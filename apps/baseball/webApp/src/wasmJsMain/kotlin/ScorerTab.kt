@@ -1,5 +1,7 @@
 package com.baseball
 
+import com.baseball.AppViewManager.renderCurrentTab
+import com.baseball.LocalGameManager.recordLocalPlayEvent
 import com.baseball.models.*
 import org.w3c.dom.*
 import kotlinx.browser.document
@@ -274,21 +276,44 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
             }
 
             // Game action triggers
-            val actionGrid = rightCol.appendElement("div", "action-grid")
+            val actionGridWrapper = rightCol.appendElement("div") {
+                style.marginTop = "1rem"
+            }
             
-            fun triggerScoringEvent(type: ScoringEventType) {
+            var optionalPitchType: String? = null
+            
+            fun triggerScoringEvent(
+                type: ScoringEventType,
+                detail: String? = null,
+                isDoublePlay: Boolean = false,
+                isError: Boolean = false,
+                runnerAdvanceMap: Map<String, Int>? = null
+            ) {
                 val bId = game.gameState.currentBatterId
                 val pId = game.gameState.currentPitcherId
                 if (bId != null && pId != null) {
+                    val finalDescription = buildString {
+                        if (optionalPitchType != null) {
+                            append("$optionalPitchType - ")
+                        }
+                        if (detail != null) {
+                            append(detail)
+                        }
+                    }.takeIf { it.isNotEmpty() }
+
                     if (isSingleGameMode) {
-                        recordLocalPlayEvent(type, bId, pId)
+                        recordLocalPlayEvent(type, bId, pId, finalDescription, isDoublePlay, isError, runnerAdvanceMap)
                         renderCurrentTab()
                     } else {
                         launch {
                             api.recordGameEvent(game.id!!, ScoringEventRequest(
                                 eventType = type,
                                 batterId = bId,
-                                pitcherId = pId
+                                pitcherId = pId,
+                                description = finalDescription,
+                                isDoublePlay = isDoublePlay,
+                                isError = isError,
+                                runnerAdvanceMap = runnerAdvanceMap
                             ))
                             renderCurrentTab() // reload view
                         }
@@ -298,36 +323,273 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                 }
             }
 
-            // Action Buttons
-            listOf(
-                ScoringEventType.BALL to "Ball (B+1)",
-                ScoringEventType.STRIKE to "Strike (S+1)",
-                ScoringEventType.FOUL to "Foul",
-                ScoringEventType.SINGLE to "Single (1B)",
-                ScoringEventType.DOUBLE to "Double (2B)",
-                ScoringEventType.TRIPLE to "Triple (3B)",
-                ScoringEventType.HOME_RUN to "Home Run (HR)",
-                ScoringEventType.WALK to "Walk (BB)",
-                ScoringEventType.HIT_BY_PITCH to "HBP",
-                ScoringEventType.STRIKEOUT to "Strikeout (K)",
-                ScoringEventType.GROUNDOUT to "Groundout",
-                ScoringEventType.FLYOUT to "Flyout",
-                ScoringEventType.SACRIFICE_FLY to "Sac Fly",
-                ScoringEventType.ERROR to "Reached on Error",
-                ScoringEventType.FIELDER_CHOICE to "Fielder's Choice"
-            ).forEach { (type, label) ->
-                val btnClass = when (type) {
-                    ScoringEventType.BALL -> "btn btn-secondary btn-action"
-                    ScoringEventType.STRIKE, ScoringEventType.STRIKEOUT -> "btn btn-danger btn-action"
-                    ScoringEventType.FOUL -> "btn btn-secondary btn-action"
-                    ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN -> "btn btn-action"
-                    else -> "btn btn-secondary btn-action"
+            fun renderActionGrid() {
+                actionGridWrapper.innerHTML = ""
+                
+                // Pitch Types Toggle
+                val pitchTypeRow = actionGridWrapper.appendElement("div") {
+                    style.display = "flex"
+                    style.setProperty("gap", "0.5rem")
+                    style.marginBottom = "1rem"
+                    style.flexWrap = "wrap"
                 }
-                actionGrid.appendElement("button", btnClass) {
-                    textContent = label
-                    onClick { triggerScoringEvent(type) }
+                val pitchTypes = listOf("Fastball", "Breaking Ball", "Offspeed")
+                pitchTypes.forEach { pType ->
+                    val isSelected = pType == optionalPitchType
+                    pitchTypeRow.appendElement("button", if (isSelected) "btn btn-primary" else "btn btn-secondary") {
+                        textContent = pType
+                        style.flex = "1"
+                        style.fontSize = "0.85rem"
+                        style.padding = "0.4rem"
+                        onClick {
+                            optionalPitchType = if (isSelected) null else pType
+                            renderActionGrid()
+                        }
+                    }
+                }
+                
+                val actionGrid = actionGridWrapper.appendElement("div", "action-grid")
+                
+                fun renderStep2(type: ScoringEventType, baseLabel: String, isHit: Boolean) {
+                    var hasError = false
+                    var hasDoublePlay = false
+                    
+                    val runnerAdvances = mutableMapOf<String, Int>()
+                    
+                    fun drawStep2UI() {
+                        actionGridWrapper.innerHTML = ""
+                        actionGridWrapper.appendElement("h3") {
+                            textContent = "Step 2: $baseLabel Details"
+                            style.marginBottom = "1rem"
+                            style.color = "var(--accent-green)"
+                            style.fontSize = "1.2rem"
+                        }
+                        
+                        // Modifiers Row
+                        val modifiersRow = actionGridWrapper.appendElement("div") {
+                            style.display = "flex"
+                            style.setProperty("gap", "0.5rem")
+                            style.marginBottom = "1rem"
+                        }
+                        
+                        modifiersRow.appendElement("button", if (hasError) "btn btn-danger" else "btn btn-secondary") {
+                            textContent = if (hasError) "Error Active" else "+ Add Error"
+                            onClick {
+                                hasError = !hasError
+                                drawStep2UI()
+                            }
+                        }
+                        
+                        if (!isHit) {
+                            modifiersRow.appendElement("button", if (hasDoublePlay) "btn btn-primary" else "btn btn-secondary") {
+                                textContent = if (hasDoublePlay) "Double Play Active" else "+ Add Double Play"
+                                onClick {
+                                    hasDoublePlay = !hasDoublePlay
+                                    if (hasDoublePlay) {
+                                        val leadRunnerId = game.gameState.runnerThirdId ?: game.gameState.runnerSecondId ?: game.gameState.runnerFirstId
+                                        if (leadRunnerId != null) {
+                                            runnerAdvances[leadRunnerId.toString()] = 0
+                                        }
+                                    } else {
+                                        runnerAdvances.clear()
+                                    }
+                                    drawStep2UI()
+                                }
+                            }
+                        }
+                        
+                        // Runner Advancement Section
+                        val r1 = game.gameState.runnerFirstId to game.gameState.runnerFirstName
+                        val r2 = game.gameState.runnerSecondId to game.gameState.runnerSecondName
+                        val r3 = game.gameState.runnerThirdId to game.gameState.runnerThirdName
+                        
+                        val activeRunners = listOfNotNull(
+                            r1.first?.let { it to ("Runner on 1B: " + r1.second) },
+                            r2.first?.let { it to ("Runner on 2B: " + r2.second) },
+                            r3.first?.let { it to ("Runner on 3B: " + r3.second) }
+                        )
+                        
+                        if (activeRunners.isNotEmpty() || hasError) {
+                            actionGridWrapper.appendElement("div") {
+                                textContent = "Runner Base Advancement (Optional)"
+                                style.fontWeight = "bold"
+                                style.fontSize = "0.9rem"
+                                style.color = "var(--text-secondary)"
+                                style.marginBottom = "0.5rem"
+                            }
+                            
+                            val runnersList = if (hasError) {
+                                activeRunners + (game.gameState.currentBatterId!! to "Batter: ${game.gameState.currentBatterName}")
+                            } else {
+                                activeRunners
+                            }
+                            
+                            runnersList.forEach { (runnerId, label) ->
+                                val row = actionGridWrapper.appendElement("div") {
+                                    style.display = "flex"
+                                    style.alignItems = "center"
+                                    style.justifyContent = "space-between"
+                                    style.marginBottom = "0.5rem"
+                                    style.setProperty("gap", "0.5rem")
+                                    style.background = "rgba(255, 255, 255, 0.03)"
+                                    style.padding = "0.4rem"
+                                    style.borderRadius = "4px"
+                                }
+                                row.appendElement("span") {
+                                    textContent = label
+                                    style.fontSize = "0.85rem"
+                                    style.flex = "1"
+                                }
+                                
+                                val btnGroup = row.appendElement("div") {
+                                    style.display = "flex"
+                                    style.setProperty("gap", "0.2rem")
+                                }
+                                
+                                val currentDest = runnerAdvances[runnerId.toString()]
+                                
+                                val options = if (runnerId == game.gameState.currentBatterId) {
+                                    listOf(0 to "Out", 1 to "1B", 2 to "2B", 3 to "3B", 4 to "HR")
+                                } else {
+                                    listOf(0 to "Out", 2 to "2B", 3 to "3B", 4 to "Score")
+                                }
+                                
+                                options.forEach { (baseVal, baseLabel) ->
+                                    val isSelected = currentDest == baseVal
+                                    val btnClass = if (isSelected) {
+                                        if (baseVal == 0) "btn btn-danger" else "btn btn-primary"
+                                    } else "btn btn-secondary"
+                                    
+                                    btnGroup.appendElement("button", btnClass) {
+                                        textContent = baseLabel
+                                        style.padding = "0.2rem 0.4rem"
+                                        style.fontSize = "0.75rem"
+                                        onClick {
+                                            if (isSelected) {
+                                                runnerAdvances.remove(runnerId.toString())
+                                            } else {
+                                                runnerAdvances[runnerId.toString()] = baseVal
+                                            }
+                                            drawStep2UI()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Locations Grid
+                        actionGridWrapper.appendElement("div") {
+                            textContent = "Select Hit/Out Fielder to Complete Play"
+                            style.fontWeight = "bold"
+                            style.fontSize = "0.9rem"
+                            style.color = "var(--text-secondary)"
+                            style.marginTop = "1rem"
+                            style.marginBottom = "0.5rem"
+                        }
+                        
+                        val locGrid = actionGridWrapper.appendElement("div", "action-grid") {
+                            style.marginBottom = "1rem"
+                        }
+                        
+                        val locations = if (isHit) {
+                            listOf("Left Field", "Center Field", "Right Field", "Infield", "Down the Line", "Gap")
+                        } else {
+                            listOf("Pitcher (1)", "Catcher (2)", "1st Base (3)", "2nd Base (4)", "3rd Base (5)", "Shortstop (6)", "Left Field (7)", "Center Field (8)", "Right Field (9)")
+                        }
+                        
+                        locations.forEach { loc ->
+                            locGrid.appendElement("button", "btn btn-action") {
+                                textContent = loc
+                                onClick {
+                                    val detail = buildString {
+                                        append("$baseLabel to $loc")
+                                        if (hasDoublePlay) {
+                                            append(" (Double Play)")
+                                        }
+                                        if (hasError) {
+                                            append(" (with Error)")
+                                        }
+                                    }
+                                    triggerScoringEvent(type, detail, hasDoublePlay, hasError, runnerAdvances.takeIf { it.isNotEmpty() })
+                                }
+                            }
+                        }
+                        
+                        // Fast fallback if they want to submit without a specific location
+                        locGrid.appendElement("button", "btn btn-action") {
+                            textContent = "Unspecified Location"
+                            style.background = "rgba(255, 255, 255, 0.1)"
+                            onClick {
+                                val detail = buildString {
+                                    append(baseLabel)
+                                    if (hasDoublePlay) {
+                                        append(" (Double Play)")
+                                    }
+                                    if (hasError) {
+                                        append(" (with Error)")
+                                    }
+                                }
+                                triggerScoringEvent(type, detail, hasDoublePlay, hasError, runnerAdvances.takeIf { it.isNotEmpty() })
+                            }
+                        }
+                        
+                        val btnRow = actionGridWrapper.appendElement("div") {
+                            style.display = "flex"
+                            style.setProperty("gap", "1rem")
+                        }
+                        btnRow.appendElement("button", "btn btn-secondary") {
+                            textContent = "Cancel"
+                            style.flex = "1"
+                            onClick { renderActionGrid() }
+                        }
+                    }
+                    
+                    drawStep2UI()
+                }
+                
+                // Action Buttons
+                listOf(
+                    ScoringEventType.BALL to "Ball (B+1)",
+                    ScoringEventType.STRIKE to "Strike (S+1)",
+                    ScoringEventType.FOUL to "Foul",
+                    ScoringEventType.SINGLE to "Single (1B)",
+                    ScoringEventType.DOUBLE to "Double (2B)",
+                    ScoringEventType.TRIPLE to "Triple (3B)",
+                    ScoringEventType.HOME_RUN to "Home Run (HR)",
+                    ScoringEventType.WALK to "Walk (BB)",
+                    ScoringEventType.HIT_BY_PITCH to "HBP",
+                    ScoringEventType.STRIKEOUT to "Strikeout (K)",
+                    ScoringEventType.GROUNDOUT to "Groundout",
+                    ScoringEventType.FLYOUT to "Flyout",
+                    ScoringEventType.LINE_OUT to "Line Out",
+                    ScoringEventType.POP_OUT to "Pop Out",
+                    ScoringEventType.SACRIFICE_FLY to "Sac Fly",
+                    ScoringEventType.ERROR to "Reached on Error",
+                    ScoringEventType.FIELDER_CHOICE to "Fielder's Choice"
+                ).forEach { (type, label) ->
+                    val btnClass = when (type) {
+                        ScoringEventType.BALL -> "btn btn-secondary btn-action"
+                        ScoringEventType.STRIKE, ScoringEventType.STRIKEOUT -> "btn btn-danger btn-action"
+                        ScoringEventType.FOUL -> "btn btn-secondary btn-action"
+                        ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN -> "btn btn-action"
+                        else -> "btn btn-secondary btn-action"
+                    }
+                    actionGrid.appendElement("button", btnClass) {
+                        textContent = label
+                        onClick { 
+                            val isHit = type in listOf(ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN)
+                            val isOut = type in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT)
+                            if (isHit || isOut) {
+                                renderStep2(type, label, isHit)
+                            } else {
+                                triggerScoringEvent(type)
+                            }
+                        }
+                    }
                 }
             }
+            
+            renderActionGrid()
             
             // Lineups and substitutions card
             val scorebookCard = rightCol.appendElement("div") {

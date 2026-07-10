@@ -7,24 +7,25 @@
 }
 
 :root {
-    --bg-dark: #0a0d0c;
-    --bg-surface: rgba(20, 30, 26, 0.7);
-    --bg-card: rgba(30, 42, 37, 0.4);
-    --border-color: rgba(46, 204, 113, 0.2);
-    --border-active: rgba(46, 204, 113, 0.6);
-    --text-primary: #f5f6fa;
-    --text-secondary: #a0a8a5;
-    --accent-green: #2ecc71;
-    --accent-green-glow: #39ff14;
-    --accent-red: #e74c3c;
-    --accent-yellow: #f1c40f;
-    --accent-blue: #3498db;
+    --bg-dark: #07080a;
+    --bg-surface: rgba(22, 26, 36, 0.7);
+    --bg-card: rgba(30, 36, 50, 0.45);
+    --border-color: rgba(229, 30, 43, 0.15);
+    --border-active: rgba(229, 30, 43, 0.6);
+    --text-primary: #f5f7fa;
+    --text-secondary: #8e9cae;
+    --accent-green: #00b050;
+    --accent-green-glow: #00e676;
+    --accent-red: #ff2a3b;
+    --accent-red-glow: #ff5252;
+    --accent-yellow: #ffcc00;
+    --accent-blue: #0073e6;
     --glass-blur: blur(12px);
-    --scoreboard-bg: #050806;
+    --scoreboard-bg: #0b0d13;
 }
 
 body {
-    background: radial-gradient(circle at top right, #112d1f, #070908);
+    background: radial-gradient(circle at top right, #1b2230, #0a0d13);
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
@@ -59,8 +60,8 @@ header {
 }
 
 .logo span {
-    color: var(--accent-green);
-    text-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
+    color: var(--accent-red);
+    text-shadow: 0 0 10px rgba(255, 42, 59, 0.4);
 }
 
 nav {
@@ -86,10 +87,10 @@ nav {
 }
 
 .nav-btn.active {
-    color: var(--accent-green);
-    background: rgba(46, 204, 113, 0.1);
-    border-color: var(--border-color);
-    box-shadow: 0 0 15px rgba(46, 204, 113, 0.1);
+    color: var(--accent-red);
+    background: rgba(255, 42, 59, 0.1);
+    border-color: rgba(255, 42, 59, 0.3);
+    box-shadow: 0 0 15px rgba(255, 42, 59, 0.1);
 }
 
 /* Layout Main */
@@ -128,7 +129,7 @@ h1, h2, h3 {
 }
 
 .card:hover {
-    border-color: rgba(46, 204, 113, 0.4);
+    border-color: rgba(255, 42, 59, 0.35);
 }
 
 /* Tables and Standings */
@@ -189,16 +190,16 @@ tr:hover td {
 
 .form-control:focus {
     outline: none;
-    border-color: var(--accent-green);
-    box-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+    border-color: var(--accent-red);
+    box-shadow: 0 0 10px rgba(255, 42, 59, 0.2);
 }
 
 .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--accent-green);
-    color: #000;
+    background: var(--accent-red);
+    color: #fff;
     font-weight: 700;
     padding: 0.75rem 1.5rem;
     border: none;
@@ -209,8 +210,8 @@ tr:hover td {
 }
 
 .btn:hover {
-    background: var(--accent-green-glow);
-    box-shadow: 0 0 15px rgba(57, 255, 20, 0.4);
+    background: var(--accent-red-glow);
+    box-shadow: 0 0 15px rgba(255, 82, 82, 0.4);
     transform: translateY(-1px);
 }
 
@@ -257,7 +258,7 @@ tr:hover td {
 }
 
 .game-card:hover {
-    background: rgba(46, 204, 113, 0.05);
+    background: rgba(255, 42, 59, 0.05);
     border-color: var(--border-active);
 }
 
@@ -281,7 +282,7 @@ tr:hover td {
 .score-num {
     font-family: 'Share Tech Mono', monospace;
     font-size: 1.25rem;
-    color: var(--accent-green-glow);
+    color: var(--accent-yellow);
 }
 
 .game-meta {
@@ -326,12 +327,12 @@ tr:hover td {
 /* Digital Scoreboard style */
 .scoreboard-led {
     background: var(--scoreboard-bg);
-    border: 2px solid #1a2f24;
+    border: 2px solid #222b3c;
     border-radius: 12px;
     padding: 1.5rem;
     color: #e0e0e0;
     font-family: 'Share Tech Mono', monospace;
-    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 0 10px rgba(46, 204, 113, 0.1);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 42, 59, 0.1);
 }
 
 .scoreboard-header {
@@ -358,8 +359,8 @@ tr:hover td {
 
 .team-led-score {
     font-size: 2rem;
-    color: var(--accent-green-glow);
-    text-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+    color: var(--accent-yellow);
+    text-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
 }
 
 .inning-display {
@@ -391,7 +392,7 @@ tr:hover td {
     width: 80px;
     height: 80px;
     transform: rotate(45deg);
-    border: 2px solid #2a4d3a;
+    border: 2px solid #2d3b55;
     position: relative;
 }
 
@@ -399,14 +400,14 @@ tr:hover td {
     position: absolute;
     width: 18px;
     height: 18px;
-    background: #223a2e;
-    border: 1px solid #1c3326;
+    background: #1f2735;
+    border: 1px solid #151c27;
     transition: all 0.3s ease;
 }
 
 .base.occupied {
-    background: var(--accent-green-glow);
-    box-shadow: 0 0 12px var(--accent-green-glow);
+    background: var(--accent-red);
+    box-shadow: 0 0 12px var(--accent-red);
     border-color: #fff;
 }
 
@@ -548,8 +549,8 @@ tr:hover td {
     margin: 5rem auto;
     padding: 2.5rem;
     text-align: center;
-    background: rgba(22, 38, 28, 0.45);
-    border: 1px solid rgba(57, 255, 20, 0.15);
+    background: rgba(18, 22, 32, 0.65);
+    border: 1px solid rgba(229, 30, 43, 0.25);
     border-radius: 16px;
     backdrop-filter: blur(12px);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
@@ -566,7 +567,7 @@ tr:hover td {
 }
 
 .welcome-logo span {
-    color: var(--accent-green);
+    color: var(--accent-red);
 }
 
 .welcome-subtitle {
@@ -616,23 +617,23 @@ tr:hover td {
 
 .mode-card:hover {
     transform: translateY(-8px);
-    background: rgba(57, 255, 20, 0.04);
-    border-color: rgba(57, 255, 20, 0.25);
+    background: rgba(229, 30, 43, 0.04);
+    border-color: rgba(229, 30, 43, 0.25);
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
 
 .mode-card.offline:hover {
-    border-color: var(--accent-green);
+    border-color: var(--accent-red);
 }
 .mode-card.offline::before {
-    background: var(--accent-green);
+    background: var(--accent-red);
 }
 
 .mode-card.online:hover {
     border-color: var(--accent-yellow);
 }
 .mode-card.online::before {
-    background: var(--accent-yellow);
+    background: var(--accent-red);
 }
 
 .mode-icon {
@@ -674,8 +675,8 @@ tr:hover td {
 }
 
 .status-dot.green {
-    background: #39ff14;
-    box-shadow: 0 0 8px #39ff14;
+    background: #00cc66;
+    box-shadow: 0 0 8px #00cc66;
 }
 
 .status-dot.red {
@@ -688,7 +689,7 @@ tr:hover td {
 }
 
 .status-text.online {
-    color: #39ff14;
+    color: #00cc66;
 }
 
 .status-text.offline {

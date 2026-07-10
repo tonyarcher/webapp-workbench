@@ -2,6 +2,7 @@ package com.baseball
 
 import com.baseball.entities.*
 import com.baseball.repositories.*
+import com.baseball.seed.SeedData
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -20,40 +21,54 @@ class Application {
         if (leagueRepository.count() == 0L) {
             println("Seeding database with sample baseball league, season, teams, and rosters...")
             
-            val league = leagueRepository.save(LeagueEntity(name = "American Baseball League"))
-            val season = seasonRepository.save(SeasonEntity(leagueId = league.id!!, name = "2026 Season", year = 2026))
+            val league = leagueRepository.save(LeagueEntity(name = SeedData.league.name))
+            val season = seasonRepository.save(SeasonEntity(leagueId = league.id!!, name = SeedData.season.name, year = SeedData.season.year))
             
-            val cubs = teamRepository.save(TeamEntity(name = "Cubs", abbreviation = "CHC", city = "Chicago"))
-            val cardinals = teamRepository.save(TeamEntity(name = "Cardinals", abbreviation = "STL", city = "St. Louis"))
-            val yankees = teamRepository.save(TeamEntity(name = "Yankees", abbreviation = "NYY", city = "New York"))
-            val redsox = teamRepository.save(TeamEntity(name = "Red Sox", abbreviation = "BOS", city = "Boston"))
+            val cubs = teamRepository.save(TeamEntity(
+                name = SeedData.teamCubs.name,
+                abbreviation = SeedData.teamCubs.abbreviation,
+                city = SeedData.teamCubs.city
+            ))
+            val cardinals = teamRepository.save(TeamEntity(
+                name = SeedData.teamCardinals.name,
+                abbreviation = SeedData.teamCardinals.abbreviation,
+                city = SeedData.teamCardinals.city
+            ))
+            val yankees = teamRepository.save(TeamEntity(
+                name = SeedData.teamYankees.name,
+                abbreviation = SeedData.teamYankees.abbreviation,
+                city = SeedData.teamYankees.city
+            ))
+            val redsox = teamRepository.save(TeamEntity(
+                name = SeedData.teamRedSox.name,
+                abbreviation = SeedData.teamRedSox.abbreviation,
+                city = SeedData.teamRedSox.city
+            ))
 
             // Seed Cubs Roster
-            val cubsPlayers = listOf(
-                PlayerEntity(teamId = cubs.id, name = "Nico Hoerner", position = "2B", jerseyNumber = 2, battingHand = "R", throwingHand = "R"),
-                PlayerEntity(teamId = cubs.id, name = "Dansby Swanson", position = "SS", jerseyNumber = 7, battingHand = "R", throwingHand = "R"),
-                PlayerEntity(teamId = cubs.id, name = "Ian Happ", position = "LF", jerseyNumber = 8, battingHand = "L", throwingHand = "R"),
-                PlayerEntity(teamId = cubs.id, name = "Cody Bellinger", position = "CF", jerseyNumber = 24, battingHand = "L", throwingHand = "L"),
-                PlayerEntity(teamId = cubs.id, name = "Seiya Suzuki", position = "RF", jerseyNumber = 27, battingHand = "R", throwingHand = "R"),
-                PlayerEntity(teamId = cubs.id, name = "Michael Busch", position = "1B", jerseyNumber = 29, battingHand = "L", throwingHand = "R"),
-                PlayerEntity(teamId = cubs.id, name = "Christopher Morel", position = "3B", jerseyNumber = 19, battingHand = "R", throwingHand = "R"),
-                PlayerEntity(teamId = cubs.id, name = "Yan Gomes", position = "C", jerseyNumber = 15, battingHand = "R", throwingHand = "R"),
-                PlayerEntity(teamId = cubs.id, name = "Shota Imanaga", position = "P", jerseyNumber = 18, battingHand = "L", throwingHand = "L")
-            )
+            val cubsPlayers = SeedData.cubsRoster.map {
+                PlayerEntity(
+                    teamId = cubs.id,
+                    name = it.name,
+                    position = it.position,
+                    jerseyNumber = it.jerseyNumber,
+                    battingHand = it.battingHand,
+                    throwingHand = it.throwingHand
+                )
+            }
             playerRepository.saveAll(cubsPlayers)
 
             // Seed Cardinals Roster
-            val cardinalsPlayers = listOf(
-                PlayerEntity(teamId = cardinals.id, name = "Brendan Donovan", position = "LF", jerseyNumber = 33, battingHand = "L", throwingHand = "R"),
-                PlayerEntity(teamId = cardinals.id, name = "Paul Goldschmidt", position = "1B", jerseyNumber = 46, battingHand = "R", throwingHand = "R"),
-                PlayerEntity(teamId = cardinals.id, name = "Nolan Arenado", position = "3B", jerseyNumber = 28, battingHand = "R", throwingHand = "R"),
-                PlayerEntity(teamId = cardinals.id, name = "Willson Contreras", position = "C", jerseyNumber = 40, battingHand = "R", throwingHand = "R"),
-                PlayerEntity(teamId = cardinals.id, name = "Lars Nootbaar", position = "RF", jerseyNumber = 21, battingHand = "L", throwingHand = "R"),
-                PlayerEntity(teamId = cardinals.id, name = "Nolan Gorman", position = "2B", jerseyNumber = 24, battingHand = "L", throwingHand = "R"),
-                PlayerEntity(teamId = cardinals.id, name = "Masyn Winn", position = "SS", jerseyNumber = 0, battingHand = "R", throwingHand = "R"),
-                PlayerEntity(teamId = cardinals.id, name = "Victor Scott II", position = "CF", jerseyNumber = 11, battingHand = "L", throwingHand = "R"),
-                PlayerEntity(teamId = cardinals.id, name = "Sonny Gray", position = "P", jerseyNumber = 54, battingHand = "R", throwingHand = "R")
-            )
+            val cardinalsPlayers = SeedData.cardinalsRoster.map {
+                PlayerEntity(
+                    teamId = cardinals.id,
+                    name = it.name,
+                    position = it.position,
+                    jerseyNumber = it.jerseyNumber,
+                    battingHand = it.battingHand,
+                    throwingHand = it.throwingHand
+                )
+            }
             playerRepository.saveAll(cardinalsPlayers)
             
             println("Seeding completed successfully.")

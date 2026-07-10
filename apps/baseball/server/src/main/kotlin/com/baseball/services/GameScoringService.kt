@@ -118,6 +118,13 @@ class GameScoringService(
             }
         }
 
+        if (request.isDoublePlay) {
+            outsAdded = maxOf(outsAdded, 2)
+        }
+        if (request.isError && request.eventType != ScoringEventType.ERROR) {
+            incrementTeamErrors(game)
+        }
+
         val runsScoredList = mutableListOf<Long>()
         val outsBefore = game.outs
 
@@ -184,66 +191,110 @@ class GameScoringService(
             }
 
             if (outsAdded > 0) {
-                pitcherStats.inningsPitchedThirds += outsAdded
+                val actualOutsAdded = minOf(outsAdded, 3 - outsBefore)
+                if (actualOutsAdded > 0) {
+                    pitcherStats.inningsPitchedThirds += actualOutsAdded
+                }
             }
 
             // Run advancement logic
-            if (basesMoved > 0 || isWalk || isHitByPitch) {
-                val runner1 = game.runnerFirstId
-                val runner2 = game.runnerSecondId
-                val runner3 = game.runnerThirdId
+            val advanceMap = request.runnerAdvanceMap
+            if (advanceMap != null && advanceMap.isNotEmpty()) {
+                // Clear bases first
+                game.runnerFirstId = null
+                game.runnerSecondId = null
+                game.runnerThirdId = null
 
-                if (isWalk || isHitByPitch) {
-                    // Forced base runner advancement
-                    if (runner1 != null) {
-                        if (runner2 != null) {
-                            if (runner3 != null) {
-                                runsScoredList.add(runner3)
-                                game.runnerThirdId = runner2
-                                game.runnerSecondId = runner1
-                                game.runnerFirstId = batter.id
+                advanceMap.forEach { (pIdStr, targetBase) ->
+                    val pId = pIdStr.toLongOrNull() ?: return@forEach
+                    when (targetBase) {
+                        1 -> game.runnerFirstId = pId
+                        2 -> game.runnerSecondId = pId
+                        3 -> game.runnerThirdId = pId
+                        4 -> runsScoredList.add(pId)
+                        0 -> {
+                            // If runner is explicitly marked as out
+                            if (pId != batter.id) {
+                                outsAdded = maxOf(outsAdded, 1)
+                            }
+                        }
+                    }
+                }
+
+                // If batter is not in advance map, place batter based on defaults
+                if (!advanceMap.containsKey(batter.id.toString())) {
+                    if (basesMoved == 1) game.runnerFirstId = batter.id
+                    else if (basesMoved == 2) game.runnerSecondId = batter.id
+                    else if (basesMoved == 3) game.runnerThirdId = batter.id
+                    else if (basesMoved == 4) runsScoredList.add(batter.id!!)
+                    else if (outsAdded == 0 && (isWalk || isHitByPitch || eventType == ScoringEventType.ERROR || eventType == ScoringEventType.FIELDER_CHOICE)) {
+                        game.runnerFirstId = batter.id
+                    }
+                }
+            } else {
+                // Default double play removal if no advance map provided
+                if (request.isDoublePlay) {
+                    if (game.runnerThirdId != null) game.runnerThirdId = null
+                    else if (game.runnerSecondId != null) game.runnerSecondId = null
+                    else if (game.runnerFirstId != null) game.runnerFirstId = null
+                }
+
+                if (basesMoved > 0 || isWalk || isHitByPitch) {
+                    val runner1 = game.runnerFirstId
+                    val runner2 = game.runnerSecondId
+                    val runner3 = game.runnerThirdId
+
+                    if (isWalk || isHitByPitch) {
+                        // Forced base runner advancement
+                        if (runner1 != null) {
+                            if (runner2 != null) {
+                                if (runner3 != null) {
+                                    runsScoredList.add(runner3)
+                                    game.runnerThirdId = runner2
+                                    game.runnerSecondId = runner1
+                                    game.runnerFirstId = batter.id
+                                } else {
+                                    game.runnerThirdId = runner2
+                                    game.runnerSecondId = runner1
+                                    game.runnerFirstId = batter.id
+                                }
                             } else {
-                                game.runnerThirdId = runner2
                                 game.runnerSecondId = runner1
                                 game.runnerFirstId = batter.id
                             }
                         } else {
-                            game.runnerSecondId = runner1
                             game.runnerFirstId = batter.id
                         }
                     } else {
-                        game.runnerFirstId = batter.id
-                    }
-                } else {
-                    // Hit or error advancement
-                    if (basesMoved == 1) {
-                        if (runner3 != null) runsScoredList.add(runner3)
-                        // Standard baseball: runner on 2nd scores on a single
-                        if (runner2 != null) runsScoredList.add(runner2)
-                        game.runnerThirdId = null
-                        game.runnerSecondId = runner1
-                        game.runnerFirstId = batter.id
-                    } else if (basesMoved == 2) {
-                        if (runner3 != null) runsScoredList.add(runner3)
-                        if (runner2 != null) runsScoredList.add(runner2)
-                        game.runnerThirdId = runner1
-                        game.runnerSecondId = batter.id
-                        game.runnerFirstId = null
-                    } else if (basesMoved == 3) {
-                        if (runner3 != null) runsScoredList.add(runner3)
-                        if (runner2 != null) runsScoredList.add(runner2)
-                        if (runner1 != null) runsScoredList.add(runner1)
-                        game.runnerThirdId = batter.id
-                        game.runnerSecondId = null
-                        game.runnerFirstId = null
-                    } else if (basesMoved == 4) {
-                        if (runner3 != null) runsScoredList.add(runner3)
-                        if (runner2 != null) runsScoredList.add(runner2)
-                        if (runner1 != null) runsScoredList.add(runner1)
-                        runsScoredList.add(batter.id!!)
-                        game.runnerThirdId = null
-                        game.runnerSecondId = null
-                        game.runnerFirstId = null
+                        // Hit or error advancement
+                        if (basesMoved == 1) {
+                            if (runner3 != null) runsScoredList.add(runner3)
+                            if (runner2 != null) runsScoredList.add(runner2)
+                            game.runnerThirdId = null
+                            game.runnerSecondId = runner1
+                            game.runnerFirstId = batter.id
+                        } else if (basesMoved == 2) {
+                            if (runner3 != null) runsScoredList.add(runner3)
+                            if (runner2 != null) runsScoredList.add(runner2)
+                            game.runnerThirdId = runner1
+                            game.runnerSecondId = batter.id
+                            game.runnerFirstId = null
+                        } else if (basesMoved == 3) {
+                            if (runner3 != null) runsScoredList.add(runner3)
+                            if (runner2 != null) runsScoredList.add(runner2)
+                            if (runner1 != null) runsScoredList.add(runner1)
+                            game.runnerThirdId = batter.id
+                            game.runnerSecondId = null
+                            game.runnerFirstId = null
+                        } else if (basesMoved == 4) {
+                            if (runner3 != null) runsScoredList.add(runner3)
+                            if (runner2 != null) runsScoredList.add(runner2)
+                            if (runner1 != null) runsScoredList.add(runner1)
+                            runsScoredList.add(batter.id!!)
+                            game.runnerThirdId = null
+                            game.runnerSecondId = null
+                            game.runnerFirstId = null
+                        }
                     }
                 }
             }

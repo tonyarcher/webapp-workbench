@@ -213,5 +213,9 @@ data class ScoringEventRequest(
     val eventType: ScoringEventType,
     val batterId: Long,
     val pitcherId: Long,
-    val description: String? = null
+    val description: String? = null,
+    val isDoublePlay: Boolean = false,
+    val isError: Boolean = false,
+    val runnerOutId: Long? = null,
+    val runnerAdvanceMap: Map<String, Int>? = null
 )
