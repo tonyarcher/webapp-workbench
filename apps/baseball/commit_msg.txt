@@ -1,0 +1,36 @@
+Initial Commit: Baseball Game Scorer, League, Season, and Roster Tracking Application
+
+This is the initial commit of the baseball scorekeeper application. It implements a complete three-module Kotlin Multiplatform (KMP) architecture supporting client-side offline game scoring and online database-backed season management.
+
+Key Features & Implementations:
+1. Multi-Module Project Structure:
+   - :shared: Serializable Kotlin Multiplatform domain models (shared by JVM and WASM targets).
+   - :server: Spring Boot JVM backend exposing REST CRUD API routes.
+   - :webApp: Kotlin/WasmJs client-side application.
+
+2. Database Configuration & Schema Fallbacks:
+   - Default Profile: Spins up an in-memory H2 database on startup, enabling developers to run Application.kt in IntelliJ out-of-the-box without PostgreSQL.
+   - 'postgres' Profile: Connects to a local PostgreSQL instance on localhost:5432.
+   - 'docker' Profile: Connects to a PostgreSQL container at postgres:5432 using container DNS.
+   - Column Mapping: Prevented SQL keyword conflicts (YEAR, POSITION, DATE, TIMESTAMP) by mapping JPA properties to custom column names.
+
+3. Complete Baseball Scoring Engine (Shared & Remote):
+   - Implements full baseball scoring rules (single, double, triple, HR, walks, base runner force advancement, outs, strikeouts, half-inning transitions, walk-offs, and stats tracking).
+   - Server-side GameScoringService saves games and logs play-by-play events.
+   - Client-side LocalGameScoringEngine runs the exact same rules inside browser memory for offline exhibition play.
+
+4. Premium WASM Dark-Green Visual Dashboard:
+   - Welcome Screen: Dynamic ping check for backend server status. Offers mode selectors for "Single Game Mode" (Offline) and "Season Mode" (Online).
+   - Visual Base Diamond: Dynamic graphic showing base-runner occupancies (1B, 2B, 3B).
+   - LED Scoreboard: Stadium-style count display (outs, strikes, balls, score).
+   - Box Score & Game Logs: Live-updated batting/pitching stats tables and play-by-play logs.
+   - Season Dashboard: Standings table calculator and round-robin schedule generator.
+
+5. Production Containerization & Deployment:
+   - JRE-only Dockerfiles: Copied pre-built executable JAR (server.jar) and WebApp static distribution (Nginx runner), removing compilation overhead inside containers.
+   - Docker Compose: Orchestrates PostgreSQL, Spring Boot server, and Nginx.
+   - Kubernetes: PVC storage, NodePort services, and ConfigMap bindings.
+
+6. Modern Library Upgrades (Mid-2026 Release Stack):
+   - Kotlin 2.4.0, Spring Boot 4.1.0, Gradle 9.6.1, Ktor Client 3.5.1, kotlinx-serialization 1.11.0, kotlinx-coroutines 1.11.0, kotlinx-datetime 0.8.0, JUnit Jupiter 5.11.0.
+   - Applied kotlin-spring compiler plugin to automatically open classes for Spring proxies.

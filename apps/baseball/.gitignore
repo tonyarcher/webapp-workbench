@@ -1,0 +1,25 @@
+# Gradle
+.gradle/
+build/
+/*/build/
+
+# Kotlin JS / WASM
+node_modules/
+yarn.lock
+kotlin-js-store/
+.kotlin/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# OS/System
+.DS_Store
+Thumbs.db
+
+# Docker / Local Env
+.env
+local.properties
