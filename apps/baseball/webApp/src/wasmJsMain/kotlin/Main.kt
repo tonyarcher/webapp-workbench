@@ -35,6 +35,19 @@ internal var localHomeRoster = emptyList<Player>()
 internal var localAwayRoster = emptyList<Player>()
 internal var activeBoxScoreTab = "away-batting"
 
+// Lineup, Bench, and Batting Order Rotation state
+internal val localAwayLineup = mutableListOf<Player>()
+internal val localHomeLineup = mutableListOf<Player>()
+internal val localAwayBench = mutableListOf<Player>()
+internal val localHomeBench = mutableListOf<Player>()
+internal var localAwayBatterIndex = 0
+internal var localHomeBatterIndex = 0
+internal val localPlayersSubbedOut = mutableSetOf<Long>() // IDs of players who left the game and cannot re-enter
+internal var localAwayActivePitcherId = 210L
+internal var localAwayActivePitcherName = "Sonny Gray"
+internal var localHomeActivePitcherId = 110L
+internal var localHomeActivePitcherName = "Justin Steele"
+
 fun main() {
     renderApp()
     // Background check for server online status
@@ -95,6 +108,7 @@ private fun initLocalGame() {
     val chc = Team(1L, "Cubs", "CHC", "Chicago")
     val stl = Team(2L, "Cardinals", "STL", "St. Louis")
     
+    // Starters + Bench Players
     localHomeRoster = listOf(
         Player(101L, 1L, "Nico Hoerner", "2B", 2, "R", "R"),
         Player(102L, 1L, "Dansby Swanson", "SS", 7, "R", "R"),
@@ -105,7 +119,11 @@ private fun initLocalGame() {
         Player(107L, 1L, "Michael Busch", "1B", 29, "L", "R"),
         Player(108L, 1L, "Nick Madrigal", "3B", 20, "R", "R"),
         Player(109L, 1L, "Yan Gomes", "C", 18, "R", "R"),
-        Player(110L, 1L, "Justin Steele", "P", 35, "L", "L")
+        Player(110L, 1L, "Justin Steele", "P", 35, "L", "L"),
+        // Home Bench
+        Player(111L, 1L, "Patrick Wisdom", "3B", 39, "R", "R"),
+        Player(112L, 1L, "Miguel Amaya", "C", 7, "R", "R"),
+        Player(113L, 1L, "Shota Imanaga", "P", 18, "L", "L")
     )
     
     localAwayRoster = listOf(
@@ -118,9 +136,33 @@ private fun initLocalGame() {
         Player(207L, 2L, "Jordan Walker", "DH", 22, "R", "R"),
         Player(208L, 2L, "Masyn Winn", "SS", 0, "R", "R"),
         Player(209L, 2L, "Victor Scott II", "CF", 11, "L", "R"),
-        Player(210L, 2L, "Sonny Gray", "P", 54, "R", "R")
+        Player(210L, 2L, "Sonny Gray", "P", 54, "R", "R"),
+        // Away Bench
+        Player(211L, 2L, "Alec Burleson", "1B", 41, "L", "R"),
+        Player(212L, 2L, "Ivan Herrera", "C", 47, "R", "R"),
+        Player(213L, 2L, "Ryan Helsley", "P", 56, "R", "R")
     )
     
+    // Set Lineups & Benches
+    localAwayActivePitcherId = 210L
+    localAwayActivePitcherName = "Sonny Gray"
+    localHomeActivePitcherId = 110L
+    localHomeActivePitcherName = "Justin Steele"
+
+    localAwayLineup.clear()
+    localAwayLineup.addAll(localAwayRoster.filter { it.position != "P" }.take(9))
+    localAwayBench.clear()
+    localAwayBench.addAll(localAwayRoster.filter { it.position == "P" && it.id != 210L } + localAwayRoster.drop(10))
+    localAwayBatterIndex = 0
+
+    localHomeLineup.clear()
+    localHomeLineup.addAll(localHomeRoster.filter { it.position != "P" }.take(9))
+    localHomeBench.clear()
+    localHomeBench.addAll(localHomeRoster.filter { it.position == "P" && it.id != 110L } + localHomeRoster.drop(10))
+    localHomeBatterIndex = 0
+
+    localPlayersSubbedOut.clear()
+
     localGame = Game(
         id = 1L,
         seasonId = 1L,
@@ -168,10 +210,10 @@ private fun initLocalGame() {
             awayInningRuns = emptyList(),
             homeInningRuns = emptyList()
         ),
-        homeBatting = localHomeRoster.filter { it.position != "P" }.map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
-        awayBatting = localAwayRoster.filter { it.position != "P" }.map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
-        homePitching = localHomeRoster.filter { it.position == "P" }.map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
-        awayPitching = localAwayRoster.filter { it.position == "P" }.map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) }
+        homeBatting = (localHomeLineup + localHomeBench.filter { it.position != "P" }).map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
+        awayBatting = (localAwayLineup + localAwayBench.filter { it.position != "P" }).map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
+        homePitching = (localHomeRoster.filter { it.position == "P" } + localHomeBench.filter { it.position == "P" }).map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
+        awayPitching = (localAwayRoster.filter { it.position == "P" } + localAwayBench.filter { it.position == "P" }).map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) }
     )
     
     localEvents = mutableListOf()
@@ -481,6 +523,23 @@ internal fun recordLocalPlayEvent(eventType: ScoringEventType, batterId: Long, p
         }
     }
 
+    if (isResolved) {
+        if (game.gameState.half == HalfInning.TOP) {
+            localAwayBatterIndex = (localAwayBatterIndex + 1) % 9
+        } else {
+            localHomeBatterIndex = (localHomeBatterIndex + 1) % 9
+        }
+    }
+
+    val nextBatter = if (currentHalf == HalfInning.TOP) {
+        localAwayLineup[localAwayBatterIndex]
+    } else {
+        localHomeLineup[localHomeBatterIndex]
+    }
+
+    val nextPitcherId = if (currentHalf == HalfInning.TOP) localHomeActivePitcherId else localAwayActivePitcherId
+    val nextPitcherName = if (currentHalf == HalfInning.TOP) localHomeActivePitcherName else localAwayActivePitcherName
+
     localGame = game.copy(
         status = status,
         homeScore = homeScore,
@@ -501,10 +560,10 @@ internal fun recordLocalPlayEvent(eventType: ScoringEventType, batterId: Long, p
             runnerFirstName = firstName,
             runnerSecondName = secondName,
             runnerThirdName = thirdName,
-            currentBatterId = batterId,
-            currentBatterName = batter.name,
-            currentPitcherId = pitcherId,
-            currentPitcherName = pitcher.name
+            currentBatterId = nextBatter.id,
+            currentBatterName = nextBatter.name,
+            currentPitcherId = nextPitcherId,
+            currentPitcherName = nextPitcherName
         )
     )
 
