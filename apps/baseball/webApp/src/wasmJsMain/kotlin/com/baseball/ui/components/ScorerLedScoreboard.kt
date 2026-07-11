@@ -2,7 +2,6 @@ package com.baseball.ui.components
 
 import com.baseball.UiConstants
 
-import com.baseball.Constants
 import com.baseball.models.*
 import com.baseball.ui.appendElement
 import org.w3c.dom.*

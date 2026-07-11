@@ -1,5 +1,7 @@
 package com.baseball.ui
 
+import com.baseball.BaseballConstants
+
 import com.baseball.UiConstants
 
 import com.baseball.api
@@ -7,7 +9,6 @@ import com.baseball.game.localGame
 import com.baseball.game.localBoxScore
 import com.baseball.game.localEvents
 import com.baseball.models.*
-import com.baseball.Constants
 import com.baseball.ui.components.renderScorebookView
 import org.w3c.dom.*
 
@@ -52,7 +53,7 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
         mainCard.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
             textContent = if (isSingleGameMode) "Back to Live Scorer" else "Back to Season Dashboard"
             onClick {
-                currentTab = if (isSingleGameMode) Constants.TAB_LIVE_SCORER else Constants.TAB_GAMES
+                currentTab = if (isSingleGameMode) BaseballConstants.TAB_LIVE_SCORER else BaseballConstants.TAB_GAMES
                 updateActiveTabButtons()
                 renderCurrentTab()
             }

@@ -7,7 +7,6 @@ import org.w3c.dom.events.Event
 import kotlinx.browser.document
 import kotlinx.coroutines.*
 import org.w3c.dom.css.CSSStyleDeclaration
-import com.baseball.Constants
 
 // Interface with default methods to be implemented by views/presenters/builders
 interface DomBuilder {

@@ -1,12 +1,13 @@
 package com.baseball.ui
 
+import com.baseball.BaseballConstants
+
 import com.baseball.UiConstants
 
 import org.w3c.dom.*
 import kotlinx.browser.window
 import com.baseball.authService
 import com.baseball.auth.UserAccount
-import com.baseball.Constants
 
 internal fun renderLoginTab(container: HTMLElement) {
     val card = container.appendElement(UiConstants.Html.DIV, "card") {
@@ -73,14 +74,14 @@ internal fun renderLoginTab(container: HTMLElement) {
             try {
                 val session = authService.login(email, password)
                 if (session != null) {
-                    window.location.hash = Constants.TAB_WELCOME
+                    window.location.hash = BaseballConstants.TAB_WELCOME
                 } else {
                     errorBanner.textContent = "Invalid email or password."
                     errorBanner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
                 }
             } catch (e: Throwable) {
                 val msg = e.message ?: ""
-                if (msg.contains(Constants.STATUS_CONNECT, ignoreCase = true) || msg.contains(Constants.STATUS_REFUSED, ignoreCase = true) || msg.contains(Constants.STATUS_NETWORK, ignoreCase = true)) {
+                if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) || msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) || msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)) {
                     errorBanner.textContent = "Unable to connect to the server. Please verify that your Spring Boot backend is running."
                 } else {
                     errorBanner.textContent = "Authentication failed: ${e.message ?: "server error"}"
@@ -195,16 +196,16 @@ internal fun renderRegisterTab(container: HTMLElement) {
                 )
                 val session = authService.login(email, password)
                 if (session != null) {
-                    window.location.hash = Constants.TAB_WELCOME
+                    window.location.hash = BaseballConstants.TAB_WELCOME
                 } else {
                     errorBanner.textContent = "Registration succeeded, but login failed."
                     errorBanner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
                 }
             } catch (e: Throwable) {
                 val msg = e.message ?: ""
-                if (msg.contains(Constants.STATUS_CONNECT, ignoreCase = true) || msg.contains(Constants.STATUS_REFUSED, ignoreCase = true) || msg.contains(Constants.STATUS_NETWORK, ignoreCase = true)) {
+                if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) || msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) || msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)) {
                     errorBanner.textContent = "Unable to connect to the server. Please verify that your Spring Boot backend is running."
-                } else if (msg.contains(Constants.STATUS_400) || msg.contains(Constants.STATUS_BAD_REQUEST, ignoreCase = true)) {
+                } else if (msg.contains(BaseballConstants.STATUS_400) || msg.contains(BaseballConstants.STATUS_BAD_REQUEST, ignoreCase = true)) {
                     errorBanner.textContent = "An account with this email already exists."
                 } else {
                     errorBanner.textContent = "Registration failed: ${e.message ?: "server error"}"

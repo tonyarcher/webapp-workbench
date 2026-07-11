@@ -5,7 +5,6 @@ import com.baseball.BaseballConstants
 
 import com.baseball.models.*
 import com.baseball.game.*
-import com.baseball.Constants
 import com.baseball.ui.appendElement
 import com.baseball.ui.onClick
 import org.w3c.dom.*
@@ -194,7 +193,7 @@ fun renderScorebookBottomSection(
         ptrh.appendElement(UiConstants.Html.TH) {
             textContent = h
             style.setProperty(UiConstants.Css.PADDING, "4px")
-            style.setProperty(UiConstants.Css.TEXT_ALIGN, if (h == Constants.METRIC_PITCHER) "left" else "center")
+            style.setProperty(UiConstants.Css.TEXT_ALIGN, if (h == BaseballConstants.METRIC_PITCHER) "left" else "center")
         }
     }
 

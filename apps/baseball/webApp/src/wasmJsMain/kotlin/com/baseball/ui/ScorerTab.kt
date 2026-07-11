@@ -6,7 +6,6 @@ import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.game.*
 import com.baseball.models.*
-import com.baseball.Constants
 import com.baseball.ui.components.*
 import org.w3c.dom.*
 import kotlinx.browser.document
@@ -188,18 +187,18 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                     val endedInning = if (index + 1 < events.size) {
                         events[index + 1].half != ev.half || events[index + 1].inning != ev.inning
                     } else {
-                        val outsOnPlay = if (ev.description.contains(Constants.DESC_DOUBLE_PLAY) || ev.description.contains(Constants.DESC_DP)) 2 
+                        val outsOnPlay = if (ev.description.contains(BaseballConstants.DESC_DOUBLE_PLAY) || ev.description.contains(BaseballConstants.DESC_DP)) 2 
                                          else if (ev.eventType in listOf(ScoringEventType.STRIKEOUT, ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.SACRIFICE_FLY, ScoringEventType.FIELDER_CHOICE)) 1 
                                          else 0
                         ev.outsBefore + outsOnPlay >= 3
                     }
 
                     val endedStr = when {
-                        ev.eventType in listOf(ScoringEventType.SINGLE, ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.ERROR) -> Constants.PLAY_RESULT_1B
-                        ev.eventType == ScoringEventType.DOUBLE -> Constants.PLAY_RESULT_2B
-                        ev.eventType == ScoringEventType.TRIPLE -> Constants.PLAY_RESULT_3B
-                        ev.eventType == ScoringEventType.HOME_RUN -> Constants.PLAY_RESULT_RUN_SCORED
-                        else -> Constants.PLAY_RESULT_OUT
+                        ev.eventType in listOf(ScoringEventType.SINGLE, ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.ERROR) -> BaseballConstants.PLAY_RESULT_1B
+                        ev.eventType == ScoringEventType.DOUBLE -> BaseballConstants.PLAY_RESULT_2B
+                        ev.eventType == ScoringEventType.TRIPLE -> BaseballConstants.PLAY_RESULT_3B
+                        ev.eventType == ScoringEventType.HOME_RUN -> BaseballConstants.PLAY_RESULT_RUN_SCORED
+                        else -> BaseballConstants.PLAY_RESULT_OUT
                     }
 
                     val notation = getScorebookNotation(ev)
@@ -224,7 +223,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                         row.appendElement(UiConstants.Html.SPAN, "log-desc") {
                             val header = "${ev.batterName} ($position) - Inning ${ev.inning} (${if (ev.half == HalfInning.TOP) "Top" else "Bottom"})"
                             val notStr = if (notation.isNotEmpty()) " [$notation]" else ""
-                            val endingDetail = if (endedInning && endedStr != Constants.PLAY_RESULT_RUN_SCORED && endedStr != Constants.PLAY_RESULT_OUT) Constants.PLAY_RESULT_LOB else endedStr
+                            val endingDetail = if (endedInning && endedStr != BaseballConstants.PLAY_RESULT_RUN_SCORED && endedStr != BaseballConstants.PLAY_RESULT_OUT) BaseballConstants.PLAY_RESULT_LOB else endedStr
                             
                             innerHTML = "<span style='color: var(--accent-yellow); font-weight: 700;'>$header</span>$notStr - ${ev.description} <span style='color: var(--text-secondary); font-size: 0.8rem;'>[Ended: $endingDetail]</span>"
                         }

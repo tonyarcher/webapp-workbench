@@ -1,5 +1,7 @@
 package com.baseball.ui
 
+import com.baseball.BaseballConstants
+
 import com.baseball.UiConstants
 
 import com.baseball.api
@@ -9,13 +11,12 @@ import com.baseball.auth.currentUserSession
 import com.baseball.auth.AuthManager
 import com.baseball.game.initLocalGame
 import com.baseball.models.*
-import com.baseball.Constants
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.*
 import org.w3c.dom.*
 
-private var _currentTab = Constants.TAB_LEAGUES
+private var _currentTab = BaseballConstants.TAB_LEAGUES
 var currentTab: String
     get() = _currentTab
     set(value) {
@@ -42,13 +43,13 @@ var activeBoxScoreTab = "away-batting"
 
 fun saveNavState() {
     try {
-        window.localStorage.setItem(Constants.KEY_NAV_IS_SINGLE_GAME_MODE, isSingleGameMode.toString())
-        window.localStorage.setItem(Constants.KEY_NAV_IS_WELCOME_SCREEN, isWelcomeScreen.toString())
-        window.localStorage.setItem(Constants.KEY_NAV_SELECTED_GAME_ID, selectedGameId?.toString() ?: "")
-        window.localStorage.setItem(Constants.KEY_NAV_SELECTED_LEAGUE_ID, selectedLeagueId?.toString() ?: "")
-        window.localStorage.setItem(Constants.KEY_NAV_SELECTED_SEASON_ID, selectedSeasonId?.toString() ?: "")
-        window.localStorage.setItem(Constants.KEY_NAV_SELECTED_TEAM_ID, selectedTeamId?.toString() ?: "")
-        window.localStorage.setItem(Constants.KEY_NAV_CURRENT_TAB, currentTab)
+        window.localStorage.setItem(BaseballConstants.KEY_NAV_IS_SINGLE_GAME_MODE, isSingleGameMode.toString())
+        window.localStorage.setItem(BaseballConstants.KEY_NAV_IS_WELCOME_SCREEN, isWelcomeScreen.toString())
+        window.localStorage.setItem(BaseballConstants.KEY_NAV_SELECTED_GAME_ID, selectedGameId?.toString() ?: "")
+        window.localStorage.setItem(BaseballConstants.KEY_NAV_SELECTED_LEAGUE_ID, selectedLeagueId?.toString() ?: "")
+        window.localStorage.setItem(BaseballConstants.KEY_NAV_SELECTED_SEASON_ID, selectedSeasonId?.toString() ?: "")
+        window.localStorage.setItem(BaseballConstants.KEY_NAV_SELECTED_TEAM_ID, selectedTeamId?.toString() ?: "")
+        window.localStorage.setItem(BaseballConstants.KEY_NAV_CURRENT_TAB, currentTab)
     } catch (e: Exception) {
         println("Error saving nav state: ${e.message}")
     }
@@ -56,13 +57,13 @@ fun saveNavState() {
 
 fun loadNavState() {
     try {
-        isSingleGameMode = window.localStorage.getItem(Constants.KEY_NAV_IS_SINGLE_GAME_MODE)?.toBoolean() ?: false
-        isWelcomeScreen = window.localStorage.getItem(Constants.KEY_NAV_IS_WELCOME_SCREEN)?.toBoolean() ?: true
-        selectedGameId = window.localStorage.getItem(Constants.KEY_NAV_SELECTED_GAME_ID)?.toLongOrNull()
-        selectedLeagueId = window.localStorage.getItem(Constants.KEY_NAV_SELECTED_LEAGUE_ID)?.toLongOrNull()
-        selectedSeasonId = window.localStorage.getItem(Constants.KEY_NAV_SELECTED_SEASON_ID)?.toLongOrNull()
-        selectedTeamId = window.localStorage.getItem(Constants.KEY_NAV_SELECTED_TEAM_ID)?.toLongOrNull()
-        _currentTab = window.localStorage.getItem(Constants.KEY_NAV_CURRENT_TAB) ?: Constants.TAB_LEAGUES
+        isSingleGameMode = window.localStorage.getItem(BaseballConstants.KEY_NAV_IS_SINGLE_GAME_MODE)?.toBoolean() ?: false
+        isWelcomeScreen = window.localStorage.getItem(BaseballConstants.KEY_NAV_IS_WELCOME_SCREEN)?.toBoolean() ?: true
+        selectedGameId = window.localStorage.getItem(BaseballConstants.KEY_NAV_SELECTED_GAME_ID)?.toLongOrNull()
+        selectedLeagueId = window.localStorage.getItem(BaseballConstants.KEY_NAV_SELECTED_LEAGUE_ID)?.toLongOrNull()
+        selectedSeasonId = window.localStorage.getItem(BaseballConstants.KEY_NAV_SELECTED_SEASON_ID)?.toLongOrNull()
+        selectedTeamId = window.localStorage.getItem(BaseballConstants.KEY_NAV_SELECTED_TEAM_ID)?.toLongOrNull()
+        _currentTab = window.localStorage.getItem(BaseballConstants.KEY_NAV_CURRENT_TAB) ?: BaseballConstants.TAB_LEAGUES
     } catch (e: Exception) {
         println("Error loading nav state: ${e.message}")
     }
@@ -77,20 +78,20 @@ object AppViewManager : DomBuilder {
         window.addEventListener("hashchange", {
             val hash = window.location.hash.removePrefix("#")
             if (hash.isNotEmpty()) {
-                val isOnlineTab = hash in listOf(Constants.TAB_LEAGUES, Constants.TAB_TEAMS, Constants.TAB_GAMES) || 
-                                  (!isSingleGameMode && hash in listOf(Constants.TAB_LIVE_SCORER, Constants.TAB_BOXSCORE))
+                val isOnlineTab = hash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES) || 
+                                  (!isSingleGameMode && hash in listOf(BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE))
                 
                 if (isOnlineTab && currentUserSession == null) {
-                    window.location.hash = Constants.TAB_LOGIN
+                    window.location.hash = BaseballConstants.TAB_LOGIN
                     return@addEventListener
                 }
 
-                if (hash == Constants.TAB_WELCOME) {
+                if (hash == BaseballConstants.TAB_WELCOME) {
                     isWelcomeScreen = true
-                } else if (hash == Constants.TAB_LOGIN || hash == Constants.TAB_REGISTER) {
+                } else if (hash == BaseballConstants.TAB_LOGIN || hash == BaseballConstants.TAB_REGISTER) {
                     isWelcomeScreen = false
                     _currentTab = hash
-                } else if (hash in listOf(Constants.TAB_LEAGUES, Constants.TAB_TEAMS, Constants.TAB_GAMES, Constants.TAB_LIVE_SCORER, Constants.TAB_BOXSCORE)) {
+                } else if (hash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE)) {
                     isWelcomeScreen = false
                     _currentTab = hash
                 }
@@ -103,21 +104,21 @@ object AppViewManager : DomBuilder {
 
         val initialHash = window.location.hash.removePrefix("#")
         if (initialHash.isNotEmpty()) {
-            val isOnlineTab = initialHash in listOf(Constants.TAB_LEAGUES, Constants.TAB_TEAMS, Constants.TAB_GAMES) || 
-                              (!isSingleGameMode && initialHash in listOf(Constants.TAB_LIVE_SCORER, Constants.TAB_BOXSCORE))
+            val isOnlineTab = initialHash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES) || 
+                              (!isSingleGameMode && initialHash in listOf(BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE))
             
             if (isOnlineTab && currentUserSession == null) {
                 isWelcomeScreen = false
-                _currentTab = Constants.TAB_LOGIN
-                window.location.hash = Constants.TAB_LOGIN
-            } else if (initialHash == Constants.TAB_WELCOME) {
+                _currentTab = BaseballConstants.TAB_LOGIN
+                window.location.hash = BaseballConstants.TAB_LOGIN
+            } else if (initialHash == BaseballConstants.TAB_WELCOME) {
                 isWelcomeScreen = true
-            } else if (initialHash in listOf(Constants.TAB_LEAGUES, Constants.TAB_TEAMS, Constants.TAB_GAMES, Constants.TAB_LIVE_SCORER, Constants.TAB_BOXSCORE, Constants.TAB_LOGIN, Constants.TAB_REGISTER)) {
+            } else if (initialHash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE, BaseballConstants.TAB_LOGIN, BaseballConstants.TAB_REGISTER)) {
                 isWelcomeScreen = false
                 _currentTab = initialHash
             }
         } else {
-            window.location.hash = if (isWelcomeScreen) Constants.TAB_WELCOME else currentTab
+            window.location.hash = if (isWelcomeScreen) BaseballConstants.TAB_WELCOME else currentTab
         }
 
         if (isSingleGameMode) {
@@ -212,7 +213,7 @@ object AppViewManager : DomBuilder {
                 isWelcomeScreen = false
                 isSingleGameMode = true
                 initLocalGame(forceReset = false)
-                window.location.hash = Constants.TAB_LIVE_SCORER
+                window.location.hash = BaseballConstants.TAB_LIVE_SCORER
             }
         }
         cardExhibition.appendElement(UiConstants.Html.DIV, "mode-icon") { textContent = "⚾" }
@@ -241,9 +242,9 @@ object AppViewManager : DomBuilder {
                         isWelcomeScreen = false
                         isSingleGameMode = false
                         if (currentUserSession == null) {
-                            window.location.hash = Constants.TAB_LOGIN
+                            window.location.hash = BaseballConstants.TAB_LOGIN
                         } else {
-                            window.location.hash = Constants.TAB_LEAGUES
+                            window.location.hash = BaseballConstants.TAB_LEAGUES
                         }
                     } catch (e: Exception) {
                         serverConnectionError = "Unable to connect to the server. Please check that your Spring Boot backend is running."
@@ -340,7 +341,7 @@ object AppViewManager : DomBuilder {
                 id = "nav-btn-leagues"
                 textContent = "Leagues & Seasons"
                 onClick {
-                    currentTab = Constants.TAB_LEAGUES
+                    currentTab = BaseballConstants.TAB_LEAGUES
                     updateActiveTabButtons()
                     renderCurrentTab()
                 }
@@ -350,7 +351,7 @@ object AppViewManager : DomBuilder {
                 id = "nav-btn-teams"
                 textContent = "Teams & Rosters"
                 onClick {
-                    currentTab = Constants.TAB_TEAMS
+                    currentTab = BaseballConstants.TAB_TEAMS
                     updateActiveTabButtons()
                     renderCurrentTab()
                 }
@@ -360,7 +361,7 @@ object AppViewManager : DomBuilder {
                 id = "nav-btn-games"
                 textContent = "Season Dashboard"
                 onClick {
-                    currentTab = Constants.TAB_GAMES
+                    currentTab = BaseballConstants.TAB_GAMES
                     updateActiveTabButtons()
                     renderCurrentTab()
                 }
@@ -372,7 +373,7 @@ object AppViewManager : DomBuilder {
             textContent = "Live Scoring"
             style.setProperty(UiConstants.Css.DISPLAY, if (isSingleGameMode || selectedGameId != null) UiConstants.CssValues.INLINE_BLOCK else UiConstants.CssValues.NONE)
             onClick {
-                currentTab = Constants.TAB_LIVE_SCORER
+                currentTab = BaseballConstants.TAB_LIVE_SCORER
                 updateActiveTabButtons()
                 renderCurrentTab()
             }
@@ -383,7 +384,7 @@ object AppViewManager : DomBuilder {
             textContent = "Box Score"
             style.setProperty(UiConstants.Css.DISPLAY, if (isSingleGameMode || selectedGameId != null) UiConstants.CssValues.INLINE_BLOCK else UiConstants.CssValues.NONE)
             onClick {
-                currentTab = Constants.TAB_BOXSCORE
+                currentTab = BaseballConstants.TAB_BOXSCORE
                 updateActiveTabButtons()
                 renderCurrentTab()
             }
@@ -415,13 +416,13 @@ object AppViewManager : DomBuilder {
         }
 
         val btnActive = when (currentTab) {
-            Constants.TAB_LIVE_SCORER -> btnLive
-            Constants.TAB_BOXSCORE -> btnBoxScore
+            BaseballConstants.TAB_LIVE_SCORER -> btnLive
+            BaseballConstants.TAB_BOXSCORE -> btnBoxScore
             else -> {
                 when (currentTab) {
-                    Constants.TAB_LEAGUES -> document.getElementById("nav-btn-leagues")
-                    Constants.TAB_TEAMS -> document.getElementById("nav-btn-teams")
-                    Constants.TAB_GAMES -> document.getElementById("nav-btn-games")
+                    BaseballConstants.TAB_LEAGUES -> document.getElementById("nav-btn-leagues")
+                    BaseballConstants.TAB_TEAMS -> document.getElementById("nav-btn-teams")
+                    BaseballConstants.TAB_GAMES -> document.getElementById("nav-btn-games")
                     else -> null
                 }
             }
@@ -434,13 +435,13 @@ object AppViewManager : DomBuilder {
         contentArea.innerHTML = ""
 
         when (currentTab) {
-            Constants.TAB_LEAGUES -> renderLeaguesTab(contentArea)
-            Constants.TAB_TEAMS -> renderTeamsTab(contentArea)
-            Constants.TAB_GAMES -> renderSeasonDashboardTab(contentArea)
-            Constants.TAB_LIVE_SCORER -> renderLiveScorerTab(contentArea)
-            Constants.TAB_BOXSCORE -> renderBoxScoreTab(contentArea)
-            Constants.TAB_LOGIN -> renderLoginTab(contentArea)
-            Constants.TAB_REGISTER -> renderRegisterTab(contentArea)
+            BaseballConstants.TAB_LEAGUES -> renderLeaguesTab(contentArea)
+            BaseballConstants.TAB_TEAMS -> renderTeamsTab(contentArea)
+            BaseballConstants.TAB_GAMES -> renderSeasonDashboardTab(contentArea)
+            BaseballConstants.TAB_LIVE_SCORER -> renderLiveScorerTab(contentArea)
+            BaseballConstants.TAB_BOXSCORE -> renderBoxScoreTab(contentArea)
+            BaseballConstants.TAB_LOGIN -> renderLoginTab(contentArea)
+            BaseballConstants.TAB_REGISTER -> renderRegisterTab(contentArea)
         }
     }
 }

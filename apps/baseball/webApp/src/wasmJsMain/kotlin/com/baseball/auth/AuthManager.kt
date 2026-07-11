@@ -1,8 +1,9 @@
 package com.baseball.auth
 
+import com.baseball.BaseballConstants
+
 import com.baseball.api.RegisterRequestDto
 import com.baseball.api
-import com.baseball.Constants
 import kotlinx.browser.window
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -30,7 +31,7 @@ object AuthManager : AuthService {
             val basicAuth = "Basic " + window.btoa("$email:$passwordHash")
             val userResponse = api.getMe(basicAuth)
             
-            window.localStorage.setItem(Constants.KEY_AUTH_TOKEN, basicAuth)
+            window.localStorage.setItem(BaseballConstants.KEY_AUTH_TOKEN, basicAuth)
             
             val session = UserSession(
                 email = userResponse.email,
@@ -41,25 +42,25 @@ object AuthManager : AuthService {
             return session
         } catch (e: Throwable) {
             val msg = e.message ?: ""
-            if (msg.contains(Constants.STATUS_CONNECT, ignoreCase = true) || msg.contains(Constants.STATUS_REFUSED, ignoreCase = true) || msg.contains(Constants.STATUS_NETWORK, ignoreCase = true)) {
+            if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) || msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) || msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)) {
                 throw e
             }
             println("Login failed: ${e.message}")
-            window.localStorage.removeItem(Constants.KEY_AUTH_TOKEN)
+            window.localStorage.removeItem(BaseballConstants.KEY_AUTH_TOKEN)
             return null
         }
      }
      
      override fun logout() {
          currentUserSession = null
-         window.localStorage.removeItem(Constants.KEY_ACTIVE_SESSION)
-         window.localStorage.removeItem(Constants.KEY_AUTH_TOKEN)
+         window.localStorage.removeItem(BaseballConstants.KEY_ACTIVE_SESSION)
+         window.localStorage.removeItem(BaseballConstants.KEY_AUTH_TOKEN)
          window.location.hash = "welcome"
      }
      
      override fun saveSession(session: UserSession) {
          currentUserSession = session
-         window.localStorage.setItem(Constants.KEY_ACTIVE_SESSION, json.encodeToString(UserSession.serializer(), session))
+         window.localStorage.setItem(BaseballConstants.KEY_ACTIVE_SESSION, json.encodeToString(UserSession.serializer(), session))
      }
      
      override fun refreshSession() {
@@ -71,7 +72,7 @@ object AuthManager : AuthService {
      }
      
      override fun loadSession(): Boolean {
-         val sessionJson = window.localStorage.getItem(Constants.KEY_ACTIVE_SESSION) ?: return false
+         val sessionJson = window.localStorage.getItem(BaseballConstants.KEY_ACTIVE_SESSION) ?: return false
          return try {
              val session = json.decodeFromString(UserSession.serializer(), sessionJson)
              if (session.expiresAtMillis > getCurrentTimeMillis()) {
@@ -79,8 +80,8 @@ object AuthManager : AuthService {
                  refreshSession()
                  return true
              } else {
-                 window.localStorage.removeItem(Constants.KEY_ACTIVE_SESSION)
-                 window.localStorage.removeItem(Constants.KEY_AUTH_TOKEN)
+                 window.localStorage.removeItem(BaseballConstants.KEY_ACTIVE_SESSION)
+                 window.localStorage.removeItem(BaseballConstants.KEY_AUTH_TOKEN)
                 false
             }
         } catch (e: Exception) {

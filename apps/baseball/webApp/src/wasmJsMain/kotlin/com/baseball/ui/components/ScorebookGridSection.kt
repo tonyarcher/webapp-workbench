@@ -3,7 +3,6 @@ package com.baseball.ui.components
 import com.baseball.UiConstants
 import com.baseball.BaseballConstants
 
-import com.baseball.Constants
 import com.baseball.models.*
 import com.baseball.game.*
 import com.baseball.ui.getScorebookNotation
@@ -270,7 +269,7 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
     statsHeaders.forEach { sh ->
         trh.appendElement(UiConstants.Html.TH) {
             textContent = sh
-            style.setProperty("border-left", if (sh == Constants.METRIC_AB) "2px solid #5a544a" else "1px solid #9c9384")
+            style.setProperty("border-left", if (sh == BaseballConstants.METRIC_AB) "2px solid #5a544a" else "1px solid #9c9384")
             style.setProperty(UiConstants.Css.WIDTH, "45px")
             style.setProperty(UiConstants.Css.TEXT_ALIGN, "center")
         }
@@ -490,7 +489,7 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
             val endedInning = if (nextEv != null) {
                 nextEv.inning != ev.inning || nextEv.half != ev.half
             } else {
-                val outsOnPlay = if (ev.description.contains(Constants.DESC_DOUBLE_PLAY) || ev.description.contains(Constants.DESC_DP)) 2 
+                val outsOnPlay = if (ev.description.contains(BaseballConstants.DESC_DOUBLE_PLAY) || ev.description.contains(BaseballConstants.DESC_DP)) 2 
                                  else if (ev.eventType in listOf(ScoringEventType.STRIKEOUT, ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.SACRIFICE_FLY, ScoringEventType.FIELDER_CHOICE)) 1 
                                  else 0
                 ev.outsBefore + outsOnPlay >= 3

@@ -1,10 +1,11 @@
 package com.baseball.ui
 
+import com.baseball.BaseballConstants
+
 import com.baseball.UiConstants
 
 import com.baseball.api
 import com.baseball.models.*
-import com.baseball.Constants
 import org.w3c.dom.*
 import kotlinx.browser.document
 
@@ -163,9 +164,9 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                     onClick {
                         selectedGameId = game.id
                         if (game.status == GameStatus.COMPLETED) {
-                            currentTab = Constants.TAB_BOXSCORE
+                            currentTab = BaseballConstants.TAB_BOXSCORE
                         } else {
-                            currentTab = Constants.TAB_LIVE_SCORER
+                            currentTab = BaseballConstants.TAB_LIVE_SCORER
                         }
                         updateActiveTabButtons()
                         renderCurrentTab()

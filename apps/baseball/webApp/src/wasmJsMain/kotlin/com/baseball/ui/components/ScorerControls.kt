@@ -1,8 +1,9 @@
 package com.baseball.ui.components
 
+import com.baseball.BaseballConstants
+
 import com.baseball.UiConstants
 
-import com.baseball.Constants
 import com.baseball.api
 import com.baseball.game.*
 import com.baseball.models.*
@@ -31,7 +32,7 @@ fun renderGameScoringControls(
                 style.setProperty(UiConstants.Css.MARGIN_TOP, "1.5rem")
                 textContent = "View Final Box Score"
                 onClick {
-                    currentTab = Constants.TAB_BOXSCORE
+                    currentTab = BaseballConstants.TAB_BOXSCORE
                     updateActiveTabButtons()
                     renderCurrentTab()
                 }

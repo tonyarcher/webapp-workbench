@@ -4,7 +4,6 @@ import com.baseball.BaseballConstants
 
 import com.baseball.models.*
 import com.baseball.seed.SeedData
-import com.baseball.Constants
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.browser.window
@@ -208,7 +207,7 @@ fun saveLocalState() {
             homeActivePitcherName = localHomeActivePitcherName
         )
         val json = Json.encodeToString(LocalGameState.serializer(), state)
-        window.localStorage.setItem(Constants.KEY_LOCAL_GAME_STATE, json)
+        window.localStorage.setItem(BaseballConstants.KEY_LOCAL_GAME_STATE, json)
     } catch (e: Exception) {
         println("Error saving local state: ${e.message}")
     }
@@ -216,7 +215,7 @@ fun saveLocalState() {
 
 fun loadLocalState(): Boolean {
     try {
-        val json = window.localStorage.getItem(Constants.KEY_LOCAL_GAME_STATE) ?: return false
+        val json = window.localStorage.getItem(BaseballConstants.KEY_LOCAL_GAME_STATE) ?: return false
         val state = Json.decodeFromString(LocalGameState.serializer(), json)
         
         localGame = state.game

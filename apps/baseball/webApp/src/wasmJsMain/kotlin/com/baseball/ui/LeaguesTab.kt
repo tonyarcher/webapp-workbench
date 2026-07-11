@@ -1,10 +1,11 @@
 package com.baseball.ui
 
+import com.baseball.BaseballConstants
+
 import com.baseball.UiConstants
 
 import com.baseball.api
 import com.baseball.models.*
-import com.baseball.Constants
 import org.w3c.dom.*
 
 // LEAGUES AND SEASONS TAB
@@ -134,7 +135,7 @@ internal fun renderLeaguesTab(container: HTMLElement) {
                             textContent = "Go to Dashboard"
                             onClick {
                                 selectedSeasonId = season.id
-                                currentTab = Constants.TAB_GAMES
+                                currentTab = BaseballConstants.TAB_GAMES
                                 updateActiveTabButtons()
                                 renderCurrentTab()
                             }

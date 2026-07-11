@@ -4,7 +4,6 @@ import com.baseball.UiConstants
 
 import com.baseball.api
 import com.baseball.models.*
-import com.baseball.Constants
 import org.w3c.dom.*
 import kotlinx.browser.document
 
