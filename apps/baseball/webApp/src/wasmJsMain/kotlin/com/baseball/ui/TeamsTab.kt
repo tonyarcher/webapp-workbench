@@ -1,5 +1,6 @@
-package com.baseball
+package com.baseball.ui
 
+import com.baseball.api
 import com.baseball.models.*
 import org.w3c.dom.*
 import kotlinx.browser.document
@@ -20,24 +21,24 @@ internal fun renderTeamsTab(container: HTMLElement) {
         if (teamsList.isEmpty()) {
             teamsListDiv.appendElement("p") {
                 textContent = "No teams created yet."
-                style.color = "var(--text-secondary)"
+                style.setProperty("color", "var(--text-secondary)")
             }
         } else {
             teamsList.forEach { team ->
                 teamsListDiv.appendElement("div", "game-card") {
-                    style.marginBottom = "0.75rem"
-                    style.display = "flex"
-                    style.justifyContent = "space-between"
-                    style.alignItems = "center"
+                    style.setProperty("margin-bottom", "0.75rem")
+                    style.setProperty("display", "flex")
+                    style.setProperty("justify-content", "space-between")
+                    style.setProperty("align-items", "center")
                     
-                    val info = appendElement("div") {
-                        val title = appendElement("div") {
-                            style.fontWeight = "700"
+                    appendElement("div") {
+                        appendElement("div") {
+                            style.setProperty("font-weight", "700")
                             textContent = "${team.city} ${team.name}"
                         }
-                        val abb = appendElement("div") {
-                            style.fontSize = "0.85rem"
-                            style.color = "var(--text-secondary)"
+                        appendElement("div") {
+                            style.setProperty("font-size", "0.85rem")
+                            style.setProperty("color", "var(--text-secondary)")
                             textContent = team.abbreviation
                         }
                     }
@@ -62,7 +63,7 @@ internal fun renderTeamsTab(container: HTMLElement) {
     
     // Create Team Form
     val createTeamCard = rightCol.appendElement("div", "card") {
-        style.marginBottom = "2rem"
+        style.setProperty("margin-bottom", "2rem")
     }
     createTeamCard.appendElement("h2") { textContent = "Add Team" }
     val tForm = createTeamCard.appendElement("form")
@@ -108,7 +109,7 @@ internal fun renderTeamsTab(container: HTMLElement) {
         rosterCard.appendElement("h2") { textContent = "${team?.city} ${team?.name} Roster" }
         
         val rosterDiv = rosterCard.appendElement("div") {
-            style.marginBottom = "1.5rem"
+            style.setProperty("margin-bottom", "1.5rem")
         }
         
         fun refreshRoster() {
@@ -118,7 +119,7 @@ internal fun renderTeamsTab(container: HTMLElement) {
                 if (roster.isEmpty()) {
                     rosterDiv.appendElement("p") {
                         textContent = "No players on this roster."
-                        style.color = "var(--text-secondary)"
+                        style.setProperty("color", "var(--text-secondary)")
                     }
                 } else {
                     val tableContainer = rosterDiv.appendElement("div", "table-container")
@@ -133,9 +134,9 @@ internal fun renderTeamsTab(container: HTMLElement) {
                     val tbody = table.appendElement("tbody")
                     roster.forEach { p ->
                         val trd = tbody.appendElement("tr")
-                        trd.appendElement("td") { textContent = p.jerseyNumber.toString(); style.fontWeight = "700" }
+                        trd.appendElement("td") { textContent = p.jerseyNumber.toString(); style.setProperty("font-weight", "700") }
                         trd.appendElement("td") { textContent = p.name }
-                        trd.appendElement("td") { textContent = p.position; style.color = "var(--accent-green)" }
+                        trd.appendElement("td") { textContent = p.position; style.setProperty("color", "var(--accent-green)") }
                         trd.appendElement("td") { textContent = "${p.battingHand}/${p.throwingHand}" }
                     }
                 }
@@ -172,7 +173,7 @@ internal fun renderTeamsTab(container: HTMLElement) {
         val pfg4 = pForm.appendElement("div", "form-group")
         pfg4.appendElement("label") { textContent = "Batting / Throwing Hand" }
         val pfg4Row = pfg4.appendElement("div") {
-            style.display = "flex"
+            style.setProperty("display", "flex")
             style.setProperty("gap", "1rem")
         }
         val selectBat = pfg4Row.appendElement("select", "form-control") as HTMLSelectElement

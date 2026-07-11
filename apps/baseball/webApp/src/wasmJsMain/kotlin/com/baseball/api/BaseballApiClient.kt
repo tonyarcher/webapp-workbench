@@ -7,9 +7,27 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.client.plugins.defaultRequest
+import kotlinx.browser.window
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-class BaseballApiClient {
+@Serializable
+data class RegisterRequestDto(
+    val email: String,
+    val password: String,
+    val firstName: String,
+    val lastName: String
+)
+
+@Serializable
+data class UserResponseDto(
+    val email: String,
+    val firstName: String,
+    val lastName: String
+)
+
+class BaseballApiClient : BaseballApi {
     private val client = HttpClient {
         install(ContentNegotiation) {
             json(Json {
@@ -17,89 +35,112 @@ class BaseballApiClient {
                 isLenient = true
             })
         }
+        defaultRequest {
+            val token = window.localStorage.getItem("auth_token")
+            if (!token.isNullOrEmpty()) {
+                header("Authorization", token)
+            }
+        }
     }
 
     private val baseUrl = "http://localhost:8080"
 
-    suspend fun getLeagues(): List<League> {
+    override suspend fun register(request: RegisterRequestDto): UserResponseDto {
+        return client.post("$baseUrl/api/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+    }
+
+    override suspend fun getMe(basicAuthToken: String): UserResponseDto {
+        return client.get("$baseUrl/api/auth/me") {
+            header("Authorization", basicAuthToken)
+        }.body()
+    }
+
+    override suspend fun getLeagues(): List<League> {
         return client.get("$baseUrl/api/leagues").body()
     }
 
-    suspend fun createLeague(league: League): League {
+    override suspend fun createLeague(league: League): League {
         return client.post("$baseUrl/api/leagues") {
             contentType(ContentType.Application.Json)
             setBody(league)
         }.body()
     }
 
-    suspend fun getSeasons(leagueId: Long): List<Season> {
+    override suspend fun getSeasons(leagueId: Long): List<Season> {
         return client.get("$baseUrl/api/seasons/by-league/$leagueId").body()
     }
 
-    suspend fun createSeason(season: Season): Season {
+    override suspend fun createSeason(season: Season): Season {
         return client.post("$baseUrl/api/seasons") {
             contentType(ContentType.Application.Json)
             setBody(season)
         }.body()
     }
 
-    suspend fun getSeasonDashboard(seasonId: Long): SeasonDashboard {
+    override suspend fun getSeasonDashboard(seasonId: Long): SeasonDashboard {
         return client.get("$baseUrl/api/seasons/$seasonId/dashboard").body()
     }
 
-    suspend fun generateSchedule(seasonId: Long): List<Game> {
+    override suspend fun generateSchedule(seasonId: Long): List<Game> {
         return client.post("$baseUrl/api/seasons/$seasonId/generate-schedule").body()
     }
 
-    suspend fun getTeams(): List<Team> {
+    override suspend fun getTeams(): List<Team> {
         return client.get("$baseUrl/api/teams").body()
     }
 
-    suspend fun createTeam(team: Team): Team {
+    override suspend fun createTeam(team: Team): Team {
         return client.post("$baseUrl/api/teams") {
             contentType(ContentType.Application.Json)
             setBody(team)
         }.body()
     }
 
-    suspend fun getTeamRoster(teamId: Long): List<Player> {
+    override suspend fun getTeamRoster(teamId: Long): List<Player> {
         return client.get("$baseUrl/api/teams/$teamId/roster").body()
     }
 
-    suspend fun getPlayers(): List<Player> {
+    override suspend fun getPlayers(): List<Player> {
         return client.get("$baseUrl/api/players").body()
     }
 
-    suspend fun createPlayer(player: Player): Player {
+    override suspend fun createPlayer(player: Player): Player {
         return client.post("$baseUrl/api/players") {
             contentType(ContentType.Application.Json)
             setBody(player)
         }.body()
     }
 
-    suspend fun getGame(gameId: Long): Game {
+    override suspend fun getGames(seasonId: Long): List<Game> {
+        return client.get("$baseUrl/api/games/by-season/$seasonId").body()
+    }
+
+    override suspend fun getGame(gameId: Long): Game {
         return client.get("$baseUrl/api/games/$gameId").body()
     }
 
-    suspend fun createGame(game: Game): Game {
+    override suspend fun createGame(game: Game): Game {
         return client.post("$baseUrl/api/games") {
             contentType(ContentType.Application.Json)
             setBody(game)
         }.body()
     }
 
-    suspend fun recordGameEvent(gameId: Long, request: ScoringEventRequest): Game {
+    override suspend fun recordGameEvent(gameId: Long, request: ScoringEventRequest): Game {
         return client.post("$baseUrl/api/games/$gameId/event") {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
     }
 
-    suspend fun getGameBoxScore(gameId: Long): BoxScore {
+    override suspend fun getGameBoxScore(gameId: Long): BoxScore {
         return client.get("$baseUrl/api/games/$gameId/boxscore").body()
     }
 
-    suspend fun getGameEvents(gameId: Long): List<PlayEvent> {
+    override suspend fun getGameEvents(gameId: Long): List<PlayEvent> {
         return client.get("$baseUrl/api/games/$gameId/events").body()
     }
 }

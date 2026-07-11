@@ -252,3 +252,16 @@ class PlayerGamePitchingStatsEntity(
         homeRunsAllowed = homeRunsAllowed
     )
 }
+
+@Entity
+@Table(name = "users")
+class UserEntity(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
+    @Column(unique = true, nullable = false)
+    var email: String = "",
+    @Column(nullable = false)
+    var passwordHash: String = "",
+    var firstName: String = "",
+    var lastName: String = ""
+)

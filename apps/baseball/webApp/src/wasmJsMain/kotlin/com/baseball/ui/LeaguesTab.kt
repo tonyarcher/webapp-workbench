@@ -1,5 +1,6 @@
-package com.baseball
+package com.baseball.ui
 
+import com.baseball.api
 import com.baseball.models.*
 import org.w3c.dom.*
 
@@ -20,26 +21,26 @@ internal fun renderLeaguesTab(container: HTMLElement) {
         if (leaguesList.isEmpty()) {
             leaguesListDiv.appendElement("p") {
                 textContent = "No leagues found. Create one to get started!"
-                style.color = "var(--text-secondary)"
+                style.setProperty("color", "var(--text-secondary)")
             }
         } else {
             leaguesList.forEach { league ->
                 val card = leaguesListDiv.appendElement("div", "game-card") {
-                    style.marginBottom = "0.75rem"
-                    style.display = "flex"
-                    style.flexDirection = "column"
-                    style.alignItems = "flex-start"
+                    style.setProperty("margin-bottom", "0.75rem")
+                    style.setProperty("display", "flex")
+                    style.setProperty("flex-direction", "column")
+                    style.setProperty("align-items", "flex-start")
                     
-                    val titleRow = appendElement("div") {
-                        style.fontWeight = "700"
-                        style.fontSize = "1.1rem"
+                    appendElement("div") {
+                        style.setProperty("font-weight", "700")
+                        style.setProperty("font-size", "1.1rem")
                         textContent = league.name
                     }
                     
-                    val selectBtn = appendElement("button", "btn btn-secondary") {
-                        style.marginTop = "0.5rem"
-                        style.padding = "0.25rem 0.75rem"
-                        style.fontSize = "0.85rem"
+                    appendElement("button", "btn btn-secondary") {
+                        style.setProperty("margin-top", "0.5rem")
+                        style.setProperty("padding", "0.25rem 0.75rem")
+                        style.setProperty("font-size", "0.85rem")
                         textContent = if (selectedLeagueId == league.id) "Active League" else "Select League"
                         if (selectedLeagueId == league.id) {
                             classList.add("active")
@@ -65,7 +66,7 @@ internal fun renderLeaguesTab(container: HTMLElement) {
     
     // Form to create league
     val createLeagueCard = rightCol.appendElement("div", "card") {
-        style.marginBottom = "2rem"
+        style.setProperty("margin-bottom", "2rem")
     }
     createLeagueCard.appendElement("h2") { textContent = "Create New League" }
     
@@ -100,7 +101,7 @@ internal fun renderLeaguesTab(container: HTMLElement) {
         seasonsCard.appendElement("h2") { textContent = "Seasons in Selected League" }
         
         val seasonsListDiv = seasonsCard.appendElement("div") {
-            style.marginBottom = "1.5rem"
+            style.setProperty("margin-bottom", "1.5rem")
         }
         
         fun refreshSeasonsUI() {
@@ -108,25 +109,25 @@ internal fun renderLeaguesTab(container: HTMLElement) {
             if (seasonsList.isEmpty()) {
                 seasonsListDiv.appendElement("p") {
                     textContent = "No seasons in this league yet."
-                    style.color = "var(--text-secondary)"
+                    style.setProperty("color", "var(--text-secondary)")
                 }
             } else {
                 seasonsList.forEach { season ->
                     val seasonItem = seasonsListDiv.appendElement("div", "game-card") {
-                        style.marginBottom = "0.5rem"
-                        style.padding = "0.75rem"
-                        style.display = "flex"
-                        style.justifyContent = "space-between"
-                        style.alignItems = "center"
+                        style.setProperty("margin-bottom", "0.5rem")
+                        style.setProperty("padding", "0.75rem")
+                        style.setProperty("display", "flex")
+                        style.setProperty("justify-content", "space-between")
+                        style.setProperty("align-items", "center")
                         
                         appendElement("span") {
                             textContent = "${season.name} (${season.year})"
-                            style.fontWeight = "600"
+                            style.setProperty("font-weight", "600")
                         }
                         
                         appendElement("button", "btn btn-secondary") {
-                            style.padding = "0.25rem 0.5rem"
-                            style.fontSize = "0.8rem"
+                            style.setProperty("padding", "0.25rem 0.5rem")
+                            style.setProperty("font-size", "0.8rem")
                             textContent = "Go to Dashboard"
                             onClick {
                                 selectedSeasonId = season.id

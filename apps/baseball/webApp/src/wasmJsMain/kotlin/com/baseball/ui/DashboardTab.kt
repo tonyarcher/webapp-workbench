@@ -1,5 +1,6 @@
-package com.baseball
+package com.baseball.ui
 
+import com.baseball.api
 import com.baseball.models.*
 import org.w3c.dom.*
 import kotlinx.browser.document
@@ -10,13 +11,13 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
 
     // Dropdown selectors for League & Season
     val selectorCard = container.appendElement("div", "card") {
-        style.marginBottom = "2rem"
-        style.display = "flex"
+        style.setProperty("margin-bottom", "2rem")
+        style.setProperty("display", "flex")
         style.setProperty("gap", "1.5rem")
-        style.alignItems = "flex-end"
+        style.setProperty("align-items", "flex-end")
     }
 
-    val lg1 = selectorCard.appendElement("div", "form-group") { style.marginBottom = "0"; style.flex = "1" }
+    val lg1 = selectorCard.appendElement("div", "form-group") { style.setProperty("margin-bottom", "0"); style.setProperty("flex", "1") }
     lg1.appendElement("label") { textContent = "Active League" }
     val selectL = lg1.appendElement("select", "form-control") as HTMLSelectElement
     leaguesList.forEach { league ->
@@ -27,7 +28,7 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
         selectL.appendChild(opt)
     }
 
-    val lg2 = selectorCard.appendElement("div", "form-group") { style.marginBottom = "0"; style.flex = "1" }
+    val lg2 = selectorCard.appendElement("div", "form-group") { style.setProperty("margin-bottom", "0"); style.setProperty("flex", "1") }
     lg2.appendElement("label") { textContent = "Active Season" }
     val selectS = lg2.appendElement("select", "form-control") as HTMLSelectElement
     
@@ -64,11 +65,11 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
 
     if (selectedSeasonId == null) {
         container.appendElement("div", "card") {
-            style.textAlign = "center"
-            style.padding = "3rem"
+            style.setProperty("text-align", "center")
+            style.setProperty("padding", "3rem")
             appendElement("p") {
                 textContent = "Please select a league and season above, then click Load Season."
-                style.color = "var(--text-secondary)"
+                style.setProperty("color", "var(--text-secondary)")
             }
         }
         return
@@ -99,7 +100,7 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
         val tbody = table.appendElement("tbody")
         dash.standings.forEach { row ->
             val trd = tbody.appendElement("tr")
-            trd.appendElement("td") { textContent = row.teamName; style.fontWeight = "700" }
+            trd.appendElement("td") { textContent = row.teamName; style.setProperty("font-weight", "700") }
             trd.appendElement("td") { textContent = row.gamesPlayed.toString() }
             trd.appendElement("td") { textContent = row.wins.toString() }
             trd.appendElement("td") { textContent = row.losses.toString() }
@@ -120,10 +121,10 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
         val rightCol = grid.appendElement("div")
         
         val actionsCard = rightCol.appendElement("div", "card") {
-            style.marginBottom = "1.5rem"
-            style.display = "flex"
-            style.justifyContent = "space-between"
-            style.alignItems = "center"
+            style.setProperty("margin-bottom", "1.5rem")
+            style.setProperty("display", "flex")
+            style.setProperty("justify-content", "space-between")
+            style.setProperty("align-items", "center")
         }
         actionsCard.appendElement("h3") { textContent = "Schedule Manager" }
         
@@ -133,8 +134,8 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
         if (dash.games.isNotEmpty()) {
             generateBtn.setAttribute("disabled", "true")
             generateBtn.className = "btn btn-secondary"
-            generateBtn.style.opacity = "0.5"
-            generateBtn.style.cursor = "not-allowed"
+            generateBtn.style.setProperty("opacity", "0.5")
+            generateBtn.style.setProperty("cursor", "not-allowed")
         } else {
             generateBtn.onClick {
                 launch {
@@ -151,7 +152,7 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
         if (dash.games.isEmpty()) {
             gamesListDiv.appendElement("p") {
                 textContent = "No games scheduled yet. Generate a schedule above!"
-                style.color = "var(--text-secondary)"
+                style.setProperty("color", "var(--text-secondary)")
             }
         } else {
             dash.games.forEach { game ->
@@ -185,8 +186,8 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                     meta.appendElement("span", badgeClass) { textContent = game.status.name }
                     meta.appendElement("span") {
                         textContent = game.date
-                        style.fontSize = "0.85rem"
-                        style.color = "var(--text-secondary)"
+                        style.setProperty("font-size", "0.85rem")
+                        style.setProperty("color", "var(--text-secondary)")
                     }
                 }
             }

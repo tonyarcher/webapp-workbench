@@ -1,14 +1,19 @@
-package com.baseball
+package com.baseball.ui
 
+import com.baseball.api
+import com.baseball.game.localGame
+import com.baseball.game.localBoxScore
+import com.baseball.game.localEvents
 import com.baseball.models.*
+import com.baseball.ui.components.renderScorebookView
 import org.w3c.dom.*
 
 // BOX SCORE TAB (COMPLETED GAMES DETAIL)
 internal fun renderBoxScoreTab(container: HTMLElement) {
     if (!isSingleGameMode && selectedGameId == null) {
         container.appendElement("div", "card") {
-            style.textAlign = "center"
-            style.padding = "3rem"
+            style.setProperty("text-align", "center")
+            style.setProperty("padding", "3rem")
             appendElement("p") { textContent = "No game selected." }
         }
         return
@@ -37,8 +42,8 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
         }
         mainCard.appendElement("p") {
             textContent = "Status: ${game.status.name} | Date: ${game.date}"
-            style.color = "var(--text-secondary)"
-            style.marginBottom = "1.5rem"
+            style.setProperty("color", "var(--text-secondary)")
+            style.setProperty("margin-bottom", "1.5rem")
         }
 
         mainCard.appendElement("button", "btn btn-secondary") {
@@ -50,38 +55,85 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
             }
         }
 
-        // Line Score
-        val lsSection = container.appendElement("div", "card") { style.marginTop = "1.5rem" }
-        lsSection.appendElement("h3") { textContent = "Line Score" }
-        renderLineScoreTable(lsSection, boxScore.lineScore, game)
-
-        // Stats grid
-        val statsGrid = container.appendElement("div", "dashboard-grid") { style.marginTop = "1.5rem" }
-        
-        val awayCard = statsGrid.appendElement("div", "card")
-        awayCard.appendElement("h3") { textContent = "${game.awayTeam.name} Batting" }
-        renderBattingTable(awayCard, boxScore.awayBatting)
-        awayCard.appendElement("h3") { textContent = "${game.awayTeam.name} Pitching"; style.marginTop = "1.5rem" }
-        renderPitchingTable(awayCard, boxScore.awayPitching)
-
-        val homeCard = statsGrid.appendElement("div", "card")
-        homeCard.appendElement("h3") { textContent = "${game.homeTeam.name} Batting" }
-        renderBattingTable(homeCard, boxScore.homeBatting)
-        homeCard.appendElement("h3") { textContent = "${game.homeTeam.name} Pitching"; style.marginTop = "1.5rem" }
-        renderPitchingTable(homeCard, boxScore.homePitching)
-
-        // Log history
-        val logCard = container.appendElement("div", "card") { style.marginTop = "1.5rem" }
-        logCard.appendElement("h3") { textContent = "Game Log History" }
-        val listLog = logCard.appendElement("div", "event-log") {
-            style.maxHeight = "350px"
+        // Toggle buttons for Scorebook vs Traditional Stats
+        val viewToggleRow = container.appendElement("div") {
+            style.setProperty("display", "flex")
+            style.setProperty("gap", "0.5rem")
+            style.setProperty("margin-top", "1.5rem")
+            style.setProperty("margin-bottom", "1rem")
         }
-        events.forEach { ev ->
-            listLog.appendElement("div", "log-item") {
-                appendElement("span", "log-desc") { textContent = ev.description }
-                appendElement("span", "log-inning") { textContent = "${ev.half.name.substring(0,3)} ${ev.inning}" }
+
+        val contentContainer = container.appendElement("div") {
+            id = "boxscore-content-view"
+        }
+
+        fun drawTraditionalView() {
+            contentContainer.innerHTML = ""
+            // Line Score
+            val lsSection = contentContainer.appendElement("div", "card")
+            lsSection.appendElement("h3") { textContent = "Line Score" }
+            renderLineScoreTable(lsSection, boxScore.lineScore, game)
+
+            // Stats grid
+            val statsGrid = contentContainer.appendElement("div", "dashboard-grid") { style.setProperty("margin-top", "1.5rem") }
+            
+            val awayCard = statsGrid.appendElement("div", "card")
+            awayCard.appendElement("h3") { textContent = "${game.awayTeam.name} Batting" }
+            renderBattingTable(awayCard, boxScore.awayBatting)
+            awayCard.appendElement("h3") { textContent = "${game.awayTeam.name} Pitching"; style.setProperty("margin-top", "1.5rem") }
+            renderPitchingTable(awayCard, boxScore.awayPitching)
+
+            val homeCard = statsGrid.appendElement("div", "card")
+            homeCard.appendElement("h3") { textContent = "${game.homeTeam.name} Batting" }
+            renderBattingTable(homeCard, boxScore.homeBatting)
+            homeCard.appendElement("h3") { textContent = "${game.homeTeam.name} Pitching"; style.setProperty("margin-top", "1.5rem") }
+            renderPitchingTable(homeCard, boxScore.homePitching)
+
+            // Log history
+            val logCard = contentContainer.appendElement("div", "card") { style.setProperty("margin-top", "1.5rem") }
+            logCard.appendElement("h3") { textContent = "Game Log History" }
+            val listLog = logCard.appendElement("div", "event-log") {
+                style.setProperty("max-height", "350px")
+            }
+            events.forEach { ev ->
+                listLog.appendElement("div", "log-item") {
+                    appendElement("span", "log-desc") { textContent = ev.description }
+                    appendElement("span", "log-inning") { textContent = "${ev.half.name.substring(0,3)} ${ev.inning}" }
+                }
             }
         }
+
+        fun drawScorebookView() {
+            contentContainer.innerHTML = ""
+            renderScorebookView(contentContainer, game, boxScore, events)
+        }
+
+        val btnScorebook = viewToggleRow.appendElement("button", "btn") {
+            textContent = "Visual Scorebook"
+            onClick {
+                drawScorebookView()
+                classList.add("btn-primary")
+                classList.remove("btn-secondary")
+                val other = viewToggleRow.children.item(1) as? HTMLButtonElement
+                other?.classList?.add("btn-secondary")
+                other?.classList?.remove("btn-primary")
+            }
+        }
+        btnScorebook.classList.add("btn-primary")
+
+        val btnTraditional = viewToggleRow.appendElement("button", "btn btn-secondary") {
+            textContent = "Traditional Stats"
+            onClick {
+                drawTraditionalView()
+                classList.add("btn-primary")
+                classList.remove("btn-secondary")
+                btnScorebook.classList.add("btn-secondary")
+                btnScorebook.classList.remove("btn-primary")
+            }
+        }
+
+        // Initial default view
+        drawScorebookView()
     }
 }
 
@@ -157,13 +209,13 @@ internal fun renderBattingTable(parent: HTMLElement, list: List<PlayerBattingSta
         trd.appendElement("td") { 
             setAttribute("colspan", "8")
             textContent = "No batting stats recorded yet."
-            style.color = "var(--text-secondary)"
-            style.textAlign = "center"
+            style.setProperty("color", "var(--text-secondary)")
+            style.setProperty("text-align", "center")
         }
     } else {
         list.forEach { s ->
             val trd = tbody.appendElement("tr")
-            trd.appendElement("td") { textContent = "${s.playerName} (${s.position})"; style.fontWeight = "700" }
+            trd.appendElement("td") { textContent = "${s.playerName} (${s.position})"; style.setProperty("font-weight", "700") }
             trd.appendElement("td") { textContent = s.atBats.toString() }
             trd.appendElement("td") { textContent = s.runs.toString() }
             trd.appendElement("td") { textContent = s.hits.toString() }
@@ -195,15 +247,14 @@ internal fun renderPitchingTable(parent: HTMLElement, list: List<PlayerPitchingS
         trd.appendElement("td") { 
             setAttribute("colspan", "8")
             textContent = "No pitching stats recorded yet."
-            style.color = "var(--text-secondary)"
-            style.textAlign = "center"
+            style.setProperty("color", "var(--text-secondary)")
+            style.setProperty("text-align", "center")
         }
     } else {
         list.forEach { s ->
             val trd = tbody.appendElement("tr")
-            trd.appendElement("td") { textContent = s.playerName; style.fontWeight = "700" }
+            trd.appendElement("td") { textContent = s.playerName; style.setProperty("font-weight", "700") }
             
-            // Format IP thirds. E.g. 10 is 3.1 IP.
             val whole = s.inningsPitchedThirds / 3
             val rem = s.inningsPitchedThirds % 3
             val ipStr = "$whole.$rem"

@@ -187,7 +187,6 @@ class GameScoringService(
                 ScoringEventType.SACRIFICE_FLY -> {
                     // No at-bat, but could lead to RBI
                 }
-                else -> {}
             }
 
             if (outsAdded > 0) {

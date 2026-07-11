@@ -47,3 +47,8 @@ interface PlayerGamePitchingStatsRepository : JpaRepository<PlayerGamePitchingSt
     fun findAllByGameId(gameId: Long): List<PlayerGamePitchingStatsEntity>
     fun findByGameIdAndPlayerId(gameId: Long, playerId: Long): PlayerGamePitchingStatsEntity?
 }
+
+@Repository
+interface UserRepository : JpaRepository<UserEntity, Long> {
+    fun findByEmail(email: String): UserEntity?
+}
