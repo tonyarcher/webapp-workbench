@@ -59,9 +59,4 @@ object Constants {
     const val STATUS_BAD_REQUEST = BaseballConstants.STATUS_BAD_REQUEST
 
     // Delegated sub-objects to UiConstants and BaseballConstants
-    val Html = UiConstants.Html
-    val Css = UiConstants.Css
-    val CssValues = UiConstants.CssValues
-    val Classes = UiConstants.Classes
-    val Positions = BaseballConstants.Positions
 }

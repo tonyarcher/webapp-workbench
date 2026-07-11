@@ -1,5 +1,7 @@
 package com.baseball.ui
 
+import com.baseball.UiConstants
+
 import com.baseball.api
 import com.baseball.authService
 import com.baseball.gameService
@@ -151,60 +153,60 @@ object AppViewManager : DomBuilder {
     }
 
     fun renderWelcomeScreen(container: HTMLElement) {
-        val welcome = container.appendElement(Constants.Html.DIV, "welcome-container")
+        val welcome = container.appendElement(UiConstants.Html.DIV, "welcome-container")
         
         val session = currentUserSession
-        val welcomeHeader = welcome.appendElement(Constants.Html.DIV) {
-            style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
-            style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.FLEX_END)
-            style.setProperty(Constants.Css.WIDTH, "100%")
-            style.setProperty(Constants.Css.MARGIN_BOTTOM, "1rem")
+        val welcomeHeader = welcome.appendElement(UiConstants.Html.DIV) {
+            style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+            style.setProperty(UiConstants.Css.JUSTIFY_CONTENT, UiConstants.CssValues.FLEX_END)
+            style.setProperty(UiConstants.Css.WIDTH, "100%")
+            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
         }
         if (session != null) {
-            welcomeHeader.appendElement(Constants.Html.SPAN) {
+            welcomeHeader.appendElement(UiConstants.Html.SPAN) {
                 textContent = "Logged in as ${session.firstName} "
-                style.setProperty(Constants.Css.COLOR, "var(--accent-yellow)")
-                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
-                style.setProperty(Constants.Css.MARGIN_RIGHT, "1rem")
+                style.setProperty(UiConstants.Css.COLOR, "var(--accent-yellow)")
+                style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                style.setProperty(UiConstants.Css.MARGIN_RIGHT, "1rem")
             }
-            welcomeHeader.appendElement(Constants.Html.A) {
+            welcomeHeader.appendElement(UiConstants.Html.A) {
                 textContent = "Log Out"
-                style.setProperty(Constants.Css.COLOR, "var(--accent-red)")
-                style.setProperty(Constants.Css.CURSOR, Constants.CssValues.POINTER)
-                style.setProperty(Constants.Css.TEXT_DECORATION, Constants.CssValues.UNDERLINE)
+                style.setProperty(UiConstants.Css.COLOR, "var(--accent-red)")
+                style.setProperty(UiConstants.Css.CURSOR, UiConstants.CssValues.POINTER)
+                style.setProperty(UiConstants.Css.TEXT_DECORATION, UiConstants.CssValues.UNDERLINE)
                 onClick {
                     authService.logout()
                 }
             }
         } else {
-            welcomeHeader.appendElement(Constants.Html.A) {
+            welcomeHeader.appendElement(UiConstants.Html.A) {
                 textContent = "Log In / Sign Up"
-                style.setProperty(Constants.Css.COLOR, "var(--accent-yellow)")
-                style.setProperty(Constants.Css.CURSOR, Constants.CssValues.POINTER)
-                style.setProperty(Constants.Css.TEXT_DECORATION, Constants.CssValues.UNDERLINE)
+                style.setProperty(UiConstants.Css.COLOR, "var(--accent-yellow)")
+                style.setProperty(UiConstants.Css.CURSOR, UiConstants.CssValues.POINTER)
+                style.setProperty(UiConstants.Css.TEXT_DECORATION, UiConstants.CssValues.UNDERLINE)
                 onClick {
                     window.location.hash = "login"
                 }
             }
         }
 
-        welcome.appendElement(Constants.Html.DIV, "welcome-logo") {
+        welcome.appendElement(UiConstants.Html.DIV, "welcome-logo") {
             innerHTML = "<span>GRAND SLAM</span> BASEBALL TRACKER"
         }
         
-        welcome.appendElement(Constants.Html.P, "welcome-subtitle") {
+        welcome.appendElement(UiConstants.Html.P, "welcome-subtitle") {
             textContent = "Exhibition Game Mode (Offline) & Full League Season Mode (Online)"
         }
         
         if (serverConnectionError != null) {
-            welcome.appendElement(Constants.Html.DIV, "server-error-banner") {
+            welcome.appendElement(UiConstants.Html.DIV, "server-error-banner") {
                 textContent = serverConnectionError!!
             }
         }
         
-        val grid = welcome.appendElement(Constants.Html.DIV, "mode-grid")
+        val grid = welcome.appendElement(UiConstants.Html.DIV, "mode-grid")
         
-        val cardExhibition = grid.appendElement(Constants.Html.DIV, "mode-card offline") {
+        val cardExhibition = grid.appendElement(UiConstants.Html.DIV, "mode-card offline") {
             onClick {
                 serverConnectionError = null
                 isWelcomeScreen = false
@@ -213,16 +215,16 @@ object AppViewManager : DomBuilder {
                 window.location.hash = Constants.TAB_LIVE_SCORER
             }
         }
-        cardExhibition.appendElement(Constants.Html.DIV, "mode-icon") { textContent = "⚾" }
-        cardExhibition.appendElement(Constants.Html.DIV, "mode-title") { textContent = "Single Game Mode" }
-        cardExhibition.appendElement(Constants.Html.DIV, "mode-desc") {
+        cardExhibition.appendElement(UiConstants.Html.DIV, "mode-icon") { textContent = "⚾" }
+        cardExhibition.appendElement(UiConstants.Html.DIV, "mode-title") { textContent = "Single Game Mode" }
+        cardExhibition.appendElement(UiConstants.Html.DIV, "mode-desc") {
             textContent = "Play or score a local exhibition game between Chicago and St. Louis. Runs entirely in your browser with no server connection required."
         }
-        val statusLocal = cardExhibition.appendElement(Constants.Html.DIV, "server-status")
-        statusLocal.appendElement(Constants.Html.SPAN, "status-dot green")
-        statusLocal.appendElement(Constants.Html.SPAN, "status-text online") { textContent = "Client-Side Only" }
+        val statusLocal = cardExhibition.appendElement(UiConstants.Html.DIV, "server-status")
+        statusLocal.appendElement(UiConstants.Html.SPAN, "status-dot green")
+        statusLocal.appendElement(UiConstants.Html.SPAN, "status-text online") { textContent = "Client-Side Only" }
 
-        val cardSeason = grid.appendElement(Constants.Html.DIV, "mode-card online") {
+        val cardSeason = grid.appendElement(UiConstants.Html.DIV, "mode-card online") {
             onClick {
                 serverConnectionError = null
                 launch {
@@ -250,15 +252,15 @@ object AppViewManager : DomBuilder {
                 }
             }
         }
-        cardSeason.appendElement(Constants.Html.DIV, "mode-icon") { textContent = "🏆" }
-        cardSeason.appendElement(Constants.Html.DIV, "mode-title") { textContent = "League & Season Mode" }
-        cardSeason.appendElement(Constants.Html.DIV, "mode-desc") {
+        cardSeason.appendElement(UiConstants.Html.DIV, "mode-icon") { textContent = "🏆" }
+        cardSeason.appendElement(UiConstants.Html.DIV, "mode-title") { textContent = "League & Season Mode" }
+        cardSeason.appendElement(UiConstants.Html.DIV, "mode-desc") {
             textContent = "Manage complete baseball leagues, schedule round-robin seasons, track standings, and record live games backed by your database server."
         }
         
-        val statusServer = cardSeason.appendElement(Constants.Html.DIV, "server-status")
-        val dot = statusServer.appendElement(Constants.Html.SPAN, "status-dot")
-        val text = statusServer.appendElement(Constants.Html.SPAN, "status-text")
+        val statusServer = cardSeason.appendElement(UiConstants.Html.DIV, "server-status")
+        val dot = statusServer.appendElement(UiConstants.Html.SPAN, "status-dot")
+        val text = statusServer.appendElement(UiConstants.Html.SPAN, "status-text")
         
         if (serverOnline) {
             dot.className = "status-dot green"
@@ -280,11 +282,11 @@ object AppViewManager : DomBuilder {
             return
         }
 
-        val header = app.appendElement(Constants.Html.HEADER)
-        val headerContainer = header.appendElement(Constants.Html.DIV, "header-container")
+        val header = app.appendElement(UiConstants.Html.HEADER)
+        val headerContainer = header.appendElement(UiConstants.Html.DIV, "header-container")
         
-        val logo = headerContainer.appendElement(Constants.Html.DIV, "logo") {
-            style.setProperty(Constants.Css.CURSOR, Constants.CssValues.POINTER)
+        val logo = headerContainer.appendElement(UiConstants.Html.DIV, "logo") {
+            style.setProperty(UiConstants.Css.CURSOR, UiConstants.CssValues.POINTER)
             onClick {
                 goBackToWelcome()
             }
@@ -293,40 +295,40 @@ object AppViewManager : DomBuilder {
         
         val userSession = currentUserSession
         if (userSession != null) {
-            val userDiv = headerContainer.appendElement(Constants.Html.DIV) {
-                style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
-                style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
-                style.setProperty(Constants.Css.GAP, "1rem")
-                style.setProperty(Constants.Css.FONT_SIZE, "0.9rem")
-                style.setProperty(Constants.Css.COLOR, "var(--text-secondary)")
+            val userDiv = headerContainer.appendElement(UiConstants.Html.DIV) {
+                style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                style.setProperty(UiConstants.Css.ALIGN_ITEMS, UiConstants.CssValues.CENTER)
+                style.setProperty(UiConstants.Css.GAP, "1rem")
+                style.setProperty(UiConstants.Css.FONT_SIZE, "0.9rem")
+                style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
             }
-            userDiv.appendElement(Constants.Html.SPAN) {
+            userDiv.appendElement(UiConstants.Html.SPAN) {
                 textContent = "Hello, ${userSession.firstName}!"
-                style.setProperty(Constants.Css.FONT_WEIGHT, "600")
-                style.setProperty(Constants.Css.COLOR, "var(--accent-yellow)")
+                style.setProperty(UiConstants.Css.FONT_WEIGHT, "600")
+                style.setProperty(UiConstants.Css.COLOR, "var(--accent-yellow)")
             }
-            userDiv.appendElement(Constants.Html.BUTTON, "btn btn-secondary") {
+            userDiv.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
                 textContent = "Log Out"
-                style.setProperty(Constants.Css.PADDING, "0.25rem 0.5rem")
-                style.setProperty(Constants.Css.FONT_SIZE, "0.8rem")
+                style.setProperty(UiConstants.Css.PADDING, "0.25rem 0.5rem")
+                style.setProperty(UiConstants.Css.FONT_SIZE, "0.8rem")
                 onClick {
                     authService.logout()
                 }
             }
         } else {
-            headerContainer.appendElement(Constants.Html.BUTTON, "btn btn-secondary") {
+            headerContainer.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
                 textContent = "Log In"
-                style.setProperty(Constants.Css.PADDING, "0.25rem 0.75rem")
-                style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
+                style.setProperty(UiConstants.Css.PADDING, "0.25rem 0.75rem")
+                style.setProperty(UiConstants.Css.FONT_SIZE, "0.85rem")
                 onClick {
                     window.location.hash = "login"
                 }
             }
         }
         
-        val nav = headerContainer.appendElement(Constants.Html.NAV)
+        val nav = headerContainer.appendElement(UiConstants.Html.NAV)
         
-        nav.appendElement(Constants.Html.BUTTON, "back-to-welcome") {
+        nav.appendElement(UiConstants.Html.BUTTON, "back-to-welcome") {
             textContent = "← Back to Menu"
             onClick {
                 goBackToWelcome()
@@ -334,7 +336,7 @@ object AppViewManager : DomBuilder {
         }
 
         if (!isSingleGameMode) {
-            nav.appendElement(Constants.Html.BUTTON, "nav-btn") {
+            nav.appendElement(UiConstants.Html.BUTTON, "nav-btn") {
                 id = "nav-btn-leagues"
                 textContent = "Leagues & Seasons"
                 onClick {
@@ -344,7 +346,7 @@ object AppViewManager : DomBuilder {
                 }
             }
             
-            nav.appendElement(Constants.Html.BUTTON, "nav-btn") {
+            nav.appendElement(UiConstants.Html.BUTTON, "nav-btn") {
                 id = "nav-btn-teams"
                 textContent = "Teams & Rosters"
                 onClick {
@@ -354,7 +356,7 @@ object AppViewManager : DomBuilder {
                 }
             }
             
-            nav.appendElement(Constants.Html.BUTTON, "nav-btn") {
+            nav.appendElement(UiConstants.Html.BUTTON, "nav-btn") {
                 id = "nav-btn-games"
                 textContent = "Season Dashboard"
                 onClick {
@@ -365,10 +367,10 @@ object AppViewManager : DomBuilder {
             }
         }
         
-        val btnLive = nav.appendElement(Constants.Html.BUTTON, "nav-btn") {
+        val btnLive = nav.appendElement(UiConstants.Html.BUTTON, "nav-btn") {
             id = "nav-btn-live"
             textContent = "Live Scoring"
-            style.setProperty(Constants.Css.DISPLAY, if (isSingleGameMode || selectedGameId != null) Constants.CssValues.INLINE_BLOCK else Constants.CssValues.NONE)
+            style.setProperty(UiConstants.Css.DISPLAY, if (isSingleGameMode || selectedGameId != null) UiConstants.CssValues.INLINE_BLOCK else UiConstants.CssValues.NONE)
             onClick {
                 currentTab = Constants.TAB_LIVE_SCORER
                 updateActiveTabButtons()
@@ -376,10 +378,10 @@ object AppViewManager : DomBuilder {
             }
         }
 
-        val btnBoxScore = nav.appendElement(Constants.Html.BUTTON, "nav-btn") {
+        val btnBoxScore = nav.appendElement(UiConstants.Html.BUTTON, "nav-btn") {
             id = "nav-btn-boxscore"
             textContent = "Box Score"
-            style.setProperty(Constants.Css.DISPLAY, if (isSingleGameMode || selectedGameId != null) Constants.CssValues.INLINE_BLOCK else Constants.CssValues.NONE)
+            style.setProperty(UiConstants.Css.DISPLAY, if (isSingleGameMode || selectedGameId != null) UiConstants.CssValues.INLINE_BLOCK else UiConstants.CssValues.NONE)
             onClick {
                 currentTab = Constants.TAB_BOXSCORE
                 updateActiveTabButtons()
@@ -387,7 +389,7 @@ object AppViewManager : DomBuilder {
             }
         }
 
-        app.appendElement(Constants.Html.MAIN) {
+        app.appendElement(UiConstants.Html.MAIN) {
             id = "content-area"
         }
 
@@ -405,11 +407,11 @@ object AppViewManager : DomBuilder {
         val btnBoxScore = document.getElementById("nav-btn-boxscore") as? HTMLButtonElement
 
         if (isSingleGameMode || selectedGameId != null) {
-            btnLive?.style?.setProperty(Constants.Css.DISPLAY, Constants.CssValues.INLINE_BLOCK)
-            btnBoxScore?.style?.setProperty(Constants.Css.DISPLAY, Constants.CssValues.INLINE_BLOCK)
+            btnLive?.style?.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.INLINE_BLOCK)
+            btnBoxScore?.style?.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.INLINE_BLOCK)
         } else {
-            btnLive?.style?.setProperty(Constants.Css.DISPLAY, Constants.CssValues.NONE)
-            btnBoxScore?.style?.setProperty(Constants.Css.DISPLAY, Constants.CssValues.NONE)
+            btnLive?.style?.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
+            btnBoxScore?.style?.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
         }
 
         val btnActive = when (currentTab) {

@@ -1,5 +1,7 @@
 package com.baseball.ui.components
 
+import com.baseball.UiConstants
+
 import com.baseball.Constants
 import com.baseball.api
 import com.baseball.game.*
@@ -18,15 +20,15 @@ fun renderGameScoringControls(
     boxScore: BoxScore
 ) {
     if (game.status == GameStatus.COMPLETED) {
-        rightCol.appendElement(Constants.Html.DIV) {
-            style.setProperty(Constants.Css.TEXT_ALIGN, "center")
-            style.setProperty(Constants.Css.PADDING, "2rem")
-            appendElement(Constants.Html.H2) { textContent = "GAME COMPLETED" }
+        rightCol.appendElement(UiConstants.Html.DIV) {
+            style.setProperty(UiConstants.Css.TEXT_ALIGN, "center")
+            style.setProperty(UiConstants.Css.PADDING, "2rem")
+            appendElement(UiConstants.Html.H2) { textContent = "GAME COMPLETED" }
             val scoreStr = "${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore}"
-            appendElement(Constants.Html.P) { textContent = "Final: $scoreStr" }
+            appendElement(UiConstants.Html.P) { textContent = "Final: $scoreStr" }
             
-            appendElement(Constants.Html.BUTTON, "btn") {
-                style.setProperty(Constants.Css.MARGIN_TOP, "1.5rem")
+            appendElement(UiConstants.Html.BUTTON, "btn") {
+                style.setProperty(UiConstants.Css.MARGIN_TOP, "1.5rem")
                 textContent = "View Final Box Score"
                 onClick {
                     currentTab = Constants.TAB_BOXSCORE
@@ -36,68 +38,68 @@ fun renderGameScoringControls(
             }
         }
     } else {
-        rightCol.appendElement(Constants.Html.H2) { textContent = "Plate Matchup" }
+        rightCol.appendElement(UiConstants.Html.H2) { textContent = "Plate Matchup" }
 
         // Matchup Card (Scorebook Style)
-        val matchupCard = rightCol.appendElement(Constants.Html.DIV) {
-            style.setProperty(Constants.Css.MARGIN_BOTTOM, "1.5rem")
-            style.setProperty(Constants.Css.BACKGROUND, "linear-gradient(135deg, rgba(27, 53, 36, 0.9) 0%, rgba(13, 26, 18, 0.95) 100%)")
-            style.setProperty(Constants.Css.BORDER, "1px solid rgba(74, 222, 128, 0.2)")
-            style.setProperty(Constants.Css.PADDING, "1.25rem")
-            style.setProperty(Constants.Css.BORDER_RADIUS, "12px")
+        val matchupCard = rightCol.appendElement(UiConstants.Html.DIV) {
+            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1.5rem")
+            style.setProperty(UiConstants.Css.BACKGROUND, "linear-gradient(135deg, rgba(27, 53, 36, 0.9) 0%, rgba(13, 26, 18, 0.95) 100%)")
+            style.setProperty(UiConstants.Css.BORDER, "1px solid rgba(74, 222, 128, 0.2)")
+            style.setProperty(UiConstants.Css.PADDING, "1.25rem")
+            style.setProperty(UiConstants.Css.BORDER_RADIUS, "12px")
         }
         
-        val vsRow = matchupCard.appendElement(Constants.Html.DIV) {
-            style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
-            style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.SPACE_BETWEEN)
-            style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
-            style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+        val vsRow = matchupCard.appendElement(UiConstants.Html.DIV) {
+            style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+            style.setProperty(UiConstants.Css.JUSTIFY_CONTENT, UiConstants.CssValues.SPACE_BETWEEN)
+            style.setProperty(UiConstants.Css.ALIGN_ITEMS, UiConstants.CssValues.CENTER)
+            style.setProperty(UiConstants.Css.TEXT_ALIGN, "center")
         }
         
         // Batter info
-        val batterBox = vsRow.appendElement(Constants.Html.DIV) { style.setProperty(Constants.Css.FLEX, "1") }
-        batterBox.appendElement(Constants.Html.DIV) { textContent = "CURRENT BATTER"; style.setProperty(Constants.Css.FONT_SIZE, "0.75rem"); style.setProperty(Constants.Css.COLOR, "var(--accent-green)") }
-        batterBox.appendElement(Constants.Html.DIV) { 
+        val batterBox = vsRow.appendElement(UiConstants.Html.DIV) { style.setProperty(UiConstants.Css.FLEX, "1") }
+        batterBox.appendElement(UiConstants.Html.DIV) { textContent = "CURRENT BATTER"; style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem"); style.setProperty(UiConstants.Css.COLOR, "var(--accent-green)") }
+        batterBox.appendElement(UiConstants.Html.DIV) { 
             textContent = game.gameState.currentBatterName ?: "None"
-            style.setProperty(Constants.Css.FONT_SIZE, "1.2rem")
-            style.setProperty(Constants.Css.FONT_WEIGHT, "800")
-            style.setProperty(Constants.Css.COLOR, "var(--text-primary)")
+            style.setProperty(UiConstants.Css.FONT_SIZE, "1.2rem")
+            style.setProperty(UiConstants.Css.FONT_WEIGHT, "800")
+            style.setProperty(UiConstants.Css.COLOR, "var(--text-primary)")
         }
         val currBatter = (awayRoster + homeRoster).find { it.id == game.gameState.currentBatterId }
-        batterBox.appendElement(Constants.Html.DIV) {
+        batterBox.appendElement(UiConstants.Html.DIV) {
             textContent = currBatter?.let { "${it.position} | #${it.jerseyNumber} | Bat: ${it.battingHand}" } ?: ""
-            style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
-            style.setProperty(Constants.Css.COLOR, "var(--text-secondary)")
+            style.setProperty(UiConstants.Css.FONT_SIZE, "0.85rem")
+            style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
         }
         
         // VS divider
-        vsRow.appendElement(Constants.Html.DIV) {
+        vsRow.appendElement(UiConstants.Html.DIV) {
             textContent = "VS"
-            style.setProperty(Constants.Css.FONT_SIZE, "1.3rem")
-            style.setProperty(Constants.Css.FONT_WEIGHT, "900")
-            style.setProperty(Constants.Css.MARGIN, "0 1.5rem")
-            style.setProperty(Constants.Css.COLOR, "rgba(74, 222, 128, 0.4)")
+            style.setProperty(UiConstants.Css.FONT_SIZE, "1.3rem")
+            style.setProperty(UiConstants.Css.FONT_WEIGHT, "900")
+            style.setProperty(UiConstants.Css.MARGIN, "0 1.5rem")
+            style.setProperty(UiConstants.Css.COLOR, "rgba(74, 222, 128, 0.4)")
         }
         
         // Pitcher info
-        val pitcherBox = vsRow.appendElement(Constants.Html.DIV) { style.setProperty(Constants.Css.FLEX, "1") }
-        pitcherBox.appendElement(Constants.Html.DIV) { textContent = "CURRENT PITCHER"; style.setProperty(Constants.Css.FONT_SIZE, "0.75rem"); style.setProperty(Constants.Css.COLOR, "var(--accent-green)") }
-        pitcherBox.appendElement(Constants.Html.DIV) { 
+        val pitcherBox = vsRow.appendElement(UiConstants.Html.DIV) { style.setProperty(UiConstants.Css.FLEX, "1") }
+        pitcherBox.appendElement(UiConstants.Html.DIV) { textContent = "CURRENT PITCHER"; style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem"); style.setProperty(UiConstants.Css.COLOR, "var(--accent-green)") }
+        pitcherBox.appendElement(UiConstants.Html.DIV) { 
             textContent = game.gameState.currentPitcherName ?: "None"
-            style.setProperty(Constants.Css.FONT_SIZE, "1.2rem")
-            style.setProperty(Constants.Css.FONT_WEIGHT, "800")
-            style.setProperty(Constants.Css.COLOR, "var(--text-primary)")
+            style.setProperty(UiConstants.Css.FONT_SIZE, "1.2rem")
+            style.setProperty(UiConstants.Css.FONT_WEIGHT, "800")
+            style.setProperty(UiConstants.Css.COLOR, "var(--text-primary)")
         }
         val currPitcher = (awayRoster + homeRoster).find { it.id == game.gameState.currentPitcherId }
-        pitcherBox.appendElement(Constants.Html.DIV) {
+        pitcherBox.appendElement(UiConstants.Html.DIV) {
             textContent = currPitcher?.let { "${it.position} | #${it.jerseyNumber} | Throw: ${it.throwingHand}" } ?: ""
-            style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
-            style.setProperty(Constants.Css.COLOR, "var(--text-secondary)")
+            style.setProperty(UiConstants.Css.FONT_SIZE, "0.85rem")
+            style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
         }
  
         // Game action triggers
-        val actionGridWrapper = rightCol.appendElement(Constants.Html.DIV) {
-            style.setProperty(Constants.Css.MARGIN_TOP, "1rem")
+        val actionGridWrapper = rightCol.appendElement(UiConstants.Html.DIV) {
+            style.setProperty(UiConstants.Css.MARGIN_TOP, "1rem")
         }
         
         var optionalPitchType: String? = null
@@ -147,27 +149,27 @@ fun renderGameScoringControls(
             actionGridWrapper.innerHTML = ""
             
             // Pitch Types Toggle Label
-            actionGridWrapper.appendElement(Constants.Html.DIV) {
-                style.setProperty(Constants.Css.FONT_SIZE, "0.8rem")
-                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
-                style.setProperty(Constants.Css.COLOR, "var(--accent-green)")
-                style.setProperty(Constants.Css.MARGIN_BOTTOM, "0.5rem")
+            actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                style.setProperty(UiConstants.Css.FONT_SIZE, "0.8rem")
+                style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                style.setProperty(UiConstants.Css.COLOR, "var(--accent-green)")
+                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
                 textContent = "PITCH TYPE (OPTIONAL)"
             }
-            val pitchTypeRow = actionGridWrapper.appendElement(Constants.Html.DIV) {
-                style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
-                style.setProperty(Constants.Css.GAP, "0.5rem")
-                style.setProperty(Constants.Css.MARGIN_BOTTOM, "1rem")
+            val pitchTypeRow = actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                style.setProperty(UiConstants.Css.GAP, "0.5rem")
+                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
                 style.setProperty("flex-wrap", "wrap")
             }
             val pitchTypes = listOf("Fastball", "Breaking Ball", "Offspeed")
             pitchTypes.forEach { pType ->
                 val isSelected = pType == optionalPitchType
-                pitchTypeRow.appendElement(Constants.Html.BUTTON, if (isSelected) "btn btn-primary" else "btn btn-secondary") {
+                pitchTypeRow.appendElement(UiConstants.Html.BUTTON, if (isSelected) "btn btn-primary" else "btn btn-secondary") {
                     textContent = pType
-                    style.setProperty(Constants.Css.FLEX, "1")
-                    style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
-                    style.setProperty(Constants.Css.PADDING, "0.4rem")
+                    style.setProperty(UiConstants.Css.FLEX, "1")
+                    style.setProperty(UiConstants.Css.FONT_SIZE, "0.85rem")
+                    style.setProperty(UiConstants.Css.PADDING, "0.4rem")
                     onClick {
                         optionalPitchType = if (isSelected) null else pType
                         renderActionGrid()
@@ -183,21 +185,21 @@ fun renderGameScoringControls(
                 
                 fun drawStep2UI() {
                     actionGridWrapper.innerHTML = ""
-                    actionGridWrapper.appendElement(Constants.Html.H3) {
+                    actionGridWrapper.appendElement(UiConstants.Html.H3) {
                         textContent = "Step 2: $baseLabel Details"
-                        style.setProperty(Constants.Css.MARGIN_BOTTOM, "1rem")
-                        style.setProperty(Constants.Css.COLOR, "var(--accent-green)")
-                        style.setProperty(Constants.Css.FONT_SIZE, "1.2rem")
+                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
+                        style.setProperty(UiConstants.Css.COLOR, "var(--accent-green)")
+                        style.setProperty(UiConstants.Css.FONT_SIZE, "1.2rem")
                     }
                     
                     // Modifiers Row
-                    val modifiersRow = actionGridWrapper.appendElement(Constants.Html.DIV) {
-                        style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
-                        style.setProperty(Constants.Css.GAP, "0.5rem")
-                        style.setProperty(Constants.Css.MARGIN_BOTTOM, "1rem")
+                    val modifiersRow = actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                        style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                        style.setProperty(UiConstants.Css.GAP, "0.5rem")
+                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
                     }
                     
-                    modifiersRow.appendElement(Constants.Html.BUTTON, if (hasError) "btn btn-danger" else "btn btn-secondary") {
+                    modifiersRow.appendElement(UiConstants.Html.BUTTON, if (hasError) "btn btn-danger" else "btn btn-secondary") {
                         textContent = if (hasError) "Error Active" else "+ Add Error"
                         onClick {
                             hasError = !hasError
@@ -206,7 +208,7 @@ fun renderGameScoringControls(
                     }
                     
                     if (!isHit) {
-                        modifiersRow.appendElement(Constants.Html.BUTTON, if (hasDoublePlay) "btn btn-primary" else "btn btn-secondary") {
+                        modifiersRow.appendElement(UiConstants.Html.BUTTON, if (hasDoublePlay) "btn btn-primary" else "btn btn-secondary") {
                             textContent = if (hasDoublePlay) "Double Play Active" else "+ Add Double Play"
                             onClick {
                                 hasDoublePlay = !hasDoublePlay
@@ -235,12 +237,12 @@ fun renderGameScoringControls(
                     )
                     
                     if (activeRunners.isNotEmpty() || hasError) {
-                        actionGridWrapper.appendElement(Constants.Html.DIV) {
+                        actionGridWrapper.appendElement(UiConstants.Html.DIV) {
                             textContent = "Runner Base Advancement (Optional)"
-                            style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
-                            style.setProperty(Constants.Css.FONT_SIZE, "0.9rem")
-                            style.setProperty(Constants.Css.COLOR, "var(--text-secondary)")
-                            style.setProperty(Constants.Css.MARGIN_BOTTOM, "0.5rem")
+                            style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                            style.setProperty(UiConstants.Css.FONT_SIZE, "0.9rem")
+                            style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
+                            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
                         }
                         
                         val runnersList = if (hasError) {
@@ -250,25 +252,25 @@ fun renderGameScoringControls(
                         }
                         
                         runnersList.forEach { (runnerId, label) ->
-                            val row = actionGridWrapper.appendElement(Constants.Html.DIV) {
-                                style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
-                                style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
-                                style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.SPACE_BETWEEN)
-                                style.setProperty(Constants.Css.MARGIN_BOTTOM, "0.5rem")
-                                style.setProperty(Constants.Css.GAP, "0.5rem")
-                                style.setProperty(Constants.Css.BACKGROUND, "rgba(255, 255, 255, 0.03)")
-                                style.setProperty(Constants.Css.PADDING, "0.4rem")
-                                style.setProperty(Constants.Css.BORDER_RADIUS, "4px")
+                            val row = actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                                style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                                style.setProperty(UiConstants.Css.ALIGN_ITEMS, UiConstants.CssValues.CENTER)
+                                style.setProperty(UiConstants.Css.JUSTIFY_CONTENT, UiConstants.CssValues.SPACE_BETWEEN)
+                                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                                style.setProperty(UiConstants.Css.GAP, "0.5rem")
+                                style.setProperty(UiConstants.Css.BACKGROUND, "rgba(255, 255, 255, 0.03)")
+                                style.setProperty(UiConstants.Css.PADDING, "0.4rem")
+                                style.setProperty(UiConstants.Css.BORDER_RADIUS, "4px")
                             }
-                            row.appendElement(Constants.Html.SPAN) {
+                            row.appendElement(UiConstants.Html.SPAN) {
                                 textContent = label
-                                style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
-                                style.setProperty(Constants.Css.FLEX, "1")
+                                style.setProperty(UiConstants.Css.FONT_SIZE, "0.85rem")
+                                style.setProperty(UiConstants.Css.FLEX, "1")
                             }
                             
-                            val btnGroup = row.appendElement(Constants.Html.DIV) {
-                                style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
-                                style.setProperty(Constants.Css.GAP, "0.2rem")
+                            val btnGroup = row.appendElement(UiConstants.Html.DIV) {
+                                style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                                style.setProperty(UiConstants.Css.GAP, "0.2rem")
                             }
                             
                             val currentDest = runnerAdvances[runnerId.toString()]
@@ -285,10 +287,10 @@ fun renderGameScoringControls(
                                     if (baseVal == 0) "btn btn-danger" else "btn btn-primary"
                                 } else "btn btn-secondary"
                                 
-                                btnGroup.appendElement(Constants.Html.BUTTON, btnClass) {
+                                btnGroup.appendElement(UiConstants.Html.BUTTON, btnClass) {
                                     textContent = baseLabel
-                                    style.setProperty(Constants.Css.PADDING, "0.2rem 0.4rem")
-                                    style.setProperty(Constants.Css.FONT_SIZE, "0.75rem")
+                                    style.setProperty(UiConstants.Css.PADDING, "0.2rem 0.4rem")
+                                    style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
                                     onClick {
                                         if (isSelected) {
                                             runnerAdvances.remove(runnerId.toString())
@@ -303,17 +305,17 @@ fun renderGameScoringControls(
                     }
                     
                     // Locations Grid
-                    actionGridWrapper.appendElement(Constants.Html.DIV) {
+                    actionGridWrapper.appendElement(UiConstants.Html.DIV) {
                         textContent = "Select Hit/Out Fielder to Complete Play"
-                        style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
-                        style.setProperty(Constants.Css.FONT_SIZE, "0.9rem")
-                        style.setProperty(Constants.Css.COLOR, "var(--text-secondary)")
-                        style.setProperty(Constants.Css.MARGIN_TOP, "1rem")
-                        style.setProperty(Constants.Css.MARGIN_BOTTOM, "0.5rem")
+                        style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                        style.setProperty(UiConstants.Css.FONT_SIZE, "0.9rem")
+                        style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
+                        style.setProperty(UiConstants.Css.MARGIN_TOP, "1rem")
+                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
                     }
                     
-                    val locGrid = actionGridWrapper.appendElement(Constants.Html.DIV, "action-grid") {
-                        style.setProperty(Constants.Css.MARGIN_BOTTOM, "1rem")
+                    val locGrid = actionGridWrapper.appendElement(UiConstants.Html.DIV, "action-grid") {
+                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
                     }
                     
                     val locations = if (isHit) {
@@ -323,7 +325,7 @@ fun renderGameScoringControls(
                     }
                     
                     locations.forEach { loc ->
-                        locGrid.appendElement(Constants.Html.BUTTON, "btn btn-action") {
+                        locGrid.appendElement(UiConstants.Html.BUTTON, "btn btn-action") {
                             textContent = loc
                             onClick {
                                 val detail = buildString {
@@ -341,9 +343,9 @@ fun renderGameScoringControls(
                     }
                     
                     // Fast fallback if they want to submit without a specific location
-                    locGrid.appendElement(Constants.Html.BUTTON, "btn btn-action") {
+                    locGrid.appendElement(UiConstants.Html.BUTTON, "btn btn-action") {
                         textContent = "Unspecified Location"
-                        style.setProperty(Constants.Css.BACKGROUND, "rgba(255, 255, 255, 0.1)")
+                        style.setProperty(UiConstants.Css.BACKGROUND, "rgba(255, 255, 255, 0.1)")
                         onClick {
                             val detail = buildString {
                                 append(baseLabel)
@@ -358,13 +360,13 @@ fun renderGameScoringControls(
                         }
                     }
                     
-                    val btnRow = actionGridWrapper.appendElement(Constants.Html.DIV) {
-                        style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
-                        style.setProperty(Constants.Css.GAP, "1rem")
+                    val btnRow = actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                        style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                        style.setProperty(UiConstants.Css.GAP, "1rem")
                     }
-                    btnRow.appendElement(Constants.Html.BUTTON, "btn btn-secondary") {
+                    btnRow.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
                         textContent = "Cancel"
-                        style.setProperty(Constants.Css.FLEX, "1")
+                        style.setProperty(UiConstants.Css.FLEX, "1")
                         onClick { renderActionGrid() }
                     }
                 }
@@ -373,17 +375,17 @@ fun renderGameScoringControls(
             }
             
             // Pitch Results Section
-            actionGridWrapper.appendElement(Constants.Html.DIV) {
-                style.setProperty(Constants.Css.FONT_SIZE, "0.8rem")
-                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
-                style.setProperty(Constants.Css.COLOR, "var(--accent-green)")
-                style.setProperty(Constants.Css.MARGIN_BOTTOM, "0.5rem")
+            actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                style.setProperty(UiConstants.Css.FONT_SIZE, "0.8rem")
+                style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                style.setProperty(UiConstants.Css.COLOR, "var(--accent-green)")
+                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
                 textContent = "PITCH RESULTS"
             }
-            val pitchGrid = actionGridWrapper.appendElement(Constants.Html.DIV, "action-grid") {
+            val pitchGrid = actionGridWrapper.appendElement(UiConstants.Html.DIV, "action-grid") {
                 style.setProperty("grid-template-columns", "repeat(3, 1fr)")
-                style.setProperty(Constants.Css.GAP, "0.5rem")
-                style.setProperty(Constants.Css.MARGIN_BOTTOM, "1.25rem")
+                style.setProperty(UiConstants.Css.GAP, "0.5rem")
+                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1.25rem")
             }
  
             listOf(
@@ -391,26 +393,26 @@ fun renderGameScoringControls(
                 ScoringEventType.STRIKE to "Strike (S+1)",
                 ScoringEventType.FOUL to "Foul"
             ).forEach { (type, label) ->
-                pitchGrid.appendElement(Constants.Html.BUTTON, "btn btn-secondary btn-action") {
+                pitchGrid.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary btn-action") {
                     textContent = label
-                    style.setProperty(Constants.Css.PADDING, "0.6rem")
+                    style.setProperty(UiConstants.Css.PADDING, "0.6rem")
                     onClick { triggerScoringEvent(type) }
                 }
             }
  
             // Plate & In-Play Results Divider
-            actionGridWrapper.appendElement(Constants.Html.DIV) {
-                style.setProperty(Constants.Css.FONT_SIZE, "0.8rem")
-                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
-                style.setProperty(Constants.Css.COLOR, "var(--accent-green)")
-                style.setProperty(Constants.Css.MARGIN_TOP, "1rem")
-                style.setProperty(Constants.Css.MARGIN_BOTTOM, "0.5rem")
+            actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                style.setProperty(UiConstants.Css.FONT_SIZE, "0.8rem")
+                style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                style.setProperty(UiConstants.Css.COLOR, "var(--accent-green)")
+                style.setProperty(UiConstants.Css.MARGIN_TOP, "1rem")
+                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
                 style.setProperty("border-top", "1px solid rgba(255, 255, 255, 0.08)")
-                style.setProperty(Constants.Css.PADDING_TOP, "1rem")
+                style.setProperty(UiConstants.Css.PADDING_TOP, "1rem")
                 textContent = "PLATE & IN-PLAY RESULTS"
             }
             
-            val actionGrid = actionGridWrapper.appendElement(Constants.Html.DIV, "action-grid")
+            val actionGrid = actionGridWrapper.appendElement(UiConstants.Html.DIV, "action-grid")
  
             listOf(
                 ScoringEventType.SINGLE to "Single (1B)",
@@ -432,7 +434,7 @@ fun renderGameScoringControls(
                     ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN -> "btn btn-action"
                     else -> "btn btn-secondary btn-action"
                 }
-                actionGrid.appendElement(Constants.Html.BUTTON, btnClass) {
+                actionGrid.appendElement(UiConstants.Html.BUTTON, btnClass) {
                     textContent = label
                     onClick { 
                         val isHit = type in listOf(ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN)

@@ -1,5 +1,7 @@
 package com.baseball.game
 
+import com.baseball.BaseballConstants
+
 import com.baseball.models.*
 import com.baseball.seed.SeedData
 import com.baseball.Constants
@@ -42,10 +44,10 @@ var localAwayBatterIndex = 0
 var localHomeBatterIndex = 0
 val localPlayersSubbedOut = mutableSetOf<Long>()
 
-var localAwayActivePitcherId = SeedData.cardinalsRoster.find { it.position == Constants.Positions.P }?.id ?: 210L
-var localAwayActivePitcherName = SeedData.cardinalsRoster.find { it.position == Constants.Positions.P }?.name ?: "Sonny Gray"
-var localHomeActivePitcherId = SeedData.cubsRoster.find { it.position == Constants.Positions.P }?.id ?: 110L
-var localHomeActivePitcherName = SeedData.cubsRoster.find { it.position == Constants.Positions.P }?.name ?: "Justin Steele"
+var localAwayActivePitcherId = SeedData.cardinalsRoster.find { it.position == BaseballConstants.Positions.P }?.id ?: 210L
+var localAwayActivePitcherName = SeedData.cardinalsRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray"
+var localHomeActivePitcherId = SeedData.cubsRoster.find { it.position == BaseballConstants.Positions.P }?.id ?: 110L
+var localHomeActivePitcherName = SeedData.cubsRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele"
 
 object LocalGameManager : GameService {
 
@@ -59,8 +61,8 @@ object LocalGameManager : GameService {
         localHomeRoster = SeedData.cubsRoster
         localAwayRoster = SeedData.cardinalsRoster
         
-        val homeP = localHomeRoster.find { it.position == Constants.Positions.P } ?: Player(110L, 1L, "Justin Steele", Constants.Positions.P, 35, "L", "L")
-        val awayP = localAwayRoster.find { it.position == Constants.Positions.P } ?: Player(210L, 2L, "Sonny Gray", Constants.Positions.P, 54, "R", "R")
+        val homeP = localHomeRoster.find { it.position == BaseballConstants.Positions.P } ?: Player(110L, 1L, "Justin Steele", BaseballConstants.Positions.P, 35, "L", "L")
+        val awayP = localAwayRoster.find { it.position == BaseballConstants.Positions.P } ?: Player(210L, 2L, "Sonny Gray", BaseballConstants.Positions.P, 54, "R", "R")
         
         localAwayActivePitcherId = awayP.id!!
         localAwayActivePitcherName = awayP.name
@@ -68,15 +70,15 @@ object LocalGameManager : GameService {
         localHomeActivePitcherName = homeP.name
 
         localAwayLineup.clear()
-        localAwayLineup.addAll(localAwayRoster.filter { it.position != Constants.Positions.P }.take(9))
+        localAwayLineup.addAll(localAwayRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
         localAwayBench.clear()
-        localAwayBench.addAll(localAwayRoster.filter { it.position == Constants.Positions.P && it.id != localAwayActivePitcherId } + localAwayRoster.drop(10))
+        localAwayBench.addAll(localAwayRoster.filter { it.position == BaseballConstants.Positions.P && it.id != localAwayActivePitcherId } + localAwayRoster.drop(10))
         localAwayBatterIndex = 0
 
         localHomeLineup.clear()
-        localHomeLineup.addAll(localHomeRoster.filter { it.position != Constants.Positions.P }.take(9))
+        localHomeLineup.addAll(localHomeRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
         localHomeBench.clear()
-        localHomeBench.addAll(localHomeRoster.filter { it.position == Constants.Positions.P && it.id != localHomeActivePitcherId } + localHomeRoster.drop(10))
+        localHomeBench.addAll(localHomeRoster.filter { it.position == BaseballConstants.Positions.P && it.id != localHomeActivePitcherId } + localHomeRoster.drop(10))
         localHomeBatterIndex = 0
 
         localPlayersSubbedOut.clear()
@@ -130,10 +132,10 @@ object LocalGameManager : GameService {
                 awayInningRuns = emptyList(),
                 homeInningRuns = emptyList()
             ),
-            homeBatting = (localHomeLineup + localHomeBench.filter { it.position != Constants.Positions.P }).map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
-            awayBatting = (localAwayLineup + localAwayBench.filter { it.position != Constants.Positions.P }).map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
-            homePitching = (localHomeRoster.filter { it.position == Constants.Positions.P } + localHomeBench.filter { it.position == Constants.Positions.P }).map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
-            awayPitching = (localAwayRoster.filter { it.position == Constants.Positions.P } + localAwayBench.filter { it.position == Constants.Positions.P }).map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) }
+            homeBatting = (localHomeLineup + localHomeBench.filter { it.position != BaseballConstants.Positions.P }).map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
+            awayBatting = (localAwayLineup + localAwayBench.filter { it.position != BaseballConstants.Positions.P }).map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
+            homePitching = (localHomeRoster.filter { it.position == BaseballConstants.Positions.P } + localHomeBench.filter { it.position == BaseballConstants.Positions.P }).map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
+            awayPitching = (localAwayRoster.filter { it.position == BaseballConstants.Positions.P } + localAwayBench.filter { it.position == BaseballConstants.Positions.P }).map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) }
         )
         
         localEvents.clear()
