@@ -48,89 +48,89 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
 
     val maxInning = events.maxOfOrNull { it.inning }?.coerceAtLeast(9) ?: 9
 
-    val headerSection = container.appendElement("div") {
-        style.setProperty("display", "grid")
+    val headerSection = container.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.DISPLAY, "grid")
         style.setProperty("grid-template-columns", "150px 1fr 1fr 180px")
-        style.setProperty("border", "2px solid #5a544a")
-        style.setProperty("background-color", "#eae5dc")
-        style.setProperty("padding", "0.75rem")
-        style.setProperty("margin-bottom", "1rem")
-        style.setProperty("font-weight", "bold")
+        style.setProperty(Constants.Css.BORDER, "2px solid #5a544a")
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#eae5dc")
+        style.setProperty(Constants.Css.PADDING, "0.75rem")
+        style.setProperty(Constants.Css.MARGIN_BOTTOM, "1rem")
+        style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
     }
 
-    headerSection.appendElement("div") {
+    headerSection.appendElement(Constants.Html.DIV) {
         textContent = if (isHomeBatting) "BOTTOM" else "TOP"
-        style.setProperty("font-size", "2rem")
-        style.setProperty("color", "#ff2a3b")
+        style.setProperty(Constants.Css.FONT_SIZE, "2rem")
+        style.setProperty(Constants.Css.COLOR, "#ff2a3b")
         style.setProperty("letter-spacing", "2px")
     }
 
-    val teamInfo = headerSection.appendElement("div") {
-        style.setProperty("display", "flex")
-        style.setProperty("flex-direction", "column")
-        style.setProperty("justify-content", "center")
+    val teamInfo = headerSection.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+        style.setProperty(Constants.Css.FLEX_DIRECTION, Constants.CssValues.COLUMN)
+        style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.CENTER)
     }
-    teamInfo.appendElement("div") { textContent = "TEAM: ${battingTeam.city.uppercase()} ${battingTeam.name.uppercase()}" }
-    teamInfo.appendElement("div") { 
+    teamInfo.appendElement(Constants.Html.DIV) { textContent = "TEAM: ${battingTeam.city.uppercase()} ${battingTeam.name.uppercase()}" }
+    teamInfo.appendElement(Constants.Html.DIV) { 
         textContent = "MANAGER: ${if (isHomeBatting) "COUNSELL, C." else "REYNOLDS, J."}"
-        style.setProperty("font-size", "0.85rem")
-        style.setProperty("color", "#555")
-        style.setProperty("margin-top", "0.25rem")
+        style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
+        style.setProperty(Constants.Css.COLOR, "#555")
+        style.setProperty(Constants.Css.MARGIN_TOP, "0.25rem")
     }
 
-    val gameInfo = headerSection.appendElement("div") {
-        style.setProperty("display", "flex")
-        style.setProperty("flex-direction", "column")
-        style.setProperty("justify-content", "center")
+    val gameInfo = headerSection.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+        style.setProperty(Constants.Css.FLEX_DIRECTION, Constants.CssValues.COLUMN)
+        style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.CENTER)
     }
-    gameInfo.appendElement("div") { textContent = "PITCHING OPPONENT: ${pitchingTeam.name.uppercase()}" }
-    gameInfo.appendElement("div") { 
+    gameInfo.appendElement(Constants.Html.DIV) { textContent = "PITCHING OPPONENT: ${pitchingTeam.name.uppercase()}" }
+    gameInfo.appendElement(Constants.Html.DIV) { 
         textContent = "UMPIRES: HP: CULBRETH, F. | 1B: NELSON, J." 
-        style.setProperty("font-size", "0.85rem")
-        style.setProperty("color", "#555")
-        style.setProperty("margin-top", "0.25rem")
+        style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
+        style.setProperty(Constants.Css.COLOR, "#555")
+        style.setProperty(Constants.Css.MARGIN_TOP, "0.25rem")
     }
 
-    val keepingScore = headerSection.appendElement("div") {
-        style.setProperty("display", "flex")
-        style.setProperty("flex-direction", "column")
-        style.setProperty("justify-content", "center")
-        style.setProperty("align-items", "flex-end")
-        style.setProperty("font-size", "0.8rem")
+    val keepingScore = headerSection.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+        style.setProperty(Constants.Css.FLEX_DIRECTION, Constants.CssValues.COLUMN)
+        style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.CENTER)
+        style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.FLEX_END)
+        style.setProperty(Constants.Css.FONT_SIZE, "0.8rem")
     }
-    keepingScore.appendElement("div") { textContent = "KEEPING SCORE BY: ☒ WEBAPP" }
-    keepingScore.appendElement("div") { textContent = "FIRST PITCH: 7:05 PM" }
+    keepingScore.appendElement(Constants.Html.DIV) { textContent = "KEEPING SCORE BY: ☒ WEBAPP" }
+    keepingScore.appendElement(Constants.Html.DIV) { textContent = "FIRST PITCH: 7:05 PM" }
 
     if (game.status != GameStatus.COMPLETED) {
-        keepingScore.appendElement("button", "btn") {
+        keepingScore.appendElement(Constants.Html.BUTTON, "btn") {
             textContent = "Bench & Bullpen"
-            style.setProperty("margin-top", "0.4rem")
-            style.setProperty("font-size", "0.75rem")
-            style.setProperty("padding", "2px 8px")
-            style.setProperty("background", "rgba(0, 0, 0, 0.05)")
-            style.setProperty("border", "1px solid #5a544a")
-            style.setProperty("border-radius", "4px")
-            style.setProperty("cursor", "pointer")
+            style.setProperty(Constants.Css.MARGIN_TOP, "0.4rem")
+            style.setProperty(Constants.Css.FONT_SIZE, "0.75rem")
+            style.setProperty(Constants.Css.PADDING, "2px 8px")
+            style.setProperty(Constants.Css.BACKGROUND, "rgba(0, 0, 0, 0.05)")
+            style.setProperty(Constants.Css.BORDER, "1px solid #5a544a")
+            style.setProperty(Constants.Css.BORDER_RADIUS, "4px")
+            style.setProperty(Constants.Css.CURSOR, Constants.CssValues.POINTER)
             onClick {
                 val drawer = document.getElementById("roster-drawer-element") as? HTMLElement
                 if (drawer != null) {
-                    val isHidden = drawer.style.getPropertyValue("display") == "none"
-                    drawer.style.setProperty("display", if (isHidden) "block" else "none")
+                    val isHidden = drawer.style.getPropertyValue(Constants.Css.DISPLAY) == Constants.CssValues.NONE
+                    drawer.style.setProperty(Constants.Css.DISPLAY, if (isHidden) Constants.CssValues.BLOCK else Constants.CssValues.NONE)
                 }
             }
         }
     }
 
     // Collapsible Bench & Bullpen Drawer
-    val rosterDrawer = container.appendElement("div") {
+    val rosterDrawer = container.appendElement(Constants.Html.DIV) {
         id = "roster-drawer-element"
-        style.setProperty("display", "none")
-        style.setProperty("background-color", "#fcfbfa")
-        style.setProperty("border", "2px solid #5a544a")
-        style.setProperty("border-top", "none")
-        style.setProperty("padding", "1rem")
-        style.setProperty("margin-top", "-1.1rem")
-        style.setProperty("margin-bottom", "1.5rem")
+        style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.NONE)
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#fcfbfa")
+        style.setProperty(Constants.Css.BORDER, "2px solid #5a544a")
+        style.setProperty(Constants.Css.BORDER_TOP, Constants.CssValues.NONE)
+        style.setProperty(Constants.Css.PADDING, "1rem")
+        style.setProperty(Constants.Css.MARGIN_TOP, "-1.1rem")
+        style.setProperty(Constants.Css.MARGIN_BOTTOM, "1.5rem")
         style.setProperty("font-family", "'Courier New', Courier, monospace")
     }
 
@@ -138,74 +138,74 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
     val fieldingBench = if (isHome) localHomeBench else localAwayBench
     val activePitcherName = if (isHome) localHomeActivePitcherName else localAwayActivePitcherName
 
-    val drawerContent = rosterDrawer.appendElement("div") {
-        style.setProperty("display", "flex")
-        style.setProperty("justify-content", "space-between")
-        style.setProperty("gap", "2rem")
+    val drawerContent = rosterDrawer.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+        style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.SPACE_BETWEEN)
+        style.setProperty(Constants.Css.GAP, "2rem")
     }
 
     // Left side: Bench
-    val benchCol = drawerContent.appendElement("div") {
-        style.setProperty("flex", "1")
+    val benchCol = drawerContent.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.FLEX, "1")
     }
-    benchCol.appendElement("h4") {
+    benchCol.appendElement(Constants.Html.H4) {
         textContent = "AVAILABLE BENCH BATTERS"
-        style.setProperty("margin", "0 0 0.5rem 0")
-        style.setProperty("font-size", "0.85rem")
-        style.setProperty("color", "#ff2a3b")
+        style.setProperty(Constants.Css.MARGIN, "0 0 0.5rem 0")
+        style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
+        style.setProperty(Constants.Css.COLOR, "#ff2a3b")
     }
     val benchList = if (isHomeBatting) localHomeBench else localAwayBench
     val availableBatters = benchList.filter { it.position != Constants.Positions.P && !localPlayersSubbedOut.contains(it.id) }
     if (availableBatters.isEmpty()) {
-        benchCol.appendElement("div") { textContent = "No batters left on bench"; style.setProperty("font-size", "0.8rem"); style.setProperty("color", "#777") }
+        benchCol.appendElement(Constants.Html.DIV) { textContent = "No batters left on bench"; style.setProperty(Constants.Css.FONT_SIZE, "0.8rem"); style.setProperty(Constants.Css.COLOR, "#777") }
     } else {
         availableBatters.forEach { p ->
-            benchCol.appendElement("div") {
+            benchCol.appendElement(Constants.Html.DIV) {
                 textContent = "• ${p.name} (#${p.jerseyNumber} - ${p.position})"
-                style.setProperty("font-size", "0.8rem")
-                style.setProperty("margin-bottom", "0.25rem")
+                style.setProperty(Constants.Css.FONT_SIZE, "0.8rem")
+                style.setProperty(Constants.Css.MARGIN_BOTTOM, "0.25rem")
             }
         }
     }
 
     // Right side: Bullpen
-    val bullpenCol = drawerContent.appendElement("div") {
-        style.setProperty("flex", "1")
+    val bullpenCol = drawerContent.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.FLEX, "1")
     }
-    bullpenCol.appendElement("h4") {
+    bullpenCol.appendElement(Constants.Html.H4) {
         textContent = "ACTIVE PITCHER & BULLPEN"
-        style.setProperty("margin", "0 0 0.5rem 0")
-        style.setProperty("font-size", "0.85rem")
-        style.setProperty("color", "#ff2a3b")
+        style.setProperty(Constants.Css.MARGIN, "0 0 0.5rem 0")
+        style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
+        style.setProperty(Constants.Css.COLOR, "#ff2a3b")
     }
-    bullpenCol.appendElement("div") {
+    bullpenCol.appendElement(Constants.Html.DIV) {
         textContent = "Current Pitcher: $activePitcherName"
-        style.setProperty("font-size", "0.8rem")
-        style.setProperty("font-weight", "bold")
-        style.setProperty("margin-bottom", "0.5rem")
+        style.setProperty(Constants.Css.FONT_SIZE, "0.8rem")
+        style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+        style.setProperty(Constants.Css.MARGIN_BOTTOM, "0.5rem")
     }
 
     val pSubs = fieldingBench.filter { it.position == Constants.Positions.P && !localPlayersSubbedOut.contains(it.id) }
     if (pSubs.isEmpty()) {
-        bullpenCol.appendElement("div") { textContent = "No relief pitchers available in bullpen"; style.setProperty("font-size", "0.8rem"); style.setProperty("color", "#777") }
+        bullpenCol.appendElement(Constants.Html.DIV) { textContent = "No relief pitchers available in bullpen"; style.setProperty(Constants.Css.FONT_SIZE, "0.8rem"); style.setProperty(Constants.Css.COLOR, "#777") }
     } else {
-        val changePitcherRow = bullpenCol.appendElement("div") {
-            style.setProperty("display", "flex")
-            style.setProperty("align-items", "center")
-            style.setProperty("gap", "0.5rem")
+        val changePitcherRow = bullpenCol.appendElement(Constants.Html.DIV) {
+            style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+            style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
+            style.setProperty(Constants.Css.GAP, "0.5rem")
         }
-        changePitcherRow.appendElement("span") { textContent = "Change Pitcher:"; style.setProperty("font-size", "0.8rem") }
-        val selectOverlay = changePitcherRow.appendElement("select") as HTMLSelectElement
+        changePitcherRow.appendElement(Constants.Html.SPAN) { textContent = "Change Pitcher:"; style.setProperty(Constants.Css.FONT_SIZE, "0.8rem") }
+        val selectOverlay = changePitcherRow.appendElement(Constants.Html.SELECT) as HTMLSelectElement
         selectOverlay.className = "form-control"
-        selectOverlay.style.setProperty("font-size", "0.75rem")
-        selectOverlay.style.setProperty("padding", "2px")
+        selectOverlay.style.setProperty(Constants.Css.FONT_SIZE, "0.75rem")
+        selectOverlay.style.setProperty(Constants.Css.PADDING, "2px")
         
-        val defOpt = document.createElement("option") as HTMLOptionElement
+        val defOpt = document.createElement(Constants.Html.OPTION) as HTMLOptionElement
         defOpt.textContent = "Select relief pitcher..."
         selectOverlay.appendChild(defOpt)
         
         pSubs.forEach { optPlayer ->
-            val opt = document.createElement("option") as HTMLOptionElement
+            val opt = document.createElement(Constants.Html.OPTION) as HTMLOptionElement
             opt.value = optPlayer.id.toString()
             opt.textContent = "${optPlayer.name} (#${optPlayer.jerseyNumber})"
             selectOverlay.appendChild(opt)
@@ -220,60 +220,60 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
         })
     }
 
-    val tableWrapper = container.appendElement("div") {
+    val tableWrapper = container.appendElement(Constants.Html.DIV) {
         style.setProperty("overflow-x", "auto")
-        style.setProperty("border", "2px solid #5a544a")
-        style.setProperty("margin-bottom", "1.5rem")
+        style.setProperty(Constants.Css.BORDER, "2px solid #5a544a")
+        style.setProperty(Constants.Css.MARGIN_BOTTOM, "1.5rem")
     }
 
-    val table = tableWrapper.appendElement("table") {
-        style.setProperty("width", "100%")
-        style.setProperty("border-collapse", "collapse")
-        style.setProperty("background-color", "#f9f7f2")
+    val table = tableWrapper.appendElement(Constants.Html.TABLE) {
+        style.setProperty(Constants.Css.WIDTH, "100%")
+        style.setProperty(Constants.Css.BORDER_COLLAPSE, Constants.CssValues.COLLAPSE)
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#f9f7f2")
     }
 
-    val thead = table.appendElement("thead") {
-        style.setProperty("background-color", "#eae5dc")
+    val thead = table.appendElement(Constants.Html.THEAD) {
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#eae5dc")
     }
-    val trh = thead.appendElement("tr") {
-        style.setProperty("border-bottom", "2px solid #5a544a")
+    val trh = thead.appendElement(Constants.Html.TR) {
+        style.setProperty(Constants.Css.BORDER_BOTTOM, "2px solid #5a544a")
     }
 
-    trh.appendElement("th") {
+    trh.appendElement(Constants.Html.TH) {
         textContent = "PLAYER"
         style.setProperty("border-right", "2px solid #5a544a")
-        style.setProperty("padding", "0.5rem")
-        style.setProperty("width", "220px")
-        style.setProperty("text-align", "left")
+        style.setProperty(Constants.Css.PADDING, "0.5rem")
+        style.setProperty(Constants.Css.WIDTH, "220px")
+        style.setProperty(Constants.Css.TEXT_ALIGN, "left")
     }
-    trh.appendElement("th") {
+    trh.appendElement(Constants.Html.TH) {
         textContent = "Pos"
         style.setProperty("border-right", "2px solid #5a544a")
-        style.setProperty("padding", "0.5rem")
-        style.setProperty("width", "50px")
-        style.setProperty("text-align", "center")
+        style.setProperty(Constants.Css.PADDING, "0.5rem")
+        style.setProperty(Constants.Css.WIDTH, "50px")
+        style.setProperty(Constants.Css.TEXT_ALIGN, "center")
     }
 
     for (i in 1..maxInning) {
-        trh.appendElement("th") {
+        trh.appendElement(Constants.Html.TH) {
             textContent = i.toString()
             style.setProperty("border-right", "1px solid #9c9384")
-            style.setProperty("width", "75px")
-            style.setProperty("text-align", "center")
+            style.setProperty(Constants.Css.WIDTH, "75px")
+            style.setProperty(Constants.Css.TEXT_ALIGN, "center")
         }
     }
 
     val statsHeaders = listOf("AB", "R", "H", "RBI")
     statsHeaders.forEach { sh ->
-        trh.appendElement("th") {
+        trh.appendElement(Constants.Html.TH) {
             textContent = sh
-            style.setProperty("border-left", if (sh == "AB") "2px solid #5a544a" else "1px solid #9c9384")
-            style.setProperty("width", "45px")
-            style.setProperty("text-align", "center")
+            style.setProperty("border-left", if (sh == Constants.METRIC_AB) "2px solid #5a544a" else "1px solid #9c9384")
+            style.setProperty(Constants.Css.WIDTH, "45px")
+            style.setProperty(Constants.Css.TEXT_ALIGN, "center")
         }
     }
 
-    val tbody = table.appendElement("tbody")
+    val tbody = table.appendElement(Constants.Html.TBODY)
 
     val baseRunners = mutableMapOf<String, Int>()
     val playAdvancements = mutableMapOf<PlayEvent, Int>()
@@ -344,17 +344,17 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
         if (subOptions.isEmpty()) {
             window.alert("No bench batters available!")
         } else {
-            val selectOverlay = document.createElement("select") as HTMLSelectElement
+            val selectOverlay = document.createElement(Constants.Html.SELECT) as HTMLSelectElement
             selectOverlay.className = "form-control"
-            selectOverlay.style.setProperty("font-size", "0.75rem")
-            selectOverlay.style.setProperty("padding", "2px")
+            selectOverlay.style.setProperty(Constants.Css.FONT_SIZE, "0.75rem")
+            selectOverlay.style.setProperty(Constants.Css.PADDING, "2px")
             
-            val defOpt = document.createElement("option") as HTMLOptionElement
+            val defOpt = document.createElement(Constants.Html.OPTION) as HTMLOptionElement
             defOpt.textContent = "Select pinch hitter..."
             selectOverlay.appendChild(defOpt)
             
             subOptions.forEach { optPlayer ->
-                val opt = document.createElement("option") as HTMLOptionElement
+                val opt = document.createElement(Constants.Html.OPTION) as HTMLOptionElement
                 opt.value = optPlayer.id.toString()
                 opt.textContent = "${optPlayer.name} (#${optPlayer.jerseyNumber} - ${optPlayer.position})"
                 selectOverlay.appendChild(opt)
@@ -380,21 +380,21 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
 
     // Helper to render inning cells for starter/sub rows
     fun renderInningCell(tr: HTMLElement, ev: PlayEvent?, cellBg: String) {
-        val tdCell = tr.appendElement("td") {
+        val tdCell = tr.appendElement(Constants.Html.TD) {
             style.setProperty("border-right", "1px solid #9c9384")
-            style.setProperty("padding", "0")
-            style.setProperty("height", "42.5px")
-            style.setProperty("width", "75px")
-            style.setProperty("background", cellBg)
+            style.setProperty(Constants.Css.PADDING, "0")
+            style.setProperty(Constants.Css.HEIGHT, "42.5px")
+            style.setProperty(Constants.Css.WIDTH, "75px")
+            style.setProperty(Constants.Css.BACKGROUND, cellBg)
         }
 
-        val cellWrapper = tdCell.appendElement("div") {
-            style.setProperty("position", "relative")
-            style.setProperty("width", "100%")
-            style.setProperty("height", "100%")
-            style.setProperty("box-sizing", "border-box")
-            style.setProperty("padding", "2px")
-            style.setProperty("overflow", "hidden")
+        val cellWrapper = tdCell.appendElement(Constants.Html.DIV) {
+            style.setProperty(Constants.Css.POSITION, Constants.CssValues.RELATIVE)
+            style.setProperty(Constants.Css.WIDTH, "100%")
+            style.setProperty(Constants.Css.HEIGHT, "100%")
+            style.setProperty(Constants.Css.BOX_SIZING, Constants.CssValues.BORDER_BOX)
+            style.setProperty(Constants.Css.PADDING, "2px")
+            style.setProperty(Constants.Css.OVERFLOW, Constants.CssValues.HIDDEN)
         }
 
         if (ev != null) {
@@ -402,84 +402,84 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
             val base = playAdvancements[ev] ?: 0
             val outNum = playOutNumbers[ev]
 
-            val diamond = cellWrapper.appendElement("div") {
-                style.setProperty("position", "absolute")
-                style.setProperty("top", "50%")
-                style.setProperty("left", "50%")
-                style.setProperty("width", "26px")
-                style.setProperty("height", "26px")
+            val diamond = cellWrapper.appendElement(Constants.Html.DIV) {
+                style.setProperty(Constants.Css.POSITION, Constants.CssValues.ABSOLUTE)
+                style.setProperty(Constants.Css.TOP, "50%")
+                style.setProperty(Constants.Css.LEFT, "50%")
+                style.setProperty(Constants.Css.WIDTH, "26px")
+                style.setProperty(Constants.Css.HEIGHT, "26px")
                 style.setProperty("margin-top", "-13px")
                 style.setProperty("margin-left", "-13px")
-                style.setProperty("border", "1px dashed #d2cdc6")
-                style.setProperty("transform", "rotate(45deg)")
-                style.setProperty("z-index", "1")
+                style.setProperty(Constants.Css.BORDER, "1px dashed #d2cdc6")
+                style.setProperty(Constants.Css.TRANSFORM, "rotate(45deg)")
+                style.setProperty(Constants.Css.Z_INDEX, "1")
             }
 
-            if (base >= 1) diamond.style.setProperty("border-right", "2px solid #ff2a3b")
-            if (base >= 2) diamond.style.setProperty("border-top", "2px solid #ff2a3b")
-            if (base >= 3) diamond.style.setProperty("border-left", "2px solid #ff2a3b")
+            if (base >= 1) diamond.style.setProperty(Constants.Css.BORDER_RIGHT, "2px solid #ff2a3b")
+            if (base >= 2) diamond.style.setProperty(Constants.Css.BORDER_TOP, "2px solid #ff2a3b")
+            if (base >= 3) diamond.style.setProperty(Constants.Css.BORDER_LEFT, "2px solid #ff2a3b")
             if (base >= 4) {
-                diamond.style.setProperty("border-bottom", "2px solid #ff2a3b")
-                diamond.style.setProperty("background-color", "rgba(255, 42, 59, 0.25)")
+                diamond.style.setProperty(Constants.Css.BORDER_BOTTOM, "2px solid #ff2a3b")
+                diamond.style.setProperty(Constants.Css.BACKGROUND_COLOR, "rgba(255, 42, 59, 0.25)")
             }
 
-            cellWrapper.appendElement("div") {
+            cellWrapper.appendElement(Constants.Html.DIV) {
                 textContent = notation
-                style.setProperty("position", "absolute")
-                style.setProperty("top", "50%")
-                style.setProperty("left", "50%")
-                style.setProperty("transform", "translate(-50%, -50%)")
-                style.setProperty("font-weight", "bold")
-                style.setProperty("font-size", "0.75rem")
-                style.setProperty("z-index", "2")
+                style.setProperty(Constants.Css.POSITION, Constants.CssValues.ABSOLUTE)
+                style.setProperty(Constants.Css.TOP, "50%")
+                style.setProperty(Constants.Css.LEFT, "50%")
+                style.setProperty(Constants.Css.TRANSFORM, "translate(-50%, -50%)")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                style.setProperty(Constants.Css.FONT_SIZE, "0.75rem")
+                style.setProperty(Constants.Css.Z_INDEX, "2")
             }
 
-            val countDiv = cellWrapper.appendElement("div") {
-                style.setProperty("position", "absolute")
-                style.setProperty("top", "2px")
-                style.setProperty("left", "4px")
-                style.setProperty("display", "flex")
-                style.setProperty("flex-direction", "column")
-                style.setProperty("gap", "1px")
-                style.setProperty("z-index", "3")
+            val countDiv = cellWrapper.appendElement(Constants.Html.DIV) {
+                style.setProperty(Constants.Css.POSITION, Constants.CssValues.ABSOLUTE)
+                style.setProperty(Constants.Css.TOP, "2px")
+                style.setProperty(Constants.Css.LEFT, "4px")
+                style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+                style.setProperty(Constants.Css.FLEX_DIRECTION, Constants.CssValues.COLUMN)
+                style.setProperty(Constants.Css.GAP, "1px")
+                style.setProperty(Constants.Css.Z_INDEX, "3")
             }
 
-            val bRow = countDiv.appendElement("div") { style.setProperty("display", "flex"); style.setProperty("gap", "1px") }
+            val bRow = countDiv.appendElement(Constants.Html.DIV) { style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX); style.setProperty(Constants.Css.GAP, "1px") }
             for (b in 1..3) {
-                bRow.appendElement("span") {
-                    style.setProperty("width", "3px")
-                    style.setProperty("height", "3px")
-                    style.setProperty("border-radius", "50%")
-                    style.setProperty("background-color", if (b <= ev.balls) "#ffcc00" else "#d2cdc6")
+                bRow.appendElement(Constants.Html.SPAN) {
+                    style.setProperty(Constants.Css.WIDTH, "3px")
+                    style.setProperty(Constants.Css.HEIGHT, "3px")
+                    style.setProperty(Constants.Css.BORDER_RADIUS, "50%")
+                    style.setProperty(Constants.Css.BACKGROUND_COLOR, if (b <= ev.balls) "#ffcc00" else "#d2cdc6")
                 }
             }
-            val sRow = countDiv.appendElement("div") { style.setProperty("display", "flex"); style.setProperty("gap", "1px") }
+            val sRow = countDiv.appendElement(Constants.Html.DIV) { style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX); style.setProperty(Constants.Css.GAP, "1px") }
             for (s in 1..2) {
-                sRow.appendElement("span") {
-                    style.setProperty("width", "3px")
-                    style.setProperty("height", "3px")
-                    style.setProperty("border-radius", "50%")
-                    style.setProperty("background-color", if (s <= ev.strikes) "#ff2a3b" else "#d2cdc6")
+                sRow.appendElement(Constants.Html.SPAN) {
+                    style.setProperty(Constants.Css.WIDTH, "3px")
+                    style.setProperty(Constants.Css.HEIGHT, "3px")
+                    style.setProperty(Constants.Css.BORDER_RADIUS, "50%")
+                    style.setProperty(Constants.Css.BACKGROUND_COLOR, if (s <= ev.strikes) "#ff2a3b" else "#d2cdc6")
                 }
             }
 
             if (outNum != null) {
-                cellWrapper.appendElement("div") {
+                cellWrapper.appendElement(Constants.Html.DIV) {
                     textContent = outNum.toString()
-                    style.setProperty("position", "absolute")
-                    style.setProperty("bottom", "2px")
-                    style.setProperty("right", "10px")
-                    style.setProperty("width", "11px")
-                    style.setProperty("height", "11px")
-                    style.setProperty("border", "1px solid #ff2a3b")
-                    style.setProperty("border-radius", "50%")
-                    style.setProperty("font-size", "0.55rem")
-                    style.setProperty("display", "flex")
-                    style.setProperty("justify-content", "center")
-                    style.setProperty("align-items", "center")
-                    style.setProperty("color", "#ff2a3b")
-                    style.setProperty("font-weight", "bold")
-                    style.setProperty("z-index", "3")
+                    style.setProperty(Constants.Css.POSITION, Constants.CssValues.ABSOLUTE)
+                    style.setProperty(Constants.Css.BOTTOM, "2px")
+                    style.setProperty(Constants.Css.RIGHT, "10px")
+                    style.setProperty(Constants.Css.WIDTH, "11px")
+                    style.setProperty(Constants.Css.HEIGHT, "11px")
+                    style.setProperty(Constants.Css.BORDER, "1px solid #ff2a3b")
+                    style.setProperty(Constants.Css.BORDER_RADIUS, "50%")
+                    style.setProperty(Constants.Css.FONT_SIZE, "0.55rem")
+                    style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+                    style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.CENTER)
+                    style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
+                    style.setProperty(Constants.Css.COLOR, "#ff2a3b")
+                    style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                    style.setProperty(Constants.Css.Z_INDEX, "3")
                 }
             }
 
@@ -487,35 +487,35 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
             val endedInning = if (nextEv != null) {
                 nextEv.inning != ev.inning || nextEv.half != ev.half
             } else {
-                val outsOnPlay = if (ev.description.contains("Double Play") || ev.description.contains("DP")) 2 
+                val outsOnPlay = if (ev.description.contains(Constants.DESC_DOUBLE_PLAY) || ev.description.contains(Constants.DESC_DP)) 2 
                                  else if (ev.eventType in listOf(ScoringEventType.STRIKEOUT, ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.SACRIFICE_FLY, ScoringEventType.FIELDER_CHOICE)) 1 
                                  else 0
                 ev.outsBefore + outsOnPlay >= 3
             }
 
             if (endedInning) {
-                cellWrapper.appendElement("div") {
-                    style.setProperty("position", "absolute")
-                    style.setProperty("bottom", "0")
-                    style.setProperty("right", "0")
-                    style.setProperty("width", "10px")
-                    style.setProperty("height", "10px")
-                    style.setProperty("background", "linear-gradient(to bottom right, transparent calc(50% - 0.5px), #ff2a3b, transparent calc(50% + 1px))")
-                    style.setProperty("pointer-events", "none")
-                    style.setProperty("z-index", "4")
+                cellWrapper.appendElement(Constants.Html.DIV) {
+                    style.setProperty(Constants.Css.POSITION, Constants.CssValues.ABSOLUTE)
+                    style.setProperty(Constants.Css.BOTTOM, "0")
+                    style.setProperty(Constants.Css.RIGHT, "0")
+                    style.setProperty(Constants.Css.WIDTH, "10px")
+                    style.setProperty(Constants.Css.HEIGHT, "10px")
+                    style.setProperty(Constants.Css.BACKGROUND, "linear-gradient(to bottom right, transparent calc(50% - 0.5px), #ff2a3b, transparent calc(50% + 1px))")
+                    style.setProperty(Constants.Css.POINTER_EVENTS, Constants.CssValues.NONE)
+                    style.setProperty(Constants.Css.Z_INDEX, "4")
                 }
             }
         } else {
-            cellWrapper.appendElement("div") {
-                style.setProperty("position", "absolute")
-                style.setProperty("top", "50%")
-                style.setProperty("left", "50%")
-                style.setProperty("width", "8px")
-                style.setProperty("height", "8px")
+            cellWrapper.appendElement(Constants.Html.DIV) {
+                style.setProperty(Constants.Css.POSITION, Constants.CssValues.ABSOLUTE)
+                style.setProperty(Constants.Css.TOP, "50%")
+                style.setProperty(Constants.Css.LEFT, "50%")
+                style.setProperty(Constants.Css.WIDTH, "8px")
+                style.setProperty(Constants.Css.HEIGHT, "8px")
                 style.setProperty("margin-top", "-4px")
                 style.setProperty("margin-left", "-4px")
-                style.setProperty("border", "1px dashed #e2ded5")
-                style.setProperty("transform", "rotate(45deg)")
+                style.setProperty(Constants.Css.BORDER, "1px dashed #e2ded5")
+                style.setProperty(Constants.Css.TRANSFORM, "rotate(45deg)")
             }
         }
     }
@@ -527,50 +527,50 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
         val cellBg = if (isEvenRow) "linear-gradient(180deg, #f4f1e7 0%, #ebe6d9 100%)" else "linear-gradient(180deg, #faf9f6 0%, #f3f0e8 100%)"
 
         // --- ROW 0: STARTER ---
-        val tr0 = tbody.appendElement("tr") {
+        val tr0 = tbody.appendElement(Constants.Html.TR) {
             style.setProperty("border-bottom", if (hasSub) "1px solid #9c9384" else "1px solid #5a544a")
-            style.setProperty("height", "42.5px")
+            style.setProperty(Constants.Css.HEIGHT, "42.5px")
         }
 
-        val tdPlayer0 = tr0.appendElement("td") {
+        val tdPlayer0 = tr0.appendElement(Constants.Html.TD) {
             style.setProperty("border-right", "2px solid #5a544a")
-            style.setProperty("padding", "0 0.5rem")
+            style.setProperty(Constants.Css.PADDING, "0 0.5rem")
             style.setProperty("vertical-align", "middle")
-            style.setProperty("background", cellBg)
-            style.setProperty("height", "42.5px")
+            style.setProperty(Constants.Css.BACKGROUND, cellBg)
+            style.setProperty(Constants.Css.HEIGHT, "42.5px")
         }
 
         val pName0 = players.getOrNull(0) ?: ""
-        val row0 = tdPlayer0.appendElement("div") {
-            style.setProperty("display", "flex")
-            style.setProperty("justify-content", "space-between")
-            style.setProperty("align-items", "center")
-            style.setProperty("width", "100%")
+        val row0 = tdPlayer0.appendElement(Constants.Html.DIV) {
+            style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+            style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.SPACE_BETWEEN)
+            style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
+            style.setProperty(Constants.Css.WIDTH, "100%")
         }
-        row0.appendElement("span") {
+        row0.appendElement(Constants.Html.SPAN) {
             if (hasSub) {
                 textContent = "${slotIdx + 1}. $pName0 (Subbed Out)"
-                style.setProperty("color", "#777")
-                style.setProperty("font-weight", "normal")
-                style.setProperty("font-size", "0.85rem")
+                style.setProperty(Constants.Css.COLOR, "#777")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.NORMAL)
+                style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
             } else {
                 textContent = "${slotIdx + 1}. $pName0"
-                style.setProperty("font-weight", "bold")
-                style.setProperty("font-size", "0.95rem")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                style.setProperty(Constants.Css.FONT_SIZE, "0.95rem")
             }
         }
 
         if (!hasSub && game.status != GameStatus.COMPLETED) {
-            row0.appendElement("button", "btn") {
+            row0.appendElement(Constants.Html.BUTTON, "btn") {
                 textContent = "Sub"
-                style.setProperty("padding", "2px 6px")
-                style.setProperty("font-size", "0.7rem")
-                style.setProperty("background-color", "#5a544a")
-                style.setProperty("color", "white")
-                style.setProperty("font-weight", "bold")
-                style.setProperty("border", "none")
-                style.setProperty("border-radius", "4px")
-                style.setProperty("cursor", "pointer")
+                style.setProperty(Constants.Css.PADDING, "2px 6px")
+                style.setProperty(Constants.Css.FONT_SIZE, "0.7rem")
+                style.setProperty(Constants.Css.BACKGROUND_COLOR, "#5a544a")
+                style.setProperty(Constants.Css.COLOR, "white")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                style.setProperty(Constants.Css.BORDER, Constants.CssValues.NONE)
+                style.setProperty(Constants.Css.BORDER_RADIUS, "4px")
+                style.setProperty(Constants.Css.CURSOR, Constants.CssValues.POINTER)
                 onClick {
                     openSubSelector(row0, slotIdx)
                 }
@@ -578,55 +578,55 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
         }
 
         val starterPos = battingStatsList.find { it.playerName == pName0 }?.position ?: Constants.Positions.DH
-        tr0.appendElement("td") {
+        tr0.appendElement(Constants.Html.TD) {
             textContent = starterPos
             style.setProperty("border-right", "2px solid #5a544a")
-            style.setProperty("padding", "0.5rem")
-            style.setProperty("text-align", "center")
-            style.setProperty("font-weight", "bold")
-            style.setProperty("background", cellBg)
+            style.setProperty(Constants.Css.PADDING, "0.5rem")
+            style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+            style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+            style.setProperty(Constants.Css.BACKGROUND, cellBg)
         }
 
         // --- ROW 1: SUBSTITUTE (Only if hasSub is true) ---
         var tr1: HTMLElement? = null
         if (hasSub) {
-            tr1 = tbody.appendElement("tr") {
+            tr1 = tbody.appendElement(Constants.Html.TR) {
                 style.setProperty("border-bottom", "1px solid #5a544a") // outer/notebook border
-                style.setProperty("height", "42.5px")
+                style.setProperty(Constants.Css.HEIGHT, "42.5px")
             }
 
-            val tdPlayer1 = tr1.appendElement("td") {
+            val tdPlayer1 = tr1.appendElement(Constants.Html.TD) {
                 style.setProperty("border-right", "2px solid #5a544a")
-                style.setProperty("padding", "0 0.5rem")
+                style.setProperty(Constants.Css.PADDING, "0 0.5rem")
                 style.setProperty("vertical-align", "middle")
-                style.setProperty("background", cellBg)
-                style.setProperty("height", "42.5px")
+                style.setProperty(Constants.Css.BACKGROUND, cellBg)
+                style.setProperty(Constants.Css.HEIGHT, "42.5px")
             }
 
             val pName1 = players[1]
-            val row1 = tdPlayer1.appendElement("div") {
-                style.setProperty("display", "flex")
-                style.setProperty("justify-content", "space-between")
-                style.setProperty("align-items", "center")
-                style.setProperty("width", "100%")
+            val row1 = tdPlayer1.appendElement(Constants.Html.DIV) {
+                style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+                style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.SPACE_BETWEEN)
+                style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
+                style.setProperty(Constants.Css.WIDTH, "100%")
             }
-            row1.appendElement("span") {
+            row1.appendElement(Constants.Html.SPAN) {
                 textContent = "${slotIdx + 1}. $pName1"
-                style.setProperty("font-weight", "bold")
-                style.setProperty("font-size", "0.95rem")
-                style.setProperty("color", "#2b2a28")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                style.setProperty(Constants.Css.FONT_SIZE, "0.95rem")
+                style.setProperty(Constants.Css.COLOR, "#2b2a28")
             }
             if (game.status != GameStatus.COMPLETED) {
-                row1.appendElement("button", "btn") {
+                row1.appendElement(Constants.Html.BUTTON, "btn") {
                     textContent = "Sub"
-                    style.setProperty("padding", "2px 6px")
-                    style.setProperty("font-size", "0.7rem")
-                    style.setProperty("background-color", "#5a544a")
-                    style.setProperty("color", "white")
-                    style.setProperty("font-weight", "bold")
-                    style.setProperty("border", "none")
-                    style.setProperty("border-radius", "4px")
-                    style.setProperty("cursor", "pointer")
+                    style.setProperty(Constants.Css.PADDING, "2px 6px")
+                    style.setProperty(Constants.Css.FONT_SIZE, "0.7rem")
+                    style.setProperty(Constants.Css.BACKGROUND_COLOR, "#5a544a")
+                    style.setProperty(Constants.Css.COLOR, "white")
+                    style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                    style.setProperty(Constants.Css.BORDER, Constants.CssValues.NONE)
+                    style.setProperty(Constants.Css.BORDER_RADIUS, "4px")
+                    style.setProperty(Constants.Css.CURSOR, Constants.CssValues.POINTER)
                     onClick {
                         openSubSelector(row1, slotIdx)
                     }
@@ -634,13 +634,13 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
             }
 
             val subPos = battingStatsList.find { it.playerName == pName1 }?.position ?: Constants.Positions.DH
-            tr1.appendElement("td") {
+            tr1.appendElement(Constants.Html.TD) {
                 textContent = subPos
                 style.setProperty("border-right", "2px solid #5a544a")
-                style.setProperty("padding", "0.5rem")
-                style.setProperty("text-align", "center")
-                style.setProperty("font-weight", "bold")
-                style.setProperty("background", cellBg)
+                style.setProperty(Constants.Css.PADDING, "0.5rem")
+                style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                style.setProperty(Constants.Css.BACKGROUND, cellBg)
             }
         }
 
@@ -662,85 +662,85 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
 
         // --- STATS CELLS ---
         val stat0 = battingStatsList.find { it.playerName == pName0 }
-        tr0.appendElement("td") {
+        tr0.appendElement(Constants.Html.TD) {
             textContent = stat0?.atBats?.toString() ?: "0"
             style.setProperty("border-left", "2px solid #5a544a")
             style.setProperty("border-right", "1px solid #9c9384")
-            style.setProperty("text-align", "center")
-            style.setProperty("font-weight", "bold")
-            style.setProperty("background", cellBg)
+            style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+            style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+            style.setProperty(Constants.Css.BACKGROUND, cellBg)
         }
-        tr0.appendElement("td") {
+        tr0.appendElement(Constants.Html.TD) {
             textContent = stat0?.runs?.toString() ?: "0"
             style.setProperty("border-right", "1px solid #9c9384")
-            style.setProperty("text-align", "center")
-            style.setProperty("font-weight", "bold")
-            style.setProperty("background", cellBg)
+            style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+            style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+            style.setProperty(Constants.Css.BACKGROUND, cellBg)
         }
-        tr0.appendElement("td") {
+        tr0.appendElement(Constants.Html.TD) {
             textContent = stat0?.hits?.toString() ?: "0"
             style.setProperty("border-right", "1px solid #9c9384")
-            style.setProperty("text-align", "center")
-            style.setProperty("font-weight", "bold")
-            style.setProperty("background", cellBg)
+            style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+            style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+            style.setProperty(Constants.Css.BACKGROUND, cellBg)
         }
-        tr0.appendElement("td") {
+        tr0.appendElement(Constants.Html.TD) {
             textContent = stat0?.rbi?.toString() ?: "0"
             style.setProperty("border-right", "1px solid #9c9384")
-            style.setProperty("text-align", "center")
-            style.setProperty("font-weight", "bold")
-            style.setProperty("background", cellBg)
+            style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+            style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+            style.setProperty(Constants.Css.BACKGROUND, cellBg)
         }
 
         if (hasSub && tr1 != null) {
             val pName1 = players[1]
             val stat1 = battingStatsList.find { it.playerName == pName1 }
-            tr1.appendElement("td") {
+            tr1.appendElement(Constants.Html.TD) {
                 textContent = stat1?.atBats?.toString() ?: ""
                 style.setProperty("border-left", "2px solid #5a544a")
                 style.setProperty("border-right", "1px solid #9c9384")
-                style.setProperty("text-align", "center")
-                style.setProperty("font-weight", "bold")
-                style.setProperty("background", cellBg)
+                style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                style.setProperty(Constants.Css.BACKGROUND, cellBg)
             }
-            tr1.appendElement("td") {
+            tr1.appendElement(Constants.Html.TD) {
                 textContent = stat1?.runs?.toString() ?: ""
                 style.setProperty("border-right", "1px solid #9c9384")
-                style.setProperty("text-align", "center")
-                style.setProperty("font-weight", "bold")
-                style.setProperty("background", cellBg)
+                style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                style.setProperty(Constants.Css.BACKGROUND, cellBg)
             }
-            tr1.appendElement("td") {
+            tr1.appendElement(Constants.Html.TD) {
                 textContent = stat1?.hits?.toString() ?: ""
                 style.setProperty("border-right", "1px solid #9c9384")
-                style.setProperty("text-align", "center")
-                style.setProperty("font-weight", "bold")
-                style.setProperty("background", cellBg)
+                style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                style.setProperty(Constants.Css.BACKGROUND, cellBg)
             }
-            tr1.appendElement("td") {
+            tr1.appendElement(Constants.Html.TD) {
                 textContent = stat1?.rbi?.toString() ?: ""
                 style.setProperty("border-right", "1px solid #9c9384")
-                style.setProperty("text-align", "center")
-                style.setProperty("font-weight", "bold")
-                style.setProperty("background", cellBg)
+                style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                style.setProperty(Constants.Css.BACKGROUND, cellBg)
             }
         }
     }
 
-    val trSummary = tbody.appendElement("tr") {
-        style.setProperty("background-color", "#eae5dc")
+    val trSummary = tbody.appendElement(Constants.Html.TR) {
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#eae5dc")
         style.setProperty("border-top", "2px solid #5a544a")
-        style.setProperty("height", "40px")
+        style.setProperty(Constants.Css.HEIGHT, "40px")
     }
 
-    trSummary.appendElement("td") {
+    trSummary.appendElement(Constants.Html.TD) {
         setAttribute("colspan", "2")
         textContent = "RUNS-HITS-ERRORS"
         style.setProperty("border-right", "2px solid #5a544a")
-        style.setProperty("padding", "0.5rem")
-        style.setProperty("font-weight", "bold")
-        style.setProperty("font-size", "0.75rem")
-        style.setProperty("white-space", "nowrap")
+        style.setProperty(Constants.Css.PADDING, "0.5rem")
+        style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+        style.setProperty(Constants.Css.FONT_SIZE, "0.75rem")
+        style.setProperty(Constants.Css.WHITE_SPACE, Constants.CssValues.NOWRAP)
     }
 
     for (inn in 1..maxInning) {
@@ -749,32 +749,32 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
         val hits = innEvents.count { it.eventType in listOf(ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN) }
         val errors = innEvents.count { it.eventType == ScoringEventType.ERROR }
 
-        trSummary.appendElement("td") {
+        trSummary.appendElement(Constants.Html.TD) {
             textContent = "$runs-$hits-$errors"
             style.setProperty("border-right", "1px solid #9c9384")
-            style.setProperty("text-align", "center")
-            style.setProperty("font-weight", "bold")
-            style.setProperty("font-size", "0.75rem")
-            style.setProperty("color", "#ff2a3b")
-            style.setProperty("white-space", "nowrap")
-            style.setProperty("width", "75px")
+            style.setProperty(Constants.Css.TEXT_ALIGN, "center")
+            style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+            style.setProperty(Constants.Css.FONT_SIZE, "0.75rem")
+            style.setProperty(Constants.Css.COLOR, "#ff2a3b")
+            style.setProperty(Constants.Css.WHITE_SPACE, Constants.CssValues.NOWRAP)
+            style.setProperty(Constants.Css.WIDTH, "75px")
             
-            style.setProperty("position", "relative")
-            appendElement("div") {
-                style.setProperty("position", "absolute")
-                style.setProperty("top", "0")
-                style.setProperty("right", "0")
-                style.setProperty("width", "100%")
-                style.setProperty("height", "100%")
+            style.setProperty(Constants.Css.POSITION, Constants.CssValues.RELATIVE)
+            appendElement(Constants.Html.DIV) {
+                style.setProperty(Constants.Css.POSITION, Constants.CssValues.ABSOLUTE)
+                style.setProperty(Constants.Css.TOP, "0")
+                style.setProperty(Constants.Css.RIGHT, "0")
+                style.setProperty(Constants.Css.WIDTH, "100%")
+                style.setProperty(Constants.Css.HEIGHT, "100%")
                 style.setProperty("background", "linear-gradient(to top right, transparent calc(50% - 0.5px), #5a544a, transparent calc(50% + 1px))")
-                style.setProperty("pointer-events", "none")
-                style.setProperty("opacity", "0.3")
+                style.setProperty(Constants.Css.POINTER_EVENTS, Constants.CssValues.NONE)
+                style.setProperty(Constants.Css.OPACITY, "0.3")
             }
         }
     }
 
     for (s in 1..4) {
-        trSummary.appendElement("td") {
+        trSummary.appendElement(Constants.Html.TD) {
             style.setProperty("border-right", "1px solid #9c9384")
         }
     }

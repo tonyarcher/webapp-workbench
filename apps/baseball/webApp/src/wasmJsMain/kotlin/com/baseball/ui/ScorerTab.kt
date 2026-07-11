@@ -3,6 +3,7 @@ package com.baseball.ui
 import com.baseball.api
 import com.baseball.game.*
 import com.baseball.models.*
+import com.baseball.Constants
 import com.baseball.ui.components.*
 import org.w3c.dom.*
 import kotlinx.browser.document
@@ -70,10 +71,10 @@ internal fun substitutePitcher(isHome: Boolean, newPitcherId: Long) {
 // LIVE SCORER TAB
 internal fun renderLiveScorerTab(container: HTMLElement) {
     if (!isSingleGameMode && selectedGameId == null) {
-        container.appendElement("div", "card") {
-            style.setProperty("text-align", "center")
-            style.setProperty("padding", "3rem")
-            appendElement("p") { textContent = "No game selected. Go to Season Dashboard to select one." }
+        container.appendElement(Constants.Html.DIV, "card") {
+            style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER)
+            style.setProperty(Constants.Css.PADDING, "3rem")
+            appendElement(Constants.Html.P) { textContent = "No game selected. Go to Season Dashboard to select one." }
         }
         return
     }
@@ -100,35 +101,35 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 
             // Bootstrap client-side lineups for remote game
             if (localAwayLineup.isEmpty()) {
-                localAwayLineup.addAll(awayRoster.filter { it.position != "P" }.take(9))
-                localAwayBench.addAll(awayRoster.filter { it.position == "P" && it.id != game.gameState.currentPitcherId } + awayRoster.drop(10))
-                localAwayActivePitcherId = game.gameState.currentPitcherId ?: awayRoster.find { it.position == "P" }?.id ?: 210L
-                localAwayActivePitcherName = game.gameState.currentPitcherName ?: awayRoster.find { it.position == "P" }?.name ?: "Sonny Gray"
+                localAwayLineup.addAll(awayRoster.filter { it.position != Constants.Positions.P }.take(9))
+                localAwayBench.addAll(awayRoster.filter { it.position == Constants.Positions.P && it.id != game.gameState.currentPitcherId } + awayRoster.drop(10))
+                localAwayActivePitcherId = game.gameState.currentPitcherId ?: awayRoster.find { it.position == Constants.Positions.P }?.id ?: 210L
+                localAwayActivePitcherName = game.gameState.currentPitcherName ?: awayRoster.find { it.position == Constants.Positions.P }?.name ?: "Sonny Gray"
                 localAwayBatterIndex = localAwayLineup.indexOfFirst { it.id == game.gameState.currentBatterId }.coerceAtLeast(0)
             }
             if (localHomeLineup.isEmpty()) {
-                localHomeLineup.addAll(homeRoster.filter { it.position != "P" }.take(9))
-                localHomeBench.addAll(homeRoster.filter { it.position == "P" && it.id != game.gameState.currentPitcherId } + homeRoster.drop(10))
-                localHomeActivePitcherId = game.gameState.currentPitcherId ?: homeRoster.find { it.position == "P" }?.id ?: 110L
-                localHomeActivePitcherName = game.gameState.currentPitcherName ?: homeRoster.find { it.position == "P" }?.name ?: "Justin Steele"
+                localHomeLineup.addAll(homeRoster.filter { it.position != Constants.Positions.P }.take(9))
+                localHomeBench.addAll(homeRoster.filter { it.position == Constants.Positions.P && it.id != game.gameState.currentPitcherId } + homeRoster.drop(10))
+                localHomeActivePitcherId = game.gameState.currentPitcherId ?: homeRoster.find { it.position == Constants.Positions.P }?.id ?: 110L
+                localHomeActivePitcherName = game.gameState.currentPitcherName ?: homeRoster.find { it.position == Constants.Positions.P }?.name ?: "Justin Steele"
                 localHomeBatterIndex = localHomeLineup.indexOfFirst { it.id == game.gameState.currentBatterId }.coerceAtLeast(0)
             }
         }
 
-        val titleRow = container.appendElement("div") {
-            style.setProperty("display", "flex")
-            style.setProperty("justify-content", "space-between")
-            style.setProperty("align-items", "center")
-            style.setProperty("margin-bottom", "1rem")
+        val titleRow = container.appendElement(Constants.Html.DIV) {
+            style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+            style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.SPACE_BETWEEN)
+            style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
+            style.setProperty(Constants.Css.MARGIN_BOTTOM, "1rem")
         }
-        titleRow.appendElement("h1") {
+        titleRow.appendElement(Constants.Html.H1) {
             textContent = "Live Scoring: ${game.awayTeam.city} @ ${game.homeTeam.city}"
-            style.setProperty("margin-bottom", "0")
+            style.setProperty(Constants.Css.MARGIN_BOTTOM, "0")
         }
         if (isSingleGameMode) {
-            titleRow.appendElement("button", "btn btn-danger") {
+            titleRow.appendElement(Constants.Html.BUTTON, "btn btn-danger") {
                 textContent = "Reset / New Game"
-                style.setProperty("padding", "0.5rem 1rem")
+                style.setProperty(Constants.Css.PADDING, "0.5rem 1rem")
                 onClick {
                     if (window.confirm("Are you sure you want to reset and start a new game? All current statistics and events will be lost.")) {
                         initLocalGame(forceReset = true)
@@ -138,44 +139,44 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
             }
         }
 
-        val topGrid = container.appendElement("div", "scorekeeper-grid")
+        val topGrid = container.appendElement(Constants.Html.DIV, "scorekeeper-grid")
 
         // 1. Digital LED Scoreboard
-        val leftCol = topGrid.appendElement("div", "scoreboard-led")
+        val leftCol = topGrid.appendElement(Constants.Html.DIV, "scoreboard-led")
         renderScorerLedScoreboard(leftCol, game)
 
         // 2. Play Actions & Lineup Selector
-        val rightCol = topGrid.appendElement("div", "card")
+        val rightCol = topGrid.appendElement(Constants.Html.DIV, "card")
         renderGameScoringControls(rightCol, game, homeRoster, awayRoster, boxScore)
 
         // 3. Play Monitoring Tabs (Play-by-play vs Visual Scorebook)
-        val monitoringCard = container.appendElement("div", "card") { style.setProperty("margin-top", "2rem") }
-        val monitoringHeader = monitoringCard.appendElement("div") {
-            style.setProperty("display", "flex")
-            style.setProperty("justify-content", "space-between")
-            style.setProperty("align-items", "center")
-            style.setProperty("border-bottom", "1px solid rgba(255, 255, 255, 0.1)")
-            style.setProperty("padding-bottom", "0.5rem")
-            style.setProperty("margin-bottom", "1rem")
+        val monitoringCard = container.appendElement(Constants.Html.DIV, "card") { style.setProperty(Constants.Css.MARGIN_TOP, "2rem") }
+        val monitoringHeader = monitoringCard.appendElement(Constants.Html.DIV) {
+            style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+            style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.SPACE_BETWEEN)
+            style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
+            style.setProperty(Constants.Css.BORDER_BOTTOM, "1px solid rgba(255, 255, 255, 0.1)")
+            style.setProperty(Constants.Css.PADDING_BOTTOM, "0.5rem")
+            style.setProperty(Constants.Css.MARGIN_BOTTOM, "1rem")
         }
 
-        monitoringHeader.appendElement("h2") {
+        monitoringHeader.appendElement(Constants.Html.H2) {
             textContent = "Live Game Monitoring"
-            style.setProperty("margin", "0")
+            style.setProperty(Constants.Css.MARGIN, "0")
         }
 
-        val toggleGroup = monitoringHeader.appendElement("div") {
-            style.setProperty("display", "flex")
-            style.setProperty("gap", "0.5rem")
+        val toggleGroup = monitoringHeader.appendElement(Constants.Html.DIV) {
+            style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+            style.setProperty(Constants.Css.GAP, "0.5rem")
         }
 
-        val monitorContent = monitoringCard.appendElement("div")
+        val monitorContent = monitoringCard.appendElement(Constants.Html.DIV)
 
         fun showLog() {
             monitorContent.innerHTML = ""
-            val logDiv = monitorContent.appendElement("div", "event-log")
+            val logDiv = monitorContent.appendElement(Constants.Html.DIV, "event-log")
             if (events.isEmpty()) {
-                logDiv.appendElement("div") { textContent = "No events logged for this game yet." }
+                logDiv.appendElement(Constants.Html.DIV) { textContent = "No events logged for this game yet." }
             } else {
                 events.forEachIndexed { index, ev ->
                     val player = (homeRoster + awayRoster).find { it.name == ev.batterName }
@@ -184,53 +185,53 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                     val endedInning = if (index + 1 < events.size) {
                         events[index + 1].half != ev.half || events[index + 1].inning != ev.inning
                     } else {
-                        val outsOnPlay = if (ev.description.contains("Double Play") || ev.description.contains("DP")) 2 
+                        val outsOnPlay = if (ev.description.contains(Constants.DESC_DOUBLE_PLAY) || ev.description.contains(Constants.DESC_DP)) 2 
                                          else if (ev.eventType in listOf(ScoringEventType.STRIKEOUT, ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.SACRIFICE_FLY, ScoringEventType.FIELDER_CHOICE)) 1 
                                          else 0
                         ev.outsBefore + outsOnPlay >= 3
                     }
 
                     val endedStr = when {
-                        ev.eventType in listOf(ScoringEventType.SINGLE, ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.ERROR) -> "1B"
-                        ev.eventType == ScoringEventType.DOUBLE -> "2B"
-                        ev.eventType == ScoringEventType.TRIPLE -> "3B"
-                        ev.eventType == ScoringEventType.HOME_RUN -> "Run Scored"
-                        else -> "Out"
+                        ev.eventType in listOf(ScoringEventType.SINGLE, ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.ERROR) -> Constants.PLAY_RESULT_1B
+                        ev.eventType == ScoringEventType.DOUBLE -> Constants.PLAY_RESULT_2B
+                        ev.eventType == ScoringEventType.TRIPLE -> Constants.PLAY_RESULT_3B
+                        ev.eventType == ScoringEventType.HOME_RUN -> Constants.PLAY_RESULT_RUN_SCORED
+                        else -> Constants.PLAY_RESULT_OUT
                     }
 
                     val notation = getScorebookNotation(ev)
 
-                    logDiv.appendElement("div", "log-item") {
-                        style.setProperty("display", "flex")
-                        style.setProperty("flex-direction", "column")
-                        style.setProperty("padding", "0.75rem")
-                        style.setProperty("border-bottom", "1px solid rgba(255, 255, 255, 0.05)")
+                    logDiv.appendElement(Constants.Html.DIV, "log-item") {
+                        style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+                        style.setProperty(Constants.Css.FLEX_DIRECTION, Constants.CssValues.COLUMN)
+                        style.setProperty(Constants.Css.PADDING, "0.75rem")
+                        style.setProperty(Constants.Css.BORDER_BOTTOM, "1px solid rgba(255, 255, 255, 0.05)")
                         if (endedInning) {
-                            style.setProperty("background", "rgba(255, 42, 59, 0.05)")
-                            style.setProperty("border-left", "4px solid var(--accent-red)")
+                            style.setProperty(Constants.Css.BACKGROUND, "rgba(255, 42, 59, 0.05)")
+                            style.setProperty(Constants.Css.BORDER_LEFT, "4px solid var(--accent-red)")
                         }
 
-                        val row = appendElement("div") {
-                            style.setProperty("display", "flex")
-                            style.setProperty("justify-content", "space-between")
-                            style.setProperty("align-items", "center")
-                            style.setProperty("width", "100%")
+                        val row = appendElement(Constants.Html.DIV) {
+                            style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+                            style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.SPACE_BETWEEN)
+                            style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
+                            style.setProperty(Constants.Css.WIDTH, "100%")
                         }
 
-                        row.appendElement("span", "log-desc") {
+                        row.appendElement(Constants.Html.SPAN, "log-desc") {
                             val header = "${ev.batterName} ($position) - Inning ${ev.inning} (${if (ev.half == HalfInning.TOP) "Top" else "Bottom"})"
                             val notStr = if (notation.isNotEmpty()) " [$notation]" else ""
-                            val endingDetail = if (endedInning && endedStr != "Run Scored" && endedStr != "Out") "LOB" else endedStr
+                            val endingDetail = if (endedInning && endedStr != Constants.PLAY_RESULT_RUN_SCORED && endedStr != Constants.PLAY_RESULT_OUT) Constants.PLAY_RESULT_LOB else endedStr
                             
                             innerHTML = "<span style='color: var(--accent-yellow); font-weight: 700;'>$header</span>$notStr - ${ev.description} <span style='color: var(--text-secondary); font-size: 0.8rem;'>[Ended: $endingDetail]</span>"
                         }
 
                         if (endedInning) {
-                            row.appendElement("span") {
+                            row.appendElement(Constants.Html.SPAN) {
                                 textContent = " ─── / (Side Retired)"
-                                style.setProperty("color", "var(--accent-red)")
-                                style.setProperty("font-weight", "bold")
-                                style.setProperty("font-size", "0.9rem")
+                                style.setProperty(Constants.Css.COLOR, "var(--accent-red)")
+                                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                                style.setProperty(Constants.Css.FONT_SIZE, "0.9rem")
                             }
                         }
                     }
@@ -243,7 +244,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
             renderScorebookView(monitorContent, game, boxScore, events)
         }
 
-        val btnLog = toggleGroup.appendElement("button", "btn btn-secondary") {
+        val btnLog = toggleGroup.appendElement(Constants.Html.BUTTON, "btn btn-secondary") {
             textContent = "Play-By-By Play Log"
             onClick {
                 showLog()
@@ -255,7 +256,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
             }
         }
 
-        val btnScorecard = toggleGroup.appendElement("button", "btn") {
+        val btnScorecard = toggleGroup.appendElement(Constants.Html.BUTTON, "btn") {
             textContent = "Visual Scorebook"
             onClick {
                 showScorecard()

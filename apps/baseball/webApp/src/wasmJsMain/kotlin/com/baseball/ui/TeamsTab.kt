@@ -2,48 +2,49 @@ package com.baseball.ui
 
 import com.baseball.api
 import com.baseball.models.*
+import com.baseball.Constants
 import org.w3c.dom.*
 import kotlinx.browser.document
 
 // TEAMS AND ROSTERS TAB
 internal fun renderTeamsTab(container: HTMLElement) {
-    container.appendElement("h1") { textContent = "Teams & Rosters" }
+    container.appendElement(Constants.Html.H1) { textContent = "Teams & Rosters" }
     
-    val grid = container.appendElement("div", "dashboard-grid")
+    val grid = container.appendElement(Constants.Html.DIV, "dashboard-grid")
     
     // Left Column: List of Teams
-    val leftCol = grid.appendElement("div", "card")
-    leftCol.appendElement("h2") { textContent = "Teams" }
-    val teamsListDiv = leftCol.appendElement("div")
+    val leftCol = grid.appendElement(Constants.Html.DIV, "card")
+    leftCol.appendElement(Constants.Html.H2) { textContent = "Teams" }
+    val teamsListDiv = leftCol.appendElement(Constants.Html.DIV)
     
     fun refreshTeamsUI() {
         teamsListDiv.innerHTML = ""
         if (teamsList.isEmpty()) {
-            teamsListDiv.appendElement("p") {
+            teamsListDiv.appendElement(Constants.Html.P) {
                 textContent = "No teams created yet."
-                style.setProperty("color", "var(--text-secondary)")
+                style.setProperty(Constants.Css.COLOR, "var(--text-secondary)")
             }
         } else {
             teamsList.forEach { team ->
-                teamsListDiv.appendElement("div", "game-card") {
-                    style.setProperty("margin-bottom", "0.75rem")
-                    style.setProperty("display", "flex")
-                    style.setProperty("justify-content", "space-between")
-                    style.setProperty("align-items", "center")
+                teamsListDiv.appendElement(Constants.Html.DIV, "game-card") {
+                    style.setProperty(Constants.Css.MARGIN_BOTTOM, "0.75rem")
+                    style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+                    style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.SPACE_BETWEEN)
+                    style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
                     
-                    appendElement("div") {
-                        appendElement("div") {
-                            style.setProperty("font-weight", "700")
+                    appendElement(Constants.Html.DIV) {
+                        appendElement(Constants.Html.DIV) {
+                            style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
                             textContent = "${team.city} ${team.name}"
                         }
-                        appendElement("div") {
-                            style.setProperty("font-size", "0.85rem")
-                            style.setProperty("color", "var(--text-secondary)")
+                        appendElement(Constants.Html.DIV) {
+                            style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
+                            style.setProperty(Constants.Css.COLOR, "var(--text-secondary)")
                             textContent = team.abbreviation
                         }
                     }
                     
-                    appendElement("button", "btn btn-secondary") {
+                    appendElement(Constants.Html.BUTTON, "btn btn-secondary") {
                         textContent = if (selectedTeamId == team.id) "Viewing Roster" else "View Roster"
                         if (selectedTeamId == team.id) classList.add("active")
                         onClick {
@@ -59,31 +60,31 @@ internal fun renderTeamsTab(container: HTMLElement) {
     refreshTeamsUI()
 
     // Right Column: Create Team Form / Roster View
-    val rightCol = grid.appendElement("div")
+    val rightCol = grid.appendElement(Constants.Html.DIV)
     
     // Create Team Form
-    val createTeamCard = rightCol.appendElement("div", "card") {
-        style.setProperty("margin-bottom", "2rem")
+    val createTeamCard = rightCol.appendElement(Constants.Html.DIV, "card") {
+        style.setProperty(Constants.Css.MARGIN_BOTTOM, "2rem")
     }
-    createTeamCard.appendElement("h2") { textContent = "Add Team" }
-    val tForm = createTeamCard.appendElement("form")
+    createTeamCard.appendElement(Constants.Html.H2) { textContent = "Add Team" }
+    val tForm = createTeamCard.appendElement(Constants.Html.FORM)
     
-    val tfg1 = tForm.appendElement("div", "form-group")
-    tfg1.appendElement("label") { textContent = "City" }
-    val inputCity = tfg1.appendElement("input", "form-control") as HTMLInputElement
+    val tfg1 = tForm.appendElement(Constants.Html.DIV, "form-group")
+    tfg1.appendElement(Constants.Html.LABEL) { textContent = "City" }
+    val inputCity = tfg1.appendElement(Constants.Html.INPUT, "form-control") as HTMLInputElement
     inputCity.placeholder = "e.g., Boston"
     
-    val tfg2 = tForm.appendElement("div", "form-group")
-    tfg2.appendElement("label") { textContent = "Team Name" }
-    val inputTName = tfg2.appendElement("input", "form-control") as HTMLInputElement
+    val tfg2 = tForm.appendElement(Constants.Html.DIV, "form-group")
+    tfg2.appendElement(Constants.Html.LABEL) { textContent = "Team Name" }
+    val inputTName = tfg2.appendElement(Constants.Html.INPUT, "form-control") as HTMLInputElement
     inputTName.placeholder = "e.g., Red Sox"
  
-    val tfg3 = tForm.appendElement("div", "form-group")
-    tfg3.appendElement("label") { textContent = "Abbreviation" }
-    val inputAbb = tfg3.appendElement("input", "form-control") as HTMLInputElement
+    val tfg3 = tForm.appendElement(Constants.Html.DIV, "form-group")
+    tfg3.appendElement(Constants.Html.LABEL) { textContent = "Abbreviation" }
+    val inputAbb = tfg3.appendElement(Constants.Html.INPUT, "form-control") as HTMLInputElement
     inputAbb.placeholder = "e.g., BOS"
     
-    val tSubmit = tForm.appendElement("button", "btn") as HTMLButtonElement
+    val tSubmit = tForm.appendElement(Constants.Html.BUTTON, "btn") as HTMLButtonElement
     tSubmit.type = "button"
     tSubmit.textContent = "Create Team"
     tSubmit.onClick {
@@ -104,12 +105,12 @@ internal fun renderTeamsTab(container: HTMLElement) {
 
     // Roster panel if team is selected
     if (selectedTeamId != null) {
-        val rosterCard = rightCol.appendElement("div", "card")
+        val rosterCard = rightCol.appendElement(Constants.Html.DIV, "card")
         val team = teamsList.find { it.id == selectedTeamId }
-        rosterCard.appendElement("h2") { textContent = "${team?.city} ${team?.name} Roster" }
+        rosterCard.appendElement(Constants.Html.H2) { textContent = "${team?.city} ${team?.name} Roster" }
         
-        val rosterDiv = rosterCard.appendElement("div") {
-            style.setProperty("margin-bottom", "1.5rem")
+        val rosterDiv = rosterCard.appendElement(Constants.Html.DIV) {
+            style.setProperty(Constants.Css.MARGIN_BOTTOM, "1.5rem")
         }
         
         fun refreshRoster() {
@@ -117,27 +118,27 @@ internal fun renderTeamsTab(container: HTMLElement) {
                 val roster = api.getTeamRoster(selectedTeamId!!)
                 rosterDiv.innerHTML = ""
                 if (roster.isEmpty()) {
-                    rosterDiv.appendElement("p") {
+                    rosterDiv.appendElement(Constants.Html.P) {
                         textContent = "No players on this roster."
-                        style.setProperty("color", "var(--text-secondary)")
+                        style.setProperty(Constants.Css.COLOR, "var(--text-secondary)")
                     }
                 } else {
-                    val tableContainer = rosterDiv.appendElement("div", "table-container")
-                    val table = tableContainer.appendElement("table")
-                    val thead = table.appendElement("thead")
-                    val trh = thead.appendElement("tr")
-                    trh.appendElement("th") { textContent = "#" }
-                    trh.appendElement("th") { textContent = "Name" }
-                    trh.appendElement("th") { textContent = "Pos" }
-                    trh.appendElement("th") { textContent = "B/T" }
+                    val tableContainer = rosterDiv.appendElement(Constants.Html.DIV, "table-container")
+                    val table = tableContainer.appendElement(Constants.Html.TABLE)
+                    val thead = table.appendElement(Constants.Html.THEAD)
+                    val trh = thead.appendElement(Constants.Html.TR)
+                    trh.appendElement(Constants.Html.TH) { textContent = "#" }
+                    trh.appendElement(Constants.Html.TH) { textContent = "Name" }
+                    trh.appendElement(Constants.Html.TH) { textContent = "Pos" }
+                    trh.appendElement(Constants.Html.TH) { textContent = "B/T" }
                     
-                    val tbody = table.appendElement("tbody")
+                    val tbody = table.appendElement(Constants.Html.TBODY)
                     roster.forEach { p ->
-                        val trd = tbody.appendElement("tr")
-                        trd.appendElement("td") { textContent = p.jerseyNumber.toString(); style.setProperty("font-weight", "700") }
-                        trd.appendElement("td") { textContent = p.name }
-                        trd.appendElement("td") { textContent = p.position; style.setProperty("color", "var(--accent-green)") }
-                        trd.appendElement("td") { textContent = "${p.battingHand}/${p.throwingHand}" }
+                        val trd = tbody.appendElement(Constants.Html.TR)
+                        trd.appendElement(Constants.Html.TD) { textContent = p.jerseyNumber.toString(); style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD) }
+                        trd.appendElement(Constants.Html.TD) { textContent = p.name }
+                        trd.appendElement(Constants.Html.TD) { textContent = p.position; style.setProperty(Constants.Css.COLOR, "var(--accent-green)") }
+                        trd.appendElement(Constants.Html.TD) { textContent = "${p.battingHand}/${p.throwingHand}" }
                     }
                 }
             }
@@ -146,52 +147,52 @@ internal fun renderTeamsTab(container: HTMLElement) {
         refreshRoster()
 
         // Add Player Form
-        rosterCard.appendElement("h3") { textContent = "Add Player to Roster" }
-        val pForm = rosterCard.appendElement("form")
+        rosterCard.appendElement(Constants.Html.H3) { textContent = "Add Player to Roster" }
+        val pForm = rosterCard.appendElement(Constants.Html.FORM)
         
-        val pfg1 = pForm.appendElement("div", "form-group")
-        pfg1.appendElement("label") { textContent = "Player Name" }
-        val inputPName = pfg1.appendElement("input", "form-control") as HTMLInputElement
+        val pfg1 = pForm.appendElement(Constants.Html.DIV, "form-group")
+        pfg1.appendElement(Constants.Html.LABEL) { textContent = "Player Name" }
+        val inputPName = pfg1.appendElement(Constants.Html.INPUT, "form-control") as HTMLInputElement
         inputPName.placeholder = "e.g., Dustin Pedroia"
         
-        val pfg2 = pForm.appendElement("div", "form-group")
-        pfg2.appendElement("label") { textContent = "Position" }
-        val inputPos = pfg2.appendElement("select", "form-control") as HTMLSelectElement
+        val pfg2 = pForm.appendElement(Constants.Html.DIV, "form-group")
+        pfg2.appendElement(Constants.Html.LABEL) { textContent = "Position" }
+        val inputPos = pfg2.appendElement(Constants.Html.SELECT, "form-control") as HTMLSelectElement
         listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH").forEach { pos ->
-            val opt = document.createElement("option") as HTMLOptionElement
+            val opt = document.createElement(Constants.Html.OPTION) as HTMLOptionElement
             opt.value = pos
             opt.textContent = pos
             inputPos.appendChild(opt)
         }
 
-        val pfg3 = pForm.appendElement("div", "form-group")
-        pfg3.appendElement("label") { textContent = "Jersey Number" }
-        val inputNum = pfg3.appendElement("input", "form-control") as HTMLInputElement
+        val pfg3 = pForm.appendElement(Constants.Html.DIV, "form-group")
+        pfg3.appendElement(Constants.Html.LABEL) { textContent = "Jersey Number" }
+        val inputNum = pfg3.appendElement(Constants.Html.INPUT, "form-control") as HTMLInputElement
         inputNum.type = "number"
         inputNum.value = "15"
 
-        val pfg4 = pForm.appendElement("div", "form-group")
-        pfg4.appendElement("label") { textContent = "Batting / Throwing Hand" }
-        val pfg4Row = pfg4.appendElement("div") {
-            style.setProperty("display", "flex")
-            style.setProperty("gap", "1rem")
+        val pfg4 = pForm.appendElement(Constants.Html.DIV, "form-group")
+        pfg4.appendElement(Constants.Html.LABEL) { textContent = "Batting / Throwing Hand" }
+        val pfg4Row = pfg4.appendElement(Constants.Html.DIV) {
+            style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+            style.setProperty(Constants.Css.GAP, "1rem")
         }
-        val selectBat = pfg4Row.appendElement("select", "form-control") as HTMLSelectElement
+        val selectBat = pfg4Row.appendElement(Constants.Html.SELECT, "form-control") as HTMLSelectElement
         listOf("R", "L", "S").forEach { h ->
-            val opt = document.createElement("option") as HTMLOptionElement
+            val opt = document.createElement(Constants.Html.OPTION) as HTMLOptionElement
             opt.value = h
             opt.textContent = "Bat: $h"
             selectBat.appendChild(opt)
         }
-        val selectThrow = pfg4Row.appendElement("select", "form-control") as HTMLSelectElement
+        val selectThrow = pfg4Row.appendElement(Constants.Html.SELECT, "form-control") as HTMLSelectElement
         listOf("R", "L").forEach { h ->
-            val opt = document.createElement("option") as HTMLOptionElement
+            val opt = document.createElement(Constants.Html.OPTION) as HTMLOptionElement
             opt.value = h
             opt.textContent = "Throw: $h"
             selectThrow.appendChild(opt)
         }
         
-        val pSubmit = pForm.appendElement("button", "btn") as HTMLButtonElement
+        val pSubmit = pForm.appendElement(Constants.Html.BUTTON, "btn") as HTMLButtonElement
         pSubmit.type = "button"
         pSubmit.textContent = "Add Player"
         pSubmit.onClick {

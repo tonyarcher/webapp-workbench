@@ -1,81 +1,67 @@
 package com.baseball
 
-// Global app-wide constants
+// Unified facade matching the previous structure, delegation/mapping to split constants files
 object Constants {
     // Navigation Tabs
-    const val TAB_DASHBOARD = "dashboard"
-    const val TAB_SCORER = "scorer"
-    const val TAB_TEAMS = "teams"
-    const val TAB_LEAGUES = "leagues"
-    const val TAB_BOXSCORE = "boxscore"
-    const val TAB_LOGIN = "login"
-    const val TAB_REGISTER = "register"
+    const val TAB_WELCOME = BaseballConstants.TAB_WELCOME
+    const val TAB_LIVE_SCORER = BaseballConstants.TAB_LIVE_SCORER
+    const val TAB_BOXSCORE = BaseballConstants.TAB_BOXSCORE
+    const val TAB_LEAGUES = BaseballConstants.TAB_LEAGUES
+    const val TAB_TEAMS = BaseballConstants.TAB_TEAMS
+    const val TAB_GAMES = BaseballConstants.TAB_GAMES
+    const val TAB_LOGIN = BaseballConstants.TAB_LOGIN
+    const val TAB_REGISTER = BaseballConstants.TAB_REGISTER
 
     // Storage Keys
-    const val KEY_LOCAL_GAME_STATE = "local_game_state"
-    const val KEY_AUTH_TOKEN = "auth_token"
-    const val KEY_ACTIVE_SESSION = "active_session"
-    const val KEY_CURRENT_USER_EMAIL = "current_user_email"
-    const val KEY_CURRENT_USER_NAME = "current_user_name"
+    const val KEY_LOCAL_GAME_STATE = BaseballConstants.KEY_LOCAL_GAME_STATE
+    const val KEY_AUTH_TOKEN = BaseballConstants.KEY_AUTH_TOKEN
+    const val KEY_ACTIVE_SESSION = BaseballConstants.KEY_ACTIVE_SESSION
+    const val KEY_CURRENT_USER_EMAIL = BaseballConstants.KEY_CURRENT_USER_EMAIL
+    const val KEY_CURRENT_USER_NAME = BaseballConstants.KEY_CURRENT_USER_NAME
     
     // Navigation Storage Keys
-    const val KEY_NAV_IS_SINGLE_GAME_MODE = "isSingleGameMode"
-    const val KEY_NAV_IS_WELCOME_SCREEN = "isWelcomeScreen"
-    const val KEY_NAV_SELECTED_GAME_ID = "selectedGameId"
-    const val KEY_NAV_SELECTED_LEAGUE_ID = "selectedLeagueId"
-    const val KEY_NAV_SELECTED_SEASON_ID = "selectedSeasonId"
-    const val KEY_NAV_SELECTED_TEAM_ID = "selectedTeamId"
-    const val KEY_NAV_CURRENT_TAB = "currentTab"
+    const val KEY_NAV_IS_SINGLE_GAME_MODE = BaseballConstants.KEY_NAV_IS_SINGLE_GAME_MODE
+    const val KEY_NAV_IS_WELCOME_SCREEN = BaseballConstants.KEY_NAV_IS_WELCOME_SCREEN
+    const val KEY_NAV_SELECTED_GAME_ID = BaseballConstants.KEY_NAV_SELECTED_GAME_ID
+    const val KEY_NAV_SELECTED_LEAGUE_ID = BaseballConstants.KEY_NAV_SELECTED_LEAGUE_ID
+    const val KEY_NAV_SELECTED_SEASON_ID = BaseballConstants.KEY_NAV_SELECTED_SEASON_ID
+    const val KEY_NAV_SELECTED_TEAM_ID = BaseballConstants.KEY_NAV_SELECTED_TEAM_ID
+    const val KEY_NAV_CURRENT_TAB = BaseballConstants.KEY_NAV_CURRENT_TAB
     
     // Default config / values
-    const val DEFAULT_FIRST_PITCH_TIME = "7:05 PM"
-    const val DEFAULT_GAME_DATE = "2026-07-10"
+    const val DEFAULT_FIRST_PITCH_TIME = BaseballConstants.DEFAULT_FIRST_PITCH_TIME
+    const val DEFAULT_GAME_DATE = BaseballConstants.DEFAULT_GAME_DATE
 
-    // HTML Tags
-    object Tags {
-        const val DIV = "div"
-        const val SPAN = "span"
-        const val BUTTON = "button"
-        const val H2 = "h2"
-        const val H3 = "h3"
-        const val TABLE = "table"
-        const val THEAD = "thead"
-        const val TBODY = "tbody"
-        const val TR = "tr"
-        const val TH = "th"
-        const val TD = "td"
-        const val SELECT = "select"
-        const val OPTION = "option"
-        const val INPUT = "input"
-        const val LABEL = "label"
-    }
+    // Play Result Strings
+    const val PLAY_RESULT_RUN_SCORED = BaseballConstants.PLAY_RESULT_RUN_SCORED
+    const val PLAY_RESULT_OUT = BaseballConstants.PLAY_RESULT_OUT
+    const val PLAY_RESULT_LOB = BaseballConstants.PLAY_RESULT_LOB
+    const val PLAY_RESULT_1B = BaseballConstants.PLAY_RESULT_1B
+    const val PLAY_RESULT_2B = BaseballConstants.PLAY_RESULT_2B
+    const val PLAY_RESULT_3B = BaseballConstants.PLAY_RESULT_3B
 
-    // CSS Class Names
-    object Classes {
-        const val BTN = "btn"
-        const val BTN_PRIMARY = "btn-primary"
-        const val BTN_SECONDARY = "btn-secondary"
-        const val BTN_DANGER = "btn-danger"
-        const val BTN_ACTION = "btn-action"
-        const val CARD = "card"
-        const val FORM_CONTROL = "form-control"
-        const val TAB_HEADERS = "tab-headers"
-        const val TAB_HEADER = "tab-header"
-        const val TAB_CONTAINER = "tab-container"
-        const val TABLE_CONTAINER = "table-container"
-    }
+    // Statistical Metrics
+    const val METRIC_AB = BaseballConstants.METRIC_AB
+    const val METRIC_R = BaseballConstants.METRIC_R
+    const val METRIC_H = BaseballConstants.METRIC_H
+    const val METRIC_RBI = BaseballConstants.METRIC_RBI
+    const val METRIC_PITCHER = BaseballConstants.METRIC_PITCHER
 
-    // Baseball Positions
-    object Positions {
-        const val P = "P"
-        const val C = "C"
-        const val FIRST_BASE = "1B"
-        const val SECOND_BASE = "2B"
-        const val THIRD_BASE = "3B"
-        const val SS = "SS"
-        const val LF = "LF"
-        const val CF = "CF"
-        const val RF = "RF"
-        const val DH = "DH"
-    }
+    // Event Descriptions / Substrings
+    const val DESC_DOUBLE_PLAY = BaseballConstants.DESC_DOUBLE_PLAY
+    const val DESC_DP = BaseballConstants.DESC_DP
+
+    // Network & Authentication Status
+    const val STATUS_CONNECT = BaseballConstants.STATUS_CONNECT
+    const val STATUS_REFUSED = BaseballConstants.STATUS_REFUSED
+    const val STATUS_NETWORK = BaseballConstants.STATUS_NETWORK
+    const val STATUS_400 = BaseballConstants.STATUS_400
+    const val STATUS_BAD_REQUEST = BaseballConstants.STATUS_BAD_REQUEST
+
+    // Delegated sub-objects to UiConstants and BaseballConstants
+    val Html = UiConstants.Html
+    val Css = UiConstants.Css
+    val CssValues = UiConstants.CssValues
+    val Classes = UiConstants.Classes
+    val Positions = BaseballConstants.Positions
 }

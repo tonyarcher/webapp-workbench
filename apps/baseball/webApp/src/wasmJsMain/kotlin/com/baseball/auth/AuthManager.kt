@@ -41,7 +41,7 @@ object AuthManager : AuthService {
             return session
         } catch (e: Throwable) {
             val msg = e.message ?: ""
-            if (msg.contains("connect", ignoreCase = true) || msg.contains("refused", ignoreCase = true) || msg.contains("network", ignoreCase = true)) {
+            if (msg.contains(Constants.STATUS_CONNECT, ignoreCase = true) || msg.contains(Constants.STATUS_REFUSED, ignoreCase = true) || msg.contains(Constants.STATUS_NETWORK, ignoreCase = true)) {
                 throw e
             }
             println("Login failed: ${e.message}")

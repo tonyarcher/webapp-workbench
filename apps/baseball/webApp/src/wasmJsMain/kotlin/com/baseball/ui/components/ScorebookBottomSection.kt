@@ -21,64 +21,64 @@ fun renderScorebookBottomSection(
     localAwayActivePitcherName: String,
     localHomeActivePitcherName: String
 ) {
-    val bottomGrid = container.appendElement("div") {
-        style.setProperty("display", "flex")
+    val bottomGrid = container.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
         style.setProperty("flex-wrap", "wrap")
-        style.setProperty("gap", "1.5rem")
-        style.setProperty("margin-top", "1.5rem")
+        style.setProperty(Constants.Css.GAP, "1.5rem")
+        style.setProperty(Constants.Css.MARGIN_TOP, "1.5rem")
     }
 
     // A. HOME DEFENSE FIELD DIAGRAM (Bottom Left)
-    val defenseCard = bottomGrid.appendElement("div", "card") {
-        style.setProperty("background-color", "#f9f7f2")
-        style.setProperty("border", "2px solid #5a544a")
-        style.setProperty("padding", "1rem")
-        style.setProperty("color", "#2b2a28")
-        style.setProperty("flex", "1 1 300px")
+    val defenseCard = bottomGrid.appendElement(Constants.Html.DIV, "card") {
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#f9f7f2")
+        style.setProperty(Constants.Css.BORDER, "2px solid #5a544a")
+        style.setProperty(Constants.Css.PADDING, "1rem")
+        style.setProperty(Constants.Css.COLOR, "#2b2a28")
+        style.setProperty(Constants.Css.FLEX, "1 1 300px")
     }
 
-    defenseCard.appendElement("h3") {
+    defenseCard.appendElement(Constants.Html.H3) {
         textContent = "HOME DEFENSE FIELD"
-        style.setProperty("text-align", "center")
-        style.setProperty("margin", "0 0 1rem 0")
-        style.setProperty("font-size", "1rem")
-        style.setProperty("font-weight", "bold")
-        style.setProperty("border-bottom", "1px solid #c2bcae")
-        style.setProperty("padding-bottom", "0.25rem")
+        style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER)
+        style.setProperty(Constants.Css.MARGIN, "0 0 1rem 0")
+        style.setProperty(Constants.Css.FONT_SIZE, "1rem")
+        style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+        style.setProperty(Constants.Css.BORDER_BOTTOM, "1px solid #c2bcae")
+        style.setProperty(Constants.Css.PADDING_BOTTOM, "0.25rem")
     }
 
-    val fieldWrapper = defenseCard.appendElement("div") {
-        style.setProperty("position", "relative")
-        style.setProperty("width", "100%")
-        style.setProperty("height", "260px")
-        style.setProperty("background-color", "#edf2eb")
-        style.setProperty("border", "1px solid #c2bcae")
-        style.setProperty("border-radius", "8px")
-        style.setProperty("overflow", "hidden")
+    val fieldWrapper = defenseCard.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.POSITION, Constants.CssValues.RELATIVE)
+        style.setProperty(Constants.Css.WIDTH, "100%")
+        style.setProperty(Constants.Css.HEIGHT, "260px")
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#edf2eb")
+        style.setProperty(Constants.Css.BORDER, "1px solid #c2bcae")
+        style.setProperty(Constants.Css.BORDER_RADIUS, "8px")
+        style.setProperty(Constants.Css.OVERFLOW, Constants.CssValues.HIDDEN)
     }
 
-    fieldWrapper.appendElement("div") {
-        style.setProperty("position", "absolute")
-        style.setProperty("bottom", "-30px")
-        style.setProperty("left", "50%")
-        style.setProperty("transform", "translateX(-50%)")
-        style.setProperty("width", "200px")
-        style.setProperty("height", "200px")
-        style.setProperty("border-radius", "50%")
-        style.setProperty("background-color", "#e5ccb3")
-        style.setProperty("z-index", "1")
+    fieldWrapper.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.POSITION, Constants.CssValues.RELATIVE)
+        style.setProperty(Constants.Css.BOTTOM, "-30px")
+        style.setProperty(Constants.Css.LEFT, "50%")
+        style.setProperty(Constants.Css.TRANSFORM, "translateX(-50%)")
+        style.setProperty(Constants.Css.WIDTH, "200px")
+        style.setProperty(Constants.Css.HEIGHT, "200px")
+        style.setProperty(Constants.Css.BORDER_RADIUS, "50%")
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#e5ccb3")
+        style.setProperty(Constants.Css.Z_INDEX, "1")
     }
 
-    fieldWrapper.appendElement("div") {
-        style.setProperty("position", "absolute")
-        style.setProperty("bottom", "20px")
-        style.setProperty("left", "50%")
-        style.setProperty("transform", "translateX(-50%) rotate(45deg)")
-        style.setProperty("width", "100px")
-        style.setProperty("height", "100px")
-        style.setProperty("background-color", "#cbe1c7")
-        style.setProperty("border", "2px solid white")
-        style.setProperty("z-index", "2")
+    fieldWrapper.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.POSITION, Constants.CssValues.RELATIVE)
+        style.setProperty(Constants.Css.BOTTOM, "20px")
+        style.setProperty(Constants.Css.LEFT, "50%")
+        style.setProperty(Constants.Css.TRANSFORM, "translateX(-50%) rotate(45deg)")
+        style.setProperty(Constants.Css.WIDTH, "100px")
+        style.setProperty(Constants.Css.HEIGHT, "100px")
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#cbe1c7")
+        style.setProperty(Constants.Css.BORDER, "2px solid white")
+        style.setProperty(Constants.Css.Z_INDEX, "2")
     }
 
     val defPlayers = if (isHomeBatting) localAwayRoster else localHomeRoster
@@ -110,178 +110,178 @@ fun renderScorebookBottomSection(
 
     coords.forEach { (pos, coord) ->
         val name = positionsMap[pos] ?: "Def"
-        fieldWrapper.appendElement("div") {
-            style.setProperty("position", "absolute")
-            style.setProperty("top", coord.first)
-            style.setProperty("left", coord.second)
-            style.setProperty("width", "80px")
-            style.setProperty("display", "flex")
-            style.setProperty("flex-direction", "column")
-            style.setProperty("align-items", "center")
-            style.setProperty("z-index", "10")
+        fieldWrapper.appendElement(Constants.Html.DIV) {
+            style.setProperty(Constants.Css.POSITION, Constants.CssValues.RELATIVE)
+            style.setProperty(Constants.Css.TOP, coord.first)
+            style.setProperty(Constants.Css.LEFT, coord.second)
+            style.setProperty(Constants.Css.WIDTH, "80px")
+            style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+            style.setProperty(Constants.Css.FLEX_DIRECTION, Constants.CssValues.COLUMN)
+            style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
+            style.setProperty(Constants.Css.Z_INDEX, "10")
 
-            appendElement("span") {
+            appendElement(Constants.Html.SPAN) {
                 textContent = pos
-                style.setProperty("font-size", "0.75rem")
-                style.setProperty("font-weight", "bold")
-                style.setProperty("background-color", "#ff2a3b")
-                style.setProperty("color", "white")
-                style.setProperty("border-radius", "50%")
-                style.setProperty("width", "18px")
-                style.setProperty("height", "18px")
-                style.setProperty("display", "flex")
-                style.setProperty("justify-content", "center")
-                style.setProperty("align-items", "center")
-                style.setProperty("border", "1px solid white")
+                style.setProperty(Constants.Css.FONT_SIZE, "0.75rem")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                style.setProperty(Constants.Css.BACKGROUND_COLOR, "#ff2a3b")
+                style.setProperty(Constants.Css.COLOR, "white")
+                style.setProperty(Constants.Css.BORDER_RADIUS, "50%")
+                style.setProperty(Constants.Css.WIDTH, "18px")
+                style.setProperty(Constants.Css.HEIGHT, "18px")
+                style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+                style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.CENTER)
+                style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
+                style.setProperty(Constants.Css.BORDER, "1px solid white")
             }
 
-            appendElement("span") {
+            appendElement(Constants.Html.SPAN) {
                 textContent = name.substringBefore(" ").take(8)
-                style.setProperty("font-size", "0.65rem")
-                style.setProperty("font-weight", "bold")
-                style.setProperty("color", "#111")
-                style.setProperty("background-color", "rgba(255, 255, 255, 0.8)")
-                style.setProperty("padding", "1px 4px")
-                style.setProperty("border-radius", "3px")
-                style.setProperty("margin-top", "2px")
-                style.setProperty("text-align", "center")
+                style.setProperty(Constants.Css.FONT_SIZE, "0.65rem")
+                style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+                style.setProperty(Constants.Css.COLOR, "#111")
+                style.setProperty(Constants.Css.BACKGROUND_COLOR, "rgba(255, 255, 255, 0.8)")
+                style.setProperty(Constants.Css.PADDING, "1px 4px")
+                style.setProperty(Constants.Css.BORDER_RADIUS, "3px")
+                style.setProperty(Constants.Css.MARGIN_TOP, "2px")
+                style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER)
             }
         }
     }
 
     // B. PITCHERS BOX SCORE TABLE (Bottom Middle)
-    val pitcherCard = bottomGrid.appendElement("div", "card") {
-        style.setProperty("background-color", "#f9f7f2")
-        style.setProperty("border", "2px solid #5a544a")
-        style.setProperty("padding", "1rem")
-        style.setProperty("color", "#2b2a28")
-        style.setProperty("flex", "1 1 320px")
+    val pitcherCard = bottomGrid.appendElement(Constants.Html.DIV, "card") {
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#f9f7f2")
+        style.setProperty(Constants.Css.BORDER, "2px solid #5a544a")
+        style.setProperty(Constants.Css.PADDING, "1rem")
+        style.setProperty(Constants.Css.COLOR, "#2b2a28")
+        style.setProperty(Constants.Css.FLEX, "1 1 320px")
     }
 
-    pitcherCard.appendElement("h3") {
+    pitcherCard.appendElement(Constants.Html.H3) {
         textContent = "OPPOSING PITCHING STATS"
-        style.setProperty("text-align", "center")
-        style.setProperty("margin", "0 0 1rem 0")
-        style.setProperty("font-size", "1rem")
-        style.setProperty("font-weight", "bold")
-        style.setProperty("border-bottom", "1px solid #c2bcae")
-        style.setProperty("padding-bottom", "0.25rem")
+        style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER)
+        style.setProperty(Constants.Css.MARGIN, "0 0 1rem 0")
+        style.setProperty(Constants.Css.FONT_SIZE, "1rem")
+        style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+        style.setProperty(Constants.Css.BORDER_BOTTOM, "1px solid #c2bcae")
+        style.setProperty(Constants.Css.PADDING_BOTTOM, "0.25rem")
     }
 
     val pStatsList = if (isHomeBatting) boxScore.awayPitching else boxScore.homePitching
 
-    val pitcherTableContainer = pitcherCard.appendElement("div") {
-        style.setProperty("overflow-y", "auto")
-        style.setProperty("height", "260px")
+    val pitcherTableContainer = pitcherCard.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.OVERFLOW_Y, Constants.CssValues.AUTO)
+        style.setProperty(Constants.Css.HEIGHT, "260px")
     }
     
-    val pTable = pitcherTableContainer.appendElement("table") {
-        style.setProperty("width", "100%")
-        style.setProperty("border-collapse", "collapse")
-        style.setProperty("font-size", "0.8rem")
+    val pTable = pitcherTableContainer.appendElement(Constants.Html.TABLE) {
+        style.setProperty(Constants.Css.WIDTH, "100%")
+        style.setProperty(Constants.Css.BORDER_COLLAPSE, Constants.CssValues.COLLAPSE)
+        style.setProperty(Constants.Css.FONT_SIZE, "0.8rem")
     }
 
-    val pThead = pTable.appendElement("thead") {
-        style.setProperty("background-color", "#eae5dc")
+    val pThead = pTable.appendElement(Constants.Html.THEAD) {
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#eae5dc")
     }
-    val ptrh = pThead.appendElement("tr") {
-        style.setProperty("border-bottom", "1px solid #5a544a")
+    val ptrh = pThead.appendElement(Constants.Html.TR) {
+        style.setProperty(Constants.Css.BORDER_BOTTOM, "1px solid #5a544a")
     }
     listOf("PITCHER", "R/L", "IP", "BF", "H", "R", "ER", "BB", "K").forEach { h ->
-        ptrh.appendElement("th") {
+        ptrh.appendElement(Constants.Html.TH) {
             textContent = h
-            style.setProperty("padding", "4px")
-            style.setProperty("text-align", if (h == "PITCHER") "left" else "center")
+            style.setProperty(Constants.Css.PADDING, "4px")
+            style.setProperty(Constants.Css.TEXT_ALIGN, if (h == Constants.METRIC_PITCHER) "left" else "center")
         }
     }
 
-    val pTbody = pTable.appendElement("tbody")
+    val pTbody = pTable.appendElement(Constants.Html.TBODY)
     pStatsList.forEach { p ->
-        val ptrd = pTbody.appendElement("tr") {
-            style.setProperty("border-bottom", "1px solid #c2bcae")
+        val ptrd = pTbody.appendElement(Constants.Html.TR) {
+            style.setProperty(Constants.Css.BORDER_BOTTOM, "1px solid #c2bcae")
         }
-        ptrd.appendElement("td") { textContent = p.playerName; style.setProperty("font-weight", "bold"); style.setProperty("padding", "6px 4px") }
-        ptrd.appendElement("td") { textContent = "R"; style.setProperty("text-align", "center") }
+        ptrd.appendElement(Constants.Html.TD) { textContent = p.playerName; style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD); style.setProperty(Constants.Css.PADDING, "6px 4px") }
+        ptrd.appendElement(Constants.Html.TD) { textContent = "R"; style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
         
         val whole = p.inningsPitchedThirds / 3
         val rem = p.inningsPitchedThirds % 3
-        ptrd.appendElement("td") { textContent = "$whole.$rem"; style.setProperty("text-align", "center") }
+        ptrd.appendElement(Constants.Html.TD) { textContent = "$whole.$rem"; style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
         
         val bf = p.inningsPitchedThirds + p.runsAllowed + p.hitsAllowed + p.walksAllowed
-        ptrd.appendElement("td") { textContent = bf.toString(); style.setProperty("text-align", "center") }
+        ptrd.appendElement(Constants.Html.TD) { textContent = bf.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
         
-        ptrd.appendElement("td") { textContent = p.hitsAllowed.toString(); style.setProperty("text-align", "center") }
-        ptrd.appendElement("td") { textContent = p.runsAllowed.toString(); style.setProperty("text-align", "center") }
-        ptrd.appendElement("td") { textContent = p.earnedRuns.toString(); style.setProperty("text-align", "center") }
-        ptrd.appendElement("td") { textContent = p.walksAllowed.toString(); style.setProperty("text-align", "center") }
-        ptrd.appendElement("td") { textContent = p.strikeoutsRecorded.toString(); style.setProperty("text-align", "center") }
+        ptrd.appendElement(Constants.Html.TD) { textContent = p.hitsAllowed.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
+        ptrd.appendElement(Constants.Html.TD) { textContent = p.runsAllowed.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
+        ptrd.appendElement(Constants.Html.TD) { textContent = p.earnedRuns.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
+        ptrd.appendElement(Constants.Html.TD) { textContent = p.walksAllowed.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
+        ptrd.appendElement(Constants.Html.TD) { textContent = p.strikeoutsRecorded.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
     }
 
     // C. SCOREBOARD & GAME TOTALS (Bottom Right)
-    val scoreboardCard = bottomGrid.appendElement("div", "card") {
-        style.setProperty("background-color", "#eae5dc")
-        style.setProperty("border", "2px solid #5a544a")
-        style.setProperty("padding", "1rem")
-        style.setProperty("color", "#2b2a28")
-        style.setProperty("flex", "1 1 280px")
+    val scoreboardCard = bottomGrid.appendElement(Constants.Html.DIV, "card") {
+        style.setProperty(Constants.Css.BACKGROUND_COLOR, "#eae5dc")
+        style.setProperty(Constants.Css.BORDER, "2px solid #5a544a")
+        style.setProperty(Constants.Css.PADDING, "1rem")
+        style.setProperty(Constants.Css.COLOR, "#2b2a28")
+        style.setProperty(Constants.Css.FLEX, "1 1 280px")
     }
 
-    scoreboardCard.appendElement("h3") {
+    scoreboardCard.appendElement(Constants.Html.H3) {
         textContent = "SCOREBOARD SUMMARY"
-        style.setProperty("text-align", "center")
-        style.setProperty("margin", "0 0 1rem 0")
-        style.setProperty("font-size", "1rem")
-        style.setProperty("font-weight", "bold")
-        style.setProperty("border-bottom", "1px solid #5a544a")
-        style.setProperty("padding-bottom", "0.25rem")
+        style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER)
+        style.setProperty(Constants.Css.MARGIN, "0 0 1rem 0")
+        style.setProperty(Constants.Css.FONT_SIZE, "1rem")
+        style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD)
+        style.setProperty(Constants.Css.BORDER_BOTTOM, "1px solid #5a544a")
+        style.setProperty(Constants.Css.PADDING_BOTTOM, "0.25rem")
     }
 
-    val sTable = scoreboardCard.appendElement("table") {
-        style.setProperty("width", "100%")
-        style.setProperty("border-collapse", "collapse")
-        style.setProperty("margin-bottom", "1.5rem")
-        style.setProperty("font-size", "0.85rem")
+    val sTable = scoreboardCard.appendElement(Constants.Html.TABLE) {
+        style.setProperty(Constants.Css.WIDTH, "100%")
+        style.setProperty(Constants.Css.BORDER_COLLAPSE, Constants.CssValues.COLLAPSE)
+        style.setProperty(Constants.Css.MARGIN_BOTTOM, "1.5rem")
+        style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
     }
 
-    val sThead = sTable.appendElement("thead")
-    val strh = sThead.appendElement("tr") {
-        style.setProperty("border-bottom", "1px solid #5a544a")
+    val sThead = sTable.appendElement(Constants.Html.THEAD)
+    val strh = sThead.appendElement(Constants.Html.TR) {
+        style.setProperty(Constants.Css.BORDER_BOTTOM, "1px solid #5a544a")
     }
-    strh.appendElement("th") { textContent = "TEAM"; style.setProperty("text-align", "left") }
+    strh.appendElement(Constants.Html.TH) { textContent = "TEAM"; style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.LEFT) }
     for (i in 1..maxInning) {
-        strh.appendElement("th") { textContent = i.toString(); style.setProperty("text-align", "center") }
+        strh.appendElement(Constants.Html.TH) { textContent = i.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
     }
-    strh.appendElement("th") { textContent = "R"; style.setProperty("text-align", "center"); style.setProperty("font-weight", "bold") }
-    strh.appendElement("th") { textContent = "H"; style.setProperty("text-align", "center") }
-    strh.appendElement("th") { textContent = "E"; style.setProperty("text-align", "center") }
+    strh.appendElement(Constants.Html.TH) { textContent = "R"; style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER); style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD) }
+    strh.appendElement(Constants.Html.TH) { textContent = "H"; style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
+    strh.appendElement(Constants.Html.TH) { textContent = "E"; style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
 
-    val sTbody = sTable.appendElement("tbody")
+    val sTbody = sTable.appendElement(Constants.Html.TBODY)
     
-    val stra = sTbody.appendElement("tr") { style.setProperty("border-bottom", "1px solid #c2bcae") }
-    stra.appendElement("td") { textContent = game.awayTeam.abbreviation; style.setProperty("font-weight", "bold") }
+    val stra = sTbody.appendElement(Constants.Html.TR) { style.setProperty(Constants.Css.BORDER_BOTTOM, "1px solid #c2bcae") }
+    stra.appendElement(Constants.Html.TD) { textContent = game.awayTeam.abbreviation; style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD) }
     boxScore.lineScore.awayInningRuns.forEach { r ->
-        stra.appendElement("td") { textContent = r?.toString() ?: "0"; style.setProperty("text-align", "center") }
+        stra.appendElement(Constants.Html.TD) { textContent = r?.toString() ?: "0"; style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
     }
-    stra.appendElement("td") { textContent = boxScore.lineScore.awayRuns.toString(); style.setProperty("text-align", "center"); style.setProperty("font-weight", "bold") }
-    stra.appendElement("td") { textContent = boxScore.lineScore.awayHits.toString(); style.setProperty("text-align", "center") }
-    stra.appendElement("td") { textContent = boxScore.lineScore.awayErrors.toString(); style.setProperty("text-align", "center") }
+    stra.appendElement(Constants.Html.TD) { textContent = boxScore.lineScore.awayRuns.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER); style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD) }
+    stra.appendElement(Constants.Html.TD) { textContent = boxScore.lineScore.awayHits.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
+    stra.appendElement(Constants.Html.TD) { textContent = boxScore.lineScore.awayErrors.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
 
-    val strhRow = sTbody.appendElement("tr") { style.setProperty("border-bottom", "1px solid #c2bcae") }
-    strhRow.appendElement("td") { textContent = game.homeTeam.abbreviation; style.setProperty("font-weight", "bold") }
+    val strhRow = sTbody.appendElement(Constants.Html.TR) { style.setProperty(Constants.Css.BORDER_BOTTOM, "1px solid #c2bcae") }
+    strhRow.appendElement(Constants.Html.TD) { textContent = game.homeTeam.abbreviation; style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD) }
     boxScore.lineScore.homeInningRuns.forEach { r ->
-        strhRow.appendElement("td") { textContent = r?.toString() ?: "0"; style.setProperty("text-align", "center") }
+        strhRow.appendElement(Constants.Html.TD) { textContent = r?.toString() ?: "0"; style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
     }
-    strhRow.appendElement("td") { textContent = boxScore.lineScore.homeRuns.toString(); style.setProperty("text-align", "center"); style.setProperty("font-weight", "bold") }
-    strhRow.appendElement("td") { textContent = boxScore.lineScore.homeHits.toString(); style.setProperty("text-align", "center") }
-    strhRow.appendElement("td") { textContent = boxScore.lineScore.homeErrors.toString(); style.setProperty("text-align", "center") }
+    strhRow.appendElement(Constants.Html.TD) { textContent = boxScore.lineScore.homeRuns.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER); style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD) }
+    strhRow.appendElement(Constants.Html.TD) { textContent = boxScore.lineScore.homeHits.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
+    strhRow.appendElement(Constants.Html.TD) { textContent = boxScore.lineScore.homeErrors.toString(); style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER) }
 
-    val decisionBlock = scoreboardCard.appendElement("div") {
-        style.setProperty("display", "flex")
-        style.setProperty("flex-direction", "column")
-        style.setProperty("gap", "0.5rem")
+    val decisionBlock = scoreboardCard.appendElement(Constants.Html.DIV) {
+        style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+        style.setProperty(Constants.Css.FLEX_DIRECTION, Constants.CssValues.COLUMN)
+        style.setProperty(Constants.Css.GAP, "0.5rem")
         style.setProperty("border-top", "1px solid #5a544a")
         style.setProperty("padding-top", "0.75rem")
-        style.setProperty("font-size", "0.8rem")
+        style.setProperty(Constants.Css.FONT_SIZE, "0.8rem")
     }
 
     val wp = if (game.homeScore > game.awayScore) 
@@ -293,13 +293,13 @@ fun renderScorebookBottomSection(
              else 
                 (if (isHomeBatting) localHomeActivePitcherName else localAwayActivePitcherName)
 
-    decisionBlock.appendElement("div") { 
+    decisionBlock.appendElement(Constants.Html.DIV) { 
         innerHTML = "WP: <span style='font-weight: bold;'>$wp</span>" 
     }
-    decisionBlock.appendElement("div") { 
+    decisionBlock.appendElement(Constants.Html.DIV) { 
         innerHTML = "LP: <span style='font-weight: bold;'>$lp</span>" 
     }
-    decisionBlock.appendElement("div") { 
+    decisionBlock.appendElement(Constants.Html.DIV) { 
         innerHTML = "SV: <span style='font-weight: bold;'>${if (game.homeScore > game.awayScore) "HADER (12)" else "NONE"}</span>" 
     }
 }

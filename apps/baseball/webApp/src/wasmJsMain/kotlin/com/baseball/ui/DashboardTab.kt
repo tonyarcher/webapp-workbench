@@ -2,40 +2,41 @@ package com.baseball.ui
 
 import com.baseball.api
 import com.baseball.models.*
+import com.baseball.Constants
 import org.w3c.dom.*
 import kotlinx.browser.document
 
 // SEASON DASHBOARD TAB
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
-    container.appendElement("h1") { textContent = "Season Dashboard" }
+    container.appendElement(Constants.Html.H1) { textContent = "Season Dashboard" }
 
     // Dropdown selectors for League & Season
-    val selectorCard = container.appendElement("div", "card") {
-        style.setProperty("margin-bottom", "2rem")
-        style.setProperty("display", "flex")
-        style.setProperty("gap", "1.5rem")
-        style.setProperty("align-items", "flex-end")
+    val selectorCard = container.appendElement(Constants.Html.DIV, "card") {
+        style.setProperty(Constants.Css.MARGIN_BOTTOM, "2rem")
+        style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+        style.setProperty(Constants.Css.GAP, "1.5rem")
+        style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.FLEX_END)
     }
 
-    val lg1 = selectorCard.appendElement("div", "form-group") { style.setProperty("margin-bottom", "0"); style.setProperty("flex", "1") }
-    lg1.appendElement("label") { textContent = "Active League" }
-    val selectL = lg1.appendElement("select", "form-control") as HTMLSelectElement
+    val lg1 = selectorCard.appendElement(Constants.Html.DIV, "form-group") { style.setProperty(Constants.Css.MARGIN_BOTTOM, "0"); style.setProperty(Constants.Css.FLEX, "1") }
+    lg1.appendElement(Constants.Html.LABEL) { textContent = "Active League" }
+    val selectL = lg1.appendElement(Constants.Html.SELECT, "form-control") as HTMLSelectElement
     leaguesList.forEach { league ->
-        val opt = document.createElement("option") as HTMLOptionElement
+        val opt = document.createElement(Constants.Html.OPTION) as HTMLOptionElement
         opt.value = league.id.toString()
         opt.textContent = league.name
         if (selectedLeagueId == league.id) opt.selected = true
         selectL.appendChild(opt)
     }
 
-    val lg2 = selectorCard.appendElement("div", "form-group") { style.setProperty("margin-bottom", "0"); style.setProperty("flex", "1") }
-    lg2.appendElement("label") { textContent = "Active Season" }
-    val selectS = lg2.appendElement("select", "form-control") as HTMLSelectElement
+    val lg2 = selectorCard.appendElement(Constants.Html.DIV, "form-group") { style.setProperty(Constants.Css.MARGIN_BOTTOM, "0"); style.setProperty(Constants.Css.FLEX, "1") }
+    lg2.appendElement(Constants.Html.LABEL) { textContent = "Active Season" }
+    val selectS = lg2.appendElement(Constants.Html.SELECT, "form-control") as HTMLSelectElement
     
     fun populateSeasonsDropdown() {
         selectS.innerHTML = ""
         seasonsList.forEach { season ->
-            val opt = document.createElement("option") as HTMLOptionElement
+            val opt = document.createElement(Constants.Html.OPTION) as HTMLOptionElement
             opt.value = season.id.toString()
             opt.textContent = "${season.name} (${season.year})"
             if (selectedSeasonId == season.id) opt.selected = true
@@ -44,7 +45,7 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
     }
     populateSeasonsDropdown()
 
-    val fetchBtn = selectorCard.appendElement("button", "btn") { textContent = "Load Season" }
+    val fetchBtn = selectorCard.appendElement(Constants.Html.BUTTON, "btn") { textContent = "Load Season" }
 
     selectL.addEventListener("change", {
         val lid = selectL.value.toLongOrNull()
@@ -64,12 +65,12 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
     }
 
     if (selectedSeasonId == null) {
-        container.appendElement("div", "card") {
-            style.setProperty("text-align", "center")
-            style.setProperty("padding", "3rem")
-            appendElement("p") {
+        container.appendElement(Constants.Html.DIV, "card") {
+            style.setProperty(Constants.Css.TEXT_ALIGN, Constants.CssValues.CENTER)
+            style.setProperty(Constants.Css.PADDING, "3rem")
+            appendElement(Constants.Html.P) {
                 textContent = "Please select a league and season above, then click Load Season."
-                style.setProperty("color", "var(--text-secondary)")
+                style.setProperty(Constants.Css.COLOR, "var(--text-secondary)")
             }
         }
         return
@@ -79,32 +80,32 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
     launch {
         val dash = api.getSeasonDashboard(selectedSeasonId!!)
         
-        val grid = container.appendElement("div", "dashboard-grid")
+        val grid = container.appendElement(Constants.Html.DIV, "dashboard-grid")
         
         // Left Column: Standings
-        val leftCol = grid.appendElement("div", "card")
-        leftCol.appendElement("h2") { textContent = "League Standings" }
+        val leftCol = grid.appendElement(Constants.Html.DIV, "card")
+        leftCol.appendElement(Constants.Html.H2) { textContent = "League Standings" }
         
-        val tableContainer = leftCol.appendElement("div", "table-container")
-        val table = tableContainer.appendElement("table")
-        val thead = table.appendElement("thead")
-        val trh = thead.appendElement("tr")
-        trh.appendElement("th") { textContent = "Team" }
-        trh.appendElement("th") { textContent = "GP" }
-        trh.appendElement("th") { textContent = "W" }
-        trh.appendElement("th") { textContent = "L" }
-        trh.appendElement("th") { textContent = "PCT" }
-        trh.appendElement("th") { textContent = "RS" }
-        trh.appendElement("th") { textContent = "RA" }
+        val tableContainer = leftCol.appendElement(Constants.Html.DIV, "table-container")
+        val table = tableContainer.appendElement(Constants.Html.TABLE)
+        val thead = table.appendElement(Constants.Html.THEAD)
+        val trh = thead.appendElement(Constants.Html.TR)
+        trh.appendElement(Constants.Html.TH) { textContent = "Team" }
+        trh.appendElement(Constants.Html.TH) { textContent = "GP" }
+        trh.appendElement(Constants.Html.TH) { textContent = "W" }
+        trh.appendElement(Constants.Html.TH) { textContent = "L" }
+        trh.appendElement(Constants.Html.TH) { textContent = "PCT" }
+        trh.appendElement(Constants.Html.TH) { textContent = "RS" }
+        trh.appendElement(Constants.Html.TH) { textContent = "RA" }
 
-        val tbody = table.appendElement("tbody")
+        val tbody = table.appendElement(Constants.Html.TBODY)
         dash.standings.forEach { row ->
-            val trd = tbody.appendElement("tr")
-            trd.appendElement("td") { textContent = row.teamName; style.setProperty("font-weight", "700") }
-            trd.appendElement("td") { textContent = row.gamesPlayed.toString() }
-            trd.appendElement("td") { textContent = row.wins.toString() }
-            trd.appendElement("td") { textContent = row.losses.toString() }
-            trd.appendElement("td") { 
+            val trd = tbody.appendElement(Constants.Html.TR)
+            trd.appendElement(Constants.Html.TD) { textContent = row.teamName; style.setProperty(Constants.Css.FONT_WEIGHT, Constants.CssValues.BOLD) }
+            trd.appendElement(Constants.Html.TD) { textContent = row.gamesPlayed.toString() }
+            trd.appendElement(Constants.Html.TD) { textContent = row.wins.toString() }
+            trd.appendElement(Constants.Html.TD) { textContent = row.losses.toString() }
+            trd.appendElement(Constants.Html.TD) { 
                 textContent = if (row.winPercentage.toString().startsWith("0.")) {
                     row.winPercentage.toString().substring(1)
                 } else if (row.winPercentage == 1.0) {
@@ -113,29 +114,29 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                     ".000"
                 }
             }
-            trd.appendElement("td") { textContent = row.runsScored.toString() }
-            trd.appendElement("td") { textContent = row.runsAllowed.toString() }
+            trd.appendElement(Constants.Html.TD) { textContent = row.runsScored.toString() }
+            trd.appendElement(Constants.Html.TD) { textContent = row.runsAllowed.toString() }
         }
 
         // Right Column: Games
-        val rightCol = grid.appendElement("div")
+        val rightCol = grid.appendElement(Constants.Html.DIV)
         
-        val actionsCard = rightCol.appendElement("div", "card") {
-            style.setProperty("margin-bottom", "1.5rem")
-            style.setProperty("display", "flex")
-            style.setProperty("justify-content", "space-between")
-            style.setProperty("align-items", "center")
+        val actionsCard = rightCol.appendElement(Constants.Html.DIV, "card") {
+            style.setProperty(Constants.Css.MARGIN_BOTTOM, "1.5rem")
+            style.setProperty(Constants.Css.DISPLAY, Constants.CssValues.FLEX)
+            style.setProperty(Constants.Css.JUSTIFY_CONTENT, Constants.CssValues.SPACE_BETWEEN)
+            style.setProperty(Constants.Css.ALIGN_ITEMS, Constants.CssValues.CENTER)
         }
-        actionsCard.appendElement("h3") { textContent = "Schedule Manager" }
+        actionsCard.appendElement(Constants.Html.H3) { textContent = "Schedule Manager" }
         
-        val generateBtn = actionsCard.appendElement("button", "btn") {
+        val generateBtn = actionsCard.appendElement(Constants.Html.BUTTON, "btn") {
             textContent = "Generate Round-Robin Schedule"
         }
         if (dash.games.isNotEmpty()) {
             generateBtn.setAttribute("disabled", "true")
             generateBtn.className = "btn btn-secondary"
-            generateBtn.style.setProperty("opacity", "0.5")
-            generateBtn.style.setProperty("cursor", "not-allowed")
+            generateBtn.style.setProperty(Constants.Css.OPACITY, "0.5")
+            generateBtn.style.setProperty(Constants.Css.CURSOR, "not-allowed")
         } else {
             generateBtn.onClick {
                 launch {
@@ -145,49 +146,49 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
             }
         }
 
-        val gamesCard = rightCol.appendElement("div", "card")
-        gamesCard.appendElement("h2") { textContent = "Games Schedule" }
+        val gamesCard = rightCol.appendElement(Constants.Html.DIV, "card")
+        gamesCard.appendElement(Constants.Html.H2) { textContent = "Games Schedule" }
         
-        val gamesListDiv = gamesCard.appendElement("div", "game-list")
+        val gamesListDiv = gamesCard.appendElement(Constants.Html.DIV, "game-list")
         if (dash.games.isEmpty()) {
-            gamesListDiv.appendElement("p") {
+            gamesListDiv.appendElement(Constants.Html.P) {
                 textContent = "No games scheduled yet. Generate a schedule above!"
-                style.setProperty("color", "var(--text-secondary)")
+                style.setProperty(Constants.Css.COLOR, "var(--text-secondary)")
             }
         } else {
             dash.games.forEach { game ->
-                gamesListDiv.appendElement("div", "game-card") {
+                gamesListDiv.appendElement(Constants.Html.DIV, "game-card") {
                     onClick {
                         selectedGameId = game.id
                         if (game.status == GameStatus.COMPLETED) {
-                            currentTab = "boxscore"
+                            currentTab = Constants.TAB_BOXSCORE
                         } else {
-                            currentTab = "live-scorer"
+                            currentTab = Constants.TAB_LIVE_SCORER
                         }
                         updateActiveTabButtons()
                         renderCurrentTab()
                     }
                     
-                    val teamScore = appendElement("div", "game-team-score")
-                    val awayRow = teamScore.appendElement("div", "game-team-row")
-                    awayRow.appendElement("span", "team-name-tag") { textContent = game.awayTeam.name }
-                    awayRow.appendElement("span", "score-num") { textContent = game.awayScore.toString() }
+                    val teamScore = appendElement(Constants.Html.DIV, "game-team-score")
+                    val awayRow = teamScore.appendElement(Constants.Html.DIV, "game-team-row")
+                    awayRow.appendElement(Constants.Html.SPAN, "team-name-tag") { textContent = game.awayTeam.name }
+                    awayRow.appendElement(Constants.Html.SPAN, "score-num") { textContent = game.awayScore.toString() }
                     
-                    val homeRow = teamScore.appendElement("div", "game-team-row")
-                    homeRow.appendElement("span", "team-name-tag") { textContent = game.homeTeam.name }
-                    homeRow.appendElement("span", "score-num") { textContent = game.homeScore.toString() }
+                    val homeRow = teamScore.appendElement(Constants.Html.DIV, "game-team-row")
+                    homeRow.appendElement(Constants.Html.SPAN, "team-name-tag") { textContent = game.homeTeam.name }
+                    homeRow.appendElement(Constants.Html.SPAN, "score-num") { textContent = game.homeScore.toString() }
                     
-                    val meta = appendElement("div", "game-meta")
+                    val meta = appendElement(Constants.Html.DIV, "game-meta")
                     val badgeClass = when (game.status) {
                         GameStatus.SCHEDULED -> "badge badge-scheduled"
                         GameStatus.IN_PROGRESS -> "badge badge-live"
                         GameStatus.COMPLETED -> "badge badge-completed"
                     }
-                    meta.appendElement("span", badgeClass) { textContent = game.status.name }
-                    meta.appendElement("span") {
+                    meta.appendElement(Constants.Html.SPAN, badgeClass) { textContent = game.status.name }
+                    meta.appendElement(Constants.Html.SPAN) {
                         textContent = game.date
-                        style.setProperty("font-size", "0.85rem")
-                        style.setProperty("color", "var(--text-secondary)")
+                        style.setProperty(Constants.Css.FONT_SIZE, "0.85rem")
+                        style.setProperty(Constants.Css.COLOR, "var(--text-secondary)")
                     }
                 }
             }
