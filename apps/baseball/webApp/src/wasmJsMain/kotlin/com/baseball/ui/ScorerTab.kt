@@ -136,20 +136,8 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
             style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0")
         }
         if (isSingleGameMode) {
-            val btnContainer = titleRow.appendElement(UiConstants.Html.DIV) {
-                style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
-                style.setProperty(UiConstants.Css.GAP, "0.5rem")
-            }
-            btnContainer.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
-                textContent = "Lineup Setup"
-                style.setProperty(UiConstants.Css.PADDING, "0.5rem 1rem")
-                onClick {
-                    isLineupDialogOpen = true
-                    renderCurrentTab()
-                }
-            }
-            btnContainer.appendElement(UiConstants.Html.BUTTON, "btn btn-danger") {
-                textContent = "Reset Game"
+            titleRow.appendElement(UiConstants.Html.BUTTON, "btn btn-danger") {
+                textContent = "New Game"
                 style.setProperty(UiConstants.Css.PADDING, "0.5rem 1rem")
                 onClick {
                     isResetDialogOpen = true
@@ -318,7 +306,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
             }
 
             resetModal.appendElement(UiConstants.Html.H2) {
-                textContent = "Reset Game Options"
+                textContent = "Start a New Game"
                 style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
             }
             resetModal.appendElement(UiConstants.Html.P) {
