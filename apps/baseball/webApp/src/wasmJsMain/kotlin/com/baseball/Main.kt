@@ -8,7 +8,7 @@ import com.baseball.ui.AppViewManager
 // Global interface instantiations promoting coding by interface inheritance
 val api: BaseballApi = BaseballApiClient()
 val authService: AuthService = AuthManager
-val gameService: GameService = LocalGameManager
+val gameService: GameService = GameManager
 
 fun main() {
     AppViewManager.start()

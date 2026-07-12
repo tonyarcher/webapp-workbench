@@ -9,7 +9,7 @@ import com.baseball.authService
 import com.baseball.gameService
 import com.baseball.auth.currentUserSession
 import com.baseball.auth.AuthManager
-import com.baseball.game.initLocalGame
+import com.baseball.game.initGame
 import com.baseball.models.*
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -122,7 +122,7 @@ object AppViewManager : DomBuilder {
         }
 
         if (isSingleGameMode) {
-            initLocalGame(forceReset = false)
+            initGame(forceReset = false)
         }
 
         renderApp()
@@ -212,7 +212,7 @@ object AppViewManager : DomBuilder {
                 serverConnectionError = null
                 isWelcomeScreen = false
                 isSingleGameMode = true
-                initLocalGame(forceReset = false)
+                initGame(forceReset = false)
                 window.location.hash = BaseballConstants.TAB_LIVE_SCORER
             }
         }

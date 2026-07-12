@@ -7,13 +7,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class LocalGameSimulationTest {
+class GameSimulationTest {
 
     @Test
     fun testSimulateMultipleGames() {
         // Simulate 3 full games to verify stats accumulation and rules
         for (gameIndex in 1..3) {
-            initLocalGame(forceReset = true)
+            initGame(forceReset = true)
             val game = localGame
             assertNotNull(game)
             assertEquals(GameStatus.SCHEDULED, game.status)
@@ -42,7 +42,7 @@ class LocalGameSimulationTest {
                     else -> ScoringEventType.GROUNDOUT
                 }
 
-                recordLocalPlayEvent(
+        recordPlayEvent(
                     eventType = eventType,
                     batterId = batterId,
                     pitcherId = pitcherId,
@@ -93,13 +93,13 @@ class LocalGameSimulationTest {
 
     @Test
     fun testBaseRunningAndThrowSequences() {
-        initLocalGame(forceReset = true)
+        initGame(forceReset = true)
         val game = localGame!!
         val batterId = game.gameState.currentBatterId!!
         val pitcherId = game.gameState.currentPitcherId!!
 
         // 1. Single to put batter on base
-        recordLocalPlayEvent(
+        recordPlayEvent(
             eventType = ScoringEventType.SINGLE,
             batterId = batterId,
             pitcherId = pitcherId,
@@ -111,7 +111,7 @@ class LocalGameSimulationTest {
         assertNotNull(runner1)
 
         // 2. Stolen Base to move runner to 2B
-        recordLocalPlayEvent(
+        recordPlayEvent(
             eventType = ScoringEventType.STOLEN_BASE,
             batterId = localGame!!.gameState.currentBatterId!!,
             pitcherId = localGame!!.gameState.currentPitcherId!!,
@@ -125,7 +125,7 @@ class LocalGameSimulationTest {
         assertEquals(0, localGame!!.gameState.strikes)
 
         // 3. Caught Stealing to get runner out with a throw sequence
-        recordLocalPlayEvent(
+        recordPlayEvent(
             eventType = ScoringEventType.CAUGHT_STEALING,
             batterId = localGame!!.gameState.currentBatterId!!,
             pitcherId = localGame!!.gameState.currentPitcherId!!,
@@ -140,13 +140,13 @@ class LocalGameSimulationTest {
 
     @Test
     fun testExhaustiveDoublePlayAndThrowScenarios() {
-        initLocalGame(forceReset = true)
+        initGame(forceReset = true)
         val game = localGame!!
         val batter1Id = game.gameState.currentBatterId!!
         val pitcherId = game.gameState.currentPitcherId!!
 
         // Yogi Harry gets a Single
-        recordLocalPlayEvent(
+        recordPlayEvent(
             eventType = ScoringEventType.SINGLE,
             batterId = batter1Id,
             pitcherId = pitcherId,
@@ -157,7 +157,7 @@ class LocalGameSimulationTest {
 
         // Babe Hammer hits a double play (1-6-3)
         val batter2Id = localGame!!.gameState.currentBatterId!!
-        recordLocalPlayEvent(
+        recordPlayEvent(
             eventType = ScoringEventType.GROUNDOUT,
             batterId = batter2Id,
             pitcherId = pitcherId,
@@ -187,13 +187,13 @@ class LocalGameSimulationTest {
 
     @Test
     fun testUndoLastLocalEvent() {
-        initLocalGame(forceReset = true)
+        initGame(forceReset = true)
         val game = localGame!!
         val batterId = game.gameState.currentBatterId!!
         val pitcherId = game.gameState.currentPitcherId!!
 
         // 1. Record strike (pitch)
-        recordLocalPlayEvent(
+        recordPlayEvent(
             eventType = ScoringEventType.STRIKE,
             batterId = batterId,
             pitcherId = pitcherId,
@@ -203,7 +203,7 @@ class LocalGameSimulationTest {
         assertEquals(1, localEvents.size)
 
         // 2. Record ball (pitch)
-        recordLocalPlayEvent(
+        recordPlayEvent(
             eventType = ScoringEventType.BALL,
             batterId = batterId,
             pitcherId = pitcherId,
@@ -220,7 +220,7 @@ class LocalGameSimulationTest {
         assertEquals(1, localEvents.size)
 
         // 3. Record a Single (play)
-        recordLocalPlayEvent(
+        recordPlayEvent(
             eventType = ScoringEventType.SINGLE,
             batterId = batterId,
             pitcherId = pitcherId,
@@ -239,13 +239,13 @@ class LocalGameSimulationTest {
 
     @Test
     fun testHitLocationScorecardNotations() {
-        initLocalGame(forceReset = true)
+        initGame(forceReset = true)
         val game = localGame!!
         val batterId = game.gameState.currentBatterId!!
         val pitcherId = game.gameState.currentPitcherId!!
 
         // Single to Left Field
-        recordLocalPlayEvent(
+        recordPlayEvent(
             eventType = ScoringEventType.SINGLE,
             batterId = batterId,
             pitcherId = pitcherId,

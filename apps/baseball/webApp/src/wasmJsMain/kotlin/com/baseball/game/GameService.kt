@@ -3,8 +3,8 @@ package com.baseball.game
 import com.baseball.models.*
 
 interface GameService {
-    fun initLocalGame(forceReset: Boolean = false)
-    fun recordLocalPlayEvent(
+    fun initGame(forceReset: Boolean = false)
+    fun recordPlayEvent(
         eventType: ScoringEventType,
         batterId: Long,
         pitcherId: Long,

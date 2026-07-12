@@ -125,7 +125,7 @@ fun renderGameScoringControls(
                 }.takeIf { it.isNotEmpty() }
 
                 if (isSingleGameMode) {
-                    LocalGameManager.recordLocalPlayEvent(type, bId, pId, finalDescription, isDoublePlay, isError, runnerAdvanceMap)
+                    GameManager.recordPlayEvent(type, bId, pId, finalDescription, isDoublePlay, isError, runnerAdvanceMap)
                     renderCurrentTab()
                 } else {
                     launch {

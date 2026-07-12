@@ -71,9 +71,9 @@ var initialHomeActivePitcherName = ""
 // Callback interface or delegate to notify UI to open lineup setup dialog
 var onOpenLineupSetupDialog: (() -> Unit)? = null
 
-object LocalGameManager : GameService {
+object GameManager : GameService {
 
-    override fun initLocalGame(forceReset: Boolean) {
+    override fun initGame(forceReset: Boolean) {
         if (!forceReset && loadLocalState()) {
             return
         }
@@ -105,7 +105,7 @@ object LocalGameManager : GameService {
         )
     }
 
-    override fun recordLocalPlayEvent(
+    override fun recordPlayEvent(
         eventType: ScoringEventType,
         batterId: Long,
         pitcherId: Long,
@@ -114,23 +114,54 @@ object LocalGameManager : GameService {
         isError: Boolean,
         runnerAdvanceMap: Map<String, Int>?
     ) {
-        recordLocalPlayEventInternal(
+        val game = localGame ?: return
+        val boxScore = localBoxScore ?: return
+        
+        val currentState = GameSessionState(
+            game = game,
+            boxScore = boxScore,
+            homeRoster = localHomeRoster,
+            awayRoster = localAwayRoster,
+            homeLineup = localHomeLineup,
+            awayLineup = localAwayLineup,
+            homeBench = localHomeBench,
+            awayBench = localAwayBench,
+            homeBatterIndex = localHomeBatterIndex,
+            awayBatterIndex = localAwayBatterIndex,
+            playersSubbedOut = localPlayersSubbedOut.toList(),
+            homeActivePitcherId = localHomeActivePitcherId,
+            homeActivePitcherName = localHomeActivePitcherName,
+            awayActivePitcherId = localAwayActivePitcherId,
+            awayActivePitcherName = localAwayActivePitcherName
+        )
+        
+        val (nextState, ev) = PlayEngine.processPlay(
+            state = currentState,
             eventType = eventType,
             batterId = batterId,
             pitcherId = pitcherId,
             descriptionDetail = descriptionDetail,
             isDoublePlay = isDoublePlay,
             isError = isError,
-            runnerAdvanceMap = runnerAdvanceMap
+            runnerAdvanceMap = runnerAdvanceMap,
+            nextEventId = (localEvents.size + 1).toLong()
         )
+        
+        localGame = nextState.game
+        localBoxScore = nextState.boxScore
+        localHomeBatterIndex = nextState.homeBatterIndex
+        localAwayBatterIndex = nextState.awayBatterIndex
+        
+        localEvents.add(ev)
+        saveLocalState()
     }
 }
 
-fun initLocalGame(forceReset: Boolean = false) {
-    LocalGameManager.initLocalGame(forceReset)
+fun initGame(forceReset: Boolean = false) {
+    GameManager.initGame(forceReset)
 }
 
-fun recordLocalPlayEvent(
+fun recordPlayEvent(
     eventType: ScoringEventType,
     batterId: Long,
     pitcherId: Long,
@@ -139,7 +170,7 @@ fun recordLocalPlayEvent(
     isError: Boolean = false,
     runnerAdvanceMap: Map<String, Int>? = null
 ) {
-    LocalGameManager.recordLocalPlayEvent(
+    GameManager.recordPlayEvent(
         eventType = eventType,
         batterId = batterId,
         pitcherId = pitcherId,
@@ -423,7 +454,7 @@ fun undoLastLocalEvent() {
         val bId = (localAwayRoster + localHomeRoster).find { it.name == ev.batterName }?.id ?: localGame!!.gameState.currentBatterId!!
         val pId = (localAwayRoster + localHomeRoster).find { it.name == ev.pitcherName }?.id ?: localGame!!.gameState.currentPitcherId!!
         
-        recordLocalPlayEvent(
+        recordPlayEvent(
             eventType = ev.eventType,
             batterId = bId,
             pitcherId = pId,
