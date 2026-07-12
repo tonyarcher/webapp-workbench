@@ -23,3 +23,8 @@ Thumbs.db
 # Docker / Local Env
 .env
 local.properties
+
+# Gradle wrapper scripts
+gradlew
+gradlew.bat
+gradle/wrapper/
