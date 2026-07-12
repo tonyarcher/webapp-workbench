@@ -293,6 +293,24 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
         baseRunners.clear()
         var currentOuts = 0
 
+        fun parseRunnerAdvances(description: String): Map<String, Int> {
+            val marker = " | Adv: "
+            if (!description.contains(marker)) return emptyMap()
+            val parts = description.substringAfter(marker).split(",")
+            val map = mutableMapOf<String, Int>()
+            parts.forEach { part ->
+                val pair = part.split("->")
+                if (pair.size == 2) {
+                    val pId = pair[0]
+                    val base = pair[1].toIntOrNull()
+                    if (base != null) {
+                        map[pId] = base
+                    }
+                }
+            }
+            return map
+        }
+
         innEvents.forEach { ev ->
             val isOut = ev.eventType in listOf(
                 ScoringEventType.STRIKEOUT, ScoringEventType.GROUNDOUT,
@@ -317,7 +335,32 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
                 else -> {}
             }
 
-            if (isOut) {
+            val isDoublePlay = ev.description.contains("(Double Play)")
+            if (isDoublePlay) {
+                val subAdvances = parseRunnerAdvances(ev.description)
+                val outRunnerEntry = baseRunners.entries.find { rEntry ->
+                    val pId = (localAwayRoster + localHomeRoster).find { it.name == rEntry.key }?.id
+                    pId != null && subAdvances[pId.toString()] == 0
+                }
+                
+                if (outRunnerEntry != null) {
+                    val outRunnerName = outRunnerEntry.key
+                    baseRunners.remove(outRunnerName)
+                    
+                    val runnerEv = innEvents.takeWhile { it != ev }.findLast { it.batterName == outRunnerName }
+                    if (runnerEv != null) {
+                        currentOuts++
+                        playOutNumbers[runnerEv] = currentOuts
+                    } else {
+                        currentOuts++
+                    }
+                } else {
+                    currentOuts++
+                }
+                
+                currentOuts++
+                playOutNumbers[ev] = currentOuts
+            } else if (isOut) {
                 currentOuts++
                 playOutNumbers[ev] = currentOuts
             } else {
@@ -345,23 +388,7 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
             playAdvancements[ev] = baseRunners[ev.batterName] ?: finalBase
         }
 
-        fun parseRunnerAdvances(description: String): Map<String, Int> {
-            val marker = " | Adv: "
-            if (!description.contains(marker)) return emptyMap()
-            val parts = description.substringAfter(marker).split(",")
-            val map = mutableMapOf<String, Int>()
-            parts.forEach { part ->
-                val pair = part.split("->")
-                if (pair.size == 2) {
-                    val pId = pair[0]
-                    val base = pair[1].toIntOrNull()
-                    if (base != null) {
-                        map[pId] = base
-                    }
-                }
-            }
-            return map
-        }
+
 
         // Trace detailed base progressions for each resolving plate event
         innEvents.forEachIndexed { evIdx, ev ->
