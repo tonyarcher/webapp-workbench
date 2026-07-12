@@ -43,6 +43,11 @@ fun recordLocalPlayEventInternal(
     var isHbp = false
     var desc = descriptionDetail ?: ""
 
+    var bStats = (if (batter.teamId == game.homeTeam.id) boxScore.homeBatting else boxScore.awayBatting)
+        .find { it.playerId == batterId } ?: PlayerBattingStats(batterId, batter.name, batter.jerseyNumber, batter.position)
+    var pStats = (if (pitcher.teamId == game.homeTeam.id) boxScore.homePitching else boxScore.awayPitching)
+        .find { it.playerId == pitcherId } ?: PlayerPitchingStats(pitcherId, pitcher.name, pitcher.jerseyNumber, pitcher.position)
+
     when (eventType) {
         ScoringEventType.BALL -> {
             balls += 1
@@ -80,6 +85,12 @@ fun recordLocalPlayEventInternal(
         ScoringEventType.SACRIFICE_FLY -> { outsAdded = 1; if (desc.isEmpty()) desc = "Sacrifice fly by ${batter.name}" }
         ScoringEventType.ERROR -> { basesMoved = 1; if (desc.isEmpty()) desc = "Error on play. ${batter.name} reaches base" }
         ScoringEventType.FIELDER_CHOICE -> { outsAdded = 1; basesMoved = 1; if (desc.isEmpty()) desc = "Fielder's choice. ${batter.name} reaches" }
+        ScoringEventType.STOLEN_BASE -> { if (desc.isEmpty()) desc = "Stolen Base" }
+        ScoringEventType.CAUGHT_STEALING -> { outsAdded = 1; if (desc.isEmpty()) desc = "Caught Stealing" }
+        ScoringEventType.PICKED_OFF -> { outsAdded = 1; if (desc.isEmpty()) desc = "Picked Off" }
+        ScoringEventType.WILD_PITCH -> { if (desc.isEmpty()) desc = "Wild Pitch" }
+        ScoringEventType.PASSED_BALL -> { if (desc.isEmpty()) desc = "Passed Ball" }
+        ScoringEventType.BALK -> { if (desc.isEmpty()) desc = "Balk" }
     }
 
     if (isDoublePlay) {
@@ -89,18 +100,18 @@ fun recordLocalPlayEventInternal(
         if (currentHalf == HalfInning.TOP) homeErrors++ else awayErrors++
     }
 
-    val isResolved = resolvedType != ScoringEventType.BALL && resolvedType != ScoringEventType.STRIKE && resolvedType != ScoringEventType.FOUL
+    val isResolved = resolvedType in listOf(
+        ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN,
+        ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.STRIKEOUT,
+        ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT,
+        ScoringEventType.ERROR, ScoringEventType.FIELDER_CHOICE, ScoringEventType.SACRIFICE_FLY
+    )
+
     val runsScoredList = mutableListOf<Long>()
 
     if (isResolved) {
         balls = 0
         strikes = 0
-
-        val battingList = if (batter.teamId == game.homeTeam.id) boxScore.homeBatting.toMutableList() else boxScore.awayBatting.toMutableList()
-        val pitchingList = if (pitcher.teamId == game.homeTeam.id) boxScore.homePitching.toMutableList() else boxScore.awayPitching.toMutableList()
-
-        var bStats = battingList.find { it.playerId == batterId } ?: PlayerBattingStats(batterId, batter.name, batter.jerseyNumber, batter.position)
-        var pStats = pitchingList.find { it.playerId == pitcherId } ?: PlayerPitchingStats(pitcherId, pitcher.name, pitcher.jerseyNumber, pitcher.position)
 
         when (resolvedType) {
             ScoringEventType.SINGLE -> { bStats = bStats.copy(hits = bStats.hits + 1, atBats = bStats.atBats + 1); pStats = pStats.copy(hitsAllowed = pStats.hitsAllowed + 1); if (currentHalf == HalfInning.TOP) awayHits++ else homeHits++ }
@@ -113,164 +124,165 @@ fun recordLocalPlayEventInternal(
             ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.FIELDER_CHOICE -> { bStats = bStats.copy(atBats = bStats.atBats + 1) }
             ScoringEventType.ERROR -> { bStats = bStats.copy(atBats = bStats.atBats + 1); if (currentHalf == HalfInning.TOP) homeErrors++ else awayErrors++ }
             ScoringEventType.SACRIFICE_FLY -> {}
+            else -> {}
         }
+    }
 
-        if (outsAdded > 0) {
-            val actualOutsAdded = minOf(outsAdded, 3 - outs)
-            if (actualOutsAdded > 0) {
-                pStats = pStats.copy(inningsPitchedThirds = pStats.inningsPitchedThirds + actualOutsAdded)
-            }
+    if (outsAdded > 0) {
+        val actualOutsAdded = minOf(outsAdded, 3 - outs)
+        if (actualOutsAdded > 0) {
+            pStats = pStats.copy(inningsPitchedThirds = pStats.inningsPitchedThirds + actualOutsAdded)
         }
+    }
 
-        if (runnerAdvanceMap != null && runnerAdvanceMap.isNotEmpty()) {
-            firstId = null; firstName = null
-            secondId = null; secondName = null
-            thirdId = null; thirdName = null
+    if (runnerAdvanceMap != null && runnerAdvanceMap.isNotEmpty()) {
+        firstId = null; firstName = null
+        secondId = null; secondName = null
+        thirdId = null; thirdName = null
 
-            runnerAdvanceMap.forEach { (pIdStr, targetBase) ->
-                val pId = pIdStr.toLongOrNull() ?: return@forEach
-                val pName = (localAwayRoster + localHomeRoster).find { it.id == pId }?.name ?: "Runner"
-                when (targetBase) {
-                    1 -> { firstId = pId; firstName = pName }
-                    2 -> { secondId = pId; secondName = pName }
-                    3 -> { thirdId = pId; thirdName = pName }
-                    4 -> runsScoredList.add(pId)
-                    0 -> {
-                        if (pId != batter.id) {
-                            outsAdded = maxOf(outsAdded, 1)
-                        }
+        runnerAdvanceMap.forEach { (pIdStr, targetBase) ->
+            val pId = pIdStr.toLongOrNull() ?: return@forEach
+            val pName = (localAwayRoster + localHomeRoster).find { it.id == pId }?.name ?: "Runner"
+            when (targetBase) {
+                1 -> { firstId = pId; firstName = pName }
+                2 -> { secondId = pId; secondName = pName }
+                3 -> { thirdId = pId; thirdName = pName }
+                4 -> runsScoredList.add(pId)
+                0 -> {
+                    if (pId != batter.id) {
+                        outsAdded = maxOf(outsAdded, 1)
                     }
                 }
             }
+        }
 
-            if (!runnerAdvanceMap.containsKey(batter.id.toString())) {
-                if (basesMoved == 1) { firstId = batter.id; firstName = batter.name }
-                else if (basesMoved == 2) { secondId = batter.id; secondName = batter.name }
-                else if (basesMoved == 3) { thirdId = batter.id; thirdName = batter.name }
-                else if (basesMoved == 4) runsScoredList.add(batter.id!!)
-                else if (outsAdded == 0 && (isWalk || isHbp || eventType == ScoringEventType.ERROR || eventType == ScoringEventType.FIELDER_CHOICE)) {
-                    firstId = batter.id; firstName = batter.name
-                }
+        if (isResolved && !runnerAdvanceMap.containsKey(batter.id.toString())) {
+            if (basesMoved == 1) { firstId = batter.id; firstName = batter.name }
+            else if (basesMoved == 2) { secondId = batter.id; secondName = batter.name }
+            else if (basesMoved == 3) { thirdId = batter.id; thirdName = batter.name }
+            else if (basesMoved == 4) runsScoredList.add(batter.id!!)
+            else if (outsAdded == 0 && (isWalk || isHbp || eventType == ScoringEventType.ERROR || eventType == ScoringEventType.FIELDER_CHOICE)) {
+                firstId = batter.id; firstName = batter.name
             }
-        } else {
-            if (isDoublePlay) {
-                if (thirdId != null) { thirdId = null; thirdName = null }
-                else if (secondId != null) { secondId = null; secondName = null }
-                else if (firstId != null) { firstId = null; firstName = null }
-            }
+        }
+    } else {
+        if (isDoublePlay) {
+            if (thirdId != null) { thirdId = null; thirdName = null }
+            else if (secondId != null) { secondId = null; secondName = null }
+            else if (firstId != null) { firstId = null; firstName = null }
+        }
 
-            if (basesMoved > 0 || isWalk || isHbp) {
-                val runner1 = firstId
-                val runner2 = secondId
-                val runner3 = thirdId
-                val runner1Name = firstName
-                val runner2Name = secondName
-                val runner3Name = thirdName
+        if (basesMoved > 0 || isWalk || isHbp) {
+            val runner1 = firstId
+            val runner2 = secondId
+            val runner3 = thirdId
+            val runner1Name = firstName
+            val runner2Name = secondName
+            val runner3Name = thirdName
 
-                if (isWalk || isHbp) {
-                    if (runner1 != null) {
-                        if (runner2 != null) {
-                            if (runner3 != null) {
-                                runsScoredList.add(runner3)
-                                thirdId = runner2; thirdName = runner2Name
-                                secondId = runner1; secondName = runner1Name
-                                firstId = batter.id; firstName = batter.name
-                            } else {
-                                thirdId = runner2; thirdName = runner2Name
-                                secondId = runner1; secondName = runner1Name
-                                firstId = batter.id; firstName = batter.name
-                            }
+            if (isWalk || isHbp) {
+                if (runner1 != null) {
+                    if (runner2 != null) {
+                        if (runner3 != null) {
+                            runsScoredList.add(runner3)
+                            thirdId = runner2; thirdName = runner2Name
+                            secondId = runner1; secondName = runner1Name
+                            firstId = batter.id; firstName = batter.name
                         } else {
+                            thirdId = runner2; thirdName = runner2Name
                             secondId = runner1; secondName = runner1Name
                             firstId = batter.id; firstName = batter.name
                         }
                     } else {
+                        secondId = runner1; secondName = runner1Name
                         firstId = batter.id; firstName = batter.name
                     }
                 } else {
-                    if (basesMoved == 1) {
-                        if (runner3 != null) runsScoredList.add(runner3)
-                        if (runner2 != null) runsScoredList.add(runner2)
-                        thirdId = null; thirdName = null
-                        secondId = runner1; secondName = runner1Name
-                        firstId = batter.id; firstName = batter.name
-                    } else if (basesMoved == 2) {
-                        if (runner3 != null) runsScoredList.add(runner3)
-                        if (runner2 != null) runsScoredList.add(runner2)
-                        thirdId = runner1; thirdName = runner1Name
-                        secondId = batter.id; secondName = batter.name
-                        firstId = null; firstName = null
-                    } else if (basesMoved == 3) {
-                        if (runner3 != null) runsScoredList.add(runner3)
-                        if (runner2 != null) runsScoredList.add(runner2)
-                        if (runner1 != null) runsScoredList.add(runner1)
-                        thirdId = batter.id; thirdName = batter.name
-                        secondId = null; secondName = null
-                        firstId = null; firstName = null
-                    } else if (basesMoved == 4) {
-                        if (runner3 != null) runsScoredList.add(runner3)
-                        if (runner2 != null) runsScoredList.add(runner2)
-                        if (runner1 != null) runsScoredList.add(runner1)
-                        runsScoredList.add(batter.id!!)
-                        thirdId = null; thirdName = null
-                        secondId = null; secondName = null
-                        firstId = null; firstName = null
-                    }
+                    firstId = batter.id; firstName = batter.name
+                }
+            } else {
+                if (basesMoved == 1) {
+                    if (runner3 != null) runsScoredList.add(runner3)
+                    if (runner2 != null) runsScoredList.add(runner2)
+                    thirdId = null; thirdName = null
+                    secondId = runner1; secondName = runner1Name
+                    firstId = batter.id; firstName = batter.name
+                } else if (basesMoved == 2) {
+                    if (runner3 != null) runsScoredList.add(runner3)
+                    if (runner2 != null) runsScoredList.add(runner2)
+                    thirdId = runner1; thirdName = runner1Name
+                    secondId = batter.id; secondName = batter.name
+                    firstId = null; firstName = null
+                } else if (basesMoved == 3) {
+                    if (runner3 != null) runsScoredList.add(runner3)
+                    if (runner2 != null) runsScoredList.add(runner2)
+                    if (runner1 != null) runsScoredList.add(runner1)
+                    thirdId = batter.id; thirdName = batter.name
+                    secondId = null; secondName = null
+                    firstId = null; firstName = null
+                } else if (basesMoved == 4) {
+                    if (runner3 != null) runsScoredList.add(runner3)
+                    if (runner2 != null) runsScoredList.add(runner2)
+                    if (runner1 != null) runsScoredList.add(runner1)
+                    runsScoredList.add(batter.id!!)
+                    thirdId = null; thirdName = null
+                    secondId = null; secondName = null
+                    firstId = null; firstName = null
                 }
             }
         }
-
-        if (resolvedType == ScoringEventType.SACRIFICE_FLY) {
-            val runner3 = thirdId
-            if (runner3 != null) {
-                runsScoredList.add(runner3)
-                thirdId = null; thirdName = null
-            }
-        }
-
-        outs += outsAdded
-        if (outs >= 3) {
-            firstId = null; firstName = null
-            secondId = null; secondName = null
-            thirdId = null; thirdName = null
-            outs = 0
-
-            if (currentHalf == HalfInning.TOP) {
-                currentHalf = HalfInning.BOTTOM
-            } else {
-                currentHalf = HalfInning.TOP
-                currentInning += 1
-            }
-        }
-
-        val homeBattingMutable = boxScore.homeBatting.toMutableList()
-        val awayBattingMutable = boxScore.awayBatting.toMutableList()
-        val homePitchingMutable = boxScore.homePitching.toMutableList()
-        val awayPitchingMutable = boxScore.awayPitching.toMutableList()
-
-        if (batter.teamId == game.homeTeam.id) {
-            homeBattingMutable.removeAll { it.playerId == batterId }
-            homeBattingMutable.add(bStats)
-        } else {
-            awayBattingMutable.removeAll { it.playerId == batterId }
-            awayBattingMutable.add(bStats)
-        }
-
-        if (pitcher.teamId == game.homeTeam.id) {
-            homePitchingMutable.removeAll { it.playerId == pitcherId }
-            homePitchingMutable.add(pStats)
-        } else {
-            awayPitchingMutable.removeAll { it.playerId == pitcherId }
-            awayPitchingMutable.add(pStats)
-        }
-
-        localBoxScore = boxScore.copy(
-            homeBatting = homeBattingMutable,
-            awayBatting = awayBattingMutable,
-            homePitching = homePitchingMutable,
-            awayPitching = awayPitchingMutable
-        )
     }
+
+    if (resolvedType == ScoringEventType.SACRIFICE_FLY) {
+        val runner3 = thirdId
+        if (runner3 != null) {
+            runsScoredList.add(runner3)
+            thirdId = null; thirdName = null
+        }
+    }
+
+    outs += outsAdded
+    if (outs >= 3) {
+        firstId = null; firstName = null
+        secondId = null; secondName = null
+        thirdId = null; thirdName = null
+        outs = 0
+
+        if (currentHalf == HalfInning.TOP) {
+            currentHalf = HalfInning.BOTTOM
+        } else {
+            currentHalf = HalfInning.TOP
+            currentInning += 1
+        }
+    }
+
+    val homeBattingMutable = boxScore.homeBatting.toMutableList()
+    val awayBattingMutable = boxScore.awayBatting.toMutableList()
+    val homePitchingMutable = boxScore.homePitching.toMutableList()
+    val awayPitchingMutable = boxScore.awayPitching.toMutableList()
+
+    if (batter.teamId == game.homeTeam.id) {
+        homeBattingMutable.removeAll { it.playerId == batterId }
+        homeBattingMutable.add(bStats)
+    } else {
+        awayBattingMutable.removeAll { it.playerId == batterId }
+        awayBattingMutable.add(bStats)
+    }
+
+    if (pitcher.teamId == game.homeTeam.id) {
+        homePitchingMutable.removeAll { it.playerId == pitcherId }
+        homePitchingMutable.add(pStats)
+    } else {
+        awayPitchingMutable.removeAll { it.playerId == pitcherId }
+        awayPitchingMutable.add(pStats)
+    }
+
+    localBoxScore = boxScore.copy(
+        homeBatting = homeBattingMutable,
+        awayBatting = awayBattingMutable,
+        homePitching = homePitchingMutable,
+        awayPitching = awayPitchingMutable
+    )
 
     runsScoredList.forEach { runnerId ->
         val battingList = if (batter.teamId == game.homeTeam.id) localBoxScore!!.homeBatting.toMutableList() else localBoxScore!!.awayBatting.toMutableList()
@@ -408,6 +420,11 @@ fun recordLocalPlayEventInternal(
         )
     )
 
+    val advancesStr = runnerAdvanceMap?.let { map ->
+        " | Adv: " + map.entries.joinToString(",") { "${it.key}->${it.value}" }
+    } ?: ""
+    val finalDesc = desc + advancesStr
+
     val ev = PlayEvent(
         id = (localEvents.size + 1).toLong(),
         gameId = game.id ?: 1L,
@@ -420,7 +437,7 @@ fun recordLocalPlayEventInternal(
         batterName = batter.name,
         pitcherName = pitcher.name,
         eventType = resolvedType,
-        description = desc,
+        description = finalDesc,
         runsScoredOnPlay = runsScoredList.size,
         timestamp = ""
     )

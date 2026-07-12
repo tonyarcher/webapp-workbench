@@ -16,6 +16,12 @@ import org.w3c.dom.*
 import kotlinx.browser.document
 import kotlinx.browser.window
 
+data class RunnerProgression(
+    val maxBase: Int,
+    val outAtBase: Int?,
+    val outDetail: String?
+)
+
 // Renders the main scorecard paper sheet (Headers, lineups, innings grid, totals, and calls bottom section)
 fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore, events: List<PlayEvent>, half: HalfInning) {
     val isHomeBatting = half == HalfInning.BOTTOM
@@ -280,6 +286,7 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
     val baseRunners = mutableMapOf<String, Int>()
     val playAdvancements = mutableMapOf<PlayEvent, Int>()
     val playOutNumbers = mutableMapOf<PlayEvent, Int>()
+    val playProgressions = mutableMapOf<PlayEvent, RunnerProgression>()
 
     for (inn in 1..maxInning) {
         val innEvents = teamEvents.filter { it.inning == inn }
@@ -336,6 +343,95 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
             }
 
             playAdvancements[ev] = baseRunners[ev.batterName] ?: finalBase
+        }
+
+        fun parseRunnerAdvances(description: String): Map<String, Int> {
+            val marker = " | Adv: "
+            if (!description.contains(marker)) return emptyMap()
+            val parts = description.substringAfter(marker).split(",")
+            val map = mutableMapOf<String, Int>()
+            parts.forEach { part ->
+                val pair = part.split("->")
+                if (pair.size == 2) {
+                    val pId = pair[0]
+                    val base = pair[1].toIntOrNull()
+                    if (base != null) {
+                        map[pId] = base
+                    }
+                }
+            }
+            return map
+        }
+
+        // Trace detailed base progressions for each resolving plate event
+        innEvents.forEachIndexed { evIdx, ev ->
+            val isResolving = ev.eventType in listOf(
+                ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN,
+                ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.STRIKEOUT,
+                ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT,
+                ScoringEventType.ERROR, ScoringEventType.FIELDER_CHOICE, ScoringEventType.SACRIFICE_FLY
+            )
+            if (isResolving) {
+                var maxB = playAdvancements[ev] ?: 0
+                var outB: Int? = null
+                var outDet: String? = null
+                
+                val isOut = ev.eventType in listOf(
+                    ScoringEventType.STRIKEOUT, ScoringEventType.GROUNDOUT,
+                    ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT,
+                    ScoringEventType.POP_OUT, ScoringEventType.SACRIFICE_FLY
+                )
+                if (isOut) {
+                    outB = 1
+                    outDet = getScorebookNotation(ev)
+                } else if (maxB > 0) {
+                    val rName = ev.batterName
+                    val pId = (localAwayRoster + localHomeRoster).find { it.name == rName }?.id
+                    if (pId != null) {
+                        var currentB = maxB
+                        for (i in (evIdx + 1) until innEvents.size) {
+                            val subEv = innEvents[i]
+                            val subAdvances = parseRunnerAdvances(subEv.description)
+                            val targetBase = subAdvances[pId.toString()]
+                            if (targetBase != null) {
+                                if (targetBase > 0) {
+                                    currentB = targetBase
+                                    maxB = maxOf(maxB, targetBase)
+                                } else if (targetBase == 0) {
+                                    outB = currentB + 1
+                                    outDet = when (subEv.eventType) {
+                                        ScoringEventType.CAUGHT_STEALING -> getScorebookNotation(subEv)
+                                        ScoringEventType.PICKED_OFF -> getScorebookNotation(subEv)
+                                        else -> {
+                                            val match = Regex("Runner Out: (\\d+(?:-\\d+)*U?)").find(subEv.description)
+                                            val fullSeq = match?.groupValues?.get(1)
+                                            if (fullSeq != null) {
+                                                val parts = fullSeq.substringBefore("U").split("-")
+                                                if (parts.size >= 3) {
+                                                    "${parts[0]}-${parts[1]}"
+                                                } else {
+                                                    fullSeq
+                                                }
+                                            } else {
+                                                "Out"
+                                            }
+                                        }
+                                    }
+                                    break
+                                }
+                            } else {
+                                if (subEv.runsScoredOnPlay > 0 && subAdvances.isEmpty()) {
+                                    if (subEv.eventType == ScoringEventType.HOME_RUN) {
+                                        maxB = 4
+                                        currentB = 4
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                playProgressions[ev] = RunnerProgression(maxB, outB, outDet)
+            }
         }
     }
 
@@ -400,9 +496,12 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
         }
 
         if (ev != null) {
-            val notation = getScorebookNotation(ev)
-            val base = playAdvancements[ev] ?: 0
+            val prog = playProgressions[ev]
+            val base = prog?.maxBase ?: (playAdvancements[ev] ?: 0)
             val outNum = playOutNumbers[ev]
+            val outAtBase = prog?.outAtBase
+            val outDetail = prog?.outDetail
+            val notation = getScorebookNotation(ev)
 
             val diamond = cellWrapper.appendElement(UiConstants.Html.DIV) {
                 style.setProperty(UiConstants.Css.POSITION, UiConstants.CssValues.ABSOLUTE)
@@ -423,6 +522,34 @@ fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore,
             if (base >= 4) {
                 diamond.style.setProperty(UiConstants.Css.BORDER_BOTTOM, "2px solid #ff2a3b")
                 diamond.style.setProperty(UiConstants.Css.BACKGROUND_COLOR, "rgba(255, 42, 59, 0.25)")
+            }
+
+            if (outAtBase != null && outDetail != null && outAtBase > 1) {
+                cellWrapper.appendElement(UiConstants.Html.DIV) {
+                    textContent = outDetail
+                    style.setProperty(UiConstants.Css.POSITION, UiConstants.CssValues.ABSOLUTE)
+                    when (outAtBase) {
+                        2 -> {
+                            style.setProperty(UiConstants.Css.TOP, "2px")
+                            style.setProperty(UiConstants.Css.RIGHT, "2px")
+                        }
+                        3 -> {
+                            style.setProperty(UiConstants.Css.TOP, "2px")
+                            style.setProperty(UiConstants.Css.LEFT, "2px")
+                        }
+                        4 -> {
+                            style.setProperty(UiConstants.Css.BOTTOM, "2px")
+                            style.setProperty(UiConstants.Css.LEFT, "2px")
+                        }
+                    }
+                    style.setProperty(UiConstants.Css.FONT_SIZE, "0.5rem")
+                    style.setProperty(UiConstants.Css.COLOR, "#ff2a3b")
+                    style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                    style.setProperty(UiConstants.Css.BACKGROUND_COLOR, "rgba(255, 255, 255, 0.85)")
+                    style.setProperty(UiConstants.Css.PADDING, "1px 2px")
+                    style.setProperty(UiConstants.Css.BORDER_RADIUS, "2px")
+                    style.setProperty(UiConstants.Css.Z_INDEX, "5")
+                }
             }
 
             cellWrapper.appendElement(UiConstants.Html.DIV) {

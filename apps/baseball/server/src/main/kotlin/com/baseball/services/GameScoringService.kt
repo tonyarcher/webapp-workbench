@@ -116,6 +116,26 @@ class GameScoringService(
                 basesMoved = 1 // batter reaches on fielder's choice
                 description = if (description.isEmpty()) "Fielder's choice. ${batter.name} reaches" else description
             }
+            ScoringEventType.STOLEN_BASE -> {
+                description = if (description.isEmpty()) "Stolen Base" else description
+            }
+            ScoringEventType.CAUGHT_STEALING -> {
+                outsAdded = 1
+                description = if (description.isEmpty()) "Caught Stealing" else description
+            }
+            ScoringEventType.PICKED_OFF -> {
+                outsAdded = 1
+                description = if (description.isEmpty()) "Picked Off" else description
+            }
+            ScoringEventType.WILD_PITCH -> {
+                description = if (description.isEmpty()) "Wild Pitch" else description
+            }
+            ScoringEventType.PASSED_BALL -> {
+                description = if (description.isEmpty()) "Passed Ball" else description
+            }
+            ScoringEventType.BALK -> {
+                description = if (description.isEmpty()) "Balk" else description
+            }
         }
 
         if (request.isDoublePlay) {
@@ -128,8 +148,15 @@ class GameScoringService(
         val runsScoredList = mutableListOf<Long>()
         val outsBefore = game.outs
 
-        // If plate appearance resolved (not just BALL, STRIKE, FOUL)
-        if (eventType != ScoringEventType.BALL && eventType != ScoringEventType.STRIKE && eventType != ScoringEventType.FOUL) {
+        val isResolved = eventType in listOf(
+            ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN,
+            ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.STRIKEOUT,
+            ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT,
+            ScoringEventType.ERROR, ScoringEventType.FIELDER_CHOICE, ScoringEventType.SACRIFICE_FLY
+        )
+
+        // If plate appearance resolved
+        if (isResolved) {
             // Reset count
             game.balls = 0
             game.strikes = 0
@@ -186,6 +213,9 @@ class GameScoringService(
                 }
                 ScoringEventType.SACRIFICE_FLY -> {
                     // No at-bat, but could lead to RBI
+                }
+                else -> {
+                    // Stolen Base, Caught Stealing, Picked Off, etc. do not impact batting/pitching stats here
                 }
             }
 

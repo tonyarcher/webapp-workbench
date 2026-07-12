@@ -90,4 +90,150 @@ class LocalGameSimulationTest {
             assertEquals(finalGame.homeHits, totalAwayPitchingHitsAllowed)
         }
     }
+
+    @Test
+    fun testBaseRunningAndThrowSequences() {
+        initLocalGame(forceReset = true)
+        val game = localGame!!
+        val batterId = game.gameState.currentBatterId!!
+        val pitcherId = game.gameState.currentPitcherId!!
+
+        // 1. Single to put batter on base
+        recordLocalPlayEvent(
+            eventType = ScoringEventType.SINGLE,
+            batterId = batterId,
+            pitcherId = pitcherId,
+            descriptionDetail = "Single by batter"
+        )
+        
+        // Batter should now be on 1B
+        val runner1 = localGame!!.gameState.runnerFirstId
+        assertNotNull(runner1)
+
+        // 2. Stolen Base to move runner to 2B
+        recordLocalPlayEvent(
+            eventType = ScoringEventType.STOLEN_BASE,
+            batterId = localGame!!.gameState.currentBatterId!!,
+            pitcherId = localGame!!.gameState.currentPitcherId!!,
+            descriptionDetail = "Stolen Base: Runner to 2B",
+            runnerAdvanceMap = mapOf(runner1.toString() to 2)
+        )
+
+        // Runner should now be on 2B, batter's count and lineup index preserved
+        assertEquals(runner1, localGame!!.gameState.runnerSecondId)
+        assertEquals(0, localGame!!.gameState.balls)
+        assertEquals(0, localGame!!.gameState.strikes)
+
+        // 3. Caught Stealing to get runner out with a throw sequence
+        recordLocalPlayEvent(
+            eventType = ScoringEventType.CAUGHT_STEALING,
+            batterId = localGame!!.gameState.currentBatterId!!,
+            pitcherId = localGame!!.gameState.currentPitcherId!!,
+            descriptionDetail = "Caught Stealing: Runner (2-5)",
+            runnerAdvanceMap = mapOf(runner1.toString() to 0)
+        )
+
+        // Runner should be out, outs incremented to 1
+        assertEquals(null, localGame!!.gameState.runnerSecondId)
+        assertEquals(1, localGame!!.gameState.outs)
+    }
+
+    @Test
+    fun testExhaustiveDoublePlayAndThrowScenarios() {
+        initLocalGame(forceReset = true)
+        val game = localGame!!
+        val batter1Id = game.gameState.currentBatterId!!
+        val pitcherId = game.gameState.currentPitcherId!!
+
+        // Yogi Harry gets a Single
+        recordLocalPlayEvent(
+            eventType = ScoringEventType.SINGLE,
+            batterId = batter1Id,
+            pitcherId = pitcherId,
+            descriptionDetail = "Single"
+        )
+        val runner1 = localGame!!.gameState.runnerFirstId
+        assertNotNull(runner1)
+
+        // Babe Hammer hits a double play (1-6-3)
+        val batter2Id = localGame!!.gameState.currentBatterId!!
+        recordLocalPlayEvent(
+            eventType = ScoringEventType.GROUNDOUT,
+            batterId = batter2Id,
+            pitcherId = pitcherId,
+            descriptionDetail = "Groundout to Shortstop (Runner Out: 1-6-3) (Double Play)",
+            isDoublePlay = true,
+            runnerAdvanceMap = mapOf(runner1.toString() to 0)
+        )
+
+        // Verify state is correct
+        assertEquals(2, localGame!!.gameState.outs)
+        assertEquals(null, localGame!!.gameState.runnerFirstId)
+
+        // Verify scorebook notation
+        val playEvents = localEvents
+        val batter1Name = (localAwayRoster + localHomeRoster).find { it.id == batter1Id }?.name ?: ""
+        val batter2Name = (localAwayRoster + localHomeRoster).find { it.id == batter2Id }?.name ?: ""
+
+        val YogiSingle = playEvents.find { it.batterName == batter1Name && it.eventType == ScoringEventType.SINGLE }!!
+        val BabeDP = playEvents.find { it.batterName == batter2Name && it.eventType == ScoringEventType.GROUNDOUT }!!
+
+        val notationYogi = com.baseball.ui.getScorebookNotation(YogiSingle)
+        val notationBabe = com.baseball.ui.getScorebookNotation(BabeDP)
+
+        assertEquals("1B", notationYogi)
+        assertEquals("1-6-3 DP", notationBabe)
+    }
+
+    @Test
+    fun testUndoLastLocalEvent() {
+        initLocalGame(forceReset = true)
+        val game = localGame!!
+        val batterId = game.gameState.currentBatterId!!
+        val pitcherId = game.gameState.currentPitcherId!!
+
+        // 1. Record strike (pitch)
+        recordLocalPlayEvent(
+            eventType = ScoringEventType.STRIKE,
+            batterId = batterId,
+            pitcherId = pitcherId,
+            descriptionDetail = "Strike 1"
+        )
+        assertEquals(1, localGame!!.gameState.strikes)
+        assertEquals(1, localEvents.size)
+
+        // 2. Record ball (pitch)
+        recordLocalPlayEvent(
+            eventType = ScoringEventType.BALL,
+            batterId = batterId,
+            pitcherId = pitcherId,
+            descriptionDetail = "Ball 1"
+        )
+        assertEquals(1, localGame!!.gameState.balls)
+        assertEquals(1, localGame!!.gameState.strikes)
+        assertEquals(2, localEvents.size)
+
+        // Undo last pitch (Ball 1)
+        undoLastLocalEvent()
+        assertEquals(0, localGame!!.gameState.balls)
+        assertEquals(1, localGame!!.gameState.strikes)
+        assertEquals(1, localEvents.size)
+
+        // 3. Record a Single (play)
+        recordLocalPlayEvent(
+            eventType = ScoringEventType.SINGLE,
+            batterId = batterId,
+            pitcherId = pitcherId,
+            descriptionDetail = "Single"
+        )
+        assertNotNull(localGame!!.gameState.runnerFirstId)
+        assertEquals(2, localEvents.size)
+
+        // Undo last play (Single)
+        undoLastLocalEvent()
+        assertEquals(null, localGame!!.gameState.runnerFirstId)
+        assertEquals(1, localGame!!.gameState.strikes)
+        assertEquals(0, localGame!!.gameState.balls)
+        assertEquals(1, localEvents.size)
+    }
 }

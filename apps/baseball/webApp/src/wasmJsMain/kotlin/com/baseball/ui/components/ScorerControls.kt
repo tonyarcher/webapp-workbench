@@ -181,6 +181,8 @@ fun renderGameScoringControls(
             fun renderStep2(type: ScoringEventType, baseLabel: String, isHit: Boolean) {
                 var hasError = false
                 var hasDoublePlay = false
+                val throwSequence = mutableListOf<Int>()
+                var isUnassisted = false
                 
                 val runnerAdvances = mutableMapOf<String, Int>()
                 
@@ -305,6 +307,94 @@ fun renderGameScoringControls(
                         }
                     }
                     
+                    val showThrowBuilder = type in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FIELDER_CHOICE) || hasDoublePlay || runnerAdvances.values.contains(0)
+                    if (showThrowBuilder) {
+                        actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                            textContent = "Defensive Play / Throw Sequence"
+                            style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                            style.setProperty(UiConstants.Css.FONT_SIZE, "0.9rem")
+                            style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
+                            style.setProperty(UiConstants.Css.MARGIN_TOP, "1rem")
+                            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                        }
+                        
+                        val displaySeq = buildString {
+                            if (throwSequence.isEmpty()) {
+                                append("No throws (Unassisted/Direct)")
+                            } else {
+                                append(throwSequence.joinToString("-"))
+                                if (isUnassisted) append("U")
+                            }
+                        }
+                        
+                        actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                            textContent = "Sequence: $displaySeq"
+                            style.setProperty(UiConstants.Css.PADDING, "0.5rem")
+                            style.setProperty(UiConstants.Css.BACKGROUND, "rgba(255, 255, 255, 0.05)")
+                            style.setProperty(UiConstants.Css.BORDER, "1px solid #5a544a")
+                            style.setProperty(UiConstants.Css.BORDER_RADIUS, "4px")
+                            style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                            style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER)
+                            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                        }
+                        
+                        val throwBtnRow = actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                            style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                            style.setProperty(UiConstants.Css.GAP, "4px")
+                            style.setProperty("flex-wrap", "wrap")
+                            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
+                        }
+                        
+                        val posLabels = listOf("1-P", "2-C", "3-1B", "4-2B", "5-3B", "6-SS", "7-LF", "8-CF", "9-RF")
+                        posLabels.forEachIndexed { idx, label ->
+                            val posNum = idx + 1
+                            throwBtnRow.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                                textContent = label
+                                style.setProperty(UiConstants.Css.PADDING, "4px 8px")
+                                style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
+                                onClick {
+                                    if (throwSequence.size < 6) {
+                                        throwSequence.add(posNum)
+                                        drawStep2UI()
+                                    }
+                                }
+                            }
+                        }
+                        
+                        throwBtnRow.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                            textContent = "U"
+                            style.setProperty(UiConstants.Css.PADDING, "4px 8px")
+                            style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
+                            onClick {
+                                isUnassisted = !isUnassisted
+                                drawStep2UI()
+                            }
+                        }
+                        
+                        throwBtnRow.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                            textContent = "⌫"
+                            style.setProperty(UiConstants.Css.PADDING, "4px 8px")
+                            style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
+                            onClick {
+                                if (throwSequence.isNotEmpty()) {
+                                    throwSequence.removeAt(throwSequence.size - 1)
+                                }
+                                drawStep2UI()
+                            }
+                        }
+                        
+                        throwBtnRow.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                            textContent = "Clear"
+                            style.setProperty(UiConstants.Css.PADDING, "4px 8px")
+                            style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
+                            onClick {
+                                throwSequence.clear()
+                                isUnassisted = false
+                                drawStep2UI()
+                            }
+                        }
+                    }
+                    
                     // Locations Grid
                     actionGridWrapper.appendElement(UiConstants.Html.DIV) {
                         textContent = "Select Hit/Out Fielder to Complete Play"
@@ -329,8 +419,21 @@ fun renderGameScoringControls(
                         locGrid.appendElement(UiConstants.Html.BUTTON, "btn btn-action") {
                             textContent = loc
                             onClick {
+                                val seqStr = if (throwSequence.isNotEmpty()) {
+                                    val s = throwSequence.joinToString("-")
+                                    if (isUnassisted) "${s}U" else s
+                                } else if (isUnassisted) "3U" else null
+                                
                                 val detail = buildString {
-                                    append("$baseLabel to $loc")
+                                    if (seqStr != null) {
+                                        if (runnerAdvances.values.contains(0)) {
+                                            append("$baseLabel to $loc (Runner Out: $seqStr)")
+                                        } else {
+                                            append("$baseLabel: $seqStr")
+                                        }
+                                    } else {
+                                        append("$baseLabel to $loc")
+                                    }
                                     if (hasDoublePlay) {
                                         append(" (Double Play)")
                                     }
@@ -348,8 +451,21 @@ fun renderGameScoringControls(
                         textContent = "Unspecified Location"
                         style.setProperty(UiConstants.Css.BACKGROUND, "rgba(255, 255, 255, 0.1)")
                         onClick {
+                            val seqStr = if (throwSequence.isNotEmpty()) {
+                                val s = throwSequence.joinToString("-")
+                                    if (isUnassisted) "${s}U" else s
+                            } else if (isUnassisted) "3U" else null
+                            
                             val detail = buildString {
-                                append(baseLabel)
+                                if (seqStr != null) {
+                                    if (runnerAdvances.values.contains(0)) {
+                                        append("$baseLabel (Runner Out: $seqStr)")
+                                    } else {
+                                        append("$baseLabel: $seqStr")
+                                    }
+                                } else {
+                                    append(baseLabel)
+                                }
                                 if (hasDoublePlay) {
                                     append(" (Double Play)")
                                 }
@@ -372,7 +488,302 @@ fun renderGameScoringControls(
                     }
                 }
                 
-                drawStep2UI()
+                drawStep2UI()            }
+
+            fun renderBaseRunningStep2(type: ScoringEventType, baseLabel: String) {
+                var selectedRunnerId: String? = null
+                val throwSequence = mutableListOf<Int>()
+                var isUnassisted = false
+                
+                val r1 = game.gameState.runnerFirstId to game.gameState.runnerFirstName
+                val r2 = game.gameState.runnerSecondId to game.gameState.runnerSecondName
+                val r3 = game.gameState.runnerThirdId to game.gameState.runnerThirdName
+                val activeRunners = listOfNotNull(
+                    r1.first?.let { it.toString() to ("Runner on 1B: " + r1.second) },
+                    r2.first?.let { it.toString() to ("Runner on 2B: " + r2.second) },
+                    r3.first?.let { it.toString() to ("Runner on 3B: " + r3.second) }
+                )
+                
+                val runnerAdvances = mutableMapOf<String, Int>()
+                
+                fun drawBaseRunningUI() {
+                    actionGridWrapper.innerHTML = ""
+                    actionGridWrapper.appendElement(UiConstants.Html.H3) {
+                        textContent = "Base Running: $baseLabel"
+                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
+                        style.setProperty(UiConstants.Css.COLOR, "var(--accent-green)")
+                        style.setProperty(UiConstants.Css.FONT_SIZE, "1.2rem")
+                    }
+                    
+                    if (type == ScoringEventType.WILD_PITCH || type == ScoringEventType.PASSED_BALL || type == ScoringEventType.BALK) {
+                        if (activeRunners.isEmpty()) {
+                            actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                                textContent = "No runners currently on base."
+                                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1.5rem")
+                                style.setProperty(UiConstants.Css.COLOR, "#777")
+                            }
+                        } else {
+                            actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                                textContent = "Select Runner Base Advancements:"
+                                style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                            }
+                            
+                            activeRunners.forEach { (runnerId, rLabel) ->
+                                val row = actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                                    style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                                    style.setProperty(UiConstants.Css.ALIGN_ITEMS, UiConstants.CssValues.CENTER)
+                                    style.setProperty(UiConstants.Css.JUSTIFY_CONTENT, UiConstants.CssValues.SPACE_BETWEEN)
+                                    style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                                    style.setProperty(UiConstants.Css.BACKGROUND, "rgba(255, 255, 255, 0.03)")
+                                    style.setProperty(UiConstants.Css.PADDING, "0.4rem")
+                                    style.setProperty(UiConstants.Css.BORDER_RADIUS, "4px")
+                                }
+                                row.appendElement(UiConstants.Html.SPAN) {
+                                    textContent = rLabel
+                                    style.setProperty(UiConstants.Css.FONT_SIZE, "0.85rem")
+                                }
+                                val btnGroup = row.appendElement(UiConstants.Html.DIV) {
+                                    style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                                    style.setProperty(UiConstants.Css.GAP, "0.2rem")
+                                }
+                                
+                                val currentDest = runnerAdvances[runnerId]
+                                val options = listOf(
+                                    null to "Stays",
+                                    2 to "2B",
+                                    3 to "3B",
+                                    4 to "Score"
+                                )
+                                options.forEach { (baseVal, oLabel) ->
+                                    val isSelected = currentDest == baseVal
+                                    btnGroup.appendElement(UiConstants.Html.BUTTON, if (isSelected) "btn btn-primary" else "btn btn-secondary") {
+                                        textContent = oLabel
+                                        style.setProperty(UiConstants.Css.PADDING, "0.2rem 0.4rem")
+                                        style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
+                                        onClick {
+                                            if (baseVal == null) runnerAdvances.remove(runnerId)
+                                            else runnerAdvances[runnerId] = baseVal
+                                            drawBaseRunningUI()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        val submitGrid = actionGridWrapper.appendElement(UiConstants.Html.DIV, "action-grid") {
+                            style.setProperty("grid-template-columns", "repeat(3, 1fr)")
+                            style.setProperty(UiConstants.Css.GAP, "0.5rem")
+                            style.setProperty(UiConstants.Css.MARGIN_TOP, "1.5rem")
+                        }
+                        
+                        listOf(
+                            ScoringEventType.WILD_PITCH to "Wild Pitch",
+                            ScoringEventType.PASSED_BALL to "Passed Ball",
+                            ScoringEventType.BALK to "Balk"
+                        ).forEach { (evType, evLabel) ->
+                            submitGrid.appendElement(UiConstants.Html.BUTTON, "btn btn-action") {
+                                textContent = evLabel
+                                onClick {
+                                    val fullMap = mutableMapOf<String, Int>()
+                                    activeRunners.forEach { (rId, _) ->
+                                        fullMap[rId] = runnerAdvances[rId] ?: when {
+                                            r1.first?.toString() == rId -> 1
+                                            r2.first?.toString() == rId -> 2
+                                            r3.first?.toString() == rId -> 3
+                                            else -> 1
+                                        }
+                                    }
+                                    triggerScoringEvent(evType, evLabel, runnerAdvanceMap = fullMap)
+                                }
+                            }
+                        }
+                        
+                    } else { // Stolen Base, Caught Stealing, Picked Off
+                        if (activeRunners.isEmpty()) {
+                            actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                                textContent = "No runners currently on base to select."
+                                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1.5rem")
+                                style.setProperty(UiConstants.Css.COLOR, "#777")
+                            }
+                        } else {
+                            actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                                textContent = "Select Runner:"
+                                style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                            }
+                            
+                            val runnerGrid = actionGridWrapper.appendElement(UiConstants.Html.DIV, "action-grid") {
+                                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
+                            }
+                            activeRunners.forEach { (rId, rLabel) ->
+                                val isSel = rId == selectedRunnerId
+                                runnerGrid.appendElement(UiConstants.Html.BUTTON, if (isSel) "btn btn-primary" else "btn btn-secondary") {
+                                    textContent = rLabel
+                                    onClick {
+                                        selectedRunnerId = rId
+                                        drawBaseRunningUI()
+                                    }
+                                }
+                            }
+                            
+                            if (selectedRunnerId != null) {
+                                if (type == ScoringEventType.STOLEN_BASE) {
+                                    actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                                        textContent = "Select Target Stolen Base:"
+                                        style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                                    }
+                                    val targetGrid = actionGridWrapper.appendElement(UiConstants.Html.DIV, "action-grid") {
+                                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
+                                    }
+                                    
+                                    val currentBase = when (selectedRunnerId) {
+                                        r1.first?.toString() -> 1
+                                        r2.first?.toString() -> 2
+                                        r3.first?.toString() -> 3
+                                        else -> 1
+                                    }
+                                    
+                                    val options = mutableListOf<Pair<Int, String>>()
+                                    if (currentBase < 2) options.add(2 to "Second Base (2B)")
+                                    if (currentBase < 3) options.add(3 to "Third Base (3B)")
+                                    options.add(4 to "Home Plate (Score)")
+                                    
+                                    options.forEach { (targetBase, baseLabel) ->
+                                        targetGrid.appendElement(UiConstants.Html.BUTTON, "btn btn-action") {
+                                            textContent = baseLabel
+                                            onClick {
+                                                val fullMap = mutableMapOf<String, Int>()
+                                                activeRunners.forEach { (rId, _) ->
+                                                    if (rId == selectedRunnerId) {
+                                                        fullMap[rId] = targetBase
+                                                    } else {
+                                                        fullMap[rId] = when {
+                                                            r1.first?.toString() == rId -> 1
+                                                            r2.first?.toString() == rId -> 2
+                                                            r3.first?.toString() == rId -> 3
+                                                            else -> 1
+                                                        }
+                                                    }
+                                                }
+                                                val targetBaseName = when (targetBase) {
+                                                    2 -> "2B"
+                                                    3 -> "3B"
+                                                    4 -> "Home"
+                                                    else -> ""
+                                                }
+                                                val runnerName = activeRunners.find { it.first == selectedRunnerId }?.second?.substringAfter(": ") ?: ""
+                                                triggerScoringEvent(ScoringEventType.STOLEN_BASE, "Stolen Base: $runnerName to $targetBaseName", runnerAdvanceMap = fullMap)
+                                            }
+                                        }
+                                    }
+                                } else { // Caught Stealing or Picked Off
+                                    actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                                        textContent = "Defensive Throw Sequence"
+                                        style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                                    }
+                                    val displaySeq = buildString {
+                                        if (throwSequence.isEmpty()) {
+                                            append(if (type == ScoringEventType.CAUGHT_STEALING) "CS (No throws)" else "PO (No throws)")
+                                        } else {
+                                            append(throwSequence.joinToString("-"))
+                                            if (isUnassisted) append("U")
+                                        }
+                                    }
+                                    actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                                        textContent = "Sequence: $displaySeq"
+                                        style.setProperty(UiConstants.Css.PADDING, "0.5rem")
+                                        style.setProperty(UiConstants.Css.BACKGROUND, "rgba(255, 255, 255, 0.05)")
+                                        style.setProperty(UiConstants.Css.BORDER, "1px solid #5a544a")
+                                        style.setProperty(UiConstants.Css.BORDER_RADIUS, "4px")
+                                        style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                                        style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER)
+                                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                                    }
+                                    
+                                    val throwBtnRow = actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                                        style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                                        style.setProperty(UiConstants.Css.GAP, "4px")
+                                        style.setProperty("flex-wrap", "wrap")
+                                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
+                                    }
+                                    val posLabels = listOf("1-P", "2-C", "3-1B", "4-2B", "5-3B", "6-SS", "7-LF", "8-CF", "9-RF")
+                                    posLabels.forEachIndexed { idx, pLabel ->
+                                        val posNum = idx + 1
+                                        throwBtnRow.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                                            textContent = pLabel
+                                            style.setProperty(UiConstants.Css.PADDING, "4px 8px")
+                                            style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
+                                            onClick {
+                                                if (throwSequence.size < 6) {
+                                                    throwSequence.add(posNum)
+                                                    drawBaseRunningUI()
+                                                }
+                                            }
+                                        }
+                                    }
+                                    throwBtnRow.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                                        textContent = "U"
+                                        style.setProperty(UiConstants.Css.PADDING, "4px 8px")
+                                        style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
+                                        onClick { isUnassisted = !isUnassisted; drawBaseRunningUI() }
+                                    }
+                                    throwBtnRow.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                                        textContent = "⌫"
+                                        style.setProperty(UiConstants.Css.PADDING, "4px 8px")
+                                        style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
+                                        onClick { if (throwSequence.isNotEmpty()) throwSequence.removeAt(throwSequence.size - 1); drawBaseRunningUI() }
+                                    }
+                                    throwBtnRow.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                                        textContent = "Clear"
+                                        style.setProperty(UiConstants.Css.PADDING, "4px 8px")
+                                        style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
+                                        onClick { throwSequence.clear(); isUnassisted = false; drawBaseRunningUI() }
+                                    }
+                                    
+                                    actionGridWrapper.appendElement(UiConstants.Html.BUTTON, "btn btn-action") {
+                                        textContent = "Submit Out"
+                                        style.setProperty(UiConstants.Css.MARGIN_TOP, "1rem")
+                                        onClick {
+                                            val seqStr = if (throwSequence.isNotEmpty()) {
+                                                val s = throwSequence.joinToString("-")
+                                                if (isUnassisted) "${s}U" else s
+                                            } else if (type == ScoringEventType.CAUGHT_STEALING) "2-6" else "1-3"
+                                            
+                                            val fullMap = mutableMapOf<String, Int>()
+                                            activeRunners.forEach { (rId, _) ->
+                                                if (rId == selectedRunnerId) {
+                                                    fullMap[rId] = 0
+                                                } else {
+                                                    fullMap[rId] = when {
+                                                        r1.first?.toString() == rId -> 1
+                                                        r2.first?.toString() == rId -> 2
+                                                        r3.first?.toString() == rId -> 3
+                                                        else -> 1
+                                                    }
+                                                }
+                                            }
+                                            val runnerName = activeRunners.find { it.first == selectedRunnerId }?.second?.substringAfter(": ") ?: ""
+                                            val prefix = if (type == ScoringEventType.CAUGHT_STEALING) "Caught Stealing" else "Picked Off"
+                                            triggerScoringEvent(type, "$prefix: $runnerName ($seqStr)", runnerAdvanceMap = fullMap)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    actionGridWrapper.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                        textContent = "Cancel"
+                        style.setProperty(UiConstants.Css.MARGIN_TOP, "1rem")
+                        style.setProperty(UiConstants.Css.WIDTH, "100%")
+                        onClick { renderActionGrid() }
+                    }
+                }
+                
+                drawBaseRunningUI()
             }
             
             // Pitch Results Section
@@ -445,6 +856,38 @@ fun renderGameScoringControls(
                         } else {
                             triggerScoringEvent(type)
                         }
+                    }
+                }
+            }
+
+            // Base Running Actions Divider
+            actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                style.setProperty(UiConstants.Css.FONT_SIZE, "0.8rem")
+                style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                style.setProperty(UiConstants.Css.COLOR, "var(--accent-green)")
+                style.setProperty(UiConstants.Css.MARGIN_TOP, "1.5rem")
+                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                style.setProperty("border-top", "1px solid rgba(255, 255, 255, 0.08)")
+                style.setProperty(UiConstants.Css.PADDING_TOP, "1.25rem")
+                textContent = "BASE RUNNING EVENTS"
+            }
+            
+            val baseRunningGrid = actionGridWrapper.appendElement(UiConstants.Html.DIV, "action-grid") {
+                style.setProperty("grid-template-columns", "repeat(2, 1fr)")
+                style.setProperty(UiConstants.Css.GAP, "0.5rem")
+            }
+            
+            listOf(
+                ScoringEventType.STOLEN_BASE to "Stolen Base",
+                ScoringEventType.CAUGHT_STEALING to "Caught Stealing",
+                ScoringEventType.PICKED_OFF to "Picked Off",
+                ScoringEventType.WILD_PITCH to "WP / PB / Balk"
+            ).forEach { (type, label) ->
+                baseRunningGrid.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary btn-action") {
+                    textContent = label
+                    style.setProperty(UiConstants.Css.PADDING, "0.5rem")
+                    onClick {
+                        renderBaseRunningStep2(type, label)
                     }
                 }
             }

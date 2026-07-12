@@ -136,7 +136,21 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
             style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0")
         }
         if (isSingleGameMode) {
-            titleRow.appendElement(UiConstants.Html.BUTTON, "btn btn-danger") {
+            val controlBtns = titleRow.appendElement(UiConstants.Html.DIV) {
+                style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                style.setProperty(UiConstants.Css.GAP, "0.5rem")
+            }
+            if (localEvents.isNotEmpty()) {
+                controlBtns.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                    textContent = "⎌ Undo Action"
+                    style.setProperty(UiConstants.Css.PADDING, "0.5rem 1rem")
+                    onClick {
+                        com.baseball.game.undoLastLocalEvent()
+                        renderCurrentTab()
+                    }
+                }
+            }
+            controlBtns.appendElement(UiConstants.Html.BUTTON, "btn btn-danger") {
                 textContent = "New Game"
                 style.setProperty(UiConstants.Css.PADDING, "0.5rem 1rem")
                 onClick {
@@ -229,8 +243,8 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                             val header = "${ev.batterName} ($position) - Inning ${ev.inning} (${if (ev.half == HalfInning.TOP) "Top" else "Bottom"})"
                             val notStr = if (notation.isNotEmpty()) " [$notation]" else ""
                             val endingDetail = if (endedInning && endedStr != BaseballConstants.PLAY_RESULT_RUN_SCORED && endedStr != BaseballConstants.PLAY_RESULT_OUT) BaseballConstants.PLAY_RESULT_LOB else endedStr
-                            
-                            innerHTML = "<span style='color: var(--accent-yellow); font-weight: 700;'>$header</span>$notStr - ${ev.description} <span style='color: var(--text-secondary); font-size: 0.8rem;'>[Ended: $endingDetail]</span>"
+                            val cleanedDesc = ev.description.substringBefore(" | Adv:")
+                            innerHTML = "<span style='color: var(--accent-yellow); font-weight: 700;'>$header</span>$notStr - $cleanedDesc <span style='color: var(--text-secondary); font-size: 0.8rem;'>[Ended: $endingDetail]</span>"
                         }
 
                         if (endedInning) {
@@ -352,6 +366,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 }
 
 internal fun getScorebookNotation(ev: PlayEvent): String {
+    val suffix = if (ev.description.contains("(Double Play)")) " DP" else ""
     return when (ev.eventType) {
         ScoringEventType.SINGLE -> "1B"
         ScoringEventType.DOUBLE -> "2B"
@@ -359,30 +374,64 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
         ScoringEventType.HOME_RUN -> "HR"
         ScoringEventType.WALK -> "BB"
         ScoringEventType.HIT_BY_PITCH -> "HBP"
-        ScoringEventType.STRIKEOUT -> "K"
+        ScoringEventType.STRIKEOUT -> "K$suffix"
         ScoringEventType.GROUNDOUT -> {
-            val matchNum = Regex("to .*? \\((\\d)\\)").find(ev.description)
-            val posNum = matchNum?.groupValues?.get(1) ?: "3"
-            "GO $posNum-3"
+            val runnerOutMatch = Regex("Runner Out: (\\d+(?:-\\d+)*U?)").find(ev.description)
+            val seqMatch = Regex("Groundout: (\\d+(?:-\\d+)*U?)").find(ev.description)
+            val baseNotation = when {
+                runnerOutMatch != null -> runnerOutMatch.groupValues[1]
+                seqMatch != null -> seqMatch.groupValues[1]
+                else -> {
+                    val matchNum = Regex("to .*? \\((\\d)\\)").find(ev.description)
+                    val posNum = matchNum?.groupValues?.get(1) ?: "3"
+                    "$posNum-3"
+                }
+            }
+            "$baseNotation$suffix"
         }
         ScoringEventType.FLYOUT -> {
             val matchNum = Regex("to .*? \\((\\d)\\)").find(ev.description)
             val posNum = matchNum?.groupValues?.get(1) ?: "8"
-            "F$posNum"
+            "F$posNum$suffix"
         }
         ScoringEventType.LINE_OUT -> {
             val matchNum = Regex("to .*? \\((\\d)\\)").find(ev.description)
             val posNum = matchNum?.groupValues?.get(1) ?: "6"
-            "L$posNum"
+            "L$posNum$suffix"
         }
         ScoringEventType.POP_OUT -> {
             val matchNum = Regex("to .*? \\((\\d)\\)").find(ev.description)
             val posNum = matchNum?.groupValues?.get(1) ?: "4"
-            "P$posNum"
+            "P$posNum$suffix"
         }
         ScoringEventType.SACRIFICE_FLY -> "SF"
         ScoringEventType.ERROR -> "E"
-        ScoringEventType.FIELDER_CHOICE -> "FC"
+        ScoringEventType.FIELDER_CHOICE -> {
+            val runnerOutMatch = Regex("Runner Out: (\\d+(?:-\\d+)*U?)").find(ev.description)
+            val seqMatch = Regex("Fielder's Choice: (\\d+(?:-\\d+)*U?)").find(ev.description)
+            val baseNotation = when {
+                runnerOutMatch != null -> runnerOutMatch.groupValues[1]
+                seqMatch != null -> seqMatch.groupValues[1]
+                else -> "FC"
+            }
+            "$baseNotation$suffix"
+        }
+        ScoringEventType.STOLEN_BASE -> {
+            if (ev.description.contains("to 3B")) "SB3"
+            else if (ev.description.contains("to Home")) "SBH"
+            else "SB"
+        }
+        ScoringEventType.CAUGHT_STEALING -> {
+            val seqMatch = Regex("Caught Stealing: .*? \\((\\d+(?:-\\d+)*U?)\\)").find(ev.description)
+            if (seqMatch != null) "CS ${seqMatch.groupValues[1]}" else "CS"
+        }
+        ScoringEventType.PICKED_OFF -> {
+            val seqMatch = Regex("Picked Off: .*? \\((\\d+(?:-\\d+)*U?)\\)").find(ev.description)
+            if (seqMatch != null) "PO ${seqMatch.groupValues[1]}" else "PO"
+        }
+        ScoringEventType.WILD_PITCH -> "WP"
+        ScoringEventType.PASSED_BALL -> "PB"
+        ScoringEventType.BALK -> "BK"
         else -> ""
     }
 }

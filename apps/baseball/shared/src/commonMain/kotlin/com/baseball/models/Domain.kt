@@ -126,7 +126,13 @@ enum class ScoringEventType {
     POP_OUT,
     ERROR,
     FIELDER_CHOICE,
-    SACRIFICE_FLY
+    SACRIFICE_FLY,
+    STOLEN_BASE,
+    CAUGHT_STEALING,
+    PICKED_OFF,
+    WILD_PITCH,
+    PASSED_BALL,
+    BALK
 }
 
 @Serializable

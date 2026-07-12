@@ -382,3 +382,55 @@ fun loadLocalState(): Boolean {
         return false
     }
 }
+
+fun undoLastLocalEvent() {
+    if (localEvents.isEmpty()) return
+    val eventsToReplay = localEvents.dropLast(1)
+    
+    val homeT = localGame?.homeTeam ?: SeedData.teamCubs
+    val awayT = localGame?.awayTeam ?: SeedData.teamCardinals
+    startNewGame(
+        homeTeam = homeT,
+        awayTeam = awayT,
+        homeLineup = initialHomeLineup.toList(),
+        awayLineup = initialAwayLineup.toList(),
+        homeBench = initialHomeBench.toList(),
+        awayBench = initialAwayBench.toList(),
+        homeActivePitcherId = initialHomeActivePitcherId,
+        awayActivePitcherId = initialAwayActivePitcherId,
+        useDh = localUseDh
+    )
+    
+    eventsToReplay.forEach { ev ->
+        val cleanDesc = ev.description.substringBefore(" | Adv:")
+        val marker = " | Adv: "
+        val advanceMap = if (ev.description.contains(marker)) {
+            val parts = ev.description.substringAfter(marker).split(",")
+            val map = mutableMapOf<String, Int>()
+            parts.forEach { part ->
+                val pair = part.split("->")
+                if (pair.size == 2) {
+                    val pId = pair[0]
+                    val base = pair[1].toIntOrNull()
+                    if (base != null) {
+                        map[pId] = base
+                    }
+                }
+            }
+            map
+        } else null
+        
+        val bId = (localAwayRoster + localHomeRoster).find { it.name == ev.batterName }?.id ?: localGame!!.gameState.currentBatterId!!
+        val pId = (localAwayRoster + localHomeRoster).find { it.name == ev.pitcherName }?.id ?: localGame!!.gameState.currentPitcherId!!
+        
+        recordLocalPlayEvent(
+            eventType = ev.eventType,
+            batterId = bId,
+            pitcherId = pId,
+            descriptionDetail = cleanDesc,
+            isDoublePlay = ev.description.contains("(Double Play)"),
+            isError = ev.description.contains("(with Error)"),
+            runnerAdvanceMap = advanceMap
+        )
+    }
+}
