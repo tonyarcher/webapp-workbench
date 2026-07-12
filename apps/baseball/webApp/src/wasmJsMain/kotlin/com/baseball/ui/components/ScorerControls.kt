@@ -183,6 +183,7 @@ fun renderGameScoringControls(
                 var hasDoublePlay = false
                 val throwSequence = mutableListOf<Int>()
                 var isUnassisted = false
+                var hrType = "Over the Fence"
                 
                 val runnerAdvances = mutableMapOf<String, Int>()
                 
@@ -266,6 +267,35 @@ fun renderGameScoringControls(
                                     runnerAdvances.clear()
                                 }
                                 drawStep2UI()
+                            }
+                        }
+                    }
+                    
+                    if (type == ScoringEventType.HOME_RUN) {
+                        actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                            textContent = "Home Run Type"
+                            style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                            style.setProperty(UiConstants.Css.FONT_SIZE, "0.9rem")
+                            style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
+                            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                        }
+                        
+                        val hrTypeRow = actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                            style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                            style.setProperty(UiConstants.Css.GAP, "0.5rem")
+                            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
+                        }
+                        
+                        listOf("Over the Fence", "Inside the Park").forEach { opt ->
+                            val active = opt == hrType
+                            val btnClass = if (active) "btn btn-primary" else "btn btn-secondary"
+                            hrTypeRow.appendElement(UiConstants.Html.BUTTON, btnClass) {
+                                textContent = opt
+                                style.setProperty(UiConstants.Css.FLEX, "1")
+                                onClick {
+                                    hrType = opt
+                                    drawStep2UI()
+                                }
                             }
                         }
                     }
@@ -473,45 +503,81 @@ fun renderGameScoringControls(
                             }
                         }
                     }
-                    
-                    // Locations Grid
-                    actionGridWrapper.appendElement(UiConstants.Html.DIV) {
-                        textContent = "Select Hit/Out Fielder to Complete Play"
-                        style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
-                        style.setProperty(UiConstants.Css.FONT_SIZE, "0.9rem")
-                        style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
-                        style.setProperty(UiConstants.Css.MARGIN_TOP, "1rem")
-                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
-                    }
-                    
-                    val locGrid = actionGridWrapper.appendElement(UiConstants.Html.DIV, "action-grid") {
-                        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
-                    }
-                    
-                    val locations = if (isHit) {
-                        listOf("Left Field", "Center Field", "Right Field", "Infield", "Down the Line", "Gap")
-                    } else {
-                        listOf("Pitcher (1)", "Catcher (2)", "1st Base (3)", "2nd Base (4)", "3rd Base (5)", "Shortstop (6)", "Left Field (7)", "Center Field (8)", "Right Field (9)")
-                    }
-                    
-                    locations.forEach { loc ->
+                                        // Locations Grid
+                    if (type != ScoringEventType.HOME_RUN || hrType == "Inside the Park") {
+                        actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                            textContent = "Select Hit/Out Fielder to Complete Play"
+                            style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
+                            style.setProperty(UiConstants.Css.FONT_SIZE, "0.9rem")
+                            style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
+                            style.setProperty(UiConstants.Css.MARGIN_TOP, "1rem")
+                            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.5rem")
+                        }
+                        
+                        val locGrid = actionGridWrapper.appendElement(UiConstants.Html.DIV, "action-grid") {
+                            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
+                        }
+                        
+                        val locations = if (isHit) {
+                            listOf("Left Field", "Center Field", "Right Field", "Infield", "Down the Line", "Gap")
+                        } else {
+                            listOf("Pitcher (1)", "Catcher (2)", "1st Base (3)", "2nd Base (4)", "3rd Base (5)", "Shortstop (6)", "Left Field (7)", "Center Field (8)", "Right Field (9)")
+                        }
+                        
+                        locations.forEach { loc ->
+                            locGrid.appendElement(UiConstants.Html.BUTTON, "btn btn-action") {
+                                textContent = loc
+                                onClick {
+                                    val seqStr = if (throwSequence.isNotEmpty()) {
+                                        val s = throwSequence.joinToString("-")
+                                        if (isUnassisted) "${s}U" else s
+                                    } else if (isUnassisted) "3U" else null
+                                    
+                                    val detail = buildString {
+                                        if (seqStr != null) {
+                                            if (runnerAdvances.values.contains(0)) {
+                                                append("$baseLabel to $loc (Runner Out: $seqStr)")
+                                            } else {
+                                                append("$baseLabel: $seqStr")
+                                            }
+                                        } else {
+                                            if (type == ScoringEventType.HOME_RUN) {
+                                                append("Inside the Park Home Run to $loc")
+                                            } else {
+                                                append("$baseLabel to $loc")
+                                            }
+                                        }
+                                        if (hasDoublePlay) {
+                                            append(" (Double Play)")
+                                        }
+                                        if (hasError) {
+                                            append(" (with Error)")
+                                        }
+                                    }
+                                    triggerScoringEvent(type, detail, hasDoublePlay, hasError, runnerAdvances.takeIf { it.isNotEmpty() })
+                                }
+                            }
+                        }
+                        
+                        // Fast fallback if they want to submit without a specific location
                         locGrid.appendElement(UiConstants.Html.BUTTON, "btn btn-action") {
-                            textContent = loc
+                            textContent = "Unspecified Location"
+                            style.setProperty(UiConstants.Css.BACKGROUND, "rgba(255, 255, 255, 0.1)")
                             onClick {
                                 val seqStr = if (throwSequence.isNotEmpty()) {
                                     val s = throwSequence.joinToString("-")
-                                    if (isUnassisted) "${s}U" else s
+                                        if (isUnassisted) "${s}U" else s
                                 } else if (isUnassisted) "3U" else null
                                 
                                 val detail = buildString {
                                     if (seqStr != null) {
                                         if (runnerAdvances.values.contains(0)) {
-                                            append("$baseLabel to $loc (Runner Out: $seqStr)")
+                                            append("$baseLabel (Runner Out: $seqStr)")
                                         } else {
                                             append("$baseLabel: $seqStr")
                                         }
                                     } else {
-                                        append("$baseLabel to $loc")
+                                        append(baseLabel)
                                     }
                                     if (hasDoublePlay) {
                                         append(" (Double Play)")
@@ -523,36 +589,25 @@ fun renderGameScoringControls(
                                 triggerScoringEvent(type, detail, hasDoublePlay, hasError, runnerAdvances.takeIf { it.isNotEmpty() })
                             }
                         }
-                    }
-                    
-                    // Fast fallback if they want to submit without a specific location
-                    locGrid.appendElement(UiConstants.Html.BUTTON, "btn btn-action") {
-                        textContent = "Unspecified Location"
-                        style.setProperty(UiConstants.Css.BACKGROUND, "rgba(255, 255, 255, 0.1)")
-                        onClick {
-                            val seqStr = if (throwSequence.isNotEmpty()) {
-                                val s = throwSequence.joinToString("-")
-                                    if (isUnassisted) "${s}U" else s
-                            } else if (isUnassisted) "3U" else null
-                            
-                            val detail = buildString {
-                                if (seqStr != null) {
-                                    if (runnerAdvances.values.contains(0)) {
-                                        append("$baseLabel (Runner Out: $seqStr)")
-                                    } else {
-                                        append("$baseLabel: $seqStr")
+                    } else {
+                        // Over the Fence Home Run - complete play directly
+                        val completeRow = actionGridWrapper.appendElement(UiConstants.Html.DIV) {
+                            style.setProperty(UiConstants.Css.MARGIN_TOP, "1rem")
+                            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
+                        }
+                        completeRow.appendElement(UiConstants.Html.BUTTON, "btn btn-primary") {
+                            textContent = "Complete Play (Home Run)"
+                            style.setProperty(UiConstants.Css.WIDTH, "100%")
+                            style.setProperty(UiConstants.Css.PADDING, "0.75rem")
+                            onClick {
+                                val detail = buildString {
+                                    append("Home Run (Over the Fence)")
+                                    if (hasError) {
+                                        append(" (with Error)")
                                     }
-                                } else {
-                                    append(baseLabel)
                                 }
-                                if (hasDoublePlay) {
-                                    append(" (Double Play)")
-                                }
-                                if (hasError) {
-                                    append(" (with Error)")
-                                }
+                                triggerScoringEvent(type, detail, false, hasError, runnerAdvances.takeIf { it.isNotEmpty() })
                             }
-                            triggerScoringEvent(type, detail, hasDoublePlay, hasError, runnerAdvances.takeIf { it.isNotEmpty() })
                         }
                     }
                     

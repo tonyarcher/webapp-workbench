@@ -254,4 +254,31 @@ class GameSimulationTest {
         val notation = com.baseball.ui.getScorebookNotation(localEvents.last())
         assertEquals("1B7", notation)
     }
+
+    @Test
+    fun testHomeRunTypes() {
+        initGame(forceReset = true)
+        val game = localGame!!
+        val batterId = game.gameState.currentBatterId!!
+        val pitcherId = game.gameState.currentPitcherId!!
+
+        // Over the Fence HR
+        recordPlayEvent(
+            eventType = ScoringEventType.HOME_RUN,
+            batterId = batterId,
+            pitcherId = pitcherId,
+            descriptionDetail = "Home Run (Over the Fence)"
+        )
+        assertEquals("HR", com.baseball.ui.getScorebookNotation(localEvents.last()))
+
+        // Inside the Park HR
+        val batter2Id = localGame!!.gameState.currentBatterId!!
+        recordPlayEvent(
+            eventType = ScoringEventType.HOME_RUN,
+            batterId = batter2Id,
+            pitcherId = pitcherId,
+            descriptionDetail = "Inside the Park Home Run to Center Field"
+        )
+        assertEquals("HR8", com.baseball.ui.getScorebookNotation(localEvents.last()))
+    }
 }
