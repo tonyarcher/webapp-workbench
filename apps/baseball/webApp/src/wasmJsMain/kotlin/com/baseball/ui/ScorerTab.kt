@@ -368,10 +368,22 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 internal fun getScorebookNotation(ev: PlayEvent): String {
     val suffix = if (ev.description.contains("(Double Play)")) " DP" else ""
     return when (ev.eventType) {
-        ScoringEventType.SINGLE -> "1B"
-        ScoringEventType.DOUBLE -> "2B"
-        ScoringEventType.TRIPLE -> "3B"
-        ScoringEventType.HOME_RUN -> "HR"
+        ScoringEventType.SINGLE -> {
+            val locNum = getHitLocationNumber(ev.description)
+            if (locNum != null) "1B$locNum" else "1B"
+        }
+        ScoringEventType.DOUBLE -> {
+            val locNum = getHitLocationNumber(ev.description)
+            if (locNum != null) "2B$locNum" else "2B"
+        }
+        ScoringEventType.TRIPLE -> {
+            val locNum = getHitLocationNumber(ev.description)
+            if (locNum != null) "3B$locNum" else "3B"
+        }
+        ScoringEventType.HOME_RUN -> {
+            val locNum = getHitLocationNumber(ev.description)
+            if (locNum != null) "HR$locNum" else "HR"
+        }
         ScoringEventType.WALK -> "BB"
         ScoringEventType.HIT_BY_PITCH -> "HBP"
         ScoringEventType.STRIKEOUT -> "K$suffix"
@@ -433,5 +445,21 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
         ScoringEventType.PASSED_BALL -> "PB"
         ScoringEventType.BALK -> "BK"
         else -> ""
+    }
+}
+
+fun getHitLocationNumber(desc: String): String? {
+    return when {
+        desc.contains("Left Field") -> "7"
+        desc.contains("Center Field") -> "8"
+        desc.contains("Right Field") -> "9"
+        desc.contains("Shortstop") -> "6"
+        desc.contains("2nd Base") || desc.contains("Second Base") -> "4"
+        desc.contains("3rd Base") || desc.contains("Third Base") -> "5"
+        desc.contains("1st Base") || desc.contains("First Base") -> "3"
+        desc.contains("Pitcher") -> "1"
+        desc.contains("Catcher") -> "2"
+        desc.contains("Infield") -> "IF"
+        else -> null
     }
 }

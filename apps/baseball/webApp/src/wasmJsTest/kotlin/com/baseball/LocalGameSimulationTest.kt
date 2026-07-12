@@ -236,4 +236,22 @@ class LocalGameSimulationTest {
         assertEquals(0, localGame!!.gameState.balls)
         assertEquals(1, localEvents.size)
     }
+
+    @Test
+    fun testHitLocationScorecardNotations() {
+        initLocalGame(forceReset = true)
+        val game = localGame!!
+        val batterId = game.gameState.currentBatterId!!
+        val pitcherId = game.gameState.currentPitcherId!!
+
+        // Single to Left Field
+        recordLocalPlayEvent(
+            eventType = ScoringEventType.SINGLE,
+            batterId = batterId,
+            pitcherId = pitcherId,
+            descriptionDetail = "Single to Left Field"
+        )
+        val notation = com.baseball.ui.getScorebookNotation(localEvents.last())
+        assertEquals("1B7", notation)
+    }
 }
