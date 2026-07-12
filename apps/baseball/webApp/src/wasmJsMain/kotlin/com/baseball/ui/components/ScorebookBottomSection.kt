@@ -113,7 +113,7 @@ fun renderScorebookBottomSection(
     coords.forEach { (pos, coord) ->
         val name = positionsMap[pos] ?: "Def"
         fieldWrapper.appendElement(UiConstants.Html.DIV) {
-            style.setProperty(UiConstants.Css.POSITION, UiConstants.CssValues.RELATIVE)
+            style.setProperty(UiConstants.Css.POSITION, UiConstants.CssValues.ABSOLUTE)
             style.setProperty(UiConstants.Css.TOP, coord.first)
             style.setProperty(UiConstants.Css.LEFT, coord.second)
             style.setProperty(UiConstants.Css.WIDTH, "80px")
