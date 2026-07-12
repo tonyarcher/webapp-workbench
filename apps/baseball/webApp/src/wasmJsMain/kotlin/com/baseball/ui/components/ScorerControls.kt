@@ -299,6 +299,43 @@ fun renderGameScoringControls(
                                             runnerAdvances.remove(runnerId.toString())
                                         } else {
                                             runnerAdvances[runnerId.toString()] = baseVal
+                                            
+                                            // Enforce trailing/leading runner constraints
+                                            if (baseVal > 0) {
+                                                val startBase = when (runnerId) {
+                                                    game.gameState.currentBatterId -> 0
+                                                    game.gameState.runnerFirstId -> 1
+                                                    game.gameState.runnerSecondId -> 2
+                                                    game.gameState.runnerThirdId -> 3
+                                                    else -> 0
+                                                }
+                                                
+                                                val otherRunners = listOfNotNull(
+                                                    game.gameState.runnerFirstId?.let { it.toString() to 1 },
+                                                    game.gameState.runnerSecondId?.let { it.toString() to 2 },
+                                                    game.gameState.runnerThirdId?.let { it.toString() to 3 },
+                                                    game.gameState.currentBatterId?.let { it.toString() to 0 }
+                                                )
+                                                
+                                                otherRunners.forEach { (oId, oStart) ->
+                                                    if (oId != runnerId.toString()) {
+                                                        val oDest = runnerAdvances[oId]
+                                                        if (oDest != null && oDest > 0) {
+                                                            if (oStart > startBase) { // leading runner
+                                                                val minDest = baseVal + (oStart - startBase)
+                                                                if (oDest < minDest) {
+                                                                    runnerAdvances[oId] = minOf(4, minDest)
+                                                                }
+                                                            } else { // trailing runner
+                                                                val maxDest = baseVal - (startBase - oStart)
+                                                                if (oDest > maxDest) {
+                                                                    runnerAdvances[oId] = maxOf(1, maxDest)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                         drawStep2UI()
                                     }
@@ -563,7 +600,42 @@ fun renderGameScoringControls(
                                         style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
                                         onClick {
                                             if (baseVal == null) runnerAdvances.remove(runnerId)
-                                            else runnerAdvances[runnerId] = baseVal
+                                            else {
+                                                runnerAdvances[runnerId] = baseVal
+                                                
+                                                // Enforce trailing/leading runner constraints
+                                                val startBase = when (runnerId) {
+                                                    game.gameState.runnerFirstId?.toString() -> 1
+                                                    game.gameState.runnerSecondId?.toString() -> 2
+                                                    game.gameState.runnerThirdId?.toString() -> 3
+                                                    else -> 0
+                                                }
+                                                
+                                                val otherRunners = listOfNotNull(
+                                                    game.gameState.runnerFirstId?.let { it.toString() to 1 },
+                                                    game.gameState.runnerSecondId?.let { it.toString() to 2 },
+                                                    game.gameState.runnerThirdId?.let { it.toString() to 3 }
+                                                )
+                                                
+                                                otherRunners.forEach { (oId, oStart) ->
+                                                    if (oId != runnerId) {
+                                                        val oDest = runnerAdvances[oId]
+                                                        if (oDest != null && oDest > 0) {
+                                                            if (oStart > startBase) { // leading runner
+                                                                val minDest = baseVal + (oStart - startBase)
+                                                                if (oDest < minDest) {
+                                                                    runnerAdvances[oId] = minOf(4, minDest)
+                                                                }
+                                                            } else { // trailing runner
+                                                                val maxDest = baseVal - (startBase - oStart)
+                                                                if (oDest > maxDest) {
+                                                                    runnerAdvances[oId] = maxOf(1, maxDest)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                             drawBaseRunningUI()
                                         }
                                     }
