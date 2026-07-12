@@ -5,7 +5,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class League(
     val id: Long? = null,
-    val name: String
+    val name: String,
+    val ownerId: String? = null
 )
 
 @Serializable
@@ -13,7 +14,8 @@ data class Season(
     val id: Long? = null,
     val leagueId: Long,
     val name: String,
-    val year: Int
+    val year: Int,
+    val ownerId: String? = null
 )
 
 @Serializable
@@ -21,7 +23,8 @@ data class Team(
     val id: Long? = null,
     val name: String,
     val abbreviation: String,
-    val city: String
+    val city: String,
+    val ownerId: String? = null
 )
 
 @Serializable
@@ -88,7 +91,8 @@ data class Game(
     val awayHits: Int = 0,
     val homeErrors: Int = 0,
     val awayErrors: Int = 0,
-    val gameState: GameState = GameState()
+    val gameState: GameState = GameState(),
+    val ownerId: String? = null
 )
 
 @Serializable

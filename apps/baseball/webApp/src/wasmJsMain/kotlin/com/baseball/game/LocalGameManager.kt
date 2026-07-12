@@ -1,7 +1,6 @@
 package com.baseball.game
 
 import com.baseball.BaseballConstants
-
 import com.baseball.models.*
 import com.baseball.seed.SeedData
 import kotlinx.serialization.Serializable
@@ -25,7 +24,17 @@ data class LocalGameState(
     val awayActivePitcherId: Long,
     val awayActivePitcherName: String,
     val homeActivePitcherId: Long,
-    val homeActivePitcherName: String
+    val homeActivePitcherName: String,
+    // Cached initial configurations for resetting
+    val useDh: Boolean = true,
+    val initialAwayLineup: List<Player> = emptyList(),
+    val initialHomeLineup: List<Player> = emptyList(),
+    val initialAwayBench: List<Player> = emptyList(),
+    val initialHomeBench: List<Player> = emptyList(),
+    val initialAwayActivePitcherId: Long = 0L,
+    val initialAwayActivePitcherName: String = "",
+    val initialHomeActivePitcherId: Long = 0L,
+    val initialHomeActivePitcherName: String = ""
 )
 
 var localGame: Game? = null
@@ -48,6 +57,20 @@ var localAwayActivePitcherName = SeedData.cardinalsRoster.find { it.position == 
 var localHomeActivePitcherId = SeedData.cubsRoster.find { it.position == BaseballConstants.Positions.P }?.id ?: 110L
 var localHomeActivePitcherName = SeedData.cubsRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele"
 
+// Initial configurations cache
+var localUseDh = true
+val initialAwayLineup = mutableListOf<Player>()
+val initialHomeLineup = mutableListOf<Player>()
+val initialAwayBench = mutableListOf<Player>()
+val initialHomeBench = mutableListOf<Player>()
+var initialAwayActivePitcherId = 0L
+var initialAwayActivePitcherName = ""
+var initialHomeActivePitcherId = 0L
+var initialHomeActivePitcherName = ""
+
+// Callback interface or delegate to notify UI to open lineup setup dialog
+var onOpenLineupSetupDialog: (() -> Unit)? = null
+
 object LocalGameManager : GameService {
 
     override fun initLocalGame(forceReset: Boolean) {
@@ -63,82 +86,23 @@ object LocalGameManager : GameService {
         val homeP = localHomeRoster.find { it.position == BaseballConstants.Positions.P } ?: Player(110L, 1L, "Justin Steele", BaseballConstants.Positions.P, 35, "L", "L")
         val awayP = localAwayRoster.find { it.position == BaseballConstants.Positions.P } ?: Player(210L, 2L, "Sonny Gray", BaseballConstants.Positions.P, 54, "R", "R")
         
-        localAwayActivePitcherId = awayP.id!!
-        localAwayActivePitcherName = awayP.name
-        localHomeActivePitcherId = homeP.id!!
-        localHomeActivePitcherName = homeP.name
+        // Default starts with DH enabled
+        val homeLineupPlayers = localHomeRoster.filter { it.position != BaseballConstants.Positions.P }.take(9)
+        val awayLineupPlayers = localAwayRoster.filter { it.position != BaseballConstants.Positions.P }.take(9)
+        val homeBenchPlayers = localHomeRoster.filter { it.position == BaseballConstants.Positions.P && it.id != homeP.id } + localHomeRoster.drop(10)
+        val awayBenchPlayers = localAwayRoster.filter { it.position == BaseballConstants.Positions.P && it.id != awayP.id } + localAwayRoster.drop(10)
 
-        localAwayLineup.clear()
-        localAwayLineup.addAll(localAwayRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
-        localAwayBench.clear()
-        localAwayBench.addAll(localAwayRoster.filter { it.position == BaseballConstants.Positions.P && it.id != localAwayActivePitcherId } + localAwayRoster.drop(10))
-        localAwayBatterIndex = 0
-
-        localHomeLineup.clear()
-        localHomeLineup.addAll(localHomeRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
-        localHomeBench.clear()
-        localHomeBench.addAll(localHomeRoster.filter { it.position == BaseballConstants.Positions.P && it.id != localHomeActivePitcherId } + localHomeRoster.drop(10))
-        localHomeBatterIndex = 0
-
-        localPlayersSubbedOut.clear()
-
-        val firstAwayBatter = localAwayLineup.firstOrNull() ?: localAwayRoster.first()
-
-        localGame = Game(
-            id = 1L,
-            seasonId = 1L,
+        startNewGame(
             homeTeam = chc,
             awayTeam = stl,
-            date = "2026-07-10",
-            status = GameStatus.SCHEDULED,
-            homeScore = 0,
-            awayScore = 0,
-            homeHits = 0,
-            awayHits = 0,
-            homeErrors = 0,
-            awayErrors = 0,
-            gameState = GameState(
-                inning = 1,
-                half = HalfInning.TOP,
-                outs = 0,
-                balls = 0,
-                strikes = 0,
-                runnerFirstId = null,
-                runnerSecondId = null,
-                runnerThirdId = null,
-                runnerFirstName = null,
-                runnerSecondName = null,
-                runnerThirdName = null,
-                currentBatterId = firstAwayBatter.id,
-                currentBatterName = firstAwayBatter.name,
-                currentPitcherId = localHomeActivePitcherId,
-                currentPitcherName = localHomeActivePitcherName
-            )
+            homeLineup = homeLineupPlayers,
+            awayLineup = awayLineupPlayers,
+            homeBench = homeBenchPlayers,
+            awayBench = awayBenchPlayers,
+            homeActivePitcherId = homeP.id!!,
+            awayActivePitcherId = awayP.id!!,
+            useDh = true
         )
-        
-        localBoxScore = BoxScore(
-            gameId = 1L,
-            homeTeamName = chc.name,
-            awayTeamName = stl.name,
-            lineScore = LineScore(
-                gameId = 1L,
-                awayRuns = 0,
-                homeRuns = 0,
-                awayHits = 0,
-                homeHits = 0,
-                awayErrors = 0,
-                homeErrors = 0,
-                awayInningRuns = emptyList(),
-                homeInningRuns = emptyList()
-            ),
-            homeBatting = (localHomeLineup + localHomeBench.filter { it.position != BaseballConstants.Positions.P }).map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
-            awayBatting = (localAwayLineup + localAwayBench.filter { it.position != BaseballConstants.Positions.P }).map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
-            homePitching = (localHomeRoster.filter { it.position == BaseballConstants.Positions.P } + localHomeBench.filter { it.position == BaseballConstants.Positions.P }).map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
-            awayPitching = (localAwayRoster.filter { it.position == BaseballConstants.Positions.P } + localAwayBench.filter { it.position == BaseballConstants.Positions.P }).map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) }
-        )
-        
-        localEvents.clear()
-        saveLocalState()
     }
 
     override fun recordLocalPlayEvent(
@@ -186,6 +150,152 @@ fun recordLocalPlayEvent(
     )
 }
 
+fun startNewGame(
+    homeTeam: Team,
+    awayTeam: Team,
+    homeLineup: List<Player>,
+    awayLineup: List<Player>,
+    homeBench: List<Player>,
+    awayBench: List<Player>,
+    homeActivePitcherId: Long,
+    awayActivePitcherId: Long,
+    useDh: Boolean
+) {
+    val homeActiveP = (homeLineup + homeBench).find { it.id == homeActivePitcherId }
+    val resolvedHomeRoster = if (homeActiveP == null) {
+        val defaultP = SeedData.cubsRoster.find { it.id == homeActivePitcherId } ?: Player(homeActivePitcherId, homeTeam.id, "Pitcher", "P", 99, "R", "R")
+        homeLineup + homeBench + defaultP
+    } else {
+        homeLineup + homeBench
+    }
+
+    val awayActiveP = (awayLineup + awayBench).find { it.id == awayActivePitcherId }
+    val resolvedAwayRoster = if (awayActiveP == null) {
+        val defaultP = SeedData.cardinalsRoster.find { it.id == awayActivePitcherId } ?: Player(awayActivePitcherId, awayTeam.id, "Pitcher", "P", 99, "R", "R")
+        awayLineup + awayBench + defaultP
+    } else {
+        awayLineup + awayBench
+    }
+
+    localHomeRoster = resolvedHomeRoster
+    localAwayRoster = resolvedAwayRoster
+
+    localHomeActivePitcherId = homeActivePitcherId
+    localHomeActivePitcherName = localHomeRoster.find { it.id == homeActivePitcherId }?.name ?: "Pitcher"
+    localAwayActivePitcherId = awayActivePitcherId
+    localAwayActivePitcherName = localAwayRoster.find { it.id == awayActivePitcherId }?.name ?: "Pitcher"
+
+    localAwayLineup.clear()
+    localAwayLineup.addAll(awayLineup)
+    localAwayBench.clear()
+    localAwayBench.addAll(awayBench)
+    localAwayBatterIndex = 0
+
+    localHomeLineup.clear()
+    localHomeLineup.addAll(homeLineup)
+    localHomeBench.clear()
+    localHomeBench.addAll(homeBench)
+    localHomeBatterIndex = 0
+
+    localPlayersSubbedOut.clear()
+
+    // Cache initial configurations
+    localUseDh = useDh
+    initialAwayLineup.clear()
+    initialAwayLineup.addAll(awayLineup)
+    initialHomeLineup.clear()
+    initialHomeLineup.addAll(homeLineup)
+    initialAwayBench.clear()
+    initialAwayBench.addAll(awayBench)
+    initialHomeBench.clear()
+    initialHomeBench.addAll(homeBench)
+    initialAwayActivePitcherId = localAwayActivePitcherId
+    initialAwayActivePitcherName = localAwayActivePitcherName
+    initialHomeActivePitcherId = localHomeActivePitcherId
+    initialHomeActivePitcherName = localHomeActivePitcherName
+
+    val firstAwayBatter = localAwayLineup.firstOrNull() ?: localAwayRoster.first()
+
+    localGame = Game(
+        id = 1L,
+        seasonId = 1L,
+        homeTeam = homeTeam,
+        awayTeam = awayTeam,
+        date = "2026-07-10",
+        status = GameStatus.SCHEDULED,
+        homeScore = 0,
+        awayScore = 0,
+        homeHits = 0,
+        awayHits = 0,
+        homeErrors = 0,
+        awayErrors = 0,
+        gameState = GameState(
+            inning = 1,
+            half = HalfInning.TOP,
+            outs = 0,
+            balls = 0,
+            strikes = 0,
+            runnerFirstId = null,
+            runnerSecondId = null,
+            runnerThirdId = null,
+            runnerFirstName = null,
+            runnerSecondName = null,
+            runnerThirdName = null,
+            currentBatterId = firstAwayBatter.id,
+            currentBatterName = firstAwayBatter.name,
+            currentPitcherId = localHomeActivePitcherId,
+            currentPitcherName = localHomeActivePitcherName
+        )
+    )
+
+    // For batting stats mapping, exclude pitchers if DH is enabled
+    localBoxScore = BoxScore(
+        gameId = 1L,
+        homeTeamName = homeTeam.name,
+        awayTeamName = awayTeam.name,
+        lineScore = LineScore(
+            gameId = 1L,
+            awayRuns = 0,
+            homeRuns = 0,
+            awayHits = 0,
+            homeHits = 0,
+            awayErrors = 0,
+            homeErrors = 0,
+            awayInningRuns = emptyList(),
+            homeInningRuns = emptyList()
+        ),
+        homeBatting = localHomeLineup.map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) } +
+                localHomeBench.filter { useDh || it.position != BaseballConstants.Positions.P }.map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
+        awayBatting = localAwayLineup.map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) } +
+                localAwayBench.filter { useDh || it.position != BaseballConstants.Positions.P }.map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
+        homePitching = localHomeRoster.filter { it.position == BaseballConstants.Positions.P }.map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) },
+        awayPitching = localAwayRoster.filter { it.position == BaseballConstants.Positions.P }.map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) }
+    )
+
+    localEvents.clear()
+    saveLocalState()
+}
+
+fun resetLocalGame(toInitialLineups: Boolean) {
+    if (toInitialLineups) {
+        val homeT = localGame?.homeTeam ?: SeedData.teamCubs
+        val awayT = localGame?.awayTeam ?: SeedData.teamCardinals
+        startNewGame(
+            homeTeam = homeT,
+            awayTeam = awayT,
+            homeLineup = initialHomeLineup.toList(),
+            awayLineup = initialAwayLineup.toList(),
+            homeBench = initialHomeBench.toList(),
+            awayBench = initialAwayBench.toList(),
+            homeActivePitcherId = initialHomeActivePitcherId,
+            awayActivePitcherId = initialAwayActivePitcherId,
+            useDh = localUseDh
+        )
+    } else {
+        onOpenLineupSetupDialog?.invoke()
+    }
+}
+
 fun saveLocalState() {
     try {
         val state = LocalGameState(
@@ -204,7 +314,16 @@ fun saveLocalState() {
             awayActivePitcherId = localAwayActivePitcherId,
             awayActivePitcherName = localAwayActivePitcherName,
             homeActivePitcherId = localHomeActivePitcherId,
-            homeActivePitcherName = localHomeActivePitcherName
+            homeActivePitcherName = localHomeActivePitcherName,
+            useDh = localUseDh,
+            initialAwayLineup = initialAwayLineup.toList(),
+            initialHomeLineup = initialHomeLineup.toList(),
+            initialAwayBench = initialAwayBench.toList(),
+            initialHomeBench = initialHomeBench.toList(),
+            initialAwayActivePitcherId = initialAwayActivePitcherId,
+            initialAwayActivePitcherName = initialAwayActivePitcherName,
+            initialHomeActivePitcherId = initialHomeActivePitcherId,
+            initialHomeActivePitcherName = initialHomeActivePitcherName
         )
         val json = Json.encodeToString(LocalGameState.serializer(), state)
         window.localStorage.setItem(BaseballConstants.KEY_LOCAL_GAME_STATE, json)
@@ -243,6 +362,20 @@ fun loadLocalState(): Boolean {
         localAwayActivePitcherName = state.awayActivePitcherName
         localHomeActivePitcherId = state.homeActivePitcherId
         localHomeActivePitcherName = state.homeActivePitcherName
+        
+        localUseDh = state.useDh
+        initialAwayLineup.clear()
+        initialAwayLineup.addAll(state.initialAwayLineup)
+        initialHomeLineup.clear()
+        initialHomeLineup.addAll(state.initialHomeLineup)
+        initialAwayBench.clear()
+        initialAwayBench.addAll(state.initialAwayBench)
+        initialHomeBench.clear()
+        initialHomeBench.addAll(state.initialHomeBench)
+        initialAwayActivePitcherId = state.initialAwayActivePitcherId
+        initialAwayActivePitcherName = state.initialAwayActivePitcherName
+        initialHomeActivePitcherId = state.initialHomeActivePitcherId
+        initialHomeActivePitcherName = state.initialHomeActivePitcherName
         return true
     } catch (e: Exception) {
         println("Error loading local state: ${e.message}")

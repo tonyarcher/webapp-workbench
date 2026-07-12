@@ -11,6 +11,8 @@ import org.w3c.dom.*
 import kotlinx.browser.document
 import kotlinx.browser.window
 
+var isResetDialogOpen = false
+
 // Sub batting swap handler
 internal fun substituteBatter(isHome: Boolean, lineupIndex: Int, newPlayerId: Long) {
     val lineup = if (isHome) localHomeLineup else localAwayLineup
@@ -72,6 +74,11 @@ internal fun substitutePitcher(isHome: Boolean, newPitcherId: Long) {
 
 // LIVE SCORER TAB
 internal fun renderLiveScorerTab(container: HTMLElement) {
+    com.baseball.game.onOpenLineupSetupDialog = {
+        isLineupDialogOpen = true
+        renderCurrentTab()
+    }
+
     if (!isSingleGameMode && selectedGameId == null) {
         container.appendElement(UiConstants.Html.DIV, "card") {
             style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER)
@@ -129,14 +136,24 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
             style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0")
         }
         if (isSingleGameMode) {
-            titleRow.appendElement(UiConstants.Html.BUTTON, "btn btn-danger") {
-                textContent = "Reset / New Game"
+            val btnContainer = titleRow.appendElement(UiConstants.Html.DIV) {
+                style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                style.setProperty(UiConstants.Css.GAP, "0.5rem")
+            }
+            btnContainer.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                textContent = "Lineup Setup"
                 style.setProperty(UiConstants.Css.PADDING, "0.5rem 1rem")
                 onClick {
-                    if (window.confirm("Are you sure you want to reset and start a new game? All current statistics and events will be lost.")) {
-                        initLocalGame(forceReset = true)
-                        renderCurrentTab()
-                    }
+                    isLineupDialogOpen = true
+                    renderCurrentTab()
+                }
+            }
+            btnContainer.appendElement(UiConstants.Html.BUTTON, "btn btn-danger") {
+                textContent = "Reset Game"
+                style.setProperty(UiConstants.Css.PADDING, "0.5rem 1rem")
+                onClick {
+                    isResetDialogOpen = true
+                    renderCurrentTab()
                 }
             }
         }
@@ -272,6 +289,77 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 
         // Default view
         showScorecard()
+
+        if (isLineupDialogOpen) {
+            val overlay = LineupSetupOverlay(container)
+            overlay.render()
+        }
+
+        if (isResetDialogOpen) {
+            val resetOverlay = container.appendElement(UiConstants.Html.DIV) {
+                style.setProperty(UiConstants.Css.POSITION, "fixed")
+                style.setProperty(UiConstants.Css.TOP, "0")
+                style.setProperty(UiConstants.Css.LEFT, "0")
+                style.setProperty(UiConstants.Css.WIDTH, "100vw")
+                style.setProperty(UiConstants.Css.HEIGHT, "100vh")
+                style.setProperty(UiConstants.Css.BACKGROUND, "rgba(10, 15, 30, 0.8)")
+                style.setProperty(UiConstants.Css.BACKDROP_FILTER, "blur(12px)")
+                style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                style.setProperty(UiConstants.Css.ALIGN_ITEMS, "center")
+                style.setProperty(UiConstants.Css.JUSTIFY_CONTENT, UiConstants.CssValues.CENTER)
+                style.setProperty(UiConstants.Css.Z_INDEX, "10000")
+            }
+
+            val resetModal = resetOverlay.appendElement(UiConstants.Html.DIV, "card") {
+                style.setProperty(UiConstants.Css.WIDTH, "90%")
+                style.setProperty(UiConstants.Css.MAX_WIDTH, "450px")
+                style.setProperty(UiConstants.Css.PADDING, "2rem")
+                style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER)
+            }
+
+            resetModal.appendElement(UiConstants.Html.H2) {
+                textContent = "Reset Game Options"
+                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
+            }
+            resetModal.appendElement(UiConstants.Html.P) {
+                textContent = "Are you sure you want to reset? All current game progress and stats will be permanently lost."
+                style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1.5rem")
+                style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
+            }
+
+            val btnCol = resetModal.appendElement(UiConstants.Html.DIV) {
+                style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
+                style.setProperty(UiConstants.Css.FLEX_DIRECTION, UiConstants.CssValues.COLUMN)
+                style.setProperty(UiConstants.Css.GAP, "0.75rem")
+            }
+
+            btnCol.appendElement(UiConstants.Html.BUTTON, "btn btn-primary") {
+                textContent = "Restart with Current Lineups"
+                onClick {
+                    isResetDialogOpen = false
+                    resetLocalGame(toInitialLineups = true)
+                    renderCurrentTab()
+                }
+            }
+
+            btnCol.appendElement(UiConstants.Html.BUTTON, "btn btn-action") {
+                textContent = "Configure New Lineups"
+                style.setProperty(UiConstants.Css.BACKGROUND, "linear-gradient(135deg, #3b82f6, #8b5cf6)")
+                onClick {
+                    isResetDialogOpen = false
+                    isLineupDialogOpen = true
+                    renderCurrentTab()
+                }
+            }
+
+            btnCol.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
+                textContent = "Cancel"
+                onClick {
+                    isResetDialogOpen = false
+                    renderCurrentTab()
+                }
+            }
+        }
     }
 }
 
