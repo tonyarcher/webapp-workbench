@@ -337,15 +337,16 @@ fun recordLocalPlayEventInternal(
         val awayInnings = lineScore.awayInningRuns.toMutableList()
         val homeInnings = lineScore.homeInningRuns.toMutableList()
 
-        while (awayInnings.size < currentInning) awayInnings.add(null)
-        while (homeInnings.size < currentInning) homeInnings.add(null)
+        val playInning = game.gameState.inning
+        while (awayInnings.size < playInning) awayInnings.add(null)
+        while (homeInnings.size < playInning) homeInnings.add(null)
 
         if (game.gameState.half == HalfInning.TOP) {
             awayScore += 1
-            awayInnings[currentInning - 1] = (awayInnings[currentInning - 1] ?: 0) + 1
+            awayInnings[playInning - 1] = (awayInnings[playInning - 1] ?: 0) + 1
         } else {
             homeScore += 1
-            homeInnings[currentInning - 1] = (homeInnings[currentInning - 1] ?: 0) + 1
+            homeInnings[playInning - 1] = (homeInnings[playInning - 1] ?: 0) + 1
         }
 
         localBoxScore = localBoxScore!!.copy(
@@ -428,8 +429,8 @@ fun recordLocalPlayEventInternal(
     val ev = PlayEvent(
         id = (localEvents.size + 1).toLong(),
         gameId = game.id ?: 1L,
-        inning = currentInning,
-        half = currentHalf,
+        inning = game.gameState.inning,
+        half = game.gameState.half,
         outsBefore = game.gameState.outs,
         outsAfter = outs,
         balls = game.gameState.balls,
