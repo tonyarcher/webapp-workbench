@@ -186,6 +186,48 @@ fun renderGameScoringControls(
                 
                 val runnerAdvances = mutableMapOf<String, Int>()
                 
+                // Pre-populate forced advancements (sane defaults)
+                val batterBase = when (type) {
+                    ScoringEventType.SINGLE, ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.ERROR, ScoringEventType.FIELDER_CHOICE -> 1
+                    ScoringEventType.DOUBLE -> 2
+                    ScoringEventType.TRIPLE -> 3
+                    ScoringEventType.HOME_RUN -> 4
+                    else -> 0
+                }
+                
+                if (batterBase > 0) {
+                    var currentLeadingReq = batterBase
+                    
+                    // 1B Runner
+                    val r1Id = game.gameState.runnerFirstId
+                    if (r1Id != null) {
+                        val r1Dest = currentLeadingReq + 1
+                        runnerAdvances[r1Id.toString()] = minOf(4, r1Dest)
+                        currentLeadingReq = r1Dest
+                    }
+                    
+                    // 2B Runner
+                    val r2Id = game.gameState.runnerSecondId
+                    if (r2Id != null) {
+                        val isR2Forced = (r1Id != null && currentLeadingReq >= 2) || batterBase >= 2
+                        if (isR2Forced) {
+                            val r2Dest = maxOf(currentLeadingReq + 1, batterBase + 1)
+                            runnerAdvances[r2Id.toString()] = minOf(4, r2Dest)
+                            currentLeadingReq = r2Dest
+                        }
+                    }
+                    
+                    // 3B Runner
+                    val r3Id = game.gameState.runnerThirdId
+                    if (r3Id != null) {
+                        val isR3Forced = (r2Id != null && runnerAdvances[r2Id.toString()] != null) || batterBase >= 3
+                        if (isR3Forced) {
+                            val r3Dest = maxOf(currentLeadingReq + 1, batterBase + 1)
+                            runnerAdvances[r3Id.toString()] = minOf(4, r3Dest)
+                        }
+                    }
+                }
+                
                 fun drawStep2UI() {
                     actionGridWrapper.innerHTML = ""
                     actionGridWrapper.appendElement(UiConstants.Html.H3) {
