@@ -170,7 +170,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
         val rightCol = topGrid.appendElement(UiConstants.Html.DIV, "card")
         renderGameScoringControls(rightCol, game, homeRoster, awayRoster, boxScore)
 
-        // 3. Play Monitoring Tabs (Play-by-play vs Visual Scorebook)
+        // 3. Play Monitoring Tabs (Play-by-play vs Scorebook)
         val monitoringCard = container.appendElement(UiConstants.Html.DIV, "card") { style.setProperty(UiConstants.Css.MARGIN_TOP, "2rem") }
         val monitoringHeader = monitoringCard.appendElement(UiConstants.Html.DIV) {
             style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
@@ -266,7 +266,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
         }
 
         val btnLog = toggleGroup.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
-            textContent = "Play-By-By Play Log"
+            textContent = "Play-By-Play Log"
             onClick {
                 showLog()
                 classList.add("btn-primary")
@@ -278,7 +278,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
         }
 
         val btnScorecard = toggleGroup.appendElement(UiConstants.Html.BUTTON, "btn") {
-            textContent = "Visual Scorebook"
+            textContent = "Scorebook"
             onClick {
                 showScorecard()
                 classList.add("btn-primary")

@@ -113,7 +113,7 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
         }
 
         val btnScorebook = viewToggleRow.appendElement(UiConstants.Html.BUTTON, "btn") {
-            textContent = "Visual Scorebook"
+            textContent = "Scorebook"
             onClick {
                 drawScorebookView()
                 classList.add("btn-primary")

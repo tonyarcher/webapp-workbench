@@ -8,7 +8,7 @@ import com.baseball.ui.appendElement
 import com.baseball.ui.onClick
 import kotlinx.browser.document
 
-// High-level Visual Scorebook component controlling tabs and coordination
+// High-level Scorebook component controlling tabs and coordination
 internal fun renderScorebookView(container: HTMLElement, game: Game, boxScore: BoxScore, events: List<PlayEvent>) {
     container.innerHTML = ""
 
@@ -34,7 +34,7 @@ internal fun renderScorebookView(container: HTMLElement, game: Game, boxScore: B
     }
 
     toggleRow.appendElement(UiConstants.Html.H2) {
-        textContent = "VISUAL SCOREBOOK"
+        textContent = "SCOREBOOK"
         style.setProperty(UiConstants.Css.MARGIN, "0")
         style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
         style.setProperty("letter-spacing", "2px")
