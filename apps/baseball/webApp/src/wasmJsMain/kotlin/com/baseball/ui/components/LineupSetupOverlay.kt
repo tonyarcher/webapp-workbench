@@ -274,6 +274,8 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
                 if (validateAndSave()) {
                     isLineupDialogOpen = false
                     renderCurrentTab()
+                } else {
+                    render()
                 }
             }
         }
