@@ -263,8 +263,14 @@ fun renderScorebookBottomSection(
     
     val stra = sTbody.appendElement(UiConstants.Html.TR) { style.setProperty(UiConstants.Css.BORDER_BOTTOM, "1px solid #c2bcae") }
     stra.appendElement(UiConstants.Html.TD) { textContent = game.awayTeam.abbreviation; style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD) }
-    boxScore.lineScore.awayInningRuns.forEach { r ->
-        stra.appendElement(UiConstants.Html.TD) { textContent = r?.toString() ?: "0"; style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER) }
+    for (i in 1..maxInning) {
+        val r = boxScore.lineScore.awayInningRuns.getOrNull(i - 1)
+        val text = when {
+            r != null -> r.toString()
+            i <= game.gameState.inning -> "0"
+            else -> "-"
+        }
+        stra.appendElement(UiConstants.Html.TD) { textContent = text; style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER) }
     }
     stra.appendElement(UiConstants.Html.TD) { textContent = boxScore.lineScore.awayRuns.toString(); style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER); style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD) }
     stra.appendElement(UiConstants.Html.TD) { textContent = boxScore.lineScore.awayHits.toString(); style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER) }
@@ -272,8 +278,14 @@ fun renderScorebookBottomSection(
 
     val strhRow = sTbody.appendElement(UiConstants.Html.TR) { style.setProperty(UiConstants.Css.BORDER_BOTTOM, "1px solid #c2bcae") }
     strhRow.appendElement(UiConstants.Html.TD) { textContent = game.homeTeam.abbreviation; style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD) }
-    boxScore.lineScore.homeInningRuns.forEach { r ->
-        strhRow.appendElement(UiConstants.Html.TD) { textContent = r?.toString() ?: "0"; style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER) }
+    for (i in 1..maxInning) {
+        val r = boxScore.lineScore.homeInningRuns.getOrNull(i - 1)
+        val text = when {
+            r != null -> r.toString()
+            i <= game.gameState.inning -> "0"
+            else -> "-"
+        }
+        strhRow.appendElement(UiConstants.Html.TD) { textContent = text; style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER) }
     }
     strhRow.appendElement(UiConstants.Html.TD) { textContent = boxScore.lineScore.homeRuns.toString(); style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER); style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD) }
     strhRow.appendElement(UiConstants.Html.TD) { textContent = boxScore.lineScore.homeHits.toString(); style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER) }
@@ -288,22 +300,59 @@ fun renderScorebookBottomSection(
         style.setProperty(UiConstants.Css.FONT_SIZE, "0.8rem")
     }
 
-    val wp = if (game.homeScore > game.awayScore) 
-                positionsMap["P"] ?: "Justin Steele" 
-             else 
-                (if (isHomeBatting) localHomeActivePitcherName else localAwayActivePitcherName)
-    val lp = if (game.homeScore < game.awayScore) 
-                positionsMap["P"] ?: "Justin Steele" 
-             else 
-                (if (isHomeBatting) localHomeActivePitcherName else localAwayActivePitcherName)
+    val isCompleted = game.status == GameStatus.COMPLETED
+    
+    val wpLabel: String
+    val lpLabel: String
+    val svLabel: String
+    
+    val wpName: String
+    val lpName: String
+    val svName: String
+
+    if (isCompleted) {
+        wpLabel = "WP"
+        lpLabel = "LP"
+        svLabel = "SV"
+        wpName = if (game.homeScore > game.awayScore) 
+                    (localHomeRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele") 
+                 else 
+                    (localAwayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
+        lpName = if (game.homeScore < game.awayScore) 
+                    (localHomeRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele") 
+                 else 
+                    (localAwayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
+        svName = if (game.homeScore > game.awayScore) "HADER (12)" else "NONE"
+    } else {
+        wpLabel = "Potential WP (Hook)"
+        lpLabel = "Potential LP (Hook)"
+        svLabel = "SV"
+        when {
+            game.homeScore > game.awayScore -> {
+                wpName = localHomeActivePitcherName
+                lpName = localAwayActivePitcherName
+                svName = "-"
+            }
+            game.awayScore > game.homeScore -> {
+                wpName = localAwayActivePitcherName
+                lpName = localHomeActivePitcherName
+                svName = "-"
+            }
+            else -> {
+                wpName = "-"
+                lpName = "-"
+                svName = "-"
+            }
+        }
+    }
 
     decisionBlock.appendElement(UiConstants.Html.DIV) { 
-        innerHTML = "WP: <span style='font-weight: bold;'>$wp</span>" 
+        innerHTML = "$wpLabel: <span style='font-weight: bold;'>$wpName</span>" 
     }
     decisionBlock.appendElement(UiConstants.Html.DIV) { 
-        innerHTML = "LP: <span style='font-weight: bold;'>$lp</span>" 
+        innerHTML = "$lpLabel: <span style='font-weight: bold;'>$lpName</span>" 
     }
     decisionBlock.appendElement(UiConstants.Html.DIV) { 
-        innerHTML = "SV: <span style='font-weight: bold;'>${if (game.homeScore > game.awayScore) "HADER (12)" else "NONE"}</span>" 
+        innerHTML = "$svLabel: <span style='font-weight: bold;'>$svName</span>" 
     }
 }
