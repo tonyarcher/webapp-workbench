@@ -59,27 +59,28 @@ fun renderScorebookBottomSection(
         style.setProperty(UiConstants.Css.OVERFLOW, UiConstants.CssValues.HIDDEN)
     }
 
+    // Infield dirt circle centered around the pitcher's mound
     fieldWrapper.appendElement(UiConstants.Html.DIV) {
-        style.setProperty(UiConstants.Css.POSITION, UiConstants.CssValues.RELATIVE)
-        style.setProperty(UiConstants.Css.BOTTOM, "-30px")
-        style.setProperty(UiConstants.Css.LEFT, "50%")
-        style.setProperty(UiConstants.Css.TRANSFORM, "translateX(-50%)")
-        style.setProperty(UiConstants.Css.WIDTH, "200px")
-        style.setProperty(UiConstants.Css.HEIGHT, "200px")
+        style.setProperty(UiConstants.Css.POSITION, UiConstants.CssValues.ABSOLUTE)
+        style.setProperty(UiConstants.Css.BOTTOM, "10px")
+        style.setProperty(UiConstants.Css.LEFT, "calc(50% - 90px)")
+        style.setProperty(UiConstants.Css.WIDTH, "180px")
+        style.setProperty(UiConstants.Css.HEIGHT, "180px")
         style.setProperty(UiConstants.Css.BORDER_RADIUS, "50%")
         style.setProperty(UiConstants.Css.BACKGROUND_COLOR, "#e5ccb3")
         style.setProperty(UiConstants.Css.Z_INDEX, "1")
     }
 
+    // Basepaths diamond (rotated square) centered on dirt circle
     fieldWrapper.appendElement(UiConstants.Html.DIV) {
-        style.setProperty(UiConstants.Css.POSITION, UiConstants.CssValues.RELATIVE)
-        style.setProperty(UiConstants.Css.BOTTOM, "20px")
-        style.setProperty(UiConstants.Css.LEFT, "50%")
-        style.setProperty(UiConstants.Css.TRANSFORM, "translateX(-50%) rotate(45deg)")
+        style.setProperty(UiConstants.Css.POSITION, UiConstants.CssValues.ABSOLUTE)
+        style.setProperty(UiConstants.Css.BOTTOM, "50px")
+        style.setProperty(UiConstants.Css.LEFT, "calc(50% - 50px)")
         style.setProperty(UiConstants.Css.WIDTH, "100px")
         style.setProperty(UiConstants.Css.HEIGHT, "100px")
         style.setProperty(UiConstants.Css.BACKGROUND_COLOR, "#cbe1c7")
         style.setProperty(UiConstants.Css.BORDER, "2px solid white")
+        style.setProperty(UiConstants.Css.TRANSFORM, "rotate(45deg)")
         style.setProperty(UiConstants.Css.Z_INDEX, "2")
     }
 
@@ -98,16 +99,17 @@ fun renderScorebookBottomSection(
         BaseballConstants.Positions.RF to (defPlayers.find { it.position == BaseballConstants.Positions.RF }?.name ?: "Right Field")
     )
 
+    // Mathematically aligned coordinates to lay out players correctly relative to the diamond
     val coords = mapOf(
-        BaseballConstants.Positions.CF to Pair("15px", "calc(50% - 40px)"),
-        BaseballConstants.Positions.LF to Pair("60px", "20px"),
-        BaseballConstants.Positions.RF to Pair("60px", "calc(100% - 100px)"),
-        BaseballConstants.Positions.SS to Pair("105px", "30%"),
-        BaseballConstants.Positions.SECOND_BASE to Pair("105px", "60%"),
-        BaseballConstants.Positions.THIRD_BASE to Pair("165px", "15%"),
-        BaseballConstants.Positions.FIRST_BASE to Pair("165px", "calc(85% - 80px)"),
-        BaseballConstants.Positions.P to Pair("175px", "calc(50% - 40px)"),
-        BaseballConstants.Positions.C to Pair("225px", "calc(50% - 40px)")
+        BaseballConstants.Positions.CF to Pair("10px", "calc(50% - 40px)"),
+        BaseballConstants.Positions.LF to Pair("40px", "15px"),
+        BaseballConstants.Positions.RF to Pair("40px", "calc(100% - 95px)"),
+        BaseballConstants.Positions.SS to Pair("55px", "calc(50% - 75px)"),
+        BaseballConstants.Positions.SECOND_BASE to Pair("65px", "calc(50% - 5px)"),
+        BaseballConstants.Positions.THIRD_BASE to Pair("130px", "calc(50% - 115px)"),
+        BaseballConstants.Positions.FIRST_BASE to Pair("130px", "calc(50% + 35px)"),
+        BaseballConstants.Positions.P to Pair("135px", "calc(50% - 40px)"),
+        BaseballConstants.Positions.C to Pair("210px", "calc(50% - 40px)")
     )
 
     coords.forEach { (pos, coord) ->
