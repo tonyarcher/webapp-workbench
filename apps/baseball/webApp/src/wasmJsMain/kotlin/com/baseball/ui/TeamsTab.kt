@@ -1,56 +1,101 @@
 package com.baseball.ui
 
+import com.baseball.BaseballConstants
 import com.baseball.UiConstants
-
 import com.baseball.api
 import com.baseball.models.*
 import org.w3c.dom.*
-import kotlinx.browser.document
+import kotlinx.html.*
+import kotlinx.html.js.*
 
-// TEAMS AND ROSTERS TAB
 internal fun renderTeamsTab(container: HTMLElement) {
-    container.appendElement(UiConstants.Html.H1) { textContent = "Teams & Rosters" }
-    
-    val grid = container.appendElement(UiConstants.Html.DIV, "dashboard-grid")
-    
-    // Left Column: List of Teams
-    val leftCol = grid.appendElement(UiConstants.Html.DIV, "card")
-    leftCol.appendElement(UiConstants.Html.H2) { textContent = "Teams" }
-    val teamsListDiv = leftCol.appendElement(UiConstants.Html.DIV)
-    
+    container.h1 { +"Teams & Rosters" }
+
+    var teamsListDiv: HTMLDivElement? = null
+    var rosterDiv: HTMLDivElement? = null
+    var inputCity: HTMLInputElement? = null
+    var inputTName: HTMLInputElement? = null
+    var inputAbb: HTMLInputElement? = null
+    var inputPName: HTMLInputElement? = null
+    var inputPos: HTMLSelectElement? = null
+    var inputNum: HTMLInputElement? = null
+    var selectBat: HTMLSelectElement? = null
+    var selectThrow: HTMLSelectElement? = null
+
+    fun refreshRoster() {
+        val divElement = rosterDiv ?: return
+        divElement.innerHTML = ""
+        val tid = selectedTeamId
+        if (tid == null) {
+            divElement.p {
+                +"Select a team to view roster."
+                style = "color: var(--text-secondary);"
+            }
+            return
+        }
+
+        launch {
+            val roster = api.getTeamRoster(tid)
+            if (roster.isEmpty()) {
+                divElement.p {
+                    +"No players on this roster yet."
+                    style = "color: var(--text-secondary);"
+                }
+            } else {
+                divElement.div(classes = "table-container") {
+                    table {
+                        thead {
+                            tr {
+                                th { +"#" }
+                                th { +"Name" }
+                                th { +"Position" }
+                                th { +"B/T" }
+                            }
+                        }
+                        tbody {
+                            roster.forEach { p ->
+                                tr {
+                                    td { +p.jerseyNumber.toString() }
+                                    td { +p.name }
+                                    td {
+                                        +p.position
+                                        style = "color: var(--accent-green);"
+                                    }
+                                    td { +"${p.battingHand}/${p.throwingHand}" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun refreshTeamsUI() {
-        teamsListDiv.innerHTML = ""
+        val divElement = teamsListDiv ?: return
+        divElement.innerHTML = ""
         if (teamsList.isEmpty()) {
-            teamsListDiv.appendElement(UiConstants.Html.P) {
-                textContent = "No teams created yet."
-                style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
+            divElement.p {
+                +"No teams found. Create one!"
+                style = "color: var(--text-secondary);"
             }
         } else {
             teamsList.forEach { team ->
-                teamsListDiv.appendElement(UiConstants.Html.DIV, "game-card") {
-                    style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0.75rem")
-                    style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
-                    style.setProperty(UiConstants.Css.JUSTIFY_CONTENT, UiConstants.CssValues.SPACE_BETWEEN)
-                    style.setProperty(UiConstants.Css.ALIGN_ITEMS, UiConstants.CssValues.CENTER)
-                    
-                    appendElement(UiConstants.Html.DIV) {
-                        appendElement(UiConstants.Html.DIV) {
-                            style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
-                            textContent = "${team.city} ${team.name}"
-                        }
-                        appendElement(UiConstants.Html.DIV) {
-                            style.setProperty(UiConstants.Css.FONT_SIZE, "0.85rem")
-                            style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
-                            textContent = team.abbreviation
-                        }
+                divElement.div(classes = "game-card") {
+                    style = "margin-bottom: 0.75rem; display: flex; flex-direction: column; align-items: flex-start;"
+
+                    div {
+                        style = "font-weight: bold; font-size: 1.1rem;"
+                        +"${team.city} ${team.name} (${team.abbreviation})"
                     }
-                    
-                    appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
-                        textContent = if (selectedTeamId == team.id) "Viewing Roster" else "View Roster"
-                        if (selectedTeamId == team.id) classList.add("active")
-                        onClick {
+
+                    button(classes = "btn btn-secondary${if (selectedTeamId == team.id) " active" else ""}") {
+                        style = "margin-top: 0.5rem; padding: 0.25rem 0.75rem; font-size: 0.85rem;"
+                        +(if (selectedTeamId == team.id) "Active Team" else "Select Team")
+                        onClickFunction = {
                             selectedTeamId = team.id
                             refreshTeamsUI()
+                            refreshRoster()
                             renderCurrentTab()
                         }
                     }
@@ -58,164 +103,178 @@ internal fun renderTeamsTab(container: HTMLElement) {
             }
         }
     }
+
+    val grid = container.div(classes = "dashboard-grid") {
+        div(classes = "card") {
+            h2 { +"Teams" }
+            div {
+                id = "teams-list-container"
+            }
+        }
+
+        div {
+            div(classes = "card") {
+                style = "margin-bottom: 2rem;"
+                h2 { +"Add Team" }
+                form {
+                    div(classes = "form-group") {
+                        label { +"City" }
+                        input(type = InputType.text, classes = "form-control") {
+                            id = "team-city-input"
+                            placeholder = "e.g., Boston"
+                        }
+                    }
+                    div(classes = "form-group") {
+                        label { +"Team Name" }
+                        input(type = InputType.text, classes = "form-control") {
+                            id = "team-name-input"
+                            placeholder = "e.g., Red Sox"
+                        }
+                    }
+                    div(classes = "form-group") {
+                        label { +"Abbreviation" }
+                        input(type = InputType.text, classes = "form-control") {
+                            id = "team-abb-input"
+                            placeholder = "e.g., BOS"
+                        }
+                    }
+                    button(classes = "btn") {
+                        type = ButtonType.button
+                        +"Create Team"
+                        onClickFunction = {
+                            val inCity = inputCity
+                            val inTName = inputTName
+                            val inAbb = inputAbb
+                            if (inCity != null && inTName != null && inAbb != null) {
+                                val city = inCity.value.trim()
+                                val name = inTName.value.trim()
+                                val abb = inAbb.value.trim()
+                                if (city.isNotEmpty() && name.isNotEmpty() && abb.isNotEmpty()) {
+                                    launch {
+                                        api.createTeam(Team(city = city, name = name, abbreviation = abb))
+                                        teamsList = api.getTeams()
+                                        inCity.value = ""
+                                        inTName.value = ""
+                                        inAbb.value = ""
+                                        refreshTeamsUI()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (selectedTeamId != null) {
+                val team = teamsList.find { it.id == selectedTeamId }
+                div(classes = "card") {
+                    h2 { +"${team?.city} ${team?.name} Roster" }
+                    div {
+                        id = "roster-container"
+                        style = "margin-bottom: 1.5rem;"
+                    }
+
+                    h3 { +"Add Player to Roster" }
+                    form {
+                        div(classes = "form-group") {
+                            label { +"Player Name" }
+                            input(type = InputType.text, classes = "form-control") {
+                                id = "player-name-input"
+                                placeholder = "e.g., Dustin Pedroia"
+                            }
+                        }
+                        div(classes = "form-group") {
+                            label { +"Position" }
+                            select(classes = "form-control") {
+                                id = "player-pos-select"
+                                listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH").forEach { pos ->
+                                    option {
+                                        value = pos
+                                        +pos
+                                    }
+                                }
+                            }
+                        }
+                        div(classes = "form-group") {
+                            label { +"Jersey Number" }
+                            input(type = InputType.number, classes = "form-control") {
+                                id = "player-num-input"
+                                value = "15"
+                            }
+                        }
+                        div(classes = "form-group") {
+                            label { +"Batting / Throwing Hand" }
+                            div {
+                                style = "display: flex; gap: 1rem;"
+                                select(classes = "form-control") {
+                                    id = "player-bat-select"
+                                    listOf("R", "L", "S").forEach { h ->
+                                        option {
+                                            value = h
+                                            +"Bat: $h"
+                                        }
+                                    }
+                                }
+                                select(classes = "form-control") {
+                                    id = "player-throw-select"
+                                    listOf("R", "L").forEach { h ->
+                                        option {
+                                            value = h
+                                            +"Throw: $h"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        button(classes = "btn") {
+                            type = ButtonType.button
+                            +"Add Player"
+                            onClickFunction = {
+                                val nameIn = inputPName
+                                val posIn = inputPos
+                                val numIn = inputNum
+                                val batIn = selectBat
+                                val thrIn = selectThrow
+                                if (nameIn != null && posIn != null && numIn != null && batIn != null && thrIn != null) {
+                                    val name = nameIn.value.trim()
+                                    val pos = posIn.value
+                                    val num = numIn.value.toIntOrNull() ?: 0
+                                    val bat = batIn.value
+                                    val thr = thrIn.value
+                                    if (name.isNotEmpty()) {
+                                        launch {
+                                            api.createPlayer(Player(
+                                                teamId = selectedTeamId,
+                                                name = name,
+                                                position = pos,
+                                                jerseyNumber = num,
+                                                battingHand = bat,
+                                                throwingHand = thr
+                                            ))
+                                            nameIn.value = ""
+                                            refreshRoster()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    teamsListDiv = grid.querySelector("#teams-list-container") as? HTMLDivElement
+    rosterDiv = grid.querySelector("#roster-container") as? HTMLDivElement
+    inputCity = grid.querySelector("#team-city-input") as? HTMLInputElement
+    inputTName = grid.querySelector("#team-name-input") as? HTMLInputElement
+    inputAbb = grid.querySelector("#team-abb-input") as? HTMLInputElement
+    inputPName = grid.querySelector("#player-name-input") as? HTMLInputElement
+    inputPos = grid.querySelector("#player-pos-select") as? HTMLSelectElement
+    inputNum = grid.querySelector("#player-num-input") as? HTMLInputElement
+    selectBat = grid.querySelector("#player-bat-select") as? HTMLSelectElement
+    selectThrow = grid.querySelector("#player-throw-select") as? HTMLSelectElement
+
     refreshTeamsUI()
-
-    // Right Column: Create Team Form / Roster View
-    val rightCol = grid.appendElement(UiConstants.Html.DIV)
-    
-    // Create Team Form
-    val createTeamCard = rightCol.appendElement(UiConstants.Html.DIV, "card") {
-        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "2rem")
-    }
-    createTeamCard.appendElement(UiConstants.Html.H2) { textContent = "Add Team" }
-    val tForm = createTeamCard.appendElement(UiConstants.Html.FORM)
-    
-    val tfg1 = tForm.appendElement(UiConstants.Html.DIV, "form-group")
-    tfg1.appendElement(UiConstants.Html.LABEL) { textContent = "City" }
-    val inputCity = tfg1.appendElement(UiConstants.Html.INPUT, "form-control") as HTMLInputElement
-    inputCity.placeholder = "e.g., Boston"
-    
-    val tfg2 = tForm.appendElement(UiConstants.Html.DIV, "form-group")
-    tfg2.appendElement(UiConstants.Html.LABEL) { textContent = "Team Name" }
-    val inputTName = tfg2.appendElement(UiConstants.Html.INPUT, "form-control") as HTMLInputElement
-    inputTName.placeholder = "e.g., Red Sox"
- 
-    val tfg3 = tForm.appendElement(UiConstants.Html.DIV, "form-group")
-    tfg3.appendElement(UiConstants.Html.LABEL) { textContent = "Abbreviation" }
-    val inputAbb = tfg3.appendElement(UiConstants.Html.INPUT, "form-control") as HTMLInputElement
-    inputAbb.placeholder = "e.g., BOS"
-    
-    val tSubmit = tForm.appendElement(UiConstants.Html.BUTTON, "btn") as HTMLButtonElement
-    tSubmit.type = "button"
-    tSubmit.textContent = "Create Team"
-    tSubmit.onClick {
-        val city = inputCity.value.trim()
-        val name = inputTName.value.trim()
-        val abb = inputAbb.value.trim()
-        if (city.isNotEmpty() && name.isNotEmpty() && abb.isNotEmpty()) {
-            launch {
-                api.createTeam(Team(city = city, name = name, abbreviation = abb))
-                teamsList = api.getTeams()
-                inputCity.value = ""
-                inputTName.value = ""
-                inputAbb.value = ""
-                refreshTeamsUI()
-            }
-        }
-    }
-
-    // Roster panel if team is selected
-    if (selectedTeamId != null) {
-        val rosterCard = rightCol.appendElement(UiConstants.Html.DIV, "card")
-        val team = teamsList.find { it.id == selectedTeamId }
-        rosterCard.appendElement(UiConstants.Html.H2) { textContent = "${team?.city} ${team?.name} Roster" }
-        
-        val rosterDiv = rosterCard.appendElement(UiConstants.Html.DIV) {
-            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1.5rem")
-        }
-        
-        fun refreshRoster() {
-            launch {
-                val roster = api.getTeamRoster(selectedTeamId!!)
-                rosterDiv.innerHTML = ""
-                if (roster.isEmpty()) {
-                    rosterDiv.appendElement(UiConstants.Html.P) {
-                        textContent = "No players on this roster."
-                        style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
-                    }
-                } else {
-                    val tableContainer = rosterDiv.appendElement(UiConstants.Html.DIV, "table-container")
-                    val table = tableContainer.appendElement(UiConstants.Html.TABLE)
-                    val thead = table.appendElement(UiConstants.Html.THEAD)
-                    val trh = thead.appendElement(UiConstants.Html.TR)
-                    trh.appendElement(UiConstants.Html.TH) { textContent = "#" }
-                    trh.appendElement(UiConstants.Html.TH) { textContent = "Name" }
-                    trh.appendElement(UiConstants.Html.TH) { textContent = "Pos" }
-                    trh.appendElement(UiConstants.Html.TH) { textContent = "B/T" }
-                    
-                    val tbody = table.appendElement(UiConstants.Html.TBODY)
-                    roster.forEach { p ->
-                        val trd = tbody.appendElement(UiConstants.Html.TR)
-                        trd.appendElement(UiConstants.Html.TD) { textContent = p.jerseyNumber.toString(); style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD) }
-                        trd.appendElement(UiConstants.Html.TD) { textContent = p.name }
-                        trd.appendElement(UiConstants.Html.TD) { textContent = p.position; style.setProperty(UiConstants.Css.COLOR, "var(--accent-green)") }
-                        trd.appendElement(UiConstants.Html.TD) { textContent = "${p.battingHand}/${p.throwingHand}" }
-                    }
-                }
-            }
-        }
-        
-        refreshRoster()
-
-        // Add Player Form
-        rosterCard.appendElement(UiConstants.Html.H3) { textContent = "Add Player to Roster" }
-        val pForm = rosterCard.appendElement(UiConstants.Html.FORM)
-        
-        val pfg1 = pForm.appendElement(UiConstants.Html.DIV, "form-group")
-        pfg1.appendElement(UiConstants.Html.LABEL) { textContent = "Player Name" }
-        val inputPName = pfg1.appendElement(UiConstants.Html.INPUT, "form-control") as HTMLInputElement
-        inputPName.placeholder = "e.g., Dustin Pedroia"
-        
-        val pfg2 = pForm.appendElement(UiConstants.Html.DIV, "form-group")
-        pfg2.appendElement(UiConstants.Html.LABEL) { textContent = "Position" }
-        val inputPos = pfg2.appendElement(UiConstants.Html.SELECT, "form-control") as HTMLSelectElement
-        listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH").forEach { pos ->
-            val opt = document.createElement(UiConstants.Html.OPTION) as HTMLOptionElement
-            opt.value = pos
-            opt.textContent = pos
-            inputPos.appendChild(opt)
-        }
-
-        val pfg3 = pForm.appendElement(UiConstants.Html.DIV, "form-group")
-        pfg3.appendElement(UiConstants.Html.LABEL) { textContent = "Jersey Number" }
-        val inputNum = pfg3.appendElement(UiConstants.Html.INPUT, "form-control") as HTMLInputElement
-        inputNum.type = "number"
-        inputNum.value = "15"
-
-        val pfg4 = pForm.appendElement(UiConstants.Html.DIV, "form-group")
-        pfg4.appendElement(UiConstants.Html.LABEL) { textContent = "Batting / Throwing Hand" }
-        val pfg4Row = pfg4.appendElement(UiConstants.Html.DIV) {
-            style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
-            style.setProperty(UiConstants.Css.GAP, "1rem")
-        }
-        val selectBat = pfg4Row.appendElement(UiConstants.Html.SELECT, "form-control") as HTMLSelectElement
-        listOf("R", "L", "S").forEach { h ->
-            val opt = document.createElement(UiConstants.Html.OPTION) as HTMLOptionElement
-            opt.value = h
-            opt.textContent = "Bat: $h"
-            selectBat.appendChild(opt)
-        }
-        val selectThrow = pfg4Row.appendElement(UiConstants.Html.SELECT, "form-control") as HTMLSelectElement
-        listOf("R", "L").forEach { h ->
-            val opt = document.createElement(UiConstants.Html.OPTION) as HTMLOptionElement
-            opt.value = h
-            opt.textContent = "Throw: $h"
-            selectThrow.appendChild(opt)
-        }
-        
-        val pSubmit = pForm.appendElement(UiConstants.Html.BUTTON, "btn") as HTMLButtonElement
-        pSubmit.type = "button"
-        pSubmit.textContent = "Add Player"
-        pSubmit.onClick {
-            val name = inputPName.value.trim()
-            val pos = inputPos.value
-            val num = inputNum.value.toIntOrNull() ?: 0
-            val bat = selectBat.value
-            val thr = selectThrow.value
-            if (name.isNotEmpty()) {
-                launch {
-                    api.createPlayer(Player(
-                        teamId = selectedTeamId,
-                        name = name,
-                        position = pos,
-                        jerseyNumber = num,
-                        battingHand = bat,
-                        throwingHand = thr
-                    ))
-                    inputPName.value = ""
-                    refreshRoster()
-                }
-            }
-        }
-    }
+    refreshRoster()
 }

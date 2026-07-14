@@ -27,6 +27,7 @@ kotlin {
                 implementation("io.ktor:ktor-serialization-kotlinx-json:3.5.1")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-browser:0.5.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-html:0.12.0")
             }
         }
         val wasmJsTest by getting {

@@ -1,86 +1,92 @@
 package com.baseball.ui.components
 
 import com.baseball.UiConstants
-
 import com.baseball.models.*
-import com.baseball.ui.appendElement
+import com.baseball.ui.*
 import org.w3c.dom.*
+import kotlinx.html.*
+import kotlinx.html.js.*
+import kotlinx.html.dom.*
 
-// LED Scoreboard and Diamond Bases visualizer component
 fun renderScorerLedScoreboard(parent: HTMLElement, game: Game) {
-    val sbHeader = parent.appendElement(UiConstants.Html.DIV, "scoreboard-header")
-    
-    val inningSymbol = if (game.gameState.half == HalfInning.TOP) "▲" else "▼"
-    sbHeader.appendElement(UiConstants.Html.SPAN, "inning-display") {
-        textContent = "$inningSymbol Inning ${game.gameState.inning}"
-    }
-    sbHeader.appendElement(UiConstants.Html.SPAN, "outs-indicator") {
-        val outsStr = when (game.gameState.outs) {
-            0 -> "No Outs"
-            1 -> "1 Out"
-            2 -> "2 Outs"
-            else -> "3 Outs"
-        }
-        textContent = outsStr
-    }
+    parent.innerHTML = ""
 
-    // Team Scores Row
-    val awayRow = parent.appendElement(UiConstants.Html.DIV, "scoreboard-row")
-    awayRow.appendElement(UiConstants.Html.SPAN, "team-led-name") { textContent = game.awayTeam.abbreviation }
-    awayRow.appendElement(UiConstants.Html.SPAN, "team-led-score") { textContent = game.awayScore.toString() }
+    parent.div {
+        val inningSymbol = if (game.gameState.half == HalfInning.TOP) "▲" else "▼"
+        div(classes = "scoreboard-header") {
+            span(classes = "inning-display") {
+                +"$inningSymbol Inning ${game.gameState.inning}"
+            }
+            span(classes = "outs-indicator") {
+                val outsStr = when (game.gameState.outs) {
+                    0 -> "No Outs"
+                    1 -> "1 Out"
+                    2 -> "2 Outs"
+                    else -> "3 Outs"
+                }
+                +outsStr
+            }
+        }
 
-    val homeRow = parent.appendElement(UiConstants.Html.DIV, "scoreboard-row")
-    homeRow.appendElement(UiConstants.Html.SPAN, "team-led-name") { textContent = game.homeTeam.abbreviation }
-    homeRow.appendElement(UiConstants.Html.SPAN, "team-led-score") { textContent = game.homeScore.toString() }
+        // Team Scores Row
+        div(classes = "scoreboard-row") {
+            span(classes = "team-led-name") { +game.awayTeam.abbreviation }
+            span(classes = "team-led-score") { +game.awayScore.toString() }
+        }
 
-    val countRow = parent.appendElement(UiConstants.Html.DIV, "scoreboard-row") {
-        style.setProperty(UiConstants.Css.MARGIN_TOP, "1rem")
-    }
-    countRow.appendElement(UiConstants.Html.SPAN, "count-display") {
-        textContent = "Count: ${game.gameState.balls} - ${game.gameState.strikes}"
-    }
-    countRow.appendElement(UiConstants.Html.SPAN) {
-        textContent = "R-H-E: ${game.awayScore}-${game.awayHits}-${game.awayErrors} vs ${game.homeScore}-${game.homeHits}-${game.homeErrors}"
-        style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
-        style.setProperty(UiConstants.Css.FONT_SIZE, "0.9rem")
-    }
+        div(classes = "scoreboard-row") {
+            span(classes = "team-led-name") { +game.homeTeam.abbreviation }
+            span(classes = "team-led-score") { +game.homeScore.toString() }
+        }
 
-    // Diamond Bases Visualization
-    val diamondContainer = parent.appendElement(UiConstants.Html.DIV, "diamond-container")
-    val baseDiamond = diamondContainer.appendElement(UiConstants.Html.DIV, "base-diamond")
-    
-    baseDiamond.appendElement(UiConstants.Html.DIV, "base base-first" + if (game.gameState.runnerFirstId != null) " occupied" else "") {
-        appendElement(UiConstants.Html.DIV, "base-label") {
-            textContent = "1st"
-            style.setProperty(UiConstants.Css.TOP, "-15px")
-            style.setProperty(UiConstants.Css.RIGHT, "-15px")
+        div(classes = "scoreboard-row") {
+            style = "margin-top: 1rem;"
+            span(classes = "count-display") {
+                +"Count: ${game.gameState.balls} - ${game.gameState.strikes}"
+            }
+            span {
+                +"R-H-E: ${game.awayScore}-${game.awayHits}-${game.awayErrors} vs ${game.homeScore}-${game.homeHits}-${game.homeErrors}"
+                style = "color: var(--text-secondary); font-size: 0.9rem;"
+            }
+        }
+
+        // Diamond Bases Visualization
+        div(classes = "diamond-container") {
+            div(classes = "base-diamond") {
+                div(classes = "base base-first" + if (game.gameState.runnerFirstId != null) " occupied" else "") {
+                    div(classes = "base-label") {
+                        +"1st"
+                        style = "top: -15px; right: -15px;"
+                    }
+                }
+                div(classes = "base base-second" + if (game.gameState.runnerSecondId != null) " occupied" else "") {
+                    div(classes = "base-label") {
+                        +"2nd"
+                        style = "top: -15px; left: -15px;"
+                    }
+                }
+                div(classes = "base base-third" + if (game.gameState.runnerThirdId != null) " occupied" else "") {
+                    div(classes = "base-label") {
+                        +"3rd"
+                        style = "bottom: -15px; left: -15px;"
+                    }
+                }
+                div(classes = "base base-home")
+            }
+        }
+
+        // Runner details on LED
+        div {
+            style = "font-size: 0.85rem; margin-top: 1rem; color: var(--text-secondary); border-top: 1px solid #1a2f24; padding-top: 0.5rem;"
+            if (game.gameState.runnerFirstName != null) {
+                div { +"1B: ${game.gameState.runnerFirstName}" }
+            }
+            if (game.gameState.runnerSecondName != null) {
+                div { +"2B: ${game.gameState.runnerSecondName}" }
+            }
+            if (game.gameState.runnerThirdName != null) {
+                div { +"3B: ${game.gameState.runnerThirdName}" }
+            }
         }
     }
-    baseDiamond.appendElement(UiConstants.Html.DIV, "base base-second" + if (game.gameState.runnerSecondId != null) " occupied" else "") {
-        appendElement(UiConstants.Html.DIV, "base-label") {
-            textContent = "2nd"
-            style.setProperty(UiConstants.Css.TOP, "-15px")
-            style.setProperty(UiConstants.Css.LEFT, "-15px")
-        }
-    }
-    baseDiamond.appendElement(UiConstants.Html.DIV, "base base-third" + if (game.gameState.runnerThirdId != null) " occupied" else "") {
-        appendElement(UiConstants.Html.DIV, "base-label") {
-            textContent = "3rd"
-            style.setProperty(UiConstants.Css.BOTTOM, "-15px")
-            style.setProperty(UiConstants.Css.LEFT, "-15px")
-        }
-    }
-    baseDiamond.appendElement(UiConstants.Html.DIV, "base base-home")
-    
-    // Runner details on LED
-    val runnersDetails = parent.appendElement(UiConstants.Html.DIV) {
-        style.setProperty(UiConstants.Css.FONT_SIZE, "0.85rem")
-        style.setProperty(UiConstants.Css.MARGIN_TOP, "1rem")
-        style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
-        style.setProperty("border-top", "1px solid #1a2f24")
-        style.setProperty(UiConstants.Css.PADDING_TOP, "0.5rem")
-    }
-    if (game.gameState.runnerFirstName != null) runnersDetails.appendElement(UiConstants.Html.DIV) { textContent = "1B: ${game.gameState.runnerFirstName}" }
-    if (game.gameState.runnerSecondName != null) runnersDetails.appendElement(UiConstants.Html.DIV) { textContent = "2B: ${game.gameState.runnerSecondName}" }
-    if (game.gameState.runnerThirdName != null) runnersDetails.appendElement(UiConstants.Html.DIV) { textContent = "3B: ${game.gameState.runnerThirdName}" }
 }

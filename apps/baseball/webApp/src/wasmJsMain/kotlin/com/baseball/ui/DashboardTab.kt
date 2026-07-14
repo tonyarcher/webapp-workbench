@@ -1,79 +1,93 @@
 package com.baseball.ui
 
 import com.baseball.BaseballConstants
-
 import com.baseball.UiConstants
-
 import com.baseball.api
 import com.baseball.models.*
 import org.w3c.dom.*
 import kotlinx.browser.document
+import kotlinx.html.*
+import kotlinx.html.js.*
+import kotlinx.html.dom.*
 
-// SEASON DASHBOARD TAB
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
-    container.appendElement(UiConstants.Html.H1) { textContent = "Season Dashboard" }
+    container.h1 { +"Season Dashboard" }
 
-    // Dropdown selectors for League & Season
-    val selectorCard = container.appendElement(UiConstants.Html.DIV, "card") {
-        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "2rem")
-        style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
-        style.setProperty(UiConstants.Css.GAP, "1.5rem")
-        style.setProperty(UiConstants.Css.ALIGN_ITEMS, UiConstants.CssValues.FLEX_END)
-    }
+    var selectL: HTMLSelectElement? = null
+    var selectS: HTMLSelectElement? = null
+    var fetchBtn: HTMLButtonElement? = null
 
-    val lg1 = selectorCard.appendElement(UiConstants.Html.DIV, "form-group") { style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0"); style.setProperty(UiConstants.Css.FLEX, "1") }
-    lg1.appendElement(UiConstants.Html.LABEL) { textContent = "Active League" }
-    val selectL = lg1.appendElement(UiConstants.Html.SELECT, "form-control") as HTMLSelectElement
-    leaguesList.forEach { league ->
-        val opt = document.createElement(UiConstants.Html.OPTION) as HTMLOptionElement
-        opt.value = league.id.toString()
-        opt.textContent = league.name
-        if (selectedLeagueId == league.id) opt.selected = true
-        selectL.appendChild(opt)
-    }
-
-    val lg2 = selectorCard.appendElement(UiConstants.Html.DIV, "form-group") { style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "0"); style.setProperty(UiConstants.Css.FLEX, "1") }
-    lg2.appendElement(UiConstants.Html.LABEL) { textContent = "Active Season" }
-    val selectS = lg2.appendElement(UiConstants.Html.SELECT, "form-control") as HTMLSelectElement
-    
     fun populateSeasonsDropdown() {
-        selectS.innerHTML = ""
+        val selectEl = selectS ?: return
+        selectEl.innerHTML = ""
         seasonsList.forEach { season ->
-            val opt = document.createElement(UiConstants.Html.OPTION) as HTMLOptionElement
-            opt.value = season.id.toString()
-            opt.textContent = "${season.name} (${season.year})"
-            if (selectedSeasonId == season.id) opt.selected = true
-            selectS.appendChild(opt)
-        }
-    }
-    populateSeasonsDropdown()
-
-    val fetchBtn = selectorCard.appendElement(UiConstants.Html.BUTTON, "btn") { textContent = "Load Season" }
-
-    selectL.addEventListener("change", {
-        val lid = selectL.value.toLongOrNull()
-        if (lid != null) {
-            selectedLeagueId = lid
-            launch {
-                seasonsList = api.getSeasons(lid)
-                selectedSeasonId = seasonsList.firstOrNull()?.id
-                populateSeasonsDropdown()
+            selectEl.append.option {
+                value = season.id.toString()
+                +"${season.name} (${season.year})"
+                selected = (selectedSeasonId == season.id)
             }
         }
-    })
-
-    fetchBtn.onClick {
-        selectedSeasonId = selectS.value.toLongOrNull()
-        renderCurrentTab()
     }
 
+    val card = container.div(classes = "card") {
+        style = "margin-bottom: 2rem; display: flex; gap: 1.5rem; align-items: flex-end;"
+
+        div(classes = "form-group") {
+            style = "margin-bottom: 0; flex: 1;"
+            label { +"Active League" }
+            select(classes = "form-control") {
+                id = "select-league-dropdown"
+                leaguesList.forEach { league ->
+                    option {
+                        value = league.id.toString()
+                        +league.name
+                        selected = (selectedLeagueId == league.id)
+                    }
+                }
+                onChangeFunction = { event ->
+                    val lid = (event.target as? HTMLSelectElement)?.value?.toLongOrNull()
+                    if (lid != null) {
+                        selectedLeagueId = lid
+                        launch {
+                            seasonsList = api.getSeasons(lid)
+                            selectedSeasonId = seasonsList.firstOrNull()?.id
+                            populateSeasonsDropdown()
+                        }
+                    }
+                }
+            }
+        }
+
+        div(classes = "form-group") {
+            style = "margin-bottom: 0; flex: 1;"
+            label { +"Active Season" }
+            select(classes = "form-control") {
+                id = "select-season-dropdown"
+            }
+        }
+
+        button(classes = "btn") {
+            id = "load-season-btn"
+            +"Load Season"
+            onClickFunction = {
+                selectedSeasonId = selectS?.value?.toLongOrNull()
+                renderCurrentTab()
+            }
+        }
+    }
+
+    selectL = card.querySelector("#select-league-dropdown") as? HTMLSelectElement
+    selectS = card.querySelector("#select-season-dropdown") as? HTMLSelectElement
+    fetchBtn = card.querySelector("#load-season-btn") as? HTMLButtonElement
+
+    populateSeasonsDropdown()
+
     if (selectedSeasonId == null) {
-        container.appendElement(UiConstants.Html.DIV, "card") {
-            style.setProperty(UiConstants.Css.TEXT_ALIGN, UiConstants.CssValues.CENTER)
-            style.setProperty(UiConstants.Css.PADDING, "3rem")
-            appendElement(UiConstants.Html.P) {
-                textContent = "Please select a league and season above, then click Load Season."
-                style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
+        container.div(classes = "card") {
+            style = "text-align: center; padding: 3rem;"
+            p {
+                +"Please select a league and season above, then click Load Season."
+                style = "color: var(--text-secondary);"
             }
         }
         return
@@ -82,116 +96,124 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
     // Dashboard Content
     launch {
         val dash = api.getSeasonDashboard(selectedSeasonId!!)
-        
-        val grid = container.appendElement(UiConstants.Html.DIV, "dashboard-grid")
-        
-        // Left Column: Standings
-        val leftCol = grid.appendElement(UiConstants.Html.DIV, "card")
-        leftCol.appendElement(UiConstants.Html.H2) { textContent = "League Standings" }
-        
-        val tableContainer = leftCol.appendElement(UiConstants.Html.DIV, "table-container")
-        val table = tableContainer.appendElement(UiConstants.Html.TABLE)
-        val thead = table.appendElement(UiConstants.Html.THEAD)
-        val trh = thead.appendElement(UiConstants.Html.TR)
-        trh.appendElement(UiConstants.Html.TH) { textContent = "Team" }
-        trh.appendElement(UiConstants.Html.TH) { textContent = "GP" }
-        trh.appendElement(UiConstants.Html.TH) { textContent = "W" }
-        trh.appendElement(UiConstants.Html.TH) { textContent = "L" }
-        trh.appendElement(UiConstants.Html.TH) { textContent = "PCT" }
-        trh.appendElement(UiConstants.Html.TH) { textContent = "RS" }
-        trh.appendElement(UiConstants.Html.TH) { textContent = "RA" }
 
-        val tbody = table.appendElement(UiConstants.Html.TBODY)
-        dash.standings.forEach { row ->
-            val trd = tbody.appendElement(UiConstants.Html.TR)
-            trd.appendElement(UiConstants.Html.TD) { textContent = row.teamName; style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD) }
-            trd.appendElement(UiConstants.Html.TD) { textContent = row.gamesPlayed.toString() }
-            trd.appendElement(UiConstants.Html.TD) { textContent = row.wins.toString() }
-            trd.appendElement(UiConstants.Html.TD) { textContent = row.losses.toString() }
-            trd.appendElement(UiConstants.Html.TD) { 
-                textContent = if (row.winPercentage.toString().startsWith("0.")) {
-                    row.winPercentage.toString().substring(1)
-                } else if (row.winPercentage == 1.0) {
-                    "1.000"
-                } else {
-                    ".000"
-                }
-            }
-            trd.appendElement(UiConstants.Html.TD) { textContent = row.runsScored.toString() }
-            trd.appendElement(UiConstants.Html.TD) { textContent = row.runsAllowed.toString() }
-        }
+        container.div(classes = "dashboard-grid") {
+            // Left Column: Standings
+            div(classes = "card") {
+                h2 { +"League Standings" }
 
-        // Right Column: Games
-        val rightCol = grid.appendElement(UiConstants.Html.DIV)
-        
-        val actionsCard = rightCol.appendElement(UiConstants.Html.DIV, "card") {
-            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1.5rem")
-            style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
-            style.setProperty(UiConstants.Css.JUSTIFY_CONTENT, UiConstants.CssValues.SPACE_BETWEEN)
-            style.setProperty(UiConstants.Css.ALIGN_ITEMS, UiConstants.CssValues.CENTER)
-        }
-        actionsCard.appendElement(UiConstants.Html.H3) { textContent = "Schedule Manager" }
-        
-        val generateBtn = actionsCard.appendElement(UiConstants.Html.BUTTON, "btn") {
-            textContent = "Generate Round-Robin Schedule"
-        }
-        if (dash.games.isNotEmpty()) {
-            generateBtn.setAttribute("disabled", "true")
-            generateBtn.className = "btn btn-secondary"
-            generateBtn.style.setProperty(UiConstants.Css.OPACITY, "0.5")
-            generateBtn.style.setProperty(UiConstants.Css.CURSOR, "not-allowed")
-        } else {
-            generateBtn.onClick {
-                launch {
-                    api.generateSchedule(selectedSeasonId!!)
-                    renderCurrentTab()
-                }
-            }
-        }
-
-        val gamesCard = rightCol.appendElement(UiConstants.Html.DIV, "card")
-        gamesCard.appendElement(UiConstants.Html.H2) { textContent = "Games Schedule" }
-        
-        val gamesListDiv = gamesCard.appendElement(UiConstants.Html.DIV, "game-list")
-        if (dash.games.isEmpty()) {
-            gamesListDiv.appendElement(UiConstants.Html.P) {
-                textContent = "No games scheduled yet. Generate a schedule above!"
-                style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
-            }
-        } else {
-            dash.games.forEach { game ->
-                gamesListDiv.appendElement(UiConstants.Html.DIV, "game-card") {
-                    onClick {
-                        selectedGameId = game.id
-                        if (game.status == GameStatus.COMPLETED) {
-                            currentTab = BaseballConstants.TAB_BOXSCORE
-                        } else {
-                            currentTab = BaseballConstants.TAB_LIVE_SCORER
+                div(classes = "table-container") {
+                    table {
+                        thead {
+                            tr {
+                                th { +"Team" }
+                                th { +"GP" }
+                                th { +"W" }
+                                th { +"L" }
+                                th { +"PCT" }
+                                th { +"RS" }
+                                th { +"RA" }
+                            }
                         }
-                        updateActiveTabButtons()
-                        renderCurrentTab()
+                        tbody {
+                            dash.standings.forEach { row ->
+                                tr {
+                                    td {
+                                        +row.teamName
+                                        style = "font-weight: bold;"
+                                    }
+                                    td { +row.gamesPlayed.toString() }
+                                    td { +row.wins.toString() }
+                                    td { +row.losses.toString() }
+                                    td {
+                                        +if (row.winPercentage.toString().startsWith("0.")) {
+                                            row.winPercentage.toString().substring(1)
+                                        } else if (row.winPercentage == 1.0) {
+                                            "1.000"
+                                        } else {
+                                            ".000"
+                                        }
+                                    }
+                                    td { +row.runsScored.toString() }
+                                    td { +row.runsAllowed.toString() }
+                                }
+                            }
+                        }
                     }
-                    
-                    val teamScore = appendElement(UiConstants.Html.DIV, "game-team-score")
-                    val awayRow = teamScore.appendElement(UiConstants.Html.DIV, "game-team-row")
-                    awayRow.appendElement(UiConstants.Html.SPAN, "team-name-tag") { textContent = game.awayTeam.name }
-                    awayRow.appendElement(UiConstants.Html.SPAN, "score-num") { textContent = game.awayScore.toString() }
-                    
-                    val homeRow = teamScore.appendElement(UiConstants.Html.DIV, "game-team-row")
-                    homeRow.appendElement(UiConstants.Html.SPAN, "team-name-tag") { textContent = game.homeTeam.name }
-                    homeRow.appendElement(UiConstants.Html.SPAN, "score-num") { textContent = game.homeScore.toString() }
-                    
-                    val meta = appendElement(UiConstants.Html.DIV, "game-meta")
-                    val badgeClass = when (game.status) {
-                        GameStatus.SCHEDULED -> "badge badge-scheduled"
-                        GameStatus.IN_PROGRESS -> "badge badge-live"
-                        GameStatus.COMPLETED -> "badge badge-completed"
+                }
+            }
+
+            // Right Column: Games
+            div {
+                div(classes = "card") {
+                    style = "margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;"
+                    h3 { +"Schedule Manager" }
+
+                    button(classes = if (dash.games.isNotEmpty()) "btn btn-secondary" else "btn") {
+                        +"Generate Round-Robin Schedule"
+                        if (dash.games.isNotEmpty()) {
+                            disabled = true
+                            style = "opacity: 0.5; cursor: not-allowed;"
+                        } else {
+                            onClickFunction = {
+                                launch {
+                                    api.generateSchedule(selectedSeasonId!!)
+                                    renderCurrentTab()
+                                }
+                            }
+                        }
                     }
-                    meta.appendElement(UiConstants.Html.SPAN, badgeClass) { textContent = game.status.name }
-                    meta.appendElement(UiConstants.Html.SPAN) {
-                        textContent = game.date
-                        style.setProperty(UiConstants.Css.FONT_SIZE, "0.85rem")
-                        style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
+                }
+
+                div(classes = "card") {
+                    h2 { +"Games Schedule" }
+
+                    div(classes = "game-list") {
+                        if (dash.games.isEmpty()) {
+                            p {
+                                +"No games scheduled yet. Generate a schedule above!"
+                                style = "color: var(--text-secondary);"
+                            }
+                        } else {
+                            dash.games.forEach { game ->
+                                div(classes = "game-card") {
+                                    onClickFunction = {
+                                        selectedGameId = game.id
+                                        if (game.status == GameStatus.COMPLETED) {
+                                            currentTab = BaseballConstants.TAB_BOXSCORE
+                                        } else {
+                                            currentTab = BaseballConstants.TAB_LIVE_SCORER
+                                        }
+                                        updateActiveTabButtons()
+                                        renderCurrentTab()
+                                    }
+
+                                    div(classes = "game-team-score") {
+                                        div(classes = "game-team-row") {
+                                            span(classes = "team-name-tag") { +game.awayTeam.name }
+                                            span(classes = "score-num") { +game.awayScore.toString() }
+                                        }
+                                        div(classes = "game-team-row") {
+                                            span(classes = "team-name-tag") { +game.homeTeam.name }
+                                            span(classes = "score-num") { +game.homeScore.toString() }
+                                        }
+                                    }
+
+                                    div(classes = "game-meta") {
+                                        val badgeClass = when (game.status) {
+                                            GameStatus.SCHEDULED -> "badge badge-scheduled"
+                                            GameStatus.IN_PROGRESS -> "badge badge-live"
+                                            GameStatus.COMPLETED -> "badge badge-completed"
+                                        }
+                                        span(classes = badgeClass) { +game.status.name }
+                                        span {
+                                            +game.date
+                                            style = "font-size: 0.85rem; color: var(--text-secondary);"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -1,86 +1,79 @@
 package com.baseball.ui.components
 
 import com.baseball.UiConstants
-
 import com.baseball.models.*
+import com.baseball.ui.*
 import org.w3c.dom.*
-import com.baseball.ui.appendElement
-import com.baseball.ui.onClick
-import kotlinx.browser.document
+import kotlinx.html.*
+import kotlinx.html.js.*
+import kotlinx.html.dom.*
 
-// High-level Scorebook component controlling tabs and coordination
 internal fun renderScorebookView(container: HTMLElement, game: Game, boxScore: BoxScore, events: List<PlayEvent>) {
     container.innerHTML = ""
 
-    val scorebookWrapper = container.appendElement(UiConstants.Html.DIV, "scorebook-wrapper") {
-        style.setProperty(UiConstants.Css.BACKGROUND_COLOR, "#fcfbfa")
-        style.setProperty(UiConstants.Css.COLOR, "#2b2a28")
-        style.setProperty(UiConstants.Css.PADDING, "2rem")
-        style.setProperty(UiConstants.Css.BORDER_RADIUS, "12px")
-        style.setProperty(UiConstants.Css.BORDER, "2px solid #d2cdc6")
-        style.setProperty(UiConstants.Css.BOX_SHADOW, "0 6px 20px rgba(0, 0, 0, 0.15)")
-        style.setProperty("font-family", "'Courier New', Courier, monospace")
-    }
-
-    var activeHalf = HalfInning.TOP // TOP for Away Batting, BOTTOM for Home Batting
-    
-    val toggleRow = scorebookWrapper.appendElement(UiConstants.Html.DIV) {
-        style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
-        style.setProperty(UiConstants.Css.JUSTIFY_CONTENT, UiConstants.CssValues.SPACE_BETWEEN)
-        style.setProperty(UiConstants.Css.ALIGN_ITEMS, UiConstants.CssValues.CENTER)
-        style.setProperty(UiConstants.Css.BORDER_BOTTOM, "2px solid #d2cdc6")
-        style.setProperty(UiConstants.Css.PADDING_BOTTOM, "1rem")
-        style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1.5rem")
-    }
-
-    toggleRow.appendElement(UiConstants.Html.H2) {
-        textContent = "SCOREBOOK"
-        style.setProperty(UiConstants.Css.MARGIN, "0")
-        style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
-        style.setProperty("letter-spacing", "2px")
-    }
-
-    val toggleBtnGroup = toggleRow.appendElement(UiConstants.Html.DIV) {
-        style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
-        style.setProperty(UiConstants.Css.GAP, "0.5rem")
-    }
+    var activeHalf = HalfInning.TOP
+    var btnAway: HTMLButtonElement? = null
+    var btnHome: HTMLButtonElement? = null
+    var sheetContainer: HTMLDivElement? = null
 
     fun redrawScorecard(half: HalfInning) {
         activeHalf = half
-        val sheetContainer = document.getElementById("scorebook-sheet-container") as? HTMLElement ?: return
-        sheetContainer.innerHTML = ""
-        renderScorecardSheet(sheetContainer, game, boxScore, events, activeHalf)
+        val sheetEl = sheetContainer ?: return
+        sheetEl.innerHTML = ""
+        renderScorecardSheet(sheetEl, game, boxScore, events, activeHalf)
     }
 
-    val btnAway = toggleBtnGroup.appendElement(UiConstants.Html.BUTTON, "btn") {
-        textContent = "${game.awayTeam.abbreviation} BATTING (TOP)"
-        style.setProperty(UiConstants.Css.PADDING, "0.5rem 1rem")
-        onClick {
-            redrawScorecard(HalfInning.TOP)
-            classList.add("btn-primary")
-            classList.remove("btn-secondary")
-            val other = toggleBtnGroup.children.item(1) as? HTMLButtonElement
-            other?.classList?.add("btn-secondary")
-            other?.classList?.remove("btn-primary")
+    val wrapper = container.div(classes = "scorebook-wrapper") {
+        style = "background-color: #fcfbfa; color: #2b2a28; padding: 2rem; border-radius: 12px; border: 2px solid #d2cdc6; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); font-family: 'Courier New', Courier, monospace;"
+
+        div {
+            style = "display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #d2cdc6; padding-bottom: 1rem; margin-bottom: 1.5rem;"
+
+            h2 {
+                +"SCOREBOOK"
+                style = "margin: 0; font-weight: bold; letter-spacing: 2px;"
+            }
+
+            div {
+                id = "toggle-btn-group"
+                style = "display: flex; gap: 0.5rem;"
+
+                button(classes = "btn btn-primary") {
+                    id = "btn-away-batting"
+                    +"${game.awayTeam.abbreviation} BATTING (TOP)"
+                    style = "padding: 0.5rem 1rem;"
+                    onClickFunction = {
+                        redrawScorecard(HalfInning.TOP)
+                        btnAway?.classList?.add("btn-primary")
+                        btnAway?.classList?.remove("btn-secondary")
+                        btnHome?.classList?.add("btn-secondary")
+                        btnHome?.classList?.remove("btn-primary")
+                    }
+                }
+
+                button(classes = "btn btn-secondary") {
+                    id = "btn-home-batting"
+                    +"${game.homeTeam.abbreviation} BATTING (BOTTOM)"
+                    style = "padding: 0.5rem 1rem;"
+                    onClickFunction = {
+                        redrawScorecard(HalfInning.BOTTOM)
+                        btnHome?.classList?.add("btn-primary")
+                        btnHome?.classList?.remove("btn-secondary")
+                        btnAway?.classList?.add("btn-secondary")
+                        btnAway?.classList?.remove("btn-primary")
+                    }
+                }
+            }
+        }
+
+        div {
+            id = "scorebook-sheet-container"
         }
     }
-    btnAway.classList.add("btn-primary")
 
-    val btnHome = toggleBtnGroup.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
-        textContent = "${game.homeTeam.abbreviation} BATTING (BOTTOM)"
-        style.setProperty(UiConstants.Css.PADDING, "0.5rem 1rem")
-        onClick {
-            redrawScorecard(HalfInning.BOTTOM)
-            classList.add("btn-primary")
-            classList.remove("btn-secondary")
-            btnAway.classList.add("btn-secondary")
-            btnAway.classList.remove("btn-primary")
-        }
-    }
-
-    scorebookWrapper.appendElement(UiConstants.Html.DIV) {
-        id = "scorebook-sheet-container"
-    }
+    sheetContainer = wrapper.querySelector("#scorebook-sheet-container") as? HTMLDivElement
+    btnAway = wrapper.querySelector("#btn-away-batting") as? HTMLButtonElement
+    btnHome = wrapper.querySelector("#btn-home-batting") as? HTMLButtonElement
 
     redrawScorecard(HalfInning.TOP)
 }

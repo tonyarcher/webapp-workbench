@@ -15,6 +15,8 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.*
 import org.w3c.dom.*
+import kotlinx.html.*
+import kotlinx.html.js.*
 
 private var _currentTab = BaseballConstants.TAB_LEAGUES
 var currentTab: String
@@ -154,123 +156,109 @@ object AppViewManager : DomBuilder {
     }
 
     fun renderWelcomeScreen(container: HTMLElement) {
-        val welcome = container.appendElement(UiConstants.Html.DIV, "welcome-container")
-        
-        val session = currentUserSession
-        val welcomeHeader = welcome.appendElement(UiConstants.Html.DIV) {
-            style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
-            style.setProperty(UiConstants.Css.JUSTIFY_CONTENT, UiConstants.CssValues.FLEX_END)
-            style.setProperty(UiConstants.Css.WIDTH, "100%")
-            style.setProperty(UiConstants.Css.MARGIN_BOTTOM, "1rem")
-        }
-        if (session != null) {
-            welcomeHeader.appendElement(UiConstants.Html.SPAN) {
-                textContent = "Logged in as ${session.firstName} "
-                style.setProperty(UiConstants.Css.COLOR, "var(--accent-yellow)")
-                style.setProperty(UiConstants.Css.FONT_WEIGHT, UiConstants.CssValues.BOLD)
-                style.setProperty(UiConstants.Css.MARGIN_RIGHT, "1rem")
-            }
-            welcomeHeader.appendElement(UiConstants.Html.A) {
-                textContent = "Log Out"
-                style.setProperty(UiConstants.Css.COLOR, "var(--accent-red)")
-                style.setProperty(UiConstants.Css.CURSOR, UiConstants.CssValues.POINTER)
-                style.setProperty(UiConstants.Css.TEXT_DECORATION, UiConstants.CssValues.UNDERLINE)
-                onClick {
-                    authService.logout()
-                }
-            }
-        } else {
-            welcomeHeader.appendElement(UiConstants.Html.A) {
-                textContent = "Log In / Sign Up"
-                style.setProperty(UiConstants.Css.COLOR, "var(--accent-yellow)")
-                style.setProperty(UiConstants.Css.CURSOR, UiConstants.CssValues.POINTER)
-                style.setProperty(UiConstants.Css.TEXT_DECORATION, UiConstants.CssValues.UNDERLINE)
-                onClick {
-                    window.location.hash = "login"
-                }
-            }
-        }
-
-        welcome.appendElement(UiConstants.Html.DIV, "welcome-logo") {
-            innerHTML = "<span>GRAND SLAM</span> BASEBALL TRACKER"
-        }
-        
-        welcome.appendElement(UiConstants.Html.P, "welcome-subtitle") {
-            textContent = "Exhibition Game Mode (Offline) & Full League Season Mode (Online)"
-        }
-        
-        if (serverConnectionError != null) {
-            welcome.appendElement(UiConstants.Html.DIV, "server-error-banner") {
-                textContent = serverConnectionError!!
-            }
-        }
-        
-        val grid = welcome.appendElement(UiConstants.Html.DIV, "mode-grid")
-        
-        val cardExhibition = grid.appendElement(UiConstants.Html.DIV, "mode-card offline") {
-            onClick {
-                serverConnectionError = null
-                isWelcomeScreen = false
-                isSingleGameMode = true
-                initGame(forceReset = false)
-                window.location.hash = BaseballConstants.TAB_LIVE_SCORER
-            }
-        }
-        cardExhibition.appendElement(UiConstants.Html.DIV, "mode-icon") { textContent = "⚾" }
-        cardExhibition.appendElement(UiConstants.Html.DIV, "mode-title") { textContent = "Single Game Mode" }
-        cardExhibition.appendElement(UiConstants.Html.DIV, "mode-desc") {
-            textContent = "Play or score a local exhibition game between Chicago and St. Louis. Runs entirely in your browser with no server connection required."
-        }
-        val statusLocal = cardExhibition.appendElement(UiConstants.Html.DIV, "server-status")
-        statusLocal.appendElement(UiConstants.Html.SPAN, "status-dot green")
-        statusLocal.appendElement(UiConstants.Html.SPAN, "status-text online") { textContent = "Client-Side Only" }
-
-        val cardSeason = grid.appendElement(UiConstants.Html.DIV, "mode-card online") {
-            onClick {
-                serverConnectionError = null
-                launch {
-                    try {
-                        leaguesList = api.getLeagues()
-                        teamsList = api.getTeams()
-                        if (leaguesList.isNotEmpty()) {
-                            selectedLeagueId = leaguesList.first().id
-                            seasonsList = api.getSeasons(selectedLeagueId!!)
-                            if (seasonsList.isNotEmpty()) {
-                                selectedSeasonId = seasonsList.first().id
-                            }
+        container.div(classes = "welcome-container") {
+            val session = currentUserSession
+            div {
+                style = "display: flex; justify-content: flex-end; width: 100%; margin-bottom: 1rem;"
+                if (session != null) {
+                    span {
+                        +"Logged in as ${session.firstName} "
+                        style = "color: var(--accent-yellow); font-weight: bold; margin-right: 1rem;"
+                    }
+                    a {
+                        +"Log Out"
+                        style = "color: var(--accent-red); cursor: pointer; text-decoration: underline;"
+                        onClickFunction = {
+                            authService.logout()
                         }
-                        isWelcomeScreen = false
-                        isSingleGameMode = false
-                        if (currentUserSession == null) {
-                            window.location.hash = BaseballConstants.TAB_LOGIN
-                        } else {
-                            window.location.hash = BaseballConstants.TAB_LEAGUES
+                    }
+                } else {
+                    a {
+                        +"Log In / Sign Up"
+                        style = "color: var(--accent-yellow); cursor: pointer; text-decoration: underline;"
+                        onClickFunction = {
+                            window.location.hash = "login"
                         }
-                    } catch (e: Exception) {
-                        serverConnectionError = "Unable to connect to the server. Please check that your Spring Boot backend is running."
-                        renderApp()
                     }
                 }
             }
-        }
-        cardSeason.appendElement(UiConstants.Html.DIV, "mode-icon") { textContent = "🏆" }
-        cardSeason.appendElement(UiConstants.Html.DIV, "mode-title") { textContent = "League & Season Mode" }
-        cardSeason.appendElement(UiConstants.Html.DIV, "mode-desc") {
-            textContent = "Manage complete baseball leagues, schedule round-robin seasons, track standings, and record live games backed by your database server."
-        }
-        
-        val statusServer = cardSeason.appendElement(UiConstants.Html.DIV, "server-status")
-        val dot = statusServer.appendElement(UiConstants.Html.SPAN, "status-dot")
-        val text = statusServer.appendElement(UiConstants.Html.SPAN, "status-text")
-        
-        if (serverOnline) {
-            dot.className = "status-dot green"
-            text.className = "status-text online"
-            text.textContent = "Server Online"
-        } else {
-            dot.className = "status-dot red"
-            text.className = "status-text offline"
-            text.textContent = "Check Connection"
+
+            div(classes = "welcome-logo") {
+                span { +"GRAND SLAM" }
+                +" BASEBALL TRACKER"
+            }
+
+            p(classes = "welcome-subtitle") {
+                +"Exhibition Game Mode (Offline) & Full League Season Mode (Online)"
+            }
+
+            val errorMsg = serverConnectionError
+            if (errorMsg != null) {
+                div(classes = "server-error-banner") {
+                    +errorMsg
+                }
+            }
+
+            div(classes = "mode-grid") {
+                div(classes = "mode-card offline") {
+                    onClickFunction = {
+                        serverConnectionError = null
+                        isWelcomeScreen = false
+                        isSingleGameMode = true
+                        initGame(forceReset = false)
+                        window.location.hash = BaseballConstants.TAB_LIVE_SCORER
+                    }
+                    div(classes = "mode-icon") { +"⚾" }
+                    div(classes = "mode-title") { +"Single Game Mode" }
+                    div(classes = "mode-desc") {
+                        +"Play or score a local exhibition game between Chicago and St. Louis. Runs entirely in your browser with no server connection required."
+                    }
+                    div(classes = "server-status") {
+                        span(classes = "status-dot green")
+                        span(classes = "status-text online") { +"Client-Side Only" }
+                    }
+                }
+
+                div(classes = "mode-card online") {
+                    onClickFunction = {
+                        serverConnectionError = null
+                        launch {
+                            try {
+                                leaguesList = api.getLeagues()
+                                teamsList = api.getTeams()
+                                if (leaguesList.isNotEmpty()) {
+                                    selectedLeagueId = leaguesList.first().id
+                                    seasonsList = api.getSeasons(selectedLeagueId!!)
+                                    if (seasonsList.isNotEmpty()) {
+                                        selectedSeasonId = seasonsList.first().id
+                                    }
+                                }
+                                isWelcomeScreen = false
+                                isSingleGameMode = false
+                                if (currentUserSession == null) {
+                                    window.location.hash = BaseballConstants.TAB_LOGIN
+                                } else {
+                                    window.location.hash = BaseballConstants.TAB_LEAGUES
+                                }
+                            } catch (e: Exception) {
+                                serverConnectionError = "Unable to connect to the server. Please check that your Spring Boot backend is running."
+                                renderApp()
+                            }
+                        }
+                    }
+                    div(classes = "mode-icon") { +"🏆" }
+                    div(classes = "mode-title") { +"League & Season Mode" }
+                    div(classes = "mode-desc") {
+                        +"Manage complete baseball leagues, schedule round-robin seasons, track standings, and record live games backed by your database server."
+                    }
+                    div(classes = "server-status") {
+                        span(classes = if (serverOnline) "status-dot green" else "status-dot red")
+                        span(classes = if (serverOnline) "status-text online" else "status-text offline") {
+                            +(if (serverOnline) "Server Online" else "Check Connection")
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -283,114 +271,109 @@ object AppViewManager : DomBuilder {
             return
         }
 
-        val header = app.appendElement(UiConstants.Html.HEADER)
-        val headerContainer = header.appendElement(UiConstants.Html.DIV, "header-container")
-        
-        val logo = headerContainer.appendElement(UiConstants.Html.DIV, "logo") {
-            style.setProperty(UiConstants.Css.CURSOR, UiConstants.CssValues.POINTER)
-            onClick {
-                goBackToWelcome()
-            }
-        }
-        logo.innerHTML = "<span>GRAND SLAM</span> BASEBALL"
-        
-        val userSession = currentUserSession
-        if (userSession != null) {
-            val userDiv = headerContainer.appendElement(UiConstants.Html.DIV) {
-                style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.FLEX)
-                style.setProperty(UiConstants.Css.ALIGN_ITEMS, UiConstants.CssValues.CENTER)
-                style.setProperty(UiConstants.Css.GAP, "1rem")
-                style.setProperty(UiConstants.Css.FONT_SIZE, "0.9rem")
-                style.setProperty(UiConstants.Css.COLOR, "var(--text-secondary)")
-            }
-            userDiv.appendElement(UiConstants.Html.SPAN) {
-                textContent = "Hello, ${userSession.firstName}!"
-                style.setProperty(UiConstants.Css.FONT_WEIGHT, "600")
-                style.setProperty(UiConstants.Css.COLOR, "var(--accent-yellow)")
-            }
-            userDiv.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
-                textContent = "Log Out"
-                style.setProperty(UiConstants.Css.PADDING, "0.25rem 0.5rem")
-                style.setProperty(UiConstants.Css.FONT_SIZE, "0.8rem")
-                onClick {
-                    authService.logout()
+        app.header {
+            div(classes = "header-container") {
+                div(classes = "logo") {
+                    style = "cursor: pointer;"
+                    onClickFunction = {
+                        goBackToWelcome()
+                    }
+                    span { +"GRAND SLAM" }
+                    +" BASEBALL"
                 }
-            }
-        } else {
-            headerContainer.appendElement(UiConstants.Html.BUTTON, "btn btn-secondary") {
-                textContent = "Log In"
-                style.setProperty(UiConstants.Css.PADDING, "0.25rem 0.75rem")
-                style.setProperty(UiConstants.Css.FONT_SIZE, "0.85rem")
-                onClick {
-                    window.location.hash = "login"
+
+                val userSession = currentUserSession
+                if (userSession != null) {
+                    div {
+                        style = "display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; color: var(--text-secondary);"
+                        span {
+                            +"Hello, ${userSession.firstName}!"
+                            style = "font-weight: 600; color: var(--accent-yellow);"
+                        }
+                        button(classes = "btn btn-secondary") {
+                            +"Log Out"
+                            style = "padding: 0.25rem 0.5rem; font-size: 0.8rem;"
+                            onClickFunction = {
+                                authService.logout()
+                            }
+                        }
+                    }
+                } else {
+                    button(classes = "btn btn-secondary") {
+                        +"Log In"
+                        style = "padding: 0.25rem 0.75rem; font-size: 0.85rem;"
+                        onClickFunction = {
+                            window.location.hash = "login"
+                        }
+                    }
                 }
-            }
-        }
-        
-        val nav = headerContainer.appendElement(UiConstants.Html.NAV)
-        
-        nav.appendElement(UiConstants.Html.BUTTON, "back-to-welcome") {
-            textContent = "← Back to Menu"
-            onClick {
-                goBackToWelcome()
+
+                nav {
+                    button(classes = "back-to-welcome") {
+                        +"← Back to Menu"
+                        onClickFunction = {
+                            goBackToWelcome()
+                        }
+                    }
+
+                    if (!isSingleGameMode) {
+                        button(classes = "nav-btn") {
+                            id = "nav-btn-leagues"
+                            +"Leagues & Seasons"
+                            onClickFunction = {
+                                currentTab = BaseballConstants.TAB_LEAGUES
+                                updateActiveTabButtons()
+                                renderCurrentTab()
+                            }
+                        }
+
+                        button(classes = "nav-btn") {
+                            id = "nav-btn-teams"
+                            +"Teams & Rosters"
+                            onClickFunction = {
+                                currentTab = BaseballConstants.TAB_TEAMS
+                                updateActiveTabButtons()
+                                renderCurrentTab()
+                            }
+                        }
+
+                        button(classes = "nav-btn") {
+                            id = "nav-btn-games"
+                            +"Season Dashboard"
+                            onClickFunction = {
+                                currentTab = BaseballConstants.TAB_GAMES
+                                updateActiveTabButtons()
+                                renderCurrentTab()
+                            }
+                        }
+                    }
+
+                    button(classes = "nav-btn") {
+                        id = "nav-btn-live"
+                        +"Live Scoring"
+                        style = "display: ${if (isSingleGameMode || selectedGameId != null) "inline-block" else "none"};"
+                        onClickFunction = {
+                            currentTab = BaseballConstants.TAB_LIVE_SCORER
+                            updateActiveTabButtons()
+                            renderCurrentTab()
+                        }
+                    }
+
+                    button(classes = "nav-btn") {
+                        id = "nav-btn-boxscore"
+                        +"Box Score"
+                        style = "display: ${if (isSingleGameMode || selectedGameId != null) "inline-block" else "none"};"
+                        onClickFunction = {
+                            currentTab = BaseballConstants.TAB_BOXSCORE
+                            updateActiveTabButtons()
+                            renderCurrentTab()
+                        }
+                    }
+                }
             }
         }
 
-        if (!isSingleGameMode) {
-            nav.appendElement(UiConstants.Html.BUTTON, "nav-btn") {
-                id = "nav-btn-leagues"
-                textContent = "Leagues & Seasons"
-                onClick {
-                    currentTab = BaseballConstants.TAB_LEAGUES
-                    updateActiveTabButtons()
-                    renderCurrentTab()
-                }
-            }
-            
-            nav.appendElement(UiConstants.Html.BUTTON, "nav-btn") {
-                id = "nav-btn-teams"
-                textContent = "Teams & Rosters"
-                onClick {
-                    currentTab = BaseballConstants.TAB_TEAMS
-                    updateActiveTabButtons()
-                    renderCurrentTab()
-                }
-            }
-            
-            nav.appendElement(UiConstants.Html.BUTTON, "nav-btn") {
-                id = "nav-btn-games"
-                textContent = "Season Dashboard"
-                onClick {
-                    currentTab = BaseballConstants.TAB_GAMES
-                    updateActiveTabButtons()
-                    renderCurrentTab()
-                }
-            }
-        }
-        
-        val btnLive = nav.appendElement(UiConstants.Html.BUTTON, "nav-btn") {
-            id = "nav-btn-live"
-            textContent = "Live Scoring"
-            style.setProperty(UiConstants.Css.DISPLAY, if (isSingleGameMode || selectedGameId != null) UiConstants.CssValues.INLINE_BLOCK else UiConstants.CssValues.NONE)
-            onClick {
-                currentTab = BaseballConstants.TAB_LIVE_SCORER
-                updateActiveTabButtons()
-                renderCurrentTab()
-            }
-        }
-
-        val btnBoxScore = nav.appendElement(UiConstants.Html.BUTTON, "nav-btn") {
-            id = "nav-btn-boxscore"
-            textContent = "Box Score"
-            style.setProperty(UiConstants.Css.DISPLAY, if (isSingleGameMode || selectedGameId != null) UiConstants.CssValues.INLINE_BLOCK else UiConstants.CssValues.NONE)
-            onClick {
-                currentTab = BaseballConstants.TAB_BOXSCORE
-                updateActiveTabButtons()
-                renderCurrentTab()
-            }
-        }
-
-        app.appendElement(UiConstants.Html.MAIN) {
+        app.main {
             id = "content-area"
         }
 
