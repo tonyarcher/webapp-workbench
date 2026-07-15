@@ -11,6 +11,7 @@ import kotlinx.browser.window
 import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.html.dom.*
+import kotlinx.css.*
 
 fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore, events: List<PlayEvent>, half: HalfInning) {
     ScorebookGridRenderer.renderScorecardSheet(container, game, boxScore, events, half)
@@ -54,42 +55,76 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
     private fun DIV.renderHeaderPanelCol1(isHomeBatting: Boolean) {
         div {
             +(if (isHomeBatting) "BOTTOM" else "TOP")
-            style = "font-size: 2rem; color: #ff2a3b; letter-spacing: 2px;"
+            css {
+                fontSize = 2.rem
+                color = Color("#ff2a3b")
+                letterSpacing = 2.px
+            }
         }
     }
 
     private fun DIV.renderHeaderPanelCol2(battingTeam: Team, isHomeBatting: Boolean) {
         div {
-            style = "display: flex; flex-direction: column; justify-content: center;"
+            css {
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                justifyContent = JustifyContent.center
+            }
             div { +"TEAM: ${battingTeam.city.uppercase()} ${battingTeam.name.uppercase()}" }
             div {
                 +"MANAGER: ${if (isHomeBatting) "COUNSELL, C." else "REYNOLDS, J."}"
-                style = "font-size: 0.85rem; color: #555; margin-top: 0.25rem;"
+                css {
+                    fontSize = 0.85.rem
+                    color = Color("#555")
+                    marginTop = 0.25.rem
+                }
             }
         }
     }
 
     private fun DIV.renderHeaderPanelCol3(pitchingTeam: Team) {
         div {
-            style = "display: flex; flex-direction: column; justify-content: center;"
+            css {
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                justifyContent = JustifyContent.center
+            }
             div { +"PITCHING OPPONENT: ${pitchingTeam.name.uppercase()}" }
             div {
                 +"UMPIRES: HP: CULBRETH, F. | 1B: NELSON, J."
-                style = "font-size: 0.85rem; color: #555; margin-top: 0.25rem;"
+                css {
+                    fontSize = 0.85.rem
+                    color = Color("#555")
+                    marginTop = 0.25.rem
+                }
             }
         }
     }
 
     private fun DIV.renderHeaderPanelCol4(game: Game) {
         div {
-            style = "display: flex; flex-direction: column; justify-content: center; align-items: flex-end; font-size: 0.8rem;"
+            css {
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                justifyContent = JustifyContent.center
+                alignItems = Align.flexEnd
+                fontSize = 0.8.rem
+            }
             div { +"KEEPING SCORE BY: ☒ WEBAPP" }
             div { +"FIRST PITCH: 7:05 PM" }
 
             if (game.status != GameStatus.COMPLETED) {
                 button(classes = "btn") {
                     +"Bench & Bullpen"
-                    style = "margin-top: 0.4rem; font-size: 0.75rem; padding: 2px 8px; background: rgba(0, 0, 0, 0.05); border: 1px solid #5a544a; border-radius: 4px; cursor: pointer;"
+                    css {
+                        marginTop = 0.4.rem
+                        fontSize = 0.75.rem
+                        padding = Padding(2.px, 8.px)
+                        background = "rgba(0, 0, 0, 0.05)"
+                        border = Border(1.px, BorderStyle.solid, Color("#5a544a"))
+                        borderRadius = 4.px
+                        cursor = Cursor.pointer
+                    }
                     onClickFunction = {
                         val drawer = document.getElementById("roster-drawer-element") as? HTMLElement
                         if (drawer != null) {
@@ -104,7 +139,15 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
     private fun renderHeaderPanel(container: HTMLElement, isHomeBatting: Boolean, game: Game, battingTeam: Team, pitchingTeam: Team) {
         container.div {
-            style = "display: grid; grid-template-columns: 150px 1fr 1fr 180px; border: 2px solid #5a544a; background-color: #eae5dc; padding: 0.75rem; margin-bottom: 1rem; font-weight: bold;"
+            css {
+                display = Display.grid
+                put("grid-template-columns", "150px 1fr 1fr 180px")
+                border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                backgroundColor = Color("#eae5dc")
+                padding = Padding(0.75.rem)
+                marginBottom = 1.rem
+                fontWeight = FontWeight.bold
+            }
             renderHeaderPanelCol1(isHomeBatting)
             renderHeaderPanelCol2(battingTeam, isHomeBatting)
             renderHeaderPanelCol3(pitchingTeam)
@@ -120,12 +163,24 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
         container.div {
             id = "roster-drawer-element"
-            style = "display: none; background-color: #fcfbfa; border: 2px solid #5a544a; border-top: none; padding: 1rem; margin-top: -1.1rem; margin-bottom: 1.5rem; font-family: 'Courier New', Courier, monospace;"
+            css {
+                display = Display.none
+                backgroundColor = Color("#fcfbfa")
+                border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                put("border-top", "none")
+                padding = Padding(1.rem)
+                marginTop = (-1.1).rem
+                marginBottom = 1.5.rem
+                fontFamily = "'Courier New', Courier, monospace"
+            }
 
             div {
-                style = "display: flex; gap: 2rem;"
+                css {
+                    display = Display.flex
+                    gap = 2.rem
+                }
                 div {
-                    style = "flex: 1;"
+                    css { put("flex", "1") }
                     h4 { +"BENCH BATTERS" }
                     val batters = benchList.filter { it.position != BaseballConstants.Positions.P && !localPlayersSubbedOut.contains(it.id) }
                     if (batters.isEmpty()) {
@@ -137,7 +192,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     }
                 }
                 div {
-                    style = "flex: 1;"
+                    css { put("flex", "1") }
                     h4 { +"BULLPEN" }
                     val pitchers = fieldingBench.filter { it.position == BaseballConstants.Positions.P && it.name != activePitcherName }
                     if (pitchers.isEmpty()) {
@@ -149,7 +204,11 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                                 if (game.status != GameStatus.COMPLETED) {
                                     button(classes = "btn") {
                                         +"Call up"
-                                        style = "margin-left: 0.5rem; font-size: 0.7rem; padding: 1px 4px;"
+                                        css {
+                                            marginLeft = 0.5.rem
+                                            fontSize = 0.7.rem
+                                            padding = Padding(1.px, 4.px)
+                                        }
                                         onClickFunction = {
                                             substitutePitcher(isHome, p.id!!)
                                             renderCurrentTab()
@@ -175,38 +234,70 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         isHomeBatting: Boolean
     ) {
         val divWrapper = container.append.div {
-            style = "width: 100%; overflow-x: auto; border: 2px solid #5a544a;"
+            css {
+                width = 100.pct
+                overflowX = Overflow.auto
+                border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+            }
         }
         val tableEl = divWrapper.table {
-            style = "border-collapse: collapse; background-color: #faf9f6; min-width: 1000px; width: 100%; color: #2b2a28; font-size: 0.85rem;"
+            css {
+                borderCollapse = BorderCollapse.collapse
+                backgroundColor = Color("#faf9f6")
+                minWidth = 1000.px
+                width = 100.pct
+                color = Color("#2b2a28")
+                fontSize = 0.85.rem
+            }
         }
         val theadEl = tableEl.thead {
-            style = "background: #eae5dc; border-bottom: 2px solid #5a544a;"
+            css {
+                background = "#eae5dc"
+                borderBottom = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+            }
         }
         val theadTr = theadEl.tr {
-            style = "height: 35px;"
+            css { height = 35.px }
         }
 
         theadTr.th {
             +"BATTERS"
-            style = "border-right: 2px solid #5a544a; padding: 0.5rem; text-align: left; width: 180px;"
+            css {
+                borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                padding = Padding(0.5.rem)
+                textAlign = TextAlign.left
+                width = 180.px
+            }
         }
         theadTr.th {
             +"POS"
-            style = "border-right: 2px solid #5a544a; padding: 0.5rem; text-align: center; width: 45px;"
+            css {
+                borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                padding = Padding(0.5.rem)
+                textAlign = TextAlign.center
+                width = 45.px
+            }
         }
 
         for (inn in 1..maxInning) {
             theadTr.th {
                 +inn.toString()
-                style = "border-right: 1px solid #9c9384; width: 75px; text-align: center;"
+                css {
+                    borderRight = Border(1.px, BorderStyle.solid, Color("#9c9384"))
+                    width = 75.px
+                    textAlign = TextAlign.center
+                }
             }
         }
 
         listOf("AB", "R", "H", "RBI").forEach { sh ->
             theadTr.th {
                 +sh
-                style = "border-left: ${if (sh == "AB") "2px solid #5a544a" else "1px solid #9c9384"}; width: 45px; text-align: center;"
+                css {
+                    borderLeft = Border(if (sh == "AB") 2.px else 1.px, BorderStyle.solid, Color(if (sh == "AB") "#5a544a" else "#9c9384"))
+                    width = 45.px
+                    textAlign = TextAlign.center
+                }
             }
         }
 
@@ -219,13 +310,22 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
     private fun renderSubRow(tbodyEl: HTMLTableSectionElement, slotIdx: Int, pName1: String, battingStatsList: List<PlayerBattingStats>, cellBg: String, game: Game, isHomeBatting: Boolean): HTMLTableRowElement {
         val tr1 = tbodyEl.tr {
-            style = "border-bottom: 1px solid #5a544a; height: 42.5px;"
+            css {
+                borderBottom = Border(1.px, BorderStyle.solid, Color("#5a544a"))
+                height = 42.5.px
+            }
         }
         val subPos = battingStatsList.find { it.playerName == pName1 }?.position ?: BaseballConstants.Positions.DH
         renderPlayerCell(tr1, slotIdx, pName1, false, cellBg, game, isHomeBatting)
         tr1.td {
             +subPos
-            style = "border-right: 2px solid #5a544a; padding: 0.5rem; text-align: center; font-weight: bold; background: $cellBg;"
+            css {
+                borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                padding = Padding(0.5.rem)
+                textAlign = TextAlign.center
+                fontWeight = FontWeight.bold
+                background = cellBg
+            }
         }
         return tr1
     }
@@ -248,14 +348,23 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         val starterPos = battingStatsList.find { it.playerName == pName0 }?.position ?: BaseballConstants.Positions.DH
 
         val tr0 = tbodyEl.tr {
-            style = "border-bottom: ${if (hasSub) "1px solid #9c9384" else "1px solid #5a544a"}; height: 42.5px;"
+            css {
+                borderBottom = Border(1.px, BorderStyle.solid, Color(if (hasSub) "#9c9384" else "#5a544a"))
+                height = 42.5.px
+            }
         }
 
         renderPlayerCell(tr0, slotIdx, pName0, hasSub, cellBg, game, isHomeBatting)
 
         tr0.td {
             +starterPos
-            style = "border-right: 2px solid #5a544a; padding: 0.5rem; text-align: center; font-weight: bold; background: $cellBg;"
+            css {
+                borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                padding = Padding(0.5.rem)
+                textAlign = TextAlign.center
+                fontWeight = FontWeight.bold
+                background = cellBg
+            }
         }
 
         var tr1: HTMLTableRowElement? = null
@@ -273,7 +382,16 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
     private fun DIV.renderSubButton(slotIdx: Int, isHomeBatting: Boolean) {
         button {
             +"Sub"
-            style = "padding: 2px 6px; font-size: 0.7rem; background-color: #5a544a; color: white; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;"
+            css {
+                padding = Padding(2.px, 6.px)
+                fontSize = 0.7.rem
+                backgroundColor = Color("#5a544a")
+                color = Color.white
+                fontWeight = FontWeight.bold
+                border = Border.none
+                borderRadius = 4.px
+                cursor = Cursor.pointer
+            }
             onClickFunction = { event ->
                 val btnEl = event.target as? HTMLButtonElement
                 val parentCell = btnEl?.parentElement?.parentElement as? HTMLElement
@@ -294,12 +412,26 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         isHomeBatting: Boolean
     ) {
         tr.td {
-            style = "border-right: 2px solid #5a544a; padding: 0 0.5rem; vertical-align: middle; background: $cellBg; height: 42.5px;"
+            css {
+                borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                padding = Padding(0.px, 0.5.rem)
+                verticalAlign = VerticalAlign.middle
+                background = cellBg
+                height = 42.5.px
+            }
             div {
-                style = "display: flex; justify-content: space-between; align-items: center; width: 100%;"
+                css {
+                    display = Display.flex
+                    justifyContent = JustifyContent.spaceBetween
+                    alignItems = Align.center
+                    width = 100.pct
+                }
                 span {
                     +pName
-                    style = "font-weight: bold; font-family: 'Courier New', Courier, monospace;"
+                    css {
+                        fontWeight = FontWeight.bold
+                        fontFamily = "'Courier New', Courier, monospace"
+                    }
                 }
                 if (!hasSub && game.status != GameStatus.COMPLETED) {
                     renderSubButton(slotIdx, isHomeBatting)
@@ -357,21 +489,44 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             val val1 = selector(stat1)
             tr0.td {
                 +val0
-                style = "border-left: ${if (statIdx == 0) "2px solid #5a544a" else "1px solid #9c9384"}; text-align: center; background: $cellBg; font-weight: bold;"
+                css {
+                    borderLeft = Border(if (statIdx == 0) 2.px else 1.px, BorderStyle.solid, Color(if (statIdx == 0) "#5a544a" else "#9c9384"))
+                    textAlign = TextAlign.center
+                    background = cellBg
+                    fontWeight = FontWeight.bold
+                }
             }
             if (hasSub && tr1 != null) {
                 tr1.td {
                     +val1
-                    style = "border-left: ${if (statIdx == 0) "2px solid #5a544a" else "1px solid #9c9384"}; text-align: center; background: $cellBg; font-weight: bold;"
+                    css {
+                        borderLeft = Border(if (statIdx == 0) 2.px else 1.px, BorderStyle.solid, Color(if (statIdx == 0) "#5a544a" else "#9c9384"))
+                        textAlign = TextAlign.center
+                        background = cellBg
+                        fontWeight = FontWeight.bold
+                    }
                 }
             }
         }
     }
 
     private fun renderInningCell(td: TD, ev: PlayEvent?, cellBg: String, teamEvents: List<PlayEvent>, parser: ScorecardParser) {
-        td.style = "border-right: 1px solid #9c9384; padding: 0; height: 42.5px; width: 75px; background: $cellBg;"
+        td.css {
+            borderRight = Border(1.px, BorderStyle.solid, Color("#9c9384"))
+            padding = Padding(0.px)
+            height = 42.5.px
+            width = 75.px
+            background = cellBg
+        }
         td.div {
-            style = "position: relative; width: 100%; height: 100%; box-sizing: border-box; padding: 2px; overflow: hidden;"
+            css {
+                position = Position.relative
+                width = 100.pct
+                height = 100.pct
+                boxSizing = BoxSizing.borderBox
+                padding = Padding(2.px)
+                overflow = Overflow.hidden
+            }
             if (ev != null) {
                 val prog = parser.playProgressions[ev]
                 val base = prog?.maxBase ?: (parser.playAdvancements[ev] ?: 0)
@@ -384,14 +539,25 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 renderOutDetails(this, outAtBase, outDetail)
                 div {
                     +notation
-                    style = "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; font-size: 0.75rem; z-index: 2;"
+                    css {
+                        position = Position.absolute
+                        top = 50.pct
+                        left = 50.pct
+                        put("transform", "translate(-50%, -50%)")
+                        fontWeight = FontWeight.bold
+                        fontSize = 0.75.rem
+                        zIndex = 2
+                    }
                 }
                 renderCountBallsStrikes(this, ev)
                 renderOutCircle(this, outNum)
                 renderEndedInningDiagonal(this, ev, teamEvents)
             } else {
                 div {
-                    style = "width: 100%; height: 100%;"
+                    css {
+                        width = 100.pct
+                        height = 100.pct
+                    }
                 }
             }
         }
@@ -399,28 +565,80 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
     private fun DIV.renderInningDiamond(parent: DIV, base: Int) {
         parent.div {
-            style = "position: absolute; top: 8px; left: 24px; width: 24px; height: 24px; border: 1px solid #dcd8cf; transform: rotate(45deg); z-index: 1;"
+            css {
+                position = Position.absolute
+                top = 8.px
+                left = 24.px
+                width = 24.px
+                height = 24.px
+                border = Border(1.px, BorderStyle.solid, Color("#dcd8cf"))
+                put("transform", "rotate(45deg)")
+                zIndex = 1
+            }
             if (base >= 1) {
                 div {
-                    style = "position: absolute; bottom: -1px; right: -1px; width: 13px; height: 1px; background-color: #5a544a; transform: rotate(-45deg); transform-origin: bottom right;"
+                    css {
+                        position = Position.absolute
+                        bottom = (-1).px
+                        right = (-1).px
+                        width = 13.px
+                        height = 1.px
+                        backgroundColor = Color("#5a544a")
+                        put("transform", "rotate(-45deg)")
+                        put("transform-origin", "bottom right")
+                    }
                 }
             }
             if (base >= 2) {
                 div {
-                    style = "position: absolute; top: -1px; right: -1px; width: 13px; height: 1px; background-color: #5a544a; transform: rotate(45deg); transform-origin: top right;"
+                    css {
+                        position = Position.absolute
+                        top = (-1).px
+                        right = (-1).px
+                        width = 13.px
+                        height = 1.px
+                        backgroundColor = Color("#5a544a")
+                        put("transform", "rotate(45deg)")
+                        put("transform-origin", "top right")
+                    }
                 }
             }
             if (base >= 3) {
                 div {
-                    style = "position: absolute; top: -1px; left: -1px; width: 13px; height: 1px; background-color: #5a544a; transform: rotate(-45deg); transform-origin: top left;"
+                    css {
+                        position = Position.absolute
+                        top = (-1).px
+                        left = (-1).px
+                        width = 13.px
+                        height = 1.px
+                        backgroundColor = Color("#5a544a")
+                        put("transform", "rotate(-45deg)")
+                        put("transform-origin", "top left")
+                    }
                 }
             }
             if (base >= 4) {
                 div {
-                    style = "position: absolute; bottom: -1px; left: -1px; width: 13px; height: 1px; background-color: #5a544a; transform: rotate(45deg); transform-origin: bottom left;"
+                    css {
+                        position = Position.absolute
+                        bottom = (-1).px
+                        left = (-1).px
+                        width = 13.px
+                        height = 1.px
+                        backgroundColor = Color("#5a544a")
+                        put("transform", "rotate(45deg)")
+                        put("transform-origin", "bottom left")
+                    }
                 }
                 div {
-                    style = "position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background-color: rgba(90, 84, 74, 0.2);"
+                    css {
+                        position = Position.absolute
+                        top = 2.px
+                        left = 2.px
+                        width = 18.px
+                        height = 18.px
+                        backgroundColor = Color("rgba(90, 84, 74, 0.2)")
+                    }
                 }
             }
         }
@@ -436,15 +654,37 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     3 -> Pair("18px", "12px")
                     else -> Pair("30px", "32px")
                 }
-                style = "position: absolute; top: $t; left: $l; font-size: 0.65rem; color: #ff2a3b; font-weight: bold; z-index: 3;"
+                css {
+                    position = Position.absolute
+                    top = t.toPxOrPctOrRem()
+                    left = l.toPxOrPctOrRem()
+                    fontSize = 0.65.rem
+                    color = Color("#ff2a3b")
+                    fontWeight = FontWeight.bold
+                    zIndex = 3
+                }
             }
         }
+    }
+
+    private fun String.toPxOrPctOrRem(): LinearDimension {
+        return if (endsWith("px")) substringBefore("px").toInt().px
+        else if (endsWith("rem")) substringBefore("rem").toDouble().rem
+        else if (endsWith("%")) substringBefore("%").toDouble().pct
+        else 0.px
     }
 
     private fun DIV.renderCountBallsStrikes(parent: DIV, ev: PlayEvent) {
         if (ev.balls > 0 || ev.strikes > 0) {
             parent.div {
-                style = "position: absolute; top: 2px; left: 4px; font-size: 0.6rem; color: #777; font-family: monospace;"
+                css {
+                    position = Position.absolute
+                    top = 2.px
+                    left = 4.px
+                    fontSize = 0.6.rem
+                    color = Color("#777")
+                    fontFamily = "monospace"
+                }
                 +"${ev.balls}-${ev.strikes}"
             }
         }
@@ -454,7 +694,21 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         if (outNum != null) {
             parent.div {
                 +outNum.toString()
-                style = "position: absolute; bottom: 2px; left: 4px; width: 11px; height: 11px; border: 1px solid #ff2a3b; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 0.55rem; color: #ff2a3b; font-weight: bold;"
+                css {
+                    position = Position.absolute
+                    bottom = 2.px
+                    left = 4.px
+                    width = 11.px
+                    height = 11.px
+                    border = Border(1.px, BorderStyle.solid, Color("#ff2a3b"))
+                    borderRadius = 50.pct
+                    display = Display.flex
+                    justifyContent = JustifyContent.center
+                    alignItems = Align.center
+                    fontSize = 0.55.rem
+                    color = Color("#ff2a3b")
+                    fontWeight = FontWeight.bold
+                }
             }
         }
     }
@@ -465,7 +719,17 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         val endedInning = ev.outsAfter == 3 && (nextPlay == null || nextPlay.inning > ev.inning)
         if (endedInning) {
             parent.div {
-                style = "position: absolute; bottom: -10px; right: -10px; width: 35px; height: 1px; background-color: #5a544a; transform: rotate(-45deg); transform-origin: bottom right; z-index: 4;"
+                css {
+                    position = Position.absolute
+                    bottom = (-10).px
+                    right = (-10).px
+                    width = 35.px
+                    height = 1.px
+                    backgroundColor = Color("#5a544a")
+                    put("transform", "rotate(-45deg)")
+                    put("transform-origin", "bottom right")
+                    zIndex = 4
+                }
             }
         }
     }

@@ -8,6 +8,7 @@ import com.baseball.authService
 import com.baseball.auth.UserAccount
 import kotlinx.html.*
 import kotlinx.html.js.*
+import kotlinx.css.*
 
 internal fun renderLoginTab(container: HTMLElement) {
     var errorBanner: HTMLDivElement? = null
@@ -15,15 +16,31 @@ internal fun renderLoginTab(container: HTMLElement) {
     var passwordInput: HTMLInputElement? = null
 
     container.div(classes = "card") {
-        style = "max-width: 450px; margin: 2rem auto; padding: 2.5rem;"
+        css {
+            put("max-width", "450px")
+            put("margin", "2rem auto")
+            put("padding", "2.5rem")
+        }
 
         h2 {
             +"Log In to Grand Slam"
-            style = "text-align: center; margin-bottom: 1.5rem;"
+            css {
+                textAlign = TextAlign.center
+                marginBottom = 1.5.rem
+            }
         }
 
         errorBanner = div {
-            style = "display: none; color: var(--accent-red); background: rgba(255, 42, 59, 0.1); border: 1px solid var(--accent-red); padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem;"
+            css {
+                display = Display.none
+                color = Color("var(--accent-red)")
+                background = "rgba(255, 42, 59, 0.1)"
+                border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
+                put("padding", "0.75rem")
+                borderRadius = 8.px
+                marginBottom = 1.rem
+                fontSize = 0.9.rem
+            }
         } as HTMLDivElement
 
         form {
@@ -44,7 +61,10 @@ internal fun renderLoginTab(container: HTMLElement) {
             button(classes = "btn") {
                 type = ButtonType.button
                 +"Log In"
-                style = "width: 100%; margin-top: 1rem;"
+                css {
+                    width = 100.pct
+                    marginTop = 1.rem
+                }
                 onClickFunction = {
                     val banner = errorBanner
                     val emailIn = emailInput
@@ -87,11 +107,21 @@ internal fun renderLoginTab(container: HTMLElement) {
         }
 
         p {
-            style = "margin-top: 1.5rem; text-align: center; font-size: 0.9rem; color: var(--text-secondary);"
+            css {
+                marginTop = 1.5.rem
+                textAlign = TextAlign.center
+                fontSize = 0.9.rem
+                color = Color("var(--text-secondary)")
+            }
             span { +"Don't have an account? " }
             a {
                 +"Create Account"
-                style = "color: var(--accent-red); cursor: pointer; font-weight: bold; text-decoration: underline;"
+                css {
+                    color = Color("var(--accent-red)")
+                    cursor = Cursor.pointer
+                    fontWeight = FontWeight.bold
+                    put("text-decoration", "underline")
+                }
                 onClickFunction = {
                     window.location.hash = "register"
                 }
@@ -108,15 +138,31 @@ internal fun renderRegisterTab(container: HTMLElement) {
     var passwordInput: HTMLInputElement? = null
 
     container.div(classes = "card") {
-        style = "max-width: 450px; margin: 2rem auto; padding: 2.5rem;"
+        css {
+            put("max-width", "450px")
+            put("margin", "2rem auto")
+            put("padding", "2.5rem")
+        }
 
         h2 {
             +"Create Account"
-            style = "text-align: center; margin-bottom: 1.5rem;"
+            css {
+                textAlign = TextAlign.center
+                marginBottom = 1.5.rem
+            }
         }
 
         errorBanner = div {
-            style = "display: none; color: var(--accent-red); background: rgba(255, 42, 59, 0.1); border: 1px solid var(--accent-red); padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem;"
+            css {
+                display = Display.none
+                color = Color("var(--accent-red)")
+                background = "rgba(255, 42, 59, 0.1)"
+                border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
+                put("padding", "0.75rem")
+                borderRadius = 8.px
+                marginBottom = 1.rem
+                fontSize = 0.9.rem
+            }
         } as HTMLDivElement
 
         form {
@@ -151,7 +197,10 @@ internal fun renderRegisterTab(container: HTMLElement) {
             button(classes = "btn") {
                 type = ButtonType.button
                 +"Register & Log In"
-                style = "width: 100%; margin-top: 1rem;"
+                css {
+                    width = 100.pct
+                    marginTop = 1.rem
+                }
                 onClickFunction = {
                     val banner = errorBanner
                     val firstIn = firstNameInput
@@ -206,11 +255,21 @@ internal fun renderRegisterTab(container: HTMLElement) {
         }
 
         p {
-            style = "margin-top: 1.5rem; text-align: center; font-size: 0.9rem; color: var(--text-secondary);"
+            css {
+                marginTop = 1.5.rem
+                textAlign = TextAlign.center
+                fontSize = 0.9.rem
+                color = Color("var(--text-secondary)")
+            }
             span { +"Already have an account? " }
             a {
                 +"Log In"
-                style = "color: var(--accent-red); cursor: pointer; font-weight: bold; text-decoration: underline;"
+                css {
+                    color = Color("var(--accent-red)")
+                    cursor = Cursor.pointer
+                    fontWeight = FontWeight.bold
+                    put("text-decoration", "underline")
+                }
                 onClickFunction = {
                     window.location.hash = "login"
                 }

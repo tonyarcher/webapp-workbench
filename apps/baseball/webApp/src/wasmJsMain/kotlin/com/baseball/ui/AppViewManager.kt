@@ -17,6 +17,7 @@ import kotlinx.coroutines.*
 import org.w3c.dom.*
 import kotlinx.html.*
 import kotlinx.html.js.*
+import kotlinx.css.*
 
 private var _currentTab = BaseballConstants.TAB_LEAGUES
 var currentTab: String
@@ -159,15 +160,28 @@ object AppViewManager : DomBuilder {
         container.div(classes = "welcome-container") {
             val session = currentUserSession
             div {
-                style = "display: flex; justify-content: flex-end; width: 100%; margin-bottom: 1rem;"
+                css {
+                    display = Display.flex
+                    justifyContent = JustifyContent.flexEnd
+                    width = 100.pct
+                    marginBottom = 1.rem
+                }
                 if (session != null) {
                     span {
                         +"Logged in as ${session.firstName} "
-                        style = "color: var(--accent-yellow); font-weight: bold; margin-right: 1rem;"
+                        css {
+                            color = Color("var(--accent-yellow)")
+                            fontWeight = FontWeight.bold
+                            marginRight = 1.rem
+                        }
                     }
                     a {
                         +"Log Out"
-                        style = "color: var(--accent-red); cursor: pointer; text-decoration: underline;"
+                        css {
+                            color = Color("var(--accent-red)")
+                            cursor = Cursor.pointer
+                            put("text-decoration", "underline")
+                        }
                         onClickFunction = {
                             authService.logout()
                         }
@@ -175,7 +189,11 @@ object AppViewManager : DomBuilder {
                 } else {
                     a {
                         +"Log In / Sign Up"
-                        style = "color: var(--accent-yellow); cursor: pointer; text-decoration: underline;"
+                        css {
+                            color = Color("var(--accent-yellow)")
+                            cursor = Cursor.pointer
+                            put("text-decoration", "underline")
+                        }
                         onClickFunction = {
                             window.location.hash = "login"
                         }
@@ -274,7 +292,9 @@ object AppViewManager : DomBuilder {
         app.header {
             div(classes = "header-container") {
                 div(classes = "logo") {
-                    style = "cursor: pointer;"
+                    css {
+                        cursor = Cursor.pointer
+                    }
                     onClickFunction = {
                         goBackToWelcome()
                     }
@@ -285,14 +305,26 @@ object AppViewManager : DomBuilder {
                 val userSession = currentUserSession
                 if (userSession != null) {
                     div {
-                        style = "display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; color: var(--text-secondary);"
+                        css {
+                            display = Display.flex
+                            alignItems = Align.center
+                            gap = 1.rem
+                            fontSize = 0.9.rem
+                            color = Color("var(--text-secondary)")
+                        }
                         span {
                             +"Hello, ${userSession.firstName}!"
-                            style = "font-weight: 600; color: var(--accent-yellow);"
+                            css {
+                                put("font-weight", "600")
+                                color = Color("var(--accent-yellow)")
+                            }
                         }
                         button(classes = "btn btn-secondary") {
                             +"Log Out"
-                            style = "padding: 0.25rem 0.5rem; font-size: 0.8rem;"
+                            css {
+                                padding = Padding(0.25.rem, 0.5.rem)
+                                fontSize = 0.8.rem
+                            }
                             onClickFunction = {
                                 authService.logout()
                             }
@@ -301,7 +333,10 @@ object AppViewManager : DomBuilder {
                 } else {
                     button(classes = "btn btn-secondary") {
                         +"Log In"
-                        style = "padding: 0.25rem 0.75rem; font-size: 0.85rem;"
+                        css {
+                            padding = Padding(0.25.rem, 0.75.rem)
+                            fontSize = 0.85.rem
+                        }
                         onClickFunction = {
                             window.location.hash = "login"
                         }
@@ -351,7 +386,9 @@ object AppViewManager : DomBuilder {
                     button(classes = "nav-btn") {
                         id = "nav-btn-live"
                         +"Live Scoring"
-                        style = "display: ${if (isSingleGameMode || selectedGameId != null) "inline-block" else "none"};"
+                        css {
+                            put("display", if (isSingleGameMode || selectedGameId != null) "inline-block" else "none")
+                        }
                         onClickFunction = {
                             currentTab = BaseballConstants.TAB_LIVE_SCORER
                             updateActiveTabButtons()
@@ -362,7 +399,9 @@ object AppViewManager : DomBuilder {
                     button(classes = "nav-btn") {
                         id = "nav-btn-boxscore"
                         +"Box Score"
-                        style = "display: ${if (isSingleGameMode || selectedGameId != null) "inline-block" else "none"};"
+                        css {
+                            put("display", if (isSingleGameMode || selectedGameId != null) "inline-block" else "none")
+                        }
                         onClickFunction = {
                             currentTab = BaseballConstants.TAB_BOXSCORE
                             updateActiveTabButtons()

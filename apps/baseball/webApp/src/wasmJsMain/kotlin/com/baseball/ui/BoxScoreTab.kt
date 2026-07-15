@@ -12,11 +12,15 @@ import org.w3c.dom.*
 import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.html.dom.*
+import kotlinx.css.*
 
 internal fun renderBoxScoreTab(container: HTMLElement) {
     if (!isSingleGameMode && selectedGameId == null) {
         container.div(classes = "card") {
-            style = "text-align: center; padding: 3rem;"
+            css {
+                textAlign = TextAlign.center
+                put("padding", "3rem")
+            }
             p { +"No game selected." }
         }
         return
@@ -43,7 +47,10 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
             h2 { +"${game.awayTeam.city} ${game.awayTeam.name} (${game.awayScore}) vs ${game.homeTeam.city} ${game.homeTeam.name} (${game.homeScore})" }
             p {
                 +"Status: ${game.status.name} | Date: ${game.date}"
-                style = "color: var(--text-secondary); margin-bottom: 1.5rem;"
+                css {
+                    color = Color("var(--text-secondary)")
+                    marginBottom = 1.5.rem
+                }
             }
             button(classes = "btn btn-secondary") {
                 +(if (isSingleGameMode) "Back to Live Scorer" else "Back to Season Dashboard")
@@ -69,7 +76,9 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
             renderLineScoreTable(lineScoreCard, boxScore.lineScore, game)
 
             val grid = contentEl.div(classes = "dashboard-grid") {
-                style = "margin-top: 1.5rem;"
+                css {
+                    marginTop = 1.5.rem
+                }
             }
 
             val awayCard = grid.div(classes = "card") {
@@ -79,7 +88,9 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
 
             awayCard.h3 {
                 +"${game.awayTeam.name} Pitching"
-                style = "margin-top: 1.5rem;"
+                css {
+                    marginTop = 1.5.rem
+                }
             }
             renderPitchingTable(awayCard, boxScore.awayPitching)
 
@@ -90,15 +101,21 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
 
             homeCard.h3 {
                 +"${game.homeTeam.name} Pitching"
-                style = "margin-top: 1.5rem;"
+                css {
+                    marginTop = 1.5.rem
+                }
             }
             renderPitchingTable(homeCard, boxScore.homePitching)
 
             contentEl.div(classes = "card") {
-                style = "margin-top: 1.5rem;"
+                css {
+                    marginTop = 1.5.rem
+                }
                 h3 { +"Game Log History" }
                 div(classes = "event-log") {
-                    style = "max-height: 350px;"
+                    css {
+                        put("max-height", "350px")
+                    }
                     events.forEach { ev ->
                         div(classes = "log-item") {
                             span(classes = "log-desc") { +ev.description }
@@ -116,7 +133,12 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
         }
 
         val buttonBar = container.div {
-            style = "display: flex; gap: 0.5rem; margin-top: 1.5rem; margin-bottom: 1rem;"
+            css {
+                display = Display.flex
+                gap = 0.5.rem
+                marginTop = 1.5.rem
+                marginBottom = 1.rem
+            }
 
             button(classes = "btn btn-primary") {
                 id = "boxscore-btn-scorebook"
@@ -224,7 +246,10 @@ internal fun renderBattingTable(parent: HTMLElement, list: List<PlayerBattingSta
                         td {
                             colSpan = "8"
                             +"No batting stats recorded yet."
-                            style = "color: var(--text-secondary); text-align: center;"
+                            css {
+                                color = Color("var(--text-secondary)")
+                                textAlign = TextAlign.center
+                            }
                         }
                     }
                 } else {
@@ -232,7 +257,9 @@ internal fun renderBattingTable(parent: HTMLElement, list: List<PlayerBattingSta
                         tr {
                             td {
                                 +"${s.playerName} (${s.position})"
-                                style = "font-weight: bold;"
+                                css {
+                                    fontWeight = FontWeight.bold
+                                }
                             }
                             td { +s.atBats.toString() }
                             td { +s.runs.toString() }
@@ -270,7 +297,10 @@ internal fun renderPitchingTable(parent: HTMLElement, list: List<PlayerPitchingS
                         td {
                             colSpan = "8"
                             +"No pitching stats recorded yet."
-                            style = "color: var(--text-secondary); text-align: center;"
+                            css {
+                                color = Color("var(--text-secondary)")
+                                textAlign = TextAlign.center
+                            }
                         }
                     }
                 } else {
@@ -278,7 +308,9 @@ internal fun renderPitchingTable(parent: HTMLElement, list: List<PlayerPitchingS
                         tr {
                             td {
                                 +s.playerName
-                                style = "font-weight: bold;"
+                                css {
+                                    fontWeight = FontWeight.bold
+                                }
                             }
                             val whole = s.inningsPitchedThirds / 3
                             val rem = s.inningsPitchedThirds % 3

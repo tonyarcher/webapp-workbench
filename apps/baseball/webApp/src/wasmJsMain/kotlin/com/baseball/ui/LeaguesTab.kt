@@ -7,6 +7,7 @@ import com.baseball.models.*
 import org.w3c.dom.*
 import kotlinx.html.*
 import kotlinx.html.js.*
+import kotlinx.css.*
 
 internal fun renderLeaguesTab(container: HTMLElement) {
     container.h1 { +"Leagues & Seasons" }
@@ -23,20 +24,34 @@ internal fun renderLeaguesTab(container: HTMLElement) {
         if (leaguesList.isEmpty()) {
             divElement.p {
                 +"No leagues found. Create one to get started!"
-                style = "color: var(--text-secondary);"
+                css {
+                    color = Color("var(--text-secondary)")
+                }
             }
         } else {
             leaguesList.forEach { league ->
                 divElement.div(classes = "game-card") {
-                    style = "margin-bottom: 0.75rem; display: flex; flex-direction: column; align-items: flex-start;"
+                    css {
+                        marginBottom = 0.75.rem
+                        display = Display.flex
+                        flexDirection = FlexDirection.column
+                        alignItems = Align.flexStart
+                    }
 
                     div {
-                        style = "font-weight: bold; font-size: 1.1rem;"
+                        css {
+                            fontWeight = FontWeight.bold
+                            fontSize = 1.1.rem
+                        }
                         +league.name
                     }
 
                     button(classes = "btn btn-secondary${if (selectedLeagueId == league.id) " active" else ""}") {
-                        style = "margin-top: 0.5rem; padding: 0.25rem 0.75rem; font-size: 0.85rem;"
+                        css {
+                            marginTop = 0.5.rem
+                            padding = Padding(0.25.rem, 0.75.rem)
+                            fontSize = 0.85.rem
+                        }
                         +(if (selectedLeagueId == league.id) "Active League" else "Select League")
                         onClickFunction = {
                             selectedLeagueId = league.id
@@ -63,7 +78,9 @@ internal fun renderLeaguesTab(container: HTMLElement) {
 
         div {
             div(classes = "card") {
-                style = "margin-bottom: 2rem;"
+                css {
+                    marginBottom = 2.rem
+                }
                 h2 { +"Create New League" }
                 form {
                     div(classes = "form-group") {
@@ -103,7 +120,9 @@ internal fun renderLeaguesTab(container: HTMLElement) {
                     h2 { +"Seasons in Selected League" }
                     div {
                         id = "seasons-list-container"
-                        style = "margin-bottom: 1.5rem;"
+                        css {
+                            marginBottom = 1.5.rem
+                        }
                     }
 
                     h3 { +"Create New Season" }
@@ -163,20 +182,33 @@ internal fun renderLeaguesTab(container: HTMLElement) {
             if (seasonsList.isEmpty()) {
                 divElement.p {
                     +"No seasons in this league yet."
-                    style = "color: var(--text-secondary);"
+                    css {
+                        color = Color("var(--text-secondary)")
+                    }
                 }
             } else {
                 seasonsList.forEach { season ->
                     divElement.div(classes = "game-card") {
-                        style = "margin-bottom: 0.5rem; padding: 0.75rem; display: flex; justify-content: space-between; align-items: center;"
+                        css {
+                            marginBottom = 0.5.rem
+                            padding = Padding(0.75.rem)
+                            display = Display.flex
+                            justifyContent = JustifyContent.spaceBetween
+                            alignItems = Align.center
+                        }
 
                         span {
                             +"${season.name} (${season.year})"
-                            style = "font-weight: 600;"
+                            css {
+                                put("font-weight", "600")
+                            }
                         }
 
                         button(classes = "btn btn-secondary") {
-                            style = "padding: 0.25rem 0.5rem; font-size: 0.8rem;"
+                            css {
+                                padding = Padding(0.25.rem, 0.5.rem)
+                                fontSize = 0.8.rem
+                            }
                             +"Go to Dashboard"
                             onClickFunction = {
                                 selectedSeasonId = season.id

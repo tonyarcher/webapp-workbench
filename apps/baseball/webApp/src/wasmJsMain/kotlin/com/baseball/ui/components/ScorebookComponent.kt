@@ -5,6 +5,7 @@ import com.baseball.ui.*
 import org.w3c.dom.*
 import kotlinx.html.*
 import kotlinx.html.js.*
+import kotlinx.css.*
 
 internal fun renderScorebookView(container: HTMLElement, game: Game, boxScore: BoxScore, events: List<PlayEvent>) {
     container.innerHTML = ""
@@ -38,7 +39,15 @@ internal fun renderScorebookView(container: HTMLElement, game: Game, boxScore: B
 
 private fun renderScorebookWrapper(container: HTMLElement, game: Game, onToggle: (HalfInning) -> Unit): HTMLDivElement {
     return container.div(classes = "scorebook-wrapper") {
-        style = "background-color: #fcfbfa; color: #2b2a28; padding: 2rem; border-radius: 12px; border: 2px solid #d2cdc6; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); font-family: 'Courier New', Courier, monospace;"
+        css {
+            backgroundColor = Color("#fcfbfa")
+            color = Color("#2b2a28")
+            padding = Padding(2.rem)
+            borderRadius = 12.px
+            border = Border(2.px, BorderStyle.solid, Color("#d2cdc6"))
+            put("box-shadow", "0 6px 20px rgba(0, 0, 0, 0.15)")
+            put("font-family", "'Courier New', Courier, monospace")
+        }
         renderScorebookHeader(this, game, onToggle)
         div {
             id = "scorebook-sheet-container"
@@ -48,10 +57,21 @@ private fun renderScorebookWrapper(container: HTMLElement, game: Game, onToggle:
 
 private fun renderScorebookHeader(parent: DIV, game: Game, onToggle: (HalfInning) -> Unit) {
     parent.div {
-        style = "display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #d2cdc6; padding-bottom: 1rem; margin-bottom: 1.5rem;"
+        css {
+            display = Display.flex
+            justifyContent = JustifyContent.spaceBetween
+            alignItems = Align.center
+            borderBottom = Border(2.px, BorderStyle.solid, Color("#d2cdc6"))
+            paddingBottom = 1.rem
+            marginBottom = 1.5.rem
+        }
         h2 {
             +"SCOREBOOK"
-            style = "margin: 0; font-weight: bold; letter-spacing: 2px;"
+            css {
+                margin = Margin(0.px)
+                fontWeight = FontWeight.bold
+                put("letter-spacing", "2px")
+            }
         }
         renderToggleButtonGroup(this, game, onToggle)
     }
@@ -60,17 +80,24 @@ private fun renderScorebookHeader(parent: DIV, game: Game, onToggle: (HalfInning
 private fun renderToggleButtonGroup(parent: DIV, game: Game, onToggle: (HalfInning) -> Unit) {
     parent.div {
         id = "toggle-btn-group"
-        style = "display: flex; gap: 0.5rem;"
+        css {
+            display = Display.flex
+            gap = 0.5.rem
+        }
         button(classes = "btn btn-primary") {
             id = "btn-away-batting"
             +"${game.awayTeam.abbreviation} BATTING (TOP)"
-            style = "padding: 0.5rem 1rem;"
+            css {
+                padding = Padding(0.5.rem, 1.rem)
+            }
             onClickFunction = { onToggle(HalfInning.TOP) }
         }
         button(classes = "btn btn-secondary") {
             id = "btn-home-batting"
             +"${game.homeTeam.abbreviation} BATTING (BOTTOM)"
-            style = "padding: 0.5rem 1rem;"
+            css {
+                padding = Padding(0.5.rem, 1.rem)
+            }
             onClickFunction = { onToggle(HalfInning.BOTTOM) }
         }
     }

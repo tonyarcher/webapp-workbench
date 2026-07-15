@@ -28,6 +28,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-browser:0.5.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-html:0.12.0")
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-css:2026.7.0")
             }
         }
         val wasmJsTest by getting {

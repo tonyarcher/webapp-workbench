@@ -7,6 +7,7 @@ import com.baseball.models.*
 import org.w3c.dom.*
 import kotlinx.html.*
 import kotlinx.html.js.*
+import kotlinx.css.*
 
 internal fun renderTeamsTab(container: HTMLElement) {
     container.h1 { +"Teams & Rosters" }
@@ -29,7 +30,7 @@ internal fun renderTeamsTab(container: HTMLElement) {
         if (tid == null) {
             divElement.p {
                 +"Select a team to view roster."
-                style = "color: var(--text-secondary);"
+                css { color = Color("var(--text-secondary)") }
             }
             return
         }
@@ -39,7 +40,7 @@ internal fun renderTeamsTab(container: HTMLElement) {
             if (roster.isEmpty()) {
                 divElement.p {
                     +"No players on this roster yet."
-                    style = "color: var(--text-secondary);"
+                    css { color = Color("var(--text-secondary)") }
                 }
             } else {
                 divElement.div(classes = "table-container") {
@@ -59,7 +60,7 @@ internal fun renderTeamsTab(container: HTMLElement) {
                                     td { +p.name }
                                     td {
                                         +p.position
-                                        style = "color: var(--accent-green);"
+                                        css { color = Color("var(--accent-green)") }
                                     }
                                     td { +"${p.battingHand}/${p.throwingHand}" }
                                 }
@@ -77,20 +78,32 @@ internal fun renderTeamsTab(container: HTMLElement) {
         if (teamsList.isEmpty()) {
             divElement.p {
                 +"No teams found. Create one!"
-                style = "color: var(--text-secondary);"
+                css { color = Color("var(--text-secondary)") }
             }
         } else {
             teamsList.forEach { team ->
                 divElement.div(classes = "game-card") {
-                    style = "margin-bottom: 0.75rem; display: flex; flex-direction: column; align-items: flex-start;"
+                    css {
+                        marginBottom = 0.75.rem
+                        display = Display.flex
+                        flexDirection = FlexDirection.column
+                        alignItems = Align.flexStart
+                    }
 
                     div {
-                        style = "font-weight: bold; font-size: 1.1rem;"
+                        css {
+                            fontWeight = FontWeight.bold
+                            fontSize = 1.1.rem
+                        }
                         +"${team.city} ${team.name} (${team.abbreviation})"
                     }
 
                     button(classes = "btn btn-secondary${if (selectedTeamId == team.id) " active" else ""}") {
-                        style = "margin-top: 0.5rem; padding: 0.25rem 0.75rem; font-size: 0.85rem;"
+                        css {
+                            marginTop = 0.5.rem
+                            padding = Padding(0.25.rem, 0.75.rem)
+                            fontSize = 0.85.rem
+                        }
                         +(if (selectedTeamId == team.id) "Active Team" else "Select Team")
                         onClickFunction = {
                             selectedTeamId = team.id
@@ -114,7 +127,7 @@ internal fun renderTeamsTab(container: HTMLElement) {
 
         div {
             div(classes = "card") {
-                style = "margin-bottom: 2rem;"
+                css { marginBottom = 2.rem }
                 h2 { +"Add Team" }
                 form {
                     div(classes = "form-group") {
@@ -171,7 +184,7 @@ internal fun renderTeamsTab(container: HTMLElement) {
                     h2 { +"${team?.city} ${team?.name} Roster" }
                     div {
                         id = "roster-container"
-                        style = "margin-bottom: 1.5rem;"
+                        css { marginBottom = 1.5.rem }
                     }
 
                     h3 { +"Add Player to Roster" }
@@ -205,7 +218,10 @@ internal fun renderTeamsTab(container: HTMLElement) {
                         div(classes = "form-group") {
                             label { +"Batting / Throwing Hand" }
                             div {
-                                style = "display: flex; gap: 1rem;"
+                                css {
+                                    display = Display.flex
+                                    gap = 1.rem
+                                }
                                 select(classes = "form-control") {
                                     id = "player-bat-select"
                                     listOf("R", "L", "S").forEach { h ->

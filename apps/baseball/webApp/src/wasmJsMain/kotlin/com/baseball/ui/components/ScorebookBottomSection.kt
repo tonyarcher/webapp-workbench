@@ -6,6 +6,8 @@ import org.w3c.dom.*
 import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.html.dom.*
+import kotlinx.css.*
+import com.baseball.ui.css
 
 fun renderScorebookBottomSection(
     container: HTMLElement,
@@ -21,7 +23,12 @@ fun renderScorebookBottomSection(
     localHomeActivePitcherName: String
 ) {
     val bottomGrid = container.append.div {
-        style = "display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 1.5rem;"
+        css {
+            display = Display.flex
+            put("flex-wrap", "wrap")
+            gap = 1.5.rem
+            marginTop = 1.5.rem
+        }
     }
 
     renderDefenseDiagram(bottomGrid, isHomeBatting, localAwayRoster, localHomeRoster, localAwayActivePitcherId, localHomeActivePitcherId)
@@ -38,20 +45,60 @@ private fun renderDefenseDiagram(
     localHomeActivePitcherId: Long
 ) {
     val cardEl = parent.append.div(classes = "card") {
-        style = "background-color: #f9f7f2; border: 2px solid #5a544a; padding: 1rem; color: #2b2a28; flex: 1 1 300px;"
+        css {
+            backgroundColor = Color("#f9f7f2")
+            border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+            padding = Padding(1.rem)
+            color = Color("#2b2a28")
+            put("flex", "1 1 300px")
+        }
         h3 {
             +"HOME DEFENSE FIELD"
-            style = "text-align: center; margin: 0 0 1rem 0; font-size: 1rem; font-weight: bold; border-bottom: 1px solid #c2bcae; padding-bottom: 0.25rem;"
+            css {
+                textAlign = TextAlign.center
+                margin = Margin(0.px, 0.px, 1.rem, 0.px)
+                fontSize = 1.rem
+                fontWeight = FontWeight.bold
+                borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
+                paddingBottom = 0.25.rem
+            }
         }
     }
 
     val fieldWrapper = cardEl.append.div {
-        style = "position: relative; width: 100%; height: 260px; background-color: #edf2eb; border: 1px solid #c2bcae; border-radius: 8px; overflow: hidden;"
-        div {
-            style = "position: absolute; bottom: 10px; left: calc(50% - 90px); width: 180px; height: 180px; border-radius: 50%; background-color: #e5ccb3; z-index: 1;"
+        css {
+            position = Position.relative
+            width = 100.pct
+            height = 260.px
+            backgroundColor = Color("#edf2eb")
+            border = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
+            borderRadius = 8.px
+            overflow = Overflow.hidden
         }
         div {
-            style = "position: absolute; bottom: 50px; left: calc(50% - 50px); width: 100px; height: 100px; background-color: #cbe1c7; border: 2px solid white; transform: rotate(45deg); z-index: 2;"
+            css {
+                position = Position.absolute
+                bottom = 10.px
+                left = "calc(50% - 90px)".toCSSValue()
+                width = 180.px
+                height = 180.px
+                borderRadius = 50.pct
+                backgroundColor = Color("#e5ccb3")
+                zIndex = 1
+            }
+        }
+        div {
+            css {
+                position = Position.absolute
+                bottom = 50.px
+                left = "calc(50% - 50px)".toCSSValue()
+                width = 100.px
+                height = 100.px
+                backgroundColor = Color("#cbe1c7")
+                border = Border(2.px, BorderStyle.solid, Color.white)
+                put("transform", "rotate(45deg)")
+                zIndex = 2
+            }
         }
     }
 
@@ -59,6 +106,8 @@ private fun renderDefenseDiagram(
     val activePitcherId = if (isHomeBatting) localAwayActivePitcherId else localHomeActivePitcherId
     renderPositionNodes(fieldWrapper, defPlayers, activePitcherId)
 }
+
+private fun String.toCSSValue(): LinearDimension = LinearDimension(this)
 
 private fun buildPositionsMap(defPlayers: List<Player>, activePitcherId: Long): Map<String, String> {
     return mapOf(
@@ -91,14 +140,44 @@ private fun renderPositionNodes(fieldWrapper: HTMLDivElement, defPlayers: List<P
     coords.forEach { (pos, coord) ->
         val name = positionsMap[pos] ?: "Def"
         fieldWrapper.append.div {
-            style = "position: absolute; top: ${coord.first}; left: ${coord.second}; width: 80px; display: flex; flex-direction: column; align-items: center; z-index: 10;"
+            css {
+                position = Position.absolute
+                top = coord.first.toCSSValue()
+                left = coord.second.toCSSValue()
+                width = 80.px
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                alignItems = Align.center
+                zIndex = 10
+            }
             span {
                 +pos
-                style = "font-size: 0.75rem; font-weight: bold; background-color: #ff2a3b; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; justify-content: center; align-items: center; border: 1px solid white;"
+                css {
+                    fontSize = 0.75.rem
+                    fontWeight = FontWeight.bold
+                    backgroundColor = Color("#ff2a3b")
+                    color = Color.white
+                    borderRadius = 50.pct
+                    width = 18.px
+                    height = 18.px
+                    display = Display.flex
+                    justifyContent = JustifyContent.center
+                    alignItems = Align.center
+                    border = Border(1.px, BorderStyle.solid, Color.white)
+                }
             }
             span {
                 +name.substringBefore(" ").take(8)
-                style = "font-size: 0.65rem; font-weight: bold; color: #111; background-color: rgba(255, 255, 255, 0.8); padding: 1px 4px; border-radius: 3px; margin-top: 2px; text-align: center;"
+                css {
+                    fontSize = 0.65.rem
+                    fontWeight = FontWeight.bold
+                    color = Color("#111")
+                    backgroundColor = Color("rgba(255, 255, 255, 0.8)")
+                    padding = Padding(1.px, 4.px)
+                    borderRadius = 3.px
+                    marginTop = 2.px
+                    textAlign = TextAlign.center
+                }
             }
         }
     }
@@ -106,13 +185,16 @@ private fun renderPositionNodes(fieldWrapper: HTMLDivElement, defPlayers: List<P
 
 private fun TABLE.renderPitchingHeader() {
     thead {
-        style = "background-color: #eae5dc;"
+        css { backgroundColor = Color("#eae5dc") }
         tr {
-            style = "border-bottom: 1px solid #5a544a;"
+            css { borderBottom = Border(1.px, BorderStyle.solid, Color("#5a544a")) }
             listOf("PITCHER", "R/L", "IP", "BF", "H", "R", "ER", "BB", "K").forEach { h ->
                 th {
                     +h
-                    style = "padding: 4px; text-align: ${if (h == "PITCHER") "left" else "center"};"
+                    css {
+                        padding = Padding(4.px)
+                        textAlign = if (h == "PITCHER") TextAlign.left else TextAlign.center
+                    }
                 }
             }
         }
@@ -121,16 +203,36 @@ private fun TABLE.renderPitchingHeader() {
 
 private fun renderOpposingPitchingStats(parent: HTMLDivElement, isHomeBatting: Boolean, boxScore: BoxScore) {
     parent.append.div(classes = "card") {
-        style = "background-color: #f9f7f2; border: 2px solid #5a544a; padding: 1rem; color: #2b2a28; flex: 1 1 320px;"
+        css {
+            backgroundColor = Color("#f9f7f2")
+            border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+            padding = Padding(1.rem)
+            color = Color("#2b2a28")
+            put("flex", "1 1 320px")
+        }
         h3 {
             +"OPPOSING PITCHING STATS"
-            style = "text-align: center; margin: 0 0 1rem 0; font-size: 1rem; font-weight: bold; border-bottom: 1px solid #c2bcae; padding-bottom: 0.25rem;"
+            css {
+                textAlign = TextAlign.center
+                margin = Margin(0.px, 0.px, 1.rem, 0.px)
+                fontSize = 1.rem
+                fontWeight = FontWeight.bold
+                borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
+                paddingBottom = 0.25.rem
+            }
         }
         val pStatsList = if (isHomeBatting) boxScore.awayPitching else boxScore.homePitching
         div {
-            style = "overflow-y: auto; height: 260px;"
+            css {
+                overflowY = Overflow.auto
+                height = 260.px
+            }
             table {
-                style = "width: 100%; border-collapse: collapse; font-size: 0.8rem;"
+                css {
+                    width = 100.pct
+                    borderCollapse = BorderCollapse.collapse
+                    fontSize = 0.8.rem
+                }
                 renderPitchingHeader()
                 tbody {
                     pStatsList.forEach { p -> renderPitcherRow(this, p) }
@@ -143,16 +245,19 @@ private fun renderOpposingPitchingStats(parent: HTMLDivElement, isHomeBatting: B
 private fun TR.renderCenterTd(text: String) {
     td {
         +text
-        style = "text-align: center;"
+        css { textAlign = TextAlign.center }
     }
 }
 
 private fun renderPitcherRow(tbody: TBODY, p: PlayerPitchingStats) {
     tbody.tr {
-        style = "border-bottom: 1px solid #c2bcae;"
+        css { borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae")) }
         td {
             +p.playerName
-            style = "font-weight: bold; padding: 6px 4px;"
+            css {
+                fontWeight = FontWeight.bold
+                padding = Padding(6.px, 4.px)
+            }
         }
         renderCenterTd("R")
         renderCenterTd("${p.inningsPitchedThirds / 3}.${p.inningsPitchedThirds % 3}")
@@ -176,10 +281,23 @@ private fun renderScoreboardSummary(
     localAwayActivePitcherName: String
 ) {
     parent.append.div(classes = "card") {
-        style = "background-color: #eae5dc; border: 2px solid #5a544a; padding: 1rem; color: #2b2a28; flex: 1 1 280px;"
+        css {
+            backgroundColor = Color("#eae5dc")
+            border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+            padding = Padding(1.rem)
+            color = Color("#2b2a28")
+            put("flex", "1 1 280px")
+        }
         h3 {
             +"SCOREBOARD SUMMARY"
-            style = "text-align: center; margin: 0 0 1rem 0; font-size: 1rem; font-weight: bold; border-bottom: 1px solid #5a544a; padding-bottom: 0.25rem;"
+            css {
+                textAlign = TextAlign.center
+                margin = Margin(0.px, 0.px, 1.rem, 0.px)
+                fontSize = 1.rem
+                fontWeight = FontWeight.bold
+                borderBottom = Border(1.px, BorderStyle.solid, Color("#5a544a"))
+                paddingBottom = 0.25.rem
+            }
         }
         renderLineScoreTable(this, game, boxScore, maxInning)
         renderPitcherRecords(this, game, localHomeRoster, localAwayRoster, localHomeActivePitcherName, localAwayActivePitcherName)
@@ -189,21 +307,24 @@ private fun renderScoreboardSummary(
 private fun TABLE.renderLineScoreHeader(maxInning: Int) {
     thead {
         tr {
-            style = "border-bottom: 1px solid #5a544a;"
+            css { borderBottom = Border(1.px, BorderStyle.solid, Color("#5a544a")) }
             th {
                 +"TEAM"
-                style = "text-align: left;"
+                css { textAlign = TextAlign.left }
             }
             for (i in 1..maxInning) {
                 th {
                     +i.toString()
-                    style = "text-align: center;"
+                    css { textAlign = TextAlign.center }
                 }
             }
             listOf("R", "H", "E").forEach { h ->
                 th {
                     +h
-                    style = "text-align: center;${if (h == "R") " font-weight: bold;" else ""}"
+                    css {
+                        textAlign = TextAlign.center
+                        if (h == "R") fontWeight = FontWeight.bold
+                    }
                 }
             }
         }
@@ -212,7 +333,12 @@ private fun TABLE.renderLineScoreHeader(maxInning: Int) {
 
 private fun renderLineScoreTable(card: DIV, game: Game, boxScore: BoxScore, maxInning: Int) {
     card.table {
-        style = "width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.85rem;"
+        css {
+            width = 100.pct
+            borderCollapse = BorderCollapse.collapse
+            marginBottom = 1.5.rem
+            fontSize = 0.85.rem
+        }
         renderLineScoreHeader(maxInning)
         tbody {
             renderLineScoreTeamRow(this, game.awayTeam.abbreviation, boxScore.lineScore.awayInningRuns, game.gameState.inning, boxScore.lineScore.awayRuns, boxScore.lineScore.awayHits, boxScore.lineScore.awayErrors, maxInning)
@@ -223,10 +349,10 @@ private fun renderLineScoreTable(card: DIV, game: Game, boxScore: BoxScore, maxI
 
 private fun renderLineScoreTeamRow(tbody: TBODY, teamAbb: String, inningRuns: List<Int?>, currentInning: Int, r: Int, h: Int, e: Int, maxInning: Int) {
     tbody.tr {
-        style = "border-bottom: 1px solid #c2bcae;"
+        css { borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae")) }
         td {
             +teamAbb
-            style = "font-weight: bold;"
+            css { fontWeight = FontWeight.bold }
         }
         for (i in 1..maxInning) {
             val run = inningRuns.getOrNull(i - 1)
@@ -239,7 +365,10 @@ private fun renderLineScoreTeamRow(tbody: TBODY, teamAbb: String, inningRuns: Li
         }
         td {
             +r.toString()
-            style = "text-align: center; font-weight: bold;"
+            css {
+                textAlign = TextAlign.center
+                fontWeight = FontWeight.bold
+            }
         }
         renderCenterTd(h.toString())
         renderCenterTd(e.toString())
@@ -284,7 +413,14 @@ private fun renderPitcherRecords(
     val svName = if (isCompleted && game.homeScore > game.awayScore) "HADER (12)" else if (isCompleted) "NONE" else "-"
 
     card.div {
-        style = "display: flex; flex-direction: column; gap: 0.5rem; border-top: 1px solid #5a544a; padding-top: 0.75rem; font-size: 0.8rem;"
+        css {
+            display = Display.flex
+            flexDirection = FlexDirection.column
+            gap = 0.5.rem
+            borderTop = Border(1.px, BorderStyle.solid, Color("#5a544a"))
+            paddingTop = 0.75.rem
+            fontSize = 0.8.rem
+        }
         listOf(
             (if (isCompleted) "WP" else "Potential WP (Hook)") to wpName,
             (if (isCompleted) "LP" else "Potential LP (Hook)") to lpName,
@@ -293,7 +429,7 @@ private fun renderPitcherRecords(
             div {
                 +"$label: "
                 span {
-                    style = "font-weight: bold;"
+                    css { fontWeight = FontWeight.bold }
                     +name
                 }
             }

@@ -9,6 +9,7 @@ import org.w3c.dom.*
 import kotlin.random.Random
 import kotlinx.html.*
 import kotlinx.html.js.*
+import kotlinx.css.*
 
 var isLineupDialogOpen = false
 
@@ -137,17 +138,39 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
     fun render() {
         container.innerHTML = ""
         container.div {
-            style = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10, 15, 30, 0.8); backdrop-filter: blur(12px); display: flex; align-items: flex-start; justify-content: center; z-index: 10000; overflow-y: auto; padding: 2rem 1rem;"
+            css {
+                position = Position.fixed
+                top = 0.px
+                left = 0.px
+                put("width", "100vw")
+                put("height", "100vh")
+                background = "rgba(10, 15, 30, 0.8)"
+                put("backdrop-filter", "blur(12px)")
+                display = Display.flex
+                alignItems = Align.flexStart
+                justifyContent = JustifyContent.center
+                zIndex = 10000
+                overflowY = Overflow.auto
+                padding = Padding(2.rem, 1.rem)
+            }
             renderModalContent(this)
         }
     }
 
     private fun renderModalContent(parent: DIV) {
         parent.div(classes = "lineup-modal-content card") {
-            style = "width: 100%; max-width: 1000px; padding: 2rem; box-shadow: 0 10px 40px rgba(0,0,0,0.5);"
+            css {
+                width = 100.pct
+                put("max-width", "1000px")
+                padding = Padding(2.rem)
+                put("box-shadow", "0 10px 40px rgba(0,0,0,0.5)")
+            }
             h1 {
                 +"Game Roster & Lineup Setup"
-                style = "text-align: center; margin-bottom: 1.5rem;"
+                css {
+                    textAlign = TextAlign.center
+                    marginBottom = 1.5.rem
+                }
             }
             renderValidationErrorBanner(this)
             renderConfigurationBar(this)
@@ -160,15 +183,30 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
         val errorMsg = validationError ?: return
         parent.div(classes = "server-error-banner") {
             +errorMsg
-            style = "margin-bottom: 1rem;"
+            css {
+                marginBottom = 1.rem
+            }
         }
     }
 
     private fun renderConfigurationBar(parent: DIV) {
         parent.div {
-            style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; background: rgba(255, 255, 255, 0.03); padding: 1rem; border-radius: 8px;"
+            css {
+                display = Display.flex
+                justifyContent = JustifyContent.spaceBetween
+                alignItems = Align.center
+                marginBottom = 1.5.rem
+                background = "rgba(255, 255, 255, 0.03)"
+                padding = Padding(1.rem)
+                borderRadius = 8.px
+            }
             label {
-                style = "display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"
+                css {
+                    display = Display.flex
+                    alignItems = Align.center
+                    gap = 0.5.rem
+                    cursor = Cursor.pointer
+                }
                 input(type = InputType.checkBox) {
                     checked = useDh
                     onChangeFunction = { event ->
@@ -180,7 +218,9 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
                 }
                 span {
                     +"Enable Designated Hitter (DH)"
-                    style = "font-weight: bold;"
+                    css {
+                        fontWeight = FontWeight.bold
+                    }
                 }
             }
             renderConfigActionButtons(this)
@@ -189,7 +229,10 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
 
     private fun renderConfigActionButtons(parent: DIV) {
         parent.div {
-            style = "display: flex; gap: 0.75rem;"
+            css {
+                display = Display.flex
+                gap = 0.75.rem
+            }
             button(classes = "btn btn-secondary") {
                 +"Load Default Roster"
                 onClickFunction = {
@@ -200,7 +243,9 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
             }
             button(classes = "btn btn-action") {
                 +"Populate Random Example Data"
-                style = "background: linear-gradient(135deg, #3b82f6, #8b5cf6);"
+                css {
+                    put("background", "linear-gradient(135deg, #3b82f6, #8b5cf6)")
+                }
                 onClickFunction = {
                     validationError = null
                     populateWithRosters(useSeedRosters = false)
@@ -212,7 +257,12 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
 
     private fun renderTeamGrid(parent: DIV) {
         parent.div {
-            style = "display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;"
+            css {
+                display = Display.grid
+                put("grid-template-columns", "1fr 1fr")
+                gap = 2.rem
+                marginBottom = 2.rem
+            }
             renderTeamColumn(isHome = false)
             renderTeamColumn(isHome = true)
         }
@@ -220,7 +270,11 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
 
     private fun renderFooterButtons(parent: DIV) {
         parent.div {
-            style = "display: flex; justify-content: space-between; margin-top: 1.5rem;"
+            css {
+                display = Display.flex
+                justifyContent = JustifyContent.spaceBetween
+                marginTop = 1.5.rem
+            }
             button(classes = "btn btn-secondary") {
                 +"← Go Back to Welcome"
                 onClickFunction = {
@@ -278,10 +332,18 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
 
     private fun DIV.renderTeamColumn(isHome: Boolean) {
         div {
-            style = "background: rgba(255, 255, 255, 0.02); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);"
+            css {
+                background = "rgba(255, 255, 255, 0.02)"
+                padding = Padding(1.5.rem)
+                borderRadius = 12.px
+                border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.05)"))
+            }
             h2 {
                 +(if (isHome) "Home Team: ${homeTeam.name}" else "Away Team: ${awayTeam.name}")
-                style = "color: " + (if (isHome) "var(--accent-yellow);" else "var(--accent-blue);") + " margin-bottom: 1rem;"
+                css {
+                    color = Color(if (isHome) "var(--accent-yellow)" else "var(--accent-blue)")
+                    marginBottom = 1.rem
+                }
             }
             if (useDh) {
                 renderPitcherInputRow(this, isHome)
@@ -293,15 +355,27 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
 
     private fun renderPitcherInputRow(parent: DIV, isHome: Boolean) {
         parent.div {
-            style = "display: flex; gap: 0.5rem; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px dashed rgba(255,255,255,0.1); align-items: center;"
+            css {
+                display = Display.flex
+                gap = 0.5.rem
+                marginBottom = 1.25.rem
+                paddingBottom = 1.rem
+                put("border-bottom", "1px dashed rgba(255,255,255,0.1)")
+                alignItems = Align.center
+            }
             span {
                 +"Starting Pitcher:"
-                style = "font-weight: bold; width: 100px;"
+                css {
+                    fontWeight = FontWeight.bold
+                    put("width", "100px")
+                }
             }
             input(type = InputType.text, classes = "form-control") {
                 placeholder = "Pitcher Name"
                 value = if (isHome) homePitcherNameInput else awayPitcherNameInput
-                style = "flex: 1;"
+                css {
+                    put("flex", "1")
+                }
                 onChangeFunction = { event ->
                     val txt = (event.target as HTMLInputElement).value
                     if (isHome) homePitcherNameInput = txt else awayPitcherNameInput = txt
@@ -310,7 +384,9 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
             input(type = InputType.number, classes = "form-control") {
                 placeholder = "No."
                 value = if (isHome) homePitcherNumberInput else awayPitcherNumberInput
-                style = "width: 60px;"
+                css {
+                    put("width", "60px")
+                }
                 onChangeFunction = { event ->
                     val txt = (event.target as HTMLInputElement).value
                     if (isHome) homePitcherNumberInput = txt else awayPitcherNumberInput = txt
@@ -321,7 +397,15 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
 
     private fun renderLineupHeader(parent: DIV) {
         parent.div {
-            style = "display: grid; grid-template-columns: 40px 1fr 60px 80px; gap: 0.5rem; margin-bottom: 0.5rem; padding: 0 0.5rem; font-weight: bold; color: rgba(255,255,255,0.6);"
+            css {
+                display = Display.grid
+                put("grid-template-columns", "40px 1fr 60px 80px")
+                gap = 0.5.rem
+                marginBottom = 0.5.rem
+                padding = Padding(0.px, 0.5.rem)
+                fontWeight = FontWeight.bold
+                color = Color("rgba(255,255,255,0.6)")
+            }
             div { +"Slot" }
             div { +"Batter Name" }
             div { +"No." }
@@ -339,10 +423,20 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
     private fun renderSingleLineupRow(parent: DIV, list: MutableList<PlayerInputs>, i: Int) {
         val item = list[i]
         parent.div {
-            style = "display: grid; grid-template-columns: 40px 1fr 60px 80px; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;"
+            css {
+                display = Display.grid
+                put("grid-template-columns", "40px 1fr 60px 80px")
+                gap = 0.5.rem
+                marginBottom = 0.5.rem
+                alignItems = Align.center
+            }
             span {
                 +"${i + 1}"
-                style = "text-align: center; color: rgba(255,255,255,0.4); font-weight: bold;"
+                css {
+                    textAlign = TextAlign.center
+                    color = Color("rgba(255,255,255,0.4)")
+                    fontWeight = FontWeight.bold
+                }
             }
             input(type = InputType.text, classes = "form-control") {
                 placeholder = "Enter Player Name"

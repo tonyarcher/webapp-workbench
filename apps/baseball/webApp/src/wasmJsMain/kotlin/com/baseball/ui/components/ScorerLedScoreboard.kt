@@ -5,6 +5,7 @@ import com.baseball.ui.*
 import org.w3c.dom.*
 import kotlinx.html.*
 import kotlinx.html.js.*
+import kotlinx.css.*
 
 fun renderScorerLedScoreboard(parent: HTMLElement, game: Game) {
     parent.innerHTML = ""
@@ -49,13 +50,18 @@ private fun renderTeamScores(parent: DIV, game: Game) {
 
 private fun renderCountAndSummary(parent: DIV, game: Game) {
     parent.div(classes = "scoreboard-row") {
-        style = "margin-top: 1rem;"
+        css {
+            marginTop = 1.rem
+        }
         span(classes = "count-display") {
             +"Count: ${game.gameState.balls} - ${game.gameState.strikes}"
         }
         span {
             +"R-H-E: ${game.awayScore}-${game.awayHits}-${game.awayErrors} vs ${game.homeScore}-${game.homeHits}-${game.homeErrors}"
-            style = "color: var(--text-secondary); font-size: 0.9rem;"
+            css {
+                color = Color("var(--text-secondary)")
+                fontSize = 0.9.rem
+            }
         }
     }
 }
@@ -66,19 +72,28 @@ private fun renderDiamondBases(parent: DIV, game: Game) {
             div(classes = "base base-first" + if (game.gameState.runnerFirstId != null) " occupied" else "") {
                 div(classes = "base-label") {
                     +"1st"
-                    style = "top: -15px; right: -15px;"
+                    css {
+                        put("top", "-15px")
+                        put("right", "-15px")
+                    }
                 }
             }
             div(classes = "base base-second" + if (game.gameState.runnerSecondId != null) " occupied" else "") {
                 div(classes = "base-label") {
                     +"2nd"
-                    style = "top: -15px; left: -15px;"
+                    css {
+                        put("top", "-15px")
+                        put("left", "-15px")
+                    }
                 }
             }
             div(classes = "base base-third" + if (game.gameState.runnerThirdId != null) " occupied" else "") {
                 div(classes = "base-label") {
                     +"3rd"
-                    style = "bottom: -15px; left: -15px;"
+                    css {
+                        put("bottom", "-15px")
+                        put("left", "-15px")
+                    }
                 }
             }
             div(classes = "base base-home")
@@ -88,7 +103,13 @@ private fun renderDiamondBases(parent: DIV, game: Game) {
 
 private fun renderRunnerDetails(parent: DIV, game: Game) {
     parent.div {
-        style = "font-size: 0.85rem; margin-top: 1rem; color: var(--text-secondary); border-top: 1px solid #1a2f24; padding-top: 0.5rem;"
+        css {
+            fontSize = 0.85.rem
+            marginTop = 1.rem
+            color = Color("var(--text-secondary)")
+            borderTop = Border(1.px, BorderStyle.solid, Color("#1a2f24"))
+            paddingTop = 0.5.rem
+        }
         if (game.gameState.runnerFirstName != null) {
             div { +"1B: ${game.gameState.runnerFirstName}" }
         }

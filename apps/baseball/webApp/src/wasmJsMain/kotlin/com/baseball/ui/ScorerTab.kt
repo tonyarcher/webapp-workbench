@@ -12,6 +12,7 @@ import kotlinx.browser.window
 import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.html.dom.*
+import kotlinx.css.*
 
 var isResetDialogOpen = false
 
@@ -77,7 +78,10 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 
     if (!isSingleGameMode && selectedGameId == null) {
         container.div(classes = "card") {
-            style = "text-align: center; padding: 3rem;"
+            css {
+                textAlign = TextAlign.center
+                padding = Padding(3.rem)
+            }
             p { +"No game selected. Go to Season Dashboard to select one." }
         }
         return
@@ -154,11 +158,24 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                         val notation = getScorebookNotation(ev)
 
                         div(classes = "log-item") {
-                            style = "display: flex; flex-direction: column; padding: 0.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05);" +
-                                    if (endedInning) " background: rgba(255, 42, 59, 0.05); border-left: 4px solid var(--accent-red);" else ""
+                            css {
+                                display = Display.flex
+                                flexDirection = FlexDirection.column
+                                padding = Padding(0.75.rem)
+                                put("border-bottom", "1px solid rgba(255, 255, 255, 0.05)")
+                                if (endedInning) {
+                                    background = "rgba(255, 42, 59, 0.05)"
+                                    put("border-left", "4px solid var(--accent-red)")
+                                }
+                            }
 
                             div {
-                                style = "display: flex; justify-content: space-between; align-items: center; width: 100%;"
+                                css {
+                                    display = Display.flex
+                                    justifyContent = JustifyContent.spaceBetween
+                                    alignItems = Align.center
+                                    width = 100.pct
+                                }
 
                                 span(classes = "log-desc") {
                                     val header = "${ev.batterName} ($position) - Inning ${ev.inning} (${if (ev.half == HalfInning.TOP) "Top" else "Bottom"})"
@@ -173,7 +190,11 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                                 if (endedInning) {
                                     span {
                                         +" ─── / (Side Retired)"
-                                        style = "color: var(--accent-red); font-weight: bold; font-size: 0.9rem;"
+                                        css {
+                                            color = Color("var(--accent-red)")
+                                            fontWeight = FontWeight.bold
+                                            fontSize = 0.9.rem
+                                        }
                                     }
                                 }
                             }
@@ -190,19 +211,27 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
         }
 
         container.div {
-            style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"
+            css {
+                display = Display.flex
+                justifyContent = JustifyContent.spaceBetween
+                alignItems = Align.center
+                marginBottom = 1.rem
+            }
             h1 {
                 +"Live Scoring: ${game.awayTeam.city} @ ${game.homeTeam.city}"
-                style = "margin-bottom: 0;"
+                css { marginBottom = 0.rem }
             }
 
             if (isSingleGameMode) {
                 div {
-                    style = "display: flex; gap: 0.5rem;"
+                    css {
+                        display = Display.flex
+                        gap = 0.5.rem
+                    }
                     if (localEvents.isNotEmpty()) {
                         button(classes = "btn btn-secondary") {
                             +"⎌ Undo Action"
-                            style = "padding: 0.5rem 1rem;"
+                            css { padding = Padding(0.5.rem, 1.rem) }
                             onClickFunction = {
                                 undoLastLocalEvent()
                                 renderCurrentTab()
@@ -211,7 +240,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                     }
                     button(classes = "btn btn-danger") {
                         +"New Game"
-                        style = "padding: 0.5rem 1rem;"
+                        css { padding = Padding(0.5.rem, 1.rem) }
                         onClickFunction = {
                             isResetDialogOpen = true
                             renderCurrentTab()
@@ -233,18 +262,28 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 
         // 3. Play Monitoring Tabs
         val monitorCard = container.div(classes = "card") {
-            style = "margin-top: 2rem;"
+            css { marginTop = 2.rem }
 
             div {
-                style = "display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 0.5rem; margin-bottom: 1rem;"
+                css {
+                    display = Display.flex
+                    justifyContent = JustifyContent.spaceBetween
+                    alignItems = Align.center
+                    put("border-bottom", "1px solid rgba(255, 255, 255, 0.1)")
+                    paddingBottom = 0.5.rem
+                    marginBottom = 1.rem
+                }
 
                 h2 {
                     +"Live Game Monitoring"
-                    style = "margin: 0;"
+                    css { put("margin", "0") }
                 }
 
                 div {
-                    style = "display: flex; gap: 0.5rem;"
+                    css {
+                        display = Display.flex
+                        gap = 0.5.rem
+                    }
 
                     button(classes = "btn btn-secondary") {
                         id = "scorer-btn-log"
@@ -290,22 +329,46 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 
         if (isResetDialogOpen) {
             container.div {
-                style = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10, 15, 30, 0.8); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; z-index: 10000;"
+                css {
+                    put("position", "fixed")
+                    put("top", "0")
+                    put("left", "0")
+                    put("width", "100vw")
+                    put("height", "100vh")
+                    background = "rgba(10, 15, 30, 0.8)"
+                    put("backdrop-filter", "blur(12px)")
+                    display = Display.flex
+                    alignItems = Align.center
+                    justifyContent = JustifyContent.center
+                    put("z-index", "10000")
+                }
 
                 div(classes = "card") {
-                    style = "width: 90%; max-width: 450px; padding: 2rem; text-align: center;"
+                    css {
+                        put("width", "90%")
+                        put("max-width", "450px")
+                        padding = Padding(2.rem)
+                        textAlign = TextAlign.center
+                    }
 
                     h2 {
                         +"Start a New Game"
-                        style = "margin-bottom: 1rem;"
+                        css { marginBottom = 1.rem }
                     }
                     p {
                         +"Are you sure you want to reset? All current game progress and stats will be permanently lost."
-                        style = "margin-bottom: 1.5rem; color: var(--text-secondary);"
+                        css {
+                            marginBottom = 1.5.rem
+                            color = Color("var(--text-secondary)")
+                        }
                     }
 
                     div {
-                        style = "display: flex; flex-direction: column; gap: 0.75rem;"
+                        css {
+                            display = Display.flex
+                            flexDirection = FlexDirection.column
+                            gap = 0.75.rem
+                        }
 
                         button(classes = "btn btn-primary") {
                             +"Restart with Current Lineups"
@@ -318,7 +381,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 
                         button(classes = "btn btn-action") {
                             +"Configure New Lineups"
-                            style = "background: linear-gradient(135deg, #3b82f6, #8b5cf6);"
+                            css { put("background", "linear-gradient(135deg, #3b82f6, #8b5cf6)") }
                             onClickFunction = {
                                 isResetDialogOpen = false
                                 isLineupDialogOpen = true

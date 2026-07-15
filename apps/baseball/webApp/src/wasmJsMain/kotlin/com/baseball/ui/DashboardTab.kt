@@ -9,6 +9,7 @@ import kotlinx.browser.document
 import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.html.dom.*
+import kotlinx.css.*
 
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
     container.h1 { +"Season Dashboard" }
@@ -30,10 +31,18 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
     }
 
     val card = container.div(classes = "card") {
-        style = "margin-bottom: 2rem; display: flex; gap: 1.5rem; align-items: flex-end;"
+        css {
+            marginBottom = 2.rem
+            display = Display.flex
+            gap = 1.5.rem
+            alignItems = Align.flexEnd
+        }
 
         div(classes = "form-group") {
-            style = "margin-bottom: 0; flex: 1;"
+            css {
+                marginBottom = 0.px
+                put("flex", "1")
+            }
             label { +"Active League" }
             select(classes = "form-control") {
                 id = "select-league-dropdown"
@@ -59,7 +68,10 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
         }
 
         div(classes = "form-group") {
-            style = "margin-bottom: 0; flex: 1;"
+            css {
+                marginBottom = 0.px
+                put("flex", "1")
+            }
             label { +"Active Season" }
             select(classes = "form-control") {
                 id = "select-season-dropdown"
@@ -84,10 +96,15 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
 
     if (selectedSeasonId == null) {
         container.div(classes = "card") {
-            style = "text-align: center; padding: 3rem;"
+            css {
+                textAlign = TextAlign.center
+                padding = Padding(3.rem)
+            }
             p {
                 +"Please select a league and season above, then click Load Season."
-                style = "color: var(--text-secondary);"
+                css {
+                    color = Color("var(--text-secondary)")
+                }
             }
         }
         return
@@ -120,7 +137,9 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                                 tr {
                                     td {
                                         +row.teamName
-                                        style = "font-weight: bold;"
+                                        css {
+                                            fontWeight = FontWeight.bold
+                                        }
                                     }
                                     td { +row.gamesPlayed.toString() }
                                     td { +row.wins.toString() }
@@ -146,14 +165,22 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
             // Right Column: Games
             div {
                 div(classes = "card") {
-                    style = "margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;"
+                    css {
+                        marginBottom = 1.5.rem
+                        display = Display.flex
+                        justifyContent = JustifyContent.spaceBetween
+                        alignItems = Align.center
+                    }
                     h3 { +"Schedule Manager" }
 
                     button(classes = if (dash.games.isNotEmpty()) "btn btn-secondary" else "btn") {
                         +"Generate Round-Robin Schedule"
                         if (dash.games.isNotEmpty()) {
                             disabled = true
-                            style = "opacity: 0.5; cursor: not-allowed;"
+                            css {
+                                opacity = 0.5
+                                put("cursor", "not-allowed")
+                            }
                         } else {
                             onClickFunction = {
                                 launch {
@@ -172,7 +199,9 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                         if (dash.games.isEmpty()) {
                             p {
                                 +"No games scheduled yet. Generate a schedule above!"
-                                style = "color: var(--text-secondary);"
+                                css {
+                                    color = Color("var(--text-secondary)")
+                                }
                             }
                         } else {
                             dash.games.forEach { game ->
@@ -208,7 +237,10 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                                         span(classes = badgeClass) { +game.status.name }
                                         span {
                                             +game.date
-                                            style = "font-size: 0.85rem; color: var(--text-secondary);"
+                                            css {
+                                                fontSize = 0.85.rem
+                                                color = Color("var(--text-secondary)")
+                                            }
                                         }
                                     }
                                 }
