@@ -1,6 +1,9 @@
 package com.baseball.seed
 
-import com.baseball.models.*
+import com.baseball.models.League
+import com.baseball.models.Player
+import com.baseball.models.Season
+import com.baseball.models.Team
 
 object SeedData {
     val league = League(1L, "American Baseball League")

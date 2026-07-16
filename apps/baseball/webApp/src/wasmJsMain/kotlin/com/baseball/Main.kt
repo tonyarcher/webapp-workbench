@@ -1,21 +1,17 @@
 package com.baseball
 
-import com.baseball.api.*
-import com.baseball.auth.*
-import com.baseball.game.*
+import com.baseball.api.BaseballApi
+import com.baseball.api.BaseballApiClient
+import com.baseball.auth.AuthManager
+import com.baseball.auth.AuthService
 import com.baseball.ui.AppViewManager
 import com.baseball.ui.auth.renderLoginTab
 import com.baseball.ui.auth.renderRegisterTab
-import com.baseball.ui.tabs.renderLeaguesTab
-import com.baseball.ui.tabs.renderTeamsTab
-import com.baseball.ui.tabs.renderSeasonDashboardTab
-import com.baseball.ui.tabs.renderLiveScorerTab
-import com.baseball.ui.tabs.renderBoxScoreTab
+import com.baseball.ui.tabs.*
 
 // Global interface instantiations promoting coding by interface inheritance
 val api: BaseballApi = BaseballApiClient()
 val authService: AuthService = AuthManager
-val gameService: GameService = GameManager
 
 fun main() {
     AppViewManager.registerTabRenderers(mapOf(

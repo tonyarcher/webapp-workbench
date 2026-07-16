@@ -1,11 +1,9 @@
 package com.baseball.auth
 
 import com.baseball.BaseballConstants
-
-import com.baseball.api.RegisterRequestDto
 import com.baseball.api
+import com.baseball.api.RegisterRequestDto
 import kotlinx.browser.window
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 var currentUserSession: UserSession? = null

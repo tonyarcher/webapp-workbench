@@ -3,7 +3,6 @@ package com.baseball.controllers
 import com.baseball.entities.UserEntity
 import com.baseball.repositories.UserRepository
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.*

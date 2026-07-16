@@ -3,9 +3,9 @@ package com.baseball.game
 import com.baseball.BaseballConstants
 import com.baseball.models.*
 import com.baseball.seed.SeedData
+import kotlinx.browser.window
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.browser.window
 
 @Serializable
 data class LocalGameState(

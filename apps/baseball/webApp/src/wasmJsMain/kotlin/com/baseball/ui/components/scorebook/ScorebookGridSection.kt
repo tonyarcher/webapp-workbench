@@ -1,17 +1,20 @@
 ﻿package com.baseball.ui.components.scorebook
 
-import com.baseball.UiConstants
 import com.baseball.BaseballConstants
-import com.baseball.models.*
+import com.baseball.UiConstants
 import com.baseball.game.*
+import com.baseball.models.*
 import com.baseball.ui.*
-import org.w3c.dom.*
 import kotlinx.browser.document
-import kotlinx.browser.window
-import kotlinx.html.*
-import kotlinx.html.js.*
-import kotlinx.html.dom.*
 import kotlinx.css.*
+import kotlinx.html.*
+import kotlinx.html.dom.append
+import kotlinx.html.js.div
+import kotlinx.html.js.onClickFunction
+import org.w3c.dom.HTMLButtonElement
+import org.w3c.dom.HTMLElement
+import org.w3c.dom.HTMLTableRowElement
+import org.w3c.dom.HTMLTableSectionElement
 
 fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore, events: List<PlayEvent>, half: HalfInning) {
     ScorebookGridRenderer.renderScorecardSheet(container, game, boxScore, events, half)

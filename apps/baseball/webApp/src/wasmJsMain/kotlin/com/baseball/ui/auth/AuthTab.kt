@@ -2,14 +2,18 @@ package com.baseball.ui.auth
 
 import com.baseball.BaseballConstants
 import com.baseball.UiConstants
-import org.w3c.dom.*
-import kotlinx.browser.window
-import com.baseball.authService
 import com.baseball.auth.UserAccount
-import kotlinx.html.*
-import kotlinx.html.js.*
+import com.baseball.authService
+import com.baseball.ui.css
+import com.baseball.ui.div
+import com.baseball.ui.launch
+import kotlinx.browser.window
 import kotlinx.css.*
-import com.baseball.ui.*
+import kotlinx.html.*
+import kotlinx.html.js.onClickFunction
+import org.w3c.dom.HTMLDivElement
+import org.w3c.dom.HTMLElement
+import org.w3c.dom.HTMLInputElement
 
 internal fun renderLoginTab(container: HTMLElement) {
     var errorBanner: HTMLDivElement? = null

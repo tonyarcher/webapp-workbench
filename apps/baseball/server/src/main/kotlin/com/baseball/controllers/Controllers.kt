@@ -177,8 +177,7 @@ class PlayerController(private val repository: PlayerRepository) {
 class GameController(
     private val repository: GameRepository,
     private val scoringService: GameScoringService,
-    private val playEventRepository: PlayEventRepository,
-    private val teamRepository: TeamRepository
+    private val playEventRepository: PlayEventRepository
 ) {
 
     @GetMapping("/{id}")

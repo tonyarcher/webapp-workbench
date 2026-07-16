@@ -1,19 +1,19 @@
 ﻿package com.baseball.ui.tabs
 
 import com.baseball.BaseballConstants
-import com.baseball.UiConstants
 import com.baseball.api
-import com.baseball.game.localGame
 import com.baseball.game.localBoxScore
 import com.baseball.game.localEvents
+import com.baseball.game.localGame
 import com.baseball.models.*
-import com.baseball.ui.components.scorebook.renderScorebookView
-import org.w3c.dom.*
-import kotlinx.html.*
-import kotlinx.html.js.*
-import kotlinx.html.dom.*
-import kotlinx.css.*
 import com.baseball.ui.*
+import com.baseball.ui.components.scorebook.renderScorebookView
+import kotlinx.css.*
+import kotlinx.html.*
+import kotlinx.html.js.onClickFunction
+import org.w3c.dom.HTMLButtonElement
+import org.w3c.dom.HTMLDivElement
+import org.w3c.dom.HTMLElement
 
 internal fun renderBoxScoreTab(container: HTMLElement) {
     if (!isSingleGameMode && selectedGameId == null) {
@@ -213,16 +213,6 @@ internal fun renderLineScoreTable(parent: HTMLElement, lineScore: LineScore, gam
                 }
             }
         }
-    }
-}
-
-internal fun renderBoxScoreTable(parent: HTMLElement, tabId: String, boxScore: BoxScore) {
-    parent.innerHTML = ""
-    when (tabId) {
-        "away-batting" -> renderBattingTable(parent, boxScore.awayBatting)
-        "away-pitching" -> renderPitchingTable(parent, boxScore.awayPitching)
-        "home-batting" -> renderBattingTable(parent, boxScore.homeBatting)
-        "home-pitching" -> renderPitchingTable(parent, boxScore.homePitching)
     }
 }
 

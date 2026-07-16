@@ -16,9 +16,7 @@ object BaseballConstants {
     const val KEY_LOCAL_GAME_STATE = "local_game_state"
     const val KEY_AUTH_TOKEN = "auth_token"
     const val KEY_ACTIVE_SESSION = "active_session"
-    const val KEY_CURRENT_USER_EMAIL = "current_user_email"
-    const val KEY_CURRENT_USER_NAME = "current_user_name"
-    
+
     // Navigation Storage Keys
     const val KEY_NAV_IS_SINGLE_GAME_MODE = "isSingleGameMode"
     const val KEY_NAV_IS_WELCOME_SCREEN = "isWelcomeScreen"
@@ -27,10 +25,6 @@ object BaseballConstants {
     const val KEY_NAV_SELECTED_SEASON_ID = "selectedSeasonId"
     const val KEY_NAV_SELECTED_TEAM_ID = "selectedTeamId"
     const val KEY_NAV_CURRENT_TAB = "currentTab"
-    
-    // Default config / values
-    const val DEFAULT_FIRST_PITCH_TIME = "7:05 PM"
-    const val DEFAULT_GAME_DATE = "2026-07-10"
 
     // Play Result Strings
     const val PLAY_RESULT_RUN_SCORED = "Run Scored"
@@ -39,13 +33,6 @@ object BaseballConstants {
     const val PLAY_RESULT_1B = "1B"
     const val PLAY_RESULT_2B = "2B"
     const val PLAY_RESULT_3B = "3B"
-
-    // Statistical Metrics
-    const val METRIC_AB = "AB"
-    const val METRIC_R = "R"
-    const val METRIC_H = "H"
-    const val METRIC_RBI = "RBI"
-    const val METRIC_PITCHER = "PITCHER"
 
     // Event Descriptions / Substrings
     const val DESC_DOUBLE_PLAY = "Double Play"

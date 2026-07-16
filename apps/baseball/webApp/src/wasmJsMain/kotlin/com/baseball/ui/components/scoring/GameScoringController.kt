@@ -2,22 +2,23 @@
 
 import com.baseball.BaseballConstants
 import com.baseball.api
-import com.baseball.game.*
+import com.baseball.game.GameManager
 import com.baseball.models.*
 import com.baseball.ui.*
-import org.w3c.dom.*
 import kotlinx.browser.window
-import kotlinx.html.*
-import kotlinx.html.js.*
-import kotlinx.html.dom.*
 import kotlinx.css.*
+import kotlinx.html.*
+import kotlinx.html.dom.append
+import kotlinx.html.js.div
+import kotlinx.html.js.onClickFunction
+import org.w3c.dom.HTMLDivElement
+import org.w3c.dom.HTMLElement
 
 class GameScoringController(
     val rightCol: HTMLElement,
     val game: Game,
     val homeRoster: List<Player>,
-    val awayRoster: List<Player>,
-    val boxScore: BoxScore
+    val awayRoster: List<Player>
 ) {
     var optionalPitchType: String? = null
     var actionGridWrapper: HTMLDivElement? = null

@@ -463,17 +463,17 @@ class GameScoringService(
 
     private fun getOrCreateBattingStats(gameId: Long, playerId: Long): PlayerGameBattingStatsEntity {
         return battingRepository.findByGameIdAndPlayerId(gameId, playerId)
-            ?: PlayerGameBattingStatsEntity(gameId = gameId, playerId = playerId)
+            ?: PlayerGameBattingStatsEntity(playerId = playerId)
     }
 
     private fun getOrCreatePitchingStats(gameId: Long, playerId: Long): PlayerGamePitchingStatsEntity {
         return pitchingRepository.findByGameIdAndPlayerId(gameId, playerId)
-            ?: PlayerGamePitchingStatsEntity(gameId = gameId, playerId = playerId)
+            ?: PlayerGamePitchingStatsEntity(playerId = playerId)
     }
 
     private fun getOrCreateInningRuns(gameId: Long, inning: Int): GameInningEntity {
         return gameInningRepository.findByGameIdAndInning(gameId, inning)
-            ?: gameInningRepository.save(GameInningEntity(gameId = gameId, inning = inning, awayRuns = 0, homeRuns = 0))
+            ?: gameInningRepository.save(GameInningEntity(inning = inning, awayRuns = 0, homeRuns = 0))
     }
 
     @Transactional(readOnly = true)

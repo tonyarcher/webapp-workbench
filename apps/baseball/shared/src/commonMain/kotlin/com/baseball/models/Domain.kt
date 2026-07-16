@@ -52,13 +52,6 @@ enum class HalfInning {
 }
 
 @Serializable
-data class RunnerState(
-    val first: Player? = null,
-    val second: Player? = null,
-    val third: Player? = null
-)
-
-@Serializable
 data class GameState(
     val inning: Int = 1,
     val half: HalfInning = HalfInning.TOP,

@@ -1,14 +1,16 @@
 ﻿package com.baseball.ui.tabs
 
-import com.baseball.BaseballConstants
-import com.baseball.UiConstants
 import com.baseball.api
-import com.baseball.models.*
-import org.w3c.dom.*
-import kotlinx.html.*
-import kotlinx.html.js.*
-import kotlinx.css.*
+import com.baseball.models.Player
+import com.baseball.models.Team
 import com.baseball.ui.*
+import kotlinx.css.*
+import kotlinx.html.*
+import kotlinx.html.js.onClickFunction
+import org.w3c.dom.HTMLDivElement
+import org.w3c.dom.HTMLElement
+import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.HTMLSelectElement
 
 internal fun renderTeamsTab(container: HTMLElement) {
     container.h1 { +"Teams & Rosters" }

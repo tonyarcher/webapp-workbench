@@ -1,23 +1,22 @@
 package com.baseball.ui
 
 import com.baseball.BaseballConstants
-
 import com.baseball.UiConstants
-
 import com.baseball.api
-import com.baseball.authService
-import com.baseball.gameService
 import com.baseball.auth.currentUserSession
-import com.baseball.auth.AuthManager
+import com.baseball.authService
 import com.baseball.game.*
-import com.baseball.models.*
+import com.baseball.models.HalfInning
+import com.baseball.models.League
+import com.baseball.models.Season
+import com.baseball.models.Team
 import kotlinx.browser.document
 import kotlinx.browser.window
-import kotlinx.coroutines.*
-import org.w3c.dom.*
-import kotlinx.html.*
-import kotlinx.html.js.*
 import kotlinx.css.*
+import kotlinx.html.*
+import kotlinx.html.js.onClickFunction
+import org.w3c.dom.HTMLButtonElement
+import org.w3c.dom.HTMLElement
 
 private var _currentTab = BaseballConstants.TAB_LEAGUES
 var currentTab: String
@@ -42,7 +41,6 @@ var isWelcomeScreen = true
 var isSingleGameMode = false
 var serverOnline = false
 var serverConnectionError: String? = null
-var activeBoxScoreTab = "away-batting"
 
 fun saveNavState() {
     try {
@@ -463,10 +461,6 @@ object AppViewManager : DomBuilder {
         contentArea.innerHTML = ""
         tabRenderers[currentTab]?.invoke(contentArea)
     }
-}
-
-fun renderApp() {
-    AppViewManager.renderApp()
 }
 
 fun updateActiveTabButtons() {

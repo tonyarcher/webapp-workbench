@@ -1,7 +1,10 @@
 package com.baseball
 
 import com.baseball.entities.*
-import com.baseball.models.*
+import com.baseball.models.GameStatus
+import com.baseball.models.HalfInning
+import com.baseball.models.ScoringEventRequest
+import com.baseball.models.ScoringEventType
 import com.baseball.repositories.*
 import com.baseball.services.GameScoringService
 import org.junit.jupiter.api.Assertions.*
@@ -195,7 +198,7 @@ class GameScoringServiceTest {
         `when`(teamRepository.findById(100L)).thenReturn(Optional.of(TeamEntity(100L, "Cards", "STL", "St. Louis")))
         `when`(teamRepository.findById(200L)).thenReturn(Optional.of(TeamEntity(200L, "Cubs", "CHC", "Chicago")))
         `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
-        `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(1L, 1L, 1, 0, 0))
+        `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(1, 0, 0))
 
         // Sac Fly
         var updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.SACRIFICE_FLY, batterId, pitcherId))
@@ -227,7 +230,7 @@ class GameScoringServiceTest {
         `when`(teamRepository.findById(100L)).thenReturn(Optional.of(TeamEntity(100L, "Cards", "STL", "St. Louis")))
         `when`(teamRepository.findById(200L)).thenReturn(Optional.of(TeamEntity(200L, "Cubs", "CHC", "Chicago")))
         `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
-        `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(1L, 1L, 1, 0, 0))
+        `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(1, 0, 0))
 
         val advanceMap = mapOf(
             "4" to 3, // R1 to 3B
@@ -264,7 +267,7 @@ class GameScoringServiceTest {
         `when`(teamRepository.findById(100L)).thenReturn(Optional.of(TeamEntity(100L, "Cards", "STL", "St. Louis")))
         `when`(teamRepository.findById(200L)).thenReturn(Optional.of(TeamEntity(200L, "Cubs", "CHC", "Chicago")))
         `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
-        `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(gameId = gameId, inning = 9, awayRuns = 0, homeRuns = 0))
+        `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(inning = 9, awayRuns = 0, homeRuns = 0))
         `when`(gameInningRepository.save(any(GameInningEntity::class.java))).thenAnswer { it.getArgument(0) }
 
         val request = ScoringEventRequest(
@@ -301,10 +304,11 @@ class GameScoringServiceTest {
         `when`(playerRepository.findById(70L)).thenReturn(Optional.of(player4))
         `when`(playerRepository.findById(80L)).thenReturn(Optional.of(player5))
 
-        `when`(gameInningRepository.findAllByGameIdOrderByInningAsc(gameId)).thenReturn(listOf(GameInningEntity(1L, 1, 1, 0, 1)))
+        `when`(gameInningRepository.findAllByGameIdOrderByInningAsc(gameId)).thenReturn(listOf(GameInningEntity(
+            1, 0, 1)))
         
-        val batting1 = PlayerGameBattingStatsEntity(gameId = gameId, playerId = 70L, atBats = 2, hits = 1)
-        val pitching1 = PlayerGamePitchingStatsEntity(gameId = gameId, playerId = 80L, runsAllowed = 1)
+        val batting1 = PlayerGameBattingStatsEntity(playerId = 70L, atBats = 2, hits = 1)
+        val pitching1 = PlayerGamePitchingStatsEntity(playerId = 80L, runsAllowed = 1)
 
         `when`(battingRepository.findAllByGameId(gameId)).thenReturn(listOf(batting1))
         `when`(pitchingRepository.findAllByGameId(gameId)).thenReturn(listOf(pitching1))
@@ -364,7 +368,7 @@ class GameScoringServiceTest {
         `when`(teamRepository.findById(100L)).thenReturn(Optional.of(TeamEntity(100L, "Cards", "STL", "St. Louis")))
         `when`(teamRepository.findById(200L)).thenReturn(Optional.of(TeamEntity(200L, "Cubs", "CHC", "Chicago")))
         `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
-        `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(1L, 1L, 1, 0, 0))
+        `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(1, 0, 0))
         `when`(gameInningRepository.save(any(GameInningEntity::class.java))).thenAnswer { it.getArgument(0) }
 
         // TRIPLE

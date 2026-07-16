@@ -1,11 +1,14 @@
 ﻿package com.baseball.ui.components.scoring
 
-import com.baseball.models.*
-import com.baseball.ui.*
-import org.w3c.dom.*
-import kotlinx.html.*
-import kotlinx.html.js.*
+import com.baseball.models.Game
+import com.baseball.models.HalfInning
+import com.baseball.ui.css
+import com.baseball.ui.div
 import kotlinx.css.*
+import kotlinx.html.DIV
+import kotlinx.html.div
+import kotlinx.html.span
+import org.w3c.dom.HTMLElement
 
 fun renderScorerLedScoreboard(parent: HTMLElement, game: Game) {
     parent.innerHTML = ""

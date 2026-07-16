@@ -1,6 +1,6 @@
 package com.baseball.game
 
-import com.baseball.models.*
+import com.baseball.models.ScoringEventType
 
 interface GameService {
     fun initGame(forceReset: Boolean = false)

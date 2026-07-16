@@ -1,7 +1,13 @@
 package com.baseball
 
-import com.baseball.entities.*
-import com.baseball.repositories.*
+import com.baseball.entities.LeagueEntity
+import com.baseball.entities.PlayerEntity
+import com.baseball.entities.SeasonEntity
+import com.baseball.entities.TeamEntity
+import com.baseball.repositories.LeagueRepository
+import com.baseball.repositories.PlayerRepository
+import com.baseball.repositories.SeasonRepository
+import com.baseball.repositories.TeamRepository
 import com.baseball.seed.SeedData
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication

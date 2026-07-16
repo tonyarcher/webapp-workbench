@@ -1,15 +1,18 @@
 ﻿package com.baseball.ui.components.lineup
 
 import com.baseball.BaseballConstants
-import com.baseball.models.Player
 import com.baseball.game.startNewGame
-import com.baseball.ui.*
+import com.baseball.models.Player
 import com.baseball.seed.SeedData
-import org.w3c.dom.*
-import kotlin.random.Random
-import kotlinx.html.*
-import kotlinx.html.js.*
+import com.baseball.ui.*
 import kotlinx.css.*
+import kotlinx.html.*
+import kotlinx.html.js.onChangeFunction
+import kotlinx.html.js.onClickFunction
+import org.w3c.dom.HTMLElement
+import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.HTMLSelectElement
+import kotlin.random.Random
 
 var isLineupDialogOpen = false
 

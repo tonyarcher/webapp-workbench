@@ -1,7 +1,8 @@
 ﻿package com.baseball
 
-import com.baseball.models.*
 import com.baseball.game.*
+import com.baseball.models.GameStatus
+import com.baseball.models.ScoringEventType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

@@ -1,12 +1,12 @@
 ﻿package com.baseball.ui.components.scoring
 
-import com.baseball.models.*
-import com.baseball.ui.*
-import org.w3c.dom.*
-import kotlinx.html.*
-import kotlinx.html.js.*
-import kotlinx.html.dom.*
+import com.baseball.models.ScoringEventType
+import com.baseball.ui.css
 import kotlinx.css.*
+import kotlinx.html.*
+import kotlinx.html.dom.append
+import kotlinx.html.js.div
+import kotlinx.html.js.onClickFunction
 
 class ScorerBaseRunningStep2Panel(
     private val controller: GameScoringController,

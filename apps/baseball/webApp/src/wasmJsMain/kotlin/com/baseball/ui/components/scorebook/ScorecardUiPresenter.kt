@@ -1,13 +1,16 @@
 ﻿package com.baseball.ui.components.scorebook
 
-import com.baseball.UiConstants
 import com.baseball.BaseballConstants
-import com.baseball.models.*
+import com.baseball.UiConstants
 import com.baseball.game.*
-import com.baseball.ui.*
-import org.w3c.dom.*
+import com.baseball.models.PlayEvent
+import com.baseball.ui.renderCurrentTab
+import com.baseball.ui.substituteBatter
 import kotlinx.browser.document
 import kotlinx.browser.window
+import org.w3c.dom.HTMLElement
+import org.w3c.dom.HTMLOptionElement
+import org.w3c.dom.HTMLSelectElement
 
 interface ScorecardUiPresenter {
     fun buildSlotPlayers(isHomeBatting: Boolean, slots: Array<MutableList<PlayEvent>>): Array<MutableList<String>> {

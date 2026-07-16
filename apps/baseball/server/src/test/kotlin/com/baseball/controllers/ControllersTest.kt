@@ -5,7 +5,6 @@ import com.baseball.models.*
 import com.baseball.repositories.*
 import com.baseball.services.GameScoringService
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
@@ -185,7 +184,7 @@ class ControllersTest {
         val scoringService = mock(GameScoringService::class.java)
         val playEventRepo = mock(PlayEventRepository::class.java)
         val teamRepo = mock(TeamRepository::class.java)
-        val controller = GameController(repo, scoringService, playEventRepo, teamRepo)
+        val controller = GameController(repo, scoringService, playEventRepo)
 
         val mockTeam = Team(100L, "Cubs", "CHC", "Chicago")
         val mockGame = Game(

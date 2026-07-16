@@ -1,16 +1,18 @@
 ﻿package com.baseball.ui.tabs
 
 import com.baseball.BaseballConstants
-import com.baseball.UiConstants
 import com.baseball.api
-import com.baseball.models.*
-import org.w3c.dom.*
-import kotlinx.browser.document
-import kotlinx.html.*
-import kotlinx.html.js.*
-import kotlinx.html.dom.*
-import kotlinx.css.*
+import com.baseball.models.GameStatus
 import com.baseball.ui.*
+import kotlinx.css.*
+import kotlinx.html.*
+import kotlinx.html.dom.append
+import kotlinx.html.js.onChangeFunction
+import kotlinx.html.js.onClickFunction
+import kotlinx.html.js.option
+import org.w3c.dom.HTMLButtonElement
+import org.w3c.dom.HTMLElement
+import org.w3c.dom.HTMLSelectElement
 
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
     container.h1 { +"Season Dashboard" }

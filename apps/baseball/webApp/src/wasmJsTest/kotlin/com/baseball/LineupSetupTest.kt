@@ -1,13 +1,9 @@
 package com.baseball
 
-import com.baseball.models.*
 import com.baseball.game.*
+import com.baseball.models.*
 import com.baseball.seed.SeedData
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
-import kotlin.test.assertFalse
+import kotlin.test.*
 
 class LineupSetupTest {
 

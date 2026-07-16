@@ -1,11 +1,17 @@
 ﻿package com.baseball.ui.components.scorebook
 
-import com.baseball.models.*
-import com.baseball.ui.*
-import org.w3c.dom.*
-import kotlinx.html.*
-import kotlinx.html.js.*
+import com.baseball.models.BoxScore
+import com.baseball.models.Game
+import com.baseball.models.HalfInning
+import com.baseball.models.PlayEvent
+import com.baseball.ui.css
+import com.baseball.ui.div
 import kotlinx.css.*
+import kotlinx.html.*
+import kotlinx.html.js.onClickFunction
+import org.w3c.dom.HTMLButtonElement
+import org.w3c.dom.HTMLDivElement
+import org.w3c.dom.HTMLElement
 
 internal fun renderScorebookView(container: HTMLElement, game: Game, boxScore: BoxScore, events: List<PlayEvent>) {
     container.innerHTML = ""
