@@ -1,4 +1,4 @@
-package com.baseball.ui.components
+﻿package com.baseball.ui.components.scorebook
 
 import com.baseball.models.*
 import com.baseball.ui.*
@@ -200,5 +200,105 @@ class ScorecardParser(
                 }
             }
         }
+    }
+}
+
+
+internal fun getScorebookNotation(ev: PlayEvent): String {
+    val suffix = if (ev.description.contains("(Double Play)") || ev.description.contains("(DP)")) " DP" else ""
+    return when (ev.eventType) {
+        ScoringEventType.SINGLE -> {
+            val locNum = getHitLocationNumber(ev.description)
+            if (locNum != null) "1B$locNum" else "1B"
+        }
+        ScoringEventType.DOUBLE -> {
+            val locNum = getHitLocationNumber(ev.description)
+            if (locNum != null) "2B$locNum" else "2B"
+        }
+        ScoringEventType.TRIPLE -> {
+            val locNum = getHitLocationNumber(ev.description)
+            if (locNum != null) "3B$locNum" else "3B"
+        }
+        ScoringEventType.HOME_RUN -> {
+            val locNum = getHitLocationNumber(ev.description)
+            if (locNum != null) "HR$locNum" else "HR"
+        }
+        ScoringEventType.WALK -> "BB"
+        ScoringEventType.HIT_BY_PITCH -> "HBP"
+        ScoringEventType.STRIKEOUT -> "K$suffix"
+        ScoringEventType.GROUNDOUT -> {
+            val runnerOutMatch = Regex("Runner Out: (\\d+(?:-\\d+)*U?)").find(ev.description)
+            val seqMatch = Regex("Groundout: (\\d+(?:-\\d+)*U?)").find(ev.description)
+            val baseNotation = when {
+                runnerOutMatch != null -> runnerOutMatch.groupValues[1]
+                seqMatch != null -> seqMatch.groupValues[1]
+                else -> {
+                    val matchNum = Regex("to .* \\((\\d)\\)").find(ev.description)
+                    val posNum = matchNum?.groupValues?.get(1) ?: "3"
+                    "$posNum-3"
+                }
+            }
+            "$baseNotation$suffix"
+        }
+        ScoringEventType.FLYOUT -> {
+            val matchNum = Regex("to .* \\((\\d)\\)").find(ev.description)
+            val posNum = matchNum?.groupValues?.get(1) ?: "8"
+            "F$posNum$suffix"
+        }
+        ScoringEventType.LINE_OUT -> {
+            val matchNum = Regex("to .* \\((\\d)\\)").find(ev.description)
+            val posNum = matchNum?.groupValues?.get(1) ?: "6"
+            "L$posNum$suffix"
+        }
+        ScoringEventType.POP_OUT -> {
+            val matchNum = Regex("to .* \\((\\d)\\)").find(ev.description)
+            val posNum = matchNum?.groupValues?.get(1) ?: "4"
+            "P$posNum$suffix"
+        }
+        ScoringEventType.SACRIFICE_FLY -> "SF"
+        ScoringEventType.ERROR -> "E"
+        ScoringEventType.FIELDER_CHOICE -> {
+            val runnerOutMatch = Regex("Runner Out: (\\d+(?:-\\d+)*U?)").find(ev.description)
+            val seqMatch = Regex("Fielder's Choice: (\\d+(?:-\\d+)*U?)").find(ev.description)
+            val baseNotation = when {
+                runnerOutMatch != null -> runnerOutMatch.groupValues[1]
+                seqMatch != null -> seqMatch.groupValues[1]
+                else -> "FC"
+            }
+            "$baseNotation$suffix"
+        }
+        ScoringEventType.STOLEN_BASE -> {
+            if (ev.description.contains("to 3B")) "SB3"
+            else if (ev.description.contains("to Home")) "SBH"
+            else "SB"
+        }
+        ScoringEventType.CAUGHT_STEALING -> {
+            val seqMatch = Regex("Caught Stealing: .* (\\d+(?:-\\d+)*U?)\\)").find(ev.description)
+            if (seqMatch != null) "CS ${seqMatch.groupValues[1]}" else "CS"
+        }
+        ScoringEventType.PICKED_OFF -> {
+            val seqMatch = Regex("Picked Off: .* (\\d+(?:-\\d+)*U?)\\)").find(ev.description)
+            if (seqMatch != null) "PO ${seqMatch.groupValues[1]}" else "PO"
+        }
+        ScoringEventType.WILD_PITCH -> "WP"
+        ScoringEventType.PASSED_BALL -> "PB"
+        ScoringEventType.BALK -> "BK"
+        else -> ""
+    }
+}
+
+fun getHitLocationNumber(desc: String): String? {
+    return when {
+        desc.contains("Left Field") -> "7"
+        desc.contains("Center Field") -> "8"
+        desc.contains("Right Field") -> "9"
+        desc.contains("Shortstop") -> "6"
+        desc.contains("2nd Base") || desc.contains("Second Base") -> "4"
+        desc.contains("3rd Base") || desc.contains("Third Base") -> "5"
+        desc.contains("1st Base") || desc.contains("First Base") -> "3"
+        desc.contains("Pitcher") -> "1"
+        desc.contains("Catcher") -> "2"
+        desc.contains("Infield") -> "IF"
+        else -> null
     }
 }

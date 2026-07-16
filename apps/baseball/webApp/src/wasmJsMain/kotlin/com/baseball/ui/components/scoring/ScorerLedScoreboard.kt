@@ -1,4 +1,4 @@
-package com.baseball.ui.components
+﻿package com.baseball.ui.components.scoring
 
 import com.baseball.models.*
 import com.baseball.ui.*
@@ -20,7 +20,7 @@ fun renderScorerLedScoreboard(parent: HTMLElement, game: Game) {
 }
 
 private fun renderScoreboardHeader(parent: DIV, game: Game) {
-    val inningSymbol = if (game.gameState.half == HalfInning.TOP) "▲" else "▼"
+    val inningSymbol = if (game.gameState.half == HalfInning.TOP) "â–²" else "â–¼"
     parent.div(classes = "scoreboard-header") {
         span(classes = "inning-display") {
             +"$inningSymbol Inning ${game.gameState.inning}"

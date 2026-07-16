@@ -1,4 +1,4 @@
-package com.baseball.ui.components
+﻿package com.baseball.ui.components.scorebook
 
 import com.baseball.UiConstants
 import com.baseball.BaseballConstants

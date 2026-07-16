@@ -1,4 +1,4 @@
-package com.baseball
+﻿package com.baseball
 
 import com.baseball.models.*
 import com.baseball.game.*
@@ -178,8 +178,8 @@ class GameSimulationTest {
         val YogiSingle = playEvents.find { it.batterName == batter1Name && it.eventType == ScoringEventType.SINGLE }!!
         val BabeDP = playEvents.find { it.batterName == batter2Name && it.eventType == ScoringEventType.GROUNDOUT }!!
 
-        val notationYogi = com.baseball.ui.getScorebookNotation(YogiSingle)
-        val notationBabe = com.baseball.ui.getScorebookNotation(BabeDP)
+        val notationYogi = com.baseball.ui.components.scorebook.getScorebookNotation(YogiSingle)
+        val notationBabe = com.baseball.ui.components.scorebook.getScorebookNotation(BabeDP)
 
         assertEquals("1B", notationYogi)
         assertEquals("1-6-3 DP", notationBabe)
@@ -251,7 +251,7 @@ class GameSimulationTest {
             pitcherId = pitcherId,
             descriptionDetail = "Single to Left Field"
         )
-        val notation = com.baseball.ui.getScorebookNotation(localEvents.last())
+        val notation = com.baseball.ui.components.scorebook.getScorebookNotation(localEvents.last())
         assertEquals("1B7", notation)
     }
 
@@ -269,7 +269,7 @@ class GameSimulationTest {
             pitcherId = pitcherId,
             descriptionDetail = "Home Run (Over the Fence)"
         )
-        assertEquals("HR", com.baseball.ui.getScorebookNotation(localEvents.last()))
+        assertEquals("HR", com.baseball.ui.components.scorebook.getScorebookNotation(localEvents.last()))
 
         // Inside the Park HR
         val batter2Id = localGame!!.gameState.currentBatterId!!
@@ -279,6 +279,6 @@ class GameSimulationTest {
             pitcherId = pitcherId,
             descriptionDetail = "Inside the Park Home Run to Center Field"
         )
-        assertEquals("HR8", com.baseball.ui.getScorebookNotation(localEvents.last()))
+        assertEquals("HR8", com.baseball.ui.components.scorebook.getScorebookNotation(localEvents.last()))
     }
 }

@@ -1,4 +1,4 @@
-package com.baseball.ui.components
+﻿package com.baseball.ui.components.scorebook
 
 import com.baseball.UiConstants
 import com.baseball.BaseballConstants
@@ -110,7 +110,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 alignItems = Align.flexEnd
                 fontSize = 0.8.rem
             }
-            div { +"KEEPING SCORE BY: ☒ WEBAPP" }
+            div { +"KEEPING SCORE BY: â˜’ WEBAPP" }
             div { +"FIRST PITCH: 7:05 PM" }
 
             if (game.status != GameStatus.COMPLETED) {

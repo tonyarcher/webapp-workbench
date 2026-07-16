@@ -9,7 +9,7 @@ import com.baseball.authService
 import com.baseball.gameService
 import com.baseball.auth.currentUserSession
 import com.baseball.auth.AuthManager
-import com.baseball.game.initGame
+import com.baseball.game.*
 import com.baseball.models.*
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -18,6 +18,8 @@ import org.w3c.dom.*
 import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.css.*
+import com.baseball.ui.auth.*
+import com.baseball.ui.tabs.*
 
 private var _currentTab = BaseballConstants.TAB_LEAGUES
 var currentTab: String
@@ -226,7 +228,7 @@ object AppViewManager : DomBuilder {
                         initGame(forceReset = false)
                         window.location.hash = BaseballConstants.TAB_LIVE_SCORER
                     }
-                    div(classes = "mode-icon") { +"⚾" }
+                    div(classes = "mode-icon") { +"âš¾" }
                     div(classes = "mode-title") { +"Single Game Mode" }
                     div(classes = "mode-desc") {
                         +"Play or score a local exhibition game between Chicago and St. Louis. Runs entirely in your browser with no server connection required."
@@ -264,7 +266,7 @@ object AppViewManager : DomBuilder {
                             }
                         }
                     }
-                    div(classes = "mode-icon") { +"🏆" }
+                    div(classes = "mode-icon") { +"ðŸ†" }
                     div(classes = "mode-title") { +"League & Season Mode" }
                     div(classes = "mode-desc") {
                         +"Manage complete baseball leagues, schedule round-robin seasons, track standings, and record live games backed by your database server."
@@ -345,7 +347,7 @@ object AppViewManager : DomBuilder {
 
                 nav {
                     button(classes = "back-to-welcome") {
-                        +"← Back to Menu"
+                        +"â† Back to Menu"
                         onClickFunction = {
                             goBackToWelcome()
                         }
@@ -478,4 +480,59 @@ fun updateActiveTabButtons() {
 
 fun renderCurrentTab() {
     AppViewManager.renderCurrentTab()
+}
+
+
+internal fun substituteBatter(isHome: Boolean, lineupIndex: Int, newPlayerId: Long) {
+    val lineup = if (isHome) localHomeLineup else localAwayLineup
+    val bench = if (isHome) localHomeBench else localAwayBench
+    val oldPlayer = lineup[lineupIndex]
+    val newPlayer = bench.find { it.id == newPlayerId } ?: return
+
+    lineup[lineupIndex] = newPlayer
+    bench.remove(newPlayer)
+    localPlayersSubbedOut.add(oldPlayer.id!!)
+
+    val game = localGame ?: return
+    val currentHalf = game.gameState.half
+    val isCurrentBatterHome = currentHalf == HalfInning.BOTTOM
+    if (isHome == isCurrentBatterHome && (if (isHome) localHomeBatterIndex else localAwayBatterIndex) == lineupIndex) {
+        localGame = game.copy(
+            gameState = game.gameState.copy(
+                currentBatterId = newPlayer.id,
+                currentBatterName = newPlayer.name
+            )
+        )
+    }
+    saveLocalState()
+}
+
+internal fun substitutePitcher(isHome: Boolean, newPitcherId: Long) {
+    val bench = if (isHome) localHomeBench else localAwayBench
+    val newPitcher = bench.find { it.id == newPitcherId } ?: return
+    val oldPitcherId = if (isHome) localHomeActivePitcherId else localAwayActivePitcherId
+
+    bench.remove(newPitcher)
+    localPlayersSubbedOut.add(oldPitcherId)
+
+    if (isHome) {
+        localHomeActivePitcherId = newPitcher.id!!
+        localHomeActivePitcherName = newPitcher.name
+    } else {
+        localAwayActivePitcherId = newPitcher.id!!
+        localAwayActivePitcherName = newPitcher.name
+    }
+
+    val game = localGame ?: return
+    val currentHalf = game.gameState.half
+    val isHomePitching = currentHalf == HalfInning.TOP
+    if (isHome == isHomePitching) {
+        localGame = game.copy(
+            gameState = game.gameState.copy(
+                currentPitcherId = newPitcher.id,
+                currentPitcherName = newPitcher.name
+            )
+        )
+    }
+    saveLocalState()
 }

@@ -1,4 +1,4 @@
-package com.baseball.ui
+﻿package com.baseball.ui.tabs
 
 import com.baseball.BaseballConstants
 import com.baseball.UiConstants
@@ -10,6 +10,8 @@ import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.html.dom.*
 import kotlinx.css.*
+import com.baseball.ui.*
+import com.baseball.ui.*
 
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
     container.h1 { +"Season Dashboard" }

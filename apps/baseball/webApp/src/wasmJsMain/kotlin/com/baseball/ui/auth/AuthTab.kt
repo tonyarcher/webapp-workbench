@@ -1,4 +1,4 @@
-package com.baseball.ui
+package com.baseball.ui.auth
 
 import com.baseball.BaseballConstants
 import com.baseball.UiConstants
@@ -9,6 +9,7 @@ import com.baseball.auth.UserAccount
 import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.css.*
+import com.baseball.ui.*
 
 internal fun renderLoginTab(container: HTMLElement) {
     var errorBanner: HTMLDivElement? = null

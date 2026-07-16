@@ -1,11 +1,13 @@
-package com.baseball.ui
+﻿package com.baseball.ui.tabs
 
 import com.baseball.UiConstants
 import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.game.*
 import com.baseball.models.*
-import com.baseball.ui.components.*
+import com.baseball.ui.components.scoring.*
+import com.baseball.ui.components.lineup.*
+import com.baseball.ui.components.scorebook.*
 import org.w3c.dom.*
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -13,62 +15,10 @@ import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.html.dom.*
 import kotlinx.css.*
+import com.baseball.ui.*
 
 var isResetDialogOpen = false
 
-internal fun substituteBatter(isHome: Boolean, lineupIndex: Int, newPlayerId: Long) {
-    val lineup = if (isHome) localHomeLineup else localAwayLineup
-    val bench = if (isHome) localHomeBench else localAwayBench
-    val oldPlayer = lineup[lineupIndex]
-    val newPlayer = bench.find { it.id == newPlayerId } ?: return
-
-    lineup[lineupIndex] = newPlayer
-    bench.remove(newPlayer)
-    localPlayersSubbedOut.add(oldPlayer.id!!)
-
-    val game = localGame ?: return
-    val currentHalf = game.gameState.half
-    val isCurrentBatterHome = currentHalf == HalfInning.BOTTOM
-    if (isHome == isCurrentBatterHome && (if (isHome) localHomeBatterIndex else localAwayBatterIndex) == lineupIndex) {
-        localGame = game.copy(
-            gameState = game.gameState.copy(
-                currentBatterId = newPlayer.id,
-                currentBatterName = newPlayer.name
-            )
-        )
-    }
-    saveLocalState()
-}
-
-internal fun substitutePitcher(isHome: Boolean, newPitcherId: Long) {
-    val bench = if (isHome) localHomeBench else localAwayBench
-    val newPitcher = bench.find { it.id == newPitcherId } ?: return
-    val oldPitcherId = if (isHome) localHomeActivePitcherId else localAwayActivePitcherId
-
-    bench.remove(newPitcher)
-    localPlayersSubbedOut.add(oldPitcherId)
-
-    if (isHome) {
-        localHomeActivePitcherId = newPitcher.id!!
-        localHomeActivePitcherName = newPitcher.name
-    } else {
-        localAwayActivePitcherId = newPitcher.id!!
-        localAwayActivePitcherName = newPitcher.name
-    }
-
-    val game = localGame ?: return
-    val currentHalf = game.gameState.half
-    val isHomePitching = currentHalf == HalfInning.TOP
-    if (isHome == isHomePitching) {
-        localGame = game.copy(
-            gameState = game.gameState.copy(
-                currentPitcherId = newPitcher.id,
-                currentPitcherName = newPitcher.name
-            )
-        )
-    }
-    saveLocalState()
-}
 
 internal fun renderLiveScorerTab(container: HTMLElement) {
     com.baseball.game.onOpenLineupSetupDialog = {
@@ -189,7 +139,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 
                                 if (endedInning) {
                                     span {
-                                        +" ─── / (Side Retired)"
+                                        +" Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ / (Side Retired)"
                                         css {
                                             color = Color("var(--accent-red)")
                                             fontWeight = FontWeight.bold
@@ -230,7 +180,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                     }
                     if (localEvents.isNotEmpty()) {
                         button(classes = "btn btn-secondary") {
-                            +"⎌ Undo Action"
+                            +"Ã¢Å½Å’ Undo Action"
                             css { padding = Padding(0.5.rem, 1.rem) }
                             onClickFunction = {
                                 undoLastLocalEvent()
@@ -403,101 +353,3 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
     }
 }
 
-internal fun getScorebookNotation(ev: PlayEvent): String {
-    val suffix = if (ev.description.contains("(Double Play)") || ev.description.contains("(DP)")) " DP" else ""
-    return when (ev.eventType) {
-        ScoringEventType.SINGLE -> {
-            val locNum = getHitLocationNumber(ev.description)
-            if (locNum != null) "1B$locNum" else "1B"
-        }
-        ScoringEventType.DOUBLE -> {
-            val locNum = getHitLocationNumber(ev.description)
-            if (locNum != null) "2B$locNum" else "2B"
-        }
-        ScoringEventType.TRIPLE -> {
-            val locNum = getHitLocationNumber(ev.description)
-            if (locNum != null) "3B$locNum" else "3B"
-        }
-        ScoringEventType.HOME_RUN -> {
-            val locNum = getHitLocationNumber(ev.description)
-            if (locNum != null) "HR$locNum" else "HR"
-        }
-        ScoringEventType.WALK -> "BB"
-        ScoringEventType.HIT_BY_PITCH -> "HBP"
-        ScoringEventType.STRIKEOUT -> "K$suffix"
-        ScoringEventType.GROUNDOUT -> {
-            val runnerOutMatch = Regex("Runner Out: (\\d+(?:-\\d+)*U?)").find(ev.description)
-            val seqMatch = Regex("Groundout: (\\d+(?:-\\d+)*U?)").find(ev.description)
-            val baseNotation = when {
-                runnerOutMatch != null -> runnerOutMatch.groupValues[1]
-                seqMatch != null -> seqMatch.groupValues[1]
-                else -> {
-                    val matchNum = Regex("to .*? \\((\\d)\\)").find(ev.description)
-                    val posNum = matchNum?.groupValues?.get(1) ?: "3"
-                    "$posNum-3"
-                }
-            }
-            "$baseNotation$suffix"
-        }
-        ScoringEventType.FLYOUT -> {
-            val matchNum = Regex("to .*? \\((\\d)\\)").find(ev.description)
-            val posNum = matchNum?.groupValues?.get(1) ?: "8"
-            "F$posNum$suffix"
-        }
-        ScoringEventType.LINE_OUT -> {
-            val matchNum = Regex("to .*? \\((\\d)\\)").find(ev.description)
-            val posNum = matchNum?.groupValues?.get(1) ?: "6"
-            "L$posNum$suffix"
-        }
-        ScoringEventType.POP_OUT -> {
-            val matchNum = Regex("to .*? \\((\\d)\\)").find(ev.description)
-            val posNum = matchNum?.groupValues?.get(1) ?: "4"
-            "P$posNum$suffix"
-        }
-        ScoringEventType.SACRIFICE_FLY -> "SF"
-        ScoringEventType.ERROR -> "E"
-        ScoringEventType.FIELDER_CHOICE -> {
-            val runnerOutMatch = Regex("Runner Out: (\\d+(?:-\\d+)*U?)").find(ev.description)
-            val seqMatch = Regex("Fielder's Choice: (\\d+(?:-\\d+)*U?)").find(ev.description)
-            val baseNotation = when {
-                runnerOutMatch != null -> runnerOutMatch.groupValues[1]
-                seqMatch != null -> seqMatch.groupValues[1]
-                else -> "FC"
-            }
-            "$baseNotation$suffix"
-        }
-        ScoringEventType.STOLEN_BASE -> {
-            if (ev.description.contains("to 3B")) "SB3"
-            else if (ev.description.contains("to Home")) "SBH"
-            else "SB"
-        }
-        ScoringEventType.CAUGHT_STEALING -> {
-            val seqMatch = Regex("Caught Stealing: .*? \\((\\d+(?:-\\d+)*U?)\\)").find(ev.description)
-            if (seqMatch != null) "CS ${seqMatch.groupValues[1]}" else "CS"
-        }
-        ScoringEventType.PICKED_OFF -> {
-            val seqMatch = Regex("Picked Off: .*? \\((\\d+(?:-\\d+)*U?)\\)").find(ev.description)
-            if (seqMatch != null) "PO ${seqMatch.groupValues[1]}" else "PO"
-        }
-        ScoringEventType.WILD_PITCH -> "WP"
-        ScoringEventType.PASSED_BALL -> "PB"
-        ScoringEventType.BALK -> "BK"
-        else -> ""
-    }
-}
-
-fun getHitLocationNumber(desc: String): String? {
-    return when {
-        desc.contains("Left Field") -> "7"
-        desc.contains("Center Field") -> "8"
-        desc.contains("Right Field") -> "9"
-        desc.contains("Shortstop") -> "6"
-        desc.contains("2nd Base") || desc.contains("Second Base") -> "4"
-        desc.contains("3rd Base") || desc.contains("Third Base") -> "5"
-        desc.contains("1st Base") || desc.contains("First Base") -> "3"
-        desc.contains("Pitcher") -> "1"
-        desc.contains("Catcher") -> "2"
-        desc.contains("Infield") -> "IF"
-        else -> null
-    }
-}

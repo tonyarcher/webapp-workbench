@@ -1,4 +1,4 @@
-package com.baseball.ui.components
+﻿package com.baseball.ui.components.lineup
 
 import com.baseball.BaseballConstants
 import com.baseball.models.Player
@@ -276,14 +276,14 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
                 marginTop = 1.5.rem
             }
             button(classes = "btn btn-secondary") {
-                +"← Go Back to Welcome"
+                +"â† Go Back to Welcome"
                 onClickFunction = {
                     isLineupDialogOpen = false
                     AppViewManager.goBackToWelcome()
                 }
             }
             button(classes = "btn btn-primary") {
-                +"⚾ Start & Save Game"
+                +"âš¾ Start & Save Game"
                 onClickFunction = {
                     if (validateAndSave()) {
                         isLineupDialogOpen = false

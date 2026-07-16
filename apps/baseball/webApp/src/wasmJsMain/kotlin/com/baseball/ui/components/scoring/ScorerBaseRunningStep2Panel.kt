@@ -1,4 +1,4 @@
-package com.baseball.ui.components
+﻿package com.baseball.ui.components.scoring
 
 import com.baseball.models.*
 import com.baseball.ui.*
@@ -361,7 +361,7 @@ class ScorerBaseRunningStep2Panel(
     }
 
     private fun DIV.renderThrowPOActionButtons() {
-        listOf("U" to { isUnassisted = !isUnassisted }, "⌫" to { if (throwSequence.isNotEmpty()) throwSequence.removeAt(throwSequence.size - 1) }, "Clear" to { throwSequence.clear(); isUnassisted = false }).forEach { (lbl, action) ->
+        listOf("U" to { isUnassisted = !isUnassisted }, "âŒ«" to { if (throwSequence.isNotEmpty()) throwSequence.removeAt(throwSequence.size - 1) }, "Clear" to { throwSequence.clear(); isUnassisted = false }).forEach { (lbl, action) ->
             button(classes = "btn btn-secondary") {
                 +lbl
                 css {
