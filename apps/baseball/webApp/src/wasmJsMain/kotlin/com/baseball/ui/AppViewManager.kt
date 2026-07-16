@@ -18,8 +18,6 @@ import org.w3c.dom.*
 import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.css.*
-import com.baseball.ui.auth.*
-import com.baseball.ui.tabs.*
 
 private var _currentTab = BaseballConstants.TAB_LEAGUES
 var currentTab: String
@@ -75,6 +73,12 @@ fun loadNavState() {
 }
 
 object AppViewManager : DomBuilder {
+
+    private val tabRenderers = mutableMapOf<String, (HTMLElement) -> Unit>()
+
+    fun registerTabRenderers(renderers: Map<String, (HTMLElement) -> Unit>) {
+        tabRenderers.putAll(renderers)
+    }
 
     fun start() {
         authService.loadSession()
@@ -457,16 +461,7 @@ object AppViewManager : DomBuilder {
     fun renderCurrentTab() {
         val contentArea = document.getElementById("content-area") as? HTMLElement ?: return
         contentArea.innerHTML = ""
-
-        when (currentTab) {
-            BaseballConstants.TAB_LEAGUES -> renderLeaguesTab(contentArea)
-            BaseballConstants.TAB_TEAMS -> renderTeamsTab(contentArea)
-            BaseballConstants.TAB_GAMES -> renderSeasonDashboardTab(contentArea)
-            BaseballConstants.TAB_LIVE_SCORER -> renderLiveScorerTab(contentArea)
-            BaseballConstants.TAB_BOXSCORE -> renderBoxScoreTab(contentArea)
-            BaseballConstants.TAB_LOGIN -> renderLoginTab(contentArea)
-            BaseballConstants.TAB_REGISTER -> renderRegisterTab(contentArea)
-        }
+        tabRenderers[currentTab]?.invoke(contentArea)
     }
 }
 

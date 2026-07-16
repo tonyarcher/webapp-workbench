@@ -4,6 +4,13 @@ import com.baseball.api.*
 import com.baseball.auth.*
 import com.baseball.game.*
 import com.baseball.ui.AppViewManager
+import com.baseball.ui.auth.renderLoginTab
+import com.baseball.ui.auth.renderRegisterTab
+import com.baseball.ui.tabs.renderLeaguesTab
+import com.baseball.ui.tabs.renderTeamsTab
+import com.baseball.ui.tabs.renderSeasonDashboardTab
+import com.baseball.ui.tabs.renderLiveScorerTab
+import com.baseball.ui.tabs.renderBoxScoreTab
 
 // Global interface instantiations promoting coding by interface inheritance
 val api: BaseballApi = BaseballApiClient()
@@ -11,5 +18,14 @@ val authService: AuthService = AuthManager
 val gameService: GameService = GameManager
 
 fun main() {
+    AppViewManager.registerTabRenderers(mapOf(
+        BaseballConstants.TAB_LEAGUES      to ::renderLeaguesTab,
+        BaseballConstants.TAB_TEAMS        to ::renderTeamsTab,
+        BaseballConstants.TAB_GAMES        to ::renderSeasonDashboardTab,
+        BaseballConstants.TAB_LIVE_SCORER  to ::renderLiveScorerTab,
+        BaseballConstants.TAB_BOXSCORE     to ::renderBoxScoreTab,
+        BaseballConstants.TAB_LOGIN        to ::renderLoginTab,
+        BaseballConstants.TAB_REGISTER     to ::renderRegisterTab,
+    ))
     AppViewManager.start()
 }

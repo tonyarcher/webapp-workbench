@@ -9,7 +9,6 @@ import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.css.*
 import com.baseball.ui.*
-import com.baseball.ui.*
 
 internal fun renderLeaguesTab(container: HTMLElement) {
     container.h1 { +"Leagues & Seasons" }

@@ -11,7 +11,6 @@ import kotlinx.html.js.*
 import kotlinx.html.dom.*
 import kotlinx.css.*
 import com.baseball.ui.*
-import com.baseball.ui.*
 
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
     container.h1 { +"Season Dashboard" }

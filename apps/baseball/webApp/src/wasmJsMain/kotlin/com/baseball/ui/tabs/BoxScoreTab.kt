@@ -14,7 +14,6 @@ import kotlinx.html.js.*
 import kotlinx.html.dom.*
 import kotlinx.css.*
 import com.baseball.ui.*
-import com.baseball.ui.*
 
 internal fun renderBoxScoreTab(container: HTMLElement) {
     if (!isSingleGameMode && selectedGameId == null) {

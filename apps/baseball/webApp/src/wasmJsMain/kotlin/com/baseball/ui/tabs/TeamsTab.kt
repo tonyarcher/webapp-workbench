@@ -9,7 +9,6 @@ import kotlinx.html.*
 import kotlinx.html.js.*
 import kotlinx.css.*
 import com.baseball.ui.*
-import com.baseball.ui.*
 
 internal fun renderTeamsTab(container: HTMLElement) {
     container.h1 { +"Teams & Rosters" }
