@@ -19,7 +19,7 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
         container.div(classes = "card") {
             css {
                 textAlign = TextAlign.center
-                put("padding", "3rem")
+                padding = Padding(3.rem)
             }
             p { +"No game selected." }
         }
@@ -114,7 +114,7 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
                 h3 { +"Game Log History" }
                 div(classes = "event-log") {
                     css {
-                        put("max-height", "350px")
+                        maxHeight = 350.px
                     }
                     events.forEach { ev ->
                         div(classes = "log-item") {

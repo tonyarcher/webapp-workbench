@@ -92,8 +92,8 @@ class GameScoringController(
                     +"VS"
                     css {
                         fontSize = 1.3.rem
-                        put("font-weight", "900")
-                        put("margin", "0 1.5rem")
+                        fontWeight = FontWeight("900")
+                        margin = Margin(0.px, 1.5.rem)
                         color = Color("rgba(74, 222, 128, 0.4)")
                     }
                 }
@@ -106,7 +106,7 @@ class GameScoringController(
         val currBatter = (awayRoster + homeRoster).find { it.id == game.gameState.currentBatterId }
         parent.div {
             css {
-                put("flex", "1")
+                flexGrow = 1.0
             }
             div {
                 +"CURRENT BATTER"
@@ -119,7 +119,7 @@ class GameScoringController(
                 +(game.gameState.currentBatterName ?: "None")
                 css {
                     fontSize = 1.2.rem
-                    put("font-weight", "800")
+                    fontWeight = FontWeight("800")
                     color = Color("var(--text-primary)")
                 }
             }
@@ -137,7 +137,7 @@ class GameScoringController(
         val currPitcher = (awayRoster + homeRoster).find { it.id == game.gameState.currentPitcherId }
         parent.div {
             css {
-                put("flex", "1")
+                flexGrow = 1.0
             }
             div {
                 +"CURRENT PITCHER"
@@ -150,7 +150,7 @@ class GameScoringController(
                 +(game.gameState.currentPitcherName ?: "None")
                 css {
                     fontSize = 1.2.rem
-                    put("font-weight", "800")
+                    fontWeight = FontWeight("800")
                     color = Color("var(--text-primary)")
                 }
             }
@@ -233,7 +233,7 @@ class GameScoringController(
                 display = Display.flex
                 gap = 0.5.rem
                 marginBottom = 1.rem
-                put("flex-wrap", "wrap")
+                flexWrap = FlexWrap.wrap
             }
             val pitchTypes = listOf("Fastball", "Breaking Ball", "Offspeed")
             pitchTypes.forEach { pType ->
@@ -241,7 +241,7 @@ class GameScoringController(
                 button(classes = if (isSelected) "btn btn-primary" else "btn btn-secondary") {
                     +pType
                     css {
-                        put("flex", "1")
+                        flexGrow = 1.0
                         fontSize = 0.85.rem
                         padding = Padding(0.4.rem)
                     }

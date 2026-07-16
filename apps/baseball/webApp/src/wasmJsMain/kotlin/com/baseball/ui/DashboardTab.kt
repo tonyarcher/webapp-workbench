@@ -41,7 +41,7 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
         div(classes = "form-group") {
             css {
                 marginBottom = 0.px
-                put("flex", "1")
+                flexGrow = 1.0
             }
             label { +"Active League" }
             select(classes = "form-control") {
@@ -70,7 +70,7 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
         div(classes = "form-group") {
             css {
                 marginBottom = 0.px
-                put("flex", "1")
+                flexGrow = 1.0
             }
             label { +"Active Season" }
             select(classes = "form-control") {
@@ -179,7 +179,7 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                             disabled = true
                             css {
                                 opacity = 0.5
-                                put("cursor", "not-allowed")
+                                cursor = Cursor.notAllowed
                             }
                         } else {
                             onClickFunction = {

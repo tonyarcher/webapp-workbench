@@ -167,7 +167,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 display = Display.none
                 backgroundColor = Color("#fcfbfa")
                 border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                put("border-top", "none")
+                borderTopStyle = BorderStyle.none
                 padding = Padding(1.rem)
                 marginTop = (-1.1).rem
                 marginBottom = 1.5.rem
@@ -180,7 +180,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     gap = 2.rem
                 }
                 div {
-                    css { put("flex", "1") }
+                    css { flexGrow = 1.0 }
                     h4 { +"BENCH BATTERS" }
                     val batters = benchList.filter { it.position != BaseballConstants.Positions.P && !localPlayersSubbedOut.contains(it.id) }
                     if (batters.isEmpty()) {
@@ -192,7 +192,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     }
                 }
                 div {
-                    css { put("flex", "1") }
+                    css { flexGrow = 1.0 }
                     h4 { +"BULLPEN" }
                     val pitchers = fieldingBench.filter { it.position == BaseballConstants.Positions.P && it.name != activePitcherName }
                     if (pitchers.isEmpty()) {

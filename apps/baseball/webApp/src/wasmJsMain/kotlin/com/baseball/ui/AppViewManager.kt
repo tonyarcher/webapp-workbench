@@ -315,7 +315,7 @@ object AppViewManager : DomBuilder {
                         span {
                             +"Hello, ${userSession.firstName}!"
                             css {
-                                put("font-weight", "600")
+                                fontWeight = FontWeight("600")
                                 color = Color("var(--accent-yellow)")
                             }
                         }
@@ -387,7 +387,7 @@ object AppViewManager : DomBuilder {
                         id = "nav-btn-live"
                         +"Live Scoring"
                         css {
-                            put("display", if (isSingleGameMode || selectedGameId != null) "inline-block" else "none")
+                            display = if (isSingleGameMode || selectedGameId != null) Display.inlineBlock else Display.none
                         }
                         onClickFunction = {
                             currentTab = BaseballConstants.TAB_LIVE_SCORER
@@ -400,7 +400,7 @@ object AppViewManager : DomBuilder {
                         id = "nav-btn-boxscore"
                         +"Box Score"
                         css {
-                            put("display", if (isSingleGameMode || selectedGameId != null) "inline-block" else "none")
+                            display = if (isSingleGameMode || selectedGameId != null) Display.inlineBlock else Display.none
                         }
                         onClickFunction = {
                             currentTab = BaseballConstants.TAB_BOXSCORE

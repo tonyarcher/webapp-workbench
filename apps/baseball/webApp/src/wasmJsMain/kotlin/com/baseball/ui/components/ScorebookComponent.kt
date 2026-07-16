@@ -46,7 +46,7 @@ private fun renderScorebookWrapper(container: HTMLElement, game: Game, onToggle:
             borderRadius = 12.px
             border = Border(2.px, BorderStyle.solid, Color("#d2cdc6"))
             put("box-shadow", "0 6px 20px rgba(0, 0, 0, 0.15)")
-            put("font-family", "'Courier New', Courier, monospace")
+            fontFamily = "'Courier New', Courier, monospace"
         }
         renderScorebookHeader(this, game, onToggle)
         div {
@@ -70,7 +70,7 @@ private fun renderScorebookHeader(parent: DIV, game: Game, onToggle: (HalfInning
             css {
                 margin = Margin(0.px)
                 fontWeight = FontWeight.bold
-                put("letter-spacing", "2px")
+                letterSpacing = 2.px
             }
         }
         renderToggleButtonGroup(this, game, onToggle)

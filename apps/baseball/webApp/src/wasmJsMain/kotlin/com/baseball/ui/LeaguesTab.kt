@@ -200,7 +200,7 @@ internal fun renderLeaguesTab(container: HTMLElement) {
                         span {
                             +"${season.name} (${season.year})"
                             css {
-                                put("font-weight", "600")
+                                fontWeight = FontWeight("600")
                             }
                         }
 

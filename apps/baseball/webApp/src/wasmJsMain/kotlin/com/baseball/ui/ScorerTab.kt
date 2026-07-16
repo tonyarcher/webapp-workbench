@@ -162,10 +162,10 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                                 display = Display.flex
                                 flexDirection = FlexDirection.column
                                 padding = Padding(0.75.rem)
-                                put("border-bottom", "1px solid rgba(255, 255, 255, 0.05)")
+                                borderBottom = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.05)"))
                                 if (endedInning) {
                                     background = "rgba(255, 42, 59, 0.05)"
-                                    put("border-left", "4px solid var(--accent-red)")
+                                    borderLeft = Border(4.px, BorderStyle.solid, Color("var(--accent-red)"))
                                 }
                             }
 
@@ -269,14 +269,14 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                     display = Display.flex
                     justifyContent = JustifyContent.spaceBetween
                     alignItems = Align.center
-                    put("border-bottom", "1px solid rgba(255, 255, 255, 0.1)")
+                    borderBottom = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.1)"))
                     paddingBottom = 0.5.rem
                     marginBottom = 1.rem
                 }
 
                 h2 {
                     +"Live Game Monitoring"
-                    css { put("margin", "0") }
+                    css { margin = Margin(0.px) }
                 }
 
                 div {
@@ -330,23 +330,23 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
         if (isResetDialogOpen) {
             container.div {
                 css {
-                    put("position", "fixed")
-                    put("top", "0")
-                    put("left", "0")
-                    put("width", "100vw")
-                    put("height", "100vh")
+                    position = Position.fixed
+                    top = 0.px
+                    left = 0.px
+                    width = LinearDimension("100vw")
+                    height = LinearDimension("100vh")
                     background = "rgba(10, 15, 30, 0.8)"
                     put("backdrop-filter", "blur(12px)")
                     display = Display.flex
                     alignItems = Align.center
                     justifyContent = JustifyContent.center
-                    put("z-index", "10000")
+                    zIndex = 10000
                 }
 
                 div(classes = "card") {
                     css {
-                        put("width", "90%")
-                        put("max-width", "450px")
+                        width = 90.pct
+                        maxWidth = 450.px
                         padding = Padding(2.rem)
                         textAlign = TextAlign.center
                     }

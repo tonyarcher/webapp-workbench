@@ -25,7 +25,7 @@ fun renderScorebookBottomSection(
     val bottomGrid = container.append.div {
         css {
             display = Display.flex
-            put("flex-wrap", "wrap")
+            flexWrap = FlexWrap.wrap
             gap = 1.5.rem
             marginTop = 1.5.rem
         }

@@ -142,8 +142,8 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
                 position = Position.fixed
                 top = 0.px
                 left = 0.px
-                put("width", "100vw")
-                put("height", "100vh")
+                width = LinearDimension("100vw")
+                height = LinearDimension("100vh")
                 background = "rgba(10, 15, 30, 0.8)"
                 put("backdrop-filter", "blur(12px)")
                 display = Display.flex
@@ -161,7 +161,7 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
         parent.div(classes = "lineup-modal-content card") {
             css {
                 width = 100.pct
-                put("max-width", "1000px")
+                maxWidth = 1000.px
                 padding = Padding(2.rem)
                 put("box-shadow", "0 10px 40px rgba(0,0,0,0.5)")
             }
@@ -360,21 +360,21 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
                 gap = 0.5.rem
                 marginBottom = 1.25.rem
                 paddingBottom = 1.rem
-                put("border-bottom", "1px dashed rgba(255,255,255,0.1)")
+                borderBottom = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.1)"))
                 alignItems = Align.center
             }
             span {
                 +"Starting Pitcher:"
                 css {
                     fontWeight = FontWeight.bold
-                    put("width", "100px")
+                    width = 100.px
                 }
             }
             input(type = InputType.text, classes = "form-control") {
                 placeholder = "Pitcher Name"
                 value = if (isHome) homePitcherNameInput else awayPitcherNameInput
                 css {
-                    put("flex", "1")
+                    flexGrow = 1.0
                 }
                 onChangeFunction = { event ->
                     val txt = (event.target as HTMLInputElement).value
@@ -385,7 +385,7 @@ class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
                 placeholder = "No."
                 value = if (isHome) homePitcherNumberInput else awayPitcherNumberInput
                 css {
-                    put("width", "60px")
+                    width = 60.px
                 }
                 onChangeFunction = { event ->
                     val txt = (event.target as HTMLInputElement).value

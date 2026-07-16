@@ -17,9 +17,9 @@ internal fun renderLoginTab(container: HTMLElement) {
 
     container.div(classes = "card") {
         css {
-            put("max-width", "450px")
-            put("margin", "2rem auto")
-            put("padding", "2.5rem")
+            maxWidth = 450.px
+            margin = Margin(2.rem, LinearDimension.auto)
+            padding = Padding(2.5.rem)
         }
 
         h2 {
@@ -36,7 +36,7 @@ internal fun renderLoginTab(container: HTMLElement) {
                 color = Color("var(--accent-red)")
                 background = "rgba(255, 42, 59, 0.1)"
                 border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
-                put("padding", "0.75rem")
+                padding = Padding(0.75.rem)
                 borderRadius = 8.px
                 marginBottom = 1.rem
                 fontSize = 0.9.rem
@@ -139,9 +139,9 @@ internal fun renderRegisterTab(container: HTMLElement) {
 
     container.div(classes = "card") {
         css {
-            put("max-width", "450px")
-            put("margin", "2rem auto")
-            put("padding", "2.5rem")
+            maxWidth = 450.px
+            margin = Margin(2.rem, LinearDimension.auto)
+            padding = Padding(2.5.rem)
         }
 
         h2 {
@@ -158,7 +158,7 @@ internal fun renderRegisterTab(container: HTMLElement) {
                 color = Color("var(--accent-red)")
                 background = "rgba(255, 42, 59, 0.1)"
                 border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
-                put("padding", "0.75rem")
+                padding = Padding(0.75.rem)
                 borderRadius = 8.px
                 marginBottom = 1.rem
                 fontSize = 0.9.rem
