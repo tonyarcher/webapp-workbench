@@ -12,6 +12,13 @@ kotlin {
                     port = 3000
                 )
             }
+            testTask {
+                useMocha {
+                    // Disable Mocha's 2s default timeout; long-running simulation tests
+                    // (up to 3×1000 play events) need more time in the browser
+                    timeout = "0"
+                }
+            }
         }
     }
     
