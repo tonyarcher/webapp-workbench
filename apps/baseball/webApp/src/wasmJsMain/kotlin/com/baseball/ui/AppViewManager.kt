@@ -230,7 +230,7 @@ object AppViewManager : DomBuilder {
                         initGame(forceReset = false)
                         window.location.hash = BaseballConstants.TAB_LIVE_SCORER
                     }
-                    div(classes = "mode-icon") { +"âš¾" }
+                    div(classes = "mode-icon") { +"⚾" }
                     div(classes = "mode-title") { +"Single Game Mode" }
                     div(classes = "mode-desc") {
                         +"Play or score a local exhibition game between Chicago and St. Louis. Runs entirely in your browser with no server connection required."
@@ -268,7 +268,7 @@ object AppViewManager : DomBuilder {
                             }
                         }
                     }
-                    div(classes = "mode-icon") { +"ðŸ†" }
+                    div(classes = "mode-icon") { +"🏆" }
                     div(classes = "mode-title") { +"League & Season Mode" }
                     div(classes = "mode-desc") {
                         +"Manage complete baseball leagues, schedule round-robin seasons, track standings, and record live games backed by your database server."
@@ -349,7 +349,7 @@ object AppViewManager : DomBuilder {
 
                 nav {
                     button(classes = "back-to-welcome") {
-                        +"â† Back to Menu"
+                        +"← Back to Menu"
                         onClickFunction = {
                             goBackToWelcome()
                         }
