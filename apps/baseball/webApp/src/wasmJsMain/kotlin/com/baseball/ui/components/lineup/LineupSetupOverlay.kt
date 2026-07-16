@@ -1,4 +1,4 @@
-﻿package com.baseball.ui.components.lineup
+package com.baseball.ui.components.lineup
 
 import com.baseball.BaseballConstants
 import com.baseball.game.startNewGame
@@ -16,7 +16,7 @@ import kotlin.random.Random
 
 var isLineupDialogOpen = false
 
-class LineupSetupOverlay(private val container: HTMLElement) : DomBuilder {
+class LineupSetupOverlay(private val container: HTMLElement) {
 
     private var useDh = true
     private var homeTeam = SeedData.teamCubs

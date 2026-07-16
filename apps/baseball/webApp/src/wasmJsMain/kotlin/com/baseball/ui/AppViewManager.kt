@@ -70,7 +70,7 @@ fun loadNavState() {
     }
 }
 
-object AppViewManager : DomBuilder {
+object AppViewManager {
 
     private val tabRenderers = mutableMapOf<String, (HTMLElement) -> Unit>()
 
