@@ -1,4 +1,4 @@
-﻿package com.baseball.ui.tabs
+package com.baseball.ui.tabs
 
 import com.baseball.BaseballConstants
 import com.baseball.api
@@ -140,7 +140,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 
                                 if (endedInning) {
                                     span {
-                                        +" Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ / (Side Retired)"
+                                        +" ─── / (Side Retired)"
                                         css {
                                             color = Color("var(--accent-red)")
                                             fontWeight = FontWeight.bold
@@ -181,7 +181,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                     }
                     if (localEvents.isNotEmpty()) {
                         button(classes = "btn btn-secondary") {
-                            +"Ã¢Å½Å’ Undo Action"
+                            +"⎌ Undo Action"
                             css { padding = Padding(0.5.rem, 1.rem) }
                             onClickFunction = {
                                 undoLastLocalEvent()

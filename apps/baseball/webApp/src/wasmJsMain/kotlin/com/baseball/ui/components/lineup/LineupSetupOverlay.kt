@@ -279,14 +279,14 @@ class LineupSetupOverlay(private val container: HTMLElement) {
                 marginTop = 1.5.rem
             }
             button(classes = "btn btn-secondary") {
-                +"â† Go Back to Welcome"
+                +"← Go Back to Welcome"
                 onClickFunction = {
                     isLineupDialogOpen = false
                     AppViewManager.goBackToWelcome()
                 }
             }
             button(classes = "btn btn-primary") {
-                +"âš¾ Start & Save Game"
+                +"⚾ Start & Save Game"
                 onClickFunction = {
                     if (validateAndSave()) {
                         isLineupDialogOpen = false
