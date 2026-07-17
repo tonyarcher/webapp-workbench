@@ -1,4 +1,4 @@
-﻿package com.baseball.ui.components.scorebook
+package com.baseball.ui.components.scorebook
 
 import com.baseball.BaseballConstants
 import com.baseball.UiConstants
@@ -7,6 +7,7 @@ import com.baseball.models.*
 import com.baseball.ui.*
 import kotlinx.browser.document
 import kotlinx.css.*
+import kotlinx.css.properties.*
 import kotlinx.html.*
 import kotlinx.html.dom.append
 import kotlinx.html.js.div
@@ -546,7 +547,9 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         position = Position.absolute
                         top = 50.pct
                         left = 50.pct
-                        put("transform", "translate(-50%, -50%)")
+                        transform {
+                            translate((-50).pct, (-50).pct)
+                        }
                         fontWeight = FontWeight.bold
                         fontSize = 0.75.rem
                         zIndex = 2
@@ -575,7 +578,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 width = 24.px
                 height = 24.px
                 border = Border(1.px, BorderStyle.solid, Color("#dcd8cf"))
-                put("transform", "rotate(45deg)")
+                transform { rotate(45.deg) }
                 zIndex = 1
             }
             if (base >= 1) {
@@ -587,7 +590,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         width = 13.px
                         height = 1.px
                         backgroundColor = Color("#5a544a")
-                        put("transform", "rotate(-45deg)")
+                        transform { rotate((-45).deg) }
                         put("transform-origin", "bottom right")
                     }
                 }
@@ -601,7 +604,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         width = 13.px
                         height = 1.px
                         backgroundColor = Color("#5a544a")
-                        put("transform", "rotate(45deg)")
+                        transform { rotate(45.deg) }
                         put("transform-origin", "top right")
                     }
                 }
@@ -615,7 +618,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         width = 13.px
                         height = 1.px
                         backgroundColor = Color("#5a544a")
-                        put("transform", "rotate(-45deg)")
+                        transform { rotate((-45).deg) }
                         put("transform-origin", "top left")
                     }
                 }
@@ -629,7 +632,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         width = 13.px
                         height = 1.px
                         backgroundColor = Color("#5a544a")
-                        put("transform", "rotate(45deg)")
+                        transform { rotate(45.deg) }
                         put("transform-origin", "bottom left")
                     }
                 }
@@ -729,7 +732,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     width = 35.px
                     height = 1.px
                     backgroundColor = Color("#5a544a")
-                    put("transform", "rotate(-45deg)")
+                    transform { rotate((-45).deg) }
                     put("transform-origin", "bottom right")
                     zIndex = 4
                 }
