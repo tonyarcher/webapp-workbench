@@ -72,6 +72,11 @@ class ControllersTest {
         val mockDashboard = SeasonDashboard(1L, "2026", emptyList<TeamStandings>(), emptyList<Game>())
         `when`(scoringService.getSeasonDashboard(1L)).thenReturn(mockDashboard)
         assertEquals(mockDashboard, controller.getDashboard(1L))
+
+        // getStats
+        val mockStats = SeasonStats(1L, emptyList(), emptyList(), emptyList())
+        `when`(scoringService.getSeasonStats(1L)).thenReturn(mockStats)
+        assertEquals(mockStats, controller.getStats(1L))
     }
 
     @Test
@@ -239,5 +244,9 @@ class ControllersTest {
         val events = controller.getEvents(1L)
         assertEquals(1, events.size)
         assertEquals("Happ", events[0].batterName)
+
+        // resetGame
+        `when`(scoringService.resetGame(1L)).thenReturn(mockGame)
+        assertEquals(mockGame, controller.resetGame(1L))
     }
 }

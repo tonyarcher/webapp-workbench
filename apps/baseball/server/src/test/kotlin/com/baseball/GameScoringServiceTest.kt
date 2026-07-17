@@ -468,4 +468,48 @@ class GameScoringServiceTest {
                 ScoringEventRequest(ScoringEventType.PICKED_OFF, batterId, pitcherId, runnerAdvanceMap = mapPO),
             )
     }
+
+    @Test
+    fun testResetGame() {
+        val gameId = 1L
+        val gameEntity = GameEntity(id = gameId, status = GameStatus.COMPLETED, homeTeamId = 100L, awayTeamId = 200L)
+        `when`(gameRepository.findById(gameId)).thenReturn(Optional.of(gameEntity))
+        `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
+        `when`(teamRepository.findById(100L)).thenReturn(Optional.of(TeamEntity(100L, "Cards", "STL", "St. Louis")))
+        `when`(teamRepository.findById(200L)).thenReturn(Optional.of(TeamEntity(200L, "Cubs", "CHC", "Chicago")))
+
+        val reset = scoringService.resetGame(gameId)
+        assertEquals(GameStatus.SCHEDULED, reset.status)
+        assertEquals(0, reset.homeScore)
+        assertEquals(0, reset.awayScore)
+    }
+
+    @Test
+    fun testGetSeasonStats() {
+        val seasonId = 1L
+        val seasonEntity = SeasonEntity(id = seasonId, name = "2026", year = 2026, leagueId = 10L)
+        `when`(seasonRepository.findById(seasonId)).thenReturn(Optional.of(seasonEntity))
+
+        val game1 = GameEntity(id = 101L, seasonId = seasonId, homeTeamId = 100L, awayTeamId = 200L)
+        `when`(gameRepository.findAllBySeasonId(seasonId)).thenReturn(listOf(game1))
+
+        val player = PlayerEntity(id = 10L, name = "Yogi", jerseyNumber = 8, position = "C", teamId = 100L)
+        `when`(playerRepository.findAll()).thenReturn(listOf(player))
+
+        val batting = PlayerGameBattingStatsEntity(id = 1L, gameId = 101L, playerId = 10L, teamId = 100L, atBats = 4, hits = 2)
+        `when`(battingRepository.findAllByGameIdIn(listOf(101L))).thenReturn(listOf(batting))
+
+        val pitching = PlayerGamePitchingStatsEntity(id = 2L, gameId = 101L, playerId = 10L, teamId = 100L, inningsPitchedThirds = 3, strikeoutsRecorded = 2)
+        `when`(pitchingRepository.findAllByGameIdIn(listOf(101L))).thenReturn(listOf(pitching))
+
+        val fielding = PlayerGameFieldingStatsEntity(id = 3L, gameId = 101L, playerId = 10L, teamId = 100L, putouts = 5, assists = 1, errors = 0)
+        `when`(fieldingRepository.findAllByGameIdIn(listOf(101L))).thenReturn(listOf(fielding))
+
+        val stats = scoringService.getSeasonStats(seasonId)
+        assertEquals(seasonId, stats.seasonId)
+        assertEquals(1, stats.battingStats.size)
+        assertEquals(2, stats.battingStats[0].hits)
+        assertEquals(1, stats.fieldingStats.size)
+        assertEquals(5, stats.fieldingStats[0].putouts)
+    }
 }
