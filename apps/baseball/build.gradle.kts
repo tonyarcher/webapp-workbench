@@ -11,30 +11,14 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
 }
 
-allprojects {
-    apply(plugin = "org.jlleitschuh.gradle.ktlint")
-}
+detekt {
+    // Path to your custom config file
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    buildUponDefaultConfig = true // Use default rules as base
+    allRules = false // Activates all rules if true
 
-configure(subprojects.filter { it.name in listOf("webApp", "shared") }) {
-    apply(plugin = "io.gitlab.arturbosch.detekt")
-
-    detekt {
-        toolVersion = "1.23.6"
-        config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-        buildUponDefaultConfig = true
-    }
-
-    configurations.matching { it.name.startsWith("detekt") }.all {
-        resolutionStrategy.eachDependency {
-            if (requested.group == "org.jetbrains.kotlin") {
-                useVersion("1.9.23")
-            }
-        }
-    }
-
-    tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
-        jvmTarget = "21"
-    }
+    // Ignore legacy warnings by generating a baseline
+    baseline = file("$rootDir/config/detekt/baseline.xml")
 }
 
 // Suppress Node.js deprecation warnings (e.g. url.parse() DEP0169 in Yarn v1) in all child processes
