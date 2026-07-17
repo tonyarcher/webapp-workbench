@@ -146,7 +146,7 @@ object AppViewManager {
                         seasonsList = api.getSeasons(selectedLeagueId!!)
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 serverOnline = false
             }
             renderApp()
@@ -262,7 +262,7 @@ object AppViewManager {
                                 } else {
                                     window.location.hash = BaseballConstants.TAB_LEAGUES
                                 }
-                            } catch (e: Exception) {
+                            } catch (e: Throwable) {
                                 serverConnectionError = "Unable to connect to the server. Please check that your Spring Boot backend is running."
                                 renderApp()
                             }
