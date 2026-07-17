@@ -573,78 +573,28 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         parent.div {
             css {
                 position = Position.absolute
-                top = 8.px
-                left = 24.px
-                width = 24.px
-                height = 24.px
-                border = Border(1.px, BorderStyle.solid, Color("#dcd8cf"))
+                top = 50.pct
+                left = 50.pct
+                width = 26.px
+                height = 26.px
+                marginTop = (-13).px
+                marginLeft = (-13).px
+                border = Border(1.px, BorderStyle.dashed, Color("#d2cdc6"))
                 transform { rotate(45.deg) }
                 zIndex = 1
-            }
-            if (base >= 1) {
-                div {
-                    css {
-                        position = Position.absolute
-                        bottom = (-1).px
-                        right = (-1).px
-                        width = 13.px
-                        height = 1.px
-                        backgroundColor = Color("#5a544a")
-                        transform { rotate((-45).deg) }
-                        put("transform-origin", "bottom right")
-                    }
+
+                if (base >= 1) {
+                    borderRight = Border(2.px, BorderStyle.solid, Color("#ff2a3b"))
                 }
-            }
-            if (base >= 2) {
-                div {
-                    css {
-                        position = Position.absolute
-                        top = (-1).px
-                        right = (-1).px
-                        width = 13.px
-                        height = 1.px
-                        backgroundColor = Color("#5a544a")
-                        transform { rotate(45.deg) }
-                        put("transform-origin", "top right")
-                    }
+                if (base >= 2) {
+                    borderTop = Border(2.px, BorderStyle.solid, Color("#ff2a3b"))
                 }
-            }
-            if (base >= 3) {
-                div {
-                    css {
-                        position = Position.absolute
-                        top = (-1).px
-                        left = (-1).px
-                        width = 13.px
-                        height = 1.px
-                        backgroundColor = Color("#5a544a")
-                        transform { rotate((-45).deg) }
-                        put("transform-origin", "top left")
-                    }
+                if (base >= 3) {
+                    borderLeft = Border(2.px, BorderStyle.solid, Color("#ff2a3b"))
                 }
-            }
-            if (base >= 4) {
-                div {
-                    css {
-                        position = Position.absolute
-                        bottom = (-1).px
-                        left = (-1).px
-                        width = 13.px
-                        height = 1.px
-                        backgroundColor = Color("#5a544a")
-                        transform { rotate(45.deg) }
-                        put("transform-origin", "bottom left")
-                    }
-                }
-                div {
-                    css {
-                        position = Position.absolute
-                        top = 2.px
-                        left = 2.px
-                        width = 18.px
-                        height = 18.px
-                        backgroundColor = Color("rgba(90, 84, 74, 0.2)")
-                    }
+                if (base >= 4) {
+                    borderBottom = Border(2.px, BorderStyle.solid, Color("#ff2a3b"))
+                    backgroundColor = Color("rgba(255, 42, 59, 0.25)")
                 }
             }
         }
