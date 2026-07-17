@@ -569,7 +569,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun DIV.renderInningDiamond(parent: DIV, base: Int) {
+    private fun renderInningDiamond(parent: DIV, base: Int) {
         parent.div {
             css {
                 position = Position.absolute
@@ -650,7 +650,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun DIV.renderOutDetails(parent: DIV, outAtBase: Int?, outDetail: String?) {
+    private fun renderOutDetails(parent: DIV, outAtBase: Int?, outDetail: String?) {
         if (outAtBase != null && outDetail != null) {
             parent.div {
                 +outDetail
@@ -680,7 +680,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         else 0.px
     }
 
-    private fun DIV.renderCountBallsStrikes(parent: DIV, ev: PlayEvent) {
+    private fun renderCountBallsStrikes(parent: DIV, ev: PlayEvent) {
         if (ev.balls > 0 || ev.strikes > 0) {
             parent.div {
                 css {
@@ -696,7 +696,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun DIV.renderOutCircle(parent: DIV, outNum: Int?) {
+    private fun renderOutCircle(parent: DIV, outNum: Int?) {
         if (outNum != null) {
             parent.div {
                 +outNum.toString()
@@ -719,7 +719,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun DIV.renderEndedInningDiagonal(parent: DIV, ev: PlayEvent, teamEvents: List<PlayEvent>) {
+    private fun renderEndedInningDiagonal(parent: DIV, ev: PlayEvent, teamEvents: List<PlayEvent>) {
         val playIdx = teamEvents.indexOf(ev)
         val nextPlay = teamEvents.getOrNull(playIdx + 1)
         val endedInning = ev.outsAfter == 3 && (nextPlay == null || nextPlay.inning > ev.inning)
