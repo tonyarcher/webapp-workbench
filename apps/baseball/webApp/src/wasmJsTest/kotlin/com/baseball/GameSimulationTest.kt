@@ -3,32 +3,31 @@ package com.baseball
 import com.baseball.game.*
 import com.baseball.models.GameStatus
 import com.baseball.models.ScoringEventType
+import kotlinx.css.*
+import kotlinx.css.properties.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-import kotlinx.css.*
-import kotlinx.css.properties.*
-
 class GameSimulationTest {
-
     @Test
     fun testCss() {
-        val builder = kotlinx.css.CssBuilder().apply {
-            transform {
-                translate((-50).pct, (-50).pct)
+        val builder =
+            kotlinx.css.CssBuilder().apply {
+                transform {
+                    translate((-50).pct, (-50).pct)
+                }
             }
-        }
-        val builder2 = kotlinx.css.CssBuilder().apply {
-            transform {
-                rotate((-45).deg)
+        val builder2 =
+            kotlinx.css.CssBuilder().apply {
+                transform {
+                    rotate((-45).deg)
+                }
             }
-        }
-        println("CSS TRANSLATE OUTPUT: ${builder.toString()}")
-        println("CSS ROTATE OUTPUT: ${builder2.toString()}")
+        println("CSS TRANSLATE OUTPUT: $builder")
+        println("CSS ROTATE OUTPUT: $builder2")
     }
-
 
     @Test
     fun testSimulateMultipleGames() {
@@ -47,27 +46,28 @@ class GameSimulationTest {
                 val pitcherId = currGame.gameState.currentPitcherId!!
 
                 // Generate a deterministic sequence of events to ensure hits, walks, outs, and runs occur
-                val eventType = when (playCount % 12) {
-                    0 -> ScoringEventType.SINGLE
-                    1 -> ScoringEventType.STRIKEOUT
-                    2 -> ScoringEventType.GROUNDOUT
-                    3 -> ScoringEventType.WALK
-                    4 -> ScoringEventType.DOUBLE
-                    5 -> ScoringEventType.FLYOUT
-                    6 -> ScoringEventType.STRIKEOUT
-                    7 -> ScoringEventType.HOME_RUN
-                    8 -> ScoringEventType.GROUNDOUT
-                    9 -> ScoringEventType.SINGLE
-                    10 -> ScoringEventType.FLYOUT
-                    11 -> ScoringEventType.GROUNDOUT
-                    else -> ScoringEventType.GROUNDOUT
-                }
+                val eventType =
+                    when (playCount % 12) {
+                        0 -> ScoringEventType.SINGLE
+                        1 -> ScoringEventType.STRIKEOUT
+                        2 -> ScoringEventType.GROUNDOUT
+                        3 -> ScoringEventType.WALK
+                        4 -> ScoringEventType.DOUBLE
+                        5 -> ScoringEventType.FLYOUT
+                        6 -> ScoringEventType.STRIKEOUT
+                        7 -> ScoringEventType.HOME_RUN
+                        8 -> ScoringEventType.GROUNDOUT
+                        9 -> ScoringEventType.SINGLE
+                        10 -> ScoringEventType.FLYOUT
+                        11 -> ScoringEventType.GROUNDOUT
+                        else -> ScoringEventType.GROUNDOUT
+                    }
 
-        recordPlayEvent(
+                recordPlayEvent(
                     eventType = eventType,
                     batterId = batterId,
                     pitcherId = pitcherId,
-                    descriptionDetail = "Play $playCount: ${eventType.name}"
+                    descriptionDetail = "Play $playCount: ${eventType.name}",
                 )
                 playCount++
             }
@@ -124,9 +124,9 @@ class GameSimulationTest {
             eventType = ScoringEventType.SINGLE,
             batterId = batterId,
             pitcherId = pitcherId,
-            descriptionDetail = "Single by batter"
+            descriptionDetail = "Single by batter",
         )
-        
+
         // Batter should now be on 1B
         val runner1 = localGame!!.gameState.runnerFirstId
         assertNotNull(runner1)
@@ -137,7 +137,7 @@ class GameSimulationTest {
             batterId = localGame!!.gameState.currentBatterId!!,
             pitcherId = localGame!!.gameState.currentPitcherId!!,
             descriptionDetail = "Stolen Base: Runner to 2B",
-            runnerAdvanceMap = mapOf(runner1.toString() to 2)
+            runnerAdvanceMap = mapOf(runner1.toString() to 2),
         )
 
         // Runner should now be on 2B, batter's count and lineup index preserved
@@ -151,7 +151,7 @@ class GameSimulationTest {
             batterId = localGame!!.gameState.currentBatterId!!,
             pitcherId = localGame!!.gameState.currentPitcherId!!,
             descriptionDetail = "Caught Stealing: Runner (2-5)",
-            runnerAdvanceMap = mapOf(runner1.toString() to 0)
+            runnerAdvanceMap = mapOf(runner1.toString() to 0),
         )
 
         // Runner should be out, outs incremented to 1
@@ -171,7 +171,7 @@ class GameSimulationTest {
             eventType = ScoringEventType.SINGLE,
             batterId = batter1Id,
             pitcherId = pitcherId,
-            descriptionDetail = "Single"
+            descriptionDetail = "Single",
         )
         val runner1 = localGame!!.gameState.runnerFirstId
         assertNotNull(runner1)
@@ -184,7 +184,7 @@ class GameSimulationTest {
             pitcherId = pitcherId,
             descriptionDetail = "Groundout to Shortstop (Runner Out: 1-6-3) (Double Play)",
             isDoublePlay = true,
-            runnerAdvanceMap = mapOf(runner1.toString() to 0)
+            runnerAdvanceMap = mapOf(runner1.toString() to 0),
         )
 
         // Verify state is correct
@@ -196,11 +196,15 @@ class GameSimulationTest {
         val batter1Name = (localAwayRoster + localHomeRoster).find { it.id == batter1Id }?.name ?: ""
         val batter2Name = (localAwayRoster + localHomeRoster).find { it.id == batter2Id }?.name ?: ""
 
-        val YogiSingle = playEvents.find { it.batterName == batter1Name && it.eventType == ScoringEventType.SINGLE }!!
-        val BabeDP = playEvents.find { it.batterName == batter2Name && it.eventType == ScoringEventType.GROUNDOUT }!!
+        val yogiSingle = playEvents.find { it.batterName == batter1Name && it.eventType == ScoringEventType.SINGLE }!!
+        val babeDP = playEvents.find { it.batterName == batter2Name && it.eventType == ScoringEventType.GROUNDOUT }!!
 
-        val notationYogi = com.baseball.ui.components.scorebook.getScorebookNotation(YogiSingle)
-        val notationBabe = com.baseball.ui.components.scorebook.getScorebookNotation(BabeDP)
+        val notationYogi =
+            com.baseball.ui.components.scorebook
+                .getScorebookNotation(yogiSingle)
+        val notationBabe =
+            com.baseball.ui.components.scorebook
+                .getScorebookNotation(babeDP)
 
         assertEquals("1B", notationYogi)
         assertEquals("1-6-3 DP", notationBabe)
@@ -218,7 +222,7 @@ class GameSimulationTest {
             eventType = ScoringEventType.STRIKE,
             batterId = batterId,
             pitcherId = pitcherId,
-            descriptionDetail = "Strike 1"
+            descriptionDetail = "Strike 1",
         )
         assertEquals(1, localGame!!.gameState.strikes)
         assertEquals(1, localEvents.size)
@@ -228,7 +232,7 @@ class GameSimulationTest {
             eventType = ScoringEventType.BALL,
             batterId = batterId,
             pitcherId = pitcherId,
-            descriptionDetail = "Ball 1"
+            descriptionDetail = "Ball 1",
         )
         assertEquals(1, localGame!!.gameState.balls)
         assertEquals(1, localGame!!.gameState.strikes)
@@ -245,7 +249,7 @@ class GameSimulationTest {
             eventType = ScoringEventType.SINGLE,
             batterId = batterId,
             pitcherId = pitcherId,
-            descriptionDetail = "Single"
+            descriptionDetail = "Single",
         )
         assertNotNull(localGame!!.gameState.runnerFirstId)
         assertEquals(2, localEvents.size)
@@ -270,9 +274,11 @@ class GameSimulationTest {
             eventType = ScoringEventType.SINGLE,
             batterId = batterId,
             pitcherId = pitcherId,
-            descriptionDetail = "Single to Left Field"
+            descriptionDetail = "Single to Left Field",
         )
-        val notation = com.baseball.ui.components.scorebook.getScorebookNotation(localEvents.last())
+        val notation =
+            com.baseball.ui.components.scorebook
+                .getScorebookNotation(localEvents.last())
         assertEquals("1B7", notation)
     }
 
@@ -288,9 +294,13 @@ class GameSimulationTest {
             eventType = ScoringEventType.HOME_RUN,
             batterId = batterId,
             pitcherId = pitcherId,
-            descriptionDetail = "Home Run (Over the Fence)"
+            descriptionDetail = "Home Run (Over the Fence)",
         )
-        assertEquals("HR", com.baseball.ui.components.scorebook.getScorebookNotation(localEvents.last()))
+        assertEquals(
+            "HR",
+            com.baseball.ui.components.scorebook
+                .getScorebookNotation(localEvents.last()),
+        )
 
         // Inside the Park HR
         val batter2Id = localGame!!.gameState.currentBatterId!!
@@ -298,8 +308,12 @@ class GameSimulationTest {
             eventType = ScoringEventType.HOME_RUN,
             batterId = batter2Id,
             pitcherId = pitcherId,
-            descriptionDetail = "Inside the Park Home Run to Center Field"
+            descriptionDetail = "Inside the Park Home Run to Center Field",
         )
-        assertEquals("HR8", com.baseball.ui.components.scorebook.getScorebookNotation(localEvents.last()))
+        assertEquals(
+            "HR8",
+            com.baseball.ui.components.scorebook
+                .getScorebookNotation(localEvents.last()),
+        )
     }
 }

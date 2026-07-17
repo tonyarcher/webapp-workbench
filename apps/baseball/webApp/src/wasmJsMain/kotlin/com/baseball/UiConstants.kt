@@ -35,5 +35,4 @@ object UiConstants {
         const val BLOCK = "block"
         const val INLINE_BLOCK = "inline-block"
     }
-
 }

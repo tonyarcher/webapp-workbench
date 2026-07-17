@@ -11,7 +11,6 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.crypto.password.PasswordEncoder
 
 class AuthControllerTest {
-
     private lateinit var userRepository: UserRepository
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var authController: AuthController
@@ -41,12 +40,13 @@ class AuthControllerTest {
         `when`(userRepository.findByEmail("new@test.com")).thenReturn(null)
         `when`(passwordEncoder.encode("pass")).thenReturn("hashedPass")
 
-        val expectedUser = UserEntity().apply {
-            email = "new@test.com"
-            passwordHash = "hashedPass"
-            firstName = "Jane"
-            lastName = "Doe"
-        }
+        val expectedUser =
+            UserEntity().apply {
+                email = "new@test.com"
+                passwordHash = "hashedPass"
+                firstName = "Jane"
+                lastName = "Doe"
+            }
         `when`(userRepository.save(any(UserEntity::class.java))).thenReturn(expectedUser)
 
         val response = authController.register(request)
@@ -74,11 +74,12 @@ class AuthControllerTest {
         val auth = mock(Authentication::class.java)
         `when`(auth.name).thenReturn("me@test.com")
 
-        val user = UserEntity().apply {
-            email = "me@test.com"
-            firstName = "Alice"
-            lastName = "Smith"
-        }
+        val user =
+            UserEntity().apply {
+                email = "me@test.com"
+                firstName = "Alice"
+                lastName = "Smith"
+            }
         `when`(userRepository.findByEmail("me@test.com")).thenReturn(user)
 
         val response = authController.getMe(auth)

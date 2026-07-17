@@ -71,94 +71,96 @@ internal fun renderLeaguesTab(container: HTMLElement) {
         }
     }
 
-    val grid = container.div(classes = "dashboard-grid") {
-        div(classes = "card") {
-            h2 { +"Available Leagues" }
-            div {
-                id = "leagues-list-container"
-            }
-        }
-
-        div {
+    val grid =
+        container.div(classes = "dashboard-grid") {
             div(classes = "card") {
-                css {
-                    marginBottom = 2.rem
+                h2 { +"Available Leagues" }
+                div {
+                    id = "leagues-list-container"
                 }
-                h2 { +"Create New League" }
-                form {
-                    div(classes = "form-group") {
-                        label { +"League Name" }
-                        input(type = InputType.text, classes = "form-control") {
-                            id = "league-name-input"
-                            placeholder = "e.g., National Baseball League"
-                        }
+            }
+
+            div {
+                div(classes = "card") {
+                    css {
+                        marginBottom = 2.rem
                     }
-                    button(classes = "btn") {
-                        type = ButtonType.button
-                        +"Create League"
-                        onClickFunction = {
-                            val inName = inputName
-                            if (inName != null) {
-                                val name = inName.value.trim()
-                                if (name.isNotEmpty()) {
-                                    launch {
-                                        val newLeague = api.createLeague(League(name = name))
-                                        leaguesList = api.getLeagues()
-                                        selectedLeagueId = newLeague.id
-                                        seasonsList = emptyList()
-                                        selectedSeasonId = null
-                                        inName.value = ""
-                                        refreshLeaguesUI()
-                                        renderCurrentTab()
+                    h2 { +"Create New League" }
+                    form {
+                        div(classes = "form-group") {
+                            label { +"League Name" }
+                            input(type = InputType.text, classes = "form-control") {
+                                id = "league-name-input"
+                                placeholder = "e.g., National Baseball League"
+                            }
+                        }
+                        button(classes = "btn") {
+                            type = ButtonType.button
+                            +"Create League"
+                            onClickFunction = {
+                                val inName = inputName
+                                if (inName != null) {
+                                    val name = inName.value.trim()
+                                    if (name.isNotEmpty()) {
+                                        launch {
+                                            val newLeague = api.createLeague(League(name = name))
+                                            leaguesList = api.getLeagues()
+                                            selectedLeagueId = newLeague.id
+                                            seasonsList = emptyList()
+                                            selectedSeasonId = null
+                                            inName.value = ""
+                                            refreshLeaguesUI()
+                                            renderCurrentTab()
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            if (selectedLeagueId != null) {
-                div(classes = "card") {
-                    h2 { +"Seasons in Selected League" }
-                    div {
-                        id = "seasons-list-container"
-                        css {
-                            marginBottom = 1.5.rem
-                        }
-                    }
-
-                    h3 { +"Create New Season" }
-                    form {
-                        div(classes = "form-group") {
-                            label { +"Season Name" }
-                            input(type = InputType.text, classes = "form-control") {
-                                id = "season-name-input"
-                                placeholder = "e.g., 2026 Regular Season"
+                if (selectedLeagueId != null) {
+                    div(classes = "card") {
+                        h2 { +"Seasons in Selected League" }
+                        div {
+                            id = "seasons-list-container"
+                            css {
+                                marginBottom = 1.5.rem
                             }
                         }
-                        div(classes = "form-group") {
-                            label { +"Year" }
-                            input(type = InputType.number, classes = "form-control") {
-                                id = "season-year-input"
-                                value = "2026"
+
+                        h3 { +"Create New Season" }
+                        form {
+                            div(classes = "form-group") {
+                                label { +"Season Name" }
+                                input(type = InputType.text, classes = "form-control") {
+                                    id = "season-name-input"
+                                    placeholder = "e.g., 2026 Regular Season"
+                                }
                             }
-                        }
-                        button(classes = "btn") {
-                            type = ButtonType.button
-                            +"Create Season"
-                            onClickFunction = {
-                                val sNameIn = inputSName
-                                val sYearIn = inputSYear
-                                if (sNameIn != null && sYearIn != null) {
-                                    val name = sNameIn.value.trim()
-                                    val yearStr = sYearIn.value.trim()
-                                    if (name.isNotEmpty() && yearStr.isNotEmpty()) {
-                                        launch {
-                                            api.createSeason(Season(leagueId = selectedLeagueId!!, name = name, year = yearStr.toInt()))
-                                            seasonsList = api.getSeasons(selectedLeagueId!!)
-                                            sNameIn.value = ""
-                                            renderCurrentTab()
+                            div(classes = "form-group") {
+                                label { +"Year" }
+                                input(type = InputType.number, classes = "form-control") {
+                                    id = "season-year-input"
+                                    value = "2026"
+                                }
+                            }
+                            button(classes = "btn") {
+                                type = ButtonType.button
+                                +"Create Season"
+                                onClickFunction = {
+                                    val sNameIn = inputSName
+                                    val sYearIn = inputSYear
+                                    if (sNameIn != null && sYearIn != null) {
+                                        val name = sNameIn.value.trim()
+                                        val yearStr = sYearIn.value.trim()
+                                        if (name.isNotEmpty() && yearStr.isNotEmpty()) {
+                                            launch {
+                                                api.createSeason(Season(leagueId = selectedLeagueId!!, name = name, year = yearStr.toInt()))
+                                                seasonsList = api.getSeasons(selectedLeagueId!!)
+                                                sNameIn.value = ""
+                                                renderCurrentTab()
+                                            }
                                         }
                                     }
                                 }
@@ -168,7 +170,6 @@ internal fun renderLeaguesTab(container: HTMLElement) {
                 }
             }
         }
-    }
 
     leaguesListDiv = grid.querySelector("#leagues-list-container") as? HTMLDivElement
     seasonsListDiv = grid.querySelector("#seasons-list-container") as? HTMLDivElement

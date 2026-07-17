@@ -16,21 +16,24 @@ import kotlin.random.Random
 
 var isLineupDialogOpen = false
 
-class LineupSetupOverlay(private val container: HTMLElement) {
-
+class LineupSetupOverlay(
+    private val container: HTMLElement,
+) {
     private var useDh = true
     private var homeTeam = SeedData.teamCubs
     private var awayTeam = SeedData.teamCardinals
 
-    private val awayLineupInputs = MutableList(9) { index ->
-        val pos = if (index == 0) "DH" else getDefaultPosition(index)
-        PlayerInputs("", "", pos)
-    }
+    private val awayLineupInputs =
+        MutableList(9) { index ->
+            val pos = if (index == 0) "DH" else getDefaultPosition(index)
+            PlayerInputs("", "", pos)
+        }
 
-    private val homeLineupInputs = MutableList(9) { index ->
-        val pos = if (index == 0) "DH" else getDefaultPosition(index)
-        PlayerInputs("", "", pos)
-    }
+    private val homeLineupInputs =
+        MutableList(9) { index ->
+            val pos = if (index == 0) "DH" else getDefaultPosition(index)
+            PlayerInputs("", "", pos)
+        }
 
     private var awayPitcherNameInput = ""
     private var awayPitcherNumberInput = ""
@@ -43,8 +46,8 @@ class LineupSetupOverlay(private val container: HTMLElement) {
         populateWithRosters(useSeedRosters = true)
     }
 
-    private fun getDefaultPosition(index: Int): String {
-        return when (index) {
+    private fun getDefaultPosition(index: Int): String =
+        when (index) {
             0 -> "DH"
             1 -> "C"
             2 -> "1B"
@@ -56,7 +59,6 @@ class LineupSetupOverlay(private val container: HTMLElement) {
             8 -> "RF"
             else -> "DH"
         }
-    }
 
     private fun populateWithRosters(useSeedRosters: Boolean) {
         if (useSeedRosters) {
@@ -103,16 +105,66 @@ class LineupSetupOverlay(private val container: HTMLElement) {
     }
 
     private fun populateRostersWithRandom() {
-        val firstNames = listOf(
-            "Babe", "Slider", "Fastball", "Windup", "HomeRun", "Bunt", "Knuckle", "Curve", "Spitball",
-            "Slugger", "Spanky", "Shorty", "Flash", "Scoop", "Dusty", "Lefty", "Stretch", "Catfish",
-            "Dizzy", "Yogi", "Skip", "Hammerin'", "Outlaw", "Blaze", "Ace", "Rusty", "Chippy"
-        )
-        val lastNames = listOf(
-            "Ruthless", "McGavin", "Freddie", "Willie", "Harry", "Master", "Jones", "Rodriguez", "O'Malley",
-            "Swinger", "Slugson", "Smacker", "Speedy", "Gloveman", "Aces", "Striker", "Grandslam", "Outlaw",
-            "Biggs", "Thunder", "Blaze", "Hammer", "Winn", "Steele", "Gray", "Bonds", "Ripken"
-        )
+        val firstNames =
+            listOf(
+                "Babe",
+                "Slider",
+                "Fastball",
+                "Windup",
+                "HomeRun",
+                "Bunt",
+                "Knuckle",
+                "Curve",
+                "Spitball",
+                "Slugger",
+                "Spanky",
+                "Shorty",
+                "Flash",
+                "Scoop",
+                "Dusty",
+                "Lefty",
+                "Stretch",
+                "Catfish",
+                "Dizzy",
+                "Yogi",
+                "Skip",
+                "Hammerin'",
+                "Outlaw",
+                "Blaze",
+                "Ace",
+                "Rusty",
+                "Chippy",
+            )
+        val lastNames =
+            listOf(
+                "Ruthless",
+                "McGavin",
+                "Freddie",
+                "Willie",
+                "Harry",
+                "Master",
+                "Jones",
+                "Rodriguez",
+                "O'Malley",
+                "Swinger",
+                "Slugson",
+                "Smacker",
+                "Speedy",
+                "Gloveman",
+                "Aces",
+                "Striker",
+                "Grandslam",
+                "Outlaw",
+                "Biggs",
+                "Thunder",
+                "Blaze",
+                "Hammer",
+                "Winn",
+                "Steele",
+                "Gray",
+                "Bonds",
+                "Ripken",
+            )
 
         fun randomPlayer(pos: String): PlayerInputs {
             val name = "${firstNames.random()} ${lastNames.random()}"
@@ -356,7 +408,10 @@ class LineupSetupOverlay(private val container: HTMLElement) {
         }
     }
 
-    private fun renderPitcherInputRow(parent: DIV, isHome: Boolean) {
+    private fun renderPitcherInputRow(
+        parent: DIV,
+        isHome: Boolean,
+    ) {
         parent.div {
             css {
                 display = Display.flex
@@ -416,14 +471,21 @@ class LineupSetupOverlay(private val container: HTMLElement) {
         }
     }
 
-    private fun renderLineupRows(parent: DIV, isHome: Boolean) {
+    private fun renderLineupRows(
+        parent: DIV,
+        isHome: Boolean,
+    ) {
         val list = if (isHome) homeLineupInputs else awayLineupInputs
         for (i in 0..8) {
             renderSingleLineupRow(parent, list, i)
         }
     }
 
-    private fun renderSingleLineupRow(parent: DIV, list: MutableList<PlayerInputs>, i: Int) {
+    private fun renderSingleLineupRow(
+        parent: DIV,
+        list: MutableList<PlayerInputs>,
+        i: Int,
+    ) {
         val item = list[i]
         parent.div {
             css {
@@ -490,13 +552,18 @@ class LineupSetupOverlay(private val container: HTMLElement) {
             awayBench = awayRes.second,
             homeActivePitcherId = homeActivePId,
             awayActivePitcherId = awayActivePId,
-            useDh = useDh
+            useDh = useDh,
         )
 
         return true
     }
 
-    private fun validateTeam(isHome: Boolean, list: List<PlayerInputs>, pName: String, pNum: String): Pair<List<Player>, List<Player>>? {
+    private fun validateTeam(
+        isHome: Boolean,
+        list: List<PlayerInputs>,
+        pName: String,
+        pNum: String,
+    ): Pair<List<Player>, List<Player>>? {
         val teamName = if (isHome) homeTeam.name else awayTeam.name
 
         if (list.any { it.name.trim().isEmpty() }) {
@@ -524,31 +591,33 @@ class LineupSetupOverlay(private val container: HTMLElement) {
         val baseId = if (isHome) 1000L else 2000L
         val tId = if (isHome) homeTeam.id else awayTeam.id
 
-        val lineupPlayers = list.mapIndexed { idx, item ->
-            Player(
-                id = baseId + idx + 1,
-                teamId = tId,
-                name = item.name.trim(),
-                position = item.position,
-                jerseyNumber = item.jerseyNumber.toInt(),
-                battingHand = "R",
-                throwingHand = "R"
-            )
-        }
+        val lineupPlayers =
+            list.mapIndexed { idx, item ->
+                Player(
+                    id = baseId + idx + 1,
+                    teamId = tId,
+                    name = item.name.trim(),
+                    position = item.position,
+                    jerseyNumber = item.jerseyNumber.toInt(),
+                    battingHand = "R",
+                    throwingHand = "R",
+                )
+            }
 
         val benchPlayers = mutableListOf<Player>()
         var activePitcherId = baseId + 10L
 
         if (useDh) {
-            val pPlayer = Player(
-                id = baseId + 10L,
-                teamId = tId,
-                name = pName.trim(),
-                position = "P",
-                jerseyNumber = pNum.toInt(),
-                battingHand = "R",
-                throwingHand = "R"
-            )
+            val pPlayer =
+                Player(
+                    id = baseId + 10L,
+                    teamId = tId,
+                    name = pName.trim(),
+                    position = "P",
+                    jerseyNumber = pNum.toInt(),
+                    battingHand = "R",
+                    throwingHand = "R",
+                )
             benchPlayers.add(pPlayer)
             activePitcherId = pPlayer.id!!
         } else {
@@ -561,11 +630,13 @@ class LineupSetupOverlay(private val container: HTMLElement) {
         }
 
         if (!useDh && list.count { it.position == "P" } != 1) {
-            validationError = "Error in $teamName Lineup: Lineup must contain exactly one Pitcher (P) in the batting order when DH is disabled."
+            validationError =
+                "Error in $teamName Lineup: Lineup must contain exactly one Pitcher (P) in the batting order when DH is disabled."
             return null
         }
         if (useDh && list.count { it.position == "P" } > 0) {
-            validationError = "Error in $teamName Lineup: Batting order cannot contain a Pitcher (P) when DH is enabled. Pitcher is designated separately."
+            validationError =
+                "Error in $teamName Lineup: Batting order cannot contain a Pitcher (P) when DH is enabled. Pitcher is designated separately."
             return null
         }
 
@@ -578,8 +649,8 @@ class LineupSetupOverlay(private val container: HTMLElement) {
                     position = if (idx == 1) "P" else "OF",
                     jerseyNumber = (80 + idx) % 100,
                     battingHand = "R",
-                    throwingHand = "R"
-                )
+                    throwingHand = "R",
+                ),
             )
         }
 
@@ -590,5 +661,5 @@ class LineupSetupOverlay(private val container: HTMLElement) {
 data class PlayerInputs(
     val name: String,
     val jerseyNumber: String,
-    val position: String
+    val position: String,
 )

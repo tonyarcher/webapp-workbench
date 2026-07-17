@@ -6,18 +6,19 @@ import com.baseball.seed.SeedData
 import kotlin.test.*
 
 class LineupSetupTest {
-
     @Test
     fun testStartNewGameWithDH() {
         val chc = SeedData.teamCubs
         val stl = SeedData.teamCardinals
 
-        val homeLineup = (1..9).map { 
-            Player(100L + it, 1L, "Home $it", if (it == 1) "DH" else "OF", it, "R", "R") 
-        }
-        val awayLineup = (1..9).map { 
-            Player(200L + it, 2L, "Away $it", if (it == 1) "DH" else "OF", it, "R", "R") 
-        }
+        val homeLineup =
+            (1..9).map {
+                Player(100L + it, 1L, "Home $it", if (it == 1) "DH" else "OF", it, "R", "R")
+            }
+        val awayLineup =
+            (1..9).map {
+                Player(200L + it, 2L, "Away $it", if (it == 1) "DH" else "OF", it, "R", "R")
+            }
 
         val homeBench = listOf(Player(110L, 1L, "Home Pitcher", "P", 99, "L", "L"))
         val awayBench = listOf(Player(210L, 2L, "Away Pitcher", "P", 98, "R", "R"))
@@ -31,7 +32,7 @@ class LineupSetupTest {
             awayBench = awayBench,
             homeActivePitcherId = 110L,
             awayActivePitcherId = 210L,
-            useDh = true
+            useDh = true,
         )
 
         val game = localGame
@@ -58,12 +59,14 @@ class LineupSetupTest {
         val chc = SeedData.teamCubs
         val stl = SeedData.teamCardinals
 
-        val homeLineup = (1..9).map { 
-            Player(100L + it, 1L, "Home $it", if (it == 9) "P" else "OF", it, "R", "R") 
-        }
-        val awayLineup = (1..9).map { 
-            Player(200L + it, 2L, "Away $it", if (it == 9) "P" else "OF", it, "R", "R") 
-        }
+        val homeLineup =
+            (1..9).map {
+                Player(100L + it, 1L, "Home $it", if (it == 9) "P" else "OF", it, "R", "R")
+            }
+        val awayLineup =
+            (1..9).map {
+                Player(200L + it, 2L, "Away $it", if (it == 9) "P" else "OF", it, "R", "R")
+            }
 
         startNewGame(
             homeTeam = chc,
@@ -74,7 +77,7 @@ class LineupSetupTest {
             awayBench = emptyList(),
             homeActivePitcherId = 109L,
             awayActivePitcherId = 209L,
-            useDh = false
+            useDh = false,
         )
 
         val game = localGame
@@ -92,12 +95,14 @@ class LineupSetupTest {
         val chc = SeedData.teamCubs
         val stl = SeedData.teamCardinals
 
-        val homeLineup = (1..9).map { 
-            Player(100L + it, 1L, "Home $it", if (it == 1) "DH" else "OF", it, "R", "R") 
-        }
-        val awayLineup = (1..9).map { 
-            Player(200L + it, 2L, "Away $it", if (it == 1) "DH" else "OF", it, "R", "R") 
-        }
+        val homeLineup =
+            (1..9).map {
+                Player(100L + it, 1L, "Home $it", if (it == 1) "DH" else "OF", it, "R", "R")
+            }
+        val awayLineup =
+            (1..9).map {
+                Player(200L + it, 2L, "Away $it", if (it == 1) "DH" else "OF", it, "R", "R")
+            }
         val homeBench = listOf(Player(110L, 1L, "Home Pitcher", "P", 99, "L", "L"))
         val awayBench = listOf(Player(210L, 2L, "Away Pitcher", "P", 98, "R", "R"))
 
@@ -110,12 +115,14 @@ class LineupSetupTest {
             awayBench = awayBench,
             homeActivePitcherId = 110L,
             awayActivePitcherId = 210L,
-            useDh = true
+            useDh = true,
         )
 
         // Make modifications to simulate game play
         localGame = localGame!!.copy(homeScore = 5, awayScore = 3)
-        localEvents.add(PlayEvent(1L, 1L, 1, HalfInning.TOP, 0, 1, 0, 0, "Away 1", "Home Pitcher", ScoringEventType.GROUNDOUT, "Ground out", 0, ""))
+        localEvents.add(
+            PlayEvent(1L, 1L, 1, HalfInning.TOP, 0, 1, 0, 0, "Away 1", "Home Pitcher", ScoringEventType.GROUNDOUT, "Ground out", 0, ""),
+        )
 
         // Reset to initial lineups
         resetLocalGame(toInitialLineups = true)
@@ -135,7 +142,7 @@ class LineupSetupTest {
         val testLeague = League(1L, "Owner League", "user_123")
         val testSeason = Season(1L, 1L, "Owner Season", 2026, "user_123")
         val testTeam = Team(1L, "Owner Team", "OWN", "Owner City", "user_123")
-        
+
         assertEquals("user_123", testLeague.ownerId)
         assertEquals("user_123", testSeason.ownerId)
         assertEquals("user_123", testTeam.ownerId)

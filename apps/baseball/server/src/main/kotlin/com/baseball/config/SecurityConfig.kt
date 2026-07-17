@@ -18,24 +18,24 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
-class SecurityConfig(private val userRepository: UserRepository) {
+class SecurityConfig(
+    private val userRepository: UserRepository,
+) {
+    @Bean
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 
     @Bean
-    fun passwordEncoder(): PasswordEncoder {
-        return BCryptPasswordEncoder()
-    }
-
-    @Bean
-    fun userDetailsService(): UserDetailsService {
-        return UserDetailsService { email ->
-            val user = userRepository.findByEmail(email)
-                ?: throw UsernameNotFoundException("User not found: $email")
-            User.withUsername(user.email)
+    fun userDetailsService(): UserDetailsService =
+        UserDetailsService { email ->
+            val user =
+                userRepository.findByEmail(email)
+                    ?: throw UsernameNotFoundException("User not found: $email")
+            User
+                .withUsername(user.email)
                 .password(user.passwordHash)
                 .roles("USER")
                 .build()
         }
-    }
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
@@ -44,15 +44,17 @@ class SecurityConfig(private val userRepository: UserRepository) {
             .cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/api/auth/register").permitAll()
-                    .requestMatchers("/api/auth/login-info").permitAll()
-                    .requestMatchers("/h2-console/**").permitAll()
-                    .anyRequest().authenticated()
-            }
-            .headers { headers ->
+                    .requestMatchers("/api/auth/register")
+                    .permitAll()
+                    .requestMatchers("/api/auth/login-info")
+                    .permitAll()
+                    .requestMatchers("/h2-console/**")
+                    .permitAll()
+                    .anyRequest()
+                    .authenticated()
+            }.headers { headers ->
                 headers.frameOptions { it.disable() } // For H2 console
-            }
-            .httpBasic(Customizer.withDefaults())
+            }.httpBasic(Customizer.withDefaults())
         return http.build()
     }
 
@@ -63,7 +65,7 @@ class SecurityConfig(private val userRepository: UserRepository) {
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
         configuration.allowedHeaders = listOf("Authorization", "Content-Type", "X-Requested-With")
         configuration.allowCredentials = true
-        
+
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)
         return source

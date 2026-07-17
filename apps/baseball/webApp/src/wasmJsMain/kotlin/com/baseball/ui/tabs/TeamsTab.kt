@@ -139,158 +139,162 @@ internal fun renderTeamsTab(container: HTMLElement) {
         }
     }
 
-    val grid = container.div(classes = "dashboard-grid") {
-        div(classes = "card") {
-            h2 { +"Teams" }
-            div {
-                id = "teams-list-container"
-            }
-        }
-
-        div {
+    val grid =
+        container.div(classes = "dashboard-grid") {
             div(classes = "card") {
-                css { marginBottom = 2.rem }
-                h2 { +"Add Team" }
-                form {
-                    div(classes = "form-group") {
-                        label { +"City" }
-                        input(type = InputType.text, classes = "form-control") {
-                            id = "team-city-input"
-                            placeholder = "e.g., Boston"
-                        }
-                    }
-                    div(classes = "form-group") {
-                        label { +"Team Name" }
-                        input(type = InputType.text, classes = "form-control") {
-                            id = "team-name-input"
-                            placeholder = "e.g., Red Sox"
-                        }
-                    }
-                    div(classes = "form-group") {
-                        label { +"Abbreviation" }
-                        input(type = InputType.text, classes = "form-control") {
-                            id = "team-abb-input"
-                            placeholder = "e.g., BOS"
-                        }
-                    }
-                    button(classes = "btn") {
-                        type = ButtonType.button
-                        +"Create Team"
-                        onClickFunction = {
-                            val inCity = inputCity
-                            val inTName = inputTName
-                            val inAbb = inputAbb
-                            if (inCity != null && inTName != null && inAbb != null) {
-                                val city = inCity.value.trim()
-                                val name = inTName.value.trim()
-                                val abb = inAbb.value.trim()
-                                if (city.isNotEmpty() && name.isNotEmpty() && abb.isNotEmpty()) {
-                                    launch {
-                                        api.createTeam(Team(city = city, name = name, abbreviation = abb))
-                                        teamsList = api.getTeams()
-                                        inCity.value = ""
-                                        inTName.value = ""
-                                        inAbb.value = ""
-                                        refreshTeamsUI()
-                                    }
-                                }
-                            }
-                        }
-                    }
+                h2 { +"Teams" }
+                div {
+                    id = "teams-list-container"
                 }
             }
 
-            if (selectedTeamId != null) {
-                val team = teamsList.find { it.id == selectedTeamId }
+            div {
                 div(classes = "card") {
-                    h2 { +"${team?.city} ${team?.name} Roster" }
-                    div {
-                        id = "roster-container"
-                        css { marginBottom = 1.5.rem }
-                    }
-
-                    h3 { +"Add Player to Roster" }
+                    css { marginBottom = 2.rem }
+                    h2 { +"Add Team" }
                     form {
                         div(classes = "form-group") {
-                            label { +"Player Name" }
+                            label { +"City" }
                             input(type = InputType.text, classes = "form-control") {
-                                id = "player-name-input"
-                                placeholder = "e.g., Dustin Pedroia"
+                                id = "team-city-input"
+                                placeholder = "e.g., Boston"
                             }
                         }
                         div(classes = "form-group") {
-                            label { +"Position" }
-                            select(classes = "form-control") {
-                                id = "player-pos-select"
-                                listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH").forEach { pos ->
-                                    option {
-                                        value = pos
-                                        +pos
-                                    }
-                                }
+                            label { +"Team Name" }
+                            input(type = InputType.text, classes = "form-control") {
+                                id = "team-name-input"
+                                placeholder = "e.g., Red Sox"
                             }
                         }
                         div(classes = "form-group") {
-                            label { +"Jersey Number" }
-                            input(type = InputType.number, classes = "form-control") {
-                                id = "player-num-input"
-                                value = "15"
-                            }
-                        }
-                        div(classes = "form-group") {
-                            label { +"Batting / Throwing Hand" }
-                            div {
-                                css {
-                                    display = Display.flex
-                                    gap = 1.rem
-                                }
-                                select(classes = "form-control") {
-                                    id = "player-bat-select"
-                                    listOf("R", "L", "S").forEach { h ->
-                                        option {
-                                            value = h
-                                            +"Bat: $h"
-                                        }
-                                    }
-                                }
-                                select(classes = "form-control") {
-                                    id = "player-throw-select"
-                                    listOf("R", "L").forEach { h ->
-                                        option {
-                                            value = h
-                                            +"Throw: $h"
-                                        }
-                                    }
-                                }
+                            label { +"Abbreviation" }
+                            input(type = InputType.text, classes = "form-control") {
+                                id = "team-abb-input"
+                                placeholder = "e.g., BOS"
                             }
                         }
                         button(classes = "btn") {
                             type = ButtonType.button
-                            +"Add Player"
+                            +"Create Team"
                             onClickFunction = {
-                                val nameIn = inputPName
-                                val posIn = inputPos
-                                val numIn = inputNum
-                                val batIn = selectBat
-                                val thrIn = selectThrow
-                                if (nameIn != null && posIn != null && numIn != null && batIn != null && thrIn != null) {
-                                    val name = nameIn.value.trim()
-                                    val pos = posIn.value
-                                    val num = numIn.value.toIntOrNull() ?: 0
-                                    val bat = batIn.value
-                                    val thr = thrIn.value
-                                    if (name.isNotEmpty()) {
+                                val inCity = inputCity
+                                val inTName = inputTName
+                                val inAbb = inputAbb
+                                if (inCity != null && inTName != null && inAbb != null) {
+                                    val city = inCity.value.trim()
+                                    val name = inTName.value.trim()
+                                    val abb = inAbb.value.trim()
+                                    if (city.isNotEmpty() && name.isNotEmpty() && abb.isNotEmpty()) {
                                         launch {
-                                            api.createPlayer(Player(
-                                                teamId = selectedTeamId,
-                                                name = name,
-                                                position = pos,
-                                                jerseyNumber = num,
-                                                battingHand = bat,
-                                                throwingHand = thr
-                                            ))
-                                            nameIn.value = ""
-                                            refreshRoster()
+                                            api.createTeam(Team(city = city, name = name, abbreviation = abb))
+                                            teamsList = api.getTeams()
+                                            inCity.value = ""
+                                            inTName.value = ""
+                                            inAbb.value = ""
+                                            refreshTeamsUI()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (selectedTeamId != null) {
+                    val team = teamsList.find { it.id == selectedTeamId }
+                    div(classes = "card") {
+                        h2 { +"${team?.city} ${team?.name} Roster" }
+                        div {
+                            id = "roster-container"
+                            css { marginBottom = 1.5.rem }
+                        }
+
+                        h3 { +"Add Player to Roster" }
+                        form {
+                            div(classes = "form-group") {
+                                label { +"Player Name" }
+                                input(type = InputType.text, classes = "form-control") {
+                                    id = "player-name-input"
+                                    placeholder = "e.g., Dustin Pedroia"
+                                }
+                            }
+                            div(classes = "form-group") {
+                                label { +"Position" }
+                                select(classes = "form-control") {
+                                    id = "player-pos-select"
+                                    listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH").forEach { pos ->
+                                        option {
+                                            value = pos
+                                            +pos
+                                        }
+                                    }
+                                }
+                            }
+                            div(classes = "form-group") {
+                                label { +"Jersey Number" }
+                                input(type = InputType.number, classes = "form-control") {
+                                    id = "player-num-input"
+                                    value = "15"
+                                }
+                            }
+                            div(classes = "form-group") {
+                                label { +"Batting / Throwing Hand" }
+                                div {
+                                    css {
+                                        display = Display.flex
+                                        gap = 1.rem
+                                    }
+                                    select(classes = "form-control") {
+                                        id = "player-bat-select"
+                                        listOf("R", "L", "S").forEach { h ->
+                                            option {
+                                                value = h
+                                                +"Bat: $h"
+                                            }
+                                        }
+                                    }
+                                    select(classes = "form-control") {
+                                        id = "player-throw-select"
+                                        listOf("R", "L").forEach { h ->
+                                            option {
+                                                value = h
+                                                +"Throw: $h"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            button(classes = "btn") {
+                                type = ButtonType.button
+                                +"Add Player"
+                                onClickFunction = {
+                                    val nameIn = inputPName
+                                    val posIn = inputPos
+                                    val numIn = inputNum
+                                    val batIn = selectBat
+                                    val thrIn = selectThrow
+                                    if (nameIn != null && posIn != null && numIn != null && batIn != null && thrIn != null) {
+                                        val name = nameIn.value.trim()
+                                        val pos = posIn.value
+                                        val num = numIn.value.toIntOrNull() ?: 0
+                                        val bat = batIn.value
+                                        val thr = thrIn.value
+                                        if (name.isNotEmpty()) {
+                                            launch {
+                                                api.createPlayer(
+                                                    Player(
+                                                        teamId = selectedTeamId,
+                                                        name = name,
+                                                        position = pos,
+                                                        jerseyNumber = num,
+                                                        battingHand = bat,
+                                                        throwingHand = thr,
+                                                    ),
+                                                )
+                                                nameIn.value = ""
+                                                refreshRoster()
+                                            }
                                         }
                                     }
                                 }
@@ -300,7 +304,6 @@ internal fun renderTeamsTab(container: HTMLElement) {
                 }
             }
         }
-    }
 
     teamsListDiv = grid.querySelector("#teams-list-container") as? HTMLDivElement
     rosterDiv = grid.querySelector("#roster-container") as? HTMLDivElement

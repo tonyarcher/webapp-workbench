@@ -8,7 +8,7 @@ import jakarta.persistence.*
 class LeagueEntity(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
-    var name: String = ""
+    var name: String = "",
 ) {
     fun toDomain() = League(id = id, name = name)
 }
@@ -21,7 +21,7 @@ class SeasonEntity(
     var leagueId: Long = 0L,
     var name: String = "",
     @Column(name = "season_year")
-    var year: Int = 0
+    var year: Int = 0,
 ) {
     fun toDomain() = Season(id = id, leagueId = leagueId, name = name, year = year)
 }
@@ -33,7 +33,7 @@ class TeamEntity(
     var id: Long? = null,
     var name: String = "",
     var abbreviation: String = "",
-    var city: String = ""
+    var city: String = "",
 ) {
     fun toDomain() = Team(id = id, name = name, abbreviation = abbreviation, city = city)
 }
@@ -50,18 +50,19 @@ class PlayerEntity(
     var jerseyNumber: Int = 0,
     var battingHand: String = "R",
     var throwingHand: String = "R",
-    var deleted: Boolean = false
+    var deleted: Boolean = false,
 ) {
-    fun toDomain() = Player(
-        id = id,
-        teamId = teamId,
-        name = name,
-        position = position,
-        jerseyNumber = jerseyNumber,
-        battingHand = battingHand,
-        throwingHand = throwingHand,
-        deleted = deleted
-    )
+    fun toDomain() =
+        Player(
+            id = id,
+            teamId = teamId,
+            name = name,
+            position = position,
+            jerseyNumber = jerseyNumber,
+            battingHand = battingHand,
+            throwingHand = throwingHand,
+            deleted = deleted,
+        )
 }
 
 @Entity
@@ -82,7 +83,6 @@ class GameEntity(
     var awayHits: Int = 0,
     var homeErrors: Int = 0,
     var awayErrors: Int = 0,
-
     // Live Game State variables
     var inning: Int = 1,
     @Enumerated(EnumType.STRING)
@@ -94,7 +94,7 @@ class GameEntity(
     var runnerSecondId: Long? = null,
     var runnerThirdId: Long? = null,
     var currentBatterId: Long? = null,
-    var currentPitcherId: Long? = null
+    var currentPitcherId: Long? = null,
 ) {
     fun toDomain(
         homeTeam: Team,
@@ -103,7 +103,7 @@ class GameEntity(
         runnerSecondName: String?,
         runnerThirdName: String?,
         currentBatterName: String?,
-        currentPitcherName: String?
+        currentPitcherName: String?,
     ) = Game(
         id = id,
         seasonId = seasonId,
@@ -117,23 +117,24 @@ class GameEntity(
         awayHits = awayHits,
         homeErrors = homeErrors,
         awayErrors = awayErrors,
-        gameState = GameState(
-            inning = inning,
-            half = half,
-            outs = outs,
-            balls = balls,
-            strikes = strikes,
-            runnerFirstId = runnerFirstId,
-            runnerSecondId = runnerSecondId,
-            runnerThirdId = runnerThirdId,
-            runnerFirstName = runnerFirstName,
-            runnerSecondName = runnerSecondName,
-            runnerThirdName = runnerThirdName,
-            currentBatterId = currentBatterId,
-            currentBatterName = currentBatterName,
-            currentPitcherId = currentPitcherId,
-            currentPitcherName = currentPitcherName
-        )
+        gameState =
+            GameState(
+                inning = inning,
+                half = half,
+                outs = outs,
+                balls = balls,
+                strikes = strikes,
+                runnerFirstId = runnerFirstId,
+                runnerSecondId = runnerSecondId,
+                runnerThirdId = runnerThirdId,
+                runnerFirstName = runnerFirstName,
+                runnerSecondName = runnerSecondName,
+                runnerThirdName = runnerThirdName,
+                currentBatterId = currentBatterId,
+                currentBatterName = currentBatterName,
+                currentPitcherId = currentPitcherId,
+                currentPitcherName = currentPitcherName,
+            ),
     )
 }
 
@@ -145,7 +146,7 @@ class GameInningEntity(
     var gameId: Long = 0L,
     var inning: Int = 1,
     var awayRuns: Int? = null,
-    var homeRuns: Int? = null
+    var homeRuns: Int? = null,
 )
 
 @Entity
@@ -168,24 +169,25 @@ class PlayEventEntity(
     var description: String = "",
     var runsScoredOnPlay: Int = 0,
     @Column(name = "event_timestamp")
-    var timestamp: String = ""
+    var timestamp: String = "",
 ) {
-    fun toDomain() = PlayEvent(
-        id = id,
-        gameId = gameId,
-        inning = inning,
-        half = half,
-        outsBefore = outsBefore,
-        outsAfter = outsAfter,
-        balls = balls,
-        strikes = strikes,
-        batterName = batterName,
-        pitcherName = pitcherName,
-        eventType = eventType,
-        description = description,
-        runsScoredOnPlay = runsScoredOnPlay,
-        timestamp = timestamp
-    )
+    fun toDomain() =
+        PlayEvent(
+            id = id,
+            gameId = gameId,
+            inning = inning,
+            half = half,
+            outsBefore = outsBefore,
+            outsAfter = outsAfter,
+            balls = balls,
+            strikes = strikes,
+            batterName = batterName,
+            pitcherName = pitcherName,
+            eventType = eventType,
+            description = description,
+            runsScoredOnPlay = runsScoredOnPlay,
+            timestamp = timestamp,
+        )
 }
 
 @Entity
@@ -205,9 +207,13 @@ class PlayerGameBattingStatsEntity(
     var homeRuns: Int = 0,
     var walks: Int = 0,
     var strikeOuts: Int = 0,
-    var hitByPitch: Int = 0
+    var hitByPitch: Int = 0,
 ) {
-    fun toDomain(playerName: String, jerseyNumber: Int, position: String) = PlayerBattingStats(
+    fun toDomain(
+        playerName: String,
+        jerseyNumber: Int,
+        position: String,
+    ) = PlayerBattingStats(
         playerId = playerId,
         playerName = playerName,
         jerseyNumber = jerseyNumber,
@@ -221,7 +227,7 @@ class PlayerGameBattingStatsEntity(
         homeRuns = homeRuns,
         walks = walks,
         strikeOuts = strikeOuts,
-        hitByPitch = hitByPitch
+        hitByPitch = hitByPitch,
     )
 }
 
@@ -239,9 +245,13 @@ class PlayerGamePitchingStatsEntity(
     var earnedRuns: Int = 0,
     var walksAllowed: Int = 0,
     var strikeoutsRecorded: Int = 0,
-    var homeRunsAllowed: Int = 0
+    var homeRunsAllowed: Int = 0,
 ) {
-    fun toDomain(playerName: String, jerseyNumber: Int, position: String) = PlayerPitchingStats(
+    fun toDomain(
+        playerName: String,
+        jerseyNumber: Int,
+        position: String,
+    ) = PlayerPitchingStats(
         playerId = playerId,
         playerName = playerName,
         jerseyNumber = jerseyNumber,
@@ -252,7 +262,7 @@ class PlayerGamePitchingStatsEntity(
         earnedRuns = earnedRuns,
         walksAllowed = walksAllowed,
         strikeoutsRecorded = strikeoutsRecorded,
-        homeRunsAllowed = homeRunsAllowed
+        homeRunsAllowed = homeRunsAllowed,
     )
 }
 
@@ -266,7 +276,7 @@ class UserEntity(
     @Column(nullable = false)
     var passwordHash: String = "",
     var firstName: String = "",
-    var lastName: String = ""
+    var lastName: String = "",
 )
 
 @Entity
@@ -279,15 +289,19 @@ class PlayerGameFieldingStatsEntity(
     var teamId: Long = 0L,
     var putouts: Int = 0,
     var assists: Int = 0,
-    var errors: Int = 0
+    var errors: Int = 0,
 ) {
-    fun toDomain(playerName: String, jerseyNumber: Int, position: String) = PlayerFieldingStats(
+    fun toDomain(
+        playerName: String,
+        jerseyNumber: Int,
+        position: String,
+    ) = PlayerFieldingStats(
         playerId = playerId,
         playerName = playerName,
         jerseyNumber = jerseyNumber,
         position = position,
         putouts = putouts,
         assists = assists,
-        errors = errors
+        errors = errors,
     )
 }

@@ -7,14 +7,14 @@ import com.baseball.models.ScoringEventType
 data class RunnerProgression(
     val maxBase: Int,
     val outAtBase: Int?,
-    val outDetail: String?
+    val outDetail: String?,
 )
 
 class ScorecardParser(
     private val teamEvents: List<PlayEvent>,
     private val localAwayRoster: List<Player>,
     private val localHomeRoster: List<Player>,
-    private val maxInning: Int
+    private val maxInning: Int,
 ) {
     val playAdvancements = mutableMapOf<PlayEvent, Int>()
     val playOutNumbers = mutableMapOf<PlayEvent, Int>()
@@ -33,11 +33,16 @@ class ScorecardParser(
             var currentOuts = 0
 
             innEvents.forEach { ev ->
-                val isOut = ev.eventType in listOf(
-                    ScoringEventType.STRIKEOUT, ScoringEventType.GROUNDOUT,
-                    ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT,
-                    ScoringEventType.POP_OUT, ScoringEventType.SACRIFICE_FLY
-                )
+                val isOut =
+                    ev.eventType in
+                        listOf(
+                            ScoringEventType.STRIKEOUT,
+                            ScoringEventType.GROUNDOUT,
+                            ScoringEventType.FLYOUT,
+                            ScoringEventType.LINE_OUT,
+                            ScoringEventType.POP_OUT,
+                            ScoringEventType.SACRIFICE_FLY,
+                        )
 
                 var finalBase = 0
                 when (ev.eventType) {
@@ -59,10 +64,11 @@ class ScorecardParser(
                 val isDoublePlay = ev.description.contains("(Double Play)")
                 if (isDoublePlay) {
                     val subAdvances = parseRunnerAdvances(ev.description)
-                    val outRunnerEntry = baseRunners.entries.find { rEntry ->
-                        val pId = (localAwayRoster + localHomeRoster).find { it.name == rEntry.key }?.id
-                        pId != null && subAdvances[pId.toString()] == 0
-                    }
+                    val outRunnerEntry =
+                        baseRunners.entries.find { rEntry ->
+                            val pId = (localAwayRoster + localHomeRoster).find { it.name == rEntry.key }?.id
+                            pId != null && subAdvances[pId.toString()] == 0
+                        }
 
                     if (outRunnerEntry != null) {
                         val outRunnerName = outRunnerEntry.key
@@ -94,7 +100,11 @@ class ScorecardParser(
                         finalBase = 4
                         runsToScore--
                     }
-                    val activeRunners = baseRunners.entries.filter { it.key != ev.batterName && it.value < 4 }.sortedByDescending { it.value }
+                    val activeRunners =
+                        baseRunners.entries
+                            .filter {
+                                it.key != ev.batterName && it.value < 4
+                            }.sortedByDescending { it.value }
                     for (r in activeRunners) {
                         if (runsToScore > 0) {
                             baseRunners[r.key] = 4
@@ -110,22 +120,39 @@ class ScorecardParser(
             }
 
             innEvents.forEachIndexed { evIdx, ev ->
-                val isResolving = ev.eventType in listOf(
-                    ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN,
-                    ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.STRIKEOUT,
-                    ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT,
-                    ScoringEventType.ERROR, ScoringEventType.FIELDER_CHOICE, ScoringEventType.SACRIFICE_FLY
-                )
+                val isResolving =
+                    ev.eventType in
+                        listOf(
+                            ScoringEventType.SINGLE,
+                            ScoringEventType.DOUBLE,
+                            ScoringEventType.TRIPLE,
+                            ScoringEventType.HOME_RUN,
+                            ScoringEventType.WALK,
+                            ScoringEventType.HIT_BY_PITCH,
+                            ScoringEventType.STRIKEOUT,
+                            ScoringEventType.GROUNDOUT,
+                            ScoringEventType.FLYOUT,
+                            ScoringEventType.LINE_OUT,
+                            ScoringEventType.POP_OUT,
+                            ScoringEventType.ERROR,
+                            ScoringEventType.FIELDER_CHOICE,
+                            ScoringEventType.SACRIFICE_FLY,
+                        )
                 if (isResolving) {
                     var maxB = playAdvancements[ev] ?: 0
                     var outB: Int? = null
                     var outDet: String? = null
 
-                    val isOut = ev.eventType in listOf(
-                        ScoringEventType.STRIKEOUT, ScoringEventType.GROUNDOUT,
-                        ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT,
-                        ScoringEventType.POP_OUT, ScoringEventType.SACRIFICE_FLY
-                    )
+                    val isOut =
+                        ev.eventType in
+                            listOf(
+                                ScoringEventType.STRIKEOUT,
+                                ScoringEventType.GROUNDOUT,
+                                ScoringEventType.FLYOUT,
+                                ScoringEventType.LINE_OUT,
+                                ScoringEventType.POP_OUT,
+                                ScoringEventType.SACRIFICE_FLY,
+                            )
                     if (isOut) {
                         outB = 1
                         outDet = getScorebookNotation(ev)
@@ -182,8 +209,8 @@ class ScorecardParser(
         return map
     }
 
-    private fun getOutDetail(subEv: PlayEvent): String {
-        return when (subEv.eventType) {
+    private fun getOutDetail(subEv: PlayEvent): String =
+        when (subEv.eventType) {
             ScoringEventType.CAUGHT_STEALING -> getScorebookNotation(subEv)
             ScoringEventType.PICKED_OFF -> getScorebookNotation(subEv)
             else -> {
@@ -201,9 +228,7 @@ class ScorecardParser(
                 }
             }
         }
-    }
 }
-
 
 internal fun getScorebookNotation(ev: PlayEvent): String {
     val suffix = if (ev.description.contains("(Double Play)") || ev.description.contains("(DP)")) " DP" else ""
@@ -230,15 +255,16 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
         ScoringEventType.GROUNDOUT -> {
             val runnerOutMatch = Regex("Runner Out: (\\d+(?:-\\d+)*U?)").find(ev.description)
             val seqMatch = Regex("Groundout: (\\d+(?:-\\d+)*U?)").find(ev.description)
-            val baseNotation = when {
-                runnerOutMatch != null -> runnerOutMatch.groupValues[1]
-                seqMatch != null -> seqMatch.groupValues[1]
-                else -> {
-                    val matchNum = Regex("to .* \\((\\d)\\)").find(ev.description)
-                    val posNum = matchNum?.groupValues?.get(1) ?: "3"
-                    "$posNum-3"
+            val baseNotation =
+                when {
+                    runnerOutMatch != null -> runnerOutMatch.groupValues[1]
+                    seqMatch != null -> seqMatch.groupValues[1]
+                    else -> {
+                        val matchNum = Regex("to .* \\((\\d)\\)").find(ev.description)
+                        val posNum = matchNum?.groupValues?.get(1) ?: "3"
+                        "$posNum-3"
+                    }
                 }
-            }
             "$baseNotation$suffix"
         }
         ScoringEventType.FLYOUT -> {
@@ -261,17 +287,22 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
         ScoringEventType.FIELDER_CHOICE -> {
             val runnerOutMatch = Regex("Runner Out: (\\d+(?:-\\d+)*U?)").find(ev.description)
             val seqMatch = Regex("Fielder's Choice: (\\d+(?:-\\d+)*U?)").find(ev.description)
-            val baseNotation = when {
-                runnerOutMatch != null -> runnerOutMatch.groupValues[1]
-                seqMatch != null -> seqMatch.groupValues[1]
-                else -> "FC"
-            }
+            val baseNotation =
+                when {
+                    runnerOutMatch != null -> runnerOutMatch.groupValues[1]
+                    seqMatch != null -> seqMatch.groupValues[1]
+                    else -> "FC"
+                }
             "$baseNotation$suffix"
         }
         ScoringEventType.STOLEN_BASE -> {
-            if (ev.description.contains("to 3B")) "SB3"
-            else if (ev.description.contains("to Home")) "SBH"
-            else "SB"
+            if (ev.description.contains("to 3B")) {
+                "SB3"
+            } else if (ev.description.contains("to Home")) {
+                "SBH"
+            } else {
+                "SB"
+            }
         }
         ScoringEventType.CAUGHT_STEALING -> {
             val seqMatch = Regex("Caught Stealing: .* (\\d+(?:-\\d+)*U?)\\)").find(ev.description)
@@ -288,8 +319,8 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
     }
 }
 
-fun getHitLocationNumber(desc: String): String? {
-    return when {
+fun getHitLocationNumber(desc: String): String? =
+    when {
         desc.contains("Left Field") -> "7"
         desc.contains("Center Field") -> "8"
         desc.contains("Right Field") -> "9"
@@ -302,4 +333,3 @@ fun getHitLocationNumber(desc: String): String? {
         desc.contains("Infield") -> "IF"
         else -> null
     }
-}

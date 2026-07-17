@@ -71,7 +71,6 @@ fun loadNavState() {
 }
 
 object AppViewManager {
-
     private val tabRenderers = mutableMapOf<String, (HTMLElement) -> Unit>()
 
     fun registerTabRenderers(renderers: Map<String, (HTMLElement) -> Unit>) {
@@ -81,13 +80,20 @@ object AppViewManager {
     fun start() {
         authService.loadSession()
         loadNavState()
-        
+
         window.addEventListener("hashchange", {
             val hash = window.location.hash.removePrefix("#")
             if (hash.isNotEmpty()) {
-                val isOnlineTab = hash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_STATS) || 
-                                  (!isSingleGameMode && hash in listOf(BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE))
-                
+                val isOnlineTab =
+                    hash in
+                        listOf(
+                            BaseballConstants.TAB_LEAGUES,
+                            BaseballConstants.TAB_TEAMS,
+                            BaseballConstants.TAB_GAMES,
+                            BaseballConstants.TAB_STATS,
+                        ) ||
+                        (!isSingleGameMode && hash in listOf(BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE))
+
                 if (isOnlineTab && currentUserSession == null) {
                     window.location.hash = BaseballConstants.TAB_LOGIN
                     return@addEventListener
@@ -98,7 +104,16 @@ object AppViewManager {
                 } else if (hash == BaseballConstants.TAB_LOGIN || hash == BaseballConstants.TAB_REGISTER) {
                     isWelcomeScreen = false
                     _currentTab = hash
-                } else if (hash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_STATS, BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE)) {
+                } else if (hash in
+                    listOf(
+                        BaseballConstants.TAB_LEAGUES,
+                        BaseballConstants.TAB_TEAMS,
+                        BaseballConstants.TAB_GAMES,
+                        BaseballConstants.TAB_STATS,
+                        BaseballConstants.TAB_LIVE_SCORER,
+                        BaseballConstants.TAB_BOXSCORE,
+                    )
+                ) {
                     isWelcomeScreen = false
                     _currentTab = hash
                 }
@@ -111,16 +126,41 @@ object AppViewManager {
 
         val initialHash = window.location.hash.removePrefix("#")
         if (initialHash.isNotEmpty()) {
-            val isOnlineTab = initialHash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_STATS) || 
-                              (!isSingleGameMode && initialHash in listOf(BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE))
-            
+            val isOnlineTab =
+                initialHash in
+                    listOf(
+                        BaseballConstants.TAB_LEAGUES,
+                        BaseballConstants.TAB_TEAMS,
+                        BaseballConstants.TAB_GAMES,
+                        BaseballConstants.TAB_STATS,
+                    ) ||
+                    (
+                        !isSingleGameMode &&
+                            initialHash in
+                            listOf(
+                                BaseballConstants.TAB_LIVE_SCORER,
+                                BaseballConstants.TAB_BOXSCORE,
+                            )
+                    )
+
             if (isOnlineTab && currentUserSession == null) {
                 isWelcomeScreen = false
                 _currentTab = BaseballConstants.TAB_LOGIN
                 window.location.hash = BaseballConstants.TAB_LOGIN
             } else if (initialHash == BaseballConstants.TAB_WELCOME) {
                 isWelcomeScreen = true
-            } else if (initialHash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_STATS, BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE, BaseballConstants.TAB_LOGIN, BaseballConstants.TAB_REGISTER)) {
+            } else if (initialHash in
+                listOf(
+                    BaseballConstants.TAB_LEAGUES,
+                    BaseballConstants.TAB_TEAMS,
+                    BaseballConstants.TAB_GAMES,
+                    BaseballConstants.TAB_STATS,
+                    BaseballConstants.TAB_LIVE_SCORER,
+                    BaseballConstants.TAB_BOXSCORE,
+                    BaseballConstants.TAB_LOGIN,
+                    BaseballConstants.TAB_REGISTER,
+                )
+            ) {
                 isWelcomeScreen = false
                 _currentTab = initialHash
             }
@@ -263,7 +303,8 @@ object AppViewManager {
                                     window.location.hash = BaseballConstants.TAB_LEAGUES
                                 }
                             } catch (e: Throwable) {
-                                serverConnectionError = "Unable to connect to the server. Please check that your Spring Boot backend is running."
+                                serverConnectionError =
+                                    "Unable to connect to the server. Please check that your Spring Boot backend is running."
                                 renderApp()
                             }
                         }
@@ -451,19 +492,20 @@ object AppViewManager {
             btnBoxScore?.style?.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
         }
 
-        val btnActive = when (currentTab) {
-            BaseballConstants.TAB_LIVE_SCORER -> btnLive
-            BaseballConstants.TAB_BOXSCORE -> btnBoxScore
-            else -> {
-                when (currentTab) {
-                    BaseballConstants.TAB_LEAGUES -> document.getElementById("nav-btn-leagues")
-                    BaseballConstants.TAB_TEAMS -> document.getElementById("nav-btn-teams")
-                    BaseballConstants.TAB_GAMES -> document.getElementById("nav-btn-games")
-                    BaseballConstants.TAB_STATS -> document.getElementById("nav-btn-stats")
-                    else -> null
+        val btnActive =
+            when (currentTab) {
+                BaseballConstants.TAB_LIVE_SCORER -> btnLive
+                BaseballConstants.TAB_BOXSCORE -> btnBoxScore
+                else -> {
+                    when (currentTab) {
+                        BaseballConstants.TAB_LEAGUES -> document.getElementById("nav-btn-leagues")
+                        BaseballConstants.TAB_TEAMS -> document.getElementById("nav-btn-teams")
+                        BaseballConstants.TAB_GAMES -> document.getElementById("nav-btn-games")
+                        BaseballConstants.TAB_STATS -> document.getElementById("nav-btn-stats")
+                        else -> null
+                    }
                 }
             }
-        }
         btnActive?.classList?.add("active")
     }
 
@@ -482,8 +524,11 @@ fun renderCurrentTab() {
     AppViewManager.renderCurrentTab()
 }
 
-
-internal fun substituteBatter(isHome: Boolean, lineupIndex: Int, newPlayerId: Long) {
+internal fun substituteBatter(
+    isHome: Boolean,
+    lineupIndex: Int,
+    newPlayerId: Long,
+) {
     val lineup = if (isHome) localHomeLineup else localAwayLineup
     val bench = if (isHome) localHomeBench else localAwayBench
     val oldPlayer = lineup[lineupIndex]
@@ -497,17 +542,22 @@ internal fun substituteBatter(isHome: Boolean, lineupIndex: Int, newPlayerId: Lo
     val currentHalf = game.gameState.half
     val isCurrentBatterHome = currentHalf == HalfInning.BOTTOM
     if (isHome == isCurrentBatterHome && (if (isHome) localHomeBatterIndex else localAwayBatterIndex) == lineupIndex) {
-        localGame = game.copy(
-            gameState = game.gameState.copy(
-                currentBatterId = newPlayer.id,
-                currentBatterName = newPlayer.name
+        localGame =
+            game.copy(
+                gameState =
+                    game.gameState.copy(
+                        currentBatterId = newPlayer.id,
+                        currentBatterName = newPlayer.name,
+                    ),
             )
-        )
     }
     saveLocalState()
 }
 
-internal fun substitutePitcher(isHome: Boolean, newPitcherId: Long) {
+internal fun substitutePitcher(
+    isHome: Boolean,
+    newPitcherId: Long,
+) {
     val bench = if (isHome) localHomeBench else localAwayBench
     val newPitcher = bench.find { it.id == newPitcherId } ?: return
     val oldPitcherId = if (isHome) localHomeActivePitcherId else localAwayActivePitcherId
@@ -527,12 +577,14 @@ internal fun substitutePitcher(isHome: Boolean, newPitcherId: Long) {
     val currentHalf = game.gameState.half
     val isHomePitching = currentHalf == HalfInning.TOP
     if (isHome == isHomePitching) {
-        localGame = game.copy(
-            gameState = game.gameState.copy(
-                currentPitcherId = newPitcher.id,
-                currentPitcherName = newPitcher.name
+        localGame =
+            game.copy(
+                gameState =
+                    game.gameState.copy(
+                        currentPitcherId = newPitcher.id,
+                        currentPitcherName = newPitcher.name,
+                    ),
             )
-        )
     }
     saveLocalState()
 }

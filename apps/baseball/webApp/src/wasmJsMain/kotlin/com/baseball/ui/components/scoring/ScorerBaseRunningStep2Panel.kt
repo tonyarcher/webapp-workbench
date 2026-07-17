@@ -11,7 +11,7 @@ import kotlinx.html.js.onClickFunction
 class ScorerBaseRunningStep2Panel(
     private val controller: GameScoringController,
     private val eventType: ScoringEventType,
-    private val baseLabel: String
+    private val baseLabel: String,
 ) {
     private var selectedRunnerId: String? = null
     private val throwSequence = mutableListOf<Int>()
@@ -25,11 +25,12 @@ class ScorerBaseRunningStep2Panel(
         val r1 = controller.game.gameState.runnerFirstId to controller.game.gameState.runnerFirstName
         val r2 = controller.game.gameState.runnerSecondId to controller.game.gameState.runnerSecondName
         val r3 = controller.game.gameState.runnerThirdId to controller.game.gameState.runnerThirdName
-        val activeRunners = listOfNotNull(
-            r1.first?.let { it.toString() to ("Runner on 1B: " + r1.second) },
-            r2.first?.let { it.toString() to ("Runner on 2B: " + r2.second) },
-            r3.first?.let { it.toString() to ("Runner on 3B: " + r3.second) }
-        )
+        val activeRunners =
+            listOfNotNull(
+                r1.first?.let { it.toString() to ("Runner on 1B: " + r1.second) },
+                r2.first?.let { it.toString() to ("Runner on 2B: " + r2.second) },
+                r3.first?.let { it.toString() to ("Runner on 3B: " + r3.second) },
+            )
 
         gridEl.append.div {
             h3 {
@@ -41,7 +42,10 @@ class ScorerBaseRunningStep2Panel(
                 }
             }
 
-            if (eventType == ScoringEventType.WILD_PITCH || eventType == ScoringEventType.PASSED_BALL || eventType == ScoringEventType.BALK) {
+            if (eventType == ScoringEventType.WILD_PITCH ||
+                eventType == ScoringEventType.PASSED_BALL ||
+                eventType == ScoringEventType.BALK
+            ) {
                 renderWildPitchPassedBallBalk(this, activeRunners, r1, r2, r3)
             } else {
                 renderStealOrPickoff(this, activeRunners, r1, r2, r3)
@@ -54,7 +58,7 @@ class ScorerBaseRunningStep2Panel(
         activeRunners: List<Pair<String, String>>,
         r1: Pair<Long?, String?>,
         r2: Pair<Long?, String?>,
-        r3: Pair<Long?, String?>
+        r3: Pair<Long?, String?>,
     ) {
         if (activeRunners.isEmpty()) {
             parent.div {
@@ -79,7 +83,11 @@ class ScorerBaseRunningStep2Panel(
         }
     }
 
-    private fun DIV.renderSingleRunnerAdvSelection(parent: DIV, runnerId: String, rLabel: String) {
+    private fun DIV.renderSingleRunnerAdvSelection(
+        parent: DIV,
+        runnerId: String,
+        rLabel: String,
+    ) {
         parent.div {
             css {
                 display = Display.flex
@@ -109,8 +117,9 @@ class ScorerBaseRunningStep2Panel(
                             fontSize = 0.75.rem
                         }
                         onClickFunction = {
-                            if (baseVal == null) runnerAdvances.remove(runnerId)
-                            else {
+                            if (baseVal == null) {
+                                runnerAdvances.remove(runnerId)
+                            } else {
                                 runnerAdvances[runnerId] = baseVal
                                 propagateWildPitchAdvances(runnerId, baseVal)
                             }
@@ -122,7 +131,12 @@ class ScorerBaseRunningStep2Panel(
         }
     }
 
-    private fun adjustRunnerDest(oId: String, oStart: Int, startBase: Int, baseVal: Int) {
+    private fun adjustRunnerDest(
+        oId: String,
+        oStart: Int,
+        startBase: Int,
+        baseVal: Int,
+    ) {
         val oDest = runnerAdvances[oId] ?: return
         if (oDest <= 0) return
         if (oStart > startBase) {
@@ -134,18 +148,32 @@ class ScorerBaseRunningStep2Panel(
         }
     }
 
-    private fun propagateWildPitchAdvances(runnerId: String, baseVal: Int) {
-        val startBase = when (runnerId) {
-            controller.game.gameState.runnerFirstId?.toString() -> 1
-            controller.game.gameState.runnerSecondId?.toString() -> 2
-            controller.game.gameState.runnerThirdId?.toString() -> 3
-            else -> 0
-        }
-        val otherRunners = listOfNotNull(
-            controller.game.gameState.runnerFirstId?.let { it.toString() to 1 },
-            controller.game.gameState.runnerSecondId?.let { it.toString() to 2 },
-            controller.game.gameState.runnerThirdId?.let { it.toString() to 3 }
-        )
+    private fun propagateWildPitchAdvances(
+        runnerId: String,
+        baseVal: Int,
+    ) {
+        val startBase =
+            when (runnerId) {
+                controller.game.gameState.runnerFirstId
+                    ?.toString(),
+                -> 1
+                controller.game.gameState.runnerSecondId
+                    ?.toString(),
+                -> 2
+                controller.game.gameState.runnerThirdId
+                    ?.toString(),
+                -> 3
+                else -> 0
+            }
+        val otherRunners =
+            listOfNotNull(
+                controller.game.gameState.runnerFirstId
+                    ?.let { it.toString() to 1 },
+                controller.game.gameState.runnerSecondId
+                    ?.let { it.toString() to 2 },
+                controller.game.gameState.runnerThirdId
+                    ?.let { it.toString() to 3 },
+            )
         otherRunners.forEach { (oId, oStart) ->
             if (oId != runnerId) {
                 adjustRunnerDest(oId, oStart, startBase, baseVal)
@@ -158,7 +186,7 @@ class ScorerBaseRunningStep2Panel(
         activeRunners: List<Pair<String, String>>,
         r1: Pair<Long?, String?>,
         r2: Pair<Long?, String?>,
-        r3: Pair<Long?, String?>
+        r3: Pair<Long?, String?>,
     ) {
         parent.div(classes = "action-grid") {
             css {
@@ -169,7 +197,7 @@ class ScorerBaseRunningStep2Panel(
             listOf(
                 ScoringEventType.WILD_PITCH to "Wild Pitch",
                 ScoringEventType.PASSED_BALL to "Passed Ball",
-                ScoringEventType.BALK to "Balk"
+                ScoringEventType.BALK to "Balk",
             ).forEach { (evType, evLabel) ->
                 button(classes = "btn btn-action") {
                     +evLabel
@@ -190,7 +218,10 @@ class ScorerBaseRunningStep2Panel(
         }
     }
 
-    private fun DIV.renderRunnerSelectionButtons(parent: DIV, activeRunners: List<Pair<String, String>>) {
+    private fun DIV.renderRunnerSelectionButtons(
+        parent: DIV,
+        activeRunners: List<Pair<String, String>>,
+    ) {
         parent.div(classes = "action-grid") {
             css { marginBottom = 1.rem }
             activeRunners.forEach { (rId, rLabel) ->
@@ -211,7 +242,7 @@ class ScorerBaseRunningStep2Panel(
         activeRunners: List<Pair<String, String>>,
         r1: Pair<Long?, String?>,
         r2: Pair<Long?, String?>,
-        r3: Pair<Long?, String?>
+        r3: Pair<Long?, String?>,
     ) {
         if (activeRunners.isEmpty()) {
             parent.div {
@@ -254,42 +285,53 @@ class ScorerBaseRunningStep2Panel(
         r1: Pair<Long?, String?>,
         r2: Pair<Long?, String?>,
         r3: Pair<Long?, String?>,
-        targetBase: Int
+        targetBase: Int,
     ): Map<String, Int> {
         val fullMap = mutableMapOf<String, Int>()
         activeRunners.forEach { (rId, _) ->
-            fullMap[rId] = if (rId == selectedRunnerId) targetBase else when {
-                r1.first?.toString() == rId -> 1
-                r2.first?.toString() == rId -> 2
-                r3.first?.toString() == rId -> 3
-                else -> 1
-            }
+            fullMap[rId] =
+                if (rId == selectedRunnerId) {
+                    targetBase
+                } else {
+                    when {
+                        r1.first?.toString() == rId -> 1
+                        r2.first?.toString() == rId -> 2
+                        r3.first?.toString() == rId -> 3
+                        else -> 1
+                    }
+                }
         }
         return fullMap
     }
 
-    private fun getStolenBaseOptions(currentBase: Int): List<Pair<Int, String>> = buildList {
-        if (currentBase < 2) add(2 to "Second Base (2B)")
-        if (currentBase < 3) add(3 to "Third Base (3B)")
-        add(4 to "Home Plate (Score)")
-    }
+    private fun getStolenBaseOptions(currentBase: Int): List<Pair<Int, String>> =
+        buildList {
+            if (currentBase < 2) add(2 to "Second Base (2B)")
+            if (currentBase < 3) add(3 to "Third Base (3B)")
+            add(4 to "Home Plate (Score)")
+        }
 
     private fun performStolenBase(
         targetBase: Int,
         activeRunners: List<Pair<String, String>>,
         r1: Pair<Long?, String?>,
         r2: Pair<Long?, String?>,
-        r3: Pair<Long?, String?>
+        r3: Pair<Long?, String?>,
     ) {
         val fullMap = buildStolenBaseMap(activeRunners, r1, r2, r3, targetBase)
-        val targetBaseName = when (targetBase) {
-            2 -> "2B"
-            3 -> "3B"
-            4 -> "Home"
-            else -> ""
-        }
+        val targetBaseName =
+            when (targetBase) {
+                2 -> "2B"
+                3 -> "3B"
+                4 -> "Home"
+                else -> ""
+            }
         val runnerName = activeRunners.find { it.first == selectedRunnerId }?.second?.substringAfter(": ") ?: ""
-        controller.triggerScoringEvent(ScoringEventType.STOLEN_BASE, "Stolen Base: $runnerName to $targetBaseName", runnerAdvanceMap = fullMap)
+        controller.triggerScoringEvent(
+            ScoringEventType.STOLEN_BASE,
+            "Stolen Base: $runnerName to $targetBaseName",
+            runnerAdvanceMap = fullMap,
+        )
     }
 
     private fun renderStolenBaseTargetSelection(
@@ -297,7 +339,7 @@ class ScorerBaseRunningStep2Panel(
         activeRunners: List<Pair<String, String>>,
         r1: Pair<Long?, String?>,
         r2: Pair<Long?, String?>,
-        r3: Pair<Long?, String?>
+        r3: Pair<Long?, String?>,
     ) {
         parent.div {
             +"Select Target Stolen Base:"
@@ -308,12 +350,13 @@ class ScorerBaseRunningStep2Panel(
         }
         parent.div(classes = "action-grid") {
             css { marginBottom = 1.rem }
-            val currentBase = when (selectedRunnerId) {
-                r1.first?.toString() -> 1
-                r2.first?.toString() -> 2
-                r3.first?.toString() -> 3
-                else -> 1
-            }
+            val currentBase =
+                when (selectedRunnerId) {
+                    r1.first?.toString() -> 1
+                    r2.first?.toString() -> 2
+                    r3.first?.toString() -> 3
+                    else -> 1
+                }
             getStolenBaseOptions(currentBase).forEach { (targetBase, baseLabel) ->
                 button(classes = "btn btn-action") {
                     +baseLabel
@@ -328,7 +371,7 @@ class ScorerBaseRunningStep2Panel(
         activeRunners: List<Pair<String, String>>,
         r1: Pair<Long?, String?>,
         r2: Pair<Long?, String?>,
-        r3: Pair<Long?, String?>
+        r3: Pair<Long?, String?>,
     ) {
         parent.div {
             +"Defensive Throw Sequence"
@@ -337,14 +380,15 @@ class ScorerBaseRunningStep2Panel(
                 marginBottom = 0.5.rem
             }
         }
-        val displaySeq = buildString {
-            if (throwSequence.isEmpty()) {
-                append(if (eventType == ScoringEventType.CAUGHT_STEALING) "CS (No throws)" else "PO (No throws)")
-            } else {
-                append(throwSequence.joinToString("-"))
-                if (isUnassisted) append("U")
+        val displaySeq =
+            buildString {
+                if (throwSequence.isEmpty()) {
+                    append(if (eventType == ScoringEventType.CAUGHT_STEALING) "CS (No throws)" else "PO (No throws)")
+                } else {
+                    append(throwSequence.joinToString("-"))
+                    if (isUnassisted) append("U")
+                }
             }
-        }
         parent.div {
             +"Sequence: $displaySeq"
             css {
@@ -361,7 +405,14 @@ class ScorerBaseRunningStep2Panel(
     }
 
     private fun DIV.renderThrowPOActionButtons() {
-        listOf("U" to { isUnassisted = !isUnassisted }, "⌫" to { if (throwSequence.isNotEmpty()) throwSequence.removeAt(throwSequence.size - 1) }, "Clear" to { throwSequence.clear(); isUnassisted = false }).forEach { (lbl, action) ->
+        listOf(
+            "U" to { isUnassisted = !isUnassisted },
+            "⌫" to { if (throwSequence.isNotEmpty()) throwSequence.removeAt(throwSequence.size - 1) },
+            "Clear" to {
+                throwSequence.clear()
+                isUnassisted = false
+            },
+        ).forEach { (lbl, action) ->
             button(classes = "btn btn-secondary") {
                 +lbl
                 css {
@@ -381,7 +432,7 @@ class ScorerBaseRunningStep2Panel(
         activeRunners: List<Pair<String, String>>,
         r1: Pair<Long?, String?>,
         r2: Pair<Long?, String?>,
-        r3: Pair<Long?, String?>
+        r3: Pair<Long?, String?>,
     ) {
         parent.div {
             css {
@@ -420,21 +471,31 @@ class ScorerBaseRunningStep2Panel(
         activeRunners: List<Pair<String, String>>,
         r1: Pair<Long?, String?>,
         r2: Pair<Long?, String?>,
-        r3: Pair<Long?, String?>
+        r3: Pair<Long?, String?>,
     ) {
-        val seqStr = if (throwSequence.isNotEmpty()) {
-            val s = throwSequence.joinToString("-")
-            if (isUnassisted) "${s}U" else s
-        } else if (eventType == ScoringEventType.CAUGHT_STEALING) "2-6" else "1-3"
+        val seqStr =
+            if (throwSequence.isNotEmpty()) {
+                val s = throwSequence.joinToString("-")
+                if (isUnassisted) "${s}U" else s
+            } else if (eventType == ScoringEventType.CAUGHT_STEALING) {
+                "2-6"
+            } else {
+                "1-3"
+            }
 
         val fullMap = mutableMapOf<String, Int>()
         activeRunners.forEach { (rId, _) ->
-            fullMap[rId] = if (rId == selectedRunnerId) 0 else when {
-                r1.first?.toString() == rId -> 1
-                r2.first?.toString() == rId -> 2
-                r3.first?.toString() == rId -> 3
-                else -> 1
-            }
+            fullMap[rId] =
+                if (rId == selectedRunnerId) {
+                    0
+                } else {
+                    when {
+                        r1.first?.toString() == rId -> 1
+                        r2.first?.toString() == rId -> 2
+                        r3.first?.toString() == rId -> 3
+                        else -> 1
+                    }
+                }
         }
         val runnerName = activeRunners.find { it.first == selectedRunnerId }?.second?.substringAfter(": ") ?: ""
         val prefix = if (eventType == ScoringEventType.CAUGHT_STEALING) "Caught Stealing" else "Picked Off"
@@ -442,7 +503,10 @@ class ScorerBaseRunningStep2Panel(
     }
 }
 
-fun GameScoringController.renderBaseRunningStep2(eventType: ScoringEventType, baseLabel: String) {
+fun GameScoringController.renderBaseRunningStep2(
+    eventType: ScoringEventType,
+    baseLabel: String,
+) {
     val panel = ScorerBaseRunningStep2Panel(this, eventType, baseLabel)
     panel.render()
 }

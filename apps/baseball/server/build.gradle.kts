@@ -14,10 +14,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    
+
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("com.h2database:h2")
-    
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.0")
@@ -50,12 +50,13 @@ jacoco {
     toolVersion = "0.8.12"
 }
 
-val jacocoExclusions = listOf(
-    "**/Application*",
-    "**/config/**",
-    "**/entities/**",
-    "**/repositories/**"
-)
+val jacocoExclusions =
+    listOf(
+        "**/Application*",
+        "**/config/**",
+        "**/entities/**",
+        "**/repositories/**",
+    )
 
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
@@ -64,11 +65,13 @@ tasks.jacocoTestReport {
         html.required.set(true)
     }
     classDirectories.setFrom(
-        files(classDirectories.files.map {
-            fileTree(it) {
-                exclude(jacocoExclusions)
-            }
-        })
+        files(
+            classDirectories.files.map {
+                fileTree(it) {
+                    exclude(jacocoExclusions)
+                }
+            },
+        ),
     )
 }
 
@@ -82,10 +85,12 @@ tasks.jacocoTestCoverageVerification {
         }
     }
     classDirectories.setFrom(
-        files(classDirectories.files.map {
-            fileTree(it) {
-                exclude(jacocoExclusions)
-            }
-        })
+        files(
+            classDirectories.files.map {
+                fileTree(it) {
+                    exclude(jacocoExclusions)
+                }
+            },
+        ),
     )
 }

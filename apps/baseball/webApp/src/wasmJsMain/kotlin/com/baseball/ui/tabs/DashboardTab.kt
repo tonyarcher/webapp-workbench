@@ -2,8 +2,8 @@ package com.baseball.ui.tabs
 
 import com.baseball.BaseballConstants
 import com.baseball.api
-import com.baseball.models.GameStatus
 import com.baseball.models.Game
+import com.baseball.models.GameStatus
 import com.baseball.ui.*
 import kotlinx.browser.document
 import kotlinx.css.*
@@ -14,8 +14,8 @@ import kotlinx.html.js.onClickFunction
 import kotlinx.html.js.option
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLElement
-import org.w3c.dom.HTMLSelectElement
 import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.HTMLSelectElement
 
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
     container.h1 { +"Season Dashboard" }
@@ -36,63 +36,64 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
         }
     }
 
-    val card = container.div(classes = "card") {
-        css {
-            marginBottom = 2.rem
-            display = Display.flex
-            gap = 1.5.rem
-            alignItems = Align.flexEnd
-        }
-
-        div(classes = "form-group") {
+    val card =
+        container.div(classes = "card") {
             css {
-                marginBottom = 0.px
-                flexGrow = 1.0
+                marginBottom = 2.rem
+                display = Display.flex
+                gap = 1.5.rem
+                alignItems = Align.flexEnd
             }
-            label { +"Active League" }
-            select(classes = "form-control") {
-                id = "select-league-dropdown"
-                leaguesList.forEach { league ->
-                    option {
-                        value = league.id.toString()
-                        +league.name
-                        selected = (selectedLeagueId == league.id)
-                    }
+
+            div(classes = "form-group") {
+                css {
+                    marginBottom = 0.px
+                    flexGrow = 1.0
                 }
-                onChangeFunction = { event ->
-                    val lid = (event.target as? HTMLSelectElement)?.value?.toLongOrNull()
-                    if (lid != null) {
-                        selectedLeagueId = lid
-                        launch {
-                            seasonsList = api.getSeasons(lid)
-                            selectedSeasonId = seasonsList.firstOrNull()?.id
-                            populateSeasonsDropdown()
+                label { +"Active League" }
+                select(classes = "form-control") {
+                    id = "select-league-dropdown"
+                    leaguesList.forEach { league ->
+                        option {
+                            value = league.id.toString()
+                            +league.name
+                            selected = (selectedLeagueId == league.id)
+                        }
+                    }
+                    onChangeFunction = { event ->
+                        val lid = (event.target as? HTMLSelectElement)?.value?.toLongOrNull()
+                        if (lid != null) {
+                            selectedLeagueId = lid
+                            launch {
+                                seasonsList = api.getSeasons(lid)
+                                selectedSeasonId = seasonsList.firstOrNull()?.id
+                                populateSeasonsDropdown()
+                            }
                         }
                     }
                 }
             }
-        }
 
-        div(classes = "form-group") {
-            css {
-                marginBottom = 0.px
-                flexGrow = 1.0
+            div(classes = "form-group") {
+                css {
+                    marginBottom = 0.px
+                    flexGrow = 1.0
+                }
+                label { +"Active Season" }
+                select(classes = "form-control") {
+                    id = "select-season-dropdown"
+                }
             }
-            label { +"Active Season" }
-            select(classes = "form-control") {
-                id = "select-season-dropdown"
-            }
-        }
 
-        button(classes = "btn") {
-            id = "load-season-btn"
-            +"Load Season"
-            onClickFunction = {
-                selectedSeasonId = selectS?.value?.toLongOrNull()
-                renderCurrentTab()
+            button(classes = "btn") {
+                id = "load-season-btn"
+                +"Load Season"
+                onClickFunction = {
+                    selectedSeasonId = selectS?.value?.toLongOrNull()
+                    renderCurrentTab()
+                }
             }
         }
-    }
 
     selectL = card.querySelector("#select-league-dropdown") as? HTMLSelectElement
     selectS = card.querySelector("#select-season-dropdown") as? HTMLSelectElement
@@ -276,12 +277,14 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                                         val awayTeam = teamsList.find { it.id == awayId }
                                         if (homeTeam != null && awayTeam != null) {
                                             launch {
-                                                api.createGame(Game(
-                                                    seasonId = selectedSeasonId!!,
-                                                    homeTeam = homeTeam,
-                                                    awayTeam = awayTeam,
-                                                    date = dateStr
-                                                ))
+                                                api.createGame(
+                                                    Game(
+                                                        seasonId = selectedSeasonId!!,
+                                                        homeTeam = homeTeam,
+                                                        awayTeam = awayTeam,
+                                                        date = dateStr,
+                                                    ),
+                                                )
                                                 renderCurrentTab()
                                             }
                                         }
@@ -331,11 +334,12 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                                     }
 
                                     div(classes = "game-meta") {
-                                        val badgeClass = when (game.status) {
-                                            GameStatus.SCHEDULED -> "badge badge-scheduled"
-                                            GameStatus.IN_PROGRESS -> "badge badge-live"
-                                            GameStatus.COMPLETED -> "badge badge-completed"
-                                        }
+                                        val badgeClass =
+                                            when (game.status) {
+                                                GameStatus.SCHEDULED -> "badge badge-scheduled"
+                                                GameStatus.IN_PROGRESS -> "badge badge-live"
+                                                GameStatus.COMPLETED -> "badge badge-completed"
+                                            }
                                         span(classes = badgeClass) { +game.status.name }
                                         span {
                                             +game.date

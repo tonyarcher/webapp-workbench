@@ -35,32 +35,35 @@ internal fun renderLoginTab(container: HTMLElement) {
             }
         }
 
-        errorBanner = div {
-            css {
-                display = Display.none
-                color = Color("var(--accent-red)")
-                background = "rgba(255, 42, 59, 0.1)"
-                border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
-                padding = Padding(0.75.rem)
-                borderRadius = 8.px
-                marginBottom = 1.rem
-                fontSize = 0.9.rem
-            }
-        } as HTMLDivElement
+        errorBanner =
+            div {
+                css {
+                    display = Display.none
+                    color = Color("var(--accent-red)")
+                    background = "rgba(255, 42, 59, 0.1)"
+                    border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
+                    padding = Padding(0.75.rem)
+                    borderRadius = 8.px
+                    marginBottom = 1.rem
+                    fontSize = 0.9.rem
+                }
+            } as HTMLDivElement
 
         form {
             div(classes = "form-group") {
                 label { +"Email Address (Username)" }
-                emailInput = input(type = InputType.email, classes = "form-control") {
-                    placeholder = "you@example.com"
-                } as HTMLInputElement
+                emailInput =
+                    input(type = InputType.email, classes = "form-control") {
+                        placeholder = "you@example.com"
+                    } as HTMLInputElement
             }
 
             div(classes = "form-group") {
                 label { +"Password" }
-                passwordInput = input(type = InputType.password, classes = "form-control") {
-                    placeholder = "Enter your password"
-                } as HTMLInputElement
+                passwordInput =
+                    input(type = InputType.password, classes = "form-control") {
+                        placeholder = "Enter your password"
+                    } as HTMLInputElement
             }
 
             button(classes = "btn") {
@@ -97,8 +100,12 @@ internal fun renderLoginTab(container: HTMLElement) {
                                     }
                                 } catch (e: Throwable) {
                                     val msg = e.message ?: ""
-                                    if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) || msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) || msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)) {
-                                        banner.textContent = "Unable to connect to the server. Please verify that your Spring Boot backend is running."
+                                    if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) ||
+                                        msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) ||
+                                        msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)
+                                    ) {
+                                        banner.textContent =
+                                            "Unable to connect to the server. Please verify that your Spring Boot backend is running."
                                     } else {
                                         banner.textContent = "Authentication failed: ${e.message ?: "server error"}"
                                     }
@@ -157,46 +164,51 @@ internal fun renderRegisterTab(container: HTMLElement) {
             }
         }
 
-        errorBanner = div {
-            css {
-                display = Display.none
-                color = Color("var(--accent-red)")
-                background = "rgba(255, 42, 59, 0.1)"
-                border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
-                padding = Padding(0.75.rem)
-                borderRadius = 8.px
-                marginBottom = 1.rem
-                fontSize = 0.9.rem
-            }
-        } as HTMLDivElement
+        errorBanner =
+            div {
+                css {
+                    display = Display.none
+                    color = Color("var(--accent-red)")
+                    background = "rgba(255, 42, 59, 0.1)"
+                    border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
+                    padding = Padding(0.75.rem)
+                    borderRadius = 8.px
+                    marginBottom = 1.rem
+                    fontSize = 0.9.rem
+                }
+            } as HTMLDivElement
 
         form {
             div(classes = "form-group") {
                 label { +"First Name" }
-                firstNameInput = input(type = InputType.text, classes = "form-control") {
-                    placeholder = "John"
-                } as HTMLInputElement
+                firstNameInput =
+                    input(type = InputType.text, classes = "form-control") {
+                        placeholder = "John"
+                    } as HTMLInputElement
             }
 
             div(classes = "form-group") {
                 label { +"Last Name" }
-                lastNameInput = input(type = InputType.text, classes = "form-control") {
-                    placeholder = "Doe"
-                } as HTMLInputElement
+                lastNameInput =
+                    input(type = InputType.text, classes = "form-control") {
+                        placeholder = "Doe"
+                    } as HTMLInputElement
             }
 
             div(classes = "form-group") {
                 label { +"Email Address (Username)" }
-                emailInput = input(type = InputType.email, classes = "form-control") {
-                    placeholder = "you@example.com"
-                } as HTMLInputElement
+                emailInput =
+                    input(type = InputType.email, classes = "form-control") {
+                        placeholder = "you@example.com"
+                    } as HTMLInputElement
             }
 
             div(classes = "form-group") {
                 label { +"Password" }
-                passwordInput = input(type = InputType.password, classes = "form-control") {
-                    placeholder = "At least 6 characters"
-                } as HTMLInputElement
+                passwordInput =
+                    input(type = InputType.password, classes = "form-control") {
+                        placeholder = "At least 6 characters"
+                    } as HTMLInputElement
             }
 
             button(classes = "btn") {
@@ -232,7 +244,7 @@ internal fun renderRegisterTab(container: HTMLElement) {
                             launch {
                                 try {
                                     authService.registerUser(
-                                        UserAccount(email, firstName, lastName, password)
+                                        UserAccount(email, firstName, lastName, password),
                                     )
                                     val session = authService.login(email, password)
                                     if (session != null) {
@@ -243,9 +255,15 @@ internal fun renderRegisterTab(container: HTMLElement) {
                                     }
                                 } catch (e: Throwable) {
                                     val msg = e.message ?: ""
-                                    if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) || msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) || msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)) {
-                                        banner.textContent = "Unable to connect to the server. Please verify that your Spring Boot backend is running."
-                                    } else if (msg.contains(BaseballConstants.STATUS_400) || msg.contains(BaseballConstants.STATUS_BAD_REQUEST, ignoreCase = true)) {
+                                    if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) ||
+                                        msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) ||
+                                        msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)
+                                    ) {
+                                        banner.textContent =
+                                            "Unable to connect to the server. Please verify that your Spring Boot backend is running."
+                                    } else if (msg.contains(BaseballConstants.STATUS_400) ||
+                                        msg.contains(BaseballConstants.STATUS_BAD_REQUEST, ignoreCase = true)
+                                    ) {
                                         banner.textContent = "An account with this email already exists."
                                     } else {
                                         banner.textContent = "Registration failed: ${e.message ?: "server error"}"

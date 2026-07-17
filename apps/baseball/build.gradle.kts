@@ -8,6 +8,11 @@ plugins {
     kotlin("plugin.spring") version "2.4.0" apply false
     kotlin("plugin.jpa") version "2.4.0" apply false
     id("io.gitlab.arturbosch.detekt") version "1.23.6"
+    id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
+}
+
+allprojects {
+    apply(plugin = "org.jlleitschuh.gradle.ktlint")
 }
 
 configure(subprojects.filter { it.name in listOf("webApp", "shared") }) {
@@ -41,7 +46,7 @@ run {
         field.isAccessible = true
         val env = field.get(null) as MutableMap<String, String>
         env["NODE_OPTIONS"] = "--no-deprecation"
-        
+
         val caseField = processEnv.getDeclaredField("theCaseInsensitiveEnvironment")
         caseField.isAccessible = true
         val caseEnv = caseField.get(null) as MutableMap<String, String>

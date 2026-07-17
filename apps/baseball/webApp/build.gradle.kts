@@ -8,9 +8,13 @@ kotlin {
         binaries.executable()
         browser {
             commonWebpackConfig {
-                devServer = (devServer ?: org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig.DevServer()).copy(
-                    port = 3000
-                )
+                devServer =
+                    (
+                        devServer ?: org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
+                            .DevServer()
+                    ).copy(
+                        port = 3000,
+                    )
             }
             testTask {
                 useMocha {
@@ -21,13 +25,13 @@ kotlin {
             }
         }
     }
-    
+
     sourceSets {
         val wasmJsMain by getting {
             dependencies {
                 implementation(project(":shared"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-                
+
                 // Ktor client for REST APIs
                 implementation("io.ktor:ktor-client-core:3.5.1")
                 implementation("io.ktor:ktor-client-content-negotiation:3.5.1")

@@ -18,7 +18,7 @@ class GameScoringController(
     val rightCol: HTMLElement,
     val game: Game,
     val homeRoster: List<Player>,
-    val awayRoster: List<Player>
+    val awayRoster: List<Player>,
 ) {
     var optionalPitchType: String? = null
     var actionGridWrapper: HTMLDivElement? = null
@@ -63,11 +63,12 @@ class GameScoringController(
             renderPlateMatchupCard(this)
         }
 
-        actionGridWrapper = rightCol.div {
-            css {
-                marginTop = 1.rem
+        actionGridWrapper =
+            rightCol.div {
+                css {
+                    marginTop = 1.rem
+                }
             }
-        }
 
         renderActionGrid()
     }
@@ -165,10 +166,11 @@ class GameScoringController(
         }
     }
 
-    private fun buildFinalDesc(detail: String?): String? = buildString {
-        optionalPitchType?.let { append("$it - ") }
-        detail?.let { append(it) }
-    }.takeIf { it.isNotEmpty() }
+    private fun buildFinalDesc(detail: String?): String? =
+        buildString {
+            optionalPitchType?.let { append("$it - ") }
+            detail?.let { append(it) }
+        }.takeIf { it.isNotEmpty() }
 
     private fun recordRemoteEvent(req: ScoringEventRequest) {
         launch {
@@ -182,7 +184,7 @@ class GameScoringController(
         detail: String? = null,
         isDoublePlay: Boolean = false,
         isError: Boolean = false,
-        runnerAdvanceMap: Map<String, Int>? = null
+        runnerAdvanceMap: Map<String, Int>? = null,
     ) {
         val bId = game.gameState.currentBatterId
         val pId = game.gameState.currentPitcherId
@@ -195,15 +197,17 @@ class GameScoringController(
             GameManager.recordPlayEvent(type, bId, pId, finalDescription, isDoublePlay, isError, runnerAdvanceMap)
             renderCurrentTab()
         } else {
-            recordRemoteEvent(ScoringEventRequest(
-                eventType = type,
-                batterId = bId,
-                pitcherId = pId,
-                description = finalDescription,
-                isDoublePlay = isDoublePlay,
-                isError = isError,
-                runnerAdvanceMap = runnerAdvanceMap
-            ))
+            recordRemoteEvent(
+                ScoringEventRequest(
+                    eventType = type,
+                    batterId = bId,
+                    pitcherId = pId,
+                    description = finalDescription,
+                    isDoublePlay = isDoublePlay,
+                    isError = isError,
+                    runnerAdvanceMap = runnerAdvanceMap,
+                ),
+            )
         }
     }
 
@@ -274,7 +278,7 @@ class GameScoringController(
             listOf(
                 ScoringEventType.BALL to "Ball (B+1)",
                 ScoringEventType.STRIKE to "Strike (S+1)",
-                ScoringEventType.FOUL to "Foul"
+                ScoringEventType.FOUL to "Foul",
             ).forEach { (type, label) ->
                 button(classes = "btn btn-secondary btn-action") {
                     +label
@@ -287,16 +291,22 @@ class GameScoringController(
         }
     }
 
-    private fun DIV.renderPlateResultsButton(type: ScoringEventType, label: String) {
-        val btnClass = when (type) {
-            ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN -> "btn btn-action"
-            else -> "btn btn-secondary btn-action"
-        }
+    private fun DIV.renderPlateResultsButton(
+        type: ScoringEventType,
+        label: String,
+    ) {
+        val btnClass =
+            when (type) {
+                ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN -> "btn btn-action"
+                else -> "btn btn-secondary btn-action"
+            }
         button(classes = btnClass) {
             +label
             onClickFunction = {
-                val isHit = type in listOf(ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN)
-                val isOut = type in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT)
+                val isHit =
+                    type in listOf(ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN)
+                val isOut =
+                    type in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT)
                 if (isHit || isOut) {
                     renderStep2(type, label, isHit)
                 } else {
@@ -334,7 +344,7 @@ class GameScoringController(
                 ScoringEventType.POP_OUT to "Pop Out",
                 ScoringEventType.SACRIFICE_FLY to "Sac Fly",
                 ScoringEventType.ERROR to "Reached on Error",
-                ScoringEventType.FIELDER_CHOICE to "Fielder's Choice"
+                ScoringEventType.FIELDER_CHOICE to "Fielder's Choice",
             ).forEach { (type, label) ->
                 renderPlateResultsButton(type, label)
             }
@@ -363,7 +373,7 @@ class GameScoringController(
                 ScoringEventType.STOLEN_BASE to "Stolen Base",
                 ScoringEventType.CAUGHT_STEALING to "Caught Stealing",
                 ScoringEventType.PICKED_OFF to "Picked Off",
-                ScoringEventType.WILD_PITCH to "WP / PB / Balk"
+                ScoringEventType.WILD_PITCH to "WP / PB / Balk",
             ).forEach { (type, label) ->
                 button(classes = "btn btn-secondary btn-action") {
                     +label

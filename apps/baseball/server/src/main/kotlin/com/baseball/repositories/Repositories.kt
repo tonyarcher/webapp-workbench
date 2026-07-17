@@ -28,7 +28,11 @@ interface GameRepository : JpaRepository<GameEntity, Long> {
 @Repository
 interface GameInningRepository : JpaRepository<GameInningEntity, Long> {
     fun findAllByGameIdOrderByInningAsc(gameId: Long): List<GameInningEntity>
-    fun findByGameIdAndInning(gameId: Long, inning: Int): GameInningEntity?
+
+    fun findByGameIdAndInning(
+        gameId: Long,
+        inning: Int,
+    ): GameInningEntity?
 }
 
 @Repository
@@ -39,21 +43,36 @@ interface PlayEventRepository : JpaRepository<PlayEventEntity, Long> {
 @Repository
 interface PlayerGameBattingStatsRepository : JpaRepository<PlayerGameBattingStatsEntity, Long> {
     fun findAllByGameId(gameId: Long): List<PlayerGameBattingStatsEntity>
-    fun findByGameIdAndPlayerId(gameId: Long, playerId: Long): PlayerGameBattingStatsEntity?
+
+    fun findByGameIdAndPlayerId(
+        gameId: Long,
+        playerId: Long,
+    ): PlayerGameBattingStatsEntity?
+
     fun findAllByGameIdIn(gameIds: Collection<Long>): List<PlayerGameBattingStatsEntity>
 }
 
 @Repository
 interface PlayerGamePitchingStatsRepository : JpaRepository<PlayerGamePitchingStatsEntity, Long> {
     fun findAllByGameId(gameId: Long): List<PlayerGamePitchingStatsEntity>
-    fun findByGameIdAndPlayerId(gameId: Long, playerId: Long): PlayerGamePitchingStatsEntity?
+
+    fun findByGameIdAndPlayerId(
+        gameId: Long,
+        playerId: Long,
+    ): PlayerGamePitchingStatsEntity?
+
     fun findAllByGameIdIn(gameIds: Collection<Long>): List<PlayerGamePitchingStatsEntity>
 }
 
 @Repository
 interface PlayerGameFieldingStatsRepository : JpaRepository<PlayerGameFieldingStatsEntity, Long> {
     fun findAllByGameId(gameId: Long): List<PlayerGameFieldingStatsEntity>
-    fun findByGameIdAndPlayerId(gameId: Long, playerId: Long): PlayerGameFieldingStatsEntity?
+
+    fun findByGameIdAndPlayerId(
+        gameId: Long,
+        playerId: Long,
+    ): PlayerGameFieldingStatsEntity?
+
     fun findAllByGameIdIn(gameIds: Collection<Long>): List<PlayerGameFieldingStatsEntity>
 }
 

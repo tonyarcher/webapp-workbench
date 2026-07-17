@@ -11,11 +11,12 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/auth")
 class AuthController(
     private val userRepository: UserRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
 ) {
-
     @PostMapping("/register")
-    fun register(@RequestBody request: RegisterRequest): ResponseEntity<Any> {
+    fun register(
+        @RequestBody request: RegisterRequest,
+    ): ResponseEntity<Any> {
         if (userRepository.findByEmail(request.email) != null) {
             return ResponseEntity.badRequest().body(mapOf("error" to "User already exists"))
         }
@@ -24,7 +25,7 @@ class AuthController(
         user.passwordHash = passwordEncoder.encode(request.password) as String
         user.firstName = request.firstName
         user.lastName = request.lastName
-        
+
         val saved = userRepository.save(user)
         return ResponseEntity.ok(UserResponse(saved.email, saved.firstName, saved.lastName))
     }
@@ -41,11 +42,11 @@ data class RegisterRequest(
     val email: String,
     val password: String,
     val firstName: String,
-    val lastName: String
+    val lastName: String,
 )
 
 data class UserResponse(
     val email: String,
     val firstName: String,
-    val lastName: String
+    val lastName: String,
 )

@@ -20,7 +20,6 @@ import org.w3c.dom.HTMLElement
 
 var isResetDialogOpen = false
 
-
 internal fun renderLiveScorerTab(container: HTMLElement) {
     com.baseball.game.onOpenLineupSetupDialog = {
         isLineupDialogOpen = true
@@ -60,16 +59,28 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 
             if (localAwayLineup.isEmpty()) {
                 localAwayLineup.addAll(awayRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
-                localAwayBench.addAll(awayRoster.filter { it.position == BaseballConstants.Positions.P && it.id != game.gameState.currentPitcherId } + awayRoster.drop(10))
-                localAwayActivePitcherId = game.gameState.currentPitcherId ?: awayRoster.find { it.position == BaseballConstants.Positions.P }?.id ?: 210L
-                localAwayActivePitcherName = game.gameState.currentPitcherName ?: awayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray"
+                localAwayBench.addAll(
+                    awayRoster.filter { it.position == BaseballConstants.Positions.P && it.id != game.gameState.currentPitcherId } +
+                        awayRoster.drop(10),
+                )
+                localAwayActivePitcherId =
+                    game.gameState.currentPitcherId ?: awayRoster.find { it.position == BaseballConstants.Positions.P }?.id ?: 210L
+                localAwayActivePitcherName =
+                    game.gameState.currentPitcherName ?: awayRoster.find { it.position == BaseballConstants.Positions.P }?.name
+                        ?: "Sonny Gray"
                 localAwayBatterIndex = localAwayLineup.indexOfFirst { it.id == game.gameState.currentBatterId }.coerceAtLeast(0)
             }
             if (localHomeLineup.isEmpty()) {
                 localHomeLineup.addAll(homeRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
-                localHomeBench.addAll(homeRoster.filter { it.position == BaseballConstants.Positions.P && it.id != game.gameState.currentPitcherId } + homeRoster.drop(10))
-                localHomeActivePitcherId = game.gameState.currentPitcherId ?: homeRoster.find { it.position == BaseballConstants.Positions.P }?.id ?: 110L
-                localHomeActivePitcherName = game.gameState.currentPitcherName ?: homeRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele"
+                localHomeBench.addAll(
+                    homeRoster.filter { it.position == BaseballConstants.Positions.P && it.id != game.gameState.currentPitcherId } +
+                        homeRoster.drop(10),
+                )
+                localHomeActivePitcherId =
+                    game.gameState.currentPitcherId ?: homeRoster.find { it.position == BaseballConstants.Positions.P }?.id ?: 110L
+                localHomeActivePitcherName =
+                    game.gameState.currentPitcherName ?: homeRoster.find { it.position == BaseballConstants.Positions.P }?.name
+                        ?: "Justin Steele"
                 localHomeBatterIndex = localHomeLineup.indexOfFirst { it.id == game.gameState.currentBatterId }.coerceAtLeast(0)
             }
         }
@@ -89,22 +100,47 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                         val player = (homeRoster + awayRoster).find { it.name == ev.batterName }
                         val position = player?.position ?: "DH"
 
-                        val endedInning = if (index + 1 < events.size) {
-                            events[index + 1].half != ev.half || events[index + 1].inning != ev.inning
-                        } else {
-                            val outsOnPlay = if (ev.description.contains(BaseballConstants.DESC_DOUBLE_PLAY) || ev.description.contains(BaseballConstants.DESC_DP)) 2
-                            else if (ev.eventType in listOf(ScoringEventType.STRIKEOUT, ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.SACRIFICE_FLY, ScoringEventType.FIELDER_CHOICE)) 1
-                            else 0
-                            ev.outsBefore + outsOnPlay >= 3
-                        }
+                        val endedInning =
+                            if (index + 1 < events.size) {
+                                events[index + 1].half != ev.half || events[index + 1].inning != ev.inning
+                            } else {
+                                val outsOnPlay =
+                                    if (ev.description.contains(BaseballConstants.DESC_DOUBLE_PLAY) ||
+                                        ev.description.contains(BaseballConstants.DESC_DP)
+                                    ) {
+                                        2
+                                    } else if (ev.eventType in
+                                        listOf(
+                                            ScoringEventType.STRIKEOUT,
+                                            ScoringEventType.GROUNDOUT,
+                                            ScoringEventType.FLYOUT,
+                                            ScoringEventType.LINE_OUT,
+                                            ScoringEventType.POP_OUT,
+                                            ScoringEventType.SACRIFICE_FLY,
+                                            ScoringEventType.FIELDER_CHOICE,
+                                        )
+                                    ) {
+                                        1
+                                    } else {
+                                        0
+                                    }
+                                ev.outsBefore + outsOnPlay >= 3
+                            }
 
-                        val endedStr = when {
-                            ev.eventType in listOf(ScoringEventType.SINGLE, ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.ERROR) -> BaseballConstants.PLAY_RESULT_1B
-                            ev.eventType == ScoringEventType.DOUBLE -> BaseballConstants.PLAY_RESULT_2B
-                            ev.eventType == ScoringEventType.TRIPLE -> BaseballConstants.PLAY_RESULT_3B
-                            ev.eventType == ScoringEventType.HOME_RUN -> BaseballConstants.PLAY_RESULT_RUN_SCORED
-                            else -> BaseballConstants.PLAY_RESULT_OUT
-                        }
+                        val endedStr =
+                            when {
+                                ev.eventType in
+                                    listOf(
+                                        ScoringEventType.SINGLE,
+                                        ScoringEventType.WALK,
+                                        ScoringEventType.HIT_BY_PITCH,
+                                        ScoringEventType.ERROR,
+                                    ) -> BaseballConstants.PLAY_RESULT_1B
+                                ev.eventType == ScoringEventType.DOUBLE -> BaseballConstants.PLAY_RESULT_2B
+                                ev.eventType == ScoringEventType.TRIPLE -> BaseballConstants.PLAY_RESULT_3B
+                                ev.eventType == ScoringEventType.HOME_RUN -> BaseballConstants.PLAY_RESULT_RUN_SCORED
+                                else -> BaseballConstants.PLAY_RESULT_OUT
+                            }
 
                         val notation = getScorebookNotation(ev)
 
@@ -131,10 +167,20 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                                 span(classes = "log-desc") {
                                     val header = "${ev.batterName} ($position) - Inning ${ev.inning} (${if (ev.half == HalfInning.TOP) "Top" else "Bottom"})"
                                     val notStr = if (notation.isNotEmpty()) " [$notation]" else ""
-                                    val endingDetail = if (endedInning && endedStr != BaseballConstants.PLAY_RESULT_RUN_SCORED && endedStr != BaseballConstants.PLAY_RESULT_OUT) BaseballConstants.PLAY_RESULT_LOB else endedStr
+                                    val endingDetail =
+                                        if (endedInning &&
+                                            endedStr != BaseballConstants.PLAY_RESULT_RUN_SCORED &&
+                                            endedStr != BaseballConstants.PLAY_RESULT_OUT
+                                        ) {
+                                            BaseballConstants.PLAY_RESULT_LOB
+                                        } else {
+                                            endedStr
+                                        }
                                     val cleanedDesc = ev.description.substringBefore(" | Adv:")
                                     unsafe {
-                                        raw("<span style='color: var(--accent-yellow); font-weight: 700;'>$header</span>$notStr - $cleanedDesc <span style='color: var(--text-secondary); font-size: 0.8rem;'>[Ended: $endingDetail]</span>")
+                                        raw(
+                                            "<span style='color: var(--accent-yellow); font-weight: 700;'>$header</span>$notStr - $cleanedDesc <span style='color: var(--text-secondary); font-size: 0.8rem;'>[Ended: $endingDetail]</span>",
+                                        )
                                     }
                                 }
 
@@ -212,63 +258,65 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
         renderGameScoringControls(rightCol, game, homeRoster, awayRoster, boxScore)
 
         // 3. Play Monitoring Tabs
-        val monitorCard = container.div(classes = "card") {
-            css { marginTop = 2.rem }
-
-            div {
-                css {
-                    display = Display.flex
-                    justifyContent = JustifyContent.spaceBetween
-                    alignItems = Align.center
-                    borderBottom = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.1)"))
-                    paddingBottom = 0.5.rem
-                    marginBottom = 1.rem
-                }
-
-                h2 {
-                    +"Live Game Monitoring"
-                    css { margin = Margin(0.px) }
-                }
+        val monitorCard =
+            container.div(classes = "card") {
+                css { marginTop = 2.rem }
 
                 div {
                     css {
                         display = Display.flex
-                        gap = 0.5.rem
+                        justifyContent = JustifyContent.spaceBetween
+                        alignItems = Align.center
+                        borderBottom = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.1)"))
+                        paddingBottom = 0.5.rem
+                        marginBottom = 1.rem
                     }
 
-                    button(classes = "btn btn-secondary") {
-                        id = "scorer-btn-log"
-                        +"Play-By-Play Log"
-                        onClickFunction = {
-                            showLog()
-                            btnLog?.classList?.add("btn-primary")
-                            btnLog?.classList?.remove("btn-secondary")
-                            btnScorecard?.classList?.add("btn-secondary")
-                            btnScorecard?.classList?.remove("btn-primary")
+                    h2 {
+                        +"Live Game Monitoring"
+                        css { margin = Margin(0.px) }
+                    }
+
+                    div {
+                        css {
+                            display = Display.flex
+                            gap = 0.5.rem
                         }
-                    }
 
-                    button(classes = "btn btn-primary") {
-                        id = "scorer-btn-scorecard"
-                        +"Scorebook"
-                        onClickFunction = {
-                            showScorecard()
-                            btnScorecard?.classList?.add("btn-primary")
-                            btnScorecard?.classList?.remove("btn-secondary")
-                            btnLog?.classList?.add("btn-secondary")
-                            btnLog?.classList?.remove("btn-primary")
+                        button(classes = "btn btn-secondary") {
+                            id = "scorer-btn-log"
+                            +"Play-By-Play Log"
+                            onClickFunction = {
+                                showLog()
+                                btnLog?.classList?.add("btn-primary")
+                                btnLog?.classList?.remove("btn-secondary")
+                                btnScorecard?.classList?.add("btn-secondary")
+                                btnScorecard?.classList?.remove("btn-primary")
+                            }
+                        }
+
+                        button(classes = "btn btn-primary") {
+                            id = "scorer-btn-scorecard"
+                            +"Scorebook"
+                            onClickFunction = {
+                                showScorecard()
+                                btnScorecard?.classList?.add("btn-primary")
+                                btnScorecard?.classList?.remove("btn-secondary")
+                                btnLog?.classList?.add("btn-secondary")
+                                btnLog?.classList?.remove("btn-primary")
+                            }
                         }
                     }
                 }
             }
-        }
 
         btnLog = monitorCard.querySelector("#scorer-btn-log") as? HTMLButtonElement
         btnScorecard = monitorCard.querySelector("#scorer-btn-scorecard") as? HTMLButtonElement
 
-        monitorContent = monitorCard.div {
-            id = "monitor-content-container"
-        }
+        monitorContent =
+            monitorCard.div {
+                id = "monitor-content-container"
+            }
 
         // Default view
         showScorecard()
@@ -367,4 +415,3 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
         }
     }
 }
-

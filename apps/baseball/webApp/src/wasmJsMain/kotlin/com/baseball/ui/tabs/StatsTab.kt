@@ -1,6 +1,5 @@
 package com.baseball.ui.tabs
 
-import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.models.*
 import com.baseball.ui.*
@@ -10,7 +9,6 @@ import kotlinx.html.dom.append
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.js.option
-import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLSelectElement
 
@@ -35,62 +33,63 @@ internal fun renderStatsTab(container: HTMLElement) {
         }
     }
 
-    val filterCard = container.div(classes = "card") {
-        css {
-            marginBottom = 2.rem
-            display = Display.flex
-            gap = 1.5.rem
-            alignItems = Align.flexEnd
-        }
-
-        div(classes = "form-group") {
+    val filterCard =
+        container.div(classes = "card") {
             css {
-                marginBottom = 0.px
-                flexGrow = 1.0
+                marginBottom = 2.rem
+                display = Display.flex
+                gap = 1.5.rem
+                alignItems = Align.flexEnd
             }
-            label { +"Select Season" }
-            select(classes = "form-control") {
-                id = "stats-season-dropdown"
-            }
-        }
 
-        div(classes = "form-group") {
-            css {
-                marginBottom = 0.px
-                flexGrow = 1.0
-            }
-            label { +"Filter by Team" }
-            select(classes = "form-control") {
-                id = "stats-team-dropdown"
-                option {
-                    value = ""
-                    +"All Teams"
-                    selected = (statsSelectedTeamId == null)
+            div(classes = "form-group") {
+                css {
+                    marginBottom = 0.px
+                    flexGrow = 1.0
                 }
-                teamsList.forEach { team ->
+                label { +"Select Season" }
+                select(classes = "form-control") {
+                    id = "stats-season-dropdown"
+                }
+            }
+
+            div(classes = "form-group") {
+                css {
+                    marginBottom = 0.px
+                    flexGrow = 1.0
+                }
+                label { +"Filter by Team" }
+                select(classes = "form-control") {
+                    id = "stats-team-dropdown"
                     option {
-                        value = team.id.toString()
-                        +"${team.city} ${team.name}"
-                        selected = (statsSelectedTeamId == team.id)
+                        value = ""
+                        +"All Teams"
+                        selected = (statsSelectedTeamId == null)
+                    }
+                    teamsList.forEach { team ->
+                        option {
+                            value = team.id.toString()
+                            +"${team.city} ${team.name}"
+                            selected = (statsSelectedTeamId == team.id)
+                        }
+                    }
+                    onChangeFunction = { event ->
+                        val tid = (event.target as? HTMLSelectElement)?.value?.toLongOrNull()
+                        statsSelectedTeamId = tid
+                        renderCurrentTab()
                     }
                 }
-                onChangeFunction = { event ->
-                    val tid = (event.target as? HTMLSelectElement)?.value?.toLongOrNull()
-                    statsSelectedTeamId = tid
+            }
+
+            button(classes = "btn") {
+                id = "load-stats-btn"
+                +"Load Statistics"
+                onClickFunction = {
+                    selectedSeasonId = selectS?.value?.toLongOrNull()
                     renderCurrentTab()
                 }
             }
         }
-
-        button(classes = "btn") {
-            id = "load-stats-btn"
-            +"Load Statistics"
-            onClickFunction = {
-                selectedSeasonId = selectS?.value?.toLongOrNull()
-                renderCurrentTab()
-            }
-        }
-    }
 
     selectS = filterCard.querySelector("#stats-season-dropdown") as? HTMLSelectElement
     selectT = filterCard.querySelector("#stats-team-dropdown") as? HTMLSelectElement
@@ -147,7 +146,7 @@ internal fun renderStatsTab(container: HTMLElement) {
     launch {
         val stats = api.getSeasonStats(selectedSeasonId!!)
         val playersList = api.getPlayers()
-        
+
         container.div(classes = "card") {
             h2 {
                 +"${selectedStatsSubTab.replaceFirstChar { it.uppercaseChar() }} Statistics"
@@ -177,17 +176,21 @@ internal fun renderStatsTab(container: HTMLElement) {
                                 }
                             }
                             tbody {
-                                val finalFiltered = stats.battingStats.filter { row ->
-                                    val playerRecord = playersList.find { it.id == row.playerId }
-                                    statsSelectedTeamId == null || playerRecord?.teamId == statsSelectedTeamId
-                                }
+                                val finalFiltered =
+                                    stats.battingStats.filter { row ->
+                                        val playerRecord = playersList.find { it.id == row.playerId }
+                                        statsSelectedTeamId == null || playerRecord?.teamId == statsSelectedTeamId
+                                    }
 
                                 if (finalFiltered.isEmpty()) {
                                     tr {
                                         td {
                                             attributes["colspan"] = "15"
                                             +"No batting statistics recorded for this selection."
-                                            css { textAlign = TextAlign.center; color = Color("var(--text-secondary)") }
+                                            css {
+                                                textAlign = TextAlign.center
+                                                color = Color("var(--text-secondary)")
+                                            }
                                         }
                                     }
                                 } else {
@@ -195,13 +198,20 @@ internal fun renderStatsTab(container: HTMLElement) {
                                         val playerRecord = playersList.find { it.id == row.playerId }
                                         val teamName = teamsList.find { it.id == playerRecord?.teamId }?.name ?: "Free Agent"
                                         val avg = if (row.atBats > 0) row.hits.toDouble() / row.atBats else 0.0
-                                        val obp = if (row.atBats + row.walks + row.hitByPitch > 0) {
-                                            (row.hits + row.walks + row.hitByPitch).toDouble() / (row.atBats + row.walks + row.hitByPitch)
-                                        } else 0.0
+                                        val obp =
+                                            if (row.atBats + row.walks + row.hitByPitch > 0) {
+                                                (row.hits + row.walks + row.hitByPitch).toDouble() /
+                                                    (row.atBats + row.walks + row.hitByPitch)
+                                            } else {
+                                                0.0
+                                            }
                                         val singles = row.hits - row.doubles - row.triples - row.homeRuns
-                                        val slg = if (row.atBats > 0) {
-                                            (singles + 2 * row.doubles + 3 * row.triples + 4 * row.homeRuns).toDouble() / row.atBats
-                                        } else 0.0
+                                        val slg =
+                                            if (row.atBats > 0) {
+                                                (singles + 2 * row.doubles + 3 * row.triples + 4 * row.homeRuns).toDouble() / row.atBats
+                                            } else {
+                                                0.0
+                                            }
                                         val ops = obp + slg
 
                                         tr {
@@ -245,17 +255,21 @@ internal fun renderStatsTab(container: HTMLElement) {
                                 }
                             }
                             tbody {
-                                val finalFiltered = stats.pitchingStats.filter { row ->
-                                    val playerRecord = playersList.find { it.id == row.playerId }
-                                    statsSelectedTeamId == null || playerRecord?.teamId == statsSelectedTeamId
-                                }
+                                val finalFiltered =
+                                    stats.pitchingStats.filter { row ->
+                                        val playerRecord = playersList.find { it.id == row.playerId }
+                                        statsSelectedTeamId == null || playerRecord?.teamId == statsSelectedTeamId
+                                    }
 
                                 if (finalFiltered.isEmpty()) {
                                     tr {
                                         td {
                                             attributes["colspan"] = "11"
                                             +"No pitching statistics recorded for this selection."
-                                            css { textAlign = TextAlign.center; color = Color("var(--text-secondary)") }
+                                            css {
+                                                textAlign = TextAlign.center
+                                                color = Color("var(--text-secondary)")
+                                            }
                                         }
                                     }
                                 } else {
@@ -299,17 +313,21 @@ internal fun renderStatsTab(container: HTMLElement) {
                                 }
                             }
                             tbody {
-                                val finalFiltered = stats.fieldingStats.filter { row ->
-                                    val playerRecord = playersList.find { it.id == row.playerId }
-                                    statsSelectedTeamId == null || playerRecord?.teamId == statsSelectedTeamId
-                                }
+                                val finalFiltered =
+                                    stats.fieldingStats.filter { row ->
+                                        val playerRecord = playersList.find { it.id == row.playerId }
+                                        statsSelectedTeamId == null || playerRecord?.teamId == statsSelectedTeamId
+                                    }
 
                                 if (finalFiltered.isEmpty()) {
                                     tr {
                                         td {
                                             attributes["colspan"] = "6"
                                             +"No fielding statistics recorded for this selection."
-                                            css { textAlign = TextAlign.center; color = Color("var(--text-secondary)") }
+                                            css {
+                                                textAlign = TextAlign.center
+                                                color = Color("var(--text-secondary)")
+                                            }
                                         }
                                     }
                                 } else {

@@ -45,7 +45,9 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
         container.h1 { +"Game Details - Box Score" }
 
         container.div(classes = "card") {
-            h2 { +"${game.awayTeam.city} ${game.awayTeam.name} (${game.awayScore}) vs ${game.homeTeam.city} ${game.homeTeam.name} (${game.homeScore})" }
+            h2 {
+                +"${game.awayTeam.city} ${game.awayTeam.name} (${game.awayScore}) vs ${game.homeTeam.city} ${game.homeTeam.name} (${game.homeScore})"
+            }
             p {
                 +"Status: ${game.status.name} | Date: ${game.date}"
                 css {
@@ -71,20 +73,23 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
             val contentEl = contentContainer ?: return
             contentEl.innerHTML = ""
 
-            val lineScoreCard = contentEl.div(classes = "card") {
-                h3 { +"Line Score" }
-            }
+            val lineScoreCard =
+                contentEl.div(classes = "card") {
+                    h3 { +"Line Score" }
+                }
             renderLineScoreTable(lineScoreCard, boxScore.lineScore, game)
 
-            val grid = contentEl.div(classes = "dashboard-grid") {
-                css {
-                    marginTop = 1.5.rem
+            val grid =
+                contentEl.div(classes = "dashboard-grid") {
+                    css {
+                        marginTop = 1.5.rem
+                    }
                 }
-            }
 
-            val awayCard = grid.div(classes = "card") {
-                h3 { +"${game.awayTeam.name} Batting" }
-            }
+            val awayCard =
+                grid.div(classes = "card") {
+                    h3 { +"${game.awayTeam.name} Batting" }
+                }
             renderBattingTable(awayCard, boxScore.awayBatting)
 
             awayCard.h3 {
@@ -95,9 +100,10 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
             }
             renderPitchingTable(awayCard, boxScore.awayPitching)
 
-            val homeCard = grid.div(classes = "card") {
-                h3 { +"${game.homeTeam.name} Batting" }
-            }
+            val homeCard =
+                grid.div(classes = "card") {
+                    h3 { +"${game.homeTeam.name} Batting" }
+                }
             renderBattingTable(homeCard, boxScore.homeBatting)
 
             homeCard.h3 {
@@ -133,51 +139,57 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
             renderScorebookView(contentEl, game, boxScore, events)
         }
 
-        val buttonBar = container.div {
-            css {
-                display = Display.flex
-                gap = 0.5.rem
-                marginTop = 1.5.rem
-                marginBottom = 1.rem
-            }
+        val buttonBar =
+            container.div {
+                css {
+                    display = Display.flex
+                    gap = 0.5.rem
+                    marginTop = 1.5.rem
+                    marginBottom = 1.rem
+                }
 
-            button(classes = "btn btn-primary") {
-                id = "boxscore-btn-scorebook"
-                +"Scorebook"
-                onClickFunction = {
-                    drawScorebookView()
-                    btnScorebook?.classList?.add("btn-primary")
-                    btnScorebook?.classList?.remove("btn-secondary")
-                    btnTraditional?.classList?.add("btn-secondary")
-                    btnTraditional?.classList?.remove("btn-primary")
+                button(classes = "btn btn-primary") {
+                    id = "boxscore-btn-scorebook"
+                    +"Scorebook"
+                    onClickFunction = {
+                        drawScorebookView()
+                        btnScorebook?.classList?.add("btn-primary")
+                        btnScorebook?.classList?.remove("btn-secondary")
+                        btnTraditional?.classList?.add("btn-secondary")
+                        btnTraditional?.classList?.remove("btn-primary")
+                    }
+                }
+
+                button(classes = "btn btn-secondary") {
+                    id = "boxscore-btn-traditional"
+                    +"Traditional Stats"
+                    onClickFunction = {
+                        drawTraditionalView()
+                        btnTraditional?.classList?.add("btn-primary")
+                        btnTraditional?.classList?.remove("btn-secondary")
+                        btnScorebook?.classList?.add("btn-secondary")
+                        btnScorebook?.classList?.remove("btn-primary")
+                    }
                 }
             }
-
-            button(classes = "btn btn-secondary") {
-                id = "boxscore-btn-traditional"
-                +"Traditional Stats"
-                onClickFunction = {
-                    drawTraditionalView()
-                    btnTraditional?.classList?.add("btn-primary")
-                    btnTraditional?.classList?.remove("btn-secondary")
-                    btnScorebook?.classList?.add("btn-secondary")
-                    btnScorebook?.classList?.remove("btn-primary")
-                }
-            }
-        }
 
         btnScorebook = buttonBar.querySelector("#boxscore-btn-scorebook") as? HTMLButtonElement
         btnTraditional = buttonBar.querySelector("#boxscore-btn-traditional") as? HTMLButtonElement
 
-        contentContainer = container.div {
-            id = "boxscore-content-view"
-        }
+        contentContainer =
+            container.div {
+                id = "boxscore-content-view"
+            }
 
         drawScorebookView()
     }
 }
 
-internal fun renderLineScoreTable(parent: HTMLElement, lineScore: LineScore, game: Game) {
+internal fun renderLineScoreTable(
+    parent: HTMLElement,
+    lineScore: LineScore,
+    game: Game,
+) {
     parent.div(classes = "table-container") {
         table(classes = "linescore-table") {
             thead {
@@ -216,7 +228,10 @@ internal fun renderLineScoreTable(parent: HTMLElement, lineScore: LineScore, gam
     }
 }
 
-internal fun renderBattingTable(parent: HTMLElement, list: List<PlayerBattingStats>) {
+internal fun renderBattingTable(
+    parent: HTMLElement,
+    list: List<PlayerBattingStats>,
+) {
     parent.div(classes = "table-container") {
         table {
             thead {
@@ -267,7 +282,10 @@ internal fun renderBattingTable(parent: HTMLElement, list: List<PlayerBattingSta
     }
 }
 
-internal fun renderPitchingTable(parent: HTMLElement, list: List<PlayerPitchingStats>) {
+internal fun renderPitchingTable(
+    parent: HTMLElement,
+    list: List<PlayerPitchingStats>,
+) {
     parent.div(classes = "table-container") {
         table {
             thead {

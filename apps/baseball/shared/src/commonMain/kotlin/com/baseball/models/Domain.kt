@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class League(
     val id: Long? = null,
     val name: String,
-    val ownerId: String? = null
+    val ownerId: String? = null,
 )
 
 @Serializable
@@ -15,7 +15,7 @@ data class Season(
     val leagueId: Long,
     val name: String,
     val year: Int,
-    val ownerId: String? = null
+    val ownerId: String? = null,
 )
 
 @Serializable
@@ -24,7 +24,7 @@ data class Team(
     val name: String,
     val abbreviation: String,
     val city: String,
-    val ownerId: String? = null
+    val ownerId: String? = null,
 )
 
 @Serializable
@@ -36,20 +36,20 @@ data class Player(
     val jerseyNumber: Int,
     val battingHand: String, // R, L, S
     val throwingHand: String, // R, L
-    val deleted: Boolean = false
+    val deleted: Boolean = false,
 )
 
 @Serializable
 enum class GameStatus {
     SCHEDULED,
     IN_PROGRESS,
-    COMPLETED
+    COMPLETED,
 }
 
 @Serializable
 enum class HalfInning {
     TOP,
-    BOTTOM
+    BOTTOM,
 }
 
 @Serializable
@@ -68,7 +68,7 @@ data class GameState(
     val currentBatterId: Long? = null,
     val currentBatterName: String? = null,
     val currentPitcherId: Long? = null,
-    val currentPitcherName: String? = null
+    val currentPitcherName: String? = null,
 )
 
 @Serializable
@@ -86,7 +86,7 @@ data class Game(
     val homeErrors: Int = 0,
     val awayErrors: Int = 0,
     val gameState: GameState = GameState(),
-    val ownerId: String? = null
+    val ownerId: String? = null,
 )
 
 @Serializable
@@ -99,7 +99,7 @@ data class LineScore(
     val awayHits: Int,
     val homeHits: Int,
     val awayErrors: Int,
-    val homeErrors: Int
+    val homeErrors: Int,
 )
 
 @Serializable
@@ -126,7 +126,7 @@ enum class ScoringEventType {
     PICKED_OFF,
     WILD_PITCH,
     PASSED_BALL,
-    BALK
+    BALK,
 }
 
 @Serializable
@@ -144,7 +144,7 @@ data class PlayEvent(
     val eventType: ScoringEventType,
     val description: String,
     val runsScoredOnPlay: Int = 0,
-    val timestamp: String // ISO 8601
+    val timestamp: String, // ISO 8601
 )
 
 @Serializable
@@ -162,7 +162,7 @@ data class PlayerBattingStats(
     val homeRuns: Int = 0,
     val walks: Int = 0,
     val strikeOuts: Int = 0,
-    val hitByPitch: Int = 0
+    val hitByPitch: Int = 0,
 )
 
 @Serializable
@@ -177,7 +177,7 @@ data class PlayerPitchingStats(
     val earnedRuns: Int = 0,
     val walksAllowed: Int = 0,
     val strikeoutsRecorded: Int = 0,
-    val homeRunsAllowed: Int = 0
+    val homeRunsAllowed: Int = 0,
 )
 
 @Serializable
@@ -189,7 +189,7 @@ data class BoxScore(
     val homeBatting: List<PlayerBattingStats>,
     val awayBatting: List<PlayerBattingStats>,
     val homePitching: List<PlayerPitchingStats>,
-    val awayPitching: List<PlayerPitchingStats>
+    val awayPitching: List<PlayerPitchingStats>,
 )
 
 @Serializable
@@ -201,7 +201,7 @@ data class TeamStandings(
     val winPercentage: Double,
     val gamesPlayed: Int,
     val runsScored: Int,
-    val runsAllowed: Int
+    val runsAllowed: Int,
 )
 
 @Serializable
@@ -209,7 +209,7 @@ data class SeasonDashboard(
     val seasonId: Long,
     val seasonName: String,
     val standings: List<TeamStandings>,
-    val games: List<Game>
+    val games: List<Game>,
 )
 
 @Serializable
@@ -221,7 +221,7 @@ data class ScoringEventRequest(
     val isDoublePlay: Boolean = false,
     val isError: Boolean = false,
     val runnerOutId: Long? = null,
-    val runnerAdvanceMap: Map<String, Int>? = null
+    val runnerAdvanceMap: Map<String, Int>? = null,
 )
 
 @Serializable
@@ -233,7 +233,7 @@ data class PlayerFieldingStats(
     val putouts: Int = 0,
     val assists: Int = 0,
     val errors: Int = 0,
-    val fieldingPercentage: Double = 1.000
+    val fieldingPercentage: Double = 1.000,
 )
 
 @Serializable
@@ -241,5 +241,5 @@ data class SeasonStats(
     val seasonId: Long,
     val battingStats: List<PlayerBattingStats>,
     val pitchingStats: List<PlayerPitchingStats>,
-    val fieldingStats: List<PlayerFieldingStats>
+    val fieldingStats: List<PlayerFieldingStats>,
 )

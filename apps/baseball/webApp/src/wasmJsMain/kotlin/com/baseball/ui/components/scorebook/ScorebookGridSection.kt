@@ -17,12 +17,24 @@ import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLTableRowElement
 import org.w3c.dom.HTMLTableSectionElement
 
-fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore, events: List<PlayEvent>, half: HalfInning) {
+fun renderScorecardSheet(
+    container: HTMLElement,
+    game: Game,
+    boxScore: BoxScore,
+    events: List<PlayEvent>,
+    half: HalfInning,
+) {
     ScorebookGridRenderer.renderScorecardSheet(container, game, boxScore, events, half)
 }
 
 object ScorebookGridRenderer : ScorecardUiPresenter {
-    fun renderScorecardSheet(container: HTMLElement, game: Game, boxScore: BoxScore, events: List<PlayEvent>, half: HalfInning) {
+    fun renderScorecardSheet(
+        container: HTMLElement,
+        game: Game,
+        boxScore: BoxScore,
+        events: List<PlayEvent>,
+        half: HalfInning,
+    ) {
         val isHomeBatting = half == HalfInning.BOTTOM
         val battingTeam = if (isHomeBatting) game.homeTeam else game.awayTeam
         val pitchingTeam = if (isHomeBatting) game.awayTeam else game.homeTeam
@@ -52,7 +64,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             localAwayActivePitcherId = localAwayActivePitcherId,
             localHomeActivePitcherId = localHomeActivePitcherId,
             localAwayActivePitcherName = localAwayActivePitcherName,
-            localHomeActivePitcherName = localHomeActivePitcherName
+            localHomeActivePitcherName = localHomeActivePitcherName,
         )
     }
 
@@ -67,7 +79,10 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun DIV.renderHeaderPanelCol2(battingTeam: Team, isHomeBatting: Boolean) {
+    private fun DIV.renderHeaderPanelCol2(
+        battingTeam: Team,
+        isHomeBatting: Boolean,
+    ) {
         div {
             css {
                 display = Display.flex
@@ -133,7 +148,10 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         val drawer = document.getElementById("roster-drawer-element") as? HTMLElement
                         if (drawer != null) {
                             val isHidden = drawer.style.getPropertyValue(UiConstants.Css.DISPLAY) == UiConstants.CssValues.NONE
-                            drawer.style.setProperty(UiConstants.Css.DISPLAY, if (isHidden) UiConstants.CssValues.BLOCK else UiConstants.CssValues.NONE)
+                            drawer.style.setProperty(
+                                UiConstants.Css.DISPLAY,
+                                if (isHidden) UiConstants.CssValues.BLOCK else UiConstants.CssValues.NONE,
+                            )
                         }
                     }
                 }
@@ -141,7 +159,13 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun renderHeaderPanel(container: HTMLElement, isHomeBatting: Boolean, game: Game, battingTeam: Team, pitchingTeam: Team) {
+    private fun renderHeaderPanel(
+        container: HTMLElement,
+        isHomeBatting: Boolean,
+        game: Game,
+        battingTeam: Team,
+        pitchingTeam: Team,
+    ) {
         container.div {
             css {
                 display = Display.grid
@@ -159,7 +183,11 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun renderRosterDrawer(container: HTMLElement, isHomeBatting: Boolean, game: Game) {
+    private fun renderRosterDrawer(
+        container: HTMLElement,
+        isHomeBatting: Boolean,
+        game: Game,
+    ) {
         val isHome = !isHomeBatting
         val fieldingBench = if (isHome) localHomeBench else localAwayBench
         val activePitcherName = if (isHome) localHomeActivePitcherName else localAwayActivePitcherName
@@ -186,7 +214,13 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 div {
                     css { flexGrow = 1.0 }
                     h4 { +"BENCH BATTERS" }
-                    val batters = benchList.filter { it.position != BaseballConstants.Positions.P && !localPlayersSubbedOut.contains(it.id) }
+                    val batters =
+                        benchList.filter {
+                            it.position != BaseballConstants.Positions.P &&
+                                !localPlayersSubbedOut.contains(
+                                    it.id,
+                                )
+                        }
                     if (batters.isEmpty()) {
                         p { +"None available" }
                     } else {
@@ -235,34 +269,38 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         teamEvents: List<PlayEvent>,
         maxInning: Int,
         parser: ScorecardParser,
-        isHomeBatting: Boolean
+        isHomeBatting: Boolean,
     ) {
-        val divWrapper = container.append.div {
-            css {
-                width = 100.pct
-                overflowX = Overflow.auto
-                border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+        val divWrapper =
+            container.append.div {
+                css {
+                    width = 100.pct
+                    overflowX = Overflow.auto
+                    border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                }
             }
-        }
-        val tableEl = divWrapper.table {
-            css {
-                borderCollapse = BorderCollapse.collapse
-                backgroundColor = Color("#faf9f6")
-                minWidth = 1000.px
-                width = 100.pct
-                color = Color("#2b2a28")
-                fontSize = 0.85.rem
+        val tableEl =
+            divWrapper.table {
+                css {
+                    borderCollapse = BorderCollapse.collapse
+                    backgroundColor = Color("#faf9f6")
+                    minWidth = 1000.px
+                    width = 100.pct
+                    color = Color("#2b2a28")
+                    fontSize = 0.85.rem
+                }
             }
-        }
-        val theadEl = tableEl.thead {
-            css {
-                background = "#eae5dc"
-                borderBottom = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+        val theadEl =
+            tableEl.thead {
+                css {
+                    background = "#eae5dc"
+                    borderBottom = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                }
             }
-        }
-        val theadTr = theadEl.tr {
-            css { height = 35.px }
-        }
+        val theadTr =
+            theadEl.tr {
+                css { height = 35.px }
+            }
 
         theadTr.th {
             +"BATTERS"
@@ -312,13 +350,22 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun renderSubRow(tbodyEl: HTMLTableSectionElement, slotIdx: Int, pName1: String, battingStatsList: List<PlayerBattingStats>, cellBg: String, game: Game, isHomeBatting: Boolean): HTMLTableRowElement {
-        val tr1 = tbodyEl.tr {
-            css {
-                borderBottom = Border(1.px, BorderStyle.solid, Color("#5a544a"))
-                height = 42.5.px
+    private fun renderSubRow(
+        tbodyEl: HTMLTableSectionElement,
+        slotIdx: Int,
+        pName1: String,
+        battingStatsList: List<PlayerBattingStats>,
+        cellBg: String,
+        game: Game,
+        isHomeBatting: Boolean,
+    ): HTMLTableRowElement {
+        val tr1 =
+            tbodyEl.tr {
+                css {
+                    borderBottom = Border(1.px, BorderStyle.solid, Color("#5a544a"))
+                    height = 42.5.px
+                }
             }
-        }
         val subPos = battingStatsList.find { it.playerName == pName1 }?.position ?: BaseballConstants.Positions.DH
         renderPlayerCell(tr1, slotIdx, pName1, false, cellBg, game, isHomeBatting)
         tr1.td {
@@ -343,20 +390,28 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         teamEvents: List<PlayEvent>,
         maxInning: Int,
         parser: ScorecardParser,
-        isHomeBatting: Boolean
+        isHomeBatting: Boolean,
     ) {
         val hasSub = players.size > 1
-        val cellBg = if (slotIdx % 2 == 1) "linear-gradient(180deg, #f4f1e7 0%, #ebe6d9 100%)" else "linear-gradient(180deg, #faf9f6 0%, #f3f0e8 100%)"
+        val cellBg =
+            if (slotIdx % 2 ==
+                1
+            ) {
+                "linear-gradient(180deg, #f4f1e7 0%, #ebe6d9 100%)"
+            } else {
+                "linear-gradient(180deg, #faf9f6 0%, #f3f0e8 100%)"
+            }
 
         val pName0 = players.getOrNull(0) ?: ""
         val starterPos = battingStatsList.find { it.playerName == pName0 }?.position ?: BaseballConstants.Positions.DH
 
-        val tr0 = tbodyEl.tr {
-            css {
-                borderBottom = Border(1.px, BorderStyle.solid, Color(if (hasSub) "#9c9384" else "#5a544a"))
-                height = 42.5.px
+        val tr0 =
+            tbodyEl.tr {
+                css {
+                    borderBottom = Border(1.px, BorderStyle.solid, Color(if (hasSub) "#9c9384" else "#5a544a"))
+                    height = 42.5.px
+                }
             }
-        }
 
         renderPlayerCell(tr0, slotIdx, pName0, hasSub, cellBg, game, isHomeBatting)
 
@@ -383,7 +438,10 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         renderStatCells(tr0, tr1, pName0, pName1, hasSub, battingStatsList, cellBg)
     }
 
-    private fun DIV.renderSubButton(slotIdx: Int, isHomeBatting: Boolean) {
+    private fun DIV.renderSubButton(
+        slotIdx: Int,
+        isHomeBatting: Boolean,
+    ) {
         button {
             +"Sub"
             css {
@@ -413,7 +471,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         hasSub: Boolean,
         cellBg: String,
         game: Game,
-        isHomeBatting: Boolean
+        isHomeBatting: Boolean,
     ) {
         tr.td {
             css {
@@ -452,7 +510,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         teamEvents: List<PlayEvent>,
         maxInning: Int,
         parser: ScorecardParser,
-        cellBg: String
+        cellBg: String,
     ) {
         val hasSub = players.size > 1
         for (inn in 1..maxInning) {
@@ -478,7 +536,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         pName1: String,
         hasSub: Boolean,
         battingStatsList: List<PlayerBattingStats>,
-        cellBg: String
+        cellBg: String,
     ) {
         val stat0 = battingStatsList.find { it.playerName == pName0 }
         val stat1 = if (hasSub) battingStatsList.find { it.playerName == pName1 } else null
@@ -487,14 +545,15 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             { s: PlayerBattingStats? -> s?.atBats?.toString() ?: "0" },
             { s: PlayerBattingStats? -> s?.runs?.toString() ?: "0" },
             { s: PlayerBattingStats? -> s?.hits?.toString() ?: "0" },
-            { s: PlayerBattingStats? -> s?.rbi?.toString() ?: "0" }
+            { s: PlayerBattingStats? -> s?.rbi?.toString() ?: "0" },
         ).forEachIndexed { statIdx, selector ->
             val val0 = selector(stat0)
             val val1 = selector(stat1)
             tr0.td {
                 +val0
                 css {
-                    borderLeft = Border(if (statIdx == 0) 2.px else 1.px, BorderStyle.solid, Color(if (statIdx == 0) "#5a544a" else "#9c9384"))
+                    borderLeft =
+                        Border(if (statIdx == 0) 2.px else 1.px, BorderStyle.solid, Color(if (statIdx == 0) "#5a544a" else "#9c9384"))
                     textAlign = TextAlign.center
                     background = cellBg
                     fontWeight = FontWeight.bold
@@ -504,7 +563,8 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 tr1.td {
                     +val1
                     css {
-                        borderLeft = Border(if (statIdx == 0) 2.px else 1.px, BorderStyle.solid, Color(if (statIdx == 0) "#5a544a" else "#9c9384"))
+                        borderLeft =
+                            Border(if (statIdx == 0) 2.px else 1.px, BorderStyle.solid, Color(if (statIdx == 0) "#5a544a" else "#9c9384"))
                         textAlign = TextAlign.center
                         background = cellBg
                         fontWeight = FontWeight.bold
@@ -514,7 +574,13 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun renderInningCell(td: TD, ev: PlayEvent?, cellBg: String, teamEvents: List<PlayEvent>, parser: ScorecardParser) {
+    private fun renderInningCell(
+        td: TD,
+        ev: PlayEvent?,
+        cellBg: String,
+        teamEvents: List<PlayEvent>,
+        parser: ScorecardParser,
+    ) {
         td.css {
             borderRight = Border(1.px, BorderStyle.solid, Color("#9c9384"))
             padding = Padding(0.px)
@@ -569,7 +635,10 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun renderInningDiamond(parent: DIV, base: Int) {
+    private fun renderInningDiamond(
+        parent: DIV,
+        base: Int,
+    ) {
         parent.div {
             css {
                 position = Position.absolute
@@ -600,16 +669,21 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun renderOutDetails(parent: DIV, outAtBase: Int?, outDetail: String?) {
+    private fun renderOutDetails(
+        parent: DIV,
+        outAtBase: Int?,
+        outDetail: String?,
+    ) {
         if (outAtBase != null && outDetail != null) {
             parent.div {
                 +outDetail
-                val (t, l) = when (outAtBase) {
-                    1 -> Pair("18px", "48px")
-                    2 -> Pair("1px", "32px")
-                    3 -> Pair("18px", "12px")
-                    else -> Pair("30px", "32px")
-                }
+                val (t, l) =
+                    when (outAtBase) {
+                        1 -> Pair("18px", "48px")
+                        2 -> Pair("1px", "32px")
+                        3 -> Pair("18px", "12px")
+                        else -> Pair("30px", "32px")
+                    }
                 css {
                     position = Position.absolute
                     top = t.toPxOrPctOrRem()
@@ -623,14 +697,21 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun String.toPxOrPctOrRem(): LinearDimension {
-        return if (endsWith("px")) substringBefore("px").toInt().px
-        else if (endsWith("rem")) substringBefore("rem").toDouble().rem
-        else if (endsWith("%")) substringBefore("%").toDouble().pct
-        else 0.px
-    }
+    private fun String.toPxOrPctOrRem(): LinearDimension =
+        if (endsWith("px")) {
+            substringBefore("px").toInt().px
+        } else if (endsWith("rem")) {
+            substringBefore("rem").toDouble().rem
+        } else if (endsWith("%")) {
+            substringBefore("%").toDouble().pct
+        } else {
+            0.px
+        }
 
-    private fun renderCountBallsStrikes(parent: DIV, ev: PlayEvent) {
+    private fun renderCountBallsStrikes(
+        parent: DIV,
+        ev: PlayEvent,
+    ) {
         if (ev.balls > 0 || ev.strikes > 0) {
             parent.div {
                 css {
@@ -646,7 +727,10 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun renderOutCircle(parent: DIV, outNum: Int?) {
+    private fun renderOutCircle(
+        parent: DIV,
+        outNum: Int?,
+    ) {
         if (outNum != null) {
             parent.div {
                 +outNum.toString()
@@ -669,7 +753,11 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
     }
 
-    private fun renderEndedInningDiagonal(parent: DIV, ev: PlayEvent, teamEvents: List<PlayEvent>) {
+    private fun renderEndedInningDiagonal(
+        parent: DIV,
+        ev: PlayEvent,
+        teamEvents: List<PlayEvent>,
+    ) {
         val playIdx = teamEvents.indexOf(ev)
         val nextPlay = teamEvents.getOrNull(playIdx + 1)
         val endedInning = ev.outsAfter == 3 && (nextPlay == null || nextPlay.inning > ev.inning)

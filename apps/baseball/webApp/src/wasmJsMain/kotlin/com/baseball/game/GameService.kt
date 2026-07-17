@@ -4,6 +4,7 @@ import com.baseball.models.ScoringEventType
 
 interface GameService {
     fun initGame(forceReset: Boolean = false)
+
     fun recordPlayEvent(
         eventType: ScoringEventType,
         batterId: Long,
@@ -11,6 +12,6 @@ interface GameService {
         descriptionDetail: String? = null,
         isDoublePlay: Boolean = false,
         isError: Boolean = false,
-        runnerAdvanceMap: Map<String, Int>? = null
+        runnerAdvanceMap: Map<String, Int>? = null,
     )
 }

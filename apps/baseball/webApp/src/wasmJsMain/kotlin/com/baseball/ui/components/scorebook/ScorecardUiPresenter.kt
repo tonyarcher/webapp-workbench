@@ -13,8 +13,11 @@ import org.w3c.dom.HTMLOptionElement
 import org.w3c.dom.HTMLSelectElement
 
 interface ScorecardUiPresenter {
-    fun buildSlotPlayers(isHomeBatting: Boolean, slots: Array<MutableList<PlayEvent>>): Array<MutableList<String>> {
-        return Array(9) { slotIdx ->
+    fun buildSlotPlayers(
+        isHomeBatting: Boolean,
+        slots: Array<MutableList<PlayEvent>>,
+    ): Array<MutableList<String>> =
+        Array(9) { slotIdx ->
             val playersInSlot = mutableListOf<String>()
             slots[slotIdx].forEach { ev ->
                 if (!playersInSlot.contains(ev.batterName)) {
@@ -31,9 +34,12 @@ interface ScorecardUiPresenter {
             }
             playersInSlot
         }
-    }
 
-    fun openSubSelector(container: HTMLElement, idx: Int, isHomeBatting: Boolean) {
+    fun openSubSelector(
+        container: HTMLElement,
+        idx: Int,
+        isHomeBatting: Boolean,
+    ) {
         val bench = if (isHomeBatting) localHomeBench else localAwayBench
         val subOptions = bench.filter { it.position != BaseballConstants.Positions.P && !localPlayersSubbedOut.contains(it.id) }
         if (subOptions.isEmpty()) {

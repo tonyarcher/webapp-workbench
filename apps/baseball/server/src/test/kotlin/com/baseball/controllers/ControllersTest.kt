@@ -11,7 +11,6 @@ import org.mockito.Mockito.*
 import java.util.*
 
 class ControllersTest {
-
     // --- LEAGUE ---
     @Test
     fun testLeagueController() {
@@ -187,21 +186,22 @@ class ControllersTest {
         val controller = GameController(repo, scoringService, playEventRepo)
 
         val mockTeam = Team(100L, "Cubs", "CHC", "Chicago")
-        val mockGame = Game(
-            id = 1L,
-            seasonId = 10L,
-            homeTeam = mockTeam,
-            awayTeam = mockTeam,
-            date = "2026-07-14",
-            status = GameStatus.SCHEDULED,
-            awayScore = 0,
-            homeScore = 0,
-            awayHits = 0,
-            homeHits = 0,
-            awayErrors = 0,
-            homeErrors = 0,
-            gameState = GameState()
-        )
+        val mockGame =
+            Game(
+                id = 1L,
+                seasonId = 10L,
+                homeTeam = mockTeam,
+                awayTeam = mockTeam,
+                date = "2026-07-14",
+                status = GameStatus.SCHEDULED,
+                awayScore = 0,
+                homeScore = 0,
+                awayHits = 0,
+                homeHits = 0,
+                awayErrors = 0,
+                homeErrors = 0,
+                gameState = GameState(),
+            )
         `when`(scoringService.getGameDomain(1L)).thenReturn(mockGame)
 
         // getOne
@@ -219,16 +219,17 @@ class ControllersTest {
         assertEquals(mockGame, controller.recordEvent(1L, request))
 
         // getBoxScore
-        val mockBoxScore = BoxScore(
-            gameId = 1L,
-            homeTeamName = "Cubs",
-            awayTeamName = "Cards",
-            lineScore = LineScore(1L, emptyList<Int?>(), emptyList<Int?>(), 0, 0, 0, 0, 0, 0),
-            homeBatting = emptyList<PlayerBattingStats>(),
-            awayBatting = emptyList<PlayerBattingStats>(),
-            homePitching = emptyList<PlayerPitchingStats>(),
-            awayPitching = emptyList<PlayerPitchingStats>()
-        )
+        val mockBoxScore =
+            BoxScore(
+                gameId = 1L,
+                homeTeamName = "Cubs",
+                awayTeamName = "Cards",
+                lineScore = LineScore(1L, emptyList<Int?>(), emptyList<Int?>(), 0, 0, 0, 0, 0, 0),
+                homeBatting = emptyList<PlayerBattingStats>(),
+                awayBatting = emptyList<PlayerBattingStats>(),
+                homePitching = emptyList<PlayerPitchingStats>(),
+                awayPitching = emptyList<PlayerPitchingStats>(),
+            )
         `when`(scoringService.getBoxScore(1L)).thenReturn(mockBoxScore)
         assertEquals(mockBoxScore, controller.getBoxScore(1L))
 

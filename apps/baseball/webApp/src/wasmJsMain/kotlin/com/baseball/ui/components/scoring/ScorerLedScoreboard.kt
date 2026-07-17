@@ -10,7 +10,10 @@ import kotlinx.html.div
 import kotlinx.html.span
 import org.w3c.dom.HTMLElement
 
-fun renderScorerLedScoreboard(parent: HTMLElement, game: Game) {
+fun renderScorerLedScoreboard(
+    parent: HTMLElement,
+    game: Game,
+) {
     parent.innerHTML = ""
 
     parent.div {
@@ -22,25 +25,32 @@ fun renderScorerLedScoreboard(parent: HTMLElement, game: Game) {
     }
 }
 
-private fun renderScoreboardHeader(parent: DIV, game: Game) {
+private fun renderScoreboardHeader(
+    parent: DIV,
+    game: Game,
+) {
     val inningSymbol = if (game.gameState.half == HalfInning.TOP) "▲" else "▼"
     parent.div(classes = "scoreboard-header") {
         span(classes = "inning-display") {
             +"$inningSymbol Inning ${game.gameState.inning}"
         }
         span(classes = "outs-indicator") {
-            val outsStr = when (game.gameState.outs) {
-                0 -> "No Outs"
-                1 -> "1 Out"
-                2 -> "2 Outs"
-                else -> "3 Outs"
-            }
+            val outsStr =
+                when (game.gameState.outs) {
+                    0 -> "No Outs"
+                    1 -> "1 Out"
+                    2 -> "2 Outs"
+                    else -> "3 Outs"
+                }
             +outsStr
         }
     }
 }
 
-private fun renderTeamScores(parent: DIV, game: Game) {
+private fun renderTeamScores(
+    parent: DIV,
+    game: Game,
+) {
     parent.div(classes = "scoreboard-row") {
         span(classes = "team-led-name") { +game.awayTeam.abbreviation }
         span(classes = "team-led-score") { +game.awayScore.toString() }
@@ -51,7 +61,10 @@ private fun renderTeamScores(parent: DIV, game: Game) {
     }
 }
 
-private fun renderCountAndSummary(parent: DIV, game: Game) {
+private fun renderCountAndSummary(
+    parent: DIV,
+    game: Game,
+) {
     parent.div(classes = "scoreboard-row") {
         css {
             marginTop = 1.rem
@@ -69,7 +82,10 @@ private fun renderCountAndSummary(parent: DIV, game: Game) {
     }
 }
 
-private fun renderDiamondBases(parent: DIV, game: Game) {
+private fun renderDiamondBases(
+    parent: DIV,
+    game: Game,
+) {
     parent.div(classes = "diamond-container") {
         div(classes = "base-diamond") {
             div(classes = "base base-first" + if (game.gameState.runnerFirstId != null) " occupied" else "") {
@@ -104,7 +120,10 @@ private fun renderDiamondBases(parent: DIV, game: Game) {
     }
 }
 
-private fun renderRunnerDetails(parent: DIV, game: Game) {
+private fun renderRunnerDetails(
+    parent: DIV,
+    game: Game,
+) {
     parent.div {
         css {
             fontSize = 0.85.rem

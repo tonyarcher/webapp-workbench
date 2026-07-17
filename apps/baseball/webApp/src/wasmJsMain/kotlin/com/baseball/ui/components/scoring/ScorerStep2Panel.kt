@@ -12,7 +12,7 @@ class ScorerStep2Panel(
     private val controller: GameScoringController,
     private val eventType: ScoringEventType,
     private val baseLabel: String,
-    private val isHit: Boolean
+    private val isHit: Boolean,
 ) {
     private var hasError = false
     private var hasDoublePlay = false
@@ -25,13 +25,14 @@ class ScorerStep2Panel(
         initializeAdvances()
     }
 
-    private fun getBatterBase(): Int = when (eventType) {
-        ScoringEventType.SINGLE, ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.ERROR, ScoringEventType.FIELDER_CHOICE -> 1
-        ScoringEventType.DOUBLE -> 2
-        ScoringEventType.TRIPLE -> 3
-        ScoringEventType.HOME_RUN -> 4
-        else -> 0
-    }
+    private fun getBatterBase(): Int =
+        when (eventType) {
+            ScoringEventType.SINGLE, ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.ERROR, ScoringEventType.FIELDER_CHOICE -> 1
+            ScoringEventType.DOUBLE -> 2
+            ScoringEventType.TRIPLE -> 3
+            ScoringEventType.HOME_RUN -> 4
+            else -> 0
+        }
 
     private fun initializeAdvances() {
         val batterBase = getBatterBase()
@@ -50,7 +51,12 @@ class ScorerStep2Panel(
             }
         }
         controller.game.gameState.runnerThirdId?.let { r3 ->
-            if (runnerAdvances[controller.game.gameState.runnerSecondId.toString()] != null || batterBase >= 3) {
+            if (runnerAdvances[
+                    controller.game.gameState.runnerSecondId
+                        .toString(),
+                ] != null ||
+                batterBase >= 3
+            ) {
                 runnerAdvances[r3.toString()] = minOf(4, maxOf(currentLeading + 1, batterBase + 1))
             }
         }
@@ -86,9 +92,10 @@ class ScorerStep2Panel(
             onClickFunction = {
                 hasDoublePlay = !hasDoublePlay
                 if (hasDoublePlay) {
-                    val leadRunnerId = controller.game.gameState.runnerThirdId
-                        ?: controller.game.gameState.runnerSecondId
-                        ?: controller.game.gameState.runnerFirstId
+                    val leadRunnerId =
+                        controller.game.gameState.runnerThirdId
+                            ?: controller.game.gameState.runnerSecondId
+                            ?: controller.game.gameState.runnerFirstId
                     if (leadRunnerId != null) {
                         runnerAdvances[leadRunnerId.toString()] = 0
                     }
@@ -156,11 +163,12 @@ class ScorerStep2Panel(
         val r2 = controller.game.gameState.runnerSecondId to controller.game.gameState.runnerSecondName
         val r3 = controller.game.gameState.runnerThirdId to controller.game.gameState.runnerThirdName
 
-        val activeRunners = listOfNotNull(
-            r1.first?.let { it to ("Runner on 1B: " + r1.second) },
-            r2.first?.let { it to ("Runner on 2B: " + r2.second) },
-            r3.first?.let { it to ("Runner on 3B: " + r3.second) }
-        )
+        val activeRunners =
+            listOfNotNull(
+                r1.first?.let { it to ("Runner on 1B: " + r1.second) },
+                r2.first?.let { it to ("Runner on 2B: " + r2.second) },
+                r3.first?.let { it to ("Runner on 3B: " + r3.second) },
+            )
 
         if (activeRunners.isNotEmpty() || hasError) {
             parent.div {
@@ -172,22 +180,32 @@ class ScorerStep2Panel(
                     marginBottom = 0.5.rem
                 }
             }
-            val runnersList = if (hasError) {
-                activeRunners + (controller.game.gameState.currentBatterId!! to "Batter: ${controller.game.gameState.currentBatterName}")
-            } else {
-                activeRunners
-            }
+            val runnersList =
+                if (hasError) {
+                    activeRunners +
+                        (controller.game.gameState.currentBatterId!! to "Batter: ${controller.game.gameState.currentBatterName}")
+                } else {
+                    activeRunners
+                }
             runnersList.forEach { (runnerId, label) ->
                 renderSingleRunnerAdvancement(this, runnerId, label)
             }
         }
     }
 
-    private fun DIV.renderAdvButton(runnerId: Long, baseVal: Int, baseLabel: String, currentDest: Int?) {
+    private fun DIV.renderAdvButton(
+        runnerId: Long,
+        baseVal: Int,
+        baseLabel: String,
+        currentDest: Int?,
+    ) {
         val isSelected = currentDest == baseVal
-        val btnClass = if (isSelected) {
-            if (baseVal == 0) "btn btn-danger" else "btn btn-primary"
-        } else "btn btn-secondary"
+        val btnClass =
+            if (isSelected) {
+                if (baseVal == 0) "btn btn-danger" else "btn btn-primary"
+            } else {
+                "btn btn-secondary"
+            }
         button(classes = btnClass) {
             +baseLabel
             css {
@@ -206,7 +224,11 @@ class ScorerStep2Panel(
         }
     }
 
-    private fun DIV.renderSingleRunnerAdvancement(parent: DIV, runnerId: Long, label: String) {
+    private fun DIV.renderSingleRunnerAdvancement(
+        parent: DIV,
+        runnerId: Long,
+        label: String,
+    ) {
         parent.div {
             css {
                 display = Display.flex
@@ -231,11 +253,12 @@ class ScorerStep2Panel(
                     gap = 0.2.rem
                 }
                 val currentDest = runnerAdvances[runnerId.toString()]
-                val options = if (runnerId == controller.game.gameState.currentBatterId) {
-                    listOf(0 to "Out", 1 to "1B", 2 to "2B", 3 to "3B", 4 to "HR")
-                } else {
-                    listOf(0 to "Out", 2 to "2B", 3 to "3B", 4 to "Score")
-                }
+                val options =
+                    if (runnerId == controller.game.gameState.currentBatterId) {
+                        listOf(0 to "Out", 1 to "1B", 2 to "2B", 3 to "3B", 4 to "HR")
+                    } else {
+                        listOf(0 to "Out", 2 to "2B", 3 to "3B", 4 to "Score")
+                    }
                 options.forEach { (baseVal, baseLabel) ->
                     renderAdvButton(runnerId, baseVal, baseLabel, currentDest)
                 }
@@ -243,21 +266,32 @@ class ScorerStep2Panel(
         }
     }
 
-    private fun getStartBase(runnerId: Long): Int = when (runnerId) {
-        controller.game.gameState.runnerFirstId -> 1
-        controller.game.gameState.runnerSecondId -> 2
-        controller.game.gameState.runnerThirdId -> 3
-        else -> 0
-    }
+    private fun getStartBase(runnerId: Long): Int =
+        when (runnerId) {
+            controller.game.gameState.runnerFirstId -> 1
+            controller.game.gameState.runnerSecondId -> 2
+            controller.game.gameState.runnerThirdId -> 3
+            else -> 0
+        }
 
-    private fun getOtherRunners(): List<Pair<String, Int>> = listOfNotNull(
-        controller.game.gameState.runnerFirstId?.let { it.toString() to 1 },
-        controller.game.gameState.runnerSecondId?.let { it.toString() to 2 },
-        controller.game.gameState.runnerThirdId?.let { it.toString() to 3 },
-        controller.game.gameState.currentBatterId?.let { it.toString() to 0 }
-    )
+    private fun getOtherRunners(): List<Pair<String, Int>> =
+        listOfNotNull(
+            controller.game.gameState.runnerFirstId
+                ?.let { it.toString() to 1 },
+            controller.game.gameState.runnerSecondId
+                ?.let { it.toString() to 2 },
+            controller.game.gameState.runnerThirdId
+                ?.let { it.toString() to 3 },
+            controller.game.gameState.currentBatterId
+                ?.let { it.toString() to 0 },
+        )
 
-    private fun adjustRunnerDest(oId: String, oStart: Int, startBase: Int, baseVal: Int) {
+    private fun adjustRunnerDest(
+        oId: String,
+        oStart: Int,
+        startBase: Int,
+        baseVal: Int,
+    ) {
         val oDest = runnerAdvances[oId] ?: return
         if (oDest <= 0) return
         if (oStart > startBase) {
@@ -269,7 +303,10 @@ class ScorerStep2Panel(
         }
     }
 
-    private fun propagateForcedAdvances(runnerId: Long, baseVal: Int) {
+    private fun propagateForcedAdvances(
+        runnerId: Long,
+        baseVal: Int,
+    ) {
         if (baseVal <= 0) return
         val startBase = getStartBase(runnerId)
         val otherRunners = getOtherRunners()
@@ -281,7 +318,10 @@ class ScorerStep2Panel(
     }
 
     private fun DIV.renderThrowSequenceSection(parent: DIV) {
-        val showThrowBuilder = eventType in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FIELDER_CHOICE) || hasDoublePlay || runnerAdvances.values.contains(0)
+        val showThrowBuilder =
+            eventType in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FIELDER_CHOICE) ||
+                hasDoublePlay ||
+                runnerAdvances.values.contains(0)
         if (!showThrowBuilder) return
 
         parent.div {
@@ -294,14 +334,15 @@ class ScorerStep2Panel(
                 marginBottom = 0.5.rem
             }
         }
-        val displaySeq = buildString {
-            if (throwSequence.isEmpty()) {
-                append("No throws (Unassisted/Direct)")
-            } else {
-                append(throwSequence.joinToString("-"))
-                if (isUnassisted) append("U")
+        val displaySeq =
+            buildString {
+                if (throwSequence.isEmpty()) {
+                    append("No throws (Unassisted/Direct)")
+                } else {
+                    append(throwSequence.joinToString("-"))
+                    if (isUnassisted) append("U")
+                }
             }
-        }
         parent.div {
             +"Sequence: $displaySeq"
             css {
@@ -342,7 +383,14 @@ class ScorerStep2Panel(
                     }
                 }
             }
-            listOf("U" to { isUnassisted = !isUnassisted }, "⌫" to { if (throwSequence.isNotEmpty()) throwSequence.removeAt(throwSequence.size - 1) }, "Clear" to { throwSequence.clear(); isUnassisted = false }).forEach { (lbl, action) ->
+            listOf(
+                "U" to { isUnassisted = !isUnassisted },
+                "⌫" to { if (throwSequence.isNotEmpty()) throwSequence.removeAt(throwSequence.size - 1) },
+                "Clear" to {
+                    throwSequence.clear()
+                    isUnassisted = false
+                },
+            ).forEach { (lbl, action) ->
                 button(classes = "btn btn-secondary") {
                     +lbl
                     css {
@@ -395,11 +443,22 @@ class ScorerStep2Panel(
     private fun renderFielderButtons(parent: DIV) {
         parent.div(classes = "action-grid") {
             css { marginBottom = 1.rem }
-            val locations = if (isHit) {
-                listOf("Left Field", "Center Field", "Right Field", "Infield", "Down the Line", "Gap")
-            } else {
-                listOf("Pitcher (1)", "Catcher (2)", "1st Base (3)", "2nd Base (4)", "3rd Base (5)", "Shortstop (6)", "Left Field (7)", "Center Field (8)", "Right Field (9)")
-            }
+            val locations =
+                if (isHit) {
+                    listOf("Left Field", "Center Field", "Right Field", "Infield", "Down the Line", "Gap")
+                } else {
+                    listOf(
+                        "Pitcher (1)",
+                        "Catcher (2)",
+                        "1st Base (3)",
+                        "2nd Base (4)",
+                        "3rd Base (5)",
+                        "Shortstop (6)",
+                        "Left Field (7)",
+                        "Center Field (8)",
+                        "Right Field (9)",
+                    )
+                }
             locations.forEach { loc ->
                 button(classes = "btn btn-action") {
                     +loc
@@ -415,28 +474,34 @@ class ScorerStep2Panel(
     }
 
     private fun submitPlayWithLocation(loc: String?) {
-        val seqStr = if (throwSequence.isNotEmpty()) {
-            val s = throwSequence.joinToString("-")
-            if (isUnassisted) "${s}U" else s
-        } else if (isUnassisted) "3U" else null
-
-        val detail = buildString {
-            if (seqStr != null) {
-                if (runnerAdvances.values.contains(0)) {
-                    append("$baseLabel" + (if (loc != null) " to $loc" else "") + " (Runner Out: $seqStr)")
-                } else {
-                    append("$baseLabel: $seqStr")
-                }
+        val seqStr =
+            if (throwSequence.isNotEmpty()) {
+                val s = throwSequence.joinToString("-")
+                if (isUnassisted) "${s}U" else s
+            } else if (isUnassisted) {
+                "3U"
             } else {
-                if (eventType == ScoringEventType.HOME_RUN) {
-                    append("Inside the Park Home Run to " + (loc ?: "Unspecified"))
-                } else {
-                    append("$baseLabel" + (if (loc != null) " to $loc" else ""))
-                }
+                null
             }
-            if (hasDoublePlay) append(" (Double Play)")
-            if (hasError) append(" (with Error)")
-        }
+
+        val detail =
+            buildString {
+                if (seqStr != null) {
+                    if (runnerAdvances.values.contains(0)) {
+                        append("$baseLabel" + (if (loc != null) " to $loc" else "") + " (Runner Out: $seqStr)")
+                    } else {
+                        append("$baseLabel: $seqStr")
+                    }
+                } else {
+                    if (eventType == ScoringEventType.HOME_RUN) {
+                        append("Inside the Park Home Run to " + (loc ?: "Unspecified"))
+                    } else {
+                        append("$baseLabel" + (if (loc != null) " to $loc" else ""))
+                    }
+                }
+                if (hasDoublePlay) append(" (Double Play)")
+                if (hasError) append(" (with Error)")
+            }
         controller.triggerScoringEvent(eventType, detail, hasDoublePlay, hasError, runnerAdvances.takeIf { it.isNotEmpty() })
     }
 
@@ -455,7 +520,11 @@ class ScorerStep2Panel(
     }
 }
 
-fun GameScoringController.renderStep2(eventType: ScoringEventType, baseLabel: String, isHit: Boolean) {
+fun GameScoringController.renderStep2(
+    eventType: ScoringEventType,
+    baseLabel: String,
+    isHit: Boolean,
+) {
     val panel = ScorerStep2Panel(this, eventType, baseLabel, isHit)
     panel.render()
 }

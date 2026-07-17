@@ -13,7 +13,12 @@ import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 
-internal fun renderScorebookView(container: HTMLElement, game: Game, boxScore: BoxScore, events: List<PlayEvent>) {
+internal fun renderScorebookView(
+    container: HTMLElement,
+    game: Game,
+    boxScore: BoxScore,
+    events: List<PlayEvent>,
+) {
     container.innerHTML = ""
 
     var activeHalf = HalfInning.TOP
@@ -28,13 +33,14 @@ internal fun renderScorebookView(container: HTMLElement, game: Game, boxScore: B
         renderScorecardSheet(sheetEl, game, boxScore, events, activeHalf)
     }
 
-    val wrapper = renderScorebookWrapper(container, game) { half ->
-        redrawScorecard(half)
-        btnAway?.classList?.toggle("btn-primary", half == HalfInning.TOP)
-        btnAway?.classList?.toggle("btn-secondary", half == HalfInning.BOTTOM)
-        btnHome?.classList?.toggle("btn-primary", half == HalfInning.BOTTOM)
-        btnHome?.classList?.toggle("btn-secondary", half == HalfInning.TOP)
-    }
+    val wrapper =
+        renderScorebookWrapper(container, game) { half ->
+            redrawScorecard(half)
+            btnAway?.classList?.toggle("btn-primary", half == HalfInning.TOP)
+            btnAway?.classList?.toggle("btn-secondary", half == HalfInning.BOTTOM)
+            btnHome?.classList?.toggle("btn-primary", half == HalfInning.BOTTOM)
+            btnHome?.classList?.toggle("btn-secondary", half == HalfInning.TOP)
+        }
 
     sheetContainer = wrapper.querySelector("#scorebook-sheet-container") as? HTMLDivElement
     btnAway = wrapper.querySelector("#btn-away-batting") as? HTMLButtonElement
@@ -43,8 +49,12 @@ internal fun renderScorebookView(container: HTMLElement, game: Game, boxScore: B
     redrawScorecard(HalfInning.TOP)
 }
 
-private fun renderScorebookWrapper(container: HTMLElement, game: Game, onToggle: (HalfInning) -> Unit): HTMLDivElement {
-    return container.div(classes = "scorebook-wrapper") {
+private fun renderScorebookWrapper(
+    container: HTMLElement,
+    game: Game,
+    onToggle: (HalfInning) -> Unit,
+): HTMLDivElement =
+    container.div(classes = "scorebook-wrapper") {
         css {
             backgroundColor = Color("#fcfbfa")
             color = Color("#2b2a28")
@@ -59,9 +69,12 @@ private fun renderScorebookWrapper(container: HTMLElement, game: Game, onToggle:
             id = "scorebook-sheet-container"
         }
     }
-}
 
-private fun renderScorebookHeader(parent: DIV, game: Game, onToggle: (HalfInning) -> Unit) {
+private fun renderScorebookHeader(
+    parent: DIV,
+    game: Game,
+    onToggle: (HalfInning) -> Unit,
+) {
     parent.div {
         css {
             display = Display.flex
@@ -83,7 +96,11 @@ private fun renderScorebookHeader(parent: DIV, game: Game, onToggle: (HalfInning
     }
 }
 
-private fun renderToggleButtonGroup(parent: DIV, game: Game, onToggle: (HalfInning) -> Unit) {
+private fun renderToggleButtonGroup(
+    parent: DIV,
+    game: Game,
+    onToggle: (HalfInning) -> Unit,
+) {
     parent.div {
         id = "toggle-btn-group"
         css {

@@ -15,7 +15,6 @@ import org.mockito.Mockito.*
 import java.util.*
 
 class GameScoringServiceTest {
-
     private lateinit var gameRepository: GameRepository
     private lateinit var gameInningRepository: GameInningRepository
     private lateinit var playerRepository: PlayerRepository
@@ -40,17 +39,18 @@ class GameScoringServiceTest {
         seasonRepository = mock(SeasonRepository::class.java)
         fieldingRepository = mock(PlayerGameFieldingStatsRepository::class.java)
 
-        scoringService = GameScoringService(
-            gameRepository,
-            gameInningRepository,
-            playerRepository,
-            teamRepository,
-            playEventRepository,
-            battingRepository,
-            pitchingRepository,
-            seasonRepository,
-            fieldingRepository
-        )
+        scoringService =
+            GameScoringService(
+                gameRepository,
+                gameInningRepository,
+                playerRepository,
+                teamRepository,
+                playEventRepository,
+                battingRepository,
+                pitchingRepository,
+                seasonRepository,
+                fieldingRepository,
+            )
     }
 
     @Test
@@ -80,17 +80,18 @@ class GameScoringServiceTest {
         val batterId = 2L
         val pitcherId = 3L
 
-        val gameEntity = GameEntity(
-            id = gameId,
-            seasonId = 10L,
-            homeTeamId = 100L,
-            awayTeamId = 200L,
-            status = GameStatus.SCHEDULED,
-            awayScore = 0,
-            homeScore = 0,
-            awayHits = 0,
-            homeHits = 0
-        )
+        val gameEntity =
+            GameEntity(
+                id = gameId,
+                seasonId = 10L,
+                homeTeamId = 100L,
+                awayTeamId = 200L,
+                status = GameStatus.SCHEDULED,
+                awayScore = 0,
+                homeScore = 0,
+                awayHits = 0,
+                homeHits = 0,
+            )
 
         val batter = PlayerEntity(id = batterId, name = "John Batter", position = "LF", teamId = 200L)
         val pitcher = PlayerEntity(id = pitcherId, name = "Jim Pitcher", position = "P", teamId = 100L)
@@ -98,7 +99,7 @@ class GameScoringServiceTest {
         `when`(gameRepository.findById(gameId)).thenReturn(Optional.of(gameEntity))
         `when`(playerRepository.findById(batterId)).thenReturn(Optional.of(batter))
         `when`(playerRepository.findById(pitcherId)).thenReturn(Optional.of(pitcher))
-        
+
         `when`(teamRepository.findById(100L)).thenReturn(Optional.of(TeamEntity(100L, "Cardinals", "STL", "St. Louis")))
         `when`(teamRepository.findById(200L)).thenReturn(Optional.of(TeamEntity(200L, "Cubs", "CHC", "Chicago")))
 
@@ -109,11 +110,12 @@ class GameScoringServiceTest {
         `when`(battingRepository.save(any(PlayerGameBattingStatsEntity::class.java))).thenAnswer { it.getArgument(0) }
         `when`(pitchingRepository.save(any(PlayerGamePitchingStatsEntity::class.java))).thenAnswer { it.getArgument(0) }
 
-        val request = ScoringEventRequest(
-            eventType = ScoringEventType.SINGLE,
-            batterId = batterId,
-            pitcherId = pitcherId
-        )
+        val request =
+            ScoringEventRequest(
+                eventType = ScoringEventType.SINGLE,
+                batterId = batterId,
+                pitcherId = pitcherId,
+            )
         val updatedGame = scoringService.recordPlayEvent(gameId, request)
 
         assertNotNull(updatedGame)
@@ -129,10 +131,14 @@ class GameScoringServiceTest {
         val gameId = 1L
         val batterId = 2L
         val pitcherId = 3L
-        val gameEntity = GameEntity(
-            id = gameId, homeTeamId = 100L, awayTeamId = 200L,
-            balls = 3, strikes = 1
-        )
+        val gameEntity =
+            GameEntity(
+                id = gameId,
+                homeTeamId = 100L,
+                awayTeamId = 200L,
+                balls = 3,
+                strikes = 1,
+            )
         val batter = PlayerEntity(id = batterId, name = "Batter", teamId = 200L)
         val pitcher = PlayerEntity(id = pitcherId, name = "Pitcher", teamId = 100L)
 
@@ -154,10 +160,14 @@ class GameScoringServiceTest {
         val gameId = 1L
         val batterId = 2L
         val pitcherId = 3L
-        val gameEntity = GameEntity(
-            id = gameId, homeTeamId = 100L, awayTeamId = 200L,
-            balls = 1, strikes = 1
-        )
+        val gameEntity =
+            GameEntity(
+                id = gameId,
+                homeTeamId = 100L,
+                awayTeamId = 200L,
+                balls = 1,
+                strikes = 1,
+            )
         val batter = PlayerEntity(id = batterId, name = "Batter", teamId = 200L)
         val pitcher = PlayerEntity(id = pitcherId, name = "Pitcher", teamId = 100L)
 
@@ -187,10 +197,14 @@ class GameScoringServiceTest {
         val gameId = 1L
         val batterId = 2L
         val pitcherId = 3L
-        val gameEntity = GameEntity(
-            id = gameId, homeTeamId = 100L, awayTeamId = 200L,
-            runnerThirdId = 4L, half = HalfInning.TOP
-        )
+        val gameEntity =
+            GameEntity(
+                id = gameId,
+                homeTeamId = 100L,
+                awayTeamId = 200L,
+                runnerThirdId = 4L,
+                half = HalfInning.TOP,
+            )
         val batter = PlayerEntity(id = batterId, name = "Batter", teamId = 200L)
         val pitcher = PlayerEntity(id = pitcherId, name = "Pitcher", teamId = 100L)
 
@@ -218,10 +232,14 @@ class GameScoringServiceTest {
         val gameId = 1L
         val batterId = 2L
         val pitcherId = 3L
-        val gameEntity = GameEntity(
-            id = gameId, homeTeamId = 100L, awayTeamId = 200L,
-            runnerFirstId = 4L, runnerSecondId = 5L
-        )
+        val gameEntity =
+            GameEntity(
+                id = gameId,
+                homeTeamId = 100L,
+                awayTeamId = 200L,
+                runnerFirstId = 4L,
+                runnerSecondId = 5L,
+            )
         val batter = PlayerEntity(id = batterId, name = "Batter", teamId = 200L)
         val pitcher = PlayerEntity(id = pitcherId, name = "Pitcher", teamId = 100L)
 
@@ -235,17 +253,19 @@ class GameScoringServiceTest {
         `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
         `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(1, 0, 0))
 
-        val advanceMap = mapOf(
-            "4" to 3, // R1 to 3B
-            "5" to 4, // R2 scores
-            "2" to 2  // Batter to 2B
-        )
-        val request = ScoringEventRequest(
-            eventType = ScoringEventType.DOUBLE,
-            batterId = batterId,
-            pitcherId = pitcherId,
-            runnerAdvanceMap = advanceMap
-        )
+        val advanceMap =
+            mapOf(
+                "4" to 3, // R1 to 3B
+                "5" to 4, // R2 scores
+                "2" to 2, // Batter to 2B
+            )
+        val request =
+            ScoringEventRequest(
+                eventType = ScoringEventType.DOUBLE,
+                batterId = batterId,
+                pitcherId = pitcherId,
+                runnerAdvanceMap = advanceMap,
+            )
         val updated = scoringService.recordPlayEvent(gameId, request)
         assertEquals(batterId, updated.gameState.runnerSecondId)
         assertEquals(4L, updated.gameState.runnerThirdId)
@@ -257,10 +277,17 @@ class GameScoringServiceTest {
         val gameId = 1L
         val batterId = 2L
         val pitcherId = 3L
-        val gameEntity = GameEntity(
-            id = gameId, homeTeamId = 100L, awayTeamId = 200L,
-            outs = 2, inning = 9, half = HalfInning.TOP, awayScore = 2, homeScore = 3
-        )
+        val gameEntity =
+            GameEntity(
+                id = gameId,
+                homeTeamId = 100L,
+                awayTeamId = 200L,
+                outs = 2,
+                inning = 9,
+                half = HalfInning.TOP,
+                awayScore = 2,
+                homeScore = 3,
+            )
         val batter = PlayerEntity(id = batterId, name = "Batter", teamId = 200L)
         val pitcher = PlayerEntity(id = pitcherId, name = "Pitcher", teamId = 100L)
 
@@ -270,14 +297,17 @@ class GameScoringServiceTest {
         `when`(teamRepository.findById(100L)).thenReturn(Optional.of(TeamEntity(100L, "Cards", "STL", "St. Louis")))
         `when`(teamRepository.findById(200L)).thenReturn(Optional.of(TeamEntity(200L, "Cubs", "CHC", "Chicago")))
         `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
-        `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(inning = 9, awayRuns = 0, homeRuns = 0))
+        `when`(
+            gameInningRepository.findByGameIdAndInning(anyLong(), anyInt()),
+        ).thenReturn(GameInningEntity(inning = 9, awayRuns = 0, homeRuns = 0))
         `when`(gameInningRepository.save(any(GameInningEntity::class.java))).thenAnswer { it.getArgument(0) }
 
-        val request = ScoringEventRequest(
-            eventType = ScoringEventType.STRIKEOUT,
-            batterId = batterId,
-            pitcherId = pitcherId
-        )
+        val request =
+            ScoringEventRequest(
+                eventType = ScoringEventType.STRIKEOUT,
+                batterId = batterId,
+                pitcherId = pitcherId,
+            )
         val updated = scoringService.recordPlayEvent(gameId, request)
         assertEquals(GameStatus.COMPLETED, updated.status)
     }
@@ -285,12 +315,21 @@ class GameScoringServiceTest {
     @Test
     fun testGetBoxScoreAndGameDomain() {
         val gameId = 1L
-        val gameEntity = GameEntity(
-            id = gameId, homeTeamId = 100L, awayTeamId = 200L,
-            awayScore = 1, homeScore = 2, awayHits = 5, homeHits = 7,
-            runnerFirstId = 40L, runnerSecondId = 50L, runnerThirdId = 60L,
-            currentBatterId = 70L, currentPitcherId = 80L
-        )
+        val gameEntity =
+            GameEntity(
+                id = gameId,
+                homeTeamId = 100L,
+                awayTeamId = 200L,
+                awayScore = 1,
+                homeScore = 2,
+                awayHits = 5,
+                homeHits = 7,
+                runnerFirstId = 40L,
+                runnerSecondId = 50L,
+                runnerThirdId = 60L,
+                currentBatterId = 70L,
+                currentPitcherId = 80L,
+            )
         `when`(gameRepository.findById(gameId)).thenReturn(Optional.of(gameEntity))
         `when`(teamRepository.findById(100L)).thenReturn(Optional.of(TeamEntity(100L, "Cards", "STL", "St. Louis")))
         `when`(teamRepository.findById(200L)).thenReturn(Optional.of(TeamEntity(200L, "Cubs", "CHC", "Chicago")))
@@ -307,9 +346,16 @@ class GameScoringServiceTest {
         `when`(playerRepository.findById(70L)).thenReturn(Optional.of(player4))
         `when`(playerRepository.findById(80L)).thenReturn(Optional.of(player5))
 
-        `when`(gameInningRepository.findAllByGameIdOrderByInningAsc(gameId)).thenReturn(listOf(GameInningEntity(
-            1, 0, 1)))
-        
+        `when`(gameInningRepository.findAllByGameIdOrderByInningAsc(gameId)).thenReturn(
+            listOf(
+                GameInningEntity(
+                    1,
+                    0,
+                    1,
+                ),
+            ),
+        )
+
         val batting1 = PlayerGameBattingStatsEntity(playerId = 70L, atBats = 2, hits = 1)
         val pitching1 = PlayerGamePitchingStatsEntity(playerId = 80L, runsAllowed = 1)
 
@@ -333,10 +379,16 @@ class GameScoringServiceTest {
         val seasonEntity = SeasonEntity(id = seasonId, leagueId = 10L, name = "2026", year = 2026)
         `when`(seasonRepository.findById(seasonId)).thenReturn(Optional.of(seasonEntity))
 
-        val game1 = GameEntity(
-            id = 101L, seasonId = seasonId, homeTeamId = 100L, awayTeamId = 200L,
-            status = GameStatus.COMPLETED, homeScore = 5, awayScore = 3
-        )
+        val game1 =
+            GameEntity(
+                id = 101L,
+                seasonId = seasonId,
+                homeTeamId = 100L,
+                awayTeamId = 200L,
+                status = GameStatus.COMPLETED,
+                homeScore = 5,
+                awayScore = 3,
+            )
         `when`(gameRepository.findAllBySeasonId(seasonId)).thenReturn(listOf(game1))
 
         val team1 = TeamEntity(id = 100L, name = "Cards", abbreviation = "STL", city = "St. Louis")
@@ -357,10 +409,13 @@ class GameScoringServiceTest {
         val gameId = 1L
         val batterId = 2L
         val pitcherId = 3L
-        val gameEntity = GameEntity(
-            id = gameId, homeTeamId = 100L, awayTeamId = 200L,
-            runnerFirstId = 4L
-        )
+        val gameEntity =
+            GameEntity(
+                id = gameId,
+                homeTeamId = 100L,
+                awayTeamId = 200L,
+                runnerFirstId = 4L,
+            )
         val batter = PlayerEntity(id = batterId, name = "Batter", teamId = 200L)
         val pitcher = PlayerEntity(id = pitcherId, name = "Pitcher", teamId = 100L)
 
@@ -391,14 +446,26 @@ class GameScoringServiceTest {
 
         // STOLEN_BASE
         val mapSB = mapOf("4" to 2)
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.STOLEN_BASE, batterId, pitcherId, runnerAdvanceMap = mapSB))
-        
+        updated =
+            scoringService.recordPlayEvent(
+                gameId,
+                ScoringEventRequest(ScoringEventType.STOLEN_BASE, batterId, pitcherId, runnerAdvanceMap = mapSB),
+            )
+
         // CAUGHT_STEALING
         val mapCS = mapOf("4" to 0)
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.CAUGHT_STEALING, batterId, pitcherId, runnerAdvanceMap = mapCS))
+        updated =
+            scoringService.recordPlayEvent(
+                gameId,
+                ScoringEventRequest(ScoringEventType.CAUGHT_STEALING, batterId, pitcherId, runnerAdvanceMap = mapCS),
+            )
 
         // PICKED_OFF
         val mapPO = mapOf("4" to 0)
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.PICKED_OFF, batterId, pitcherId, runnerAdvanceMap = mapPO))
+        updated =
+            scoringService.recordPlayEvent(
+                gameId,
+                ScoringEventRequest(ScoringEventType.PICKED_OFF, batterId, pitcherId, runnerAdvanceMap = mapPO),
+            )
     }
 }

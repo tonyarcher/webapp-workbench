@@ -10,7 +10,7 @@ fun renderGameScoringControls(
     game: Game,
     homeRoster: List<Player>,
     awayRoster: List<Player>,
-    boxScore: BoxScore
+    boxScore: BoxScore,
 ) {
     val controller = GameScoringController(rightCol, game, homeRoster, awayRoster)
     controller.render()
