@@ -49,7 +49,8 @@ class PlayerEntity(
     var position: String = "",
     var jerseyNumber: Int = 0,
     var battingHand: String = "R",
-    var throwingHand: String = "R"
+    var throwingHand: String = "R",
+    var deleted: Boolean = false
 ) {
     fun toDomain() = Player(
         id = id,
@@ -58,7 +59,8 @@ class PlayerEntity(
         position = position,
         jerseyNumber = jerseyNumber,
         battingHand = battingHand,
-        throwingHand = throwingHand
+        throwingHand = throwingHand,
+        deleted = deleted
     )
 }
 
@@ -138,6 +140,9 @@ class GameEntity(
 @Entity
 @Table(name = "game_innings")
 class GameInningEntity(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
+    var gameId: Long = 0L,
     var inning: Int = 1,
     var awayRuns: Int? = null,
     var homeRuns: Int? = null
@@ -186,7 +191,11 @@ class PlayEventEntity(
 @Entity
 @Table(name = "player_game_batting_stats")
 class PlayerGameBattingStatsEntity(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
+    var gameId: Long = 0L,
     var playerId: Long = 0L,
+    var teamId: Long = 0L,
     var atBats: Int = 0,
     var runs: Int = 0,
     var hits: Int = 0,
@@ -219,7 +228,11 @@ class PlayerGameBattingStatsEntity(
 @Entity
 @Table(name = "player_game_pitching_stats")
 class PlayerGamePitchingStatsEntity(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
+    var gameId: Long = 0L,
     var playerId: Long = 0L,
+    var teamId: Long = 0L,
     var inningsPitchedThirds: Int = 0,
     var hitsAllowed: Int = 0,
     var runsAllowed: Int = 0,
@@ -246,6 +259,8 @@ class PlayerGamePitchingStatsEntity(
 @Entity
 @Table(name = "users")
 class UserEntity(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
     @Column(unique = true, nullable = false)
     var email: String = "",
     @Column(nullable = false)
@@ -253,3 +268,26 @@ class UserEntity(
     var firstName: String = "",
     var lastName: String = ""
 )
+
+@Entity
+@Table(name = "player_game_fielding_stats")
+class PlayerGameFieldingStatsEntity(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
+    var gameId: Long = 0L,
+    var playerId: Long = 0L,
+    var teamId: Long = 0L,
+    var putouts: Int = 0,
+    var assists: Int = 0,
+    var errors: Int = 0
+) {
+    fun toDomain(playerName: String, jerseyNumber: Int, position: String) = PlayerFieldingStats(
+        playerId = playerId,
+        playerName = playerName,
+        jerseyNumber = jerseyNumber,
+        position = position,
+        putouts = putouts,
+        assists = assists,
+        errors = errors
+    )
+}

@@ -1,4 +1,4 @@
-﻿package com.baseball
+package com.baseball
 
 import com.baseball.game.*
 import com.baseball.models.GameStatus
@@ -8,7 +8,27 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+import kotlinx.css.*
+import kotlinx.css.properties.*
+
 class GameSimulationTest {
+
+    @Test
+    fun testCss() {
+        val builder = kotlinx.css.CssBuilder().apply {
+            transform {
+                translate((-50).pct, (-50).pct)
+            }
+        }
+        val builder2 = kotlinx.css.CssBuilder().apply {
+            transform {
+                rotate((-45).deg)
+            }
+        }
+        println("CSS TRANSLATE OUTPUT: ${builder.toString()}")
+        println("CSS ROTATE OUTPUT: ${builder2.toString()}")
+    }
+
 
     @Test
     fun testSimulateMultipleGames() {

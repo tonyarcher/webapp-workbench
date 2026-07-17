@@ -59,7 +59,13 @@ class SeasonController(
     }
 
     @GetMapping("/{id}/dashboard")
-    fun getDashboard(@PathVariable id: Long): SeasonDashboard = scoringService.getSeasonDashboard(id)
+    fun getDashboard(@PathVariable id: Long): SeasonDashboard {
+        val dash = scoringService.getSeasonDashboard(id)
+        return dash.copy(games = dash.games.sortedWith(compareBy<Game> { it.date }.thenBy { it.id }))
+    }
+
+    @GetMapping("/{id}/stats")
+    fun getStats(@PathVariable id: Long): SeasonStats = scoringService.getSeasonStats(id)
 
     @PostMapping("/{id}/generate-schedule")
     fun generateSchedule(@PathVariable id: Long): List<Game> {
@@ -90,7 +96,8 @@ class SeasonController(
         }
         
         gameRepository.saveAll(games)
-        return scoringService.getSeasonDashboard(id).games
+        val dash = scoringService.getSeasonDashboard(id)
+        return dash.games.sortedWith(compareBy<Game> { it.date }.thenBy { it.id })
     }
 }
 
@@ -128,7 +135,7 @@ class TeamController(
     
     @GetMapping("/{id}/roster")
     fun getRoster(@PathVariable id: Long): List<Player> =
-        playerRepository.findAllByTeamId(id).map { it.toDomain() }
+        playerRepository.findAllByTeamId(id).filter { !it.deleted }.map { it.toDomain() }
 }
 
 @RestController
@@ -168,7 +175,12 @@ class PlayerController(private val repository: PlayerRepository) {
     }
 
     @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long) = repository.deleteById(id)
+    fun delete(@PathVariable id: Long) {
+        val entity = repository.findById(id).orElseThrow()
+        entity.teamId = null
+        entity.deleted = true
+        repository.save(entity)
+    }
 }
 
 @RestController
@@ -207,4 +219,9 @@ class GameController(
     @GetMapping("/{id}/events")
     fun getEvents(@PathVariable id: Long): List<PlayEvent> =
         playEventRepository.findAllByGameIdOrderByTimestampAsc(id).map { it.toDomain() }
+
+    @PostMapping("/{id}/reset")
+    fun resetGame(@PathVariable id: Long): Game {
+        return scoringService.resetGame(id)
+    }
 }

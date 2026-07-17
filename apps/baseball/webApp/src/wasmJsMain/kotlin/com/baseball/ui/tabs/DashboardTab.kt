@@ -1,9 +1,11 @@
-﻿package com.baseball.ui.tabs
+package com.baseball.ui.tabs
 
 import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.models.GameStatus
+import com.baseball.models.Game
 import com.baseball.ui.*
+import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.dom.append
@@ -13,6 +15,7 @@ import kotlinx.html.js.option
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLSelectElement
+import org.w3c.dom.HTMLInputElement
 
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
     container.h1 { +"Season Dashboard" }
@@ -170,25 +173,119 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                 div(classes = "card") {
                     css {
                         marginBottom = 1.5.rem
-                        display = Display.flex
-                        justifyContent = JustifyContent.spaceBetween
-                        alignItems = Align.center
                     }
                     h3 { +"Schedule Manager" }
-
-                    button(classes = if (dash.games.isNotEmpty()) "btn btn-secondary" else "btn") {
-                        +"Generate Round-Robin Schedule"
-                        if (dash.games.isNotEmpty()) {
-                            disabled = true
-                            css {
-                                opacity = 0.5
-                                cursor = Cursor.notAllowed
+                    div {
+                        css {
+                            display = Display.flex
+                            justifyContent = JustifyContent.spaceBetween
+                            alignItems = Align.center
+                            marginBottom = 1.rem
+                        }
+                        span { +"Generate a full round-robin season schedule automatically:" }
+                        button(classes = if (dash.games.isNotEmpty()) "btn btn-secondary" else "btn") {
+                            +"Generate Round-Robin Schedule"
+                            if (dash.games.isNotEmpty()) {
+                                disabled = true
+                                css {
+                                    opacity = 0.5
+                                    cursor = Cursor.notAllowed
+                                }
+                            } else {
+                                onClickFunction = {
+                                    launch {
+                                        api.generateSchedule(selectedSeasonId!!)
+                                        renderCurrentTab()
+                                    }
+                                }
                             }
-                        } else {
+                        }
+                    }
+
+                    hr {
+                        css {
+                            border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.05)"))
+                            margin = Margin(1.rem, 0.px)
+                        }
+                    }
+
+                    h4 { +"Schedule a Single Game" }
+                    div {
+                        css {
+                            display = Display.flex
+                            flexWrap = FlexWrap.wrap
+                            gap = 1.rem
+                            alignItems = Align.flexEnd
+                        }
+                        div(classes = "form-group") {
+                            css {
+                                marginBottom = 0.px
+                                put("flex", "1 1 200px")
+                            }
+                            label { +"Home Team" }
+                            select(classes = "form-control") {
+                                id = "sched-home-select"
+                                teamsList.forEach { t ->
+                                    option {
+                                        value = t.id.toString()
+                                        +"${t.city} ${t.name}"
+                                    }
+                                }
+                            }
+                        }
+                        div(classes = "form-group") {
+                            css {
+                                marginBottom = 0.px
+                                put("flex", "1 1 200px")
+                            }
+                            label { +"Away Team" }
+                            select(classes = "form-control") {
+                                id = "sched-away-select"
+                                teamsList.forEach { t ->
+                                    option {
+                                        value = t.id.toString()
+                                        +"${t.city} ${t.name}"
+                                    }
+                                }
+                            }
+                        }
+                        div(classes = "form-group") {
+                            css {
+                                marginBottom = 0.px
+                                put("flex", "1 1 150px")
+                            }
+                            label { +"Date" }
+                            input(type = InputType.text, classes = "form-control") {
+                                id = "sched-date-input"
+                                value = "2026-07-17"
+                                placeholder = "YYYY-MM-DD"
+                            }
+                        }
+                        button(classes = "btn") {
+                            +"Schedule Game"
                             onClickFunction = {
-                                launch {
-                                    api.generateSchedule(selectedSeasonId!!)
-                                    renderCurrentTab()
+                                val homeSel = document.getElementById("sched-home-select") as? HTMLSelectElement
+                                val awaySel = document.getElementById("sched-away-select") as? HTMLSelectElement
+                                val dateIn = document.getElementById("sched-date-input") as? HTMLInputElement
+                                if (homeSel != null && awaySel != null && dateIn != null) {
+                                    val homeId = homeSel.value.toLongOrNull()
+                                    val awayId = awaySel.value.toLongOrNull()
+                                    val dateStr = dateIn.value.trim()
+                                    if (homeId != null && awayId != null && dateStr.isNotEmpty() && homeId != awayId) {
+                                        val homeTeam = teamsList.find { it.id == homeId }
+                                        val awayTeam = teamsList.find { it.id == awayId }
+                                        if (homeTeam != null && awayTeam != null) {
+                                            launch {
+                                                api.createGame(Game(
+                                                    seasonId = selectedSeasonId!!,
+                                                    homeTeam = homeTeam,
+                                                    awayTeam = awayTeam,
+                                                    date = dateStr
+                                                ))
+                                                renderCurrentTab()
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -199,17 +296,19 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                     h2 { +"Games Schedule" }
 
                     div(classes = "game-list") {
-                        if (dash.games.isEmpty()) {
+                        val sortedGames = dash.games.sortedWith(compareBy({ it.date }, { it.id }))
+                        if (sortedGames.isEmpty()) {
                             p {
-                                +"No games scheduled yet. Generate a schedule above!"
+                                +"No games scheduled yet. Generate or schedule a game above!"
                                 css {
                                     color = Color("var(--text-secondary)")
                                 }
                             }
                         } else {
-                            dash.games.forEach { game ->
+                            sortedGames.forEach { game ->
                                 div(classes = "game-card") {
                                     onClickFunction = {
+                                        com.baseball.game.clearLiveScorerCache()
                                         selectedGameId = game.id
                                         if (game.status == GameStatus.COMPLETED) {
                                             currentTab = BaseballConstants.TAB_BOXSCORE

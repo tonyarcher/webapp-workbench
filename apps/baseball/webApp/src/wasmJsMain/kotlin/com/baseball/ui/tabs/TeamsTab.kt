@@ -1,4 +1,4 @@
-﻿package com.baseball.ui.tabs
+package com.baseball.ui.tabs
 
 import com.baseball.api
 import com.baseball.models.Player
@@ -54,6 +54,7 @@ internal fun renderTeamsTab(container: HTMLElement) {
                                 th { +"Name" }
                                 th { +"Position" }
                                 th { +"B/T" }
+                                th { +"Action" }
                             }
                         }
                         tbody {
@@ -66,6 +67,24 @@ internal fun renderTeamsTab(container: HTMLElement) {
                                         css { color = Color("var(--accent-green)") }
                                     }
                                     td { +"${p.battingHand}/${p.throwingHand}" }
+                                    td {
+                                        button(classes = "btn btn-secondary") {
+                                            +"Remove"
+                                            css {
+                                                padding = Padding(0.2.rem, 0.5.rem)
+                                                fontSize = 0.75.rem
+                                                backgroundColor = Color("#ff2a3b")
+                                                color = Color("white")
+                                                border = Border.none
+                                            }
+                                            onClickFunction = {
+                                                launch {
+                                                    api.deletePlayer(p.id!!)
+                                                    refreshRoster()
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

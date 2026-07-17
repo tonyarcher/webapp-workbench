@@ -16,7 +16,8 @@ class GameScoringService(
     private val playEventRepository: PlayEventRepository,
     private val battingRepository: PlayerGameBattingStatsRepository,
     private val pitchingRepository: PlayerGamePitchingStatsRepository,
-    private val seasonRepository: SeasonRepository
+    private val seasonRepository: SeasonRepository,
+    private val fieldingRepository: PlayerGameFieldingStatsRepository
 ) {
 
     @Transactional
@@ -143,6 +144,9 @@ class GameScoringService(
         }
         if (request.isError && request.eventType != ScoringEventType.ERROR) {
             incrementTeamErrors(game)
+            getFielderIdByPosition(game, game.half, listOf("LF", "CF", "RF", "SS", "2B", "3B", "1B", "P", "C").random())?.let { fielderId ->
+                incrementFieldingStats(gameId, fielderId, errors = 1)
+            }
         }
 
         val runsScoredList = mutableListOf<Long>()
@@ -217,6 +221,33 @@ class GameScoringService(
                 else -> {
                     // Stolen Base, Caught Stealing, Picked Off, etc. do not impact batting/pitching stats here
                 }
+            }
+
+            when (eventType) {
+                ScoringEventType.STRIKEOUT -> {
+                    getFielderIdByPosition(game, game.half, "C")?.let { catcherId ->
+                        incrementFieldingStats(gameId, catcherId, putouts = 1)
+                    }
+                }
+                ScoringEventType.GROUNDOUT -> {
+                    getFielderIdByPosition(game, game.half, "1B")?.let { firstBaseId ->
+                        incrementFieldingStats(gameId, firstBaseId, putouts = 1)
+                    }
+                    getFielderIdByPosition(game, game.half, listOf("SS", "2B", "3B").random())?.let { infielderId ->
+                        incrementFieldingStats(gameId, infielderId, assists = 1)
+                    }
+                }
+                ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.SACRIFICE_FLY -> {
+                    getFielderIdByPosition(game, game.half, listOf("LF", "CF", "RF", "SS", "2B", "3B", "1B").random())?.let { fielderId ->
+                        incrementFieldingStats(gameId, fielderId, putouts = 1)
+                    }
+                }
+                ScoringEventType.ERROR -> {
+                    getFielderIdByPosition(game, game.half, listOf("LF", "CF", "RF", "SS", "2B", "3B", "1B", "P", "C").random())?.let { fielderId ->
+                        incrementFieldingStats(gameId, fielderId, errors = 1)
+                    }
+                }
+                else -> {}
             }
 
             if (outsAdded > 0) {
@@ -462,18 +493,54 @@ class GameScoringService(
     }
 
     private fun getOrCreateBattingStats(gameId: Long, playerId: Long): PlayerGameBattingStatsEntity {
-        return battingRepository.findByGameIdAndPlayerId(gameId, playerId)
-            ?: PlayerGameBattingStatsEntity(playerId = playerId)
+        val existing = battingRepository.findByGameIdAndPlayerId(gameId, playerId)
+        if (existing != null) return existing
+        val player = playerRepository.findById(playerId).orElse(null)
+        val teamId = player?.teamId ?: 0L
+        val entity = PlayerGameBattingStatsEntity(gameId = gameId, playerId = playerId, teamId = teamId)
+        battingRepository.save(entity)
+        return entity
     }
 
     private fun getOrCreatePitchingStats(gameId: Long, playerId: Long): PlayerGamePitchingStatsEntity {
-        return pitchingRepository.findByGameIdAndPlayerId(gameId, playerId)
-            ?: PlayerGamePitchingStatsEntity(playerId = playerId)
+        val existing = pitchingRepository.findByGameIdAndPlayerId(gameId, playerId)
+        if (existing != null) return existing
+        val player = playerRepository.findById(playerId).orElse(null)
+        val teamId = player?.teamId ?: 0L
+        val entity = PlayerGamePitchingStatsEntity(gameId = gameId, playerId = playerId, teamId = teamId)
+        pitchingRepository.save(entity)
+        return entity
+    }
+
+    private fun getOrCreateFieldingStats(gameId: Long, playerId: Long): PlayerGameFieldingStatsEntity {
+        val existing = fieldingRepository.findByGameIdAndPlayerId(gameId, playerId)
+        if (existing != null) return existing
+        val player = playerRepository.findById(playerId).orElse(null)
+        val teamId = player?.teamId ?: 0L
+        val entity = PlayerGameFieldingStatsEntity(gameId = gameId, playerId = playerId, teamId = teamId)
+        fieldingRepository.save(entity)
+        return entity
+    }
+
+    private fun incrementFieldingStats(gameId: Long, playerId: Long, putouts: Int = 0, assists: Int = 0, errors: Int = 0) {
+        val stats = getOrCreateFieldingStats(gameId, playerId)
+        stats.putouts += putouts
+        stats.assists += assists
+        stats.errors += errors
+        fieldingRepository.save(stats)
+    }
+
+    private fun getFielderIdByPosition(game: GameEntity, half: HalfInning, position: String): Long? {
+        val defendingTeamId = if (half == HalfInning.TOP) game.homeTeamId else game.awayTeamId
+        val defenders = playerRepository.findAllByTeamId(defendingTeamId)
+        return defenders.find { it.position == position }?.id 
+            ?: defenders.firstOrNull()?.id
     }
 
     private fun getOrCreateInningRuns(gameId: Long, inning: Int): GameInningEntity {
-        return gameInningRepository.findByGameIdAndInning(gameId, inning)
-            ?: gameInningRepository.save(GameInningEntity(inning = inning, awayRuns = 0, homeRuns = 0))
+        val existing = gameInningRepository.findByGameIdAndInning(gameId, inning)
+        if (existing != null) return existing
+        return gameInningRepository.save(GameInningEntity(gameId = gameId, inning = inning, awayRuns = 0, homeRuns = 0))
     }
 
     @Transactional(readOnly = true)
@@ -637,6 +704,130 @@ class GameScoringService(
             seasonName = season.name,
             standings = standings,
             games = games
+        )
+    }
+
+    @Transactional
+    fun resetGame(gameId: Long): Game {
+        val game = gameRepository.findById(gameId).orElseThrow { IllegalArgumentException("Game not found: $gameId") }
+        
+        playEventRepository.deleteAll(playEventRepository.findAllByGameIdOrderByTimestampAsc(gameId))
+        gameInningRepository.deleteAll(gameInningRepository.findAllByGameIdOrderByInningAsc(gameId))
+        battingRepository.deleteAll(battingRepository.findAllByGameId(gameId))
+        pitchingRepository.deleteAll(pitchingRepository.findAllByGameId(gameId))
+        fieldingRepository.deleteAll(fieldingRepository.findAllByGameId(gameId))
+
+        game.status = GameStatus.SCHEDULED
+        game.homeScore = 0
+        game.awayScore = 0
+        game.homeHits = 0
+        game.awayHits = 0
+        game.homeErrors = 0
+        game.awayErrors = 0
+        game.inning = 1
+        game.half = HalfInning.TOP
+        game.outs = 0
+        game.balls = 0
+        game.strikes = 0
+        game.runnerFirstId = null
+        game.runnerSecondId = null
+        game.runnerThirdId = null
+        game.currentBatterId = null
+        game.currentPitcherId = null
+
+        val saved = gameRepository.save(game)
+        return mapGameToDomain(saved)
+    }
+
+    @Transactional(readOnly = true)
+    fun getSeasonStats(seasonId: Long): SeasonStats {
+        val season = seasonRepository.findById(seasonId).orElseThrow { IllegalArgumentException("Season not found: $seasonId") }
+        val games = gameRepository.findAllBySeasonId(seasonId)
+        val gameIds = games.map { it.id!! }
+
+        if (gameIds.isEmpty()) {
+            return SeasonStats(seasonId = seasonId, battingStats = emptyList(), pitchingStats = emptyList(), fieldingStats = emptyList())
+        }
+
+        val allPlayers = playerRepository.findAll().associateBy { it.id!! }
+
+        val battingEntities = battingRepository.findAllByGameIdIn(gameIds)
+        val aggregatedBatting = battingEntities.groupBy { it.playerId }.map { (playerId, statsList) ->
+            val p = allPlayers[playerId]
+            val pName = p?.name ?: "Unknown"
+            val jersey = p?.jerseyNumber ?: 0
+            val pos = p?.position ?: "DH"
+            
+            PlayerBattingStats(
+                playerId = playerId,
+                playerName = pName,
+                jerseyNumber = jersey,
+                position = pos,
+                atBats = statsList.sumOf { it.atBats },
+                runs = statsList.sumOf { it.runs },
+                hits = statsList.sumOf { it.hits },
+                rbi = statsList.sumOf { it.rbi },
+                doubles = statsList.sumOf { it.doubles },
+                triples = statsList.sumOf { it.triples },
+                homeRuns = statsList.sumOf { it.homeRuns },
+                walks = statsList.sumOf { it.walks },
+                strikeOuts = statsList.sumOf { it.strikeOuts },
+                hitByPitch = statsList.sumOf { it.hitByPitch }
+            )
+        }.sortedByDescending { it.hits }
+
+        val pitchingEntities = pitchingRepository.findAllByGameIdIn(gameIds)
+        val aggregatedPitching = pitchingEntities.groupBy { it.playerId }.map { (playerId, statsList) ->
+            val p = allPlayers[playerId]
+            val pName = p?.name ?: "Unknown"
+            val jersey = p?.jerseyNumber ?: 0
+            val pos = p?.position ?: "P"
+
+            PlayerPitchingStats(
+                playerId = playerId,
+                playerName = pName,
+                jerseyNumber = jersey,
+                position = pos,
+                inningsPitchedThirds = statsList.sumOf { it.inningsPitchedThirds },
+                hitsAllowed = statsList.sumOf { it.hitsAllowed },
+                runsAllowed = statsList.sumOf { it.runsAllowed },
+                earnedRuns = statsList.sumOf { it.earnedRuns },
+                walksAllowed = statsList.sumOf { it.walksAllowed },
+                strikeoutsRecorded = statsList.sumOf { it.strikeoutsRecorded },
+                homeRunsAllowed = statsList.sumOf { it.homeRunsAllowed }
+            )
+        }.sortedByDescending { it.strikeoutsRecorded }
+
+        val fieldingEntities = fieldingRepository.findAllByGameIdIn(gameIds)
+        val aggregatedFielding = fieldingEntities.groupBy { it.playerId }.map { (playerId, statsList) ->
+            val p = allPlayers[playerId]
+            val pName = p?.name ?: "Unknown"
+            val jersey = p?.jerseyNumber ?: 0
+            val pos = p?.position ?: "DH"
+
+            val po = statsList.sumOf { it.putouts }
+            val a = statsList.sumOf { it.assists }
+            val e = statsList.sumOf { it.errors }
+            val totalChances = po + a + e
+            val fpct = if (totalChances > 0) (po + a).toDouble() / totalChances else 1.0
+
+            PlayerFieldingStats(
+                playerId = playerId,
+                playerName = pName,
+                jerseyNumber = jersey,
+                position = pos,
+                putouts = po,
+                assists = a,
+                errors = e,
+                fieldingPercentage = Math.round(fpct * 1000.0) / 1000.0
+            )
+        }.sortedByDescending { it.errors }
+
+        return SeasonStats(
+            seasonId = seasonId,
+            battingStats = aggregatedBatting,
+            pitchingStats = aggregatedPitching,
+            fieldingStats = aggregatedFielding
         )
     }
 }

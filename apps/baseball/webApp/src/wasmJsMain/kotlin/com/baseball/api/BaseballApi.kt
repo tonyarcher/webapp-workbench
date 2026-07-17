@@ -22,4 +22,7 @@ interface BaseballApi {
     suspend fun getPlayers(): List<Player>
     suspend fun createPlayer(player: Player): Player
     suspend fun createGame(game: Game): Game
+    suspend fun deletePlayer(playerId: Long)
+    suspend fun resetGame(gameId: Long): Game
+    suspend fun getSeasonStats(seasonId: Long): SeasonStats
 }

@@ -321,22 +321,36 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                             gap = 0.75.rem
                         }
 
-                        button(classes = "btn btn-primary") {
-                            +"Restart with Current Lineups"
-                            onClickFunction = {
-                                isResetDialogOpen = false
-                                resetLocalGame(toInitialLineups = true)
-                                renderCurrentTab()
+                        if (isSingleGameMode) {
+                            button(classes = "btn btn-primary") {
+                                +"Restart with Current Lineups"
+                                onClickFunction = {
+                                    isResetDialogOpen = false
+                                    resetLocalGame(toInitialLineups = true)
+                                    renderCurrentTab()
+                                }
                             }
-                        }
 
-                        button(classes = "btn btn-action") {
-                            +"Configure New Lineups"
-                            css { put("background", "linear-gradient(135deg, #3b82f6, #8b5cf6)") }
-                            onClickFunction = {
-                                isResetDialogOpen = false
-                                isLineupDialogOpen = true
-                                renderCurrentTab()
+                            button(classes = "btn btn-action") {
+                                +"Configure New Lineups"
+                                css { put("background", "linear-gradient(135deg, #3b82f6, #8b5cf6)") }
+                                onClickFunction = {
+                                    isResetDialogOpen = false
+                                    isLineupDialogOpen = true
+                                    renderCurrentTab()
+                                }
+                            }
+                        } else {
+                            button(classes = "btn btn-primary") {
+                                +"Reset Game Stats & Events"
+                                onClickFunction = {
+                                    launch {
+                                        api.resetGame(selectedGameId!!)
+                                        com.baseball.game.clearLiveScorerCache()
+                                        isResetDialogOpen = false
+                                        renderCurrentTab()
+                                    }
+                                }
                             }
                         }
 

@@ -24,6 +24,7 @@ class GameScoringServiceTest {
     private lateinit var battingRepository: PlayerGameBattingStatsRepository
     private lateinit var pitchingRepository: PlayerGamePitchingStatsRepository
     private lateinit var seasonRepository: SeasonRepository
+    private lateinit var fieldingRepository: PlayerGameFieldingStatsRepository
 
     private lateinit var scoringService: GameScoringService
 
@@ -37,6 +38,7 @@ class GameScoringServiceTest {
         battingRepository = mock(PlayerGameBattingStatsRepository::class.java)
         pitchingRepository = mock(PlayerGamePitchingStatsRepository::class.java)
         seasonRepository = mock(SeasonRepository::class.java)
+        fieldingRepository = mock(PlayerGameFieldingStatsRepository::class.java)
 
         scoringService = GameScoringService(
             gameRepository,
@@ -46,7 +48,8 @@ class GameScoringServiceTest {
             playEventRepository,
             battingRepository,
             pitchingRepository,
-            seasonRepository
+            seasonRepository,
+            fieldingRepository
         )
     }
 

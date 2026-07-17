@@ -85,7 +85,7 @@ object AppViewManager {
         window.addEventListener("hashchange", {
             val hash = window.location.hash.removePrefix("#")
             if (hash.isNotEmpty()) {
-                val isOnlineTab = hash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES) || 
+                val isOnlineTab = hash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_STATS) || 
                                   (!isSingleGameMode && hash in listOf(BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE))
                 
                 if (isOnlineTab && currentUserSession == null) {
@@ -98,7 +98,7 @@ object AppViewManager {
                 } else if (hash == BaseballConstants.TAB_LOGIN || hash == BaseballConstants.TAB_REGISTER) {
                     isWelcomeScreen = false
                     _currentTab = hash
-                } else if (hash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE)) {
+                } else if (hash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_STATS, BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE)) {
                     isWelcomeScreen = false
                     _currentTab = hash
                 }
@@ -111,7 +111,7 @@ object AppViewManager {
 
         val initialHash = window.location.hash.removePrefix("#")
         if (initialHash.isNotEmpty()) {
-            val isOnlineTab = initialHash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES) || 
+            val isOnlineTab = initialHash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_STATS) || 
                               (!isSingleGameMode && initialHash in listOf(BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE))
             
             if (isOnlineTab && currentUserSession == null) {
@@ -120,7 +120,7 @@ object AppViewManager {
                 window.location.hash = BaseballConstants.TAB_LOGIN
             } else if (initialHash == BaseballConstants.TAB_WELCOME) {
                 isWelcomeScreen = true
-            } else if (initialHash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE, BaseballConstants.TAB_LOGIN, BaseballConstants.TAB_REGISTER)) {
+            } else if (initialHash in listOf(BaseballConstants.TAB_LEAGUES, BaseballConstants.TAB_TEAMS, BaseballConstants.TAB_GAMES, BaseballConstants.TAB_STATS, BaseballConstants.TAB_LIVE_SCORER, BaseballConstants.TAB_BOXSCORE, BaseballConstants.TAB_LOGIN, BaseballConstants.TAB_REGISTER)) {
                 isWelcomeScreen = false
                 _currentTab = initialHash
             }
@@ -385,6 +385,16 @@ object AppViewManager {
                                 renderCurrentTab()
                             }
                         }
+
+                        button(classes = "nav-btn") {
+                            id = "nav-btn-stats"
+                            +"Season Stats"
+                            onClickFunction = {
+                                currentTab = BaseballConstants.TAB_STATS
+                                updateActiveTabButtons()
+                                renderCurrentTab()
+                            }
+                        }
                     }
 
                     button(classes = "nav-btn") {
@@ -449,6 +459,7 @@ object AppViewManager {
                     BaseballConstants.TAB_LEAGUES -> document.getElementById("nav-btn-leagues")
                     BaseballConstants.TAB_TEAMS -> document.getElementById("nav-btn-teams")
                     BaseballConstants.TAB_GAMES -> document.getElementById("nav-btn-games")
+                    BaseballConstants.TAB_STATS -> document.getElementById("nav-btn-stats")
                     else -> null
                 }
             }

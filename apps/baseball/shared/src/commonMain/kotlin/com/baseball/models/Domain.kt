@@ -35,7 +35,8 @@ data class Player(
     val position: String, // e.g., P, C, 1B, 2B, 3B, SS, LF, CF, RF, DH
     val jerseyNumber: Int,
     val battingHand: String, // R, L, S
-    val throwingHand: String // R, L
+    val throwingHand: String, // R, L
+    val deleted: Boolean = false
 )
 
 @Serializable
@@ -221,4 +222,24 @@ data class ScoringEventRequest(
     val isError: Boolean = false,
     val runnerOutId: Long? = null,
     val runnerAdvanceMap: Map<String, Int>? = null
+)
+
+@Serializable
+data class PlayerFieldingStats(
+    val playerId: Long,
+    val playerName: String,
+    val jerseyNumber: Int,
+    val position: String,
+    val putouts: Int = 0,
+    val assists: Int = 0,
+    val errors: Int = 0,
+    val fieldingPercentage: Double = 1.000
+)
+
+@Serializable
+data class SeasonStats(
+    val seasonId: Long,
+    val battingStats: List<PlayerBattingStats>,
+    val pitchingStats: List<PlayerPitchingStats>,
+    val fieldingStats: List<PlayerFieldingStats>
 )

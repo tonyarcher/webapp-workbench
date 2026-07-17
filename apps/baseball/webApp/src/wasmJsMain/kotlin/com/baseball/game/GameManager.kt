@@ -71,6 +71,24 @@ var initialHomeActivePitcherName = ""
 // Callback interface or delegate to notify UI to open lineup setup dialog
 var onOpenLineupSetupDialog: (() -> Unit)? = null
 
+fun clearLiveScorerCache() {
+    localAwayLineup.clear()
+    localHomeLineup.clear()
+    localAwayBench.clear()
+    localHomeBench.clear()
+    localAwayBatterIndex = 0
+    localHomeBatterIndex = 0
+    localPlayersSubbedOut.clear()
+    initialAwayLineup.clear()
+    initialHomeLineup.clear()
+    initialAwayBench.clear()
+    initialHomeBench.clear()
+    initialAwayActivePitcherId = 0L
+    initialAwayActivePitcherName = ""
+    initialHomeActivePitcherId = 0L
+    initialHomeActivePitcherName = ""
+}
+
 object GameManager : GameService {
 
     override fun initGame(forceReset: Boolean) {

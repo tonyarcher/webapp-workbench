@@ -174,7 +174,7 @@ class ControllersTest {
 
         // delete
         controller.delete(1L)
-        verify(repo, times(1)).deleteById(1L)
+        verify(repo, atLeastOnce()).save(any(PlayerEntity::class.java))
     }
 
     // --- GAME ---

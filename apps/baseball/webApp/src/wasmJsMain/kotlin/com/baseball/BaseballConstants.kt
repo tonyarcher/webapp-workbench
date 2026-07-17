@@ -9,6 +9,7 @@ object BaseballConstants {
     const val TAB_LEAGUES = "leagues"
     const val TAB_TEAMS = "teams"
     const val TAB_GAMES = "games"
+    const val TAB_STATS = "stats"
     const val TAB_LOGIN = "login"
     const val TAB_REGISTER = "register"
 

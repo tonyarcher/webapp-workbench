@@ -143,4 +143,16 @@ class BaseballApiClient : BaseballApi {
     override suspend fun getGameEvents(gameId: Long): List<PlayEvent> {
         return client.get("$baseUrl/api/games/$gameId/events").body()
     }
+
+    override suspend fun deletePlayer(playerId: Long) {
+        client.delete("$baseUrl/api/players/$playerId")
+    }
+
+    override suspend fun resetGame(gameId: Long): Game {
+        return client.post("$baseUrl/api/games/$gameId/reset").body()
+    }
+
+    override suspend fun getSeasonStats(seasonId: Long): SeasonStats {
+        return client.get("$baseUrl/api/seasons/$seasonId/stats").body()
+    }
 }
