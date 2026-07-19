@@ -60,27 +60,8 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                 events = api.getGameEvents(selectedGameId!!)
                 boxScore = api.getGameBoxScore(selectedGameId!!)
                 
-                var hRoster = api.getTeamRoster(game.homeTeam.id!!)
-                var aRoster = api.getTeamRoster(game.awayTeam.id!!)
-
-                // Auto-generate players if the team roster is empty
-                if (hRoster.isEmpty()) {
-                    for (i in 1..9) {
-                        api.createPlayer(Player(null, game.homeTeam.id, "Home Batter $i", "LF", 10 + i, "R", "R"))
-                    }
-                    api.createPlayer(Player(null, game.homeTeam.id, "Home Pitcher", "P", 99, "R", "R"))
-                    hRoster = api.getTeamRoster(game.homeTeam.id!!)
-                }
-                if (aRoster.isEmpty()) {
-                    for (i in 1..9) {
-                        api.createPlayer(Player(null, game.awayTeam.id, "Away Batter $i", "LF", 10 + i, "R", "R"))
-                    }
-                    api.createPlayer(Player(null, game.awayTeam.id, "Away Pitcher", "P", 99, "R", "R"))
-                    aRoster = api.getTeamRoster(game.awayTeam.id!!)
-                }
-
-                homeRoster = hRoster
-                awayRoster = aRoster
+                homeRoster = api.getTeamRoster(game.homeTeam.id!!)
+                awayRoster = api.getTeamRoster(game.awayTeam.id!!)
 
                 AppViewManager.selectedGameStatus = game.status
 
@@ -191,21 +172,8 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                             borderRadius = 30.px
                         }
                         onClickFunction = {
-                            if (isSingleGameMode) {
-                                isLineupDialogOpen = true
-                                renderCurrentTab()
-                            } else {
-                                launch {
-                                    try {
-                                        api.startGame(game.id!!)
-                                        AppViewManager.selectedGameStatus = GameStatus.IN_PROGRESS
-                                        AppViewManager.renderApp()
-                                        renderCurrentTab()
-                                    } catch (e: Throwable) {
-                                        println("Error starting game: ${e.message}")
-                                    }
-                                }
-                            }
+                            isLineupDialogOpen = true
+                            renderCurrentTab()
                         }
                     }
                 }
@@ -449,7 +417,13 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
             showScorecard()
 
             if (isLineupDialogOpen) {
-                val overlay = LineupSetupOverlay(container)
+                val overlay = LineupSetupOverlay(
+                    container = container,
+                    homeRosterParam = homeRoster,
+                    awayRosterParam = awayRoster,
+                    homeTeamParam = game.homeTeam,
+                    awayTeamParam = game.awayTeam
+                )
                 overlay.render()
             }
 

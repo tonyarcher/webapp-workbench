@@ -1,9 +1,8 @@
 package com.baseball.ui.components.lineup
 
 import com.baseball.BaseballConstants
-import com.baseball.game.startNewGame
-import com.baseball.game.localGame
-import com.baseball.game.saveLocalState
+import com.baseball.api
+import com.baseball.game.*
 import com.baseball.models.GameStatus
 import com.baseball.models.Player
 import com.baseball.seed.SeedData
@@ -21,6 +20,10 @@ var isLineupDialogOpen = false
 
 class LineupSetupOverlay(
     private val container: HTMLElement,
+    private val homeRosterParam: List<Player> = emptyList(),
+    private val awayRosterParam: List<Player> = emptyList(),
+    private val homeTeamParam: com.baseball.models.Team? = null,
+    private val awayTeamParam: com.baseball.models.Team? = null,
 ) {
     private var useDh = true
     private var homeTeam = SeedData.teamCubs
@@ -46,7 +49,9 @@ class LineupSetupOverlay(
     private var validationError: String? = null
 
     init {
-        populateWithRosters(useSeedRosters = true)
+        if (homeTeamParam != null) homeTeam = homeTeamParam
+        if (awayTeamParam != null) awayTeam = awayTeamParam
+        populateWithRosters(homeRosterParam, awayRosterParam)
     }
 
     private fun getDefaultPosition(index: Int): String =
@@ -63,25 +68,18 @@ class LineupSetupOverlay(
             else -> "DH"
         }
 
-    private fun populateWithRosters(useSeedRosters: Boolean) {
-        if (useSeedRosters) {
-            populateRostersFromSeed()
-        } else {
-            populateRostersWithRandom()
+    private fun populateWithRosters(homeRoster: List<Player>, awayRoster: List<Player>) {
+        if (homeRoster.isEmpty() && awayRoster.isEmpty()) {
+            return
         }
-    }
-
-    private fun populateRostersFromSeed() {
-        val awayRoster = SeedData.cardinalsRoster
-        val homeRoster = SeedData.cubsRoster
 
         val awayP = awayRoster.find { it.position == BaseballConstants.Positions.P }
-        awayPitcherNameInput = awayP?.name ?: "Sonny Gray"
-        awayPitcherNumberInput = awayP?.jerseyNumber?.toString() ?: "54"
+        awayPitcherNameInput = awayP?.name ?: ""
+        awayPitcherNumberInput = awayP?.jerseyNumber?.toString() ?: ""
 
         val homeP = homeRoster.find { it.position == BaseballConstants.Positions.P }
-        homePitcherNameInput = homeP?.name ?: "Justin Steele"
-        homePitcherNumberInput = homeP?.jerseyNumber?.toString() ?: "35"
+        homePitcherNameInput = homeP?.name ?: ""
+        homePitcherNumberInput = homeP?.jerseyNumber?.toString() ?: ""
 
         if (useDh) {
             val awayBatters = awayRoster.filter { it.position != BaseballConstants.Positions.P }.take(9)
@@ -97,78 +95,27 @@ class LineupSetupOverlay(
             awayBatters.forEachIndexed { i, p ->
                 awayLineupInputs[i] = PlayerInputs(p.name, p.jerseyNumber.toString(), p.position)
             }
-            awayLineupInputs[8] = PlayerInputs(awayPitcherNameInput, awayPitcherNumberInput, "P")
+            if (awayP != null) {
+                awayLineupInputs[8] = PlayerInputs(awayPitcherNameInput, awayPitcherNumberInput, "P")
+            }
 
             val homeBatters = homeRoster.filter { it.position != BaseballConstants.Positions.P }.take(8)
             homeBatters.forEachIndexed { i, p ->
                 homeLineupInputs[i] = PlayerInputs(p.name, p.jerseyNumber.toString(), p.position)
             }
-            homeLineupInputs[8] = PlayerInputs(homePitcherNameInput, homePitcherNumberInput, "P")
+            if (homeP != null) {
+                homeLineupInputs[8] = PlayerInputs(homePitcherNameInput, homePitcherNumberInput, "P")
+            }
         }
     }
 
-    private fun populateRostersWithRandom() {
-        val firstNames =
-            listOf(
-                "Babe",
-                "Slider",
-                "Fastball",
-                "Windup",
-                "HomeRun",
-                "Bunt",
-                "Knuckle",
-                "Curve",
-                "Spitball",
-                "Slugger",
-                "Spanky",
-                "Shorty",
-                "Flash",
-                "Scoop",
-                "Dusty",
-                "Lefty",
-                "Stretch",
-                "Catfish",
-                "Dizzy",
-                "Yogi",
-                "Skip",
-                "Hammerin'",
-                "Outlaw",
-                "Blaze",
-                "Ace",
-                "Rusty",
-                "Chippy",
-            )
-        val lastNames =
-            listOf(
-                "Ruthless",
-                "McGavin",
-                "Freddie",
-                "Willie",
-                "Harry",
-                "Master",
-                "Jones",
-                "Rodriguez",
-                "O'Malley",
-                "Swinger",
-                "Slugson",
-                "Smacker",
-                "Speedy",
-                "Gloveman",
-                "Aces",
-                "Striker",
-                "Grandslam",
-                "Outlaw",
-                "Biggs",
-                "Thunder",
-                "Blaze",
-                "Hammer",
-                "Winn",
-                "Steele",
-                "Gray",
-                "Bonds",
-                "Ripken",
-            )
+    private fun populateRostersFromSeed() {
+        populateWithRosters(SeedData.cubsRoster, SeedData.cardinalsRoster)
+    }
 
+    private fun populateRostersWithRandom() {
+        val firstNames = listOf("Babe", "Slider", "Fastball", "Windup", "HomeRun", "Bunt", "Knuckle", "Curve", "Spitball", "Slugger", "Rusty", "Ace", "Chippy", "Skip")
+        val lastNames = listOf("Ruthless", "McGavin", "Freddie", "Willie", "Harry", "Master", "Jones", "Rodriguez", "O'Malley", "Swinger", "Slugson")
         fun randomPlayer(pos: String): PlayerInputs {
             val name = "${firstNames.random()} ${lastNames.random()}"
             val num = Random.nextInt(1, 100).toString()
@@ -295,7 +242,7 @@ class LineupSetupOverlay(
                 +"Load Default Roster"
                 onClickFunction = {
                     validationError = null
-                    populateWithRosters(useSeedRosters = true)
+                    populateRostersFromSeed()
                     render()
                 }
             }
@@ -306,7 +253,7 @@ class LineupSetupOverlay(
                 }
                 onClickFunction = {
                     validationError = null
-                    populateWithRosters(useSeedRosters = false)
+                    populateRostersWithRandom()
                     render()
                 }
             }
@@ -543,23 +490,118 @@ class LineupSetupOverlay(
         val awayRes = validateTeam(isHome = false, awayLineupInputs, awayPitcherNameInput, awayPitcherNumberInput) ?: return false
         val homeRes = validateTeam(isHome = true, homeLineupInputs, homePitcherNameInput, homePitcherNumberInput) ?: return false
 
-        val awayActivePId = if (useDh) awayRes.second.first().id!! else awayRes.first.find { it.position == "P" }!!.id!!
-        val homeActivePId = if (useDh) homeRes.second.first().id!! else homeRes.first.find { it.position == "P" }!!.id!!
+        if (isSingleGameMode) {
+            val awayActivePId = if (useDh) awayRes.second.first().id!! else awayRes.first.find { it.position == "P" }!!.id!!
+            val homeActivePId = if (useDh) homeRes.second.first().id!! else homeRes.first.find { it.position == "P" }!!.id!!
 
-        startNewGame(
-            homeTeam = homeTeam,
-            awayTeam = awayTeam,
-            homeLineup = homeRes.first,
-            awayLineup = awayRes.first,
-            homeBench = homeRes.second,
-            awayBench = awayRes.second,
-            homeActivePitcherId = homeActivePId,
-            awayActivePitcherId = awayActivePId,
-            useDh = useDh,
-        )
+            startNewGame(
+                homeTeam = homeTeam,
+                awayTeam = awayTeam,
+                homeLineup = homeRes.first,
+                awayLineup = awayRes.first,
+                homeBench = homeRes.second,
+                awayBench = awayRes.second,
+                homeActivePitcherId = homeActivePId,
+                awayActivePitcherId = awayActivePId,
+                useDh = useDh,
+            )
 
-        localGame = localGame?.copy(status = GameStatus.IN_PROGRESS)
-        saveLocalState()
+            localGame = localGame?.copy(status = GameStatus.IN_PROGRESS)
+            saveLocalState()
+
+            isLineupDialogOpen = false
+            renderCurrentTab()
+        } else {
+            launch {
+                try {
+                    val activeGame = api.getGame(selectedGameId!!)
+
+                    // Create home players
+                    val serverHomeLineup = homeRes.first.map { p ->
+                        api.createPlayer(
+                            Player(
+                                id = null,
+                                teamId = activeGame.homeTeam.id,
+                                name = p.name,
+                                position = p.position,
+                                jerseyNumber = p.jerseyNumber,
+                                battingHand = "R",
+                                throwingHand = "R"
+                            )
+                        )
+                    }
+                    val serverHomeBench = homeRes.second.map { p ->
+                        api.createPlayer(
+                            Player(
+                                id = null,
+                                teamId = activeGame.homeTeam.id,
+                                name = p.name,
+                                position = p.position,
+                                jerseyNumber = p.jerseyNumber,
+                                battingHand = "R",
+                                throwingHand = "R"
+                            )
+                        )
+                    }
+
+                    // Create away players
+                    val serverAwayLineup = awayRes.first.map { p ->
+                        api.createPlayer(
+                            Player(
+                                id = null,
+                                teamId = activeGame.awayTeam.id,
+                                name = p.name,
+                                position = p.position,
+                                jerseyNumber = p.jerseyNumber,
+                                battingHand = "R",
+                                throwingHand = "R"
+                            )
+                        )
+                    }
+                    val serverAwayBench = awayRes.second.map { p ->
+                        api.createPlayer(
+                            Player(
+                                id = null,
+                                teamId = activeGame.awayTeam.id,
+                                name = p.name,
+                                position = p.position,
+                                jerseyNumber = p.jerseyNumber,
+                                battingHand = "R",
+                                throwingHand = "R"
+                            )
+                        )
+                    }
+
+                    // Start game on the server
+                    api.startGame(activeGame.id!!)
+                    AppViewManager.selectedGameStatus = GameStatus.IN_PROGRESS
+
+                    // Update client state variables
+                    localHomeLineup.clear()
+                    localHomeLineup.addAll(serverHomeLineup)
+                    localHomeBench.clear()
+                    localHomeBench.addAll(serverHomeBench)
+
+                    localAwayLineup.clear()
+                    localAwayLineup.addAll(serverAwayLineup)
+                    localAwayBench.clear()
+                    localAwayBench.addAll(serverAwayBench)
+
+                    val homeP = serverHomeBench.find { it.position == "P" } ?: serverHomeLineup.find { it.position == "P" }
+                    val awayP = serverAwayBench.find { it.position == "P" } ?: serverAwayLineup.find { it.position == "P" }
+                    localHomeActivePitcherId = homeP?.id ?: 110L
+                    localHomeActivePitcherName = homeP?.name ?: "Pitcher"
+                    localAwayActivePitcherId = awayP?.id ?: 210L
+                    localAwayActivePitcherName = awayP?.name ?: "Pitcher"
+
+                    isLineupDialogOpen = false
+                    AppViewManager.renderApp()
+                    renderCurrentTab()
+                } catch (e: Throwable) {
+                    println("Error starting online game: ${e.message}")
+                }
+            }
+        }
 
         return true
     }
