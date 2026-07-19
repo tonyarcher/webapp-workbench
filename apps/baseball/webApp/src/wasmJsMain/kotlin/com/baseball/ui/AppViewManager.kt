@@ -10,6 +10,7 @@ import com.baseball.models.HalfInning
 import com.baseball.models.League
 import com.baseball.models.Season
 import com.baseball.models.Team
+import com.baseball.models.GameStatus
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*
@@ -72,6 +73,14 @@ fun loadNavState() {
 
 object AppViewManager {
     private val tabRenderers = mutableMapOf<String, (HTMLElement) -> Unit>()
+    var selectedGameStatus: GameStatus? = null
+
+    fun isGameInProgress(): Boolean {
+        if (isSingleGameMode) {
+            return localGame?.status == GameStatus.IN_PROGRESS
+        }
+        return selectedGameStatus == GameStatus.IN_PROGRESS
+    }
 
     fun registerTabRenderers(renderers: Map<String, (HTMLElement) -> Unit>) {
         tabRenderers.putAll(renderers)
@@ -389,14 +398,16 @@ object AppViewManager {
                 }
 
                 nav {
-                    button(classes = "back-to-welcome") {
-                        +"← Back to Menu"
-                        onClickFunction = {
-                            goBackToWelcome()
+                    if (!isGameInProgress()) {
+                        button(classes = "back-to-welcome") {
+                            +"← Back to Menu"
+                            onClickFunction = {
+                                goBackToWelcome()
+                            }
                         }
                     }
 
-                    if (!isSingleGameMode) {
+                    if (!isSingleGameMode && !isGameInProgress()) {
                         button(classes = "nav-btn") {
                             id = "nav-btn-leagues"
                             +"Leagues & Seasons"
@@ -446,19 +457,6 @@ object AppViewManager {
                         }
                         onClickFunction = {
                             currentTab = BaseballConstants.TAB_LIVE_SCORER
-                            updateActiveTabButtons()
-                            renderCurrentTab()
-                        }
-                    }
-
-                    button(classes = "nav-btn") {
-                        id = "nav-btn-boxscore"
-                        +"Box Score"
-                        css {
-                            display = if (isSingleGameMode || selectedGameId != null) Display.inlineBlock else Display.none
-                        }
-                        onClickFunction = {
-                            currentTab = BaseballConstants.TAB_BOXSCORE
                             updateActiveTabButtons()
                             renderCurrentTab()
                         }

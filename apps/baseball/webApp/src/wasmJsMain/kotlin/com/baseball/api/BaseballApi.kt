@@ -49,4 +49,6 @@ interface BaseballApi {
     suspend fun resetGame(gameId: Long): Game
 
     suspend fun getSeasonStats(seasonId: Long): SeasonStats
+
+    suspend fun startGame(gameId: Long): Game
 }

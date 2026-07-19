@@ -142,4 +142,6 @@ class BaseballApiClient : BaseballApi {
     override suspend fun resetGame(gameId: Long): Game = client.post("$baseUrl/api/games/$gameId/reset").body()
 
     override suspend fun getSeasonStats(seasonId: Long): SeasonStats = client.get("$baseUrl/api/seasons/$seasonId/stats").body()
+
+    override suspend fun startGame(gameId: Long): Game = client.post("$baseUrl/api/games/$gameId/start").body()
 }

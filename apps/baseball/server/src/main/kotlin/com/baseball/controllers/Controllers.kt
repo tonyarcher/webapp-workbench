@@ -271,4 +271,14 @@ class GameController(
     fun resetGame(
         @PathVariable id: Long,
     ): Game = scoringService.resetGame(id)
+
+    @PostMapping("/{id}/start")
+    fun startGame(
+        @PathVariable id: Long,
+    ): Game {
+        val game = repository.findById(id).orElseThrow()
+        game.status = GameStatus.IN_PROGRESS
+        repository.save(game)
+        return scoringService.getGameDomain(id)
+    }
 }
