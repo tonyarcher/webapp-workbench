@@ -218,8 +218,6 @@ internal fun renderLeaguesTab(container: HTMLElement) {
                                 selectedSeasonId = season.id
                                 saveNavState()
                                 currentTab = BaseballConstants.TAB_GAMES
-                                updateActiveTabButtons()
-                                renderCurrentTab()
                             }
                         }
                     }

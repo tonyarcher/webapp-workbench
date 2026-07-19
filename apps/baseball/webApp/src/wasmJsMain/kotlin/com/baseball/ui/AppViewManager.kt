@@ -413,8 +413,6 @@ object AppViewManager {
                             +"Leagues & Seasons"
                             onClickFunction = {
                                 currentTab = BaseballConstants.TAB_LEAGUES
-                                updateActiveTabButtons()
-                                renderCurrentTab()
                             }
                         }
 
@@ -423,8 +421,6 @@ object AppViewManager {
                             +"Teams & Rosters"
                             onClickFunction = {
                                 currentTab = BaseballConstants.TAB_TEAMS
-                                updateActiveTabButtons()
-                                renderCurrentTab()
                             }
                         }
 
@@ -433,8 +429,6 @@ object AppViewManager {
                             +"Season Dashboard"
                             onClickFunction = {
                                 currentTab = BaseballConstants.TAB_GAMES
-                                updateActiveTabButtons()
-                                renderCurrentTab()
                             }
                         }
 
@@ -443,8 +437,6 @@ object AppViewManager {
                             +"Season Stats"
                             onClickFunction = {
                                 currentTab = BaseballConstants.TAB_STATS
-                                updateActiveTabButtons()
-                                renderCurrentTab()
                             }
                         }
                     }
@@ -457,8 +449,6 @@ object AppViewManager {
                         }
                         onClickFunction = {
                             currentTab = BaseballConstants.TAB_LIVE_SCORER
-                            updateActiveTabButtons()
-                            renderCurrentTab()
                         }
                     }
                 }

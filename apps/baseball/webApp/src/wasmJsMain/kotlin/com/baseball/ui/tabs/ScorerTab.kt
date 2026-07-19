@@ -144,26 +144,49 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                         }
                     }
 
-                    button(classes = "btn btn-primary") {
-                        +"START GAME"
-                        css {
-                            fontSize = 1.3.rem
-                            padding = Padding(0.75.rem, 2.5.rem)
-                            borderRadius = 30.px
+                    if (homeRoster.isEmpty() || awayRoster.isEmpty()) {
+                        p {
+                            css {
+                                color = Color("var(--accent-red)")
+                                fontWeight = FontWeight.bold
+                                marginTop = 1.rem
+                                marginBottom = 1.5.rem
+                            }
+                            +"Warning: One or both teams do not have any players in their roster. You must add players before starting the game."
                         }
-                        onClickFunction = {
-                            launch {
-                                try {
-                                    if (isSingleGameMode) {
-                                        localGame = localGame!!.copy(status = GameStatus.IN_PROGRESS)
-                                    } else {
-                                        api.startGame(game.id!!)
-                                        AppViewManager.selectedGameStatus = GameStatus.IN_PROGRESS
+                        button(classes = "btn btn-primary") {
+                            +"Go to Teams & Rosters"
+                            css {
+                                fontSize = 1.1.rem
+                                padding = Padding(0.75.rem, 2.rem)
+                                borderRadius = 30.px
+                            }
+                            onClickFunction = {
+                                currentTab = BaseballConstants.TAB_TEAMS
+                            }
+                        }
+                    } else {
+                        button(classes = "btn btn-primary") {
+                            +"START GAME"
+                            css {
+                                fontSize = 1.3.rem
+                                padding = Padding(0.75.rem, 2.5.rem)
+                                borderRadius = 30.px
+                            }
+                            onClickFunction = {
+                                launch {
+                                    try {
+                                        if (isSingleGameMode) {
+                                            localGame = localGame!!.copy(status = GameStatus.IN_PROGRESS)
+                                        } else {
+                                            api.startGame(game.id!!)
+                                            AppViewManager.selectedGameStatus = GameStatus.IN_PROGRESS
+                                        }
+                                        AppViewManager.renderApp()
+                                        renderCurrentTab()
+                                    } catch (e: Throwable) {
+                                        println("Error starting game: ${e.message}")
                                     }
-                                    AppViewManager.renderApp()
-                                    renderCurrentTab()
-                                } catch (e: Throwable) {
-                                    println("Error starting game: ${e.message}")
                                 }
                             }
                         }
