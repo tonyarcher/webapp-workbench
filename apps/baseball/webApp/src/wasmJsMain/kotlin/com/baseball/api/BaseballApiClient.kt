@@ -48,10 +48,10 @@ class BaseballApiClient : BaseballApi {
 
     private val baseUrl = run {
         val loc = kotlinx.browser.window.location
-        if (loc.hostname == "localhost" || loc.hostname == "127.0.0.1" || loc.hostname.isEmpty()) {
+        if ((loc.hostname == "localhost" || loc.hostname == "127.0.0.1" || loc.hostname.isEmpty()) && loc.port == "3000") {
             "http://localhost:8080"
         } else {
-            "${loc.protocol}//${loc.hostname}:8080"
+            "${loc.protocol}//${loc.host}"
         }
     }
 
