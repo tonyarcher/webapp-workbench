@@ -59,11 +59,32 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                 game = api.getGame(selectedGameId!!)
                 events = api.getGameEvents(selectedGameId!!)
                 boxScore = api.getGameBoxScore(selectedGameId!!)
-                homeRoster = api.getTeamRoster(game.homeTeam.id!!)
-                awayRoster = api.getTeamRoster(game.awayTeam.id!!)
+                
+                var hRoster = api.getTeamRoster(game.homeTeam.id!!)
+                var aRoster = api.getTeamRoster(game.awayTeam.id!!)
+
+                // Auto-generate players if the team roster is empty
+                if (hRoster.isEmpty()) {
+                    for (i in 1..9) {
+                        api.createPlayer(Player(null, game.homeTeam.id, "Home Batter $i", "LF", 10 + i, "R", "R"))
+                    }
+                    api.createPlayer(Player(null, game.homeTeam.id, "Home Pitcher", "P", 99, "R", "R"))
+                    hRoster = api.getTeamRoster(game.homeTeam.id!!)
+                }
+                if (aRoster.isEmpty()) {
+                    for (i in 1..9) {
+                        api.createPlayer(Player(null, game.awayTeam.id, "Away Batter $i", "LF", 10 + i, "R", "R"))
+                    }
+                    api.createPlayer(Player(null, game.awayTeam.id, "Away Pitcher", "P", 99, "R", "R"))
+                    aRoster = api.getTeamRoster(game.awayTeam.id!!)
+                }
+
+                homeRoster = hRoster
+                awayRoster = aRoster
 
                 AppViewManager.selectedGameStatus = game.status
 
+                // Harmonize Away Lineup & Bench
                 if (localAwayLineup.isEmpty()) {
                     localAwayLineup.addAll(awayRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
                     localAwayBench.addAll(
@@ -76,7 +97,17 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                         game.gameState.currentPitcherName ?: awayRoster.find { it.position == BaseballConstants.Positions.P }?.name
                             ?: "Sonny Gray"
                     localAwayBatterIndex = localAwayLineup.indexOfFirst { it.id == game.gameState.currentBatterId }.coerceAtLeast(0)
+                } else {
+                    localAwayLineup.removeAll { p -> awayRoster.none { it.id == p.id } }
+                    localAwayBench.removeAll { p -> awayRoster.none { it.id == p.id } }
+                    val newAway = awayRoster.filter { r -> localAwayLineup.none { it.id == r.id } && localAwayBench.none { it.id == r.id } }
+                    localAwayBench.addAll(newAway)
+                    while (localAwayLineup.size < 9 && localAwayBench.isNotEmpty()) {
+                        localAwayLineup.add(localAwayBench.removeFirst())
+                    }
                 }
+
+                // Harmonize Home Lineup & Bench
                 if (localHomeLineup.isEmpty()) {
                     localHomeLineup.addAll(homeRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
                     localHomeBench.addAll(
@@ -89,6 +120,14 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                         game.gameState.currentPitcherName ?: homeRoster.find { it.position == BaseballConstants.Positions.P }?.name
                             ?: "Justin Steele"
                     localHomeBatterIndex = localHomeLineup.indexOfFirst { it.id == game.gameState.currentBatterId }.coerceAtLeast(0)
+                } else {
+                    localHomeLineup.removeAll { p -> homeRoster.none { it.id == p.id } }
+                    localHomeBench.removeAll { p -> homeRoster.none { it.id == p.id } }
+                    val newHome = homeRoster.filter { r -> localHomeLineup.none { it.id == r.id } && localHomeBench.none { it.id == r.id } }
+                    localHomeBench.addAll(newHome)
+                    while (localHomeLineup.size < 9 && localHomeBench.isNotEmpty()) {
+                        localHomeLineup.add(localHomeBench.removeFirst())
+                    }
                 }
             }
 
@@ -144,49 +183,26 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                         }
                     }
 
-                    if (homeRoster.isEmpty() || awayRoster.isEmpty()) {
-                        p {
-                            css {
-                                color = Color("var(--accent-red)")
-                                fontWeight = FontWeight.bold
-                                marginTop = 1.rem
-                                marginBottom = 1.5.rem
-                            }
-                            +"Warning: One or both teams do not have any players in their roster. You must add players before starting the game."
+                    button(classes = "btn btn-primary") {
+                        +"START GAME"
+                        css {
+                            fontSize = 1.3.rem
+                            padding = Padding(0.75.rem, 2.5.rem)
+                            borderRadius = 30.px
                         }
-                        button(classes = "btn btn-primary") {
-                            +"Go to Teams & Rosters"
-                            css {
-                                fontSize = 1.1.rem
-                                padding = Padding(0.75.rem, 2.rem)
-                                borderRadius = 30.px
-                            }
-                            onClickFunction = {
-                                currentTab = BaseballConstants.TAB_TEAMS
-                            }
-                        }
-                    } else {
-                        button(classes = "btn btn-primary") {
-                            +"START GAME"
-                            css {
-                                fontSize = 1.3.rem
-                                padding = Padding(0.75.rem, 2.5.rem)
-                                borderRadius = 30.px
-                            }
-                            onClickFunction = {
-                                launch {
-                                    try {
-                                        if (isSingleGameMode) {
-                                            localGame = localGame!!.copy(status = GameStatus.IN_PROGRESS)
-                                        } else {
-                                            api.startGame(game.id!!)
-                                            AppViewManager.selectedGameStatus = GameStatus.IN_PROGRESS
-                                        }
-                                        AppViewManager.renderApp()
-                                        renderCurrentTab()
-                                    } catch (e: Throwable) {
-                                        println("Error starting game: ${e.message}")
+                        onClickFunction = {
+                            launch {
+                                try {
+                                    if (isSingleGameMode) {
+                                        localGame = localGame!!.copy(status = GameStatus.IN_PROGRESS)
+                                    } else {
+                                        api.startGame(game.id!!)
+                                        AppViewManager.selectedGameStatus = GameStatus.IN_PROGRESS
                                     }
+                                    AppViewManager.renderApp()
+                                    renderCurrentTab()
+                                } catch (e: Throwable) {
+                                    println("Error starting game: ${e.message}")
                                 }
                             }
                         }
