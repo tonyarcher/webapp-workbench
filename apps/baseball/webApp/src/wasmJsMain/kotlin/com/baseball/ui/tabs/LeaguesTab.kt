@@ -1,4 +1,4 @@
-﻿package com.baseball.ui.tabs
+package com.baseball.ui.tabs
 
 import com.baseball.BaseballConstants
 import com.baseball.api
@@ -216,6 +216,7 @@ internal fun renderLeaguesTab(container: HTMLElement) {
                             +"Go to Dashboard"
                             onClickFunction = {
                                 selectedSeasonId = season.id
+                                saveNavState()
                                 currentTab = BaseballConstants.TAB_GAMES
                                 updateActiveTabButtons()
                                 renderCurrentTab()
