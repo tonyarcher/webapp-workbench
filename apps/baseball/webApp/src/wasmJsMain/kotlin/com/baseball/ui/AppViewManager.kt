@@ -304,7 +304,7 @@ object AppViewManager {
                                 }
                             } catch (e: Throwable) {
                                 serverConnectionError =
-                                    "Unable to connect to the server. Please check that your Spring Boot backend is running."
+                                    "Unable to connect to the server. Please check that the backend server is running."
                                 renderApp()
                             }
                         }

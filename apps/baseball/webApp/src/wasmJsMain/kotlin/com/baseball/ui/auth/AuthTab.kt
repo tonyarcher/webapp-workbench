@@ -105,7 +105,7 @@ internal fun renderLoginTab(container: HTMLElement) {
                                         msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)
                                     ) {
                                         banner.textContent =
-                                            "Unable to connect to the server. Please verify that your Spring Boot backend is running."
+                                            "Unable to connect to the server. Please verify that the backend server is running."
                                     } else {
                                         banner.textContent = "Authentication failed: ${e.message ?: "server error"}"
                                     }
@@ -260,7 +260,7 @@ internal fun renderRegisterTab(container: HTMLElement) {
                                         msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)
                                     ) {
                                         banner.textContent =
-                                            "Unable to connect to the server. Please verify that your Spring Boot backend is running."
+                                            "Unable to connect to the server. Please verify that the backend server is running."
                                     } else if (msg.contains(BaseballConstants.STATUS_400) ||
                                         msg.contains(BaseballConstants.STATUS_BAD_REQUEST, ignoreCase = true)
                                     ) {

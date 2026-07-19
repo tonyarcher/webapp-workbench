@@ -46,7 +46,14 @@ class BaseballApiClient : BaseballApi {
             }
         }
 
-    private val baseUrl = "http://localhost:8080"
+    private val baseUrl = run {
+        val loc = kotlinx.browser.window.location
+        if (loc.hostname == "localhost" || loc.hostname == "127.0.0.1" || loc.hostname.isEmpty()) {
+            "http://localhost:8080"
+        } else {
+            "${loc.protocol}//${loc.hostname}:8080"
+        }
+    }
 
     override suspend fun register(request: RegisterRequestDto): UserResponseDto =
         client
