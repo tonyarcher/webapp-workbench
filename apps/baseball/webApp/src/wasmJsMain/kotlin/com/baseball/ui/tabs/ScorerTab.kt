@@ -191,18 +191,19 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                             borderRadius = 30.px
                         }
                         onClickFunction = {
-                            launch {
-                                try {
-                                    if (isSingleGameMode) {
-                                        localGame = localGame!!.copy(status = GameStatus.IN_PROGRESS)
-                                    } else {
+                            if (isSingleGameMode) {
+                                isLineupDialogOpen = true
+                                renderCurrentTab()
+                            } else {
+                                launch {
+                                    try {
                                         api.startGame(game.id!!)
                                         AppViewManager.selectedGameStatus = GameStatus.IN_PROGRESS
+                                        AppViewManager.renderApp()
+                                        renderCurrentTab()
+                                    } catch (e: Throwable) {
+                                        println("Error starting game: ${e.message}")
                                     }
-                                    AppViewManager.renderApp()
-                                    renderCurrentTab()
-                                } catch (e: Throwable) {
-                                    println("Error starting game: ${e.message}")
                                 }
                             }
                         }

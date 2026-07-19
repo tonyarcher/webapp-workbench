@@ -2,6 +2,9 @@ package com.baseball.ui.components.lineup
 
 import com.baseball.BaseballConstants
 import com.baseball.game.startNewGame
+import com.baseball.game.localGame
+import com.baseball.game.saveLocalState
+import com.baseball.models.GameStatus
 import com.baseball.models.Player
 import com.baseball.seed.SeedData
 import com.baseball.ui.*
@@ -554,6 +557,9 @@ class LineupSetupOverlay(
             awayActivePitcherId = awayActivePId,
             useDh = useDh,
         )
+
+        localGame = localGame?.copy(status = GameStatus.IN_PROGRESS)
+        saveLocalState()
 
         return true
     }
