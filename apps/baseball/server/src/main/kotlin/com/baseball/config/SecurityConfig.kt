@@ -42,6 +42,12 @@ class SecurityConfig(
         http
             .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource()) }
+            .exceptionHandling { exceptions ->
+                exceptions.authenticationEntryPoint { _, response, authException ->
+                    response.status = jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED
+                    response.writer.write(authException.message ?: "Unauthorized")
+                }
+            }
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/api/auth/register")
