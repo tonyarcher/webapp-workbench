@@ -226,9 +226,10 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                             label { +"Home Team" }
                             select(classes = "form-control") {
                                 id = "sched-home-select"
-                                teamsList.forEach { t ->
+                                teamsList.forEachIndexed { index, t ->
                                     option {
                                         value = t.id.toString()
+                                        selected = (index == 0)
                                         +"${t.city} ${t.name}"
                                     }
                                 }
@@ -242,9 +243,10 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
                             label { +"Away Team" }
                             select(classes = "form-control") {
                                 id = "sched-away-select"
-                                teamsList.forEach { t ->
+                                teamsList.forEachIndexed { index, t ->
                                     option {
                                         value = t.id.toString()
+                                        selected = (teamsList.size > 1 && index == 1) || (teamsList.size <= 1 && index == 0)
                                         +"${t.city} ${t.name}"
                                     }
                                 }
