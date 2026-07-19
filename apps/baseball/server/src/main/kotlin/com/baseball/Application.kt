@@ -22,7 +22,14 @@ class Application {
         seasonRepository: SeasonRepository,
         teamRepository: TeamRepository,
         playerRepository: PlayerRepository,
+        jdbcTemplate: org.springframework.jdbc.core.JdbcTemplate,
     ) = CommandLineRunner {
+        try {
+            jdbcTemplate.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE")
+        } catch (e: Exception) {
+            println("Info: Could not run ALTER TABLE statement: ${e.message}")
+        }
+
         if (leagueRepository.count() == 0L) {
             println("Seeding database with sample baseball league, season, teams, and rosters...")
 
