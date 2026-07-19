@@ -7,6 +7,7 @@ import com.baseball.authService
 import com.baseball.ui.css
 import com.baseball.ui.div
 import com.baseball.ui.launch
+import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.*
@@ -16,10 +17,6 @@ import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 
 internal fun renderLoginTab(container: HTMLElement) {
-    var errorBanner: HTMLDivElement? = null
-    var emailInput: HTMLInputElement? = null
-    var passwordInput: HTMLInputElement? = null
-
     container.div(classes = "card") {
         css {
             maxWidth = 450.px
@@ -35,35 +32,35 @@ internal fun renderLoginTab(container: HTMLElement) {
             }
         }
 
-        errorBanner =
-            div {
-                css {
-                    display = Display.none
-                    color = Color("var(--accent-red)")
-                    background = "rgba(255, 42, 59, 0.1)"
-                    border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
-                    padding = Padding(0.75.rem)
-                    borderRadius = 8.px
-                    marginBottom = 1.rem
-                    fontSize = 0.9.rem
-                }
-            } as HTMLDivElement
+        div {
+            id = "login-error-banner"
+            css {
+                display = Display.none
+                color = Color("var(--accent-red)")
+                background = "rgba(255, 42, 59, 0.1)"
+                border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
+                padding = Padding(0.75.rem)
+                borderRadius = 8.px
+                marginBottom = 1.rem
+                fontSize = 0.9.rem
+            }
+        }
 
         form {
             div(classes = "form-group") {
                 label { +"Email Address (Username)" }
-                emailInput =
-                    input(type = InputType.email, classes = "form-control") {
-                        placeholder = "you@example.com"
-                    } as HTMLInputElement
+                input(type = InputType.email, classes = "form-control") {
+                    id = "login-email"
+                    placeholder = "you@example.com"
+                }
             }
 
             div(classes = "form-group") {
                 label { +"Password" }
-                passwordInput =
-                    input(type = InputType.password, classes = "form-control") {
-                        placeholder = "Enter your password"
-                    } as HTMLInputElement
+                input(type = InputType.password, classes = "form-control") {
+                    id = "login-password"
+                    placeholder = "Enter your password"
+                }
             }
 
             button(classes = "btn") {
@@ -74,9 +71,9 @@ internal fun renderLoginTab(container: HTMLElement) {
                     marginTop = 1.rem
                 }
                 onClickFunction = {
-                    val banner = errorBanner
-                    val emailIn = emailInput
-                    val passIn = passwordInput
+                    val banner = document.getElementById("login-error-banner") as? HTMLDivElement
+                    val emailIn = document.getElementById("login-email") as? HTMLInputElement
+                    val passIn = document.getElementById("login-password") as? HTMLInputElement
                     if (banner != null && emailIn != null && passIn != null) {
                         banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
                         val email = emailIn.value.trim()
@@ -143,12 +140,6 @@ internal fun renderLoginTab(container: HTMLElement) {
 }
 
 internal fun renderRegisterTab(container: HTMLElement) {
-    var errorBanner: HTMLDivElement? = null
-    var firstNameInput: HTMLInputElement? = null
-    var lastNameInput: HTMLInputElement? = null
-    var emailInput: HTMLInputElement? = null
-    var passwordInput: HTMLInputElement? = null
-
     container.div(classes = "card") {
         css {
             maxWidth = 450.px
@@ -164,51 +155,51 @@ internal fun renderRegisterTab(container: HTMLElement) {
             }
         }
 
-        errorBanner =
-            div {
-                css {
-                    display = Display.none
-                    color = Color("var(--accent-red)")
-                    background = "rgba(255, 42, 59, 0.1)"
-                    border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
-                    padding = Padding(0.75.rem)
-                    borderRadius = 8.px
-                    marginBottom = 1.rem
-                    fontSize = 0.9.rem
-                }
-            } as HTMLDivElement
+        div {
+            id = "register-error-banner"
+            css {
+                display = Display.none
+                color = Color("var(--accent-red)")
+                background = "rgba(255, 42, 59, 0.1)"
+                border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
+                padding = Padding(0.75.rem)
+                borderRadius = 8.px
+                marginBottom = 1.rem
+                fontSize = 0.9.rem
+            }
+        }
 
         form {
             div(classes = "form-group") {
                 label { +"First Name" }
-                firstNameInput =
-                    input(type = InputType.text, classes = "form-control") {
-                        placeholder = "John"
-                    } as HTMLInputElement
+                input(type = InputType.text, classes = "form-control") {
+                    id = "register-first-name"
+                    placeholder = "John"
+                }
             }
 
             div(classes = "form-group") {
                 label { +"Last Name" }
-                lastNameInput =
-                    input(type = InputType.text, classes = "form-control") {
-                        placeholder = "Doe"
-                    } as HTMLInputElement
+                input(type = InputType.text, classes = "form-control") {
+                    id = "register-last-name"
+                    placeholder = "Doe"
+                }
             }
 
             div(classes = "form-group") {
                 label { +"Email Address (Username)" }
-                emailInput =
-                    input(type = InputType.email, classes = "form-control") {
-                        placeholder = "you@example.com"
-                    } as HTMLInputElement
+                input(type = InputType.email, classes = "form-control") {
+                    id = "register-email"
+                    placeholder = "you@example.com"
+                }
             }
 
             div(classes = "form-group") {
                 label { +"Password" }
-                passwordInput =
-                    input(type = InputType.password, classes = "form-control") {
-                        placeholder = "At least 6 characters"
-                    } as HTMLInputElement
+                input(type = InputType.password, classes = "form-control") {
+                    id = "register-password"
+                    placeholder = "At least 6 characters"
+                }
             }
 
             button(classes = "btn") {
@@ -219,11 +210,11 @@ internal fun renderRegisterTab(container: HTMLElement) {
                     marginTop = 1.rem
                 }
                 onClickFunction = {
-                    val banner = errorBanner
-                    val firstIn = firstNameInput
-                    val lastIn = lastNameInput
-                    val emailIn = emailInput
-                    val passIn = passwordInput
+                    val banner = document.getElementById("register-error-banner") as? HTMLDivElement
+                    val firstIn = document.getElementById("register-first-name") as? HTMLInputElement
+                    val lastIn = document.getElementById("register-last-name") as? HTMLInputElement
+                    val emailIn = document.getElementById("register-email") as? HTMLInputElement
+                    val passIn = document.getElementById("register-password") as? HTMLInputElement
                     if (banner != null && firstIn != null && lastIn != null && emailIn != null && passIn != null) {
                         banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
                         val firstName = firstIn.value.trim()
