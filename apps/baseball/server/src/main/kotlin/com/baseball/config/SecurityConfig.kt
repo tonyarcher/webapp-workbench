@@ -39,14 +39,16 @@ class SecurityConfig(
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        val entryPoint = org.springframework.security.web.AuthenticationEntryPoint { _, response, authException ->
+            response.status = jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED
+            response.writer.write(authException.message ?: "Unauthorized")
+        }
+
         http
             .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource()) }
             .exceptionHandling { exceptions ->
-                exceptions.authenticationEntryPoint { _, response, authException ->
-                    response.status = jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED
-                    response.writer.write(authException.message ?: "Unauthorized")
-                }
+                exceptions.authenticationEntryPoint(entryPoint)
             }
             .authorizeHttpRequests { auth ->
                 auth
@@ -60,7 +62,9 @@ class SecurityConfig(
                     .authenticated()
             }.headers { headers ->
                 headers.frameOptions { it.disable() } // For H2 console
-            }.httpBasic(Customizer.withDefaults())
+            }.httpBasic { basic ->
+                basic.authenticationEntryPoint(entryPoint)
+            }
         return http.build()
     }
 
