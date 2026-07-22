@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 
 var currentUserSession: UserSession? = null
 
+@OptIn(kotlin.js.ExperimentalWasmJsInterop::class)
 @JsFun("() => Date.now()")
 private external fun getCurrentTimeMillis(): Double
 

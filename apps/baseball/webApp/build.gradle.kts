@@ -42,7 +42,7 @@ kotlin {
                 implementation("org.jetbrains.kotlin-wrappers:kotlin-css:2026.7.0")
             }
         }
-        val wasmJsTest by getting {
+        wasmJsTest {
             dependencies {
                 implementation(kotlin("test"))
             }
