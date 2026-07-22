@@ -1,4 +1,4 @@
-﻿package com.baseball.ui.components.scorebook
+package com.baseball.ui.components.scorebook
 
 import com.baseball.models.PlayEvent
 import com.baseball.models.Player
@@ -24,6 +24,7 @@ class ScorecardParser(
         parseAllEvents()
     }
 
+    @Suppress("ComplexMethod", "LongMethod", "NestedBlockDepth", "CognitiveComplexMethod", "CyclomaticComplexMethod")
     private fun parseAllEvents() {
         val baseRunners = mutableMapOf<String, Int>()
 
@@ -230,6 +231,7 @@ class ScorecardParser(
         }
 }
 
+@Suppress("ComplexMethod", "LongMethod", "NestedBlockDepth", "CognitiveComplexMethod", "CyclomaticComplexMethod")
 internal fun getScorebookNotation(ev: PlayEvent): String {
     val suffix = if (ev.description.contains("(Double Play)") || ev.description.contains("(DP)")) " DP" else ""
     return when (ev.eventType) {

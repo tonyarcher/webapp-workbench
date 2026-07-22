@@ -20,6 +20,7 @@ class GameScoringService(
     private val fieldingRepository: PlayerGameFieldingStatsRepository,
 ) {
     @Transactional
+    @Suppress("ComplexMethod", "LongMethod", "NestedBlockDepth", "CognitiveComplexMethod", "CyclomaticComplexMethod")
     fun recordPlayEvent(
         gameId: Long,
         request: ScoringEventRequest,

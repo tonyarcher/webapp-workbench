@@ -18,53 +18,15 @@ import org.w3c.dom.HTMLElement
 
 internal fun renderBoxScoreTab(container: HTMLElement) {
     if (!isSingleGameMode && selectedGameId == null) {
-        container.div(classes = "card") {
-            css {
-                textAlign = TextAlign.center
-                padding = Padding(3.rem)
-            }
-            p { +"No game selected." }
-        }
+        renderNoGameSelected(container)
         return
     }
 
     launch {
-        val game: Game
-        val boxScore: BoxScore
-        val events: List<PlayEvent>
-
-        if (isSingleGameMode) {
-            game = localGame!!
-            boxScore = localBoxScore!!
-            events = localEvents
-        } else {
-            game = api.getGame(selectedGameId!!)
-            boxScore = api.getGameBoxScore(selectedGameId!!)
-            events = api.getGameEvents(selectedGameId!!)
-        }
+        val (game, boxScore, events) = loadBoxScoreData()
 
         container.h1 { +"Game Details - Box Score" }
-
-        container.div(classes = "card") {
-            h2 {
-                +"${game.awayTeam.city} ${game.awayTeam.name} (${game.awayScore}) vs ${game.homeTeam.city} ${game.homeTeam.name} (${game.homeScore})"
-            }
-            p {
-                +"Status: ${game.status.name} | Date: ${game.date}"
-                css {
-                    color = Color("var(--text-secondary)")
-                    marginBottom = 1.5.rem
-                }
-            }
-            button(classes = "btn btn-secondary") {
-                +(if (isSingleGameMode) "Back to Live Scorer" else "Back to Season Dashboard")
-                onClickFunction = {
-                    currentTab = if (isSingleGameMode) BaseballConstants.TAB_LIVE_SCORER else BaseballConstants.TAB_GAMES
-                    updateActiveTabButtons()
-                    renderCurrentTab()
-                }
-            }
-        }
+        renderBoxScoreHeaderCard(container, game)
 
         var btnScorebook: HTMLButtonElement? = null
         var btnTraditional: HTMLButtonElement? = null
@@ -73,65 +35,7 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
         fun drawTraditionalView() {
             val contentEl = contentContainer ?: return
             contentEl.innerHTML = ""
-
-            val lineScoreCard =
-                contentEl.div(classes = "card") {
-                    h3 { +"Line Score" }
-                }
-            renderLineScoreTable(lineScoreCard, boxScore.lineScore, game)
-
-            val grid =
-                contentEl.div(classes = "dashboard-grid") {
-                    css {
-                        marginTop = 1.5.rem
-                    }
-                }
-
-            val awayCard =
-                grid.div(classes = "card") {
-                    h3 { +"${game.awayTeam.name} Batting" }
-                }
-            renderBattingTable(awayCard, boxScore.awayBatting)
-
-            awayCard.h3 {
-                +"${game.awayTeam.name} Pitching"
-                css {
-                    marginTop = 1.5.rem
-                }
-            }
-            renderPitchingTable(awayCard, boxScore.awayPitching)
-
-            val homeCard =
-                grid.div(classes = "card") {
-                    h3 { +"${game.homeTeam.name} Batting" }
-                }
-            renderBattingTable(homeCard, boxScore.homeBatting)
-
-            homeCard.h3 {
-                +"${game.homeTeam.name} Pitching"
-                css {
-                    marginTop = 1.5.rem
-                }
-            }
-            renderPitchingTable(homeCard, boxScore.homePitching)
-
-            contentEl.div(classes = "card") {
-                css {
-                    marginTop = 1.5.rem
-                }
-                h3 { +"Game Log History" }
-                div(classes = "event-log") {
-                    css {
-                        maxHeight = 350.px
-                    }
-                    events.forEach { ev ->
-                        div(classes = "log-item") {
-                            span(classes = "log-desc") { +ev.description }
-                            span(classes = "log-inning") { +"${ev.half.name.substring(0, 3)} ${ev.inning}" }
-                        }
-                    }
-                }
-            }
+            renderTraditionalBoxScoreView(contentEl, game, boxScore, events)
         }
 
         fun drawScorebookView() {
@@ -140,49 +44,166 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
             renderScorebookView(contentEl, game, boxScore, events)
         }
 
-        val buttonBar =
-            container.div {
-                css {
-                    display = Display.flex
-                    gap = 0.5.rem
-                    marginTop = 1.5.rem
-                    marginBottom = 1.rem
-                }
-
-                button(classes = "btn btn-primary") {
-                    id = "boxscore-btn-scorebook"
-                    +"Scorebook"
-                    onClickFunction = {
-                        drawScorebookView()
-                        btnScorebook?.classList?.add("btn-primary")
-                        btnScorebook?.classList?.remove("btn-secondary")
-                        btnTraditional?.classList?.add("btn-secondary")
-                        btnTraditional?.classList?.remove("btn-primary")
-                    }
-                }
-
-                button(classes = "btn btn-secondary") {
-                    id = "boxscore-btn-traditional"
-                    +"Traditional Stats"
-                    onClickFunction = {
-                        drawTraditionalView()
-                        btnTraditional?.classList?.add("btn-primary")
-                        btnTraditional?.classList?.remove("btn-secondary")
-                        btnScorebook?.classList?.add("btn-secondary")
-                        btnScorebook?.classList?.remove("btn-primary")
-                    }
-                }
+        val buttonBar = renderBoxScoreToggleButtons(
+            container = container,
+            onScorebookClick = {
+                drawScorebookView()
+                btnScorebook?.classList?.add("btn-primary")
+                btnScorebook?.classList?.remove("btn-secondary")
+                btnTraditional?.classList?.add("btn-secondary")
+                btnTraditional?.classList?.remove("btn-primary")
+            },
+            onTraditionalClick = {
+                drawTraditionalView()
+                btnTraditional?.classList?.add("btn-primary")
+                btnTraditional?.classList?.remove("btn-secondary")
+                btnScorebook?.classList?.add("btn-secondary")
+                btnScorebook?.classList?.remove("btn-primary")
             }
+        )
 
         btnScorebook = buttonBar.querySelector("#boxscore-btn-scorebook") as? HTMLButtonElement
         btnTraditional = buttonBar.querySelector("#boxscore-btn-traditional") as? HTMLButtonElement
 
-        contentContainer =
-            container.div {
-                id = "boxscore-content-view"
-            }
+        contentContainer = container.div {
+            id = "boxscore-content-view"
+        }
 
         drawScorebookView()
+    }
+}
+
+private fun renderNoGameSelected(container: HTMLElement) {
+    container.div(classes = "card") {
+        css {
+            textAlign = TextAlign.center
+            padding = Padding(3.rem)
+        }
+        p { +"No game selected." }
+    }
+}
+
+private suspend fun loadBoxScoreData(): Triple<Game, BoxScore, List<PlayEvent>> {
+    return if (isSingleGameMode) {
+        Triple(localGame!!, localBoxScore!!, localEvents)
+    } else {
+        val g = api.getGame(selectedGameId!!)
+        val b = api.getGameBoxScore(selectedGameId!!)
+        val e = api.getGameEvents(selectedGameId!!)
+        Triple(g, b, e)
+    }
+}
+
+private fun renderBoxScoreHeaderCard(container: HTMLElement, game: Game) {
+    container.div(classes = "card") {
+        h2 {
+            +"${game.awayTeam.city} ${game.awayTeam.name} (${game.awayScore}) vs ${game.homeTeam.city} ${game.homeTeam.name} (${game.homeScore})"
+        }
+        p {
+            +"Status: ${game.status.name} | Date: ${game.date}"
+            css {
+                color = Color("var(--text-secondary)")
+                marginBottom = 1.5.rem
+            }
+        }
+        button(classes = "btn btn-secondary") {
+            +(if (isSingleGameMode) "Back to Live Scorer" else "Back to Season Dashboard")
+            onClickFunction = {
+                currentTab = if (isSingleGameMode) BaseballConstants.TAB_LIVE_SCORER else BaseballConstants.TAB_GAMES
+                updateActiveTabButtons()
+                renderCurrentTab()
+            }
+        }
+    }
+}
+
+private fun renderBoxScoreToggleButtons(
+    container: HTMLElement,
+    onScorebookClick: () -> Unit,
+    onTraditionalClick: () -> Unit
+): HTMLDivElement {
+    return container.div {
+        css {
+            display = Display.flex
+            gap = 0.5.rem
+            marginTop = 1.5.rem
+            marginBottom = 1.rem
+        }
+
+        button(classes = "btn btn-primary") {
+            id = "boxscore-btn-scorebook"
+            +"Scorebook"
+            onClickFunction = { onScorebookClick() }
+        }
+
+        button(classes = "btn btn-secondary") {
+            id = "boxscore-btn-traditional"
+            +"Traditional Stats"
+            onClickFunction = { onTraditionalClick() }
+        }
+    }
+}
+
+private fun renderTraditionalBoxScoreView(
+    contentEl: HTMLDivElement,
+    game: Game,
+    boxScore: BoxScore,
+    events: List<PlayEvent>
+) {
+    val lineScoreCard = contentEl.div(classes = "card") {
+        h3 { +"Line Score" }
+    }
+    renderLineScoreTable(lineScoreCard, boxScore.lineScore, game)
+
+    val grid = contentEl.div(classes = "dashboard-grid") {
+        css {
+            marginTop = 1.5.rem
+        }
+    }
+
+    renderTeamTraditionalStats(grid, game.awayTeam.name, boxScore.awayBatting, boxScore.awayPitching)
+    renderTeamTraditionalStats(grid, game.homeTeam.name, boxScore.homeBatting, boxScore.homePitching)
+
+    renderGameLogCard(contentEl, events)
+}
+
+private fun renderTeamTraditionalStats(
+    parent: HTMLDivElement,
+    teamName: String,
+    batting: List<PlayerBattingStats>,
+    pitching: List<PlayerPitchingStats>
+) {
+    val card = parent.div(classes = "card") {
+        h3 { +"$teamName Batting" }
+    }
+    renderBattingTable(card, batting)
+
+    card.h3 {
+        +"$teamName Pitching"
+        css {
+            marginTop = 1.5.rem
+        }
+    }
+    renderPitchingTable(card, pitching)
+}
+
+private fun renderGameLogCard(contentEl: HTMLDivElement, events: List<PlayEvent>) {
+    contentEl.div(classes = "card") {
+        css {
+            marginTop = 1.5.rem
+        }
+        h3 { +"Game Log History" }
+        div(classes = "event-log") {
+            css {
+                maxHeight = 350.px
+            }
+            events.forEach { ev ->
+                div(classes = "log-item") {
+                    span(classes = "log-desc") { +ev.description }
+                    span(classes = "log-inning") { +"${ev.half.name.substring(0, 3)} ${ev.inning}" }
+                }
+            }
+        }
     }
 }
 
@@ -206,26 +227,28 @@ internal fun renderLineScoreTable(
                 }
             }
             tbody {
-                tr {
-                    td(classes = "linescore-team") { +game.awayTeam.name }
-                    lineScore.awayInningRuns.forEach { runs ->
-                        td { +(runs?.toString() ?: "-") }
-                    }
-                    td(classes = "linescore-stat") { +lineScore.awayRuns.toString() }
-                    td(classes = "linescore-stat") { +lineScore.awayHits.toString() }
-                    td(classes = "linescore-stat") { +lineScore.awayErrors.toString() }
-                }
-                tr {
-                    td(classes = "linescore-team") { +game.homeTeam.name }
-                    lineScore.homeInningRuns.forEach { runs ->
-                        td { +(runs?.toString() ?: "-") }
-                    }
-                    td(classes = "linescore-stat") { +lineScore.homeRuns.toString() }
-                    td(classes = "linescore-stat") { +lineScore.homeHits.toString() }
-                    td(classes = "linescore-stat") { +lineScore.homeErrors.toString() }
-                }
+                renderLineScoreRow(game.awayTeam.name, lineScore.awayInningRuns, lineScore.awayRuns, lineScore.awayHits, lineScore.awayErrors)
+                renderLineScoreRow(game.homeTeam.name, lineScore.homeInningRuns, lineScore.homeRuns, lineScore.homeHits, lineScore.homeErrors)
             }
         }
+    }
+}
+
+private fun TBODY.renderLineScoreRow(
+    teamName: String,
+    inningRuns: List<Int?>,
+    runs: Int,
+    hits: Int,
+    errors: Int
+) {
+    tr {
+        td(classes = "linescore-team") { +teamName }
+        inningRuns.forEach { r ->
+            td { +(r?.toString() ?: "-") }
+        }
+        td(classes = "linescore-stat") { +runs.toString() }
+        td(classes = "linescore-stat") { +hits.toString() }
+        td(classes = "linescore-stat") { +errors.toString() }
     }
 }
 
@@ -249,37 +272,28 @@ internal fun renderBattingTable(
             }
             tbody {
                 if (list.isEmpty()) {
-                    tr {
-                        td {
-                            colSpan = "8"
-                            +"No batting stats recorded yet."
-                            css {
-                                color = Color("var(--text-secondary)")
-                                textAlign = TextAlign.center
-                            }
-                        }
-                    }
+                    renderEmptyTableMessage(8, "No batting stats recorded yet.")
                 } else {
-                    list.forEach { s ->
-                        tr {
-                            td {
-                                +"${s.playerName} (${s.position})"
-                                css {
-                                    fontWeight = FontWeight.bold
-                                }
-                            }
-                            td { +s.atBats.toString() }
-                            td { +s.runs.toString() }
-                            td { +s.hits.toString() }
-                            td { +s.rbi.toString() }
-                            td { +s.walks.toString() }
-                            td { +s.strikeOuts.toString() }
-                            td { +s.homeRuns.toString() }
-                        }
-                    }
+                    list.forEach { s -> renderBattingRow(s) }
                 }
             }
         }
+    }
+}
+
+private fun TBODY.renderBattingRow(s: PlayerBattingStats) {
+    tr {
+        td {
+            +"${s.playerName} (${s.position})"
+            css { fontWeight = FontWeight.bold }
+        }
+        td { +s.atBats.toString() }
+        td { +s.runs.toString() }
+        td { +s.hits.toString() }
+        td { +s.rbi.toString() }
+        td { +s.walks.toString() }
+        td { +s.strikeOuts.toString() }
+        td { +s.homeRuns.toString() }
     }
 }
 
@@ -303,38 +317,42 @@ internal fun renderPitchingTable(
             }
             tbody {
                 if (list.isEmpty()) {
-                    tr {
-                        td {
-                            colSpan = "8"
-                            +"No pitching stats recorded yet."
-                            css {
-                                color = Color("var(--text-secondary)")
-                                textAlign = TextAlign.center
-                            }
-                        }
-                    }
+                    renderEmptyTableMessage(8, "No pitching stats recorded yet.")
                 } else {
-                    list.forEach { s ->
-                        tr {
-                            td {
-                                +s.playerName
-                                css {
-                                    fontWeight = FontWeight.bold
-                                }
-                            }
-                            val whole = s.inningsPitchedThirds / 3
-                            val rem = s.inningsPitchedThirds % 3
-                            val ipStr = "$whole.$rem"
-                            td { +ipStr }
-                            td { +s.hitsAllowed.toString() }
-                            td { +s.runsAllowed.toString() }
-                            td { +s.earnedRuns.toString() }
-                            td { +s.walksAllowed.toString() }
-                            td { +s.strikeoutsRecorded.toString() }
-                            td { +s.homeRunsAllowed.toString() }
-                        }
-                    }
+                    list.forEach { s -> renderPitchingRow(s) }
                 }
+            }
+        }
+    }
+}
+
+private fun TBODY.renderPitchingRow(s: PlayerPitchingStats) {
+    tr {
+        td {
+            +s.playerName
+            css { fontWeight = FontWeight.bold }
+        }
+        val whole = s.inningsPitchedThirds / 3
+        val rem = s.inningsPitchedThirds % 3
+        val ipStr = "$whole.$rem"
+        td { +ipStr }
+        td { +s.hitsAllowed.toString() }
+        td { +s.runsAllowed.toString() }
+        td { +s.earnedRuns.toString() }
+        td { +s.walksAllowed.toString() }
+        td { +s.strikeoutsRecorded.toString() }
+        td { +s.homeRunsAllowed.toString() }
+    }
+}
+
+private fun TBODY.renderEmptyTableMessage(spanCount: Int, message: String) {
+    tr {
+        td {
+            colSpan = spanCount.toString()
+            +message
+            css {
+                color = Color("var(--text-secondary)")
+                textAlign = TextAlign.center
             }
         }
     }

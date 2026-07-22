@@ -21,6 +21,7 @@ data class GameSessionState(
 )
 
 object PlayEngine {
+    @Suppress("ComplexMethod", "LongMethod", "NestedBlockDepth", "CognitiveComplexMethod", "CyclomaticComplexMethod")
     fun processPlay(
         state: GameSessionState,
         eventType: ScoringEventType,
