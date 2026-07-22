@@ -1,9 +1,9 @@
 plugins {
-    kotlin("jvm")
-    kotlin("plugin.spring")
-    kotlin("plugin.jpa")
-    id("org.springframework.boot")
-    id("io.spring.dependency-management")
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.spring)
+    alias(libs.plugins.kotlin.jpa)
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
     jacoco
 }
 
@@ -19,9 +19,9 @@ dependencies {
     runtimeOnly("com.h2database:h2")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.0")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.0")
-    testImplementation("org.mockito:mockito-core:5.23.0")
+    testImplementation(libs.junit.jupiter.api)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+    testImplementation(libs.mockito.core)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

@@ -1,6 +1,6 @@
 plugins {
-    kotlin("multiplatform")
-    kotlin("plugin.serialization")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -30,16 +30,16 @@ kotlin {
         val wasmJsMain by getting {
             dependencies {
                 implementation(project(":shared"))
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+                implementation(libs.kotlinx.serialization.json)
 
                 // Ktor client for REST APIs
-                implementation("io.ktor:ktor-client-core:3.5.1")
-                implementation("io.ktor:ktor-client-content-negotiation:3.5.1")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:3.5.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-browser:0.5.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-html:0.12.0")
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-css:2026.7.0")
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.browser)
+                implementation(libs.kotlinx.html)
+                implementation(libs.kotlin.css)
             }
         }
         wasmJsTest {
