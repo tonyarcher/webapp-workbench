@@ -2,67 +2,92 @@ package com.baseball.ui
 
 import com.baseball.BaseballConstants
 import com.baseball.UiConstants
-import com.baseball.api.api
+import com.baseball.api
 import com.baseball.authService
-import com.baseball.game.GameManager
-import com.baseball.game.initGame
-import com.baseball.game.isGameInProgress
-import com.baseball.game.localAwayActivePitcherId
-import com.baseball.game.localAwayActivePitcherName
-import com.baseball.game.localAwayBench
-import com.baseball.game.localAwayLineup
-import com.baseball.game.localGame
-import com.baseball.game.localHomeActivePitcherId
-import com.baseball.game.localHomeActivePitcherName
-import com.baseball.game.localHomeBench
-import com.baseball.game.localHomeLineup
-import com.baseball.game.localPlayersSubbedOut
-import com.baseball.game.saveLocalState
+import com.baseball.game.*
+
 import com.baseball.models.HalfInning
 import com.baseball.models.Player
+import com.baseball.auth.UserSession
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.js.onClickFunction
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLElement
+
+@Serializable
+data class NavState(
+    val currentTab: String,
+    val isWelcomeScreen: Boolean,
+    val isSingleGameMode: Boolean,
+    val selectedLeagueId: Long?,
+    val selectedSeasonId: Long?,
+    val selectedTeamId: Long?,
+    val selectedGameId: Long?,
+)
 
 object AppViewManager {
     private val tabRenderers = mutableMapOf<String, (HTMLElement) -> Unit>()
 
+    var _currentTab: String = BaseballConstants.TAB_LEAGUES
     var currentTab: String
-        get() = GameManager.currentTab
+        get() = _currentTab
         set(value) {
-            GameManager.currentTab = value
+            _currentTab = value
             saveNavState()
             renderApp()
-            renderCurrentTab()
+            renderCurrentTabContent()
         }
 
-    var isWelcomeScreen: Boolean
-        get() = GameManager.isWelcomeScreen
-        set(value) {
-            GameManager.isWelcomeScreen = value
-        }
+    var isWelcomeScreen: Boolean = true
+    var serverConnectionError: String? = null
+    var serverOnline: Boolean = false
+    var currentUserSession: UserSession? = null
 
-    var isSingleGameMode: Boolean
-        get() = GameManager.isSingleGameMode
-        set(value) {
-            GameManager.isSingleGameMode = value
-        }
+    fun renderCurrentTabContent() {
+        val contentArea = document.getElementById("content-area") as? HTMLElement ?: return
+        contentArea.innerHTML = ""
+        tabRenderers[currentTab]?.invoke(contentArea)
+    }
 
-    var serverConnectionError: String?
-        get() = GameManager.serverConnectionError
-        set(value) {
-            GameManager.serverConnectionError = value
+    fun saveNavState() {
+        val state = NavState(
+            currentTab = currentTab,
+            isWelcomeScreen = isWelcomeScreen,
+            isSingleGameMode = isSingleGameMode,
+            selectedLeagueId = selectedLeagueId,
+            selectedSeasonId = selectedSeasonId,
+            selectedTeamId = selectedTeamId,
+            selectedGameId = selectedGameId,
+        )
+        window.localStorage.setItem("baseball_nav_state", Json.encodeToString(state))
+    }
+
+    fun loadNavState() {
+        val json = window.localStorage.getItem("baseball_nav_state") ?: return
+        try {
+            val state = Json.decodeFromString<NavState>(json)
+            _currentTab = state.currentTab
+            isWelcomeScreen = state.isWelcomeScreen
+            isSingleGameMode = state.isSingleGameMode
+            selectedLeagueId = state.selectedLeagueId
+            selectedSeasonId = state.selectedSeasonId
+            selectedTeamId = state.selectedTeamId
+            selectedGameId = state.selectedGameId
+        } catch (e: Throwable) {
+            // Ignore
         }
+    }
 
     fun isGameInProgress(): Boolean {
         if (isSingleGameMode) {
             return localGame?.status == com.baseball.models.GameStatus.IN_PROGRESS
         }
-        return GameManager.selectedGameStatus == com.baseball.models.GameStatus.IN_PROGRESS
+        return selectedGameStatus == com.baseball.models.GameStatus.IN_PROGRESS
     }
 
     fun registerTabRenderers(renderers: Map<String, (HTMLElement) -> Unit>) {
@@ -92,12 +117,12 @@ object AppViewManager {
         }
 
         renderApp()
-        renderCurrentTab()
+        renderCurrentTabContent()
         fetchInitialServerData()
     }
 
     private fun handleHashRoute(hash: String, isEvent: Boolean) {
-        if (requiresOnlineAuth(hash) && GameManager.currentUserSession == null) {
+        if (requiresOnlineAuth(hash) && currentUserSession == null) {
             if (isEvent) {
                 window.location.hash = BaseballConstants.TAB_LOGIN
             } else {
@@ -119,7 +144,7 @@ object AppViewManager {
             saveNavState()
             authService.refreshSession()
             renderApp()
-            renderCurrentTab()
+            renderCurrentTabContent()
         }
     }
 
@@ -149,31 +174,31 @@ object AppViewManager {
         launch {
             try {
                 api.getLeagues()
-                GameManager.serverOnline = true
+                serverOnline = true
                 if (!isSingleGameMode && !isWelcomeScreen) {
-                    GameManager.leaguesList = api.getLeagues()
-                    GameManager.teamsList = api.getTeams()
-                    if (GameManager.selectedLeagueId != null) {
-                        GameManager.seasonsList = api.getSeasons(GameManager.selectedLeagueId!!)
+                    leaguesList = api.getLeagues()
+                    teamsList = api.getTeams()
+                    if (selectedLeagueId != null) {
+                        seasonsList = api.getSeasons(selectedLeagueId!!)
                     }
                 }
             } catch (e: Throwable) {
-                GameManager.serverOnline = false
+                serverOnline = false
             }
             renderApp()
-            renderCurrentTab()
+            renderCurrentTabContent()
         }
     }
 
     fun goBackToWelcome() {
-        GameManager.selectedGameId = null
+        selectedGameId = null
         serverConnectionError = null
         window.location.hash = "welcome"
     }
 
     fun renderWelcomeScreen(container: HTMLElement) {
         container.div(classes = "welcome-container") {
-            renderWelcomeHeader()
+            renderWelcomeHeader(this)
             div(classes = "welcome-logo") {
                 span { +"GRAND SLAM" }
                 +" BASEBALL TRACKER"
@@ -185,15 +210,15 @@ object AppViewManager {
                 div(classes = "server-error-banner") { +errorMsg }
             }
             div(classes = "mode-grid") {
-                renderOfflineModeCard()
-                renderOnlineModeCard()
+                renderOfflineModeCard(this)
+                renderOnlineModeCard(this)
             }
         }
     }
 
-    private fun TagConsumer<HTMLElement>.renderWelcomeHeader() {
-        val session = GameManager.currentUserSession
-        div {
+    private fun renderWelcomeHeader(parent: DIV) {
+        val session = currentUserSession
+        parent.div {
             css {
                 display = Display.flex
                 justifyContent = JustifyContent.flexEnd
@@ -232,8 +257,8 @@ object AppViewManager {
         }
     }
 
-    private fun TagConsumer<HTMLElement>.renderOfflineModeCard() {
-        div(classes = "mode-card offline") {
+    private fun renderOfflineModeCard(parent: DIV) {
+        parent.div(classes = "mode-card offline") {
             onClickFunction = {
                 serverConnectionError = null
                 isWelcomeScreen = false
@@ -253,8 +278,8 @@ object AppViewManager {
         }
     }
 
-    private fun TagConsumer<HTMLElement>.renderOnlineModeCard() {
-        div(classes = "mode-card online") {
+    private fun renderOnlineModeCard(parent: DIV) {
+        parent.div(classes = "mode-card online") {
             onClickFunction = { handleOnlineModeSelection() }
             div(classes = "mode-icon") { +"🏆" }
             div(classes = "mode-title") { +"League & Season Mode" }
@@ -262,9 +287,9 @@ object AppViewManager {
                 +"Manage complete baseball leagues, schedule round-robin seasons, track standings, and record live games backed by your database server."
             }
             div(classes = "server-status") {
-                span(classes = if (GameManager.serverOnline) "status-dot green" else "status-dot red")
-                span(classes = if (GameManager.serverOnline) "status-text online" else "status-text offline") {
-                    +(if (GameManager.serverOnline) "Server Online" else "Check Connection")
+                span(classes = if (serverOnline) "status-dot green" else "status-dot red")
+                span(classes = if (serverOnline) "status-text online" else "status-text offline") {
+                    +(if (serverOnline) "Server Online" else "Check Connection")
                 }
             }
         }
@@ -274,18 +299,18 @@ object AppViewManager {
         serverConnectionError = null
         launch {
             try {
-                GameManager.leaguesList = api.getLeagues()
-                GameManager.teamsList = api.getTeams()
-                if (GameManager.leaguesList.isNotEmpty()) {
-                    GameManager.selectedLeagueId = GameManager.leaguesList.first().id
-                    GameManager.seasonsList = api.getSeasons(GameManager.selectedLeagueId!!)
-                    if (GameManager.seasonsList.isNotEmpty()) {
-                        GameManager.selectedSeasonId = GameManager.seasonsList.first().id
+                leaguesList = api.getLeagues()
+                teamsList = api.getTeams()
+                if (leaguesList.isNotEmpty()) {
+                    selectedLeagueId = leaguesList.first().id
+                    seasonsList = api.getSeasons(selectedLeagueId!!)
+                    if (seasonsList.isNotEmpty()) {
+                        selectedSeasonId = seasonsList.first().id
                     }
                 }
                 isWelcomeScreen = false
                 isSingleGameMode = false
-                window.location.hash = if (GameManager.currentUserSession == null) BaseballConstants.TAB_LOGIN else BaseballConstants.TAB_LEAGUES
+                window.location.hash = if (currentUserSession == null) BaseballConstants.TAB_LOGIN else BaseballConstants.TAB_LEAGUES
             } catch (e: Throwable) {
                 serverConnectionError = "Unable to connect to the server. Please check that the backend server is running."
                 renderApp()
@@ -310,8 +335,8 @@ object AppViewManager {
                     span { +"GRAND SLAM" }
                     +" BASEBALL"
                 }
-                renderUserHeaderControls()
-                renderHeaderNavigation()
+                renderUserHeaderControls(this)
+                renderHeaderNavigation(this)
             }
         }
 
@@ -322,10 +347,10 @@ object AppViewManager {
         updateActiveTabButtons()
     }
 
-    private fun TagConsumer<HTMLElement>.renderUserHeaderControls() {
-        val userSession = GameManager.currentUserSession
+    private fun renderUserHeaderControls(parent: DIV) {
+        val userSession = currentUserSession
         if (userSession != null) {
-            div {
+            parent.div {
                 css {
                     display = Display.flex
                     alignItems = Align.center
@@ -350,7 +375,7 @@ object AppViewManager {
                 }
             }
         } else {
-            button(classes = "btn btn-secondary") {
+            parent.button(classes = "btn btn-secondary") {
                 +"Log In"
                 css {
                     padding = Padding(0.25.rem, 0.75.rem)
@@ -361,8 +386,8 @@ object AppViewManager {
         }
     }
 
-    private fun TagConsumer<HTMLElement>.renderHeaderNavigation() {
-        nav {
+    private fun renderHeaderNavigation(parent: DIV) {
+        parent.nav {
             if (!isGameInProgress()) {
                 button(classes = "back-to-welcome") {
                     +"← Back to Menu"
@@ -397,7 +422,7 @@ object AppViewManager {
                 id = "nav-btn-live"
                 +"Live Scoring"
                 css {
-                    display = if (isSingleGameMode || GameManager.selectedGameId != null) Display.inlineBlock else Display.none
+                    display = if (isSingleGameMode || selectedGameId != null) Display.inlineBlock else Display.none
                 }
                 onClickFunction = { currentTab = BaseballConstants.TAB_LIVE_SCORER }
             }
@@ -414,7 +439,7 @@ object AppViewManager {
         val btnLive = document.getElementById("nav-btn-live") as? HTMLButtonElement
         val btnBoxScore = document.getElementById("nav-btn-boxscore") as? HTMLButtonElement
 
-        if (isSingleGameMode || GameManager.selectedGameId != null) {
+        if (isSingleGameMode || selectedGameId != null) {
             btnLive?.style?.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.INLINE_BLOCK)
             btnBoxScore?.style?.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.INLINE_BLOCK)
         } else {
@@ -437,11 +462,6 @@ object AppViewManager {
             else -> null
         }
 
-    fun renderCurrentTab() {
-        val contentArea = document.getElementById("content-area") as? HTMLElement ?: return
-        contentArea.innerHTML = ""
-        tabRenderers[currentTab]?.invoke(contentArea)
-    }
 }
 
 fun updateActiveTabButtons() {
@@ -449,7 +469,7 @@ fun updateActiveTabButtons() {
 }
 
 fun renderCurrentTab() {
-    AppViewManager.renderCurrentTab()
+    AppViewManager.renderCurrentTabContent()
 }
 
 internal fun substituteBatter(
@@ -469,7 +489,7 @@ internal fun substituteBatter(
     val game = localGame ?: return
     val currentHalf = game.gameState.half
     val isCurrentBatterHome = currentHalf == HalfInning.BOTTOM
-    if (isHome == isCurrentBatterHome && (if (isHome) GameManager.localHomeBatterIndex else GameManager.localAwayBatterIndex) == lineupIndex) {
+    if (isHome == isCurrentBatterHome && (if (isHome) localHomeBatterIndex else localAwayBatterIndex) == lineupIndex) {
         localGame =
             game.copy(
                 gameState =

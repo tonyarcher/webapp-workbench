@@ -1,10 +1,11 @@
-﻿package com.baseball.ui.components.scorebook
+package com.baseball.ui.components.scorebook
 
 import com.baseball.BaseballConstants
 import com.baseball.UiConstants
 import com.baseball.game.*
 import com.baseball.models.PlayEvent
-import com.baseball.ui.renderCurrentTab
+import com.baseball.ui.*
+
 import com.baseball.ui.substituteBatter
 import kotlinx.browser.document
 import kotlinx.browser.window

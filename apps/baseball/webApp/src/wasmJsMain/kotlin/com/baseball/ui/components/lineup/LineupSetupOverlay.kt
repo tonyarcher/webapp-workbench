@@ -7,6 +7,7 @@ import com.baseball.models.GameStatus
 import com.baseball.models.Player
 import com.baseball.seed.SeedData
 import com.baseball.ui.*
+
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.js.onChangeFunction
@@ -484,7 +485,9 @@ class LineupSetupOverlay(
                 }
             }
         }
-       private fun validateAndSave(): Boolean {
+    }
+
+    private fun validateAndSave(): Boolean {
         val awayRes = validateTeam(isHome = false, awayLineupInputs, awayPitcherNameInput, awayPitcherNumberInput) ?: return false
         val homeRes = validateTeam(isHome = true, homeLineupInputs, homePitcherNameInput, homePitcherNumberInput) ?: return false
 
@@ -534,7 +537,7 @@ class LineupSetupOverlay(
                 val serverAwayBench = createServerPlayers(activeGame.awayTeam.id, awayRes.second)
 
                 api.startGame(activeGame.id!!)
-                AppViewManager.selectedGameStatus = GameStatus.IN_PROGRESS
+                selectedGameStatus = GameStatus.IN_PROGRESS
 
                 updateClientState(serverHomeLineup, serverHomeBench, serverAwayLineup, serverAwayBench)
                 isLineupDialogOpen = false
@@ -546,7 +549,7 @@ class LineupSetupOverlay(
         }
     }
 
-    private suspend fun createServerPlayers(teamId: Long, players: List<Player>): List<Player> =
+    private suspend fun createServerPlayers(teamId: Long?, players: List<Player>): List<Player> =
         players.map { p ->
             api.createPlayer(
                 Player(
@@ -583,7 +586,6 @@ class LineupSetupOverlay(
         localAwayActivePitcherId = awayP?.id ?: 210L
         localAwayActivePitcherName = awayP?.name ?: "Pitcher"
     }
-   }
 
     private fun validateTeam(
         isHome: Boolean,

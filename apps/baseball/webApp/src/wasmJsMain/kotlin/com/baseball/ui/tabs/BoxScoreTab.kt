@@ -1,4 +1,4 @@
-﻿package com.baseball.ui.tabs
+package com.baseball.ui.tabs
 
 import com.baseball.BaseballConstants
 import com.baseball.api
@@ -7,6 +7,7 @@ import com.baseball.game.localEvents
 import com.baseball.game.localGame
 import com.baseball.models.*
 import com.baseball.ui.*
+
 import com.baseball.ui.components.scorebook.renderScorebookView
 import kotlinx.css.*
 import kotlinx.html.*

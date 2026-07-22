@@ -5,6 +5,7 @@ import com.baseball.api
 import com.baseball.game.*
 import com.baseball.models.*
 import com.baseball.ui.*
+
 import com.baseball.ui.components.lineup.LineupSetupOverlay
 import com.baseball.ui.components.lineup.isLineupDialogOpen
 import com.baseball.ui.components.scorebook.getScorebookNotation
@@ -63,7 +64,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                 homeRoster = api.getTeamRoster(game.homeTeam.id!!)
                 awayRoster = api.getTeamRoster(game.awayTeam.id!!)
 
-                AppViewManager.selectedGameStatus = game.status
+                selectedGameStatus = game.status
 
                 // Harmonize Away Lineup & Bench
                 if (localAwayLineup.isEmpty()) {

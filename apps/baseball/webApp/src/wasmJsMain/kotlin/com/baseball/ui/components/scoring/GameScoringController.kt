@@ -1,10 +1,11 @@
-﻿package com.baseball.ui.components.scoring
+package com.baseball.ui.components.scoring
 
 import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.game.GameManager
 import com.baseball.models.*
 import com.baseball.ui.*
+
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.*
