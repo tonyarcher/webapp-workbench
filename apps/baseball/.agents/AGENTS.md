@@ -49,4 +49,4 @@ To achieve optimal code reuse, follow this mapping matrix:
 ## 8. Code Constraints & Quality Mandates
 * **File Size Limit**: Keep files concise and modular. Files should not exceed **500 lines**.
 * **Method Size Limit**: Keep functions and methods focused. Methods should not exceed **50 lines**.
-* **Code Coverage**: Maintain a minimum **80%+ code coverage** limit on business, domain, and routing logic classes in the server and shared modules.
+* **Code Coverage**: Maintain a minimum **90%+ code coverage** limit on business, domain, and routing logic classes in the server and shared modules.

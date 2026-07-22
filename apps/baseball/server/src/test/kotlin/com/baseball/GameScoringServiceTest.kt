@@ -416,16 +416,28 @@ class GameScoringServiceTest {
                 awayTeamId = 200L,
                 runnerFirstId = 4L,
             )
-        val batter = PlayerEntity(id = batterId, name = "Batter", teamId = 200L)
-        val pitcher = PlayerEntity(id = pitcherId, name = "Pitcher", teamId = 100L)
+        val batter = PlayerEntity(id = batterId, name = "Batter", position = "DH", teamId = 200L)
+        val pitcher = PlayerEntity(id = pitcherId, name = "Pitcher", position = "P", teamId = 100L)
 
-        `when`(gameRepository.findById(gameId)).thenReturn(Optional.of(gameEntity))
+
+        val ss = PlayerEntity(id = 50L, name = "Shortstop", position = "SS", teamId = 100L)
+        val c = PlayerEntity(id = 51L, name = "Catcher", position = "C", teamId = 100L)
+        `when`(playerRepository.findAll()).thenReturn(listOf(batter, pitcher, ss, c))
+        `when`(playerRepository.findAllByTeamId(100L)).thenReturn(listOf(pitcher, ss, c))
+
         `when`(playerRepository.findById(batterId)).thenReturn(Optional.of(batter))
         `when`(playerRepository.findById(pitcherId)).thenReturn(Optional.of(pitcher))
         `when`(playerRepository.findById(4L)).thenReturn(Optional.of(PlayerEntity(id = 4L, name = "Runner", teamId = 200L)))
+        `when`(playerRepository.findById(50L)).thenReturn(Optional.of(ss))
+        `when`(playerRepository.findById(51L)).thenReturn(Optional.of(c))
+        `when`(fieldingRepository.save(any(PlayerGameFieldingStatsEntity::class.java))).thenAnswer { it.getArgument(0) }
+
+
         `when`(teamRepository.findById(100L)).thenReturn(Optional.of(TeamEntity(100L, "Cards", "STL", "St. Louis")))
         `when`(teamRepository.findById(200L)).thenReturn(Optional.of(TeamEntity(200L, "Cubs", "CHC", "Chicago")))
+        `when`(gameRepository.findById(gameId)).thenAnswer { Optional.of(gameEntity) }
         `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
+
         `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(1, 0, 0))
         `when`(gameInningRepository.save(any(GameInningEntity::class.java))).thenAnswer { it.getArgument(0) }
 
@@ -467,7 +479,89 @@ class GameScoringServiceTest {
                 gameId,
                 ScoringEventRequest(ScoringEventType.PICKED_OFF, batterId, pitcherId, runnerAdvanceMap = mapPO),
             )
+
+        // WILD_PITCH
+        val mapWP = mapOf("4" to 2)
+        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.WILD_PITCH, batterId, pitcherId, runnerAdvanceMap = mapWP))
+
+        // PASSED_BALL
+        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.PASSED_BALL, batterId, pitcherId, runnerAdvanceMap = mapWP))
+
+        // ERROR
+        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.ERROR, batterId, pitcherId, isError = true))
+
+        // SACRIFICE_FLY
+        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.SACRIFICE_FLY, batterId, pitcherId))
+
+        // FIELDER_CHOICE
+        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.FIELDER_CHOICE, batterId, pitcherId))
+
+        // DOUBLE PLAY
+        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.GROUNDOUT, batterId, pitcherId, isDoublePlay = true))
     }
+
+    @Test
+    fun testBasesLoadedWalkAndInningTransition() {
+        val gameId = 1L
+        val batterId = 2L
+        val pitcherId = 3L
+        val gameEntity =
+            GameEntity(
+                id = gameId,
+                status = GameStatus.IN_PROGRESS,
+                homeTeamId = 100L,
+                awayTeamId = 200L,
+                outs = 2,
+                runnerFirstId = 10L,
+                runnerSecondId = 11L,
+                runnerThirdId = 12L,
+                inning = 9,
+                half = HalfInning.BOTTOM,
+                homeScore = 3,
+                awayScore = 3,
+            )
+
+        `when`(gameRepository.findById(gameId)).thenReturn(Optional.of(gameEntity))
+        `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
+
+        val batter = PlayerEntity(id = batterId, name = "WalkBatter", jerseyNumber = 9, position = "DH", teamId = 100L)
+        val pitcher = PlayerEntity(id = pitcherId, name = "Pitcher", jerseyNumber = 34, position = "P", teamId = 200L)
+        val r1 = PlayerEntity(id = 10L, name = "R1", jerseyNumber = 1, position = "1B", teamId = 100L)
+        val r2 = PlayerEntity(id = 11L, name = "R2", jerseyNumber = 2, position = "2B", teamId = 100L)
+        val r3 = PlayerEntity(id = 12L, name = "R3", jerseyNumber = 3, position = "3B", teamId = 100L)
+        `when`(playerRepository.findAll()).thenReturn(listOf(batter, pitcher, r1, r2, r3))
+        `when`(playerRepository.findById(batterId)).thenReturn(Optional.of(batter))
+        `when`(playerRepository.findById(pitcherId)).thenReturn(Optional.of(pitcher))
+        `when`(playerRepository.findById(10L)).thenReturn(Optional.of(r1))
+        `when`(playerRepository.findById(11L)).thenReturn(Optional.of(r2))
+        `when`(playerRepository.findById(12L)).thenReturn(Optional.of(r3))
+
+        val teamHome = TeamEntity(id = 100L, name = "Cards", abbreviation = "STL", city = "St. Louis")
+        val teamAway = TeamEntity(id = 200L, name = "Cubs", abbreviation = "CHC", city = "Chicago")
+        `when`(teamRepository.findById(100L)).thenReturn(Optional.of(teamHome))
+        `when`(teamRepository.findById(200L)).thenReturn(Optional.of(teamAway))
+
+        `when`(gameInningRepository.findAllByGameIdOrderByInningAsc(gameId)).thenReturn(emptyList())
+
+        `when`(battingRepository.save(any(PlayerGameBattingStatsEntity::class.java))).thenAnswer { it.getArgument(0) }
+        `when`(pitchingRepository.save(any(PlayerGamePitchingStatsEntity::class.java))).thenAnswer { it.getArgument(0) }
+        `when`(fieldingRepository.save(any(PlayerGameFieldingStatsEntity::class.java))).thenAnswer { it.getArgument(0) }
+        `when`(gameInningRepository.save(any(GameInningEntity::class.java))).thenAnswer { it.getArgument(0) }
+
+        // Bases-loaded WALK in 9th bottom (walkoff)
+        val updated = scoringService.recordPlayEvent(
+
+            gameId,
+            ScoringEventRequest(ScoringEventType.WALK, batterId, pitcherId)
+        )
+
+        assertEquals(4, updated.homeScore)
+        assertEquals(GameStatus.COMPLETED, updated.status)
+    }
+
+
+
+
 
     @Test
     fun testResetGame() {
@@ -512,4 +606,17 @@ class GameScoringServiceTest {
         assertEquals(1, stats.fieldingStats.size)
         assertEquals(5, stats.fieldingStats[0].putouts)
     }
+
+    @Test
+    fun testNotFoundExceptions() {
+        `when`(gameRepository.findById(999L)).thenReturn(Optional.empty())
+        `when`(seasonRepository.findById(999L)).thenReturn(Optional.empty())
+
+        assertThrows(IllegalArgumentException::class.java) { scoringService.getGameDomain(999L) }
+        assertThrows(IllegalArgumentException::class.java) { scoringService.getBoxScore(999L) }
+        assertThrows(IllegalArgumentException::class.java) { scoringService.getSeasonDashboard(999L) }
+        assertThrows(IllegalArgumentException::class.java) { scoringService.getSeasonStats(999L) }
+        assertThrows(IllegalArgumentException::class.java) { scoringService.resetGame(999L) }
+    }
 }
+

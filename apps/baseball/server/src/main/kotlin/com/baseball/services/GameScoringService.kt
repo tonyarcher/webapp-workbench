@@ -726,14 +726,11 @@ class GameScoringService(
         val games = gameRepository.findAllBySeasonId(seasonId).map { mapGameToDomain(it) }
         val standings = computeStandings(games, teamRepository.findAll())
 
-        val upcomingGames = games.filter { it.status == GameStatus.SCHEDULED }
-        val recentGames = games.filter { it.status == GameStatus.COMPLETED }.sortedByDescending { it.id }
-
         return SeasonDashboard(
-            season = season.toDomain(),
+            seasonId = seasonId,
+            seasonName = season.name,
             standings = standings,
-            upcomingGames = upcomingGames,
-            recentGames = recentGames,
+            games = games,
         )
     }
 
@@ -752,18 +749,18 @@ class GameScoringService(
         }.toMutableMap()
 
         games.filter { it.status == GameStatus.COMPLETED }.forEach { game ->
-            val homeStats = teamStatsMap[game.homeTeam.id] ?: return@forEach
-            val awayStats = teamStatsMap[game.awayTeam.id] ?: return@forEach
+            val homeStats = teamStatsMap[game.homeTeam.id!!] ?: return@forEach
+            val awayStats = teamStatsMap[game.awayTeam.id!!] ?: return@forEach
 
             val homeWon = game.homeScore > game.awayScore
-            teamStatsMap[game.homeTeam.id] = homeStats.copy(
+            teamStatsMap[game.homeTeam.id!!] = homeStats.copy(
                 wins = homeStats.wins + (if (homeWon) 1 else 0),
                 losses = homeStats.losses + (if (!homeWon) 1 else 0),
                 gamesPlayed = homeStats.gamesPlayed + 1,
                 runsScored = homeStats.runsScored + game.homeScore,
                 runsAllowed = homeStats.runsAllowed + game.awayScore,
             )
-            teamStatsMap[game.awayTeam.id] = awayStats.copy(
+            teamStatsMap[game.awayTeam.id!!] = awayStats.copy(
                 wins = awayStats.wins + (if (!homeWon) 1 else 0),
                 losses = awayStats.losses + (if (homeWon) 1 else 0),
                 gamesPlayed = awayStats.gamesPlayed + 1,
@@ -778,6 +775,7 @@ class GameScoringService(
             stats.copy(winPercentage = winPct)
         }.sortedWith(compareByDescending<TeamStandings> { it.winPercentage }.thenByDescending { it.wins })
     }
+
 
 
     @Transactional

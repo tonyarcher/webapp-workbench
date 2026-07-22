@@ -248,5 +248,43 @@ class ControllersTest {
         // resetGame
         `when`(scoringService.resetGame(1L)).thenReturn(mockGame)
         assertEquals(mockGame, controller.resetGame(1L))
+
+        // startGame
+        val inProgressGame = mockGame.copy(status = GameStatus.IN_PROGRESS)
+        `when`(repo.findById(1L)).thenReturn(Optional.of(gameEntity))
+        `when`(scoringService.getGameDomain(1L)).thenReturn(inProgressGame)
+        assertEquals(inProgressGame, controller.startGame(1L))
+    }
+
+    @Test
+    fun testControllersNotFoundExceptions() {
+        val leagueRepo = mock(LeagueRepository::class.java)
+        val leagueController = LeagueController(leagueRepo)
+        `when`(leagueRepo.findById(99L)).thenReturn(Optional.empty())
+        assertThrows(NoSuchElementException::class.java) { leagueController.getOne(99L) }
+
+        val seasonRepo = mock(SeasonRepository::class.java)
+        val seasonController = SeasonController(seasonRepo, mock(GameRepository::class.java), mock(TeamRepository::class.java), mock(GameScoringService::class.java))
+        `when`(seasonRepo.findAllByLeagueId(99L)).thenReturn(emptyList())
+        assertEquals(emptyList<Season>(), seasonController.getByLeague(99L))
+
+
+        val teamRepo = mock(TeamRepository::class.java)
+        val teamController = TeamController(teamRepo, mock(PlayerRepository::class.java))
+        `when`(teamRepo.findById(99L)).thenReturn(Optional.empty())
+        assertThrows(NoSuchElementException::class.java) { teamController.getOne(99L) }
+
+        val playerRepo = mock(PlayerRepository::class.java)
+        val playerController = PlayerController(playerRepo)
+        `when`(playerRepo.findById(99L)).thenReturn(Optional.empty())
+        assertThrows(NoSuchElementException::class.java) { playerController.getOne(99L) }
+
+        val gameRepo = mock(GameRepository::class.java)
+        val gameController = GameController(gameRepo, mock(GameScoringService::class.java), mock(PlayEventRepository::class.java))
+        `when`(gameRepo.findById(99L)).thenReturn(Optional.empty())
+        assertThrows(NoSuchElementException::class.java) { gameController.startGame(99L) }
     }
 }
+
+
+
