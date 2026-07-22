@@ -11,14 +11,27 @@ plugins {
     alias(libs.plugins.ktlint)
 }
 
-detekt {
-    // Path to your custom config file
-    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-    buildUponDefaultConfig = true // Use default rules as base
-    allRules = false // Activates all rules if true
+subprojects {
+    apply(plugin = "io.gitlab.arturbosch.detekt")
 
-    // Ignore legacy warnings by generating a baseline
-    baseline = file("$rootDir/config/detekt/baseline.xml")
+    System.setProperty("java.version", "21")
+
+    dependencies {
+        "detekt"("io.gitlab.arturbosch.detekt:detekt-cli:1.23.8")
+        "detekt"("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.0.21")
+    }
+
+    detekt {
+        config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+        buildUponDefaultConfig = true
+        allRules = false
+        ignoreFailures = false
+        source.setFrom(files("src/commonMain/kotlin", "src/wasmJsMain/kotlin", "src/jvmMain/kotlin", "src/main/kotlin"))
+    }
+
+    tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+        jvmTarget = "21"
+    }
 }
 
 // Suppress Node.js deprecation warnings (e.g. url.parse() DEP0169 in Yarn v1) in all child processes

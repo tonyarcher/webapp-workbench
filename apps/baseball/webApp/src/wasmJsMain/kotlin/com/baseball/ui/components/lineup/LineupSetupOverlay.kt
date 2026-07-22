@@ -484,127 +484,106 @@ class LineupSetupOverlay(
                 }
             }
         }
-    }
-
-    private fun validateAndSave(): Boolean {
+       private fun validateAndSave(): Boolean {
         val awayRes = validateTeam(isHome = false, awayLineupInputs, awayPitcherNameInput, awayPitcherNumberInput) ?: return false
         val homeRes = validateTeam(isHome = true, homeLineupInputs, homePitcherNameInput, homePitcherNumberInput) ?: return false
 
         if (isSingleGameMode) {
-            val awayActivePId = if (useDh) awayRes.second.first().id!! else awayRes.first.find { it.position == "P" }!!.id!!
-            val homeActivePId = if (useDh) homeRes.second.first().id!! else homeRes.first.find { it.position == "P" }!!.id!!
-
-            startNewGame(
-                homeTeam = homeTeam,
-                awayTeam = awayTeam,
-                homeLineup = homeRes.first,
-                awayLineup = awayRes.first,
-                homeBench = homeRes.second,
-                awayBench = awayRes.second,
-                homeActivePitcherId = homeActivePId,
-                awayActivePitcherId = awayActivePId,
-                useDh = useDh,
-            )
-
-            localGame = localGame?.copy(status = GameStatus.IN_PROGRESS)
-            saveLocalState()
-
-            isLineupDialogOpen = false
-            renderCurrentTab()
+            saveLocalGameLineup(homeRes, awayRes)
         } else {
-            launch {
-                try {
-                    val activeGame = api.getGame(selectedGameId!!)
-
-                    // Create home players
-                    val serverHomeLineup = homeRes.first.map { p ->
-                        api.createPlayer(
-                            Player(
-                                id = null,
-                                teamId = activeGame.homeTeam.id,
-                                name = p.name,
-                                position = p.position,
-                                jerseyNumber = p.jerseyNumber,
-                                battingHand = "R",
-                                throwingHand = "R"
-                            )
-                        )
-                    }
-                    val serverHomeBench = homeRes.second.map { p ->
-                        api.createPlayer(
-                            Player(
-                                id = null,
-                                teamId = activeGame.homeTeam.id,
-                                name = p.name,
-                                position = p.position,
-                                jerseyNumber = p.jerseyNumber,
-                                battingHand = "R",
-                                throwingHand = "R"
-                            )
-                        )
-                    }
-
-                    // Create away players
-                    val serverAwayLineup = awayRes.first.map { p ->
-                        api.createPlayer(
-                            Player(
-                                id = null,
-                                teamId = activeGame.awayTeam.id,
-                                name = p.name,
-                                position = p.position,
-                                jerseyNumber = p.jerseyNumber,
-                                battingHand = "R",
-                                throwingHand = "R"
-                            )
-                        )
-                    }
-                    val serverAwayBench = awayRes.second.map { p ->
-                        api.createPlayer(
-                            Player(
-                                id = null,
-                                teamId = activeGame.awayTeam.id,
-                                name = p.name,
-                                position = p.position,
-                                jerseyNumber = p.jerseyNumber,
-                                battingHand = "R",
-                                throwingHand = "R"
-                            )
-                        )
-                    }
-
-                    // Start game on the server
-                    api.startGame(activeGame.id!!)
-                    AppViewManager.selectedGameStatus = GameStatus.IN_PROGRESS
-
-                    // Update client state variables
-                    localHomeLineup.clear()
-                    localHomeLineup.addAll(serverHomeLineup)
-                    localHomeBench.clear()
-                    localHomeBench.addAll(serverHomeBench)
-
-                    localAwayLineup.clear()
-                    localAwayLineup.addAll(serverAwayLineup)
-                    localAwayBench.clear()
-                    localAwayBench.addAll(serverAwayBench)
-
-                    val homeP = serverHomeBench.find { it.position == "P" } ?: serverHomeLineup.find { it.position == "P" }
-                    val awayP = serverAwayBench.find { it.position == "P" } ?: serverAwayLineup.find { it.position == "P" }
-                    localHomeActivePitcherId = homeP?.id ?: 110L
-                    localHomeActivePitcherName = homeP?.name ?: "Pitcher"
-                    localAwayActivePitcherId = awayP?.id ?: 210L
-                    localAwayActivePitcherName = awayP?.name ?: "Pitcher"
-
-                    isLineupDialogOpen = false
-                    AppViewManager.renderApp()
-                    renderCurrentTab()
-                } catch (e: Throwable) {
-                    println("Error starting online game: ${e.message}")
-                }
-            }
+            saveServerGameLineup(homeRes, awayRes)
         }
-
         return true
     }
+
+    private fun saveLocalGameLineup(
+        homeRes: Pair<List<Player>, List<Player>>,
+        awayRes: Pair<List<Player>, List<Player>>,
+    ) {
+        val awayActivePId = if (useDh) awayRes.second.first().id!! else awayRes.first.find { it.position == "P" }!!.id!!
+        val homeActivePId = if (useDh) homeRes.second.first().id!! else homeRes.first.find { it.position == "P" }!!.id!!
+
+        startNewGame(
+            homeTeam = homeTeam,
+            awayTeam = awayTeam,
+            homeLineup = homeRes.first,
+            awayLineup = awayRes.first,
+            homeBench = homeRes.second,
+            awayBench = awayRes.second,
+            homeActivePitcherId = homeActivePId,
+            awayActivePitcherId = homeActivePId,
+            useDh = useDh,
+        )
+
+        localGame = localGame?.copy(status = GameStatus.IN_PROGRESS)
+        saveLocalState()
+        isLineupDialogOpen = false
+        renderCurrentTab()
+    }
+
+    private fun saveServerGameLineup(
+        homeRes: Pair<List<Player>, List<Player>>,
+        awayRes: Pair<List<Player>, List<Player>>,
+    ) {
+        launch {
+            try {
+                val activeGame = api.getGame(selectedGameId!!)
+                val serverHomeLineup = createServerPlayers(activeGame.homeTeam.id, homeRes.first)
+                val serverHomeBench = createServerPlayers(activeGame.homeTeam.id, homeRes.second)
+                val serverAwayLineup = createServerPlayers(activeGame.awayTeam.id, awayRes.first)
+                val serverAwayBench = createServerPlayers(activeGame.awayTeam.id, awayRes.second)
+
+                api.startGame(activeGame.id!!)
+                AppViewManager.selectedGameStatus = GameStatus.IN_PROGRESS
+
+                updateClientState(serverHomeLineup, serverHomeBench, serverAwayLineup, serverAwayBench)
+                isLineupDialogOpen = false
+                AppViewManager.renderApp()
+                renderCurrentTab()
+            } catch (e: Throwable) {
+                println("Error starting online game: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun createServerPlayers(teamId: Long, players: List<Player>): List<Player> =
+        players.map { p ->
+            api.createPlayer(
+                Player(
+                    id = null,
+                    teamId = teamId,
+                    name = p.name,
+                    position = p.position,
+                    jerseyNumber = p.jerseyNumber,
+                    battingHand = "R",
+                    throwingHand = "R",
+                ),
+            )
+        }
+
+    private fun updateClientState(
+        homeLineup: List<Player>,
+        homeBench: List<Player>,
+        awayLineup: List<Player>,
+        awayBench: List<Player>,
+    ) {
+        localHomeLineup.clear()
+        localHomeLineup.addAll(homeLineup)
+        localHomeBench.clear()
+        localHomeBench.addAll(homeBench)
+        localAwayLineup.clear()
+        localAwayLineup.addAll(awayLineup)
+        localAwayBench.clear()
+        localAwayBench.addAll(awayBench)
+
+        val homeP = homeBench.find { it.position == "P" } ?: homeLineup.find { it.position == "P" }
+        val awayP = awayBench.find { it.position == "P" } ?: awayLineup.find { it.position == "P" }
+        localHomeActivePitcherId = homeP?.id ?: 110L
+        localHomeActivePitcherName = homeP?.name ?: "Pitcher"
+        localAwayActivePitcherId = awayP?.id ?: 210L
+        localAwayActivePitcherName = awayP?.name ?: "Pitcher"
+    }
+   }
 
     private fun validateTeam(
         isHome: Boolean,

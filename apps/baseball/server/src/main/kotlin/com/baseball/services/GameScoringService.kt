@@ -724,71 +724,61 @@ class GameScoringService(
     fun getSeasonDashboard(seasonId: Long): SeasonDashboard {
         val season = seasonRepository.findById(seasonId).orElseThrow { IllegalArgumentException("Season not found: $seasonId") }
         val games = gameRepository.findAllBySeasonId(seasonId).map { mapGameToDomain(it) }
+        val standings = computeStandings(games, teamRepository.findAll())
 
-        // Compute Standings
-        val teamStatsMap = mutableMapOf<Long, TeamStandings>()
-
-        // Populate all teams
-        val allTeams = teamRepository.findAll()
-        allTeams.forEach { team ->
-            teamStatsMap[team.id!!] =
-                TeamStandings(
-                    teamId = team.id!!,
-                    teamName = team.name,
-                    wins = 0,
-                    losses = 0,
-                    winPercentage = 0.0,
-                    gamesPlayed = 0,
-                    runsScored = 0,
-                    runsAllowed = 0,
-                )
-        }
-
-        games.forEach { game ->
-            if (game.status == GameStatus.COMPLETED) {
-                val homeStats = teamStatsMap[game.homeTeam.id]!!
-                val awayStats = teamStatsMap[game.awayTeam.id]!!
-
-                val homeWins = if (game.homeScore > game.awayScore) 1 else 0
-                val homeLosses = if (game.homeScore < game.awayScore) 1 else 0
-                val awayWins = if (game.awayScore > game.homeScore) 1 else 0
-                val awayLosses = if (game.awayScore < game.homeScore) 1 else 0
-
-                teamStatsMap[game.homeTeam.id!!] =
-                    homeStats.copy(
-                        wins = homeStats.wins + homeWins,
-                        losses = homeStats.losses + homeLosses,
-                        gamesPlayed = homeStats.gamesPlayed + 1,
-                        runsScored = homeStats.runsScored + game.homeScore,
-                        runsAllowed = homeStats.runsAllowed + game.awayScore,
-                    )
-
-                teamStatsMap[game.awayTeam.id!!] =
-                    awayStats.copy(
-                        wins = awayStats.wins + awayWins,
-                        losses = awayStats.losses + awayLosses,
-                        gamesPlayed = awayStats.gamesPlayed + 1,
-                        runsScored = awayStats.runsScored + game.awayScore,
-                        runsAllowed = awayStats.runsAllowed + game.homeScore,
-                    )
-            }
-        }
-
-        // Calculate percentages and sort
-        val standings =
-            teamStatsMap.values
-                .map { stats ->
-                    val percentage = if (stats.gamesPlayed > 0) stats.wins.toDouble() / stats.gamesPlayed else 0.0
-                    stats.copy(winPercentage = Math.round(percentage * 1000.0) / 1000.0)
-                }.sortedWith(compareByDescending<TeamStandings> { it.winPercentage }.thenByDescending { it.wins })
+        val upcomingGames = games.filter { it.status == GameStatus.SCHEDULED }
+        val recentGames = games.filter { it.status == GameStatus.COMPLETED }.sortedByDescending { it.id }
 
         return SeasonDashboard(
-            seasonId = seasonId,
-            seasonName = season.name,
+            season = season.toDomain(),
             standings = standings,
-            games = games,
+            upcomingGames = upcomingGames,
+            recentGames = recentGames,
         )
     }
+
+    private fun computeStandings(games: List<Game>, allTeams: List<TeamEntity>): List<TeamStandings> {
+        val teamStatsMap = allTeams.associate { team ->
+            team.id!! to TeamStandings(
+                teamId = team.id!!,
+                teamName = team.name,
+                wins = 0,
+                losses = 0,
+                winPercentage = 0.0,
+                gamesPlayed = 0,
+                runsScored = 0,
+                runsAllowed = 0,
+            )
+        }.toMutableMap()
+
+        games.filter { it.status == GameStatus.COMPLETED }.forEach { game ->
+            val homeStats = teamStatsMap[game.homeTeam.id] ?: return@forEach
+            val awayStats = teamStatsMap[game.awayTeam.id] ?: return@forEach
+
+            val homeWon = game.homeScore > game.awayScore
+            teamStatsMap[game.homeTeam.id] = homeStats.copy(
+                wins = homeStats.wins + (if (homeWon) 1 else 0),
+                losses = homeStats.losses + (if (!homeWon) 1 else 0),
+                gamesPlayed = homeStats.gamesPlayed + 1,
+                runsScored = homeStats.runsScored + game.homeScore,
+                runsAllowed = homeStats.runsAllowed + game.awayScore,
+            )
+            teamStatsMap[game.awayTeam.id] = awayStats.copy(
+                wins = awayStats.wins + (if (!homeWon) 1 else 0),
+                losses = awayStats.losses + (if (homeWon) 1 else 0),
+                gamesPlayed = awayStats.gamesPlayed + 1,
+                runsScored = awayStats.runsScored + game.awayScore,
+                runsAllowed = awayStats.runsAllowed + game.homeScore,
+            )
+        }
+
+        return teamStatsMap.values.map { stats ->
+            val totalGames = stats.wins + stats.losses
+            val winPct = if (totalGames > 0) stats.wins.toDouble() / totalGames else 0.0
+            stats.copy(winPercentage = winPct)
+        }.sortedWith(compareByDescending<TeamStandings> { it.winPercentage }.thenByDescending { it.wins })
+    }
+
 
     @Transactional
     fun resetGame(gameId: Long): Game {

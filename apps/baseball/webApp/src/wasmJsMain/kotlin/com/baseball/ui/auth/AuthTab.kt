@@ -70,48 +70,7 @@ internal fun renderLoginTab(container: HTMLElement) {
                     width = 100.pct
                     marginTop = 1.rem
                 }
-                onClickFunction = {
-                    val banner = document.getElementById("login-error-banner") as? HTMLDivElement
-                    val emailIn = document.getElementById("login-email") as? HTMLInputElement
-                    val passIn = document.getElementById("login-password") as? HTMLInputElement
-                    if (banner != null && emailIn != null && passIn != null) {
-                        banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
-                        val email = emailIn.value.trim()
-                        val password = passIn.value
-
-                        if (!validateEmail(email)) {
-                            banner.textContent = "Please enter a valid email address."
-                            banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
-                        } else if (password.length < 6) {
-                            banner.textContent = "Password must be at least 6 characters."
-                            banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
-                        } else {
-                            launch {
-                                try {
-                                    val session = authService.login(email, password)
-                                    if (session != null) {
-                                        window.location.hash = BaseballConstants.TAB_WELCOME
-                                    } else {
-                                        banner.textContent = "Invalid email or password."
-                                        banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
-                                    }
-                                } catch (e: Throwable) {
-                                    val msg = e.message ?: ""
-                                    if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) ||
-                                        msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) ||
-                                        msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)
-                                    ) {
-                                        banner.textContent =
-                                            "Unable to connect to the server. Please verify that the backend server is running."
-                                    } else {
-                                        banner.textContent = "Authentication failed: ${e.message ?: "server error"}"
-                                    }
-                                    banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
-                                }
-                            }
-                        }
-                    }
-                }
+                onClickFunction = { handleLoginClick() }
             }
         }
 
@@ -131,11 +90,43 @@ internal fun renderLoginTab(container: HTMLElement) {
                     fontWeight = FontWeight.bold
                     put("text-decoration", "underline")
                 }
-                onClickFunction = {
-                    window.location.hash = "register"
-                }
+                onClickFunction = { window.location.hash = "register" }
             }
         }
+    }
+}
+
+private fun handleLoginClick() {
+    val banner = document.getElementById("login-error-banner") as? HTMLDivElement ?: return
+    val emailIn = document.getElementById("login-email") as? HTMLInputElement ?: return
+    val passIn = document.getElementById("login-password") as? HTMLInputElement ?: return
+
+    banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
+    val email = emailIn.value.trim()
+    val password = passIn.value
+
+    if (!validateEmail(email)) {
+        showError(banner, "Please enter a valid email address.")
+        return
+    }
+    if (password.length < 6) {
+        showError(banner, "Password must be at least 6 characters.")
+        return
+    }
+
+    launch { executeLogin(email, password, banner) }
+}
+
+private suspend fun executeLogin(email: String, pass: String, banner: HTMLDivElement) {
+    try {
+        val session = authService.login(email, pass)
+        if (session != null) {
+            window.location.hash = BaseballConstants.TAB_WELCOME
+        } else {
+            showError(banner, "Invalid email or password.")
+        }
+    } catch (e: Throwable) {
+        showError(banner, parseAuthException(e))
     }
 }
 
@@ -209,62 +200,7 @@ internal fun renderRegisterTab(container: HTMLElement) {
                     width = 100.pct
                     marginTop = 1.rem
                 }
-                onClickFunction = {
-                    val banner = document.getElementById("register-error-banner") as? HTMLDivElement
-                    val firstIn = document.getElementById("register-first-name") as? HTMLInputElement
-                    val lastIn = document.getElementById("register-last-name") as? HTMLInputElement
-                    val emailIn = document.getElementById("register-email") as? HTMLInputElement
-                    val passIn = document.getElementById("register-password") as? HTMLInputElement
-                    if (banner != null && firstIn != null && lastIn != null && emailIn != null && passIn != null) {
-                        banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
-                        val firstName = firstIn.value.trim()
-                        val lastName = lastIn.value.trim()
-                        val email = emailIn.value.trim()
-                        val password = passIn.value
-
-                        if (firstName.isEmpty() || lastName.isEmpty()) {
-                            banner.textContent = "Please enter both your first and last name."
-                            banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
-                        } else if (!validateEmail(email)) {
-                            banner.textContent = "Please enter a valid email address."
-                            banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
-                        } else if (password.length < 6) {
-                            banner.textContent = "Password must be at least 6 characters."
-                            banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
-                        } else {
-                            launch {
-                                try {
-                                    authService.registerUser(
-                                        UserAccount(email, firstName, lastName, password),
-                                    )
-                                    val session = authService.login(email, password)
-                                    if (session != null) {
-                                        window.location.hash = BaseballConstants.TAB_WELCOME
-                                    } else {
-                                        banner.textContent = "Registration succeeded, but login failed."
-                                        banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
-                                    }
-                                } catch (e: Throwable) {
-                                    val msg = e.message ?: ""
-                                    if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) ||
-                                        msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) ||
-                                        msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)
-                                    ) {
-                                        banner.textContent =
-                                            "Unable to connect to the server. Please verify that the backend server is running."
-                                    } else if (msg.contains(BaseballConstants.STATUS_400) ||
-                                        msg.contains(BaseballConstants.STATUS_BAD_REQUEST, ignoreCase = true)
-                                    ) {
-                                        banner.textContent = "An account with this email already exists."
-                                    } else {
-                                        banner.textContent = "Registration failed: ${e.message ?: "server error"}"
-                                    }
-                                    banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
-                                }
-                            }
-                        }
-                    }
-                }
+                onClickFunction = { handleRegisterClick() }
             }
         }
 
@@ -284,13 +220,83 @@ internal fun renderRegisterTab(container: HTMLElement) {
                     fontWeight = FontWeight.bold
                     put("text-decoration", "underline")
                 }
-                onClickFunction = {
-                    window.location.hash = "login"
-                }
+                onClickFunction = { window.location.hash = "login" }
             }
         }
     }
 }
+
+private fun handleRegisterClick() {
+    val banner = document.getElementById("register-error-banner") as? HTMLDivElement ?: return
+    val firstIn = document.getElementById("register-first-name") as? HTMLInputElement ?: return
+    val lastIn = document.getElementById("register-last-name") as? HTMLInputElement ?: return
+    val emailIn = document.getElementById("register-email") as? HTMLInputElement ?: return
+    val passIn = document.getElementById("register-password") as? HTMLInputElement ?: return
+
+    banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
+    val first = firstIn.value.trim()
+    val last = lastIn.value.trim()
+    val email = emailIn.value.trim()
+    val pass = passIn.value
+
+    if (first.isEmpty() || last.isEmpty()) {
+        showError(banner, "Please enter both your first and last name.")
+        return
+    }
+    if (!validateEmail(email)) {
+        showError(banner, "Please enter a valid email address.")
+        return
+    }
+    if (pass.length < 6) {
+        showError(banner, "Password must be at least 6 characters.")
+        return
+    }
+
+    launch { executeRegister(first, last, email, pass, banner) }
+}
+
+private suspend fun executeRegister(first: String, last: String, email: String, pass: String, banner: HTMLDivElement) {
+    try {
+        authService.registerUser(UserAccount(email, first, last, pass))
+        val session = authService.login(email, pass)
+        if (session != null) {
+            window.location.hash = BaseballConstants.TAB_WELCOME
+        } else {
+            showError(banner, "Registration succeeded, but login failed.")
+        }
+    } catch (e: Throwable) {
+        showError(banner, parseRegisterException(e))
+    }
+}
+
+private fun showError(banner: HTMLDivElement, message: String) {
+    banner.textContent = message
+    banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
+}
+
+private fun parseAuthException(e: Throwable): String {
+    val msg = e.message ?: ""
+    return if (isConnectionError(msg)) {
+        "Unable to connect to the server. Please verify that the backend server is running."
+    } else {
+        "Authentication failed: ${e.message ?: "server error"}"
+    }
+}
+
+private fun parseRegisterException(e: Throwable): String {
+    val msg = e.message ?: ""
+    return when {
+        isConnectionError(msg) -> "Unable to connect to the server. Please verify that the backend server is running."
+        msg.contains(BaseballConstants.STATUS_400) || msg.contains(BaseballConstants.STATUS_BAD_REQUEST, ignoreCase = true) ->
+            "An account with this email already exists."
+        else -> "Registration failed: ${e.message ?: "server error"}"
+    }
+}
+
+private fun isConnectionError(msg: String): Boolean =
+    msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) ||
+        msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) ||
+        msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)
 
 private fun validateEmail(email: String): Boolean {
     val atIndex = email.indexOf('@')
