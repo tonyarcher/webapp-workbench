@@ -1,5 +1,3 @@
-
-
 package com.baseball.game
 
 import com.baseball.models.ScoringEventType
@@ -7,6 +5,7 @@ import com.baseball.models.ScoringEventType
 interface GameService {
     fun initGame(forceReset: Boolean = false)
 
+    @Suppress("LongParameterList")
     fun recordPlayEvent(
         eventType: ScoringEventType,
         batterId: Long,
