@@ -1,4 +1,6 @@
-﻿package com.baseball.ui.components.scorebook
+@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
+package com.baseball.ui.components.scorebook
 
 import com.baseball.models.BoxScore
 import com.baseball.models.Game

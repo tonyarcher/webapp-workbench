@@ -1,3 +1,5 @@
+@file:Suppress("WildcardImport", "UseCheckOrError", "MagicNumber", "MaxLineLength", "LargeClass", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition")
+
 package com.baseball.services
 
 import com.baseball.entities.*

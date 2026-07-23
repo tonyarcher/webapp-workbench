@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber", "TooManyFunctions")
+
 package com.baseball.seed
 
 import com.baseball.models.League

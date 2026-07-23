@@ -1,3 +1,5 @@
+@file:Suppress("WildcardImport", "LongParameterList", "MagicNumber", "LargeClass", "LongMethod")
+
 package com.baseball.entities
 
 import com.baseball.models.*

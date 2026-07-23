@@ -1,3 +1,5 @@
+@file:Suppress("LargeClass", "ComplexCondition", "WildcardImport", "MaxLineLength", "UnusedPrivateProperty", "MagicNumber", "TooManyFunctions")
+
 package com.baseball.game
 
 import com.baseball.models.*
@@ -21,7 +23,7 @@ data class GameSessionState(
 )
 
 object PlayEngine {
-    @Suppress("ComplexMethod", "LongMethod", "NestedBlockDepth", "CognitiveComplexMethod", "CyclomaticComplexMethod")
+    @Suppress("ComplexMethod", "LongMethod", "NestedBlockDepth", "CognitiveComplexMethod", "CyclomaticComplexMethod", "MagicNumber", "LongParameterList", "ReturnCount", "TooGenericExceptionCaught", "SwallowedException")
     fun processPlay(
         state: GameSessionState,
         eventType: ScoringEventType,

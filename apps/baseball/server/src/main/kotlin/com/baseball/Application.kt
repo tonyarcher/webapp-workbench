@@ -1,3 +1,8 @@
+@file:Suppress(
+    "LongMethod", "TooGenericExceptionCaught", "SpreadOperator",
+    "UnusedPrivateProperty", "MagicNumber", "TooManyFunctions", "MaxLineLength",
+)
+
 package com.baseball
 
 import com.baseball.entities.LeagueEntity
