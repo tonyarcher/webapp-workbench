@@ -257,6 +257,7 @@ private fun DIV.renderScheduleManagerCard(games: List<Game>) {
     }
 }
 
+@Suppress("MagicNumber")
 private fun DIV.renderRoundRobinSection(hasGames: Boolean) {
     div {
         css {

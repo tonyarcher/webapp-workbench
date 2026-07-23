@@ -192,6 +192,7 @@ private fun renderTeamTraditionalStats(
     renderPitchingTable(card, pitching)
 }
 
+@Suppress("MagicNumber", "MaxLineLength")
 private fun renderGameLogCard(contentEl: HTMLDivElement, events: List<PlayEvent>) {
     contentEl.div(classes = "card") {
         css {
@@ -240,6 +241,7 @@ internal fun renderLineScoreTable(
     }
 }
 
+@Suppress("LongParameterList")
 private fun TBODY.renderLineScoreRow(
     teamName: String,
     inningRuns: List<Int?>,
@@ -258,6 +260,7 @@ private fun TBODY.renderLineScoreRow(
     }
 }
 
+@Suppress("MagicNumber")
 internal fun renderBattingTable(
     parent: HTMLElement,
     list: List<PlayerBattingStats>,
@@ -303,6 +306,7 @@ private fun TBODY.renderBattingRow(s: PlayerBattingStats) {
     }
 }
 
+@Suppress("MagicNumber")
 internal fun renderPitchingTable(
     parent: HTMLElement,
     list: List<PlayerPitchingStats>,
@@ -332,6 +336,7 @@ internal fun renderPitchingTable(
     }
 }
 
+@Suppress("MagicNumber")
 private fun TBODY.renderPitchingRow(s: PlayerPitchingStats) {
     tr {
         td {

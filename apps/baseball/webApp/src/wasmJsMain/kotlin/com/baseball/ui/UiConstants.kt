@@ -1,6 +1,10 @@
 package com.baseball.ui
 
-import kotlinx.css.*
+import kotlinx.css.Color
+import kotlinx.css.LinearDimension
+import kotlinx.css.Padding
+import kotlinx.css.px
+import kotlinx.css.rem
 
 /**
  * Centralized UI constants to replace magic numbers and repeated values.
