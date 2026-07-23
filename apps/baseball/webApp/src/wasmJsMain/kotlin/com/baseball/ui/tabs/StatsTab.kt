@@ -227,6 +227,7 @@ private fun renderBattingTable(table: TABLE, stats: SeasonStats, playersList: Li
     }
 }
 
+@Suppress("MagicNumber", "MaxLineLength", "LongMethod")
 private fun renderBattingRow(tbody: TBODY, row: PlayerBattingStats, playerRecord: Player?) {
     val teamName = teamsList.find { it.id == playerRecord?.teamId }?.name ?: "Free Agent"
     val avg = if (row.atBats > 0) row.hits.toDouble() / row.atBats else 0.0
@@ -303,6 +304,7 @@ private fun renderPitchingTable(table: TABLE, stats: SeasonStats, playersList: L
     }
 }
 
+@Suppress("MagicNumber", "MaxLineLength", "LongMethod")
 private fun renderPitchingRow(tbody: TBODY, row: PlayerPitchingStats, playerRecord: Player?) {
     val teamName = teamsList.find { it.id == playerRecord?.teamId }?.name ?: "Free Agent"
     val ip = formatIP(row.inningsPitchedThirds)
@@ -380,6 +382,7 @@ private fun renderFieldingRow(tbody: TBODY, row: PlayerFieldingStats, playerReco
     }
 }
 
+@Suppress("MagicNumber")
 private fun formatDecimal(value: Double): String {
     val rounded = (value * 1000).toInt()
     val str = rounded.toString()
@@ -395,6 +398,7 @@ private fun formatDecimal(value: Double): String {
     }
 }
 
+@Suppress("MagicNumber")
 private fun formatDecimal2(value: Double): String {
     val rounded = (value * 100).toInt()
     val whole = rounded / 100
@@ -403,6 +407,7 @@ private fun formatDecimal2(value: Double): String {
     return "$whole.$fracStr"
 }
 
+@Suppress("MagicNumber")
 private fun formatIP(thirds: Int): String {
     val whole = thirds / 3
     val rem = thirds % 3

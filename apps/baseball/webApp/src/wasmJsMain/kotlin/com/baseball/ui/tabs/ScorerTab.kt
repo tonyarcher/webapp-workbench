@@ -82,7 +82,12 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
     launch {
         try {
             if (isSingleGameMode && localGame == null) initGame(forceReset = false)
-            val (game, events, boxScore, homeRoster, awayRoster) = loadScorerData()
+            val data = loadScorerData()
+            val game = data.game
+            val events = data.events
+            val boxScore = data.boxScore
+            val homeRoster = data.homeRoster
+            val awayRoster = data.awayRoster
             container.innerHTML = ""
             if (game.status == GameStatus.SCHEDULED) {
                 renderStartGameCard(container, game)
@@ -126,6 +131,7 @@ private suspend fun loadScorerData(): ScorerData {
     return ScorerData(game, events, boxScore, homeRoster, awayRoster)
 }
 
+@Suppress("MagicNumber", "MaxLineLength", "LongMethod")
 private fun harmonizeAwayLineup(game: Game, awayRoster: List<Player>) {
     if (localAwayLineup.isEmpty()) {
         localAwayLineup.addAll(awayRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
@@ -145,6 +151,7 @@ private fun harmonizeAwayLineup(game: Game, awayRoster: List<Player>) {
     }
 }
 
+@Suppress("MagicNumber", "MaxLineLength", "LongMethod")
 private fun harmonizeHomeLineup(game: Game, homeRoster: List<Player>) {
     if (localHomeLineup.isEmpty()) {
         localHomeLineup.addAll(homeRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
@@ -177,6 +184,7 @@ private fun renderStartGameCard(container: HTMLElement, game: Game) {
     }
 }
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber")
 private fun renderStartGameTeams(container: DIV, game: Game) {
     container.div {
         css { display = Display.flex; justifyContent = JustifyContent.center; gap = UiConstants.CARD_GAP_LARGE; marginBottom = UiConstants.CARD_GAP_XL }
@@ -204,6 +212,7 @@ private fun renderStartGameButton(container: DIV) {
     }
 }
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "LongParameterList")
 private fun renderLiveScorerMainView(
     container: HTMLElement,
     game: Game,
@@ -223,6 +232,7 @@ private fun renderLiveScorerMainView(
     if (isResetDialogOpen) renderResetGameOverlay(container)
 }
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber")
 private fun renderScorerHeader(container: HTMLElement, game: Game) {
     container.div {
         css { display = Display.flex; justifyContent = JustifyContent.spaceBetween; alignItems = Align.center; marginBottom = 1.rem }
@@ -245,6 +255,7 @@ private fun renderScorerHeader(container: HTMLElement, game: Game) {
     }
 }
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "LongParameterList")
 private fun renderPlayMonitoringSection(
     container: HTMLElement,
     game: Game,
@@ -302,6 +313,7 @@ private fun renderPlayMonitoringSection(
     showScorecard()
 }
 
+@Suppress("MagicNumber")
 private fun isPlayEventInningEnded(ev: PlayEvent, nextEv: PlayEvent?): Boolean {
     if (nextEv != null) return nextEv.half != ev.half || nextEv.inning != ev.inning
     val outsOnPlay = when {
@@ -323,6 +335,7 @@ private fun getPlayEventEndingStr(ev: PlayEvent): String = when (ev.eventType) {
     else -> BaseballConstants.PLAY_RESULT_OUT
 }
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber")
 private fun renderEventLogContent(monitorEl: HTMLDivElement, events: List<PlayEvent>, homeRoster: List<Player>, awayRoster: List<Player>) {
     monitorEl.innerHTML = ""
     monitorEl.div(classes = "event-log") {
@@ -340,6 +353,7 @@ private fun renderEventLogContent(monitorEl: HTMLDivElement, events: List<PlayEv
     }
 }
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber")
 private fun renderLogItem(container: DIV, ev: PlayEvent, position: String, endedInning: Boolean) {
     val endedStr = getPlayEventEndingStr(ev)
     val notation = getScorebookNotation(ev)
@@ -368,6 +382,7 @@ private fun renderLogItem(container: DIV, ev: PlayEvent, position: String, ended
     }
 }
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber")
 private fun renderResetGameOverlay(container: HTMLElement) {
     container.div {
         css {

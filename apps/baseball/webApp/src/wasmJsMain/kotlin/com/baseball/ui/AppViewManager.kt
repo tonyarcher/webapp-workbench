@@ -30,6 +30,7 @@ data class NavState(
     val selectedGameId: Long?,
 )
 
+@Suppress("TooManyFunctions", "LongMethod")
 object AppViewManager {
     private val tabRenderers = mutableMapOf<String, (HTMLElement) -> Unit>()
 

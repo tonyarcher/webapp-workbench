@@ -21,6 +21,7 @@ import kotlin.random.Random
 
 var isLineupDialogOpen = false
 
+@Suppress("LargeClass", "TooManyFunctions", "LongMethod", "CyclomaticComplexMethod", "CognitiveComplexMethod")
 class LineupSetupOverlay(
     private val container: HTMLElement,
     private val homeRosterParam: List<Player> = emptyList(),

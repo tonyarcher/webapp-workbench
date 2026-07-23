@@ -16,6 +16,7 @@ import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 
+@Suppress("LongMethod", "TooManyFunctions")
 internal fun renderLoginTab(container: HTMLElement) {
     container.div(classes = "card") {
         css {

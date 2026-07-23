@@ -5,6 +5,7 @@ import kotlinx.css.*
 /**
  * Centralized UI constants to replace magic numbers and repeated values.
  */
+@Suppress("MagicNumber")
 object UiConstants {
     // Padding / margins
     val CARD_PADDING = Padding(0.75.rem)

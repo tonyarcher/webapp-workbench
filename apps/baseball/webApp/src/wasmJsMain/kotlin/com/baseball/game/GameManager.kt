@@ -90,6 +90,7 @@ fun clearLiveScorerCache() {
     initialHomeActivePitcherName = ""
 }
 
+@Suppress("TooManyFunctions", "LongMethod", "LongParameterList")
 object GameManager : GameService {
     private fun initDefaultGameSession() {
         val chc = SeedData.teamCubs
@@ -208,6 +209,7 @@ fun recordPlayEvent(
     )
 }
 
+@Suppress("LongParameterList", "LongMethod")
 private fun initializeGameRosters(
     homeTeam: Team,
     awayTeam: Team,
