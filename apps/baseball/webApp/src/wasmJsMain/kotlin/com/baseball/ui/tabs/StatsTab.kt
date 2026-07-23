@@ -19,6 +19,7 @@ import org.w3c.dom.HTMLSelectElement
 private var selectedStatsSubTab = "batting" // batting, pitching, fielding
 private var statsSelectedTeamId: Long? = null // null means All Teams
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
 internal fun renderStatsTab(container: HTMLElement) {
     container.h1 { +"Season Player Statistics" }
 

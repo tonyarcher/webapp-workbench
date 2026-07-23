@@ -16,6 +16,7 @@ import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
 internal fun renderLeaguesTab(container: HTMLElement) {
     container.h1 { +"Leagues & Seasons" }
 

@@ -16,78 +16,6 @@ import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 
-private fun renderAuthFormFields(form: FORM, isRegister: Boolean) {
-    if (isRegister) {
-        form.div(classes = "form-group") {
-            label { +"First Name" }
-            input(type = InputType.text, classes = "form-control") {
-                id = "register-first-name"
-                placeholder = "John"
-            }
-        }
-        form.div(classes = "form-group") {
-            label { +"Last Name" }
-            input(type = InputType.text, classes = "form-control") {
-                id = "register-last-name"
-                placeholder = "Doe"
-            }
-        }
-    }
-
-    form.div(classes = "form-group") {
-        label { +"Email Address (Username)" }
-        input(type = InputType.email, classes = "form-control") {
-            id = if (isRegister) "register-email" else "login-email"
-            placeholder = "you@example.com"
-        }
-    }
-
-    form.div(classes = "form-group") {
-        label { +"Password" }
-        input(type = InputType.password, classes = "form-control") {
-            id = if (isRegister) "register-password" else "login-password"
-            placeholder = if (isRegister) "At least 6 characters" else "Enter your password"
-        }
-    }
-}
-
-private fun renderAuthForm(card: DIV, isRegister: Boolean) {
-    card.form {
-        renderAuthFormFields(this, isRegister)
-        button(classes = "btn") {
-            type = ButtonType.button
-            +(if (isRegister) "Register & Log In" else "Log In")
-            css {
-                width = 100.pct
-                marginTop = 1.rem
-            }
-            onClickFunction = { if (isRegister) handleRegisterClick() else handleLoginClick() }
-        }
-    }
-}
-
-private fun renderAuthFooter(card: DIV, isRegister: Boolean) {
-    card.p {
-        css {
-            marginTop = 1.5.rem
-            textAlign = TextAlign.center
-            fontSize = 0.9.rem
-            color = Color("var(--text-secondary)")
-        }
-        span { +(if (isRegister) "Already have an account? " else "Don't have an account? ") }
-        a {
-            +(if (isRegister) "Log In" else "Create Account")
-            css {
-                color = Color("var(--accent-red)")
-                cursor = Cursor.pointer
-                fontWeight = FontWeight.bold
-                put("text-decoration", "underline")
-            }
-            onClickFunction = { window.location.hash = if (isRegister) "login" else "register" }
-        }
-    }
-}
-
 internal fun renderLoginTab(container: HTMLElement) {
     container.div(classes = "card") {
         css {
@@ -118,8 +46,87 @@ internal fun renderLoginTab(container: HTMLElement) {
             }
         }
 
-        renderAuthForm(this, isRegister = false)
-        renderAuthFooter(this, isRegister = false)
+        form {
+            div(classes = "form-group") {
+                label { +"Email Address (Username)" }
+                input(type = InputType.email, classes = "form-control") {
+                    id = "login-email"
+                    placeholder = "you@example.com"
+                }
+            }
+
+            div(classes = "form-group") {
+                label { +"Password" }
+                input(type = InputType.password, classes = "form-control") {
+                    id = "login-password"
+                    placeholder = "Enter your password"
+                }
+            }
+
+            button(classes = "btn") {
+                type = ButtonType.button
+                +"Log In"
+                css {
+                    width = 100.pct
+                    marginTop = 1.rem
+                }
+                onClickFunction = { handleLoginClick() }
+            }
+        }
+
+        p {
+            css {
+                marginTop = 1.5.rem
+                textAlign = TextAlign.center
+                fontSize = 0.9.rem
+                color = Color("var(--text-secondary)")
+            }
+            span { +"Don't have an account? " }
+            a {
+                +"Create Account"
+                css {
+                    color = Color("var(--accent-red)")
+                    cursor = Cursor.pointer
+                    fontWeight = FontWeight.bold
+                    put("text-decoration", "underline")
+                }
+                onClickFunction = { window.location.hash = "register" }
+            }
+        }
+    }
+}
+
+private fun handleLoginClick() {
+    val banner = document.getElementById("login-error-banner") as? HTMLDivElement ?: return
+    val emailIn = document.getElementById("login-email") as? HTMLInputElement ?: return
+    val passIn = document.getElementById("login-password") as? HTMLInputElement ?: return
+
+    banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
+    val email = emailIn.value.trim()
+    val password = passIn.value
+
+    if (!validateEmail(email)) {
+        showError(banner, "Please enter a valid email address.")
+        return
+    }
+    if (password.length < 6) {
+        showError(banner, "Password must be at least 6 characters.")
+        return
+    }
+
+    launch { executeLogin(email, password, banner) }
+}
+
+private suspend fun executeLogin(email: String, pass: String, banner: HTMLDivElement) {
+    try {
+        val session = authService.login(email, pass)
+        if (session != null) {
+            window.location.hash = BaseballConstants.TAB_WELCOME
+        } else {
+            showError(banner, "Invalid email or password.")
+        }
+    } catch (e: Throwable) {
+        showError(banner, parseAuthException(e))
     }
 }
 
@@ -153,8 +160,69 @@ internal fun renderRegisterTab(container: HTMLElement) {
             }
         }
 
-        renderAuthForm(this, isRegister = true)
-        renderAuthFooter(this, isRegister = true)
+        form {
+            div(classes = "form-group") {
+                label { +"First Name" }
+                input(type = InputType.text, classes = "form-control") {
+                    id = "register-first-name"
+                    placeholder = "John"
+                }
+            }
+
+            div(classes = "form-group") {
+                label { +"Last Name" }
+                input(type = InputType.text, classes = "form-control") {
+                    id = "register-last-name"
+                    placeholder = "Doe"
+                }
+            }
+
+            div(classes = "form-group") {
+                label { +"Email Address (Username)" }
+                input(type = InputType.email, classes = "form-control") {
+                    id = "register-email"
+                    placeholder = "you@example.com"
+                }
+            }
+
+            div(classes = "form-group") {
+                label { +"Password" }
+                input(type = InputType.password, classes = "form-control") {
+                    id = "register-password"
+                    placeholder = "At least 6 characters"
+                }
+            }
+
+            button(classes = "btn") {
+                type = ButtonType.button
+                +"Register & Log In"
+                css {
+                    width = 100.pct
+                    marginTop = 1.rem
+                }
+                onClickFunction = { handleRegisterClick() }
+            }
+        }
+
+        p {
+            css {
+                marginTop = 1.5.rem
+                textAlign = TextAlign.center
+                fontSize = 0.9.rem
+                color = Color("var(--text-secondary)")
+            }
+            span { +"Already have an account? " }
+            a {
+                +"Log In"
+                css {
+                    color = Color("var(--accent-red)")
+                    cursor = Cursor.pointer
+                    fontWeight = FontWeight.bold
+                    put("text-decoration", "underline")
+                }
+                onClickFunction = { window.location.hash = "login" }
+            }
+        }
     }
 }
 

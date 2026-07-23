@@ -69,6 +69,7 @@ import kotlin.text.substringBefore
 
 var isResetDialogOpen = false
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
 internal fun renderLiveScorerTab(container: HTMLElement) {
     com.baseball.game.onOpenLineupSetupDialog = {
         isLineupDialogOpen = true

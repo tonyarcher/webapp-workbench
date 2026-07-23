@@ -28,6 +28,7 @@ import kotlin.compareTo
 import kotlin.invoke
 import kotlin.toString
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
     showDashboardLoading(container)
 

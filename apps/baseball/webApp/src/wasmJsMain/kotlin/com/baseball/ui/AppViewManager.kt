@@ -216,26 +216,6 @@ object AppViewManager {
         }
     }
 
-    private fun renderSessionUserInfo(parent: DIV, session: UserSession) {
-        parent.span {
-            +"Logged in as ${session.firstName} "
-            css {
-                color = Color("var(--accent-yellow)")
-                fontWeight = FontWeight.bold
-                marginRight = 1.rem
-            }
-        }
-        parent.a {
-            +"Log Out"
-            css {
-                color = Color("var(--accent-red)")
-                cursor = Cursor.pointer
-                put("text-decoration", "underline")
-            }
-            onClickFunction = { authService.logout() }
-        }
-    }
-
     private fun renderWelcomeHeader(parent: DIV) {
         val session = currentUserSession
         parent.div {
@@ -246,7 +226,23 @@ object AppViewManager {
                 marginBottom = 1.rem
             }
             if (session != null) {
-                renderSessionUserInfo(this, session)
+                span {
+                    +"Logged in as ${session.firstName} "
+                    css {
+                        color = Color("var(--accent-yellow)")
+                        fontWeight = FontWeight.bold
+                        marginRight = 1.rem
+                    }
+                }
+                a {
+                    +"Log Out"
+                    css {
+                        color = Color("var(--accent-red)")
+                        cursor = Cursor.pointer
+                        put("text-decoration", "underline")
+                    }
+                    onClickFunction = { authService.logout() }
+                }
             } else {
                 a {
                     +"Log In / Sign Up"
@@ -259,6 +255,96 @@ object AppViewManager {
                 }
             }
         }
+    }
+
+    private fun renderOfflineModeCard(parent: DIV) {
+        parent.div(classes = "mode-card offline") {
+            onClickFunction = {
+                serverConnectionError = null
+                isWelcomeScreen = false
+                isSingleGameMode = true
+                initGame(forceReset = false)
+                window.location.hash = BaseballConstants.TAB_LIVE_SCORER
+            }
+            div(classes = "mode-icon") { +"⚾" }
+            div(classes = "mode-title") { +"Single Game Mode" }
+            div(classes = "mode-desc") {
+                +"Play or score a local exhibition game between Chicago and St. Louis. Runs entirely in your browser with no server connection required."
+            }
+            div(classes = "server-status") {
+                span(classes = "status-dot green")
+                span(classes = "status-text online") { +"Client-Side Only" }
+            }
+        }
+    }
+
+    private fun renderOnlineModeCard(parent: DIV) {
+        parent.div(classes = "mode-card online") {
+            onClickFunction = { handleOnlineModeSelection() }
+            div(classes = "mode-icon") { +"🏆" }
+            div(classes = "mode-title") { +"League & Season Mode" }
+            div(classes = "mode-desc") {
+                +"Manage complete baseball leagues, schedule round-robin seasons, track standings, and record live games backed by your database server."
+            }
+            div(classes = "server-status") {
+                span(classes = if (serverOnline) "status-dot green" else "status-dot red")
+                span(classes = if (serverOnline) "status-text online" else "status-text offline") {
+                    +(if (serverOnline) "Server Online" else "Check Connection")
+                }
+            }
+        }
+    }
+
+    private fun handleOnlineModeSelection() {
+        serverConnectionError = null
+        launch {
+            try {
+                leaguesList = api.getLeagues()
+                teamsList = api.getTeams()
+                if (leaguesList.isNotEmpty()) {
+                    selectedLeagueId = leaguesList.first().id
+                    seasonsList = api.getSeasons(selectedLeagueId!!)
+                    if (seasonsList.isNotEmpty()) {
+                        selectedSeasonId = seasonsList.first().id
+                    }
+                }
+                isWelcomeScreen = false
+                isSingleGameMode = false
+                window.location.hash = if (currentUserSession == null) BaseballConstants.TAB_LOGIN else BaseballConstants.TAB_LEAGUES
+            } catch (e: Throwable) {
+                serverConnectionError = "Unable to connect to the server. Please check that the backend server is running."
+                renderApp()
+            }
+        }
+    }
+
+    fun renderApp() {
+        val app = document.getElementById("app") as? HTMLElement ?: return
+        app.innerHTML = ""
+
+        if (isWelcomeScreen) {
+            renderWelcomeScreen(app)
+            return
+        }
+
+        app.header {
+            div(classes = "header-container") {
+                div(classes = "logo") {
+                    css { cursor = Cursor.pointer }
+                    onClickFunction = { goBackToWelcome() }
+                    span { +"GRAND SLAM" }
+                    +" BASEBALL"
+                }
+                renderUserHeaderControls(this)
+                renderHeaderNavigation(this)
+            }
+        }
+
+        app.main {
+            id = "content-area"
+        }
+
+        updateActiveTabButtons()
     }
 
     private fun renderUserHeaderControls(parent: DIV) {
@@ -300,29 +386,6 @@ object AppViewManager {
         }
     }
 
-    private fun renderMainNavigationButtons(parent: NAV) {
-        parent.button(classes = "nav-btn") {
-            id = "nav-btn-leagues"
-            +"Leagues & Seasons"
-            onClickFunction = { currentTab = BaseballConstants.TAB_LEAGUES }
-        }
-        parent.button(classes = "nav-btn") {
-            id = "nav-btn-teams"
-            +"Teams & Rosters"
-            onClickFunction = { currentTab = BaseballConstants.TAB_TEAMS }
-        }
-        parent.button(classes = "nav-btn") {
-            id = "nav-btn-games"
-            +"Season Dashboard"
-            onClickFunction = { currentTab = BaseballConstants.TAB_GAMES }
-        }
-        parent.button(classes = "nav-btn") {
-            id = "nav-btn-stats"
-            +"Season Stats"
-            onClickFunction = { currentTab = BaseballConstants.TAB_STATS }
-        }
-    }
-
     private fun renderHeaderNavigation(parent: DIV) {
         parent.nav {
             if (!isGameInProgress()) {
@@ -333,7 +396,26 @@ object AppViewManager {
             }
 
             if (!isSingleGameMode && !isGameInProgress()) {
-                renderMainNavigationButtons(this)
+                button(classes = "nav-btn") {
+                    id = "nav-btn-leagues"
+                    +"Leagues & Seasons"
+                    onClickFunction = { currentTab = BaseballConstants.TAB_LEAGUES }
+                }
+                button(classes = "nav-btn") {
+                    id = "nav-btn-teams"
+                    +"Teams & Rosters"
+                    onClickFunction = { currentTab = BaseballConstants.TAB_TEAMS }
+                }
+                button(classes = "nav-btn") {
+                    id = "nav-btn-games"
+                    +"Season Dashboard"
+                    onClickFunction = { currentTab = BaseballConstants.TAB_GAMES }
+                }
+                button(classes = "nav-btn") {
+                    id = "nav-btn-stats"
+                    +"Season Stats"
+                    onClickFunction = { currentTab = BaseballConstants.TAB_STATS }
+                }
             }
 
             button(classes = "nav-btn") {

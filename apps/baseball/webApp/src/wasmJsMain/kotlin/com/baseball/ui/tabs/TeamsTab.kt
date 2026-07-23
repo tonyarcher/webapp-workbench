@@ -19,6 +19,7 @@ import org.w3c.dom.HTMLSelectElement
 
 private val uiScope = MainScope()
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
 internal fun renderTeamsTab(container: HTMLElement) {
     container.h1 { +"Teams & Rosters" }
 

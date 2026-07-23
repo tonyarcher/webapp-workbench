@@ -21,6 +21,7 @@ import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 
+@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
 internal fun renderBoxScoreTab(container: HTMLElement) {
     if (!isSingleGameMode && selectedGameId == null) {
         renderNoGameSelected(container)
