@@ -4,7 +4,7 @@ package com.baseball.ui.components.scorebook
 
 import com.baseball.BaseballConstants
 import com.baseball.models.*
-import com.baseball.ui.*
+import com.baseball.ui.css
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.dom.append

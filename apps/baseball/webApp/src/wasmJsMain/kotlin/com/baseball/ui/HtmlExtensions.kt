@@ -2,23 +2,23 @@
 
 package com.baseball.ui
 
-import kotlinx.html.BUTTON
 import kotlinx.html.DIV
+import kotlinx.html.SPAN
+import kotlinx.html.BUTTON
+import kotlinx.html.P
 import kotlinx.html.H1
 import kotlinx.html.H2
 import kotlinx.html.H3
-import kotlinx.html.HEADER
-import kotlinx.html.LABEL
-import kotlinx.html.MAIN
-import kotlinx.html.P
-import kotlinx.html.SELECT
-import kotlinx.html.SPAN
 import kotlinx.html.TABLE
-import kotlinx.html.TBODY
-import kotlinx.html.TD
-import kotlinx.html.TH
 import kotlinx.html.THEAD
+import kotlinx.html.TBODY
 import kotlinx.html.TR
+import kotlinx.html.TH
+import kotlinx.html.TD
+import kotlinx.html.SELECT
+import kotlinx.html.LABEL
+import kotlinx.html.HEADER
+import kotlinx.html.MAIN
 import kotlinx.html.dom.append
 import kotlinx.html.js.*
 import org.w3c.dom.*

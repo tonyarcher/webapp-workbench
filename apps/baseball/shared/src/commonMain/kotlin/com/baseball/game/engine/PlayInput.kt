@@ -1,7 +1,7 @@
 package com.baseball.game.engine
 
-import kotlinx.serialization.Serializable
 import com.baseball.models.ScoringEventType
+import kotlinx.serialization.Serializable
 
 @Serializable
 data class PlayInput(

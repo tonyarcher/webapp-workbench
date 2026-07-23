@@ -9,14 +9,11 @@ import com.baseball.game.localBoxScore
 import com.baseball.game.localEvents
 import com.baseball.game.localGame
 import com.baseball.models.*
-import com.baseball.ui.components.scorebook.renderScorebookView
 import com.baseball.ui.*
+import com.baseball.ui.components.scorebook.renderScorebookView
 import kotlinx.css.*
 import kotlinx.html.*
-import kotlinx.html.js.*
-import kotlinx.html.th
-import kotlinx.html.thead
-import kotlinx.html.tr
+import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement

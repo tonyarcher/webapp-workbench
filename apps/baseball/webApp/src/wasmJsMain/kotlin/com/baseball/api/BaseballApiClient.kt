@@ -1,29 +1,13 @@
 package com.baseball.api
 
-import com.baseball.models.BoxScore
-import com.baseball.models.Game
-import com.baseball.models.League
-import com.baseball.models.PlayEvent
-import com.baseball.models.Player
-import com.baseball.models.RegisterRequestDto
-import com.baseball.models.ScoringEventRequest
-import com.baseball.models.Season
-import com.baseball.models.SeasonDashboard
-import com.baseball.models.SeasonStats
-import com.baseball.models.Team
-import com.baseball.models.UserResponseDto
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.request.delete
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
+import com.baseball.models.*
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.browser.window
 import kotlinx.serialization.json.Json
 

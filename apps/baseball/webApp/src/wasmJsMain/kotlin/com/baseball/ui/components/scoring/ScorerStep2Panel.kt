@@ -2,13 +2,41 @@ package com.baseball.ui.components.scoring
 
 import com.baseball.models.ScoringEventType
 import com.baseball.ui.css
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.Align
+import kotlinx.css.JustifyContent
+import kotlinx.css.FontWeight
+import kotlinx.css.Padding
+import kotlinx.css.marginBottom
+import kotlinx.css.fontSize
+import kotlinx.css.background
+import kotlinx.css.borderRadius
+import kotlinx.css.gap
+import kotlinx.css.rem
+import kotlinx.css.px
+import kotlinx.html.DIV
+import kotlinx.html.button
+import kotlinx.html.div
+import kotlinx.html.h3
+import kotlinx.html.span
+import kotlinx.html.dom.append
+import kotlinx.html.js.div
+import kotlinx.html.js.onClickFunction
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.TextAlign
+import kotlinx.css.alignItems
+import kotlinx.css.justifyContent
+import kotlinx.css.marginTop
+import kotlinx.css.width
+import kotlinx.css.pct
 import kotlinx.css.*
-import kotlinx.html.*
 import kotlinx.html.dom.append
 import kotlinx.html.js.div
 import kotlinx.html.js.onClickFunction
 
-@Suppress("TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "MagicNumber", "MaxLineLength")
+
 class ScorerStep2Panel(
     private val controller: GameScoringController,
     private val eventType: ScoringEventType,

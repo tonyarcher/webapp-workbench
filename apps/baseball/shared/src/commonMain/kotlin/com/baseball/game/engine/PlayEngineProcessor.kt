@@ -1,11 +1,8 @@
 package com.baseball.game.engine
 
-import com.baseball.models.Game
 import com.baseball.game.GameSessionState
 import com.baseball.models.PlayEvent
 import com.baseball.models.Player
-import com.baseball.models.ScoringEventType
-import com.baseball.game.engine.PlayInput
 
 /**
  * Lightweight processor that resolves batter/pitcher and creates a minimal PlayEvent.

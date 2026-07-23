@@ -5,67 +5,21 @@ package com.baseball.ui.tabs
 
 import com.baseball.BaseballConstants
 import com.baseball.api
-import com.baseball.game.initGame
-import com.baseball.game.localAwayRoster
-import com.baseball.game.localBoxScore
-import com.baseball.game.localEvents
-import com.baseball.game.localGame
-import com.baseball.game.localHomeRoster
-import com.baseball.models.BoxScore
-import com.baseball.models.Game
-import com.baseball.models.GameStatus
-import com.baseball.models.PlayEvent
-import com.baseball.models.Player
-import com.baseball.ui.UiConstants
+import com.baseball.game.*
+import com.baseball.models.*
+import com.baseball.ui.*
 import com.baseball.ui.components.lineup.LineupSetupOverlay
 import com.baseball.ui.components.lineup.isLineupDialogOpen
 import com.baseball.ui.components.scorebook.getScorebookNotation
 import com.baseball.ui.components.scorebook.renderScorebookView
 import com.baseball.ui.components.scoring.renderGameScoringControls
 import com.baseball.ui.components.scoring.renderScorerLedScoreboard
-import com.baseball.ui.isSingleGameMode
-import com.baseball.ui.renderCurrentTab
-import com.baseball.ui.selectedGameId
-import com.baseball.ui.selectedGameStatus
-import com.baseball.game.*
-import com.baseball.models.*
-import com.baseball.ui.*
 import kotlinx.css.*
 import kotlinx.html.*
-import kotlinx.html.js.*
-import kotlinx.html.h2
-import kotlinx.html.p
+import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
-import kotlin.Boolean
-import kotlin.String
-import kotlin.Throwable
-import kotlin.collections.List
-import kotlin.collections.addAll
-import kotlin.collections.drop
-import kotlin.collections.filter
-import kotlin.collections.find
-import kotlin.collections.forEachIndexed
-import kotlin.collections.getOrNull
-import kotlin.collections.indexOfFirst
-import kotlin.collections.isEmpty
-import kotlin.collections.isNotEmpty
-import kotlin.collections.listOf
-import kotlin.collections.none
-import kotlin.collections.plus
-import kotlin.collections.removeAll
-import kotlin.collections.removeFirst
-import kotlin.collections.take
-import kotlin.compareTo
-import kotlin.sequences.indexOfFirst
-import kotlin.sequences.none
-import kotlin.text.contains
-import kotlin.text.indexOfFirst
-import kotlin.text.isEmpty
-import kotlin.text.isNotEmpty
-import kotlin.text.none
-import kotlin.text.substringBefore
 
 var isResetDialogOpen = false
 
@@ -234,7 +188,7 @@ private fun renderLiveScorerMainView(
     renderScorerHeader(container, game)
     val topGrid = container.div(classes = "scorekeeper-grid")
     renderScorerLedScoreboard(topGrid.div(classes = "scoreboard-led"), game)
-    renderGameScoringControls(topGrid.div(classes = "card"), game, homeRoster, awayRoster, boxScore)
+    renderGameScoringControls(topGrid.div(classes = "card"), game, homeRoster, awayRoster)
     renderPlayMonitoringSection(container, game, events, boxScore, homeRoster, awayRoster)
     if (isLineupDialogOpen) {
         LineupSetupOverlay(container, homeRoster, awayRoster, game.homeTeam, game.awayTeam).render()

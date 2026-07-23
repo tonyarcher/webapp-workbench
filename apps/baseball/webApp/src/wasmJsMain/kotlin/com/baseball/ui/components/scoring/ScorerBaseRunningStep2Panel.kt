@@ -4,8 +4,35 @@ package com.baseball.ui.components.scoring
 
 import com.baseball.models.ScoringEventType
 import com.baseball.ui.css
-import kotlinx.css.*
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.Align
+import kotlinx.css.JustifyContent
+import kotlinx.css.FontWeight
+import kotlinx.css.Padding
+import kotlinx.css.marginBottom
+import kotlinx.css.fontSize
+import kotlinx.css.background
+import kotlinx.css.borderRadius
+import kotlinx.css.gap
+import kotlinx.css.rem
+import kotlinx.css.px
 import kotlinx.html.*
+import kotlinx.html.dom.append
+import kotlinx.html.js.div
+import kotlinx.html.js.onClickFunction
+import kotlinx.css.rem
+import kotlinx.css.background
+import kotlinx.css.borderRadius
+import kotlinx.css.gap
+import kotlinx.css.*
+
+import kotlinx.html.button
+import kotlinx.html.DIV
+import kotlinx.html.button
+import kotlinx.html.div
+import kotlinx.html.h3
+import kotlinx.html.span
 import kotlinx.html.dom.append
 import kotlinx.html.js.div
 import kotlinx.html.js.onClickFunction

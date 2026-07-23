@@ -13,20 +13,12 @@ import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.dom.append
-import kotlinx.html.js.*
-import kotlinx.html.tr
+import kotlinx.html.js.onChangeFunction
+import kotlinx.html.js.onClickFunction
+import kotlinx.html.js.option
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
-
-import kotlin.Boolean
-import kotlin.Double
-import kotlin.Int
-import kotlin.String
-import kotlin.Throwable
-import kotlin.compareTo
-import kotlin.invoke
-import kotlin.toString
 
 @Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
