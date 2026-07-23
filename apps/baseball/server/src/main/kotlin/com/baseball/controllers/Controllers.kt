@@ -1,5 +1,3 @@
-@file:Suppress("WildcardImport", "UseCheckOrError")
-
 package com.baseball.controllers
 
 import com.baseball.entities.*
@@ -90,14 +88,14 @@ class SeasonController(
         @PathVariable id: Long,
     ): List<Game> {
         val teams = teamRepository.findAll()
-        if (teams.size < 2) throw IllegalStateException("Need at least 2 teams to generate a schedule")
+        check(teams.size >= 2) { "Need at least 2 teams to generate a schedule" }
 
         val games = mutableListOf<GameEntity>()
         var date = LocalDate.now()
 
         // Generate round robin schedule (each team plays every other team once home and once away)
-        for (i in 0 until teams.size) {
-            for (j in 0 until teams.size) {
+        for (i in teams.indices) {
+            for (j in teams.indices) {
                 if (i != j) {
                     val home = teams[i]
                     val away = teams[j]
@@ -111,7 +109,7 @@ class SeasonController(
                             status = GameStatus.SCHEDULED,
                         )
                     games.add(game)
-                    date = date.plusDays(1) // increment day
+                    date = date.plusDays(1)
                 }
             }
         }
@@ -188,13 +186,12 @@ class PlayerController(
     ): Player {
         val entity =
             PlayerEntity(
-                teamId = player.teamId,
                 name = player.name,
                 position = player.position,
+                teamId = player.teamId,
                 jerseyNumber = player.jerseyNumber,
                 battingHand = player.battingHand,
-                throwingHand = player.throwingHand,
-            )
+            ).apply { throwingHand = player.throwingHand }
         return repository.save(entity).toDomain()
     }
 

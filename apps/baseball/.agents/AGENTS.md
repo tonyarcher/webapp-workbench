@@ -50,3 +50,15 @@ To achieve optimal code reuse, follow this mapping matrix:
 * **File Size Limit**: Keep files concise and modular. Files should not exceed **500 lines**.
 * **Method Size Limit**: Keep functions and methods focused. Methods should not exceed **50 lines**.
 * **Code Coverage**: Maintain a minimum **90%+ code coverage** limit on business, domain, and routing logic classes in the server and shared modules.
+
+> [!NOTE]
+> The agent will not add exceptions to detekt.yml or file-level @file:Suppress annotations.
+
+> [!NOTE]
+
+> Commit after a successful Gradle build. Try to commit frequently; squashing commits is acceptable.
+
+> [!NOTE]
+> Use feature branches for each new task. Create a new branch `feature/<task-name>` from `main`, push it to the upstream
+repository, and work on that branch. When the task completes, open a PR and merge back.
+

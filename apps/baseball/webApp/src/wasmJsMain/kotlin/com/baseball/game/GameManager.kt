@@ -1,8 +1,7 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
-
 package com.baseball.game
 
 import com.baseball.BaseballConstants
+import com.baseball.game.engine.PlayInput
 import com.baseball.models.*
 import com.baseball.seed.SeedData
 import kotlinx.browser.window
@@ -131,6 +130,7 @@ object GameManager : GameService {
         )
     }
 
+    @Suppress("LongParameterList")
     override fun recordPlayEvent(
         eventType: ScoringEventType,
         batterId: Long,
@@ -162,18 +162,17 @@ object GameManager : GameService {
                 awayActivePitcherName = localAwayActivePitcherName,
             )
 
-        val (nextState, ev) =
-            PlayEngine.processPlay(
-                state = currentState,
-                eventType = eventType,
-                batterId = batterId,
-                pitcherId = pitcherId,
-                descriptionDetail = descriptionDetail,
-                isDoublePlay = isDoublePlay,
-                isError = isError,
-                runnerAdvanceMap = runnerAdvanceMap,
-                nextEventId = (localEvents.size + 1).toLong(),
-            )
+        val playInput = PlayInput(
+            eventType = eventType,
+            batterId = batterId,
+            pitcherId = pitcherId,
+            descriptionDetail = descriptionDetail,
+            isDoublePlay = isDoublePlay,
+            isError = isError,
+            runnerAdvanceMap = runnerAdvanceMap,
+            nextEventId = (localEvents.size + 1).toLong()
+        )
+        val (nextState, ev) = PlayEngine.processPlay(state = currentState, input = playInput)
 
         localGame = nextState.game
         localBoxScore = nextState.boxScore

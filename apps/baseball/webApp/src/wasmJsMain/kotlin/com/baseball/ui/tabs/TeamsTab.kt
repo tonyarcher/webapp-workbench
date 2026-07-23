@@ -1,12 +1,14 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
 
 package com.baseball.ui.tabs
+
 
 import com.baseball.api
 import com.baseball.models.Player
 import com.baseball.models.Team
 import com.baseball.ui.*
-
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.js.onClickFunction
@@ -14,6 +16,8 @@ import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
+
+private val uiScope = MainScope()
 
 internal fun renderTeamsTab(container: HTMLElement) {
     container.h1 { +"Teams & Rosters" }
@@ -71,7 +75,7 @@ private fun refreshRosterUI(divElement: HTMLDivElement) {
         return
     }
 
-    launch {
+    uiScope.launch {
         val roster = api.getTeamRoster(tid)
         renderRosterContent(divElement, roster)
     }
@@ -118,14 +122,14 @@ private fun renderRosterRow(tbody: TBODY, p: Player, rosterDiv: HTMLDivElement) 
             button(classes = "btn btn-secondary") {
                 +"Remove"
                 css {
-                    padding = Padding(0.2.rem, 0.5.rem)
-                    fontSize = 0.75.rem
+                    padding = Padding(UiConstants.CARD_GAP_SMALL, UiConstants.CARD_GAP_SMALL)
+                    fontSize = UiConstants.FONT_SIZE_SMALL
                     backgroundColor = Color("#ff2a3b")
                     color = Color("white")
                     border = Border.none
                 }
                 onClickFunction = {
-                    launch {
+                    uiScope.launch {
                         api.deletePlayer(p.id!!)
                         refreshRosterUI(rosterDiv)
                     }
@@ -152,7 +156,7 @@ private fun refreshTeamsListUI(divElement: HTMLDivElement, onSelectTeam: () -> U
 private fun renderTeamItemCard(divElement: HTMLDivElement, team: Team, onSelectTeam: () -> Unit) {
     divElement.div(classes = "game-card") {
         css {
-            marginBottom = 0.75.rem
+            marginBottom = UiConstants.CARD_GAP_SMALL
             display = Display.flex
             flexDirection = FlexDirection.column
             alignItems = Align.flexStart
@@ -161,16 +165,16 @@ private fun renderTeamItemCard(divElement: HTMLDivElement, team: Team, onSelectT
         div {
             css {
                 fontWeight = FontWeight.bold
-                fontSize = 1.1.rem
+                fontSize = UiConstants.FONT_SIZE_LARGE
             }
             +"${team.city} ${team.name} (${team.abbreviation})"
         }
 
         button(classes = "btn btn-secondary${if (selectedTeamId == team.id) " active" else ""}") {
             css {
-                marginTop = 0.5.rem
-                padding = Padding(0.25.rem, 0.75.rem)
-                fontSize = 0.85.rem
+                marginTop = UiConstants.CARD_GAP_SMALL
+                padding = Padding(UiConstants.CARD_GAP_SMALL, UiConstants.CARD_PADDING)
+                fontSize = UiConstants.FONT_SIZE_MEDIUM
             }
             +(if (selectedTeamId == team.id) "Active Team" else "Select Team")
             onClickFunction = {
@@ -183,7 +187,7 @@ private fun renderTeamItemCard(divElement: HTMLDivElement, team: Team, onSelectT
 
 private fun renderAddTeamCard(container: DIV, onTeamCreated: () -> Unit) {
     container.div(classes = "card") {
-        css { marginBottom = 2.rem }
+        css { marginBottom = UiConstants.CARD_MARGIN_BOTTOM }
         h2 { +"Add Team" }
         form {
             div(classes = "form-group") {
@@ -232,7 +236,7 @@ private fun handleCreateTeamSubmit(
         val name = inputTName.value.trim()
         val abb = inputAbb.value.trim()
         if (city.isNotEmpty() && name.isNotEmpty() && abb.isNotEmpty()) {
-            launch {
+            uiScope.launch {
                 api.createTeam(Team(city = city, name = name, abbreviation = abb))
                 teamsList = api.getTeams()
                 inputCity.value = ""
@@ -249,7 +253,7 @@ private fun renderRosterSectionCard(container: DIV, team: Team, onRosterUpdated:
         h2 { +"${team.city} ${team.name} Roster" }
         div {
             id = "roster-container"
-            css { marginBottom = 1.5.rem }
+            css { marginBottom = UiConstants.CARD_GAP_LARGE }
         }
 
         h3 { +"Add Player to Roster" }
@@ -307,7 +311,7 @@ private fun renderBattingThrowingSelects(container: FORM) {
         div {
             css {
                 display = Display.flex
-                gap = 1.rem
+                gap = UiConstants.CARD_GAP
             }
             select(classes = "form-control") {
                 id = "player-bat-select"
@@ -346,7 +350,7 @@ private fun handleAddPlayerSubmit(
         val bat = batIn.value
         val thr = thrIn.value
         if (name.isNotEmpty()) {
-            launch {
+            uiScope.launch {
                 api.createPlayer(
                     Player(
                         teamId = selectedTeamId,

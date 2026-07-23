@@ -1,10 +1,10 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
 
 package com.baseball.auth
 
 import com.baseball.BaseballConstants
 import com.baseball.api
-import com.baseball.api.RegisterRequestDto
+import com.baseball.models.RegisterRequestDto
 import kotlinx.browser.window
 import kotlinx.serialization.json.Json
 

@@ -1,6 +1,6 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
 
 package com.baseball.ui.tabs
+
 
 import com.baseball.BaseballConstants
 import com.baseball.api
@@ -8,19 +8,42 @@ import com.baseball.models.Game
 import com.baseball.models.GameStatus
 import com.baseball.models.SeasonDashboard
 import com.baseball.models.TeamStandings
-import com.baseball.ui.*
-
-import kotlinx.browser.document
+import com.baseball.ui.currentTab
+import com.baseball.ui.renderCurrentTab
+import com.baseball.ui.selectedGameId
+import com.baseball.ui.updateActiveTabButtons
 import kotlinx.css.*
-import kotlinx.html.*
-import kotlinx.html.dom.append
+import kotlinx.html.DIV
+import kotlinx.html.button
+import kotlinx.html.div
+import kotlinx.html.h1
+import kotlinx.html.h2
+import kotlinx.html.input
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.js.option
-import org.w3c.dom.HTMLButtonElement
+import kotlinx.html.option
+import kotlinx.html.p
+import kotlinx.html.select
+import kotlinx.html.span
+import kotlinx.html.table
+import kotlinx.html.tbody
+import kotlinx.html.td
+import kotlinx.html.th
+import kotlinx.html.thead
+import kotlinx.html.tr
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
+import styled.*
+import kotlin.Boolean
+import kotlin.Double
+import kotlin.Int
+import kotlin.String
+import kotlin.Throwable
+import kotlin.compareTo
+import kotlin.invoke
+import kotlin.toString
 
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
     showDashboardLoading(container)
@@ -31,7 +54,7 @@ internal fun renderSeasonDashboardTab(container: HTMLElement) {
             container.innerHTML = ""
             container.h1 { +"Season Dashboard" }
 
-            val controls = renderSeasonSelectorCard(container)
+            renderSeasonSelectorCard(container)
 
             if (selectedSeasonId == null) {
                 showNoSeasonSelectedMessage(container)
@@ -51,7 +74,7 @@ private fun showDashboardLoading(container: HTMLElement) {
     container.div(classes = "card") {
         css {
             textAlign = TextAlign.center
-            padding = Padding(3.rem)
+            padding = UiConstants.CARD_PADDING_LARGE
         }
         p { +"Loading season dashboard..." }
     }
@@ -81,9 +104,9 @@ private fun renderSeasonSelectorCard(container: HTMLElement): SeasonSelectorCont
 
     val card = container.div(classes = "card") {
         css {
-            marginBottom = 2.rem
+            marginBottom = UiConstants.CARD_MARGIN_BOTTOM
             display = Display.flex
-            gap = 1.5.rem
+            gap = UiConstants.CARD_GAP_LARGE
             alignItems = Align.flexEnd
         }
 
@@ -236,13 +259,13 @@ private fun formatWinPercentage(pct: Double): String {
 
 private fun DIV.renderScheduleManagerCard(games: List<Game>) {
     div(classes = "card") {
-        css { marginBottom = 1.5.rem }
+        css { marginBottom = UiConstants.CARD_GAP_LARGE }
         h3 { +"Schedule Manager" }
         renderRoundRobinSection(games.isNotEmpty())
         hr {
             css {
                 border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.05)"))
-                margin = Margin(1.rem, 0.px)
+                margin = Margin(UiConstants.CARD_GAP, 0.px)
             }
         }
         h4 { +"Schedule a Single Game" }
@@ -256,7 +279,7 @@ private fun DIV.renderRoundRobinSection(hasGames: Boolean) {
             display = Display.flex
             justifyContent = JustifyContent.spaceBetween
             alignItems = Align.center
-            marginBottom = 1.rem
+            marginBottom = UiConstants.CARD_GAP
         }
         span { +"Generate a full round-robin season schedule automatically:" }
         button(classes = if (hasGames) "btn btn-secondary" else "btn") {
@@ -284,7 +307,7 @@ private fun DIV.renderSingleGameScheduleForm() {
         css {
             display = Display.flex
             flexWrap = FlexWrap.wrap
-            gap = 1.rem
+            gap = UiConstants.CARD_GAP
             alignItems = Align.flexEnd
         }
         renderTeamSelectGroup("Home Team", "sched-home-select", defaultIndex = 0)
@@ -385,8 +408,8 @@ private fun DIV.renderGameCardItem(g: Game) {
             display = Display.flex
             justifyContent = JustifyContent.spaceBetween
             alignItems = Align.center
-            padding = Padding(0.75.rem)
-            marginBottom = 0.5.rem
+            padding = UiConstants.CARD_PADDING
+            marginBottom = UiConstants.CARD_GAP_SMALL
         }
         div {
             div {
@@ -395,9 +418,9 @@ private fun DIV.renderGameCardItem(g: Game) {
             }
             div {
                 css {
-                    fontSize = 0.85.rem
+                    fontSize = UiConstants.FONT_SIZE_MEDIUM
                     color = Color("var(--text-secondary)")
-                    marginTop = 0.25.rem
+                    marginTop = UiConstants.CARD_GAP_SMALL
                 }
                 +"Date: ${g.date} | Status: ${g.status}"
             }
@@ -410,14 +433,14 @@ private fun DIV.renderGameCardAction(g: Game) {
     div {
         css {
             display = Display.flex
-            gap = 0.5.rem
+            gap = UiConstants.CARD_GAP_SMALL
             alignItems = Align.center
         }
         if (g.status == GameStatus.COMPLETED) {
             span {
                 css {
                     fontWeight = FontWeight.bold
-                    marginRight = 1.rem
+                    marginRight = UiConstants.CARD_GAP
                 }
                 +"${g.awayScore} - ${g.homeScore}"
             }
@@ -449,7 +472,7 @@ private fun renderDashboardError(container: HTMLElement, e: Throwable) {
     container.div(classes = "card") {
         css {
             textAlign = TextAlign.center
-            padding = Padding(3.rem)
+            padding = UiConstants.CARD_PADDING_LARGE
         }
         h2 { +"Failed to load Dashboard" }
         p {
@@ -458,7 +481,7 @@ private fun renderDashboardError(container: HTMLElement, e: Throwable) {
         }
         button(classes = "btn btn-primary") {
             +"Retry"
-            css { marginTop = 1.rem }
+            css { marginTop = UiConstants.CARD_GAP }
             onClickFunction = {
                 renderCurrentTab()
             }

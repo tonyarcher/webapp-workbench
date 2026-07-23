@@ -1,24 +1,81 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
 
 package com.baseball.ui.tabs
 
+
 import com.baseball.BaseballConstants
 import com.baseball.api
-import com.baseball.game.*
-import com.baseball.models.*
-import com.baseball.ui.*
+import com.baseball.game.initGame
+import com.baseball.game.localAwayRoster
+import com.baseball.game.localBoxScore
+import com.baseball.game.localEvents
+import com.baseball.game.localGame
+import com.baseball.game.localHomeRoster
+import com.baseball.models.BoxScore
+import com.baseball.models.Game
+import com.baseball.models.GameStatus
+import com.baseball.models.PlayEvent
+import com.baseball.models.Player
+import com.baseball.ui.UiConstants
 import com.baseball.ui.components.lineup.LineupSetupOverlay
 import com.baseball.ui.components.lineup.isLineupDialogOpen
 import com.baseball.ui.components.scorebook.getScorebookNotation
 import com.baseball.ui.components.scorebook.renderScorebookView
 import com.baseball.ui.components.scoring.renderGameScoringControls
 import com.baseball.ui.components.scoring.renderScorerLedScoreboard
-import kotlinx.css.*
-import kotlinx.html.*
-import kotlinx.html.js.onClickFunction
+import com.baseball.ui.isSingleGameMode
+import com.baseball.ui.renderCurrentTab
+import com.baseball.ui.selectedGameId
+import com.baseball.ui.selectedGameStatus
+import kotlinx.css.Align
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.FlexDirection
+import kotlinx.css.FontWeight
+import kotlinx.css.JustifyContent
+import kotlinx.css.Margin
+import kotlinx.css.Padding
+import kotlinx.css.pct
+import kotlinx.css.px
+import kotlinx.css.rem
+import kotlinx.html.DIV
+import kotlinx.html.button
+import kotlinx.html.css
+import kotlinx.html.div
+import kotlinx.html.h1
+import kotlinx.html.h2
+import kotlinx.html.p
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
+import kotlin.Boolean
+import kotlin.String
+import kotlin.Throwable
+import kotlin.collections.List
+import kotlin.collections.addAll
+import kotlin.collections.drop
+import kotlin.collections.filter
+import kotlin.collections.find
+import kotlin.collections.forEachIndexed
+import kotlin.collections.getOrNull
+import kotlin.collections.indexOfFirst
+import kotlin.collections.isEmpty
+import kotlin.collections.isNotEmpty
+import kotlin.collections.listOf
+import kotlin.collections.none
+import kotlin.collections.plus
+import kotlin.collections.removeAll
+import kotlin.collections.removeFirst
+import kotlin.collections.take
+import kotlin.compareTo
+import kotlin.sequences.indexOfFirst
+import kotlin.sequences.none
+import kotlin.text.contains
+import kotlin.text.indexOfFirst
+import kotlin.text.isEmpty
+import kotlin.text.isNotEmpty
+import kotlin.text.none
+import kotlin.text.substringBefore
 
 var isResetDialogOpen = false
 
@@ -118,10 +175,10 @@ private fun harmonizeHomeLineup(game: Game, homeRoster: List<Player>) {
 
 private fun renderStartGameCard(container: HTMLElement, game: Game) {
     container.div(classes = "card") {
-        css { textAlign = TextAlign.center; padding = Padding(3.rem); maxWidth = 600.px; margin = Margin(2.rem, LinearDimension.auto) }
+        css { textAlign = TextAlign.center; padding = UiConstants.CARD_PADDING_LARGE; maxWidth = 600.px; margin = Margin(2.rem, LinearDimension.auto) }
         h2 { +"Ready to Play!" }
         p {
-            css { fontSize = 1.1.rem; color = Color("var(--text-secondary)"); marginTop = 1.rem; marginBottom = 2.rem }
+            css { fontSize = UiConstants.FONT_SIZE_LARGE; color = Color("var(--text-secondary)"); marginTop = 1.rem; marginBottom = UiConstants.CARD_GAP_XL }
             +"Matchup: ${game.awayTeam.city} ${game.awayTeam.name} @ ${game.homeTeam.city} ${game.homeTeam.name}"
         }
         renderStartGameTeams(this, game)
@@ -131,14 +188,14 @@ private fun renderStartGameCard(container: HTMLElement, game: Game) {
 
 private fun renderStartGameTeams(container: DIV, game: Game) {
     container.div {
-        css { display = Display.flex; justifyContent = JustifyContent.center; gap = 1.5.rem; marginBottom = 2.rem }
+        css { display = Display.flex; justifyContent = JustifyContent.center; gap = UiConstants.CARD_GAP_LARGE; marginBottom = UiConstants.CARD_GAP_XL }
         div {
-            css { background = "rgba(255,255,255,0.05)"; padding = Padding(1.5.rem); borderRadius = 8.px; flexGrow = 1.0 }
+            css { background = "rgba(255,255,255,0.05)"; padding = Padding(UiConstants.CARD_GAP_LARGE); borderRadius = UiConstants.CARD_BORDER_RADIUS; flexGrow = 1.0 }
             div { +"Away" }
             h3 { +"${game.awayTeam.abbreviation}" }
         }
         div {
-            css { background = "rgba(255,255,255,0.05)"; padding = Padding(1.5.rem); borderRadius = 8.px; flexGrow = 1.0 }
+            css { background = "rgba(255,255,255,0.05)"; padding = Padding(UiConstants.CARD_GAP_LARGE); borderRadius = UiConstants.CARD_BORDER_RADIUS; flexGrow = 1.0 }
             div { +"Home" }
             h3 { +"${game.homeTeam.abbreviation}" }
         }
@@ -221,7 +278,7 @@ private fun renderPlayMonitoringSection(
     }
 
     val monitorCard = container.div(classes = "card") {
-        css { marginTop = 2.rem }
+        css { marginTop = UiConstants.CARD_GAP_XL }
         div {
             css { display = Display.flex; justifyContent = JustifyContent.spaceBetween; alignItems = Align.center; borderBottom = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.1)")); paddingBottom = 0.5.rem; marginBottom = 1.rem }
             h2 { +"Live Game Monitoring"; css { margin = Margin(0.px) } }
@@ -328,7 +385,7 @@ private fun renderResetGameOverlay(container: HTMLElement) {
             alignItems = Align.center; justifyContent = JustifyContent.center; zIndex = 10000
         }
         div(classes = "card") {
-            css { width = 90.pct; maxWidth = 450.px; padding = Padding(2.rem); textAlign = TextAlign.center }
+            css { width = UiConstants.MODAL_WIDTH_PCT.pct; maxWidth = UiConstants.MODAL_MAX_WIDTH_PX.px; padding = Padding(2.rem); textAlign = TextAlign.center }
             h2 { +"Start a New Game"; css { marginBottom = 1.rem } }
             p { +"Are you sure you want to reset? All current game progress and stats will be permanently lost."; css { marginBottom = 1.5.rem; color = Color("var(--text-secondary)") } }
             renderResetDialogActions(this)

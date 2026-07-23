@@ -1,6 +1,7 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
 
 package com.baseball.ui.tabs
+
 
 import com.baseball.BaseballConstants
 import com.baseball.api
@@ -8,12 +9,28 @@ import com.baseball.game.localBoxScore
 import com.baseball.game.localEvents
 import com.baseball.game.localGame
 import com.baseball.models.*
-import com.baseball.ui.*
-
 import com.baseball.ui.components.scorebook.renderScorebookView
-import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.FontWeight
+import kotlinx.css.TextAlign
+import kotlinx.css.gap
+import kotlinx.css.marginBottom
+import kotlinx.css.marginTop
+import kotlinx.css.maxHeight
+import kotlinx.css.rem
+import kotlinx.html.button
+import kotlinx.html.div
+import kotlinx.html.h1
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.p
+import kotlinx.html.span
+import kotlinx.html.table
+import kotlinx.html.tbody
+import kotlinx.html.td
+import kotlinx.html.th
+import kotlinx.html.thead
+import kotlinx.html.tr
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
@@ -79,7 +96,7 @@ private fun renderNoGameSelected(container: HTMLElement) {
     container.div(classes = "card") {
         css {
             textAlign = TextAlign.center
-            padding = Padding(3.rem)
+            padding = UiConstants.CARD_PADDING_LARGE
         }
         p { +"No game selected." }
     }
@@ -98,14 +115,13 @@ private suspend fun loadBoxScoreData(): Triple<Game, BoxScore, List<PlayEvent>> 
 
 private fun renderBoxScoreHeaderCard(container: HTMLElement, game: Game) {
     container.div(classes = "card") {
-        h2 {
-            +"${game.awayTeam.city} ${game.awayTeam.name} (${game.awayScore}) vs ${game.homeTeam.city} ${game.homeTeam.name} (${game.homeScore})"
-        }
+        val header = "${game.awayTeam.city} ${game.awayTeam.name} (${game.awayScore}) vs ${game.homeTeam.city} ${game.homeTeam.name} (${game.homeScore})"
+        h2 { +header }
         p {
             +"Status: ${game.status.name} | Date: ${game.date}"
             css {
                 color = Color("var(--text-secondary)")
-                marginBottom = 1.5.rem
+                marginBottom = UiConstants.CARD_GAP_XL
             }
         }
         button(classes = "btn btn-secondary") {
@@ -127,9 +143,9 @@ private fun renderBoxScoreToggleButtons(
     return container.div {
         css {
             display = Display.flex
-            gap = 0.5.rem
-            marginTop = 1.5.rem
-            marginBottom = 1.rem
+            gap = UiConstants.CARD_GAP
+            marginTop = UiConstants.CARD_GAP_XL
+            marginBottom = UiConstants.CARD_GAP
         }
 
         button(classes = "btn btn-primary") {
@@ -183,7 +199,7 @@ private fun renderTeamTraditionalStats(
     card.h3 {
         +"$teamName Pitching"
         css {
-            marginTop = 1.5.rem
+            marginTop = UiConstants.CARD_GAP_XL
         }
     }
     renderPitchingTable(card, pitching)
@@ -192,12 +208,13 @@ private fun renderTeamTraditionalStats(
 private fun renderGameLogCard(contentEl: HTMLDivElement, events: List<PlayEvent>) {
     contentEl.div(classes = "card") {
         css {
-            marginTop = 1.5.rem
+            padding = UiConstants.CARD_PADDING
+            marginBottom = UiConstants.CARD_GAP
         }
         h3 { +"Game Log History" }
         div(classes = "event-log") {
             css {
-                maxHeight = 350.px
+                maxHeight = UiConstants.EVENT_LOG_MAX_HEIGHT_PX.px
             }
             events.forEach { ev ->
                 div(classes = "log-item") {

@@ -1,12 +1,13 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
 
 package com.baseball.ui.tabs
+
 
 import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.models.League
 import com.baseball.models.Season
-import com.baseball.ui.*
+import com.baseball.ui.UiConstants
 
 import kotlinx.css.*
 import kotlinx.html.*
@@ -94,7 +95,7 @@ private fun DIV.renderLeaguesListCard() {
 private fun renderLeagueCardItem(parent: HTMLDivElement, league: League, refs: LeaguesTabReferences) {
     parent.div(classes = "game-card") {
         css {
-            marginBottom = 0.75.rem
+            marginBottom = UiConstants.CARD_PADDING
             display = Display.flex
             flexDirection = FlexDirection.column
             alignItems = Align.flexStart
@@ -103,7 +104,7 @@ private fun renderLeagueCardItem(parent: HTMLDivElement, league: League, refs: L
         div {
             css {
                 fontWeight = FontWeight.bold
-                fontSize = 1.1.rem
+                fontSize = UiConstants.FONT_SIZE_LARGE
             }
             +league.name
         }
@@ -111,7 +112,7 @@ private fun renderLeagueCardItem(parent: HTMLDivElement, league: League, refs: L
         val isSelected = (selectedLeagueId == league.id)
         button(classes = "btn btn-secondary${if (isSelected) " active" else ""}") {
             css {
-                marginTop = 0.5.rem
+                marginTop = UiConstants.CARD_GAP_SMALL
                 padding = Padding(0.25.rem, 0.75.rem)
                 fontSize = 0.85.rem
             }
@@ -131,7 +132,7 @@ private fun renderLeagueCardItem(parent: HTMLDivElement, league: League, refs: L
 
 private fun DIV.renderCreateLeagueCard(refs: LeaguesTabReferences) {
     div(classes = "card") {
-        css { marginBottom = 2.rem }
+        css { marginBottom = UiConstants.CARD_MARGIN_BOTTOM }
         h2 { +"Create New League" }
         form {
             div(classes = "form-group") {
@@ -172,7 +173,7 @@ private fun DIV.renderSeasonsSection(refs: LeaguesTabReferences) {
         h2 { +"Seasons in Selected League" }
         div {
             id = "seasons-list-container"
-            css { marginBottom = 1.5.rem }
+            css { marginBottom = UiConstants.CARD_GAP_LARGE }
         }
 
         h3 { +"Create New Season" }
@@ -224,8 +225,8 @@ private fun handleCreateSeasonClick(refs: LeaguesTabReferences) {
 private fun renderSeasonCardItem(parent: HTMLDivElement, season: Season) {
     parent.div(classes = "game-card") {
         css {
-            marginBottom = 0.5.rem
-            padding = Padding(0.75.rem)
+            marginBottom = UiConstants.CARD_GAP_SMALL
+            padding = UiConstants.CARD_PADDING
             display = Display.flex
             justifyContent = JustifyContent.spaceBetween
             alignItems = Align.center

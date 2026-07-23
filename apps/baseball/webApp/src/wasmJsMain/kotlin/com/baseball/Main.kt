@@ -1,4 +1,4 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
 
 package com.baseball
 
@@ -10,6 +10,8 @@ import com.baseball.ui.AppViewManager
 import com.baseball.ui.auth.renderLoginTab
 import com.baseball.ui.auth.renderRegisterTab
 import com.baseball.ui.tabs.*
+
+// Duplicate tab imports removed
 
 // Global interface instantiations promoting coding by interface inheritance
 val api: BaseballApi = BaseballApiClient()

@@ -1,16 +1,14 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
 
 package com.baseball.ui
 
 import com.baseball.BaseballConstants
 import com.baseball.UiConstants
 import com.baseball.api
+import com.baseball.auth.UserSession
 import com.baseball.authService
 import com.baseball.game.*
-
 import com.baseball.models.HalfInning
-import com.baseball.models.Player
-import com.baseball.auth.UserSession
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*

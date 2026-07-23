@@ -1,4 +1,4 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter", "LargeClass")
+
 
 package com.baseball.ui.components.scorebook
 
@@ -7,10 +7,12 @@ import com.baseball.UiConstants
 import com.baseball.game.*
 import com.baseball.models.*
 import com.baseball.ui.*
-
 import kotlinx.browser.document
 import kotlinx.css.*
-import kotlinx.css.properties.*
+import kotlinx.css.properties.deg
+import kotlinx.css.properties.rotate
+import kotlinx.css.properties.transform
+import kotlinx.css.properties.translate
 import kotlinx.html.*
 import kotlinx.html.dom.append
 import kotlinx.html.js.div

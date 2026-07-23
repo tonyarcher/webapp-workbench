@@ -1,7 +1,9 @@
-@file:Suppress("WildcardImport", "UseCheckOrError", "MagicNumber", "MaxLineLength", "LargeClass", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition")
+
 
 package com.baseball.services
 
+import com.baseball.ScoringConstants
+import com.baseball.ServerConstants
 import com.baseball.entities.*
 import com.baseball.models.*
 import com.baseball.repositories.*
@@ -63,7 +65,7 @@ class GameScoringService(
             ScoringEventType.BALL -> {
                 game.balls += 1
                 description = if (description.isEmpty()) "Ball to ${batter.name}" else description
-                if (game.balls >= 4) {
+                if (game.balls >= ScoringConstants.BALLS_FOR_WALK) {
                     eventType = ScoringEventType.WALK
                     isWalk = true
                     description = "Walk for ${batter.name}"
@@ -72,7 +74,7 @@ class GameScoringService(
             ScoringEventType.STRIKE -> {
                 game.strikes += 1
                 description = if (description.isEmpty()) "Strike to ${batter.name}" else description
-                if (game.strikes >= 3) {
+                if (game.strikes >= ScoringConstants.STRIKES_FOR_STRIKEOUT) {
                     eventType = ScoringEventType.STRIKEOUT
                     outsAdded = 1
                     description = "Strikeout for ${batter.name}"
@@ -97,7 +99,7 @@ class GameScoringService(
                 description = if (description.isEmpty()) "Triple by ${batter.name}" else description
             }
             ScoringEventType.HOME_RUN -> {
-                basesMoved = 4
+                basesMoved = ScoringConstants.HOME_RUN_BASES
                 description = if (description.isEmpty()) "Home run by ${batter.name}!" else description
             }
             ScoringEventType.WALK -> {
@@ -478,19 +480,20 @@ class GameScoringService(
         val playEvent =
             PlayEventEntity(
                 gameId = game.id!!,
-                inning = game.inning,
-                half = game.half,
-                outsBefore = outsBefore,
-                outsAfter = game.outs,
-                balls = game.balls,
-                strikes = game.strikes,
                 batterName = batter.name,
                 pitcherName = pitcher.name,
                 eventType = eventType,
                 description = description,
-                runsScoredOnPlay = runsScoredList.size,
-                timestamp = Instant.now().toString(),
-            )
+            ).apply {
+                this.inning = game.inning
+                this.half = game.half
+                this.outsBefore = outsBefore
+                this.outsAfter = game.outs
+                this.balls = game.balls
+                this.strikes = game.strikes
+                this.runsScoredOnPlay = runsScoredList.size
+                this.timestamp = Instant.now().toString()
+            }
         playEventRepository.save(playEvent)
 
         val saved = gameRepository.save(game)
@@ -504,7 +507,7 @@ class GameScoringService(
         // 3. The home team scores the winning run in the bottom of the 9th or later (walk-off).
         // 4. The away team leads after the Bottom of the 9th (or any subsequent inning) completes.
 
-        if (game.inning >= 9) {
+        if (game.inning >= ServerConstants.MIN_COMPLETION_INNING) {
             val isTopComplete = game.half == HalfInning.BOTTOM && game.outs == 0 // We just transitioned to Bottom 9
             val isBottomComplete = game.half == HalfInning.TOP && game.inning > 9 // We just transitioned to Top 10
 
@@ -548,7 +551,11 @@ class GameScoringService(
         if (existing != null) return existing
         val player = playerRepository.findById(playerId).orElse(null)
         val teamId = player?.teamId ?: 0L
-        val entity = PlayerGameBattingStatsEntity(gameId = gameId, playerId = playerId, teamId = teamId)
+        val entity = PlayerGameBattingStatsEntity().apply {
+            this.gameId = gameId
+            this.playerId = playerId
+            this.teamId = teamId
+        }
         battingRepository.save(entity)
         return entity
     }
@@ -561,7 +568,11 @@ class GameScoringService(
         if (existing != null) return existing
         val player = playerRepository.findById(playerId).orElse(null)
         val teamId = player?.teamId ?: 0L
-        val entity = PlayerGamePitchingStatsEntity(gameId = gameId, playerId = playerId, teamId = teamId)
+        val entity = PlayerGamePitchingStatsEntity().apply {
+            this.gameId = gameId
+            this.playerId = playerId
+            this.teamId = teamId
+        }
         pitchingRepository.save(entity)
         return entity
     }
@@ -574,7 +585,11 @@ class GameScoringService(
         if (existing != null) return existing
         val player = playerRepository.findById(playerId).orElse(null)
         val teamId = player?.teamId ?: 0L
-        val entity = PlayerGameFieldingStatsEntity(gameId = gameId, playerId = playerId, teamId = teamId)
+        val entity = PlayerGameFieldingStatsEntity().apply {
+            this.gameId = gameId
+            this.playerId = playerId
+            this.teamId = teamId
+        }
         fieldingRepository.save(entity)
         return entity
     }
@@ -643,11 +658,13 @@ class GameScoringService(
         return game.toDomain(
             homeTeam = homeTeam,
             awayTeam = awayTeam,
-            runnerFirstName = runner1,
-            runnerSecondName = runner2,
-            runnerThirdName = runner3,
-            currentBatterName = batter,
-            currentPitcherName = pitcher,
+            names = GameRunnersDomainNames(
+                runnerFirstName = runner1,
+                runnerSecondName = runner2,
+                runnerThirdName = runner3,
+                currentBatterName = batter,
+                currentPitcherName = pitcher,
+            ),
         )
     }
 
@@ -662,7 +679,7 @@ class GameScoringService(
         // Ensure at least 9 innings are represented in line score
         val awayInningRuns = mutableListOf<Int?>()
         val homeInningRuns = mutableListOf<Int?>()
-        val maxInnings = maxOf(9, innings.maxOfOrNull { it.inning } ?: 9)
+        val maxInnings = maxOf(ServerConstants.MIN_COMPLETION_INNING, innings.maxOfOrNull { it.inning } ?: ServerConstants.MIN_COMPLETION_INNING)
 
         for (i in 1..maxInnings) {
             val inn = innings.find { it.inning == i }
@@ -738,18 +755,23 @@ class GameScoringService(
     }
 
     private fun computeStandings(games: List<Game>, allTeams: List<TeamEntity>): List<TeamStandings> {
-        val teamStatsMap = allTeams.associate { team ->
-            team.id!! to TeamStandings(
-                teamId = team.id!!,
-                teamName = team.name,
-                wins = 0,
-                losses = 0,
-                winPercentage = 0.0,
-                gamesPlayed = 0,
-                runsScored = 0,
-                runsAllowed = 0,
-            )
-        }.toMutableMap()
+        val teamStatsMap = mutableMapOf<Long, TeamStandings>()
+        for (team in allTeams) {
+            team.id?.let { id ->
+                teamStatsMap[id] = TeamStandings(
+                    teamId = id,
+                    teamName = team.name,
+                    wins = 0,
+                    losses = 0,
+                    winPercentage = 0.0,
+                    gamesPlayed = 0,
+                    runsScored = 0,
+                    runsAllowed = 0,
+                )
+            }
+        }
+        // Continue with existing logic
+
 
         games.filter { it.status == GameStatus.COMPLETED }.forEach { game ->
             val homeStats = teamStatsMap[game.homeTeam.id!!] ?: return@forEach

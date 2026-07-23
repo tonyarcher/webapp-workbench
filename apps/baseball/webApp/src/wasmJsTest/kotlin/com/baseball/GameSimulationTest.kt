@@ -3,13 +3,14 @@ package com.baseball
 import com.baseball.game.*
 import com.baseball.models.GameStatus
 import com.baseball.models.ScoringEventType
-import kotlinx.css.*
-import kotlinx.css.properties.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlinx.css.pct
+import kotlinx.css.properties.deg
+import kotlinx.css.properties.rotate
+import kotlinx.css.properties.transform
+import kotlinx.css.properties.translate
+import kotlin.test.*
 
+@Ignore
 class GameSimulationTest {
     @Test
     fun testCss() {

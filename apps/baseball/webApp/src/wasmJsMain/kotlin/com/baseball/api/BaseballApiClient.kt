@@ -1,4 +1,4 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
 
 package com.baseball.api
 
@@ -11,23 +11,9 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.browser.window
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-@Serializable
-data class RegisterRequestDto(
-    val email: String,
-    val password: String,
-    val firstName: String,
-    val lastName: String,
-)
-
-@Serializable
-data class UserResponseDto(
-    val email: String,
-    val firstName: String,
-    val lastName: String,
-)
+// DTO definitions moved to shared module
 
 class BaseballApiClient : BaseballApi {
     private val client =

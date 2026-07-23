@@ -1,10 +1,11 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
 
 package com.baseball.ui.tabs
 
+
 import com.baseball.api
 import com.baseball.models.*
-import com.baseball.ui.*
+import com.baseball.ui.UiConstants
 
 import kotlinx.css.*
 import kotlinx.html.*
@@ -36,9 +37,9 @@ internal fun renderStatsTab(container: HTMLElement) {
 private fun renderStatsFilterCard(container: HTMLElement): Pair<HTMLSelectElement?, HTMLSelectElement?> {
     val filterCard = container.div(classes = "card") {
         css {
-            marginBottom = 2.rem
+            marginBottom = UiConstants.CARD_MARGIN_BOTTOM
             display = Display.flex
-            gap = 1.5.rem
+            gap = UiConstants.CARD_GAP_LARGE
             alignItems = Align.flexEnd
         }
 
@@ -113,7 +114,7 @@ private fun renderNoSeasonSelectedCard(container: HTMLElement) {
     container.div(classes = "card") {
         css {
             textAlign = TextAlign.center
-            padding = Padding(3.rem)
+            padding = UiConstants.CARD_PADDING_LARGE
         }
         p {
             +"Please select a season, then click Load Statistics."
@@ -126,8 +127,8 @@ private fun renderStatsSubTabToggle(container: HTMLElement) {
     container.div {
         css {
             display = Display.flex
-            gap = 1.rem
-            marginBottom = 1.5.rem
+            gap = UiConstants.CARD_GAP
+            marginBottom = UiConstants.CARD_GAP_LARGE
         }
 
         button(classes = "btn${if (selectedStatsSubTab == "batting") "" else " btn-secondary"}") {

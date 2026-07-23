@@ -1,4 +1,4 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
 
 package com.baseball
 
@@ -61,4 +61,11 @@ object BaseballConstants {
         const val RF = "RF"
         const val DH = "DH"
     }
+
+    // UI dimension constants
+    object UiDimensions {
+        const val MAX_WIDTH_450 = 450
+        const val BORDER_RADIUS_8 = 8
+    }
 }
+

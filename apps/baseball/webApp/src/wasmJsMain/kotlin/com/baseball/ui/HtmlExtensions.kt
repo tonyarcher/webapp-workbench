@@ -1,8 +1,24 @@
-@file:Suppress("WildcardImport", "MagicNumber", "MaxLineLength", "TooManyFunctions", "LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "LongParameterList", "ComplexCondition", "TooGenericExceptionCaught", "SwallowedException", "ObjectPropertyNaming", "ReturnCount", "DestructuringDeclarationWithTooManyEntries", "UnusedPrivateMember", "UnusedPrivateProperty", "UnusedParameter")
+
 
 package com.baseball.ui
 
-import kotlinx.html.*
+import kotlinx.html.BUTTON
+import kotlinx.html.DIV
+import kotlinx.html.H1
+import kotlinx.html.H2
+import kotlinx.html.H3
+import kotlinx.html.HEADER
+import kotlinx.html.LABEL
+import kotlinx.html.MAIN
+import kotlinx.html.P
+import kotlinx.html.SELECT
+import kotlinx.html.SPAN
+import kotlinx.html.TABLE
+import kotlinx.html.TBODY
+import kotlinx.html.TD
+import kotlinx.html.TH
+import kotlinx.html.THEAD
+import kotlinx.html.TR
 import kotlinx.html.dom.append
 import org.w3c.dom.*
 
