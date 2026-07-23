@@ -7,7 +7,7 @@ import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.models.League
 import com.baseball.models.Season
-import com.baseball.ui.UiConstants
+import com.baseball.ui.*
 
 import kotlinx.css.*
 import kotlinx.html.*
@@ -95,7 +95,7 @@ private fun DIV.renderLeaguesListCard() {
 private fun renderLeagueCardItem(parent: HTMLDivElement, league: League, refs: LeaguesTabReferences) {
     parent.div(classes = "game-card") {
         css {
-            marginBottom = UiConstants.CARD_PADDING
+            marginBottom = UiConstants.CARD_MARGIN_BOTTOM
             display = Display.flex
             flexDirection = FlexDirection.column
             alignItems = Align.flexStart

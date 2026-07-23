@@ -173,7 +173,7 @@ private fun renderTeamItemCard(divElement: HTMLDivElement, team: Team, onSelectT
         button(classes = "btn btn-secondary${if (selectedTeamId == team.id) " active" else ""}") {
             css {
                 marginTop = UiConstants.CARD_GAP_SMALL
-                padding = Padding(UiConstants.CARD_GAP_SMALL, UiConstants.CARD_PADDING)
+                padding = Padding(UiConstants.CARD_GAP_SMALL, UiConstants.CARD_PADDING.top)
                 fontSize = UiConstants.FONT_SIZE_MEDIUM
             }
             +(if (selectedTeamId == team.id) "Active Team" else "Select Team")

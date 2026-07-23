@@ -4,10 +4,10 @@ package com.baseball.ui.components.scorebook
 
 import com.baseball.BaseballConstants
 import com.baseball.models.*
-import com.baseball.ui.css
+import com.baseball.ui.*
 import kotlinx.css.*
+import kotlinx.html.*
 import kotlinx.html.dom.append
-import kotlinx.html.js.div
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 
@@ -32,7 +32,7 @@ fun renderScorebookBottomSection(
                 gap = 1.5.rem
                 marginTop = 1.5.rem
             }
-        }
+        } as HTMLDivElement
 
     renderDefenseDiagram(bottomGrid, isHomeBatting, localAwayRoster, localHomeRoster, localAwayActivePitcherId, localHomeActivePitcherId)
     renderOpposingPitchingStats(bottomGrid, isHomeBatting, boxScore)
@@ -114,7 +114,7 @@ private fun renderDefenseDiagram(
                     zIndex = 2
                 }
             }
-        }
+        } as HTMLDivElement
 
     val defPlayers = if (isHomeBatting) localAwayRoster else localHomeRoster
     val activePitcherId = if (isHomeBatting) localAwayActivePitcherId else localHomeActivePitcherId

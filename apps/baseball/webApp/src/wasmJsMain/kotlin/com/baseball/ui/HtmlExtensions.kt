@@ -20,6 +20,7 @@ import kotlinx.html.TH
 import kotlinx.html.THEAD
 import kotlinx.html.TR
 import kotlinx.html.dom.append
+import kotlinx.html.js.*
 import org.w3c.dom.*
 
 fun HTMLElement.div(
