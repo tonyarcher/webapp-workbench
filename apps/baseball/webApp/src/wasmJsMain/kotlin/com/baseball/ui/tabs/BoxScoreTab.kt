@@ -102,7 +102,9 @@ private suspend fun loadBoxScoreData(): Triple<Game, BoxScore, List<PlayEvent>> 
 
 private fun renderBoxScoreHeaderCard(container: HTMLElement, game: Game) {
     container.div(classes = "card") {
-        val header = "${game.awayTeam.city} ${game.awayTeam.name} (${game.awayScore}) vs ${game.homeTeam.city} ${game.homeTeam.name} (${game.homeScore})"
+        val awayStr = "${game.awayTeam.city} ${game.awayTeam.name} (${game.awayScore})"
+        val homeStr = "${game.homeTeam.city} ${game.homeTeam.name} (${game.homeScore})"
+        val header = "$awayStr vs $homeStr"
         h2 { +header }
         p {
             +"Status: ${game.status.name} | Date: ${game.date}"
@@ -234,8 +236,20 @@ internal fun renderLineScoreTable(
                 }
             }
             tbody {
-                renderLineScoreRow(game.awayTeam.name, lineScore.awayInningRuns, lineScore.awayRuns, lineScore.awayHits, lineScore.awayErrors)
-                renderLineScoreRow(game.homeTeam.name, lineScore.homeInningRuns, lineScore.homeRuns, lineScore.homeHits, lineScore.homeErrors)
+                renderLineScoreRow(
+                    game.awayTeam.name,
+                    lineScore.awayInningRuns,
+                    lineScore.awayRuns,
+                    lineScore.awayHits,
+                    lineScore.awayErrors,
+                )
+                renderLineScoreRow(
+                    game.homeTeam.name,
+                    lineScore.homeInningRuns,
+                    lineScore.homeRuns,
+                    lineScore.homeHits,
+                    lineScore.homeErrors,
+                )
             }
         }
     }

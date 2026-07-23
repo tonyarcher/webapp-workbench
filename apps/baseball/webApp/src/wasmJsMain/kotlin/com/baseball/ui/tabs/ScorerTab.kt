@@ -173,10 +173,20 @@ private fun harmonizeHomeLineup(game: Game, homeRoster: List<Player>) {
 
 private fun renderStartGameCard(container: HTMLElement, game: Game) {
     container.div(classes = "card") {
-        css { textAlign = TextAlign.center; padding = UiConstants.CARD_PADDING_LARGE; maxWidth = 600.px; margin = Margin(2.rem, LinearDimension.auto) }
+        css {
+            textAlign = TextAlign.center
+            padding = UiConstants.CARD_PADDING_LARGE
+            maxWidth = 600.px
+            margin = Margin(2.rem, LinearDimension.auto)
+        }
         h2 { +"Ready to Play!" }
         p {
-            css { fontSize = UiConstants.FONT_SIZE_LARGE; color = Color("var(--text-secondary)"); marginTop = 1.rem; marginBottom = UiConstants.CARD_GAP_XL }
+            css {
+                fontSize = UiConstants.FONT_SIZE_LARGE
+                color = Color("var(--text-secondary)")
+                marginTop = 1.rem
+                marginBottom = UiConstants.CARD_GAP_XL
+            }
             +"Matchup: ${game.awayTeam.city} ${game.awayTeam.name} @ ${game.homeTeam.city} ${game.homeTeam.name}"
         }
         renderStartGameTeams(this, game)
@@ -316,11 +326,18 @@ private fun renderPlayMonitoringSection(
 @Suppress("MagicNumber")
 private fun isPlayEventInningEnded(ev: PlayEvent, nextEv: PlayEvent?): Boolean {
     if (nextEv != null) return nextEv.half != ev.half || nextEv.inning != ev.inning
+    val isDp = ev.description.contains(BaseballConstants.DESC_DOUBLE_PLAY) ||
+        ev.description.contains(BaseballConstants.DESC_DP)
     val outsOnPlay = when {
-        ev.description.contains(BaseballConstants.DESC_DOUBLE_PLAY) || ev.description.contains(BaseballConstants.DESC_DP) -> 2
+        isDp -> 2
         ev.eventType in listOf(
-            ScoringEventType.STRIKEOUT, ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT,
-            ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.SACRIFICE_FLY, ScoringEventType.FIELDER_CHOICE,
+            ScoringEventType.STRIKEOUT,
+            ScoringEventType.GROUNDOUT,
+            ScoringEventType.FLYOUT,
+            ScoringEventType.LINE_OUT,
+            ScoringEventType.POP_OUT,
+            ScoringEventType.SACRIFICE_FLY,
+            ScoringEventType.FIELDER_CHOICE,
         ) -> 1
         else -> 0
     }
@@ -328,7 +345,10 @@ private fun isPlayEventInningEnded(ev: PlayEvent, nextEv: PlayEvent?): Boolean {
 }
 
 private fun getPlayEventEndingStr(ev: PlayEvent): String = when (ev.eventType) {
-    ScoringEventType.SINGLE, ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.ERROR -> BaseballConstants.PLAY_RESULT_1B
+    ScoringEventType.SINGLE,
+    ScoringEventType.WALK,
+    ScoringEventType.HIT_BY_PITCH,
+    ScoringEventType.ERROR -> BaseballConstants.PLAY_RESULT_1B
     ScoringEventType.DOUBLE -> BaseballConstants.PLAY_RESULT_2B
     ScoringEventType.TRIPLE -> BaseballConstants.PLAY_RESULT_3B
     ScoringEventType.HOME_RUN -> BaseballConstants.PLAY_RESULT_RUN_SCORED
@@ -405,7 +425,11 @@ private fun renderResetDialogActions(container: DIV) {
         if (isSingleGameMode) {
             button(classes = "btn btn-primary") {
                 +"Restart with Current Lineups"
-                onClickFunction = { isResetDialogOpen = false; resetLocalGame(toInitialLineups = true); renderCurrentTab() }
+                onClickFunction = {
+                    isResetDialogOpen = false
+                    resetLocalGame(toInitialLineups = true)
+                    renderCurrentTab()
+                }
             }
             button(classes = "btn btn-action") {
                 +"Configure New Lineups"

@@ -71,7 +71,8 @@ private suspend fun ensureDashboardDataLoaded() {
     if (selectedLeagueId == null && leaguesList.isNotEmpty()) {
         selectedLeagueId = leaguesList.first().id
     }
-    if (selectedLeagueId != null && (seasonsList.isEmpty() || seasonsList.firstOrNull()?.leagueId != selectedLeagueId)) {
+    val isSeasonListInvalid = seasonsList.isEmpty() || seasonsList.firstOrNull()?.leagueId != selectedLeagueId
+    if (selectedLeagueId != null && isSeasonListInvalid) {
         seasonsList = api.getSeasons(selectedLeagueId!!)
     }
     if (selectedSeasonId == null || seasonsList.none { it.id == selectedSeasonId }) {
