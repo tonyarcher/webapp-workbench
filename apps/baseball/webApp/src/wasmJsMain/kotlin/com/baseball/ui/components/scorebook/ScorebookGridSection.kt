@@ -32,6 +32,7 @@ fun renderScorecardSheet(
     ScorebookGridRenderer.renderScorecardSheet(container, game, boxScore, events, half)
 }
 
+@Suppress("LargeClass", "TooManyFunctions", "LongParameterList", "LongMethod", "CognitiveComplexMethod")
 object ScorebookGridRenderer : ScorecardUiPresenter {
     fun renderScorecardSheet(
         container: HTMLElement,

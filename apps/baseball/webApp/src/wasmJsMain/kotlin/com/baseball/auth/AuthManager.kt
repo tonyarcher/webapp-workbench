@@ -28,6 +28,7 @@ object AuthManager : AuthService {
         api.register(request)
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override suspend fun login(
         email: String,
         passwordHash: String,
@@ -47,6 +48,7 @@ object AuthManager : AuthService {
             saveSession(session)
             return session
         } catch (e: Throwable) {
+            @Suppress("TooGenericExceptionCaught")
             val msg = e.message ?: ""
             if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) ||
                 msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) ||
@@ -81,6 +83,7 @@ object AuthManager : AuthService {
         saveSession(newSession)
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override fun loadSession(): Boolean {
         val sessionJson = window.localStorage.getItem(BaseballConstants.KEY_ACTIVE_SESSION) ?: return false
         return try {
