@@ -486,9 +486,23 @@ private fun DIV.renderPitcherRecords(
 ) {
     val isCompleted = game.status == GameStatus.COMPLETED
     val wpName =
-        determineWpName(isCompleted, game, localHomeRoster, localAwayRoster, localHomeActivePitcherName, localAwayActivePitcherName)
+        determineWpName(
+            isCompleted,
+            game,
+            localHomeRoster,
+            localAwayRoster,
+            localHomeActivePitcherName,
+            localAwayActivePitcherName
+        )
     val lpName =
-        determineLpName(isCompleted, game, localHomeRoster, localAwayRoster, localHomeActivePitcherName, localAwayActivePitcherName)
+        determineLpName(
+            isCompleted,
+            game,
+            localHomeRoster,
+            localAwayRoster,
+            localHomeActivePitcherName,
+            localAwayActivePitcherName
+        )
     val svName =
         if (isCompleted && game.homeScore > game.awayScore) {
             "HADER (12)"
@@ -503,7 +517,11 @@ private fun DIV.renderPitcherRecords(
             display = Display.flex
             flexDirection = FlexDirection.column
             gap = 0.5.rem
-            borderTop = Border(1.px, BorderStyle.solid, Color("#5a544a"))
+            borderTop = Border(
+    1.px,
+    BorderStyle.solid,
+    Color("#5a544a")
+)
             paddingTop = 0.75.rem
             fontSize = 0.8.rem
         }

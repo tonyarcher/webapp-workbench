@@ -64,6 +64,10 @@ To achieve optimal code reuse, follow this mapping matrix:
 
 > [!NOTE]
 > Use feature branches for each new task. Create a new branch `feature/<task-name>` from `main`, push it to the upstream
+
+## 10. Error Handling
+- **Compiler Errors**: All compiler errors must be resolved immediately. Do not leave any unresolved compiler errors in the codebase.
+
 repository, and work on that branch. When the task completes, open a PR and merge back.
 
 

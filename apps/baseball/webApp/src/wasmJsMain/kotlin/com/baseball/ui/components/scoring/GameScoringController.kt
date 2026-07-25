@@ -304,8 +304,12 @@ class GameScoringController(
     ) {
         val btnClass =
             when (type) {
-                ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN -> "btn btn-action"
+                ScoringEventType.SINGLE,
+                ScoringEventType.DOUBLE,
+                ScoringEventType.TRIPLE,
+                ScoringEventType.HOME_RUN -> "btn btn-action"
                 else -> "btn btn-secondary btn-action"
+
             }
         button(classes = btnClass) {
             +label

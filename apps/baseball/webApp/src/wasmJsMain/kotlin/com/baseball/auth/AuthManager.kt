@@ -71,7 +71,8 @@ object AuthManager : AuthService {
 
     override fun saveSession(session: UserSession) {
         currentUserSession = session
-        window.localStorage.setItem(BaseballConstants.KEY_ACTIVE_SESSION, json.encodeToString(UserSession.serializer(), session))
+        val sessionJson = json.encodeToString(UserSession.serializer(), session)
+        window.localStorage.setItem(BaseballConstants.KEY_ACTIVE_SESSION, sessionJson)
     }
 
     override fun refreshSession() {
@@ -83,22 +84,24 @@ object AuthManager : AuthService {
         saveSession(newSession)
     }
 
-    @Suppress("TooGenericExceptionCaught")
     override fun loadSession(): Boolean {
-        val sessionJson = window.localStorage.getItem(BaseballConstants.KEY_ACTIVE_SESSION) ?: return false
-        return try {
-            val session = json.decodeFromString(UserSession.serializer(), sessionJson)
-            if (session.expiresAtMillis > getCurrentTimeMillis()) {
-                currentUserSession = session
-                refreshSession()
-                return true
-            } else {
-                window.localStorage.removeItem(BaseballConstants.KEY_ACTIVE_SESSION)
-                window.localStorage.removeItem(BaseballConstants.KEY_AUTH_TOKEN)
-                false
+        val sessionJson = window.localStorage.getItem(BaseballConstants.KEY_ACTIVE_SESSION)
+        var result = false
+        if (sessionJson != null) {
+            try {
+                val session = json.decodeFromString(UserSession.serializer(), sessionJson)
+                if (session.expiresAtMillis > getCurrentTimeMillis()) {
+                    currentUserSession = session
+                    refreshSession()
+                    result = true
+                } else {
+                    window.localStorage.removeItem(BaseballConstants.KEY_ACTIVE_SESSION)
+                    window.localStorage.removeItem(BaseballConstants.KEY_AUTH_TOKEN)
+                }
+            } catch (ignored: Throwable) {
+                println("Failed to load session: ${ignored.message}")
             }
-        } catch (e: Exception) {
-            false
         }
+        return result
     }
 }

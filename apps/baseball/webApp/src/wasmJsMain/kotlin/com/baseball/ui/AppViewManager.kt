@@ -35,11 +35,11 @@ data class NavState(
 object AppViewManager {
     private val tabRenderers = mutableMapOf<String, (HTMLElement) -> Unit>()
 
-    var _currentTab: String = BaseballConstants.TAB_LEAGUES
+    var internalCurrentTab: String = BaseballConstants.TAB_LEAGUES
     var currentTab: String
-        get() = _currentTab
+        get() = internalCurrentTab
         set(value) {
-            _currentTab = value
+            internalCurrentTab = value
             saveNavState()
             renderApp()
             renderCurrentTabContent()
@@ -73,15 +73,15 @@ object AppViewManager {
         val json = window.localStorage.getItem("baseball_nav_state") ?: return
         try {
             val state = Json.decodeFromString<NavState>(json)
-            _currentTab = state.currentTab
+            internalCurrentTab = state.currentTab
             isWelcomeScreen = state.isWelcomeScreen
             isSingleGameMode = state.isSingleGameMode
             selectedLeagueId = state.selectedLeagueId
             selectedSeasonId = state.selectedSeasonId
             selectedTeamId = state.selectedTeamId
             selectedGameId = state.selectedGameId
-        } catch (e: Throwable) {
-            // Ignore
+        } catch (ignored: Throwable) {
+            println("Failed to load nav state: ${ignored.message}")
         }
     }
 
@@ -129,7 +129,7 @@ object AppViewManager {
                 window.location.hash = BaseballConstants.TAB_LOGIN
             } else {
                 isWelcomeScreen = false
-                _currentTab = BaseballConstants.TAB_LOGIN
+                internalCurrentTab = BaseballConstants.TAB_LOGIN
                 window.location.hash = BaseballConstants.TAB_LOGIN
             }
             return
@@ -139,7 +139,7 @@ object AppViewManager {
             isWelcomeScreen = true
         } else if (isValidTab(hash)) {
             isWelcomeScreen = false
-            _currentTab = hash
+            internalCurrentTab = hash
         }
 
         if (isEvent) {
@@ -184,7 +184,8 @@ object AppViewManager {
                         seasonsList = api.getSeasons(selectedLeagueId!!)
                     }
                 }
-            } catch (e: Throwable) {
+            } catch (ignored: Throwable) {
+                println("Failed to fetch initial server data: ${ignored.message}")
                 serverOnline = false
             }
             renderApp()
@@ -273,7 +274,8 @@ object AppViewManager {
             div(classes = "mode-icon") { +"⚾" }
             div(classes = "mode-title") { +"Single Game Mode" }
             div(classes = "mode-desc") {
-                +"Play or score a local exhibition game between Chicago and St. Louis. Runs entirely in your browser with no server connection required."
+                +"Play or score a local exhibition game between Chicago and St. Louis. "
+                +"Runs entirely in your browser with no server connection required."
             }
             div(classes = "server-status") {
                 span(classes = "status-dot green")
@@ -288,7 +290,8 @@ object AppViewManager {
             div(classes = "mode-icon") { +"🏆" }
             div(classes = "mode-title") { +"League & Season Mode" }
             div(classes = "mode-desc") {
-                +"Manage complete baseball leagues, schedule round-robin seasons, track standings, and record live games backed by your database server."
+                +"Manage complete baseball leagues, schedule round-robin seasons, "
+                +"track standings, and record live games backed by your database server."
             }
             div(classes = "server-status") {
                 span(classes = if (serverOnline) "status-dot green" else "status-dot red")
@@ -314,8 +317,10 @@ object AppViewManager {
                 }
                 isWelcomeScreen = false
                 isSingleGameMode = false
-                window.location.hash = if (currentUserSession == null) BaseballConstants.TAB_LOGIN else BaseballConstants.TAB_LEAGUES
-            } catch (e: Throwable) {
+                val nextHash = if (currentUserSession == null) BaseballConstants.TAB_LOGIN else BaseballConstants.TAB_LEAGUES
+                window.location.hash = nextHash
+            } catch (ignored: Throwable) {
+                println("Failed to connect online mode: ${ignored.message}")
                 serverConnectionError = "Unable to connect to the server. Please check that the backend server is running."
                 renderApp()
             }

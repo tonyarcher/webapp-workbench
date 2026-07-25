@@ -47,18 +47,7 @@ internal suspend fun setupRenderSeasonDashboardTab(container: HTMLElement) {
     }
 }
 
-private fun showDashboardLoading(container: HTMLElement) {
-    container.innerHTML = ""
-    container.append {
-        div(classes = "card") {
-            css {
-                textAlign = TextAlign.center
-                padding = UiConstants.CARD_PADDING_LARGE
-            }
-            p { +"Loading season dashboard..." }
-        }
-    }
-}
+
 
 private suspend fun ensureDashboardDataLoaded() {
     if (leaguesList.isEmpty()) {
@@ -169,20 +158,7 @@ private fun populateSeasonsDropdown(selectEl: HTMLSelectElement?) {
     }
 }
 
-private fun showNoSeasonSelectedMessage(container: HTMLElement) {
-    container.append {
-        div(classes = "card") {
-            css {
-                textAlign = TextAlign.center
-                padding = Padding(3.rem)
-            }
-            p {
-                +"Please select a league and season above, then click Load Season."
-                css { color = Color("var(--text-secondary)") }
-            }
-        }
-    }
-}
+
 
 private fun renderDashboardContent(container: HTMLElement, dash: SeasonDashboard) {
     container.append {
@@ -235,16 +211,7 @@ private fun TBODY.renderTeamStandings(row: TeamStandings) {
     }
 }
 
-private fun formatWinPercentage(pct: Double): String {
-    val str = pct.toString()
-    return if (str.startsWith("0.")) {
-        str.substring(1)
-    } else if (pct == 1.0) {
-        "1.000"
-    } else {
-        ".000"
-    }
-}
+
 
 private fun DIV.renderScheduleManagerCard(games: List<Game>) {
     div(classes = "card") {
@@ -448,30 +415,6 @@ private fun DIV.renderGameCardAction(g: Game) {
                     selectedGameId = g.id
                     currentTab = BaseballConstants.TAB_LIVE_SCORER
                     updateActiveTabButtons()
-                    renderCurrentTab()
-                }
-            }
-        }
-    }
-}
-
-private fun renderDashboardError(container: HTMLElement, e: Throwable) {
-    container.innerHTML = ""
-    container.append {
-        div(classes = "card") {
-            css {
-                textAlign = TextAlign.center
-                padding = UiConstants.CARD_PADDING_LARGE
-            }
-            h2 { +"Failed to load Dashboard" }
-            p {
-                css { color = Color("var(--text-secondary)") }
-                +"Error: ${e.message}"
-            }
-            button(classes = "btn btn-primary") {
-                +"Retry"
-                css { marginTop = UiConstants.CARD_GAP }
-                onClickFunction = {
                     renderCurrentTab()
                 }
             }

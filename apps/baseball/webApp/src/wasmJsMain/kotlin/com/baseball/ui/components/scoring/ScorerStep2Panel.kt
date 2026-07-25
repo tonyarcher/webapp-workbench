@@ -28,7 +28,11 @@ class ScorerStep2Panel(
 
     private fun getBatterBase(): Int =
         when (eventType) {
-            ScoringEventType.SINGLE, ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.ERROR, ScoringEventType.FIELDER_CHOICE -> 1
+            ScoringEventType.SINGLE,
+            ScoringEventType.WALK,
+            ScoringEventType.HIT_BY_PITCH,
+            ScoringEventType.ERROR,
+            ScoringEventType.FIELDER_CHOICE -> 1
             ScoringEventType.DOUBLE -> 2
             ScoringEventType.TRIPLE -> 3
             ScoringEventType.HOME_RUN -> 4
@@ -183,8 +187,10 @@ class ScorerStep2Panel(
             }
             val runnersList =
                 if (hasError) {
-                    activeRunners +
-                        (controller.game.gameState.currentBatterId!! to "Batter: ${controller.game.gameState.currentBatterName}")
+                    activeRunners + (
+                        controller.game.gameState.currentBatterId!! to
+                            "Batter: ${controller.game.gameState.currentBatterName}"
+                    )
                 } else {
                     activeRunners
                 }
@@ -422,7 +428,13 @@ class ScorerStep2Panel(
                     }
                     onClickFunction = {
                         val detail = "Home Run (Over the Fence)" + if (hasError) " (with Error)" else ""
-                        controller.triggerScoringEvent(eventType, detail, false, hasError, runnerAdvances.takeIf { it.isNotEmpty() })
+                                            controller.triggerScoringEvent(
+                        eventType,
+                        detail,
+                        false,
+                        hasError,
+                        runnerAdvances.takeIf { it.isNotEmpty() }
+                    )
                     }
                 }
             }
@@ -489,7 +501,11 @@ class ScorerStep2Panel(
             buildString {
                 if (seqStr != null) {
                     if (runnerAdvances.values.contains(0)) {
-                        append("$baseLabel" + (if (loc != null) " to $loc" else "") + " (Runner Out: $seqStr)")
+                        append(
+                            "$baseLabel" +
+                            (if (loc != null) " to $loc" else "") +
+                            " (Runner Out: $seqStr)"
+                        )
                     } else {
                         append("$baseLabel: $seqStr")
                     }
