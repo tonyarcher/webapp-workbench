@@ -37,42 +37,46 @@ class GameScoringController(
     }
 
     private fun renderCompletedGame() {
-        rightCol.div {
-            css {
-                textAlign = TextAlign.center
-                padding = Padding(2.rem)
-            }
-            h2 { +"GAME COMPLETED" }
-            val scoreStr = "${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore}"
-            p { +"Final: $scoreStr" }
-
-            button(classes = "btn") {
+        rightCol.append {
+            div {
                 css {
-                    marginTop = 1.5.rem
+                    textAlign = TextAlign.center
+                    padding = Padding(2.rem)
                 }
-                +"View Final Box Score"
-                onClickFunction = {
-                    currentTab = BaseballConstants.TAB_BOXSCORE
-                    updateActiveTabButtons()
-                    renderCurrentTab()
+                h2 { +"GAME COMPLETED" }
+                val scoreStr = "${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore}"
+                p { +"Final: $scoreStr" }
+
+                button(classes = "btn") {
+                    css {
+                        marginTop = 1.5.rem
+                    }
+                    +"View Final Box Score"
+                    onClickFunction = {
+                        currentTab = BaseballConstants.TAB_BOXSCORE
+                        updateActiveTabButtons()
+                        renderCurrentTab()
+                    }
                 }
             }
         }
     }
 
     private fun renderActiveGameControls() {
-        rightCol.div {
-            h2 { +"Plate Matchup" }
-            renderPlateMatchupCard(this)
-        }
-
-        actionGridWrapper =
-            rightCol.div {
+        rightCol.append {
+            div {
+                h2 { +"Plate Matchup" }
+                renderPlateMatchupCard(this)
+            }
+            div {
+                id = "action-grid-wrapper"
                 css {
                     marginTop = 1.rem
                 }
             }
+        }
 
+        actionGridWrapper = rightCol.querySelector("#action-grid-wrapper") as? HTMLDivElement
         renderActionGrid()
     }
 

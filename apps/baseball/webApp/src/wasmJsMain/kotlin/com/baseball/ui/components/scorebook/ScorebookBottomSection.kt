@@ -8,6 +8,7 @@ import com.baseball.ui.css
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.dom.append
+import kotlinx.html.js.*
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 
@@ -331,8 +332,8 @@ private fun renderScoreboardSummary(
                 paddingBottom = 0.25.rem
             }
         }
-        renderLineScoreTable(this, game, boxScore, maxInning)
-        renderPitcherRecords(this, game, localHomeRoster, localAwayRoster, localHomeActivePitcherName, localAwayActivePitcherName)
+        renderLineScoreTable(game, boxScore, maxInning)
+        renderPitcherRecords(game, localHomeRoster, localAwayRoster, localHomeActivePitcherName, localAwayActivePitcherName)
     }
 }
 
@@ -363,13 +364,12 @@ private fun TABLE.renderLineScoreHeader(maxInning: Int) {
     }
 }
 
-private fun renderLineScoreTable(
-    card: DIV,
+private fun DIV.renderLineScoreTable(
     game: Game,
     boxScore: BoxScore,
     maxInning: Int,
 ) {
-    card.table {
+    table {
         css {
             width = 100.pct
             borderCollapse = BorderCollapse.collapse
@@ -379,7 +379,6 @@ private fun renderLineScoreTable(
         renderLineScoreHeader(maxInning)
         tbody {
             renderLineScoreTeamRow(
-                this,
                 game.awayTeam.abbreviation,
                 boxScore.lineScore.awayInningRuns,
                 game.gameState.inning,
@@ -389,7 +388,6 @@ private fun renderLineScoreTable(
                 maxInning,
             )
             renderLineScoreTeamRow(
-                this,
                 game.homeTeam.abbreviation,
                 boxScore.lineScore.homeInningRuns,
                 game.gameState.inning,
@@ -402,8 +400,7 @@ private fun renderLineScoreTable(
     }
 }
 
-private fun renderLineScoreTeamRow(
-    tbody: TBODY,
+private fun TBODY.renderLineScoreTeamRow(
     teamAbb: String,
     inningRuns: List<Int?>,
     currentInning: Int,
@@ -412,7 +409,7 @@ private fun renderLineScoreTeamRow(
     e: Int,
     maxInning: Int,
 ) {
-    tbody.tr {
+    tr {
         css { borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae")) }
         td {
             +teamAbb
@@ -480,8 +477,7 @@ private fun determineLpName(
         else -> "-"
     }
 
-private fun renderPitcherRecords(
-    card: DIV,
+private fun DIV.renderPitcherRecords(
     game: Game,
     localHomeRoster: List<Player>,
     localAwayRoster: List<Player>,
@@ -502,7 +498,7 @@ private fun renderPitcherRecords(
             "-"
         }
 
-    card.div {
+    div {
         css {
             display = Display.flex
             flexDirection = FlexDirection.column

@@ -13,7 +13,8 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.*
-import kotlinx.html.js.onClickFunction
+import kotlinx.html.dom.append
+import kotlinx.html.js.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLButtonElement
@@ -198,28 +199,30 @@ object AppViewManager {
     }
 
     fun renderWelcomeScreen(container: HTMLElement) {
-        container.div(classes = "welcome-container") {
-            renderWelcomeHeader(this)
-            div(classes = "welcome-logo") {
-                span { +"GRAND SLAM" }
-                +" BASEBALL TRACKER"
-            }
-            p(classes = "welcome-subtitle") {
-                +"Exhibition Game Mode (Offline) & Full League Season Mode (Online)"
-            }
-            serverConnectionError?.let { errorMsg ->
-                div(classes = "server-error-banner") { +errorMsg }
-            }
-            div(classes = "mode-grid") {
-                renderOfflineModeCard(this)
-                renderOnlineModeCard(this)
+        container.append {
+            div(classes = "welcome-container") {
+                renderWelcomeHeader()
+                div(classes = "welcome-logo") {
+                    span { +"GRAND SLAM" }
+                    +" BASEBALL TRACKER"
+                }
+                p(classes = "welcome-subtitle") {
+                    +"Exhibition Game Mode (Offline) & Full League Season Mode (Online)"
+                }
+                serverConnectionError?.let { errorMsg ->
+                    div(classes = "server-error-banner") { +errorMsg }
+                }
+                div(classes = "mode-grid") {
+                    renderOfflineModeCard()
+                    renderOnlineModeCard()
+                }
             }
         }
     }
 
-    private fun renderWelcomeHeader(parent: DIV) {
+    private fun DIV.renderWelcomeHeader() {
         val session = currentUserSession
-        parent.div {
+        div {
             css {
                 display = Display.flex
                 justifyContent = JustifyContent.flexEnd
@@ -258,8 +261,8 @@ object AppViewManager {
         }
     }
 
-    private fun renderOfflineModeCard(parent: DIV) {
-        parent.div(classes = "mode-card offline") {
+    private fun DIV.renderOfflineModeCard() {
+        div(classes = "mode-card offline") {
             onClickFunction = {
                 serverConnectionError = null
                 isWelcomeScreen = false
@@ -279,8 +282,8 @@ object AppViewManager {
         }
     }
 
-    private fun renderOnlineModeCard(parent: DIV) {
-        parent.div(classes = "mode-card online") {
+    private fun DIV.renderOnlineModeCard() {
+        div(classes = "mode-card online") {
             onClickFunction = { handleOnlineModeSelection() }
             div(classes = "mode-icon") { +"🏆" }
             div(classes = "mode-title") { +"League & Season Mode" }
@@ -328,30 +331,32 @@ object AppViewManager {
             return
         }
 
-        app.header {
-            div(classes = "header-container") {
-                div(classes = "logo") {
-                    css { cursor = Cursor.pointer }
-                    onClickFunction = { goBackToWelcome() }
-                    span { +"GRAND SLAM" }
-                    +" BASEBALL"
+        app.append {
+            header {
+                div(classes = "header-container") {
+                    div(classes = "logo") {
+                        css { cursor = Cursor.pointer }
+                        onClickFunction = { goBackToWelcome() }
+                        span { +"GRAND SLAM" }
+                        +" BASEBALL"
+                    }
+                    renderUserHeaderControls()
+                    renderHeaderNavigation()
                 }
-                renderUserHeaderControls(this)
-                renderHeaderNavigation(this)
             }
-        }
 
-        app.main {
-            id = "content-area"
+            main {
+                id = "content-area"
+            }
         }
 
         updateActiveTabButtons()
     }
 
-    private fun renderUserHeaderControls(parent: DIV) {
+    private fun DIV.renderUserHeaderControls() {
         val userSession = currentUserSession
         if (userSession != null) {
-            parent.div {
+            div {
                 css {
                     display = Display.flex
                     alignItems = Align.center
@@ -376,7 +381,7 @@ object AppViewManager {
                 }
             }
         } else {
-            parent.button(classes = "btn btn-secondary") {
+            button(classes = "btn btn-secondary") {
                 +"Log In"
                 css {
                     padding = Padding(0.25.rem, 0.75.rem)
@@ -387,8 +392,8 @@ object AppViewManager {
         }
     }
 
-    private fun renderHeaderNavigation(parent: DIV) {
-        parent.nav {
+    private fun DIV.renderHeaderNavigation() {
+        nav {
             if (!isGameInProgress()) {
                 button(classes = "back-to-welcome") {
                     +"← Back to Menu"

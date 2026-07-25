@@ -1,16 +1,6 @@
 package com.baseball.repositories
 
-import com.baseball.entities.GameEntity
-import com.baseball.entities.GameInningEntity
-import com.baseball.entities.LeagueEntity
-import com.baseball.entities.PlayEventEntity
-import com.baseball.entities.PlayerEntity
-import com.baseball.entities.PlayerGameBattingStatsEntity
-import com.baseball.entities.PlayerGameFieldingStatsEntity
-import com.baseball.entities.PlayerGamePitchingStatsEntity
-import com.baseball.entities.SeasonEntity
-import com.baseball.entities.TeamEntity
-import com.baseball.entities.UserEntity
+import com.baseball.entities.*
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 

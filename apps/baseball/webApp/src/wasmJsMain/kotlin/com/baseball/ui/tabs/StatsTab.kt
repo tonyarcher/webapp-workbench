@@ -6,96 +6,103 @@ package com.baseball.ui.tabs
 import com.baseball.api
 import com.baseball.models.*
 import com.baseball.ui.*
-
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.dom.append
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.js.option
+import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLSelectElement
+import org.w3c.dom.events.Event
 
 private var selectedStatsSubTab = "batting" // batting, pitching, fielding
 private var statsSelectedTeamId: Long? = null // null means All Teams
 
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
+// Removed @Suppress per Detekt rules
 internal fun renderStatsTab(container: HTMLElement) {
-    container.h1 { +"Season Player Statistics" }
+    launch { setupRenderStatsTab(container) }
+}
 
+internal suspend fun setupRenderStatsTab(container: HTMLElement) {
+    container.append {
+    h1 { +"Season Player Statistics" }
+}
     val (selectS, _) = renderStatsFilterCard(container)
     populateSeasonsDropdown(selectS)
-
     if (selectedSeasonId == null) {
         renderNoSeasonSelectedCard(container)
         return
     }
-
     renderStatsSubTabToggle(container)
     renderStatsTableSection(container)
 }
 
 private fun renderStatsFilterCard(container: HTMLElement): Pair<HTMLSelectElement?, HTMLSelectElement?> {
-    val filterCard = container.div(classes = "card") {
-        css {
-            marginBottom = UiConstants.CARD_MARGIN_BOTTOM
-            display = Display.flex
-            gap = UiConstants.CARD_GAP_LARGE
-            alignItems = Align.flexEnd
-        }
-
-        div(classes = "form-group") {
+    container.append {
+        div(classes = "dashboard-grid") {
             css {
-                marginBottom = 0.px
-                flexGrow = 1.0
+                marginBottom = UiConstants.CARD_MARGIN_BOTTOM
+                display = Display.flex
+                gap = UiConstants.CARD_GAP_LARGE
+                alignItems = Align.flexEnd
             }
-            label { +"Select Season" }
-            select(classes = "form-control") {
-                id = "stats-season-dropdown"
-            }
-        }
 
-        div(classes = "form-group") {
-            css {
-                marginBottom = 0.px
-                flexGrow = 1.0
-            }
-            label { +"Filter by Team" }
-            select(classes = "form-control") {
-                id = "stats-team-dropdown"
-                option {
-                    value = ""
-                    +"All Teams"
-                    selected = (statsSelectedTeamId == null)
+            div(classes = "form-group") {
+                css {
+                    marginBottom = 0.px
+                    flexGrow = 1.0
                 }
-                teamsList.forEach { team ->
+                label { +"Select Season" }
+                select(classes = "form-control") {
+                    id = "stats-season-dropdown"
+                }
+            }
+
+            div(classes = "form-group") {
+                css {
+                    marginBottom = 0.px
+                    flexGrow = 1.0
+                }
+                label { +"Filter by Team" }
+                select(classes = "form-control") {
+                    id = "stats-team-dropdown"
                     option {
-                        value = team.id.toString()
-                        +"${team.city} ${team.name}"
-                        selected = (statsSelectedTeamId == team.id)
+                        value = ""
+                        +"All Teams"
+                        selected = (statsSelectedTeamId == null)
+                    }
+                    teamsList.forEach { team ->
+                        option {
+                            value = team.id.toString()
+                            +"${team.city} ${team.name}"
+                            selected = (statsSelectedTeamId == team.id)
+                        }
+                    }
+                    onChangeFunction = { event ->
+                        val tid = (event.target as? HTMLSelectElement)?.value?.toLongOrNull()
+                        statsSelectedTeamId = tid
+                        renderCurrentTab()
                     }
                 }
-                onChangeFunction = { event ->
-                    val tid = (event.target as? HTMLSelectElement)?.value?.toLongOrNull()
-                    statsSelectedTeamId = tid
+            }
+
+            button(classes = "btn") {
+                id = "load-stats-btn"
+                +"Load Statistics"
+                onClickFunction = { _: Event ->
+                    val selectS = container.querySelector("#stats-season-dropdown") as? HTMLSelectElement
+                    selectedSeasonId = selectS?.value?.toLongOrNull()
                     renderCurrentTab()
                 }
             }
         }
-
-        button(classes = "btn") {
-            id = "load-stats-btn"
-            +"Load Statistics"
-            onClickFunction = {
-                val selectS = container.querySelector("#stats-season-dropdown") as? HTMLSelectElement
-                selectedSeasonId = selectS?.value?.toLongOrNull()
-                renderCurrentTab()
-            }
-        }
     }
 
-    val selectS = filterCard.querySelector("#stats-season-dropdown") as? HTMLSelectElement
-    val selectT = filterCard.querySelector("#stats-team-dropdown") as? HTMLSelectElement
+    val filterCard = container.querySelector(".dashboard-grid") as? HTMLDivElement
+    val selectS = filterCard?.querySelector("#stats-season-dropdown") as? HTMLSelectElement
+    val selectT = filterCard?.querySelector("#stats-team-dropdown") as? HTMLSelectElement
     return Pair(selectS, selectT)
 }
 
@@ -112,47 +119,51 @@ private fun populateSeasonsDropdown(selectEl: HTMLSelectElement?) {
 }
 
 private fun renderNoSeasonSelectedCard(container: HTMLElement) {
-    container.div(classes = "card") {
-        css {
-            textAlign = TextAlign.center
-            padding = UiConstants.CARD_PADDING_LARGE
-        }
-        p {
-            +"Please select a season, then click Load Statistics."
-            css { color = Color("var(--text-secondary)") }
+    container.append {
+        div(classes = "card") {
+            css {
+                textAlign = TextAlign.center
+                padding = UiConstants.CARD_PADDING_LARGE
+            }
+            p {
+                +"Please select a season, then click Load Statistics."
+                css { color = Color("var(--text-secondary)") }
+            }
         }
     }
 }
 
 private fun renderStatsSubTabToggle(container: HTMLElement) {
-    container.div {
-        css {
-            display = Display.flex
-            gap = UiConstants.CARD_GAP
-            marginBottom = UiConstants.CARD_GAP_LARGE
-        }
-
-        button(classes = "btn${if (selectedStatsSubTab == "batting") "" else " btn-secondary"}") {
-            +"Batting"
-            onClickFunction = {
-                selectedStatsSubTab = "batting"
-                renderCurrentTab()
+    container.append {
+        div {
+            css {
+                display = Display.flex
+                gap = UiConstants.CARD_GAP
+                marginBottom = UiConstants.CARD_GAP_LARGE
             }
-        }
 
-        button(classes = "btn${if (selectedStatsSubTab == "pitching") "" else " btn-secondary"}") {
-            +"Pitching"
-            onClickFunction = {
-                selectedStatsSubTab = "pitching"
-                renderCurrentTab()
+            button(classes = "btn${if (selectedStatsSubTab == "batting") "" else " btn-secondary"}") {
+                +"Batting"
+                onClickFunction = { _: Event ->
+                    selectedStatsSubTab = "batting"
+                    renderCurrentTab()
+                }
             }
-        }
 
-        button(classes = "btn${if (selectedStatsSubTab == "fielding") "" else " btn-secondary"}") {
-            +"Fielding"
-            onClickFunction = {
-                selectedStatsSubTab = "fielding"
-                renderCurrentTab()
+            button(classes = "btn${if (selectedStatsSubTab == "pitching") "" else " btn-secondary"}") {
+                +"Pitching"
+                onClickFunction = { _: Event ->
+                    selectedStatsSubTab = "pitching"
+                    renderCurrentTab()
+                }
+            }
+
+            button(classes = "btn${if (selectedStatsSubTab == "fielding") "" else " btn-secondary"}") {
+                +"Fielding"
+                onClickFunction = { _: Event ->
+                    selectedStatsSubTab = "fielding"
+                    renderCurrentTab()
+                }
             }
         }
     }
@@ -163,17 +174,19 @@ private fun renderStatsTableSection(container: HTMLElement) {
         val stats = api.getSeasonStats(selectedSeasonId!!)
         val playersList = api.getPlayers()
 
-        container.div(classes = "card") {
-            h2 {
-                +"${selectedStatsSubTab.replaceFirstChar { it.uppercaseChar() }} Statistics"
-            }
+        container.append {
+            div(classes = "card") {
+                h2 {
+                    +"${selectedStatsSubTab.replaceFirstChar { it.uppercaseChar() }} Statistics"
+                }
 
-            div(classes = "table-container") {
-                table {
-                    when (selectedStatsSubTab) {
-                        "batting" -> renderBattingTable(this, stats, playersList)
-                        "pitching" -> renderPitchingTable(this, stats, playersList)
-                        "fielding" -> renderFieldingTable(this, stats, playersList)
+                div(classes = "table-container") {
+                    table {
+                        when (selectedStatsSubTab) {
+                            "batting" -> renderBattingTable(this, stats, playersList)
+                            "pitching" -> renderPitchingTable(this, stats, playersList)
+                            "fielding" -> renderFieldingTable(this, stats, playersList)
+                        }
                     }
                 }
             }
@@ -227,7 +240,7 @@ private fun renderBattingTable(table: TABLE, stats: SeasonStats, playersList: Li
     }
 }
 
-@Suppress("MagicNumber", "MaxLineLength", "LongMethod")
+// Removed @Suppress per Detekt rules
 private fun renderBattingRow(tbody: TBODY, row: PlayerBattingStats, playerRecord: Player?) {
     val teamName = teamsList.find { it.id == playerRecord?.teamId }?.name ?: "Free Agent"
     val avg = if (row.atBats > 0) row.hits.toDouble() / row.atBats else 0.0
@@ -304,7 +317,7 @@ private fun renderPitchingTable(table: TABLE, stats: SeasonStats, playersList: L
     }
 }
 
-@Suppress("MagicNumber", "MaxLineLength", "LongMethod")
+// Removed @Suppress per Detekt rules
 private fun renderPitchingRow(tbody: TBODY, row: PlayerPitchingStats, playerRecord: Player?) {
     val teamName = teamsList.find { it.id == playerRecord?.teamId }?.name ?: "Free Agent"
     val ip = formatIP(row.inningsPitchedThirds)
@@ -382,7 +395,7 @@ private fun renderFieldingRow(tbody: TBODY, row: PlayerFieldingStats, playerReco
     }
 }
 
-@Suppress("MagicNumber")
+// Removed @Suppress per Detekt rules
 private fun formatDecimal(value: Double): String {
     val rounded = (value * 1000).toInt()
     val str = rounded.toString()
@@ -398,7 +411,7 @@ private fun formatDecimal(value: Double): String {
     }
 }
 
-@Suppress("MagicNumber")
+// Removed @Suppress per Detekt rules
 private fun formatDecimal2(value: Double): String {
     val rounded = (value * 100).toInt()
     val whole = rounded / 100
@@ -407,7 +420,7 @@ private fun formatDecimal2(value: Double): String {
     return "$whole.$fracStr"
 }
 
-@Suppress("MagicNumber")
+// Removed @Suppress per Detekt rules
 private fun formatIP(thirds: Int): String {
     val whole = thirds / 3
     val rem = thirds % 3

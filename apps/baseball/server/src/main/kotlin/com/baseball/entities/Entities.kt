@@ -1,26 +1,7 @@
 package com.baseball.entities
 
-import com.baseball.models.Game
-import com.baseball.models.GameState
-import com.baseball.models.GameStatus
-import com.baseball.models.HalfInning
-import com.baseball.models.League
-import com.baseball.models.PlayEvent
-import com.baseball.models.Player
-import com.baseball.models.PlayerBattingStats
-import com.baseball.models.PlayerFieldingStats
-import com.baseball.models.PlayerPitchingStats
-import com.baseball.models.ScoringEventType
-import com.baseball.models.Season
-import com.baseball.models.Team
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
-import jakarta.persistence.Table
+import com.baseball.models.*
+import jakarta.persistence.*
 
 data class GameRunnersDomainNames(
     val runnerFirstName: String? = null,

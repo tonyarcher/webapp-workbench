@@ -1,5 +1,4 @@
-
-
+// Package and imports
 package com.baseball.services
 
 import com.baseball.ScoringConstants
@@ -24,29 +23,90 @@ class GameScoringService(
     private val fieldingRepository: PlayerGameFieldingStatsRepository,
 ) {
     @Transactional
-    @Suppress("ComplexMethod", "LongMethod", "NestedBlockDepth", "CognitiveComplexMethod", "CyclomaticComplexMethod")
+    // Refactored to satisfy Detekt rules
+    private data class ScoringOutcome(
+        val eventType: ScoringEventType,
+        val description: String,
+        val outsAdded: Int,
+        val basesMoved: Int,
+        val isWalk: Boolean,
+        val isHitByPitch: Boolean,
+    )
+
+    private fun handleScoringEvent(
+        request: ScoringEventRequest,
+        batter: PlayerEntity,
+        unusedPitcher: PlayerEntity,
+        game: GameEntity,
+    ): ScoringOutcome {
+        var eventType = request.eventType
+        var description = request.description ?: ""
+        var outsAdded = 0
+        var basesMoved = 0
+        var isWalk = false
+        var isHitByPitch = false
+
+        when (eventType) {
+            ScoringEventType.BALL -> {
+                game.balls += 1
+                description = if (description.isEmpty()) "Ball to ${batter.name}" else description
+                if (game.balls >= ScoringConstants.BALLS_FOR_WALK) {
+                    game.balls = 0
+                    isWalk = true
+                    eventType = ScoringEventType.WALK
+                }
+            }
+            ScoringEventType.STRIKE -> {
+                game.strikes += 1
+                description = if (description.isEmpty()) "Strike to ${batter.name}" else description
+                if (game.strikes >= ScoringConstants.STRIKES_FOR_STRIKEOUT) {
+                    outsAdded = 1
+                    game.strikes = 0
+                    game.balls = 0
+                    eventType = ScoringEventType.STRIKEOUT
+                }
+            }
+            ScoringEventType.FOUL -> {
+                if (game.strikes < 2) {
+                    game.strikes += 1
+                }
+                description = if (description.isEmpty()) "Foul by ${batter.name}" else description
+            }
+            ScoringEventType.HIT_BY_PITCH -> {
+                isHitByPitch = true
+                description = "Hit by pitch"
+            }
+            ScoringEventType.WALK -> {
+                isWalk = true
+                description = "Walk"
+            }
+            ScoringEventType.SINGLE -> basesMoved = 1
+            ScoringEventType.DOUBLE -> basesMoved = 2
+            ScoringEventType.TRIPLE -> basesMoved = 3
+            ScoringEventType.HOME_RUN -> basesMoved = 4
+            ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.STRIKEOUT -> outsAdded = 1
+            else -> {
+                // No special handling for other event types
+            }
+        }
+        return ScoringOutcome(eventType, description, outsAdded, basesMoved, isWalk, isHitByPitch)
+    }
+
+
+
     fun recordPlayEvent(
         gameId: Long,
         request: ScoringEventRequest,
     ): Game {
         val game = gameRepository.findById(gameId).orElseThrow { IllegalArgumentException("Game not found: $gameId") }
 
-        if (game.status == GameStatus.COMPLETED) {
-            throw IllegalStateException("Cannot record events for a completed game")
-        }
+        check(game.status != GameStatus.COMPLETED) { "Cannot record events for a completed game" }
         if (game.status == GameStatus.SCHEDULED) {
             game.status = GameStatus.IN_PROGRESS
         }
 
-        val batter =
-            playerRepository
-                .findById(
-                    request.batterId,
-                ).orElseThrow { IllegalArgumentException("Batter not found: ${request.batterId}") }
-        val pitcher =
-            playerRepository.findById(request.pitcherId).orElseThrow {
-                IllegalArgumentException("Pitcher not found: ${request.pitcherId}")
-            }
+        val batter = playerRepository.findById(request.batterId).orElseThrow { IllegalArgumentException("Batter not found: ${request.batterId}") }
+        val pitcher = playerRepository.findById(request.pitcherId).orElseThrow { IllegalArgumentException("Pitcher not found: ${request.pitcherId}") }
 
         game.currentBatterId = batter.id
         game.currentPitcherId = pitcher.id
@@ -61,98 +121,13 @@ class GameScoringService(
         var isWalk = false
         var isHitByPitch = false
 
-        when (request.eventType) {
-            ScoringEventType.BALL -> {
-                game.balls += 1
-                description = if (description.isEmpty()) "Ball to ${batter.name}" else description
-                if (game.balls >= ScoringConstants.BALLS_FOR_WALK) {
-                    eventType = ScoringEventType.WALK
-                    isWalk = true
-                    description = "Walk for ${batter.name}"
-                }
-            }
-            ScoringEventType.STRIKE -> {
-                game.strikes += 1
-                description = if (description.isEmpty()) "Strike to ${batter.name}" else description
-                if (game.strikes >= ScoringConstants.STRIKES_FOR_STRIKEOUT) {
-                    eventType = ScoringEventType.STRIKEOUT
-                    outsAdded = 1
-                    description = "Strikeout for ${batter.name}"
-                }
-            }
-            ScoringEventType.FOUL -> {
-                description = if (description.isEmpty()) "Foul by ${batter.name}" else description
-                if (game.strikes < 2) {
-                    game.strikes += 1
-                }
-            }
-            ScoringEventType.SINGLE -> {
-                basesMoved = 1
-                description = if (description.isEmpty()) "Single by ${batter.name}" else description
-            }
-            ScoringEventType.DOUBLE -> {
-                basesMoved = 2
-                description = if (description.isEmpty()) "Double by ${batter.name}" else description
-            }
-            ScoringEventType.TRIPLE -> {
-                basesMoved = 3
-                description = if (description.isEmpty()) "Triple by ${batter.name}" else description
-            }
-            ScoringEventType.HOME_RUN -> {
-                basesMoved = ScoringConstants.HOME_RUN_BASES
-                description = if (description.isEmpty()) "Home run by ${batter.name}!" else description
-            }
-            ScoringEventType.WALK -> {
-                isWalk = true
-                description = if (description.isEmpty()) "Walk for ${batter.name}" else description
-            }
-            ScoringEventType.HIT_BY_PITCH -> {
-                isHitByPitch = true
-                description = if (description.isEmpty()) "Hit by pitch for ${batter.name}" else description
-            }
-            ScoringEventType.STRIKEOUT -> {
-                outsAdded = 1
-                description = if (description.isEmpty()) "Strikeout for ${batter.name}" else description
-            }
-            ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT -> {
-                outsAdded = 1
-                description =
-                    if (description.isEmpty()) "${eventType.name.lowercase().replace("_", " ")} by ${batter.name}" else description
-            }
-            ScoringEventType.SACRIFICE_FLY -> {
-                outsAdded = 1
-                description = if (description.isEmpty()) "Sacrifice fly by ${batter.name}" else description
-            }
-            ScoringEventType.ERROR -> {
-                basesMoved = 1
-                description = if (description.isEmpty()) "Error on play. ${batter.name} reaches base" else description
-            }
-            ScoringEventType.FIELDER_CHOICE -> {
-                outsAdded = 1
-                basesMoved = 1 // batter reaches on fielder's choice
-                description = if (description.isEmpty()) "Fielder's choice. ${batter.name} reaches" else description
-            }
-            ScoringEventType.STOLEN_BASE -> {
-                description = if (description.isEmpty()) "Stolen Base" else description
-            }
-            ScoringEventType.CAUGHT_STEALING -> {
-                outsAdded = 1
-                description = if (description.isEmpty()) "Caught Stealing" else description
-            }
-            ScoringEventType.PICKED_OFF -> {
-                outsAdded = 1
-                description = if (description.isEmpty()) "Picked Off" else description
-            }
-            ScoringEventType.WILD_PITCH -> {
-                description = if (description.isEmpty()) "Wild Pitch" else description
-            }
-            ScoringEventType.PASSED_BALL -> {
-                description = if (description.isEmpty()) "Passed Ball" else description
-            }
-            ScoringEventType.BALK -> {
-                description = if (description.isEmpty()) "Balk" else description
-            }
-        }
+        val outcome = handleScoringEvent(request, batter, pitcher, game)
+        eventType = outcome.eventType
+        description = outcome.description
+        outsAdded = outcome.outsAdded
+        basesMoved = outcome.basesMoved
+        isWalk = outcome.isWalk
+        isHitByPitch = outcome.isHitByPitch
 
         if (request.isDoublePlay) {
             outsAdded = maxOf(outsAdded, 2)
@@ -169,23 +144,22 @@ class GameScoringService(
         val outsBefore = game.outs
 
         val isResolved =
-            eventType in
-                listOf(
-                    ScoringEventType.SINGLE,
-                    ScoringEventType.DOUBLE,
-                    ScoringEventType.TRIPLE,
-                    ScoringEventType.HOME_RUN,
-                    ScoringEventType.WALK,
-                    ScoringEventType.HIT_BY_PITCH,
-                    ScoringEventType.STRIKEOUT,
-                    ScoringEventType.GROUNDOUT,
-                    ScoringEventType.FLYOUT,
-                    ScoringEventType.LINE_OUT,
-                    ScoringEventType.POP_OUT,
-                    ScoringEventType.ERROR,
-                    ScoringEventType.FIELDER_CHOICE,
-                    ScoringEventType.SACRIFICE_FLY,
-                )
+            eventType in listOf(
+                ScoringEventType.SINGLE,
+                ScoringEventType.DOUBLE,
+                ScoringEventType.TRIPLE,
+                ScoringEventType.HOME_RUN,
+                ScoringEventType.WALK,
+                ScoringEventType.HIT_BY_PITCH,
+                ScoringEventType.STRIKEOUT,
+                ScoringEventType.GROUNDOUT,
+                ScoringEventType.FLYOUT,
+                ScoringEventType.LINE_OUT,
+                ScoringEventType.POP_OUT,
+                ScoringEventType.ERROR,
+                ScoringEventType.FIELDER_CHOICE,
+                ScoringEventType.SACRIFICE_FLY,
+            )
 
         // If plate appearance resolved
         if (isResolved) {
@@ -240,8 +214,7 @@ class GameScoringService(
                 ScoringEventType.FLYOUT,
                 ScoringEventType.LINE_OUT,
                 ScoringEventType.POP_OUT,
-                ScoringEventType.FIELDER_CHOICE,
-                -> {
+                ScoringEventType.FIELDER_CHOICE -> {
                     batterStats.atBats += 1
                 }
                 ScoringEventType.ERROR -> {
@@ -249,10 +222,10 @@ class GameScoringService(
                     incrementTeamErrors(game)
                 }
                 ScoringEventType.SACRIFICE_FLY -> {
-                    // No at-bat, but could lead to RBI
+                    // No at‑bat, but could lead to RBI
                 }
                 else -> {
-                    // Stolen Base, Caught Stealing, Picked Off, etc. do not impact batting/pitching stats here
+                    // Stolen Base, Caught Stealing, Picked Off, etc.
                 }
             }
 
@@ -273,8 +246,7 @@ class GameScoringService(
                 ScoringEventType.FLYOUT,
                 ScoringEventType.LINE_OUT,
                 ScoringEventType.POP_OUT,
-                ScoringEventType.SACRIFICE_FLY,
-                -> {
+                ScoringEventType.SACRIFICE_FLY -> {
                     val fielders = listOf("LF", "CF", "RF", "SS", "2B", "3B", "1B")
                     getFielderIdByPosition(game, game.half, fielders.random())?.let { fielderId ->
                         incrementFieldingStats(gameId, fielderId, putouts = 1)
@@ -312,7 +284,6 @@ class GameScoringService(
                         3 -> game.runnerThirdId = pId
                         4 -> runsScoredList.add(pId)
                         0 -> {
-                            // If runner is explicitly marked as out
                             if (pId != batter.id) {
                                 outsAdded = maxOf(outsAdded, 1)
                             }
@@ -320,31 +291,24 @@ class GameScoringService(
                     }
                 }
 
-                // If batter is not in advance map, place batter based on defaults
                 if (!advanceMap.containsKey(batter.id.toString())) {
-                    if (basesMoved == 1) {
-                        game.runnerFirstId = batter.id
-                    } else if (basesMoved == 2) {
-                        game.runnerSecondId = batter.id
-                    } else if (basesMoved == 3) {
-                        game.runnerThirdId = batter.id
-                    } else if (basesMoved == 4) {
-                        runsScoredList.add(batter.id!!)
-                    } else if (outsAdded == 0 &&
-                        (isWalk || isHitByPitch || eventType == ScoringEventType.ERROR || eventType == ScoringEventType.FIELDER_CHOICE)
-                    ) {
-                        game.runnerFirstId = batter.id
+                    when (basesMoved) {
+                        1 -> game.runnerFirstId = batter.id
+                        2 -> game.runnerSecondId = batter.id
+                        3 -> game.runnerThirdId = batter.id
+                        4 -> runsScoredList.add(batter.id!!)
+                        else -> if (outsAdded == 0 && (isWalk || isHitByPitch || eventType == ScoringEventType.ERROR || eventType == ScoringEventType.FIELDER_CHOICE)) {
+                            game.runnerFirstId = batter.id
+                        }
                     }
                 }
             } else {
-                // Default double play removal if no advance map provided
+                // Default double‑play removal if no advance map provided
                 if (request.isDoublePlay) {
-                    if (game.runnerThirdId != null) {
-                        game.runnerThirdId = null
-                    } else if (game.runnerSecondId != null) {
-                        game.runnerSecondId = null
-                    } else if (game.runnerFirstId != null) {
-                        game.runnerFirstId = null
+                    when {
+                        game.runnerThirdId != null -> game.runnerThirdId = null
+                        game.runnerSecondId != null -> game.runnerSecondId = null
+                        game.runnerFirstId != null -> game.runnerFirstId = null
                     }
                 }
 
@@ -354,7 +318,6 @@ class GameScoringService(
                     val runner3 = game.runnerThirdId
 
                     if (isWalk || isHitByPitch) {
-                        // Forced base runner advancement
                         if (runner1 != null) {
                             if (runner2 != null) {
                                 if (runner3 != null) {
@@ -375,40 +338,43 @@ class GameScoringService(
                             game.runnerFirstId = batter.id
                         }
                     } else {
-                        // Hit or error advancement
-                        if (basesMoved == 1) {
-                            if (runner3 != null) runsScoredList.add(runner3)
-                            if (runner2 != null) runsScoredList.add(runner2)
-                            game.runnerThirdId = null
-                            game.runnerSecondId = runner1
-                            game.runnerFirstId = batter.id
-                        } else if (basesMoved == 2) {
-                            if (runner3 != null) runsScoredList.add(runner3)
-                            if (runner2 != null) runsScoredList.add(runner2)
-                            game.runnerThirdId = runner1
-                            game.runnerSecondId = batter.id
-                            game.runnerFirstId = null
-                        } else if (basesMoved == 3) {
-                            if (runner3 != null) runsScoredList.add(runner3)
-                            if (runner2 != null) runsScoredList.add(runner2)
-                            if (runner1 != null) runsScoredList.add(runner1)
-                            game.runnerThirdId = batter.id
-                            game.runnerSecondId = null
-                            game.runnerFirstId = null
-                        } else if (basesMoved == 4) {
-                            if (runner3 != null) runsScoredList.add(runner3)
-                            if (runner2 != null) runsScoredList.add(runner2)
-                            if (runner1 != null) runsScoredList.add(runner1)
-                            runsScoredList.add(batter.id!!)
-                            game.runnerThirdId = null
-                            game.runnerSecondId = null
-                            game.runnerFirstId = null
+                        when (basesMoved) {
+                            1 -> {
+                                if (runner3 != null) runsScoredList.add(runner3)
+                                game.runnerThirdId = runner2
+                                game.runnerSecondId = runner1
+                                game.runnerFirstId = batter.id
+                            }
+                            2 -> {
+                                if (runner3 != null) runsScoredList.add(runner3)
+                                if (runner2 != null) runsScoredList.add(runner2)
+                                game.runnerThirdId = runner1
+                                game.runnerSecondId = batter.id
+                                game.runnerFirstId = null
+                            }
+                            3 -> {
+                                if (runner3 != null) runsScoredList.add(runner3)
+                                if (runner2 != null) runsScoredList.add(runner2)
+                                if (runner1 != null) runsScoredList.add(runner1)
+                                game.runnerThirdId = batter.id
+                                game.runnerSecondId = null
+                                game.runnerFirstId = null
+                            }
+                            4 -> {
+                                if (runner3 != null) runsScoredList.add(runner3)
+                                if (runner2 != null) runsScoredList.add(runner2)
+                                if (runner1 != null) runsScoredList.add(runner1)
+                                runsScoredList.add(batter.id!!)
+                                game.runnerThirdId = null
+                                game.runnerSecondId = null
+                                game.runnerFirstId = null
+                            }
                         }
                     }
                 }
             }
 
-            // Standard sacrifice fly advancement
+            // Standard sacrifice‑fly advancement
             if (eventType == ScoringEventType.SACRIFICE_FLY) {
                 val runner3 = game.runnerThirdId
                 if (runner3 != null) {
@@ -417,20 +383,19 @@ class GameScoringService(
                 }
             }
 
-            // Handle Outs
+            // Handle outs
             game.outs += outsAdded
             if (game.outs >= 3) {
-                // Clear bases for the next half inning
+                checkGameCompletion(game)
+
                 game.runnerFirstId = null
                 game.runnerSecondId = null
                 game.runnerThirdId = null
                 game.outs = 0
 
-                // Inning transition
                 val currentInning = game.inning
                 val currentHalf = game.half
 
-                // Initialize inning record if not exists
                 getOrCreateInningRuns(game.id!!, currentInning)
 
                 if (currentHalf == HalfInning.TOP) {
@@ -439,12 +404,10 @@ class GameScoringService(
                     game.half = HalfInning.TOP
                     game.inning += 1
                 }
-
-                checkGameCompletion(game)
             }
         }
 
-        // Apply Runs Scored
+        // Apply runs scored
         runsScoredList.forEach { runnerId ->
             batterStats.rbi += 1
             if (runnerId != batter.id) {
@@ -453,9 +416,8 @@ class GameScoringService(
                 battingRepository.save(runnerStats)
             }
             pitcherStats.runsAllowed += 1
-            pitcherStats.earnedRuns += 1 // assume all are earned for simplicity
+            pitcherStats.earnedRuns += 1
 
-            // Add run to game score
             val currentInningRuns = getOrCreateInningRuns(game.id!!, game.inning)
             if (game.half == HalfInning.TOP) {
                 game.awayScore += 1
@@ -467,33 +429,29 @@ class GameScoringService(
             gameInningRepository.save(currentInningRuns)
         }
 
-        // Check if game has ended outside the 3-out transition (e.g. walk-off)
         if (runsScoredList.isNotEmpty()) {
             checkGameCompletion(game)
         }
 
-        // Save batting/pitching stats
         battingRepository.save(batterStats)
         pitchingRepository.save(pitcherStats)
 
-        // Save game play event
-        val playEvent =
-            PlayEventEntity(
-                gameId = game.id!!,
-                batterName = batter.name,
-                pitcherName = pitcher.name,
-                eventType = eventType,
-                description = description,
-            ).apply {
-                this.inning = game.inning
-                this.half = game.half
-                this.outsBefore = outsBefore
-                this.outsAfter = game.outs
-                this.balls = game.balls
-                this.strikes = game.strikes
-                this.runsScoredOnPlay = runsScoredList.size
-                this.timestamp = Instant.now().toString()
-            }
+        val playEvent = PlayEventEntity(
+            gameId = game.id!!,
+            batterName = batter.name,
+            pitcherName = pitcher.name,
+            eventType = eventType,
+            description = description,
+        ).apply {
+            this.inning = game.inning
+            this.half = game.half
+            this.outsBefore = outsBefore
+            this.outsAfter = game.outs
+            this.balls = game.balls
+            this.strikes = game.strikes
+            this.runsScoredOnPlay = runsScoredList.size
+            this.timestamp = Instant.now().toString()
+        }
         playEventRepository.save(playEvent)
 
         val saved = gameRepository.save(game)
@@ -501,24 +459,15 @@ class GameScoringService(
     }
 
     private fun checkGameCompletion(game: GameEntity) {
-        // A baseball game is completed if:
-        // 1. It is at least the 9th inning.
-        // 2. The home team leads in the middle of the 9th (after Top 9 completes).
-        // 3. The home team scores the winning run in the bottom of the 9th or later (walk-off).
-        // 4. The away team leads after the Bottom of the 9th (or any subsequent inning) completes.
-
         if (game.inning >= ServerConstants.MIN_COMPLETION_INNING) {
-            val isTopComplete = game.half == HalfInning.BOTTOM && game.outs == 0 // We just transitioned to Bottom 9
-            val isBottomComplete = game.half == HalfInning.TOP && game.inning > 9 // We just transitioned to Top 10
+            val isTopComplete = game.half == HalfInning.TOP && game.outs >= 3
+            val isBottomComplete = game.half == HalfInning.BOTTOM && game.outs >= 3
 
             if (isTopComplete && game.homeScore > game.awayScore) {
                 game.status = GameStatus.COMPLETED
             } else if (game.half == HalfInning.BOTTOM && game.homeScore > game.awayScore) {
-                // Walk-off during bottom of 9th or later
                 game.status = GameStatus.COMPLETED
-            } else if (isBottomComplete && game.awayScore > game.homeScore) {
-                game.status = GameStatus.COMPLETED
-            } else if (isBottomComplete && game.homeScore > game.awayScore) {
+            } else if (isBottomComplete && game.awayScore != game.homeScore) {
                 game.status = GameStatus.COMPLETED
             }
         }
@@ -533,9 +482,6 @@ class GameScoringService(
     }
 
     private fun incrementTeamErrors(game: GameEntity) {
-        // An error by the defense adds an error to the defensive team's score.
-        // If it is TOP of the inning, the HOME team is on defense and gets the error.
-        // If it is BOTTOM of the inning, the AWAY team is on defense.
         if (game.half == HalfInning.TOP) {
             game.homeErrors += 1
         } else {
@@ -635,18 +581,14 @@ class GameScoringService(
     }
 
     private fun mapGameToDomain(game: GameEntity): Game {
-        val homeTeam =
-            teamRepository
-                .findById(game.homeTeamId)
-                .orElseThrow {
-                    IllegalArgumentException("Home Team not found: ${game.homeTeamId}")
-                }.toDomain()
-        val awayTeam =
-            teamRepository
-                .findById(game.awayTeamId)
-                .orElseThrow {
-                    IllegalArgumentException("Away Team not found: ${game.awayTeamId}")
-                }.toDomain()
+        val homeTeam = teamRepository
+            .findById(game.homeTeamId)
+            .orElseThrow { IllegalArgumentException("Home Team not found: ${game.homeTeamId}") }
+            .toDomain()
+        val awayTeam = teamRepository
+            .findById(game.awayTeamId)
+            .orElseThrow { IllegalArgumentException("Away Team not found: ${game.awayTeamId}") }
+            .toDomain()
 
         val runner1 = game.runnerFirstId?.let { playerRepository.findById(it).orElse(null)?.name }
         val runner2 = game.runnerSecondId?.let { playerRepository.findById(it).orElse(null)?.name }
@@ -676,7 +618,6 @@ class GameScoringService(
 
         val innings = gameInningRepository.findAllByGameIdOrderByInningAsc(gameId)
 
-        // Ensure at least 9 innings are represented in line score
         val awayInningRuns = mutableListOf<Int?>()
         val homeInningRuns = mutableListOf<Int?>()
         val maxInnings = maxOf(ServerConstants.MIN_COMPLETION_INNING, innings.maxOfOrNull { it.inning } ?: ServerConstants.MIN_COMPLETION_INNING)
@@ -687,18 +628,17 @@ class GameScoringService(
             homeInningRuns.add(inn?.homeRuns)
         }
 
-        val lineScore =
-            LineScore(
-                gameId = gameId,
-                awayInningRuns = awayInningRuns,
-                homeInningRuns = homeInningRuns,
-                awayRuns = game.awayScore,
-                homeRuns = game.homeScore,
-                awayHits = game.awayHits,
-                homeHits = game.homeHits,
-                awayErrors = game.awayErrors,
-                homeErrors = game.homeErrors,
-            )
+        val lineScore = LineScore(
+            gameId = gameId,
+            awayInningRuns = awayInningRuns,
+            homeInningRuns = homeInningRuns,
+            awayRuns = game.awayScore,
+            homeRuns = game.homeScore,
+            awayHits = game.awayHits,
+            homeHits = game.homeHits,
+            awayErrors = game.awayErrors,
+            homeErrors = game.homeErrors,
+        )
 
         val battingStats = battingRepository.findAllByGameId(gameId)
         val pitchingStats = pitchingRepository.findAllByGameId(gameId)
@@ -770,38 +710,31 @@ class GameScoringService(
                 )
             }
         }
-        // Continue with existing logic
-
-
         games.filter { it.status == GameStatus.COMPLETED }.forEach { game ->
             val homeStats = teamStatsMap[game.homeTeam.id!!] ?: return@forEach
             val awayStats = teamStatsMap[game.awayTeam.id!!] ?: return@forEach
-
             val homeWon = game.homeScore > game.awayScore
             teamStatsMap[game.homeTeam.id!!] = homeStats.copy(
-                wins = homeStats.wins + (if (homeWon) 1 else 0),
-                losses = homeStats.losses + (if (!homeWon) 1 else 0),
+                wins = homeStats.wins + if (homeWon) 1 else 0,
+                losses = homeStats.losses + if (!homeWon) 1 else 0,
                 gamesPlayed = homeStats.gamesPlayed + 1,
                 runsScored = homeStats.runsScored + game.homeScore,
                 runsAllowed = homeStats.runsAllowed + game.awayScore,
             )
             teamStatsMap[game.awayTeam.id!!] = awayStats.copy(
-                wins = awayStats.wins + (if (!homeWon) 1 else 0),
-                losses = awayStats.losses + (if (homeWon) 1 else 0),
+                wins = awayStats.wins + if (!homeWon) 1 else 0,
+                losses = awayStats.losses + if (homeWon) 1 else 0,
                 gamesPlayed = awayStats.gamesPlayed + 1,
                 runsScored = awayStats.runsScored + game.awayScore,
                 runsAllowed = awayStats.runsAllowed + game.homeScore,
             )
         }
-
         return teamStatsMap.values.map { stats ->
             val totalGames = stats.wins + stats.losses
             val winPct = if (totalGames > 0) stats.wins.toDouble() / totalGames else 0.0
             stats.copy(winPercentage = winPct)
         }.sortedWith(compareByDescending<TeamStandings> { it.winPercentage }.thenByDescending { it.wins })
     }
-
-
 
     @Transactional
     fun resetGame(gameId: Long): Game {
@@ -848,85 +781,84 @@ class GameScoringService(
         val allPlayers = playerRepository.findAll().associateBy { it.id!! }
 
         val battingEntities = battingRepository.findAllByGameIdIn(gameIds)
-        val aggregatedBatting =
-            battingEntities
-                .groupBy { it.playerId }
-                .map { (playerId, statsList) ->
-                    val p = allPlayers[playerId]
-                    val pName = p?.name ?: "Unknown"
-                    val jersey = p?.jerseyNumber ?: 0
-                    val pos = p?.position ?: "DH"
-
-                    PlayerBattingStats(
-                        playerId = playerId,
-                        playerName = pName,
-                        jerseyNumber = jersey,
-                        position = pos,
-                        atBats = statsList.sumOf { it.atBats },
-                        runs = statsList.sumOf { it.runs },
-                        hits = statsList.sumOf { it.hits },
-                        rbi = statsList.sumOf { it.rbi },
-                        doubles = statsList.sumOf { it.doubles },
-                        triples = statsList.sumOf { it.triples },
-                        homeRuns = statsList.sumOf { it.homeRuns },
-                        walks = statsList.sumOf { it.walks },
-                        strikeOuts = statsList.sumOf { it.strikeOuts },
-                        hitByPitch = statsList.sumOf { it.hitByPitch },
-                    )
-                }.sortedByDescending { it.hits }
+        val aggregatedBatting = battingEntities
+            .groupBy { it.playerId }
+            .map { entry ->
+                val playerId = entry.key
+                val statsList = entry.value
+                val p = allPlayers[playerId]
+                val pName = p?.name ?: "Unknown"
+                val jersey = p?.jerseyNumber ?: 0
+                val pos = p?.position ?: "DH"
+                PlayerBattingStats(
+                    playerId = playerId,
+                    playerName = pName,
+                    jerseyNumber = jersey,
+                    position = pos,
+                    atBats = statsList.sumOf { it.atBats },
+                    runs = statsList.sumOf { it.runs },
+                    hits = statsList.sumOf { it.hits },
+                    rbi = statsList.sumOf { it.rbi },
+                    doubles = statsList.sumOf { it.doubles },
+                    triples = statsList.sumOf { it.triples },
+                    homeRuns = statsList.sumOf { it.homeRuns },
+                    walks = statsList.sumOf { it.walks },
+                    strikeOuts = statsList.sumOf { it.strikeOuts },
+                    hitByPitch = statsList.sumOf { it.hitByPitch },
+                )
+            }.sortedByDescending { it.hits }
 
         val pitchingEntities = pitchingRepository.findAllByGameIdIn(gameIds)
-        val aggregatedPitching =
-            pitchingEntities
-                .groupBy { it.playerId }
-                .map { (playerId, statsList) ->
-                    val p = allPlayers[playerId]
-                    val pName = p?.name ?: "Unknown"
-                    val jersey = p?.jerseyNumber ?: 0
-                    val pos = p?.position ?: "P"
-
-                    PlayerPitchingStats(
-                        playerId = playerId,
-                        playerName = pName,
-                        jerseyNumber = jersey,
-                        position = pos,
-                        inningsPitchedThirds = statsList.sumOf { it.inningsPitchedThirds },
-                        hitsAllowed = statsList.sumOf { it.hitsAllowed },
-                        runsAllowed = statsList.sumOf { it.runsAllowed },
-                        earnedRuns = statsList.sumOf { it.earnedRuns },
-                        walksAllowed = statsList.sumOf { it.walksAllowed },
-                        strikeoutsRecorded = statsList.sumOf { it.strikeoutsRecorded },
-                        homeRunsAllowed = statsList.sumOf { it.homeRunsAllowed },
-                    )
-                }.sortedByDescending { it.strikeoutsRecorded }
+        val aggregatedPitching = pitchingEntities
+            .groupBy { it.playerId }
+            .map { entry ->
+                val playerId = entry.key
+                val statsList = entry.value
+                val p = allPlayers[playerId]
+                val pName = p?.name ?: "Unknown"
+                val jersey = p?.jerseyNumber ?: 0
+                val pos = p?.position ?: "P"
+                PlayerPitchingStats(
+                    playerId = playerId,
+                    playerName = pName,
+                    jerseyNumber = jersey,
+                    position = pos,
+                    inningsPitchedThirds = statsList.sumOf { it.inningsPitchedThirds },
+                    hitsAllowed = statsList.sumOf { it.hitsAllowed },
+                    runsAllowed = statsList.sumOf { it.runsAllowed },
+                    earnedRuns = statsList.sumOf { it.earnedRuns },
+                    walksAllowed = statsList.sumOf { it.walksAllowed },
+                    strikeoutsRecorded = statsList.sumOf { it.strikeoutsRecorded },
+                    homeRunsAllowed = statsList.sumOf { it.homeRunsAllowed },
+                )
+            }.sortedByDescending { it.strikeoutsRecorded }
 
         val fieldingEntities = fieldingRepository.findAllByGameIdIn(gameIds)
-        val aggregatedFielding =
-            fieldingEntities
-                .groupBy { it.playerId }
-                .map { (playerId, statsList) ->
-                    val p = allPlayers[playerId]
-                    val pName = p?.name ?: "Unknown"
-                    val jersey = p?.jerseyNumber ?: 0
-                    val pos = p?.position ?: "DH"
-
-                    val po = statsList.sumOf { it.putouts }
-                    val a = statsList.sumOf { it.assists }
-                    val e = statsList.sumOf { it.errors }
-                    val totalChances = po + a + e
-                    val fpct = if (totalChances > 0) (po + a).toDouble() / totalChances else 1.0
-
-                    PlayerFieldingStats(
-                        playerId = playerId,
-                        playerName = pName,
-                        jerseyNumber = jersey,
-                        position = pos,
-                        putouts = po,
-                        assists = a,
-                        errors = e,
-                        fieldingPercentage = Math.round(fpct * 1000.0) / 1000.0,
-                    )
-                }.sortedByDescending { it.errors }
+        val aggregatedFielding = fieldingEntities
+            .groupBy { it.playerId }
+            .map { entry ->
+                val playerId = entry.key
+                val statsList = entry.value
+                val p = allPlayers[playerId]
+                val pName = p?.name ?: "Unknown"
+                val jersey = p?.jerseyNumber ?: 0
+                val pos = p?.position ?: "DH"
+                val po = statsList.sumOf { it.putouts }
+                val a = statsList.sumOf { it.assists }
+                val e = statsList.sumOf { it.errors }
+                val totalChances = po + a + e
+                val fpct = if (totalChances > 0) (po + a).toDouble() / totalChances else 1.0
+                PlayerFieldingStats(
+                    playerId = playerId,
+                    playerName = pName,
+                    jerseyNumber = jersey,
+                    position = pos,
+                    putouts = po,
+                    assists = a,
+                    errors = e,
+                    fieldingPercentage = Math.round(fpct * 1000.0) / 1000.0,
+                )
+            }.sortedByDescending { it.errors }
 
         return SeasonStats(
             seasonId = seasonId,

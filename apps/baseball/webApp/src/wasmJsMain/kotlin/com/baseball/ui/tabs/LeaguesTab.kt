@@ -1,36 +1,40 @@
-
-
 package com.baseball.ui.tabs
-
 
 import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.models.League
 import com.baseball.models.Season
 import com.baseball.ui.*
-
 import kotlinx.css.*
 import kotlinx.html.*
+import kotlinx.html.dom.append
 import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
+// Removed @Suppress per Detekt rules
 internal fun renderLeaguesTab(container: HTMLElement) {
-    container.h1 { +"Leagues & Seasons" }
+    container.innerHTML = ""
+    container.append {
+        h1 { +"Leagues & Seasons" }
+    }
 
     val references = LeaguesTabReferences()
 
-    val grid = container.div(classes = "dashboard-grid") {
-        renderLeaguesListCard()
-        div {
-            renderCreateLeagueCard(references)
-            if (selectedLeagueId != null) {
-                renderSeasonsSection(references)
+    container.append {
+        div(classes = "dashboard-grid") {
+            id = "leagues-grid"
+            renderLeaguesListCard()
+            div {
+                renderCreateLeagueCard(references)
+                if (selectedLeagueId != null) {
+                    renderSeasonsSection(references)
+                }
             }
         }
     }
+    val grid = container.querySelector("#leagues-grid") as HTMLDivElement
 
     references.bind(grid)
     references.refreshLeaguesUI()
@@ -56,9 +60,11 @@ private class LeaguesTabReferences {
         val divElement = leaguesListDiv ?: return
         divElement.innerHTML = ""
         if (leaguesList.isEmpty()) {
-            divElement.p {
-                +"No leagues found. Create one to get started!"
-                css { color = Color("var(--text-secondary)") }
+            divElement.append {
+                p {
+                    +"No leagues found. Create one to get started!"
+                    css { color = Color("var(--text-secondary)") }
+                }
             }
         } else {
             leaguesList.forEach { league ->
@@ -72,9 +78,11 @@ private class LeaguesTabReferences {
         val divElement = seasonsListDiv ?: return
         divElement.innerHTML = ""
         if (seasonsList.isEmpty()) {
-            divElement.p {
-                +"No seasons in this league yet."
-                css { color = Color("var(--text-secondary)") }
+            divElement.append {
+                p {
+                    +"No seasons in this league yet."
+                    css { color = Color("var(--text-secondary)") }
+                }
             }
         } else {
             seasonsList.forEach { season ->
@@ -94,68 +102,81 @@ private fun DIV.renderLeaguesListCard() {
 }
 
 private fun renderLeagueCardItem(parent: HTMLDivElement, league: League, refs: LeaguesTabReferences) {
-    parent.div(classes = "game-card") {
-        css {
-            marginBottom = UiConstants.CARD_MARGIN_BOTTOM
-            display = Display.flex
-            flexDirection = FlexDirection.column
-            alignItems = Align.flexStart
-        }
-
-        div {
+    parent.append {
+        div(classes = "game-card") {
             css {
-                fontWeight = FontWeight.bold
-                fontSize = UiConstants.FONT_SIZE_LARGE
-            }
-            +league.name
-        }
-
-        val isSelected = (selectedLeagueId == league.id)
-        button(classes = "btn btn-secondary${if (isSelected) " active" else ""}") {
-            css {
-                marginTop = UiConstants.CARD_GAP_SMALL
-                padding = Padding(0.25.rem, 0.75.rem)
-                fontSize = 0.85.rem
-            }
-            +(if (isSelected) "Active League" else "Select League")
-            onClickFunction = {
-                selectedLeagueId = league.id
-                launch {
-                    seasonsList = api.getSeasons(league.id!!)
-                    selectedSeasonId = seasonsList.firstOrNull()?.id
-                    refs.refreshLeaguesUI()
-                    renderCurrentTab()
+                marginBottom = UiConstants.CARD_GAP_SMALL
+                padding = UiConstants.CARD_PADDING
+                display = Display.flex
+                justifyContent = JustifyContent.spaceBetween
+                alignItems = Align.center
+                if (selectedLeagueId == league.id) {
+                    border = Border(1.px, BorderStyle.solid, Color("var(--primary)"))
                 }
             }
+
+            span {
+                +league.name
+                css { fontWeight = FontWeight("600") }
+            }
+
+            button(classes = if (selectedLeagueId == league.id) "btn btn-primary" else "btn btn-secondary") {
+                css {
+                    padding = Padding(0.25.rem, 0.5.rem)
+                    fontSize = 0.8.rem
+                }
+                +"${if (selectedLeagueId == league.id) "Selected" else "Select"}"
+                onClickFunction = { handleSelectLeagueClick(league, refs) }
+            }
         }
+    }
+}
+
+private fun handleSelectLeagueClick(league: League, refs: LeaguesTabReferences) {
+    selectedLeagueId = league.id
+    selectedSeasonId = null
+    seasonsList = emptyList()
+    saveNavState()
+    refs.refreshLeaguesUI()
+    launch {
+        seasonsList = api.getSeasons(league.id!!)
+        if (seasonsList.isNotEmpty()) {
+            selectedSeasonId = seasonsList.first().id
+            saveNavState()
+        }
+        renderCurrentTab()
     }
 }
 
 private fun DIV.renderCreateLeagueCard(refs: LeaguesTabReferences) {
     div(classes = "card") {
-        css { marginBottom = UiConstants.CARD_MARGIN_BOTTOM }
+        css { marginBottom = UiConstants.CARD_GAP_LARGE }
         h2 { +"Create New League" }
-        form {
-            div(classes = "form-group") {
-                label { +"League Name" }
-                input(type = InputType.text, classes = "form-control") {
-                    id = "league-name-input"
-                    placeholder = "e.g., National Baseball League"
-                }
+        renderCreateLeagueForm(refs)
+    }
+}
+
+private fun DIV.renderCreateLeagueForm(refs: LeaguesTabReferences) {
+    form {
+        div(classes = "form-group") {
+            label { +"League Name" }
+            input(type = InputType.text, classes = "form-control") {
+                id = "league-name-input"
+                placeholder = "e.g., National Baseball League"
             }
-            button(classes = "btn") {
-                type = ButtonType.button
-                +"Create League"
-                onClickFunction = { handleCreateLeagueClick(refs) }
-            }
+        }
+        button(classes = "btn") {
+            type = ButtonType.button
+            +"Create League"
+            onClickFunction = { handleCreateLeagueClick(refs) }
         }
     }
 }
 
 private fun handleCreateLeagueClick(refs: LeaguesTabReferences) {
-    val inName = refs.inputName ?: return
-    val name = inName.value.trim()
-    if (name.isNotEmpty()) {
+    val inName = refs.inputName
+    if (inName != null && inName.value.trim().isNotEmpty()) {
+        val name = inName.value.trim()
         launch {
             val newLeague = api.createLeague(League(name = name))
             leaguesList = api.getLeagues()
@@ -224,30 +245,32 @@ private fun handleCreateSeasonClick(refs: LeaguesTabReferences) {
 }
 
 private fun renderSeasonCardItem(parent: HTMLDivElement, season: Season) {
-    parent.div(classes = "game-card") {
-        css {
-            marginBottom = UiConstants.CARD_GAP_SMALL
-            padding = UiConstants.CARD_PADDING
-            display = Display.flex
-            justifyContent = JustifyContent.spaceBetween
-            alignItems = Align.center
-        }
-
-        span {
-            +"${season.name} (${season.year})"
-            css { fontWeight = FontWeight("600") }
-        }
-
-        button(classes = "btn btn-secondary") {
+    parent.append {
+        div(classes = "game-card") {
             css {
-                padding = Padding(0.25.rem, 0.5.rem)
-                fontSize = 0.8.rem
+                marginBottom = UiConstants.CARD_GAP_SMALL
+                padding = UiConstants.CARD_PADDING
+                display = Display.flex
+                justifyContent = JustifyContent.spaceBetween
+                alignItems = Align.center
             }
-            +"Go to Dashboard"
-            onClickFunction = {
-                selectedSeasonId = season.id
-                saveNavState()
-                currentTab = BaseballConstants.TAB_GAMES
+
+            span {
+                +"${season.name} (${season.year})"
+                css { fontWeight = FontWeight("600") }
+            }
+
+            button(classes = "btn btn-secondary") {
+                css {
+                    padding = Padding(0.25.rem, 0.5.rem)
+                    fontSize = 0.8.rem
+                }
+                +"Go to Dashboard"
+                onClickFunction = {
+                    selectedSeasonId = season.id
+                    saveNavState()
+                    currentTab = BaseballConstants.TAB_GAMES
+                }
             }
         }
     }

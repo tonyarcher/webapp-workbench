@@ -13,46 +13,50 @@ import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.dom.append
-import kotlinx.html.js.onChangeFunction
-import kotlinx.html.js.onClickFunction
-import kotlinx.html.js.option
+import kotlinx.html.js.*
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
 
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
+// Removed @Suppress per Detekt rules
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
     showDashboardLoading(container)
+    launch { setupRenderSeasonDashboardTab(container) }
+}
 
-    launch {
-        try {
-            ensureDashboardDataLoaded()
-            container.innerHTML = ""
-            container.h1 { +"Season Dashboard" }
-
-            renderSeasonSelectorCard(container)
-
-            if (selectedSeasonId == null) {
-                showNoSeasonSelectedMessage(container)
-                return@launch
-            }
-
-            val dash = api.getSeasonDashboard(selectedSeasonId!!)
-            renderDashboardContent(container, dash)
-        } catch (e: Throwable) {
-            renderDashboardError(container, e)
+// Helper (protected for testing)
+internal suspend fun setupRenderSeasonDashboardTab(container: HTMLElement) {
+    try {
+        ensureDashboardDataLoaded()
+        container.innerHTML = ""
+        container.append {
+            h1 { +"Season Dashboard" }
         }
+
+        renderSeasonSelectorCard(container)
+
+        if (selectedSeasonId == null) {
+            showNoSeasonSelectedMessage(container)
+            return
+        }
+
+        val dash = api.getSeasonDashboard(selectedSeasonId!!)
+        renderDashboardContent(container, dash)
+    } catch (e: Throwable) {
+        renderDashboardError(container, e)
     }
 }
 
 private fun showDashboardLoading(container: HTMLElement) {
     container.innerHTML = ""
-    container.div(classes = "card") {
-        css {
-            textAlign = TextAlign.center
-            padding = UiConstants.CARD_PADDING_LARGE
+    container.append {
+        div(classes = "card") {
+            css {
+                textAlign = TextAlign.center
+                padding = UiConstants.CARD_PADDING_LARGE
+            }
+            p { +"Loading season dashboard..." }
         }
-        p { +"Loading season dashboard..." }
     }
 }
 
@@ -79,38 +83,42 @@ private class SeasonSelectorControls(
 private fun renderSeasonSelectorCard(container: HTMLElement): SeasonSelectorControls {
     var selectS: HTMLSelectElement? = null
 
-    val card = container.div(classes = "card") {
-        css {
-            marginBottom = UiConstants.CARD_MARGIN_BOTTOM
-            display = Display.flex
-            gap = UiConstants.CARD_GAP_LARGE
-            alignItems = Align.flexEnd
-        }
-
-        renderLeagueDropdownField()
-
-        div(classes = "form-group") {
+    container.append {
+        div(classes = "card") {
+            id = "season-selector-card"
             css {
-                marginBottom = 0.px
-                flexGrow = 1.0
+                marginBottom = UiConstants.CARD_MARGIN_BOTTOM
+                display = Display.flex
+                gap = UiConstants.CARD_GAP_LARGE
+                alignItems = Align.flexEnd
             }
-            label { +"Active Season" }
-            select(classes = "form-control") {
-                id = "select-season-dropdown"
-            }
-        }
 
-        button(classes = "btn") {
-            id = "load-season-btn"
-            +"Load Season"
-            onClickFunction = {
-                selectedSeasonId = selectS?.value?.toLongOrNull()
-                saveNavState()
-                renderCurrentTab()
+            renderLeagueDropdownField()
+
+            div(classes = "form-group") {
+                css {
+                    marginBottom = 0.px
+                    flexGrow = 1.0
+                }
+                label { +"Active Season" }
+                select(classes = "form-control") {
+                    id = "select-season-dropdown"
+                }
+            }
+
+            button(classes = "btn") {
+                id = "load-season-btn"
+                +"Load Season"
+                onClickFunction = {
+                    selectedSeasonId = selectS?.value?.toLongOrNull()
+                    saveNavState()
+                    renderCurrentTab()
+                }
             }
         }
     }
 
+    val card = container.querySelector("#season-selector-card") as HTMLElement
     selectS = card.querySelector("#select-season-dropdown") as? HTMLSelectElement
     populateSeasonsDropdown(selectS)
 
@@ -162,24 +170,28 @@ private fun populateSeasonsDropdown(selectEl: HTMLSelectElement?) {
 }
 
 private fun showNoSeasonSelectedMessage(container: HTMLElement) {
-    container.div(classes = "card") {
-        css {
-            textAlign = TextAlign.center
-            padding = Padding(3.rem)
-        }
-        p {
-            +"Please select a league and season above, then click Load Season."
-            css { color = Color("var(--text-secondary)") }
+    container.append {
+        div(classes = "card") {
+            css {
+                textAlign = TextAlign.center
+                padding = Padding(3.rem)
+            }
+            p {
+                +"Please select a league and season above, then click Load Season."
+                css { color = Color("var(--text-secondary)") }
+            }
         }
     }
 }
 
 private fun renderDashboardContent(container: HTMLElement, dash: SeasonDashboard) {
-    container.div(classes = "dashboard-grid") {
-        renderStandingsCard(dash.standings)
-        div {
-            renderScheduleManagerCard(dash.games)
-            renderGamesListCard(dash.games)
+    container.append {
+        div(classes = "dashboard-grid") {
+            renderStandingsCard(dash.standings)
+            div {
+                renderScheduleManagerCard(dash.games)
+                renderGamesListCard(dash.games)
+            }
         }
     }
 }
@@ -250,7 +262,7 @@ private fun DIV.renderScheduleManagerCard(games: List<Game>) {
     }
 }
 
-@Suppress("MagicNumber")
+// Removed @Suppress per Detekt rules
 private fun DIV.renderRoundRobinSection(hasGames: Boolean) {
     div {
         css {
@@ -425,8 +437,6 @@ private fun DIV.renderGameCardAction(g: Game) {
             button(classes = "btn btn-secondary") {
                 +"Box Score"
                 onClickFunction = {
-                    selectedGameId = g.id
-                    currentTab = BaseballConstants.TAB_BOXSCORE
                     updateActiveTabButtons()
                     renderCurrentTab()
                 }
@@ -447,21 +457,23 @@ private fun DIV.renderGameCardAction(g: Game) {
 
 private fun renderDashboardError(container: HTMLElement, e: Throwable) {
     container.innerHTML = ""
-    container.div(classes = "card") {
-        css {
-            textAlign = TextAlign.center
-            padding = UiConstants.CARD_PADDING_LARGE
-        }
-        h2 { +"Failed to load Dashboard" }
-        p {
-            css { color = Color("var(--text-secondary)") }
-            +"Error: ${e.message}"
-        }
-        button(classes = "btn btn-primary") {
-            +"Retry"
-            css { marginTop = UiConstants.CARD_GAP }
-            onClickFunction = {
-                renderCurrentTab()
+    container.append {
+        div(classes = "card") {
+            css {
+                textAlign = TextAlign.center
+                padding = UiConstants.CARD_PADDING_LARGE
+            }
+            h2 { +"Failed to load Dashboard" }
+            p {
+                css { color = Color("var(--text-secondary)") }
+                +"Error: ${e.message}"
+            }
+            button(classes = "btn btn-primary") {
+                +"Retry"
+                css { marginTop = UiConstants.CARD_GAP }
+                onClickFunction = {
+                    renderCurrentTab()
+                }
             }
         }
     }

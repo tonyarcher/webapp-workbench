@@ -9,11 +9,10 @@ import com.baseball.models.GameStatus
 import com.baseball.models.Player
 import com.baseball.seed.SeedData
 import com.baseball.ui.*
-
 import kotlinx.css.*
 import kotlinx.html.*
-import kotlinx.html.js.onChangeFunction
-import kotlinx.html.js.onClickFunction
+import kotlinx.html.dom.append
+import kotlinx.html.js.*
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
@@ -146,28 +145,30 @@ class LineupSetupOverlay(
 
     fun render() {
         container.innerHTML = ""
-        container.div {
-            css {
-                position = Position.fixed
-                top = 0.px
-                left = 0.px
-                width = LinearDimension("100vw")
-                height = LinearDimension("100vh")
-                background = "rgba(10, 15, 30, 0.8)"
-                put("backdrop-filter", "blur(12px)")
-                display = Display.flex
-                alignItems = Align.flexStart
-                justifyContent = JustifyContent.center
-                zIndex = 10000
-                overflowY = Overflow.auto
-                padding = Padding(2.rem, 1.rem)
+        container.append {
+            div {
+                css {
+                    position = Position.fixed
+                    top = 0.px
+                    left = 0.px
+                    width = LinearDimension("100vw")
+                    height = LinearDimension("100vh")
+                    background = "rgba(10, 15, 30, 0.8)"
+                    put("backdrop-filter", "blur(12px)")
+                    display = Display.flex
+                    alignItems = Align.flexStart
+                    justifyContent = JustifyContent.center
+                    zIndex = 10000
+                    overflowY = Overflow.auto
+                    padding = Padding(2.rem, 1.rem)
+                }
+                renderModalContent()
             }
-            renderModalContent(this)
         }
     }
 
-    private fun renderModalContent(parent: DIV) {
-        parent.div(classes = "lineup-modal-content card") {
+    private fun DIV.renderModalContent() {
+        div(classes = "lineup-modal-content card") {
             css {
                 width = 100.pct
                 maxWidth = 1000.px

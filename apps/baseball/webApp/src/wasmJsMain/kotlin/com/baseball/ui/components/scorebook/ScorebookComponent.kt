@@ -7,10 +7,10 @@ import com.baseball.models.Game
 import com.baseball.models.HalfInning
 import com.baseball.models.PlayEvent
 import com.baseball.ui.css
-import com.baseball.ui.div
 import kotlinx.css.*
 import kotlinx.html.*
-import kotlinx.html.js.onClickFunction
+import kotlinx.html.dom.append
+import kotlinx.html.js.*
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
@@ -55,29 +55,33 @@ private fun renderScorebookWrapper(
     container: HTMLElement,
     game: Game,
     onToggle: (HalfInning) -> Unit,
-): HTMLDivElement =
-    container.div(classes = "scorebook-wrapper") {
-        css {
-            backgroundColor = Color("#fcfbfa")
-            color = Color("#2b2a28")
-            padding = Padding(2.rem)
-            borderRadius = 12.px
-            border = Border(2.px, BorderStyle.solid, Color("#d2cdc6"))
-            put("box-shadow", "0 6px 20px rgba(0, 0, 0, 0.15)")
-            fontFamily = "'Courier New', Courier, monospace"
-        }
-        renderScorebookHeader(this, game, onToggle)
-        div {
-            id = "scorebook-sheet-container"
+): HTMLDivElement {
+    container.append {
+        div(classes = "scorebook-wrapper") {
+            id = "scorebook-wrapper-element"
+            css {
+                backgroundColor = Color("#fcfbfa")
+                color = Color("#2b2a28")
+                padding = Padding(2.rem)
+                borderRadius = 12.px
+                border = Border(2.px, BorderStyle.solid, Color("#d2cdc6"))
+                put("box-shadow", "0 6px 20px rgba(0, 0, 0, 0.15)")
+                fontFamily = "'Courier New', Courier, monospace"
+            }
+            renderScorebookHeader(game, onToggle)
+            div {
+                id = "scorebook-sheet-container"
+            }
         }
     }
+    return container.querySelector("#scorebook-wrapper-element") as HTMLDivElement
+}
 
-private fun renderScorebookHeader(
-    parent: DIV,
+private fun DIV.renderScorebookHeader(
     game: Game,
     onToggle: (HalfInning) -> Unit,
 ) {
-    parent.div {
+    div {
         css {
             display = Display.flex
             justifyContent = JustifyContent.spaceBetween
@@ -94,16 +98,15 @@ private fun renderScorebookHeader(
                 letterSpacing = 2.px
             }
         }
-        renderToggleButtonGroup(this, game, onToggle)
+        renderToggleButtonGroup(game, onToggle)
     }
 }
 
-private fun renderToggleButtonGroup(
-    parent: DIV,
+private fun DIV.renderToggleButtonGroup(
     game: Game,
     onToggle: (HalfInning) -> Unit,
 ) {
-    parent.div {
+    div {
         id = "toggle-btn-group"
         css {
             display = Display.flex

@@ -16,14 +16,16 @@ import com.baseball.ui.components.scoring.renderGameScoringControls
 import com.baseball.ui.components.scoring.renderScorerLedScoreboard
 import kotlinx.css.*
 import kotlinx.html.*
+import kotlinx.html.dom.append
 import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
+import org.w3c.dom.events.Event
 
 var isResetDialogOpen = false
 
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
+// Removed @Suppress per Detekt rules
 internal fun renderLiveScorerTab(container: HTMLElement) {
     com.baseball.game.onOpenLineupSetupDialog = {
         isLineupDialogOpen = true
@@ -55,9 +57,14 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 }
 
 private fun renderNoGameSelectedCard(container: HTMLElement) {
-    container.div(classes = "card") {
-        css { textAlign = TextAlign.center; padding = Padding(3.rem) }
-        p { +"No game selected. Go to Season Dashboard to select one." }
+    container.append {
+        div(classes = "card") {
+            css {
+                textAlign = TextAlign.center
+                padding = Padding(3.rem)
+            }
+            p { +"No game selected. Go to Season Dashboard to select one." }
+        }
     }
 }
 
@@ -85,7 +92,7 @@ private suspend fun loadScorerData(): ScorerData {
     return ScorerData(game, events, boxScore, homeRoster, awayRoster)
 }
 
-@Suppress("MagicNumber", "MaxLineLength", "LongMethod")
+// Removed @Suppress per Detekt rules
 private fun harmonizeAwayLineup(game: Game, awayRoster: List<Player>) {
     if (localAwayLineup.isEmpty()) {
         localAwayLineup.addAll(awayRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
@@ -105,7 +112,7 @@ private fun harmonizeAwayLineup(game: Game, awayRoster: List<Player>) {
     }
 }
 
-@Suppress("MagicNumber", "MaxLineLength", "LongMethod")
+// Removed @Suppress per Detekt rules
 private fun harmonizeHomeLineup(game: Game, homeRoster: List<Player>) {
     if (localHomeLineup.isEmpty()) {
         localHomeLineup.addAll(homeRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
@@ -126,57 +133,69 @@ private fun harmonizeHomeLineup(game: Game, homeRoster: List<Player>) {
 }
 
 private fun renderStartGameCard(container: HTMLElement, game: Game) {
-    container.div(classes = "card") {
-        css {
-            textAlign = TextAlign.center
-            padding = UiConstants.CARD_PADDING_LARGE
-            maxWidth = 600.px
-            margin = Margin(2.rem, LinearDimension.auto)
-        }
-        h2 { +"Ready to Play!" }
-        p {
+    container.append {
+        div(classes = "card") {
             css {
-                fontSize = UiConstants.FONT_SIZE_LARGE
-                color = Color("var(--text-secondary)")
-                marginTop = 1.rem
-                marginBottom = UiConstants.CARD_GAP_XL
+                textAlign = TextAlign.center
+                padding = UiConstants.CARD_PADDING_LARGE
+                maxWidth = 600.px
+                margin = Margin(2.rem, LinearDimension.auto)
             }
-            +"Matchup: ${game.awayTeam.city} ${game.awayTeam.name} @ ${game.homeTeam.city} ${game.homeTeam.name}"
+            h2 { +"Ready to Play!" }
+            p {
+                css {
+                    fontSize = UiConstants.FONT_SIZE_LARGE
+                    color = Color("var(--text-secondary)")
+                    marginTop = 1.rem
+                    marginBottom = UiConstants.CARD_GAP_XL
+                }
+                +"Matchup: ${game.awayTeam.city} ${game.awayTeam.name} @ ${game.homeTeam.city} ${game.homeTeam.name}"
+            }
+            div {
+                css {
+                    display = Display.flex
+                    justifyContent = JustifyContent.center
+                    gap = UiConstants.CARD_GAP_LARGE
+                    marginBottom = UiConstants.CARD_GAP_XL
+                }
+                div {
+                    css {
+                        background = "rgba(255,255,255,0.05)"
+                        padding = Padding(UiConstants.CARD_GAP_LARGE)
+                        borderRadius = UiConstants.CARD_BORDER_RADIUS
+                        flexGrow = 1.0
+                    }
+                    div { +"Away" }
+                    h3 { +"${game.awayTeam.abbreviation}" }
+                }
+                div {
+                    css {
+                        background = "rgba(255,255,255,0.05)"
+                        padding = Padding(UiConstants.CARD_GAP_LARGE)
+                        borderRadius = UiConstants.CARD_BORDER_RADIUS
+                        flexGrow = 1.0
+                    }
+                    div { +"Home" }
+                    h3 { +"${game.homeTeam.abbreviation}" }
+                }
+            }
+            button(classes = "btn btn-primary") {
+                +"START GAME"
+                css {
+                    fontSize = 1.3.rem
+                    padding = Padding(0.75.rem, 2.5.rem)
+                    borderRadius = 30.px
+                }
+                onClickFunction = { _: Event ->
+                    isLineupDialogOpen = true
+                    renderCurrentTab()
+                }
+            }
         }
-        renderStartGameTeams(this, game)
-        renderStartGameButton(this)
     }
 }
 
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber")
-private fun renderStartGameTeams(container: DIV, game: Game) {
-    container.div {
-        css { display = Display.flex; justifyContent = JustifyContent.center; gap = UiConstants.CARD_GAP_LARGE; marginBottom = UiConstants.CARD_GAP_XL }
-        div {
-            css { background = "rgba(255,255,255,0.05)"; padding = Padding(UiConstants.CARD_GAP_LARGE); borderRadius = UiConstants.CARD_BORDER_RADIUS; flexGrow = 1.0 }
-            div { +"Away" }
-            h3 { +"${game.awayTeam.abbreviation}" }
-        }
-        div {
-            css { background = "rgba(255,255,255,0.05)"; padding = Padding(UiConstants.CARD_GAP_LARGE); borderRadius = UiConstants.CARD_BORDER_RADIUS; flexGrow = 1.0 }
-            div { +"Home" }
-            h3 { +"${game.homeTeam.abbreviation}" }
-        }
-    }
-}
-
-private fun renderStartGameButton(container: DIV) {
-    container.button(classes = "btn btn-primary") {
-        +"START GAME"
-        css { fontSize = 1.3.rem; padding = Padding(0.75.rem, 2.5.rem); borderRadius = 30.px }
-        onClickFunction = {
-            isLineupDialogOpen = true
-            renderCurrentTab()
-        }
-    }
-}
-
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "LongParameterList")
+// Removed @Suppress per Detekt rules
 private fun renderLiveScorerMainView(
     container: HTMLElement,
     game: Game,
@@ -186,9 +205,18 @@ private fun renderLiveScorerMainView(
     awayRoster: List<Player>,
 ) {
     renderScorerHeader(container, game)
-    val topGrid = container.div(classes = "scorekeeper-grid")
-    renderScorerLedScoreboard(topGrid.div(classes = "scoreboard-led"), game)
-    renderGameScoringControls(topGrid.div(classes = "card"), game, homeRoster, awayRoster)
+    // Create the top grid container and obtain a reference to it
+    container.append {
+        div(classes = "scorekeeper-grid") {
+            div(classes = "scoreboard-led") {}
+            div(classes = "card") { id = "scoring-controls-card" }
+        }
+    }
+    val topGrid = container.querySelector(".scorekeeper-grid") as HTMLElement
+    val scoreboardLed = topGrid.querySelector(".scoreboard-led") as HTMLElement
+    val scoringControlsCard = topGrid.querySelector("#scoring-controls-card") as HTMLElement
+    renderScorerLedScoreboard(scoreboardLed, game)
+    renderGameScoringControls(scoringControlsCard, game, homeRoster, awayRoster)
     renderPlayMonitoringSection(container, game, events, boxScore, homeRoster, awayRoster)
     if (isLineupDialogOpen) {
         LineupSetupOverlay(container, homeRoster, awayRoster, game.homeTeam, game.awayTeam).render()
@@ -196,30 +224,51 @@ private fun renderLiveScorerMainView(
     if (isResetDialogOpen) renderResetGameOverlay(container)
 }
 
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber")
+// Removed @Suppress per Detekt rules
 private fun renderScorerHeader(container: HTMLElement, game: Game) {
-    container.div {
-        css { display = Display.flex; justifyContent = JustifyContent.spaceBetween; alignItems = Align.center; marginBottom = 1.rem }
-        h1 { +"Live Scoring: ${game.awayTeam.city} @ ${game.homeTeam.city}"; css { marginBottom = 0.rem } }
-        if (isSingleGameMode) {
-            div {
-                css { display = Display.flex; gap = 0.5.rem }
-                if (localEvents.isNotEmpty()) {
-                    button(classes = "btn btn-secondary") {
-                        +"⎌ Undo Action"; css { padding = Padding(0.5.rem, 1.rem) }
-                        onClickFunction = { undoLastLocalEvent(); renderCurrentTab() }
+    container.append {
+        div {
+            css {
+                display = Display.flex
+                justifyContent = JustifyContent.spaceBetween
+                alignItems = Align.center
+                marginBottom = 1.rem
+            }
+            h1 {
+                +"Live Scoring: ${game.awayTeam.city} @ ${game.homeTeam.city}"
+                css { marginBottom = 0.rem }
+            }
+            if (isSingleGameMode) {
+                div {
+                    css {
+                        display = Display.flex
+                        gap = 0.5.rem
                     }
-                }
-                button(classes = "btn btn-danger") {
-                    +"New Game"; css { padding = Padding(0.5.rem, 1.rem) }
-                    onClickFunction = { isResetDialogOpen = true; renderCurrentTab() }
+                    if (localEvents.isNotEmpty()) {
+                        button(classes = "btn btn-secondary") {
+                            +"⎌ Undo Action"
+                            css { padding = Padding(0.5.rem, 1.rem) }
+                            onClickFunction = { _: Event ->
+                                undoLastLocalEvent()
+                                renderCurrentTab()
+                            }
+                        }
+                    }
+                    button(classes = "btn btn-danger") {
+                        +"New Game"
+                        css { padding = Padding(0.5.rem, 1.rem) }
+                        onClickFunction = { _: Event ->
+                            isResetDialogOpen = true
+                            renderCurrentTab()
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "LongParameterList")
+// Removed @Suppress per Detekt rules
 private fun renderPlayMonitoringSection(
     container: HTMLElement,
     game: Game,
@@ -243,41 +292,63 @@ private fun renderPlayMonitoringSection(
         renderScorebookView(monitorEl, game, boxScore, events)
     }
 
-    val monitorCard = container.div(classes = "card") {
-        css { marginTop = UiConstants.CARD_GAP_XL }
-        div {
-            css { display = Display.flex; justifyContent = JustifyContent.spaceBetween; alignItems = Align.center; borderBottom = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.1)")); paddingBottom = 0.5.rem; marginBottom = 1.rem }
-            h2 { +"Live Game Monitoring"; css { margin = Margin(0.px) } }
+    container.append {
+        div(classes = "card") {
+            id = "play-monitoring-card"
+            css { marginTop = UiConstants.CARD_GAP_XL }
             div {
-                css { display = Display.flex; gap = 0.5.rem }
-                button(classes = "btn btn-secondary") {
-                    id = "scorer-btn-log"
-                    +"Play-By-Play Log"
-                    onClickFunction = {
-                        showLog()
-                        btnLog?.classList?.add("btn-primary"); btnLog?.classList?.remove("btn-secondary")
-                        btnScorecard?.classList?.add("btn-secondary"); btnScorecard?.classList?.remove("btn-primary")
-                    }
+                css {
+                    display = Display.flex
+                    justifyContent = JustifyContent.spaceBetween
+                    alignItems = Align.center
+                    borderBottom = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.1)"))
+                    paddingBottom = 0.5.rem
+                    marginBottom = 1.rem
                 }
-                button(classes = "btn btn-primary") {
-                    id = "scorer-btn-scorecard"
-                    +"Scorebook"
-                    onClickFunction = {
-                        showScorecard()
-                        btnScorecard?.classList?.add("btn-primary"); btnScorecard?.classList?.remove("btn-secondary")
-                        btnLog?.classList?.add("btn-secondary"); btnLog?.classList?.remove("btn-primary")
+                h2 {
+                    +"Live Game Monitoring"
+                    css { margin = Margin(0.px) }
+                }
+                div {
+                    css {
+                        display = Display.flex
+                        gap = 0.5.rem
+                    }
+                    button(classes = "btn btn-secondary") {
+                        id = "scorer-btn-log"
+                        +"Play-By-Play Log"
+                        onClickFunction = { _: Event ->
+                            showLog()
+                            btnLog?.classList?.add("btn-primary")
+                            btnLog?.classList?.remove("btn-secondary")
+                            btnScorecard?.classList?.add("btn-secondary")
+                            btnScorecard?.classList?.remove("btn-primary")
+                        }
+                    }
+                    button(classes = "btn btn-primary") {
+                        id = "scorer-btn-scorecard"
+                        +"Scorebook"
+                        onClickFunction = { _: Event ->
+                            showScorecard()
+                            btnScorecard?.classList?.add("btn-primary")
+                            btnScorecard?.classList?.remove("btn-secondary")
+                            btnLog?.classList?.add("btn-secondary")
+                            btnLog?.classList?.remove("btn-primary")
+                        }
                     }
                 }
             }
         }
     }
-    btnLog = monitorCard.querySelector("#scorer-btn-log") as? HTMLButtonElement
-    btnScorecard = monitorCard.querySelector("#scorer-btn-scorecard") as? HTMLButtonElement
-    monitorContent = monitorCard.div { id = "monitor-content-container" }
+    val monitorCard = container.querySelector("#play-monitoring-card") as? HTMLDivElement
+    btnLog = monitorCard?.querySelector("#scorer-btn-log") as? HTMLButtonElement
+    btnScorecard = monitorCard?.querySelector("#scorer-btn-scorecard") as? HTMLButtonElement
+    monitorCard?.append { div { id = "monitor-content-container" } }
+    monitorContent = monitorCard?.querySelector("#monitor-content-container") as? HTMLDivElement
     showScorecard()
 }
 
-@Suppress("MagicNumber")
+// Removed @Suppress per Detekt rules
 private fun isPlayEventInningEnded(ev: PlayEvent, nextEv: PlayEvent?): Boolean {
     if (nextEv != null) return nextEv.half != ev.half || nextEv.inning != ev.inning
     val isDp = ev.description.contains(BaseballConstants.DESC_DOUBLE_PLAY) ||
@@ -309,116 +380,166 @@ private fun getPlayEventEndingStr(ev: PlayEvent): String = when (ev.eventType) {
     else -> BaseballConstants.PLAY_RESULT_OUT
 }
 
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber")
 private fun renderEventLogContent(monitorEl: HTMLDivElement, events: List<PlayEvent>, homeRoster: List<Player>, awayRoster: List<Player>) {
     monitorEl.innerHTML = ""
-    monitorEl.div(classes = "event-log") {
-        if (events.isEmpty()) {
-            div { +"No events logged for this game yet." }
-        } else {
-            val allPlayers = homeRoster + awayRoster
-            events.forEachIndexed { index, ev ->
-                val player = allPlayers.find { it.name == ev.batterName }
-                val position = player?.position ?: "DH"
-                val endedInning = isPlayEventInningEnded(ev, events.getOrNull(index + 1))
-                renderLogItem(this, ev, position, endedInning)
-            }
-        }
-    }
-}
-
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber")
-private fun renderLogItem(container: DIV, ev: PlayEvent, position: String, endedInning: Boolean) {
-    val endedStr = getPlayEventEndingStr(ev)
-    val notation = getScorebookNotation(ev)
-    container.div(classes = "log-item") {
-        css {
-            display = Display.flex; flexDirection = FlexDirection.column; padding = Padding(0.75.rem)
-            borderBottom = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.05)"))
-            if (endedInning) { background = "rgba(255, 42, 59, 0.05)"; borderLeft = Border(4.px, BorderStyle.solid, Color("var(--accent-red)")) }
-        }
-        div {
-            css { display = Display.flex; justifyContent = JustifyContent.spaceBetween; alignItems = Align.center; width = 100.pct }
-            span(classes = "log-desc") {
-                val header = "${ev.batterName} ($position) - Inning ${ev.inning} (${if (ev.half == HalfInning.TOP) "Top" else "Bottom"})"
-                val notStr = if (notation.isNotEmpty()) " [$notation]" else ""
-                val endingDetail = if (endedInning && endedStr != BaseballConstants.PLAY_RESULT_RUN_SCORED && endedStr != BaseballConstants.PLAY_RESULT_OUT) BaseballConstants.PLAY_RESULT_LOB else endedStr
-                val cleanedDesc = ev.description.substringBefore(" | Adv:")
-                unsafe { raw("<span style='color: var(--accent-yellow); font-weight: 700;'>$header</span>$notStr - $cleanedDesc <span style='color: var(--text-secondary); font-size: 0.8rem;'>[Ended: $endingDetail]</span>") }
-            }
-            if (endedInning) {
-                span {
-                    +" ─── / (Side Retired)"
-                    css { color = Color("var(--accent-red)"); fontWeight = FontWeight.bold; fontSize = 0.9.rem }
-                }
-            }
-        }
-    }
-}
-
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber")
-private fun renderResetGameOverlay(container: HTMLElement) {
-    container.div {
-        css {
-            position = Position.fixed; top = 0.px; left = 0.px; width = LinearDimension("100vw"); height = LinearDimension("100vh")
-            background = "rgba(10, 15, 30, 0.8)"; put("backdrop-filter", "blur(12px)"); display = Display.flex
-            alignItems = Align.center; justifyContent = JustifyContent.center; zIndex = 10000
-        }
-        div(classes = "card") {
-            css { width = UiConstants.MODAL_WIDTH_PCT.pct; maxWidth = UiConstants.MODAL_MAX_WIDTH_PX.px; padding = Padding(2.rem); textAlign = TextAlign.center }
-            h2 { +"Start a New Game"; css { marginBottom = 1.rem } }
-            p { +"Are you sure you want to reset? All current game progress and stats will be permanently lost."; css { marginBottom = 1.5.rem; color = Color("var(--text-secondary)") } }
-            renderResetDialogActions(this)
-        }
-    }
-}
-
-private fun renderResetDialogActions(container: DIV) {
-    container.div {
-        css { display = Display.flex; flexDirection = FlexDirection.column; gap = 0.75.rem }
-        if (isSingleGameMode) {
-            button(classes = "btn btn-primary") {
-                +"Restart with Current Lineups"
-                onClickFunction = {
-                    isResetDialogOpen = false
-                    resetLocalGame(toInitialLineups = true)
-                    renderCurrentTab()
-                }
-            }
-            button(classes = "btn btn-action") {
-                +"Configure New Lineups"
-                css { put("background", "linear-gradient(135deg, #3b82f6, #8b5cf6)") }
-                onClickFunction = { isResetDialogOpen = false; isLineupDialogOpen = true; renderCurrentTab() }
-            }
-        } else {
-            button(classes = "btn btn-primary") {
-                +"Reset Game Stats & Events"
-                onClickFunction = {
-                    launch {
-                        api.resetGame(selectedGameId!!)
-                        com.baseball.game.clearLiveScorerCache()
-                        isResetDialogOpen = false
-                        renderCurrentTab()
+    monitorEl.append {
+        div(classes = "event-log") {
+            if (events.isEmpty()) {
+                div { +"No events logged for this game yet." }
+            } else {
+                val allPlayers = homeRoster + awayRoster
+                events.forEachIndexed { index, ev ->
+                    val player = allPlayers.find { it.name == ev.batterName }
+                    val position = player?.position ?: "DH"
+                    val endedInning = isPlayEventInningEnded(ev, events.getOrNull(index + 1))
+                    val endedStr = getPlayEventEndingStr(ev)
+                    val notation = getScorebookNotation(ev)
+                    div(classes = "log-item") {
+                        css {
+                            display = Display.flex
+                            flexDirection = FlexDirection.column
+                            padding = Padding(0.75.rem)
+                            borderBottom = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.05)"))
+                            if (endedInning) {
+                                background = "rgba(255, 42, 59, 0.05)"
+                                borderLeft = Border(4.px, BorderStyle.solid, Color("var(--accent-red)"))
+                            }
+                        }
+                        div {
+                            css {
+                                display = Display.flex
+                                justifyContent = JustifyContent.spaceBetween
+                                alignItems = Align.center
+                                width = 100.pct
+                            }
+                            span(classes = "log-desc") {
+                                val header = "${ev.batterName} ($position) - Inning ${ev.inning} (${if (ev.half == HalfInning.TOP) "Top" else "Bottom"})"
+                                val notStr = if (notation.isNotEmpty()) " [$notation]" else ""
+                                val endingDetail = if (endedInning && endedStr != BaseballConstants.PLAY_RESULT_RUN_SCORED && endedStr != BaseballConstants.PLAY_RESULT_OUT) BaseballConstants.PLAY_RESULT_LOB else endedStr
+                                val cleanedDesc = ev.description.substringBefore(" | Adv:")
+                                unsafe { raw("<span style='color: var(--accent-yellow); font-weight: 700;'>$header</span>$notStr - $cleanedDesc <span style='color: var(--text-secondary); font-size: 0.8rem;'>[Ended: $endingDetail]</span>") }
+                            }
+                            if (endedInning) {
+                                span {
+                                    +" ─── / (Side Retired)"
+                                    css {
+                                        color = Color("var(--accent-red)")
+                                        fontWeight = FontWeight.bold
+                                        fontSize = 0.9.rem
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
-        button(classes = "btn btn-secondary") {
-            +"Cancel"
-            onClickFunction = { isResetDialogOpen = false; renderCurrentTab() }
+    }
+}
+
+// Removed @Suppress per Detekt rules
+private fun renderResetGameOverlay(container: HTMLElement) {
+    container.append {
+        div {
+            css {
+                position = Position.fixed
+                top = 0.px
+                left = 0.px
+                width = LinearDimension("100vw")
+                height = LinearDimension("100vh")
+                background = "rgba(10, 15, 30, 0.8)"
+                put("backdrop-filter", "blur(12px)")
+                display = Display.flex
+                alignItems = Align.center
+                justifyContent = JustifyContent.center
+                zIndex = 10000
+            }
+            div(classes = "card") {
+                css {
+                    width = UiConstants.MODAL_WIDTH_PCT.pct
+                    maxWidth = UiConstants.MODAL_MAX_WIDTH_PX.px
+                    padding = Padding(2.rem)
+                    textAlign = TextAlign.center
+                }
+                h2 {
+                    +"Start a New Game"
+                    css { marginBottom = 1.rem }
+                }
+                p {
+                    +"Are you sure you want to reset? All current game progress and stats will be permanently lost."
+                    css {
+                        marginBottom = 1.5.rem
+                        color = Color("var(--text-secondary)")
+                    }
+                }
+                div {
+                    css {
+                        display = Display.flex
+                        flexDirection = FlexDirection.column
+                        gap = 0.75.rem
+                    }
+                    if (isSingleGameMode) {
+                        button(classes = "btn btn-primary") {
+                            +"Restart with Current Lineups"
+                            onClickFunction = { _: Event ->
+                                isResetDialogOpen = false
+                                resetLocalGame(toInitialLineups = true)
+                                renderCurrentTab()
+                            }
+                        }
+                        button(classes = "btn btn-action") {
+                            +"Configure New Lineups"
+                            css { put("background", "linear-gradient(135deg, #3b82f6, #8b5cf6)") }
+                            onClickFunction = { _: Event ->
+                                isResetDialogOpen = false
+                                isLineupDialogOpen = true
+                                renderCurrentTab()
+                            }
+                        }
+                    } else {
+                        button(classes = "btn btn-primary") {
+                            +"Reset Game Stats & Events"
+                            onClickFunction = { _: Event ->
+                                launch {
+                                    api.resetGame(selectedGameId!!)
+                                    com.baseball.game.clearLiveScorerCache()
+                                    isResetDialogOpen = false
+                                    renderCurrentTab()
+                                }
+                            }
+                        }
+                    }
+                    button(classes = "btn btn-secondary") {
+                        +"Cancel"
+                        onClickFunction = { _: Event ->
+                            isResetDialogOpen = false
+                            renderCurrentTab()
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 private fun renderScorerErrorCard(container: HTMLElement, errorMsg: String?) {
     container.innerHTML = ""
-    container.div(classes = "card") {
-        css { textAlign = TextAlign.center; padding = Padding(3.rem) }
-        h2 { +"Failed to load Live Scorer" }
-        p { css { color = Color("var(--text-secondary)") }; +"Error: $errorMsg" }
-        button(classes = "btn btn-primary") {
-            +"Retry"; css { marginTop = 1.rem }
-            onClickFunction = { renderCurrentTab() }
+    container.append {
+        div(classes = "card") {
+            css {
+                textAlign = TextAlign.center
+                padding = Padding(3.rem)
+            }
+            h2 { +"Failed to load Live Scorer" }
+            p {
+                css { color = Color("var(--text-secondary)") }
+                +"Error: $errorMsg"
+            }
+            button(classes = "btn btn-primary") {
+                +"Retry"
+                css { marginTop = 1.rem }
+                onClickFunction = { _: Event -> renderCurrentTab() }
+            }
         }
     }
 }

@@ -51,6 +51,10 @@ To achieve optimal code reuse, follow this mapping matrix:
 * **Method Size Limit**: Keep functions and methods focused. Methods should not exceed **50 lines**.
 * **Code Coverage**: Maintain a minimum **90%+ code coverage** limit on business, domain, and routing logic classes in the server and shared modules.
 
+## 9. Communication & Output Guidelines (ADHD & Speed-Reading Optimized)
+* **Assume ADHD / Speed Reading**: User speed-reads output. Keep all text outputs ultra-concise, direct, and structured with bullet points or bold keywords.
+* **No Token Waste**: Avoid fluff, long preamble, re-explaining context, or repeating code snippets needlessly. Get straight to the actions, status, or exact diffs.
+
 > [!NOTE]
 > The agent will not add exceptions to detekt.yml or file-level @file:Suppress annotations.
 
@@ -61,4 +65,5 @@ To achieve optimal code reuse, follow this mapping matrix:
 > [!NOTE]
 > Use feature branches for each new task. Create a new branch `feature/<task-name>` from `main`, push it to the upstream
 repository, and work on that branch. When the task completes, open a PR and merge back.
+
 

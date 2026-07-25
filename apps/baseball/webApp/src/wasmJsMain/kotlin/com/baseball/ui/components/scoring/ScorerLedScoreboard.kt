@@ -5,10 +5,10 @@ package com.baseball.ui.components.scoring
 import com.baseball.models.Game
 import com.baseball.models.HalfInning
 import com.baseball.ui.css
-import com.baseball.ui.div
 import kotlinx.css.*
 import kotlinx.html.DIV
 import kotlinx.html.div
+import kotlinx.html.dom.append
 import kotlinx.html.span
 import org.w3c.dom.HTMLElement
 
@@ -18,12 +18,14 @@ fun renderScorerLedScoreboard(
 ) {
     parent.innerHTML = ""
 
-    parent.div {
-        renderScoreboardHeader(this, game)
-        renderTeamScores(this, game)
-        renderCountAndSummary(this, game)
-        renderDiamondBases(this, game)
-        renderRunnerDetails(this, game)
+    parent.append {
+        div {
+            renderScoreboardHeader(this, game)
+            renderTeamScores(this, game)
+            renderCountAndSummary(this, game)
+            renderDiamondBases(this, game)
+            renderRunnerDetails(this, game)
+        }
     }
 }
 

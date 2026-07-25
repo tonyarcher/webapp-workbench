@@ -5,93 +5,95 @@ import com.baseball.UiConstants
 import com.baseball.auth.UserAccount
 import com.baseball.authService
 import com.baseball.ui.css
-import com.baseball.ui.div
 import com.baseball.ui.launch
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.*
-import kotlinx.html.js.onClickFunction
+import kotlinx.html.dom.append
+import kotlinx.html.js.*
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 
 @Suppress("LongMethod", "TooManyFunctions")
 internal fun renderLoginTab(container: HTMLElement) {
-    container.div(classes = "card") {
-        css {
-            maxWidth = 450.px
-            margin = Margin(2.rem, LinearDimension.auto)
-            padding = Padding(2.5.rem)
-        }
-
-        h2 {
-            +"Log In to Grand Slam"
+    container.append {
+        div(classes = "card") {
             css {
-                textAlign = TextAlign.center
-                marginBottom = 1.5.rem
-            }
-        }
-
-        div {
-            id = "login-error-banner"
-            css {
-                display = Display.none
-                color = Color("var(--accent-red)")
-                background = "rgba(255, 42, 59, 0.1)"
-                border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
-                padding = Padding(0.75.rem)
-                borderRadius = 8.px
-                marginBottom = 1.rem
-                fontSize = 0.9.rem
-            }
-        }
-
-        form {
-            div(classes = "form-group") {
-                label { +"Email Address (Username)" }
-                input(type = InputType.email, classes = "form-control") {
-                    id = "login-email"
-                    placeholder = "you@example.com"
-                }
+                maxWidth = 450.px
+                margin = Margin(2.rem, LinearDimension.auto)
+                padding = Padding(2.5.rem)
             }
 
-            div(classes = "form-group") {
-                label { +"Password" }
-                input(type = InputType.password, classes = "form-control") {
-                    id = "login-password"
-                    placeholder = "Enter your password"
-                }
-            }
-
-            button(classes = "btn") {
-                type = ButtonType.button
-                +"Log In"
+            h2 {
+                +"Log In to Grand Slam"
                 css {
-                    width = 100.pct
-                    marginTop = 1.rem
+                    textAlign = TextAlign.center
+                    marginBottom = 1.5.rem
                 }
-                onClickFunction = { handleLoginClick() }
             }
-        }
 
-        p {
-            css {
-                marginTop = 1.5.rem
-                textAlign = TextAlign.center
-                fontSize = 0.9.rem
-                color = Color("var(--text-secondary)")
-            }
-            span { +"Don't have an account? " }
-            a {
-                +"Create Account"
+            div {
+                id = "login-error-banner"
                 css {
+                    display = Display.none
                     color = Color("var(--accent-red)")
-                    cursor = Cursor.pointer
-                    fontWeight = FontWeight.bold
-                    put("text-decoration", "underline")
+                    background = "rgba(255, 42, 59, 0.1)"
+                    border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
+                    padding = Padding(0.75.rem)
+                    borderRadius = 8.px
+                    marginBottom = 1.rem
+                    fontSize = 0.9.rem
                 }
-                onClickFunction = { window.location.hash = "register" }
+            }
+
+            form {
+                div(classes = "form-group") {
+                    label { +"Email Address (Username)" }
+                    input(type = InputType.email, classes = "form-control") {
+                        id = "login-email"
+                        placeholder = "you@example.com"
+                    }
+                }
+
+                div(classes = "form-group") {
+                    label { +"Password" }
+                    input(type = InputType.password, classes = "form-control") {
+                        id = "login-password"
+                        placeholder = "Enter your password"
+                    }
+                }
+
+                button(classes = "btn") {
+                    type = ButtonType.button
+                    +"Log In"
+                    css {
+                        width = 100.pct
+                        marginTop = 1.rem
+                    }
+                    onClickFunction = { handleLoginClick() }
+                }
+            }
+
+            p {
+                css {
+                    marginTop = 1.5.rem
+                    textAlign = TextAlign.center
+                    fontSize = 0.9.rem
+                    color = Color("var(--text-secondary)")
+                }
+                span { +"Don't have an account? " }
+                a {
+                    +"Create Account"
+                    css {
+                        color = Color("var(--accent-red)")
+                        cursor = Cursor.pointer
+                        fontWeight = FontWeight.bold
+                        put("text-decoration", "underline")
+                    }
+                    onClickFunction = { window.location.hash = "register" }
+                }
             }
         }
     }
@@ -132,96 +134,98 @@ private suspend fun executeLogin(email: String, pass: String, banner: HTMLDivEle
 }
 
 internal fun renderRegisterTab(container: HTMLElement) {
-    container.div(classes = "card") {
-        css {
-            maxWidth = 450.px
-            margin = Margin(2.rem, LinearDimension.auto)
-            padding = Padding(2.5.rem)
-        }
-
-        h2 {
-            +"Create Account"
+    container.append {
+        div(classes = "card") {
             css {
-                textAlign = TextAlign.center
-                marginBottom = 1.5.rem
-            }
-        }
-
-        div {
-            id = "register-error-banner"
-            css {
-                display = Display.none
-                color = Color("var(--accent-red)")
-                background = "rgba(255, 42, 59, 0.1)"
-                border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
-                padding = Padding(0.75.rem)
-                borderRadius = 8.px
-                marginBottom = 1.rem
-                fontSize = 0.9.rem
-            }
-        }
-
-        form {
-            div(classes = "form-group") {
-                label { +"First Name" }
-                input(type = InputType.text, classes = "form-control") {
-                    id = "register-first-name"
-                    placeholder = "John"
-                }
+                maxWidth = 450.px
+                margin = Margin(2.rem, LinearDimension.auto)
+                padding = Padding(2.5.rem)
             }
 
-            div(classes = "form-group") {
-                label { +"Last Name" }
-                input(type = InputType.text, classes = "form-control") {
-                    id = "register-last-name"
-                    placeholder = "Doe"
-                }
-            }
-
-            div(classes = "form-group") {
-                label { +"Email Address (Username)" }
-                input(type = InputType.email, classes = "form-control") {
-                    id = "register-email"
-                    placeholder = "you@example.com"
-                }
-            }
-
-            div(classes = "form-group") {
-                label { +"Password" }
-                input(type = InputType.password, classes = "form-control") {
-                    id = "register-password"
-                    placeholder = "At least 6 characters"
-                }
-            }
-
-            button(classes = "btn") {
-                type = ButtonType.button
-                +"Register & Log In"
+            h2 {
+                +"Create Account"
                 css {
-                    width = 100.pct
-                    marginTop = 1.rem
+                    textAlign = TextAlign.center
+                    marginBottom = 1.5.rem
                 }
-                onClickFunction = { handleRegisterClick() }
             }
-        }
 
-        p {
-            css {
-                marginTop = 1.5.rem
-                textAlign = TextAlign.center
-                fontSize = 0.9.rem
-                color = Color("var(--text-secondary)")
-            }
-            span { +"Already have an account? " }
-            a {
-                +"Log In"
+            div {
+                id = "register-error-banner"
                 css {
+                    display = Display.none
                     color = Color("var(--accent-red)")
-                    cursor = Cursor.pointer
-                    fontWeight = FontWeight.bold
-                    put("text-decoration", "underline")
+                    background = "rgba(255, 42, 59, 0.1)"
+                    border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
+                    padding = Padding(0.75.rem)
+                    borderRadius = 8.px
+                    marginBottom = 1.rem
+                    fontSize = 0.9.rem
                 }
-                onClickFunction = { window.location.hash = "login" }
+            }
+
+            form {
+                div(classes = "form-group") {
+                    label { +"First Name" }
+                    input(type = InputType.text, classes = "form-control") {
+                        id = "register-first-name"
+                        placeholder = "John"
+                    }
+                }
+
+                div(classes = "form-group") {
+                    label { +"Last Name" }
+                    input(type = InputType.text, classes = "form-control") {
+                        id = "register-last-name"
+                        placeholder = "Doe"
+                    }
+                }
+
+                div(classes = "form-group") {
+                    label { +"Email Address (Username)" }
+                    input(type = InputType.email, classes = "form-control") {
+                        id = "register-email"
+                        placeholder = "you@example.com"
+                    }
+                }
+
+                div(classes = "form-group") {
+                    label { +"Password" }
+                    input(type = InputType.password, classes = "form-control") {
+                        id = "register-password"
+                        placeholder = "At least 6 characters"
+                    }
+                }
+
+                button(classes = "btn") {
+                    type = ButtonType.button
+                    +"Register & Log In"
+                    css {
+                        width = 100.pct
+                        marginTop = 1.rem
+                    }
+                    onClickFunction = { handleRegisterClick() }
+                }
+            }
+
+            p {
+                css {
+                    marginTop = 1.5.rem
+                    textAlign = TextAlign.center
+                    fontSize = 0.9.rem
+                    color = Color("var(--text-secondary)")
+                }
+                span { +"Already have an account? " }
+                a {
+                    +"Log In"
+                    css {
+                        color = Color("var(--accent-red)")
+                        cursor = Cursor.pointer
+                        fontWeight = FontWeight.bold
+                        put("text-decoration", "underline")
+                    }
+                    onClickFunction = { window.location.hash = "login" }
+                }
             }
         }
     }

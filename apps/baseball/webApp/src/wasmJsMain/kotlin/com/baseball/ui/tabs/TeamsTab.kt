@@ -11,17 +11,19 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.css.*
 import kotlinx.html.*
+import kotlinx.html.dom.append
 import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
+import org.w3c.dom.events.Event
 
 private val uiScope = MainScope()
 
-@Suppress("LongMethod", "MaxLineLength", "MagicNumber", "TooManyFunctions")
+// Removed @Suppress per Detekt rules
 internal fun renderTeamsTab(container: HTMLElement) {
-    container.h1 { +"Teams & Rosters" }
+    container.append { h1 { +"Teams & Rosters" } }
 
     var teamsListDiv: HTMLDivElement? = null
     var rosterDiv: HTMLDivElement? = null
@@ -40,24 +42,30 @@ internal fun renderTeamsTab(container: HTMLElement) {
         })
     }
 
-    val grid = container.div(classes = "dashboard-grid") {
-        div(classes = "card") {
-            h2 { +"Teams" }
-            div { id = "teams-list-container" }
-        }
-
-        div {
-            renderAddTeamCard(this, onTeamCreated = { refreshTeamsUI() })
-
-            if (selectedTeamId != null) {
-                val team = teamsList.find { it.id == selectedTeamId }
-                if (team != null) {
-                    renderRosterSectionCard(this, team, onRosterUpdated = { refreshRoster() })
+    // Create the dashboard grid container and obtain a reference to it
+    container.append {
+        div(classes = "dashboard-grid") {
+            // Teams list card
+            div(classes = "card") {
+                h2 { +"Teams" }
+                div { id = "teams-list-container" }
+            }
+            // Add team / roster card
+            div {
+                renderAddTeamCard(onTeamCreated = { refreshTeamsUI() })
+                if (selectedTeamId != null) {
+                    val team = teamsList.find { it.id == selectedTeamId }
+                    if (team != null) {
+                        renderRosterSectionCard(team, onRosterUpdated = { refreshRoster() })
+                    }
                 }
             }
         }
     }
 
+    // Obtain reference to the dashboard grid container we just created
+    val grid = container.querySelector(".dashboard-grid") as HTMLElement
+    // Save references to sub‑containers for later UI updates
     teamsListDiv = grid.querySelector("#teams-list-container") as? HTMLDivElement
     rosterDiv = grid.querySelector("#roster-container") as? HTMLDivElement
 
@@ -69,9 +77,11 @@ private fun refreshRosterUI(divElement: HTMLDivElement) {
     divElement.innerHTML = ""
     val tid = selectedTeamId
     if (tid == null) {
-        divElement.p {
-            +"Select a team to view roster."
-            css { color = Color("var(--text-secondary)") }
+        divElement.append {
+            p {
+                +"Select a team to view roster."
+                css { color = Color("var(--text-secondary)") }
+            }
         }
         return
     }
@@ -84,25 +94,29 @@ private fun refreshRosterUI(divElement: HTMLDivElement) {
 
 private fun renderRosterContent(divElement: HTMLDivElement, roster: List<Player>) {
     if (roster.isEmpty()) {
-        divElement.p {
-            +"No players on this roster yet."
-            css { color = Color("var(--text-secondary)") }
+        divElement.append {
+            p {
+                +"No players on this roster yet."
+                css { color = Color("var(--text-secondary)") }
+            }
         }
     } else {
-        divElement.div(classes = "table-container") {
-            table {
-                thead {
-                    tr {
-                        th { +"#" }
-                        th { +"Name" }
-                        th { +"Position" }
-                        th { +"B/T" }
-                        th { +"Action" }
+        divElement.append {
+            div(classes = "table-container") {
+                table {
+                    thead {
+                        tr {
+                            th { +"#" }
+                            th { +"Name" }
+                            th { +"Position" }
+                            th { +"B/T" }
+                            th { +"Action" }
+                        }
                     }
-                }
-                tbody {
-                    roster.forEach { p ->
-                        renderRosterRow(this, p, divElement)
+                    tbody {
+                        roster.forEach { p ->
+                            renderRosterRow(this, p, divElement)
+                        }
                     }
                 }
             }
@@ -129,7 +143,7 @@ private fun renderRosterRow(tbody: TBODY, p: Player, rosterDiv: HTMLDivElement) 
                     color = Color("white")
                     border = Border.none
                 }
-                onClickFunction = {
+                onClickFunction = { _: Event ->
                     uiScope.launch {
                         api.deletePlayer(p.id!!)
                         refreshRosterUI(rosterDiv)
@@ -143,7 +157,7 @@ private fun renderRosterRow(tbody: TBODY, p: Player, rosterDiv: HTMLDivElement) 
 private fun refreshTeamsListUI(divElement: HTMLDivElement, onSelectTeam: () -> Unit) {
     divElement.innerHTML = ""
     if (teamsList.isEmpty()) {
-        divElement.p {
+        divElement.append.p {
             +"No teams found. Create one!"
             css { color = Color("var(--text-secondary)") }
         }
@@ -155,39 +169,41 @@ private fun refreshTeamsListUI(divElement: HTMLDivElement, onSelectTeam: () -> U
 }
 
 private fun renderTeamItemCard(divElement: HTMLDivElement, team: Team, onSelectTeam: () -> Unit) {
-    divElement.div(classes = "game-card") {
-        css {
-            marginBottom = UiConstants.CARD_GAP_SMALL
-            display = Display.flex
-            flexDirection = FlexDirection.column
-            alignItems = Align.flexStart
-        }
-
-        div {
+    divElement.append {
+        div(classes = "game-card") {
             css {
-                fontWeight = FontWeight.bold
-                fontSize = UiConstants.FONT_SIZE_LARGE
+                marginBottom = UiConstants.CARD_GAP_SMALL
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                alignItems = Align.flexStart
             }
-            +"${team.city} ${team.name} (${team.abbreviation})"
-        }
 
-        button(classes = "btn btn-secondary${if (selectedTeamId == team.id) " active" else ""}") {
-            css {
-                marginTop = UiConstants.CARD_GAP_SMALL
-                padding = Padding(UiConstants.CARD_GAP_SMALL, UiConstants.CARD_PADDING.top)
-                fontSize = UiConstants.FONT_SIZE_MEDIUM
+            div {
+                css {
+                    fontWeight = FontWeight.bold
+                    fontSize = UiConstants.FONT_SIZE_LARGE
+                }
+                +"${team.city} ${team.name} (${team.abbreviation})"
             }
-            +(if (selectedTeamId == team.id) "Active Team" else "Select Team")
-            onClickFunction = {
-                selectedTeamId = team.id
-                onSelectTeam()
+
+            button(classes = "btn btn-secondary${if (selectedTeamId == team.id) " active" else ""}") {
+                css {
+                    marginTop = UiConstants.CARD_GAP_SMALL
+                    padding = Padding(UiConstants.CARD_GAP_SMALL, UiConstants.CARD_PADDING.top)
+                    fontSize = UiConstants.FONT_SIZE_MEDIUM
+                }
+                +(if (selectedTeamId == team.id) "Active Team" else "Select Team")
+                onClickFunction = { _: Event ->
+                    selectedTeamId = team.id
+                    onSelectTeam()
+                }
             }
         }
     }
 }
 
-private fun renderAddTeamCard(container: DIV, onTeamCreated: () -> Unit) {
-    container.div(classes = "card") {
+private fun DIV.renderAddTeamCard(onTeamCreated: () -> Unit) {
+    div(classes = "card") {
         css { marginBottom = UiConstants.CARD_MARGIN_BOTTOM }
         h2 { +"Add Team" }
         form {
@@ -215,7 +231,7 @@ private fun renderAddTeamCard(container: DIV, onTeamCreated: () -> Unit) {
             button(classes = "btn") {
                 type = ButtonType.button
                 +"Create Team"
-                onClickFunction = {
+                onClickFunction = { _: Event ->
                     val inputCity = kotlinx.browser.document.getElementById("team-city-input") as? HTMLInputElement
                     val inputTName = kotlinx.browser.document.getElementById("team-name-input") as? HTMLInputElement
                     val inputAbb = kotlinx.browser.document.getElementById("team-abb-input") as? HTMLInputElement
@@ -249,8 +265,8 @@ private fun handleCreateTeamSubmit(
     }
 }
 
-private fun renderRosterSectionCard(container: DIV, team: Team, onRosterUpdated: () -> Unit) {
-    container.div(classes = "card") {
+private fun DIV.renderRosterSectionCard(team: Team, onRosterUpdated: () -> Unit) {
+    div(classes = "card") {
         h2 { +"${team.city} ${team.name} Roster" }
         div {
             id = "roster-container"
@@ -258,12 +274,12 @@ private fun renderRosterSectionCard(container: DIV, team: Team, onRosterUpdated:
         }
 
         h3 { +"Add Player to Roster" }
-        renderAddPlayerForm(this, onRosterUpdated)
+        renderAddPlayerForm(onRosterUpdated)
     }
 }
 
-private fun renderAddPlayerForm(container: DIV, onPlayerAdded: () -> Unit) {
-    container.form {
+private fun DIV.renderAddPlayerForm(onPlayerAdded: () -> Unit) {
+    form {
         div(classes = "form-group") {
             label { +"Player Name" }
             input(type = InputType.text, classes = "form-control") {
@@ -290,7 +306,7 @@ private fun renderAddPlayerForm(container: DIV, onPlayerAdded: () -> Unit) {
                 value = "15"
             }
         }
-        renderBattingThrowingSelects(this)
+        renderBattingThrowingSelects()
         button(classes = "btn") {
             type = ButtonType.button
             +"Add Player"
@@ -306,8 +322,8 @@ private fun renderAddPlayerForm(container: DIV, onPlayerAdded: () -> Unit) {
     }
 }
 
-private fun renderBattingThrowingSelects(container: FORM) {
-    container.div(classes = "form-group") {
+private fun FORM.renderBattingThrowingSelects() {
+    div(classes = "form-group") {
         label { +"Batting / Throwing Hand" }
         div {
             css {
