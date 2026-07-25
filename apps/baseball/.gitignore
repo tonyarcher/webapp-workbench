@@ -28,4 +28,11 @@ local.properties
 # Gradle wrapper scripts
 gradlew
 gradlew.bat
-gradle/wrapper/
+*.txt
+# Debug detekt logs
+webapp_detekt_errors.txt
+webapp_detekt_errors_utf8.txt
+webapp_detekt_output.txt
+webapp_detekt_utf8.txt
+detekt_output.txt
+
