@@ -34,7 +34,7 @@ fun renderScorebookBottomSection(
                 gap = 1.5.rem
                 marginTop = 1.5.rem
             }
-        } as HTMLDivElement
+        }
 
     renderDefenseDiagram(
         bottomGrid,
@@ -123,7 +123,7 @@ private fun renderDefenseDiagram(
                     zIndex = 2
                 }
             }
-        } as HTMLDivElement
+        }
 
     val defPlayers = if (isHomeBatting) localAwayRoster else localHomeRoster
     val activePitcherId = if (isHomeBatting) localAwayActivePitcherId else localHomeActivePitcherId
