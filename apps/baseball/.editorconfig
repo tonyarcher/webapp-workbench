@@ -1,4 +1,0 @@
-[*.{kt,kts}]
-max_line_length = off
-ktlint_standard_no-wildcard-imports = disabled
-ktlint_standard_backing-property-naming = disabled

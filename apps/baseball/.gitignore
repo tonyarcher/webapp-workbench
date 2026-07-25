@@ -36,3 +36,10 @@ webapp_detekt_output.txt
 webapp_detekt_utf8.txt
 detekt_output.txt
 
+
+# IDE/config files
+.editorconfig
+.vscode/
+
+# Antigravity config
+.gemini/
