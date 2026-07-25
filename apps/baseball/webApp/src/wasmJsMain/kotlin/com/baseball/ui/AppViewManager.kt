@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui
 
 import com.baseball.BaseballConstants
@@ -14,7 +12,10 @@ import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.dom.append
-import kotlinx.html.js.*
+import kotlinx.html.js.div
+import kotlinx.html.js.header
+import kotlinx.html.js.main
+import kotlinx.html.js.onClickFunction
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLButtonElement

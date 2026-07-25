@@ -8,7 +8,7 @@ import com.baseball.ui.css
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.dom.append
-import kotlinx.html.js.*
+import kotlinx.html.js.div
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 
@@ -36,7 +36,14 @@ fun renderScorebookBottomSection(
             }
         } as HTMLDivElement
 
-    renderDefenseDiagram(bottomGrid, isHomeBatting, localAwayRoster, localHomeRoster, localAwayActivePitcherId, localHomeActivePitcherId)
+    renderDefenseDiagram(
+        bottomGrid,
+        isHomeBatting,
+        localAwayRoster,
+        localHomeRoster,
+        localAwayActivePitcherId,
+        localHomeActivePitcherId
+    )
     renderOpposingPitchingStats(bottomGrid, isHomeBatting, boxScore)
     renderScoreboardSummary(
         bottomGrid,
@@ -130,18 +137,26 @@ private fun buildPositionsMap(
     activePitcherId: Long,
 ): Map<String, String> =
     mapOf(
-        BaseballConstants.Positions.P to (defPlayers.find { it.id == activePitcherId }?.name ?: "Pitcher"),
-        BaseballConstants.Positions.C to (defPlayers.find { it.position == BaseballConstants.Positions.C }?.name ?: "Catcher"),
+        BaseballConstants.Positions.P to
+                (defPlayers.find { it.id == activePitcherId }?.name
+                    ?: "Pitcher"),
+        BaseballConstants.Positions.C to
+                (defPlayers.find { it.position == BaseballConstants.Positions.C }?.name
+                    ?: "Catcher"),
         BaseballConstants.Positions.FIRST_BASE to
-            (defPlayers.find { it.position == BaseballConstants.Positions.FIRST_BASE }?.name ?: "First Base"),
+                (defPlayers.find { it.position == BaseballConstants.Positions.FIRST_BASE }?.name ?: "First Base"),
         BaseballConstants.Positions.SECOND_BASE to
-            (defPlayers.find { it.position == BaseballConstants.Positions.SECOND_BASE }?.name ?: "Second Base"),
+                (defPlayers.find { it.position == BaseballConstants.Positions.SECOND_BASE }?.name ?: "Second Base"),
         BaseballConstants.Positions.THIRD_BASE to
-            (defPlayers.find { it.position == BaseballConstants.Positions.THIRD_BASE }?.name ?: "Third Base"),
-        BaseballConstants.Positions.SS to (defPlayers.find { it.position == BaseballConstants.Positions.SS }?.name ?: "Shortstop"),
-        BaseballConstants.Positions.LF to (defPlayers.find { it.position == BaseballConstants.Positions.LF }?.name ?: "Left Field"),
-        BaseballConstants.Positions.CF to (defPlayers.find { it.position == BaseballConstants.Positions.CF }?.name ?: "Center Field"),
-        BaseballConstants.Positions.RF to (defPlayers.find { it.position == BaseballConstants.Positions.RF }?.name ?: "Right Field"),
+                (defPlayers.find { it.position == BaseballConstants.Positions.THIRD_BASE }?.name ?: "Third Base"),
+        BaseballConstants.Positions.SS to
+                (defPlayers.find { it.position == BaseballConstants.Positions.SS }?.name ?: "Shortstop"),
+        BaseballConstants.Positions.LF to
+                (defPlayers.find { it.position == BaseballConstants.Positions.LF }?.name ?: "Left Field"),
+        BaseballConstants.Positions.CF to
+                (defPlayers.find { it.position == BaseballConstants.Positions.CF }?.name ?: "Center Field"),
+        BaseballConstants.Positions.RF to
+                (defPlayers.find { it.position == BaseballConstants.Positions.RF }?.name ?: "Right Field"),
     )
 
 private fun renderPositionNodes(

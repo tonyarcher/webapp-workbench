@@ -70,4 +70,9 @@ To achieve optimal code reuse, follow this mapping matrix:
 
 repository, and work on that branch. When the task completes, open a PR and merge back.
 
+## Avoid *Er and *Utils Classes
 
+**Guideline:** Do not create classes or objects whose names end with `-Er`, `-Or`, `-Manager`, `-Utils`, or `-Helper`.
+These patterns increase complexity and reduce cohesion. Refactor existing such classes (e.g., `AppViewManager`,
+`DashboardTabHelpers`, `BoxScoreTabHelpers`) into interfaces with small concrete implementations as detailed in the
+implementation plan.

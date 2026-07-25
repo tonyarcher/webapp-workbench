@@ -53,10 +53,20 @@ var localAwayBatterIndex = 0
 var localHomeBatterIndex = 0
 val localPlayersSubbedOut = mutableSetOf<Long>()
 
-var localAwayActivePitcherId = SeedData.cardinalsRoster.find { it.position == BaseballConstants.Positions.P }?.id ?: 210L
-var localAwayActivePitcherName = SeedData.cardinalsRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray"
-var localHomeActivePitcherId = SeedData.cubsRoster.find { it.position == BaseballConstants.Positions.P }?.id ?: 110L
-var localHomeActivePitcherName = SeedData.cubsRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele"
+var localAwayActivePitcherId = SeedData.cardinalsRoster.find { it.position == BaseballConstants.Positions.P }
+    ?.id ?: 210L
+var localAwayActivePitcherName = SeedData.cardinalsRoster.find {
+    it.position == BaseballConstants.Positions.P
+}
+    ?.name ?: "Sonny Gray"
+var localHomeActivePitcherId = SeedData.cubsRoster.find {
+    it.position == BaseballConstants.Positions.P
+}
+    ?.id ?: 110L
+var localHomeActivePitcherName = SeedData.cubsRoster.find {
+    it.position == BaseballConstants.Positions.P
+}
+    ?.name ?: "Justin Steele"
 
 // Initial configurations cache
 var localUseDh = true
@@ -106,8 +116,12 @@ object GameManager : GameService {
 
         val homeLineupPlayers = localHomeRoster.filter { it.position != BaseballConstants.Positions.P }.take(9)
         val awayLineupPlayers = localAwayRoster.filter { it.position != BaseballConstants.Positions.P }.take(9)
-        val homeBenchPlayers = localHomeRoster.filter { it.position == BaseballConstants.Positions.P && it.id != homeP.id } + localHomeRoster.drop(10)
-        val awayBenchPlayers = localAwayRoster.filter { it.position == BaseballConstants.Positions.P && it.id != awayP.id } + localAwayRoster.drop(10)
+        val homeBenchPlayers = localHomeRoster.filter {
+            it.position == BaseballConstants.Positions.P && it.id != homeP.id
+        } + localHomeRoster.drop(10)
+        val awayBenchPlayers = localAwayRoster.filter {
+            it.position == BaseballConstants.Positions.P && it.id != awayP.id
+        } + localAwayRoster.drop(10)
 
         startNewGame(
             homeTeam = chc,
@@ -479,15 +493,18 @@ private fun applyLoadedLocalGameState(state: LocalGameState) {
 }
 
 fun loadLocalState(): Boolean {
+    var result = false
     try {
-        val json = window.localStorage.getItem(BaseballConstants.KEY_LOCAL_GAME_STATE) ?: return false
-        val state = Json.decodeFromString(LocalGameState.serializer(), json)
-        applyLoadedLocalGameState(state)
-        return true
+        val json = window.localStorage.getItem(BaseballConstants.KEY_LOCAL_GAME_STATE)
+        if (json != null) {
+            val state = Json.decodeFromString(LocalGameState.serializer(), json)
+            applyLoadedLocalGameState(state)
+            result = true
+        }
     } catch (e: Exception) {
         println("Error loading local state: ${e.message}")
-        return false
     }
+    return result
 }
 
 private fun parseAdvanceMap(description: String): Map<String, Int>? {

@@ -47,7 +47,7 @@ object AuthManager : AuthService {
                 )
             saveSession(session)
             return session
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             @Suppress("TooGenericExceptionCaught")
             val msg = e.message ?: ""
             if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) ||
