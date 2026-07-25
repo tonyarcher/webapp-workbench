@@ -36,7 +36,7 @@ class GameScoringService(
     private fun handleScoringEvent(
         request: ScoringEventRequest,
         batter: PlayerEntity,
-        unusedPitcher: PlayerEntity,
+        _unusedPitcher: PlayerEntity,
         game: GameEntity,
     ): ScoringOutcome {
         var eventType = request.eventType
@@ -682,7 +682,10 @@ class GameScoringService(
 
     @Transactional(readOnly = true)
     fun getSeasonDashboard(seasonId: Long): SeasonDashboard {
-        val season = seasonRepository.findById(seasonId).orElseThrow { IllegalArgumentException("Season not found: $seasonId") }
+        val season = seasonRepository.findById(seasonId)
+            .orElseThrow {
+                IllegalArgumentException("Season not found: $seasonId")
+            }
         val games = gameRepository.findAllBySeasonId(seasonId).map { mapGameToDomain(it) }
         val standings = computeStandings(games, teamRepository.findAll())
 
@@ -770,12 +773,20 @@ class GameScoringService(
 
     @Transactional(readOnly = true)
     fun getSeasonStats(seasonId: Long): SeasonStats {
-        val season = seasonRepository.findById(seasonId).orElseThrow { IllegalArgumentException("Season not found: $seasonId") }
+        val season = seasonRepository.findById(seasonId)
+            .orElseThrow {
+                IllegalArgumentException("Season not found: $seasonId")
+            }
         val games = gameRepository.findAllBySeasonId(seasonId)
         val gameIds = games.map { it.id!! }
 
         if (gameIds.isEmpty()) {
-            return SeasonStats(seasonId = seasonId, battingStats = emptyList(), pitchingStats = emptyList(), fieldingStats = emptyList())
+            return SeasonStats(
+                seasonId = seasonId,
+                battingStats = emptyList(),
+                pitchingStats = emptyList(),
+                fieldingStats = emptyList()
+            )
         }
 
         val allPlayers = playerRepository.findAll().associateBy { it.id!! }

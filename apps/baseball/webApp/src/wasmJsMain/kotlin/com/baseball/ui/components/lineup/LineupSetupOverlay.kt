@@ -117,8 +117,14 @@ class LineupSetupOverlay(
     }
 
     private fun populateRostersWithRandom() {
-        val firstNames = listOf("Babe", "Slider", "Fastball", "Windup", "HomeRun", "Bunt", "Knuckle", "Curve", "Spitball", "Slugger", "Rusty", "Ace", "Chippy", "Skip")
-        val lastNames = listOf("Ruthless", "McGavin", "Freddie", "Willie", "Harry", "Master", "Jones", "Rodriguez", "O'Malley", "Swinger", "Slugson")
+        val firstNames = listOf(
+            "Babe", "Slider", "Fastball", "Windup", "HomeRun", "Bunt", 
+            "Knuckle", "Curve", "Spitball", "Slugger", "Rusty", "Ace", "Chippy", "Skip"
+        )
+        val lastNames = listOf(
+            "Ruthless", "McGavin", "Freddie", "Willie", "Harry", "Master", 
+            "Jones", "Rodriguez", "O'Malley", "Swinger", "Slugson"
+        )
         fun randomPlayer(pos: String): PlayerInputs {
             val name = "${firstNames.random()} ${lastNames.random()}"
             val num = Random.nextInt(1, 100).toString()
@@ -492,8 +498,10 @@ class LineupSetupOverlay(
     }
 
     private fun validateAndSave(): Boolean {
-        val awayRes = validateTeam(isHome = false, awayLineupInputs, awayPitcherNameInput, awayPitcherNumberInput) ?: return false
-        val homeRes = validateTeam(isHome = true, homeLineupInputs, homePitcherNameInput, homePitcherNumberInput) ?: return false
+        val awayRes = validateTeam(isHome = false, awayLineupInputs, awayPitcherNameInput, awayPitcherNumberInput)
+        val homeRes = validateTeam(isHome = true, homeLineupInputs, homePitcherNameInput, homePitcherNumberInput)
+        
+        if (awayRes == null || homeRes == null) return false
 
         if (isSingleGameMode) {
             saveLocalGameLineup(homeRes, awayRes)
@@ -518,7 +526,7 @@ class LineupSetupOverlay(
             homeBench = homeRes.second,
             awayBench = awayRes.second,
             homeActivePitcherId = homeActivePId,
-            awayActivePitcherId = homeActivePId,
+            awayActivePitcherId = awayActivePId,
             useDh = useDh,
         )
 
@@ -547,7 +555,7 @@ class LineupSetupOverlay(
                 isLineupDialogOpen = false
                 AppViewManager.renderApp()
                 renderCurrentTab()
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 println("Error starting online game: ${e.message}")
             }
         }
@@ -598,26 +606,26 @@ class LineupSetupOverlay(
         pNum: String,
     ): Pair<List<Player>, List<Player>>? {
         val teamName = if (isHome) homeTeam.name else awayTeam.name
-
-        if (list.any { it.name.trim().isEmpty() }) {
-            validationError = "Error in $teamName Lineup: All player names must be filled."
-            return null
-        }
-
         val nums = list.map { it.jerseyNumber.toIntOrNull() }
-        if (nums.any { it == null || it < 0 || it > 99 }) {
-            validationError = "Error in $teamName Lineup: Jersey numbers must be integers between 0 and 99."
-            return null
+        val allNums = if (useDh) nums + pNum.toIntOrNull() else nums
+
+        val error = when {
+            list.any { it.name.trim().isEmpty() } -> "Error in $teamName Lineup: All player names must be filled."
+            nums.any { it == null || it < 0 || it > 99 } -> "Error in $teamName Lineup: Jersey numbers must be integers between 0 and 99."
+            useDh && (pName.trim().isEmpty() || pNum.toIntOrNull() == null) -> 
+                "Error in $teamName Lineup: Starting Pitcher name and number must be filled when DH is enabled."
+            allNums.filterNotNull().size != allNums.toSet().filterNotNull().size -> "Error in $teamName Lineup: Duplicate jersey numbers are not allowed."
+            !useDh && list.indexOfFirst { it.position == "P" } == -1 -> 
+                "Error in $teamName Lineup: Pitcher (P) must be included in the batting lineup when DH is disabled."
+            !useDh && list.count { it.position == "P" } != 1 -> 
+                "Error in $teamName Lineup: Lineup must contain exactly one Pitcher (P) in the batting order when DH is disabled."
+            useDh && list.count { it.position == "P" } > 0 -> 
+                "Error in $teamName Lineup: Batting order cannot contain a Pitcher (P) when DH is enabled."
+            else -> null
         }
 
-        if (useDh && (pName.trim().isEmpty() || pNum.toIntOrNull() == null)) {
-            validationError = "Error in $teamName Lineup: Starting Pitcher name and number must be filled when DH is enabled."
-            return null
-        }
-
-        val allNums = if (useDh) nums + pNum.toInt() else nums
-        if (allNums.size != allNums.toSet().size) {
-            validationError = "Error in $teamName Lineup: Duplicate jersey numbers are not allowed."
+        if (error != null) {
+            validationError = error
             return null
         }
 
@@ -655,22 +663,7 @@ class LineupSetupOverlay(
             activePitcherId = pPlayer.id!!
         } else {
             val pitcherLineupIndex = list.indexOfFirst { it.position == "P" }
-            if (pitcherLineupIndex == -1) {
-                validationError = "Error in $teamName Lineup: Pitcher (P) must be included in the batting lineup when DH is disabled."
-                return null
-            }
             activePitcherId = lineupPlayers[pitcherLineupIndex].id!!
-        }
-
-        if (!useDh && list.count { it.position == "P" } != 1) {
-            validationError =
-                "Error in $teamName Lineup: Lineup must contain exactly one Pitcher (P) in the batting order when DH is disabled."
-            return null
-        }
-        if (useDh && list.count { it.position == "P" } > 0) {
-            validationError =
-                "Error in $teamName Lineup: Batting order cannot contain a Pitcher (P) when DH is enabled. Pitcher is designated separately."
-            return null
         }
 
         for (idx in 1..4) {

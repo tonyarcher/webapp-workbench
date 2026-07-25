@@ -49,7 +49,11 @@ class ScorecardParser(
 
                 var finalBase = 0
                 when (ev.eventType) {
-                    ScoringEventType.SINGLE, ScoringEventType.WALK, ScoringEventType.HIT_BY_PITCH, ScoringEventType.ERROR, ScoringEventType.FIELDER_CHOICE -> {
+                    ScoringEventType.SINGLE,
+                    ScoringEventType.WALK,
+                    ScoringEventType.HIT_BY_PITCH,
+                    ScoringEventType.ERROR,
+                    ScoringEventType.FIELDER_CHOICE -> {
                         finalBase = 1
                     }
                     ScoringEventType.DOUBLE -> {
@@ -323,17 +327,21 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
     }
 }
 
-fun getHitLocationNumber(desc: String): String? =
-    when {
-        desc.contains("Left Field") -> "7"
-        desc.contains("Center Field") -> "8"
-        desc.contains("Right Field") -> "9"
-        desc.contains("Shortstop") -> "6"
-        desc.contains("2nd Base") || desc.contains("Second Base") -> "4"
-        desc.contains("3rd Base") || desc.contains("Third Base") -> "5"
-        desc.contains("1st Base") || desc.contains("First Base") -> "3"
-        desc.contains("Pitcher") -> "1"
-        desc.contains("Catcher") -> "2"
-        desc.contains("Infield") -> "IF"
-        else -> null
-    }
+fun getHitLocationNumber(desc: String): String? {
+    val locations = listOf(
+        "Left Field" to "7",
+        "Center Field" to "8",
+        "Right Field" to "9",
+        "Shortstop" to "6",
+        "2nd Base" to "4",
+        "Second Base" to "4",
+        "3rd Base" to "5",
+        "Third Base" to "5",
+        "1st Base" to "3",
+        "First Base" to "3",
+        "Pitcher" to "1",
+        "Catcher" to "2",
+        "Infield" to "IF"
+    )
+    return locations.firstOrNull { desc.contains(it.first) }?.second
+}

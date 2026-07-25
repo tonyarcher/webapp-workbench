@@ -47,7 +47,9 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         val teamEvents = events.filter { it.half == half }
 
         val slots = Array(9) { mutableListOf<PlayEvent>() }
-        teamEvents.forEachIndexed { index, event -> slots[index % 9].add(event) }
+        teamEvents.forEachIndexed { index, event ->
+            slots[index % 9].add(event)
+        }
 
         val slotPlayers = buildSlotPlayers(isHomeBatting, slots)
         val maxInning = events.maxOfOrNull { it.inning }?.coerceAtLeast(9) ?: 9
@@ -56,7 +58,16 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
         renderHeaderPanel(container, isHomeBatting, game, battingTeam, pitchingTeam)
         renderRosterDrawer(container, isHomeBatting, game)
-        renderScorecardTable(container, game, slotPlayers, battingStatsList, teamEvents, maxInning, parser, isHomeBatting)
+        renderScorecardTable(
+            container,
+            game,
+            slotPlayers,
+            battingStatsList,
+            teamEvents,
+            maxInning,
+            parser,
+            isHomeBatting
+        )
 
         renderScorebookBottomSection(
             container = container,
@@ -240,7 +251,10 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     div {
                         css { flexGrow = 1.0 }
                         h4 { +"BULLPEN" }
-                        val pitchers = fieldingBench.filter { it.position == BaseballConstants.Positions.P && it.name != activePitcherName }
+                        val pitchers = fieldingBench.filter {
+                            it.position == BaseballConstants.Positions.P &&
+                                it.name != activePitcherName
+                        }
                         if (pitchers.isEmpty()) {
                             p { +"None available" }
                         } else {
@@ -338,7 +352,11 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                                 th {
                                     +sh
                                     css {
-                                        borderLeft = Border(if (sh == "AB") 2.px else 1.px, BorderStyle.solid, Color(if (sh == "AB") "#5a544a" else "#9c9384"))
+                                        borderLeft = Border(
+    if (sh == "AB") 2.px else 1.px,
+    BorderStyle.solid,
+    Color(if (sh == "AB") "#5a544a" else "#9c9384")
+)
                                         width = 45.px
                                         textAlign = TextAlign.center
                                     }
@@ -357,7 +375,17 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         val tbodyEl = tableEl.querySelector("#scorebook-tbody") as HTMLTableSectionElement
         for (slotIdx in 0..8) {
             val players = slotPlayers[slotIdx]
-            renderSlotRows(tbodyEl, game, slotIdx, players, battingStatsList, teamEvents, maxInning, parser, isHomeBatting)
+            renderSlotRows(
+                tbodyEl,
+                game,
+                slotIdx,
+                players,
+                battingStatsList,
+                teamEvents,
+                maxInning,
+                parser,
+                isHomeBatting
+            )
         }
     }
 
@@ -382,7 +410,8 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
         val tr1 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
         val subPos = battingStatsList.find { it.playerName == pName1 }?.position ?: BaseballConstants.Positions.DH
-        renderPlayerCell(tr1, slotIdx, pName1, false, cellBg, game, isHomeBatting)
+        renderPlayerCell(tr1, slotIdx, pName1, false, game, isHomeBatting, cellBg)
+
         tr1.append {
             td {
                 +subPos
@@ -434,7 +463,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
         val tr0 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
 
-        renderPlayerCell(tr0, slotIdx, pName0, hasSub, cellBg, game, isHomeBatting)
+        renderPlayerCell(tr0, slotIdx, pName0, hasSub, game, isHomeBatting, cellBg)
 
         tr0.append {
             td {
@@ -492,9 +521,9 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         slotIdx: Int,
         pName: String,
         hasSub: Boolean,
-        cellBg: String,
         game: Game,
         isHomeBatting: Boolean,
+        cellBg: String,
     ) {
         tr.append {
             td {
@@ -584,7 +613,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             { s: PlayerBattingStats? -> s?.atBats?.toString() ?: "0" },
             { s: PlayerBattingStats? -> s?.runs?.toString() ?: "0" },
             { s: PlayerBattingStats? -> s?.hits?.toString() ?: "0" },
-            { s: PlayerBattingStats? -> s?.rbi?.toString() ?: "0" },
+            { s: PlayerBattingStats? -> s?.rbi?.toString() ?: "0" }
         ).forEachIndexed { statIdx, selector ->
             val val0 = selector(stat0)
             val val1 = selector(stat1)
@@ -592,8 +621,11 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 td {
                     +val0
                     css {
-                        borderLeft =
-                            Border(if (statIdx == 0) 2.px else 1.px, BorderStyle.solid, Color(if (statIdx == 0) "#5a544a" else "#9c9384"))
+                        borderLeft = Border(
+                            if (statIdx == 0) 2.px else 1.px,
+                            BorderStyle.solid,
+                            Color(if (statIdx == 0) "#5a544a" else "#9c9384")
+                        )
                         textAlign = TextAlign.center
                         background = cellBg
                         fontWeight = FontWeight.bold
@@ -605,8 +637,11 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     td {
                         +val1
                         css {
-                            borderLeft =
-                                Border(if (statIdx == 0) 2.px else 1.px, BorderStyle.solid, Color(if (statIdx == 0) "#5a544a" else "#9c9384"))
+                            borderLeft = Border(
+                                if (statIdx == 0) 2.px else 1.px,
+                                BorderStyle.solid,
+                                Color(if (statIdx == 0) "#5a544a" else "#9c9384")
+                            )
                             textAlign = TextAlign.center
                             background = cellBg
                             fontWeight = FontWeight.bold
