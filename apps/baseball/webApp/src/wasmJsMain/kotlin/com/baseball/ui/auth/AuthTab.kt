@@ -11,7 +11,8 @@ import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.dom.append
-import kotlinx.html.js.*
+import kotlinx.html.js.div
+import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
@@ -100,23 +101,29 @@ internal fun renderLoginTab(container: HTMLElement) {
 }
 
 private fun handleLoginClick() {
-    val banner = document.getElementById("login-error-banner") as? HTMLDivElement ?: return
-    val emailIn = document.getElementById("login-email") as? HTMLInputElement ?: return
-    val passIn = document.getElementById("login-password") as? HTMLInputElement ?: return
+    // Retrieve essential elements; abort if any are missing (single return)
+    val banner = document.getElementById("login-error-banner") as? HTMLDivElement
+    val emailIn = document.getElementById("login-email") as? HTMLInputElement
+    val passIn = document.getElementById("login-password") as? HTMLInputElement
+    if (banner == null || emailIn == null || passIn == null) return
 
+    // Hide previous error
     banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
     val email = emailIn.value.trim()
     val password = passIn.value
 
-    if (!validateEmail(email)) {
-        showError(banner, "Please enter a valid email address.")
-        return
+    // Validate input; show first encountered error (single return)
+    val errorMsg = when {
+        !validateEmail(email) -> "Please enter a valid email address."
+        password.length < 6 -> "Password must be at least 6 characters."
+        else -> null
     }
-    if (password.length < 6) {
-        showError(banner, "Password must be at least 6 characters.")
+    if (errorMsg != null) {
+        showError(banner, errorMsg)
         return
     }
 
+    // Proceed with login
     launch { executeLogin(email, password, banner) }
 }
 
@@ -128,7 +135,7 @@ private suspend fun executeLogin(email: String, pass: String, banner: HTMLDivEle
         } else {
             showError(banner, "Invalid email or password.")
         }
-    } catch (e: Throwable) {
+    } catch (e: Exception) {
         showError(banner, parseAuthException(e))
     }
 }
@@ -232,31 +239,34 @@ internal fun renderRegisterTab(container: HTMLElement) {
 }
 
 private fun handleRegisterClick() {
-    val banner = document.getElementById("register-error-banner") as? HTMLDivElement ?: return
-    val firstIn = document.getElementById("register-first-name") as? HTMLInputElement ?: return
-    val lastIn = document.getElementById("register-last-name") as? HTMLInputElement ?: return
-    val emailIn = document.getElementById("register-email") as? HTMLInputElement ?: return
-    val passIn = document.getElementById("register-password") as? HTMLInputElement ?: return
+    // Retrieve essential elements; abort if any are missing (single return)
+    val banner = document.getElementById("register-error-banner") as? HTMLDivElement
+    val firstIn = document.getElementById("register-first-name") as? HTMLInputElement
+    val lastIn = document.getElementById("register-last-name") as? HTMLInputElement
+    val emailIn = document.getElementById("register-email") as? HTMLInputElement
+    val passIn = document.getElementById("register-password") as? HTMLInputElement
+    if (banner == null || firstIn == null || lastIn == null || emailIn == null || passIn == null) return
 
+    // Hide previous error
     banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
     val first = firstIn.value.trim()
     val last = lastIn.value.trim()
     val email = emailIn.value.trim()
     val pass = passIn.value
 
-    if (first.isEmpty() || last.isEmpty()) {
-        showError(banner, "Please enter both your first and last name.")
-        return
+    // Validate input; show first encountered error (single return)
+    val errorMsg = when {
+        first.isEmpty() || last.isEmpty() -> "Please enter both your first and last name."
+        !validateEmail(email) -> "Please enter a valid email address."
+        pass.length < 6 -> "Password must be at least 6 characters."
+        else -> null
     }
-    if (!validateEmail(email)) {
-        showError(banner, "Please enter a valid email address.")
-        return
-    }
-    if (pass.length < 6) {
-        showError(banner, "Password must be at least 6 characters.")
+    if (errorMsg != null) {
+        showError(banner, errorMsg)
         return
     }
 
+    // Proceed with registration
     launch { executeRegister(first, last, email, pass, banner) }
 }
 
@@ -269,7 +279,7 @@ private suspend fun executeRegister(first: String, last: String, email: String, 
         } else {
             showError(banner, "Registration succeeded, but login failed.")
         }
-    } catch (e: Throwable) {
+    } catch (e: Exception) {
         showError(banner, parseRegisterException(e))
     }
 }
@@ -294,14 +304,15 @@ private fun parseRegisterException(e: Throwable): String {
         isConnectionError(msg) -> "Unable to connect to the server. Please verify that the backend server is running."
         msg.contains(BaseballConstants.STATUS_400) || msg.contains(BaseballConstants.STATUS_BAD_REQUEST, ignoreCase = true) ->
             "An account with this email already exists."
+
         else -> "Registration failed: ${e.message ?: "server error"}"
     }
 }
 
 private fun isConnectionError(msg: String): Boolean =
     msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) ||
-        msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) ||
-        msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)
+            msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) ||
+            msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)
 
 private fun validateEmail(email: String): Boolean {
     val atIndex = email.indexOf('@')

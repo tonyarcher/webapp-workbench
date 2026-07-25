@@ -12,7 +12,9 @@ import com.baseball.ui.*
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.dom.append
-import kotlinx.html.js.*
+import kotlinx.html.js.div
+import kotlinx.html.js.onChangeFunction
+import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
@@ -118,11 +120,11 @@ class LineupSetupOverlay(
 
     private fun populateRostersWithRandom() {
         val firstNames = listOf(
-            "Babe", "Slider", "Fastball", "Windup", "HomeRun", "Bunt", 
+            "Babe", "Slider", "Fastball", "Windup", "HomeRun", "Bunt",
             "Knuckle", "Curve", "Spitball", "Slugger", "Rusty", "Ace", "Chippy", "Skip"
         )
         val lastNames = listOf(
-            "Ruthless", "McGavin", "Freddie", "Willie", "Harry", "Master", 
+            "Ruthless", "McGavin", "Freddie", "Willie", "Harry", "Master",
             "Jones", "Rodriguez", "O'Malley", "Swinger", "Slugson"
         )
         fun randomPlayer(pos: String): PlayerInputs {
@@ -500,7 +502,7 @@ class LineupSetupOverlay(
     private fun validateAndSave(): Boolean {
         val awayRes = validateTeam(isHome = false, awayLineupInputs, awayPitcherNameInput, awayPitcherNumberInput)
         val homeRes = validateTeam(isHome = true, homeLineupInputs, homePitcherNameInput, homePitcherNumberInput)
-        
+
         if (awayRes == null || homeRes == null) return false
 
         if (isSingleGameMode) {
@@ -612,14 +614,14 @@ class LineupSetupOverlay(
         val error = when {
             list.any { it.name.trim().isEmpty() } -> "Error in $teamName Lineup: All player names must be filled."
             nums.any { it == null || it < 0 || it > 99 } -> "Error in $teamName Lineup: Jersey numbers must be integers between 0 and 99."
-            useDh && (pName.trim().isEmpty() || pNum.toIntOrNull() == null) -> 
+            useDh && (pName.trim().isEmpty() || pNum.toIntOrNull() == null) ->
                 "Error in $teamName Lineup: Starting Pitcher name and number must be filled when DH is enabled."
             allNums.filterNotNull().size != allNums.toSet().filterNotNull().size -> "Error in $teamName Lineup: Duplicate jersey numbers are not allowed."
-            !useDh && list.indexOfFirst { it.position == "P" } == -1 -> 
+            !useDh && list.indexOfFirst { it.position == "P" } == -1 ->
                 "Error in $teamName Lineup: Pitcher (P) must be included in the batting lineup when DH is disabled."
-            !useDh && list.count { it.position == "P" } != 1 -> 
+            !useDh && list.count { it.position == "P" } != 1 ->
                 "Error in $teamName Lineup: Lineup must contain exactly one Pitcher (P) in the batting order when DH is disabled."
-            useDh && list.count { it.position == "P" } > 0 -> 
+            useDh && list.count { it.position == "P" } > 0 ->
                 "Error in $teamName Lineup: Batting order cannot contain a Pitcher (P) when DH is enabled."
             else -> null
         }
