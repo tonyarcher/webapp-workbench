@@ -1,0 +1,14 @@
+# Handle text files automatically and normalize them to Unix-style LF in the repository
+* text=auto
+
+# Explicitly force LF line endings for text-based files on checkout
+*.js text eol=lf
+*.py text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+
+# Explicitly force CRLF line endings for Windows-specific files
+*.bat text eol=crlf
+*.cmd text eol=crlf
