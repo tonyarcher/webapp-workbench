@@ -55,24 +55,21 @@ To achieve optimal code reuse, follow this mapping matrix:
 * **Assume ADHD / Speed Reading**: User speed-reads output. Keep all text outputs ultra-concise, direct, and structured with bullet points or bold keywords.
 * **No Token Waste**: Avoid fluff, long preamble, re-explaining context, or repeating code snippets needlessly. Get straight to the actions, status, or exact diffs.
 
+## 10. Error Handling
+* **Compiler Errors**: All compiler errors must be resolved immediately. Do not leave any unresolved compiler errors in the codebase.
+
+## 11. Avoid *Er and *Utils Classes
+* **Guideline:** Do not create classes or objects whose names end with `-Er`, `-Or`, `-Manager`, `-Utils`, or `-Helper`.
+These patterns increase complexity and reduce cohesion. Refactor existing such classes (e.g., `AppViewManager`,
+`DashboardTabHelpers`, `BoxScoreTabHelpers`) into interfaces with small concrete implementations as detailed in the
+implementation plan.
+
 > [!NOTE]
 > The agent will not add exceptions to detekt.yml or file-level @file:Suppress annotations.
 
 > [!NOTE]
-
 > Commit after a successful Gradle build. Try to commit frequently; squashing commits is acceptable.
 
 > [!NOTE]
-> Use feature branches for each new task. Create a new branch `feature/<task-name>` from `main`, push it to the upstream
-
-## 10. Error Handling
-- **Compiler Errors**: All compiler errors must be resolved immediately. Do not leave any unresolved compiler errors in the codebase.
-
-repository, and work on that branch. When the task completes, open a PR and merge back.
-
-## Avoid *Er and *Utils Classes
-
-**Guideline:** Do not create classes or objects whose names end with `-Er`, `-Or`, `-Manager`, `-Utils`, or `-Helper`.
-These patterns increase complexity and reduce cohesion. Refactor existing such classes (e.g., `AppViewManager`,
-`DashboardTabHelpers`, `BoxScoreTabHelpers`) into interfaces with small concrete implementations as detailed in the
-implementation plan.
+> Use feature branches for each new task. Create a new branch `feature/<task-name>` from `main`, push it to the upstream repository, and work on that branch.
+> When the task completes, open a PR and merge back.
