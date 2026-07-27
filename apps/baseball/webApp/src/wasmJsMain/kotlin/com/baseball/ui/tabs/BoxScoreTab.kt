@@ -44,53 +44,40 @@ private fun renderBoxScoreContent(
     container: HTMLElement,
     game: Game,
     boxScore: BoxScore,
-    events: List<PlayEvent>
+    events: List<PlayEvent>,
 ) {
     var btnScorebook: HTMLButtonElement? = null
     var btnTraditional: HTMLButtonElement? = null
     var contentContainer: HTMLDivElement? = null
 
-    fun drawTraditionalView() {
-        val contentEl = contentContainer ?: return
-        contentEl.innerHTML = ""
-        renderTraditionalBoxScoreView(contentEl, game, boxScore, events)
-    }
-
-    fun drawScorebookView() {
-        val contentEl = contentContainer ?: return
-        contentEl.innerHTML = ""
-        renderScorebookView(contentEl, game, boxScore, events)
-    }
-
     val buttonBar = renderBoxScoreToggleButtons(
         container = container,
         onScorebookClick = {
-            drawScorebookView()
+            contentContainer?.innerHTML = ""
+            renderScorebookView(contentContainer!!, game, boxScore, events)
             btnScorebook?.classList?.add("btn-primary")
             btnScorebook?.classList?.remove("btn-secondary")
             btnTraditional?.classList?.add("btn-secondary")
             btnTraditional?.classList?.remove("btn-primary")
         },
         onTraditionalClick = {
-            drawTraditionalView()
+            contentContainer?.innerHTML = ""
+            renderTraditionalBoxScoreView(contentContainer!!, game, boxScore, events)
             btnTraditional?.classList?.add("btn-primary")
             btnTraditional?.classList?.remove("btn-secondary")
             btnScorebook?.classList?.add("btn-secondary")
             btnScorebook?.classList?.remove("btn-primary")
-        }
+        },
     )
 
     btnScorebook = buttonBar.querySelector("#boxscore-btn-scorebook") as? HTMLButtonElement
     btnTraditional = buttonBar.querySelector("#boxscore-btn-traditional") as? HTMLButtonElement
 
     container.append {
-        div {
-            id = "boxscore-content-view"
-        }
+        div { id = "boxscore-content-view" }
     }
     contentContainer = container.querySelector("#boxscore-content-view") as? HTMLDivElement
-
-    drawScorebookView()
+    contentContainer?.let { renderScorebookView(it, game, boxScore, events) }
 }
 
 private fun renderNoGameSelected(container: HTMLElement) {
