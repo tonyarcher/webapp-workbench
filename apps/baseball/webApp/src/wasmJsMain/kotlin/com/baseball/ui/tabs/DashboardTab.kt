@@ -18,7 +18,6 @@ import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
 
-// Removed @Suppress per Detekt rules
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
     showDashboardLoading(container)
     launch { setupRenderSeasonDashboardTab(container) }

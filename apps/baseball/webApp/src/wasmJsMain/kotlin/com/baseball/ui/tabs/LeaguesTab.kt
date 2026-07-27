@@ -13,7 +13,6 @@ import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 
-// Removed @Suppress per Detekt rules
 internal fun renderLeaguesTab(container: HTMLElement) {
     container.innerHTML = ""
     container.append {

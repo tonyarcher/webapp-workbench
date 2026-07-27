@@ -12,7 +12,6 @@ import kotlinx.html.js.div
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 
-@Suppress("LongParameterList", "TooManyFunctions")
 fun renderScorebookBottomSection(
     container: HTMLElement,
     game: Game,

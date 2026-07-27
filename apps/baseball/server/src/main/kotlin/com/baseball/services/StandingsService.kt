@@ -1,17 +1,24 @@
 package com.baseball.services
 
-import com.baseball.entities.GameEntity
+import com.baseball.entities.TeamEntity
+import com.baseball.models.Game
 import com.baseball.models.GameStatus
 import com.baseball.models.TeamStandings
-import com.baseball.repositories.TeamRepository
 import org.springframework.stereotype.Service
 
 @Service
-class StandingsService(
-    private val teamRepository: TeamRepository,
-) {
+class StandingsService {
 
-    fun computeStandings(games: List<com.baseball.models.Game>, allTeams: List<com.baseball.entities.TeamEntity>): List<TeamStandings> {
+    fun computeStandings(
+        games: List<Game>,
+        allTeams: List<TeamEntity>,
+    ): List<TeamStandings> {
+        val teamStatsMap = initializeTeamStats(allTeams)
+        processCompletedGames(games, teamStatsMap)
+        return calculateWinPercentages(teamStatsMap)
+    }
+
+    private fun initializeTeamStats(allTeams: List<TeamEntity>): MutableMap<Long, TeamStandings> {
         val teamStatsMap = mutableMapOf<Long, TeamStandings>()
         for (team in allTeams) {
             team.id?.let { id ->
@@ -27,6 +34,10 @@ class StandingsService(
                 )
             }
         }
+        return teamStatsMap
+    }
+
+    private fun processCompletedGames(games: List<Game>, teamStatsMap: MutableMap<Long, TeamStandings>) {
         games.filter { it.status == GameStatus.COMPLETED }.forEach { game ->
             val homeStats = teamStatsMap[game.homeTeam.id!!] ?: return@forEach
             val awayStats = teamStatsMap[game.awayTeam.id!!] ?: return@forEach
@@ -46,6 +57,9 @@ class StandingsService(
                 runsAllowed = awayStats.runsAllowed + game.homeScore,
             )
         }
+    }
+
+    private fun calculateWinPercentages(teamStatsMap: MutableMap<Long, TeamStandings>): List<TeamStandings> {
         return teamStatsMap.values.map { stats ->
             val totalGames = stats.wins + stats.losses
             val winPct = if (totalGames > 0) stats.wins.toDouble() / totalGames else 0.0

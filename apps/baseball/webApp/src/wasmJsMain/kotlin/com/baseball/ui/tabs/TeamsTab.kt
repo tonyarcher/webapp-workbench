@@ -21,7 +21,6 @@ import org.w3c.dom.events.Event
 
 private val uiScope = MainScope()
 
-// Removed @Suppress per Detekt rules
 internal fun renderTeamsTab(container: HTMLElement) {
     container.append { h1 { +"Teams & Rosters" } }
 

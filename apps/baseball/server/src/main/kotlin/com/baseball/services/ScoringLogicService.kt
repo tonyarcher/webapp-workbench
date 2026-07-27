@@ -21,7 +21,6 @@ class ScoringLogicService {
     fun handleScoringEvent(
         request: ScoringEventRequest,
         batter: PlayerEntity,
-        _unusedPitcher: PlayerEntity,
         game: GameEntity,
     ): ScoringOutcome {
         var eventType = request.eventType
@@ -30,42 +29,81 @@ class ScoringLogicService {
         var basesMoved = 0
         var isWalk = false
         var isHitByPitch = false
+
         when (eventType) {
             ScoringEventType.BALL -> {
-                game.balls += 1
-                description = if (description.isEmpty()) "Ball to ${batter.name}" else description
-                if (game.balls >= ScoringConstants.BALLS_FOR_WALK) {
-                    game.balls = 0
+                val result = handleBall(game, batter, description)
+                description = result.first
+                if (result.second) {
                     isWalk = true
                     eventType = ScoringEventType.WALK
                 }
             }
             ScoringEventType.STRIKE -> {
-                game.strikes += 1
-                description = if (description.isEmpty()) "Strike to ${batter.name}" else description
-                if (game.strikes >= ScoringConstants.STRIKES_FOR_STRIKEOUT) {
-                    outsAdded = 1
-                    game.strikes = 0
-                    game.balls = 0
+                val result = handleStrike(game, batter, description)
+                description = result.first
+                if (result.second > 0) {
+                    outsAdded = result.second
                     eventType = ScoringEventType.STRIKEOUT
                 }
             }
             ScoringEventType.FOUL -> {
-                if (game.strikes < 2) {
-                    game.strikes += 1
-                }
-                description = if (description.isEmpty()) "Foul by ${batter.name}" else description
+                description = handleFoul(game, batter, description)
             }
             ScoringEventType.HIT_BY_PITCH -> {
                 isHitByPitch = true
                 description = "Hit by pitch"
             }
             ScoringEventType.WALK -> {
-                // Walk already handled in BALL case when count reaches limit
                 isWalk = true
             }
-            else -> {}
+            else -> {
+                basesMoved = getBasesMoved(eventType)
+                outsAdded = getOutsAdded(eventType)
+            }
         }
         return ScoringOutcome(eventType, description, outsAdded, basesMoved, isWalk, isHitByPitch)
+    }
+
+    private fun handleBall(game: GameEntity, batter: PlayerEntity, currentDesc: String): Pair<String, Boolean> {
+        game.balls += 1
+        val desc = if (currentDesc.isEmpty()) "Ball to ${batter.name}" else currentDesc
+        if (game.balls >= ScoringConstants.BALLS_FOR_WALK) {
+            game.balls = 0
+            return Pair(desc, true)
+        }
+        return Pair(desc, false)
+    }
+
+    private fun handleStrike(game: GameEntity, batter: PlayerEntity, currentDesc: String): Pair<String, Int> {
+        game.strikes += 1
+        val desc = if (currentDesc.isEmpty()) "Strike to ${batter.name}" else currentDesc
+        if (game.strikes >= ScoringConstants.STRIKES_FOR_STRIKEOUT) {
+            game.strikes = 0
+            game.balls = 0
+            return Pair(desc, 1)
+        }
+        return Pair(desc, 0)
+    }
+
+    private fun handleFoul(game: GameEntity, batter: PlayerEntity, currentDesc: String): String {
+        if (game.strikes < 2) {
+            game.strikes += 1
+        }
+        return if (currentDesc.isEmpty()) "Foul by ${batter.name}" else currentDesc
+    }
+
+    private fun getBasesMoved(type: ScoringEventType): Int = when (type) {
+        ScoringEventType.SINGLE -> 1
+        ScoringEventType.DOUBLE -> 2
+        ScoringEventType.TRIPLE -> 3
+        ScoringEventType.HOME_RUN -> 4
+        else -> 0
+    }
+
+    private fun getOutsAdded(type: ScoringEventType): Int = when (type) {
+        ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT,
+        ScoringEventType.POP_OUT, ScoringEventType.STRIKEOUT -> 1
+        else -> 0
     }
 }

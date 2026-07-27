@@ -60,9 +60,12 @@ To achieve optimal code reuse, follow this mapping matrix:
 
 ## 11. Avoid *Er and *Utils Classes
 * **Guideline:** Do not create classes or objects whose names end with `-Er`, `-Or`, `-Manager`, `-Utils`, or `-Helper`.
-These patterns increase complexity and reduce cohesion. Refactor existing such classes (e.g., `AppViewManager`,
+* These patterns increase complexity and reduce cohesion. Refactor existing such classes (e.g., `AppViewManager`,
 `DashboardTabHelpers`, `BoxScoreTabHelpers`) into interfaces with small concrete implementations as detailed in the
 implementation plan.
+
+## 12. - Add more packages for many reasons. 
+* **To better fit with the ui and functionality and to avoid long lists of source files. Prefer short classes and more packages.
 
 > [!NOTE]
 > The agent will not add exceptions to detekt.yml or file-level @file:Suppress annotations.
@@ -73,3 +76,4 @@ implementation plan.
 > [!NOTE]
 > Use feature branches for each new task. Create a new branch `feature/<task-name>` from `main`, push it to the upstream repository, and work on that branch.
 > When the task completes, open a PR and merge back.
+

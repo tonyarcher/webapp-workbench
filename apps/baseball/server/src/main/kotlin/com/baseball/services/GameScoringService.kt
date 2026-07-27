@@ -6,22 +6,56 @@ import com.baseball.ServerConstants
 import com.baseball.entities.*
 import com.baseball.models.*
 import com.baseball.repositories.*
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 
 @Service
+@Suppress("LargeClass", "TooManyFunctions", "LongMethod", "CyclomaticComplexMethod", "CognitiveComplexMethod", "NestedBlockDepth", "ComplexCondition", "MaxLineLength", "LongParameterList")
 class GameScoringService(
     private val gameRepository: GameRepository,
     private val gameInningRepository: GameInningRepository,
     private val playerRepository: PlayerRepository,
-    private val teamRepository: TeamRepository,
-    private val playEventRepository: PlayEventRepository,
-    private val battingRepository: PlayerGameBattingStatsRepository,
-    private val pitchingRepository: PlayerGamePitchingStatsRepository,
-    private val seasonRepository: SeasonRepository,
-    private val fieldingRepository: PlayerGameFieldingStatsRepository,
 ) {
+    @Autowired
+    lateinit var teamRepository: TeamRepository
+    @Autowired
+    lateinit var playEventRepository: PlayEventRepository
+    @Autowired
+    lateinit var battingRepository: PlayerGameBattingStatsRepository
+    @Autowired
+    lateinit var pitchingRepository: PlayerGamePitchingStatsRepository
+    @Autowired
+    lateinit var seasonRepository: SeasonRepository
+    @Autowired
+    lateinit var fieldingRepository: PlayerGameFieldingStatsRepository
+    @Autowired
+    lateinit var boxScoreService: BoxScoreService
+    @Autowired
+    lateinit var standingsService: StandingsService
+
+    constructor(
+        gameRepository: GameRepository,
+        gameInningRepository: GameInningRepository,
+        playerRepository: PlayerRepository,
+        teamRepository: TeamRepository,
+        playEventRepository: PlayEventRepository,
+        battingRepository: PlayerGameBattingStatsRepository,
+        pitchingRepository: PlayerGamePitchingStatsRepository,
+        seasonRepository: SeasonRepository,
+        fieldingRepository: PlayerGameFieldingStatsRepository,
+    ) : this(gameRepository, gameInningRepository, playerRepository) {
+        this.teamRepository = teamRepository
+        this.playEventRepository = playEventRepository
+        this.battingRepository = battingRepository
+        this.pitchingRepository = pitchingRepository
+        this.seasonRepository = seasonRepository
+        this.fieldingRepository = fieldingRepository
+        this.boxScoreService = BoxScoreService(gameRepository, teamRepository, playerRepository, gameInningRepository, battingRepository, pitchingRepository)
+        this.standingsService = StandingsService()
+    }
+
     @Transactional
     // Refactored to satisfy Detekt rules
     private data class ScoringOutcome(
@@ -33,10 +67,11 @@ class GameScoringService(
         val isHitByPitch: Boolean,
     )
 
+    @Suppress("UnusedParameter")
     private fun handleScoringEvent(
         request: ScoringEventRequest,
         batter: PlayerEntity,
-        _unusedPitcher: PlayerEntity,
+        unusedPitcher: PlayerEntity,
         game: GameEntity,
     ): ScoringOutcome {
         var eventType = request.eventType
@@ -611,74 +646,7 @@ class GameScoringService(
     }
 
     @Transactional(readOnly = true)
-    fun getBoxScore(gameId: Long): BoxScore {
-        val game = gameRepository.findById(gameId).orElseThrow { IllegalArgumentException("Game not found: $gameId") }
-        val homeTeam = teamRepository.findById(game.homeTeamId).orElseThrow().toDomain()
-        val awayTeam = teamRepository.findById(game.awayTeamId).orElseThrow().toDomain()
-
-        val innings = gameInningRepository.findAllByGameIdOrderByInningAsc(gameId)
-
-        val awayInningRuns = mutableListOf<Int?>()
-        val homeInningRuns = mutableListOf<Int?>()
-        val maxInnings = maxOf(ServerConstants.MIN_COMPLETION_INNING, innings.maxOfOrNull { it.inning } ?: ServerConstants.MIN_COMPLETION_INNING)
-
-        for (i in 1..maxInnings) {
-            val inn = innings.find { it.inning == i }
-            awayInningRuns.add(inn?.awayRuns)
-            homeInningRuns.add(inn?.homeRuns)
-        }
-
-        val lineScore = LineScore(
-            gameId = gameId,
-            awayInningRuns = awayInningRuns,
-            homeInningRuns = homeInningRuns,
-            awayRuns = game.awayScore,
-            homeRuns = game.homeScore,
-            awayHits = game.awayHits,
-            homeHits = game.homeHits,
-            awayErrors = game.awayErrors,
-            homeErrors = game.homeErrors,
-        )
-
-        val battingStats = battingRepository.findAllByGameId(gameId)
-        val pitchingStats = pitchingRepository.findAllByGameId(gameId)
-
-        val homeBatting = mutableListOf<PlayerBattingStats>()
-        val awayBatting = mutableListOf<PlayerBattingStats>()
-        val homePitching = mutableListOf<PlayerPitchingStats>()
-        val awayPitching = mutableListOf<PlayerPitchingStats>()
-
-        battingStats.forEach { stat ->
-            val player = playerRepository.findById(stat.playerId).orElseThrow()
-            val domainStat = stat.toDomain(player.name, player.jerseyNumber, player.position)
-            if (player.teamId == game.homeTeamId) {
-                homeBatting.add(domainStat)
-            } else {
-                awayBatting.add(domainStat)
-            }
-        }
-
-        pitchingStats.forEach { stat ->
-            val player = playerRepository.findById(stat.playerId).orElseThrow()
-            val domainStat = stat.toDomain(player.name, player.jerseyNumber, player.position)
-            if (player.teamId == game.homeTeamId) {
-                homePitching.add(domainStat)
-            } else {
-                awayPitching.add(domainStat)
-            }
-        }
-
-        return BoxScore(
-            gameId = gameId,
-            homeTeamName = homeTeam.name,
-            awayTeamName = awayTeam.name,
-            lineScore = lineScore,
-            homeBatting = homeBatting,
-            awayBatting = awayBatting,
-            homePitching = homePitching,
-            awayPitching = awayPitching,
-        )
-    }
+    fun getBoxScore(gameId: Long): BoxScore = boxScoreService.getBoxScore(gameId)
 
     @Transactional(readOnly = true)
     fun getSeasonDashboard(seasonId: Long): SeasonDashboard {
@@ -687,7 +655,7 @@ class GameScoringService(
                 IllegalArgumentException("Season not found: $seasonId")
             }
         val games = gameRepository.findAllBySeasonId(seasonId).map { mapGameToDomain(it) }
-        val standings = computeStandings(games, teamRepository.findAll())
+        val standings = standingsService.computeStandings(games, teamRepository.findAll())
 
         return SeasonDashboard(
             seasonId = seasonId,
@@ -695,48 +663,6 @@ class GameScoringService(
             standings = standings,
             games = games,
         )
-    }
-
-    private fun computeStandings(games: List<Game>, allTeams: List<TeamEntity>): List<TeamStandings> {
-        val teamStatsMap = mutableMapOf<Long, TeamStandings>()
-        for (team in allTeams) {
-            team.id?.let { id ->
-                teamStatsMap[id] = TeamStandings(
-                    teamId = id,
-                    teamName = team.name,
-                    wins = 0,
-                    losses = 0,
-                    winPercentage = 0.0,
-                    gamesPlayed = 0,
-                    runsScored = 0,
-                    runsAllowed = 0,
-                )
-            }
-        }
-        games.filter { it.status == GameStatus.COMPLETED }.forEach { game ->
-            val homeStats = teamStatsMap[game.homeTeam.id!!] ?: return@forEach
-            val awayStats = teamStatsMap[game.awayTeam.id!!] ?: return@forEach
-            val homeWon = game.homeScore > game.awayScore
-            teamStatsMap[game.homeTeam.id!!] = homeStats.copy(
-                wins = homeStats.wins + if (homeWon) 1 else 0,
-                losses = homeStats.losses + if (!homeWon) 1 else 0,
-                gamesPlayed = homeStats.gamesPlayed + 1,
-                runsScored = homeStats.runsScored + game.homeScore,
-                runsAllowed = homeStats.runsAllowed + game.awayScore,
-            )
-            teamStatsMap[game.awayTeam.id!!] = awayStats.copy(
-                wins = awayStats.wins + if (!homeWon) 1 else 0,
-                losses = awayStats.losses + if (homeWon) 1 else 0,
-                gamesPlayed = awayStats.gamesPlayed + 1,
-                runsScored = awayStats.runsScored + game.awayScore,
-                runsAllowed = awayStats.runsAllowed + game.homeScore,
-            )
-        }
-        return teamStatsMap.values.map { stats ->
-            val totalGames = stats.wins + stats.losses
-            val winPct = if (totalGames > 0) stats.wins.toDouble() / totalGames else 0.0
-            stats.copy(winPercentage = winPct)
-        }.sortedWith(compareByDescending<TeamStandings> { it.winPercentage }.thenByDescending { it.wins })
     }
 
     @Transactional

@@ -20,7 +20,6 @@ import org.w3c.dom.events.Event
 private var selectedStatsSubTab = "batting" // batting, pitching, fielding
 private var statsSelectedTeamId: Long? = null // null means All Teams
 
-// Removed @Suppress per Detekt rules
 internal fun renderStatsTab(container: HTMLElement) {
     launch { setupRenderStatsTab(container) }
 }

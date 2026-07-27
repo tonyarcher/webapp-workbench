@@ -41,6 +41,8 @@ detekt_output.txt
 .editorconfig
 .vscode/
 /.cursor/
+/.air/
 
 # Antigravity config
 .gemini/
+

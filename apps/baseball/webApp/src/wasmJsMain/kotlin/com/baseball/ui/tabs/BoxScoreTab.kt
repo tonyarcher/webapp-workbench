@@ -14,12 +14,14 @@ import com.baseball.ui.components.scorebook.renderScorebookView
 import kotlinx.css.*
 import kotlinx.html.*
 import kotlinx.html.dom.append
-import kotlinx.html.js.*
+import kotlinx.html.js.div
+import kotlinx.html.js.h1
+import kotlinx.html.js.h3
+import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 
-// Removed @Suppress annotation per Detekt rules
 internal fun renderBoxScoreTab(container: HTMLElement) {
     if (!isSingleGameMode && selectedGameId == null) {
         renderNoGameSelected(container)
