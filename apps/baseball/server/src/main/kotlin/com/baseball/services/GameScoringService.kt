@@ -34,6 +34,8 @@ class GameScoringService(
     lateinit var boxScoreService: BoxScoreService
     @Autowired
     lateinit var standingsService: StandingsService
+    @Autowired
+    lateinit var seasonStatsService: SeasonStatsService
 
     constructor(
         gameRepository: GameRepository,
@@ -54,6 +56,7 @@ class GameScoringService(
         this.fieldingRepository = fieldingRepository
         this.boxScoreService = BoxScoreService(gameRepository, teamRepository, playerRepository, gameInningRepository, battingRepository, pitchingRepository)
         this.standingsService = StandingsService()
+        this.seasonStatsService = SeasonStatsService(seasonRepository, gameRepository, playerRepository, battingRepository, pitchingRepository, fieldingRepository)
     }
 
     @Transactional
@@ -698,110 +701,5 @@ class GameScoringService(
     }
 
     @Transactional(readOnly = true)
-    fun getSeasonStats(seasonId: Long): SeasonStats {
-        val season = seasonRepository.findById(seasonId)
-            .orElseThrow {
-                IllegalArgumentException("Season not found: $seasonId")
-            }
-        val games = gameRepository.findAllBySeasonId(seasonId)
-        val gameIds = games.map { it.id!! }
-
-        if (gameIds.isEmpty()) {
-            return SeasonStats(
-                seasonId = seasonId,
-                battingStats = emptyList(),
-                pitchingStats = emptyList(),
-                fieldingStats = emptyList()
-            )
-        }
-
-        val allPlayers = playerRepository.findAll().associateBy { it.id!! }
-
-        val battingEntities = battingRepository.findAllByGameIdIn(gameIds)
-        val aggregatedBatting = battingEntities
-            .groupBy { it.playerId }
-            .map { entry ->
-                val playerId = entry.key
-                val statsList = entry.value
-                val p = allPlayers[playerId]
-                val pName = p?.name ?: "Unknown"
-                val jersey = p?.jerseyNumber ?: 0
-                val pos = p?.position ?: "DH"
-                PlayerBattingStats(
-                    playerId = playerId,
-                    playerName = pName,
-                    jerseyNumber = jersey,
-                    position = pos,
-                    atBats = statsList.sumOf { it.atBats },
-                    runs = statsList.sumOf { it.runs },
-                    hits = statsList.sumOf { it.hits },
-                    rbi = statsList.sumOf { it.rbi },
-                    doubles = statsList.sumOf { it.doubles },
-                    triples = statsList.sumOf { it.triples },
-                    homeRuns = statsList.sumOf { it.homeRuns },
-                    walks = statsList.sumOf { it.walks },
-                    strikeOuts = statsList.sumOf { it.strikeOuts },
-                    hitByPitch = statsList.sumOf { it.hitByPitch },
-                )
-            }.sortedByDescending { it.hits }
-
-        val pitchingEntities = pitchingRepository.findAllByGameIdIn(gameIds)
-        val aggregatedPitching = pitchingEntities
-            .groupBy { it.playerId }
-            .map { entry ->
-                val playerId = entry.key
-                val statsList = entry.value
-                val p = allPlayers[playerId]
-                val pName = p?.name ?: "Unknown"
-                val jersey = p?.jerseyNumber ?: 0
-                val pos = p?.position ?: "P"
-                PlayerPitchingStats(
-                    playerId = playerId,
-                    playerName = pName,
-                    jerseyNumber = jersey,
-                    position = pos,
-                    inningsPitchedThirds = statsList.sumOf { it.inningsPitchedThirds },
-                    hitsAllowed = statsList.sumOf { it.hitsAllowed },
-                    runsAllowed = statsList.sumOf { it.runsAllowed },
-                    earnedRuns = statsList.sumOf { it.earnedRuns },
-                    walksAllowed = statsList.sumOf { it.walksAllowed },
-                    strikeoutsRecorded = statsList.sumOf { it.strikeoutsRecorded },
-                    homeRunsAllowed = statsList.sumOf { it.homeRunsAllowed },
-                )
-            }.sortedByDescending { it.strikeoutsRecorded }
-
-        val fieldingEntities = fieldingRepository.findAllByGameIdIn(gameIds)
-        val aggregatedFielding = fieldingEntities
-            .groupBy { it.playerId }
-            .map { entry ->
-                val playerId = entry.key
-                val statsList = entry.value
-                val p = allPlayers[playerId]
-                val pName = p?.name ?: "Unknown"
-                val jersey = p?.jerseyNumber ?: 0
-                val pos = p?.position ?: "DH"
-                val po = statsList.sumOf { it.putouts }
-                val a = statsList.sumOf { it.assists }
-                val e = statsList.sumOf { it.errors }
-                val totalChances = po + a + e
-                val fpct = if (totalChances > 0) (po + a).toDouble() / totalChances else 1.0
-                PlayerFieldingStats(
-                    playerId = playerId,
-                    playerName = pName,
-                    jerseyNumber = jersey,
-                    position = pos,
-                    putouts = po,
-                    assists = a,
-                    errors = e,
-                    fieldingPercentage = Math.round(fpct * 1000.0) / 1000.0,
-                )
-            }.sortedByDescending { it.errors }
-
-        return SeasonStats(
-            seasonId = seasonId,
-            battingStats = aggregatedBatting,
-            pitchingStats = aggregatedPitching,
-            fieldingStats = aggregatedFielding,
-        )
-    }
+    fun getSeasonStats(seasonId: Long): SeasonStats = seasonStatsService.getSeasonStats(seasonId)
 }
