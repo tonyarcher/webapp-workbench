@@ -18,51 +18,73 @@ class ScoringLogicService {
         val isHitByPitch: Boolean,
     )
 
+    data class EventOutcomeResult(
+        val eventType: ScoringEventType,
+        val description: String,
+        val outsAdded: Int,
+        val basesMoved: Int,
+        val isWalk: Boolean,
+        val isHitByPitch: Boolean,
+    )
+
     fun handleScoringEvent(
         request: ScoringEventRequest,
         batter: PlayerEntity,
         game: GameEntity,
     ): ScoringOutcome {
-        var eventType = request.eventType
-        var description = request.description ?: ""
-        var outsAdded = 0
-        var basesMoved = 0
-        var isWalk = false
-        var isHitByPitch = false
+        val outcome = resolveEventOutcome(request.eventType, request.description ?: "", game, batter)
+        return ScoringOutcome(
+            outcome.eventType,
+            outcome.description,
+            outcome.outsAdded,
+            outcome.basesMoved,
+            outcome.isWalk,
+            outcome.isHitByPitch,
+        )
+    }
 
-        when (eventType) {
-            ScoringEventType.BALL -> {
-                val result = handleBall(game, batter, description)
-                description = result.first
-                if (result.second) {
-                    isWalk = true
-                    eventType = ScoringEventType.WALK
-                }
-            }
-            ScoringEventType.STRIKE -> {
-                val result = handleStrike(game, batter, description)
-                description = result.first
-                if (result.second > 0) {
-                    outsAdded = result.second
-                    eventType = ScoringEventType.STRIKEOUT
-                }
-            }
-            ScoringEventType.FOUL -> {
-                description = handleFoul(game, batter, description)
-            }
-            ScoringEventType.HIT_BY_PITCH -> {
-                isHitByPitch = true
-                description = "Hit by pitch"
-            }
-            ScoringEventType.WALK -> {
-                isWalk = true
-            }
-            else -> {
-                basesMoved = getBasesMoved(eventType)
-                outsAdded = getOutsAdded(eventType)
-            }
+    private fun resolveEventOutcome(
+        initialEventType: ScoringEventType,
+        initialDesc: String,
+        game: GameEntity,
+        batter: PlayerEntity,
+    ): EventOutcomeResult {
+        return when (initialEventType) {
+            ScoringEventType.BALL -> resolveBallOutcome(game, batter, initialDesc)
+            ScoringEventType.STRIKE -> resolveStrikeOutcome(game, batter, initialDesc)
+            ScoringEventType.FOUL -> EventOutcomeResult(
+                ScoringEventType.FOUL,
+                handleFoul(game, batter, initialDesc),
+                0, 0, false, false,
+            )
+            ScoringEventType.HIT_BY_PITCH -> EventOutcomeResult(
+                ScoringEventType.HIT_BY_PITCH,
+                "Hit by pitch",
+                0, 0, false, true,
+            )
+            ScoringEventType.WALK -> EventOutcomeResult(ScoringEventType.WALK, initialDesc, 0, 0, true, false)
+            else -> EventOutcomeResult(
+                initialEventType,
+                initialDesc,
+                getOutsAdded(initialEventType),
+                getBasesMoved(initialEventType),
+                false,
+                false,
+            )
         }
-        return ScoringOutcome(eventType, description, outsAdded, basesMoved, isWalk, isHitByPitch)
+    }
+
+    private fun resolveBallOutcome(game: GameEntity, batter: PlayerEntity, desc: String): EventOutcomeResult {
+        val result = handleBall(game, batter, desc)
+        val type = if (result.second) ScoringEventType.WALK else ScoringEventType.BALL
+        return EventOutcomeResult(type, result.first, 0, 0, result.second, false)
+    }
+
+    private fun resolveStrikeOutcome(game: GameEntity, batter: PlayerEntity, desc: String): EventOutcomeResult {
+        val result = handleStrike(game, batter, desc)
+        val outs = result.second
+        val type = if (outs > 0) ScoringEventType.STRIKEOUT else ScoringEventType.STRIKE
+        return EventOutcomeResult(type, result.first, outs, 0, false, false)
     }
 
     private fun handleBall(game: GameEntity, batter: PlayerEntity, currentDesc: String): Pair<String, Boolean> {
