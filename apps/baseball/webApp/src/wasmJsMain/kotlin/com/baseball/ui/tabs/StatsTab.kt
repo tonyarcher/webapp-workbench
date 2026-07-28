@@ -1,5 +1,6 @@
 package com.baseball.ui.tabs
 
+import com.baseball.ui.*
 import kotlinx.html.dom.append
 import kotlinx.html.h1
 import org.w3c.dom.HTMLElement
@@ -16,7 +17,7 @@ internal suspend fun setupRenderStatsTab(container: HTMLElement) {
         h1 { +"Season Player Statistics" }
     }
     val (selectS, _) = renderStatsFilterCard(container)
-    populateSeasonsDropdown(selectS)
+    populateStatsSeasonsDropdown(selectS)
     if (selectedSeasonId == null) {
         renderNoSeasonSelectedCard(container)
         return

@@ -2,8 +2,9 @@
 
 Welcome, AI Agent. This file provides the context, structural rules, and coding standards you must follow when modifying or extending this multiplatform codebase.
 
-## 1. Core Architectural Mandate: Maximize Shared Code
+## 1. Core Architectural Mandate: Maximize Shared Code & Vertical Integration
 * **Shared First**: Every piece of domain logic, request/response payload, and validation rule MUST be authored in the KMP shared module (`:shared`) under `commonMain` to maximize code reuse across backend and web/client platforms.
+* **Vertical Integration**: Prefer a **vertically integrated microservices architecture** where each feature domain encapsulates its complete vertical slice (from DB entity and repository to service, controller, and client use-cases) rather than horizontal layering, ensuring high cohesion, autonomy, and domain independence.
 * **Separation of Concerns**: Keep Spring Boot infrastructure annotations (e.g., `@RestController`, `@Entity`) isolated inside the server module (`:server`). Do not allow Spring annotations to bleed into the `:shared` module's `commonMain` source set.
 
 ## 2. Tech Stack & Multiplatform Ecosystem

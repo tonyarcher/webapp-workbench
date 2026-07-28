@@ -81,7 +81,7 @@ internal fun renderStatsFilterCard(container: HTMLElement): Pair<HTMLSelectEleme
     return Pair(selectS, selectT)
 }
 
-internal fun populateSeasonsDropdown(selectEl: HTMLSelectElement?) {
+internal fun populateStatsSeasonsDropdown(selectEl: HTMLSelectElement?) {
     if (selectEl == null) return
     selectEl.innerHTML = ""
     seasonsList.forEach { season ->
@@ -239,10 +239,10 @@ private fun renderBattingRow(tbody: TBODY, row: PlayerBattingStats, playerRecord
         td { +row.homeRuns.toString() }
         td { +row.walks.toString() }
         td { +row.strikeOuts.toString() }
-        td { +avg.asPrecision(3) }
-        td { +obp.asPrecision(3) }
-        td { +slg.asPrecision(3) }
-        td { +ops.asPrecision(3) }
+        td { +formatDecimal(avg) }
+        td { +formatDecimal(obp) }
+        td { +formatDecimal(slg) }
+        td { +formatDecimal(ops) }
     }
 }
 
@@ -305,7 +305,7 @@ private fun renderPitchingRow(tbody: TBODY, row: PlayerPitchingStats, playerReco
         td { +row.walksAllowed.toString() }
         td { +row.strikeoutsRecorded.toString() }
         td { +row.homeRunsAllowed.toString() }
-        td { +era.asPrecision(2) }
+        td { +if (ipNum > 0) formatDecimal2(era) else "-.--" }
     }
 }
 
@@ -356,6 +356,29 @@ private fun renderFieldingRow(tbody: TBODY, row: PlayerFieldingStats, playerReco
         td { +row.putouts.toString() }
         td { +row.assists.toString() }
         td { +row.errors.toString() }
-        td { +row.fieldingPercentage.asPrecision(3) }
+        td { +formatDecimal(row.fieldingPercentage) }
     }
+}
+
+private fun formatDecimal(value: Double): String {
+    val rounded = (value * 1000).toInt()
+    val str = rounded.toString()
+    return when {
+        rounded == 0 -> ".000"
+        rounded >= 1000 -> {
+            val s = value.toString()
+            if (s.length >= 5) s.substring(0, 5) else s
+        }
+        str.length == 1 -> ".00$str"
+        str.length == 2 -> ".0$str"
+        else -> ".$str"
+    }
+}
+
+private fun formatDecimal2(value: Double): String {
+    val rounded = (value * 100).toInt()
+    val whole = rounded / 100
+    val frac = rounded % 100
+    val fracStr = if (frac < 10) "0$frac" else frac.toString()
+    return "$whole.$fracStr"
 }

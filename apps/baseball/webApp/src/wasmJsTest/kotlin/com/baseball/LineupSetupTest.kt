@@ -26,12 +26,8 @@ class LineupSetupTest {
         startNewGame(
             homeTeam = chc,
             awayTeam = stl,
-            homeLineup = homeLineup,
-            awayLineup = awayLineup,
-            homeBench = homeBench,
-            awayBench = awayBench,
-            homeActivePitcherId = 110L,
-            awayActivePitcherId = 210L,
+            homeConfig = TeamLineupConfig(homeLineup, homeBench, 110L),
+            awayConfig = TeamLineupConfig(awayLineup, awayBench, 210L),
             useDh = true,
         )
 
@@ -71,12 +67,8 @@ class LineupSetupTest {
         startNewGame(
             homeTeam = chc,
             awayTeam = stl,
-            homeLineup = homeLineup,
-            awayLineup = awayLineup,
-            homeBench = emptyList(),
-            awayBench = emptyList(),
-            homeActivePitcherId = 109L,
-            awayActivePitcherId = 209L,
+            homeConfig = TeamLineupConfig(homeLineup, emptyList(), 109L),
+            awayConfig = TeamLineupConfig(awayLineup, emptyList(), 209L),
             useDh = false,
         )
 
@@ -109,12 +101,8 @@ class LineupSetupTest {
         startNewGame(
             homeTeam = chc,
             awayTeam = stl,
-            homeLineup = homeLineup,
-            awayLineup = awayLineup,
-            homeBench = homeBench,
-            awayBench = awayBench,
-            homeActivePitcherId = 110L,
-            awayActivePitcherId = 210L,
+            homeConfig = TeamLineupConfig(homeLineup, homeBench, 110L),
+            awayConfig = TeamLineupConfig(awayLineup, awayBench, 210L),
             useDh = true,
         )
 

@@ -523,12 +523,8 @@ class LineupSetupOverlay(
         startNewGame(
             homeTeam = homeTeam,
             awayTeam = awayTeam,
-            homeLineup = homeRes.first,
-            awayLineup = awayRes.first,
-            homeBench = homeRes.second,
-            awayBench = awayRes.second,
-            homeActivePitcherId = homeActivePId,
-            awayActivePitcherId = awayActivePId,
+            homeConfig = TeamLineupConfig(homeRes.first, homeRes.second, homeActivePId),
+            awayConfig = TeamLineupConfig(awayRes.first, awayRes.second, awayActivePId),
             useDh = useDh,
         )
 
