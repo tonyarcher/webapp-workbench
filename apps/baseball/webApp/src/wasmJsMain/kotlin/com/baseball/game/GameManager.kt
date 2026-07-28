@@ -155,27 +155,19 @@ object GameManager : GameService {
             awayActivePitcherName = localAwayActivePitcherName,
         )
 
-    override fun recordPlayEvent(
-        eventType: ScoringEventType,
-        batterId: Long,
-        pitcherId: Long,
-        descriptionDetail: String?,
-        isDoublePlay: Boolean,
-        isError: Boolean,
-        runnerAdvanceMap: Map<String, Int>?,
-    ) {
+    override fun recordPlayEvent(input: PlayEventInput) {
         val game = localGame ?: return
         val boxScore = localBoxScore ?: return
         val currentState = createCurrentSessionState(game, boxScore)
 
         val playInput = PlayInput(
-            eventType = eventType,
-            batterId = batterId,
-            pitcherId = pitcherId,
-            descriptionDetail = descriptionDetail,
-            isDoublePlay = isDoublePlay,
-            isError = isError,
-            runnerAdvanceMap = runnerAdvanceMap,
+            eventType = input.eventType,
+            batterId = input.batterId,
+            pitcherId = input.pitcherId,
+            descriptionDetail = input.descriptionDetail,
+            isDoublePlay = input.isDoublePlay,
+            isError = input.isError,
+            runnerAdvanceMap = input.runnerAdvanceMap,
             nextEventId = (localEvents.size + 1).toLong(),
         )
         val (nextState, ev) = PlayEngine.processPlay(state = currentState, input = playInput)
@@ -194,24 +186,8 @@ fun initGame(forceReset: Boolean = false) {
     GameManager.initGame(forceReset)
 }
 
-fun recordPlayEvent(
-    eventType: ScoringEventType,
-    batterId: Long,
-    pitcherId: Long,
-    descriptionDetail: String? = null,
-    isDoublePlay: Boolean = false,
-    isError: Boolean = false,
-    runnerAdvanceMap: Map<String, Int>? = null,
-) {
-    GameManager.recordPlayEvent(
-        eventType = eventType,
-        batterId = batterId,
-        pitcherId = pitcherId,
-        descriptionDetail = descriptionDetail,
-        isDoublePlay = isDoublePlay,
-        isError = isError,
-        runnerAdvanceMap = runnerAdvanceMap,
-    )
+fun recordPlayEvent(input: PlayEventInput) {
+    GameManager.recordPlayEvent(input)
 }
 
 private fun initializeGameRosters(
@@ -354,13 +330,15 @@ private fun replayEvents(events: List<PlayEvent>) {
         val pId = allRoster.find { it.name == ev.pitcherName }?.id ?: localGame!!.gameState.currentPitcherId!!
 
         recordPlayEvent(
-            eventType = ev.eventType,
-            batterId = bId,
-            pitcherId = pId,
-            descriptionDetail = cleanDesc,
-            isDoublePlay = ev.description.contains("(Double Play)"),
-            isError = ev.description.contains("(with Error)"),
-            runnerAdvanceMap = advanceMap,
+            PlayEventInput(
+                eventType = ev.eventType,
+                batterId = bId,
+                pitcherId = pId,
+                descriptionDetail = cleanDesc,
+                isDoublePlay = ev.description.contains("(Double Play)"),
+                isError = ev.description.contains("(with Error)"),
+                runnerAdvanceMap = advanceMap,
+            ),
         )
     }
 }

@@ -318,3 +318,25 @@ class GameSimulationTest {
         )
     }
 }
+
+private fun recordPlayEvent(
+    eventType: ScoringEventType,
+    batterId: Long,
+    pitcherId: Long,
+    descriptionDetail: String? = null,
+    isDoublePlay: Boolean = false,
+    isError: Boolean = false,
+    runnerAdvanceMap: Map<String, Int>? = null,
+) {
+    com.baseball.game.recordPlayEvent(
+        PlayEventInput(
+            eventType = eventType,
+            batterId = batterId,
+            pitcherId = pitcherId,
+            descriptionDetail = descriptionDetail,
+            isDoublePlay = isDoublePlay,
+            isError = isError,
+            runnerAdvanceMap = runnerAdvanceMap,
+        ),
+    )
+}

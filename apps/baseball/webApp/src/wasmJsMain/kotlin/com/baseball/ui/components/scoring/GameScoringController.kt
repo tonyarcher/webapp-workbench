@@ -5,6 +5,7 @@ package com.baseball.ui.components.scoring
 import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.game.GameManager
+import com.baseball.game.PlayEventInput
 import com.baseball.models.*
 import com.baseball.ui.*
 
@@ -201,7 +202,17 @@ class GameScoringController(
         }
         val finalDescription = buildFinalDesc(detail)
         if (isSingleGameMode) {
-            GameManager.recordPlayEvent(type, bId, pId, finalDescription, isDoublePlay, isError, runnerAdvanceMap)
+            GameManager.recordPlayEvent(
+                PlayEventInput(
+                    eventType = type,
+                    batterId = bId,
+                    pitcherId = pId,
+                    descriptionDetail = finalDescription,
+                    isDoublePlay = isDoublePlay,
+                    isError = isError,
+                    runnerAdvanceMap = runnerAdvanceMap,
+                ),
+            )
             renderCurrentTab()
         } else {
             recordRemoteEvent(
