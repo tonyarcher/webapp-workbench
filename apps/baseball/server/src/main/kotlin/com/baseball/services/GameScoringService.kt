@@ -117,7 +117,6 @@ class GameScoringService(
     private fun handleScoringEvent(
         request: ScoringEventRequest,
         batter: PlayerEntity,
-        unusedPitcher: PlayerEntity,
         game: GameEntity,
     ): ScoringOutcome {
         var eventType = request.eventType
@@ -170,8 +169,11 @@ class GameScoringService(
             ScoringEventType.DOUBLE -> basesMoved = 2
             ScoringEventType.TRIPLE -> basesMoved = 3
             ScoringEventType.HOME_RUN -> basesMoved = 4
-            ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.STRIKEOUT -> outsAdded =
-                1
+            ScoringEventType.GROUNDOUT,
+            ScoringEventType.FLYOUT,
+            ScoringEventType.LINE_OUT,
+            ScoringEventType.POP_OUT,
+            ScoringEventType.STRIKEOUT -> outsAdded = 1
 
             else -> {
                 // No special handling for other event types
@@ -210,7 +212,7 @@ class GameScoringService(
         var isWalk = false
         var isHitByPitch = false
 
-        val outcome = handleScoringEvent(request, batter, pitcher, game)
+        val outcome = handleScoringEvent(request, batter, game)
         eventType = outcome.eventType
         description = outcome.description
         outsAdded = outcome.outsAdded
@@ -400,8 +402,13 @@ class GameScoringService(
                         2 -> game.runnerSecondId = batter.id
                         3 -> game.runnerThirdId = batter.id
                         4 -> runsScoredList.add(batter.id!!)
-                        else -> if (outsAdded == 0 && (isWalk || isHitByPitch || eventType == ScoringEventType.ERROR || eventType == ScoringEventType.FIELDER_CHOICE)) {
-                            game.runnerFirstId = batter.id
+                        else -> {
+                            val isReachBaseEvent = isWalk || isHitByPitch ||
+                                eventType == ScoringEventType.ERROR ||
+                                eventType == ScoringEventType.FIELDER_CHOICE
+                            if (outsAdded == 0 && isReachBaseEvent) {
+                                game.runnerFirstId = batter.id
+                            }
                         }
                     }
                 }
