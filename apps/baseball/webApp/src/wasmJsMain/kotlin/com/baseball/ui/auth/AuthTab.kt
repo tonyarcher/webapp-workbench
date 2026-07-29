@@ -17,7 +17,6 @@ import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 
-@Suppress("LongMethod", "TooManyFunctions")
 internal fun renderLoginTab(container: HTMLElement) {
     container.append {
         div(classes = "card") {
@@ -101,18 +100,15 @@ internal fun renderLoginTab(container: HTMLElement) {
 }
 
 private fun handleLoginClick() {
-    // Retrieve essential elements; abort if any are missing (single return)
     val banner = document.getElementById("login-error-banner") as? HTMLDivElement
     val emailIn = document.getElementById("login-email") as? HTMLInputElement
     val passIn = document.getElementById("login-password") as? HTMLInputElement
     if (banner == null || emailIn == null || passIn == null) return
 
-    // Hide previous error
     banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
     val email = emailIn.value.trim()
     val password = passIn.value
 
-    // Validate input; show first encountered error (single return)
     val errorMsg = when {
         !validateEmail(email) -> "Please enter a valid email address."
         password.length < 6 -> "Password must be at least 6 characters."
@@ -123,7 +119,6 @@ private fun handleLoginClick() {
         return
     }
 
-    // Proceed with login
     launch { executeLogin(email, password, banner) }
 }
 
@@ -148,98 +143,109 @@ internal fun renderRegisterTab(container: HTMLElement) {
                 margin = Margin(2.rem, LinearDimension.auto)
                 padding = Padding(2.5.rem)
             }
+            renderRegisterHeader()
+            renderRegisterErrorBanner()
+            renderRegisterForm()
+            renderRegisterFooter()
+        }
+    }
+}
 
-            h2 {
-                +"Create Account"
-                css {
-                    textAlign = TextAlign.center
-                    marginBottom = 1.5.rem
-                }
+private fun DIV.renderRegisterHeader() {
+    h2 {
+        +"Create Account"
+        css {
+            textAlign = TextAlign.center
+            marginBottom = 1.5.rem
+        }
+    }
+}
+
+private fun DIV.renderRegisterErrorBanner() {
+    div {
+        id = "register-error-banner"
+        css {
+            display = Display.none
+            color = Color("var(--accent-red)")
+            background = "rgba(255, 42, 59, 0.1)"
+            border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
+            padding = Padding(0.75.rem)
+            borderRadius = 8.px
+            marginBottom = 1.rem
+            fontSize = 0.9.rem
+        }
+    }
+}
+
+private fun DIV.renderRegisterForm() {
+    form {
+        div(classes = "form-group") {
+            label { +"First Name" }
+            input(type = InputType.text, classes = "form-control") {
+                id = "register-first-name"
+                placeholder = "John"
             }
+        }
 
-            div {
-                id = "register-error-banner"
-                css {
-                    display = Display.none
-                    color = Color("var(--accent-red)")
-                    background = "rgba(255, 42, 59, 0.1)"
-                    border = Border(1.px, BorderStyle.solid, Color("var(--accent-red)"))
-                    padding = Padding(0.75.rem)
-                    borderRadius = 8.px
-                    marginBottom = 1.rem
-                    fontSize = 0.9.rem
-                }
+        div(classes = "form-group") {
+            label { +"Last Name" }
+            input(type = InputType.text, classes = "form-control") {
+                id = "register-last-name"
+                placeholder = "Doe"
             }
+        }
 
-            form {
-                div(classes = "form-group") {
-                    label { +"First Name" }
-                    input(type = InputType.text, classes = "form-control") {
-                        id = "register-first-name"
-                        placeholder = "John"
-                    }
-                }
-
-                div(classes = "form-group") {
-                    label { +"Last Name" }
-                    input(type = InputType.text, classes = "form-control") {
-                        id = "register-last-name"
-                        placeholder = "Doe"
-                    }
-                }
-
-                div(classes = "form-group") {
-                    label { +"Email Address (Username)" }
-                    input(type = InputType.email, classes = "form-control") {
-                        id = "register-email"
-                        placeholder = "you@example.com"
-                    }
-                }
-
-                div(classes = "form-group") {
-                    label { +"Password" }
-                    input(type = InputType.password, classes = "form-control") {
-                        id = "register-password"
-                        placeholder = "At least 6 characters"
-                    }
-                }
-
-                button(classes = "btn") {
-                    type = ButtonType.button
-                    +"Register & Log In"
-                    css {
-                        width = 100.pct
-                        marginTop = 1.rem
-                    }
-                    onClickFunction = { handleRegisterClick() }
-                }
+        div(classes = "form-group") {
+            label { +"Email Address (Username)" }
+            input(type = InputType.email, classes = "form-control") {
+                id = "register-email"
+                placeholder = "you@example.com"
             }
+        }
 
-            p {
-                css {
-                    marginTop = 1.5.rem
-                    textAlign = TextAlign.center
-                    fontSize = 0.9.rem
-                    color = Color("var(--text-secondary)")
-                }
-                span { +"Already have an account? " }
-                a {
-                    +"Log In"
-                    css {
-                        color = Color("var(--accent-red)")
-                        cursor = Cursor.pointer
-                        fontWeight = FontWeight.bold
-                        put("text-decoration", "underline")
-                    }
-                    onClickFunction = { window.location.hash = "login" }
-                }
+        div(classes = "form-group") {
+            label { +"Password" }
+            input(type = InputType.password, classes = "form-control") {
+                id = "register-password"
+                placeholder = "At least 6 characters"
             }
+        }
+
+        button(classes = "btn") {
+            type = ButtonType.button
+            +"Register & Log In"
+            css {
+                width = 100.pct
+                marginTop = 1.rem
+            }
+            onClickFunction = { handleRegisterClick() }
+        }
+    }
+}
+
+private fun DIV.renderRegisterFooter() {
+    p {
+        css {
+            marginTop = 1.5.rem
+            textAlign = TextAlign.center
+            fontSize = 0.9.rem
+            color = Color("var(--text-secondary)")
+        }
+        span { +"Already have an account? " }
+        a {
+            +"Log In"
+            css {
+                color = Color("var(--accent-red)")
+                cursor = Cursor.pointer
+                fontWeight = FontWeight.bold
+                put("text-decoration", "underline")
+            }
+            onClickFunction = { window.location.hash = "login" }
         }
     }
 }
 
 private fun handleRegisterClick() {
-    // Retrieve essential elements; abort if any are missing (single return)
     val banner = document.getElementById("register-error-banner") as? HTMLDivElement
     val firstIn = document.getElementById("register-first-name") as? HTMLInputElement
     val lastIn = document.getElementById("register-last-name") as? HTMLInputElement
@@ -247,14 +253,12 @@ private fun handleRegisterClick() {
     val passIn = document.getElementById("register-password") as? HTMLInputElement
     if (banner == null || firstIn == null || lastIn == null || emailIn == null || passIn == null) return
 
-    // Hide previous error
     banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.NONE)
     val first = firstIn.value.trim()
     val last = lastIn.value.trim()
     val email = emailIn.value.trim()
     val pass = passIn.value
 
-    // Validate input; show first encountered error (single return)
     val errorMsg = when {
         first.isEmpty() || last.isEmpty() -> "Please enter both your first and last name."
         !validateEmail(email) -> "Please enter a valid email address."
@@ -266,7 +270,6 @@ private fun handleRegisterClick() {
         return
     }
 
-    // Proceed with registration
     launch { executeRegister(first, last, email, pass, banner) }
 }
 
@@ -282,40 +285,4 @@ private suspend fun executeRegister(first: String, last: String, email: String, 
     } catch (e: Exception) {
         showError(banner, parseRegisterException(e))
     }
-}
-
-private fun showError(banner: HTMLDivElement, message: String) {
-    banner.textContent = message
-    banner.style.setProperty(UiConstants.Css.DISPLAY, UiConstants.CssValues.BLOCK)
-}
-
-private fun parseAuthException(e: Throwable): String {
-    val msg = e.message ?: ""
-    return if (isConnectionError(msg)) {
-        "Unable to connect to the server. Please verify that the backend server is running."
-    } else {
-        "Authentication failed: ${e.message ?: "server error"}"
-    }
-}
-
-private fun parseRegisterException(e: Throwable): String {
-    val msg = e.message ?: ""
-    return when {
-        isConnectionError(msg) -> "Unable to connect to the server. Please verify that the backend server is running."
-        msg.contains(BaseballConstants.STATUS_400) || msg.contains(BaseballConstants.STATUS_BAD_REQUEST, ignoreCase = true) ->
-            "An account with this email already exists."
-
-        else -> "Registration failed: ${e.message ?: "server error"}"
-    }
-}
-
-private fun isConnectionError(msg: String): Boolean =
-    msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) ||
-            msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) ||
-            msg.contains(BaseballConstants.STATUS_NETWORK, ignoreCase = true)
-
-private fun validateEmail(email: String): Boolean {
-    val atIndex = email.indexOf('@')
-    val dotIndex = email.lastIndexOf('.')
-    return atIndex > 0 && dotIndex > atIndex + 1 && dotIndex < email.length - 1
 }
