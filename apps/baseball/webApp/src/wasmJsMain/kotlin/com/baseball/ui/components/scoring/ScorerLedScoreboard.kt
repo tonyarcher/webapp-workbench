@@ -95,34 +95,33 @@ private fun renderDiamondBases(
 ) {
     parent.div(classes = "diamond-container") {
         div(classes = "base-diamond") {
-            div(classes = "base base-first" + if (game.gameState.runnerFirstId != null) " occupied" else "") {
-                div(classes = "base-label") {
-                    +"1st"
-                    css {
-                        put("top", "-15px")
-                        put("right", "-15px")
-                    }
-                }
+            renderBase("base-first", "1st", game.gameState.runnerFirstId != null) {
+                put("top", "-15px")
+                put("right", "-15px")
             }
-            div(classes = "base base-second" + if (game.gameState.runnerSecondId != null) " occupied" else "") {
-                div(classes = "base-label") {
-                    +"2nd"
-                    css {
-                        put("top", "-15px")
-                        put("left", "-15px")
-                    }
-                }
+            renderBase("base-second", "2nd", game.gameState.runnerSecondId != null) {
+                put("top", "-15px")
+                put("left", "-15px")
             }
-            div(classes = "base base-third" + if (game.gameState.runnerThirdId != null) " occupied" else "") {
-                div(classes = "base-label") {
-                    +"3rd"
-                    css {
-                        put("bottom", "-15px")
-                        put("left", "-15px")
-                    }
-                }
+            renderBase("base-third", "3rd", game.gameState.runnerThirdId != null) {
+                put("bottom", "-15px")
+                put("left", "-15px")
             }
             div(classes = "base base-home")
+        }
+    }
+}
+
+private fun DIV.renderBase(
+    baseClass: String,
+    label: String,
+    isOccupied: Boolean,
+    labelCss: CssBuilder.() -> Unit,
+) {
+    div(classes = "base $baseClass" + if (isOccupied) " occupied" else "") {
+        div(classes = "base-label") {
+            +label
+            css(labelCss)
         }
     }
 }
