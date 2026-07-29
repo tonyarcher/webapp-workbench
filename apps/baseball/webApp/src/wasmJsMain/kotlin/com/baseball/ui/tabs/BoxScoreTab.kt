@@ -73,11 +73,15 @@ private fun renderBoxScoreContent(
     btnScorebook = buttonBar.querySelector("#boxscore-btn-scorebook") as? HTMLButtonElement
     btnTraditional = buttonBar.querySelector("#boxscore-btn-traditional") as? HTMLButtonElement
 
+    contentContainer = createBoxScoreContentContainer(container)
+    contentContainer?.let { renderScorebookView(it, game, boxScore, events) }
+}
+
+private fun createBoxScoreContentContainer(container: HTMLElement): HTMLDivElement? {
     container.append {
         div { id = "boxscore-content-view" }
     }
-    contentContainer = container.querySelector("#boxscore-content-view") as? HTMLDivElement
-    contentContainer?.let { renderScorebookView(it, game, boxScore, events) }
+    return container.querySelector("#boxscore-content-view") as? HTMLDivElement
 }
 
 private fun renderNoGameSelected(container: HTMLElement) {

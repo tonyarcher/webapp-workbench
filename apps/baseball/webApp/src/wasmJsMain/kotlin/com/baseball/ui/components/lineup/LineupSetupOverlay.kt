@@ -608,15 +608,19 @@ class LineupSetupOverlay(
         val allNums = if (useDh) nums + pNum.toIntOrNull() else nums
 
         val error = when {
-            list.any { it.name.trim().isEmpty() } -> "Error in $teamName Lineup: All player names must be filled."
-            nums.any { it == null || it < 0 || it > 99 } -> "Error in $teamName Lineup: Jersey numbers must be integers between 0 and 99."
+            list.any { it.name.trim().isEmpty() } ->
+                "Error in $teamName Lineup: All player names must be filled."
+            nums.any { it == null || it < 0 || it > 99 } ->
+                "Error in $teamName Lineup: Jersey numbers must be integers between 0 and 99."
             useDh && (pName.trim().isEmpty() || pNum.toIntOrNull() == null) ->
                 "Error in $teamName Lineup: Starting Pitcher name and number must be filled when DH is enabled."
-            allNums.filterNotNull().size != allNums.toSet().filterNotNull().size -> "Error in $teamName Lineup: Duplicate jersey numbers are not allowed."
+            allNums.filterNotNull().size != allNums.toSet().filterNotNull().size ->
+                "Error in $teamName Lineup: Duplicate jersey numbers are not allowed."
             !useDh && list.indexOfFirst { it.position == "P" } == -1 ->
                 "Error in $teamName Lineup: Pitcher (P) must be included in the batting lineup when DH is disabled."
             !useDh && list.count { it.position == "P" } != 1 ->
-                "Error in $teamName Lineup: Lineup must contain exactly one Pitcher (P) in the batting order when DH is disabled."
+                "Error in $teamName Lineup: Lineup must contain exactly one Pitcher (P) " +
+                    "in the batting order when DH is disabled."
             useDh && list.count { it.position == "P" } > 0 ->
                 "Error in $teamName Lineup: Batting order cannot contain a Pitcher (P) when DH is enabled."
             else -> null

@@ -318,11 +318,16 @@ object AppViewManager {
                 }
                 isWelcomeScreen = false
                 isSingleGameMode = false
-                val nextHash = if (currentUserSession == null) BaseballConstants.TAB_LOGIN else BaseballConstants.TAB_LEAGUES
+                val nextHash = if (currentUserSession == null) {
+                    BaseballConstants.TAB_LOGIN
+                } else {
+                    BaseballConstants.TAB_LEAGUES
+                }
                 window.location.hash = nextHash
             } catch (ignored: Throwable) {
                 println("Failed to connect online mode: ${ignored.message}")
-                serverConnectionError = "Unable to connect to the server. Please check that the backend server is running."
+                serverConnectionError =
+                    "Unable to connect to the server. Please check that the backend server is running."
                 renderApp()
             }
         }
