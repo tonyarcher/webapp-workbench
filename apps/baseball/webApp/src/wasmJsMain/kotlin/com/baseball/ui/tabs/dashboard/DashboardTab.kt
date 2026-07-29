@@ -1,4 +1,4 @@
-package com.baseball.ui.tabs
+package com.baseball.ui.tabs.dashboard
 
 import com.baseball.api
 import com.baseball.ui.launch

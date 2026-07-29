@@ -1,4 +1,4 @@
-package com.baseball.ui.tabs
+package com.baseball.ui.tabs.leagues
 
 import com.baseball.BaseballConstants
 import com.baseball.api
