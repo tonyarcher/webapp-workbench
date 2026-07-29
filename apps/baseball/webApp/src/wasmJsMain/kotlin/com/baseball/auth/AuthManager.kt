@@ -44,7 +44,7 @@ object AuthManager : AuthService {
                 )
             saveSession(session)
             return session
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             val msg = e.message ?: ""
             if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) ||
                 msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) ||
