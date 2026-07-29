@@ -65,12 +65,14 @@ class GameScoringServiceTest {
                 gameRepository,
                 gameInningRepository,
                 playerRepository,
-                teamRepository,
-                playEventRepository,
-                battingRepository,
-                pitchingRepository,
-                seasonRepository,
-                fieldingRepository,
+                GameScoringService.Repositories(
+                    teamRepository,
+                    playEventRepository,
+                    battingRepository,
+                    pitchingRepository,
+                    seasonRepository,
+                    fieldingRepository,
+                ),
             )
     }
 
