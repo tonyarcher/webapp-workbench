@@ -12,7 +12,7 @@ import com.baseball.models.PlayEvent
 import com.baseball.models.PlayerBattingStats
 import com.baseball.models.PlayerPitchingStats
 import com.baseball.ui.UiConstants
-import com.baseball.ui.components.scorebook.renderScorebookView
+import com.baseball.ui.gametracking.scorebook.renderScorebookView
 import com.baseball.ui.css
 import com.baseball.ui.currentTab
 import com.baseball.ui.isSingleGameMode

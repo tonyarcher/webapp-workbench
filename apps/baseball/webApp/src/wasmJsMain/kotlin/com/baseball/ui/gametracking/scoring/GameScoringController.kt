@@ -1,4 +1,4 @@
-package com.baseball.ui.components.scoring
+package com.baseball.ui.gametracking.scoring
 
 import com.baseball.BaseballConstants
 import com.baseball.api

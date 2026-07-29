@@ -4,7 +4,7 @@ import com.baseball.api
 import com.baseball.game.clearLiveScorerCache
 import com.baseball.game.resetLocalGame
 import com.baseball.ui.UiConstants
-import com.baseball.ui.components.lineup.isLineupDialogOpen
+import com.baseball.ui.gametracking.lineup.isLineupDialogOpen
 import com.baseball.ui.css
 import com.baseball.ui.isSingleGameMode
 import com.baseball.ui.launch

@@ -1,4 +1,4 @@
-package com.baseball.ui.components.scorebook
+package com.baseball.ui.gametracking.scorebook
 
 import com.baseball.BaseballConstants
 import com.baseball.models.BoxScore

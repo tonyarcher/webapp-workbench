@@ -2,7 +2,7 @@ package com.baseball.ui.tabs.scorer
 
 import com.baseball.models.Game
 import com.baseball.ui.UiConstants
-import com.baseball.ui.components.lineup.isLineupDialogOpen
+import com.baseball.ui.gametracking.lineup.isLineupDialogOpen
 import com.baseball.ui.css
 import com.baseball.ui.renderCurrentTab
 import kotlinx.css.Color

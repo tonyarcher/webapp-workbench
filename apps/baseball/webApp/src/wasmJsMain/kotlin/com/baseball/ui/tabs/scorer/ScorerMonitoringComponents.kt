@@ -6,8 +6,8 @@ import com.baseball.models.PlayEvent
 import com.baseball.models.Player
 import com.baseball.models.ScoringEventType
 import com.baseball.ui.UiConstants
-import com.baseball.ui.components.scorebook.getScorebookNotation
-import com.baseball.ui.components.scorebook.renderScorebookView
+import com.baseball.ui.gametracking.scorebook.getScorebookNotation
+import com.baseball.ui.gametracking.scorebook.renderScorebookView
 import com.baseball.ui.css
 import kotlinx.css.Align
 import kotlinx.css.Border

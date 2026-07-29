@@ -228,10 +228,10 @@ class GameSimulationTest {
         val babeDP = playEvents.find { it.batterName == batter2Name && it.eventType == ScoringEventType.GROUNDOUT }!!
 
         val notationYogi =
-            com.baseball.ui.components.scorebook
+            com.baseball.ui.gametracking.scorebook
                 .getScorebookNotation(yogiSingle)
         val notationBabe =
-            com.baseball.ui.components.scorebook
+            com.baseball.ui.gametracking.scorebook
                 .getScorebookNotation(babeDP)
 
         assertEquals("1B", notationYogi)
@@ -305,7 +305,7 @@ class GameSimulationTest {
             descriptionDetail = "Single to Left Field",
         )
         val notation =
-            com.baseball.ui.components.scorebook
+            com.baseball.ui.gametracking.scorebook
                 .getScorebookNotation(localEvents.last())
         assertEquals("1B7", notation)
     }
@@ -326,7 +326,7 @@ class GameSimulationTest {
         )
         assertEquals(
             "HR",
-            com.baseball.ui.components.scorebook
+            com.baseball.ui.gametracking.scorebook
                 .getScorebookNotation(localEvents.last()),
         )
 
@@ -340,7 +340,7 @@ class GameSimulationTest {
         )
         assertEquals(
             "HR8",
-            com.baseball.ui.components.scorebook
+            com.baseball.ui.gametracking.scorebook
                 .getScorebookNotation(localEvents.last()),
         )
     }
