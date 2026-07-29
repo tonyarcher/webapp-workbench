@@ -97,7 +97,7 @@ class GameScoringController(
                     alignItems = Align.center
                     textAlign = TextAlign.center
                 }
-                renderMatchupBatterInfo(this)
+                renderMatchupBatterInfo()
                 div {
                     +"VS"
                     css {
@@ -107,14 +107,14 @@ class GameScoringController(
                         color = Color("rgba(74, 222, 128, 0.4)")
                     }
                 }
-                renderMatchupPitcherInfo(this)
+                renderMatchupPitcherInfo()
             }
         }
     }
 
-    private fun DIV.renderMatchupBatterInfo(parent: DIV) {
+    private fun DIV.renderMatchupBatterInfo() {
         val currBatter = (awayRoster + homeRoster).find { it.id == game.gameState.currentBatterId }
-        parent.div {
+        div {
             css {
                 flexGrow = 1.0
             }
@@ -143,9 +143,9 @@ class GameScoringController(
         }
     }
 
-    private fun DIV.renderMatchupPitcherInfo(parent: DIV) {
+    private fun DIV.renderMatchupPitcherInfo() {
         val currPitcher = (awayRoster + homeRoster).find { it.id == game.gameState.currentPitcherId }
-        parent.div {
+        div {
             css {
                 flexGrow = 1.0
             }
