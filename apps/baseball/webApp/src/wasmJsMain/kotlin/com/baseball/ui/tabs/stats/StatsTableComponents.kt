@@ -1,4 +1,4 @@
-package com.baseball.ui.tabs
+package com.baseball.ui.tabs.stats
 
 import com.baseball.models.Player
 import com.baseball.models.PlayerBattingStats

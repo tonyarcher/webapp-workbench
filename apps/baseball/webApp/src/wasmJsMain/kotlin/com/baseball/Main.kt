@@ -11,8 +11,8 @@ import com.baseball.ui.tabs.renderBoxScoreTab
 import com.baseball.ui.tabs.renderLeaguesTab
 import com.baseball.ui.tabs.renderLiveScorerTab
 import com.baseball.ui.tabs.renderSeasonDashboardTab
-import com.baseball.ui.tabs.renderStatsTab
-import com.baseball.ui.tabs.renderTeamsTab
+import com.baseball.ui.tabs.stats.renderStatsTab
+import com.baseball.ui.tabs.teams.renderTeamsTab
 
 // Duplicate tab imports removed
 

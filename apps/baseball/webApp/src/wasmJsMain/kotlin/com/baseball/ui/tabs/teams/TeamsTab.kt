@@ -1,4 +1,4 @@
-package com.baseball.ui.tabs
+package com.baseball.ui.tabs.teams
 
 import com.baseball.api
 import com.baseball.models.Team
