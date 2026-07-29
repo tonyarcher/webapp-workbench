@@ -16,30 +16,16 @@ import com.baseball.ui.launch
 import com.baseball.ui.renderCurrentTab
 import com.baseball.ui.updateActiveTabButtons
 import kotlinx.browser.window
-import kotlinx.css.Align
 import kotlinx.css.Border
 import kotlinx.css.BorderStyle
 import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.FlexWrap
 import kotlinx.css.FontWeight
-import kotlinx.css.JustifyContent
-import kotlinx.css.Margin
 import kotlinx.css.Padding
 import kotlinx.css.TextAlign
-import kotlinx.css.alignItems
-import kotlinx.css.border
-import kotlinx.css.borderRadius
 import kotlinx.css.borderTop
 import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.flexGrow
-import kotlinx.css.flexWrap
 import kotlinx.css.fontSize
 import kotlinx.css.fontWeight
-import kotlinx.css.gap
-import kotlinx.css.justifyContent
-import kotlinx.css.margin
 import kotlinx.css.marginBottom
 import kotlinx.css.marginTop
 import kotlinx.css.padding
@@ -53,7 +39,6 @@ import kotlinx.html.div
 import kotlinx.html.dom.append
 import kotlinx.html.h2
 import kotlinx.html.id
-import kotlinx.html.js.div
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.p
 import org.w3c.dom.HTMLDivElement
@@ -108,13 +93,11 @@ class GameScoringController(
         rightCol.append {
             div {
                 h2 { +"Plate Matchup" }
-                renderPlateMatchupCard(this)
+                renderPlateMatchupCard(this, game, homeRoster, awayRoster)
             }
             div {
                 id = "action-grid-wrapper"
-                css {
-                    marginTop = 1.rem
-                }
+                css { marginTop = 1.rem }
             }
         }
 
@@ -122,111 +105,11 @@ class GameScoringController(
         renderActionGrid()
     }
 
-    private fun renderPlateMatchupCard(parent: DIV) {
-        parent.div {
-            css {
-                marginBottom = 1.5.rem
-                put("background", "linear-gradient(135deg, rgba(27, 53, 36, 0.9) 0%, rgba(13, 26, 18, 0.95) 100%)")
-                border = Border(1.px, BorderStyle.solid, Color("rgba(74, 222, 128, 0.2)"))
-                padding = Padding(1.25.rem)
-                borderRadius = 12.px
-            }
-            div {
-                css {
-                    display = Display.flex
-                    justifyContent = JustifyContent.spaceBetween
-                    alignItems = Align.center
-                    textAlign = TextAlign.center
-                }
-                renderMatchupBatterInfo()
-                div {
-                    +"VS"
-                    css {
-                        fontSize = 1.3.rem
-                        fontWeight = FontWeight("900")
-                        margin = Margin(0.px, 1.5.rem)
-                        color = Color("rgba(74, 222, 128, 0.4)")
-                    }
-                }
-                renderMatchupPitcherInfo()
-            }
-        }
-    }
-
-    private fun DIV.renderMatchupBatterInfo() {
-        val currBatter = (awayRoster + homeRoster).find { it.id == game.gameState.currentBatterId }
-        div {
-            css {
-                flexGrow = 1.0
-            }
-            div {
-                +"CURRENT BATTER"
-                css {
-                    fontSize = 0.75.rem
-                    color = Color("var(--accent-green)")
-                }
-            }
-            div {
-                +(game.gameState.currentBatterName ?: "None")
-                css {
-                    fontSize = 1.2.rem
-                    fontWeight = FontWeight("800")
-                    color = Color("var(--text-primary)")
-                }
-            }
-            div {
-                +(currBatter?.let { "${it.position} | #${it.jerseyNumber} | Bat: ${it.battingHand}" } ?: "")
-                css {
-                    fontSize = 0.85.rem
-                    color = Color("var(--text-secondary)")
-                }
-            }
-        }
-    }
-
-    private fun DIV.renderMatchupPitcherInfo() {
-        val currPitcher = (awayRoster + homeRoster).find { it.id == game.gameState.currentPitcherId }
-        div {
-            css {
-                flexGrow = 1.0
-            }
-            div {
-                +"CURRENT PITCHER"
-                css {
-                    fontSize = 0.75.rem
-                    color = Color("var(--accent-green)")
-                }
-            }
-            div {
-                +(game.gameState.currentPitcherName ?: "None")
-                css {
-                    fontSize = 1.2.rem
-                    fontWeight = FontWeight("800")
-                    color = Color("var(--text-primary)")
-                }
-            }
-            div {
-                +(currPitcher?.let { "${it.position} | #${it.jerseyNumber} | Throw: ${it.throwingHand}" } ?: "")
-                css {
-                    fontSize = 0.85.rem
-                    color = Color("var(--text-secondary)")
-                }
-            }
-        }
-    }
-
     private fun buildFinalDesc(detail: String?): String? =
         buildString {
             optionalPitchType?.let { append("$it - ") }
             detail?.let { append(it) }
         }.takeIf { it.isNotEmpty() }
-
-    private fun recordRemoteEvent(req: ScoringEventRequest) {
-        launch {
-            api.recordGameEvent(game.id!!, req)
-            renderCurrentTab()
-        }
-    }
 
     fun triggerScoringEvent(
         type: ScoringEventType,
@@ -245,29 +128,24 @@ class GameScoringController(
         if (isSingleGameMode) {
             GameManager.recordPlayEvent(
                 PlayEventInput(
-                    eventType = type,
-                    batterId = bId,
-                    pitcherId = pId,
-                    descriptionDetail = finalDescription,
-                    isDoublePlay = isDoublePlay,
-                    isError = isError,
-                    runnerAdvanceMap = runnerAdvanceMap,
-                ),
+                    eventType = type, batterId = bId, pitcherId = pId,
+                    descriptionDetail = finalDescription, isDoublePlay = isDoublePlay,
+                    isError = isError, runnerAdvanceMap = runnerAdvanceMap,
+                )
             )
-            renderCurrentTab()
         } else {
-            recordRemoteEvent(
-                ScoringEventRequest(
-                    eventType = type,
-                    batterId = bId,
-                    pitcherId = pId,
-                    description = finalDescription,
-                    isDoublePlay = isDoublePlay,
-                    isError = isError,
-                    runnerAdvanceMap = runnerAdvanceMap,
-                ),
-            )
+            launch {
+                api.recordGameEvent(
+                    game.id!!,
+                    ScoringEventRequest(
+                        eventType = type, batterId = bId, pitcherId = pId,
+                        description = finalDescription, isDoublePlay = isDoublePlay,
+                        isError = isError, runnerAdvanceMap = runnerAdvanceMap,
+                    )
+                )
+            }
         }
+        renderCurrentTab()
     }
 
     fun renderActionGrid() {
@@ -277,115 +155,30 @@ class GameScoringController(
         gridEl.append.div {
             div {
                 css {
-                    fontSize = 0.8.rem
-                    fontWeight = FontWeight.bold
-                    color = Color("var(--accent-green)")
+                    fontSize = 0.8.rem; fontWeight = FontWeight.bold; color = Color("var(--accent-green)")
                     marginBottom = 0.5.rem
                 }
                 +"PITCH TYPE (OPTIONAL)"
             }
-            renderPitchTypes()
-            renderPitchResultsSection()
+            renderPitchTypes(optionalPitchType) { pType ->
+                optionalPitchType = pType
+                renderActionGrid()
+            }
+            renderPitchResultsSection { type -> triggerScoringEvent(type) }
             renderPlateResultsSection()
-            renderBaseRunningEventsSection()
+            renderBaseRunningEventsSection { type, label -> renderBaseRunningStep2(type, label) }
         }
     }
 
-    private fun DIV.renderPitchTypes() {
-        div {
-            css {
-                display = Display.flex
-                gap = 0.5.rem
-                marginBottom = 1.rem
-                flexWrap = FlexWrap.wrap
-            }
-            val pitchTypes = listOf("Fastball", "Breaking Ball", "Offspeed")
-            pitchTypes.forEach { pType ->
-                val isSelected = pType == optionalPitchType
-                button(classes = if (isSelected) "btn btn-primary" else "btn btn-secondary") {
-                    +pType
-                    css {
-                        flexGrow = 1.0
-                        fontSize = 0.85.rem
-                        padding = Padding(0.4.rem)
-                    }
-                    onClickFunction = {
-                        optionalPitchType = if (isSelected) null else pType
-                        renderActionGrid()
-                    }
-                }
-            }
-        }
-    }
+    private fun DIV.renderPlateResultsButton(type: ScoringEventType, label: String) {
+        val isHit = type in listOf(ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN)
+        val isOut = type in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT)
+        val btnClass = if (isHit) "btn btn-action" else "btn btn-secondary btn-action"
 
-    private fun DIV.renderPitchResultsSection() {
-        div {
-            css {
-                fontSize = 0.8.rem
-                fontWeight = FontWeight.bold
-                color = Color("var(--accent-green)")
-                marginBottom = 0.5.rem
-            }
-            +"PITCH RESULTS"
-        }
-        div(classes = "action-grid") {
-            css {
-                put("grid-template-columns", "repeat(3, 1fr)")
-                gap = 0.5.rem
-                marginBottom = 1.25.rem
-            }
-            listOf(
-                ScoringEventType.BALL to "Ball (B+1)",
-                ScoringEventType.STRIKE to "Strike (S+1)",
-                ScoringEventType.FOUL to "Foul",
-            ).forEach { (type, label) ->
-                button(classes = "btn btn-secondary btn-action") {
-                    +label
-                    css {
-                        padding = Padding(0.6.rem)
-                    }
-                    onClickFunction = { triggerScoringEvent(type) }
-                }
-            }
-        }
-    }
-
-    private fun DIV.renderPlateResultsButton(
-        type: ScoringEventType,
-        label: String,
-    ) {
-        val btnClass =
-            when (type) {
-                ScoringEventType.SINGLE,
-                ScoringEventType.DOUBLE,
-                ScoringEventType.TRIPLE,
-                ScoringEventType.HOME_RUN -> "btn btn-action"
-
-                else -> "btn btn-secondary btn-action"
-
-            }
         button(classes = btnClass) {
             +label
             onClickFunction = {
-                val isHit =
-                    type in listOf(
-                        ScoringEventType.SINGLE,
-                        ScoringEventType.DOUBLE,
-                        ScoringEventType.TRIPLE,
-                        ScoringEventType.HOME_RUN,
-                    )
-                val isOut =
-                    type in listOf(
-                        ScoringEventType.GROUNDOUT,
-                        ScoringEventType.FLYOUT,
-                        ScoringEventType.LINE_OUT,
-                        ScoringEventType.POP_OUT,
-                    )
-                if (isHit || isOut) {
-                    renderStep2(type, label, isHit)
-                } else {
-                    triggerScoringEvent(type)
-                }
+                if (isHit || isOut) renderStep2(type, label, isHit) else triggerScoringEvent(type)
             }
         }
     }
@@ -393,11 +186,8 @@ class GameScoringController(
     private fun DIV.renderPlateResultsSection() {
         div {
             css {
-                fontSize = 0.8.rem
-                fontWeight = FontWeight.bold
-                color = Color("var(--accent-green)")
-                marginTop = 1.rem
-                marginBottom = 0.5.rem
+                fontSize = 0.8.rem; fontWeight = FontWeight.bold; color = Color("var(--accent-green)")
+                marginTop = 1.rem; marginBottom = 0.5.rem
                 borderTop = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.08)"))
                 paddingTop = 1.rem
             }
@@ -405,60 +195,14 @@ class GameScoringController(
         }
         div(classes = "action-grid") {
             listOf(
-                ScoringEventType.SINGLE to "Single (1B)",
-                ScoringEventType.DOUBLE to "Double (2B)",
-                ScoringEventType.TRIPLE to "Triple (3B)",
-                ScoringEventType.HOME_RUN to "Home Run (HR)",
-                ScoringEventType.WALK to "Walk (BB)",
-                ScoringEventType.HIT_BY_PITCH to "HBP",
-                ScoringEventType.STRIKEOUT to "Strikeout (K)",
-                ScoringEventType.GROUNDOUT to "Groundout",
-                ScoringEventType.FLYOUT to "Flyout",
-                ScoringEventType.LINE_OUT to "Line Out",
-                ScoringEventType.POP_OUT to "Pop Out",
-                ScoringEventType.SACRIFICE_FLY to "Sac Fly",
-                ScoringEventType.ERROR to "Reached on Error",
-                ScoringEventType.FIELDER_CHOICE to "Fielder's Choice",
-            ).forEach { (type, label) ->
-                renderPlateResultsButton(type, label)
-            }
-        }
-    }
-
-    private fun DIV.renderBaseRunningEventsSection() {
-        div {
-            css {
-                fontSize = 0.8.rem
-                fontWeight = FontWeight.bold
-                color = Color("var(--accent-green)")
-                marginTop = 1.5.rem
-                marginBottom = 0.5.rem
-                borderTop = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.08)"))
-                paddingTop = 1.25.rem
-            }
-            +"BASE RUNNING EVENTS"
-        }
-        div(classes = "action-grid") {
-            css {
-                put("grid-template-columns", "repeat(2, 1fr)")
-                gap = 0.5.rem
-            }
-            listOf(
-                ScoringEventType.STOLEN_BASE to "Stolen Base",
-                ScoringEventType.CAUGHT_STEALING to "Caught Stealing",
-                ScoringEventType.PICKED_OFF to "Picked Off",
-                ScoringEventType.WILD_PITCH to "WP / PB / Balk",
-            ).forEach { (type, label) ->
-                button(classes = "btn btn-secondary btn-action") {
-                    +label
-                    css {
-                        padding = Padding(0.5.rem)
-                    }
-                    onClickFunction = {
-                        renderBaseRunningStep2(type, label)
-                    }
-                }
-            }
+                ScoringEventType.SINGLE to "Single (1B)", ScoringEventType.DOUBLE to "Double (2B)",
+                ScoringEventType.TRIPLE to "Triple (3B)", ScoringEventType.HOME_RUN to "Home Run (HR)",
+                ScoringEventType.WALK to "Walk (BB)", ScoringEventType.HIT_BY_PITCH to "HBP",
+                ScoringEventType.STRIKEOUT to "Strikeout (K)", ScoringEventType.GROUNDOUT to "Groundout",
+                ScoringEventType.FLYOUT to "Flyout", ScoringEventType.LINE_OUT to "Line Out",
+                ScoringEventType.POP_OUT to "Pop Out", ScoringEventType.SACRIFICE_FLY to "Sac Fly",
+                ScoringEventType.ERROR to "Reached on Error", ScoringEventType.FIELDER_CHOICE to "Fielder's Choice",
+            ).forEach { (type, label) -> renderPlateResultsButton(type, label) }
         }
     }
 }
