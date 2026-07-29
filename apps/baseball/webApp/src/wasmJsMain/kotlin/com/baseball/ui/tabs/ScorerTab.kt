@@ -125,7 +125,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                 return@launch
             }
             renderLiveScorerMainView(container, game, events, boxScore, homeRoster, awayRoster)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             renderScorerErrorCard(container, e.message)
         }
     }

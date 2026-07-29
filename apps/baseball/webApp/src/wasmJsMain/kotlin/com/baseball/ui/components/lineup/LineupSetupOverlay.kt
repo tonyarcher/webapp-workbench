@@ -618,7 +618,7 @@ class LineupSetupOverlay(
                 isLineupDialogOpen = false
                 AppViewManager.renderApp()
                 renderCurrentTab()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 println("Error starting online game: ${e.message}")
             }
         }

@@ -169,7 +169,7 @@ private suspend fun executeLogin(email: String, pass: String, banner: HTMLDivEle
         } else {
             showError(banner, "Invalid email or password.")
         }
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
         showError(banner, parseAuthException(e))
     }
 }
@@ -321,7 +321,7 @@ private suspend fun executeRegister(first: String, last: String, email: String, 
         } else {
             showError(banner, "Registration succeeded, but login failed.")
         }
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
         showError(banner, parseRegisterException(e))
     }
 }
