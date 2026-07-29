@@ -14,6 +14,14 @@ import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
 import org.w3c.dom.events.Event
 
+private data class PlayerFormInputs(
+    val name: HTMLInputElement,
+    val position: HTMLSelectElement,
+    val number: HTMLInputElement,
+    val battingHand: HTMLSelectElement,
+    val throwingHand: HTMLSelectElement,
+)
+
 internal fun renderRosterContent(divElement: HTMLDivElement, roster: List<Player>) {
     if (roster.isEmpty()) {
         divElement.append {
@@ -122,12 +130,7 @@ private fun DIV.renderAddPlayerForm(onPlayerAdded: () -> Unit) {
             type = ButtonType.button
             +"Add Player"
             onClickFunction = {
-                val nameIn = kotlinx.browser.document.getElementById("player-name-input") as? HTMLInputElement
-                val posIn = kotlinx.browser.document.getElementById("player-pos-select") as? HTMLSelectElement
-                val numIn = kotlinx.browser.document.getElementById("player-num-input") as? HTMLInputElement
-                val batIn = kotlinx.browser.document.getElementById("player-bat-select") as? HTMLSelectElement
-                val thrIn = kotlinx.browser.document.getElementById("player-throw-select") as? HTMLSelectElement
-                handleAddPlayerSubmit(nameIn, posIn, numIn, batIn, thrIn, onPlayerAdded)
+                readPlayerFormInputs()?.let { handleAddPlayerSubmit(it, onPlayerAdded) }
             }
         }
     }
@@ -163,35 +166,36 @@ private fun FORM.renderBattingThrowingSelects() {
     }
 }
 
+private fun readPlayerFormInputs(): PlayerFormInputs? {
+    val document = kotlinx.browser.document
+    return PlayerFormInputs(
+        name = document.getElementById("player-name-input") as? HTMLInputElement ?: return null,
+        position = document.getElementById("player-pos-select") as? HTMLSelectElement ?: return null,
+        number = document.getElementById("player-num-input") as? HTMLInputElement ?: return null,
+        battingHand = document.getElementById("player-bat-select") as? HTMLSelectElement ?: return null,
+        throwingHand = document.getElementById("player-throw-select") as? HTMLSelectElement ?: return null,
+    )
+}
+
 private fun handleAddPlayerSubmit(
-    nameIn: HTMLInputElement?,
-    posIn: HTMLSelectElement?,
-    numIn: HTMLInputElement?,
-    batIn: HTMLSelectElement?,
-    thrIn: HTMLSelectElement?,
+    inputs: PlayerFormInputs,
     onPlayerAdded: () -> Unit,
 ) {
-    if (nameIn != null && posIn != null && numIn != null && batIn != null && thrIn != null) {
-        val name = nameIn.value.trim()
-        val pos = posIn.value
-        val num = numIn.value.toIntOrNull() ?: 0
-        val bat = batIn.value
-        val thr = thrIn.value
-        if (name.isNotEmpty()) {
-            uiScope.launch {
-                api.createPlayer(
-                    Player(
-                        teamId = selectedTeamId,
-                        name = name,
-                        position = pos,
-                        jerseyNumber = num,
-                        battingHand = bat,
-                        throwingHand = thr,
-                    ),
-                )
-                nameIn.value = ""
-                onPlayerAdded()
-            }
-        }
+    val name = inputs.name.value.trim()
+    if (name.isEmpty()) return
+
+    uiScope.launch {
+        api.createPlayer(
+            Player(
+                teamId = selectedTeamId,
+                name = name,
+                position = inputs.position.value,
+                jerseyNumber = inputs.number.value.toIntOrNull() ?: 0,
+                battingHand = inputs.battingHand.value,
+                throwingHand = inputs.throwingHand.value,
+            ),
+        )
+        inputs.name.value = ""
+        onPlayerAdded()
     }
 }
