@@ -238,7 +238,6 @@ class ScorecardParser(
         }
 }
 
-@Suppress("ComplexMethod", "LongMethod", "NestedBlockDepth", "CognitiveComplexMethod", "CyclomaticComplexMethod")
 internal fun getScorebookNotation(ev: PlayEvent): String {
     val suffix = if (ev.description.contains("(Double Play)") || ev.description.contains("(DP)")) " DP" else ""
     return when (ev.eventType) {

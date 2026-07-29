@@ -113,7 +113,7 @@ class GameScoringService(
         val isHitByPitch: Boolean,
     )
 
-    @Suppress("UnusedParameter")
+
     private fun handleScoringEvent(
         request: ScoringEventRequest,
         batter: PlayerEntity,

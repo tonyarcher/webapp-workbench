@@ -249,7 +249,6 @@ private fun renderTeamTraditionalStats(
     renderPitchingTable(card, pitching)
 }
 
-// Removed @Suppress per Detekt rules
 private fun renderGameLogCard(contentEl: HTMLDivElement, events: List<PlayEvent>) {
     contentEl.append {
         div(classes = "card") {

@@ -167,7 +167,6 @@ private suspend fun loadScorerData(): ScorerData {
     return ScorerData(game, events, boxScore, homeRoster, awayRoster)
 }
 
-// Removed @Suppress per Detekt rules
 private fun harmonizeAwayLineup(game: Game, awayRoster: List<Player>) {
     if (localAwayLineup.isEmpty()) {
         localAwayLineup.addAll(awayRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
@@ -197,7 +196,6 @@ private fun harmonizeAwayLineup(game: Game, awayRoster: List<Player>) {
     }
 }
 
-// Removed @Suppress per Detekt rules
 private fun harmonizeHomeLineup(game: Game, homeRoster: List<Player>) {
     if (localHomeLineup.isEmpty()) {
         localHomeLineup.addAll(homeRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
@@ -290,7 +288,6 @@ private fun renderStartGameCard(container: HTMLElement, game: Game) {
     }
 }
 
-// Removed @Suppress per Detekt rules
 private fun renderLiveScorerMainView(
     container: HTMLElement,
     game: Game,
@@ -319,7 +316,6 @@ private fun renderLiveScorerMainView(
     if (isResetDialogOpen) renderResetGameOverlay(container)
 }
 
-// Removed @Suppress per Detekt rules
 private fun renderScorerHeader(container: HTMLElement, game: Game) {
     container.append {
         div {
@@ -363,7 +359,6 @@ private fun renderScorerHeader(container: HTMLElement, game: Game) {
     }
 }
 
-// Removed @Suppress per Detekt rules
 private fun renderPlayMonitoringSection(
     container: HTMLElement,
     game: Game,
@@ -443,7 +438,6 @@ private fun renderPlayMonitoringSection(
     showScorecard()
 }
 
-// Removed @Suppress per Detekt rules
 private fun isPlayEventInningEnded(ev: PlayEvent, nextEv: PlayEvent?): Boolean {
     if (nextEv != null) return nextEv.half != ev.half || nextEv.inning != ev.inning
     val isDp = ev.description.contains(BaseballConstants.DESC_DOUBLE_PLAY) ||
@@ -552,7 +546,6 @@ private fun renderEventLogContent(
     }
 }
 
-// Removed @Suppress per Detekt rules
 private fun renderResetGameOverlay(container: HTMLElement) {
     container.append {
         div {
