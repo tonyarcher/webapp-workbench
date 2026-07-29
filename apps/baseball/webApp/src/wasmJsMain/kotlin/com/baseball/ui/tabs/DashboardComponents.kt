@@ -82,9 +82,6 @@ import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
 
-internal class SeasonSelectorControls(
-    val selectSeasonEl: HTMLSelectElement?,
-)
 
 internal fun renderSeasonSelectorCard(container: HTMLElement): SeasonSelectorControls {
     var selectS: HTMLSelectElement? = null
