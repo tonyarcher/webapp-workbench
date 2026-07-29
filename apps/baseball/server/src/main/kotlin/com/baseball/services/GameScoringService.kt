@@ -41,20 +41,28 @@ class GameScoringService(
 ) {
     @Autowired
     lateinit var teamRepository: TeamRepository
+
     @Autowired
     lateinit var playEventRepository: PlayEventRepository
+
     @Autowired
     lateinit var battingRepository: PlayerGameBattingStatsRepository
+
     @Autowired
     lateinit var pitchingRepository: PlayerGamePitchingStatsRepository
+
     @Autowired
     lateinit var seasonRepository: SeasonRepository
+
     @Autowired
     lateinit var fieldingRepository: PlayerGameFieldingStatsRepository
+
     @Autowired
     lateinit var boxScoreService: BoxScoreService
+
     @Autowired
     lateinit var standingsService: StandingsService
+
     @Autowired
     lateinit var seasonStatsService: SeasonStatsService
 
@@ -75,9 +83,23 @@ class GameScoringService(
         this.pitchingRepository = pitchingRepository
         this.seasonRepository = seasonRepository
         this.fieldingRepository = fieldingRepository
-        this.boxScoreService = BoxScoreService(gameRepository, teamRepository, playerRepository, gameInningRepository, battingRepository, pitchingRepository)
+        this.boxScoreService = BoxScoreService(
+            gameRepository,
+            teamRepository,
+            playerRepository,
+            gameInningRepository,
+            battingRepository,
+            pitchingRepository
+        )
         this.standingsService = StandingsService()
-        this.seasonStatsService = SeasonStatsService(seasonRepository, gameRepository, playerRepository, battingRepository, pitchingRepository, fieldingRepository)
+        this.seasonStatsService = SeasonStatsService(
+            seasonRepository,
+            gameRepository,
+            playerRepository,
+            battingRepository,
+            pitchingRepository,
+            fieldingRepository
+        )
     }
 
     @Transactional
@@ -115,6 +137,7 @@ class GameScoringService(
                     eventType = ScoringEventType.WALK
                 }
             }
+
             ScoringEventType.STRIKE -> {
                 game.strikes += 1
                 description = if (description.isEmpty()) "Strike to ${batter.name}" else description
@@ -125,32 +148,37 @@ class GameScoringService(
                     eventType = ScoringEventType.STRIKEOUT
                 }
             }
+
             ScoringEventType.FOUL -> {
                 if (game.strikes < 2) {
                     game.strikes += 1
                 }
                 description = if (description.isEmpty()) "Foul by ${batter.name}" else description
             }
+
             ScoringEventType.HIT_BY_PITCH -> {
                 isHitByPitch = true
                 description = "Hit by pitch"
             }
+
             ScoringEventType.WALK -> {
                 isWalk = true
                 description = "Walk"
             }
+
             ScoringEventType.SINGLE -> basesMoved = 1
             ScoringEventType.DOUBLE -> basesMoved = 2
             ScoringEventType.TRIPLE -> basesMoved = 3
             ScoringEventType.HOME_RUN -> basesMoved = 4
-            ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.STRIKEOUT -> outsAdded = 1
+            ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT, ScoringEventType.STRIKEOUT -> outsAdded =
+                1
+
             else -> {
                 // No special handling for other event types
             }
         }
         return ScoringOutcome(eventType, description, outsAdded, basesMoved, isWalk, isHitByPitch)
     }
-
 
 
     fun recordPlayEvent(
@@ -164,8 +192,10 @@ class GameScoringService(
             game.status = GameStatus.IN_PROGRESS
         }
 
-        val batter = playerRepository.findById(request.batterId).orElseThrow { IllegalArgumentException("Batter not found: ${request.batterId}") }
-        val pitcher = playerRepository.findById(request.pitcherId).orElseThrow { IllegalArgumentException("Pitcher not found: ${request.pitcherId}") }
+        val batter = playerRepository.findById(request.batterId)
+            .orElseThrow { IllegalArgumentException("Batter not found: ${request.batterId}") }
+        val pitcher = playerRepository.findById(request.pitcherId)
+            .orElseThrow { IllegalArgumentException("Pitcher not found: ${request.pitcherId}") }
 
         game.currentBatterId = batter.id
         game.currentPitcherId = pitcher.id
@@ -234,6 +264,7 @@ class GameScoringService(
                     pitcherStats.hitsAllowed += 1
                     incrementTeamHits(game)
                 }
+
                 ScoringEventType.DOUBLE -> {
                     batterStats.hits += 1
                     batterStats.doubles += 1
@@ -241,6 +272,7 @@ class GameScoringService(
                     pitcherStats.hitsAllowed += 1
                     incrementTeamHits(game)
                 }
+
                 ScoringEventType.TRIPLE -> {
                     batterStats.hits += 1
                     batterStats.triples += 1
@@ -248,6 +280,7 @@ class GameScoringService(
                     pitcherStats.hitsAllowed += 1
                     incrementTeamHits(game)
                 }
+
                 ScoringEventType.HOME_RUN -> {
                     batterStats.hits += 1
                     batterStats.homeRuns += 1
@@ -257,18 +290,22 @@ class GameScoringService(
                     pitcherStats.homeRunsAllowed += 1
                     incrementTeamHits(game)
                 }
+
                 ScoringEventType.WALK -> {
                     batterStats.walks += 1
                     pitcherStats.walksAllowed += 1
                 }
+
                 ScoringEventType.HIT_BY_PITCH -> {
                     batterStats.hitByPitch += 1
                 }
+
                 ScoringEventType.STRIKEOUT -> {
                     batterStats.strikeOuts += 1
                     batterStats.atBats += 1
                     pitcherStats.strikeoutsRecorded += 1
                 }
+
                 ScoringEventType.GROUNDOUT,
                 ScoringEventType.FLYOUT,
                 ScoringEventType.LINE_OUT,
@@ -276,13 +313,16 @@ class GameScoringService(
                 ScoringEventType.FIELDER_CHOICE -> {
                     batterStats.atBats += 1
                 }
+
                 ScoringEventType.ERROR -> {
                     batterStats.atBats += 1
                     incrementTeamErrors(game)
                 }
+
                 ScoringEventType.SACRIFICE_FLY -> {
                     // No at‑bat, but could lead to RBI
                 }
+
                 else -> {
                     // Stolen Base, Caught Stealing, Picked Off, etc.
                 }
@@ -294,6 +334,7 @@ class GameScoringService(
                         incrementFieldingStats(gameId, catcherId, putouts = 1)
                     }
                 }
+
                 ScoringEventType.GROUNDOUT -> {
                     getFielderIdByPosition(game, game.half, "1B")?.let { firstBaseId ->
                         incrementFieldingStats(gameId, firstBaseId, putouts = 1)
@@ -302,6 +343,7 @@ class GameScoringService(
                         incrementFieldingStats(gameId, infielderId, assists = 1)
                     }
                 }
+
                 ScoringEventType.FLYOUT,
                 ScoringEventType.LINE_OUT,
                 ScoringEventType.POP_OUT,
@@ -311,12 +353,14 @@ class GameScoringService(
                         incrementFieldingStats(gameId, fielderId, putouts = 1)
                     }
                 }
+
                 ScoringEventType.ERROR -> {
                     val defenders = listOf("LF", "CF", "RF", "SS", "2B", "3B", "1B", "P", "C")
                     getFielderIdByPosition(game, game.half, defenders.random())?.let { fielderId ->
                         incrementFieldingStats(gameId, fielderId, errors = 1)
                     }
                 }
+
                 else -> {}
             }
 
@@ -404,6 +448,7 @@ class GameScoringService(
                                 game.runnerSecondId = runner1
                                 game.runnerFirstId = batter.id
                             }
+
                             2 -> {
                                 if (runner3 != null) runsScoredList.add(runner3)
                                 if (runner2 != null) runsScoredList.add(runner2)
@@ -411,6 +456,7 @@ class GameScoringService(
                                 game.runnerSecondId = batter.id
                                 game.runnerFirstId = null
                             }
+
                             3 -> {
                                 if (runner3 != null) runsScoredList.add(runner3)
                                 if (runner2 != null) runsScoredList.add(runner2)
@@ -419,6 +465,7 @@ class GameScoringService(
                                 game.runnerSecondId = null
                                 game.runnerFirstId = null
                             }
+
                             4 -> {
                                 if (runner3 != null) runsScoredList.add(runner3)
                                 if (runner2 != null) runsScoredList.add(runner2)

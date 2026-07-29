@@ -68,10 +68,12 @@ class TeamEntity(
 @Entity
 @Table(name = "players")
 class PlayerEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
     var teamId: Long? = null
     var name: String = ""
+
     @Column(name = "player_position")
     var position: String = ""
     var jerseyNumber: Int = 0
@@ -112,13 +114,16 @@ class PlayerEntity {
 @Entity
 @Table(name = "games")
 class GameEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
     var seasonId: Long = 0L
     var homeTeamId: Long = 0L
     var awayTeamId: Long = 0L
+
     @Column(name = "game_date")
     var date: String = ""
+
     @Enumerated(EnumType.STRING)
     var status: GameStatus = GameStatus.SCHEDULED
     var homeScore: Int = 0
@@ -128,6 +133,7 @@ class GameEntity {
     var homeErrors: Int = 0
     var awayErrors: Int = 0
     var inning: Int = 1
+
     @Enumerated(EnumType.STRING)
     var half: HalfInning = HalfInning.TOP
     var outs: Int = 0
@@ -189,10 +195,12 @@ class GameInningEntity(
 @Entity
 @Table(name = "play_events")
 class PlayEventEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
     var gameId: Long = 0L
     var inning: Int = 1
+
     @Enumerated(EnumType.STRING)
     var half: HalfInning = HalfInning.TOP
     var outsBefore: Int = 0
@@ -201,10 +209,12 @@ class PlayEventEntity {
     var strikes: Int = 0
     var batterName: String = ""
     var pitcherName: String = ""
+
     @Enumerated(EnumType.STRING)
     var eventType: ScoringEventType = ScoringEventType.SINGLE
     var description: String = ""
     var runsScoredOnPlay: Int = 0
+
     @Column(name = "event_timestamp")
     var timestamp: String = ""
 
@@ -237,7 +247,8 @@ class PlayEventEntity {
 @Entity
 @Table(name = "player_game_batting_stats")
 class PlayerGameBattingStatsEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
     var gameId: Long = 0L
     var playerId: Long = 0L
@@ -284,7 +295,8 @@ class PlayerGameBattingStatsEntity {
 @Entity
 @Table(name = "player_game_pitching_stats")
 class PlayerGamePitchingStatsEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
     var gameId: Long = 0L
     var playerId: Long = 0L
@@ -342,7 +354,8 @@ class UserEntity(
 @Entity
 @Table(name = "player_game_fielding_stats")
 class PlayerGameFieldingStatsEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
     var gameId: Long = 0L
     var playerId: Long = 0L

@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui.components.scoring
 
 import com.baseball.BaseballConstants
@@ -362,6 +360,7 @@ class GameScoringController(
                 ScoringEventType.DOUBLE,
                 ScoringEventType.TRIPLE,
                 ScoringEventType.HOME_RUN -> "btn btn-action"
+
                 else -> "btn btn-secondary btn-action"
 
             }

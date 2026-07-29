@@ -1,5 +1,3 @@
-
-
 package com.baseball
 
 import com.baseball.api.BaseballApi

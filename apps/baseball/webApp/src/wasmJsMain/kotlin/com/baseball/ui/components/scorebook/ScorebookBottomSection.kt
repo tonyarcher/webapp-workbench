@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui.components.scorebook
 
 import com.baseball.BaseballConstants
@@ -537,6 +535,7 @@ private fun determineWpName(
             } else {
                 (localAwayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
             }
+
         game.homeScore > game.awayScore -> localHomeActivePitcherName
         game.awayScore > game.homeScore -> localAwayActivePitcherName
         else -> "-"
@@ -557,6 +556,7 @@ private fun determineLpName(
             } else {
                 (localAwayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
             }
+
         game.homeScore < game.awayScore -> localHomeActivePitcherName
         game.awayScore < game.homeScore -> localAwayActivePitcherName
         else -> "-"
@@ -603,10 +603,10 @@ private fun DIV.renderPitcherRecords(
             flexDirection = FlexDirection.column
             gap = 0.5.rem
             borderTop = Border(
-    1.px,
-    BorderStyle.solid,
-    Color("#5a544a")
-)
+                1.px,
+                BorderStyle.solid,
+                Color("#5a544a")
+            )
             paddingTop = 0.75.rem
             fontSize = 0.8.rem
         }

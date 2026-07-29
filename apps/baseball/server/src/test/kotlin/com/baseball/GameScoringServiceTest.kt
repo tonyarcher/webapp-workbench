@@ -173,7 +173,8 @@ class GameScoringServiceTest {
 
         `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
 
-        val updatedGame = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.BALL, batterId, pitcherId))
+        val updatedGame =
+            scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.BALL, batterId, pitcherId))
         assertEquals(0, updatedGame.gameState.balls)
         assertEquals(batterId, updatedGame.gameState.runnerFirstId)
     }
@@ -203,15 +204,18 @@ class GameScoringServiceTest {
         `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
 
         // Foul first (strikes should become 2)
-        var updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.FOUL, batterId, pitcherId))
+        var updated =
+            scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.FOUL, batterId, pitcherId))
         assertEquals(2, updated.gameState.strikes)
 
         // Another foul (strikes should stay 2)
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.FOUL, batterId, pitcherId))
+        updated =
+            scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.FOUL, batterId, pitcherId))
         assertEquals(2, updated.gameState.strikes)
 
         // Strike 3
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.STRIKE, batterId, pitcherId))
+        updated =
+            scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.STRIKE, batterId, pitcherId))
         assertEquals(0, updated.gameState.strikes)
         assertEquals(1, updated.gameState.outs)
     }
@@ -236,19 +240,31 @@ class GameScoringServiceTest {
         `when`(gameRepository.findById(gameId)).thenReturn(Optional.of(gameEntity))
         `when`(playerRepository.findById(batterId)).thenReturn(Optional.of(batter))
         `when`(playerRepository.findById(pitcherId)).thenReturn(Optional.of(pitcher))
-        `when`(playerRepository.findById(4L)).thenReturn(Optional.of(PlayerEntity(id = 4L, name = "Runner", teamId = 200L)))
+        `when`(playerRepository.findById(4L)).thenReturn(
+            Optional.of(
+                PlayerEntity(
+                    id = 4L,
+                    name = "Runner",
+                    teamId = 200L
+                )
+            )
+        )
         `when`(teamRepository.findById(100L)).thenReturn(Optional.of(TeamEntity(100L, "Cards", "STL", "St. Louis")))
         `when`(teamRepository.findById(200L)).thenReturn(Optional.of(TeamEntity(200L, "Cubs", "CHC", "Chicago")))
         `when`(gameRepository.save(any(GameEntity::class.java))).thenAnswer { it.getArgument(0) }
         `when`(gameInningRepository.findByGameIdAndInning(anyLong(), anyInt())).thenReturn(GameInningEntity(1, 0, 0))
 
         // Sac Fly
-        var updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.SACRIFICE_FLY, batterId, pitcherId))
+        var updated = scoringService.recordPlayEvent(
+            gameId,
+            ScoringEventRequest(ScoringEventType.SACRIFICE_FLY, batterId, pitcherId)
+        )
         assertNull(updated.gameState.runnerThirdId)
         assertEquals(1, updated.awayScore)
 
         // Reached on Error
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.ERROR, batterId, pitcherId))
+        updated =
+            scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.ERROR, batterId, pitcherId))
         assertEquals(1, gameEntity.homeErrors)
     }
 
@@ -457,7 +473,15 @@ class GameScoringServiceTest {
 
         `when`(playerRepository.findById(batterId)).thenReturn(Optional.of(batter))
         `when`(playerRepository.findById(pitcherId)).thenReturn(Optional.of(pitcher))
-        `when`(playerRepository.findById(4L)).thenReturn(Optional.of(PlayerEntity(id = 4L, name = "Runner", teamId = 200L)))
+        `when`(playerRepository.findById(4L)).thenReturn(
+            Optional.of(
+                PlayerEntity(
+                    id = 4L,
+                    name = "Runner",
+                    teamId = 200L
+                )
+            )
+        )
         `when`(playerRepository.findById(50L)).thenReturn(Optional.of(ss))
         `when`(playerRepository.findById(51L)).thenReturn(Optional.of(c))
         `when`(fieldingRepository.save(any(PlayerGameFieldingStatsEntity::class.java))).thenAnswer { it.getArgument(0) }
@@ -472,19 +496,25 @@ class GameScoringServiceTest {
         `when`(gameInningRepository.save(any(GameInningEntity::class.java))).thenAnswer { it.getArgument(0) }
 
         // TRIPLE
-        var updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.TRIPLE, batterId, pitcherId))
+        var updated =
+            scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.TRIPLE, batterId, pitcherId))
         assertEquals(batterId, updated.gameState.runnerThirdId)
 
         // HOME RUN
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.HOME_RUN, batterId, pitcherId))
+        updated =
+            scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.HOME_RUN, batterId, pitcherId))
         assertNull(updated.gameState.runnerThirdId)
 
         // HIT_BY_PITCH
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.HIT_BY_PITCH, batterId, pitcherId))
+        updated = scoringService.recordPlayEvent(
+            gameId,
+            ScoringEventRequest(ScoringEventType.HIT_BY_PITCH, batterId, pitcherId)
+        )
         assertEquals(batterId, updated.gameState.runnerFirstId)
 
         // BALK
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.BALK, batterId, pitcherId))
+        updated =
+            scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.BALK, batterId, pitcherId))
 
         // STOLEN_BASE
         val mapSB = mapOf("4" to 2)
@@ -512,22 +542,40 @@ class GameScoringServiceTest {
 
         // WILD_PITCH
         val mapWP = mapOf("4" to 2)
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.WILD_PITCH, batterId, pitcherId, runnerAdvanceMap = mapWP))
+        updated = scoringService.recordPlayEvent(
+            gameId,
+            ScoringEventRequest(ScoringEventType.WILD_PITCH, batterId, pitcherId, runnerAdvanceMap = mapWP)
+        )
 
         // PASSED_BALL
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.PASSED_BALL, batterId, pitcherId, runnerAdvanceMap = mapWP))
+        updated = scoringService.recordPlayEvent(
+            gameId,
+            ScoringEventRequest(ScoringEventType.PASSED_BALL, batterId, pitcherId, runnerAdvanceMap = mapWP)
+        )
 
         // ERROR
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.ERROR, batterId, pitcherId, isError = true))
+        updated = scoringService.recordPlayEvent(
+            gameId,
+            ScoringEventRequest(ScoringEventType.ERROR, batterId, pitcherId, isError = true)
+        )
 
         // SACRIFICE_FLY
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.SACRIFICE_FLY, batterId, pitcherId))
+        updated = scoringService.recordPlayEvent(
+            gameId,
+            ScoringEventRequest(ScoringEventType.SACRIFICE_FLY, batterId, pitcherId)
+        )
 
         // FIELDER_CHOICE
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.FIELDER_CHOICE, batterId, pitcherId))
+        updated = scoringService.recordPlayEvent(
+            gameId,
+            ScoringEventRequest(ScoringEventType.FIELDER_CHOICE, batterId, pitcherId)
+        )
 
         // DOUBLE PLAY
-        updated = scoringService.recordPlayEvent(gameId, ScoringEventRequest(ScoringEventType.GROUNDOUT, batterId, pitcherId, isDoublePlay = true))
+        updated = scoringService.recordPlayEvent(
+            gameId,
+            ScoringEventRequest(ScoringEventType.GROUNDOUT, batterId, pitcherId, isDoublePlay = true)
+        )
     }
 
     @Test
@@ -591,9 +639,6 @@ class GameScoringServiceTest {
     }
 
 
-
-
-
     @Test
     fun testResetGame() {
         val gameId = 1L
@@ -621,10 +666,18 @@ class GameScoringServiceTest {
         val player = PlayerEntity(id = 10L, name = "Yogi", jerseyNumber = 8, position = "C", teamId = 100L)
         `when`(playerRepository.findAll()).thenReturn(listOf(player))
 
-        val batting = PlayerGameBattingStatsEntity(id = 1L, gameId = 101L, playerId = 10L, teamId = 100L, atBats = 4, hits = 2)
+        val batting =
+            PlayerGameBattingStatsEntity(id = 1L, gameId = 101L, playerId = 10L, teamId = 100L, atBats = 4, hits = 2)
         `when`(battingRepository.findAllByGameIdIn(listOf(101L))).thenReturn(listOf(batting))
 
-        val pitching = PlayerGamePitchingStatsEntity(id = 2L, gameId = 101L, playerId = 10L, teamId = 100L, inningsPitchedThirds = 3, strikeoutsRecorded = 2)
+        val pitching = PlayerGamePitchingStatsEntity(
+            id = 2L,
+            gameId = 101L,
+            playerId = 10L,
+            teamId = 100L,
+            inningsPitchedThirds = 3,
+            strikeoutsRecorded = 2
+        )
         `when`(pitchingRepository.findAllByGameIdIn(listOf(101L))).thenReturn(listOf(pitching))
 
         val fielding = PlayerGameFieldingStatsEntity().apply {

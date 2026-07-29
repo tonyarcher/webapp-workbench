@@ -1,5 +1,3 @@
-
-
 package com.baseball
 
 // UI & Code Layout specific styling/DOM constants

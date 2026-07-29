@@ -1,5 +1,3 @@
-
-
 package com.baseball
 
 // Baseball game rules, metrics, network statuses and navigation tabs constants

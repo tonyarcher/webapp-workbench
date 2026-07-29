@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui.components.scoring
 
 import com.baseball.models.ScoringEventType
@@ -188,13 +186,16 @@ class ScorerBaseRunningStep2Panel(
             when (runnerId) {
                 controller.game.gameState.runnerFirstId
                     ?.toString(),
-                -> 1
+                    -> 1
+
                 controller.game.gameState.runnerSecondId
                     ?.toString(),
-                -> 2
+                    -> 2
+
                 controller.game.gameState.runnerThirdId
                     ?.toString(),
-                -> 3
+                    -> 3
+
                 else -> 0
             }
         val otherRunners =

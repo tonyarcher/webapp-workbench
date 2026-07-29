@@ -1,5 +1,3 @@
-
-
 package com.baseball.auth
 
 import com.baseball.BaseballConstants
@@ -28,7 +26,6 @@ object AuthManager : AuthService {
         api.register(request)
     }
 
-    @Suppress("TooGenericExceptionCaught")
     override suspend fun login(
         email: String,
         passwordHash: String,
@@ -48,7 +45,6 @@ object AuthManager : AuthService {
             saveSession(session)
             return session
         } catch (e: Exception) {
-            @Suppress("TooGenericExceptionCaught")
             val msg = e.message ?: ""
             if (msg.contains(BaseballConstants.STATUS_CONNECT, ignoreCase = true) ||
                 msg.contains(BaseballConstants.STATUS_REFUSED, ignoreCase = true) ||

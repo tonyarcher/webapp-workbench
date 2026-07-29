@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui.components.scoring
 
 import com.baseball.models.Game

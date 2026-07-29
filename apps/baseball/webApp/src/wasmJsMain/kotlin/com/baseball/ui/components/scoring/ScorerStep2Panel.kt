@@ -63,6 +63,7 @@ class ScorerStep2Panel(
             ScoringEventType.HIT_BY_PITCH,
             ScoringEventType.ERROR,
             ScoringEventType.FIELDER_CHOICE -> 1
+
             ScoringEventType.DOUBLE -> 2
             ScoringEventType.TRIPLE -> 3
             ScoringEventType.HOME_RUN -> 4
@@ -218,9 +219,9 @@ class ScorerStep2Panel(
             val runnersList =
                 if (hasError) {
                     activeRunners + (
-                        controller.game.gameState.currentBatterId!! to
-                            "Batter: ${controller.game.gameState.currentBatterName}"
-                    )
+                            controller.game.gameState.currentBatterId!! to
+                                    "Batter: ${controller.game.gameState.currentBatterName}"
+                            )
                 } else {
                     activeRunners
                 }
@@ -357,8 +358,8 @@ class ScorerStep2Panel(
     private fun DIV.renderThrowSequenceSection(parent: DIV) {
         val showThrowBuilder =
             eventType in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FIELDER_CHOICE) ||
-                hasDoublePlay ||
-                runnerAdvances.values.contains(0)
+                    hasDoublePlay ||
+                    runnerAdvances.values.contains(0)
         if (!showThrowBuilder) return
 
         parent.div {
@@ -458,13 +459,13 @@ class ScorerStep2Panel(
                     }
                     onClickFunction = {
                         val detail = "Home Run (Over the Fence)" + if (hasError) " (with Error)" else ""
-                                            controller.triggerScoringEvent(
-                        eventType,
-                        detail,
-                        false,
-                        hasError,
-                        runnerAdvances.takeIf { it.isNotEmpty() }
-                    )
+                        controller.triggerScoringEvent(
+                            eventType,
+                            detail,
+                            false,
+                            hasError,
+                            runnerAdvances.takeIf { it.isNotEmpty() }
+                        )
                     }
                 }
             }
@@ -533,8 +534,8 @@ class ScorerStep2Panel(
                     if (runnerAdvances.values.contains(0)) {
                         append(
                             "$baseLabel" +
-                            (if (loc != null) " to $loc" else "") +
-                            " (Runner Out: $seqStr)"
+                                    (if (loc != null) " to $loc" else "") +
+                                    " (Runner Out: $seqStr)"
                         )
                     } else {
                         append("$baseLabel: $seqStr")

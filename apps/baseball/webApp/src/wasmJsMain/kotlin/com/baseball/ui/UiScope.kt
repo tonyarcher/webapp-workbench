@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui
 
 import kotlinx.coroutines.CoroutineScope

@@ -177,7 +177,16 @@ class ControllersTest {
         verify(repo, times(1)).deleteById(1L)
 
         // getRoster
-        `when`(playerRepo.findAllByTeamId(1L)).thenReturn(listOf(PlayerEntity(id = 5L, name = "Suzuki", position = "RF", teamId = 1L)))
+        `when`(playerRepo.findAllByTeamId(1L)).thenReturn(
+            listOf(
+                PlayerEntity(
+                    id = 5L,
+                    name = "Suzuki",
+                    position = "RF",
+                    teamId = 1L
+                )
+            )
+        )
         val roster = controller.getRoster(1L)
         assertEquals(1, roster.size)
         assertEquals("Suzuki", roster[0].name)
@@ -296,7 +305,12 @@ class ControllersTest {
         assertThrows(NoSuchElementException::class.java) { leagueController.getOne(99L) }
 
         val seasonRepo = mock(SeasonRepository::class.java)
-        val seasonController = SeasonController(seasonRepo, mock(GameRepository::class.java), mock(TeamRepository::class.java), mock(GameScoringService::class.java))
+        val seasonController = SeasonController(
+            seasonRepo,
+            mock(GameRepository::class.java),
+            mock(TeamRepository::class.java),
+            mock(GameScoringService::class.java)
+        )
         `when`(seasonRepo.findAllByLeagueId(99L)).thenReturn(emptyList())
         assertEquals(emptyList<Season>(), seasonController.getByLeague(99L))
 
@@ -312,7 +326,8 @@ class ControllersTest {
         assertThrows(NoSuchElementException::class.java) { playerController.getOne(99L) }
 
         val gameRepo = mock(GameRepository::class.java)
-        val gameController = GameController(gameRepo, mock(GameScoringService::class.java), mock(PlayEventRepository::class.java))
+        val gameController =
+            GameController(gameRepo, mock(GameScoringService::class.java), mock(PlayEventRepository::class.java))
         `when`(gameRepo.findById(99L)).thenReturn(Optional.empty())
         assertThrows(NoSuchElementException::class.java) { gameController.startGame(99L) }
     }

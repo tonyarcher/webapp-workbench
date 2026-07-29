@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui.components.scorebook
 
 import com.baseball.BaseballConstants
@@ -326,9 +324,9 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         val batters =
                             benchList.filter {
                                 it.position != BaseballConstants.Positions.P &&
-                                    !localPlayersSubbedOut.contains(
-                                        it.id,
-                                    )
+                                        !localPlayersSubbedOut.contains(
+                                            it.id,
+                                        )
                             }
                         if (batters.isEmpty()) {
                             p { +"None available" }
@@ -343,7 +341,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         h4 { +"BULLPEN" }
                         val pitchers = fieldingBench.filter {
                             it.position == BaseballConstants.Positions.P &&
-                                it.name != activePitcherName
+                                    it.name != activePitcherName
                         }
                         if (pitchers.isEmpty()) {
                             p { +"None available" }
@@ -443,10 +441,10 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                                     +sh
                                     css {
                                         borderLeft = Border(
-    if (sh == "AB") 2.px else 1.px,
-    BorderStyle.solid,
-    Color(if (sh == "AB") "#5a544a" else "#9c9384")
-)
+                                            if (sh == "AB") 2.px else 1.px,
+                                            BorderStyle.solid,
+                                            Color(if (sh == "AB") "#5a544a" else "#9c9384")
+                                        )
                                         width = 45.px
                                         textAlign = TextAlign.center
                                     }

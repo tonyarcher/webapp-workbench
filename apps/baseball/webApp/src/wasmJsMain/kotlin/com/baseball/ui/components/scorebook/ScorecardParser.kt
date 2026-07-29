@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui.components.scorebook
 
 import com.baseball.models.PlayEvent
@@ -37,14 +35,14 @@ class ScorecardParser(
             innEvents.forEach { ev ->
                 val isOut =
                     ev.eventType in
-                        listOf(
-                            ScoringEventType.STRIKEOUT,
-                            ScoringEventType.GROUNDOUT,
-                            ScoringEventType.FLYOUT,
-                            ScoringEventType.LINE_OUT,
-                            ScoringEventType.POP_OUT,
-                            ScoringEventType.SACRIFICE_FLY,
-                        )
+                            listOf(
+                                ScoringEventType.STRIKEOUT,
+                                ScoringEventType.GROUNDOUT,
+                                ScoringEventType.FLYOUT,
+                                ScoringEventType.LINE_OUT,
+                                ScoringEventType.POP_OUT,
+                                ScoringEventType.SACRIFICE_FLY,
+                            )
 
                 var finalBase = 0
                 when (ev.eventType) {
@@ -55,15 +53,19 @@ class ScorecardParser(
                     ScoringEventType.FIELDER_CHOICE -> {
                         finalBase = 1
                     }
+
                     ScoringEventType.DOUBLE -> {
                         finalBase = 2
                     }
+
                     ScoringEventType.TRIPLE -> {
                         finalBase = 3
                     }
+
                     ScoringEventType.HOME_RUN -> {
                         finalBase = 4
                     }
+
                     else -> {}
                 }
 
@@ -128,22 +130,22 @@ class ScorecardParser(
             innEvents.forEachIndexed { evIdx, ev ->
                 val isResolving =
                     ev.eventType in
-                        listOf(
-                            ScoringEventType.SINGLE,
-                            ScoringEventType.DOUBLE,
-                            ScoringEventType.TRIPLE,
-                            ScoringEventType.HOME_RUN,
-                            ScoringEventType.WALK,
-                            ScoringEventType.HIT_BY_PITCH,
-                            ScoringEventType.STRIKEOUT,
-                            ScoringEventType.GROUNDOUT,
-                            ScoringEventType.FLYOUT,
-                            ScoringEventType.LINE_OUT,
-                            ScoringEventType.POP_OUT,
-                            ScoringEventType.ERROR,
-                            ScoringEventType.FIELDER_CHOICE,
-                            ScoringEventType.SACRIFICE_FLY,
-                        )
+                            listOf(
+                                ScoringEventType.SINGLE,
+                                ScoringEventType.DOUBLE,
+                                ScoringEventType.TRIPLE,
+                                ScoringEventType.HOME_RUN,
+                                ScoringEventType.WALK,
+                                ScoringEventType.HIT_BY_PITCH,
+                                ScoringEventType.STRIKEOUT,
+                                ScoringEventType.GROUNDOUT,
+                                ScoringEventType.FLYOUT,
+                                ScoringEventType.LINE_OUT,
+                                ScoringEventType.POP_OUT,
+                                ScoringEventType.ERROR,
+                                ScoringEventType.FIELDER_CHOICE,
+                                ScoringEventType.SACRIFICE_FLY,
+                            )
                 if (isResolving) {
                     var maxB = playAdvancements[ev] ?: 0
                     var outB: Int? = null
@@ -151,14 +153,14 @@ class ScorecardParser(
 
                     val isOut =
                         ev.eventType in
-                            listOf(
-                                ScoringEventType.STRIKEOUT,
-                                ScoringEventType.GROUNDOUT,
-                                ScoringEventType.FLYOUT,
-                                ScoringEventType.LINE_OUT,
-                                ScoringEventType.POP_OUT,
-                                ScoringEventType.SACRIFICE_FLY,
-                            )
+                                listOf(
+                                    ScoringEventType.STRIKEOUT,
+                                    ScoringEventType.GROUNDOUT,
+                                    ScoringEventType.FLYOUT,
+                                    ScoringEventType.LINE_OUT,
+                                    ScoringEventType.POP_OUT,
+                                    ScoringEventType.SACRIFICE_FLY,
+                                )
                     if (isOut) {
                         outB = 1
                         outDet = getScorebookNotation(ev)
@@ -244,18 +246,22 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
             val locNum = getHitLocationNumber(ev.description)
             if (locNum != null) "1B$locNum" else "1B"
         }
+
         ScoringEventType.DOUBLE -> {
             val locNum = getHitLocationNumber(ev.description)
             if (locNum != null) "2B$locNum" else "2B"
         }
+
         ScoringEventType.TRIPLE -> {
             val locNum = getHitLocationNumber(ev.description)
             if (locNum != null) "3B$locNum" else "3B"
         }
+
         ScoringEventType.HOME_RUN -> {
             val locNum = getHitLocationNumber(ev.description)
             if (locNum != null) "HR$locNum" else "HR"
         }
+
         ScoringEventType.WALK -> "BB"
         ScoringEventType.HIT_BY_PITCH -> "HBP"
         ScoringEventType.STRIKEOUT -> "K$suffix"
@@ -274,21 +280,25 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
                 }
             "$baseNotation$suffix"
         }
+
         ScoringEventType.FLYOUT -> {
             val matchNum = Regex("to .* \\((\\d)\\)").find(ev.description)
             val posNum = matchNum?.groupValues?.get(1) ?: "8"
             "F$posNum$suffix"
         }
+
         ScoringEventType.LINE_OUT -> {
             val matchNum = Regex("to .* \\((\\d)\\)").find(ev.description)
             val posNum = matchNum?.groupValues?.get(1) ?: "6"
             "L$posNum$suffix"
         }
+
         ScoringEventType.POP_OUT -> {
             val matchNum = Regex("to .* \\((\\d)\\)").find(ev.description)
             val posNum = matchNum?.groupValues?.get(1) ?: "4"
             "P$posNum$suffix"
         }
+
         ScoringEventType.SACRIFICE_FLY -> "SF"
         ScoringEventType.ERROR -> "E"
         ScoringEventType.FIELDER_CHOICE -> {
@@ -302,6 +312,7 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
                 }
             "$baseNotation$suffix"
         }
+
         ScoringEventType.STOLEN_BASE -> {
             if (ev.description.contains("to 3B")) {
                 "SB3"
@@ -311,14 +322,17 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
                 "SB"
             }
         }
+
         ScoringEventType.CAUGHT_STEALING -> {
             val seqMatch = Regex("Caught Stealing: .* (\\d+(?:-\\d+)*U?)\\)").find(ev.description)
             if (seqMatch != null) "CS ${seqMatch.groupValues[1]}" else "CS"
         }
+
         ScoringEventType.PICKED_OFF -> {
             val seqMatch = Regex("Picked Off: .* (\\d+(?:-\\d+)*U?)\\)").find(ev.description)
             if (seqMatch != null) "PO ${seqMatch.groupValues[1]}" else "PO"
         }
+
         ScoringEventType.WILD_PITCH -> "WP"
         ScoringEventType.PASSED_BALL -> "PB"
         ScoringEventType.BALK -> "BK"

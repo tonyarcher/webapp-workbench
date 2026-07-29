@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui.components.scoring
 
 import com.baseball.models.Game
@@ -88,9 +86,9 @@ private fun renderCountAndSummary(
         }
         span {
             +(
-                "R-H-E: ${game.awayScore}-${game.awayHits}-${game.awayErrors} " +
-                    "vs ${game.homeScore}-${game.homeHits}-${game.homeErrors}"
-            )
+                    "R-H-E: ${game.awayScore}-${game.awayHits}-${game.awayErrors} " +
+                            "vs ${game.homeScore}-${game.homeHits}-${game.homeErrors}"
+                    )
             css {
                 color = Color("var(--text-secondary)")
                 fontSize = 0.9.rem

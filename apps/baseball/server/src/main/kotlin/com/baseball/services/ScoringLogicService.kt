@@ -57,11 +57,13 @@ class ScoringLogicService {
                 handleFoul(game, batter, initialDesc),
                 0, 0, false, false,
             )
+
             ScoringEventType.HIT_BY_PITCH -> EventOutcomeResult(
                 ScoringEventType.HIT_BY_PITCH,
                 "Hit by pitch",
                 0, 0, false, true,
             )
+
             ScoringEventType.WALK -> EventOutcomeResult(ScoringEventType.WALK, initialDesc, 0, 0, true, false)
             else -> EventOutcomeResult(
                 initialEventType,
@@ -126,6 +128,7 @@ class ScoringLogicService {
     private fun getOutsAdded(type: ScoringEventType): Int = when (type) {
         ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT,
         ScoringEventType.POP_OUT, ScoringEventType.STRIKEOUT -> 1
+
         else -> 0
     }
 }

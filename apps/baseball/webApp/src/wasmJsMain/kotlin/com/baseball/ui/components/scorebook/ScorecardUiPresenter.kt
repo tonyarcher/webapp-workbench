@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui.components.scorebook
 
 import com.baseball.BaseballConstants
@@ -47,24 +45,24 @@ interface ScorecardUiPresenter {
         isHomeBatting: Boolean,
     ) {
         val bench = if (isHomeBatting) localHomeBench else localAwayBench
-        val subOptions = bench.filter { 
-            it.position != BaseballConstants.Positions.P && !localPlayersSubbedOut.contains(it.id) 
+        val subOptions = bench.filter {
+            it.position != BaseballConstants.Positions.P && !localPlayersSubbedOut.contains(it.id)
         }
         if (subOptions.isEmpty()) {
             window.alert("No bench batters available!")
             return
         }
-        
+
         val selectOverlay = buildSelectOverlay(subOptions, isHomeBatting, idx)
-        
+
         container.innerHTML = ""
         container.appendChild(selectOverlay)
         selectOverlay.focus()
     }
 
     private fun buildSelectOverlay(
-        subOptions: List<com.baseball.models.Player>, 
-        isHomeBatting: Boolean, 
+        subOptions: List<com.baseball.models.Player>,
+        isHomeBatting: Boolean,
         idx: Int
     ): HTMLSelectElement {
         val selectOverlay = document.createElement(UiConstants.Html.SELECT) as HTMLSelectElement

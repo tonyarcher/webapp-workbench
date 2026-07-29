@@ -1,5 +1,3 @@
-
-
 package com.baseball.auth
 
 import kotlinx.serialization.Serializable

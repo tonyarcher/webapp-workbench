@@ -23,8 +23,9 @@ internal fun parseRegisterException(e: Throwable): String {
     return when {
         isConnectionError(msg) -> "Unable to connect to the server. Please verify that the backend server is running."
         msg.contains(BaseballConstants.STATUS_400) ||
-            msg.contains(BaseballConstants.STATUS_BAD_REQUEST, ignoreCase = true) ->
+                msg.contains(BaseballConstants.STATUS_BAD_REQUEST, ignoreCase = true) ->
             "An account with this email already exists."
+
         else -> "Registration failed: ${e.message ?: "server error"}"
     }
 }

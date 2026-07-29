@@ -128,7 +128,22 @@ class LineupSetupTest {
         // Make modifications to simulate game play
         localGame = localGame!!.copy(homeScore = 5, awayScore = 3)
         localEvents.add(
-            PlayEvent(1L, 1L, 1, HalfInning.TOP, 0, 1, 0, 0, "Away 1", "Home Pitcher", ScoringEventType.GROUNDOUT, "Ground out", 0, ""),
+            PlayEvent(
+                1L,
+                1L,
+                1,
+                HalfInning.TOP,
+                0,
+                1,
+                0,
+                0,
+                "Away 1",
+                "Home Pitcher",
+                ScoringEventType.GROUNDOUT,
+                "Ground out",
+                0,
+                ""
+            ),
         )
 
         // Reset to initial lineups

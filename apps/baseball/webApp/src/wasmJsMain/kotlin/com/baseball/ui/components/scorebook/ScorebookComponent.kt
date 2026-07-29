@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui.components.scorebook
 
 import com.baseball.models.BoxScore

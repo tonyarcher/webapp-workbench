@@ -104,12 +104,28 @@ class GameSimulationTest {
             val totalAwayPitchingRunsAllowed = finalBoxScore.awayPitching.sumOf { it.runsAllowed }
             val totalHomePitchingRunsAllowed = finalBoxScore.homePitching.sumOf { it.runsAllowed }
 
-            assertEquals(finalGame.awayScore, totalAwayRunsScoredByBatters, "Away team runs in batting stats should match total score")
-            assertEquals(finalGame.homeScore, totalHomeRunsScoredByBatters, "Home team runs in batting stats should match total score")
+            assertEquals(
+                finalGame.awayScore,
+                totalAwayRunsScoredByBatters,
+                "Away team runs in batting stats should match total score"
+            )
+            assertEquals(
+                finalGame.homeScore,
+                totalHomeRunsScoredByBatters,
+                "Home team runs in batting stats should match total score"
+            )
 
             // Pitchers from Home team pitch to Away batters (and vice versa)
-            assertEquals(finalGame.awayScore, totalHomePitchingRunsAllowed, "Home pitching runs allowed should match away team score")
-            assertEquals(finalGame.homeScore, totalAwayPitchingRunsAllowed, "Away pitching runs allowed should match home team score")
+            assertEquals(
+                finalGame.awayScore,
+                totalHomePitchingRunsAllowed,
+                "Home pitching runs allowed should match away team score"
+            )
+            assertEquals(
+                finalGame.homeScore,
+                totalAwayPitchingRunsAllowed,
+                "Away pitching runs allowed should match home team score"
+            )
 
             // 3. Verify hits totals
             val totalAwayBattingHits = finalBoxScore.awayBatting.sumOf { it.hits }

@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui.tabs
 
 
@@ -153,8 +151,8 @@ private fun renderBoxScoreHeaderCard(container: HTMLElement, game: Game) {
             button(classes = "btn btn-secondary") {
                 +(if (isSingleGameMode) "Back to Live Scorer" else "Back to Season Dashboard")
                 onClickFunction = {
-                    currentTab = if (isSingleGameMode) BaseballConstants.TAB_LIVE_SCORER 
-                                 else BaseballConstants.TAB_GAMES
+                    currentTab = if (isSingleGameMode) BaseballConstants.TAB_LIVE_SCORER
+                    else BaseballConstants.TAB_GAMES
                     updateActiveTabButtons()
                     renderCurrentTab()
                 }

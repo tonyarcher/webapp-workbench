@@ -297,7 +297,6 @@ fun resetLocalGame(toInitialLineups: Boolean) {
 }
 
 
-
 fun undoLastLocalEvent() {
     if (localEvents.isEmpty()) return
     val eventsToReplay = localEvents.dropLast(1)

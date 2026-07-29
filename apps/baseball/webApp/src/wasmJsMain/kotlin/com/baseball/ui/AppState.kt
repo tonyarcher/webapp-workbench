@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui
 
 import com.baseball.models.GameStatus
@@ -22,7 +20,9 @@ var isSingleGameMode: Boolean = false
 
 var currentTab: String
     get() = AppViewManager.currentTab
-    set(value) { AppViewManager.currentTab = value }
+    set(value) {
+        AppViewManager.currentTab = value
+    }
 
 fun saveNavState() {
     AppViewManager.saveNavState()

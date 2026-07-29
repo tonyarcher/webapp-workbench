@@ -1,5 +1,3 @@
-
-
 package com.baseball.ui.tabs
 
 
@@ -207,7 +205,7 @@ private fun harmonizeHomeLineup(game: Game, homeRoster: List<Player>) {
             homeRoster.filter {
                 it.position == BaseballConstants.Positions.P && it.id != game.gameState.currentPitcherId
             } +
-                homeRoster.drop(10),
+                    homeRoster.drop(10),
         )
         localHomeActivePitcherId = game.gameState.currentPitcherId
             ?: homeRoster.find { it.position == BaseballConstants.Positions.P }?.id ?: 110L
@@ -449,7 +447,7 @@ private fun renderPlayMonitoringSection(
 private fun isPlayEventInningEnded(ev: PlayEvent, nextEv: PlayEvent?): Boolean {
     if (nextEv != null) return nextEv.half != ev.half || nextEv.inning != ev.inning
     val isDp = ev.description.contains(BaseballConstants.DESC_DOUBLE_PLAY) ||
-        ev.description.contains(BaseballConstants.DESC_DP)
+            ev.description.contains(BaseballConstants.DESC_DP)
     val outsOnPlay = when {
         isDp -> 2
         ev.eventType in listOf(
@@ -461,6 +459,7 @@ private fun isPlayEventInningEnded(ev: PlayEvent, nextEv: PlayEvent?): Boolean {
             ScoringEventType.SACRIFICE_FLY,
             ScoringEventType.FIELDER_CHOICE,
         ) -> 1
+
         else -> 0
     }
     return ev.outsBefore + outsOnPlay >= 3
@@ -471,6 +470,7 @@ private fun getPlayEventEndingStr(ev: PlayEvent): String = when (ev.eventType) {
     ScoringEventType.WALK,
     ScoringEventType.HIT_BY_PITCH,
     ScoringEventType.ERROR -> BaseballConstants.PLAY_RESULT_1B
+
     ScoringEventType.DOUBLE -> BaseballConstants.PLAY_RESULT_2B
     ScoringEventType.TRIPLE -> BaseballConstants.PLAY_RESULT_3B
     ScoringEventType.HOME_RUN -> BaseballConstants.PLAY_RESULT_RUN_SCORED
@@ -529,9 +529,9 @@ private fun renderEventLogContent(
                                 val cleanedDesc = ev.description.substringBefore(" | Adv:")
                                 val eventHtml =
                                     "<span style='color: var(--accent-yellow); font-weight: 700;'>$header</span>" +
-                                        "$notStr - $cleanedDesc " +
-                                        "<span style='color: var(--text-secondary); font-size: 0.8rem;'>" +
-                                        "[Ended: $endingDetail]</span>"
+                                            "$notStr - $cleanedDesc " +
+                                            "<span style='color: var(--text-secondary); font-size: 0.8rem;'>" +
+                                            "[Ended: $endingDetail]</span>"
                                 unsafe { raw(eventHtml) }
                             }
                             if (endedInning) {
