@@ -26,6 +26,7 @@ import kotlinx.css.marginTop
 import kotlinx.css.padding
 import kotlinx.html.ButtonType
 import kotlinx.html.DIV
+import kotlinx.html.FORM
 import kotlinx.html.InputType
 import kotlinx.html.button
 import kotlinx.html.div
@@ -129,31 +130,28 @@ private fun renderTeamItemCard(divElement: HTMLDivElement, team: Team, onSelectT
         div(classes = "game-card") {
             css {
                 marginBottom = UiConstants.CARD_GAP_SMALL
-                display = Display.flex
-                flexDirection = FlexDirection.column
-                alignItems = Align.flexStart
+                display = Display.flex; flexDirection = FlexDirection.column; alignItems = Align.flexStart
             }
-
             div {
-                css {
-                    fontWeight = FontWeight.bold
-                    fontSize = UiConstants.FONT_SIZE_LARGE
-                }
+                css { fontWeight = FontWeight.bold; fontSize = UiConstants.FONT_SIZE_LARGE }
                 +"${team.city} ${team.name} (${team.abbreviation})"
             }
+            renderTeamSelectButton(team, onSelectTeam)
+        }
+    }
+}
 
-            button(classes = "btn btn-secondary${if (selectedTeamId == team.id) " active" else ""}") {
-                css {
-                    marginTop = UiConstants.CARD_GAP_SMALL
-                    padding = Padding(UiConstants.CARD_GAP_SMALL, UiConstants.CARD_PADDING.top)
-                    fontSize = UiConstants.FONT_SIZE_MEDIUM
-                }
-                +(if (selectedTeamId == team.id) "Active Team" else "Select Team")
-                onClickFunction = { _: Event ->
-                    selectedTeamId = team.id
-                    onSelectTeam()
-                }
-            }
+private fun DIV.renderTeamSelectButton(team: Team, onSelectTeam: () -> Unit) {
+    button(classes = "btn btn-secondary${if (selectedTeamId == team.id) " active" else ""}") {
+        css {
+            marginTop = UiConstants.CARD_GAP_SMALL
+            padding = Padding(UiConstants.CARD_GAP_SMALL, UiConstants.CARD_PADDING.top)
+            fontSize = UiConstants.FONT_SIZE_MEDIUM
+        }
+        +(if (selectedTeamId == team.id) "Active Team" else "Select Team")
+        onClickFunction = { _: Event ->
+            selectedTeamId = team.id
+            onSelectTeam()
         }
     }
 }
@@ -163,39 +161,45 @@ private fun DIV.renderAddTeamCard(onTeamCreated: () -> Unit) {
         css { marginBottom = UiConstants.CARD_MARGIN_BOTTOM }
         h2 { +"Add Team" }
         form {
-            div(classes = "form-group") {
-                label { +"City" }
-                input(type = InputType.text, classes = "form-control") {
-                    id = "team-city-input"
-                    placeholder = "e.g., Boston"
-                }
-            }
-            div(classes = "form-group") {
-                label { +"Team Name" }
-                input(type = InputType.text, classes = "form-control") {
-                    id = "team-name-input"
-                    placeholder = "e.g., Red Sox"
-                }
-            }
-            div(classes = "form-group") {
-                label { +"Abbreviation" }
-                input(type = InputType.text, classes = "form-control") {
-                    id = "team-abb-input"
-                    placeholder = "e.g., BOS"
-                }
-            }
+            renderTeamFormInputs()
             button(classes = "btn") {
                 type = ButtonType.button
                 +"Create Team"
-                onClickFunction = { _: Event ->
-                    val inputCity = kotlinx.browser.document.getElementById("team-city-input") as? HTMLInputElement
-                    val inputTName = kotlinx.browser.document.getElementById("team-name-input") as? HTMLInputElement
-                    val inputAbb = kotlinx.browser.document.getElementById("team-abb-input") as? HTMLInputElement
-                    handleCreateTeamSubmit(inputCity, inputTName, inputAbb, onTeamCreated)
-                }
+                onClickFunction = { _: Event -> submitAddTeam(onTeamCreated) }
             }
         }
     }
+}
+
+private fun FORM.renderTeamFormInputs() {
+    div(classes = "form-group") {
+        label { +"City" }
+        input(type = InputType.text, classes = "form-control") {
+            id = "team-city-input"
+            placeholder = "e.g., Boston"
+        }
+    }
+    div(classes = "form-group") {
+        label { +"Team Name" }
+        input(type = InputType.text, classes = "form-control") {
+            id = "team-name-input"
+            placeholder = "e.g., Red Sox"
+        }
+    }
+    div(classes = "form-group") {
+        label { +"Abbreviation" }
+        input(type = InputType.text, classes = "form-control") {
+            id = "team-abb-input"
+            placeholder = "e.g., BOS"
+        }
+    }
+}
+
+private fun submitAddTeam(onTeamCreated: () -> Unit) {
+    val inputCity = kotlinx.browser.document.getElementById("team-city-input") as? HTMLInputElement
+    val inputTName = kotlinx.browser.document.getElementById("team-name-input") as? HTMLInputElement
+    val inputAbb = kotlinx.browser.document.getElementById("team-abb-input") as? HTMLInputElement
+    handleCreateTeamSubmit(inputCity, inputTName, inputAbb, onTeamCreated)
 }
 
 private fun handleCreateTeamSubmit(

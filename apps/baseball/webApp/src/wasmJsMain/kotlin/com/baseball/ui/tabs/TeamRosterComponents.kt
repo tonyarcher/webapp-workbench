@@ -58,30 +58,32 @@ private data class PlayerFormInputs(
 
 internal fun renderRosterContent(divElement: HTMLDivElement, roster: List<Player>) {
     if (roster.isEmpty()) {
-        divElement.append {
-            p {
-                +"No players on this roster yet."
-                css { color = Color("var(--text-secondary)") }
-            }
-        }
+        renderEmptyRosterMessage(divElement)
     } else {
-        divElement.append {
-            div(classes = "table-container") {
-                table {
-                    thead {
-                        tr {
-                            th { +"#" }
-                            th { +"Name" }
-                            th { +"Position" }
-                            th { +"B/T" }
-                            th { +"Action" }
-                        }
+        renderRosterTable(divElement, roster)
+    }
+}
+
+private fun renderEmptyRosterMessage(divElement: HTMLDivElement) {
+    divElement.append {
+        p {
+            +"No players on this roster yet."
+            css { color = Color("var(--text-secondary)") }
+        }
+    }
+}
+
+private fun renderRosterTable(divElement: HTMLDivElement, roster: List<Player>) {
+    divElement.append {
+        div(classes = "table-container") {
+            table {
+                thead {
+                    tr {
+                        th { +"#" }; th { +"Name" }; th { +"Position" }; th { +"B/T" }; th { +"Action" }
                     }
-                    tbody {
-                        roster.forEach { p ->
-                            renderRosterRow(this, p, divElement)
-                        }
-                    }
+                }
+                tbody {
+                    roster.forEach { p -> renderRosterRow(this, p, divElement) }
                 }
             }
         }
@@ -133,25 +135,7 @@ internal fun DIV.renderRosterSectionCard(team: Team, onRosterUpdated: () -> Unit
 
 private fun DIV.renderAddPlayerForm(onPlayerAdded: () -> Unit) {
     form {
-        div(classes = "form-group") {
-            label { +"Player Name" }
-            input(type = InputType.text, classes = "form-control") {
-                id = "player-name-input"
-                placeholder = "e.g., Dustin Pedroia"
-            }
-        }
-        div(classes = "form-group") {
-            label { +"Position" }
-            select(classes = "form-control") {
-                id = "player-pos-select"
-                listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH").forEach { pos ->
-                    option {
-                        value = pos
-                        +pos
-                    }
-                }
-            }
-        }
+        renderPlayerNameAndPosInputs()
         div(classes = "form-group") {
             label { +"Jersey Number" }
             input(type = InputType.number, classes = "form-control") {
@@ -165,6 +149,25 @@ private fun DIV.renderAddPlayerForm(onPlayerAdded: () -> Unit) {
             +"Add Player"
             onClickFunction = {
                 readPlayerFormInputs()?.let { handleAddPlayerSubmit(it, onPlayerAdded) }
+            }
+        }
+    }
+}
+
+private fun FORM.renderPlayerNameAndPosInputs() {
+    div(classes = "form-group") {
+        label { +"Player Name" }
+        input(type = InputType.text, classes = "form-control") {
+            id = "player-name-input"
+            placeholder = "e.g., Dustin Pedroia"
+        }
+    }
+    div(classes = "form-group") {
+        label { +"Position" }
+        select(classes = "form-control") {
+            id = "player-pos-select"
+            listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH").forEach { pos ->
+                option { value = pos; +pos }
             }
         }
     }
@@ -202,13 +205,17 @@ private fun FORM.renderBattingThrowingSelects() {
 
 private fun readPlayerFormInputs(): PlayerFormInputs? {
     val document = kotlinx.browser.document
-    return PlayerFormInputs(
-        name = document.getElementById("player-name-input") as? HTMLInputElement ?: return null,
-        position = document.getElementById("player-pos-select") as? HTMLSelectElement ?: return null,
-        number = document.getElementById("player-num-input") as? HTMLInputElement ?: return null,
-        battingHand = document.getElementById("player-bat-select") as? HTMLSelectElement ?: return null,
-        throwingHand = document.getElementById("player-throw-select") as? HTMLSelectElement ?: return null,
-    )
+    val name = document.getElementById("player-name-input") as? HTMLInputElement
+    val position = document.getElementById("player-pos-select") as? HTMLSelectElement
+    val number = document.getElementById("player-num-input") as? HTMLInputElement
+    val battingHand = document.getElementById("player-bat-select") as? HTMLSelectElement
+    val throwingHand = document.getElementById("player-throw-select") as? HTMLSelectElement
+
+    return if (name != null && position != null && number != null && battingHand != null && throwingHand != null) {
+        PlayerFormInputs(name, position, number, battingHand, throwingHand)
+    } else {
+        null
+    }
 }
 
 private fun handleAddPlayerSubmit(
