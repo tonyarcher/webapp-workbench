@@ -1,6 +1,13 @@
 package com.baseball
 
-import com.baseball.game.*
+import com.baseball.game.PlayEventInput
+import com.baseball.game.initGame
+import com.baseball.game.localAwayRoster
+import com.baseball.game.localBoxScore
+import com.baseball.game.localEvents
+import com.baseball.game.localGame
+import com.baseball.game.localHomeRoster
+import com.baseball.game.undoLastLocalEvent
 import com.baseball.models.GameStatus
 import com.baseball.models.ScoringEventType
 import kotlinx.css.pct
@@ -8,7 +15,11 @@ import kotlinx.css.properties.deg
 import kotlinx.css.properties.rotate
 import kotlinx.css.properties.transform
 import kotlinx.css.properties.translate
-import kotlin.test.*
+import kotlin.test.Ignore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @Ignore
 class GameSimulationTest {

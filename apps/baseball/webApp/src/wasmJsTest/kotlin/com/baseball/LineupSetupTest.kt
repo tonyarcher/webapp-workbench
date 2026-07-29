@@ -1,9 +1,28 @@
 package com.baseball
 
-import com.baseball.game.*
-import com.baseball.models.*
+import com.baseball.game.TeamLineupConfig
+import com.baseball.game.initialAwayLineup
+import com.baseball.game.initialHomeLineup
+import com.baseball.game.localEvents
+import com.baseball.game.localGame
+import com.baseball.game.localHomeActivePitcherId
+import com.baseball.game.localHomeLineup
+import com.baseball.game.localUseDh
+import com.baseball.game.resetLocalGame
+import com.baseball.game.startNewGame
+import com.baseball.models.HalfInning
+import com.baseball.models.League
+import com.baseball.models.PlayEvent
+import com.baseball.models.Player
+import com.baseball.models.ScoringEventType
+import com.baseball.models.Season
+import com.baseball.models.Team
 import com.baseball.seed.SeedData
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class LineupSetupTest {
     @Test

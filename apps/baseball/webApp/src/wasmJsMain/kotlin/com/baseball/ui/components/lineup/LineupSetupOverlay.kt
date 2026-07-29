@@ -4,17 +4,84 @@ package com.baseball.ui.components.lineup
 
 import com.baseball.BaseballConstants
 import com.baseball.api
-import com.baseball.game.*
+import com.baseball.game.TeamLineupConfig
+import com.baseball.game.localAwayActivePitcherId
+import com.baseball.game.localAwayActivePitcherName
+import com.baseball.game.localAwayBench
+import com.baseball.game.localAwayLineup
+import com.baseball.game.localGame
+import com.baseball.game.localHomeActivePitcherId
+import com.baseball.game.localHomeActivePitcherName
+import com.baseball.game.localHomeBench
+import com.baseball.game.localHomeLineup
+import com.baseball.game.saveLocalState
+import com.baseball.game.startNewGame
 import com.baseball.models.GameStatus
 import com.baseball.models.Player
 import com.baseball.seed.SeedData
-import com.baseball.ui.*
-import kotlinx.css.*
-import kotlinx.html.*
+import com.baseball.ui.AppViewManager
+import com.baseball.ui.css
+import com.baseball.ui.isSingleGameMode
+import com.baseball.ui.launch
+import com.baseball.ui.renderCurrentTab
+import com.baseball.ui.selectedGameId
+import com.baseball.ui.selectedGameStatus
+import kotlinx.css.Align
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.FontWeight
+import kotlinx.css.JustifyContent
+import kotlinx.css.LinearDimension
+import kotlinx.css.Overflow
+import kotlinx.css.Padding
+import kotlinx.css.Position
+import kotlinx.css.TextAlign
+import kotlinx.css.alignItems
+import kotlinx.css.background
+import kotlinx.css.border
+import kotlinx.css.borderBottom
+import kotlinx.css.borderRadius
+import kotlinx.css.color
+import kotlinx.css.cursor
+import kotlinx.css.display
+import kotlinx.css.flexGrow
+import kotlinx.css.fontWeight
+import kotlinx.css.gap
+import kotlinx.css.height
+import kotlinx.css.justifyContent
+import kotlinx.css.left
+import kotlinx.css.marginBottom
+import kotlinx.css.marginTop
+import kotlinx.css.maxWidth
+import kotlinx.css.overflowY
+import kotlinx.css.padding
+import kotlinx.css.paddingBottom
+import kotlinx.css.pct
+import kotlinx.css.position
+import kotlinx.css.px
+import kotlinx.css.rem
+import kotlinx.css.textAlign
+import kotlinx.css.top
+import kotlinx.css.width
+import kotlinx.css.zIndex
+import kotlinx.html.DIV
+import kotlinx.html.InputType
+import kotlinx.html.button
+import kotlinx.html.div
 import kotlinx.html.dom.append
+import kotlinx.html.h1
+import kotlinx.html.h2
+import kotlinx.html.input
 import kotlinx.html.js.div
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.label
+import kotlinx.html.option
+import kotlinx.html.select
+import kotlinx.html.span
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
@@ -22,7 +89,6 @@ import kotlin.random.Random
 
 var isLineupDialogOpen = false
 
-@Suppress("LargeClass", "TooManyFunctions", "LongMethod", "CyclomaticComplexMethod", "CognitiveComplexMethod")
 class LineupSetupOverlay(
     private val container: HTMLElement,
     private val homeRosterParam: List<Player> = emptyList(),

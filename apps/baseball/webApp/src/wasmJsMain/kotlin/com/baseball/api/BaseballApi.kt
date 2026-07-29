@@ -1,6 +1,17 @@
 package com.baseball.api
 
-import com.baseball.models.*
+import com.baseball.models.BoxScore
+import com.baseball.models.Game
+import com.baseball.models.League
+import com.baseball.models.PlayEvent
+import com.baseball.models.Player
+import com.baseball.models.RegisterRequestDto
+import com.baseball.models.ScoringEventRequest
+import com.baseball.models.Season
+import com.baseball.models.SeasonDashboard
+import com.baseball.models.SeasonStats
+import com.baseball.models.Team
+import com.baseball.models.UserResponseDto
 
 interface AuthApi {
     suspend fun register(request: RegisterRequestDto): UserResponseDto

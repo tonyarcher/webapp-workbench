@@ -26,7 +26,6 @@ class ScorecardParser(
         parseAllEvents()
     }
 
-    @Suppress("ComplexMethod", "LongMethod", "NestedBlockDepth", "CognitiveComplexMethod", "CyclomaticComplexMethod")
     private fun parseAllEvents() {
         val baseRunners = mutableMapOf<String, Int>()
 

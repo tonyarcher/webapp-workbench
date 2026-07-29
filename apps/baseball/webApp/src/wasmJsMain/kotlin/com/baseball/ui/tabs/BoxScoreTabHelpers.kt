@@ -1,16 +1,27 @@
 package com.baseball.ui.tabs
 
-import com.baseball.game.localBoxScore
-import com.baseball.game.localEvents
-import com.baseball.game.localGame
-import com.baseball.models.*
-import com.baseball.ui.*
-import kotlinx.css.*
-import kotlinx.html.*
+import com.baseball.models.Game
+import com.baseball.models.LineScore
+import com.baseball.models.PlayerBattingStats
+import com.baseball.models.PlayerPitchingStats
+import com.baseball.ui.css
+import kotlinx.css.Color
+import kotlinx.css.FontWeight
+import kotlinx.css.TextAlign
+import kotlinx.css.color
+import kotlinx.css.fontWeight
+import kotlinx.css.textAlign
+import kotlinx.html.TABLE
+import kotlinx.html.TBODY
 import kotlinx.html.dom.append
-import kotlinx.html.js.*
+import kotlinx.html.js.div
+import kotlinx.html.table
+import kotlinx.html.tbody
+import kotlinx.html.td
+import kotlinx.html.th
+import kotlinx.html.thead
+import kotlinx.html.tr
 import org.w3c.dom.HTMLElement
-import org.w3c.dom.HTMLDivElement
 
 internal fun renderLineScoreTable(
     parent: HTMLElement,

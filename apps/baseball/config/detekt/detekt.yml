@@ -147,7 +147,7 @@ complexity:
     active: true
     threshold: 4
   NestedScopeFunctions:
-    active: false
+    active: true
     threshold: 1
     functions:
       - 'kotlin.apply'
@@ -324,10 +324,10 @@ naming:
     active: false
     forbiddenName: []
   FunctionMaxLength:
-    active: false
+    active: true
     maximumFunctionNameLength: 30
   FunctionMinLength:
-    active: false
+    active: true
     minimumFunctionNameLength: 3
   FunctionNaming:
     active: true
@@ -343,7 +343,7 @@ naming:
     rootPackage: ''
     requireRootInDeclaration: false
   LambdaParameterNaming:
-    active: false
+    active: true
     parameterPattern: '[a-z][A-Za-z0-9]*|_'
   MatchingDeclarationName:
     active: true
@@ -372,7 +372,7 @@ naming:
     active: false
     maximumVariableNameLength: 64
   VariableMinLength:
-    active: false
+    active: true
     minimumVariableNameLength: 1
   VariableNaming:
     active: true
@@ -385,7 +385,7 @@ performance:
   ArrayPrimitive:
     active: true
   CouldBeSequence:
-    active: false
+    active: true
     threshold: 3
   ForEachOnRange:
     active: true
@@ -628,7 +628,7 @@ style:
   MandatoryBracesLoops:
     active: false
   MaxChainedCallsOnSameLine:
-    active: false
+    active: true
     maxChainedCalls: 5
   MaxLineLength:
     active: true
@@ -721,7 +721,7 @@ style:
   UnnecessaryInheritance:
     active: true
   UnnecessaryInnerClass:
-    active: false
+    active: true
   UnnecessaryLet:
     active: false
   UnnecessaryParentheses:
@@ -730,7 +730,7 @@ style:
   UntilInsteadOfRangeTo:
     active: false
   UnusedImports:
-    active: false
+    active: true
   UnusedParameter:
     active: true
     allowedNames: 'ignored|expected'

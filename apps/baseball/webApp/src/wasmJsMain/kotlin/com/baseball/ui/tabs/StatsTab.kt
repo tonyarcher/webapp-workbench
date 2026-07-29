@@ -1,6 +1,7 @@
 package com.baseball.ui.tabs
 
-import com.baseball.ui.*
+import com.baseball.ui.launch
+import com.baseball.ui.selectedSeasonId
 import kotlinx.html.dom.append
 import kotlinx.html.h1
 import org.w3c.dom.HTMLElement

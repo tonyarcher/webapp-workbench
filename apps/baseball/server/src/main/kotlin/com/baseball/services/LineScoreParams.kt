@@ -1,6 +1,5 @@
 package com.baseball.services
 
-import com.baseball.models.LineScore
 import com.baseball.repositories.GameInningRepository
 
 data class LineScoreParams(

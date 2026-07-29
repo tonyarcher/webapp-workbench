@@ -4,11 +4,41 @@ package com.baseball.ui.components.scoring
 
 import com.baseball.models.ScoringEventType
 import com.baseball.ui.css
-import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.css.Align
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.FontWeight
+import kotlinx.css.JustifyContent
+import kotlinx.css.Padding
+import kotlinx.css.TextAlign
+import kotlinx.css.alignItems
+import kotlinx.css.background
+import kotlinx.css.border
+import kotlinx.css.borderRadius
+import kotlinx.css.color
+import kotlinx.css.display
+import kotlinx.css.fontSize
+import kotlinx.css.fontWeight
+import kotlinx.css.gap
+import kotlinx.css.justifyContent
+import kotlinx.css.marginBottom
+import kotlinx.css.marginTop
+import kotlinx.css.padding
+import kotlinx.css.pct
+import kotlinx.css.px
+import kotlinx.css.rem
+import kotlinx.css.textAlign
+import kotlinx.css.width
+import kotlinx.html.DIV
+import kotlinx.html.button
+import kotlinx.html.div
 import kotlinx.html.dom.append
+import kotlinx.html.h3
 import kotlinx.html.js.div
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.span
 
 class ScorerBaseRunningStep2Panel(
     private val controller: GameScoringController,

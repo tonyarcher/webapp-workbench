@@ -2,7 +2,6 @@ package com.baseball.services
 
 import com.baseball.ServerConstants
 import com.baseball.models.LineScore
-import com.baseball.repositories.GameInningRepository
 
 fun createLineScore(params: LineScoreParams): LineScore {
     val innings = params.gameInningRepository.findAllByGameIdOrderByInningAsc(params.gameId)

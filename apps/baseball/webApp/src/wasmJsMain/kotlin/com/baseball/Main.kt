@@ -9,7 +9,12 @@ import com.baseball.auth.AuthService
 import com.baseball.ui.AppViewManager
 import com.baseball.ui.auth.renderLoginTab
 import com.baseball.ui.auth.renderRegisterTab
-import com.baseball.ui.tabs.*
+import com.baseball.ui.tabs.renderBoxScoreTab
+import com.baseball.ui.tabs.renderLeaguesTab
+import com.baseball.ui.tabs.renderLiveScorerTab
+import com.baseball.ui.tabs.renderSeasonDashboardTab
+import com.baseball.ui.tabs.renderStatsTab
+import com.baseball.ui.tabs.renderTeamsTab
 
 // Duplicate tab imports removed
 

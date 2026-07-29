@@ -5,17 +5,57 @@ import com.baseball.UiConstants
 import com.baseball.api
 import com.baseball.auth.UserSession
 import com.baseball.authService
-import com.baseball.game.*
+import com.baseball.game.initGame
+import com.baseball.game.localAwayActivePitcherId
+import com.baseball.game.localAwayActivePitcherName
+import com.baseball.game.localAwayBatterIndex
+import com.baseball.game.localAwayBench
+import com.baseball.game.localAwayLineup
+import com.baseball.game.localGame
+import com.baseball.game.localHomeActivePitcherId
+import com.baseball.game.localHomeActivePitcherName
+import com.baseball.game.localHomeBatterIndex
+import com.baseball.game.localHomeBench
+import com.baseball.game.localHomeLineup
+import com.baseball.game.localPlayersSubbedOut
+import com.baseball.game.saveLocalState
 import com.baseball.models.HalfInning
 import kotlinx.browser.document
 import kotlinx.browser.window
-import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.css.Align
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.FontWeight
+import kotlinx.css.JustifyContent
+import kotlinx.css.Padding
+import kotlinx.css.alignItems
+import kotlinx.css.color
+import kotlinx.css.cursor
+import kotlinx.css.display
+import kotlinx.css.fontSize
+import kotlinx.css.fontWeight
+import kotlinx.css.gap
+import kotlinx.css.justifyContent
+import kotlinx.css.marginBottom
+import kotlinx.css.marginRight
+import kotlinx.css.padding
+import kotlinx.css.pct
+import kotlinx.css.rem
+import kotlinx.css.width
+import kotlinx.html.DIV
+import kotlinx.html.a
+import kotlinx.html.button
+import kotlinx.html.div
 import kotlinx.html.dom.append
+import kotlinx.html.id
 import kotlinx.html.js.div
 import kotlinx.html.js.header
 import kotlinx.html.js.main
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.nav
+import kotlinx.html.p
+import kotlinx.html.span
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLButtonElement
@@ -32,7 +72,6 @@ data class NavState(
     val selectedGameId: Long?,
 )
 
-@Suppress("TooManyFunctions", "LongMethod")
 object AppViewManager {
     private val tabRenderers = mutableMapOf<String, (HTMLElement) -> Unit>()
 
