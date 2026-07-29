@@ -7,10 +7,10 @@ import com.baseball.auth.AuthService
 import com.baseball.ui.AppViewManager
 import com.baseball.ui.auth.renderLoginTab
 import com.baseball.ui.auth.renderRegisterTab
+import com.baseball.ui.tabs.boxscore.renderBoxScoreTab
 import com.baseball.ui.tabs.dashboard.renderSeasonDashboardTab
 import com.baseball.ui.tabs.leagues.renderLeaguesTab
-import com.baseball.ui.tabs.renderBoxScoreTab
-import com.baseball.ui.tabs.renderLiveScorerTab
+import com.baseball.ui.tabs.scorer.renderLiveScorerTab
 import com.baseball.ui.tabs.stats.renderStatsTab
 import com.baseball.ui.tabs.teams.renderTeamsTab
 

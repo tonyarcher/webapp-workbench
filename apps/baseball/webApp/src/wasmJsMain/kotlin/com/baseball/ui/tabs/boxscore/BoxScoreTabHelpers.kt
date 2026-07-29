@@ -1,4 +1,4 @@
-package com.baseball.ui.tabs
+package com.baseball.ui.tabs.boxscore
 
 import com.baseball.models.Game
 import com.baseball.models.LineScore

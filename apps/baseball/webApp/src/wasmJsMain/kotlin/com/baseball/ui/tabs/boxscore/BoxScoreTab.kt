@@ -1,4 +1,4 @@
-package com.baseball.ui.tabs
+package com.baseball.ui.tabs.boxscore
 
 
 import com.baseball.BaseballConstants
