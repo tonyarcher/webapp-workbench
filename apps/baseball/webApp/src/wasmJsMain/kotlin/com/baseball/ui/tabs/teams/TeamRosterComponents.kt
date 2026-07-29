@@ -205,17 +205,13 @@ private fun FORM.renderBattingThrowingSelects() {
 
 private fun readPlayerFormInputs(): PlayerFormInputs? {
     val document = kotlinx.browser.document
-    val name = document.getElementById("player-name-input") as? HTMLInputElement
-    val position = document.getElementById("player-pos-select") as? HTMLSelectElement
-    val number = document.getElementById("player-num-input") as? HTMLInputElement
-    val battingHand = document.getElementById("player-bat-select") as? HTMLSelectElement
-    val throwingHand = document.getElementById("player-throw-select") as? HTMLSelectElement
+    val name = (document.getElementById("player-name-input") as? HTMLInputElement) ?: return null
+    val position = (document.getElementById("player-pos-select") as? HTMLSelectElement) ?: return null
+    val number = (document.getElementById("player-num-input") as? HTMLInputElement) ?: return null
+    val battingHand = (document.getElementById("player-bat-select") as? HTMLSelectElement) ?: return null
+    val throwingHand = (document.getElementById("player-throw-select") as? HTMLSelectElement) ?: return null
 
-    return if (name != null && position != null && number != null && battingHand != null && throwingHand != null) {
-        PlayerFormInputs(name, position, number, battingHand, throwingHand)
-    } else {
-        null
-    }
+    return PlayerFormInputs(name, position, number, battingHand, throwingHand)
 }
 
 private fun handleAddPlayerSubmit(
