@@ -163,7 +163,8 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     onClickFunction = {
                         val drawer = document.getElementById("roster-drawer-element") as? HTMLElement
                         if (drawer != null) {
-                            val isHidden = drawer.style.getPropertyValue(UiConstants.Css.DISPLAY) == UiConstants.CssValues.NONE
+                            val isHidden =
+                                drawer.style.getPropertyValue(UiConstants.Css.DISPLAY) == UiConstants.CssValues.NONE
                             drawer.style.setProperty(
                                 UiConstants.Css.DISPLAY,
                                 if (isHidden) UiConstants.CssValues.BLOCK else UiConstants.CssValues.NONE,

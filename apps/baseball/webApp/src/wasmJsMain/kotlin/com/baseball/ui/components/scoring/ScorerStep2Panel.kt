@@ -519,7 +519,13 @@ class ScorerStep2Panel(
                 if (hasDoublePlay) append(" (Double Play)")
                 if (hasError) append(" (with Error)")
             }
-        controller.triggerScoringEvent(eventType, detail, hasDoublePlay, hasError, runnerAdvances.takeIf { it.isNotEmpty() })
+        controller.triggerScoringEvent(
+            eventType,
+            detail,
+            hasDoublePlay,
+            hasError,
+            runnerAdvances.takeIf { it.isNotEmpty() },
+        )
     }
 
     private fun DIV.renderFooter(parent: DIV) {

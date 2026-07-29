@@ -347,7 +347,13 @@ private fun renderScoreboardSummary(
             }
         }
         renderLineScoreTable(game, boxScore, maxInning)
-        renderPitcherRecords(game, localHomeRoster, localAwayRoster, localHomeActivePitcherName, localAwayActivePitcherName)
+        renderPitcherRecords(
+            game,
+            localHomeRoster,
+            localAwayRoster,
+            localHomeActivePitcherName,
+            localAwayActivePitcherName,
+        )
     }
 }
 

@@ -326,9 +326,19 @@ class GameScoringController(
             +label
             onClickFunction = {
                 val isHit =
-                    type in listOf(ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN)
+                    type in listOf(
+                        ScoringEventType.SINGLE,
+                        ScoringEventType.DOUBLE,
+                        ScoringEventType.TRIPLE,
+                        ScoringEventType.HOME_RUN,
+                    )
                 val isOut =
-                    type in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT)
+                    type in listOf(
+                        ScoringEventType.GROUNDOUT,
+                        ScoringEventType.FLYOUT,
+                        ScoringEventType.LINE_OUT,
+                        ScoringEventType.POP_OUT,
+                    )
                 if (isHit || isOut) {
                     renderStep2(type, label, isHit)
                 } else {

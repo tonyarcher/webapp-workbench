@@ -126,7 +126,9 @@ private fun harmonizeHomeLineup(game: Game, homeRoster: List<Player>) {
     if (localHomeLineup.isEmpty()) {
         localHomeLineup.addAll(homeRoster.filter { it.position != BaseballConstants.Positions.P }.take(9))
         localHomeBench.addAll(
-            homeRoster.filter { it.position == BaseballConstants.Positions.P && it.id != game.gameState.currentPitcherId } +
+            homeRoster.filter {
+                it.position == BaseballConstants.Positions.P && it.id != game.gameState.currentPitcherId
+            } +
                 homeRoster.drop(10),
         )
         localHomeActivePitcherId = game.gameState.currentPitcherId
@@ -397,7 +399,12 @@ private fun getPlayEventEndingStr(ev: PlayEvent): String = when (ev.eventType) {
     else -> BaseballConstants.PLAY_RESULT_OUT
 }
 
-private fun renderEventLogContent(monitorEl: HTMLDivElement, events: List<PlayEvent>, homeRoster: List<Player>, awayRoster: List<Player>) {
+private fun renderEventLogContent(
+    monitorEl: HTMLDivElement,
+    events: List<PlayEvent>,
+    homeRoster: List<Player>,
+    awayRoster: List<Player>,
+) {
     monitorEl.innerHTML = ""
     monitorEl.append {
         div(classes = "event-log") {
@@ -430,11 +437,24 @@ private fun renderEventLogContent(monitorEl: HTMLDivElement, events: List<PlayEv
                                 width = 100.pct
                             }
                             span(classes = "log-desc") {
-                                val header = "${ev.batterName} ($position) - Inning ${ev.inning} (${if (ev.half == HalfInning.TOP) "Top" else "Bottom"})"
+                                val inningHalf = if (ev.half == HalfInning.TOP) "Top" else "Bottom"
+                                val header = "${ev.batterName} ($position) - Inning ${ev.inning} ($inningHalf)"
                                 val notStr = if (notation.isNotEmpty()) " [$notation]" else ""
-                                val endingDetail = if (endedInning && endedStr != BaseballConstants.PLAY_RESULT_RUN_SCORED && endedStr != BaseballConstants.PLAY_RESULT_OUT) BaseballConstants.PLAY_RESULT_LOB else endedStr
+                                val endingDetail = if (
+                                    endedInning && endedStr != BaseballConstants.PLAY_RESULT_RUN_SCORED &&
+                                    endedStr != BaseballConstants.PLAY_RESULT_OUT
+                                ) {
+                                    BaseballConstants.PLAY_RESULT_LOB
+                                } else {
+                                    endedStr
+                                }
                                 val cleanedDesc = ev.description.substringBefore(" | Adv:")
-                                unsafe { raw("<span style='color: var(--accent-yellow); font-weight: 700;'>$header</span>$notStr - $cleanedDesc <span style='color: var(--text-secondary); font-size: 0.8rem;'>[Ended: $endingDetail]</span>") }
+                                val eventHtml =
+                                    "<span style='color: var(--accent-yellow); font-weight: 700;'>$header</span>" +
+                                        "$notStr - $cleanedDesc " +
+                                        "<span style='color: var(--text-secondary); font-size: 0.8rem;'>" +
+                                        "[Ended: $endingDetail]</span>"
+                                unsafe { raw(eventHtml) }
                             }
                             if (endedInning) {
                                 span {
