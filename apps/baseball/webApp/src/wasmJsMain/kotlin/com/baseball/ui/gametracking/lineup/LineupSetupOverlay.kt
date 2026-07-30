@@ -73,12 +73,14 @@ class LineupSetupOverlay(
             )
             render()
         }
+
         fun loadDefault() {
             validationError = null
             val cfg = PopulateRostersConfig(useDh, awayLineupInputs, homeLineupInputs, setAwayPitcher, setHomePitcher)
             populateWithRosters(cubs, cards, cfg)
             render()
         }
+
         fun doRandom() {
             validationError = null
             populateRostersWithRandom(useDh, awayLineupInputs, homeLineupInputs, setAwayPitcher, setHomePitcher)
@@ -113,8 +115,6 @@ class LineupSetupOverlay(
             PopulateRostersConfig(useDh, awayLineupInputs, homeLineupInputs, setAwayPitcher, setHomePitcher)
         )
     }
-
-
 
 
     fun render() {

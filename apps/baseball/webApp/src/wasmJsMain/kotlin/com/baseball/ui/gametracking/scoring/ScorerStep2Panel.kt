@@ -549,7 +549,13 @@ private data class PlayDetailParams(
 )
 
 private fun buildPlayDetailString(params: PlayDetailParams): String = buildString {
-    val mainNotation = formatMainPlayNotation(params.baseLabel, params.loc, params.seqStr, params.hasRunnerOut, params.eventType)
+    val mainNotation = formatMainPlayNotation(
+        params.baseLabel,
+        params.loc,
+        params.seqStr,
+        params.hasRunnerOut,
+        params.eventType,
+    )
     append(mainNotation)
     if (params.hasDoublePlay) append(" (Double Play)")
     if (params.hasError) append(" (with Error)")

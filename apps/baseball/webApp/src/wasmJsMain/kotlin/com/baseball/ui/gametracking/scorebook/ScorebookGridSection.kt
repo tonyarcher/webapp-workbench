@@ -370,21 +370,25 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 pitchers.forEach { p ->
                     div {
                         +"#${p.jerseyNumber} ${p.name} (LHP/RHP)"
-                        if (game.status != GameStatus.COMPLETED) {
-                            button(classes = "btn") {
-                                +"Call up"
-                                css {
-                                    marginLeft = 0.5.rem
-                                    fontSize = 0.7.rem
-                                    padding = Padding(1.px, 4.px)
-                                }
-                                onClickFunction = {
-                                    substitutePitcher(isHome, p.id!!)
-                                    renderCurrentTab()
-                                }
-                            }
-                        }
+                        renderCallUpButton(game, isHome, p.id)
                     }
+                }
+            }
+        }
+    }
+
+    private fun DIV.renderCallUpButton(game: Game, isHome: Boolean, pitcherId: Long?) {
+        if (game.status != GameStatus.COMPLETED && pitcherId != null) {
+            button(classes = "btn") {
+                +"Call up"
+                css {
+                    marginLeft = 0.5.rem
+                    fontSize = 0.7.rem
+                    padding = Padding(1.px, 4.px)
+                }
+                onClickFunction = {
+                    substitutePitcher(isHome, pitcherId)
+                    renderCurrentTab()
                 }
             }
         }
@@ -517,20 +521,23 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 rowRenderData.cellBackground,
             )
         )
+        tr1.renderPosTd(subPos, rowRenderData.cellBackground)
+        return tr1
+    }
 
-        tr1.append {
+    private fun HTMLTableRowElement.renderPosTd(position: String, cellBackground: String) {
+        append {
             td {
-                +subPos
+                +position
                 css {
                     borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
                     padding = Padding(0.5.rem)
                     textAlign = TextAlign.center
                     fontWeight = FontWeight.bold
-                    background = rowRenderData.cellBackground
+                    background = cellBackground
                 }
             }
         }
-        return tr1
     }
 
     private fun renderSlotRows(
@@ -560,19 +567,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         val tr0 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
 
         renderPlayerCell(tr0, game, PlayerCellData(slotIdx, playerName0, hasSub, params.isHomeBatting, cellBackground))
-
-        tr0.append {
-            td {
-                +starterPos
-                css {
-                    borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                    padding = Padding(0.5.rem)
-                    textAlign = TextAlign.center
-                    fontWeight = FontWeight.bold
-                    background = cellBackground
-                }
-            }
-        }
+        tr0.renderPosTd(starterPos, cellBackground)
 
         var tr1: HTMLTableRowElement? = null
         var substitutePlayerName = ""
