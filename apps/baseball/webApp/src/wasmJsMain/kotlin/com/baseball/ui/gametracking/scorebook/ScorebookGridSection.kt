@@ -698,36 +698,31 @@ private fun DIV.renderPlayerName(name: String) {
         ).forEachIndexed { statIdx, selector ->
             val val0 = selector(stat0)
             val val1 = selector(stat1)
-            tr0.append {
-                td {
-                    +val0
-                    css {
-                        borderLeft = Border(
-                            if (statIdx == 0) 2.px else 1.px,
-                            BorderStyle.solid,
-                            Color(if (statIdx == 0) "#5a544a" else "#9c9384")
-                        )
-                        textAlign = TextAlign.center
-                        background = rowData.cellBackground
-                        fontWeight = FontWeight.bold
-                    }
-                }
-            }
+            appendStatTd(tr0, val0, statIdx == 0, rowData.cellBackground)
             if (hasSub && tr1 != null) {
-                tr1.append {
-                    td {
-                        +val1
-                        css {
-                            borderLeft = Border(
-                                if (statIdx == 0) 2.px else 1.px,
-                                BorderStyle.solid,
-                                Color(if (statIdx == 0) "#5a544a" else "#9c9384")
-                            )
-                            textAlign = TextAlign.center
-                            background = rowData.cellBackground
-                            fontWeight = FontWeight.bold
-                        }
-                    }
+                appendStatTd(tr1, val1, statIdx == 0, rowData.cellBackground)
+            }
+        }
+    }
+
+    private fun appendStatTd(
+        tr: HTMLTableRowElement,
+        value: String,
+        isFirst: Boolean,
+        bg: String,
+    ) {
+        tr.append {
+            td {
+                +value
+                css {
+                    borderLeft = Border(
+                        if (isFirst) 2.px else 1.px,
+                        BorderStyle.solid,
+                        Color(if (isFirst) "#5a544a" else "#9c9384")
+                    )
+                    textAlign = TextAlign.center
+                    background = bg
+                    fontWeight = FontWeight.bold
                 }
             }
         }
@@ -756,32 +751,7 @@ private fun DIV.renderPlayerName(name: String) {
                 overflow = Overflow.hidden
             }
             if (ev != null) {
-                val prog = parser.playProgressions[ev]
-                val base = prog?.maxBase ?: (parser.playAdvancements[ev] ?: 0)
-                val outNum = parser.playOutNumbers[ev]
-                val outAtBase = prog?.outAtBase
-                val outDetail = prog?.outDetail
-                val notation = getScorebookNotation(ev)
-
-                renderInningDiamond(base)
-                renderOutDetails(outAtBase, outDetail)
-                div {
-                    +notation
-                    css {
-                        position = Position.absolute
-                        top = 50.pct
-                        left = 50.pct
-                        transform {
-                            translate((-50).pct, (-50).pct)
-                        }
-                        fontWeight = FontWeight.bold
-                        fontSize = 0.75.rem
-                        zIndex = 2
-                    }
-                }
-                renderCountBallsStrikes(ev)
-                renderOutCircle(outNum)
-                renderEndedInningDiagonal(ev, teamEvents)
+                renderEventInInningCell(ev, parser, teamEvents)
             } else {
                 div {
                     css {
@@ -791,6 +761,39 @@ private fun DIV.renderPlayerName(name: String) {
                 }
             }
         }
+    }
+
+    private fun DIV.renderEventInInningCell(
+        ev: PlayEvent,
+        parser: ScorecardParser,
+        teamEvents: List<PlayEvent>,
+    ) {
+        val prog = parser.playProgressions[ev]
+        val base = prog?.maxBase ?: (parser.playAdvancements[ev] ?: 0)
+        val outNum = parser.playOutNumbers[ev]
+        val outAtBase = prog?.outAtBase
+        val outDetail = prog?.outDetail
+        val notation = getScorebookNotation(ev)
+
+        renderInningDiamond(base)
+        renderOutDetails(outAtBase, outDetail)
+        div {
+            +notation
+            css {
+                position = Position.absolute
+                top = 50.pct
+                left = 50.pct
+                transform {
+                    translate((-50).pct, (-50).pct)
+                }
+                fontWeight = FontWeight.bold
+                fontSize = 0.75.rem
+                zIndex = 2
+            }
+        }
+        renderCountBallsStrikes(ev)
+        renderOutCircle(outNum)
+        renderEndedInningDiagonal(ev, teamEvents)
     }
 
     private fun DIV.renderInningDiamond(
