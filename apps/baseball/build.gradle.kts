@@ -36,7 +36,7 @@ subprojects {
 
 // Suppress Node.js deprecation warnings (e.g. url.parse() DEP0169 in Yarn v1) in all child processes
 run {
-    @Suppress("UNCHECKED_CAST")
+    @Suppress("UNCHECKED_CAST", "SwallowedException", "TooGenericExceptionCaught")
     try {
         val processEnv = Class.forName("java.lang.ProcessEnvironment")
         val field = processEnv.getDeclaredField("theEnvironment")
