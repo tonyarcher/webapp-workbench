@@ -50,6 +50,31 @@ data class LineupUiContext(
     val homePitcherNumber: String,
 )
 
+data class LineupPitcherChangeHandlers(
+    val onAwayPitcherNameChange: (String) -> Unit,
+    val onAwayPitcherNumberChange: (String) -> Unit,
+    val onHomePitcherNameChange: (String) -> Unit,
+    val onHomePitcherNumberChange: (String) -> Unit,
+)
+
+data class LineupValidationInput(
+    val homeTeam: com.baseball.models.Team,
+    val awayTeam: com.baseball.models.Team,
+    val useDh: Boolean,
+    val isHome: Boolean,
+    val lineupInputs: List<PlayerInputs>,
+    val pitcherName: String,
+    val pitcherNumber: String,
+)
+
+data class PopulateRostersConfig(
+    val useDh: Boolean,
+    val awayLineupInputs: MutableList<PlayerInputs>,
+    val homeLineupInputs: MutableList<PlayerInputs>,
+    val setAwayP: (String, String) -> Unit,
+    val setHomeP: (String, String) -> Unit,
+)
+
 internal fun buildLineupPlayers(
     list: List<PlayerInputs>,
     baseId: Long,
