@@ -5,8 +5,8 @@ import com.baseball.models.PlayerBattingStats
 import com.baseball.models.PlayerFieldingStats
 import com.baseball.models.PlayerPitchingStats
 import com.baseball.models.SeasonStats
-import com.baseball.ui.css
-import com.baseball.ui.teamsList
+import com.baseball.ui.core.css
+import com.baseball.ui.state.teamsList
 import kotlinx.css.Color
 import kotlinx.css.TextAlign
 import kotlinx.css.color

@@ -3,12 +3,12 @@ package com.baseball.ui.tabs.dashboard
 import com.baseball.api
 import com.baseball.models.Game
 import com.baseball.models.GameStatus
-import com.baseball.ui.UiConstants
-import com.baseball.ui.css
-import com.baseball.ui.launch
-import com.baseball.ui.renderCurrentTab
-import com.baseball.ui.selectedSeasonId
-import com.baseball.ui.teamsList
+import com.baseball.ui.core.UiConstants
+import com.baseball.ui.core.css
+import com.baseball.ui.core.launch
+import com.baseball.ui.state.renderCurrentTab
+import com.baseball.ui.state.selectedSeasonId
+import com.baseball.ui.state.teamsList
 import kotlinx.browser.document
 import kotlinx.css.Align
 import kotlinx.css.Border
@@ -25,7 +25,6 @@ import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flexWrap
 import kotlinx.css.gap
-import kotlinx.css.hr
 import kotlinx.css.justifyContent
 import kotlinx.css.margin
 import kotlinx.css.marginBottom

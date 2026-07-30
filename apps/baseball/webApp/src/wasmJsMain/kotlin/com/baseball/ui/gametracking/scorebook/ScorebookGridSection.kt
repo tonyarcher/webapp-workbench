@@ -1,7 +1,6 @@
 package com.baseball.ui.gametracking.scorebook
 
-import com.baseball.BaseballConstants
-import com.baseball.UiConstants
+import com.baseball.game.BaseballConstants
 import com.baseball.game.localAwayActivePitcherId
 import com.baseball.game.localAwayActivePitcherName
 import com.baseball.game.localAwayBench
@@ -18,9 +17,10 @@ import com.baseball.models.HalfInning
 import com.baseball.models.PlayEvent
 import com.baseball.models.PlayerBattingStats
 import com.baseball.models.Team
-import com.baseball.ui.css
-import com.baseball.ui.renderCurrentTab
-import com.baseball.ui.substitutePitcher
+import com.baseball.ui.core.DomUiConstants
+import com.baseball.ui.core.css
+import com.baseball.ui.state.renderCurrentTab
+import com.baseball.ui.state.substitutePitcher
 import kotlinx.browser.document
 import kotlinx.css.Align
 import kotlinx.css.Border
@@ -251,10 +251,10 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         val drawer = document.getElementById("roster-drawer-element") as? HTMLElement
                         if (drawer != null) {
                             val isHidden =
-                                drawer.style.getPropertyValue(UiConstants.Css.DISPLAY) == UiConstants.CssValues.NONE
+                                drawer.style.getPropertyValue(DomUiConstants.Css.DISPLAY) == DomUiConstants.CssValues.NONE
                             drawer.style.setProperty(
-                                UiConstants.Css.DISPLAY,
-                                if (isHidden) UiConstants.CssValues.BLOCK else UiConstants.CssValues.NONE,
+                                DomUiConstants.Css.DISPLAY,
+                                if (isHidden) DomUiConstants.CssValues.BLOCK else DomUiConstants.CssValues.NONE,
                             )
                         }
                     }

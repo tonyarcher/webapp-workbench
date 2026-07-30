@@ -2,11 +2,11 @@ package com.baseball.ui.tabs.teams
 
 import com.baseball.api
 import com.baseball.models.Team
-import com.baseball.ui.UiConstants
-import com.baseball.ui.css
-import com.baseball.ui.renderCurrentTab
-import com.baseball.ui.selectedTeamId
-import com.baseball.ui.teamsList
+import com.baseball.ui.core.UiConstants
+import com.baseball.ui.core.css
+import com.baseball.ui.state.renderCurrentTab
+import com.baseball.ui.state.selectedTeamId
+import com.baseball.ui.state.teamsList
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.css.Align

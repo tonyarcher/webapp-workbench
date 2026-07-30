@@ -1,4 +1,4 @@
-package com.baseball.ui
+package com.baseball.ui.core
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

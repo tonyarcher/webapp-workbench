@@ -1,6 +1,5 @@
 package com.baseball.ui.gametracking.scoring
 
-import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.game.GameManager
 import com.baseball.game.PlayEventInput
@@ -9,12 +8,13 @@ import com.baseball.models.GameStatus
 import com.baseball.models.Player
 import com.baseball.models.ScoringEventRequest
 import com.baseball.models.ScoringEventType
-import com.baseball.ui.css
-import com.baseball.ui.currentTab
-import com.baseball.ui.isSingleGameMode
-import com.baseball.ui.launch
-import com.baseball.ui.renderCurrentTab
-import com.baseball.ui.updateActiveTabButtons
+import com.baseball.ui.core.css
+import com.baseball.ui.core.launch
+import com.baseball.ui.state.NavTabs
+import com.baseball.ui.state.currentTab
+import com.baseball.ui.state.isSingleGameMode
+import com.baseball.ui.state.renderCurrentTab
+import com.baseball.ui.state.updateActiveTabButtons
 import kotlinx.browser.window
 import kotlinx.css.Border
 import kotlinx.css.BorderStyle
@@ -80,7 +80,7 @@ class GameScoringController(
                     }
                     +"View Final Box Score"
                     onClickFunction = {
-                        currentTab = BaseballConstants.TAB_BOXSCORE
+                        currentTab = NavTabs.TAB_BOXSCORE
                         updateActiveTabButtons()
                         renderCurrentTab()
                     }

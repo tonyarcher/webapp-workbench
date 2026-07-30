@@ -1,8 +1,8 @@
 // Refactored DashboardTabHelpers for Kotlin/JS
 package com.baseball.ui.tabs.dashboard
 
-import com.baseball.ui.UiConstants
-import com.baseball.ui.renderCurrentTab
+import com.baseball.ui.core.UiConstants
+import com.baseball.ui.state.renderCurrentTab
 import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.dom.append

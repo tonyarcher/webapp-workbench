@@ -1,12 +1,12 @@
 package com.baseball.ui.gametracking.scorebook
 
-import com.baseball.BaseballConstants
+import com.baseball.game.BaseballConstants
 import com.baseball.models.BoxScore
 import com.baseball.models.Game
 import com.baseball.models.GameStatus
 import com.baseball.models.Player
 import com.baseball.models.PlayerPitchingStats
-import com.baseball.ui.css
+import com.baseball.ui.core.css
 import kotlinx.css.Align
 import kotlinx.css.Border
 import kotlinx.css.BorderCollapse

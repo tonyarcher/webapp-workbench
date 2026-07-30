@@ -33,7 +33,7 @@ import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import java.util.*
+import java.util.Optional
 
 class GameScoringServiceTest {
     private lateinit var gameRepository: GameRepository

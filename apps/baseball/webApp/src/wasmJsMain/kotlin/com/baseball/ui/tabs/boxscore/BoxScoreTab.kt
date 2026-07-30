@@ -1,7 +1,6 @@
 package com.baseball.ui.tabs.boxscore
 
 
-import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.game.localBoxScore
 import com.baseball.game.localEvents
@@ -11,15 +10,16 @@ import com.baseball.models.Game
 import com.baseball.models.PlayEvent
 import com.baseball.models.PlayerBattingStats
 import com.baseball.models.PlayerPitchingStats
-import com.baseball.ui.UiConstants
+import com.baseball.ui.core.UiConstants
+import com.baseball.ui.core.css
+import com.baseball.ui.core.launch
 import com.baseball.ui.gametracking.scorebook.renderScorebookView
-import com.baseball.ui.css
-import com.baseball.ui.currentTab
-import com.baseball.ui.isSingleGameMode
-import com.baseball.ui.launch
-import com.baseball.ui.renderCurrentTab
-import com.baseball.ui.selectedGameId
-import com.baseball.ui.updateActiveTabButtons
+import com.baseball.ui.state.NavTabs
+import com.baseball.ui.state.currentTab
+import com.baseball.ui.state.isSingleGameMode
+import com.baseball.ui.state.renderCurrentTab
+import com.baseball.ui.state.selectedGameId
+import com.baseball.ui.state.updateActiveTabButtons
 import kotlinx.css.Color
 import kotlinx.css.Display
 import kotlinx.css.TextAlign
@@ -146,8 +146,8 @@ private fun renderBoxScoreHeaderCard(container: HTMLElement, game: Game) {
             button(classes = "btn btn-secondary") {
                 +(if (isSingleGameMode) "Back to Live Scorer" else "Back to Season Dashboard")
                 onClickFunction = {
-                    currentTab = if (isSingleGameMode) BaseballConstants.TAB_LIVE_SCORER
-                    else BaseballConstants.TAB_GAMES
+                    currentTab = if (isSingleGameMode) NavTabs.TAB_LIVE_SCORER
+                    else NavTabs.TAB_GAMES
                     updateActiveTabButtons()
                     renderCurrentTab()
                 }

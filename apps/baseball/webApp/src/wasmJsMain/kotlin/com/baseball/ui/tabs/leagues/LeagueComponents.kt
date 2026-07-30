@@ -1,18 +1,18 @@
 package com.baseball.ui.tabs.leagues
 
-import com.baseball.BaseballConstants
 import com.baseball.api
 import com.baseball.models.Season
-import com.baseball.ui.UiConstants
-import com.baseball.ui.css
-import com.baseball.ui.currentTab
-import com.baseball.ui.launch
-import com.baseball.ui.leaguesList
-import com.baseball.ui.renderCurrentTab
-import com.baseball.ui.saveNavState
-import com.baseball.ui.seasonsList
-import com.baseball.ui.selectedLeagueId
-import com.baseball.ui.selectedSeasonId
+import com.baseball.ui.core.UiConstants
+import com.baseball.ui.core.css
+import com.baseball.ui.core.launch
+import com.baseball.ui.state.NavTabs
+import com.baseball.ui.state.currentTab
+import com.baseball.ui.state.leaguesList
+import com.baseball.ui.state.renderCurrentTab
+import com.baseball.ui.state.saveNavState
+import com.baseball.ui.state.seasonsList
+import com.baseball.ui.state.selectedLeagueId
+import com.baseball.ui.state.selectedSeasonId
 import kotlinx.css.Align
 import kotlinx.css.Display
 import kotlinx.css.FontWeight
@@ -163,7 +163,7 @@ internal fun renderSeasonCardItem(parent: HTMLDivElement, season: Season) {
                 onClickFunction = {
                     selectedSeasonId = season.id
                     saveNavState()
-                    currentTab = BaseballConstants.TAB_GAMES
+                    currentTab = NavTabs.TAB_GAMES
                 }
             }
         }

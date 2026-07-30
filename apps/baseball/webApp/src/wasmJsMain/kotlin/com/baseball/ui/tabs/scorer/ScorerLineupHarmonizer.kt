@@ -1,6 +1,6 @@
 package com.baseball.ui.tabs.scorer
 
-import com.baseball.BaseballConstants
+import com.baseball.game.BaseballConstants
 import com.baseball.game.localAwayActivePitcherId
 import com.baseball.game.localAwayActivePitcherName
 import com.baseball.game.localAwayBatterIndex

@@ -4,7 +4,7 @@ import com.baseball.models.BoxScore
 import com.baseball.models.Game
 import com.baseball.models.HalfInning
 import com.baseball.models.PlayEvent
-import com.baseball.ui.css
+import com.baseball.ui.core.css
 import kotlinx.css.Align
 import kotlinx.css.Border
 import kotlinx.css.BorderStyle

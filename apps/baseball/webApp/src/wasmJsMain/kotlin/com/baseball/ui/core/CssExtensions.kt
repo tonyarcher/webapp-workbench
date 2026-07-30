@@ -1,4 +1,4 @@
-package com.baseball.ui
+package com.baseball.ui.core
 
 import kotlinx.css.CssBuilder
 import kotlinx.html.HTMLTag

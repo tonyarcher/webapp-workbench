@@ -4,9 +4,10 @@ import com.baseball.api.BaseballApi
 import com.baseball.api.BaseballApiClient
 import com.baseball.auth.AuthManager
 import com.baseball.auth.AuthService
-import com.baseball.ui.AppViewManager
 import com.baseball.ui.auth.renderLoginTab
 import com.baseball.ui.auth.renderRegisterTab
+import com.baseball.ui.state.AppViewManager
+import com.baseball.ui.state.NavTabs
 import com.baseball.ui.tabs.boxscore.renderBoxScoreTab
 import com.baseball.ui.tabs.dashboard.renderSeasonDashboardTab
 import com.baseball.ui.tabs.leagues.renderLeaguesTab
@@ -23,14 +24,14 @@ val authService: AuthService = AuthManager
 fun main() {
     AppViewManager.registerTabRenderers(
         mapOf(
-            BaseballConstants.TAB_LEAGUES to ::renderLeaguesTab,
-            BaseballConstants.TAB_TEAMS to ::renderTeamsTab,
-            BaseballConstants.TAB_GAMES to ::renderSeasonDashboardTab,
-            BaseballConstants.TAB_STATS to ::renderStatsTab,
-            BaseballConstants.TAB_LIVE_SCORER to ::renderLiveScorerTab,
-            BaseballConstants.TAB_BOXSCORE to ::renderBoxScoreTab,
-            BaseballConstants.TAB_LOGIN to ::renderLoginTab,
-            BaseballConstants.TAB_REGISTER to ::renderRegisterTab,
+            NavTabs.TAB_LEAGUES to ::renderLeaguesTab,
+            NavTabs.TAB_TEAMS to ::renderTeamsTab,
+            NavTabs.TAB_GAMES to ::renderSeasonDashboardTab,
+            NavTabs.TAB_STATS to ::renderStatsTab,
+            NavTabs.TAB_LIVE_SCORER to ::renderLiveScorerTab,
+            NavTabs.TAB_BOXSCORE to ::renderBoxScoreTab,
+            NavTabs.TAB_LOGIN to ::renderLoginTab,
+            NavTabs.TAB_REGISTER to ::renderRegisterTab,
         ),
     )
     AppViewManager.start()

@@ -4,7 +4,7 @@ import com.baseball.models.Game
 import com.baseball.models.LineScore
 import com.baseball.models.PlayerBattingStats
 import com.baseball.models.PlayerPitchingStats
-import com.baseball.ui.css
+import com.baseball.ui.core.css
 import kotlinx.css.Color
 import kotlinx.css.FontWeight
 import kotlinx.css.TextAlign

@@ -1,15 +1,15 @@
 package com.baseball.ui.tabs.dashboard
 
-import com.baseball.BaseballConstants
 import com.baseball.models.Game
 import com.baseball.models.GameStatus
 import com.baseball.models.TeamStandings
-import com.baseball.ui.UiConstants
-import com.baseball.ui.css
-import com.baseball.ui.currentTab
-import com.baseball.ui.renderCurrentTab
-import com.baseball.ui.selectedGameId
-import com.baseball.ui.updateActiveTabButtons
+import com.baseball.ui.core.UiConstants
+import com.baseball.ui.core.css
+import com.baseball.ui.state.NavTabs
+import com.baseball.ui.state.currentTab
+import com.baseball.ui.state.renderCurrentTab
+import com.baseball.ui.state.selectedGameId
+import com.baseball.ui.state.updateActiveTabButtons
 import kotlinx.css.Align
 import kotlinx.css.Color
 import kotlinx.css.Display
@@ -159,7 +159,7 @@ private fun DIV.renderActiveGameAction(g: Game) {
         +"Score Game"
         onClickFunction = {
             selectedGameId = g.id
-            currentTab = BaseballConstants.TAB_LIVE_SCORER
+            currentTab = NavTabs.TAB_LIVE_SCORER
             updateActiveTabButtons()
             renderCurrentTab()
         }

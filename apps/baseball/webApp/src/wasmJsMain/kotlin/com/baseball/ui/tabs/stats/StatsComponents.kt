@@ -1,13 +1,13 @@
 package com.baseball.ui.tabs.stats
 
 import com.baseball.api
-import com.baseball.ui.UiConstants
-import com.baseball.ui.css
-import com.baseball.ui.launch
-import com.baseball.ui.renderCurrentTab
-import com.baseball.ui.seasonsList
-import com.baseball.ui.selectedSeasonId
-import com.baseball.ui.teamsList
+import com.baseball.ui.core.UiConstants
+import com.baseball.ui.core.css
+import com.baseball.ui.core.launch
+import com.baseball.ui.state.renderCurrentTab
+import com.baseball.ui.state.seasonsList
+import com.baseball.ui.state.selectedSeasonId
+import com.baseball.ui.state.teamsList
 import kotlinx.css.Align
 import kotlinx.css.Color
 import kotlinx.css.Display

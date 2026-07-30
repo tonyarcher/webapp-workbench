@@ -1,8 +1,8 @@
 package com.baseball.ui.tabs.boxscore
 
 import com.baseball.models.PlayEvent
-import com.baseball.ui.UiConstants
-import com.baseball.ui.css
+import com.baseball.ui.core.UiConstants
+import com.baseball.ui.core.css
 import kotlinx.css.marginBottom
 import kotlinx.css.maxHeight
 import kotlinx.css.padding

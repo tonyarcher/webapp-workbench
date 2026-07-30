@@ -1,15 +1,15 @@
 package com.baseball.ui.gametracking.scorebook
 
-import com.baseball.BaseballConstants
-import com.baseball.UiConstants
+import com.baseball.game.BaseballConstants
 import com.baseball.game.localAwayBench
 import com.baseball.game.localAwayLineup
 import com.baseball.game.localHomeBench
 import com.baseball.game.localHomeLineup
 import com.baseball.game.localPlayersSubbedOut
 import com.baseball.models.PlayEvent
-import com.baseball.ui.renderCurrentTab
-import com.baseball.ui.substituteBatter
+import com.baseball.ui.core.DomUiConstants
+import com.baseball.ui.state.renderCurrentTab
+import com.baseball.ui.state.substituteBatter
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
@@ -65,17 +65,17 @@ interface ScorecardUiPresenter {
         isHomeBatting: Boolean,
         idx: Int
     ): HTMLSelectElement {
-        val selectOverlay = document.createElement(UiConstants.Html.SELECT) as HTMLSelectElement
+        val selectOverlay = document.createElement(DomUiConstants.Html.SELECT) as HTMLSelectElement
         selectOverlay.className = "form-control"
-        selectOverlay.style.setProperty(UiConstants.Css.FONT_SIZE, "0.75rem")
-        selectOverlay.style.setProperty(UiConstants.Css.PADDING, "2px")
+        selectOverlay.style.setProperty(DomUiConstants.Css.FONT_SIZE, "0.75rem")
+        selectOverlay.style.setProperty(DomUiConstants.Css.PADDING, "2px")
 
-        val defOpt = document.createElement(UiConstants.Html.OPTION) as HTMLOptionElement
+        val defOpt = document.createElement(DomUiConstants.Html.OPTION) as HTMLOptionElement
         defOpt.textContent = "Select pinch hitter..."
         selectOverlay.appendChild(defOpt)
 
         subOptions.forEach { optPlayer ->
-            val opt = document.createElement(UiConstants.Html.OPTION) as HTMLOptionElement
+            val opt = document.createElement(DomUiConstants.Html.OPTION) as HTMLOptionElement
             opt.value = optPlayer.id.toString()
             opt.textContent = "${optPlayer.name} (#${optPlayer.jerseyNumber} - ${optPlayer.position})"
             selectOverlay.appendChild(opt)

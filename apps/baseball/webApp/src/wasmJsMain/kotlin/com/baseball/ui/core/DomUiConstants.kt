@@ -1,7 +1,7 @@
-package com.baseball
+package com.baseball.ui.core
 
 // UI & Code Layout specific styling/DOM constants
-object UiConstants {
+object DomUiConstants {
     // HTML Tag Constants
     object Html {
         const val DIV = "div"
