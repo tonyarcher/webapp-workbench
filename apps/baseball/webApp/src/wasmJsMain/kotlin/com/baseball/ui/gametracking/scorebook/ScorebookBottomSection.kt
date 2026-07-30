@@ -109,65 +109,63 @@ private fun renderDefenseDiagram(
     isHomeBatting: Boolean,
     teamState: ScorebookTeamState,
 ) {
-    val cardEl =
-        parent.append.div(classes = "card") {
+    val cardEl = parent.append.div(classes = "card") {
+        css {
+            backgroundColor = Color("#f9f7f2")
+            border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+            padding = Padding(1.rem)
+            color = Color("#2b2a28")
+            put("flex", "1 1 300px")
+        }
+        h3 {
+            +"HOME DEFENSE FIELD"
             css {
-                backgroundColor = Color("#f9f7f2")
-                border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                padding = Padding(1.rem)
-                color = Color("#2b2a28")
-                put("flex", "1 1 300px")
-            }
-            h3 {
-                +"HOME DEFENSE FIELD"
-                css {
-                    textAlign = TextAlign.center
-                    margin = Margin(0.px, 0.px, 1.rem, 0.px)
-                    fontSize = 1.rem
-                    fontWeight = FontWeight.bold
-                    borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
-                    paddingBottom = 0.25.rem
-                }
+                textAlign = TextAlign.center
+                margin = Margin(0.px, 0.px, 1.rem, 0.px)
+                fontSize = 1.rem
+                fontWeight = FontWeight.bold
+                borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
+                paddingBottom = 0.25.rem
             }
         }
+    }
 
-    val fieldWrapper =
-        cardEl.append.div {
+    val fieldWrapper = cardEl.append.div {
+        css {
+            position = Position.relative
+            width = 100.pct
+            height = 260.px
+            backgroundColor = Color("#edf2eb")
+            border = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
+            borderRadius = 8.px
+            overflow = Overflow.hidden
+        }
+        div {
             css {
-                position = Position.relative
-                width = 100.pct
-                height = 260.px
-                backgroundColor = Color("#edf2eb")
-                border = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
-                borderRadius = 8.px
-                overflow = Overflow.hidden
-            }
-            div {
-                css {
-                    position = Position.absolute
-                    bottom = 10.px
-                    left = "calc(50% - 90px)".toCSSValue()
-                    width = 180.px
-                    height = 180.px
-                    borderRadius = 50.pct
-                    backgroundColor = Color("#e5ccb3")
-                    zIndex = 1
-                }
-            }
-            div {
-                css {
-                    position = Position.absolute
-                    bottom = 50.px
-                    left = "calc(50% - 50px)".toCSSValue()
-                    width = 100.px
-                    height = 100.px
-                    backgroundColor = Color("#cbe1c7")
-                    border = Border(2.px, BorderStyle.solid, Color.white)
-                    put("transform", "rotate(45deg)")
-                    zIndex = 2
-                }
+                position = Position.absolute
+                bottom = 10.px
+                left = "calc(50% - 90px)".toCSSValue()
+                width = 180.px
+                height = 180.px
+                borderRadius = 50.pct
+                backgroundColor = Color("#e5ccb3")
+                zIndex = 1
             }
         }
+        div {
+            css {
+                position = Position.absolute
+                bottom = 50.px
+                left = "calc(50% - 50px)".toCSSValue()
+                width = 100.px
+                height = 100.px
+                backgroundColor = Color("#cbe1c7")
+                border = Border(2.px, BorderStyle.solid, Color.white)
+                put("transform", "rotate(45deg)")
+                zIndex = 2
+            }
+        }
+    }
 
     val defPlayers = if (isHomeBatting) teamState.awayRoster else teamState.homeRoster
     val activePitcherId = if (isHomeBatting) teamState.awayActivePitcherId else teamState.homeActivePitcherId
@@ -291,25 +289,7 @@ private fun renderOpposingPitchingStats(
     isHomeBatting: Boolean,
     boxScore: BoxScore,
 ) {
-    parent.append.div(classes = "card") {
-        css {
-            backgroundColor = Color("#f9f7f2")
-            border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-            padding = Padding(1.rem)
-            color = Color("#2b2a28")
-            put("flex", "1 1 320px")
-        }
-        h3 {
-            +"OPPOSING PITCHING STATS"
-            css {
-                textAlign = TextAlign.center
-                margin = Margin(0.px, 0.px, 1.rem, 0.px)
-                fontSize = 1.rem
-                fontWeight = FontWeight.bold
-                borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
-                paddingBottom = 0.25.rem
-            }
-        }
+    parent.renderStatsCard("OPPOSING PITCHING STATS") {
         val pStatsList = if (isHomeBatting) boxScore.awayPitching else boxScore.homePitching
         div {
             css {
@@ -570,13 +550,41 @@ private fun DIV.renderPitcherRecords(
             (if (isCompleted) "LP" else "Potential LP (Hook)") to lpName,
             "SV" to svName,
         ).forEach { (label, name) ->
-            div {
-                +"$label: "
-                span {
-                    css { fontWeight = FontWeight.bold }
-                    +name
-                }
+            renderRecordRow(label, name)
+        }
+    }
+}
+
+private fun HTMLDivElement.renderStatsCard(title: String, block: DIV.() -> Unit) {
+    append.div(classes = "card") {
+        css {
+            backgroundColor = Color("#f9f7f2")
+            border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+            padding = Padding(1.rem)
+            color = Color("#2b2a28")
+            put("flex", "1 1 300px")
+        }
+        h3 {
+            +title
+            css {
+                textAlign = TextAlign.center
+                margin = Margin(0.px, 0.px, 1.rem, 0.px)
+                fontSize = 1.rem
+                fontWeight = FontWeight.bold
+                borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
+                paddingBottom = 0.25.rem
             }
+        }
+        block()
+    }
+}
+
+private fun DIV.renderRecordRow(label: String, name: String) {
+    div {
+        +"$label: "
+        span {
+            css { fontWeight = FontWeight.bold }
+            +name
         }
     }
 }

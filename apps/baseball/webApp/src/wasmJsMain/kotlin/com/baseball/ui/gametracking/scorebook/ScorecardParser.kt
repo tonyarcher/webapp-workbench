@@ -33,17 +33,7 @@ class ScorecardParser(
             var currentOuts = 0
 
             innEvents.forEach { ev ->
-                val isOut =
-                    ev.eventType in
-                            listOf(
-                                ScoringEventType.STRIKEOUT,
-                                ScoringEventType.GROUNDOUT,
-                                ScoringEventType.FLYOUT,
-                                ScoringEventType.LINE_OUT,
-                                ScoringEventType.POP_OUT,
-                                ScoringEventType.SACRIFICE_FLY,
-                            )
-
+                val isOut = isOutEvent(ev.eventType)
                 var finalBase = 0
                 when (ev.eventType) {
                     ScoringEventType.SINGLE,
@@ -151,16 +141,7 @@ class ScorecardParser(
                     var outB: Int? = null
                     var outDet: String? = null
 
-                    val isOut =
-                        ev.eventType in
-                                listOf(
-                                    ScoringEventType.STRIKEOUT,
-                                    ScoringEventType.GROUNDOUT,
-                                    ScoringEventType.FLYOUT,
-                                    ScoringEventType.LINE_OUT,
-                                    ScoringEventType.POP_OUT,
-                                    ScoringEventType.SACRIFICE_FLY,
-                                )
+                    val isOut = isOutEvent(ev.eventType)
                     if (isOut) {
                         outB = 1
                         outDet = getScorebookNotation(ev)
@@ -357,3 +338,13 @@ fun getHitLocationNumber(desc: String): String? {
     )
     return locations.firstOrNull { desc.contains(it.first) }?.second
 }
+
+internal fun isOutEvent(type: ScoringEventType): Boolean =
+    type in listOf(
+        ScoringEventType.STRIKEOUT,
+        ScoringEventType.GROUNDOUT,
+        ScoringEventType.FLYOUT,
+        ScoringEventType.LINE_OUT,
+        ScoringEventType.POP_OUT,
+        ScoringEventType.SACRIFICE_FLY,
+    )

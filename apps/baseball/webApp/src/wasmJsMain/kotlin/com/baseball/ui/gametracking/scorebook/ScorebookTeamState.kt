@@ -30,6 +30,11 @@ data class ScorecardRenderParams(
     val isHomeBatting: Boolean,
 )
 
+data class RowRenderData(
+    val pName1: String,
+    val cellBg: String,
+)
+
 data class LineScoreData(
     val teamAbb: String,
     val inningRuns: List<Int?>,

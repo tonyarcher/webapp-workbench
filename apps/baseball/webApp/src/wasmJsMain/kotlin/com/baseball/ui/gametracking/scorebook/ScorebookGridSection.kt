@@ -477,8 +477,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
     private fun renderSubRow(
         tbodyEl: HTMLTableSectionElement,
         slotIdx: Int,
-        pName1: String,
-        cellBg: String,
+        rowData: RowRenderData,
         game: Game,
         params: ScorecardRenderParams,
     ): HTMLTableRowElement {
@@ -493,8 +492,8 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             }
         }
         val tr1 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
-        val subPos = params.battingStatsList.find { it.playerName == pName1 }?.position ?: BaseballConstants.Positions.DH
-        renderPlayerCell(tr1, slotIdx, pName1, false, game, params.isHomeBatting, cellBg)
+        val subPos = params.battingStatsList.find { it.playerName == rowData.pName1 }?.position ?: BaseballConstants.Positions.DH
+        renderPlayerCell(tr1, slotIdx, rowData.pName1, false, game, params.isHomeBatting, rowData.cellBg)
 
         tr1.append {
             td {
@@ -504,7 +503,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     padding = Padding(0.5.rem)
                     textAlign = TextAlign.center
                     fontWeight = FontWeight.bold
-                    background = cellBg
+                    background = rowData.cellBg
                 }
             }
         }
@@ -563,7 +562,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
         if (hasSub) {
             pName1 = players[1]
-            tr1 = renderSubRow(tbodyEl, slotIdx, pName1, cellBg, game, params)
+            tr1 = renderSubRow(tbodyEl, slotIdx, RowRenderData(pName1, cellBg), game, params)
         }
 
         renderInningCells(tr0, tr1, slotIdx, players, cellBg, params)
@@ -705,7 +704,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                             Color(if (statIdx == 0) "#5a544a" else "#9c9384")
                         )
                         textAlign = TextAlign.center
-                        background = cellBg
+                    background = cellBg
                         fontWeight = FontWeight.bold
                     }
                 }
@@ -721,7 +720,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                                 Color(if (statIdx == 0) "#5a544a" else "#9c9384")
                             )
                             textAlign = TextAlign.center
-                            background = cellBg
+                    background = cellBg
                             fontWeight = FontWeight.bold
                         }
                     }
