@@ -2,7 +2,7 @@ package com.baseball.ui.gametracking.lineup
 
 import com.baseball.models.Player
 import com.baseball.seed.SeedData
-import com.baseball.ui.state.AppViewManager
+import com.baseball.ui.state.goBackToWelcome
 import com.baseball.ui.state.isSingleGameMode
 import com.baseball.ui.state.renderCurrentTab
 import org.w3c.dom.HTMLElement
@@ -90,7 +90,7 @@ class LineupSetupOverlay(
             onDhToggle = ::dhToggle,
             onLoadDefault = ::loadDefault,
             onRandom = ::doRandom,
-            onBack = { isLineupDialogOpen = false; AppViewManager.goBackToWelcome() },
+            onBack = { isLineupDialogOpen = false; goBackToWelcome() },
             onStartSave = createOnStartSave(
                 CurrentLineupState(
                     homeTeam, awayTeam, useDh,

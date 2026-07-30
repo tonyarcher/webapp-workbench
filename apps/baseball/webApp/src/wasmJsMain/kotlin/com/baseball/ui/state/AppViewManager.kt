@@ -144,13 +144,13 @@ object AppViewManager {
         window.addEventListener("hashchange", {
             val hash = window.location.hash.removePrefix("#")
             if (hash.isNotEmpty()) {
-                handleHashRoute(hash, isEvent = true)
+                AppRoutingHandler.handleHashRoute(hash, isEvent = true)
             }
         })
 
         val initialHash = window.location.hash.removePrefix("#")
         if (initialHash.isNotEmpty()) {
-            handleHashRoute(initialHash, isEvent = false)
+            AppRoutingHandler.handleHashRoute(initialHash, isEvent = false)
         } else {
             window.location.hash = if (isWelcomeScreen) NavTabs.TAB_WELCOME else currentTab
         }
@@ -164,30 +164,65 @@ object AppViewManager {
         fetchInitialServerData()
     }
 
-    private fun handleHashRoute(hash: String, isEvent: Boolean) {
-        if (requiresOnlineAuth(hash) && currentUserSession == null) {
+    private fun fetchInitialServerData() {
+        launch {
+            try {
+                api.getLeagues()
+                serverOnline = true
+                if (!isSingleGameMode && !isWelcomeScreen) {
+                    leaguesList = api.getLeagues()
+                    teamsList = api.getTeams()
+                    if (selectedLeagueId != null) {
+                        seasonsList = api.getSeasons(selectedLeagueId!!)
+                    }
+                }
+            } catch (ignored: Throwable) {
+                println("Failed to fetch initial server data: ${ignored.message}")
+                serverOnline = false
+            }
+            renderApp()
+            renderCurrentTabContent()
+        }
+    }
+
+    fun renderWelcomeScreen(container: HTMLElement) {
+        AppWelcomeScreenRenderer.renderWelcomeScreen(container)
+    }
+
+    fun renderApp() {
+        AppHeaderRenderer.renderApp()
+    }
+
+    fun updateActiveTabButtons() {
+        AppHeaderRenderer.updateActiveTabButtons()
+    }
+}
+
+private object AppRoutingHandler {
+    fun handleHashRoute(hash: String, isEvent: Boolean) {
+        if (requiresOnlineAuth(hash) && AppViewManager.currentUserSession == null) {
             if (isEvent) {
                 window.location.hash = NavTabs.TAB_LOGIN
             } else {
-                isWelcomeScreen = false
-                internalCurrentTab = NavTabs.TAB_LOGIN
+                AppViewManager.isWelcomeScreen = false
+                AppViewManager.internalCurrentTab = NavTabs.TAB_LOGIN
                 window.location.hash = NavTabs.TAB_LOGIN
             }
             return
         }
 
         if (hash == NavTabs.TAB_WELCOME) {
-            isWelcomeScreen = true
+            AppViewManager.isWelcomeScreen = true
         } else if (isValidTab(hash)) {
-            isWelcomeScreen = false
-            internalCurrentTab = hash
+            AppViewManager.isWelcomeScreen = false
+            AppViewManager.internalCurrentTab = hash
         }
 
         if (isEvent) {
-            saveNavState()
+            AppViewManager.saveNavState()
             authService.refreshSession()
-            renderApp()
-            renderCurrentTabContent()
+            AppViewManager.renderApp()
+            AppViewManager.renderCurrentTabContent()
         }
     }
 
@@ -213,33 +248,14 @@ object AppViewManager {
         NavTabs.TAB_REGISTER,
     )
 
-    private fun fetchInitialServerData() {
-        launch {
-            try {
-                api.getLeagues()
-                serverOnline = true
-                if (!isSingleGameMode && !isWelcomeScreen) {
-                    leaguesList = api.getLeagues()
-                    teamsList = api.getTeams()
-                    if (selectedLeagueId != null) {
-                        seasonsList = api.getSeasons(selectedLeagueId!!)
-                    }
-                }
-            } catch (ignored: Throwable) {
-                println("Failed to fetch initial server data: ${ignored.message}")
-                serverOnline = false
-            }
-            renderApp()
-            renderCurrentTabContent()
-        }
-    }
-
     fun goBackToWelcome() {
         selectedGameId = null
-        serverConnectionError = null
+        AppViewManager.serverConnectionError = null
         window.location.hash = "welcome"
     }
+}
 
+private object AppWelcomeScreenRenderer {
     fun renderWelcomeScreen(container: HTMLElement) {
         container.append {
             div(classes = "welcome-container") {
@@ -251,7 +267,7 @@ object AppViewManager {
                 p(classes = "welcome-subtitle") {
                     +"Exhibition Game Mode (Offline) & Full League Season Mode (Online)"
                 }
-                serverConnectionError?.let { errorMsg ->
+                AppViewManager.serverConnectionError?.let { errorMsg ->
                     div(classes = "server-error-banner") { +errorMsg }
                 }
                 div(classes = "mode-grid") {
@@ -263,7 +279,7 @@ object AppViewManager {
     }
 
     private fun DIV.renderWelcomeHeader() {
-        val session = currentUserSession ?: run {
+        val session = AppViewManager.currentUserSession ?: run {
             renderLoggedOutWelcomeHeader()
             return
         }
@@ -321,8 +337,8 @@ object AppViewManager {
     private fun DIV.renderOfflineModeCard() {
         div(classes = "mode-card offline") {
             onClickFunction = {
-                serverConnectionError = null
-                isWelcomeScreen = false
+                AppViewManager.serverConnectionError = null
+                AppViewManager.isWelcomeScreen = false
                 isSingleGameMode = true
                 initGame(forceReset = false)
                 window.location.hash = NavTabs.TAB_LIVE_SCORER
@@ -350,16 +366,16 @@ object AppViewManager {
                 +"track standings, and record live games backed by your database server."
             }
             div(classes = "server-status") {
-                span(classes = if (serverOnline) "status-dot green" else "status-dot red")
-                span(classes = if (serverOnline) "status-text online" else "status-text offline") {
-                    +(if (serverOnline) "Server Online" else "Check Connection")
+                span(classes = if (AppViewManager.serverOnline) "status-dot green" else "status-dot red")
+                span(classes = if (AppViewManager.serverOnline) "status-text online" else "status-text offline") {
+                    +(if (AppViewManager.serverOnline) "Server Online" else "Check Connection")
                 }
             }
         }
     }
 
     private fun handleOnlineModeSelection() {
-        serverConnectionError = null
+        AppViewManager.serverConnectionError = null
         launch {
             try {
                 leaguesList = api.getLeagues()
@@ -371,9 +387,9 @@ object AppViewManager {
                         selectedSeasonId = seasonsList.first().id
                     }
                 }
-                isWelcomeScreen = false
+                AppViewManager.isWelcomeScreen = false
                 isSingleGameMode = false
-                val nextHash = if (currentUserSession == null) {
+                val nextHash = if (AppViewManager.currentUserSession == null) {
                     NavTabs.TAB_LOGIN
                 } else {
                     NavTabs.TAB_LEAGUES
@@ -381,19 +397,21 @@ object AppViewManager {
                 window.location.hash = nextHash
             } catch (ignored: Throwable) {
                 println("Failed to connect online mode: ${ignored.message}")
-                serverConnectionError =
+                AppViewManager.serverConnectionError =
                     "Unable to connect to the server. Please check that the backend server is running."
-                renderApp()
+                AppViewManager.renderApp()
             }
         }
     }
+}
 
+private object AppHeaderRenderer {
     fun renderApp() {
         val app = document.getElementById("app") as? HTMLElement ?: return
         app.innerHTML = ""
 
-        if (isWelcomeScreen) {
-            renderWelcomeScreen(app)
+        if (AppViewManager.isWelcomeScreen) {
+            AppViewManager.renderWelcomeScreen(app)
             return
         }
 
@@ -402,7 +420,7 @@ object AppViewManager {
                 div(classes = "header-container") {
                     div(classes = "logo") {
                         css { cursor = Cursor.pointer }
-                        onClickFunction = { goBackToWelcome() }
+                        onClickFunction = { AppRoutingHandler.goBackToWelcome() }
                         span { +"GRAND SLAM" }
                         +" BASEBALL"
                     }
@@ -420,7 +438,7 @@ object AppViewManager {
     }
 
     private fun DIV.renderUserHeaderControls() {
-        val userSession = currentUserSession
+        val userSession = AppViewManager.currentUserSession
         if (userSession != null) {
             renderLoggedInUserHeaderControls(userSession)
         } else {
@@ -468,10 +486,10 @@ object AppViewManager {
 
     private fun DIV.renderHeaderNavigation() {
         nav {
-            if (!isGameInProgress()) {
+            if (!AppViewManager.isGameInProgress()) {
                 button(classes = "back-to-welcome") {
                     +"← Back to Menu"
-                    onClickFunction = { goBackToWelcome() }
+                    onClickFunction = { AppRoutingHandler.goBackToWelcome() }
                 }
             }
             renderSeasonNavigationButtons()
@@ -481,32 +499,32 @@ object AppViewManager {
                 css {
                     display = if (isSingleGameMode || selectedGameId != null) Display.inlineBlock else Display.none
                 }
-                onClickFunction = { currentTab = NavTabs.TAB_LIVE_SCORER }
+                onClickFunction = { AppViewManager.currentTab = NavTabs.TAB_LIVE_SCORER }
             }
         }
     }
 
     private fun kotlinx.html.NAV.renderSeasonNavigationButtons() {
-        if (isSingleGameMode || isGameInProgress()) return
+        if (isSingleGameMode || AppViewManager.isGameInProgress()) return
         button(classes = "nav-btn") {
             id = "nav-btn-leagues"
             +"Leagues & Seasons"
-            onClickFunction = { currentTab = NavTabs.TAB_LEAGUES }
+            onClickFunction = { AppViewManager.currentTab = NavTabs.TAB_LEAGUES }
         }
         button(classes = "nav-btn") {
             id = "nav-btn-teams"
             +"Teams & Rosters"
-            onClickFunction = { currentTab = NavTabs.TAB_TEAMS }
+            onClickFunction = { AppViewManager.currentTab = NavTabs.TAB_TEAMS }
         }
         button(classes = "nav-btn") {
             id = "nav-btn-games"
             +"Season Dashboard"
-            onClickFunction = { currentTab = NavTabs.TAB_GAMES }
+            onClickFunction = { AppViewManager.currentTab = NavTabs.TAB_GAMES }
         }
         button(classes = "nav-btn") {
             id = "nav-btn-stats"
             +"Season Stats"
-            onClickFunction = { currentTab = NavTabs.TAB_STATS }
+            onClickFunction = { AppViewManager.currentTab = NavTabs.TAB_STATS }
         }
     }
 
@@ -533,7 +551,7 @@ object AppViewManager {
     }
 
     private fun getActiveNavButton(btnLive: HTMLButtonElement?, btnBoxScore: HTMLButtonElement?): HTMLElement? =
-        when (currentTab) {
+        when (AppViewManager.currentTab) {
             NavTabs.TAB_LIVE_SCORER -> btnLive
             NavTabs.TAB_BOXSCORE -> btnBoxScore
             NavTabs.TAB_LEAGUES -> document.getElementById("nav-btn-leagues") as? HTMLElement
@@ -542,11 +560,14 @@ object AppViewManager {
             NavTabs.TAB_STATS -> document.getElementById("nav-btn-stats") as? HTMLElement
             else -> null
         }
-
 }
 
 fun updateActiveTabButtons() {
     AppViewManager.updateActiveTabButtons()
+}
+
+fun goBackToWelcome() {
+    AppRoutingHandler.goBackToWelcome()
 }
 
 fun renderCurrentTab() {
