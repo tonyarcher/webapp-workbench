@@ -171,63 +171,59 @@ class LineupSetupOverlay(
     private val setAwayPitcher = { n: String, num: String -> awayPitcherNameInput = n; awayPitcherNumberInput = num }
     private val setHomePitcher = { n: String, num: String -> homePitcherNameInput = n; homePitcherNumberInput = num }
 
-    private fun makeLineupAdjustConfig() = LineupAdjustConfig(
-        useDh, awayLineupInputs, homeLineupInputs,
-        awayPitcherNameInput, awayPitcherNumberInput,
-        homePitcherNameInput, homePitcherNumberInput
-    )
-
-    private data class LineupCallbacks(
-        val onDhToggle: (Boolean) -> Unit,
-        val onLoadDefault: () -> Unit,
-        val onRandom: () -> Unit,
-        val onBack: () -> Unit,
-        val onStartSave: () -> Unit,
-    )
-
-    private fun createOnDhToggle(): (Boolean) -> Unit = { newVal ->
-        useDh = newVal
-        validationError = null
-        adjustLineupPositions(makeLineupAdjustConfig())
-        render()
-    }
-
-    private fun createOnLoadDefault(cubs: List<Player>, cards: List<Player>): () -> Unit = {
-        validationError = null
-        val cfg = PopulateRostersConfig(
-            useDh, awayLineupInputs, homeLineupInputs, setAwayPitcher, setHomePitcher
-        )
-        populateWithRosters(cubs, cards, cfg)
-        render()
-    }
-
-    private fun createOnRandom(): () -> Unit = {
-        validationError = null
-        populateRostersWithRandom(
-            useDh, awayLineupInputs, homeLineupInputs, setAwayPitcher, setHomePitcher
-        )
-        render()
-    }
-
-    private fun createOnBack(): () -> Unit = { isLineupDialogOpen = false; AppViewManager.goBackToWelcome() }
-
-    private fun createOnStartSave(): () -> Unit = {
-        if (validateAndSave()) {
-            isLineupDialogOpen = false; renderCurrentTab()
-        } else {
-            render()
-        }
-    }
-
     private fun createLineupCallbacks(): LineupCallbacks {
         val cubs = SeedData.cubsRoster
         val cards = SeedData.cardinalsRoster
         return LineupCallbacks(
-            onDhToggle = createOnDhToggle(),
-            onLoadDefault = createOnLoadDefault(cubs, cards),
-            onRandom = createOnRandom(),
-            onBack = createOnBack(),
-            onStartSave = createOnStartSave(),
+            onDhToggle = { newVal ->
+                useDh = newVal
+                validationError = null
+                adjustLineupPositions(
+                    LineupAdjustConfig(
+                        useDh, awayLineupInputs, homeLineupInputs,
+                        awayPitcherNameInput, awayPitcherNumberInput,
+                        homePitcherNameInput, homePitcherNumberInput
+                    )
+                )
+                render()
+            },
+            onLoadDefault = {
+                validationError = null
+                val cfg = PopulateRostersConfig(
+                    useDh, awayLineupInputs, homeLineupInputs, setAwayPitcher, setHomePitcher
+                )
+                populateWithRosters(cubs, cards, cfg)
+                render()
+            },
+            onRandom = {
+                validationError = null
+                populateRostersWithRandom(
+                    useDh, awayLineupInputs, homeLineupInputs, setAwayPitcher, setHomePitcher
+                )
+                render()
+            },
+            onBack = { isLineupDialogOpen = false; AppViewManager.goBackToWelcome() },
+            onStartSave = {
+                val awayInput = LineupValidationInput(
+                    homeTeam, awayTeam, useDh, isHome = false, awayLineupInputs, awayPitcherNameInput, awayPitcherNumberInput
+                )
+                val homeInput = LineupValidationInput(
+                    homeTeam, awayTeam, useDh, isHome = true, homeLineupInputs, homePitcherNameInput, homePitcherNumberInput
+                )
+                val awayRes = validateTeam(awayInput) { validationError = it }
+                val homeRes = validateTeam(homeInput) { validationError = it }
+
+                if (awayRes == null || homeRes == null) {
+                    render()
+                } else {
+                    if (isSingleGameMode) {
+                        saveLocalGameLineup(homeRes, awayRes, homeTeam, awayTeam, useDh)
+                    } else {
+                        saveServerGameLineup(homeRes, awayRes)
+                    }
+                    isLineupDialogOpen = false; renderCurrentTab()
+                }
+            },
         )
     }
 
@@ -330,7 +326,7 @@ private fun populateRostersWithRandom(
                     onHomePitcherNameChange = { newName: String -> homePitcherNameInput = newName },
                     onHomePitcherNumberChange = { newNumber: String -> homePitcherNumberInput = newNumber }
                 ),
-                cb.onDhToggle, cb.onLoadDefault, cb.onRandom, cb.onBack, cb.onStartSave
+                cb
             )
         }
     }
@@ -374,11 +370,7 @@ private fun DIV.renderModalContent(
     validationError: String?,
     lineupUiContext: LineupUiContext,
     handlers: LineupPitcherChangeHandlers,
-    onDhToggle: (Boolean) -> Unit,
-    onLoadDefault: () -> Unit,
-    onRandom: () -> Unit,
-    onBack: () -> Unit,
-    onStartSave: () -> Unit,
+    callbacks: LineupCallbacks,
 ) {
     div(classes = "lineup-modal-content card") {
         css {
@@ -388,9 +380,9 @@ private fun DIV.renderModalContent(
             put("box-shadow", "0 10px 40px rgba(0,0,0,0.5)")
         }
         renderLineupModalHeader(this, validationError)
-        renderConfigurationBar(this, useDh, onDhToggle, onLoadDefault, onRandom)
+        renderConfigurationBar(this, useDh, callbacks.onDhToggle, callbacks.onLoadDefault, callbacks.onRandom)
         renderTeamGrid(this, lineupUiContext, handlers)
-        renderFooterButtons(this, onBack, onStartSave)
+        renderFooterButtons(this, callbacks.onBack, callbacks.onStartSave)
     }
 }
 
@@ -661,109 +653,92 @@ private fun renderSingleLineupRow(
 }
 
 
-    private fun validateAndSave(): Boolean {
-        val awayInput = LineupValidationInput(
-            homeTeam, awayTeam, useDh, isHome = false, awayLineupInputs, awayPitcherNameInput, awayPitcherNumberInput
-        )
-        val homeInput = LineupValidationInput(
-            homeTeam, awayTeam, useDh, isHome = true, homeLineupInputs, homePitcherNameInput, homePitcherNumberInput
-        )
-        val awayRes = validateTeam(awayInput) { validationError = it }
-        val homeRes = validateTeam(homeInput) { validationError = it }
+private fun saveLocalGameLineup(
+    homeRes: Pair<List<Player>, List<Player>>,
+    awayRes: Pair<List<Player>, List<Player>>,
+    homeTeam: com.baseball.models.Team,
+    awayTeam: com.baseball.models.Team,
+    useDh: Boolean,
+) {
+    val awayActivePId = if (useDh) awayRes.second.first().id!! else awayRes.first.find { it.position == "P" }!!.id!!
+    val homeActivePId = if (useDh) homeRes.second.first().id!! else homeRes.first.find { it.position == "P" }!!.id!!
 
-        if (awayRes == null || homeRes == null) return false
+    startNewGame(
+        homeTeam = homeTeam,
+        awayTeam = awayTeam,
+        homeConfig = TeamLineupConfig(homeRes.first, homeRes.second, homeActivePId),
+        awayConfig = TeamLineupConfig(awayRes.first, awayRes.second, awayActivePId),
+        useDh = useDh,
+    )
 
-        if (isSingleGameMode) {
-            saveLocalGameLineup(homeRes, awayRes)
-        } else {
-            saveServerGameLineup(homeRes, awayRes)
-        }
-        return true
-    }
+    localGame = localGame?.copy(status = GameStatus.IN_PROGRESS)
+    saveLocalState()
+    isLineupDialogOpen = false
+    renderCurrentTab()
+}
 
-    private fun saveLocalGameLineup(
-        homeRes: Pair<List<Player>, List<Player>>,
-        awayRes: Pair<List<Player>, List<Player>>,
-    ) {
-        val awayActivePId = if (useDh) awayRes.second.first().id!! else awayRes.first.find { it.position == "P" }!!.id!!
-        val homeActivePId = if (useDh) homeRes.second.first().id!! else homeRes.first.find { it.position == "P" }!!.id!!
+private fun saveServerGameLineup(
+    homeRes: Pair<List<Player>, List<Player>>,
+    awayRes: Pair<List<Player>, List<Player>>,
+) {
+    launch {
+        try {
+            val activeGame = api.getGame(selectedGameId!!)
+            val serverHomeLineup = createServerPlayers(activeGame.homeTeam.id, homeRes.first)
+            val serverHomeBench = createServerPlayers(activeGame.homeTeam.id, homeRes.second)
+            val serverAwayLineup = createServerPlayers(activeGame.awayTeam.id, awayRes.first)
+            val serverAwayBench = createServerPlayers(activeGame.awayTeam.id, awayRes.second)
 
-        startNewGame(
-            homeTeam = homeTeam,
-            awayTeam = awayTeam,
-            homeConfig = TeamLineupConfig(homeRes.first, homeRes.second, homeActivePId),
-            awayConfig = TeamLineupConfig(awayRes.first, awayRes.second, awayActivePId),
-            useDh = useDh,
-        )
+            api.startGame(activeGame.id!!)
+            selectedGameStatus = GameStatus.IN_PROGRESS
 
-        localGame = localGame?.copy(status = GameStatus.IN_PROGRESS)
-        saveLocalState()
-        isLineupDialogOpen = false
-        renderCurrentTab()
-    }
-
-    private fun saveServerGameLineup(
-        homeRes: Pair<List<Player>, List<Player>>,
-        awayRes: Pair<List<Player>, List<Player>>,
-    ) {
-        launch {
-            try {
-                val activeGame = api.getGame(selectedGameId!!)
-                val serverHomeLineup = createServerPlayers(activeGame.homeTeam.id, homeRes.first)
-                val serverHomeBench = createServerPlayers(activeGame.homeTeam.id, homeRes.second)
-                val serverAwayLineup = createServerPlayers(activeGame.awayTeam.id, awayRes.first)
-                val serverAwayBench = createServerPlayers(activeGame.awayTeam.id, awayRes.second)
-
-                api.startGame(activeGame.id!!)
-                selectedGameStatus = GameStatus.IN_PROGRESS
-
-                updateClientState(serverHomeLineup, serverHomeBench, serverAwayLineup, serverAwayBench)
-                isLineupDialogOpen = false
-                AppViewManager.renderApp()
-                renderCurrentTab()
-            } catch (expected: Throwable) {
-                println("Error starting online game: ${expected.message}")
-            }
+            updateClientState(serverHomeLineup, serverHomeBench, serverAwayLineup, serverAwayBench)
+            isLineupDialogOpen = false
+            AppViewManager.renderApp()
+            renderCurrentTab()
+        } catch (expected: Throwable) {
+            println("Error starting online game: ${expected.message}")
         }
     }
+}
 
-    private suspend fun createServerPlayers(teamId: Long?, players: List<Player>): List<Player> =
-        players.map { p ->
-            api.createPlayer(
-                Player(
-                    id = null,
-                    teamId = teamId,
-                    name = p.name,
-                    position = p.position,
-                    jerseyNumber = p.jerseyNumber,
-                    battingHand = "R",
-                    throwingHand = "R",
-                ),
-            )
-        }
-
-    private fun updateClientState(
-        homeLineup: List<Player>,
-        homeBench: List<Player>,
-        awayLineup: List<Player>,
-        awayBench: List<Player>,
-    ) {
-        localHomeLineup.clear()
-        localHomeLineup.addAll(homeLineup)
-        localHomeBench.clear()
-        localHomeBench.addAll(homeBench)
-        localAwayLineup.clear()
-        localAwayLineup.addAll(awayLineup)
-        localAwayBench.clear()
-        localAwayBench.addAll(awayBench)
-
-        val homeP = homeBench.find { it.position == "P" } ?: homeLineup.find { it.position == "P" }
-        val awayP = awayBench.find { it.position == "P" } ?: awayLineup.find { it.position == "P" }
-        localHomeActivePitcherId = homeP?.id ?: 110L
-        localHomeActivePitcherName = homeP?.name ?: "Pitcher"
-        localAwayActivePitcherId = awayP?.id ?: 210L
-        localAwayActivePitcherName = awayP?.name ?: "Pitcher"
+private suspend fun createServerPlayers(teamId: Long?, players: List<Player>): List<Player> =
+    players.map { p ->
+        api.createPlayer(
+            Player(
+                id = null,
+                teamId = teamId,
+                name = p.name,
+                position = p.position,
+                jerseyNumber = p.jerseyNumber,
+                battingHand = "R",
+                throwingHand = "R",
+            ),
+        )
     }
+
+private fun updateClientState(
+    homeLineup: List<Player>,
+    homeBench: List<Player>,
+    awayLineup: List<Player>,
+    awayBench: List<Player>,
+) {
+    localHomeLineup.clear()
+    localHomeLineup.addAll(homeLineup)
+    localHomeBench.clear()
+    localHomeBench.addAll(homeBench)
+    localAwayLineup.clear()
+    localAwayLineup.addAll(awayLineup)
+    localAwayBench.clear()
+    localAwayBench.addAll(awayBench)
+
+    val homeP = homeBench.find { it.position == "P" } ?: homeLineup.find { it.position == "P" }
+    val awayP = awayBench.find { it.position == "P" } ?: awayLineup.find { it.position == "P" }
+    localHomeActivePitcherId = homeP?.id ?: 110L
+    localHomeActivePitcherName = homeP?.name ?: "Pitcher"
+    localAwayActivePitcherId = awayP?.id ?: 210L
+    localAwayActivePitcherName = awayP?.name ?: "Pitcher"
+}
 }
 
 private fun validateTeam(

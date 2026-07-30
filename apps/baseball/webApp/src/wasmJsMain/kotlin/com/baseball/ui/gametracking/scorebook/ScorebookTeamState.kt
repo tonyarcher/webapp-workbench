@@ -22,7 +22,7 @@ data class ScorebookSectionData(
 )
 
 data class ScorecardRenderParams(
-    val slotPlayers: Array<MutableList<String>>,
+    val playersByBattingSlot: Array<MutableList<String>>,
     val battingStatsList: List<PlayerBattingStats>,
     val teamEvents: List<PlayEvent>,
     val maxInning: Int,
@@ -43,4 +43,18 @@ data class LineScoreData(
     val h: Int,
     val e: Int,
     val maxInning: Int,
+)
+
+data class PlayerCellData(
+    val slotIdx: Int,
+    val playerName: String,
+    val hasSub: Boolean,
+    val isHomeBatting: Boolean,
+    val cellBackground: String,
+)
+
+data class RowData(
+    val slotIdx: Int,
+    val players: List<String>,
+    val cellBackground: String,
 )
