@@ -478,10 +478,9 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         tbodyEl: HTMLTableSectionElement,
         slotIdx: Int,
         pName1: String,
-        battingStatsList: List<PlayerBattingStats>,
         cellBg: String,
         game: Game,
-        isHomeBatting: Boolean,
+        params: ScorecardRenderParams,
     ): HTMLTableRowElement {
         val rowId = "sub-row-$slotIdx"
         tbodyEl.append {
@@ -494,8 +493,8 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             }
         }
         val tr1 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
-        val subPos = battingStatsList.find { it.playerName == pName1 }?.position ?: BaseballConstants.Positions.DH
-        renderPlayerCell(tr1, slotIdx, pName1, false, game, isHomeBatting, cellBg)
+        val subPos = params.battingStatsList.find { it.playerName == pName1 }?.position ?: BaseballConstants.Positions.DH
+        renderPlayerCell(tr1, slotIdx, pName1, false, game, params.isHomeBatting, cellBg)
 
         tr1.append {
             td {
@@ -564,10 +563,10 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
         if (hasSub) {
             pName1 = players[1]
-            tr1 = renderSubRow(tbodyEl, slotIdx, pName1, params.battingStatsList, cellBg, game, params.isHomeBatting)
+            tr1 = renderSubRow(tbodyEl, slotIdx, pName1, cellBg, game, params)
         }
 
-        renderInningCells(tr0, tr1, slotIdx, players, params.teamEvents, params.maxInning, params.parser, cellBg)
+        renderInningCells(tr0, tr1, slotIdx, players, cellBg, params)
         renderStatCells(tr0, tr1, pName0, pName1, hasSub, params.battingStatsList, cellBg)
     }
 
@@ -642,23 +641,21 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         tr1: HTMLTableRowElement?,
         slotIdx: Int,
         players: List<String>,
-        teamEvents: List<PlayEvent>,
-        maxInning: Int,
-        parser: ScorecardParser,
         cellBg: String,
+        params: ScorecardRenderParams,
     ) {
         val hasSub = players.size > 1
-        for (inn in 1..maxInning) {
-            val ev = teamEvents.find { (teamEvents.indexOf(it) % 9 == slotIdx) && it.inning == inn }
+        for (inn in 1..params.maxInning) {
+            val ev = params.teamEvents.find { (params.teamEvents.indexOf(it) % 9 == slotIdx) && it.inning == inn }
             val isSubPlay = ev != null && hasSub && ev.batterName == players[1]
 
             if (isSubPlay && tr1 != null) {
-                renderInningCellWrapper(tr0, null, cellBg, teamEvents, parser)
-                renderInningCellWrapper(tr1, ev, cellBg, teamEvents, parser)
+                renderInningCellWrapper(tr0, null, cellBg, params.teamEvents, params.parser)
+                renderInningCellWrapper(tr1, ev, cellBg, params.teamEvents, params.parser)
             } else {
-                renderInningCellWrapper(tr0, ev, cellBg, teamEvents, parser)
+                renderInningCellWrapper(tr0, ev, cellBg, params.teamEvents, params.parser)
                 if (hasSub && tr1 != null) {
-                    renderInningCellWrapper(tr1, null, cellBg, teamEvents, parser)
+                    renderInningCellWrapper(tr1, null, cellBg, params.teamEvents, params.parser)
                 }
             }
         }
