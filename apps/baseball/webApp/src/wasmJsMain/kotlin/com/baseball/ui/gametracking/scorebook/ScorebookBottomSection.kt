@@ -77,16 +77,9 @@ import org.w3c.dom.HTMLElement
 
 fun renderScorebookBottomSection(
     container: HTMLElement,
-    game: Game,
-    boxScore: BoxScore,
     isHomeBatting: Boolean,
-    maxInning: Int,
-    localAwayRoster: List<Player>,
-    localHomeRoster: List<Player>,
-    localAwayActivePitcherId: Long,
-    localHomeActivePitcherId: Long,
-    localAwayActivePitcherName: String,
-    localHomeActivePitcherName: String,
+    teamState: ScorebookTeamState,
+    data: ScorebookSectionData,
 ) {
     val bottomGrid =
         container.append.div {
@@ -101,31 +94,20 @@ fun renderScorebookBottomSection(
     renderDefenseDiagram(
         bottomGrid,
         isHomeBatting,
-        localAwayRoster,
-        localHomeRoster,
-        localAwayActivePitcherId,
-        localHomeActivePitcherId
+        teamState
     )
-    renderOpposingPitchingStats(bottomGrid, isHomeBatting, boxScore)
+    renderOpposingPitchingStats(bottomGrid, isHomeBatting, data.boxScore)
     renderScoreboardSummary(
         bottomGrid,
-        game,
-        boxScore,
-        maxInning,
-        localHomeRoster,
-        localAwayRoster,
-        localHomeActivePitcherName,
-        localAwayActivePitcherName,
+        data,
+        teamState,
     )
 }
 
 private fun renderDefenseDiagram(
     parent: HTMLDivElement,
     isHomeBatting: Boolean,
-    localAwayRoster: List<Player>,
-    localHomeRoster: List<Player>,
-    localAwayActivePitcherId: Long,
-    localHomeActivePitcherId: Long,
+    teamState: ScorebookTeamState,
 ) {
     val cardEl =
         parent.append.div(classes = "card") {
@@ -187,8 +169,8 @@ private fun renderDefenseDiagram(
             }
         }
 
-    val defPlayers = if (isHomeBatting) localAwayRoster else localHomeRoster
-    val activePitcherId = if (isHomeBatting) localAwayActivePitcherId else localHomeActivePitcherId
+    val defPlayers = if (isHomeBatting) teamState.awayRoster else teamState.homeRoster
+    val activePitcherId = if (isHomeBatting) teamState.awayActivePitcherId else teamState.homeActivePitcherId
     renderPositionNodes(fieldWrapper, defPlayers, activePitcherId)
 }
 
@@ -382,13 +364,8 @@ private fun renderPitcherRow(
 
 private fun renderScoreboardSummary(
     parent: HTMLDivElement,
-    game: Game,
-    boxScore: BoxScore,
-    maxInning: Int,
-    localHomeRoster: List<Player>,
-    localAwayRoster: List<Player>,
-    localHomeActivePitcherName: String,
-    localAwayActivePitcherName: String,
+    data: ScorebookSectionData,
+    teamState: ScorebookTeamState,
 ) {
     parent.append.div(classes = "card") {
         css {
@@ -409,13 +386,10 @@ private fun renderScoreboardSummary(
                 paddingBottom = 0.25.rem
             }
         }
-        renderLineScoreTable(game, boxScore, maxInning)
+        renderLineScoreTable(data.game, data.boxScore, data.maxInning)
         renderPitcherRecords(
-            game,
-            localHomeRoster,
-            localAwayRoster,
-            localHomeActivePitcherName,
-            localAwayActivePitcherName,
+            data.game,
+            teamState,
         )
     }
 }
@@ -462,131 +436,112 @@ private fun DIV.renderLineScoreTable(
         renderLineScoreHeader(maxInning)
         tbody {
             renderLineScoreTeamRow(
-                game.awayTeam.abbreviation,
-                boxScore.lineScore.awayInningRuns,
-                game.gameState.inning,
-                boxScore.lineScore.awayRuns,
-                boxScore.lineScore.awayHits,
-                boxScore.lineScore.awayErrors,
-                maxInning,
+                LineScoreData(
+                    teamAbb = game.awayTeam.abbreviation,
+                    inningRuns = boxScore.lineScore.awayInningRuns,
+                    currentInning = game.gameState.inning,
+                    r = boxScore.lineScore.awayRuns,
+                    h = boxScore.lineScore.awayHits,
+                    e = boxScore.lineScore.awayErrors,
+                    maxInning = maxInning,
+                ),
             )
             renderLineScoreTeamRow(
-                game.homeTeam.abbreviation,
-                boxScore.lineScore.homeInningRuns,
-                game.gameState.inning,
-                boxScore.lineScore.homeRuns,
-                boxScore.lineScore.homeHits,
-                boxScore.lineScore.homeErrors,
-                maxInning,
+                LineScoreData(
+                    teamAbb = game.homeTeam.abbreviation,
+                    inningRuns = boxScore.lineScore.homeInningRuns,
+                    currentInning = game.gameState.inning,
+                    r = boxScore.lineScore.homeRuns,
+                    h = boxScore.lineScore.homeHits,
+                    e = boxScore.lineScore.homeErrors,
+                    maxInning = maxInning,
+                ),
             )
         }
     }
 }
 
-private fun TBODY.renderLineScoreTeamRow(
-    teamAbb: String,
-    inningRuns: List<Int?>,
-    currentInning: Int,
-    r: Int,
-    h: Int,
-    e: Int,
-    maxInning: Int,
-) {
+private fun TBODY.renderLineScoreTeamRow(data: LineScoreData) {
     tr {
         css { borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae")) }
         td {
-            +teamAbb
+            +data.teamAbb
             css { fontWeight = FontWeight.bold }
         }
-        for (i in 1..maxInning) {
-            val run = inningRuns.getOrNull(i - 1)
+        for (i in 1..data.maxInning) {
+            val run = data.inningRuns.getOrNull(i - 1)
             val text =
                 when {
                     run != null -> run.toString()
-                    i <= currentInning -> "0"
+                    i <= data.currentInning -> "0"
                     else -> "-"
                 }
             renderCenterTd(text)
         }
         td {
-            +r.toString()
+            +data.r.toString()
             css {
                 textAlign = TextAlign.center
                 fontWeight = FontWeight.bold
             }
         }
-        renderCenterTd(h.toString())
-        renderCenterTd(e.toString())
+        renderCenterTd(data.h.toString())
+        renderCenterTd(data.e.toString())
     }
 }
 
 private fun determineWpName(
     isCompleted: Boolean,
     game: Game,
-    localHomeRoster: List<Player>,
-    localAwayRoster: List<Player>,
-    localHomeActivePitcherName: String,
-    localAwayActivePitcherName: String,
+    teamState: ScorebookTeamState,
 ): String =
     when {
         isCompleted ->
             if (game.homeScore > game.awayScore) {
-                (localHomeRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele")
+                (teamState.homeRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele")
             } else {
-                (localAwayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
+                (teamState.awayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
             }
 
-        game.homeScore > game.awayScore -> localHomeActivePitcherName
-        game.awayScore > game.homeScore -> localAwayActivePitcherName
+        game.homeScore > game.awayScore -> teamState.homeActivePitcherName
+        game.awayScore > game.homeScore -> teamState.awayActivePitcherName
         else -> "-"
     }
 
 private fun determineLpName(
     isCompleted: Boolean,
     game: Game,
-    localHomeRoster: List<Player>,
-    localAwayRoster: List<Player>,
-    localHomeActivePitcherName: String,
-    localAwayActivePitcherName: String,
+    teamState: ScorebookTeamState,
 ): String =
     when {
         isCompleted ->
             if (game.homeScore < game.awayScore) {
-                (localHomeRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele")
+                (teamState.homeRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele")
             } else {
-                (localAwayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
+                (teamState.awayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
             }
 
-        game.homeScore < game.awayScore -> localHomeActivePitcherName
-        game.awayScore < game.homeScore -> localAwayActivePitcherName
+        game.homeScore < game.awayScore -> teamState.homeActivePitcherName
+        game.awayScore < game.homeScore -> teamState.awayActivePitcherName
         else -> "-"
     }
 
 private fun DIV.renderPitcherRecords(
     game: Game,
-    localHomeRoster: List<Player>,
-    localAwayRoster: List<Player>,
-    localHomeActivePitcherName: String,
-    localAwayActivePitcherName: String,
+    teamState: ScorebookTeamState,
 ) {
     val isCompleted = game.status == GameStatus.COMPLETED
     val wpName =
         determineWpName(
             isCompleted,
             game,
-            localHomeRoster,
-            localAwayRoster,
-            localHomeActivePitcherName,
-            localAwayActivePitcherName
+            teamState
         )
     val lpName =
         determineLpName(
             isCompleted,
             game,
-            localHomeRoster,
-            localAwayRoster,
-            localHomeActivePitcherName,
-            localAwayActivePitcherName
+            teamState
         )
     val svName =
         if (isCompleted && game.homeScore > game.awayScore) {

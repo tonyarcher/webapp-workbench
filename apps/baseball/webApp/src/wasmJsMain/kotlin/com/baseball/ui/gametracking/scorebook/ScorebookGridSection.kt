@@ -158,16 +158,20 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
         renderScorebookBottomSection(
             container = container,
-            game = game,
-            boxScore = boxScore,
             isHomeBatting = isHomeBatting,
-            maxInning = maxInning,
-            localAwayRoster = localAwayRoster,
-            localHomeRoster = localHomeRoster,
-            localAwayActivePitcherId = localAwayActivePitcherId,
-            localHomeActivePitcherId = localHomeActivePitcherId,
-            localAwayActivePitcherName = localAwayActivePitcherName,
-            localHomeActivePitcherName = localHomeActivePitcherName,
+            teamState = ScorebookTeamState(
+                awayRoster = localAwayRoster,
+                homeRoster = localHomeRoster,
+                awayActivePitcherId = localAwayActivePitcherId,
+                homeActivePitcherId = localHomeActivePitcherId,
+                awayActivePitcherName = localAwayActivePitcherName,
+                homeActivePitcherName = localHomeActivePitcherName,
+            ),
+            data = ScorebookSectionData(
+                game = game,
+                boxScore = boxScore,
+                maxInning = maxInning,
+            ),
         )
     }
 

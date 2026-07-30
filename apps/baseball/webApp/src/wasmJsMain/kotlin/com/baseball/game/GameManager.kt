@@ -206,10 +206,6 @@ private fun initializeGameRosters(
     localHomeActivePitcherName = result.homeActivePitcherName
     localAwayActivePitcherId = awayConfig.activePitcherId
     localAwayActivePitcherName = result.awayActivePitcherName
-    populateLineups(homeConfig, awayConfig)
-}
-
-private fun populateLineups(homeConfig: TeamLineupConfig, awayConfig: TeamLineupConfig) {
     localAwayLineup.clear(); localAwayLineup.addAll(awayConfig.lineup)
     localAwayBench.clear(); localAwayBench.addAll(awayConfig.bench)
     localAwayBatterIndex = 0
@@ -217,26 +213,6 @@ private fun populateLineups(homeConfig: TeamLineupConfig, awayConfig: TeamLineup
     localHomeBench.clear(); localHomeBench.addAll(homeConfig.bench)
     localHomeBatterIndex = 0
     localPlayersSubbedOut.clear()
-}
-
-private fun cacheInitialGameConfig(
-    homeConfig: TeamLineupConfig,
-    awayConfig: TeamLineupConfig,
-    useDh: Boolean,
-) {
-    localUseDh = useDh
-    initialAwayLineup.clear()
-    initialAwayLineup.addAll(awayConfig.lineup)
-    initialHomeLineup.clear()
-    initialHomeLineup.addAll(homeConfig.lineup)
-    initialAwayBench.clear()
-    initialAwayBench.addAll(awayConfig.bench)
-    initialHomeBench.clear()
-    initialHomeBench.addAll(homeConfig.bench)
-    initialAwayActivePitcherId = localAwayActivePitcherId
-    initialAwayActivePitcherName = localAwayActivePitcherName
-    initialHomeActivePitcherId = localHomeActivePitcherId
-    initialHomeActivePitcherName = localHomeActivePitcherName
 }
 
 private fun createNewGameSession(
@@ -267,7 +243,19 @@ fun startNewGame(
     useDh: Boolean,
 ) {
     initializeGameRosters(homeTeam, awayTeam, homeConfig, awayConfig)
-    cacheInitialGameConfig(homeConfig, awayConfig, useDh)
+    localUseDh = useDh
+    initialAwayLineup.clear()
+    initialAwayLineup.addAll(awayConfig.lineup)
+    initialHomeLineup.clear()
+    initialHomeLineup.addAll(homeConfig.lineup)
+    initialAwayBench.clear()
+    initialAwayBench.addAll(awayConfig.bench)
+    initialHomeBench.clear()
+    initialHomeBench.addAll(homeConfig.bench)
+    initialAwayActivePitcherId = localAwayActivePitcherId
+    initialAwayActivePitcherName = localAwayActivePitcherName
+    initialHomeActivePitcherId = localHomeActivePitcherId
+    initialHomeActivePitcherName = localHomeActivePitcherName
     createNewGameSession(homeTeam, awayTeam, useDh, homeConfig, awayConfig)
 }
 
