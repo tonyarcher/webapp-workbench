@@ -61,184 +61,194 @@ internal fun renderDefenseDiagram(
     isHomeBatting: Boolean,
     teamState: ScorebookTeamState,
 ) {
-    val cardEl = parent.append.div(classes = "card") {
-        css {
-            backgroundColor = Color("#f9f7f2")
-            border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-            padding = Padding(1.rem)
-            color = Color("#2b2a28")
-            put("flex", "1 1 300px")
-        }
-    }
-    renderDefenseHeader(cardEl)
-
-    val fieldWrapper = cardEl.append.div {
-        css {
-            position = Position.relative
-            width = 100.pct
-            height = 260.px
-            backgroundColor = Color("#edf2eb")
-            border = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
-            borderRadius = 8.px
-            overflow = Overflow.hidden
-        }
-    }
-    renderDefenseFieldDiamond(fieldWrapper)
-
-    val defPlayers = if (isHomeBatting) teamState.awayRoster else teamState.homeRoster
-    val activePitcherId = if (isHomeBatting) teamState.awayActivePitcherId else teamState.homeActivePitcherId
-    renderPositionNodes(fieldWrapper, defPlayers, activePitcherId)
-}
-
-private fun renderDefenseHeader(parent: Element) {
-    parent.append {
-        h3 {
-            +"HOME DEFENSE FIELD"
-            css {
-                textAlign = TextAlign.center
-                margin = Margin(0.px, 0.px, 1.rem, 0.px)
-                fontSize = 1.rem
-                fontWeight = FontWeight.bold
-                borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
-                paddingBottom = 0.25.rem
-            }
-        }
-    }
-}
-
-private fun renderDefenseFieldDiamond(fieldWrapper: Element) {
-    fieldWrapper.append.div {
-        css {
-            position = Position.absolute
-            bottom = 10.px
-            left = "calc(50% - 90px)".toCSSValue()
-            width = 180.px
-            height = 180.px
-            borderRadius = 50.pct
-            backgroundColor = Color("#e5ccb3")
-            zIndex = 1
-        }
-    }
-    fieldWrapper.append.div {
-        css {
-            position = Position.absolute
-            bottom = 50.px
-            left = "calc(50% - 50px)".toCSSValue()
-            width = 100.px
-            height = 100.px
-            backgroundColor = Color("#cbe1c7")
-            border = Border(2.px, BorderStyle.solid, Color.white)
-            put("transform", "rotate(45deg)")
-            zIndex = 2
-        }
-    }
+    ScorebookFieldDiagramRenderer.renderDefenseDiagram(parent, isHomeBatting, teamState)
 }
 
 private fun String.toCSSValue(): LinearDimension = LinearDimension(this)
 
-private fun buildPositionsMap(
-    defPlayers: List<Player>,
-    activePitcherId: Long,
-): Map<String, String> =
-    mapOf(
-        BaseballConstants.Positions.P to
-                (defPlayers.find { it.id == activePitcherId }?.name ?: "Pitcher"),
-        BaseballConstants.Positions.C to
-                (defPlayers.find { it.position == BaseballConstants.Positions.C }?.name ?: "Catcher"),
-        BaseballConstants.Positions.FIRST_BASE to
-                (defPlayers.find { it.position == BaseballConstants.Positions.FIRST_BASE }?.name ?: "First Base"),
-        BaseballConstants.Positions.SECOND_BASE to
-                (defPlayers.find { it.position == BaseballConstants.Positions.SECOND_BASE }?.name ?: "Second Base"),
-        BaseballConstants.Positions.THIRD_BASE to
-                (defPlayers.find { it.position == BaseballConstants.Positions.THIRD_BASE }?.name ?: "Third Base"),
-        BaseballConstants.Positions.SS to
-                (defPlayers.find { it.position == BaseballConstants.Positions.SS }?.name ?: "Shortstop"),
-        BaseballConstants.Positions.LF to
-                (defPlayers.find { it.position == BaseballConstants.Positions.LF }?.name ?: "Left Field"),
-        BaseballConstants.Positions.CF to
-                (defPlayers.find { it.position == BaseballConstants.Positions.CF }?.name ?: "Center Field"),
-        BaseballConstants.Positions.RF to
-                (defPlayers.find { it.position == BaseballConstants.Positions.RF }?.name ?: "Right Field"),
-    )
+private object ScorebookFieldDiagramRenderer {
+    fun renderDefenseDiagram(
+        parent: Element,
+        isHomeBatting: Boolean,
+        teamState: ScorebookTeamState,
+    ) {
+        val cardEl = parent.append.div(classes = "card") {
+            css {
+                backgroundColor = Color("#f9f7f2")
+                border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                padding = Padding(1.rem)
+                color = Color("#2b2a28")
+                put("flex", "1 1 300px")
+            }
+        }
+        renderDefenseHeader(cardEl)
 
-private fun renderPositionNodes(
-    fieldWrapper: Element,
-    defPlayers: List<Player>,
-    activePitcherId: Long,
-) {
-    val positionsMap = buildPositionsMap(defPlayers, activePitcherId)
-    val coords =
+        val fieldWrapper = cardEl.append.div {
+            css {
+                position = Position.relative
+                width = 100.pct
+                height = 260.px
+                backgroundColor = Color("#edf2eb")
+                border = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
+                borderRadius = 8.px
+                overflow = Overflow.hidden
+            }
+        }
+        renderDefenseFieldDiamond(fieldWrapper)
+
+        val defPlayers = if (isHomeBatting) teamState.awayRoster else teamState.homeRoster
+        val activePitcherId = if (isHomeBatting) teamState.awayActivePitcherId else teamState.homeActivePitcherId
+        renderPositionNodes(fieldWrapper, defPlayers, activePitcherId)
+    }
+
+    private fun renderDefenseHeader(parent: Element) {
+        parent.append {
+            h3 {
+                +"HOME DEFENSE FIELD"
+                css {
+                    textAlign = TextAlign.center
+                    margin = Margin(0.px, 0.px, 1.rem, 0.px)
+                    fontSize = 1.rem
+                    fontWeight = FontWeight.bold
+                    borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
+                    paddingBottom = 0.25.rem
+                }
+            }
+        }
+    }
+
+    private fun renderDefenseFieldDiamond(fieldWrapper: Element) {
+        fieldWrapper.append.div {
+            css {
+                position = Position.absolute
+                bottom = 10.px
+                left = "calc(50% - 90px)".toCSSValue()
+                width = 180.px
+                height = 180.px
+                borderRadius = 50.pct
+                backgroundColor = Color("#e5ccb3")
+                zIndex = 1
+            }
+        }
+        fieldWrapper.append.div {
+            css {
+                position = Position.absolute
+                bottom = 50.px
+                left = "calc(50% - 50px)".toCSSValue()
+                width = 100.px
+                height = 100.px
+                backgroundColor = Color("#cbe1c7")
+                border = Border(2.px, BorderStyle.solid, Color.white)
+                put("transform", "rotate(45deg)")
+                zIndex = 2
+            }
+        }
+    }
+
+    private fun buildPositionsMap(
+        defPlayers: List<Player>,
+        activePitcherId: Long,
+    ): Map<String, String> =
         mapOf(
-            BaseballConstants.Positions.CF to Pair("10px", "calc(50% - 40px)"),
-            BaseballConstants.Positions.LF to Pair("40px", "15px"),
-            BaseballConstants.Positions.RF to Pair("40px", "calc(100% - 95px)"),
-            BaseballConstants.Positions.SS to Pair("55px", "calc(50% - 75px)"),
-            BaseballConstants.Positions.SECOND_BASE to Pair("65px", "calc(50% - 5px)"),
-            BaseballConstants.Positions.THIRD_BASE to Pair("130px", "calc(50% - 115px)"),
-            BaseballConstants.Positions.FIRST_BASE to Pair("130px", "calc(50% + 35px)"),
-            BaseballConstants.Positions.P to Pair("135px", "calc(50% - 40px)"),
-            BaseballConstants.Positions.C to Pair("210px", "calc(50% - 40px)"),
+            BaseballConstants.Positions.P to
+                    (defPlayers.find { it.id == activePitcherId }?.name ?: "Pitcher"),
+            BaseballConstants.Positions.C to
+                    (defPlayers.find { it.position == BaseballConstants.Positions.C }?.name ?: "Catcher"),
+            BaseballConstants.Positions.FIRST_BASE to
+                    (defPlayers.find { it.position == BaseballConstants.Positions.FIRST_BASE }?.name ?: "First Base"),
+            BaseballConstants.Positions.SECOND_BASE to
+                    (defPlayers.find { it.position == BaseballConstants.Positions.SECOND_BASE }?.name ?: "Second Base"),
+            BaseballConstants.Positions.THIRD_BASE to
+                    (defPlayers.find { it.position == BaseballConstants.Positions.THIRD_BASE }?.name ?: "Third Base"),
+            BaseballConstants.Positions.SS to
+                    (defPlayers.find { it.position == BaseballConstants.Positions.SS }?.name ?: "Shortstop"),
+            BaseballConstants.Positions.LF to
+                    (defPlayers.find { it.position == BaseballConstants.Positions.LF }?.name ?: "Left Field"),
+            BaseballConstants.Positions.CF to
+                    (defPlayers.find { it.position == BaseballConstants.Positions.CF }?.name ?: "Center Field"),
+            BaseballConstants.Positions.RF to
+                    (defPlayers.find { it.position == BaseballConstants.Positions.RF }?.name ?: "Right Field"),
         )
 
-    coords.forEach { (pos, coord) ->
-        val name = positionsMap[pos] ?: "Def"
-        renderPositionNode(fieldWrapper, pos, coord, name)
-    }
-}
+    private fun renderPositionNodes(
+        fieldWrapper: Element,
+        defPlayers: List<Player>,
+        activePitcherId: Long,
+    ) {
+        val positionsMap = buildPositionsMap(defPlayers, activePitcherId)
+        val coords =
+            mapOf(
+                BaseballConstants.Positions.CF to Pair("10px", "calc(50% - 40px)"),
+                BaseballConstants.Positions.LF to Pair("40px", "15px"),
+                BaseballConstants.Positions.RF to Pair("40px", "calc(100% - 95px)"),
+                BaseballConstants.Positions.SS to Pair("55px", "calc(50% - 75px)"),
+                BaseballConstants.Positions.SECOND_BASE to Pair("65px", "calc(50% - 5px)"),
+                BaseballConstants.Positions.THIRD_BASE to Pair("130px", "calc(50% - 115px)"),
+                BaseballConstants.Positions.FIRST_BASE to Pair("130px", "calc(50% + 35px)"),
+                BaseballConstants.Positions.P to Pair("135px", "calc(50% - 40px)"),
+                BaseballConstants.Positions.C to Pair("210px", "calc(50% - 40px)"),
+            )
 
-private fun renderPositionNode(
-    fieldWrapper: Element,
-    pos: String,
-    coord: Pair<String, String>,
-    name: String,
-) {
-    fieldWrapper.append.div {
-        css {
-            position = Position.absolute
-            top = coord.first.toCSSValue()
-            left = coord.second.toCSSValue()
-            width = 80.px
-            display = Display.flex
-            flexDirection = FlexDirection.column
-            alignItems = Align.center
-            zIndex = 10
-        }
-        renderPositionBadge(pos)
-        renderPositionLabel(name)
-    }
-}
-
-private fun DIV.renderPositionBadge(pos: String) {
-    span {
-        +pos
-        css {
-            fontSize = 0.75.rem
-            fontWeight = FontWeight.bold
-            backgroundColor = Color("#ff2a3b")
-            color = Color.white
-            borderRadius = 50.pct
-            width = 18.px
-            height = 18.px
-            display = Display.flex
-            justifyContent = JustifyContent.center
-            alignItems = Align.center
-            border = Border(1.px, BorderStyle.solid, Color.white)
+        coords.forEach { (pos, coord) ->
+            val name = positionsMap[pos] ?: "Def"
+            renderPositionNode(fieldWrapper, pos, coord, name)
         }
     }
-}
 
-private fun DIV.renderPositionLabel(name: String) {
-    span {
-        +name.substringBefore(" ").take(8)
-        css {
-            fontSize = 0.65.rem
-            fontWeight = FontWeight.bold
-            color = Color("#111")
-            backgroundColor = Color("rgba(255, 255, 255, 0.8)")
-            padding = Padding(1.px, 4.px)
-            borderRadius = 3.px
-            marginTop = 2.px
-            textAlign = TextAlign.center
+    private fun renderPositionNode(
+        fieldWrapper: Element,
+        pos: String,
+        coord: Pair<String, String>,
+        name: String,
+    ) {
+        fieldWrapper.append.div {
+            css {
+                position = Position.absolute
+                top = coord.first.toCSSValue()
+                left = coord.second.toCSSValue()
+                width = 80.px
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                alignItems = Align.center
+                zIndex = 10
+            }
+            renderPositionBadge(pos)
+            renderPositionLabel(name)
+        }
+    }
+
+    private fun DIV.renderPositionBadge(pos: String) {
+        span {
+            +pos
+            css {
+                fontSize = 0.75.rem
+                fontWeight = FontWeight.bold
+                backgroundColor = Color("#ff2a3b")
+                color = Color.white
+                borderRadius = 50.pct
+                width = 18.px
+                height = 18.px
+                display = Display.flex
+                justifyContent = JustifyContent.center
+                alignItems = Align.center
+                border = Border(1.px, BorderStyle.solid, Color.white)
+            }
+        }
+    }
+
+    private fun DIV.renderPositionLabel(name: String) {
+        span {
+            +name.substringBefore(" ").take(8)
+            css {
+                fontSize = 0.65.rem
+                fontWeight = FontWeight.bold
+                color = Color("#111")
+                backgroundColor = Color("rgba(255, 255, 255, 0.8)")
+                padding = Padding(1.px, 4.px)
+                borderRadius = 3.px
+                marginTop = 2.px
+                textAlign = TextAlign.center
+            }
         }
     }
 }
@@ -247,37 +257,36 @@ internal fun determineWpName(
     isCompleted: Boolean,
     game: Game,
     teamState: ScorebookTeamState,
-): String =
-    when {
-        isCompleted ->
-            if (game.homeScore > game.awayScore) {
-                (teamState.homeRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele")
-            } else {
-                (teamState.awayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
-            }
-
-        game.homeScore > game.awayScore -> teamState.homeActivePitcherName
-        game.awayScore > game.homeScore -> teamState.awayActivePitcherName
-        else -> "-"
-    }
+): String = determineDecisionPitcher(isWinning = true, isCompleted, game, teamState)
 
 internal fun determineLpName(
     isCompleted: Boolean,
     game: Game,
     teamState: ScorebookTeamState,
-): String =
-    when {
-        isCompleted ->
-            if (game.homeScore < game.awayScore) {
-                (teamState.homeRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele")
-            } else {
-                (teamState.awayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
-            }
+): String = determineDecisionPitcher(isWinning = false, isCompleted, game, teamState)
 
-        game.homeScore < game.awayScore -> teamState.homeActivePitcherName
-        game.awayScore < game.homeScore -> teamState.awayActivePitcherName
+private fun determineDecisionPitcher(
+    isWinning: Boolean,
+    isCompleted: Boolean,
+    game: Game,
+    teamState: ScorebookTeamState,
+): String {
+    val homeWon = game.homeScore > game.awayScore
+    val awayWon = game.awayScore > game.homeScore
+    val targetHome = if (isWinning) homeWon else game.homeScore < game.awayScore
+    val targetAway = if (isWinning) awayWon else game.awayScore < game.homeScore
+
+    return when {
+        isCompleted -> if (targetHome) {
+            (teamState.homeRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Justin Steele")
+        } else {
+            (teamState.awayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
+        }
+        targetHome -> teamState.homeActivePitcherName
+        targetAway -> teamState.awayActivePitcherName
         else -> "-"
     }
+}
 
 internal fun determineSvName(
     isCompleted: Boolean,
@@ -310,7 +319,13 @@ internal fun DIV.renderPitcherRecords(
             fontSize = 0.8.rem
         }
         getPitcherRecords(isCompleted, wpName, lpName, svName).forEach { (label, name) ->
-            renderRecordRow(label, name)
+            div {
+                +"$label: "
+                span {
+                    css { fontWeight = FontWeight.bold }
+                    +name
+                }
+            }
         }
     }
 }
@@ -347,15 +362,5 @@ internal fun Element.renderStatsCard(title: String, block: DIV.() -> Unit) {
             }
         }
         block()
-    }
-}
-
-private fun DIV.renderRecordRow(label: String, name: String) {
-    div {
-        +"$label: "
-        span {
-            css { fontWeight = FontWeight.bold }
-            +name
-        }
     }
 }

@@ -38,19 +38,18 @@ import kotlinx.html.js.div
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.span
 
-
 class ScorerStep2Panel(
-    private val controller: GameScoringController,
-    private val eventType: ScoringEventType,
-    private val baseLabel: String,
-    private val isHit: Boolean,
+    internal val controller: GameScoringController,
+    internal val eventType: ScoringEventType,
+    internal val baseLabel: String,
+    internal val isHit: Boolean,
 ) {
-    private var hasError = false
-    private var hasDoublePlay = false
-    private val throwSequence = mutableListOf<Int>()
-    private var isUnassisted = false
-    private var hrType = "Over the Fence"
-    private val runnerAdvances = mutableMapOf<String, Int>()
+    internal var hasError = false
+    internal var hasDoublePlay = false
+    internal val throwSequence = mutableListOf<Int>()
+    internal var isUnassisted = false
+    internal var hrType = "Over the Fence"
+    internal val runnerAdvances = mutableMapOf<String, Int>()
 
     init {
         initializeAdvances()
@@ -70,7 +69,7 @@ class ScorerStep2Panel(
             else -> 0
         }
 
-    private fun initializeAdvances() {
+    internal fun initializeAdvances() {
         val batterBase = getBatterBase()
         if (batterBase <= 0) return
         var currentLeading = batterBase
@@ -111,60 +110,83 @@ class ScorerStep2Panel(
                     fontSize = 1.2.rem
                 }
             }
-            renderOptionsBar(this)
+            ScorerStep2OptionsUi.renderOptionsBar(this@ScorerStep2Panel, this)
             if (eventType == ScoringEventType.HOME_RUN) {
-                renderHomeRunOptions(this)
+                ScorerStep2OptionsUi.renderHomeRunOptions(this@ScorerStep2Panel, this)
             }
-            renderRunnersAdvancement(this)
-            renderThrowSequenceSection(this)
-            renderFielderGridSection(this)
-            renderFooter(this)
+            ScorerStep2RunnerAdvancementUi.renderRunnersAdvancement(this@ScorerStep2Panel, this)
+            ScorerStep2DefensePlayUi.renderThrowSequenceSection(this@ScorerStep2Panel, this)
+            ScorerStep2FielderGridUi.renderFielderGridSection(this@ScorerStep2Panel, this)
+            ScorerStep2DefensePlayUi.renderFooter(this@ScorerStep2Panel, this)
         }
     }
 
-    private fun DIV.renderDoublePlayButton() {
-        button(classes = if (hasDoublePlay) "btn btn-primary" else "btn btn-secondary") {
-            +(if (hasDoublePlay) "Double Play Active" else "+ Add Double Play")
-            onClickFunction = {
-                hasDoublePlay = !hasDoublePlay
-                if (hasDoublePlay) {
-                    val leadRunnerId =
-                        controller.game.gameState.runnerThirdId
-                            ?: controller.game.gameState.runnerSecondId
-                            ?: controller.game.gameState.runnerFirstId
-                    if (leadRunnerId != null) {
-                        runnerAdvances[leadRunnerId.toString()] = 0
-                    }
-                } else {
-                    runnerAdvances.clear()
-                    initializeAdvances()
-                }
-                render()
-            }
-        }
+    internal fun submitPlayWithLocation(loc: String?) {
+        val seqStr = buildSeqString(throwSequence, isUnassisted)
+        val detailParams = PlayDetailParams(
+            baseLabel = baseLabel,
+            loc = loc,
+            seqStr = seqStr,
+            hasRunnerOut = runnerAdvances.values.contains(0),
+            eventType = eventType,
+            hasDoublePlay = hasDoublePlay,
+            hasError = hasError,
+        )
+        val detail = buildPlayDetailString(detailParams)
+        controller.triggerScoringEvent(
+            eventType,
+            detail,
+            hasDoublePlay,
+            hasError,
+            runnerAdvances.takeIf { it.isNotEmpty() },
+        )
     }
+}
 
-    private fun DIV.renderOptionsBar(parent: DIV) {
+private object ScorerStep2OptionsUi {
+    fun renderOptionsBar(panel: ScorerStep2Panel, parent: DIV) {
         parent.div {
             css {
                 display = Display.flex
                 gap = 0.5.rem
                 marginBottom = 1.rem
             }
-            button(classes = if (hasError) "btn btn-danger" else "btn btn-secondary") {
-                +(if (hasError) "Error Active" else "+ Add Error")
+            button(classes = if (panel.hasError) "btn btn-danger" else "btn btn-secondary") {
+                +(if (panel.hasError) "Error Active" else "+ Add Error")
                 onClickFunction = {
-                    hasError = !hasError
-                    render()
+                    panel.hasError = !panel.hasError
+                    panel.render()
                 }
             }
-            if (!isHit) {
-                renderDoublePlayButton()
+            if (!panel.isHit) {
+                renderDoublePlayButton(panel, this)
             }
         }
     }
 
-    private fun DIV.renderHomeRunOptions(parent: DIV) {
+    private fun renderDoublePlayButton(panel: ScorerStep2Panel, parent: DIV) {
+        parent.button(classes = if (panel.hasDoublePlay) "btn btn-primary" else "btn btn-secondary") {
+            +(if (panel.hasDoublePlay) "Double Play Active" else "+ Add Double Play")
+            onClickFunction = {
+                panel.hasDoublePlay = !panel.hasDoublePlay
+                if (panel.hasDoublePlay) {
+                    val gameState = panel.controller.game.gameState
+                    val leadRunnerId = gameState.runnerThirdId
+                        ?: gameState.runnerSecondId
+                        ?: gameState.runnerFirstId
+                    if (leadRunnerId != null) {
+                        panel.runnerAdvances[leadRunnerId.toString()] = 0
+                    }
+                } else {
+                    panel.runnerAdvances.clear()
+                    panel.initializeAdvances()
+                }
+                panel.render()
+            }
+        }
+    }
+
+    fun renderHomeRunOptions(panel: ScorerStep2Panel, parent: DIV) {
         parent.div {
             +"Home Run Type"
             css {
@@ -181,21 +203,23 @@ class ScorerStep2Panel(
                 marginBottom = 1.rem
             }
             listOf("Over the Fence", "Inside the Park").forEach { opt ->
-                val active = opt == hrType
+                val active = opt == panel.hrType
                 button(classes = if (active) "btn btn-primary" else "btn btn-secondary") {
                     +opt
                     css { put("flex", "1") }
                     onClickFunction = {
-                        hrType = opt
-                        render()
+                        panel.hrType = opt
+                        panel.render()
                     }
                 }
             }
         }
     }
+}
 
-    private fun DIV.renderRunnersAdvancement(parent: DIV) {
-        val runnersList = getActiveRunnersList()
+private object ScorerStep2RunnerAdvancementUi {
+    fun renderRunnersAdvancement(panel: ScorerStep2Panel, parent: DIV) {
+        val runnersList = getActiveRunnersList(panel)
         if (runnersList.isNotEmpty()) {
             parent.div {
                 +"Runner Base Advancement (Optional)"
@@ -207,62 +231,33 @@ class ScorerStep2Panel(
                 }
             }
             runnersList.forEach { (runnerId, label) ->
-                renderSingleRunnerAdvancement(this, runnerId, label)
+                renderSingleRunnerAdvancement(panel, parent, runnerId, label)
             }
         }
     }
 
-    private fun getActiveRunnersList(): List<Pair<Long, String>> {
-        val r1 = controller.game.gameState.runnerFirstId to controller.game.gameState.runnerFirstName
-        val r2 = controller.game.gameState.runnerSecondId to controller.game.gameState.runnerSecondName
-        val r3 = controller.game.gameState.runnerThirdId to controller.game.gameState.runnerThirdName
+    private fun getActiveRunnersList(panel: ScorerStep2Panel): List<Pair<Long, String>> {
+        val gameState = panel.controller.game.gameState
+        val r1 = gameState.runnerFirstId to gameState.runnerFirstName
+        val r2 = gameState.runnerSecondId to gameState.runnerSecondName
+        val r3 = gameState.runnerThirdId to gameState.runnerThirdName
 
         val activeRunners = listOfNotNull(
             r1.first?.let { it to ("Runner on 1B: " + r1.second) },
             r2.first?.let { it to ("Runner on 2B: " + r2.second) },
             r3.first?.let { it to ("Runner on 3B: " + r3.second) },
         )
-        return if (hasError && controller.game.gameState.currentBatterId != null) {
-            val batterId = controller.game.gameState.currentBatterId!!
-            val batterLabel = "Batter: ${controller.game.gameState.currentBatterName}"
+        return if (panel.hasError && gameState.currentBatterId != null) {
+            val batterId = gameState.currentBatterId!!
+            val batterLabel = "Batter: ${gameState.currentBatterName}"
             activeRunners + (batterId to batterLabel)
         } else {
             activeRunners
         }
     }
 
-    private fun DIV.renderAdvButton(
-        runnerId: Long,
-        baseVal: Int,
-        baseLabel: String,
-        currentDest: Int?,
-    ) {
-        val isSelected = currentDest == baseVal
-        val btnClass =
-            if (isSelected) {
-                if (baseVal == 0) "btn btn-danger" else "btn btn-primary"
-            } else {
-                "btn btn-secondary"
-            }
-        button(classes = btnClass) {
-            +baseLabel
-            css {
-                padding = Padding(0.2.rem, 0.4.rem)
-                fontSize = 0.75.rem
-            }
-            onClickFunction = {
-                if (isSelected) {
-                    runnerAdvances.remove(runnerId.toString())
-                } else {
-                    runnerAdvances[runnerId.toString()] = baseVal
-                    propagateForcedAdvances(runnerId, baseVal)
-                }
-                render()
-            }
-        }
-    }
-
-    private fun DIV.renderSingleRunnerAdvancement(
+    private fun renderSingleRunnerAdvancement(
+        panel: ScorerStep2Panel,
         parent: DIV,
         runnerId: Long,
         label: String,
@@ -285,91 +280,114 @@ class ScorerStep2Panel(
                     put("flex", "1")
                 }
             }
-            renderAdvOptionGroup(runnerId)
+            renderAdvOptionGroup(panel, this, runnerId)
         }
     }
 
-    private fun DIV.renderAdvOptionGroup(runnerId: Long) {
-        div {
+    private fun renderAdvOptionGroup(panel: ScorerStep2Panel, parent: DIV, runnerId: Long) {
+        parent.div {
             css {
                 display = Display.flex
                 gap = 0.2.rem
             }
-            val currentDest = runnerAdvances[runnerId.toString()]
             val options =
-                if (runnerId == controller.game.gameState.currentBatterId) {
+                if (runnerId == panel.controller.game.gameState.currentBatterId) {
                     listOf(0 to "Out", 1 to "1B", 2 to "2B", 3 to "3B", 4 to "HR")
                 } else {
                     listOf(0 to "Out", 2 to "2B", 3 to "3B", 4 to "Score")
                 }
             options.forEach { (baseVal, baseLabel) ->
-                renderAdvButton(runnerId, baseVal, baseLabel, currentDest)
+                renderAdvButton(panel, this, runnerId, baseVal, baseLabel)
             }
         }
     }
 
-    private fun getStartBase(runnerId: Long): Int =
-        when (runnerId) {
-            controller.game.gameState.runnerFirstId -> 1
-            controller.game.gameState.runnerSecondId -> 2
-            controller.game.gameState.runnerThirdId -> 3
+    private fun renderAdvButton(
+        panel: ScorerStep2Panel,
+        parent: DIV,
+        runnerId: Long,
+        baseVal: Int,
+        baseLabel: String,
+    ) {
+        val currentDest = panel.runnerAdvances[runnerId.toString()]
+        val isSelected = currentDest == baseVal
+        val btnClass =
+            if (isSelected) {
+                if (baseVal == 0) "btn btn-danger" else "btn btn-primary"
+            } else {
+                "btn btn-secondary"
+            }
+        parent.button(classes = btnClass) {
+            +baseLabel
+            css {
+                padding = Padding(0.2.rem, 0.4.rem)
+                fontSize = 0.75.rem
+            }
+            onClickFunction = {
+                if (isSelected) {
+                    panel.runnerAdvances.remove(runnerId.toString())
+                } else {
+                    panel.runnerAdvances[runnerId.toString()] = baseVal
+                    propagateForcedAdvances(panel, runnerId, baseVal)
+                }
+                panel.render()
+            }
+        }
+    }
+
+    private fun propagateForcedAdvances(panel: ScorerStep2Panel, runnerId: Long, baseVal: Int) {
+        if (baseVal <= 0) return
+        val gameState = panel.controller.game.gameState
+        val startBase = when (runnerId) {
+            gameState.runnerFirstId -> 1
+            gameState.runnerSecondId -> 2
+            gameState.runnerThirdId -> 3
             else -> 0
         }
-
-    private fun getOtherRunners(): List<Pair<String, Int>> =
-        listOfNotNull(
-            controller.game.gameState.runnerFirstId
-                ?.let { it.toString() to 1 },
-            controller.game.gameState.runnerSecondId
-                ?.let { it.toString() to 2 },
-            controller.game.gameState.runnerThirdId
-                ?.let { it.toString() to 3 },
-            controller.game.gameState.currentBatterId
-                ?.let { it.toString() to 0 },
+        val otherRunners = listOfNotNull(
+            gameState.runnerFirstId?.let { it.toString() to 1 },
+            gameState.runnerSecondId?.let { it.toString() to 2 },
+            gameState.runnerThirdId?.let { it.toString() to 3 },
+            gameState.currentBatterId?.let { it.toString() to 0 },
         )
+        otherRunners.forEach { (oId, oStart) ->
+            if (oId != runnerId.toString()) {
+                adjustRunnerDest(panel, oId, oStart, startBase, baseVal)
+            }
+        }
+    }
 
     private fun adjustRunnerDest(
+        panel: ScorerStep2Panel,
         oId: String,
         oStart: Int,
         startBase: Int,
         baseVal: Int,
     ) {
-        val oDest = runnerAdvances[oId] ?: return
+        val oDest = panel.runnerAdvances[oId] ?: return
         if (oDest <= 0) return
         if (oStart > startBase) {
             val minDest = baseVal + (oStart - startBase)
-            if (oDest < minDest) runnerAdvances[oId] = minOf(4, minDest)
+            if (oDest < minDest) panel.runnerAdvances[oId] = minOf(4, minDest)
         } else {
             val maxDest = baseVal - (startBase - oStart)
-            if (oDest > maxDest) runnerAdvances[oId] = maxOf(1, maxDest)
+            if (oDest > maxDest) panel.runnerAdvances[oId] = maxOf(1, maxDest)
         }
     }
+}
 
-    private fun propagateForcedAdvances(
-        runnerId: Long,
-        baseVal: Int,
-    ) {
-        if (baseVal <= 0) return
-        val startBase = getStartBase(runnerId)
-        val otherRunners = getOtherRunners()
-        otherRunners.forEach { (oId, oStart) ->
-            if (oId != runnerId.toString()) {
-                adjustRunnerDest(oId, oStart, startBase, baseVal)
-            }
-        }
-    }
-
-    private fun DIV.renderThrowSequenceSection(parent: DIV) {
+private object ScorerStep2DefensePlayUi {
+    fun renderThrowSequenceSection(panel: ScorerStep2Panel, parent: DIV) {
         val showThrowBuilder =
-            eventType in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FIELDER_CHOICE) ||
-                    hasDoublePlay ||
-                    runnerAdvances.values.contains(0)
+            panel.eventType in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FIELDER_CHOICE) ||
+                    panel.hasDoublePlay ||
+                    panel.runnerAdvances.values.contains(0)
         if (!showThrowBuilder) return
-        renderThrowSequenceHeader(parent)
-        renderThrowBuilderButtons(parent)
+        renderThrowSequenceHeader(panel, parent)
+        renderThrowBuilderButtons(panel, parent)
     }
 
-    private fun DIV.renderThrowSequenceHeader(parent: DIV) {
+    private fun renderThrowSequenceHeader(panel: ScorerStep2Panel, parent: DIV) {
         parent.div {
             +"Defensive Play / Throw Sequence"
             css {
@@ -380,7 +398,7 @@ class ScorerStep2Panel(
                 marginBottom = 0.5.rem
             }
         }
-        val displaySeq = getDisplaySequence()
+        val displaySeq = getDisplaySequence(panel)
         parent.div {
             +"Sequence: $displaySeq"
             css {
@@ -395,16 +413,16 @@ class ScorerStep2Panel(
         }
     }
 
-    private fun getDisplaySequence(): String = buildString {
-        if (throwSequence.isEmpty()) {
+    private fun getDisplaySequence(panel: ScorerStep2Panel): String = buildString {
+        if (panel.throwSequence.isEmpty()) {
             append("No throws (Unassisted/Direct)")
         } else {
-            append(throwSequence.joinToString("-"))
-            if (isUnassisted) append("U")
+            append(panel.throwSequence.joinToString("-"))
+            if (panel.isUnassisted) append("U")
         }
     }
 
-    private fun renderThrowBuilderButtons(parent: DIV) {
+    private fun renderThrowBuilderButtons(panel: ScorerStep2Panel, parent: DIV) {
         parent.div {
             css {
                 display = Display.flex
@@ -412,41 +430,41 @@ class ScorerStep2Panel(
                 put("flex-wrap", "wrap")
                 marginBottom = 1.rem
             }
-            renderPosBuilderButtons()
-            renderControlBuilderButtons()
+            renderPosBuilderButtons(panel, this)
+            renderControlBuilderButtons(panel, this)
         }
     }
 
-    private fun DIV.renderPosBuilderButtons() {
+    private fun renderPosBuilderButtons(panel: ScorerStep2Panel, parent: DIV) {
         val posLabels = listOf("1-P", "2-C", "3-1B", "4-2B", "5-3B", "6-SS", "7-LF", "8-CF", "9-RF")
         posLabels.forEachIndexed { idx, label ->
             val posNum = idx + 1
-            button(classes = "btn btn-secondary") {
+            parent.button(classes = "btn btn-secondary") {
                 +label
                 css {
                     padding = Padding(4.px, 8.px)
                     fontSize = 0.75.rem
                 }
                 onClickFunction = {
-                    if (throwSequence.size < 6) {
-                        throwSequence.add(posNum)
-                        render()
+                    if (panel.throwSequence.size < 6) {
+                        panel.throwSequence.add(posNum)
+                        panel.render()
                     }
                 }
             }
         }
     }
 
-    private fun DIV.renderControlBuilderButtons() {
+    private fun renderControlBuilderButtons(panel: ScorerStep2Panel, parent: DIV) {
         listOf(
-            "U" to { isUnassisted = !isUnassisted },
-            "⌫" to { if (throwSequence.isNotEmpty()) throwSequence.removeAt(throwSequence.size - 1) },
+            "U" to { panel.isUnassisted = !panel.isUnassisted },
+            "⌫" to { if (panel.throwSequence.isNotEmpty()) panel.throwSequence.removeAt(panel.throwSequence.size - 1) },
             "Clear" to {
-                throwSequence.clear()
-                isUnassisted = false
+                panel.throwSequence.clear()
+                panel.isUnassisted = false
             },
         ).forEach { (lbl, action) ->
-            button(classes = "btn btn-secondary") {
+            parent.button(classes = "btn btn-secondary") {
                 +lbl
                 css {
                     padding = Padding(4.px, 8.px)
@@ -454,15 +472,31 @@ class ScorerStep2Panel(
                 }
                 onClickFunction = {
                     action()
-                    render()
+                    panel.render()
                 }
             }
         }
     }
 
-    private fun DIV.renderFielderGridSection(parent: DIV) {
-        if (eventType == ScoringEventType.HOME_RUN && hrType == "Over the Fence") {
-            renderFenceHrCompleteButton(parent)
+    fun renderFooter(panel: ScorerStep2Panel, parent: DIV) {
+        parent.div {
+            css {
+                display = Display.flex
+                gap = 1.rem
+            }
+            button(classes = "btn btn-secondary") {
+                +"Cancel"
+                css { put("flex", "1") }
+                onClickFunction = { panel.controller.renderActionGrid() }
+            }
+        }
+    }
+}
+
+private object ScorerStep2FielderGridUi {
+    fun renderFielderGridSection(panel: ScorerStep2Panel, parent: DIV) {
+        if (panel.eventType == ScoringEventType.HOME_RUN && panel.hrType == "Over the Fence") {
+            renderFenceHrCompleteButton(panel, parent)
         } else {
             parent.div {
                 +"Select Hit/Out Fielder to Complete Play"
@@ -474,11 +508,11 @@ class ScorerStep2Panel(
                     marginBottom = 0.5.rem
                 }
             }
-            renderFielderButtons(parent)
+            renderFielderButtons(panel, parent)
         }
     }
 
-    private fun DIV.renderFenceHrCompleteButton(parent: DIV) {
+    private fun renderFenceHrCompleteButton(panel: ScorerStep2Panel, parent: DIV) {
         parent.div {
             css {
                 marginTop = 1.rem
@@ -491,61 +525,41 @@ class ScorerStep2Panel(
                     padding = Padding(0.75.rem)
                 }
                 onClickFunction = {
-                    val detail = "Home Run (Over the Fence)" + if (hasError) " (with Error)" else ""
-                    controller.triggerScoringEvent(
-                        eventType,
+                    val detail = "Home Run (Over the Fence)" + if (panel.hasError) " (with Error)" else ""
+                    panel.controller.triggerScoringEvent(
+                        panel.eventType,
                         detail,
                         false,
-                        hasError,
-                        runnerAdvances.takeIf { it.isNotEmpty() }
+                        panel.hasError,
+                        panel.runnerAdvances.takeIf { it.isNotEmpty() }
                     )
                 }
             }
         }
     }
 
-    private fun renderFielderButtons(parent: DIV) {
+    private fun renderFielderButtons(panel: ScorerStep2Panel, parent: DIV) {
         parent.div(classes = "action-grid") {
             css { marginBottom = 1.rem }
-            val locations = getFielderLocations(isHit)
-            renderLocationButtons(locations)
+            val locations = getFielderLocations(panel.isHit)
+            renderLocationButtons(panel, this, locations)
             button(classes = "btn btn-action") {
                 +"Unspecified Location"
                 css { background = "rgba(255, 255, 255, 0.1)" }
-                onClickFunction = { submitPlayWithLocation(null) }
+                onClickFunction = { panel.submitPlayWithLocation(null) }
             }
         }
     }
 
-    private fun DIV.renderLocationButtons(locations: List<String>) {
+    private fun renderLocationButtons(panel: ScorerStep2Panel, parent: DIV, locations: List<String>) {
         locations.forEach { loc ->
-            button(classes = "btn btn-action") {
+            parent.button(classes = "btn btn-action") {
                 +loc
-                onClickFunction = { submitPlayWithLocation(loc) }
+                onClickFunction = { panel.submitPlayWithLocation(loc) }
             }
         }
     }
-
-    private fun submitPlayWithLocation(loc: String?) {
-        val seqStr = buildSeqString(throwSequence, isUnassisted)
-        val detailParams = PlayDetailParams(
-            baseLabel = baseLabel,
-            loc = loc,
-            seqStr = seqStr,
-            hasRunnerOut = runnerAdvances.values.contains(0),
-            eventType = eventType,
-            hasDoublePlay = hasDoublePlay,
-            hasError = hasError,
-        )
-        val detail = buildPlayDetailString(detailParams)
-        controller.triggerScoringEvent(
-            eventType,
-            detail,
-            hasDoublePlay,
-            hasError,
-            runnerAdvances.takeIf { it.isNotEmpty() },
-        )
-    }
+}
 
 private fun getFielderLocations(isHit: Boolean): List<String> =
     if (isHit) {
@@ -605,21 +619,6 @@ private fun formatMainPlayNotation(
     }
 }
 
-    private fun DIV.renderFooter(parent: DIV) {
-        parent.div {
-            css {
-                display = Display.flex
-                gap = 1.rem
-            }
-            button(classes = "btn btn-secondary") {
-                +"Cancel"
-                css { put("flex", "1") }
-                onClickFunction = { controller.renderActionGrid() }
-            }
-        }
-    }
-}
-
 private fun buildSeqString(throwSequence: List<Int>, isUnassisted: Boolean): String? =
     if (throwSequence.isNotEmpty()) {
         val s = throwSequence.joinToString("-")
@@ -629,8 +628,6 @@ private fun buildSeqString(throwSequence: List<Int>, isUnassisted: Boolean): Str
     } else {
         null
     }
-
-
 
 fun GameScoringController.renderStep2(
     eventType: ScoringEventType,

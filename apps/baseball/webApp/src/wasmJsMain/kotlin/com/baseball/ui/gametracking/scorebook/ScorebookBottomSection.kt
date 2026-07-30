@@ -231,31 +231,34 @@ private fun DIV.renderLineScoreTable(
         }
         renderLineScoreHeader(maxInning)
         tbody {
-            renderLineScoreTeamRow(getAwayLineScoreData(game, boxScore, maxInning))
-            renderLineScoreTeamRow(getHomeLineScoreData(game, boxScore, maxInning))
+            renderLineScoreTeamRow(buildLineScoreData(isHome = false, game, boxScore, maxInning))
+            renderLineScoreTeamRow(buildLineScoreData(isHome = true, game, boxScore, maxInning))
         }
     }
 }
 
-private fun getAwayLineScoreData(game: Game, boxScore: BoxScore, maxInning: Int) = LineScoreData(
-    teamAbb = game.awayTeam.abbreviation,
-    inningRuns = boxScore.lineScore.awayInningRuns,
-    currentInning = game.gameState.inning,
-    r = boxScore.lineScore.awayRuns,
-    h = boxScore.lineScore.awayHits,
-    e = boxScore.lineScore.awayErrors,
-    maxInning = maxInning,
-)
+private fun buildLineScoreData(
+    isHome: Boolean,
+    game: Game,
+    boxScore: BoxScore,
+    maxInning: Int,
+): LineScoreData {
+    val team = if (isHome) game.homeTeam else game.awayTeam
+    val inningRuns = if (isHome) boxScore.lineScore.homeInningRuns else boxScore.lineScore.awayInningRuns
+    val r = if (isHome) boxScore.lineScore.homeRuns else boxScore.lineScore.awayRuns
+    val h = if (isHome) boxScore.lineScore.homeHits else boxScore.lineScore.awayHits
+    val e = if (isHome) boxScore.lineScore.homeErrors else boxScore.lineScore.awayErrors
 
-private fun getHomeLineScoreData(game: Game, boxScore: BoxScore, maxInning: Int) = LineScoreData(
-    teamAbb = game.homeTeam.abbreviation,
-    inningRuns = boxScore.lineScore.homeInningRuns,
-    currentInning = game.gameState.inning,
-    r = boxScore.lineScore.homeRuns,
-    h = boxScore.lineScore.homeHits,
-    e = boxScore.lineScore.homeErrors,
-    maxInning = maxInning,
-)
+    return LineScoreData(
+        teamAbb = team.abbreviation,
+        inningRuns = inningRuns,
+        currentInning = game.gameState.inning,
+        r = r,
+        h = h,
+        e = e,
+        maxInning = maxInning,
+    )
+}
 
 private fun TBODY.renderLineScoreTeamRow(data: LineScoreData) {
     tr {

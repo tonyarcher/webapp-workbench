@@ -136,9 +136,9 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
         val params = createRenderParams(isHomeBatting, boxScore, teamEvents, maxInning)
 
-        renderHeaderPanel(container, isHomeBatting, game, battingTeam, pitchingTeam)
-        renderRosterDrawer(container, isHomeBatting, game)
-        renderScorecardTable(container, game, params)
+        ScorebookHeaderPanelUi.renderHeaderPanel(container, isHomeBatting, game, battingTeam, pitchingTeam)
+        ScorebookRosterDrawerUi.renderRosterDrawer(container, isHomeBatting, game)
+        ScorebookTableGridUi.renderScorecardTable(container, game, params)
 
         renderScorebookBottomSection(
             container = container,
@@ -178,6 +178,34 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             parser = parser,
             isHomeBatting = isHomeBatting,
         )
+    }
+}
+
+private object ScorebookHeaderPanelUi {
+    fun renderHeaderPanel(
+        container: HTMLElement,
+        isHomeBatting: Boolean,
+        game: Game,
+        battingTeam: Team,
+        pitchingTeam: Team,
+    ) {
+        container.append {
+            div {
+                css {
+                    display = Display.grid
+                    put("grid-template-columns", "150px 1fr 1fr 180px")
+                    border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                    backgroundColor = Color("#eae5dc")
+                    padding = Padding(0.75.rem)
+                    marginBottom = 1.rem
+                    fontWeight = FontWeight.bold
+                }
+                renderHeaderPanelCol1(isHomeBatting)
+                renderHeaderPanelCol2(battingTeam, isHomeBatting)
+                renderHeaderPanelCol3(pitchingTeam)
+                renderHeaderPanelCol4(game)
+            }
+        }
     }
 
     private fun DIV.renderHeaderPanelCol1(isHomeBatting: Boolean) {
@@ -274,34 +302,10 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             }
         }
     }
+}
 
-    private fun renderHeaderPanel(
-        container: HTMLElement,
-        isHomeBatting: Boolean,
-        game: Game,
-        battingTeam: Team,
-        pitchingTeam: Team,
-    ) {
-        container.append {
-            div {
-                css {
-                    display = Display.grid
-                    put("grid-template-columns", "150px 1fr 1fr 180px")
-                    border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                    backgroundColor = Color("#eae5dc")
-                    padding = Padding(0.75.rem)
-                    marginBottom = 1.rem
-                    fontWeight = FontWeight.bold
-                }
-                renderHeaderPanelCol1(isHomeBatting)
-                renderHeaderPanelCol2(battingTeam, isHomeBatting)
-                renderHeaderPanelCol3(pitchingTeam)
-                renderHeaderPanelCol4(game)
-            }
-        }
-    }
-
-    private fun renderRosterDrawer(
+private object ScorebookRosterDrawerUi {
+    fun renderRosterDrawer(
         container: HTMLElement,
         isHomeBatting: Boolean,
         game: Game,
@@ -395,17 +399,122 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             }
         }
     }
+}
 
-    private fun renderScorecardTable(
+private object ScorebookTableGridUi {
+    fun renderScorecardTable(
         container: HTMLElement,
         game: Game,
         params: ScorecardRenderParams,
     ) {
-        buildScorecardTableHtml(container, params.maxInning)
+        ScorebookTableContainerUi.buildScorecardTableHtml(container, params.maxInning)
         populateTableSlots(container, game, params)
     }
 
-    private fun buildScorecardTableHtml(container: HTMLElement, maxInning: Int) {
+    private fun populateTableSlots(
+        container: HTMLElement,
+        game: Game,
+        params: ScorecardRenderParams,
+    ) {
+        val tableEl = container.querySelector("#scorecard-table-el") as HTMLElement
+        val tbodyEl = tableEl.querySelector("#scorebook-tbody") as HTMLTableSectionElement
+        for (slotIdx in 0..8) {
+            val players = params.playersByBattingSlot[slotIdx]
+            renderSlotRows(tbodyEl, game, slotIdx, players, params)
+        }
+    }
+
+    private fun renderSubRow(
+        tbodyEl: HTMLTableSectionElement,
+        slotIdx: Int,
+        rowRenderData: RowRenderData,
+        game: Game,
+        params: ScorecardRenderParams,
+    ): HTMLTableRowElement {
+        val rowId = "sub-row-$slotIdx"
+        tbodyEl.append {
+            tr {
+                id = rowId
+                css {
+                    borderBottom = Border(1.px, BorderStyle.solid, Color("#5a544a"))
+                    height = 42.5.px
+                }
+            }
+        }
+        val tr1 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
+        val subPos = params.battingStatsList.find { it.playerName == rowRenderData.substitutePlayerName }?.position
+            ?: BaseballConstants.Positions.DH
+        ScorebookRowCellUi.renderPlayerCell(
+            tr1,
+            game,
+            PlayerCellData(
+                slotIdx,
+                rowRenderData.substitutePlayerName,
+                false,
+                params.isHomeBatting,
+                rowRenderData.cellBackground,
+            )
+        )
+        ScorebookRowCellUi.renderPosTd(tr1, subPos, rowRenderData.cellBackground)
+        return tr1
+    }
+
+    private fun createSlotRow(tbodyEl: HTMLTableSectionElement, rowId: String, hasSub: Boolean): HTMLTableRowElement {
+        tbodyEl.append {
+            tr {
+                id = rowId
+                css {
+                    borderBottom = Border(1.px, BorderStyle.solid, Color(if (hasSub) "#9c9384" else "#5a544a"))
+                    height = 42.5.px
+                }
+            }
+        }
+        return tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
+    }
+
+    private fun renderSlotRows(
+        tbodyEl: HTMLTableSectionElement,
+        game: Game,
+        slotIdx: Int,
+        players: List<String>,
+        params: ScorecardRenderParams,
+    ) {
+        val hasSub = players.size > 1
+        val cellBackground = getCellBackground(slotIdx)
+
+        val playerName0 = players.getOrNull(0) ?: ""
+        val starterPos =
+            params.battingStatsList.find { it.playerName == playerName0 }?.position ?: BaseballConstants.Positions.DH
+
+        val tr0 = createSlotRow(tbodyEl, "slot-row-$slotIdx", hasSub)
+
+        ScorebookRowCellUi.renderPlayerCell(
+            tr0,
+            game,
+            PlayerCellData(slotIdx, playerName0, hasSub, params.isHomeBatting, cellBackground)
+        )
+        ScorebookRowCellUi.renderPosTd(tr0, starterPos, cellBackground)
+
+        var tr1: HTMLTableRowElement? = null
+        if (hasSub) {
+            val substitutePlayerName = players[1]
+            tr1 = renderSubRow(tbodyEl, slotIdx, RowRenderData(substitutePlayerName, cellBackground), game, params)
+        }
+
+        ScorebookInningCellUi.renderInningCells(tr0, tr1, RowData(slotIdx, players, cellBackground), params)
+        ScorebookRowCellUi.renderStatCells(tr0, tr1, RowData(slotIdx, players, cellBackground), params)
+    }
+
+    private fun getCellBackground(slotIdx: Int) =
+        if (slotIdx % 2 == 1) {
+            "linear-gradient(180deg, #f4f1e7 0%, #ebe6d9 100%)"
+        } else {
+            "linear-gradient(180deg, #faf9f6 0%, #f3f0e8 100%)"
+        }
+}
+
+private object ScorebookTableContainerUi {
+    fun buildScorecardTableHtml(container: HTMLElement, maxInning: Int) {
         container.append {
             div {
                 id = "scorecard-table-wrapper"
@@ -440,19 +549,6 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             tbody {
                 id = "scorebook-tbody"
             }
-        }
-    }
-
-    private fun populateTableSlots(
-        container: HTMLElement,
-        game: Game,
-        params: ScorecardRenderParams,
-    ) {
-        val tableEl = container.querySelector("#scorecard-table-el") as HTMLElement
-        val tbodyEl = tableEl.querySelector("#scorebook-tbody") as HTMLTableSectionElement
-        for (slotIdx in 0..8) {
-            val players = params.playersByBattingSlot[slotIdx]
-            renderSlotRows(tbodyEl, game, slotIdx, players, params)
         }
     }
 
@@ -516,44 +612,11 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             }
         }
     }
+}
 
-    private fun renderSubRow(
-        tbodyEl: HTMLTableSectionElement,
-        slotIdx: Int,
-        rowRenderData: RowRenderData,
-        game: Game,
-        params: ScorecardRenderParams,
-    ): HTMLTableRowElement {
-        val rowId = "sub-row-$slotIdx"
-        tbodyEl.append {
-            tr {
-                id = rowId
-                css {
-                    borderBottom = Border(1.px, BorderStyle.solid, Color("#5a544a"))
-                    height = 42.5.px
-                }
-            }
-        }
-        val tr1 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
-        val subPos = params.battingStatsList.find { it.playerName == rowRenderData.substitutePlayerName }?.position
-            ?: BaseballConstants.Positions.DH
-        renderPlayerCell(
-            tr1,
-            game,
-            PlayerCellData(
-                slotIdx,
-                rowRenderData.substitutePlayerName,
-                false,
-                params.isHomeBatting,
-                rowRenderData.cellBackground,
-            )
-        )
-        tr1.renderPosTd(subPos, rowRenderData.cellBackground)
-        return tr1
-    }
-
-    private fun HTMLTableRowElement.renderPosTd(position: String, cellBackground: String) {
-        append {
+private object ScorebookRowCellUi {
+    fun renderPosTd(tr: HTMLTableRowElement, position: String, cellBackground: String) {
+        tr.append {
             td {
                 +position
                 css {
@@ -565,54 +628,6 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 }
             }
         }
-    }
-
-    private fun renderSlotRows(
-        tbodyEl: HTMLTableSectionElement,
-        game: Game,
-        slotIdx: Int,
-        players: List<String>,
-        params: ScorecardRenderParams,
-    ) {
-        val hasSub = players.size > 1
-        val cellBackground = getCellBackground(slotIdx)
-
-        val playerName0 = players.getOrNull(0) ?: ""
-        val starterPos =
-            params.battingStatsList.find { it.playerName == playerName0 }?.position ?: BaseballConstants.Positions.DH
-
-        val rowId = "slot-row-$slotIdx"
-        tbodyEl.append {
-            tr {
-                id = rowId
-                css {
-                    borderBottom = Border(1.px, BorderStyle.solid, Color(if (hasSub) "#9c9384" else "#5a544a"))
-                    height = 42.5.px
-                }
-            }
-        }
-        val tr0 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
-
-        renderPlayerCell(tr0, game, PlayerCellData(slotIdx, playerName0, hasSub, params.isHomeBatting, cellBackground))
-        tr0.renderPosTd(starterPos, cellBackground)
-
-        var tr1: HTMLTableRowElement? = null
-        var substitutePlayerName = ""
-
-        if (hasSub) {
-            substitutePlayerName = players[1]
-            tr1 = renderSubRow(tbodyEl, slotIdx, RowRenderData(substitutePlayerName, cellBackground), game, params)
-        }
-
-        renderInningCells(tr0, tr1, RowData(slotIdx, players, cellBackground), params)
-        renderStatCells(tr0, tr1, RowData(slotIdx, players, cellBackground), params)
-    }
-
-private fun getCellBackground(slotIdx: Int) =
-    if (slotIdx % 2 == 1) {
-        "linear-gradient(180deg, #f4f1e7 0%, #ebe6d9 100%)"
-    } else {
-        "linear-gradient(180deg, #faf9f6 0%, #f3f0e8 100%)"
     }
 
     private fun DIV.renderSubButton(
@@ -635,13 +650,13 @@ private fun getCellBackground(slotIdx: Int) =
                 val btnEl = event.target as? HTMLButtonElement
                 val parentCell = btnEl?.parentElement?.parentElement as? HTMLElement
                 if (parentCell != null) {
-                    openSubSelector(parentCell, slotIdx, isHomeBatting)
+                    ScorebookGridRenderer.openSubSelector(parentCell, slotIdx, isHomeBatting)
                 }
             }
         }
     }
 
-    private fun renderPlayerCell(
+    fun renderPlayerCell(
         tr: HTMLTableRowElement,
         game: Game,
         data: PlayerCellData,
@@ -671,56 +686,17 @@ private fun getCellBackground(slotIdx: Int) =
         }
     }
 
-private fun DIV.renderPlayerName(name: String) {
-    span {
-        +name
-        css {
-            fontWeight = FontWeight.bold
-            fontFamily = "'Courier New', Courier, monospace"
-        }
-    }
-}
-
-    private fun renderInningCells(
-        tr0: HTMLTableRowElement,
-        tr1: HTMLTableRowElement?,
-        rowData: RowData,
-        params: ScorecardRenderParams,
-    ) {
-        val hasSub = rowData.players.size > 1
-        for (inn in 1..params.maxInning) {
-            val ev = params.teamEvents.find { event ->
-                (params.teamEvents.indexOf(event) % 9 == rowData.slotIdx) && event.inning == inn
-            }
-            val isSubPlay = ev != null && hasSub && ev.batterName == rowData.players[1]
-
-            if (isSubPlay && tr1 != null) {
-                renderInningCellWrapper(tr0, null, rowData.cellBackground, params.teamEvents, params.parser)
-                renderInningCellWrapper(tr1, ev, rowData.cellBackground, params.teamEvents, params.parser)
-            } else {
-                renderInningCellWrapper(tr0, ev, rowData.cellBackground, params.teamEvents, params.parser)
-                if (hasSub && tr1 != null) {
-                    renderInningCellWrapper(tr1, null, rowData.cellBackground, params.teamEvents, params.parser)
-                }
+    private fun DIV.renderPlayerName(name: String) {
+        span {
+            +name
+            css {
+                fontWeight = FontWeight.bold
+                fontFamily = "'Courier New', Courier, monospace"
             }
         }
     }
 
-    private fun renderInningCellWrapper(
-        tr: HTMLTableRowElement,
-        ev: PlayEvent?,
-        cellBackground: String,
-        teamEvents: List<PlayEvent>,
-        parser: ScorecardParser,
-    ) {
-        tr.append {
-            td {
-                renderInningCell(ev, cellBackground, teamEvents, parser)
-            }
-        }
-    }
-
-    private fun renderStatCells(
+    fun renderStatCells(
         tr0: HTMLTableRowElement,
         tr1: HTMLTableRowElement?,
         rowData: RowData,
@@ -766,6 +742,47 @@ private fun DIV.renderPlayerName(name: String) {
                     background = bg
                     fontWeight = FontWeight.bold
                 }
+            }
+        }
+    }
+}
+
+private object ScorebookInningCellUi {
+    fun renderInningCells(
+        tr0: HTMLTableRowElement,
+        tr1: HTMLTableRowElement?,
+        rowData: RowData,
+        params: ScorecardRenderParams,
+    ) {
+        val hasSub = rowData.players.size > 1
+        for (inn in 1..params.maxInning) {
+            val ev = params.teamEvents.find { event ->
+                (params.teamEvents.indexOf(event) % 9 == rowData.slotIdx) && event.inning == inn
+            }
+            val isSubPlay = ev != null && hasSub && ev.batterName == rowData.players[1]
+
+            if (isSubPlay && tr1 != null) {
+                renderInningCellWrapper(tr0, null, rowData.cellBackground, params.teamEvents, params.parser)
+                renderInningCellWrapper(tr1, ev, rowData.cellBackground, params.teamEvents, params.parser)
+            } else {
+                renderInningCellWrapper(tr0, ev, rowData.cellBackground, params.teamEvents, params.parser)
+                if (hasSub && tr1 != null) {
+                    renderInningCellWrapper(tr1, null, rowData.cellBackground, params.teamEvents, params.parser)
+                }
+            }
+        }
+    }
+
+    private fun renderInningCellWrapper(
+        tr: HTMLTableRowElement,
+        ev: PlayEvent?,
+        cellBackground: String,
+        teamEvents: List<PlayEvent>,
+        parser: ScorecardParser,
+    ) {
+        tr.append {
+            td {
+                renderInningCell(ev, cellBackground, teamEvents, parser)
             }
         }
     }
@@ -818,7 +835,7 @@ private fun DIV.renderPlayerName(name: String) {
         val notation = getScorebookNotation(ev)
 
         renderInningDiamond(base)
-        renderOutDetails(outAtBase, outDetail)
+        ScorebookCellAnnotationUi.renderOutDetails(this, outAtBase, outDetail)
         div {
             +notation
             css {
@@ -833,9 +850,9 @@ private fun DIV.renderPlayerName(name: String) {
                 zIndex = 2
             }
         }
-        renderCountBallsStrikes(ev)
-        renderOutCircle(outNum)
-        renderEndedInningDiagonal(ev, teamEvents)
+        ScorebookCellAnnotationUi.renderCountBallsStrikes(this, ev)
+        ScorebookCellAnnotationUi.renderOutCircle(this, outNum)
+        ScorebookCellAnnotationUi.renderEndedInningDiagonal(this, ev, teamEvents)
     }
 
     private fun DIV.renderInningDiamond(
@@ -870,13 +887,16 @@ private fun DIV.renderPlayerName(name: String) {
             }
         }
     }
+}
 
-    private fun DIV.renderOutDetails(
+private object ScorebookCellAnnotationUi {
+    fun renderOutDetails(
+        parent: DIV,
         outAtBase: Int?,
         outDetail: String?,
     ) {
         if (outAtBase != null && outDetail != null) {
-            div {
+            parent.div {
                 +outDetail
                 val (t, l) =
                     when (outAtBase) {
@@ -909,11 +929,12 @@ private fun DIV.renderPlayerName(name: String) {
             0.px
         }
 
-    private fun DIV.renderCountBallsStrikes(
+    fun renderCountBallsStrikes(
+        parent: DIV,
         ev: PlayEvent,
     ) {
         if (ev.balls > 0 || ev.strikes > 0) {
-            div {
+            parent.div {
                 css {
                     position = Position.absolute
                     top = 2.px
@@ -927,11 +948,12 @@ private fun DIV.renderPlayerName(name: String) {
         }
     }
 
-    private fun DIV.renderOutCircle(
+    fun renderOutCircle(
+        parent: DIV,
         outNum: Int?,
     ) {
         if (outNum != null) {
-            div {
+            parent.div {
                 +outNum.toString()
                 css {
                     position = Position.absolute
@@ -952,7 +974,8 @@ private fun DIV.renderPlayerName(name: String) {
         }
     }
 
-    private fun DIV.renderEndedInningDiagonal(
+    fun renderEndedInningDiagonal(
+        parent: DIV,
         ev: PlayEvent,
         teamEvents: List<PlayEvent>,
     ) {
@@ -960,7 +983,7 @@ private fun DIV.renderPlayerName(name: String) {
         val nextPlay = teamEvents.getOrNull(playIdx + 1)
         val endedInning = ev.outsAfter == 3 && (nextPlay == null || nextPlay.inning > ev.inning)
         if (endedInning) {
-            div {
+            parent.div {
                 css {
                     position = Position.absolute
                     bottom = (-10).px
