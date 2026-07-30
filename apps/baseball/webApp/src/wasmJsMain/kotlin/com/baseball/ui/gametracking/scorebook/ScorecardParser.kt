@@ -246,6 +246,7 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
         ScoringEventType.DOUBLE,
         ScoringEventType.TRIPLE,
         ScoringEventType.HOME_RUN -> getHitNotation(ev)
+
         ScoringEventType.WALK -> "BB"
         ScoringEventType.HIT_BY_PITCH -> "HBP"
         ScoringEventType.STRIKEOUT -> "K$suffix"
@@ -254,6 +255,7 @@ internal fun getScorebookNotation(ev: PlayEvent): String {
         ScoringEventType.LINE_OUT,
         ScoringEventType.POP_OUT,
         ScoringEventType.FIELDER_CHOICE -> getOutScorebookNotation(ev, suffix)
+
         ScoringEventType.SACRIFICE_FLY -> "SF"
         ScoringEventType.ERROR -> "E"
         else -> getBaseRunningNotation(ev)
@@ -278,14 +280,17 @@ private fun getBaseRunningNotation(ev: PlayEvent): String = when (ev.eventType) 
         else if (ev.description.contains("to Home")) "SBH"
         else "SB"
     }
+
     ScoringEventType.CAUGHT_STEALING -> {
         val seqMatch = Regex("Caught Stealing: .* (\\d+(?:-\\d+)*U?)\\)").find(ev.description)
         if (seqMatch != null) "CS ${seqMatch.groupValues[1]}" else "CS"
     }
+
     ScoringEventType.PICKED_OFF -> {
         val seqMatch = Regex("Picked Off: .* (\\d+(?:-\\d+)*U?)\\)").find(ev.description)
         if (seqMatch != null) "PO ${seqMatch.groupValues[1]}" else "PO"
     }
+
     ScoringEventType.WILD_PITCH -> "WP"
     ScoringEventType.PASSED_BALL -> "PB"
     ScoringEventType.BALK -> "BK"
