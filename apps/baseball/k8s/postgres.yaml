@@ -36,13 +36,9 @@ spec:
       containers:
         - name: postgres
           image: postgres:15-alpine
-          env:
-            - name: POSTGRES_DB
-              value: baseball
-            - name: POSTGRES_USER
-              value: postgres
-            - name: POSTGRES_PASSWORD
-              value: postgres
+          envFrom:
+            - secretRef:
+                name: postgres-secret
           ports:
             - containerPort: 5432
           volumeMounts:
