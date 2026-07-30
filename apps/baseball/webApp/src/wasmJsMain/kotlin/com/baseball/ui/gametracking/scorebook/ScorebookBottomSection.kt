@@ -130,32 +130,8 @@ private fun renderDefenseDiagram(
             borderRadius = 8.px
             overflow = Overflow.hidden
         }
-        div {
-            css {
-                position = Position.absolute
-                bottom = 10.px
-                left = "calc(50% - 90px)".toCSSValue()
-                width = 180.px
-                height = 180.px
-                borderRadius = 50.pct
-                backgroundColor = Color("#e5ccb3")
-                zIndex = 1
-            }
-        }
-        div {
-            css {
-                position = Position.absolute
-                bottom = 50.px
-                left = "calc(50% - 50px)".toCSSValue()
-                width = 100.px
-                height = 100.px
-                backgroundColor = Color("#cbe1c7")
-                border = Border(2.px, BorderStyle.solid, Color.white)
-                put("transform", "rotate(45deg)")
-                zIndex = 2
-            }
-        }
     }
+    renderDefenseFieldDiamond(fieldWrapper)
 
     val defPlayers = if (isHomeBatting) teamState.awayRoster else teamState.homeRoster
     val activePitcherId = if (isHomeBatting) teamState.awayActivePitcherId else teamState.homeActivePitcherId
@@ -174,6 +150,34 @@ private fun renderDefenseHeader(parent: HTMLDivElement) {
                 borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
                 paddingBottom = 0.25.rem
             }
+        }
+    }
+}
+
+private fun renderDefenseFieldDiamond(fieldWrapper: HTMLDivElement) {
+    fieldWrapper.append.div {
+        css {
+            position = Position.absolute
+            bottom = 10.px
+            left = "calc(50% - 90px)".toCSSValue()
+            width = 180.px
+            height = 180.px
+            borderRadius = 50.pct
+            backgroundColor = Color("#e5ccb3")
+            zIndex = 1
+        }
+    }
+    fieldWrapper.append.div {
+        css {
+            position = Position.absolute
+            bottom = 50.px
+            left = "calc(50% - 50px)".toCSSValue()
+            width = 100.px
+            height = 100.px
+            backgroundColor = Color("#cbe1c7")
+            border = Border(2.px, BorderStyle.solid, Color.white)
+            put("transform", "rotate(45deg)")
+            zIndex = 2
         }
     }
 }
@@ -228,46 +232,63 @@ private fun renderPositionNodes(
 
     coords.forEach { (pos, coord) ->
         val name = positionsMap[pos] ?: "Def"
-        fieldWrapper.append.div {
-            css {
-                position = Position.absolute
-                top = coord.first.toCSSValue()
-                left = coord.second.toCSSValue()
-                width = 80.px
-                display = Display.flex
-                flexDirection = FlexDirection.column
-                alignItems = Align.center
-                zIndex = 10
-            }
-            span {
-                +pos
-                css {
-                    fontSize = 0.75.rem
-                    fontWeight = FontWeight.bold
-                    backgroundColor = Color("#ff2a3b")
-                    color = Color.white
-                    borderRadius = 50.pct
-                    width = 18.px
-                    height = 18.px
-                    display = Display.flex
-                    justifyContent = JustifyContent.center
-                    alignItems = Align.center
-                    border = Border(1.px, BorderStyle.solid, Color.white)
-                }
-            }
-            span {
-                +name.substringBefore(" ").take(8)
-                css {
-                    fontSize = 0.65.rem
-                    fontWeight = FontWeight.bold
-                    color = Color("#111")
-                    backgroundColor = Color("rgba(255, 255, 255, 0.8)")
-                    padding = Padding(1.px, 4.px)
-                    borderRadius = 3.px
-                    marginTop = 2.px
-                    textAlign = TextAlign.center
-                }
-            }
+        renderPositionNode(fieldWrapper, pos, coord, name)
+    }
+}
+
+private fun renderPositionNode(
+    fieldWrapper: HTMLDivElement,
+    pos: String,
+    coord: Pair<String, String>,
+    name: String,
+) {
+    fieldWrapper.append.div {
+        css {
+            position = Position.absolute
+            top = coord.first.toCSSValue()
+            left = coord.second.toCSSValue()
+            width = 80.px
+            display = Display.flex
+            flexDirection = FlexDirection.column
+            alignItems = Align.center
+            zIndex = 10
+        }
+        renderPositionBadge(pos)
+        renderPositionLabel(name)
+    }
+}
+
+private fun DIV.renderPositionBadge(pos: String) {
+    span {
+        +pos
+        css {
+            fontSize = 0.75.rem
+            fontWeight = FontWeight.bold
+            backgroundColor = Color("#ff2a3b")
+            color = Color.white
+            borderRadius = 50.pct
+            width = 18.px
+            height = 18.px
+            display = Display.flex
+            justifyContent = JustifyContent.center
+            alignItems = Align.center
+            border = Border(1.px, BorderStyle.solid, Color.white)
+        }
+    }
+}
+
+private fun DIV.renderPositionLabel(name: String) {
+    span {
+        +name.substringBefore(" ").take(8)
+        css {
+            fontSize = 0.65.rem
+            fontWeight = FontWeight.bold
+            color = Color("#111")
+            backgroundColor = Color("rgba(255, 255, 255, 0.8)")
+            padding = Padding(1.px, 4.px)
+            borderRadius = 3.px
+            marginTop = 2.px
+            textAlign = TextAlign.center
         }
     }
 }
@@ -421,31 +442,31 @@ private fun DIV.renderLineScoreTable(
         }
         renderLineScoreHeader(maxInning)
         tbody {
-            renderLineScoreTeamRow(
-                LineScoreData(
-                    teamAbb = game.awayTeam.abbreviation,
-                    inningRuns = boxScore.lineScore.awayInningRuns,
-                    currentInning = game.gameState.inning,
-                    r = boxScore.lineScore.awayRuns,
-                    h = boxScore.lineScore.awayHits,
-                    e = boxScore.lineScore.awayErrors,
-                    maxInning = maxInning,
-                ),
-            )
-            renderLineScoreTeamRow(
-                LineScoreData(
-                    teamAbb = game.homeTeam.abbreviation,
-                    inningRuns = boxScore.lineScore.homeInningRuns,
-                    currentInning = game.gameState.inning,
-                    r = boxScore.lineScore.homeRuns,
-                    h = boxScore.lineScore.homeHits,
-                    e = boxScore.lineScore.homeErrors,
-                    maxInning = maxInning,
-                ),
-            )
+            renderLineScoreTeamRow(getAwayLineScoreData(game, boxScore, maxInning))
+            renderLineScoreTeamRow(getHomeLineScoreData(game, boxScore, maxInning))
         }
     }
 }
+
+private fun getAwayLineScoreData(game: Game, boxScore: BoxScore, maxInning: Int) = LineScoreData(
+    teamAbb = game.awayTeam.abbreviation,
+    inningRuns = boxScore.lineScore.awayInningRuns,
+    currentInning = game.gameState.inning,
+    r = boxScore.lineScore.awayRuns,
+    h = boxScore.lineScore.awayHits,
+    e = boxScore.lineScore.awayErrors,
+    maxInning = maxInning,
+)
+
+private fun getHomeLineScoreData(game: Game, boxScore: BoxScore, maxInning: Int) = LineScoreData(
+    teamAbb = game.homeTeam.abbreviation,
+    inningRuns = boxScore.lineScore.homeInningRuns,
+    currentInning = game.gameState.inning,
+    r = boxScore.lineScore.homeRuns,
+    h = boxScore.lineScore.homeHits,
+    e = boxScore.lineScore.homeErrors,
+    maxInning = maxInning,
+)
 
 private fun TBODY.renderLineScoreTeamRow(data: LineScoreData) {
     tr {
@@ -512,31 +533,26 @@ private fun determineLpName(
         else -> "-"
     }
 
+private fun determineSvName(
+    isCompleted: Boolean,
+    game: Game,
+): String =
+    if (isCompleted && game.homeScore > game.awayScore) {
+        "HADER (12)"
+    } else if (isCompleted) {
+        "NONE"
+    } else {
+        "-"
+    }
+
 private fun DIV.renderPitcherRecords(
     game: Game,
     teamState: ScorebookTeamState,
 ) {
     val isCompleted = game.status == GameStatus.COMPLETED
-    val wpName =
-        determineWpName(
-            isCompleted,
-            game,
-            teamState
-        )
-    val lpName =
-        determineLpName(
-            isCompleted,
-            game,
-            teamState
-        )
-    val svName =
-        if (isCompleted && game.homeScore > game.awayScore) {
-            "HADER (12)"
-        } else if (isCompleted) {
-            "NONE"
-        } else {
-            "-"
-        }
+    val wpName = determineWpName(isCompleted, game, teamState)
+    val lpName = determineLpName(isCompleted, game, teamState)
+    val svName = determineSvName(isCompleted, game)
 
     div {
         css {
@@ -551,15 +567,22 @@ private fun DIV.renderPitcherRecords(
             paddingTop = 0.75.rem
             fontSize = 0.8.rem
         }
-        listOf(
-            (if (isCompleted) "WP" else "Potential WP (Hook)") to wpName,
-            (if (isCompleted) "LP" else "Potential LP (Hook)") to lpName,
-            "SV" to svName,
-        ).forEach { (label, name) ->
+        getPitcherRecords(isCompleted, wpName, lpName, svName).forEach { (label, name) ->
             renderRecordRow(label, name)
         }
     }
 }
+
+private fun getPitcherRecords(
+    isCompleted: Boolean,
+    wpName: String,
+    lpName: String,
+    svName: String,
+) = listOf(
+    (if (isCompleted) "WP" else "Potential WP (Hook)") to wpName,
+    (if (isCompleted) "LP" else "Potential LP (Hook)") to lpName,
+    "SV" to svName,
+)
 
 private fun HTMLDivElement.renderStatsCard(title: String, block: DIV.() -> Unit) {
     append.div(classes = "card") {

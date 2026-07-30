@@ -523,14 +523,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         params: ScorecardRenderParams,
     ) {
         val hasSub = players.size > 1
-        val cellBackground =
-            if (slotIdx % 2 ==
-                1
-            ) {
-                "linear-gradient(180deg, #f4f1e7 0%, #ebe6d9 100%)"
-            } else {
-                "linear-gradient(180deg, #faf9f6 0%, #f3f0e8 100%)"
-            }
+        val cellBackground = getCellBackground(slotIdx)
 
         val playerName0 = players.getOrNull(0) ?: ""
         val starterPos =
@@ -573,6 +566,13 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
         renderInningCells(tr0, tr1, RowData(slotIdx, players, cellBackground), params)
         renderStatCells(tr0, tr1, RowData(slotIdx, players, cellBackground), params)
+    }
+
+private fun getCellBackground(slotIdx: Int) =
+    if (slotIdx % 2 == 1) {
+        "linear-gradient(180deg, #f4f1e7 0%, #ebe6d9 100%)"
+    } else {
+        "linear-gradient(180deg, #faf9f6 0%, #f3f0e8 100%)"
     }
 
     private fun DIV.renderSubButton(
@@ -622,13 +622,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         alignItems = Align.center
                         width = 100.pct
                     }
-                    span {
-                        +data.playerName
-                        css {
-                            fontWeight = FontWeight.bold
-                            fontFamily = "'Courier New', Courier, monospace"
-                        }
-                    }
+                    renderPlayerName(data.playerName)
                     if (!data.hasSub && game.status != GameStatus.COMPLETED) {
                         renderSubButton(data.slotIdx, data.isHomeBatting)
                     }
@@ -636,6 +630,16 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             }
         }
     }
+
+private fun DIV.renderPlayerName(name: String) {
+    span {
+        +name
+        css {
+            fontWeight = FontWeight.bold
+            fontFamily = "'Courier New', Courier, monospace"
+        }
+    }
+}
 
     private fun renderInningCells(
         tr0: HTMLTableRowElement,
