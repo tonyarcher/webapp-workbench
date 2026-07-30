@@ -139,24 +139,33 @@ class ScorerBaseRunningStep2Panel(
                 }
                 val currentDest = runnerAdvances[runnerId]
                 listOf(null to "Stays", 2 to "2B", 3 to "3B", 4 to "Score").forEach { (baseVal, oLabel) ->
-                    val isSelected = currentDest == baseVal
-                    button(classes = if (isSelected) "btn btn-primary" else "btn btn-secondary") {
-                        +oLabel
-                        css {
-                            padding = Padding(0.2.rem, 0.4.rem)
-                            fontSize = 0.75.rem
-                        }
-                        onClickFunction = {
-                            if (baseVal == null) {
-                                runnerAdvances.remove(runnerId)
-                            } else {
-                                runnerAdvances[runnerId] = baseVal
-                                propagateWildPitchAdvances(runnerId, baseVal)
-                            }
-                            render()
-                        }
-                    }
+                    renderAdvOptionButton(runnerId, currentDest, baseVal, oLabel)
                 }
+            }
+        }
+    }
+
+    private fun DIV.renderAdvOptionButton(
+        runnerId: String,
+        currentDest: Int?,
+        baseVal: Int?,
+        oLabel: String,
+    ) {
+        val isSelected = currentDest == baseVal
+        button(classes = if (isSelected) "btn btn-primary" else "btn btn-secondary") {
+            +oLabel
+            css {
+                padding = Padding(0.2.rem, 0.4.rem)
+                fontSize = 0.75.rem
+            }
+            onClickFunction = {
+                if (baseVal == null) {
+                    runnerAdvances.remove(runnerId)
+                } else {
+                    runnerAdvances[runnerId] = baseVal
+                    propagateWildPitchAdvances(runnerId, baseVal)
+                }
+                render()
             }
         }
     }

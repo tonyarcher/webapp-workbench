@@ -518,38 +518,17 @@ class ScorerStep2Panel(
     }
 
     private fun submitPlayWithLocation(loc: String?) {
-        val seqStr =
-            if (throwSequence.isNotEmpty()) {
-                val s = throwSequence.joinToString("-")
-                if (isUnassisted) "${s}U" else s
-            } else if (isUnassisted) {
-                "3U"
-            } else {
-                null
-            }
-
-        val detail =
-            buildString {
-                if (seqStr != null) {
-                    if (runnerAdvances.values.contains(0)) {
-                        append(
-                            "$baseLabel" +
-                                    (if (loc != null) " to $loc" else "") +
-                                    " (Runner Out: $seqStr)"
-                        )
-                    } else {
-                        append("$baseLabel: $seqStr")
-                    }
-                } else {
-                    if (eventType == ScoringEventType.HOME_RUN) {
-                        append("Inside the Park Home Run to " + (loc ?: "Unspecified"))
-                    } else {
-                        append("$baseLabel" + (if (loc != null) " to $loc" else ""))
-                    }
-                }
-                if (hasDoublePlay) append(" (Double Play)")
-                if (hasError) append(" (with Error)")
-            }
+        val seqStr = buildSeqString(throwSequence, isUnassisted)
+        val detailParams = PlayDetailParams(
+            baseLabel = baseLabel,
+            loc = loc,
+            seqStr = seqStr,
+            hasRunnerOut = runnerAdvances.values.contains(0),
+            eventType = eventType,
+            hasDoublePlay = hasDoublePlay,
+            hasError = hasError,
+        )
+        val detail = buildPlayDetailString(detailParams)
         controller.triggerScoringEvent(
             eventType,
             detail,
@@ -558,6 +537,41 @@ class ScorerStep2Panel(
             runnerAdvances.takeIf { it.isNotEmpty() },
         )
     }
+
+private data class PlayDetailParams(
+    val baseLabel: String,
+    val loc: String?,
+    val seqStr: String?,
+    val hasRunnerOut: Boolean,
+    val eventType: ScoringEventType,
+    val hasDoublePlay: Boolean,
+    val hasError: Boolean,
+)
+
+private fun buildPlayDetailString(params: PlayDetailParams): String = buildString {
+    val mainNotation = formatMainPlayNotation(params.baseLabel, params.loc, params.seqStr, params.hasRunnerOut, params.eventType)
+    append(mainNotation)
+    if (params.hasDoublePlay) append(" (Double Play)")
+    if (params.hasError) append(" (with Error)")
+}
+
+private fun formatMainPlayNotation(
+    baseLabel: String,
+    loc: String?,
+    seqStr: String?,
+    hasRunnerOut: Boolean,
+    eventType: ScoringEventType,
+): String {
+    val locSuffix = if (loc != null) " to $loc" else ""
+    if (seqStr != null) {
+        return if (hasRunnerOut) "$baseLabel$locSuffix (Runner Out: $seqStr)" else "$baseLabel: $seqStr"
+    }
+    return if (eventType == ScoringEventType.HOME_RUN) {
+        "Inside the Park Home Run to " + (loc ?: "Unspecified")
+    } else {
+        "$baseLabel$locSuffix"
+    }
+}
 
     private fun DIV.renderFooter(parent: DIV) {
         parent.div {
@@ -573,6 +587,18 @@ class ScorerStep2Panel(
         }
     }
 }
+
+private fun buildSeqString(throwSequence: List<Int>, isUnassisted: Boolean): String? =
+    if (throwSequence.isNotEmpty()) {
+        val s = throwSequence.joinToString("-")
+        if (isUnassisted) "${s}U" else s
+    } else if (isUnassisted) {
+        "3U"
+    } else {
+        null
+    }
+
+
 
 fun GameScoringController.renderStep2(
     eventType: ScoringEventType,
