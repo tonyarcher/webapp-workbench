@@ -78,3 +78,14 @@ implementation plan.
 > Use feature branches for each new task. Create a new branch `feature/<task-name>` from `main`, push it to the upstream repository, and work on that branch.
 > When the task completes, open a PR and merge back.
 
+## 13. Descriptive Variable Naming (Especially for UI/Render Parameters)
+* Prefer long, non-abbreviated, self-documenting variable and property names.
+* Examples:
+  * `pitcherName` / `pitcherNumber` (never `pName` / `pNum`)
+  * `cellBackground` (never `cellBg`)
+  * `lineupUiContext` (never `ctx`)
+  * `onAwayPitcherNameChange` (never `onAwayPName`)
+  * `substitutePlayerName` (never `pName1`)
+* This rule applies especially to data classes used to bundle render parameters (e.g. `LineupUiContext`, `RowRenderData`, `ScorecardRenderParams`, `BenchBuildConfig`).
+* Short names are only acceptable for well-known single-letter loop variables (`i`, `j`) or when the type already makes the meaning obvious in a very small scope.
+

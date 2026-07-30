@@ -289,17 +289,17 @@ private fun populateRostersWithRandom(
             val onLoadDefault = { validationError = null; populateWithRosters(cubs, cards); render() }
             val onRandom = { validationError = null; populateRostersWithRandom(useDh, awayLineupInputs, homeLineupInputs, {n, num -> awayPitcherNameInput = n; awayPitcherNumberInput = num}, {n, num -> homePitcherNameInput = n; homePitcherNumberInput = num}); render() }
             renderConfigurationBar(this, useDh, onDhToggle, onLoadDefault, onRandom)
-            val ctx = LineupUiContext(
+            val lineupUiContext = LineupUiContext(
                 useDh, awayTeam.name, homeTeam.name,
                 awayLineupInputs, homeLineupInputs,
                 awayPitcherNameInput, awayPitcherNumberInput,
                 homePitcherNameInput, homePitcherNumberInput
             )
-            val onAwayPName = { s: String -> awayPitcherNameInput = s }
-            val onAwayPNum = { s: String -> awayPitcherNumberInput = s }
-            val onHomePName = { s: String -> homePitcherNameInput = s }
-            val onHomePNum = { s: String -> homePitcherNumberInput = s }
-            renderTeamGrid(this, ctx, onAwayPName, onAwayPNum, onHomePName, onHomePNum)
+            val onAwayPitcherNameChange = { newName: String -> awayPitcherNameInput = newName }
+            val onAwayPitcherNumberChange = { newNumber: String -> awayPitcherNumberInput = newNumber }
+            val onHomePitcherNameChange = { newName: String -> homePitcherNameInput = newName }
+            val onHomePitcherNumberChange = { newNumber: String -> homePitcherNumberInput = newNumber }
+            renderTeamGrid(this, lineupUiContext, onAwayPitcherNameChange, onAwayPitcherNumberChange, onHomePitcherNameChange, onHomePitcherNumberChange)
             val onBack = { isLineupDialogOpen = false; AppViewManager.goBackToWelcome() }
             val onStartSave = { if (validateAndSave()) { isLineupDialogOpen = false; renderCurrentTab() } else { render() } }
             renderFooterButtons(this, onBack, onStartSave)
@@ -379,11 +379,11 @@ private fun renderConfigActionButtons(parent: DIV, onLoadDefault: () -> Unit, on
 
 private fun renderTeamGrid(
     parent: DIV,
-    ctx: LineupUiContext,
-    onAwayPName: (String) -> Unit,
-    onAwayPNum: (String) -> Unit,
-    onHomePName: (String) -> Unit,
-    onHomePNum: (String) -> Unit,
+    lineupUiContext: LineupUiContext,
+    onAwayPitcherNameChange: (String) -> Unit,
+    onAwayPitcherNumberChange: (String) -> Unit,
+    onHomePitcherNameChange: (String) -> Unit,
+    onHomePitcherNumberChange: (String) -> Unit,
 ) {
     parent.div {
         css {
@@ -392,8 +392,8 @@ private fun renderTeamGrid(
             gap = 2.rem
             marginBottom = 2.rem
         }
-        renderTeamColumn(isHome = false, ctx, onAwayPName, onAwayPNum)
-        renderTeamColumn(isHome = true, ctx, onHomePName, onHomePNum)
+        renderTeamColumn(isHome = false, lineupUiContext, onAwayPitcherNameChange, onAwayPitcherNumberChange)
+        renderTeamColumn(isHome = true, lineupUiContext, onHomePitcherNameChange, onHomePitcherNumberChange)
     }
 }
 
@@ -415,7 +415,7 @@ private fun renderFooterButtons(parent: DIV, onBack: () -> Unit, onStartSave: ()
     }
 }
 
-private fun DIV.renderTeamColumn(isHome: Boolean, ctx: LineupUiContext, onPName: (String) -> Unit, onPNum: (String) -> Unit) {
+private fun DIV.renderTeamColumn(isHome: Boolean, lineupUiContext: LineupUiContext, onPitcherNameChange: (String) -> Unit, onPitcherNumberChange: (String) -> Unit) {
     div {
         css {
             background = "rgba(255, 255, 255, 0.02)"
@@ -424,30 +424,30 @@ private fun DIV.renderTeamColumn(isHome: Boolean, ctx: LineupUiContext, onPName:
             border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.05)"))
         }
         h2 {
-            +(if (isHome) "Home Team: ${ctx.homeTeamName}" else "Away Team: ${ctx.awayTeamName}")
+            +(if (isHome) "Home Team: ${lineupUiContext.homeTeamName}" else "Away Team: ${lineupUiContext.awayTeamName}")
             css {
                 color = Color(if (isHome) "var(--accent-yellow)" else "var(--accent-blue)")
                 marginBottom = 1.rem
             }
         }
-        if (ctx.useDh) {
-            val pName = if (isHome) ctx.homePName else ctx.awayPName
-            val pNum = if (isHome) ctx.homePNum else ctx.awayPNum
-            renderPitcherInputRow(this, isHome, pName, pNum, onPName, onPNum)
+        if (lineupUiContext.useDh) {
+            val pitcherName = if (isHome) lineupUiContext.homePitcherName else lineupUiContext.awayPitcherName
+            val pitcherNumber = if (isHome) lineupUiContext.homePitcherNumber else lineupUiContext.awayPitcherNumber
+            renderPitcherInputRow(this, isHome, pitcherName, pitcherNumber, onPitcherNameChange, onPitcherNumberChange)
         }
         renderLineupHeader(this)
-        val list = if (isHome) ctx.homeLineup else ctx.awayLineup
-        renderLineupRows(this, list as MutableList<PlayerInputs>)
+        val lineupInputs = if (isHome) lineupUiContext.homeLineupInputs else lineupUiContext.awayLineupInputs
+        renderLineupRows(this, lineupInputs)
     }
 }
 
 private fun renderPitcherInputRow(
     parent: DIV,
     isHome: Boolean,
-    pName: String,
-    pNum: String,
-    onNameChange: (String) -> Unit,
-    onNumChange: (String) -> Unit,
+    pitcherName: String,
+    pitcherNumber: String,
+    onPitcherNameChange: (String) -> Unit,
+    onPitcherNumberChange: (String) -> Unit,
 ) {
     parent.div {
         css {
@@ -465,12 +465,12 @@ private fun renderPitcherInputRow(
                 width = 100.px
             }
         }
-        renderPitcherNameInput(isHome, pName, onNameChange)
-        renderPitcherNumberInput(isHome, pNum, onNumChange)
+        renderPitcherNameInput(isHome, pitcherName, onPitcherNameChange)
+        renderPitcherNumberInput(isHome, pitcherNumber, onPitcherNumberChange)
     }
 }
 
-private fun DIV.renderPitcherNameInput(isHome: Boolean, currentValue: String, onChange: (String) -> Unit) {
+private fun DIV.renderPitcherNameInput(isHome: Boolean, currentValue: String, onPitcherNameChange: (String) -> Unit) {
     input(type = InputType.text, classes = "form-control") {
         placeholder = "Pitcher Name"
         value = currentValue
@@ -479,12 +479,12 @@ private fun DIV.renderPitcherNameInput(isHome: Boolean, currentValue: String, on
         }
         onChangeFunction = { event ->
             val txt = (event.target as HTMLInputElement).value
-            onChange(txt)
+            onPitcherNameChange(txt)
         }
     }
 }
 
-private fun DIV.renderPitcherNumberInput(isHome: Boolean, currentValue: String, onChange: (String) -> Unit) {
+private fun DIV.renderPitcherNumberInput(isHome: Boolean, currentValue: String, onPitcherNumberChange: (String) -> Unit) {
     input(type = InputType.number, classes = "form-control") {
         placeholder = "No."
         value = currentValue
@@ -493,7 +493,7 @@ private fun DIV.renderPitcherNumberInput(isHome: Boolean, currentValue: String, 
         }
         onChangeFunction = { event ->
             val txt = (event.target as HTMLInputElement).value
-            onChange(txt)
+            onPitcherNumberChange(txt)
         }
     }
 }
@@ -655,12 +655,12 @@ private fun validateTeam(
     awayTeam: com.baseball.models.Team,
     useDh: Boolean,
     isHome: Boolean,
-    list: List<PlayerInputs>,
-    pName: String,
-    pNum: String,
+    lineupInputs: List<PlayerInputs>,
+    pitcherName: String,
+    pitcherNumber: String,
     onError: (String) -> Unit,
 ): Pair<List<Player>, List<Player>>? {
-    val error = getTeamValidationError(TeamValidationRequest(homeTeam, awayTeam, useDh, isHome, list, pName, pNum))
+    val error = getTeamValidationError(TeamValidationRequest(homeTeam, awayTeam, useDh, isHome, lineupInputs, pitcherName, pitcherNumber))
     if (error != null) {
         onError(error)
         return null
@@ -668,10 +668,10 @@ private fun validateTeam(
 
     val teamName = if (isHome) homeTeam.name else awayTeam.name
     val baseId = if (isHome) 1000L else 2000L
-    val tId = if (isHome) homeTeam.id else awayTeam.id
+    val teamId = if (isHome) homeTeam.id else awayTeam.id
 
-    val lineupPlayers = buildLineupPlayers(list, baseId, tId)
-    val config = BenchBuildConfig(useDh, pName, pNum, lineupPlayers, list, baseId, tId, teamName)
+    val lineupPlayers = buildLineupPlayers(lineupInputs, baseId, teamId)
+    val config = BenchBuildConfig(useDh, pitcherName, pitcherNumber, lineupPlayers, lineupInputs, baseId, teamId, teamName)
     val (benchPlayers, _) = buildBenchAndPitcher(config)
 
     return Pair(lineupPlayers, benchPlayers)

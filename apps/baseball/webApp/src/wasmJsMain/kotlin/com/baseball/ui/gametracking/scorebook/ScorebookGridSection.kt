@@ -477,7 +477,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
     private fun renderSubRow(
         tbodyEl: HTMLTableSectionElement,
         slotIdx: Int,
-        rowData: RowRenderData,
+        rowRenderData: RowRenderData,
         game: Game,
         params: ScorecardRenderParams,
     ): HTMLTableRowElement {
@@ -492,8 +492,8 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             }
         }
         val tr1 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
-        val subPos = params.battingStatsList.find { it.playerName == rowData.pName1 }?.position ?: BaseballConstants.Positions.DH
-        renderPlayerCell(tr1, slotIdx, rowData.pName1, false, game, params.isHomeBatting, rowData.cellBg)
+        val subPos = params.battingStatsList.find { it.playerName == rowRenderData.substitutePlayerName }?.position ?: BaseballConstants.Positions.DH
+        renderPlayerCell(tr1, slotIdx, rowRenderData.substitutePlayerName, false, game, params.isHomeBatting, rowRenderData.cellBackground)
 
         tr1.append {
             td {
@@ -503,7 +503,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     padding = Padding(0.5.rem)
                     textAlign = TextAlign.center
                     fontWeight = FontWeight.bold
-                    background = rowData.cellBg
+                    background = rowRenderData.cellBackground
                 }
             }
         }
@@ -518,7 +518,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         params: ScorecardRenderParams,
     ) {
         val hasSub = players.size > 1
-        val cellBg =
+        val cellBackground =
             if (slotIdx % 2 ==
                 1
             ) {
@@ -527,8 +527,8 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 "linear-gradient(180deg, #faf9f6 0%, #f3f0e8 100%)"
             }
 
-        val pName0 = players.getOrNull(0) ?: ""
-        val starterPos = params.battingStatsList.find { it.playerName == pName0 }?.position ?: BaseballConstants.Positions.DH
+        val playerName0 = players.getOrNull(0) ?: ""
+        val starterPos = params.battingStatsList.find { it.playerName == playerName0 }?.position ?: BaseballConstants.Positions.DH
 
         val rowId = "slot-row-$slotIdx"
         tbodyEl.append {
@@ -542,7 +542,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
         val tr0 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
 
-        renderPlayerCell(tr0, slotIdx, pName0, hasSub, game, params.isHomeBatting, cellBg)
+        renderPlayerCell(tr0, slotIdx, playerName0, hasSub, game, params.isHomeBatting, cellBackground)
 
         tr0.append {
             td {
@@ -552,21 +552,21 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     padding = Padding(0.5.rem)
                     textAlign = TextAlign.center
                     fontWeight = FontWeight.bold
-                    background = cellBg
+                    background = cellBackground
                 }
             }
         }
 
         var tr1: HTMLTableRowElement? = null
-        var pName1 = ""
+        var substitutePlayerName = ""
 
         if (hasSub) {
-            pName1 = players[1]
-            tr1 = renderSubRow(tbodyEl, slotIdx, RowRenderData(pName1, cellBg), game, params)
+            substitutePlayerName = players[1]
+            tr1 = renderSubRow(tbodyEl, slotIdx, RowRenderData(substitutePlayerName, cellBackground), game, params)
         }
 
-        renderInningCells(tr0, tr1, slotIdx, players, cellBg, params)
-        renderStatCells(tr0, tr1, pName0, pName1, hasSub, params.battingStatsList, cellBg)
+        renderInningCells(tr0, tr1, slotIdx, players, cellBackground, params)
+        renderStatCells(tr0, tr1, playerName0, substitutePlayerName, hasSub, params.battingStatsList, cellBackground)
     }
 
     private fun DIV.renderSubButton(
@@ -598,11 +598,11 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
     private fun renderPlayerCell(
         tr: HTMLTableRowElement,
         slotIdx: Int,
-        pName: String,
+        playerName: String,
         hasSub: Boolean,
         game: Game,
         isHomeBatting: Boolean,
-        cellBg: String,
+        cellBackground: String,
     ) {
         tr.append {
             td {
@@ -610,7 +610,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
                     padding = Padding(0.px, 0.5.rem)
                     verticalAlign = VerticalAlign.middle
-                    background = cellBg
+                    background = cellBackground
                     height = 42.5.px
                 }
                 div {
@@ -621,7 +621,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         width = 100.pct
                     }
                     span {
-                        +pName
+                        +playerName
                         css {
                             fontWeight = FontWeight.bold
                             fontFamily = "'Courier New', Courier, monospace"
@@ -640,7 +640,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         tr1: HTMLTableRowElement?,
         slotIdx: Int,
         players: List<String>,
-        cellBg: String,
+        cellBackground: String,
         params: ScorecardRenderParams,
     ) {
         val hasSub = players.size > 1
@@ -649,12 +649,12 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             val isSubPlay = ev != null && hasSub && ev.batterName == players[1]
 
             if (isSubPlay && tr1 != null) {
-                renderInningCellWrapper(tr0, null, cellBg, params.teamEvents, params.parser)
-                renderInningCellWrapper(tr1, ev, cellBg, params.teamEvents, params.parser)
+                renderInningCellWrapper(tr0, null, cellBackground, params.teamEvents, params.parser)
+                renderInningCellWrapper(tr1, ev, cellBackground, params.teamEvents, params.parser)
             } else {
-                renderInningCellWrapper(tr0, ev, cellBg, params.teamEvents, params.parser)
+                renderInningCellWrapper(tr0, ev, cellBackground, params.teamEvents, params.parser)
                 if (hasSub && tr1 != null) {
-                    renderInningCellWrapper(tr1, null, cellBg, params.teamEvents, params.parser)
+                    renderInningCellWrapper(tr1, null, cellBackground, params.teamEvents, params.parser)
                 }
             }
         }
@@ -663,13 +663,13 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
     private fun renderInningCellWrapper(
         tr: HTMLTableRowElement,
         ev: PlayEvent?,
-        cellBg: String,
+        cellBackground: String,
         teamEvents: List<PlayEvent>,
         parser: ScorecardParser,
     ) {
         tr.append {
             td {
-                renderInningCell(ev, cellBg, teamEvents, parser)
+                renderInningCell(ev, cellBackground, teamEvents, parser)
             }
         }
     }
@@ -677,14 +677,14 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
     private fun renderStatCells(
         tr0: HTMLTableRowElement,
         tr1: HTMLTableRowElement?,
-        pName0: String,
-        pName1: String,
+        playerName0: String,
+        substitutePlayerName: String,
         hasSub: Boolean,
         battingStatsList: List<PlayerBattingStats>,
-        cellBg: String,
+        cellBackground: String,
     ) {
-        val stat0 = battingStatsList.find { it.playerName == pName0 }
-        val stat1 = if (hasSub) battingStatsList.find { it.playerName == pName1 } else null
+        val stat0 = battingStatsList.find { it.playerName == playerName0 }
+        val stat1 = if (hasSub) battingStatsList.find { it.playerName == substitutePlayerName } else null
 
         listOf(
             { s: PlayerBattingStats? -> s?.atBats?.toString() ?: "0" },
@@ -704,7 +704,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                             Color(if (statIdx == 0) "#5a544a" else "#9c9384")
                         )
                         textAlign = TextAlign.center
-                    background = cellBg
+                    background = cellBackground
                         fontWeight = FontWeight.bold
                     }
                 }
@@ -720,7 +720,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                                 Color(if (statIdx == 0) "#5a544a" else "#9c9384")
                             )
                             textAlign = TextAlign.center
-                    background = cellBg
+                    background = cellBackground
                             fontWeight = FontWeight.bold
                         }
                     }
@@ -731,7 +731,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
     private fun TD.renderInningCell(
         ev: PlayEvent?,
-        cellBg: String,
+        cellBackground: String,
         teamEvents: List<PlayEvent>,
         parser: ScorecardParser,
     ) {
@@ -740,7 +740,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             padding = Padding(0.px)
             height = 42.5.px
             width = 75.px
-            background = cellBg
+            background = cellBackground
         }
         div {
             css {

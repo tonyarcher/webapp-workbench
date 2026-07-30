@@ -31,8 +31,8 @@ data class ScorecardRenderParams(
 )
 
 data class RowRenderData(
-    val pName1: String,
-    val cellBg: String,
+    val substitutePlayerName: String,
+    val cellBackground: String,
 )
 
 data class LineScoreData(

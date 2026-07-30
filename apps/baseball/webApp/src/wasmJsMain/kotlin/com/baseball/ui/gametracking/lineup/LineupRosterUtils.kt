@@ -11,12 +11,12 @@ data class PlayerInputs(
 
 data class BenchBuildConfig(
     val useDh: Boolean,
-    val pName: String,
-    val pNum: String,
+    val pitcherName: String,
+    val pitcherNumber: String,
     val lineupPlayers: List<Player>,
-    val list: List<PlayerInputs>,
+    val lineupInputs: List<PlayerInputs>,
     val baseId: Long,
-    val tId: Long?,
+    val teamId: Long?,
     val teamName: String,
 )
 
@@ -24,30 +24,30 @@ data class RosterApplyConfig(
     val roster: List<Player>,
     val maxBatters: Int,
     val pitcherName: String,
-    val pitcherNum: String,
+    val pitcherNumber: String,
     val usePitcherSlot: Boolean = false,
 )
 
 data class LineupAdjustConfig(
     val useDh: Boolean,
-    val awayLineup: MutableList<PlayerInputs>,
-    val homeLineup: MutableList<PlayerInputs>,
-    val awayPName: String,
-    val awayPNum: String,
-    val homePName: String,
-    val homePNum: String,
+    val awayLineupInputs: MutableList<PlayerInputs>,
+    val homeLineupInputs: MutableList<PlayerInputs>,
+    val awayPitcherName: String,
+    val awayPitcherNumber: String,
+    val homePitcherName: String,
+    val homePitcherNumber: String,
 )
 
 data class LineupUiContext(
     val useDh: Boolean,
     val awayTeamName: String,
     val homeTeamName: String,
-    val awayLineup: MutableList<PlayerInputs>,
-    val homeLineup: MutableList<PlayerInputs>,
-    val awayPName: String,
-    val awayPNum: String,
-    val homePName: String,
-    val homePNum: String,
+    val awayLineupInputs: MutableList<PlayerInputs>,
+    val homeLineupInputs: MutableList<PlayerInputs>,
+    val awayPitcherName: String,
+    val awayPitcherNumber: String,
+    val homePitcherName: String,
+    val homePitcherNumber: String,
 )
 
 internal fun buildLineupPlayers(
@@ -74,21 +74,21 @@ internal fun buildBenchAndPitcher(config: BenchBuildConfig): Pair<List<Player>, 
     if (config.useDh) {
         val pPlayer = Player(
             id = config.baseId + 10L,
-            teamId = config.tId,
-            name = config.pName.trim(),
+            teamId = config.teamId,
+            name = config.pitcherName.trim(),
             position = "P",
-            jerseyNumber = config.pNum.toInt(),
+            jerseyNumber = config.pitcherNumber.toInt(),
             battingHand = "R",
             throwingHand = "R",
         )
         benchPlayers.add(pPlayer)
         activePitcherId = pPlayer.id!!
     } else {
-        val pitcherLineupIndex = config.list.indexOfFirst { it.position == "P" }
+        val pitcherLineupIndex = config.lineupInputs.indexOfFirst { it.position == "P" }
         activePitcherId = config.lineupPlayers[pitcherLineupIndex].id!!
     }
 
-    benchPlayers.addAll(buildDefaultBench(config.baseId, config.tId, config.teamName))
+    benchPlayers.addAll(buildDefaultBench(config.baseId, config.teamId, config.teamName))
 
     return Pair(benchPlayers, activePitcherId)
 }
@@ -112,7 +112,7 @@ internal fun applyRosterToLineup(lineup: MutableList<PlayerInputs>, config: Rost
         lineup[i] = PlayerInputs(p.name, p.jerseyNumber.toString(), p.position)
     }
     if (config.usePitcherSlot) {
-        lineup[config.maxBatters] = PlayerInputs(config.pitcherName, config.pitcherNum, "P")
+        lineup[config.maxBatters] = PlayerInputs(config.pitcherName, config.pitcherNumber, "P")
     }
 }
 
@@ -123,7 +123,7 @@ internal fun findPitcherInputs(roster: List<Player>): Pair<String, String> {
 
 internal fun adjustLineupPositions(config: LineupAdjustConfig) {
     if (config.useDh) {
-        adjustPositionsForDh(config.awayLineup, config.homeLineup)
+        adjustPositionsForDh(config.awayLineupInputs, config.homeLineupInputs)
     } else {
         adjustPositionsNoDh(config)
     }
@@ -145,12 +145,12 @@ internal fun adjustPositionsForDh(away: MutableList<PlayerInputs>, home: Mutable
 }
 
 internal fun adjustPositionsNoDh(config: LineupAdjustConfig) {
-    if (config.awayLineup[0].position == "DH") {
-        config.awayLineup[0] = config.awayLineup[0].copy(position = "LF")
+    if (config.awayLineupInputs[0].position == "DH") {
+        config.awayLineupInputs[0] = config.awayLineupInputs[0].copy(position = "LF")
     }
-    config.awayLineup[8] = PlayerInputs(config.awayPName, config.awayPNum, "P")
-    if (config.homeLineup[0].position == "DH") {
-        config.homeLineup[0] = config.homeLineup[0].copy(position = "LF")
+    config.awayLineupInputs[8] = PlayerInputs(config.awayPitcherName, config.awayPitcherNumber, "P")
+    if (config.homeLineupInputs[0].position == "DH") {
+        config.homeLineupInputs[0] = config.homeLineupInputs[0].copy(position = "LF")
     }
-    config.homeLineup[8] = PlayerInputs(config.homePName, config.homePNum, "P")
+    config.homeLineupInputs[8] = PlayerInputs(config.homePitcherName, config.homePitcherNumber, "P")
 }
