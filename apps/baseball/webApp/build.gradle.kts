@@ -1,3 +1,4 @@
+@OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
@@ -27,7 +28,7 @@ kotlin {
     }
 
     sourceSets {
-        val wasmJsMain by getting {
+        getByName("wasmJsMain") {
             dependencies {
                 implementation(project(":shared"))
                 implementation(libs.kotlinx.serialization.json)
@@ -42,7 +43,7 @@ kotlin {
                 implementation(libs.kotlin.css)
             }
         }
-        wasmJsTest {
+        getByName("wasmJsTest") {
             dependencies {
                 implementation(kotlin("test"))
             }
