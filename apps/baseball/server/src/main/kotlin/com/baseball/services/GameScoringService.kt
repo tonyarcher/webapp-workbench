@@ -91,7 +91,6 @@ class GameScoringService(
     }
 
 
-
     private val recorder: GamePlayEventRecorder
         get() = GamePlayEventRecorder(
             EventRecorderRepositories(

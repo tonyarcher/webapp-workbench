@@ -492,8 +492,17 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             }
         }
         val tr1 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
-        val subPos = params.battingStatsList.find { it.playerName == rowRenderData.substitutePlayerName }?.position ?: BaseballConstants.Positions.DH
-        renderPlayerCell(tr1, slotIdx, rowRenderData.substitutePlayerName, false, game, params.isHomeBatting, rowRenderData.cellBackground)
+        val subPos = params.battingStatsList.find { it.playerName == rowRenderData.substitutePlayerName }?.position
+            ?: BaseballConstants.Positions.DH
+        renderPlayerCell(
+            tr1,
+            slotIdx,
+            rowRenderData.substitutePlayerName,
+            false,
+            game,
+            params.isHomeBatting,
+            rowRenderData.cellBackground
+        )
 
         tr1.append {
             td {
@@ -528,7 +537,8 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             }
 
         val playerName0 = players.getOrNull(0) ?: ""
-        val starterPos = params.battingStatsList.find { it.playerName == playerName0 }?.position ?: BaseballConstants.Positions.DH
+        val starterPos =
+            params.battingStatsList.find { it.playerName == playerName0 }?.position ?: BaseballConstants.Positions.DH
 
         val rowId = "slot-row-$slotIdx"
         tbodyEl.append {
@@ -704,7 +714,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                             Color(if (statIdx == 0) "#5a544a" else "#9c9384")
                         )
                         textAlign = TextAlign.center
-                    background = cellBackground
+                        background = cellBackground
                         fontWeight = FontWeight.bold
                     }
                 }
@@ -720,7 +730,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                                 Color(if (statIdx == 0) "#5a544a" else "#9c9384")
                             )
                             textAlign = TextAlign.center
-                    background = cellBackground
+                            background = cellBackground
                             fontWeight = FontWeight.bold
                         }
                     }

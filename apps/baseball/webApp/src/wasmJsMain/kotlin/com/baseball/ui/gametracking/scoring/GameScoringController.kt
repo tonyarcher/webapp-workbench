@@ -171,8 +171,18 @@ class GameScoringController(
     }
 
     private fun DIV.renderPlateResultsButton(type: ScoringEventType, label: String) {
-        val isHit = type in listOf(ScoringEventType.SINGLE, ScoringEventType.DOUBLE, ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN)
-        val isOut = type in listOf(ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT)
+        val isHit = type in listOf(
+            ScoringEventType.SINGLE,
+            ScoringEventType.DOUBLE,
+            ScoringEventType.TRIPLE,
+            ScoringEventType.HOME_RUN
+        )
+        val isOut = type in listOf(
+            ScoringEventType.GROUNDOUT,
+            ScoringEventType.FLYOUT,
+            ScoringEventType.LINE_OUT,
+            ScoringEventType.POP_OUT
+        )
         val btnClass = if (isHit) "btn btn-action" else "btn btn-secondary btn-action"
 
         button(classes = btnClass) {

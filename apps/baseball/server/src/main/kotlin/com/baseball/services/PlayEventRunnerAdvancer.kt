@@ -59,8 +59,8 @@ object PlayEventRunnerAdvancer {
 
     private fun isReachBase(outcome: ScoringLogicService.ScoringOutcome): Boolean =
         outcome.isWalk || outcome.isHitByPitch ||
-            outcome.eventType == ScoringEventType.ERROR ||
-            outcome.eventType == ScoringEventType.FIELDER_CHOICE
+                outcome.eventType == ScoringEventType.ERROR ||
+                outcome.eventType == ScoringEventType.FIELDER_CHOICE
 
     private fun removeDoublePlayRunner(game: GameEntity) {
         when {

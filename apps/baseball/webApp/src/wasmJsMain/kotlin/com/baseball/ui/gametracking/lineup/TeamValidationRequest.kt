@@ -49,11 +49,14 @@ internal fun checkPitcherRequirements(request: TeamValidationRequest, teamName: 
     return when {
         !request.useDh && request.lineupInputs.indexOfFirst { it.position == "P" } == -1 ->
             "Error in $teamName Lineup: Pitcher (P) must be included in the batting lineup when DH is disabled."
+
         !request.useDh && pCount != 1 ->
             "Error in $teamName Lineup: Lineup must contain exactly one Pitcher (P) " +
                     "in the batting order when DH is disabled."
+
         request.useDh && pCount > 0 ->
             "Error in $teamName Lineup: Batting order cannot contain a Pitcher (P) when DH is enabled."
+
         else -> null
     }
 }

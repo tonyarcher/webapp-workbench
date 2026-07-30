@@ -1,6 +1,7 @@
 package com.baseball.ui.auth
 
 import com.baseball.ui.core.css
+import kotlinx.browser.window
 import kotlinx.css.Border
 import kotlinx.css.BorderStyle
 import kotlinx.css.Color
@@ -39,7 +40,6 @@ import kotlinx.html.input
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.label
 import kotlinx.html.p
-import kotlinx.browser.window
 import kotlinx.html.span
 
 internal fun DIV.renderLoginHeader() {

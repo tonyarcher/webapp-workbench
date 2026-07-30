@@ -39,13 +39,19 @@ private class AwayLineupStateAccess : LineupStateAccess {
     override val bench: MutableList<Player> get() = localAwayBench
     override var batterIndex: Int
         get() = localAwayBatterIndex
-        set(value) { localAwayBatterIndex = value }
+        set(value) {
+            localAwayBatterIndex = value
+        }
     override var activePitcherId: Long
         get() = localAwayActivePitcherId
-        set(value) { localAwayActivePitcherId = value }
+        set(value) {
+            localAwayActivePitcherId = value
+        }
     override var activePitcherName: String
         get() = localAwayActivePitcherName
-        set(value) { localAwayActivePitcherName = value }
+        set(value) {
+            localAwayActivePitcherName = value
+        }
     override val defaultPitcherId: Long = 210L
     override val defaultPitcherName: String = "Sonny Gray"
 }
@@ -55,13 +61,19 @@ private class HomeLineupStateAccess : LineupStateAccess {
     override val bench: MutableList<Player> get() = localHomeBench
     override var batterIndex: Int
         get() = localHomeBatterIndex
-        set(value) { localHomeBatterIndex = value }
+        set(value) {
+            localHomeBatterIndex = value
+        }
     override var activePitcherId: Long
         get() = localHomeActivePitcherId
-        set(value) { localHomeActivePitcherId = value }
+        set(value) {
+            localHomeActivePitcherId = value
+        }
     override var activePitcherName: String
         get() = localHomeActivePitcherName
-        set(value) { localHomeActivePitcherName = value }
+        set(value) {
+            localHomeActivePitcherName = value
+        }
     override val defaultPitcherId: Long = 110L
     override val defaultPitcherName: String = "Justin Steele"
 }

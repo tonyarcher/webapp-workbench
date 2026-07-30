@@ -114,9 +114,6 @@ private suspend fun loadScorerData(): ScorerData {
 }
 
 
-
-
-
 private fun renderLiveScorerMainView(container: HTMLElement, data: ScorerData) {
     renderScorerHeader(container, data.game)
     container.append {
