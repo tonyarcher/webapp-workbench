@@ -125,27 +125,29 @@ class GameScoringController(
             return
         }
         val finalDescription = buildFinalDesc(detail)
+        recordEvent(PlayEventInput(type, bId, pId, finalDescription, isDoublePlay, isError, runnerAdvanceMap))
+        renderCurrentTab()
+    }
+
+    private fun recordEvent(input: PlayEventInput) {
         if (isSingleGameMode) {
-            GameManager.recordPlayEvent(
-                PlayEventInput(
-                    eventType = type, batterId = bId, pitcherId = pId,
-                    descriptionDetail = finalDescription, isDoublePlay = isDoublePlay,
-                    isError = isError, runnerAdvanceMap = runnerAdvanceMap,
-                )
-            )
+            GameManager.recordPlayEvent(input)
         } else {
             launch {
                 api.recordGameEvent(
                     game.id!!,
                     ScoringEventRequest(
-                        eventType = type, batterId = bId, pitcherId = pId,
-                        description = finalDescription, isDoublePlay = isDoublePlay,
-                        isError = isError, runnerAdvanceMap = runnerAdvanceMap,
-                    )
+                        eventType = input.eventType,
+                        batterId = input.batterId,
+                        pitcherId = input.pitcherId,
+                        description = input.descriptionDetail,
+                        isDoublePlay = input.isDoublePlay,
+                        isError = input.isError,
+                        runnerAdvanceMap = input.runnerAdvanceMap,
+                    ),
                 )
             }
         }
-        renderCurrentTab()
     }
 
     fun renderActionGrid() {

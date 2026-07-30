@@ -256,8 +256,8 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     onClickFunction = {
                         val drawer = document.getElementById("roster-drawer-element") as? HTMLElement
                         if (drawer != null) {
-                            val isHidden =
-                                drawer.style.getPropertyValue(DomUiConstants.Css.DISPLAY) == DomUiConstants.CssValues.NONE
+                            val isHidden = drawer.style.getPropertyValue(DomUiConstants.Css.DISPLAY) ==
+                                DomUiConstants.CssValues.NONE
                             drawer.style.setProperty(
                                 DomUiConstants.Css.DISPLAY,
                                 if (isHidden) DomUiConstants.CssValues.BLOCK else DomUiConstants.CssValues.NONE,
@@ -497,7 +497,13 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         renderPlayerCell(
             tr1,
             game,
-            PlayerCellData(slotIdx, rowRenderData.substitutePlayerName, false, params.isHomeBatting, rowRenderData.cellBackground)
+            PlayerCellData(
+                slotIdx,
+                rowRenderData.substitutePlayerName,
+                false,
+                params.isHomeBatting,
+                rowRenderData.cellBackground,
+            )
         )
 
         tr1.append {
@@ -649,7 +655,9 @@ private fun DIV.renderPlayerName(name: String) {
     ) {
         val hasSub = rowData.players.size > 1
         for (inn in 1..params.maxInning) {
-            val ev = params.teamEvents.find { (params.teamEvents.indexOf(it) % 9 == rowData.slotIdx) && it.inning == inn }
+            val ev = params.teamEvents.find { event ->
+                (params.teamEvents.indexOf(event) % 9 == rowData.slotIdx) && event.inning == inn
+            }
             val isSubPlay = ev != null && hasSub && ev.batterName == rowData.players[1]
 
             if (isSubPlay && tr1 != null) {

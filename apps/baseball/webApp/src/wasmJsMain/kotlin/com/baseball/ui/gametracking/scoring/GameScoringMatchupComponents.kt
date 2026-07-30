@@ -33,13 +33,7 @@ import kotlinx.html.div
 
 internal fun renderPlateMatchupCard(parent: DIV, game: Game, homeRoster: List<Player>, awayRoster: List<Player>) {
     parent.div {
-        css {
-            marginBottom = 1.5.rem
-            put("background", "linear-gradient(135deg, rgba(27, 53, 36, 0.9) 0%, rgba(13, 26, 18, 0.95) 100%)")
-            border = Border(1.px, BorderStyle.solid, Color("rgba(74, 222, 128, 0.2)"))
-            padding = Padding(1.25.rem)
-            borderRadius = 12.px
-        }
+        css { applyPlateMatchupCardStyle() }
         div {
             css {
                 display = Display.flex
@@ -92,4 +86,12 @@ private fun DIV.renderMatchupPitcherInfo(game: Game, homeRoster: List<Player>, a
             css { fontSize = 0.85.rem; color = Color("var(--text-secondary)") }
         }
     }
+}
+
+private fun kotlinx.css.CssBuilder.applyPlateMatchupCardStyle() {
+    marginBottom = 1.5.rem
+    put("background", "linear-gradient(135deg, rgba(27, 53, 36, 0.9) 0%, rgba(13, 26, 18, 0.95) 100%)")
+    border = Border(1.px, BorderStyle.solid, Color("rgba(74, 222, 128, 0.2)"))
+    padding = Padding(1.25.rem)
+    borderRadius = 12.px
 }
