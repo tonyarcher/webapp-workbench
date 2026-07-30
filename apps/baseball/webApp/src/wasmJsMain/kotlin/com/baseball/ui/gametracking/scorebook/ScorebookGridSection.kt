@@ -148,12 +148,14 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         renderScorecardTable(
             container,
             game,
-            slotPlayers,
-            battingStatsList,
-            teamEvents,
-            maxInning,
-            parser,
-            isHomeBatting
+            ScorecardRenderParams(
+                slotPlayers = slotPlayers,
+                battingStatsList = battingStatsList,
+                teamEvents = teamEvents,
+                maxInning = maxInning,
+                parser = parser,
+                isHomeBatting = isHomeBatting,
+            )
         )
 
         renderScorebookBottomSection(
@@ -379,12 +381,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
     private fun renderScorecardTable(
         container: HTMLElement,
         game: Game,
-        slotPlayers: Array<MutableList<String>>,
-        battingStatsList: List<PlayerBattingStats>,
-        teamEvents: List<PlayEvent>,
-        maxInning: Int,
-        parser: ScorecardParser,
-        isHomeBatting: Boolean,
+        params: ScorecardRenderParams,
     ) {
         container.append {
             div {
@@ -430,7 +427,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                                     width = 45.px
                                 }
                             }
-                            for (inn in 1..maxInning) {
+                            for (inn in 1..params.maxInning) {
                                 th {
                                     +inn.toString()
                                     css {
@@ -466,17 +463,13 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         val tableEl = container.querySelector("#scorecard-table-el") as HTMLElement
         val tbodyEl = tableEl.querySelector("#scorebook-tbody") as HTMLTableSectionElement
         for (slotIdx in 0..8) {
-            val players = slotPlayers[slotIdx]
+            val players = params.slotPlayers[slotIdx]
             renderSlotRows(
                 tbodyEl,
                 game,
                 slotIdx,
                 players,
-                battingStatsList,
-                teamEvents,
-                maxInning,
-                parser,
-                isHomeBatting
+                params
             )
         }
     }
@@ -524,11 +517,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         game: Game,
         slotIdx: Int,
         players: List<String>,
-        battingStatsList: List<PlayerBattingStats>,
-        teamEvents: List<PlayEvent>,
-        maxInning: Int,
-        parser: ScorecardParser,
-        isHomeBatting: Boolean,
+        params: ScorecardRenderParams,
     ) {
         val hasSub = players.size > 1
         val cellBg =
@@ -541,7 +530,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             }
 
         val pName0 = players.getOrNull(0) ?: ""
-        val starterPos = battingStatsList.find { it.playerName == pName0 }?.position ?: BaseballConstants.Positions.DH
+        val starterPos = params.battingStatsList.find { it.playerName == pName0 }?.position ?: BaseballConstants.Positions.DH
 
         val rowId = "slot-row-$slotIdx"
         tbodyEl.append {
@@ -555,7 +544,7 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         }
         val tr0 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
 
-        renderPlayerCell(tr0, slotIdx, pName0, hasSub, game, isHomeBatting, cellBg)
+        renderPlayerCell(tr0, slotIdx, pName0, hasSub, game, params.isHomeBatting, cellBg)
 
         tr0.append {
             td {
@@ -575,11 +564,11 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
 
         if (hasSub) {
             pName1 = players[1]
-            tr1 = renderSubRow(tbodyEl, slotIdx, pName1, battingStatsList, cellBg, game, isHomeBatting)
+            tr1 = renderSubRow(tbodyEl, slotIdx, pName1, params.battingStatsList, cellBg, game, params.isHomeBatting)
         }
 
-        renderInningCells(tr0, tr1, slotIdx, players, teamEvents, maxInning, parser, cellBg)
-        renderStatCells(tr0, tr1, pName0, pName1, hasSub, battingStatsList, cellBg)
+        renderInningCells(tr0, tr1, slotIdx, players, params.teamEvents, params.maxInning, params.parser, cellBg)
+        renderStatCells(tr0, tr1, pName0, pName1, hasSub, params.battingStatsList, cellBg)
     }
 
     private fun DIV.renderSubButton(

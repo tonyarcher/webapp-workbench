@@ -87,6 +87,20 @@ import kotlin.random.Random
 
 var isLineupDialogOpen = false
 
+private fun getDefaultPosition(index: Int): String =
+    when (index) {
+        0 -> "DH"
+        1 -> "C"
+        2 -> "1B"
+        3 -> "2B"
+        4 -> "3B"
+        5 -> "SS"
+        6 -> "LF"
+        7 -> "CF"
+        8 -> "RF"
+        else -> "DH"
+    }
+
 class LineupSetupOverlay(
     private val container: HTMLElement,
     private val homeRosterParam: List<Player> = emptyList(),
@@ -122,20 +136,6 @@ class LineupSetupOverlay(
         if (awayTeamParam != null) awayTeam = awayTeamParam
         populateWithRosters(homeRosterParam, awayRosterParam)
     }
-
-    private fun getDefaultPosition(index: Int): String =
-        when (index) {
-            0 -> "DH"
-            1 -> "C"
-            2 -> "1B"
-            3 -> "2B"
-            4 -> "3B"
-            5 -> "SS"
-            6 -> "LF"
-            7 -> "CF"
-            8 -> "RF"
-            else -> "DH"
-        }
 
     private fun populateWithRosters(homeRoster: List<Player>, awayRoster: List<Player>) {
         if (homeRoster.isEmpty() && awayRoster.isEmpty()) {
@@ -176,10 +176,6 @@ class LineupSetupOverlay(
                 homeLineupInputs[8] = PlayerInputs(homePitcherNameInput, homePitcherNumberInput, "P")
             }
         }
-    }
-
-    private fun populateRostersFromSeed() {
-        populateWithRosters(SeedData.cubsRoster, SeedData.cardinalsRoster)
     }
 
     private fun populateRostersWithRandom() {
@@ -320,7 +316,7 @@ class LineupSetupOverlay(
                 +"Load Default Roster"
                 onClickFunction = {
                     validationError = null
-                    populateRostersFromSeed()
+                    populateWithRosters(SeedData.cubsRoster, SeedData.cardinalsRoster)
                     render()
                 }
             }
@@ -456,27 +452,35 @@ class LineupSetupOverlay(
                     width = 100.px
                 }
             }
-            input(type = InputType.text, classes = "form-control") {
-                placeholder = "Pitcher Name"
-                value = if (isHome) homePitcherNameInput else awayPitcherNameInput
-                css {
-                    flexGrow = 1.0
-                }
-                onChangeFunction = { event ->
-                    val txt = (event.target as HTMLInputElement).value
-                    if (isHome) homePitcherNameInput = txt else awayPitcherNameInput = txt
-                }
+            renderPitcherNameInput(isHome)
+            renderPitcherNumberInput(isHome)
+        }
+    }
+
+    private fun DIV.renderPitcherNameInput(isHome: Boolean) {
+        input(type = InputType.text, classes = "form-control") {
+            placeholder = "Pitcher Name"
+            value = if (isHome) homePitcherNameInput else awayPitcherNameInput
+            css {
+                flexGrow = 1.0
             }
-            input(type = InputType.number, classes = "form-control") {
-                placeholder = "No."
-                value = if (isHome) homePitcherNumberInput else awayPitcherNumberInput
-                css {
-                    width = 60.px
-                }
-                onChangeFunction = { event ->
-                    val txt = (event.target as HTMLInputElement).value
-                    if (isHome) homePitcherNumberInput = txt else awayPitcherNumberInput = txt
-                }
+            onChangeFunction = { event ->
+                val txt = (event.target as HTMLInputElement).value
+                if (isHome) homePitcherNameInput = txt else awayPitcherNameInput = txt
+            }
+        }
+    }
+
+    private fun DIV.renderPitcherNumberInput(isHome: Boolean) {
+        input(type = InputType.number, classes = "form-control") {
+            placeholder = "No."
+            value = if (isHome) homePitcherNumberInput else awayPitcherNumberInput
+            css {
+                width = 60.px
+            }
+            onChangeFunction = { event ->
+                val txt = (event.target as HTMLInputElement).value
+                if (isHome) homePitcherNumberInput = txt else awayPitcherNumberInput = txt
             }
         }
     }
@@ -618,8 +622,8 @@ class LineupSetupOverlay(
                 isLineupDialogOpen = false
                 AppViewManager.renderApp()
                 renderCurrentTab()
-            } catch (e: Throwable) {
-                println("Error starting online game: ${e.message}")
+            } catch (expected: Throwable) {
+                println("Error starting online game: ${expected.message}")
             }
         }
     }
@@ -668,11 +672,33 @@ class LineupSetupOverlay(
         pName: String,
         pNum: String,
     ): Pair<List<Player>, List<Player>>? {
+        val error = getTeamValidationError(isHome, list, pName, pNum)
+        if (error != null) {
+            validationError = error
+            return null
+        }
+
+        val teamName = if (isHome) homeTeam.name else awayTeam.name
+        val baseId = if (isHome) 1000L else 2000L
+        val tId = if (isHome) homeTeam.id else awayTeam.id
+
+        val lineupPlayers = buildLineupPlayers(list, baseId, tId)
+        val (benchPlayers, _) = buildBenchAndPitcher(isHome, useDh, pName, pNum, lineupPlayers, list, baseId, tId, teamName)
+
+        return Pair(lineupPlayers, benchPlayers)
+    }
+
+    private fun getTeamValidationError(
+        isHome: Boolean,
+        list: List<PlayerInputs>,
+        pName: String,
+        pNum: String,
+    ): String? {
         val teamName = if (isHome) homeTeam.name else awayTeam.name
         val nums = list.map { it.jerseyNumber.toIntOrNull() }
         val allNums = if (useDh) nums + pNum.toIntOrNull() else nums
 
-        val error = when {
+        return when {
             list.any { it.name.trim().isEmpty() } ->
                 "Error in $teamName Lineup: All player names must be filled."
 
@@ -697,28 +723,36 @@ class LineupSetupOverlay(
 
             else -> null
         }
+    }
 
-        if (error != null) {
-            validationError = error
-            return null
+    private fun buildLineupPlayers(
+        list: List<PlayerInputs>,
+        baseId: Long,
+        tId: Long?,
+    ): List<Player> =
+        list.mapIndexed { idx, item ->
+            Player(
+                id = baseId + idx + 1,
+                teamId = tId,
+                name = item.name.trim(),
+                position = item.position,
+                jerseyNumber = item.jerseyNumber.toInt(),
+                battingHand = "R",
+                throwingHand = "R",
+            )
         }
 
-        val baseId = if (isHome) 1000L else 2000L
-        val tId = if (isHome) homeTeam.id else awayTeam.id
-
-        val lineupPlayers =
-            list.mapIndexed { idx, item ->
-                Player(
-                    id = baseId + idx + 1,
-                    teamId = tId,
-                    name = item.name.trim(),
-                    position = item.position,
-                    jerseyNumber = item.jerseyNumber.toInt(),
-                    battingHand = "R",
-                    throwingHand = "R",
-                )
-            }
-
+    private fun buildBenchAndPitcher(
+        isHome: Boolean,
+        useDh: Boolean,
+        pName: String,
+        pNum: String,
+        lineupPlayers: List<Player>,
+        list: List<PlayerInputs>,
+        baseId: Long,
+        tId: Long?,
+        teamName: String,
+    ): Pair<List<Player>, Long> {
         val benchPlayers = mutableListOf<Player>()
         var activePitcherId = baseId + 10L
 
@@ -754,7 +788,7 @@ class LineupSetupOverlay(
             )
         }
 
-        return Pair(lineupPlayers, benchPlayers)
+        return Pair(benchPlayers, activePitcherId)
     }
 }
 
