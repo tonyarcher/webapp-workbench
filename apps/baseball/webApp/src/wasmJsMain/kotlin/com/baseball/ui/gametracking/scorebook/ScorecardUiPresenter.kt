@@ -17,7 +17,7 @@ import org.w3c.dom.HTMLOptionElement
 import org.w3c.dom.HTMLSelectElement
 
 interface ScorecardUiPresenter {
-    fun buildSlotPlayers(
+    fun buildPlayersByBattingSlot(
         isHomeBatting: Boolean,
         slots: Array<MutableList<PlayEvent>>,
     ): Array<MutableList<String>> =

@@ -179,3 +179,11 @@ internal fun adjustPositionsNoDh(config: LineupAdjustConfig) {
     }
     config.homeLineupInputs[8] = PlayerInputs(config.homePitcherName, config.homePitcherNumber, "P")
 }
+
+data class LineupCallbacks(
+    val onDhToggle: (Boolean) -> Unit,
+    val onLoadDefault: () -> Unit,
+    val onRandom: () -> Unit,
+    val onBack: () -> Unit,
+    val onStartSave: () -> Unit,
+)

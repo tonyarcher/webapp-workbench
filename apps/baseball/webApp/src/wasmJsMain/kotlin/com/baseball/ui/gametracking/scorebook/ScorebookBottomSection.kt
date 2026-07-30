@@ -117,18 +117,8 @@ private fun renderDefenseDiagram(
             color = Color("#2b2a28")
             put("flex", "1 1 300px")
         }
-        h3 {
-            +"HOME DEFENSE FIELD"
-            css {
-                textAlign = TextAlign.center
-                margin = Margin(0.px, 0.px, 1.rem, 0.px)
-                fontSize = 1.rem
-                fontWeight = FontWeight.bold
-                borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
-                paddingBottom = 0.25.rem
-            }
-        }
     }
+    renderDefenseHeader(cardEl)
 
     val fieldWrapper = cardEl.append.div {
         css {
@@ -170,6 +160,22 @@ private fun renderDefenseDiagram(
     val defPlayers = if (isHomeBatting) teamState.awayRoster else teamState.homeRoster
     val activePitcherId = if (isHomeBatting) teamState.awayActivePitcherId else teamState.homeActivePitcherId
     renderPositionNodes(fieldWrapper, defPlayers, activePitcherId)
+}
+
+private fun renderDefenseHeader(parent: HTMLDivElement) {
+    parent.append {
+        h3 {
+            +"HOME DEFENSE FIELD"
+            css {
+                textAlign = TextAlign.center
+                margin = Margin(0.px, 0.px, 1.rem, 0.px)
+                fontSize = 1.rem
+                fontWeight = FontWeight.bold
+                borderBottom = Border(1.px, BorderStyle.solid, Color("#c2bcae"))
+                paddingBottom = 0.25.rem
+            }
+        }
+    }
 }
 
 private fun String.toCSSValue(): LinearDimension = LinearDimension(this)
