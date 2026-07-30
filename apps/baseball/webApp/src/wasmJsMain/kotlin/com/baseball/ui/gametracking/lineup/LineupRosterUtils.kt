@@ -1,7 +1,7 @@
 package com.baseball.ui.gametracking.lineup
 
-import com.baseball.models.Player
 import com.baseball.game.BaseballConstants
+import com.baseball.models.Player
 
 data class PlayerInputs(
     val name: String,

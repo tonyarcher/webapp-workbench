@@ -163,6 +163,7 @@ private fun formatDecimal(value: Double): String {
             val s = value.toString()
             if (s.length >= 5) s.substring(0, 5) else s
         }
+
         str.length == 1 -> ".00$str"
         str.length == 2 -> ".0$str"
         else -> ".$str"

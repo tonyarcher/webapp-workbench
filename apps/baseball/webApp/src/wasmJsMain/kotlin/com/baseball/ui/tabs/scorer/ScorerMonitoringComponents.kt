@@ -240,6 +240,7 @@ private fun isPlayEventInningEnded(ev: PlayEvent, nextEv: PlayEvent?): Boolean {
             ScoringEventType.SACRIFICE_FLY,
             ScoringEventType.FIELDER_CHOICE,
         ) -> 1
+
         else -> 0
     }
     return ev.outsBefore + outsOnPlay >= 3
@@ -250,6 +251,7 @@ private fun getPlayEventEndingStr(ev: PlayEvent): String = when (ev.eventType) {
     ScoringEventType.WALK,
     ScoringEventType.HIT_BY_PITCH,
     ScoringEventType.ERROR -> BaseballConstants.PLAY_RESULT_1B
+
     ScoringEventType.DOUBLE -> BaseballConstants.PLAY_RESULT_2B
     ScoringEventType.TRIPLE -> BaseballConstants.PLAY_RESULT_3B
     ScoringEventType.HOME_RUN -> BaseballConstants.PLAY_RESULT_RUN_SCORED

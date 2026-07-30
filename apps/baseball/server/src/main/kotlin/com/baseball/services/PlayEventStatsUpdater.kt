@@ -20,13 +20,24 @@ class PlayEventStatsUpdater(
         when (eventType) {
             ScoringEventType.SINGLE, ScoringEventType.DOUBLE,
             ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN -> applyExtraHitStats(eventType, bStats, pStats, game)
-            ScoringEventType.WALK -> { bStats.walks += 1; pStats.walksAllowed += 1 }
+
+            ScoringEventType.WALK -> {
+                bStats.walks += 1; pStats.walksAllowed += 1
+            }
+
             ScoringEventType.HIT_BY_PITCH -> bStats.hitByPitch += 1
-            ScoringEventType.STRIKEOUT -> { bStats.strikeOuts += 1; bStats.atBats += 1; pStats.strikeoutsRecorded += 1 }
+            ScoringEventType.STRIKEOUT -> {
+                bStats.strikeOuts += 1; bStats.atBats += 1; pStats.strikeoutsRecorded += 1
+            }
+
             ScoringEventType.GROUNDOUT, ScoringEventType.FLYOUT,
             ScoringEventType.LINE_OUT, ScoringEventType.POP_OUT,
             ScoringEventType.FIELDER_CHOICE -> bStats.atBats += 1
-            ScoringEventType.ERROR -> { bStats.atBats += 1; incrementTeamErrors(game) }
+
+            ScoringEventType.ERROR -> {
+                bStats.atBats += 1; incrementTeamErrors(game)
+            }
+
             else -> {}
         }
     }
@@ -41,7 +52,10 @@ class PlayEventStatsUpdater(
         when (eventType) {
             ScoringEventType.DOUBLE -> bStats.doubles += 1
             ScoringEventType.TRIPLE -> bStats.triples += 1
-            ScoringEventType.HOME_RUN -> { bStats.homeRuns += 1; bStats.runs += 1; pStats.homeRunsAllowed += 1 }
+            ScoringEventType.HOME_RUN -> {
+                bStats.homeRuns += 1; bStats.runs += 1; pStats.homeRunsAllowed += 1
+            }
+
             else -> {}
         }
     }
@@ -66,16 +80,19 @@ class PlayEventStatsUpdater(
                     statsRecorder.incrementFieldingStats(game.id!!, it, assists = 1)
                 }
             }
+
             ScoringEventType.FLYOUT, ScoringEventType.LINE_OUT,
             ScoringEventType.POP_OUT, ScoringEventType.SACRIFICE_FLY -> {
                 recordOutFielder(game, listOf("LF", "CF", "RF", "SS", "2B", "3B", "1B").random())
             }
+
             ScoringEventType.ERROR -> {
                 val defenders = listOf("LF", "CF", "RF", "SS", "2B", "3B", "1B", "P", "C")
                 getFielderId(game, game.half, defenders.random())?.let {
                     statsRecorder.incrementFieldingStats(game.id!!, it, errors = 1)
                 }
             }
+
             else -> {}
         }
     }
