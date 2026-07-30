@@ -195,18 +195,8 @@ class ScorerStep2Panel(
     }
 
     private fun DIV.renderRunnersAdvancement(parent: DIV) {
-        val r1 = controller.game.gameState.runnerFirstId to controller.game.gameState.runnerFirstName
-        val r2 = controller.game.gameState.runnerSecondId to controller.game.gameState.runnerSecondName
-        val r3 = controller.game.gameState.runnerThirdId to controller.game.gameState.runnerThirdName
-
-        val activeRunners =
-            listOfNotNull(
-                r1.first?.let { it to ("Runner on 1B: " + r1.second) },
-                r2.first?.let { it to ("Runner on 2B: " + r2.second) },
-                r3.first?.let { it to ("Runner on 3B: " + r3.second) },
-            )
-
-        if (activeRunners.isNotEmpty() || hasError) {
+        val runnersList = getActiveRunnersList()
+        if (runnersList.isNotEmpty()) {
             parent.div {
                 +"Runner Base Advancement (Optional)"
                 css {
@@ -216,18 +206,28 @@ class ScorerStep2Panel(
                     marginBottom = 0.5.rem
                 }
             }
-            val runnersList =
-                if (hasError) {
-                    activeRunners + (
-                            controller.game.gameState.currentBatterId!! to
-                                    "Batter: ${controller.game.gameState.currentBatterName}"
-                            )
-                } else {
-                    activeRunners
-                }
             runnersList.forEach { (runnerId, label) ->
                 renderSingleRunnerAdvancement(this, runnerId, label)
             }
+        }
+    }
+
+    private fun getActiveRunnersList(): List<Pair<Long, String>> {
+        val r1 = controller.game.gameState.runnerFirstId to controller.game.gameState.runnerFirstName
+        val r2 = controller.game.gameState.runnerSecondId to controller.game.gameState.runnerSecondName
+        val r3 = controller.game.gameState.runnerThirdId to controller.game.gameState.runnerThirdName
+
+        val activeRunners = listOfNotNull(
+            r1.first?.let { it to ("Runner on 1B: " + r1.second) },
+            r2.first?.let { it to ("Runner on 2B: " + r2.second) },
+            r3.first?.let { it to ("Runner on 3B: " + r3.second) },
+        )
+        return if (hasError && controller.game.gameState.currentBatterId != null) {
+            val batterId = controller.game.gameState.currentBatterId!!
+            val batterLabel = "Batter: ${controller.game.gameState.currentBatterName}"
+            activeRunners + (batterId to batterLabel)
+        } else {
+            activeRunners
         }
     }
 
@@ -285,21 +285,25 @@ class ScorerStep2Panel(
                     put("flex", "1")
                 }
             }
-            div {
-                css {
-                    display = Display.flex
-                    gap = 0.2.rem
+            renderAdvOptionGroup(runnerId)
+        }
+    }
+
+    private fun DIV.renderAdvOptionGroup(runnerId: Long) {
+        div {
+            css {
+                display = Display.flex
+                gap = 0.2.rem
+            }
+            val currentDest = runnerAdvances[runnerId.toString()]
+            val options =
+                if (runnerId == controller.game.gameState.currentBatterId) {
+                    listOf(0 to "Out", 1 to "1B", 2 to "2B", 3 to "3B", 4 to "HR")
+                } else {
+                    listOf(0 to "Out", 2 to "2B", 3 to "3B", 4 to "Score")
                 }
-                val currentDest = runnerAdvances[runnerId.toString()]
-                val options =
-                    if (runnerId == controller.game.gameState.currentBatterId) {
-                        listOf(0 to "Out", 1 to "1B", 2 to "2B", 3 to "3B", 4 to "HR")
-                    } else {
-                        listOf(0 to "Out", 2 to "2B", 3 to "3B", 4 to "Score")
-                    }
-                options.forEach { (baseVal, baseLabel) ->
-                    renderAdvButton(runnerId, baseVal, baseLabel, currentDest)
-                }
+            options.forEach { (baseVal, baseLabel) ->
+                renderAdvButton(runnerId, baseVal, baseLabel, currentDest)
             }
         }
     }
@@ -361,7 +365,11 @@ class ScorerStep2Panel(
                     hasDoublePlay ||
                     runnerAdvances.values.contains(0)
         if (!showThrowBuilder) return
+        renderThrowSequenceHeader(parent)
+        renderThrowBuilderButtons(parent)
+    }
 
+    private fun DIV.renderThrowSequenceHeader(parent: DIV) {
         parent.div {
             +"Defensive Play / Throw Sequence"
             css {
@@ -372,15 +380,7 @@ class ScorerStep2Panel(
                 marginBottom = 0.5.rem
             }
         }
-        val displaySeq =
-            buildString {
-                if (throwSequence.isEmpty()) {
-                    append("No throws (Unassisted/Direct)")
-                } else {
-                    append(throwSequence.joinToString("-"))
-                    if (isUnassisted) append("U")
-                }
-            }
+        val displaySeq = getDisplaySequence()
         parent.div {
             +"Sequence: $displaySeq"
             css {
@@ -393,7 +393,15 @@ class ScorerStep2Panel(
                 marginBottom = 0.5.rem
             }
         }
-        renderThrowBuilderButtons(parent)
+    }
+
+    private fun getDisplaySequence(): String = buildString {
+        if (throwSequence.isEmpty()) {
+            append("No throws (Unassisted/Direct)")
+        } else {
+            append(throwSequence.joinToString("-"))
+            if (isUnassisted) append("U")
+        }
     }
 
     private fun renderThrowBuilderButtons(parent: DIV) {
@@ -404,39 +412,24 @@ class ScorerStep2Panel(
                 put("flex-wrap", "wrap")
                 marginBottom = 1.rem
             }
-            val posLabels = listOf("1-P", "2-C", "3-1B", "4-2B", "5-3B", "6-SS", "7-LF", "8-CF", "9-RF")
-            posLabels.forEachIndexed { idx, label ->
-                val posNum = idx + 1
-                button(classes = "btn btn-secondary") {
-                    +label
-                    css {
-                        padding = Padding(4.px, 8.px)
-                        fontSize = 0.75.rem
-                    }
-                    onClickFunction = {
-                        if (throwSequence.size < 6) {
-                            throwSequence.add(posNum)
-                            render()
-                        }
-                    }
+            renderPosBuilderButtons()
+            renderControlBuilderButtons()
+        }
+    }
+
+    private fun DIV.renderPosBuilderButtons() {
+        val posLabels = listOf("1-P", "2-C", "3-1B", "4-2B", "5-3B", "6-SS", "7-LF", "8-CF", "9-RF")
+        posLabels.forEachIndexed { idx, label ->
+            val posNum = idx + 1
+            button(classes = "btn btn-secondary") {
+                +label
+                css {
+                    padding = Padding(4.px, 8.px)
+                    fontSize = 0.75.rem
                 }
-            }
-            listOf(
-                "U" to { isUnassisted = !isUnassisted },
-                "⌫" to { if (throwSequence.isNotEmpty()) throwSequence.removeAt(throwSequence.size - 1) },
-                "Clear" to {
-                    throwSequence.clear()
-                    isUnassisted = false
-                },
-            ).forEach { (lbl, action) ->
-                button(classes = "btn btn-secondary") {
-                    +lbl
-                    css {
-                        padding = Padding(4.px, 8.px)
-                        fontSize = 0.75.rem
-                    }
-                    onClickFunction = {
-                        action()
+                onClickFunction = {
+                    if (throwSequence.size < 6) {
+                        throwSequence.add(posNum)
                         render()
                     }
                 }
@@ -444,31 +437,32 @@ class ScorerStep2Panel(
         }
     }
 
-    private fun DIV.renderFielderGridSection(parent: DIV) {
-        if (eventType == ScoringEventType.HOME_RUN && hrType == "Over the Fence") {
-            parent.div {
+    private fun DIV.renderControlBuilderButtons() {
+        listOf(
+            "U" to { isUnassisted = !isUnassisted },
+            "⌫" to { if (throwSequence.isNotEmpty()) throwSequence.removeAt(throwSequence.size - 1) },
+            "Clear" to {
+                throwSequence.clear()
+                isUnassisted = false
+            },
+        ).forEach { (lbl, action) ->
+            button(classes = "btn btn-secondary") {
+                +lbl
                 css {
-                    marginTop = 1.rem
-                    marginBottom = 1.rem
+                    padding = Padding(4.px, 8.px)
+                    fontSize = 0.75.rem
                 }
-                button(classes = "btn btn-primary") {
-                    +"Complete Play (Home Run)"
-                    css {
-                        width = 100.pct
-                        padding = Padding(0.75.rem)
-                    }
-                    onClickFunction = {
-                        val detail = "Home Run (Over the Fence)" + if (hasError) " (with Error)" else ""
-                        controller.triggerScoringEvent(
-                            eventType,
-                            detail,
-                            false,
-                            hasError,
-                            runnerAdvances.takeIf { it.isNotEmpty() }
-                        )
-                    }
+                onClickFunction = {
+                    action()
+                    render()
                 }
             }
+        }
+    }
+
+    private fun DIV.renderFielderGridSection(parent: DIV) {
+        if (eventType == ScoringEventType.HOME_RUN && hrType == "Over the Fence") {
+            renderFenceHrCompleteButton(parent)
         } else {
             parent.div {
                 +"Select Hit/Out Fielder to Complete Play"
@@ -484,35 +478,50 @@ class ScorerStep2Panel(
         }
     }
 
+    private fun DIV.renderFenceHrCompleteButton(parent: DIV) {
+        parent.div {
+            css {
+                marginTop = 1.rem
+                marginBottom = 1.rem
+            }
+            button(classes = "btn btn-primary") {
+                +"Complete Play (Home Run)"
+                css {
+                    width = 100.pct
+                    padding = Padding(0.75.rem)
+                }
+                onClickFunction = {
+                    val detail = "Home Run (Over the Fence)" + if (hasError) " (with Error)" else ""
+                    controller.triggerScoringEvent(
+                        eventType,
+                        detail,
+                        false,
+                        hasError,
+                        runnerAdvances.takeIf { it.isNotEmpty() }
+                    )
+                }
+            }
+        }
+    }
+
     private fun renderFielderButtons(parent: DIV) {
         parent.div(classes = "action-grid") {
             css { marginBottom = 1.rem }
-            val locations =
-                if (isHit) {
-                    listOf("Left Field", "Center Field", "Right Field", "Infield", "Down the Line", "Gap")
-                } else {
-                    listOf(
-                        "Pitcher (1)",
-                        "Catcher (2)",
-                        "1st Base (3)",
-                        "2nd Base (4)",
-                        "3rd Base (5)",
-                        "Shortstop (6)",
-                        "Left Field (7)",
-                        "Center Field (8)",
-                        "Right Field (9)",
-                    )
-                }
-            locations.forEach { loc ->
-                button(classes = "btn btn-action") {
-                    +loc
-                    onClickFunction = { submitPlayWithLocation(loc) }
-                }
-            }
+            val locations = getFielderLocations(isHit)
+            renderLocationButtons(locations)
             button(classes = "btn btn-action") {
                 +"Unspecified Location"
                 css { background = "rgba(255, 255, 255, 0.1)" }
                 onClickFunction = { submitPlayWithLocation(null) }
+            }
+        }
+    }
+
+    private fun DIV.renderLocationButtons(locations: List<String>) {
+        locations.forEach { loc ->
+            button(classes = "btn btn-action") {
+                +loc
+                onClickFunction = { submitPlayWithLocation(loc) }
             }
         }
     }
@@ -535,6 +544,23 @@ class ScorerStep2Panel(
             hasDoublePlay,
             hasError,
             runnerAdvances.takeIf { it.isNotEmpty() },
+        )
+    }
+
+private fun getFielderLocations(isHit: Boolean): List<String> =
+    if (isHit) {
+        listOf("Left Field", "Center Field", "Right Field", "Infield", "Down the Line", "Gap")
+    } else {
+        listOf(
+            "Pitcher (1)",
+            "Catcher (2)",
+            "1st Base (3)",
+            "2nd Base (4)",
+            "3rd Base (5)",
+            "Shortstop (6)",
+            "Left Field (7)",
+            "Center Field (8)",
+            "Right Field (9)",
         )
     }
 

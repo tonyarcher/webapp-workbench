@@ -131,33 +131,14 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         val isHomeBatting = half == HalfInning.BOTTOM
         val battingTeam = if (isHomeBatting) game.homeTeam else game.awayTeam
         val pitchingTeam = if (isHomeBatting) game.awayTeam else game.homeTeam
-        val battingStatsList = if (isHomeBatting) boxScore.homeBatting else boxScore.awayBatting
         val teamEvents = events.filter { it.half == half }
-
-        val slots = Array(9) { mutableListOf<PlayEvent>() }
-        teamEvents.forEachIndexed { index, event ->
-            slots[index % 9].add(event)
-        }
-
-        val playersByBattingSlot = buildPlayersByBattingSlot(isHomeBatting, slots)
         val maxInning = events.maxOfOrNull { it.inning }?.coerceAtLeast(9) ?: 9
 
-        val parser = ScorecardParser(teamEvents, localAwayRoster, localHomeRoster, maxInning)
+        val params = createRenderParams(isHomeBatting, boxScore, teamEvents, maxInning)
 
         renderHeaderPanel(container, isHomeBatting, game, battingTeam, pitchingTeam)
         renderRosterDrawer(container, isHomeBatting, game)
-        renderScorecardTable(
-            container,
-            game,
-            ScorecardRenderParams(
-                playersByBattingSlot = playersByBattingSlot,
-                battingStatsList = battingStatsList,
-                teamEvents = teamEvents,
-                maxInning = maxInning,
-                parser = parser,
-                isHomeBatting = isHomeBatting,
-            )
-        )
+        renderScorecardTable(container, game, params)
 
         renderScorebookBottomSection(
             container = container,
@@ -175,6 +156,27 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                 boxScore = boxScore,
                 maxInning = maxInning,
             ),
+        )
+    }
+
+    private fun createRenderParams(
+        isHomeBatting: Boolean,
+        boxScore: BoxScore,
+        teamEvents: List<PlayEvent>,
+        maxInning: Int,
+    ): ScorecardRenderParams {
+        val battingStatsList = if (isHomeBatting) boxScore.homeBatting else boxScore.awayBatting
+        val slots = Array(9) { mutableListOf<PlayEvent>() }
+        teamEvents.forEachIndexed { index, event -> slots[index % 9].add(event) }
+        val playersByBattingSlot = buildPlayersByBattingSlot(isHomeBatting, slots)
+        val parser = ScorecardParser(teamEvents, localAwayRoster, localHomeRoster, maxInning)
+        return ScorecardRenderParams(
+            playersByBattingSlot = playersByBattingSlot,
+            battingStatsList = battingStatsList,
+            teamEvents = teamEvents,
+            maxInning = maxInning,
+            parser = parser,
+            isHomeBatting = isHomeBatting,
         )
     }
 
@@ -399,6 +401,11 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
         game: Game,
         params: ScorecardRenderParams,
     ) {
+        buildScorecardTableHtml(container, params.maxInning)
+        populateTableSlots(container, game, params)
+    }
+
+    private fun buildScorecardTableHtml(container: HTMLElement, maxInning: Int) {
         container.append {
             div {
                 id = "scorecard-table-wrapper"
@@ -407,86 +414,106 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                     overflowX = Overflow.auto
                     border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
                 }
-                table {
-                    id = "scorecard-table-el"
-                    css {
-                        borderCollapse = BorderCollapse.collapse
-                        backgroundColor = Color("#faf9f6")
-                        minWidth = 1000.px
-                        width = 100.pct
-                        color = Color("#2b2a28")
-                        fontSize = 0.85.rem
-                    }
-                    thead {
-                        css {
-                            background = "#eae5dc"
-                            borderBottom = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                        }
-                        tr {
-                            id = "scorebook-header-row"
-                            css { height = 35.px }
-                            th {
-                                +"BATTERS"
-                                css {
-                                    borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                                    padding = Padding(0.5.rem)
-                                    textAlign = TextAlign.left
-                                    width = 180.px
-                                }
-                            }
-                            th {
-                                +"POS"
-                                css {
-                                    borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                                    padding = Padding(0.5.rem)
-                                    textAlign = TextAlign.center
-                                    width = 45.px
-                                }
-                            }
-                            for (inn in 1..params.maxInning) {
-                                th {
-                                    +inn.toString()
-                                    css {
-                                        borderRight = Border(1.px, BorderStyle.solid, Color("#9c9384"))
-                                        width = 75.px
-                                        textAlign = TextAlign.center
-                                    }
-                                }
-                            }
-                            listOf("AB", "R", "H", "RBI").forEach { sh ->
-                                th {
-                                    +sh
-                                    css {
-                                        borderLeft = Border(
-                                            if (sh == "AB") 2.px else 1.px,
-                                            BorderStyle.solid,
-                                            Color(if (sh == "AB") "#5a544a" else "#9c9384")
-                                        )
-                                        width = 45.px
-                                        textAlign = TextAlign.center
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    tbody {
-                        id = "scorebook-tbody"
-                    }
-                }
+                buildTableStructure(maxInning)
             }
         }
+    }
 
+    private fun kotlinx.html.DIV.buildTableStructure(maxInning: Int) {
+        table {
+            id = "scorecard-table-el"
+            css {
+                borderCollapse = BorderCollapse.collapse
+                backgroundColor = Color("#faf9f6")
+                minWidth = 1000.px
+                width = 100.pct
+                color = Color("#2b2a28")
+                fontSize = 0.85.rem
+            }
+            thead {
+                css {
+                    background = "#eae5dc"
+                    borderBottom = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                }
+                renderScorecardTableHeader(maxInning)
+            }
+            tbody {
+                id = "scorebook-tbody"
+            }
+        }
+    }
+
+    private fun populateTableSlots(
+        container: HTMLElement,
+        game: Game,
+        params: ScorecardRenderParams,
+    ) {
         val tableEl = container.querySelector("#scorecard-table-el") as HTMLElement
         val tbodyEl = tableEl.querySelector("#scorebook-tbody") as HTMLTableSectionElement
         for (slotIdx in 0..8) {
             val players = params.playersByBattingSlot[slotIdx]
-            renderSlotRows(
-                tbodyEl,
-                game,
-                slotIdx,
-                players,
-                params
-            )
+            renderSlotRows(tbodyEl, game, slotIdx, players, params)
+        }
+    }
+
+    private fun kotlinx.html.THEAD.renderScorecardTableHeader(maxInning: Int) {
+        tr {
+            id = "scorebook-header-row"
+            css { height = 35.px }
+            renderBattersAndPosHeaders()
+            renderInningHeaderCols(maxInning)
+            renderStatHeaderCols()
+        }
+    }
+
+    private fun kotlinx.html.TR.renderBattersAndPosHeaders() {
+        th {
+            +"BATTERS"
+            css {
+                borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                padding = Padding(0.5.rem)
+                textAlign = TextAlign.left
+                width = 180.px
+            }
+        }
+        th {
+            +"POS"
+            css {
+                borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
+                padding = Padding(0.5.rem)
+                textAlign = TextAlign.center
+                width = 45.px
+            }
+        }
+    }
+
+    private fun kotlinx.html.TR.renderInningHeaderCols(maxInning: Int) {
+        for (inn in 1..maxInning) {
+            th {
+                +inn.toString()
+                css {
+                    borderRight = Border(1.px, BorderStyle.solid, Color("#9c9384"))
+                    width = 75.px
+                    textAlign = TextAlign.center
+                }
+            }
+        }
+    }
+
+    private fun kotlinx.html.TR.renderStatHeaderCols() {
+        listOf("AB", "R", "H", "RBI").forEach { sh ->
+            th {
+                +sh
+                css {
+                    borderLeft = Border(
+                        if (sh == "AB") 2.px else 1.px,
+                        BorderStyle.solid,
+                        Color(if (sh == "AB") "#5a544a" else "#9c9384")
+                    )
+                    width = 45.px
+                    textAlign = TextAlign.center
+                }
+            }
         }
     }
 
