@@ -93,15 +93,7 @@ internal fun DIV.renderBaseRunningEventsSection(
     onRenderStep2: (ScoringEventType, String) -> Unit,
 ) {
     div {
-        css {
-            fontSize = 0.8.rem
-            fontWeight = FontWeight.bold
-            color = Color("var(--accent-green)")
-            marginTop = 1.5.rem
-            marginBottom = 0.5.rem
-            borderTop = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.08)"))
-            paddingTop = 1.25.rem
-        }
+        css { applyBaseRunningHeaderStyle() }
         +"BASE RUNNING EVENTS"
     }
     div(classes = "action-grid") {
@@ -122,4 +114,14 @@ internal fun DIV.renderBaseRunningEventsSection(
             }
         }
     }
+}
+
+private fun kotlinx.css.CssBuilder.applyBaseRunningHeaderStyle() {
+    fontSize = 0.8.rem
+    fontWeight = FontWeight.bold
+    color = Color("var(--accent-green)")
+    marginTop = 1.5.rem
+    marginBottom = 0.5.rem
+    borderTop = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.08)"))
+    paddingTop = 1.25.rem
 }
