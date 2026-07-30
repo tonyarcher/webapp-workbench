@@ -49,7 +49,7 @@ object AuthManager : AuthService {
                 )
             saveSession(session)
             return session
-        } catch (e: Throwable) {
+        } catch (e: IllegalStateException) {
             val msg = e.message ?: ""
             if (msg.contains(STATUS_CONNECT, ignoreCase = true) ||
                 msg.contains(STATUS_REFUSED, ignoreCase = true) ||

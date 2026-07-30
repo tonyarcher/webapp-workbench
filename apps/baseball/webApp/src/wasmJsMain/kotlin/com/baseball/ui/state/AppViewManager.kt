@@ -263,7 +263,14 @@ object AppViewManager {
     }
 
     private fun DIV.renderWelcomeHeader() {
-        val session = currentUserSession
+        val session = currentUserSession ?: run {
+            renderLoggedOutWelcomeHeader()
+            return
+        }
+        renderLoggedInWelcomeHeader(session)
+    }
+
+    private fun DIV.renderLoggedInWelcomeHeader(session: UserSession) {
         div {
             css {
                 display = Display.flex
@@ -271,34 +278,42 @@ object AppViewManager {
                 width = 100.pct
                 marginBottom = 1.rem
             }
-            if (session != null) {
-                span {
-                    +"Logged in as ${session.firstName} "
-                    css {
-                        color = Color("var(--accent-yellow)")
-                        fontWeight = FontWeight.bold
-                        marginRight = 1.rem
-                    }
+            span {
+                +"Logged in as ${session.firstName} "
+                css {
+                    color = Color("var(--accent-yellow)")
+                    fontWeight = FontWeight.bold
+                    marginRight = 1.rem
                 }
-                a {
-                    +"Log Out"
-                    css {
-                        color = Color("var(--accent-red)")
-                        cursor = Cursor.pointer
-                        put("text-decoration", "underline")
-                    }
-                    onClickFunction = { authService.logout() }
+            }
+            a {
+                +"Log Out"
+                css {
+                    color = Color("var(--accent-red)")
+                    cursor = Cursor.pointer
+                    put("text-decoration", "underline")
                 }
-            } else {
-                a {
-                    +"Log In / Sign Up"
-                    css {
-                        color = Color("var(--accent-yellow)")
-                        cursor = Cursor.pointer
-                        put("text-decoration", "underline")
-                    }
-                    onClickFunction = { window.location.hash = "login" }
+                onClickFunction = { authService.logout() }
+            }
+        }
+    }
+
+    private fun DIV.renderLoggedOutWelcomeHeader() {
+        div {
+            css {
+                display = Display.flex
+                justifyContent = JustifyContent.flexEnd
+                width = 100.pct
+                marginBottom = 1.rem
+            }
+            a {
+                +"Log In / Sign Up"
+                css {
+                    color = Color("var(--accent-yellow)")
+                    cursor = Cursor.pointer
+                    put("text-decoration", "underline")
                 }
+                onClickFunction = { window.location.hash = "login" }
             }
         }
     }
@@ -407,39 +422,47 @@ object AppViewManager {
     private fun DIV.renderUserHeaderControls() {
         val userSession = currentUserSession
         if (userSession != null) {
-            div {
-                css {
-                    display = Display.flex
-                    alignItems = Align.center
-                    gap = 1.rem
-                    fontSize = 0.9.rem
-                    color = Color("var(--text-secondary)")
-                }
-                span {
-                    +"Hello, ${userSession.firstName}!"
-                    css {
-                        fontWeight = FontWeight("600")
-                        color = Color("var(--accent-yellow)")
-                    }
-                }
-                button(classes = "btn btn-secondary") {
-                    +"Log Out"
-                    css {
-                        padding = Padding(0.25.rem, 0.5.rem)
-                        fontSize = 0.8.rem
-                    }
-                    onClickFunction = { authService.logout() }
-                }
-            }
+            renderLoggedInUserHeaderControls(userSession)
         } else {
-            button(classes = "btn btn-secondary") {
-                +"Log In"
-                css {
-                    padding = Padding(0.25.rem, 0.75.rem)
-                    fontSize = 0.85.rem
-                }
-                onClickFunction = { window.location.hash = "login" }
+            renderLoggedOutUserHeaderControls()
+        }
+    }
+
+    private fun DIV.renderLoggedInUserHeaderControls(userSession: UserSession) {
+        div {
+            css {
+                display = Display.flex
+                alignItems = Align.center
+                gap = 1.rem
+                fontSize = 0.9.rem
+                color = Color("var(--text-secondary)")
             }
+            span {
+                +"Hello, ${userSession.firstName}!"
+                css {
+                    fontWeight = FontWeight("600")
+                    color = Color("var(--accent-yellow)")
+                }
+            }
+            button(classes = "btn btn-secondary") {
+                +"Log Out"
+                css {
+                    padding = Padding(0.25.rem, 0.5.rem)
+                    fontSize = 0.8.rem
+                }
+                onClickFunction = { authService.logout() }
+            }
+        }
+    }
+
+    private fun DIV.renderLoggedOutUserHeaderControls() {
+        button(classes = "btn btn-secondary") {
+            +"Log In"
+            css {
+                padding = Padding(0.25.rem, 0.75.rem)
+                fontSize = 0.85.rem
+            }
+            onClickFunction = { window.location.hash = "login" }
         }
     }
 
@@ -451,30 +474,7 @@ object AppViewManager {
                     onClickFunction = { goBackToWelcome() }
                 }
             }
-
-            if (!isSingleGameMode && !isGameInProgress()) {
-                button(classes = "nav-btn") {
-                    id = "nav-btn-leagues"
-                    +"Leagues & Seasons"
-                    onClickFunction = { currentTab = NavTabs.TAB_LEAGUES }
-                }
-                button(classes = "nav-btn") {
-                    id = "nav-btn-teams"
-                    +"Teams & Rosters"
-                    onClickFunction = { currentTab = NavTabs.TAB_TEAMS }
-                }
-                button(classes = "nav-btn") {
-                    id = "nav-btn-games"
-                    +"Season Dashboard"
-                    onClickFunction = { currentTab = NavTabs.TAB_GAMES }
-                }
-                button(classes = "nav-btn") {
-                    id = "nav-btn-stats"
-                    +"Season Stats"
-                    onClickFunction = { currentTab = NavTabs.TAB_STATS }
-                }
-            }
-
+            renderSeasonNavigationButtons()
             button(classes = "nav-btn") {
                 id = "nav-btn-live"
                 +"Live Scoring"
@@ -483,6 +483,30 @@ object AppViewManager {
                 }
                 onClickFunction = { currentTab = NavTabs.TAB_LIVE_SCORER }
             }
+        }
+    }
+
+    private fun kotlinx.html.NAV.renderSeasonNavigationButtons() {
+        if (isSingleGameMode || isGameInProgress()) return
+        button(classes = "nav-btn") {
+            id = "nav-btn-leagues"
+            +"Leagues & Seasons"
+            onClickFunction = { currentTab = NavTabs.TAB_LEAGUES }
+        }
+        button(classes = "nav-btn") {
+            id = "nav-btn-teams"
+            +"Teams & Rosters"
+            onClickFunction = { currentTab = NavTabs.TAB_TEAMS }
+        }
+        button(classes = "nav-btn") {
+            id = "nav-btn-games"
+            +"Season Dashboard"
+            onClickFunction = { currentTab = NavTabs.TAB_GAMES }
+        }
+        button(classes = "nav-btn") {
+            id = "nav-btn-stats"
+            +"Season Stats"
+            onClickFunction = { currentTab = NavTabs.TAB_STATS }
         }
     }
 

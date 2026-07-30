@@ -10,8 +10,10 @@ fun saveLocalState() {
         val state = buildCurrentLocalGameState()
         val json = Json.encodeToString(LocalGameState.serializer(), state)
         window.localStorage.setItem(KEY_LOCAL_GAME_STATE, json)
-    } catch (t: Throwable) {
-        println("Error saving local state: ${t.message}")
+    } catch (e: kotlinx.serialization.SerializationException) {
+        println("Error saving local state: ${e.message}")
+    } catch (e: IllegalStateException) {
+        println("Error saving local state: ${e.message}")
     }
 }
 
@@ -24,8 +26,10 @@ fun loadLocalState(): Boolean {
             applyLoadedLocalGameState(state)
             result = true
         }
-    } catch (t: Throwable) {
-        println("Error loading local state: ${t.message}")
+    } catch (e: kotlinx.serialization.SerializationException) {
+        println("Error loading local state: ${e.message}")
+    } catch (e: IllegalStateException) {
+        println("Error loading local state: ${e.message}")
     }
     return result
 }

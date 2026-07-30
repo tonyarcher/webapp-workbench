@@ -32,7 +32,7 @@ internal suspend fun setupRenderSeasonDashboardTab(container: HTMLElement) {
 
         val dash = api.getSeasonDashboard(selectedSeasonId!!)
         renderDashboardContent(container, dash)
-    } catch (e: Throwable) {
+    } catch (e: IllegalStateException) {
         renderDashboardError(container, e)
     }
 }

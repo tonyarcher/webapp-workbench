@@ -71,7 +71,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
                 return@launch
             }
             renderLiveScorerMainView(container, data)
-        } catch (e: Throwable) {
+        } catch (e: IllegalStateException) {
             renderScorerErrorCard(container, e.message)
         }
     }
