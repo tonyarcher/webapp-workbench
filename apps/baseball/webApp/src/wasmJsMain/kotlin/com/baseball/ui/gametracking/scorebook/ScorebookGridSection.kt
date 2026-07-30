@@ -15,6 +15,7 @@ import com.baseball.models.Game
 import com.baseball.models.GameStatus
 import com.baseball.models.HalfInning
 import com.baseball.models.PlayEvent
+import com.baseball.models.Player
 import com.baseball.models.PlayerBattingStats
 import com.baseball.models.Team
 import com.baseball.ui.core.DomUiConstants
@@ -240,29 +241,32 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
             }
             div { +"KEEPING SCORE BY: ☑ WEBAPP" }
             div { +"FIRST PITCH: 7:05 PM" }
+            renderBenchButton(game)
+        }
+    }
 
-            if (game.status != GameStatus.COMPLETED) {
-                button(classes = "btn") {
-                    +"Bench & Bullpen"
-                    css {
-                        marginTop = 0.4.rem
-                        fontSize = 0.75.rem
-                        padding = Padding(2.px, 8.px)
-                        background = "rgba(0, 0, 0, 0.05)"
-                        border = Border(1.px, BorderStyle.solid, Color("#5a544a"))
-                        borderRadius = 4.px
-                        cursor = Cursor.pointer
-                    }
-                    onClickFunction = {
-                        val drawer = document.getElementById("roster-drawer-element") as? HTMLElement
-                        if (drawer != null) {
-                            val isHidden = drawer.style.getPropertyValue(DomUiConstants.Css.DISPLAY) ==
+    private fun DIV.renderBenchButton(game: Game) {
+        if (game.status != GameStatus.COMPLETED) {
+            button(classes = "btn") {
+                +"Bench & Bullpen"
+                css {
+                    marginTop = 0.4.rem
+                    fontSize = 0.75.rem
+                    padding = Padding(2.px, 8.px)
+                    background = "rgba(0, 0, 0, 0.05)"
+                    border = Border(1.px, BorderStyle.solid, Color("#5a544a"))
+                    borderRadius = 4.px
+                    cursor = Cursor.pointer
+                }
+                onClickFunction = {
+                    val drawer = document.getElementById("roster-drawer-element") as? HTMLElement
+                    if (drawer != null) {
+                        val isHidden = drawer.style.getPropertyValue(DomUiConstants.Css.DISPLAY) ==
                                 DomUiConstants.CssValues.NONE
-                            drawer.style.setProperty(
-                                DomUiConstants.Css.DISPLAY,
-                                if (isHidden) DomUiConstants.CssValues.BLOCK else DomUiConstants.CssValues.NONE,
-                            )
-                        }
+                        drawer.style.setProperty(
+                            DomUiConstants.Css.DISPLAY,
+                            if (isHidden) DomUiConstants.CssValues.BLOCK else DomUiConstants.CssValues.NONE,
+                        )
                     }
                 }
             }
@@ -324,51 +328,59 @@ object ScorebookGridRenderer : ScorecardUiPresenter {
                         display = Display.flex
                         gap = 2.rem
                     }
+                    renderBenchBattersCol(benchList)
+                    renderBullpenCol(fieldingBench, activePitcherName, isHome, game)
+                }
+            }
+        }
+    }
+
+    private fun DIV.renderBenchBattersCol(benchList: List<Player>) {
+        div {
+            css { flexGrow = 1.0 }
+            h4 { +"BENCH BATTERS" }
+            val batters = benchList.filter {
+                it.position != BaseballConstants.Positions.P && !localPlayersSubbedOut.contains(it.id)
+            }
+            if (batters.isEmpty()) {
+                p { +"None available" }
+            } else {
+                batters.forEach { p ->
+                    div { +"#${p.jerseyNumber} ${p.name} (${p.position})" }
+                }
+            }
+        }
+    }
+
+    private fun DIV.renderBullpenCol(
+        fieldingBench: List<Player>,
+        activePitcherName: String,
+        isHome: Boolean,
+        game: Game,
+    ) {
+        div {
+            css { flexGrow = 1.0 }
+            h4 { +"BULLPEN" }
+            val pitchers = fieldingBench.filter {
+                it.position == BaseballConstants.Positions.P && it.name != activePitcherName
+            }
+            if (pitchers.isEmpty()) {
+                p { +"None available" }
+            } else {
+                pitchers.forEach { p ->
                     div {
-                        css { flexGrow = 1.0 }
-                        h4 { +"BENCH BATTERS" }
-                        val batters =
-                            benchList.filter {
-                                it.position != BaseballConstants.Positions.P &&
-                                        !localPlayersSubbedOut.contains(
-                                            it.id,
-                                        )
-                            }
-                        if (batters.isEmpty()) {
-                            p { +"None available" }
-                        } else {
-                            batters.forEach { p ->
-                                div { +"#${p.jerseyNumber} ${p.name} (${p.position})" }
-                            }
-                        }
-                    }
-                    div {
-                        css { flexGrow = 1.0 }
-                        h4 { +"BULLPEN" }
-                        val pitchers = fieldingBench.filter {
-                            it.position == BaseballConstants.Positions.P &&
-                                    it.name != activePitcherName
-                        }
-                        if (pitchers.isEmpty()) {
-                            p { +"None available" }
-                        } else {
-                            pitchers.forEach { p ->
-                                div {
-                                    +"#${p.jerseyNumber} ${p.name} (LHP/RHP)"
-                                    if (game.status != GameStatus.COMPLETED) {
-                                        button(classes = "btn") {
-                                            +"Call up"
-                                            css {
-                                                marginLeft = 0.5.rem
-                                                fontSize = 0.7.rem
-                                                padding = Padding(1.px, 4.px)
-                                            }
-                                            onClickFunction = {
-                                                substitutePitcher(isHome, p.id!!)
-                                                renderCurrentTab()
-                                            }
-                                        }
-                                    }
+                        +"#${p.jerseyNumber} ${p.name} (LHP/RHP)"
+                        if (game.status != GameStatus.COMPLETED) {
+                            button(classes = "btn") {
+                                +"Call up"
+                                css {
+                                    marginLeft = 0.5.rem
+                                    fontSize = 0.7.rem
+                                    padding = Padding(1.px, 4.px)
+                                }
+                                onClickFunction = {
+                                    substitutePitcher(isHome, p.id!!)
+                                    renderCurrentTab()
                                 }
                             }
                         }
