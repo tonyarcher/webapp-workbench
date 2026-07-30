@@ -101,6 +101,85 @@ private fun getDefaultPosition(index: Int): String =
         else -> "DH"
     }
 
+private fun DIV.renderNameInput(list: MutableList<PlayerInputs>, i: Int, item: PlayerInputs) {
+    input(type = InputType.text, classes = "form-control") {
+        placeholder = "Enter Player Name"
+        value = item.name
+        onChangeFunction = { event ->
+            val txt = (event.target as HTMLInputElement).value
+            list[i] = list[i].copy(name = txt)
+        }
+    }
+}
+
+private fun DIV.renderNumberInput(list: MutableList<PlayerInputs>, i: Int, item: PlayerInputs) {
+    input(type = InputType.number, classes = "form-control") {
+        placeholder = "#"
+        value = item.jerseyNumber
+        onChangeFunction = { event ->
+            val txt = (event.target as HTMLInputElement).value
+            list[i] = list[i].copy(jerseyNumber = txt)
+        }
+    }
+}
+
+private fun DIV.renderPositionSelect(list: MutableList<PlayerInputs>, i: Int, item: PlayerInputs) {
+    select(classes = "form-control") {
+        val availablePositions = listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH")
+        availablePositions.forEach { pos ->
+            option {
+                value = pos
+                +pos
+                selected = (pos == item.position)
+            }
+        }
+        onChangeFunction = { event ->
+            val selectVal = (event.target as HTMLSelectElement).value
+            list[i] = list[i].copy(position = selectVal)
+        }
+    }
+    }
+
+private fun getTeamValidationError(
+    homeTeam: com.baseball.models.Team,
+    awayTeam: com.baseball.models.Team,
+    useDh: Boolean,
+    isHome: Boolean,
+    list: List<PlayerInputs>,
+    pName: String,
+    pNum: String,
+): String? {
+    val teamName = if (isHome) homeTeam.name else awayTeam.name
+    val nums = list.map { it.jerseyNumber.toIntOrNull() }
+    val allNums = if (useDh) nums + pNum.toIntOrNull() else nums
+
+    return when {
+        list.any { it.name.trim().isEmpty() } ->
+            "Error in $teamName Lineup: All player names must be filled."
+
+        nums.any { it == null || it < 0 || it > 99 } ->
+            "Error in $teamName Lineup: Jersey numbers must be integers between 0 and 99."
+
+        useDh && (pName.trim().isEmpty() || pNum.toIntOrNull() == null) ->
+            "Error in $teamName Lineup: Starting Pitcher name and number must be filled when DH is enabled."
+
+        allNums.filterNotNull().size != allNums.toSet().filterNotNull().size ->
+            "Error in $teamName Lineup: Duplicate jersey numbers are not allowed."
+
+        !useDh && list.indexOfFirst { it.position == "P" } == -1 ->
+            "Error in $teamName Lineup: Pitcher (P) must be included in the batting lineup when DH is disabled."
+
+        !useDh && list.count { it.position == "P" } != 1 ->
+            "Error in $teamName Lineup: Lineup must contain exactly one Pitcher (P) " +
+                    "in the batting order when DH is disabled."
+
+        useDh && list.count { it.position == "P" } > 0 ->
+            "Error in $teamName Lineup: Batting order cannot contain a Pitcher (P) when DH is enabled."
+
+        else -> null
+    }
+}
+
 class LineupSetupOverlay(
     private val container: HTMLElement,
     private val homeRosterParam: List<Player> = emptyList(),
@@ -279,30 +358,34 @@ class LineupSetupOverlay(
                 padding = Padding(1.rem)
                 borderRadius = 8.px
             }
-            label {
-                css {
-                    display = Display.flex
-                    alignItems = Align.center
-                    gap = 0.5.rem
-                    cursor = Cursor.pointer
-                }
-                input(type = InputType.checkBox) {
-                    checked = useDh
-                    onChangeFunction = { event ->
-                        useDh = (event.target as HTMLInputElement).checked
-                        validationError = null
-                        adjustLineupPositions()
-                        render()
-                    }
-                }
-                span {
-                    +"Enable Designated Hitter (DH)"
-                    css {
-                        fontWeight = FontWeight.bold
-                    }
+            renderDhToggle()
+            renderConfigActionButtons(this)
+        }
+    }
+
+    private fun DIV.renderDhToggle() {
+        label {
+            css {
+                display = Display.flex
+                alignItems = Align.center
+                gap = 0.5.rem
+                cursor = Cursor.pointer
+            }
+            input(type = InputType.checkBox) {
+                checked = useDh
+                onChangeFunction = { event ->
+                    useDh = (event.target as HTMLInputElement).checked
+                    validationError = null
+                    adjustLineupPositions()
+                    render()
                 }
             }
-            renderConfigActionButtons(this)
+            span {
+                +"Enable Designated Hitter (DH)"
+                css {
+                    fontWeight = FontWeight.bold
+                }
+            }
         }
     }
 
@@ -535,38 +618,13 @@ class LineupSetupOverlay(
                     fontWeight = FontWeight.bold
                 }
             }
-            input(type = InputType.text, classes = "form-control") {
-                placeholder = "Enter Player Name"
-                value = item.name
-                onChangeFunction = { event ->
-                    val txt = (event.target as HTMLInputElement).value
-                    list[i] = list[i].copy(name = txt)
-                }
-            }
-            input(type = InputType.number, classes = "form-control") {
-                placeholder = "#"
-                value = item.jerseyNumber
-                onChangeFunction = { event ->
-                    val txt = (event.target as HTMLInputElement).value
-                    list[i] = list[i].copy(jerseyNumber = txt)
-                }
-            }
-            select(classes = "form-control") {
-                val availablePositions = listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH")
-                availablePositions.forEach { pos ->
-                    option {
-                        value = pos
-                        +pos
-                        selected = (pos == item.position)
-                    }
-                }
-                onChangeFunction = { event ->
-                    val selectVal = (event.target as HTMLSelectElement).value
-                    list[i] = list[i].copy(position = selectVal)
-                }
-            }
+            renderNameInput(list, i, item)
+            renderNumberInput(list, i, item)
+            renderPositionSelect(list, i, item)
         }
     }
+
+
 
     private fun validateAndSave(): Boolean {
         val awayRes = validateTeam(isHome = false, awayLineupInputs, awayPitcherNameInput, awayPitcherNumberInput)
@@ -672,7 +730,7 @@ class LineupSetupOverlay(
         pName: String,
         pNum: String,
     ): Pair<List<Player>, List<Player>>? {
-        val error = getTeamValidationError(isHome, list, pName, pNum)
+        val error = getTeamValidationError(homeTeam, awayTeam, useDh, isHome, list, pName, pNum)
         if (error != null) {
             validationError = error
             return null
@@ -683,113 +741,14 @@ class LineupSetupOverlay(
         val tId = if (isHome) homeTeam.id else awayTeam.id
 
         val lineupPlayers = buildLineupPlayers(list, baseId, tId)
-        val (benchPlayers, _) = buildBenchAndPitcher(isHome, useDh, pName, pNum, lineupPlayers, list, baseId, tId, teamName)
+        val config = BenchBuildConfig(useDh, pName, pNum, lineupPlayers, list, baseId, tId, teamName)
+        val (benchPlayers, _) = buildBenchAndPitcher(config)
 
         return Pair(lineupPlayers, benchPlayers)
     }
 
-    private fun getTeamValidationError(
-        isHome: Boolean,
-        list: List<PlayerInputs>,
-        pName: String,
-        pNum: String,
-    ): String? {
-        val teamName = if (isHome) homeTeam.name else awayTeam.name
-        val nums = list.map { it.jerseyNumber.toIntOrNull() }
-        val allNums = if (useDh) nums + pNum.toIntOrNull() else nums
 
-        return when {
-            list.any { it.name.trim().isEmpty() } ->
-                "Error in $teamName Lineup: All player names must be filled."
 
-            nums.any { it == null || it < 0 || it > 99 } ->
-                "Error in $teamName Lineup: Jersey numbers must be integers between 0 and 99."
-
-            useDh && (pName.trim().isEmpty() || pNum.toIntOrNull() == null) ->
-                "Error in $teamName Lineup: Starting Pitcher name and number must be filled when DH is enabled."
-
-            allNums.filterNotNull().size != allNums.toSet().filterNotNull().size ->
-                "Error in $teamName Lineup: Duplicate jersey numbers are not allowed."
-
-            !useDh && list.indexOfFirst { it.position == "P" } == -1 ->
-                "Error in $teamName Lineup: Pitcher (P) must be included in the batting lineup when DH is disabled."
-
-            !useDh && list.count { it.position == "P" } != 1 ->
-                "Error in $teamName Lineup: Lineup must contain exactly one Pitcher (P) " +
-                        "in the batting order when DH is disabled."
-
-            useDh && list.count { it.position == "P" } > 0 ->
-                "Error in $teamName Lineup: Batting order cannot contain a Pitcher (P) when DH is enabled."
-
-            else -> null
-        }
-    }
-
-    private fun buildLineupPlayers(
-        list: List<PlayerInputs>,
-        baseId: Long,
-        tId: Long?,
-    ): List<Player> =
-        list.mapIndexed { idx, item ->
-            Player(
-                id = baseId + idx + 1,
-                teamId = tId,
-                name = item.name.trim(),
-                position = item.position,
-                jerseyNumber = item.jerseyNumber.toInt(),
-                battingHand = "R",
-                throwingHand = "R",
-            )
-        }
-
-    private fun buildBenchAndPitcher(
-        isHome: Boolean,
-        useDh: Boolean,
-        pName: String,
-        pNum: String,
-        lineupPlayers: List<Player>,
-        list: List<PlayerInputs>,
-        baseId: Long,
-        tId: Long?,
-        teamName: String,
-    ): Pair<List<Player>, Long> {
-        val benchPlayers = mutableListOf<Player>()
-        var activePitcherId = baseId + 10L
-
-        if (useDh) {
-            val pPlayer =
-                Player(
-                    id = baseId + 10L,
-                    teamId = tId,
-                    name = pName.trim(),
-                    position = "P",
-                    jerseyNumber = pNum.toInt(),
-                    battingHand = "R",
-                    throwingHand = "R",
-                )
-            benchPlayers.add(pPlayer)
-            activePitcherId = pPlayer.id!!
-        } else {
-            val pitcherLineupIndex = list.indexOfFirst { it.position == "P" }
-            activePitcherId = lineupPlayers[pitcherLineupIndex].id!!
-        }
-
-        for (idx in 1..4) {
-            benchPlayers.add(
-                Player(
-                    id = baseId + 10L + idx,
-                    teamId = tId,
-                    name = "Sub $idx ($teamName)",
-                    position = if (idx == 1) "P" else "OF",
-                    jerseyNumber = (80 + idx) % 100,
-                    battingHand = "R",
-                    throwingHand = "R",
-                ),
-            )
-        }
-
-        return Pair(benchPlayers, activePitcherId)
-    }
 }
 
 data class PlayerInputs(
@@ -797,3 +756,79 @@ data class PlayerInputs(
     val jerseyNumber: String,
     val position: String,
 )
+
+data class BenchBuildConfig(
+    val useDh: Boolean,
+    val pName: String,
+    val pNum: String,
+    val lineupPlayers: List<Player>,
+    val list: List<PlayerInputs>,
+    val baseId: Long,
+    val tId: Long?,
+    val teamName: String,
+)
+
+private fun buildLineupPlayers(
+    list: List<PlayerInputs>,
+    baseId: Long,
+    tId: Long?,
+): List<Player> =
+    list.mapIndexed { idx, item ->
+        Player(
+            id = baseId + idx + 1,
+            teamId = tId,
+            name = item.name.trim(),
+            position = item.position,
+            jerseyNumber = item.jerseyNumber.toInt(),
+            battingHand = "R",
+            throwingHand = "R",
+        )
+    }
+
+private fun buildBenchAndPitcher(config: BenchBuildConfig): Pair<List<Player>, Long> {
+    val useDh = config.useDh
+    val pName = config.pName
+    val pNum = config.pNum
+    val lineupPlayers = config.lineupPlayers
+    val list = config.list
+    val baseId = config.baseId
+    val tId = config.tId
+    val teamName = config.teamName
+    val benchPlayers = mutableListOf<Player>()
+    var activePitcherId = baseId + 10L
+
+    if (useDh) {
+        val pPlayer =
+            Player(
+                id = baseId + 10L,
+                teamId = tId,
+                name = pName.trim(),
+                position = "P",
+                jerseyNumber = pNum.toInt(),
+                battingHand = "R",
+                throwingHand = "R",
+            )
+        benchPlayers.add(pPlayer)
+        activePitcherId = pPlayer.id!!
+    } else {
+        val pitcherLineupIndex = list.indexOfFirst { it.position == "P" }
+        activePitcherId = lineupPlayers[pitcherLineupIndex].id!!
+    }
+
+    benchPlayers.addAll(buildDefaultBench(baseId, tId, teamName))
+
+    return Pair(benchPlayers, activePitcherId)
+}
+
+private fun buildDefaultBench(baseId: Long, tId: Long?, teamName: String): List<Player> =
+    (1..4).map { idx ->
+        Player(
+            id = baseId + 10L + idx,
+            teamId = tId,
+            name = "Sub $idx ($teamName)",
+            position = if (idx == 1) "P" else "OF",
+            jerseyNumber = (80 + idx) % 100,
+            battingHand = "R",
+            throwingHand = "R",
+        )
+    }
