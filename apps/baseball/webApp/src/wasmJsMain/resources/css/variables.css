@@ -1,0 +1,18 @@
+/* CSS Custom Properties (Variables) */
+:root {
+    --bg-dark: #07080a;
+    --bg-surface: rgba(22, 26, 36, 0.7);
+    --bg-card: rgba(30, 36, 50, 0.45);
+    --border-color: rgba(229, 30, 43, 0.15);
+    --border-active: rgba(229, 30, 43, 0.6);
+    --text-primary: #f5f7fa;
+    --text-secondary: #8e9cae;
+    --accent-green: #00b050;
+    --accent-green-glow: #00e676;
+    --accent-red: #ff2a3b;
+    --accent-red-glow: #ff5252;
+    --accent-yellow: #ffcc00;
+    --accent-blue: #0073e6;
+    --glass-blur: blur(12px);
+    --scoreboard-bg: #0b0d13;
+}
