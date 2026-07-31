@@ -3,11 +3,13 @@
 build/
 /*/build/
 
-# Kotlin JS / WASM
+# Kotlin JS / WASM & Web Components Build Outputs
 node_modules/
 yarn.lock
 kotlin-js-store/
 .kotlin/
+webApp/src/wasmJsMain/resources/js/web-components.js
+webComponents/dist/
 
 # IntelliJ IDEA
 .idea/
@@ -36,7 +38,6 @@ webapp_detekt_output.txt
 webapp_detekt_utf8.txt
 detekt_output.txt
 
-
 # IDE/config files
 .editorconfig
 .vscode/
@@ -45,4 +46,3 @@ detekt_output.txt
 
 # Antigravity config
 .gemini/
-
