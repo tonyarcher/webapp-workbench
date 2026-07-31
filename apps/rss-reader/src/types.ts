@@ -1,0 +1,75 @@
+export interface Folder {
+  id: string;
+  title: string;
+  createdAt: number;
+}
+
+export interface Feed {
+  id: string;
+  title: string;
+  url: string;
+  siteUrl?: string;
+  icon?: string;
+  folderId: string | null;
+  unread: number;
+  addedAt: number;
+  lastFetchedAt?: number;
+  lastError?: string;
+}
+
+export interface Article {
+  id: string;
+  feedId: string;
+  guid: string;
+  title: string;
+  link?: string;
+  author?: string;
+  summary?: string;
+  content?: string;
+  published: number;
+  fetchedAt: number;
+  read: 0 | 1;
+  starred: boolean;
+  normLink?: string;
+  comments?: number;
+  popularity: number;
+  hot: number;
+}
+
+export type ArticleSort = 'hot' | 'newest' | 'oldest';
+export type ListViewType = 'detailed' | 'headline';
+
+export type View =
+  | { kind: 'all' }
+  | { kind: 'folder'; id: string }
+  | { kind: 'feed'; id: string };
+
+export interface ParsedItem {
+  guid: string;
+  title: string;
+  link?: string;
+  author?: string;
+  summary?: string;
+  content?: string;
+  comments?: number;
+  published: number;
+}
+
+export interface ParsedFeed {
+  title: string;
+  siteUrl?: string;
+  items: ParsedItem[];
+}
+
+export interface OpmlSource {
+  title: string;
+  xmlUrl: string;
+  htmlUrl?: string;
+}
+
+export type OpmlNode = OpmlSource | OpmlFolder;
+
+export interface OpmlFolder {
+  title: string;
+  children: OpmlNode[];
+}

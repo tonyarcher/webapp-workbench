@@ -1,0 +1,80 @@
+:root {
+  --font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji';
+}
+
+/* Light */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --accent: #2563eb;
+  --bg: #ffffff;
+  --panel-bg: #ffffff;
+  --sidebar-bg: #fafafa;
+  --border: #e5e7eb;
+  --row-border: #f0f1f3;
+  --text: #1f2328;
+  --text-muted: #6b7280;
+  --hover: #f3f4f6;
+  --active-bg: #e8f0fe;
+  --active-text: #1d4ed8;
+  --badge-bg: #e0e7ff;
+  --badge-text: #3730a3;
+  --input-bg: #ffffff;
+  --danger: #dc2626;
+  --star-color: #f59e0b;
+}
+
+/* Dark grey — low contrast, easy on the eyes */
+[data-theme='dark'] {
+  color-scheme: dark;
+  --accent: #539bf5;
+  --bg: #1c2128;
+  --panel-bg: #22272e;
+  --sidebar-bg: #1c2128;
+  --border: #373e47;
+  --row-border: #2d333b;
+  --text: #cdd9e5;
+  --text-muted: #8b949e;
+  --hover: #2d333b;
+  --active-bg: #14324a;
+  --active-text: #58a6ff;
+  --badge-bg: #2d333b;
+  --badge-text: #cdd9e5;
+  --input-bg: #1c2128;
+  --danger: #f47067;
+  --star-color: #f0883e;
+}
+
+/* Lights out OLED — pure black background */
+[data-theme='oled'] {
+  color-scheme: dark;
+  --accent: #60a5fa;
+  --bg: #000000;
+  --panel-bg: #000000;
+  --sidebar-bg: #000000;
+  --border: #1f1f1f;
+  --row-border: #161616;
+  --text: #f2f2f2;
+  --text-muted: #8a8f98;
+  --hover: #111111;
+  --active-bg: #0a1f33;
+  --active-text: #93c5fd;
+  --badge-bg: #161616;
+  --badge-text: #d1d5db;
+  --input-bg: #0a0a0a;
+  --danger: #f87171;
+  --star-color: #fbbf24;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-family);
+}
