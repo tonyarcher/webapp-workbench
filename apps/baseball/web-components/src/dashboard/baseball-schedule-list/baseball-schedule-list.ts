@@ -19,13 +19,11 @@ export interface GameItem {
 export class BaseballScheduleList extends LitElement {
   static styles = scheduleSheet;
 
-  @property({ type: Array }) games: GameItem[] = [];
-
   @property({
-    type: String,
+    type: Array,
     attribute: 'games-json',
     converter: {
-      fromAttribute: (val: string | null) => {
+      fromAttribute: (val: string | null): GameItem[] => {
         if (!val) return [];
         try {
           return JSON.parse(val);
@@ -35,28 +33,18 @@ export class BaseballScheduleList extends LitElement {
       }
     }
   })
-  set gamesJson(val: GameItem[]) {
-    this.games = val;
-  }
-
-  private onScoreGame(gameId: number) {
-    this.dispatchEvent(new CustomEvent('score-game-click', { detail: { gameId }, bubbles: true }));
-  }
-
-  private onBoxScore(gameId: number) {
-    this.dispatchEvent(new CustomEvent('box-score-click', { detail: { gameId }, bubbles: true }));
-  }
+  games: GameItem[] = [];
 
   render() {
     return html`
       <div class="card">
-        <h3>Games Schedule (${this.games.length})</h3>
-        ${this.games.length === 0
-          ? html`<p class="text-muted">No games scheduled yet.</p>`
-          : html`
+        <h3>Games Schedule (${(this.games ?? []).length})</h3>
+        ${(this.games ?? []).length === 0
+            ? html`<p class="text-muted">No games scheduled yet.</p>`
+            : html`
               <div class="schedule-list">
-                ${this.games.map(
-                  (g) => html`
+                ${(this.games ?? []).map(
+                    (g) => html`
                     <div class="game-card">
                       <div>
                         <div class="font-bold">${g.awayTeam} @ ${g.homeTeam}</div>
@@ -64,11 +52,11 @@ export class BaseballScheduleList extends LitElement {
                       </div>
                       <div class="flex-center flex-gap-sm">
                         ${g.status === 'COMPLETED'
-                          ? html`
+                            ? html`
                               <span class="font-bold margin-right-md">${g.awayScore} - ${g.homeScore}</span>
                               <button class="btn btn-secondary" @click=${() => this.onBoxScore(g.id)}>Box Score</button>
                             `
-                          : html`
+                            : html`
                               <button class="btn" @click=${() => this.onScoreGame(g.id)}>Score Game</button>
                             `}
                       </div>
@@ -79,6 +67,14 @@ export class BaseballScheduleList extends LitElement {
             `}
       </div>
     `;
+  }
+
+  private onScoreGame(gameId: number) {
+    this.dispatchEvent(new CustomEvent('score-game-click', {detail: {gameId}, bubbles: true}));
+  }
+
+  private onBoxScore(gameId: number) {
+    this.dispatchEvent(new CustomEvent('box-score-click', {detail: {gameId}, bubbles: true}));
   }
 }
 

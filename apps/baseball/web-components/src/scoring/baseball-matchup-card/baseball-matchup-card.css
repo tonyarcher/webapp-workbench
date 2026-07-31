@@ -1,72 +1,99 @@
 :host {
-  display: block;
-  width: 100%;
+    display: block;
+    width: 100%;
+    font-family: 'Outfit', sans-serif;
 }
 
-.matchup-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(135deg, rgba(27, 53, 36, 0.95) 0%, rgba(13, 26, 18, 0.98) 100%);
-  border: 1.5px solid rgba(74, 222, 128, 0.35);
-  padding: 1.5rem 2rem;
-  border-radius: 14px;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 25px rgba(0, 176, 80, 0.15);
-  box-sizing: border-box;
-  font-family: 'Outfit', sans-serif;
+.card {
+    background: linear-gradient(135deg, rgba(27, 53, 36, 0.95) 0%, rgba(13, 26, 18, 0.98) 100%);
+    border: 1.5px solid rgba(74, 222, 128, 0.35);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 25px rgba(0, 176, 80, 0.15);
+    box-sizing: border-box;
+    color: #ffffff;
 }
 
-.flex-between {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
+.matchup-header {
+    text-align: center;
+    margin-bottom: 1rem;
 }
 
-.flex-grow {
-  flex-grow: 1;
+.matchup-title {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: rgba(74, 222, 128, 0.8);
+    text-transform: uppercase;
 }
 
-.text-center {
-  text-align: center;
+.matchup-grid {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
 }
 
-.text-accent-green {
-  color: var(--accent-green, #00b050);
-  letter-spacing: 1px;
-  font-size: 0.85rem;
-  font-weight: bold;
+.player-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
-.matchup-player-name {
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: var(--text-primary, #ffffff);
-  letter-spacing: 0.5px;
-  margin-top: 0.25rem;
+.batter-box {
+    text-align: left;
 }
 
-.matchup-player-stats {
-  font-size: 0.9rem;
-  color: var(--text-secondary, #8e9cae);
-  font-weight: 500;
-  margin-top: 0.25rem;
+.pitcher-box {
+    text-align: right;
 }
 
-.matchup-vs-badge {
-  font-size: 1.3rem;
-  font-weight: 900;
-  margin: 0 1.5rem;
-  color: var(--accent-green-glow, #00e676);
-  background: rgba(0, 230, 118, 0.12);
-  border: 1.5px solid rgba(0, 230, 118, 0.4);
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 15px rgba(0, 230, 118, 0.25);
-  flex-shrink: 0;
+.role-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: rgba(74, 222, 128, 0.7);
+    text-transform: uppercase;
+}
+
+.player-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.3px;
+}
+
+.player-sub {
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.82rem;
+    color: #8e9cae;
+    font-weight: 500;
+    flex-wrap: wrap;
+}
+
+.pitcher-box .player-sub {
+    justify-content: flex-end;
+}
+
+.stat-badge {
+    color: #00e676;
+    font-weight: 700;
+}
+
+.vs-badge {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #00e676;
+    background: rgba(0, 230, 118, 0.12);
+    border: 1.5px solid rgba(0, 230, 118, 0.4);
+    border-radius: 50%;
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 15px rgba(0, 230, 118, 0.25);
+    flex-shrink: 0;
 }

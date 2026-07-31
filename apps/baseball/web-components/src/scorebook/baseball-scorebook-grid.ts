@@ -1,24 +1,28 @@
 import {html, LitElement} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
-import scorebookCssText from './baseball-scorebook-grid/baseball-scorebook-grid.css?inline';
+import scorebookCssText from './baseball-scorebook-grid.css?inline';
 
 const scorebookSheet = new CSSStyleSheet();
 scorebookSheet.replaceSync(scorebookCssText);
 
-export interface InningSlotData {
-  b1?: boolean;
-  b2?: boolean;
-  b3?: boolean;
-  b4?: boolean;
-  playDesc?: string;
-  outs?: number;
-  endedInning?: boolean;
+export interface ScorebookCellDto {
+  notation?: string | null;
+  base?: number;
+  outNum?: number | null;
+  count?: string | null;
+  hasEndedInningLine?: boolean;
 }
 
-export interface ScorebookRowData {
-  battingSlot: number;
-  playersInSlot: string[];
-  slots: (InningSlotData | null)[];
+export interface ScorebookSlotDto {
+  slotIdx: number;
+  batterName: string;
+  position: string;
+  hasSub?: boolean;
+  atBats?: number;
+  runs?: number;
+  hits?: number;
+  rbi?: number;
+  innings?: Record<string, ScorebookCellDto>;
 }
 
 @customElement('baseball-scorebook-grid')
@@ -26,14 +30,13 @@ export class BaseballScorebookGrid extends LitElement {
   static styles = scorebookSheet;
 
   @property({type: String, attribute: 'team-name'}) teamName = 'Team Scorecard';
-  @property({ type: Number, attribute: 'max-inning' }) maxInning = 9;
-  @property({type: Array}) rows: ScorebookRowData[] = [];
+  @property({type: Number, attribute: 'max-inning'}) maxInning = 9;
 
   @property({
-    type: String,
+    type: Array,
     attribute: 'slots-json',
     converter: {
-      fromAttribute: (val: string | null) => {
+      fromAttribute: (val: string | null): ScorebookSlotDto[] => {
         if (!val) return [];
         try {
           return JSON.parse(val);
@@ -43,9 +46,7 @@ export class BaseballScorebookGrid extends LitElement {
       }
     }
   })
-  set slotsJson(val: ScorebookRowData[]) {
-    this.rows = val;
-  }
+  rows: ScorebookSlotDto[] = [];
 
   render() {
     const inningsArray = Array.from({length: this.maxInning}, (_, i) => i + 1);
@@ -59,25 +60,31 @@ export class BaseballScorebookGrid extends LitElement {
             <thead>
               <tr>
                 <th class="col-slot">#</th>
-                <th class="col-name">Batter Name</th>
+                <th class="col-name">Batter</th>
+                <th class="col-pos">POS</th>
                 ${inningsArray.map((inn) => html`<th class="col-inning">${inn}</th>`)}
+                <th class="col-stat">AB</th>
+                <th class="col-stat">R</th>
+                <th class="col-stat">H</th>
+                <th class="col-stat">RBI</th>
               </tr>
             </thead>
             <tbody>
-            ${this.rows.map(
+            ${(this.rows ?? []).map(
                 (row) => html`
                   <tr>
-                    <td class="col-slot font-bold">${row.battingSlot}</td>
-                    <td class="col-name">
-                      <div class="player-names-list">
-                        ${row.playersInSlot.map((name) => html`<div>${name}</div>`)}
-                      </div>
-                    </td>
-                    ${inningsArray.map((_, idx) => html`
+                    <td class="col-slot font-bold">${row.slotIdx}</td>
+                    <td class="col-name">${row.batterName}</td>
+                    <td class="col-pos text-secondary">${row.position}</td>
+                    ${inningsArray.map((inn) => html`
                       <td class="col-inning">
-                        ${this.renderDiamond(row.slots[idx] || null)}
+                        ${this.renderCell(row.innings?.[inn] ?? null)}
                       </td>
                     `)}
+                    <td class="col-stat">${row.atBats ?? 0}</td>
+                    <td class="col-stat">${row.runs ?? 0}</td>
+                    <td class="col-stat">${row.hits ?? 0}</td>
+                    <td class="col-stat">${row.rbi ?? 0}</td>
                   </tr>
                 `
             )}
@@ -88,24 +95,18 @@ export class BaseballScorebookGrid extends LitElement {
     `;
   }
 
-  private renderDiamond(slot: InningSlotData | null) {
-    if (!slot) {
-      return html`
-        <div class="diamond"></div>`;
-    }
-
-    const b1Class = slot.b1 ? 'b1' : '';
-    const b2Class = slot.b2 ? 'b2' : '';
-    const b3Class = slot.b3 ? 'b3' : '';
-    const b4Class = slot.b4 ? 'b4' : '';
-    const endClass = slot.endedInning ? 'ended-inning' : '';
+  private renderCell(cell: ScorebookCellDto | null) {
+    const baseClass = cell?.base ? `b${cell.base}` : '';
+    const endClass = cell?.hasEndedInningLine ? 'ended-inning' : '';
 
     return html`
-      <div class="diamond ${b1Class} ${b2Class} ${b3Class} ${b4Class} ${endClass}">
-        ${slot.playDesc ? html`<div class="play-desc">${slot.playDesc}</div>` : ''}
-        ${slot.outs !== undefined && slot.outs > 0
-        ? html`<div class="out-circle">${slot.outs}</div>`
-        : ''}
+      <div class="diamond ${baseClass} ${endClass}">
+        ${cell?.notation ? html`
+          <div class="play-desc">${cell.notation}</div>` : ''}
+        ${cell?.outNum ? html`
+          <div class="out-circle">${cell.outNum}</div>` : ''}
+        ${cell?.count ? html`
+          <div class="count-badge">${cell.count}</div>` : ''}
       </div>
     `;
   }

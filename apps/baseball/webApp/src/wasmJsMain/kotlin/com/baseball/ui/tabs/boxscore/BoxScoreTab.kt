@@ -4,7 +4,6 @@ import com.baseball.game.localBoxScore
 import com.baseball.game.localEvents
 import com.baseball.game.localGame
 import kotlinx.browser.document
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLElement
 

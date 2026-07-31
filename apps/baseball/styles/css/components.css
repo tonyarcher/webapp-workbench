@@ -238,18 +238,50 @@ tr:hover td {
 }
 
 /* Spacing Utility Classes */
-.margin-top-xs { margin-top: 0.25rem; }
-.margin-top-sm { margin-top: 0.5rem; }
-.margin-top-md { margin-top: 1rem; }
-.margin-top-lg { margin-top: 1.5rem; }
+.margin-top-xs {
+    margin-top: 0.25rem;
+}
 
-.margin-bottom-xs { margin-bottom: 0.25rem; }
-.margin-bottom-sm { margin-bottom: 0.5rem; }
-.margin-bottom-md { margin-bottom: 1rem; }
-.margin-bottom-lg { margin-bottom: 1.5rem; }
+.margin-top-sm {
+    margin-top: 0.5rem;
+}
 
-.margin-right-md { margin-right: 1rem; }
+.margin-top-md {
+    margin-top: 1rem;
+}
 
-.padding-lg { padding: 2rem; }
-.border-bottom-dark { border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-.padding-bottom-sm { padding-bottom: 0.5rem; }
+.margin-top-lg {
+    margin-top: 1.5rem;
+}
+
+.margin-bottom-xs {
+    margin-bottom: 0.25rem;
+}
+
+.margin-bottom-sm {
+    margin-bottom: 0.5rem;
+}
+
+.margin-bottom-md {
+    margin-bottom: 1rem;
+}
+
+.margin-bottom-lg {
+    margin-bottom: 1.5rem;
+}
+
+.margin-right-md {
+    margin-right: 1rem;
+}
+
+.padding-lg {
+    padding: 2rem;
+}
+
+.border-bottom-dark {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.padding-bottom-sm {
+    padding-bottom: 0.5rem;
+}

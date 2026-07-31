@@ -8,7 +8,6 @@ import com.baseball.ui.state.seasonsList
 import com.baseball.ui.state.selectedLeagueId
 import com.baseball.ui.state.selectedSeasonId
 import kotlinx.browser.document
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLElement
 

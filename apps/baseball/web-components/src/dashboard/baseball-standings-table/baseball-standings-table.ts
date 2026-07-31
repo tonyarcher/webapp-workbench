@@ -19,13 +19,11 @@ export interface StandingsRow {
 export class BaseballStandingsTable extends LitElement {
   static styles = standingsSheet;
 
-  @property({ type: Array }) standings: StandingsRow[] = [];
-
   @property({
-    type: String,
+    type: Array,
     attribute: 'standings-json',
     converter: {
-      fromAttribute: (val: string | null) => {
+      fromAttribute: (val: string | null): StandingsRow[] => {
         if (!val) return [];
         try {
           return JSON.parse(val);
@@ -35,13 +33,7 @@ export class BaseballStandingsTable extends LitElement {
       }
     }
   })
-  set standingsJson(rows: StandingsRow[]) {
-    this.standings = rows;
-  }
-
-  private formatPct(pct: number): string {
-    return (pct || 0).toFixed(3).replace(/^0+/, '');
-  }
+  standings: StandingsRow[] = [];
 
   render() {
     return html`
@@ -61,7 +53,7 @@ export class BaseballStandingsTable extends LitElement {
               </tr>
             </thead>
             <tbody>
-              ${this.standings.map(
+            ${(this.standings ?? []).map(
                 (s) => html`
                   <tr>
                     <td class="font-bold">${s.teamName}</td>
@@ -73,12 +65,16 @@ export class BaseballStandingsTable extends LitElement {
                     <td>${s.runsAllowed}</td>
                   </tr>
                 `
-              )}
+            )}
             </tbody>
           </table>
         </div>
       </div>
     `;
+  }
+
+  private formatPct(pct: number): string {
+    return (pct || 0).toFixed(3).replace(/^0+/, '');
   }
 }
 

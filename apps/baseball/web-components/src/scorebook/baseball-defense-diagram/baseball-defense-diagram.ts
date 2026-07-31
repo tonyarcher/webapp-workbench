@@ -50,7 +50,7 @@ export class BaseballDefenseDiagram extends LitElement {
                     <span class="player-name">${f.playerName}</span>
                     <span class="pos-code">#${f.jerseyNumber} ${f.posName}</span>
                   </div>
-              </div>
+                </div>
               `
           )}
         </div>

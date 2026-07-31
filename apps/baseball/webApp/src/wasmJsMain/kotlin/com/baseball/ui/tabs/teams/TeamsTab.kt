@@ -5,7 +5,6 @@ import com.baseball.ui.core.launch
 import com.baseball.ui.state.selectedTeamId
 import com.baseball.ui.state.teamsList
 import kotlinx.browser.document
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLElement
 
@@ -35,6 +34,6 @@ internal suspend fun setupRenderTeamsTab(container: HTMLElement) {
 
     val roster = api.getTeamRoster(tId)
     val rosterTable = document.createElement("baseball-roster-table")
-    rosterTable.setAttribute("roster-json", Json.encodeToString(roster))
+    rosterTable.setAttribute("players-json", Json.encodeToString(roster))
     container.appendChild(rosterTable)
 }

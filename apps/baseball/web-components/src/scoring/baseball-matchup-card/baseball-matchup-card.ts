@@ -9,15 +9,11 @@ matchupSheet.replaceSync(matchupCssText);
 export class BaseballMatchupCard extends LitElement {
   static styles = matchupSheet;
 
-  @property({type: String, attribute: 'batter-name'}) batterName = 'Batter Name';
-  @property({type: Number, attribute: 'batter-number'}) batterNumber = 0;
-  @property({type: String, attribute: 'batter-hand'}) batterHand = 'R';
-  @property({type: String, attribute: 'batter-avg'}) batterAvg = '.000';
+  @property({type: String, attribute: 'batter-name'}) batterName = 'Current Batter';
+  @property({type: String, attribute: 'batter-stats'}) batterStats = '';
 
-  @property({type: String, attribute: 'pitcher-name'}) pitcherName = 'Pitcher Name';
-  @property({type: Number, attribute: 'pitcher-number'}) pitcherNumber = 0;
-  @property({type: String, attribute: 'pitcher-hand'}) pitcherHand = 'R';
-  @property({type: String, attribute: 'pitcher-era'}) pitcherEra = '0.00';
+  @property({type: String, attribute: 'pitcher-name'}) pitcherName = 'Current Pitcher';
+  @property({type: String, attribute: 'pitcher-stats'}) pitcherStats = '';
 
   render() {
     return html`
@@ -29,22 +25,16 @@ export class BaseballMatchupCard extends LitElement {
         <div class="matchup-grid">
           <div class="player-box batter-box">
             <div class="role-label">BATTER</div>
-            <div class="player-name">#${this.batterNumber} ${this.batterName}</div>
-            <div class="player-sub">
-              <span>Bats: ${this.batterHand}</span>
-              <span class="stat-badge">AVG: ${this.batterAvg}</span>
-            </div>
+            <div class="player-name">${this.batterName}</div>
+            <div class="player-sub">${this.batterStats}</div>
           </div>
 
           <div class="vs-badge">VS</div>
 
           <div class="player-box pitcher-box">
             <div class="role-label">PITCHER</div>
-            <div class="player-name">#${this.pitcherNumber} ${this.pitcherName}</div>
-            <div class="player-sub">
-              <span>Throws: ${this.pitcherHand}</span>
-              <span class="stat-badge">ERA: ${this.pitcherEra}</span>
-            </div>
+            <div class="player-name">${this.pitcherName}</div>
+            <div class="player-sub">${this.pitcherStats}</div>
           </div>
         </div>
       </div>

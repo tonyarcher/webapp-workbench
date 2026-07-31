@@ -7,27 +7,27 @@ dashTabSheet.replaceSync(dashTabCssText);
 
 @customElement('baseball-dashboard-tab')
 export class BaseballDashboardTab extends LitElement {
-  static styles = dashTabSheet;
+    static styles = dashTabSheet;
 
-  @property({ type: String, attribute: 'standings-json' }) standingsJson = '[]';
-  @property({ type: String, attribute: 'schedule-json' }) scheduleJson = '[]';
+    @property({type: String, attribute: 'standings-json'}) standingsJson = '[]';
+    @property({type: String, attribute: 'schedule-json'}) scheduleJson = '[]';
 
-  render() {
-    return html`
-      <div class="tab-header">
-        <h1>Season Dashboard</h1>
-      </div>
+    render() {
+        return html`
+            <div class="tab-header">
+                <h1>Season Dashboard</h1>
+            </div>
 
-      <div class="dashboard-layout">
-        <baseball-standings-table .standingsJson=${this.standingsJson}></baseball-standings-table>
-        <baseball-schedule-list .scheduleJson=${this.scheduleJson}></baseball-schedule-list>
-      </div>
-    `;
-  }
+            <div class="dashboard-layout">
+                <baseball-standings-table standings-json=${this.standingsJson}></baseball-standings-table>
+                <baseball-schedule-list games-json=${this.scheduleJson}></baseball-schedule-list>
+            </div>
+        `;
+    }
 }
 
 declare global {
-  interface HTMLElementTagNameMap {
-    'baseball-dashboard-tab': BaseballDashboardTab;
-  }
+    interface HTMLElementTagNameMap {
+        'baseball-dashboard-tab': BaseballDashboardTab;
+    }
 }

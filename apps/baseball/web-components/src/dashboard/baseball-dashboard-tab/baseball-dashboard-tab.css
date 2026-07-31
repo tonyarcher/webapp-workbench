@@ -1,28 +1,28 @@
 :host {
-  display: block;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  font-family: 'Outfit', sans-serif;
-  box-sizing: border-box;
+    display: block;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: 'Outfit', sans-serif;
+    box-sizing: border-box;
 }
 
 .tab-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
 }
 
 h1 {
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: var(--text-primary, #ffffff);
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-primary, #ffffff);
 }
 
 .dashboard-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
 }

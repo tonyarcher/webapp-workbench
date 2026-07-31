@@ -9,7 +9,6 @@ import com.baseball.models.PlayEvent
 import com.baseball.models.PlayerBattingStats
 import kotlinx.browser.document
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLElement
 

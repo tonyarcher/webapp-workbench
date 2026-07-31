@@ -1,18 +1,18 @@
-import { html, css, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import {css, html, LitElement} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
 
 export interface StatRow {
-  playerName: string;
-  teamName: string;
-  games: number;
-  stat1: string;
-  stat2: string;
-  stat3: string;
+    playerName: string;
+    teamName: string;
+    games: number;
+    stat1: string;
+    stat2: string;
+    stat3: string;
 }
 
 @customElement('baseball-stats-table')
 export class BaseballStatsTable extends LitElement {
-  static styles = css`
+    static styles = css`
     :host {
       display: block;
       width: 100%;
@@ -79,32 +79,28 @@ export class BaseballStatsTable extends LitElement {
     }
   `;
 
-  @property({ type: String }) title = 'League Leaders';
-  @property({ type: String, attribute: 'col1-name' }) col1Name = 'AVG';
-  @property({ type: String, attribute: 'col2-name' }) col2Name = 'HR';
-  @property({ type: String, attribute: 'col3-name' }) col3Name = 'RBI';
-  @property({ type: Array }) rows: StatRow[] = [];
-
-  @property({
-    type: String,
-    attribute: 'rows-json',
-    converter: {
-      fromAttribute: (val: string | null) => {
-        if (!val) return [];
-        try {
-          return JSON.parse(val);
-        } catch {
-          return [];
+    @property({type: String}) title = 'League Leaders';
+    @property({type: String, attribute: 'col1-name'}) col1Name = 'AVG';
+    @property({type: String, attribute: 'col2-name'}) col2Name = 'HR';
+    @property({type: String, attribute: 'col3-name'}) col3Name = 'RBI';
+    @property({
+        type: Array,
+        attribute: 'rows-json',
+        converter: {
+            fromAttribute: (val: string | null): StatRow[] => {
+                if (!val) return [];
+                try {
+                    return JSON.parse(val);
+                } catch {
+                    return [];
+                }
+            }
         }
-      }
-    }
-  })
-  set rowsJson(val: StatRow[]) {
-    this.rows = val;
-  }
+    })
+    rows: StatRow[] = [];
 
-  render() {
-    return html`
+    render() {
+        return html`
       <div class="card">
         <h2>${this.title}</h2>
         <div class="table-container">
@@ -120,8 +116,8 @@ export class BaseballStatsTable extends LitElement {
               </tr>
             </thead>
             <tbody>
-              ${this.rows.map(
-                (r) => html`
+            ${(this.rows ?? []).map(
+                    (r) => html`
                   <tr>
                     <td class="font-bold">${r.playerName}</td>
                     <td class="text-secondary">${r.teamName}</td>
@@ -131,17 +127,17 @@ export class BaseballStatsTable extends LitElement {
                     <td>${r.stat3}</td>
                   </tr>
                 `
-              )}
+            )}
             </tbody>
           </table>
         </div>
       </div>
     `;
-  }
+    }
 }
 
 declare global {
-  interface HTMLElementTagNameMap {
-    'baseball-stats-table': BaseballStatsTable;
-  }
+    interface HTMLElementTagNameMap {
+        'baseball-stats-table': BaseballStatsTable;
+    }
 }
