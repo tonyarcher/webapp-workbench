@@ -9,11 +9,9 @@ import kotlinx.css.position
 import kotlinx.css.top
 import kotlinx.html.DIV
 import kotlinx.html.div
-import kotlinx.html.dom.append
 import kotlinx.html.h3
 import kotlinx.html.id
 import kotlinx.html.span
-import org.w3c.dom.HTMLElement
 
 fun renderDefenseDiagram(
     parent: DIV,
@@ -29,20 +27,17 @@ private object ScorebookFieldDiagramRenderer {
         isHomeBatting: Boolean,
         teamState: ScorebookTeamState,
     ) {
-        var fieldWrapper: HTMLElement? = null
-        parent.div(classes = "field-diagram-card card") {
-            renderDefenseHeader()
-            fieldWrapper = div(classes = "field-diagram-wrapper") {
-                renderDefenseFieldDiamond()
-            } as HTMLElement
-        }
-
         val defPlayers = if (isHomeBatting) teamState.awayRoster else teamState.homeRoster
         val activePitcherId = if (isHomeBatting) teamState.awayActivePitcherId else teamState.homeActivePitcherId
         val activePitcherName = if (isHomeBatting) teamState.awayActivePitcherName else teamState.homeActivePitcherName
 
-        val fw = fieldWrapper ?: return
-        renderFielderBadges(fw, defPlayers, activePitcherId, activePitcherName)
+        parent.div(classes = "field-diagram-card card") {
+            renderDefenseHeader()
+            div(classes = "field-diagram-wrapper") {
+                renderDefenseFieldDiamond()
+                renderFielderBadges(this, defPlayers, activePitcherId, activePitcherName)
+            }
+        }
     }
 
     private fun DIV.renderDefenseHeader() {
@@ -58,7 +53,7 @@ private object ScorebookFieldDiagramRenderer {
     }
 
     private fun renderFielderBadges(
-        fieldWrapper: HTMLElement,
+        fieldWrapper: DIV,
         defPlayers: List<Player>,
         activePitcherId: Long?,
         activePitcherName: String,
@@ -94,13 +89,13 @@ private object ScorebookFieldDiagramRenderer {
     }
 
     private fun renderFielderBadge(
-        fieldWrapper: HTMLElement,
+        fieldWrapper: DIV,
         posCode: String,
         playerName: String,
         leftPct: String,
         topPct: String,
     ) {
-        fieldWrapper.append.div(classes = "field-position-badge") {
+        fieldWrapper.div(classes = "field-position-badge") {
             css {
                 position = Position.absolute
                 left = kotlinx.css.LinearDimension(leftPct)

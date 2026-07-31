@@ -49,7 +49,6 @@ class ScorecardParser(
     private fun processInningEvents(innEvents: List<PlayEvent>, baseRunners: MutableMap<String, Int>) {
         var currentOuts = 0
         innEvents.forEach { ev ->
-            val isOut = ScorecardNotationFormatter.isOutEvent(ev.eventType)
             var finalBase = ScorecardAdvancementCalculator.getInitialBaseForEvent(ev.eventType)
             currentOuts = processEventOutsAndRunners(ev, finalBase, currentOuts, baseRunners, innEvents)
             if (ev.runsScoredOnPlay > 0) {
