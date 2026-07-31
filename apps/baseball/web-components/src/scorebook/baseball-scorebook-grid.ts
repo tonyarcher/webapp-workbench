@@ -15,19 +15,19 @@ export interface ScorebookSlotData {
   slotIdx: number;
   batterName: string;
   position: string;
-  hasSub: boolean;
+  hasSub?: boolean;
   subBatterName?: string;
   subPosition?: string;
-  atBats: number;
-  runs: number;
-  hits: number;
-  rbi: number;
+  atBats?: number;
+  runs?: number;
+  hits?: number;
+  rbi?: number;
   subAtBats?: number;
   subRuns?: number;
   subHits?: number;
   subRbi?: number;
-  innings: Record<number, ScorebookCellData>;
-  subInnings?: Record<number, ScorebookCellData>;
+  innings?: Record<string | number, ScorebookCellData>;
+  subInnings?: Record<string | number, ScorebookCellData>;
 }
 
 @customElement('baseball-scorebook-grid')
@@ -67,6 +67,14 @@ export class BaseballScorebookGrid extends LitElement {
 
   private onSubClick(slotIdx: number) {
     this.dispatchEvent(new CustomEvent('sub-click', { detail: { slotIdx }, bubbles: true }));
+  }
+
+  private getInningCell(
+    inningsObj: Record<string | number, ScorebookCellData> | undefined,
+    inn: number
+  ): ScorebookCellData | undefined {
+    if (!inningsObj) return undefined;
+    return inningsObj[inn] ?? inningsObj[String(inn)];
   }
 
   renderCell(cellData?: ScorebookCellData) {
@@ -145,7 +153,7 @@ export class BaseballScorebookGrid extends LitElement {
               </tr>
             </thead>
             <tbody>
-              ${this.slots.map((s) => {
+              ${(this.slots || []).map((s) => {
                 const bg = s.slotIdx % 2 === 1 ? '#f4f1e7' : '#faf9f6';
                 return html`
                   <tr style="background-color: ${bg};">
@@ -158,11 +166,13 @@ export class BaseballScorebookGrid extends LitElement {
                       </div>
                     </td>
                     <td class="text-center font-bold">${s.position}</td>
-                    ${inningsHeader.map((inn) => html`<td class="scorebook-cell-td">${this.renderCell(s.innings[inn])}</td>`)}
-                    <td class="text-center">${s.atBats}</td>
-                    <td class="text-center font-bold">${s.runs}</td>
-                    <td class="text-center font-bold">${s.hits}</td>
-                    <td class="text-center">${s.rbi}</td>
+                    ${inningsHeader.map(
+                      (inn) => html`<td class="scorebook-cell-td">${this.renderCell(this.getInningCell(s.innings, inn))}</td>`
+                    )}
+                    <td class="text-center">${s.atBats || 0}</td>
+                    <td class="text-center font-bold">${s.runs || 0}</td>
+                    <td class="text-center font-bold">${s.hits || 0}</td>
+                    <td class="text-center">${s.rbi || 0}</td>
                   </tr>
                   ${s.hasSub
                     ? html`
@@ -173,7 +183,9 @@ export class BaseballScorebookGrid extends LitElement {
                             </div>
                           </td>
                           <td class="text-center font-bold" style="font-size: 0.8rem; color: #555;">${s.subPosition || ''}</td>
-                          ${inningsHeader.map((inn) => html`<td class="scorebook-cell-td">${this.renderCell(s.subInnings ? s.subInnings[inn] : undefined)}</td>`)}
+                          ${inningsHeader.map(
+                            (inn) => html`<td class="scorebook-cell-td">${this.renderCell(this.getInningCell(s.subInnings, inn))}</td>`
+                          )}
                           <td class="text-center">${s.subAtBats || 0}</td>
                           <td class="text-center font-bold">${s.subRuns || 0}</td>
                           <td class="text-center font-bold">${s.subHits || 0}</td>
