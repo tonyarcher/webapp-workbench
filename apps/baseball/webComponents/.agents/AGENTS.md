@@ -1,21 +1,6 @@
-typescriptstatic styles = css`
-  :host {
-    display: block;
-    border-radius: var(--baseball-radius);
-    background: white;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  }
-  h3 {
-    color: var(--baseball-primary); /* Reads perfectly from the top level! */
-    font-family: var(--baseball-font-sans);
-  }
-`; Use code with caution.Updated AGENTS.md for Your Migration StrategyThis updated file explicitly instructs AI coding
-agents on how to handle styling so it remains fully compatible with your future React migration.markdown# Web Components
-Subfolder Instructions (Lit + TS + Vite Migration Setup)
-
 ## Scope & Role
 
-You are developing `@baseball/web-components`. These components must remain strictly framework-agnostic so they can
+You are developing `@baseball/webComponents`. These components must remain strictly framework-agnostic so they can
 easily be dropped into Kotlin templates now, and React/TanStack later.
 
 ## Commands (Scoped)
