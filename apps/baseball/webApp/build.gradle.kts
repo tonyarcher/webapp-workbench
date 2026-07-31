@@ -43,7 +43,6 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.browser)
                 implementation(libs.kotlinx.html)
-                implementation(libs.kotlin.css)
             }
         }
         getByName("wasmJsTest") {

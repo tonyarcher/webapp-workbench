@@ -2,28 +2,11 @@ package com.baseball.ui.tabs.teams
 
 import com.baseball.api
 import com.baseball.models.Team
-import com.baseball.ui.core.UiConstants
-import com.baseball.ui.core.css
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.selectedTeamId
 import com.baseball.ui.state.teamsList
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import kotlinx.css.Align
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.FlexDirection
-import kotlinx.css.FontWeight
-import kotlinx.css.Padding
-import kotlinx.css.alignItems
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.flexDirection
-import kotlinx.css.fontSize
-import kotlinx.css.fontWeight
-import kotlinx.css.marginBottom
-import kotlinx.css.marginTop
-import kotlinx.css.padding
 import kotlinx.html.ButtonType
 import kotlinx.html.DIV
 import kotlinx.html.FORM
@@ -97,9 +80,8 @@ internal fun refreshRosterUI(divElement: HTMLDivElement) {
     val tid = selectedTeamId
     if (tid == null) {
         divElement.append {
-            p {
+            p(classes = "text-muted") {
                 +"Select a team to view roster."
-                css { color = Color("var(--text-secondary)") }
             }
         }
         return
@@ -114,9 +96,8 @@ internal fun refreshRosterUI(divElement: HTMLDivElement) {
 private fun refreshTeamsListUI(divElement: HTMLDivElement, onSelectTeam: () -> Unit) {
     divElement.innerHTML = ""
     if (teamsList.isEmpty()) {
-        divElement.append.p {
+        divElement.append.p(classes = "text-muted") {
             +"No teams found. Create one!"
-            css { color = Color("var(--text-secondary)") }
         }
     } else {
         teamsList.forEach { team ->
@@ -127,13 +108,8 @@ private fun refreshTeamsListUI(divElement: HTMLDivElement, onSelectTeam: () -> U
 
 private fun renderTeamItemCard(divElement: HTMLDivElement, team: Team, onSelectTeam: () -> Unit) {
     divElement.append {
-        div(classes = "game-card") {
-            css {
-                marginBottom = UiConstants.CARD_GAP_SMALL
-                display = Display.flex; flexDirection = FlexDirection.column; alignItems = Align.flexStart
-            }
-            div {
-                css { fontWeight = FontWeight.bold; fontSize = UiConstants.FONT_SIZE_LARGE }
+        div(classes = "game-card margin-bottom-sm") {
+            div(classes = "font-bold font-large") {
                 +"${team.city} ${team.name} (${team.abbreviation})"
             }
             renderTeamSelectButton(team, onSelectTeam)
@@ -142,12 +118,7 @@ private fun renderTeamItemCard(divElement: HTMLDivElement, team: Team, onSelectT
 }
 
 private fun DIV.renderTeamSelectButton(team: Team, onSelectTeam: () -> Unit) {
-    button(classes = "btn btn-secondary${if (selectedTeamId == team.id) " active" else ""}") {
-        css {
-            marginTop = UiConstants.CARD_GAP_SMALL
-            padding = Padding(UiConstants.CARD_GAP_SMALL, UiConstants.CARD_PADDING.top)
-            fontSize = UiConstants.FONT_SIZE_MEDIUM
-        }
+    button(classes = "btn btn-secondary margin-top-xs${if (selectedTeamId == team.id) " active" else ""}") {
         +(if (selectedTeamId == team.id) "Active Team" else "Select Team")
         onClickFunction = { _: Event ->
             selectedTeamId = team.id
@@ -157,8 +128,7 @@ private fun DIV.renderTeamSelectButton(team: Team, onSelectTeam: () -> Unit) {
 }
 
 private fun DIV.renderAddTeamCard(onTeamCreated: () -> Unit) {
-    div(classes = "card") {
-        css { marginBottom = UiConstants.CARD_MARGIN_BOTTOM }
+    div(classes = "card margin-bottom-lg") {
         h2 { +"Add Team" }
         form {
             renderTeamFormInputs()

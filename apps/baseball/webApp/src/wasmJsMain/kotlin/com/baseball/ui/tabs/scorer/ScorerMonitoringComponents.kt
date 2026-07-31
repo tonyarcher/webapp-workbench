@@ -5,40 +5,8 @@ import com.baseball.models.HalfInning
 import com.baseball.models.PlayEvent
 import com.baseball.models.Player
 import com.baseball.models.ScoringEventType
-import com.baseball.ui.core.UiConstants
-import com.baseball.ui.core.css
 import com.baseball.ui.gametracking.scorebook.getScorebookNotation
 import com.baseball.ui.gametracking.scorebook.renderScorebookView
-import kotlinx.css.Align
-import kotlinx.css.Border
-import kotlinx.css.BorderStyle
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.FlexDirection
-import kotlinx.css.FontWeight
-import kotlinx.css.JustifyContent
-import kotlinx.css.Margin
-import kotlinx.css.Padding
-import kotlinx.css.alignItems
-import kotlinx.css.background
-import kotlinx.css.borderBottom
-import kotlinx.css.borderLeft
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.flexDirection
-import kotlinx.css.fontSize
-import kotlinx.css.fontWeight
-import kotlinx.css.gap
-import kotlinx.css.justifyContent
-import kotlinx.css.margin
-import kotlinx.css.marginBottom
-import kotlinx.css.marginTop
-import kotlinx.css.padding
-import kotlinx.css.paddingBottom
-import kotlinx.css.pct
-import kotlinx.css.px
-import kotlinx.css.rem
-import kotlinx.css.width
 import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.dom.append
@@ -72,9 +40,8 @@ internal fun renderPlayMonitoringSection(
     }
 
     container.append {
-        div(classes = "card") {
+        div(classes = "card margin-top-lg") {
             id = "play-monitoring-card"
-            css { marginTop = UiConstants.CARD_GAP_XL }
             renderMonitoringHeader(
                 onLogClick = {
                     showLog()
@@ -101,15 +68,9 @@ private fun kotlinx.html.DIV.renderMonitoringHeader(
     onLogClick: () -> Unit,
     onScorecardClick: () -> Unit,
 ) {
-    div {
-        css {
-            display = Display.flex; justifyContent = JustifyContent.spaceBetween; alignItems = Align.center
-            borderBottom = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.1)"))
-            paddingBottom = 0.5.rem; marginBottom = 1.rem
-        }
-        h2 { +"Live Game Monitoring"; css { margin = Margin(0.px) } }
-        div {
-            css { display = Display.flex; gap = 0.5.rem }
+    div(classes = "flex-between margin-bottom-md border-bottom-dark padding-bottom-sm") {
+        h2 { +"Live Game Monitoring" }
+        div(classes = "flex-gap-sm") {
             button(classes = "btn btn-secondary") {
                 id = "scorer-btn-log"
                 +"Play-By-Play Log"
@@ -156,15 +117,7 @@ private fun kotlinx.html.DIV.renderSingleEventLogItem(
     val endedStr = getPlayEventEndingStr(ev)
     val notation = getScorebookNotation(ev)
 
-    div(classes = "log-item") {
-        css {
-            display = Display.flex; flexDirection = FlexDirection.column; padding = Padding(0.75.rem)
-            borderBottom = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.05)"))
-            if (endedInning) {
-                background = "rgba(255, 42, 59, 0.05)"
-                borderLeft = Border(4.px, BorderStyle.solid, Color("var(--accent-red)"))
-            }
-        }
+    div(classes = if (endedInning) "log-item ended-inning-log-item" else "log-item") {
         renderLogItemContent(ev, position, notation, endedInning, endedStr)
     }
 }
@@ -176,25 +129,14 @@ private fun kotlinx.html.DIV.renderLogItemContent(
     endedInning: Boolean,
     endedStr: String,
 ) {
-    div {
-        css {
-            display = Display.flex
-            justifyContent = JustifyContent.spaceBetween
-            alignItems = Align.center
-            width = 100.pct
-        }
+    div(classes = "flex-between") {
         span(classes = "log-desc") {
             val eventHtml = buildEventLogHtml(ev, position, notation, endedInning, endedStr)
             unsafe { raw(eventHtml) }
         }
         if (endedInning) {
-            span {
+            span(classes = "text-accent-red font-bold font-small") {
                 +" ─── / (Side Retired)"
-                css {
-                    color = Color("var(--accent-red)")
-                    fontWeight = FontWeight.bold
-                    fontSize = 0.9.rem
-                }
             }
         }
     }

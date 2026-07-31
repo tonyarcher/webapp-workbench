@@ -1,6 +1,5 @@
 package com.baseball.ui.tabs.boxscore
 
-
 import com.baseball.api
 import com.baseball.game.localBoxScore
 import com.baseball.game.localEvents
@@ -10,8 +9,6 @@ import com.baseball.models.Game
 import com.baseball.models.PlayEvent
 import com.baseball.models.PlayerBattingStats
 import com.baseball.models.PlayerPitchingStats
-import com.baseball.ui.core.UiConstants
-import com.baseball.ui.core.css
 import com.baseball.ui.core.launch
 import com.baseball.ui.gametracking.scorebook.renderScorebookView
 import com.baseball.ui.state.NavTabs
@@ -20,17 +17,6 @@ import com.baseball.ui.state.isSingleGameMode
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.selectedGameId
 import com.baseball.ui.state.updateActiveTabButtons
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.TextAlign
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.gap
-import kotlinx.css.marginBottom
-import kotlinx.css.marginTop
-import kotlinx.css.padding
-import kotlinx.css.rem
-import kotlinx.css.textAlign
 import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.dom.append
@@ -52,7 +38,6 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
     launch { setupRenderBoxScoreTab(container) }
 }
 
-// Helper (protected for testing)
 internal suspend fun setupRenderBoxScoreTab(container: HTMLElement) {
     val (game, boxScore, events) = loadBoxScoreData()
     container.append {
@@ -108,11 +93,7 @@ private fun createBoxScoreContentContainer(container: HTMLElement): HTMLDivEleme
 
 private fun renderNoGameSelected(container: HTMLElement) {
     container.append {
-        div(classes = "card") {
-            css {
-                textAlign = TextAlign.center
-                padding = UiConstants.CARD_PADDING_LARGE
-            }
+        div(classes = "card text-center padding-lg") {
             p { +"No game selected." }
         }
     }
@@ -136,12 +117,8 @@ private fun renderBoxScoreHeaderCard(container: HTMLElement, game: Game) {
             val homeStr = "${game.homeTeam.city} ${game.homeTeam.name} (${game.homeScore})"
             val header = "$awayStr vs $homeStr"
             h2 { +header }
-            p {
+            p(classes = "text-muted margin-bottom-lg") {
                 +"Status: ${game.status.name} | Date: ${game.date}"
-                css {
-                    color = Color("var(--text-secondary)")
-                    marginBottom = UiConstants.CARD_GAP_XL
-                }
             }
             button(classes = "btn btn-secondary") {
                 +(if (isSingleGameMode) "Back to Live Scorer" else "Back to Season Dashboard")
@@ -162,14 +139,8 @@ private fun renderBoxScoreToggleButtons(
     onTraditionalClick: () -> Unit
 ): HTMLDivElement {
     container.append {
-        div {
+        div(classes = "flex-gap-md margin-top-lg margin-bottom-md") {
             id = "boxscore-toggle-container"
-            css {
-                display = Display.flex
-                gap = UiConstants.CARD_GAP
-                marginTop = UiConstants.CARD_GAP_XL
-                marginBottom = UiConstants.CARD_GAP
-            }
 
             button(classes = "btn btn-primary") {
                 id = "boxscore-btn-scorebook"
@@ -203,11 +174,8 @@ private fun renderTraditionalBoxScoreView(
     renderLineScoreTable(lineScoreCard, boxScore.lineScore, game)
 
     contentEl.append {
-        div(classes = "dashboard-grid") {
+        div(classes = "dashboard-grid margin-top-md") {
             id = "traditional-stats-grid"
-            css {
-                marginTop = 1.5.rem
-            }
         }
     }
     val grid = contentEl.querySelector("#traditional-stats-grid") as HTMLDivElement
@@ -234,16 +202,9 @@ private fun renderTeamTraditionalStats(
     renderBattingTable(card, batting)
 
     card.append {
-        h3 {
+        h3(classes = "margin-top-lg") {
             +"$teamName Pitching"
-            css {
-                marginTop = UiConstants.CARD_GAP_XL
-            }
         }
     }
     renderPitchingTable(card, pitching)
 }
-
-
-
-

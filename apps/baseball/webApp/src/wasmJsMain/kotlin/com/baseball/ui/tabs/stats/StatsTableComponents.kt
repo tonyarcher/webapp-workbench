@@ -5,12 +5,7 @@ import com.baseball.models.PlayerBattingStats
 import com.baseball.models.PlayerFieldingStats
 import com.baseball.models.PlayerPitchingStats
 import com.baseball.models.SeasonStats
-import com.baseball.ui.core.css
 import com.baseball.ui.state.teamsList
-import kotlinx.css.Color
-import kotlinx.css.TextAlign
-import kotlinx.css.color
-import kotlinx.css.textAlign
 import kotlinx.html.TABLE
 import kotlinx.html.TBODY
 import kotlinx.html.tbody
@@ -35,10 +30,9 @@ internal fun renderBattingTable(table: TABLE, stats: SeasonStats, playersList: L
 
         if (finalFiltered.isEmpty()) {
             tr {
-                td {
+                td(classes = "text-center text-muted") {
                     attributes["colspan"] = "15"
                     +"No batting statistics recorded for this selection."
-                    css { textAlign = TextAlign.center; color = Color("var(--text-secondary)") }
                 }
             }
         } else {
@@ -86,10 +80,9 @@ internal fun renderPitchingTable(table: TABLE, stats: SeasonStats, playersList: 
 
         if (finalFiltered.isEmpty()) {
             tr {
-                td {
+                td(classes = "text-center text-muted") {
                     attributes["colspan"] = "10"
                     +"No pitching statistics recorded for this selection."
-                    css { textAlign = TextAlign.center; color = Color("var(--text-secondary)") }
                 }
             }
         } else {
@@ -131,10 +124,9 @@ internal fun renderFieldingTable(table: TABLE, stats: SeasonStats, playersList: 
 
         if (finalFiltered.isEmpty()) {
             tr {
-                td {
+                td(classes = "text-center text-muted") {
                     attributes["colspan"] = "7"
                     +"No fielding statistics recorded for this selection."
-                    css { textAlign = TextAlign.center; color = Color("var(--text-secondary)") }
                 }
             }
         } else {

@@ -1,0 +1,54 @@
+/* Game Scoring & Action Panels */
+.action-grid-3col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.scorer-sequence-box {
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #5a544a;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.scorer-runner-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.4rem;
+    border-radius: 4px;
+}
+
+.matchup-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.matchup-player-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.matchup-player-name {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #fff;
+}
+
+.matchup-player-stats {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}

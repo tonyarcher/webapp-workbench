@@ -1,0 +1,36 @@
+/* Authentication Components */
+.auth-card {
+    max-width: 450px;
+    margin: 2rem auto;
+    padding: 2.5rem;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.auth-error-banner {
+    display: none;
+    color: var(--accent-red);
+    background: rgba(255, 42, 59, 0.1);
+    border: 1px solid var(--accent-red);
+    padding: 0.75rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.auth-footer {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.auth-link {
+    color: var(--accent-red);
+    cursor: pointer;
+    font-weight: bold;
+    text-decoration: underline;
+}

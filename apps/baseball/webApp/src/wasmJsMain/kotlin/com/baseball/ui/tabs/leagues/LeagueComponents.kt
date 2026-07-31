@@ -2,8 +2,6 @@ package com.baseball.ui.tabs.leagues
 
 import com.baseball.api
 import com.baseball.models.Season
-import com.baseball.ui.core.UiConstants
-import com.baseball.ui.core.css
 import com.baseball.ui.core.launch
 import com.baseball.ui.state.NavTabs
 import com.baseball.ui.state.currentTab
@@ -13,19 +11,6 @@ import com.baseball.ui.state.saveNavState
 import com.baseball.ui.state.seasonsList
 import com.baseball.ui.state.selectedLeagueId
 import com.baseball.ui.state.selectedSeasonId
-import kotlinx.css.Align
-import kotlinx.css.Display
-import kotlinx.css.FontWeight
-import kotlinx.css.JustifyContent
-import kotlinx.css.Padding
-import kotlinx.css.alignItems
-import kotlinx.css.display
-import kotlinx.css.fontSize
-import kotlinx.css.fontWeight
-import kotlinx.css.justifyContent
-import kotlinx.css.marginBottom
-import kotlinx.css.padding
-import kotlinx.css.rem
 import kotlinx.html.ButtonType
 import kotlinx.html.DIV
 import kotlinx.html.InputType
@@ -43,8 +28,7 @@ import kotlinx.html.span
 import org.w3c.dom.HTMLDivElement
 
 internal fun DIV.renderCreateLeagueCard(refs: LeaguesTabReferences) {
-    div(classes = "card") {
-        css { marginBottom = UiConstants.CARD_GAP_LARGE }
+    div(classes = "card margin-bottom-lg") {
         h2 { +"Create New League" }
         renderCreateLeagueForm(refs)
     }
@@ -87,9 +71,8 @@ private fun handleCreateLeagueClick(refs: LeaguesTabReferences) {
 internal fun DIV.renderSeasonsSection(refs: LeaguesTabReferences) {
     div(classes = "card") {
         h2 { +"Seasons in Selected League" }
-        div {
+        div(classes = "margin-bottom-lg") {
             id = "seasons-list-container"
-            css { marginBottom = UiConstants.CARD_GAP_LARGE }
         }
 
         h3 { +"Create New Season" }
@@ -140,25 +123,12 @@ private fun handleCreateSeasonClick(refs: LeaguesTabReferences) {
 
 internal fun renderSeasonCardItem(parent: HTMLDivElement, season: Season) {
     parent.append {
-        div(classes = "game-card") {
-            css {
-                marginBottom = UiConstants.CARD_GAP_SMALL
-                padding = UiConstants.CARD_PADDING
-                display = Display.flex
-                justifyContent = JustifyContent.spaceBetween
-                alignItems = Align.center
-            }
-
-            span {
+        div(classes = "game-card flex-between margin-bottom-sm") {
+            span(classes = "font-bold") {
                 +"${season.name} (${season.year})"
-                css { fontWeight = FontWeight("600") }
             }
 
-            button(classes = "btn btn-secondary") {
-                css {
-                    padding = Padding(0.25.rem, 0.5.rem)
-                    fontSize = 0.8.rem
-                }
+            button(classes = "btn btn-secondary font-small") {
                 +"Go to Dashboard"
                 onClickFunction = {
                     selectedSeasonId = season.id

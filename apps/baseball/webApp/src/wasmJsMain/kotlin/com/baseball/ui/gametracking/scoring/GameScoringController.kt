@@ -8,7 +8,6 @@ import com.baseball.models.GameStatus
 import com.baseball.models.Player
 import com.baseball.models.ScoringEventRequest
 import com.baseball.models.ScoringEventType
-import com.baseball.ui.core.css
 import com.baseball.ui.core.launch
 import com.baseball.ui.state.NavTabs
 import com.baseball.ui.state.currentTab
@@ -16,23 +15,6 @@ import com.baseball.ui.state.isSingleGameMode
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.updateActiveTabButtons
 import kotlinx.browser.window
-import kotlinx.css.Border
-import kotlinx.css.BorderStyle
-import kotlinx.css.Color
-import kotlinx.css.FontWeight
-import kotlinx.css.Padding
-import kotlinx.css.TextAlign
-import kotlinx.css.borderTop
-import kotlinx.css.color
-import kotlinx.css.fontSize
-import kotlinx.css.fontWeight
-import kotlinx.css.marginBottom
-import kotlinx.css.marginTop
-import kotlinx.css.padding
-import kotlinx.css.paddingTop
-import kotlinx.css.px
-import kotlinx.css.rem
-import kotlinx.css.textAlign
 import kotlinx.html.DIV
 import kotlinx.html.button
 import kotlinx.html.div
@@ -65,19 +47,12 @@ class GameScoringController(
 
     private fun renderCompletedGame() {
         rightCol.append {
-            div {
-                css {
-                    textAlign = TextAlign.center
-                    padding = Padding(2.rem)
-                }
+            div(classes = "text-center padding-lg") {
                 h2 { +"GAME COMPLETED" }
                 val scoreStr = "${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore}"
                 p { +"Final: $scoreStr" }
 
-                button(classes = "btn") {
-                    css {
-                        marginTop = 1.5.rem
-                    }
+                button(classes = "btn margin-top-md") {
                     +"View Final Box Score"
                     onClickFunction = {
                         currentTab = NavTabs.TAB_BOXSCORE
@@ -95,9 +70,8 @@ class GameScoringController(
                 h2 { +"Plate Matchup" }
                 renderPlateMatchupCard(this, game, homeRoster, awayRoster)
             }
-            div {
+            div(classes = "margin-top-md") {
                 id = "action-grid-wrapper"
-                css { marginTop = 1.rem }
             }
         }
 
@@ -155,11 +129,7 @@ class GameScoringController(
         gridEl.innerHTML = ""
 
         gridEl.append.div {
-            div {
-                css {
-                    fontSize = 0.8.rem; fontWeight = FontWeight.bold; color = Color("var(--accent-green)")
-                    marginBottom = 0.5.rem
-                }
+            div(classes = "text-accent-green font-bold margin-bottom-sm") {
                 +"PITCH TYPE (OPTIONAL)"
             }
             renderPitchTypes(optionalPitchType) { pType ->
@@ -196,16 +166,10 @@ class GameScoringController(
     }
 
     private fun DIV.renderPlateResultsSection() {
-        div {
-            css {
-                fontSize = 0.8.rem; fontWeight = FontWeight.bold; color = Color("var(--accent-green)")
-                marginTop = 1.rem; marginBottom = 0.5.rem
-                borderTop = Border(1.px, BorderStyle.solid, Color("rgba(255, 255, 255, 0.08)"))
-                paddingTop = 1.rem
-            }
+        div(classes = "text-accent-green font-bold margin-top-md margin-bottom-sm") {
             +"PLATE & IN-PLAY RESULTS"
         }
-        div(classes = "action-grid") {
+        div(classes = "action-grid-3col") {
             listOf(
                 ScoringEventType.SINGLE to "Single (1B)", ScoringEventType.DOUBLE to "Double (2B)",
                 ScoringEventType.TRIPLE to "Triple (3B)", ScoringEventType.HOME_RUN to "Home Run (HR)",

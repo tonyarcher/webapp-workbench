@@ -2,8 +2,6 @@ package com.baseball.ui.tabs.dashboard
 
 import com.baseball.api
 import com.baseball.models.SeasonDashboard
-import com.baseball.ui.core.UiConstants
-import com.baseball.ui.core.css
 import com.baseball.ui.core.launch
 import com.baseball.ui.state.leaguesList
 import com.baseball.ui.state.renderCurrentTab
@@ -11,14 +9,6 @@ import com.baseball.ui.state.saveNavState
 import com.baseball.ui.state.seasonsList
 import com.baseball.ui.state.selectedLeagueId
 import com.baseball.ui.state.selectedSeasonId
-import kotlinx.css.Align
-import kotlinx.css.Display
-import kotlinx.css.alignItems
-import kotlinx.css.display
-import kotlinx.css.flexGrow
-import kotlinx.css.gap
-import kotlinx.css.marginBottom
-import kotlinx.css.px
 import kotlinx.html.DIV
 import kotlinx.html.button
 import kotlinx.html.div
@@ -34,12 +24,8 @@ import org.w3c.dom.HTMLSelectElement
 
 internal fun renderSeasonSelectorCard(container: HTMLElement): SeasonSelectorControls {
     container.append {
-        div(classes = "card") {
+        div(classes = "card flex-between margin-bottom-lg flex-gap-md") {
             id = "season-selector-card"
-            css {
-                marginBottom = UiConstants.CARD_MARGIN_BOTTOM
-                display = Display.flex; gap = UiConstants.CARD_GAP_LARGE; alignItems = Align.flexEnd
-            }
             renderLeagueDropdownField()
             renderActiveSeasonField()
             renderLoadSeasonButton(container)
@@ -53,8 +39,7 @@ internal fun renderSeasonSelectorCard(container: HTMLElement): SeasonSelectorCon
 }
 
 private fun DIV.renderActiveSeasonField() {
-    div(classes = "form-group") {
-        css { marginBottom = 0.px; flexGrow = 1.0 }
+    div(classes = "form-group flex-grow") {
         label { +"Active Season" }
         select(classes = "form-control") { id = "select-season-dropdown" }
     }
@@ -74,8 +59,7 @@ private fun DIV.renderLoadSeasonButton(container: HTMLElement) {
 }
 
 private fun DIV.renderLeagueDropdownField() {
-    div(classes = "form-group") {
-        css { marginBottom = 0.px; flexGrow = 1.0 }
+    div(classes = "form-group flex-grow") {
         label { +"Active League" }
         select(classes = "form-control") {
             id = "select-league-dropdown"

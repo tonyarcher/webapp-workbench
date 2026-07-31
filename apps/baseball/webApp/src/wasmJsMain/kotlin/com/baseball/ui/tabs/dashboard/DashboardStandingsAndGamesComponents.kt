@@ -3,35 +3,11 @@ package com.baseball.ui.tabs.dashboard
 import com.baseball.models.Game
 import com.baseball.models.GameStatus
 import com.baseball.models.TeamStandings
-import com.baseball.ui.core.UiConstants
-import com.baseball.ui.core.css
 import com.baseball.ui.state.NavTabs
 import com.baseball.ui.state.currentTab
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.selectedGameId
 import com.baseball.ui.state.updateActiveTabButtons
-import kotlinx.css.Align
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.FlexDirection
-import kotlinx.css.FontWeight
-import kotlinx.css.JustifyContent
-import kotlinx.css.Overflow
-import kotlinx.css.alignItems
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.flexDirection
-import kotlinx.css.fontSize
-import kotlinx.css.fontWeight
-import kotlinx.css.gap
-import kotlinx.css.justifyContent
-import kotlinx.css.marginBottom
-import kotlinx.css.marginRight
-import kotlinx.css.marginTop
-import kotlinx.css.maxHeight
-import kotlinx.css.overflowY
-import kotlinx.css.padding
-import kotlinx.css.px
 import kotlinx.html.DIV
 import kotlinx.html.TBODY
 import kotlinx.html.button
@@ -69,7 +45,7 @@ internal fun DIV.renderStandingsCard(standings: List<TeamStandings>) {
 
 private fun TBODY.renderTeamStandings(row: TeamStandings) {
     tr {
-        td { +row.teamName; css { fontWeight = FontWeight.bold } }
+        td(classes = "font-bold") { +row.teamName }
         td { +row.gamesPlayed.toString() }
         td { +row.wins.toString() }
         td { +row.losses.toString() }
@@ -83,19 +59,11 @@ internal fun DIV.renderGamesListCard(games: List<Game>) {
     div(classes = "card") {
         h3 { +"Games Schedule (${games.size})" }
         if (games.isEmpty()) {
-            p {
+            p(classes = "text-muted") {
                 +"No games scheduled yet."
-                css { color = Color("var(--text-secondary)") }
             }
         } else {
-            div {
-                css {
-                    display = Display.flex
-                    flexDirection = FlexDirection.column
-                    gap = UiConstants.CARD_GAP
-                    maxHeight = 400.px
-                    overflowY = Overflow.auto
-                }
+            div(classes = "schedule-list") {
                 games.forEach { g -> renderGameCardItem(g) }
             }
         }
@@ -103,25 +71,12 @@ internal fun DIV.renderGamesListCard(games: List<Game>) {
 }
 
 private fun DIV.renderGameCardItem(g: Game) {
-    div(classes = "game-card") {
-        css {
-            display = Display.flex
-            justifyContent = JustifyContent.spaceBetween
-            alignItems = Align.center
-            padding = UiConstants.CARD_PADDING
-            marginBottom = 0.px
-        }
+    div(classes = "game-card flex-between") {
         div {
-            div {
-                css { fontWeight = FontWeight.bold }
+            div(classes = "font-bold") {
                 +"${g.awayTeam.city} ${g.awayTeam.name} @ ${g.homeTeam.city} ${g.homeTeam.name}"
             }
-            div {
-                css {
-                    fontSize = UiConstants.FONT_SIZE_MEDIUM
-                    color = Color("var(--text-secondary)")
-                    marginTop = UiConstants.CARD_GAP_SMALL
-                }
+            div(classes = "text-muted font-small margin-top-xs") {
                 +"Date: ${g.date} | Status: ${g.status}"
             }
         }
@@ -130,8 +85,7 @@ private fun DIV.renderGameCardItem(g: Game) {
 }
 
 private fun DIV.renderGameCardAction(g: Game) {
-    div {
-        css { display = Display.flex; gap = UiConstants.CARD_GAP_SMALL; alignItems = Align.center }
+    div(classes = "flex-center flex-gap-sm") {
         if (g.status == GameStatus.COMPLETED) {
             renderCompletedGameAction(g)
         } else {
@@ -141,8 +95,7 @@ private fun DIV.renderGameCardAction(g: Game) {
 }
 
 private fun DIV.renderCompletedGameAction(g: Game) {
-    span {
-        css { fontWeight = FontWeight.bold; marginRight = UiConstants.CARD_GAP }
+    span(classes = "font-bold margin-right-md") {
         +"${g.awayScore} - ${g.homeScore}"
     }
     button(classes = "btn btn-secondary") {

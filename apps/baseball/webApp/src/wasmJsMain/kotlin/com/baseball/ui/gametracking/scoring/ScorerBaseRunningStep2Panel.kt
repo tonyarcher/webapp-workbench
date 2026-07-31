@@ -1,34 +1,6 @@
 package com.baseball.ui.gametracking.scoring
 
 import com.baseball.models.ScoringEventType
-import com.baseball.ui.core.css
-import kotlinx.css.Align
-import kotlinx.css.Border
-import kotlinx.css.BorderStyle
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.FontWeight
-import kotlinx.css.JustifyContent
-import kotlinx.css.Padding
-import kotlinx.css.TextAlign
-import kotlinx.css.alignItems
-import kotlinx.css.background
-import kotlinx.css.border
-import kotlinx.css.borderRadius
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.fontSize
-import kotlinx.css.fontWeight
-import kotlinx.css.gap
-import kotlinx.css.justifyContent
-import kotlinx.css.marginBottom
-import kotlinx.css.marginTop
-import kotlinx.css.padding
-import kotlinx.css.pct
-import kotlinx.css.px
-import kotlinx.css.rem
-import kotlinx.css.textAlign
-import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.button
 import kotlinx.html.div
@@ -54,13 +26,8 @@ class ScorerBaseRunningStep2Panel(
         val activeRunners = getActiveRunnersList()
 
         gridEl.append.div {
-            h3 {
+            h3(classes = "text-accent-green font-bold margin-bottom-md") {
                 +"Base Running: $baseLabel"
-                css {
-                    marginBottom = 1.rem
-                    color = Color("var(--accent-green)")
-                    fontSize = 1.2.rem
-                }
             }
 
             if (isWildPitchOrBalkEvent()) {
@@ -211,20 +178,12 @@ private object WildPitchStep2Ui {
         activeRunners: List<Pair<String, String>>,
     ) {
         if (activeRunners.isEmpty()) {
-            parent.div {
+            parent.div(classes = "text-muted margin-bottom-md") {
                 +"No runners currently on base."
-                css {
-                    marginBottom = 1.5.rem
-                    color = Color("#777")
-                }
             }
         } else {
-            parent.div {
+            parent.div(classes = "font-bold margin-bottom-sm") {
                 +"Select Runner Base Advancements:"
-                css {
-                    fontWeight = FontWeight.bold
-                    marginBottom = 0.5.rem
-                }
             }
             activeRunners.forEach { (runnerId, rLabel) ->
                 renderSingleRunnerAdvSelection(panel, parent, runnerId, rLabel)
@@ -239,25 +198,11 @@ private object WildPitchStep2Ui {
         runnerId: String,
         rLabel: String,
     ) {
-        parent.div {
-            css {
-                display = Display.flex
-                alignItems = Align.center
-                justifyContent = JustifyContent.spaceBetween
-                marginBottom = 0.5.rem
-                background = "rgba(255, 255, 255, 0.03)"
-                padding = Padding(0.4.rem)
-                borderRadius = 4.px
-            }
-            span {
+        parent.div(classes = "scorer-runner-row") {
+            span(classes = "font-small") {
                 +rLabel
-                css { fontSize = 0.85.rem }
             }
-            div {
-                css {
-                    display = Display.flex
-                    gap = 0.2.rem
-                }
+            div(classes = "flex-gap-xs") {
                 val currentDest = panel.runnerAdvances[runnerId]
                 listOf(null to "Stays", 2 to "2B", 3 to "3B", 4 to "Score").forEach { (baseVal, oLabel) ->
                     renderAdvOptionButton(panel, runnerId, currentDest, baseVal, oLabel)
@@ -276,10 +221,6 @@ private object WildPitchStep2Ui {
         val isSelected = currentDest == baseVal
         button(classes = if (isSelected) "btn btn-primary" else "btn btn-secondary") {
             +oLabel
-            css {
-                padding = Padding(0.2.rem, 0.4.rem)
-                fontSize = 0.75.rem
-            }
             onClickFunction = {
                 if (baseVal == null) {
                     panel.runnerAdvances.remove(runnerId)
@@ -341,12 +282,7 @@ private object WildPitchStep2Ui {
         parent: DIV,
         activeRunners: List<Pair<String, String>>,
     ) {
-        parent.div(classes = "action-grid") {
-            css {
-                put("grid-template-columns", "repeat(3, 1fr)")
-                gap = 0.5.rem
-                marginTop = 1.5.rem
-            }
+        parent.div(classes = "action-grid-3col margin-top-md") {
             listOf(
                 ScoringEventType.WILD_PITCH to "Wild Pitch",
                 ScoringEventType.PASSED_BALL to "Passed Ball",
@@ -370,20 +306,12 @@ private object StealPickoffStep2Ui {
         activeRunners: List<Pair<String, String>>,
     ) {
         if (activeRunners.isEmpty()) {
-            parent.div {
+            parent.div(classes = "text-muted margin-bottom-md") {
                 +"No runners currently on base to select."
-                css {
-                    marginBottom = 1.5.rem
-                    color = Color("#777")
-                }
             }
         } else {
-            parent.div {
+            parent.div(classes = "font-bold margin-bottom-sm") {
                 +"Select Runner:"
-                css {
-                    fontWeight = FontWeight.bold
-                    marginBottom = 0.5.rem
-                }
             }
             renderRunnerSelectionButtons(panel, parent, activeRunners)
 
@@ -403,8 +331,7 @@ private object StealPickoffStep2Ui {
         parent: DIV,
         activeRunners: List<Pair<String, String>>,
     ) {
-        parent.div(classes = "action-grid") {
-            css { marginBottom = 1.rem }
+        parent.div(classes = "action-grid margin-bottom-md") {
             activeRunners.forEach { (rId, rLabel) ->
                 val isSel = rId == panel.selectedRunnerId
                 button(classes = if (isSel) "btn btn-primary" else "btn btn-secondary") {
@@ -419,12 +346,8 @@ private object StealPickoffStep2Ui {
     }
 
     private fun renderCancelButton(panel: ScorerBaseRunningStep2Panel, parent: DIV) {
-        parent.button(classes = "btn btn-secondary") {
+        parent.button(classes = "btn btn-secondary btn-full margin-top-md") {
             +"Cancel"
-            css {
-                marginTop = 1.rem
-                width = 100.pct
-            }
             onClickFunction = { panel.controller.renderActionGrid() }
         }
     }
@@ -434,15 +357,10 @@ private object StealPickoffStep2Ui {
         parent: DIV,
         activeRunners: List<Pair<String, String>>,
     ) {
-        parent.div {
+        parent.div(classes = "font-bold margin-bottom-sm") {
             +"Select Target Stolen Base:"
-            css {
-                fontWeight = FontWeight.bold
-                marginBottom = 0.5.rem
-            }
         }
-        parent.div(classes = "action-grid") {
-            css { marginBottom = 1.rem }
+        parent.div(classes = "action-grid margin-bottom-md") {
             val gameState = panel.controller.game.gameState
             val currentBase =
                 when (panel.selectedRunnerId) {
@@ -465,25 +383,12 @@ private object StealPickoffStep2Ui {
         parent: DIV,
         activeRunners: List<Pair<String, String>>,
     ) {
-        parent.div {
+        parent.div(classes = "font-bold margin-bottom-sm") {
             +"Defensive Throw Sequence"
-            css {
-                fontWeight = FontWeight.bold
-                marginBottom = 0.5.rem
-            }
         }
         val displaySeq = panel.getDisplaySequence()
-        parent.div {
+        parent.div(classes = "scorer-sequence-box") {
             +"Sequence: $displaySeq"
-            css {
-                padding = Padding(0.5.rem)
-                background = "rgba(255, 255, 255, 0.05)"
-                border = Border(1.px, BorderStyle.solid, Color("#5a544a"))
-                borderRadius = 4.px
-                fontWeight = FontWeight.bold
-                textAlign = TextAlign.center
-                marginBottom = 0.5.rem
-            }
         }
         renderThrowSequencePOButtons(panel, parent, activeRunners)
     }
@@ -499,10 +404,6 @@ private object StealPickoffStep2Ui {
         ).forEach { (lbl, action) ->
             parent.button(classes = "btn btn-secondary") {
                 +lbl
-                css {
-                    padding = Padding(4.px, 8.px)
-                    fontSize = 0.75.rem
-                }
                 onClickFunction = {
                     action()
                     panel.render()
@@ -516,19 +417,12 @@ private object StealPickoffStep2Ui {
         parent: DIV,
         activeRunners: List<Pair<String, String>>,
     ) {
-        parent.div {
-            css {
-                display = Display.flex
-                gap = 4.px
-                put("flex-wrap", "wrap")
-                marginBottom = 1.rem
-            }
+        parent.div(classes = "flex-gap-xs margin-bottom-md") {
             renderPositionButtons(panel, this)
             renderThrowPOActionButtons(panel, this)
         }
-        parent.button(classes = "btn btn-action") {
+        parent.button(classes = "btn btn-action margin-top-md") {
             +"Submit Out"
-            css { marginTop = 1.rem }
             onClickFunction = { panel.submitPOOut(activeRunners) }
         }
     }
@@ -539,10 +433,6 @@ private object StealPickoffStep2Ui {
             val posNum = idx + 1
             parent.button(classes = "btn btn-secondary") {
                 +pLabel
-                css {
-                    padding = Padding(4.px, 8.px)
-                    fontSize = 0.75.rem
-                }
                 onClickFunction = {
                     if (panel.throwSequence.size < 6) {
                         panel.throwSequence.add(posNum)

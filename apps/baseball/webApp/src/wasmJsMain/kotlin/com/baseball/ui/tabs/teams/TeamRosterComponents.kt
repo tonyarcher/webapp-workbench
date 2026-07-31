@@ -3,23 +3,9 @@ package com.baseball.ui.tabs.teams
 import com.baseball.api
 import com.baseball.models.Player
 import com.baseball.models.Team
-import com.baseball.ui.core.UiConstants
-import com.baseball.ui.core.css
 import com.baseball.ui.core.uiScope
 import com.baseball.ui.state.selectedTeamId
 import kotlinx.coroutines.launch
-import kotlinx.css.Border
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.Padding
-import kotlinx.css.backgroundColor
-import kotlinx.css.border
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.fontSize
-import kotlinx.css.gap
-import kotlinx.css.marginBottom
-import kotlinx.css.padding
 import kotlinx.html.ButtonType
 import kotlinx.html.DIV
 import kotlinx.html.FORM
@@ -67,9 +53,8 @@ internal fun renderRosterContent(divElement: HTMLDivElement, roster: List<Player
 
 private fun renderEmptyRosterMessage(divElement: HTMLDivElement) {
     divElement.append {
-        p {
+        p(classes = "text-muted") {
             +"No players on this roster yet."
-            css { color = Color("var(--text-secondary)") }
         }
     }
 }
@@ -95,21 +80,13 @@ private fun renderRosterRow(tbody: TBODY, p: Player, rosterDiv: HTMLDivElement) 
     tbody.tr {
         td { +p.jerseyNumber.toString() }
         td { +p.name }
-        td {
+        td(classes = "text-accent-green") {
             +p.position
-            css { color = Color("var(--accent-green)") }
         }
         td { +"${p.battingHand}/${p.throwingHand}" }
         td {
-            button(classes = "btn btn-secondary") {
+            button(classes = "btn btn-danger font-small") {
                 +"Remove"
-                css {
-                    padding = Padding(UiConstants.CARD_GAP_SMALL, UiConstants.CARD_GAP_SMALL)
-                    fontSize = UiConstants.FONT_SIZE_SMALL
-                    backgroundColor = Color("#ff2a3b")
-                    color = Color("white")
-                    border = Border.none
-                }
                 onClickFunction = { _: Event ->
                     uiScope.launch {
                         api.deletePlayer(p.id!!)
@@ -124,9 +101,8 @@ private fun renderRosterRow(tbody: TBODY, p: Player, rosterDiv: HTMLDivElement) 
 internal fun DIV.renderRosterSectionCard(team: Team, onRosterUpdated: () -> Unit) {
     div(classes = "card") {
         h2 { +"${team.city} ${team.name} Roster" }
-        div {
+        div(classes = "margin-bottom-lg") {
             id = "roster-container"
-            css { marginBottom = UiConstants.CARD_GAP_LARGE }
         }
 
         h3 { +"Add Player to Roster" }
@@ -177,11 +153,7 @@ private fun FORM.renderPlayerNameAndPosInputs() {
 private fun FORM.renderBattingThrowingSelects() {
     div(classes = "form-group") {
         label { +"Batting / Throwing Hand" }
-        div {
-            css {
-                display = Display.flex
-                gap = UiConstants.CARD_GAP
-            }
+        div(classes = "flex-between flex-gap-md") {
             select(classes = "form-control") {
                 id = "player-bat-select"
                 listOf("R", "L", "S").forEach { h ->
@@ -212,12 +184,10 @@ private fun readPlayerFormInputs(): PlayerFormInputs? {
     val battingHand = document.getElementById("player-bat-select") as? HTMLSelectElement
     val throwingHand = document.getElementById("player-throw-select") as? HTMLSelectElement
 
-    val inputsValid = name != null && position != null && number != null && battingHand != null && throwingHand != null
-    return if (inputsValid) {
-        PlayerFormInputs(name!!, position!!, number!!, battingHand!!, throwingHand!!)
-    } else {
-        null
+    if (listOf(name, position, number, battingHand, throwingHand).any { it == null }) {
+        return null
     }
+    return PlayerFormInputs(name!!, position!!, number!!, battingHand!!, throwingHand!!)
 }
 
 private fun handleAddPlayerSubmit(

@@ -10,11 +10,6 @@ import com.baseball.game.localHomeRoster
 import com.baseball.game.undoLastLocalEvent
 import com.baseball.models.GameStatus
 import com.baseball.models.ScoringEventType
-import kotlinx.css.pct
-import kotlinx.css.properties.deg
-import kotlinx.css.properties.rotate
-import kotlinx.css.properties.transform
-import kotlinx.css.properties.translate
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,24 +18,6 @@ import kotlin.test.assertTrue
 
 @Ignore
 class GameSimulationTest {
-    @Test
-    fun testCss() {
-        val builder =
-            kotlinx.css.CssBuilder().apply {
-                transform {
-                    translate((-50).pct, (-50).pct)
-                }
-            }
-        val builder2 =
-            kotlinx.css.CssBuilder().apply {
-                transform {
-                    rotate((-45).deg)
-                }
-            }
-        println("CSS TRANSLATE OUTPUT: $builder")
-        println("CSS ROTATE OUTPUT: $builder2")
-    }
-
     @Test
     fun testSimulateMultipleGames() {
         // Simulate 3 full games to verify stats accumulation and rules
