@@ -1,4 +1,4 @@
-package com.baseball.ui.gametracking.scoring
+package com.baseball.ui.controller.scorer
 
 import com.baseball.models.ScoringEventType
 

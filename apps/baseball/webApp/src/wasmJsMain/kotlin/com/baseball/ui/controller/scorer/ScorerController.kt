@@ -1,18 +1,25 @@
-package com.baseball.ui.gametracking.scoring
+package com.baseball.ui.controller.scorer
 
 import com.baseball.api
 import com.baseball.game.GameManager
 import com.baseball.game.PlayEventInput
 import com.baseball.game.localAwayActivePitcherId
 import com.baseball.game.localAwayLineup
+import com.baseball.game.localAwayRoster
+import com.baseball.game.localBoxScore
+import com.baseball.game.localEvents
+import com.baseball.game.localGame
 import com.baseball.game.localHomeActivePitcherId
 import com.baseball.game.localHomeLineup
+import com.baseball.game.localHomeRoster
+import com.baseball.models.BoxScore
 import com.baseball.models.Game
 import com.baseball.models.GameStatus
 import com.baseball.models.HalfInning
 import com.baseball.models.Player
 import com.baseball.models.ScoringEventRequest
 import com.baseball.models.ScoringEventType
+import com.baseball.ui.gametracking.scorebook.renderScorecardSheet
 import com.baseball.ui.state.NavTabs
 import com.baseball.ui.state.currentTab
 import com.baseball.ui.state.isSingleGameMode
@@ -41,6 +48,78 @@ private fun extractBaseLabel(event: Event): String =
 private fun extractLocation(event: Event): String? =
     js("(event.detail && event.detail.location !== undefined) ? (event.detail.location || null) : null")
 
+object ScorerTabController {
+    fun render(container: HTMLElement) {
+        container.innerHTML = ""
+        val game = localGame
+        val boxScore = localBoxScore
+
+        val scorerTab = document.createElement("baseball-scorer-tab")
+        if (game == null || boxScore == null) {
+            scorerTab.setAttribute("no-game", "true")
+            container.appendChild(scorerTab)
+            return
+        }
+
+        scorerTab.setAttribute("away-name", game.awayTeam.name)
+        scorerTab.setAttribute("home-name", game.homeTeam.name)
+
+        val sbMount = document.createElement("div") as HTMLElement
+        sbMount.setAttribute("slot", "scoreboard")
+        mountScoreboard(sbMount, game, boxScore)
+
+        val ctrlMount = document.createElement("div") as HTMLElement
+        ctrlMount.setAttribute("slot", "controls")
+        val controller = GameScoringController(
+            ctrlMount,
+            game,
+            if (isSingleGameMode) localHomeRoster else emptyList(),
+            if (isSingleGameMode) localAwayRoster else emptyList(),
+        )
+        controller.render()
+
+        val bookMount = document.createElement("div") as HTMLElement
+        bookMount.setAttribute("slot", "scorebook")
+        renderScorecardSheet(bookMount, game, boxScore, localEvents, game.gameState.half)
+
+        scorerTab.appendChild(sbMount)
+        scorerTab.appendChild(ctrlMount)
+        scorerTab.appendChild(bookMount)
+
+        container.appendChild(scorerTab)
+    }
+
+    private fun mountScoreboard(container: HTMLElement, game: Game, boxScore: BoxScore) {
+        val maxInning = localEvents.maxOfOrNull { it.inning }?.coerceAtLeast(9) ?: 9
+        val scoreboard = document.createElement("baseball-scoreboard")
+        scoreboard.setAttribute("away-name", game.awayTeam.name)
+        scoreboard.setAttribute("home-name", game.homeTeam.name)
+        scoreboard.setAttribute("away-score", game.awayScore.toString())
+        scoreboard.setAttribute("home-score", game.homeScore.toString())
+        scoreboard.setAttribute("away-hits", boxScore.lineScore.awayHits.toString())
+        scoreboard.setAttribute("home-hits", boxScore.lineScore.homeHits.toString())
+        scoreboard.setAttribute("away-errors", boxScore.lineScore.awayErrors.toString())
+        scoreboard.setAttribute("home-errors", boxScore.lineScore.homeErrors.toString())
+        scoreboard.setAttribute("inning", game.gameState.inning.toString())
+        scoreboard.setAttribute("half", game.gameState.half.name)
+        scoreboard.setAttribute("balls", game.gameState.balls.toString())
+        scoreboard.setAttribute("strikes", game.gameState.strikes.toString())
+        scoreboard.setAttribute("outs", game.gameState.outs.toString())
+        game.gameState.runnerFirstId?.let {
+            scoreboard.setAttribute("runner-first", "true")
+            scoreboard.setAttribute("runner-first-name", game.gameState.runnerFirstName ?: "Runner on 1B")
+        }
+        game.gameState.runnerSecondId?.let {
+            scoreboard.setAttribute("runner-second", "true")
+            scoreboard.setAttribute("runner-second-name", game.gameState.runnerSecondName ?: "Runner on 2B")
+        }
+        game.gameState.runnerThirdId?.let {
+            scoreboard.setAttribute("runner-third", "true")
+            scoreboard.setAttribute("runner-third-name", game.gameState.runnerThirdName ?: "Runner on 3B")
+        }
+        container.appendChild(scoreboard)
+    }
+}
 
 class GameScoringController(
     val rightCol: HTMLElement,
