@@ -36,7 +36,7 @@ private fun renderOpposingPitchingStats(
     isHomeBatting: Boolean,
     boxScore: BoxScore,
 ) {
-    parent.div(classes = "card field-diagram-card") {
+    parent.div(classes = "card scorebook-bottom-card") {
         h3 { +"OPPOSING PITCHING STATS" }
         val pStatsList = if (isHomeBatting) boxScore.awayPitching else boxScore.homePitching
         div(classes = "table-container") {
@@ -91,7 +91,7 @@ private fun renderScoreboardSummary(
     parent: DIV,
     data: ScorebookSectionData,
 ) {
-    parent.div(classes = "card field-diagram-card") {
+    parent.div(classes = "card scorebook-bottom-card") {
         h3(classes = "text-center font-bold") {
             +"SCOREBOARD SUMMARY"
         }

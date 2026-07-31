@@ -168,6 +168,7 @@
 .player-name-span {
     font-weight: bold;
     font-family: 'Courier New', Courier, monospace;
+    color: #111111;
 }
 
 .inning-cell-box {
@@ -177,6 +178,7 @@
     box-sizing: border-box;
     padding: 2px;
     overflow: hidden;
+    background-color: #ffffff;
 }
 
 .inning-diamond-shape {
@@ -187,7 +189,7 @@
     height: 26px;
     margin-top: -13px;
     margin-left: -13px;
-    border: 1px dashed #d2cdc6;
+    border: 1px solid #9c9384;
     transform: rotate(45deg);
     z-index: 1;
 }
@@ -195,7 +197,7 @@
 .inning-diamond-shape.b1 { border-right: 2px solid #ff2a3b; }
 .inning-diamond-shape.b2 { border-right: 2px solid #ff2a3b; border-top: 2px solid #ff2a3b; }
 .inning-diamond-shape.b3 { border-right: 2px solid #ff2a3b; border-top: 2px solid #ff2a3b; border-left: 2px solid #ff2a3b; }
-.inning-diamond-shape.b4 { border: 2px solid #ff2a3b; background-color: rgba(255, 42, 59, 0.25); }
+.inning-diamond-shape.b4 { border: 2px solid #ff2a3b; background-color: rgba(255, 42, 59, 0.45); }
 
 .notation-tag {
     position: absolute;
@@ -204,6 +206,7 @@
     transform: translate(-50%, -50%);
     font-weight: bold;
     font-size: 0.75rem;
+    color: #111111;
     z-index: 2;
 }
 
@@ -212,7 +215,7 @@
     top: 2px;
     left: 4px;
     font-size: 0.6rem;
-    color: #777;
+    color: #333333;
     font-family: monospace;
 }
 
@@ -244,6 +247,54 @@
     z-index: 4;
 }
 
+/* Field Diagram & Defense Styles */
+.field-diagram-card {
+    background-color: #faf9f6 !important;
+    border: 2px solid #5a544a !important;
+    color: #2b2a28 !important;
+    border-radius: 8px;
+    padding: 1rem;
+    flex: 1 1 300px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.field-diagram-wrapper {
+    position: relative;
+    width: 100%;
+    height: 240px;
+    background-color: #2e7d32;
+    border: 2px solid #5a544a;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+#field-diamond-bg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120px;
+    height: 120px;
+    margin-top: -60px;
+    margin-left: -60px;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    transform: rotate(45deg);
+    background: rgba(210, 180, 140, 0.35);
+}
+
+.field-position-badge {
+    background-color: #ffffff;
+    border: 1px solid #5a544a;
+    color: #111111;
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
 /* Position Badge Coordinates for Defense Diagram */
 .pos-pos-P { position: absolute; left: 50%; top: 55%; transform: translate(-50%, -50%); }
 .pos-pos-C { position: absolute; left: 50%; top: 85%; transform: translate(-50%, -50%); }
@@ -255,7 +306,7 @@
 .pos-pos-CF { position: absolute; left: 50%; top: 15%; transform: translate(-50%, -50%); }
 .pos-pos-RF { position: absolute; left: 80%; top: 22%; transform: translate(-50%, -50%); }
 
-/* Pitchers Box / Bottom Section Layout */
+/* Pitchers Box & Bottom Section Cards */
 .scorebook-bottom-section {
     display: flex;
     gap: 1.5rem;
@@ -263,10 +314,31 @@
     align-items: flex-start;
 }
 
-.pitchers-card {
-    background-color: #f9f7f2;
-    border: 2px solid #5a544a;
+.scorebook-bottom-card {
+    background-color: #faf9f6 !important;
+    border: 2px solid #5a544a !important;
+    color: #2b2a28 !important;
+    border-radius: 8px;
     padding: 1rem;
-    color: #2b2a28;
     flex: 1 1 300px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.scorebook-bottom-card h3, .field-diagram-card h3 {
+    color: #1a1918 !important;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-bottom: 2px solid #5a544a;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.scorebook-bottom-card th, .field-diagram-card th {
+    color: #555555 !important;
+    border-bottom: 1px solid #5a544a !important;
+}
+
+.scorebook-bottom-card td, .field-diagram-card td {
+    color: #2b2a28 !important;
+    border-bottom: 1px solid #d2cdc6 !important;
 }
