@@ -2,28 +2,22 @@ package com.baseball.ui.gametracking.scoring
 
 import com.baseball.models.ScoringEventType
 import kotlinx.browser.document
-import kotlinx.html.DIV
-import kotlinx.html.div
-import kotlinx.html.id
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
 
 internal fun renderActionGridComponent(
-    parent: DIV,
+    parent: HTMLElement,
     currentPitchType: String?,
     onPitchTypeSelected: (String?) -> Unit,
     onTriggerEvent: (ScoringEventType) -> Unit,
     onRenderStep2: (ScoringEventType, String) -> Unit,
 ) {
-    parent.div { id = "action-grid-mount-point" }
-
-    val mountPoint = document.getElementById("action-grid-mount-point") as? HTMLElement ?: return
-    mountPoint.innerHTML = ""
+    parent.innerHTML = ""
     val grid = document.createElement("baseball-action-grid")
     currentPitchType?.let { grid.setAttribute("current-pitch-type", it) }
 
     bindActionGridEvents(grid, onPitchTypeSelected, onTriggerEvent, onRenderStep2)
-    mountPoint.appendChild(grid)
+    parent.appendChild(grid)
 }
 
 private fun bindActionGridEvents(
