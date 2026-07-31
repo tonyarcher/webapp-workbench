@@ -267,17 +267,32 @@ export function App() {
   );
 }
 
-function LeaguesTab() {
+function LeaguesTab({ onSelectLeague }: { onSelectLeague?: (id: number) => void }) {
   const { data: leagues, isLoading, error } = useQuery({
     queryKey: ['leagues'],
     queryFn: () => api.getLeagues(),
   });
+
+  const leaguesRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = leaguesRef.current;
+    if (!el) return;
+    const handleLeagueClick = (e: any) => {
+      const id = e.detail?.leagueId;
+      if (id && onSelectLeague) onSelectLeague(id);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    el.addEventListener('league-click', handleLeagueClick);
+    return () => el.removeEventListener('league-click', handleLeagueClick);
+  }, [onSelectLeague]);
 
   if (isLoading) return <baseball-tab-page-wrapper loading-message="Loading Leagues..." />;
   if (error) return <baseball-tab-page-wrapper empty-message={(error as Error).message} />;
 
   return (
     <baseball-leagues-tab
+      ref={leaguesRef}
       leagues-json={JSON.stringify(leagues || [])}
     />
   );

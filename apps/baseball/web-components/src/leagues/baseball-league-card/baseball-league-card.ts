@@ -9,6 +9,7 @@ leagueCardSheet.replaceSync(leagueCardCssText);
 export class BaseballLeagueCard extends LitElement {
     static styles = leagueCardSheet;
 
+    @property({type: Number, attribute: 'league-id'}) leagueId = 0;
     @property({type: String, attribute: 'league-name'}) leagueName = '';
     @property({type: String, attribute: 'league-details'}) leagueDetails = '';
 
@@ -19,9 +20,19 @@ export class BaseballLeagueCard extends LitElement {
                     <h2>${this.leagueName}</h2>
                     <div class="text-muted font-small margin-top-xs">${this.leagueDetails}</div>
                 </div>
-                <button class="btn">Manage League</button>
+                <button class="btn" @click=${this.onClick}>Manage League</button>
             </div>
         `;
+    }
+
+    private onClick() {
+        this.dispatchEvent(
+            new CustomEvent('league-click', {
+                detail: {leagueId: this.leagueId, leagueName: this.leagueName},
+                bubbles: true,
+                composed: true,
+            })
+        );
     }
 }
 

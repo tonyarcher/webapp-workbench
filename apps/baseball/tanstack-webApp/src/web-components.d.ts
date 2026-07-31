@@ -29,6 +29,7 @@ declare module 'react' {
         'leagues-json'?: string;
       };
       'baseball-league-card': CustomElementProps & {
+        'league-id'?: string | number;
         'league-name'?: string;
         'league-details'?: string;
       };

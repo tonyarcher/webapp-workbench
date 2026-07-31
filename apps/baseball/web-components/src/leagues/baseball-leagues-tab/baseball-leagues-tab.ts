@@ -35,6 +35,7 @@ export class BaseballLeaguesTab extends LitElement {
                         <div class="leagues-grid">
                             ${leagues.map(league => html`
                                 <baseball-league-card
+                                        league-id="${league.id}"
                                         league-name="${league.name}"
                                         league-details="${'Official League #' + league.id}"
                                 ></baseball-league-card>
