@@ -14,22 +14,22 @@ export class BaseballMatchupCard extends LitElement {
 
   render() {
     return html`
-      <div class="card matchup-container">
+      <div class="matchup-container">
         <div class="flex-between text-center" style="width: 100%;">
           <div class="flex-grow">
-            <div class="text-accent-green font-bold font-small">CURRENT BATTER</div>
-            <div class="matchup-player-name font-large font-bold text-primary margin-top-xs">${this.batterName}</div>
-            <div class="matchup-player-stats font-small text-muted margin-top-xs">${this.batterStats}</div>
+            <div class="text-accent-green font-bold font-small" style="letter-spacing: 1px;">CURRENT BATTER</div>
+            <div class="matchup-player-name margin-top-xs">${this.batterName}</div>
+            <div class="matchup-player-stats margin-top-xs">${this.batterStats}</div>
           </div>
 
-          <div class="text-accent-red font-bold font-large flex-center" style="margin: 0 1.5rem; background: rgba(255, 42, 59, 0.15); border: 1px solid var(--accent-red); border-radius: 50%; width: 44px; height: 44px;">
+          <div class="matchup-vs-badge">
             VS
           </div>
 
           <div class="flex-grow">
-            <div class="text-accent-green font-bold font-small">CURRENT PITCHER</div>
-            <div class="matchup-player-name font-large font-bold text-primary margin-top-xs">${this.pitcherName}</div>
-            <div class="matchup-player-stats font-small text-muted margin-top-xs">${this.pitcherStats}</div>
+            <div class="text-accent-green font-bold font-small" style="letter-spacing: 1px;">CURRENT PITCHER</div>
+            <div class="matchup-player-name margin-top-xs">${this.pitcherName}</div>
+            <div class="matchup-player-stats margin-top-xs">${this.pitcherStats}</div>
           </div>
         </div>
       </div>

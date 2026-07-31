@@ -335,15 +335,23 @@
 .pos-pos-CF { position: absolute; left: 50%; top: 15%; transform: translate(-50%, -50%); }
 .pos-pos-RF { position: absolute; left: 80%; top: 22%; transform: translate(-50%, -50%); }
 
-/* Pitchers Box & Bottom Section Cards */
+/* Pitchers Box & Bottom Section Layout */
 .scorebook-bottom-section {
     display: flex;
     flex-wrap: wrap;
     gap: 1.5rem;
     margin-top: 1.5rem;
-    align-items: stretch;
+    align-items: flex-start;
     width: 100%;
     box-sizing: border-box;
+}
+
+.scorebook-right-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    flex: 1 1 360px;
+    max-width: 100%;
 }
 
 .scorebook-bottom-card {
@@ -352,8 +360,7 @@
     color: #2b2a28 !important;
     border-radius: 8px;
     padding: 1rem;
-    flex: 1 1 280px;
-    max-width: 100%;
+    width: 100%;
     box-sizing: border-box;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     overflow-x: auto;

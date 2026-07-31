@@ -6,6 +6,13 @@
     margin-top: 1.5rem;
 }
 
+.action-grid-2col {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
 .scorer-sequence-box {
     padding: 0.5rem;
     background: rgba(255, 255, 255, 0.05);
@@ -30,10 +37,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
+    background: linear-gradient(135deg, rgba(27, 53, 36, 0.95) 0%, rgba(13, 26, 18, 0.98) 100%) !important;
+    border: 1.5px solid rgba(74, 222, 128, 0.35) !important;
+    padding: 1.5rem 2rem !important;
+    border-radius: 14px !important;
+    margin-bottom: 1.5rem !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 25px rgba(0, 176, 80, 0.15) !important;
 }
 
 .matchup-player-info {
@@ -43,12 +52,31 @@
 }
 
 .matchup-player-name {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.5px;
 }
 
 .matchup-player-stats {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.matchup-vs-badge {
+    font-size: 1.3rem;
+    font-weight: 900;
+    margin: 0 1.5rem;
+    color: #00e676;
+    background: rgba(0, 230, 118, 0.12);
+    border: 1.5px solid rgba(0, 230, 118, 0.4);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 15px rgba(0, 230, 118, 0.25);
+    flex-shrink: 0;
 }

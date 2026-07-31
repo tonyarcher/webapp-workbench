@@ -26,8 +26,10 @@ fun renderScorebookBottomSection(
 ) {
     container.append.div(classes = "scorebook-bottom-section") {
         renderDefenseDiagram(this, isHomeBatting, teamState)
-        renderOpposingPitchingStats(this, isHomeBatting, data.boxScore)
-        renderScoreboardSummary(this, data)
+        div(classes = "scorebook-right-stack") {
+            renderScoreboardSummary(this, data)
+            renderOpposingPitchingStats(this, isHomeBatting, data.boxScore)
+        }
     }
 }
 
