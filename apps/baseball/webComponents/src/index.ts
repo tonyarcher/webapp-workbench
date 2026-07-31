@@ -4,3 +4,7 @@ import './scorebook/baseball-scorebook-grid.js';
 import './scoring/baseball-matchup-card.js';
 import './scoring/baseball-action-grid.js';
 import './dashboard/baseball-standings-table.js';
+import './dashboard/baseball-schedule-list.js';
+import './stats/baseball-stats-table.js';
+import './teams/baseball-roster-table.js';
+import './leagues/baseball-league-card.js';

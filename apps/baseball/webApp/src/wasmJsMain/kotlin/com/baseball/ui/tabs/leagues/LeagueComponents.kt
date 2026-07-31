@@ -11,12 +11,12 @@ import com.baseball.ui.state.saveNavState
 import com.baseball.ui.state.seasonsList
 import com.baseball.ui.state.selectedLeagueId
 import com.baseball.ui.state.selectedSeasonId
+import kotlinx.browser.document
 import kotlinx.html.ButtonType
 import kotlinx.html.DIV
 import kotlinx.html.InputType
 import kotlinx.html.button
 import kotlinx.html.div
-import kotlinx.html.dom.append
 import kotlinx.html.form
 import kotlinx.html.h2
 import kotlinx.html.h3
@@ -24,7 +24,6 @@ import kotlinx.html.id
 import kotlinx.html.input
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.label
-import kotlinx.html.span
 import org.w3c.dom.HTMLDivElement
 
 internal fun DIV.renderCreateLeagueCard(refs: LeaguesTabReferences) {
@@ -122,20 +121,13 @@ private fun handleCreateSeasonClick(refs: LeaguesTabReferences) {
 }
 
 internal fun renderSeasonCardItem(parent: HTMLDivElement, season: Season) {
-    parent.append {
-        div(classes = "game-card flex-between margin-bottom-sm") {
-            span(classes = "font-bold") {
-                +"${season.name} (${season.year})"
-            }
-
-            button(classes = "btn btn-secondary font-small") {
-                +"Go to Dashboard"
-                onClickFunction = {
-                    selectedSeasonId = season.id
-                    saveNavState()
-                    currentTab = NavTabs.TAB_GAMES
-                }
-            }
-        }
-    }
+    val card = document.createElement("baseball-league-card")
+    card.setAttribute("league-name", season.name)
+    card.setAttribute("season", season.year.toString())
+    card.addEventListener("click", {
+        selectedSeasonId = season.id
+        saveNavState()
+        currentTab = NavTabs.TAB_GAMES
+    })
+    parent.appendChild(card)
 }

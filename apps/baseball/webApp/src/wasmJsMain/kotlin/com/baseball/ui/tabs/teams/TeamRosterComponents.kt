@@ -5,12 +5,12 @@ import com.baseball.models.Player
 import com.baseball.models.Team
 import com.baseball.ui.core.uiScope
 import com.baseball.ui.state.selectedTeamId
+import kotlinx.browser.document
 import kotlinx.coroutines.launch
 import kotlinx.html.ButtonType
 import kotlinx.html.DIV
 import kotlinx.html.FORM
 import kotlinx.html.InputType
-import kotlinx.html.TBODY
 import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.dom.append
@@ -24,16 +24,23 @@ import kotlinx.html.label
 import kotlinx.html.option
 import kotlinx.html.p
 import kotlinx.html.select
-import kotlinx.html.table
-import kotlinx.html.tbody
-import kotlinx.html.td
-import kotlinx.html.th
-import kotlinx.html.thead
-import kotlinx.html.tr
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLDivElement
+import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
 import org.w3c.dom.events.Event
+
+@Serializable
+private data class PlayerJs(
+    val id: Long,
+    val name: String,
+    val position: String,
+    val jerseyNumber: Int,
+    val battingHand: String,
+    val throwingHand: String,
+)
 
 private data class PlayerFormInputs(
     val name: HTMLInputElement,
@@ -43,157 +50,124 @@ private data class PlayerFormInputs(
     val throwingHand: HTMLSelectElement,
 )
 
+internal fun DIV.renderRosterSectionCard(team: Team, onRosterUpdated: () -> Unit) {
+    div(classes = "card margin-top-lg") {
+        h2 { +"Roster: ${team.name}" }
+        div { id = "roster-container" }
+        renderAddPlayerForm(this, onRosterUpdated)
+    }
+}
+
 internal fun renderRosterContent(divElement: HTMLDivElement, roster: List<Player>) {
     if (roster.isEmpty()) {
-        renderEmptyRosterMessage(divElement)
+        divElement.append { p(classes = "text-muted") { +"No players on this roster yet." } }
     } else {
         renderRosterTable(divElement, roster)
     }
 }
 
-private fun renderEmptyRosterMessage(divElement: HTMLDivElement) {
-    divElement.append {
-        p(classes = "text-muted") {
-            +"No players on this roster yet."
-        }
-    }
-}
-
 private fun renderRosterTable(divElement: HTMLDivElement, roster: List<Player>) {
-    divElement.append {
-        div(classes = "table-container") {
-            table {
-                thead {
-                    tr {
-                        th { +"#" }; th { +"Name" }; th { +"Position" }; th { +"B/T" }; th { +"Action" }
+    val players = roster.map { p ->
+        PlayerJs(
+            id = p.id ?: 0L,
+            name = p.name,
+            position = p.position,
+            jerseyNumber = p.jerseyNumber,
+            battingHand = p.battingHand,
+            throwingHand = p.throwingHand,
+        )
+    }
+
+    divElement.append { div { id = "roster-table-mount-point" } }
+
+    val mountPoint = document.getElementById("roster-table-mount-point") as? HTMLElement
+    if (mountPoint != null) {
+        mountPoint.innerHTML = ""
+        val table = document.createElement("baseball-roster-table")
+        val jsonString = Json.encodeToString(players)
+        table.setAttribute("players-json", jsonString)
+        mountPoint.appendChild(table)
+    }
+}
+
+internal fun renderAddPlayerForm(parent: DIV, onPlayerAdded: () -> Unit) {
+    parent.div(classes = "card margin-top-lg") {
+        h3 { +"Add New Player" }
+        form {
+            id = "add-player-form"
+            renderFormFields()
+            div(classes = "margin-top-md") {
+                button(classes = "btn btn-primary", type = ButtonType.button) {
+                    +"Save Player"
+                    onClickFunction = { e: Event ->
+                        e.preventDefault()
+                        readPlayerFormInputs()?.let { inputs -> handleAddPlayerSubmit(inputs, onPlayerAdded) }
                     }
                 }
-                tbody {
-                    roster.forEach { p -> renderRosterRow(this, p, divElement) }
-                }
             }
         }
     }
 }
 
-private fun renderRosterRow(tbody: TBODY, p: Player, rosterDiv: HTMLDivElement) {
-    tbody.tr {
-        td { +p.jerseyNumber.toString() }
-        td { +p.name }
-        td(classes = "text-accent-green") {
-            +p.position
-        }
-        td { +"${p.battingHand}/${p.throwingHand}" }
-        td {
-            button(classes = "btn btn-danger font-small") {
-                +"Remove"
-                onClickFunction = { _: Event ->
-                    uiScope.launch {
-                        api.deletePlayer(p.id!!)
-                        refreshRosterUI(rosterDiv)
-                    }
-                }
-            }
-        }
-    }
-}
-
-internal fun DIV.renderRosterSectionCard(team: Team, onRosterUpdated: () -> Unit) {
-    div(classes = "card") {
-        h2 { +"${team.city} ${team.name} Roster" }
-        div(classes = "margin-bottom-lg") {
-            id = "roster-container"
-        }
-
-        h3 { +"Add Player to Roster" }
-        renderAddPlayerForm(onRosterUpdated)
-    }
-}
-
-private fun DIV.renderAddPlayerForm(onPlayerAdded: () -> Unit) {
-    form {
-        renderPlayerNameAndPosInputs()
-        div(classes = "form-group") {
-            label { +"Jersey Number" }
-            input(type = InputType.number, classes = "form-control") {
-                id = "player-num-input"
-                value = "15"
-            }
-        }
-        renderBattingThrowingSelects()
-        button(classes = "btn") {
-            type = ButtonType.button
-            +"Add Player"
-            onClickFunction = {
-                readPlayerFormInputs()?.let { handleAddPlayerSubmit(it, onPlayerAdded) }
-            }
-        }
-    }
-}
-
-private fun FORM.renderPlayerNameAndPosInputs() {
+private fun FORM.renderFormFields() {
     div(classes = "form-group") {
         label { +"Player Name" }
-        input(type = InputType.text, classes = "form-control") {
-            id = "player-name-input"
-            placeholder = "e.g., Dustin Pedroia"
-        }
+        input(type = InputType.text, classes = "form-control") { id = "player-name-input" }
     }
-    div(classes = "form-group") {
-        label { +"Position" }
-        select(classes = "form-control") {
-            id = "player-pos-select"
-            listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH").forEach { pos ->
-                option { value = pos; +pos }
+    renderSelectRow1()
+    renderSelectRow2()
+}
+
+private fun FORM.renderSelectRow1() {
+    div(classes = "flex-gap-md") {
+        div(classes = "form-group flex-grow") {
+            label { +"Position" }
+            select(classes = "form-control") {
+                id = "player-pos-select"
+                listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH").forEach { pos ->
+                    option { value = pos; +pos }
+                }
             }
+        }
+        div(classes = "form-group flex-grow") {
+            label { +"Jersey Number" }
+            input(type = InputType.number, classes = "form-control") { id = "player-num-input"; value = "1" }
         }
     }
 }
 
-private fun FORM.renderBattingThrowingSelects() {
-    div(classes = "form-group") {
-        label { +"Batting / Throwing Hand" }
-        div(classes = "flex-between flex-gap-md") {
+private fun FORM.renderSelectRow2() {
+    div(classes = "flex-gap-md margin-top-sm") {
+        div(classes = "form-group flex-grow") {
+            label { +"Batting Hand" }
             select(classes = "form-control") {
                 id = "player-bat-select"
-                listOf("R", "L", "S").forEach { h ->
-                    option {
-                        value = h
-                        +"Bat: $h"
-                    }
-                }
+                listOf("Right", "Left", "Switch").forEach { h -> option { value = h; +"Bat: $h" } }
             }
+        }
+        div(classes = "form-group flex-grow") {
+            label { +"Throwing Hand" }
             select(classes = "form-control") {
                 id = "player-throw-select"
-                listOf("R", "L").forEach { h ->
-                    option {
-                        value = h
-                        +"Throw: $h"
-                    }
-                }
+                listOf("Right", "Left").forEach { h -> option { value = h; +"Throw: $h" } }
             }
         }
     }
 }
 
 private fun readPlayerFormInputs(): PlayerFormInputs? {
-    val document = kotlinx.browser.document
-    val name = document.getElementById("player-name-input") as? HTMLInputElement
-    val position = document.getElementById("player-pos-select") as? HTMLSelectElement
-    val number = document.getElementById("player-num-input") as? HTMLInputElement
-    val battingHand = document.getElementById("player-bat-select") as? HTMLSelectElement
-    val throwingHand = document.getElementById("player-throw-select") as? HTMLSelectElement
+    val doc = kotlinx.browser.document
+    val name = doc.getElementById("player-name-input") as? HTMLInputElement
+    val position = doc.getElementById("player-pos-select") as? HTMLSelectElement
+    val number = doc.getElementById("player-num-input") as? HTMLInputElement
+    val battingHand = doc.getElementById("player-bat-select") as? HTMLSelectElement
+    val throwingHand = doc.getElementById("player-throw-select") as? HTMLSelectElement
 
-    if (listOf(name, position, number, battingHand, throwingHand).any { it == null }) {
-        return null
-    }
+    if (listOf(name, position, number, battingHand, throwingHand).any { it == null }) return null
     return PlayerFormInputs(name!!, position!!, number!!, battingHand!!, throwingHand!!)
 }
 
-private fun handleAddPlayerSubmit(
-    inputs: PlayerFormInputs,
-    onPlayerAdded: () -> Unit,
-) {
+private fun handleAddPlayerSubmit(inputs: PlayerFormInputs, onPlayerAdded: () -> Unit) {
     val name = inputs.name.value.trim()
     if (name.isEmpty()) return
 
@@ -206,9 +180,8 @@ private fun handleAddPlayerSubmit(
                 jerseyNumber = inputs.number.value.toIntOrNull() ?: 0,
                 battingHand = inputs.battingHand.value,
                 throwingHand = inputs.throwingHand.value,
-            ),
+            )
         )
-        inputs.name.value = ""
         onPlayerAdded()
     }
 }
