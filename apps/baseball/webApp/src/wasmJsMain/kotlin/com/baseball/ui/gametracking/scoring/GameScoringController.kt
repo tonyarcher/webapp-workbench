@@ -20,8 +20,7 @@ import com.baseball.ui.state.isSingleGameMode
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.updateActiveTabButtons
 import kotlinx.browser.document
-import org.w3c.dom.HTMLButtonElement
-import org.w3c.dom.HTMLDivElement
+import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
 
 class GameScoringController(
@@ -31,67 +30,115 @@ class GameScoringController(
     val awayRoster: List<Player>,
 ) {
     var optionalPitchType: String? = null
-    var actionGridWrapper: HTMLDivElement? = null
+    private var scoringControls: Element? = null
 
     fun render() {
         rightCol.innerHTML = ""
+        val controls = document.createElement("baseball-scoring-controls")
+        scoringControls = controls
 
         if (game.status == GameStatus.COMPLETED) {
-            renderCompletedGame()
+            controls.setAttribute("game-status", "completed")
+            controls.setAttribute("away-name", game.awayTeam.name)
+            controls.setAttribute("home-name", game.homeTeam.name)
+            controls.setAttribute("away-score", game.awayScore.toString())
+            controls.setAttribute("home-score", game.homeScore.toString())
+            controls.addEventListener("view-boxscore", {
+                currentTab = NavTabs.TAB_BOXSCORE
+                updateActiveTabButtons()
+                renderCurrentTab()
+            })
         } else {
-            renderActiveGameControls()
+            controls.setAttribute("game-status", "active")
+            refreshMatchupAttributes(controls)
+            bindActiveEvents(controls)
         }
+
+        rightCol.appendChild(controls)
     }
 
-    private fun renderCompletedGame() {
-        val container = document.createElement("div") as HTMLDivElement
-        container.className = "text-center padding-lg"
+    private fun refreshMatchupAttributes(controls: Element) {
+        val isHomeBatting = game.gameState.half == HalfInning.BOTTOM
+        val allPlayers = (if (isHomeBatting) homeRoster else awayRoster) +
+                         (if (isHomeBatting) awayRoster else homeRoster)
+        val currBatter = allPlayers.find { it.id == game.gameState.currentBatterId }
+        val currPitcher = allPlayers.find { it.id == game.gameState.currentPitcherId }
 
-        val h2 = document.createElement("h2")
-        h2.textContent = "GAME COMPLETED"
-        container.appendChild(h2)
+        val batterName = game.gameState.currentBatterName ?: currBatter?.name ?: "Current Batter"
+        val batterStats = currBatter?.let { "${it.position} | #${it.jerseyNumber} | Bat: ${it.battingHand}" }
+            ?: "AVG .333 | 2 HR"
+        val pitcherName = game.gameState.currentPitcherName ?: currPitcher?.name ?: "Current Pitcher"
+        val pitcherStats = currPitcher?.let { "${it.position} | #${it.jerseyNumber} | Throw: ${it.throwingHand}" }
+            ?: "ERA 2.50 | 15 K"
 
-        val p = document.createElement("p")
-        p.textContent = "Final: ${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore}"
-        container.appendChild(p)
+        controls.setAttribute("batter-name", batterName)
+        controls.setAttribute("batter-stats", batterStats)
+        controls.setAttribute("pitcher-name", pitcherName)
+        controls.setAttribute("pitcher-stats", pitcherStats)
+        optionalPitchType?.let { controls.setAttribute("current-pitch-type", it) }
+    }
 
-        val btn = document.createElement("button") as HTMLButtonElement
-        btn.className = "btn margin-top-md"
-        btn.textContent = "View Final Box Score"
-        btn.addEventListener("click", {
-            currentTab = NavTabs.TAB_BOXSCORE
-            updateActiveTabButtons()
-            renderCurrentTab()
+    private fun bindActiveEvents(controls: Element) {
+        controls.addEventListener("pitch-type-selected", { event ->
+            val pitchType = (event as? org.w3c.dom.CustomEvent)?.detail?.let {
+                js("it.pitchType") as? String
+            }
+            optionalPitchType = if (pitchType.isNullOrBlank()) null else pitchType
+            controls.setAttribute("current-pitch-type", optionalPitchType ?: "")
         })
-        container.appendChild(btn)
 
-        rightCol.appendChild(container)
+        controls.addEventListener("trigger-scoring-event", { event ->
+            val eventTypeStr = (event as? org.w3c.dom.CustomEvent)?.detail?.let {
+                js("it.eventType") as? String
+            } ?: ""
+            runCatching { ScoringEventType.valueOf(eventTypeStr) }.getOrNull()
+                ?.let { triggerScoringEvent(it) }
+        })
+
+        controls.addEventListener("render-step2", { event ->
+            val detail = (event as? org.w3c.dom.CustomEvent)?.detail
+            val eventTypeStr = detail?.let { js("it.eventType") as? String } ?: ""
+            val baseLabel = detail?.let { js("it.baseLabel") as? String } ?: ""
+            runCatching { ScoringEventType.valueOf(eventTypeStr) }.getOrNull()?.let { type ->
+                renderStep2(type, baseLabel)
+            }
+        })
+
+        controls.addEventListener("location-selected", { event ->
+            val location = (event as? org.w3c.dom.CustomEvent)?.detail?.let {
+                js("it.location") as? String
+            }
+            pendingStep2Panel?.submitPlayWithLocation(location)
+            pendingStep2Panel = null
+            resetToActionGrid()
+        })
+
+        controls.addEventListener("cancel-step2", {
+            pendingStep2Panel = null
+            resetToActionGrid()
+        })
     }
 
-    private fun renderActiveGameControls() {
-        val title = document.createElement("h2")
-        title.textContent = "Plate Matchup"
-        rightCol.appendChild(title)
+    private var pendingStep2Panel: ScorerStep2Panel? = null
 
-        val matchupMount = document.createElement("div") as HTMLDivElement
-        matchupMount.id = "matchup-card-mount-point"
-        rightCol.appendChild(matchupMount)
-
-        val gridWrap = document.createElement("div") as HTMLDivElement
-        gridWrap.id = "action-grid-wrapper"
-        gridWrap.className = "margin-top-md"
-        rightCol.appendChild(gridWrap)
-
-        renderPlateMatchupCard(matchupMount, game, homeRoster, awayRoster)
-        actionGridWrapper = gridWrap
-        renderActionGrid()
+    fun renderStep2(eventType: ScoringEventType, baseLabel: String) {
+        val isHit = eventType in listOf(
+            ScoringEventType.SINGLE, ScoringEventType.DOUBLE,
+            ScoringEventType.TRIPLE, ScoringEventType.HOME_RUN,
+        )
+        val panel = ScorerStep2Panel(this, eventType, baseLabel, isHit)
+        pendingStep2Panel = panel
+        val controls = scoringControls ?: return
+        controls.setAttribute("panel-mode", "step2")
+        controls.setAttribute("step2-label", baseLabel)
+        controls.setAttribute("step2-is-hit", isHit.toString())
     }
 
-    private fun buildFinalDesc(detail: String?): String? =
-        buildString {
-            optionalPitchType?.let { append("$it - ") }
-            detail?.let { append(it) }
-        }.takeIf { it.isNotEmpty() }
+    private fun resetToActionGrid() {
+        scoringControls?.setAttribute("panel-mode", "action-grid")
+        scoringControls?.removeAttribute("step2-label")
+        scoringControls?.removeAttribute("step2-is-hit")
+    }
 
     fun triggerScoringEvent(
         type: ScoringEventType,
@@ -100,16 +147,25 @@ class GameScoringController(
         isError: Boolean = false,
         runnerAdvanceMap: Map<String, Int>? = null,
     ) {
+        val finalDescription = buildString {
+            optionalPitchType?.let { append("$it - ") }
+            detail?.let { append(it) }
+        }.takeIf { it.isNotEmpty() }
+
+        recordEvent(PlayEventInput(type, resolvedBatterId(), resolvedPitcherId(), finalDescription, isDoublePlay, isError, runnerAdvanceMap))
+        renderCurrentTab()
+    }
+
+    private fun resolvedBatterId(): Long {
         val isHomeBatting = game.gameState.half == HalfInning.BOTTOM
         val currentLineup = if (isHomeBatting) localHomeLineup else localAwayLineup
-        val currentPitcherId = if (isHomeBatting) localAwayActivePitcherId else localHomeActivePitcherId
+        return game.gameState.currentBatterId ?: currentLineup.firstOrNull()?.id ?: 101L
+    }
 
-        val bId = game.gameState.currentBatterId ?: currentLineup.firstOrNull()?.id ?: 101L
-        val pId = game.gameState.currentPitcherId ?: currentPitcherId
-
-        val finalDescription = buildFinalDesc(detail)
-        recordEvent(PlayEventInput(type, bId, pId, finalDescription, isDoublePlay, isError, runnerAdvanceMap))
-        renderCurrentTab()
+    private fun resolvedPitcherId(): Long? {
+        val isHomeBatting = game.gameState.half == HalfInning.BOTTOM
+        return game.gameState.currentPitcherId
+            ?: if (isHomeBatting) localAwayActivePitcherId else localHomeActivePitcherId
     }
 
     private fun recordEvent(input: PlayEventInput) {
@@ -131,29 +187,5 @@ class GameScoringController(
                 )
             }
         }
-    }
-
-    fun renderActionGrid() {
-        val gridEl = actionGridWrapper ?: return
-        gridEl.innerHTML = ""
-
-        renderActionGridComponent(
-            parent = gridEl,
-            currentPitchType = optionalPitchType,
-            onPitchTypeSelected = { pType ->
-                optionalPitchType = pType
-                renderActionGrid()
-            },
-            onTriggerEvent = { type -> triggerScoringEvent(type) },
-            onRenderStep2 = { type, label ->
-                val isHit = type in listOf(
-                    ScoringEventType.SINGLE,
-                    ScoringEventType.DOUBLE,
-                    ScoringEventType.TRIPLE,
-                    ScoringEventType.HOME_RUN
-                )
-                renderStep2(type, label, isHit)
-            },
-        )
     }
 }

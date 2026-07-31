@@ -13,9 +13,7 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
     val game = localGame
     val boxScore = localBoxScore
     if (game == null || boxScore == null) {
-        val msg = document.createElement("p")
-        msg.textContent = "No active box score available."
-        container.appendChild(msg)
+        container.innerHTML = "<p>No active box score available.</p>"
         return
     }
 

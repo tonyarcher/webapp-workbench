@@ -5,12 +5,13 @@ import com.baseball.game.localBoxScore
 import com.baseball.game.localEvents
 import com.baseball.game.localGame
 import com.baseball.game.localHomeRoster
-import com.baseball.models.BoxScore
 import com.baseball.models.Game
+import com.baseball.models.BoxScore
 import com.baseball.ui.gametracking.scorebook.renderScorecardSheet
 import com.baseball.ui.gametracking.scoring.GameScoringController
 import com.baseball.ui.state.isSingleGameMode
 import kotlinx.browser.document
+import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLElement
 
 internal fun renderScorerTab(container: HTMLElement) {
@@ -19,53 +20,27 @@ internal fun renderScorerTab(container: HTMLElement) {
     val game = localGame
     val boxScore = localBoxScore
     if (game == null || boxScore == null) {
-        val msg = document.createElement("p")
-        msg.textContent = "No active game scoring session."
-        container.appendChild(msg)
+        container.innerHTML = "<p>No active game scoring session.</p>"
         return
     }
 
-    val header = document.createElement("div") as HTMLElement
-    header.className = "flex-between margin-bottom-md"
-    header.innerHTML = "<h1 style='margin: 0;'>Live Scoring: ${game.awayTeam.name} @ ${game.homeTeam.name}</h1>"
-    container.appendChild(header)
+    container.innerHTML = """
+        <h1>Live Scoring: ${game.awayTeam.name} @ ${game.homeTeam.name}</h1>
+        <div class="action-grid-2col margin-bottom-lg" id="scorer-top-grid">
+            <div id="scoreboard-mount"></div>
+            <div id="scoring-controls-mount"></div>
+        </div>
+        <div class="margin-top-lg" id="scorebook-mount"></div>
+    """.trimIndent()
 
-    renderTopGridSection(container, game, boxScore)
-
-    val bottomSection = document.createElement("div") as HTMLElement
-    bottomSection.className = "margin-top-lg"
-    container.appendChild(bottomSection)
-
-    renderScorecardSheet(bottomSection, game, boxScore, localEvents, game.gameState.half)
+    mountScoreboard(game, boxScore)
+    mountScoringControls(game)
+    mountScorecardSheet(game, boxScore)
 }
 
-private fun renderTopGridSection(container: HTMLElement, game: Game, boxScore: BoxScore) {
-    val topGrid = document.createElement("div") as HTMLElement
-    topGrid.className = "action-grid-2col margin-bottom-lg"
-
-    val leftCol = document.createElement("div") as HTMLElement
-    val rightCol = document.createElement("div") as HTMLElement
-
-    topGrid.appendChild(leftCol)
-    topGrid.appendChild(rightCol)
-    container.appendChild(topGrid)
-
-    renderScoreboardElement(leftCol, game, boxScore)
-
-    val controller = GameScoringController(
-        rightCol,
-        game,
-        if (isSingleGameMode) localHomeRoster else emptyList(),
-        if (isSingleGameMode) localAwayRoster else emptyList()
-    )
-    controller.render()
-}
-
-private fun renderScoreboardElement(
-    parent: HTMLElement,
-    game: Game,
-    boxScore: BoxScore,
-) {
+private fun mountScoreboard(game: Game, boxScore: BoxScore) {
+    val mount = document.getElementById("scoreboard-mount") as? HTMLElement ?: return
+    val maxInning = localEvents.maxOfOrNull { it.inning }?.coerceAtLeast(9) ?: 9
     val scoreboard = document.createElement("baseball-scoreboard")
     scoreboard.setAttribute("away-name", game.awayTeam.name)
     scoreboard.setAttribute("home-name", game.homeTeam.name)
@@ -80,19 +55,33 @@ private fun renderScoreboardElement(
     scoreboard.setAttribute("balls", game.gameState.balls.toString())
     scoreboard.setAttribute("strikes", game.gameState.strikes.toString())
     scoreboard.setAttribute("outs", game.gameState.outs.toString())
-
-    if (game.gameState.runnerFirstId != null) {
+    game.gameState.runnerFirstId?.let {
         scoreboard.setAttribute("runner-first", "true")
         scoreboard.setAttribute("runner-first-name", game.gameState.runnerFirstName ?: "Runner on 1B")
     }
-    if (game.gameState.runnerSecondId != null) {
+    game.gameState.runnerSecondId?.let {
         scoreboard.setAttribute("runner-second", "true")
         scoreboard.setAttribute("runner-second-name", game.gameState.runnerSecondName ?: "Runner on 2B")
     }
-    if (game.gameState.runnerThirdId != null) {
+    game.gameState.runnerThirdId?.let {
         scoreboard.setAttribute("runner-third", "true")
         scoreboard.setAttribute("runner-third-name", game.gameState.runnerThirdName ?: "Runner on 3B")
     }
+    mount.appendChild(scoreboard)
+}
 
-    parent.appendChild(scoreboard)
+private fun mountScoringControls(game: Game) {
+    val mount = document.getElementById("scoring-controls-mount") as? HTMLElement ?: return
+    val controller = GameScoringController(
+        mount,
+        game,
+        if (isSingleGameMode) localHomeRoster else emptyList(),
+        if (isSingleGameMode) localAwayRoster else emptyList(),
+    )
+    controller.render()
+}
+
+private fun mountScorecardSheet(game: Game, boxScore: BoxScore) {
+    val mount = document.getElementById("scorebook-mount") as? HTMLElement ?: return
+    renderScorecardSheet(mount, game, boxScore, localEvents, game.gameState.half)
 }

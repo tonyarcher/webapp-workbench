@@ -2,11 +2,13 @@ package com.baseball.auth
 
 import com.baseball.api
 import com.baseball.models.RegisterRequestDto
-import com.baseball.ui.auth.STATUS_CONNECT
-import com.baseball.ui.auth.STATUS_NETWORK
-import com.baseball.ui.auth.STATUS_REFUSED
 import kotlinx.browser.window
 import kotlinx.serialization.json.Json
+
+// Network & Authentication Status
+internal const val STATUS_CONNECT = "connect"
+internal const val STATUS_REFUSED = "refused"
+internal const val STATUS_NETWORK = "network"
 
 internal const val KEY_AUTH_TOKEN = "auth_token"
 internal const val KEY_ACTIVE_SESSION = "active_session"

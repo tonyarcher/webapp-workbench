@@ -14,26 +14,19 @@ internal fun renderTeamsTab(container: HTMLElement) {
 }
 
 internal suspend fun setupRenderTeamsTab(container: HTMLElement) {
-    container.innerHTML = ""
-
-    val title = document.createElement("h1")
-    title.textContent = "Team Rosters"
-    container.appendChild(title)
-
     if (teamsList.isEmpty()) {
         teamsList = api.getTeams()
     }
 
     val tId = selectedTeamId ?: teamsList.firstOrNull()?.id
     if (tId == null) {
-        val msg = document.createElement("p")
-        msg.textContent = "No teams available."
-        container.appendChild(msg)
+        container.innerHTML = "<h1>Team Rosters</h1><p>No teams available.</p>"
         return
     }
 
     val roster = api.getTeamRoster(tId)
     val rosterTable = document.createElement("baseball-roster-table")
     rosterTable.setAttribute("players-json", Json.encodeToString(roster))
+    container.innerHTML = "<h1>Team Rosters</h1>"
     container.appendChild(rosterTable)
 }

@@ -14,22 +14,15 @@ internal fun renderStatsTab(container: HTMLElement) {
 }
 
 internal suspend fun setupRenderStatsTab(container: HTMLElement) {
-    container.innerHTML = ""
-
-    val title = document.createElement("h1")
-    title.textContent = "Season Player Statistics"
-    container.appendChild(title)
-
     val sId = selectedSeasonId
     if (sId == null) {
-        val msg = document.createElement("p")
-        msg.textContent = "No season selected."
-        container.appendChild(msg)
+        container.innerHTML = "<h1>Season Player Statistics</h1><p>No season selected.</p>"
         return
     }
 
     val seasonStats = api.getSeasonStats(sId)
     val table = document.createElement("baseball-stats-table")
     table.setAttribute("rows-json", Json.encodeToString<List<PlayerBattingStats>>(seasonStats.battingStats))
+    container.innerHTML = "<h1>Season Player Statistics</h1>"
     container.appendChild(table)
 }
