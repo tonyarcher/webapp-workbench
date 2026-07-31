@@ -141,12 +141,6 @@ class ScorecardParser(
 internal fun getScorebookNotation(ev: PlayEvent): String =
     ScorecardNotationFormatter.getScorebookNotation(ev)
 
-fun getHitLocationNumber(desc: String): String? =
-    ScorecardNotationFormatter.getHitLocationNumber(desc)
-
-internal fun isOutEvent(type: ScoringEventType): Boolean =
-    ScorecardNotationFormatter.isOutEvent(type)
-
 private object ScorecardAdvancementCalculator {
     fun processRunsScoredOnPlay(
         ev: PlayEvent,
@@ -383,16 +377,4 @@ private object ScorecardNotationFormatter {
             ScoringEventType.SACRIFICE_FLY,
         )
 
-    fun getInitialBaseForEvent(eventType: ScoringEventType): Int = when (eventType) {
-        ScoringEventType.SINGLE,
-        ScoringEventType.WALK,
-        ScoringEventType.HIT_BY_PITCH,
-        ScoringEventType.ERROR,
-        ScoringEventType.FIELDER_CHOICE -> 1
-
-        ScoringEventType.DOUBLE -> 2
-        ScoringEventType.TRIPLE -> 3
-        ScoringEventType.HOME_RUN -> 4
-        else -> 0
-    }
 }
