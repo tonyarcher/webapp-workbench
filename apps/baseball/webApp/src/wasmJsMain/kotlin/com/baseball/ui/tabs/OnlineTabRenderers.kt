@@ -26,7 +26,7 @@ import org.w3c.dom.HTMLElement
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
 internal fun renderSeasonDashboardTab(container: HTMLElement) {
-    container.innerHTML = "<div class='text-center padding-lg'>Loading Dashboard...</div>"
+    showLoading(container, "Loading Dashboard...")
     launch { setupRenderSeasonDashboardTab(container) }
 }
 
@@ -145,7 +145,7 @@ private fun mountScoreboard(container: HTMLElement, game: Game, boxScore: BoxSco
 // ── Leagues ──────────────────────────────────────────────────────────────────
 
 internal fun renderLeaguesTab(container: HTMLElement) {
-    container.innerHTML = "<div class='text-center padding-lg'>Loading Leagues...</div>"
+    showLoading(container, "Loading Leagues...")
     launch { setupRenderLeaguesTab(container) }
 }
 
@@ -160,42 +160,48 @@ private suspend fun setupRenderLeaguesTab(container: HTMLElement) {
 // ── Teams ─────────────────────────────────────────────────────────────────────
 
 internal fun renderTeamsTab(container: HTMLElement) {
-    container.innerHTML = "<div class='text-center padding-lg'>Loading Teams...</div>"
+    showLoading(container, "Loading Teams...")
     launch { setupRenderTeamsTab(container) }
 }
 
 private suspend fun setupRenderTeamsTab(container: HTMLElement) {
     if (teamsList.isEmpty()) teamsList = api.getTeams()
     val tId = selectedTeamId ?: teamsList.firstOrNull()?.id
+    val wrapper = document.createElement("baseball-tab-page-wrapper")
+    wrapper.setAttribute("page-title", "Team Rosters")
     if (tId == null) {
-        container.innerHTML = "<h1>Team Rosters</h1><p>No teams available.</p>"
-        return
+        wrapper.setAttribute("empty-message", "No teams available.")
+    } else {
+        val roster = api.getTeamRoster(tId)
+        val rosterTable = document.createElement("baseball-roster-table")
+        rosterTable.setAttribute("players-json", Json.encodeToString(roster))
+        wrapper.appendChild(rosterTable)
     }
-    val roster = api.getTeamRoster(tId)
-    val rosterTable = document.createElement("baseball-roster-table")
-    rosterTable.setAttribute("players-json", Json.encodeToString(roster))
-    container.innerHTML = "<h1>Team Rosters</h1>"
-    container.appendChild(rosterTable)
+    container.innerHTML = ""
+    container.appendChild(wrapper)
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
 internal fun renderStatsTab(container: HTMLElement) {
-    container.innerHTML = "<div class='text-center padding-lg'>Loading Stats...</div>"
+    showLoading(container, "Loading Stats...")
     launch { setupRenderStatsTab(container) }
 }
 
 private suspend fun setupRenderStatsTab(container: HTMLElement) {
     val sId = selectedSeasonId
+    val wrapper = document.createElement("baseball-tab-page-wrapper")
+    wrapper.setAttribute("page-title", "Season Player Statistics")
     if (sId == null) {
-        container.innerHTML = "<h1>Season Player Statistics</h1><p>No season selected.</p>"
-        return
+        wrapper.setAttribute("empty-message", "No season selected.")
+    } else {
+        val seasonStats = api.getSeasonStats(sId)
+        val table = document.createElement("baseball-stats-table")
+        table.setAttribute("rows-json", Json.encodeToString<List<PlayerBattingStats>>(seasonStats.battingStats))
+        wrapper.appendChild(table)
     }
-    val seasonStats = api.getSeasonStats(sId)
-    val table = document.createElement("baseball-stats-table")
-    table.setAttribute("rows-json", Json.encodeToString<List<PlayerBattingStats>>(seasonStats.battingStats))
-    container.innerHTML = "<h1>Season Player Statistics</h1>"
-    container.appendChild(table)
+    container.innerHTML = ""
+    container.appendChild(wrapper)
 }
 
 // ── Box Score ─────────────────────────────────────────────────────────────────
@@ -205,7 +211,9 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
     val game = localGame
     val boxScore = localBoxScore
     if (game == null || boxScore == null) {
-        container.innerHTML = "<p>No active box score available.</p>"
+        val wrapper = document.createElement("baseball-tab-page-wrapper")
+        wrapper.setAttribute("empty-message", "No active box score available.")
+        container.appendChild(wrapper)
         return
     }
     val maxInning = localEvents.maxOfOrNull { it.inning }?.coerceAtLeast(9) ?: 9
@@ -226,4 +234,13 @@ internal fun renderBoxScoreTab(container: HTMLElement) {
     scoreboard.setAttribute("max-inning", maxInning.toString())
     scoreboard.setAttribute("line-score-json", Json.encodeToString(boxScore.lineScore))
     container.appendChild(scoreboard)
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+private fun showLoading(container: HTMLElement, message: String) {
+    container.innerHTML = ""
+    val wrapper = document.createElement("baseball-tab-page-wrapper")
+    wrapper.setAttribute("loading-message", message)
+    container.appendChild(wrapper)
 }

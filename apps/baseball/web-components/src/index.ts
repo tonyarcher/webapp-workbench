@@ -16,4 +16,5 @@ import './teams/baseball-roster-table/baseball-roster-table';
 import './leagues/baseball-league-card/baseball-league-card';
 import './leagues/baseball-leagues-tab/baseball-leagues-tab';
 import './layout/baseball-nav-bar/baseball-nav-bar';
+import './layout/baseball-tab-page-wrapper/baseball-tab-page-wrapper';
 import './auth/baseball-auth-card/baseball-auth-card';
