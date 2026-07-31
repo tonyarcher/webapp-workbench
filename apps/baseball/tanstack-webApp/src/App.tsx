@@ -8,6 +8,11 @@ import {
   predictRecommendedArticles,
   sampleArticles,
 } from './chrome-ai';
+import {
+  loadAppState,
+  requestPersistentStorage,
+  saveAppState,
+} from './storage-persistence';
 
 const queryClient = new QueryClient();
 
@@ -42,18 +47,33 @@ const defaultBoxScore = {
 };
 
 export function AppContent() {
-  const [currentTab, setCurrentTab] = useState('leagues');
+  const initialSaved = loadAppState();
+
+  const [currentTab, setCurrentTab] = useState(initialSaved?.currentTab || 'leagues');
   const [selectedSeasonId] = useState<number | null>(null);
   const [selectedTeamId] = useState<number | null>(null);
-  const [isWelcomeScreen, setIsWelcomeScreen] = useState(true);
-  const [isSingleGameMode, setIsSingleGameMode] = useState(false);
-  const [hasActiveGame, setHasActiveGame] = useState(false);
-  const [userName, setUserName] = useState('');
+  const [isWelcomeScreen, setIsWelcomeScreen] = useState(initialSaved ? false : true);
+  const [isSingleGameMode, setIsSingleGameMode] = useState(initialSaved?.isSingleGameMode || false);
+  const [hasActiveGame, setHasActiveGame] = useState(initialSaved?.hasActiveGame || false);
+  const [userName, setUserName] = useState(initialSaved?.userName || '');
 
   const navRef = useRef<HTMLElement>(null);
   const welcomeRef = useRef<HTMLElement>(null);
   const authRef = useRef<HTMLElement>(null);
   const scorerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    requestPersistentStorage();
+  }, []);
+
+  useEffect(() => {
+    saveAppState({
+      currentTab,
+      isSingleGameMode,
+      hasActiveGame,
+      userName,
+    });
+  }, [currentTab, isSingleGameMode, hasActiveGame, userName]);
 
   useEffect(() => {
     const nav = navRef.current;
