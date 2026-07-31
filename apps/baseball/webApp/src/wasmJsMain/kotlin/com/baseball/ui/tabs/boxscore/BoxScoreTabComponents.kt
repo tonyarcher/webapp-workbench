@@ -4,13 +4,6 @@ import com.baseball.models.Game
 import com.baseball.models.LineScore
 import com.baseball.models.PlayerBattingStats
 import com.baseball.models.PlayerPitchingStats
-import com.baseball.ui.core.css
-import kotlinx.css.Color
-import kotlinx.css.FontWeight
-import kotlinx.css.TextAlign
-import kotlinx.css.color
-import kotlinx.css.fontWeight
-import kotlinx.css.textAlign
 import kotlinx.html.TABLE
 import kotlinx.html.TBODY
 import kotlinx.html.dom.append
@@ -118,9 +111,8 @@ internal fun renderBattingTable(
 
 private fun TBODY.renderBattingRow(s: PlayerBattingStats) {
     tr {
-        td {
+        td(classes = "font-bold") {
             +"${s.playerName} (${s.position})"
-            css { fontWeight = FontWeight.bold }
         }
         td { +s.atBats.toString() }
         td { +s.runs.toString() }
@@ -165,9 +157,8 @@ internal fun renderPitchingTable(
 
 private fun TBODY.renderPitchingRow(s: PlayerPitchingStats) {
     tr {
-        td {
+        td(classes = "font-bold") {
             +s.playerName
-            css { fontWeight = FontWeight.bold }
         }
         val whole = s.inningsPitchedThirds / 3
         val rem = s.inningsPitchedThirds % 3
@@ -177,6 +168,7 @@ private fun TBODY.renderPitchingRow(s: PlayerPitchingStats) {
         td { +s.runsAllowed.toString() }
         td { +s.earnedRuns.toString() }
         td { +s.walksAllowed.toString() }
+        td { +s.walksAllowed.toString() }
         td { +s.strikeoutsRecorded.toString() }
         td { +s.homeRunsAllowed.toString() }
     }
@@ -184,13 +176,9 @@ private fun TBODY.renderPitchingRow(s: PlayerPitchingStats) {
 
 private fun TBODY.renderEmptyTableMessage(spanCount: Int, message: String) {
     tr {
-        td {
+        td(classes = "text-muted text-center") {
             colSpan = spanCount.toString()
             +message
-            css {
-                color = Color("var(--text-secondary)")
-                textAlign = TextAlign.center
-            }
         }
     }
 }
