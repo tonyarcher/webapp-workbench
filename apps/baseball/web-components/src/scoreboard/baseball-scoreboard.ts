@@ -75,9 +75,9 @@ export class BaseballScoreboard extends LitElement {
         const runnerSecond = g ? !!g.gameState?.runnerSecondId : this.runnerSecond;
         const runnerThird = g ? !!g.gameState?.runnerThirdId : this.runnerThird;
 
-        const runnerFirstName = g?.gameState?.runnerFirstName ?? (runnerFirst ? "Runner on 1B" : this.runnerFirstName);
-        const runnerSecondName = g?.gameState?.runnerSecondName ?? (runnerSecond ? "Runner on 2B" : this.runnerSecondName);
-        const runnerThirdName = g?.gameState?.runnerThirdName ?? (runnerThird ? "Runner on 3B" : this.runnerThirdName);
+        const runnerFirstName = g?.gameState?.runnerFirstName ?? (this.runnerFirstName || (runnerFirst ? "Runner on 1B" : ""));
+        const runnerSecondName = g?.gameState?.runnerSecondName ?? (this.runnerSecondName || (runnerSecond ? "Runner on 2B" : ""));
+        const runnerThirdName = g?.gameState?.runnerThirdName ?? (this.runnerThirdName || (runnerThird ? "Runner on 3B" : ""));
 
         const inningSymbol = half === 'TOP' ? '▲' : '▼';
         const outsStr = outs === 0 ? 'No Outs' : outs === 1 ? '1 Out' : outs === 2 ? '2 Outs' : '3 Outs';
@@ -102,8 +102,7 @@ export class BaseballScoreboard extends LitElement {
                 <div class="scoreboard-row margin-top-md">
                     <span class="count-display">Count: ${balls} - ${strikes}</span>
                     <span class="text-muted font-small">
-            R-H-E: ${awayScore}-${awayHits}-${awayErrors} vs ${homeScore}-${homeHits}
-                        -${homeErrors}
+            R-H-E: ${awayScore}-${awayHits}-${awayErrors} vs ${homeScore}-${homeHits}-${homeErrors}
           </span>
                 </div>
 

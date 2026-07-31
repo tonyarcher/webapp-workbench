@@ -15,14 +15,14 @@ export class BaseballLeaguesTab extends LitElement {
     static styles = leaguesTabSheet;
 
     @property({
+        type: Array,
         attribute: 'leagues-json',
-        converter: (value) => {
-            try {
-                return value ? JSON.parse(value) : [];
-            } catch {
-                return [];
+        converter: {
+            fromAttribute: (val: string | null): LeagueDto[] => {
+                if (!val) return [];
+                try { return JSON.parse(val); } catch { return []; }
             }
-        },
+        }
     }) leagues: LeagueDto[] = [];
 
     render() {
@@ -35,8 +35,8 @@ export class BaseballLeaguesTab extends LitElement {
                         <div class="leagues-grid">
                             ${leagues.map(league => html`
                                 <baseball-league-card
-                                        league-name=${league.name}
-                                        league-details=${'Official League #' + league.id}
+                                        league-name="${league.name}"
+                                        league-details="${'Official League #' + league.id}"
                                 ></baseball-league-card>
                             `)}
                         </div>

@@ -76,10 +76,13 @@ export class BaseballNavBar extends LitElement {
     }
 
     private onSelectTab(tabId: string) {
+        this.activeTab = tabId;
+        this.setAttribute('active-tab', tabId);
         this.dispatchEvent(
             new CustomEvent('tab-selected', {
                 detail: {tabId},
-                bubbles: true
+                bubbles: true,
+                composed: true
             })
         );
     }

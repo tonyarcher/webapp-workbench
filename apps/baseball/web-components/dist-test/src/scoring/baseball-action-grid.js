@@ -1,0 +1,119 @@
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { html, LitElement } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import actionGridCssText from './baseball-action-grid.css?inline';
+const actionGridSheet = new CSSStyleSheet();
+actionGridSheet.replaceSync(actionGridCssText);
+let BaseballActionGrid = class BaseballActionGrid extends LitElement {
+    constructor() {
+        super(...arguments);
+        this.currentPitchType = '';
+    }
+    static { this.styles = actionGridSheet; }
+    render() {
+        return html `
+            <div class="card action-card">
+                <h3 class="section-title">PITCH SELECTION (OPTIONAL)</h3>
+                <div class="pitch-types-row">
+                    ${['Fastball', 'Curveball', 'Slider', 'Changeup', 'Sinker', 'Cutter'].map((pt) => {
+            const isSelected = pt === this.currentPitchType;
+            return html `
+                            <button
+                                    class="btn ${isSelected ? 'btn-primary' : 'btn-secondary'}"
+                                    @click=${() => this.emitPitchType(pt)}
+                            >
+                                ${pt}
+                            </button>
+                        `;
+        })}
+                </div>
+
+                <h3 class="section-title margin-top-md">PITCH RESULTS</h3>
+                <div class="action-grid-3col">
+                    <button class="btn btn-action btn-ball" @click=${() => this.emitEvent('BALL')}>BALL</button>
+                    <button class="btn btn-action btn-strike" @click=${() => this.emitEvent('STRIKE')}>STRIKE LOOKING
+                    </button>
+                    <button class="btn btn-action btn-strike" @click=${() => this.emitEvent('STRIKE')}>STRIKE SWINGING
+                    </button>
+                    <button class="btn btn-action btn-foul" @click=${() => this.emitEvent('FOUL')}>FOUL BALL</button>
+                </div>
+
+                <h3 class="section-title margin-top-md">PLATE & IN-PLAY RESULTS</h3>
+                <div class="action-grid-3col">
+                    <button class="btn btn-action btn-hit" @click=${() => this.emitStep2('SINGLE', 'Single (1B)')}>
+                        SINGLE
+                        (1B)
+                    </button>
+                    <button class="btn btn-action btn-hit" @click=${() => this.emitStep2('DOUBLE', 'Double (2B)')}>
+                        DOUBLE
+                        (2B)
+                    </button>
+                    <button class="btn btn-action btn-hit" @click=${() => this.emitStep2('TRIPLE', 'Triple (3B)')}>
+                        TRIPLE
+                        (3B)
+                    </button>
+                    <button class="btn btn-action btn-hit" @click=${() => this.emitStep2('HOME_RUN', 'Home Run (HR)')}>
+                        HOME
+                        RUN (HR)
+                    </button>
+                    <button class="btn btn-action btn-walk" @click=${() => this.emitEvent('WALK')}>WALK (BB)</button>
+                    <button class="btn btn-action btn-walk" @click=${() => this.emitEvent('HIT_BY_PITCH')}>HIT BY PITCH
+                        (HBP)
+                    </button>
+                    <button class="btn btn-action btn-out" @click=${() => this.emitEvent('STRIKEOUT')}>STRIKEOUT (K)
+                    </button>
+                    <button class="btn btn-action btn-out" @click=${() => this.emitStep2('GROUNDOUT', 'Groundout')}>
+                        GROUNDOUT
+                    </button>
+                    <button class="btn btn-action btn-out" @click=${() => this.emitStep2('FLYOUT', 'Flyout')}>FLYOUT
+                    </button>
+                    <button class="btn btn-action btn-out" @click=${() => this.emitStep2('LINE_OUT', 'Line Out')}>LINE
+                        OUT
+                    </button>
+                    <button class="btn btn-action btn-out" @click=${() => this.emitStep2('POP_OUT', 'Pop Out')}>POP OUT
+                    </button>
+                    <button class="btn btn-action btn-out" @click=${() => this.emitStep2('SACRIFICE_FLY', 'Sac Fly')}>
+                        SAC
+                        FLY
+                    </button>
+                    <button class="btn btn-action btn-out" @click=${() => this.emitStep2('ERROR', 'Error (E)')}>ERROR
+                        (E)
+                    </button>
+                    <button class="btn btn-action btn-out"
+                            @click=${() => this.emitStep2('FIELDER_CHOICE', "Fielder's Choice")}>FIELDER'S CHOICE
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    emitPitchType(pitchType) {
+        this.dispatchEvent(new CustomEvent('pitch-type-selected', {
+            detail: { pitchType },
+            bubbles: true,
+        }));
+    }
+    emitEvent(eventType) {
+        this.dispatchEvent(new CustomEvent('trigger-scoring-event', {
+            detail: { eventType },
+            bubbles: true,
+        }));
+    }
+    emitStep2(eventType, baseLabel) {
+        this.dispatchEvent(new CustomEvent('render-step2', {
+            detail: { eventType, baseLabel },
+            bubbles: true,
+        }));
+    }
+};
+__decorate([
+    property({ type: String, attribute: 'current-pitch-type' })
+], BaseballActionGrid.prototype, "currentPitchType", void 0);
+BaseballActionGrid = __decorate([
+    customElement('baseball-action-grid')
+], BaseballActionGrid);
+export { BaseballActionGrid };

@@ -47,8 +47,8 @@ export class BaseballScheduleList extends LitElement {
                 (g) => html`
                     <div class="game-card">
                       <div>
-                        <div class="font-bold">${g.awayTeam} @ ${g.homeTeam}</div>
-                        <div class="text-muted font-small margin-top-xs">Date: ${g.date} | Status: ${g.status}</div>
+                        <div class="font-bold">${(g.awayTeam as any)?.name || g.awayTeam} @ ${(g.homeTeam as any)?.name || g.homeTeam}</div>
+                        <div class="text-muted font-small margin-top-xs">Date: ${g.date || (g as any).scheduledDate} | Status: ${g.status}</div>
                       </div>
                       <div class="flex-center flex-gap-sm">
                         ${g.status === 'COMPLETED'

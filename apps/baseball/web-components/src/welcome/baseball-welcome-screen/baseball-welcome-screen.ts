@@ -53,10 +53,12 @@ export class BaseballWelcomeScreen extends LitElement {
     }
 
     private onSelectMode(mode: 'single' | 'league') {
+        this.setAttribute('selected-mode', mode);
         this.dispatchEvent(
             new CustomEvent('mode-selected', {
                 detail: {mode},
-                bubbles: true
+                bubbles: true,
+                composed: true
             })
         );
     }
