@@ -10,6 +10,7 @@ import com.baseball.models.BoxScore
 import com.baseball.models.Game
 import com.baseball.models.HalfInning
 import com.baseball.models.PlayEvent
+import com.baseball.models.PlayerBattingStats
 import kotlinx.browser.document
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -26,9 +27,12 @@ fun renderScorecardSheet(
     val isHomeBatting = half == HalfInning.BOTTOM
     val battingTeam = if (isHomeBatting) game.homeTeam else game.awayTeam
     val pitchingTeam = if (isHomeBatting) game.awayTeam else game.homeTeam
+    val teamEvents = events.filter { it.half == half }
     val maxInning = events.maxOfOrNull { it.inning }?.coerceAtLeast(9) ?: 9
 
     container.innerHTML = ""
+
+    val parser = ScorecardParser(teamEvents, localAwayRoster, localHomeRoster, maxInning)
 
     val scorebookEl = document.createElement("baseball-scorebook-grid")
     scorebookEl.setAttribute("team-name", battingTeam.name)
@@ -36,7 +40,7 @@ fun renderScorecardSheet(
     scorebookEl.setAttribute("half-tag", if (isHomeBatting) "BOT" else "TOP")
     scorebookEl.setAttribute("max-inning", maxInning.toString())
 
-    val slots = buildScorebookSlots(isHomeBatting, boxScore)
+    val slots = buildScorebookSlots(isHomeBatting, boxScore, teamEvents, parser, maxInning)
     scorebookEl.setAttribute("slots-json", Json.encodeToString(slots))
 
     container.appendChild(scorebookEl)
@@ -73,11 +77,15 @@ private data class ScorebookCellDto(
     val base: Int = 0,
     val outNum: Int? = null,
     val count: String? = null,
+    val hasEndedInningLine: Boolean = false,
 )
 
 private fun buildScorebookSlots(
     isHomeBatting: Boolean,
     boxScore: BoxScore,
+    teamEvents: List<PlayEvent>,
+    parser: ScorecardParser,
+    maxInning: Int,
 ): List<ScorebookSlotDto> {
     val bStats = if (isHomeBatting) boxScore.homeBatting else boxScore.awayBatting
     return bStats.mapIndexed { idx, p ->
@@ -89,6 +97,31 @@ private fun buildScorebookSlots(
             runs = p.runs,
             hits = p.hits,
             rbi = p.rbi,
+            innings = buildInningsMapForBatter(p, teamEvents, parser, maxInning),
         )
     }
+}
+
+private fun buildInningsMapForBatter(
+    p: PlayerBattingStats,
+    teamEvents: List<PlayEvent>,
+    parser: ScorecardParser,
+    maxInning: Int,
+): Map<Int, ScorebookCellDto> {
+    val map = mutableMapOf<Int, ScorebookCellDto>()
+    for (inn in 1..maxInning) {
+        val ev = teamEvents.find { it.inning == inn && it.batterName == p.playerName }
+        if (ev != null) {
+            val progression = parser.playProgressions[ev]
+            val base = progression?.maxBase ?: parser.playAdvancements[ev] ?: 0
+            map[inn] = ScorebookCellDto(
+                notation = getScorebookNotation(ev),
+                base = base,
+                outNum = parser.playOutNumbers[ev],
+                count = "${ev.balls}-${ev.strikes}",
+                hasEndedInningLine = ev.outsAfter == 3,
+            )
+        }
+    }
+    return map
 }
