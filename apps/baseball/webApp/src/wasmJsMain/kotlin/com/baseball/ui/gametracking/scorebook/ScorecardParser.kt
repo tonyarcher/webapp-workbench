@@ -281,6 +281,7 @@ private object ScorecardNotationFormatter {
             ScoringEventType.LINE_OUT,
             ScoringEventType.POP_OUT,
             ScoringEventType.FIELDER_CHOICE -> getOutScorebookNotation(ev, suffix)
+
             else -> getBaseRunningNotation(ev)
         }
     }
@@ -302,14 +303,17 @@ private object ScorecardNotationFormatter {
             ev.description.contains("to Home") -> "SBH"
             else -> "SB"
         }
+
         ScoringEventType.CAUGHT_STEALING -> {
             val match = Regex("Caught Stealing: .* (\\d+(?:-\\d+)*U?)\\)").find(ev.description)
             if (match != null) "CS ${match.groupValues[1]}" else "CS"
         }
+
         ScoringEventType.PICKED_OFF -> {
             val match = Regex("Picked Off: .* (\\d+(?:-\\d+)*U?)\\)").find(ev.description)
             if (match != null) "PO ${match.groupValues[1]}" else "PO"
         }
+
         ScoringEventType.WILD_PITCH -> "WP"
         ScoringEventType.PASSED_BALL -> "PB"
         ScoringEventType.BALK -> "BK"
