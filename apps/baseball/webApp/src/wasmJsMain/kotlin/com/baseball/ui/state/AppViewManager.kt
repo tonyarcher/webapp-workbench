@@ -68,10 +68,6 @@ object AppViewManager {
             window.location.hash = if (isWelcomeScreen) NavTabs.TAB_WELCOME else currentTab
         }
 
-        if (isSingleGameMode) {
-            initGame(forceReset = false)
-        }
-
         renderApp()
         renderCurrentTabContent()
         fetchInitialServerData()
@@ -119,7 +115,6 @@ object AppViewManager {
             isWelcomeScreen = false
             if (mode == "single") {
                 isSingleGameMode = true
-                initGame(forceReset = false)
                 window.location.hash = NavTabs.TAB_LIVE_SCORER
             } else {
                 isSingleGameMode = false

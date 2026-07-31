@@ -55,10 +55,10 @@ export class BaseballScoringControls extends LitElement {
             <div class="active-controls">
                 <h2>Plate Matchup</h2>
                 <baseball-matchup-card
-                    batter-name=${this.batterName}
-                    batter-stats=${this.batterStats}
-                    pitcher-name=${this.pitcherName}
-                    pitcher-stats=${this.pitcherStats}
+                    batter-name="${this.batterName}"
+                    batter-stats="${this.batterStats}"
+                    pitcher-name="${this.pitcherName}"
+                    pitcher-stats="${this.pitcherStats}"
                 ></baseball-matchup-card>
 
                 ${this.panelMode === 'step2'

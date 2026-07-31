@@ -187,6 +187,46 @@ const LiveScorerView = React.forwardRef(({ hasActiveGame }: any, ref: any) => {
       <div slot="controls">
         <baseball-scoring-controls game-status="active" batter-name="Nico Hoerner" pitcher-name="Sonny Gray" />
       </div>
+      <div slot="scorebook">
+        <baseball-scorebook-grid
+          team-name="Chicago Cubs"
+          pitcher-opponent="Sonny Gray"
+          half-tag="TOP"
+          max-inning="9"
+          slots-json={JSON.stringify([
+            {
+              slotIdx: 1,
+              batterName: 'Nico Hoerner',
+              position: '2B',
+              atBats: 0,
+              runs: 0,
+              hits: 0,
+              rbi: 0,
+              innings: {}
+            },
+            {
+              slotIdx: 2,
+              batterName: 'Dansby Swanson',
+              position: 'SS',
+              atBats: 0,
+              runs: 0,
+              hits: 0,
+              rbi: 0,
+              innings: {}
+            },
+            {
+              slotIdx: 3,
+              batterName: 'Ian Happ',
+              position: 'LF',
+              atBats: 0,
+              runs: 0,
+              hits: 0,
+              rbi: 0,
+              innings: {}
+            }
+          ])}
+        />
+      </div>
     </baseball-scorer-tab>
   );
 });
