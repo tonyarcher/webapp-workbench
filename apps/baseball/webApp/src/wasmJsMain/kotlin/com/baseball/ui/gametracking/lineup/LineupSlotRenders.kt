@@ -1,22 +1,5 @@
 package com.baseball.ui.gametracking.lineup
 
-import com.baseball.ui.core.css
-import kotlinx.css.Align
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.FontWeight
-import kotlinx.css.Padding
-import kotlinx.css.TextAlign
-import kotlinx.css.alignItems
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.fontWeight
-import kotlinx.css.gap
-import kotlinx.css.marginBottom
-import kotlinx.css.padding
-import kotlinx.css.px
-import kotlinx.css.rem
-import kotlinx.css.textAlign
 import kotlinx.html.DIV
 import kotlinx.html.InputType
 import kotlinx.html.div
@@ -68,16 +51,7 @@ internal fun DIV.renderPositionSelect(list: MutableList<PlayerInputs>, i: Int, i
 }
 
 internal fun renderLineupHeader(parent: DIV) {
-    parent.div {
-        css {
-            display = Display.grid
-            put("grid-template-columns", "40px 1fr 60px 80px")
-            gap = 0.5.rem
-            marginBottom = 0.5.rem
-            padding = Padding(0.px, 0.5.rem)
-            fontWeight = FontWeight.bold
-            color = Color("rgba(255,255,255,0.6)")
-        }
+    parent.div(classes = "lineup-grid-header") {
         div { +"Slot" }
         div { +"Batter Name" }
         div { +"No." }
@@ -97,21 +71,9 @@ internal fun renderSingleLineupRow(
     i: Int,
 ) {
     val item = list[i]
-    parent.div {
-        css {
-            display = Display.grid
-            put("grid-template-columns", "40px 1fr 60px 80px")
-            gap = 0.5.rem
-            marginBottom = 0.5.rem
-            alignItems = Align.center
-        }
-        span {
+    parent.div(classes = "lineup-grid-row") {
+        span(classes = "lineup-slot-num") {
             +"${i + 1}"
-            css {
-                textAlign = TextAlign.center
-                color = Color("rgba(255,255,255,0.4)")
-                fontWeight = FontWeight.bold
-            }
         }
         renderNameInput(list, i, item)
         renderNumberInput(list, i, item)

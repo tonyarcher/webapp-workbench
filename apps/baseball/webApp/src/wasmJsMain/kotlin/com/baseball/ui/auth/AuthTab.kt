@@ -3,19 +3,10 @@ package com.baseball.ui.auth
 import com.baseball.auth.UserAccount
 import com.baseball.authService
 import com.baseball.ui.core.DomUiConstants
-import com.baseball.ui.core.css
 import com.baseball.ui.core.launch
 import com.baseball.ui.state.NavTabs
 import kotlinx.browser.document
 import kotlinx.browser.window
-import kotlinx.css.LinearDimension
-import kotlinx.css.Margin
-import kotlinx.css.Padding
-import kotlinx.css.margin
-import kotlinx.css.maxWidth
-import kotlinx.css.padding
-import kotlinx.css.px
-import kotlinx.css.rem
 import kotlinx.html.div
 import kotlinx.html.dom.append
 import org.w3c.dom.HTMLDivElement
@@ -24,12 +15,7 @@ import org.w3c.dom.HTMLInputElement
 
 internal fun renderLoginTab(container: HTMLElement) {
     container.append {
-        div(classes = "card") {
-            css {
-                maxWidth = 450.px
-                margin = Margin(2.rem, LinearDimension.auto)
-                padding = Padding(2.5.rem)
-            }
+        div(classes = "card auth-card") {
             renderLoginHeader()
             renderLoginErrorBanner()
             renderLoginForm()
@@ -76,12 +62,7 @@ private suspend fun executeLogin(email: String, pass: String, banner: HTMLDivEle
 
 internal fun renderRegisterTab(container: HTMLElement) {
     container.append {
-        div(classes = "card") {
-            css {
-                maxWidth = 450.px
-                margin = Margin(2.rem, LinearDimension.auto)
-                padding = Padding(2.5.rem)
-            }
+        div(classes = "card auth-card") {
             renderRegisterHeader()
             renderRegisterErrorBanner()
             renderRegisterForm()
