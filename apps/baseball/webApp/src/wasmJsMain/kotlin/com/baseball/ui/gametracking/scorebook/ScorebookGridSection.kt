@@ -48,7 +48,10 @@ fun renderScorecardSheet(
     scorebookEl.setAttribute("pitcher-opponent", pitchingTeam.name)
     scorebookEl.setAttribute("half-tag", if (isHomeBatting) "BOT" else "TOP")
     scorebookEl.setAttribute("max-inning", maxInning.toString())
-    scorebookEl.setAttribute("slots-json", Json.encodeToString(buildScorebookSlots(isHomeBatting, boxScore, teamEvents, parser, maxInning)))
+    scorebookEl.setAttribute(
+        "slots-json",
+        Json.encodeToString(buildScorebookSlots(isHomeBatting, boxScore, teamEvents, parser, maxInning))
+    )
 
     container.innerHTML = ""
     container.appendChild(scorebookEl)

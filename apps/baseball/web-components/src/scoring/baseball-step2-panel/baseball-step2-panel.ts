@@ -18,22 +18,7 @@ export class BaseballStep2Panel extends LitElement {
             : [
                 'Pitcher (1)', 'Catcher (2)', '1st Base (3)', '2nd Base (4)', '3rd Base (5)',
                 'Shortstop (6)', 'Left Field (7)', 'Center Field (8)', 'Right Field (9)',
-              ];
-    }
-
-    private selectLocation(location: string | null) {
-        this.dispatchEvent(new CustomEvent('location-selected', {
-            detail: {location},
-            bubbles: true,
-            composed: true,
-        }));
-    }
-
-    private cancelStep2() {
-        this.dispatchEvent(new CustomEvent('cancel-step2', {
-            bubbles: true,
-            composed: true,
-        }));
+            ];
     }
 
     render() {
@@ -55,6 +40,21 @@ export class BaseballStep2Panel extends LitElement {
                 </button>
             </div>
         `;
+    }
+
+    private selectLocation(location: string | null) {
+        this.dispatchEvent(new CustomEvent('location-selected', {
+            detail: {location},
+            bubbles: true,
+            composed: true,
+        }));
+    }
+
+    private cancelStep2() {
+        this.dispatchEvent(new CustomEvent('cancel-step2', {
+            bubbles: true,
+            composed: true,
+        }));
     }
 }
 

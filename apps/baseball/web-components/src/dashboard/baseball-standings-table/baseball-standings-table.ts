@@ -6,37 +6,37 @@ const standingsSheet = new CSSStyleSheet();
 standingsSheet.replaceSync(standingsCssText);
 
 export interface StandingsRow {
-  teamName: string;
-  gamesPlayed: number;
-  wins: number;
-  losses: number;
-  winPercentage: number;
-  runsScored: number;
-  runsAllowed: number;
+    teamName: string;
+    gamesPlayed: number;
+    wins: number;
+    losses: number;
+    winPercentage: number;
+    runsScored: number;
+    runsAllowed: number;
 }
 
 @customElement('baseball-standings-table')
 export class BaseballStandingsTable extends LitElement {
-  static styles = standingsSheet;
+    static styles = standingsSheet;
 
-  @property({
-    type: Array,
-    attribute: 'standings-json',
-    converter: {
-      fromAttribute: (val: string | null): StandingsRow[] => {
-        if (!val) return [];
-        try {
-          return JSON.parse(val);
-        } catch {
-          return [];
+    @property({
+        type: Array,
+        attribute: 'standings-json',
+        converter: {
+            fromAttribute: (val: string | null): StandingsRow[] => {
+                if (!val) return [];
+                try {
+                    return JSON.parse(val);
+                } catch {
+                    return [];
+                }
+            }
         }
-      }
-    }
-  })
-  standings: StandingsRow[] = [];
+    })
+    standings: StandingsRow[] = [];
 
-  render() {
-    return html`
+    render() {
+        return html`
       <div class="card">
         <h2>League Standings</h2>
         <div class="table-container">
@@ -54,7 +54,7 @@ export class BaseballStandingsTable extends LitElement {
             </thead>
             <tbody>
             ${(this.standings ?? []).map(
-                (s) => html`
+            (s) => html`
                   <tr>
                     <td class="font-bold">${s.teamName}</td>
                     <td>${s.gamesPlayed}</td>
@@ -65,21 +65,21 @@ export class BaseballStandingsTable extends LitElement {
                     <td>${s.runsAllowed}</td>
                   </tr>
                 `
-            )}
+        )}
             </tbody>
           </table>
         </div>
       </div>
     `;
-  }
+    }
 
-  private formatPct(pct: number): string {
-    return (pct || 0).toFixed(3).replace(/^0+/, '');
-  }
+    private formatPct(pct: number): string {
+        return (pct || 0).toFixed(3).replace(/^0+/, '');
+    }
 }
 
 declare global {
-  interface HTMLElementTagNameMap {
-    'baseball-standings-table': BaseballStandingsTable;
-  }
+    interface HTMLElementTagNameMap {
+        'baseball-standings-table': BaseballStandingsTable;
+    }
 }

@@ -6,52 +6,52 @@ const scorebookSheet = new CSSStyleSheet();
 scorebookSheet.replaceSync(scorebookCssText);
 
 export interface ScorebookCellDto {
-  notation?: string | null;
-  base?: number;
-  outNum?: number | null;
-  count?: string | null;
-  hasEndedInningLine?: boolean;
+    notation?: string | null;
+    base?: number;
+    outNum?: number | null;
+    count?: string | null;
+    hasEndedInningLine?: boolean;
 }
 
 export interface ScorebookSlotDto {
-  slotIdx: number;
-  batterName: string;
-  position: string;
-  hasSub?: boolean;
-  atBats?: number;
-  runs?: number;
-  hits?: number;
-  rbi?: number;
-  innings?: Record<string, ScorebookCellDto>;
+    slotIdx: number;
+    batterName: string;
+    position: string;
+    hasSub?: boolean;
+    atBats?: number;
+    runs?: number;
+    hits?: number;
+    rbi?: number;
+    innings?: Record<string, ScorebookCellDto>;
 }
 
 @customElement('baseball-scorebook-grid')
 export class BaseballScorebookGrid extends LitElement {
-  static styles = scorebookSheet;
+    static styles = scorebookSheet;
 
-  @property({type: String, attribute: 'team-name'}) teamName = 'Team Scorecard';
-  @property({type: Number, attribute: 'max-inning'}) maxInning = 9;
+    @property({type: String, attribute: 'team-name'}) teamName = 'Team Scorecard';
+    @property({type: Number, attribute: 'max-inning'}) maxInning = 9;
 
-  @property({
-    type: Array,
-    attribute: 'slots-json',
-    converter: {
-      fromAttribute: (val: string | null): ScorebookSlotDto[] => {
-        if (!val) return [];
-        try {
-          return JSON.parse(val);
-        } catch {
-          return [];
+    @property({
+        type: Array,
+        attribute: 'slots-json',
+        converter: {
+            fromAttribute: (val: string | null): ScorebookSlotDto[] => {
+                if (!val) return [];
+                try {
+                    return JSON.parse(val);
+                } catch {
+                    return [];
+                }
+            }
         }
-      }
-    }
-  })
-  rows: ScorebookSlotDto[] = [];
+    })
+    rows: ScorebookSlotDto[] = [];
 
-  render() {
-    const inningsArray = Array.from({length: this.maxInning}, (_, i) => i + 1);
+    render() {
+        const inningsArray = Array.from({length: this.maxInning}, (_, i) => i + 1);
 
-    return html`
+        return html`
       <div class="card scorebook-container">
         <h2 class="scorebook-title">${this.teamName} - Scorebook Sheet</h2>
 
@@ -71,7 +71,7 @@ export class BaseballScorebookGrid extends LitElement {
             </thead>
             <tbody>
             ${(this.rows ?? []).map(
-                (row) => html`
+            (row) => html`
                   <tr>
                     <td class="col-slot font-bold">${row.slotIdx}</td>
                     <td class="col-name">${row.batterName}</td>
@@ -87,19 +87,19 @@ export class BaseballScorebookGrid extends LitElement {
                     <td class="col-stat">${row.rbi ?? 0}</td>
                   </tr>
                 `
-            )}
+        )}
             </tbody>
           </table>
         </div>
       </div>
     `;
-  }
+    }
 
-  private renderCell(cell: ScorebookCellDto | null) {
-    const baseClass = cell?.base ? `b${cell.base}` : '';
-    const endClass = cell?.hasEndedInningLine ? 'ended-inning' : '';
+    private renderCell(cell: ScorebookCellDto | null) {
+        const baseClass = cell?.base ? `b${cell.base}` : '';
+        const endClass = cell?.hasEndedInningLine ? 'ended-inning' : '';
 
-    return html`
+        return html`
       <div class="diamond ${baseClass} ${endClass}">
         ${cell?.notation ? html`
           <div class="play-desc">${cell.notation}</div>` : ''}
@@ -109,11 +109,11 @@ export class BaseballScorebookGrid extends LitElement {
           <div class="count-badge">${cell.count}</div>` : ''}
       </div>
     `;
-  }
+    }
 }
 
 declare global {
-  interface HTMLElementTagNameMap {
-    'baseball-scorebook-grid': BaseballScorebookGrid;
-  }
+    interface HTMLElementTagNameMap {
+        'baseball-scorebook-grid': BaseballScorebookGrid;
+    }
 }

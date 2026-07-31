@@ -2,9 +2,9 @@ package com.baseball.ui.auth
 
 import com.baseball.auth.UserAccount
 import com.baseball.authService
-import com.baseball.ui.state.launch
 import com.baseball.ui.state.AppViewManager
 import com.baseball.ui.state.NavTabs
+import com.baseball.ui.state.launch
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.Element

@@ -117,7 +117,7 @@ export class BaseballStatsTable extends LitElement {
             </thead>
             <tbody>
             ${(this.rows ?? []).map(
-                    (r) => html`
+            (r) => html`
                   <tr>
                     <td class="font-bold">${r.playerName}</td>
                     <td class="text-secondary">${r.teamName}</td>
@@ -127,7 +127,7 @@ export class BaseballStatsTable extends LitElement {
                     <td>${r.stat3}</td>
                   </tr>
                 `
-            )}
+        )}
             </tbody>
           </table>
         </div>

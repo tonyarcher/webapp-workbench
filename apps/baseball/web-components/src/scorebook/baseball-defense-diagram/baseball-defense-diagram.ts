@@ -6,23 +6,23 @@ const defenseSheet = new CSSStyleSheet();
 defenseSheet.replaceSync(defenseCssText);
 
 export interface FielderPosition {
-  posNum: number;
-  posName: string;
-  playerName: string;
-  jerseyNumber: number;
-  topPct: number;
-  leftPct: number;
+    posNum: number;
+    posName: string;
+    playerName: string;
+    jerseyNumber: number;
+    topPct: number;
+    leftPct: number;
 }
 
 @customElement('baseball-defense-diagram')
 export class BaseballDefenseDiagram extends LitElement {
-  static styles = defenseSheet;
+    static styles = defenseSheet;
 
-  @property({type: String, attribute: 'defending-team'}) defendingTeam = 'Defending Team';
-  @property({type: Array}) fielders: FielderPosition[] = [];
+    @property({type: String, attribute: 'defending-team'}) defendingTeam = 'Defending Team';
+    @property({type: Array}) fielders: FielderPosition[] = [];
 
-  render() {
-    return html`
+    render() {
+        return html`
       <div class="card">
         <h2>Defensive Alignment - ${this.defendingTeam}</h2>
 
@@ -40,7 +40,7 @@ export class BaseballDefenseDiagram extends LitElement {
           <div class="pitcher-mound"></div>
 
           ${this.fielders.map(
-              (f) => html`
+            (f) => html`
                 <div
                     class="fielder-node"
                     style="top: ${f.topPct}%; left: ${f.leftPct}%;"
@@ -52,15 +52,15 @@ export class BaseballDefenseDiagram extends LitElement {
                   </div>
                 </div>
               `
-          )}
+        )}
         </div>
       </div>
     `;
-  }
+    }
 }
 
 declare global {
-  interface HTMLElementTagNameMap {
-    'baseball-defense-diagram': BaseballDefenseDiagram;
-  }
+    interface HTMLElementTagNameMap {
+        'baseball-defense-diagram': BaseballDefenseDiagram;
+    }
 }

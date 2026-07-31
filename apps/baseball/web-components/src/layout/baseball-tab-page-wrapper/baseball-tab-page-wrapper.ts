@@ -21,8 +21,8 @@ export class BaseballTabPageWrapper extends LitElement {
         return html`
             ${this.pageTitle ? html`<h1>${this.pageTitle}</h1>` : ''}
             ${this.emptyMessage
-                ? html`<p class="empty-state">${this.emptyMessage}</p>`
-                : html`<slot></slot>`}
+            ? html`<p class="empty-state">${this.emptyMessage}</p>`
+            : html`<slot></slot>`}
         `;
     }
 }

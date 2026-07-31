@@ -7,16 +7,16 @@ matchupSheet.replaceSync(matchupCssText);
 
 @customElement('baseball-matchup-card')
 export class BaseballMatchupCard extends LitElement {
-  static styles = matchupSheet;
+    static styles = matchupSheet;
 
-  @property({type: String, attribute: 'batter-name'}) batterName = 'Current Batter';
-  @property({type: String, attribute: 'batter-stats'}) batterStats = '';
+    @property({type: String, attribute: 'batter-name'}) batterName = 'Current Batter';
+    @property({type: String, attribute: 'batter-stats'}) batterStats = '';
 
-  @property({type: String, attribute: 'pitcher-name'}) pitcherName = 'Current Pitcher';
-  @property({type: String, attribute: 'pitcher-stats'}) pitcherStats = '';
+    @property({type: String, attribute: 'pitcher-name'}) pitcherName = 'Current Pitcher';
+    @property({type: String, attribute: 'pitcher-stats'}) pitcherStats = '';
 
-  render() {
-    return html`
+    render() {
+        return html`
       <div class="card matchup-card">
         <div class="matchup-header">
           <span class="matchup-title">CURRENT PLATE MATCHUP</span>
@@ -39,11 +39,11 @@ export class BaseballMatchupCard extends LitElement {
         </div>
       </div>
     `;
-  }
+    }
 }
 
 declare global {
-  interface HTMLElementTagNameMap {
-    'baseball-matchup-card': BaseballMatchupCard;
-  }
+    interface HTMLElementTagNameMap {
+        'baseball-matchup-card': BaseballMatchupCard;
+    }
 }

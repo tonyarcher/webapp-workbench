@@ -62,7 +62,7 @@ export class BaseballScoringControls extends LitElement {
                 ></baseball-matchup-card>
 
                 ${this.panelMode === 'step2'
-                    ? html`
+            ? html`
                         <baseball-step2-panel
                             base-label=${this.step2Label}
                             ?is-hit=${this.step2IsHit}
@@ -70,7 +70,7 @@ export class BaseballScoringControls extends LitElement {
                             @cancel-step2=${() => this.emit('cancel-step2', {})}
                         ></baseball-step2-panel>
                     `
-                    : html`
+            : html`
                         <baseball-action-grid
                             current-pitch-type=${this.currentPitchType}
                             @pitch-type-selected=${(e: CustomEvent) => this.emit('pitch-type-selected', e.detail)}

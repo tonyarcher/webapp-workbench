@@ -17,7 +17,11 @@ export class BaseballLeaguesTab extends LitElement {
     @property({
         attribute: 'leagues-json',
         converter: (value) => {
-            try { return value ? JSON.parse(value) : []; } catch { return []; }
+            try {
+                return value ? JSON.parse(value) : [];
+            } catch {
+                return [];
+            }
         },
     }) leagues: LeagueDto[] = [];
 
@@ -26,17 +30,17 @@ export class BaseballLeaguesTab extends LitElement {
         return html`
             <h1>League Directory</h1>
             ${leagues.length === 0
-                ? html`<p class="empty-state">No leagues available.</p>`
-                : html`
-                    <div class="leagues-grid">
-                        ${leagues.map(league => html`
-                            <baseball-league-card
-                                league-name=${league.name}
-                                league-details=${'Official League #' + league.id}
-                            ></baseball-league-card>
-                        `)}
-                    </div>
-                `}
+                    ? html`<p class="empty-state">No leagues available.</p>`
+                    : html`
+                        <div class="leagues-grid">
+                            ${leagues.map(league => html`
+                                <baseball-league-card
+                                        league-name=${league.name}
+                                        league-details=${'Official League #' + league.id}
+                                ></baseball-league-card>
+                            `)}
+                        </div>
+                    `}
         `;
     }
 }

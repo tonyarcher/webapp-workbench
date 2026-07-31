@@ -27,17 +27,19 @@ var isSingleGameMode: Boolean = false
 
 var currentTab: String
     get() = AppViewManager.currentTab
-    set(value) { AppViewManager.currentTab = value }
+    set(value) {
+        AppViewManager.currentTab = value
+    }
 
 // Navigation tab ID constants
 object NavTabs {
-    const val TAB_WELCOME     = "welcome"
+    const val TAB_WELCOME = "welcome"
     const val TAB_LIVE_SCORER = "live-scorer"
-    const val TAB_BOXSCORE    = "boxscore"
-    const val TAB_LEAGUES     = "leagues"
-    const val TAB_TEAMS       = "teams"
-    const val TAB_GAMES       = "games"
-    const val TAB_STATS       = "stats"
-    const val TAB_LOGIN       = "login"
-    const val TAB_REGISTER    = "register"
+    const val TAB_BOXSCORE = "boxscore"
+    const val TAB_LEAGUES = "leagues"
+    const val TAB_TEAMS = "teams"
+    const val TAB_GAMES = "games"
+    const val TAB_STATS = "stats"
+    const val TAB_LOGIN = "login"
+    const val TAB_REGISTER = "register"
 }

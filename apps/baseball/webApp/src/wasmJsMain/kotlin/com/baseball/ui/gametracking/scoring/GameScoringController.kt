@@ -13,10 +13,10 @@ import com.baseball.models.HalfInning
 import com.baseball.models.Player
 import com.baseball.models.ScoringEventRequest
 import com.baseball.models.ScoringEventType
-import com.baseball.ui.state.launch
 import com.baseball.ui.state.NavTabs
 import com.baseball.ui.state.currentTab
 import com.baseball.ui.state.isSingleGameMode
+import com.baseball.ui.state.launch
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.updateActiveTabButtons
 import kotlinx.browser.document
@@ -88,7 +88,10 @@ class GameScoringController(
         controls.setAttribute("batter-stats", currBatter?.let {
             "${it.position} | #${it.jerseyNumber} | Bat: ${it.battingHand}"
         } ?: "AVG .333 | 2 HR")
-        controls.setAttribute("pitcher-name", game.gameState.currentPitcherName ?: currPitcher?.name ?: "Current Pitcher")
+        controls.setAttribute(
+            "pitcher-name",
+            game.gameState.currentPitcherName ?: currPitcher?.name ?: "Current Pitcher"
+        )
         controls.setAttribute("pitcher-stats", currPitcher?.let {
             "${it.position} | #${it.jerseyNumber} | Throw: ${it.throwingHand}"
         } ?: "ERA 2.50 | 15 K")
@@ -165,7 +168,17 @@ class GameScoringController(
         val batterId = game.gameState.currentBatterId ?: currentLineup.firstOrNull()?.id ?: 101L
         val pitcherId = game.gameState.currentPitcherId ?: currentPitcherId
 
-        recordEvent(PlayEventInput(type, batterId, pitcherId, finalDescription, isDoublePlay, isError, runnerAdvanceMap))
+        recordEvent(
+            PlayEventInput(
+                type,
+                batterId,
+                pitcherId,
+                finalDescription,
+                isDoublePlay,
+                isError,
+                runnerAdvanceMap
+            )
+        )
         renderCurrentTab()
     }
 

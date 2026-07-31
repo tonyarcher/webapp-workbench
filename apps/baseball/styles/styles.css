@@ -66,8 +66,13 @@ h1, h2, h3 {
 }
 
 @media (max-width: 900px) {
-    .action-grid-2col { grid-template-columns: 1fr; }
-    .action-grid-3col { grid-template-columns: 1fr 1fr; }
+    .action-grid-2col {
+        grid-template-columns: 1fr;
+    }
+
+    .action-grid-3col {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
 /* Card */
@@ -81,7 +86,9 @@ h1, h2, h3 {
     transition: all 0.3s ease;
 }
 
-.padding-md { padding: 1rem; }
+.padding-md {
+    padding: 1rem;
+}
 
 /* Buttons */
 .btn {
@@ -143,17 +150,42 @@ h1, h2, h3 {
 }
 
 /* Typography */
-.text-center        { text-align: center; }
-.font-bold          { font-weight: bold; }
-.text-accent-green  { color: var(--accent-green, #00cc66); }
-.text-muted         { color: var(--text-secondary); }
+.text-center {
+    text-align: center;
+}
+
+.font-bold {
+    font-weight: bold;
+}
+
+.text-accent-green {
+    color: var(--accent-green, #00cc66);
+}
+
+.text-muted {
+    color: var(--text-secondary);
+}
 
 /* Spacing */
-.margin-top-md      { margin-top: 1rem; }
-.margin-top-lg      { margin-top: 1.5rem; }
-.margin-bottom-md   { margin-bottom: 1rem; }
-.margin-bottom-lg   { margin-bottom: 1.5rem; }
-.padding-lg         { padding: 2rem; }
+.margin-top-md {
+    margin-top: 1rem;
+}
+
+.margin-top-lg {
+    margin-top: 1.5rem;
+}
+
+.margin-bottom-md {
+    margin-bottom: 1rem;
+}
+
+.margin-bottom-lg {
+    margin-bottom: 1.5rem;
+}
+
+.padding-lg {
+    padding: 2rem;
+}
 
 /* Server error banner — rendered by Kotlin on API failures */
 .server-error-banner {

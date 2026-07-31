@@ -17,8 +17,8 @@ export class BaseballActionGrid extends LitElement {
                 <h3 class="section-title">PITCH SELECTION (OPTIONAL)</h3>
                 <div class="pitch-types-row">
                     ${['Fastball', 'Curveball', 'Slider', 'Changeup', 'Sinker', 'Cutter'].map((pt) => {
-                        const isSelected = pt === this.currentPitchType;
-                        return html`
+            const isSelected = pt === this.currentPitchType;
+            return html`
                             <button
                                     class="btn ${isSelected ? 'btn-primary' : 'btn-secondary'}"
                                     @click=${() => this.emitPitchType(pt)}
@@ -26,7 +26,7 @@ export class BaseballActionGrid extends LitElement {
                                 ${pt}
                             </button>
                         `;
-                    })}
+        })}
                 </div>
 
                 <h3 class="section-title margin-top-md">PITCH RESULTS</h3>

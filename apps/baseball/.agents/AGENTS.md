@@ -9,9 +9,9 @@ Welcome. This file provides the general context, quality mandates, and workflow 
 * **Framework Agnosticism**: Web components must remain strictly isolated from Kotlin backend logic and future
   React/TanStack bindings. Keep web components purely standard-compliant.
 * **CSS Boundary Rule**:
-  * **Global Directory**: Holds design tokens, brand colors, fonts, and global variables (`:root`).
-  * **Component Directory**: Holds component-specific structure, layout, and shadow DOM styling. Component styles must
-    read from global variables, never hardcoded values.
+    * **Global Directory**: Holds design tokens, brand colors, fonts, and global variables (`:root`).
+    * **Component Directory**: Holds component-specific structure, layout, and shadow DOM styling. Component styles must
+      read from global variables, never hardcoded values.
 
 ## 2. Code Quality Mandates
 
@@ -20,11 +20,11 @@ Welcome. This file provides the general context, quality mandates, and workflow 
 * **Class & Package Structure**: Prefer short, single-responsibility classes/components. Split functionality across
   focused directories to avoid monolithic files.
 * **Naming Conventions**:
-  * Do NOT create classes, components, or objects whose names end with `-Er`, `-Or`, `-Manager`, `-Utils`, or
-    `-Helper`.
-  * Prefer descriptive, domain-specific names or interfaces with concrete implementations.
-  * Use long, self-documenting, non-abbreviated variable and property names (e.g., `pitcherName`, `cellBackground`,
-    `lineupUiContext`).
+    * Do NOT create classes, components, or objects whose names end with `-Er`, `-Or`, `-Manager`, `-Utils`, or
+      `-Helper`.
+    * Prefer descriptive, domain-specific names or interfaces with concrete implementations.
+    * Use long, self-documenting, non-abbreviated variable and property names (e.g., `pitcherName`, `cellBackground`,
+      `lineupUiContext`).
 
 ## 3. Communication & Output Guidelines (ADHD & Speed-Reading Optimized)
 
