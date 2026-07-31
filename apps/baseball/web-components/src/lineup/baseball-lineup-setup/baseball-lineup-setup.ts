@@ -18,13 +18,59 @@ export class BaseballLineupSetup extends LitElement {
 
     @property({type: String, attribute: 'home-team-name'}) homeTeamName = 'Home Team';
     @property({type: String, attribute: 'away-team-name'}) awayTeamName = 'Away Team';
+    @property({type: Boolean, attribute: 'is-open'}) isOpen = false;
 
-    @property({type: Array}) homeLineup: PlayerInfo[] = [];
-    @property({type: Array}) awayLineup: PlayerInfo[] = [];
-    @property({type: Array}) homeBench: PlayerInfo[] = [];
-    @property({type: Array}) awayBench: PlayerInfo[] = [];
+    @property({
+        type: Array,
+        attribute: 'home-lineup-json',
+        converter: {
+            fromAttribute: (val: string | null): PlayerInfo[] => {
+                if (!val) return [];
+                try { return JSON.parse(val); } catch { return []; }
+            }
+        }
+    })
+    homeLineup: PlayerInfo[] = [];
+
+    @property({
+        type: Array,
+        attribute: 'away-lineup-json',
+        converter: {
+            fromAttribute: (val: string | null): PlayerInfo[] => {
+                if (!val) return [];
+                try { return JSON.parse(val); } catch { return []; }
+            }
+        }
+    })
+    awayLineup: PlayerInfo[] = [];
+
+    @property({
+        type: Array,
+        attribute: 'home-bench-json',
+        converter: {
+            fromAttribute: (val: string | null): PlayerInfo[] => {
+                if (!val) return [];
+                try { return JSON.parse(val); } catch { return []; }
+            }
+        }
+    })
+    homeBench: PlayerInfo[] = [];
+
+    @property({
+        type: Array,
+        attribute: 'away-bench-json',
+        converter: {
+            fromAttribute: (val: string | null): PlayerInfo[] => {
+                if (!val) return [];
+                try { return JSON.parse(val); } catch { return []; }
+            }
+        }
+    })
+    awayBench: PlayerInfo[] = [];
 
     render() {
+        if (!this.isOpen) return html``;
+
         return html`
             <div class="overlay-backdrop">
                 <div class="dialog-card">
@@ -75,10 +121,14 @@ export class BaseballLineupSetup extends LitElement {
     }
 
     private onClose() {
-        this.dispatchEvent(new CustomEvent('close-lineup-setup', {bubbles: true}));
+        this.isOpen = false;
+        this.removeAttribute('is-open');
+        this.dispatchEvent(new CustomEvent('close-lineup-setup', {bubbles: true, composed: true}));
     }
 
     private onSave() {
+        this.isOpen = false;
+        this.removeAttribute('is-open');
         this.dispatchEvent(
             new CustomEvent('save-lineup-setup', {
                 detail: {
@@ -88,6 +138,7 @@ export class BaseballLineupSetup extends LitElement {
                     awayBench: this.awayBench,
                 },
                 bubbles: true,
+                composed: true,
             })
         );
     }

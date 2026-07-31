@@ -3,15 +3,20 @@ package com.baseball.ui.controller.scorer
 import com.baseball.api
 import com.baseball.game.GameManager
 import com.baseball.game.PlayEventInput
+import com.baseball.game.TeamLineupConfig
+import com.baseball.game.initGame
 import com.baseball.game.localAwayActivePitcherId
+import com.baseball.game.localAwayBench
 import com.baseball.game.localAwayLineup
 import com.baseball.game.localAwayRoster
 import com.baseball.game.localBoxScore
 import com.baseball.game.localEvents
 import com.baseball.game.localGame
 import com.baseball.game.localHomeActivePitcherId
+import com.baseball.game.localHomeBench
 import com.baseball.game.localHomeLineup
 import com.baseball.game.localHomeRoster
+import com.baseball.game.startNewGame
 import com.baseball.models.BoxScore
 import com.baseball.models.Game
 import com.baseball.models.GameStatus
@@ -19,6 +24,7 @@ import com.baseball.models.HalfInning
 import com.baseball.models.Player
 import com.baseball.models.ScoringEventRequest
 import com.baseball.models.ScoringEventType
+import com.baseball.seed.SeedData
 import com.baseball.ui.gametracking.scorebook.renderScorecardSheet
 import com.baseball.ui.state.NavTabs
 import com.baseball.ui.state.currentTab
@@ -56,9 +62,40 @@ object ScorerTabController {
         val boxScore = localBoxScore
 
         val scorerTab = document.createElement("baseball-scorer-tab")
+        val lineupDialog = document.createElement("baseball-lineup-setup")
+
+        scorerTab.addEventListener("start-new-game-click", {
+            initGame(forceReset = true)
+            renderCurrentTab()
+        })
+
+        scorerTab.addEventListener("open-lineup-setup-click", {
+            lineupDialog.setAttribute("is-open", "true")
+            lineupDialog.setAttribute("home-team-name", game?.homeTeam?.name ?: "Home Team")
+            lineupDialog.setAttribute("away-team-name", game?.awayTeam?.name ?: "Away Team")
+            lineupDialog.setAttribute("home-lineup-json", Json.encodeToString(localHomeLineup))
+            lineupDialog.setAttribute("away-lineup-json", Json.encodeToString(localAwayLineup))
+            lineupDialog.setAttribute("home-bench-json", Json.encodeToString(localHomeBench))
+            lineupDialog.setAttribute("away-bench-json", Json.encodeToString(localAwayBench))
+        })
+
+        lineupDialog.addEventListener("save-lineup-setup", {
+            if (game != null) {
+                startNewGame(
+                    homeTeam = game.homeTeam,
+                    awayTeam = game.awayTeam,
+                    homeConfig = TeamLineupConfig(localHomeLineup, localHomeBench, localHomeActivePitcherId),
+                    awayConfig = TeamLineupConfig(localAwayLineup, localAwayBench, localAwayActivePitcherId),
+                    useDh = true,
+                )
+            }
+            renderCurrentTab()
+        })
+
         if (game == null || boxScore == null) {
             scorerTab.setAttribute("no-game", "true")
             container.appendChild(scorerTab)
+            container.appendChild(lineupDialog)
             return
         }
 
@@ -88,6 +125,7 @@ object ScorerTabController {
         scorerTab.appendChild(bookMount)
 
         container.appendChild(scorerTab)
+        container.appendChild(lineupDialog)
     }
 
     private fun mountScoreboard(container: HTMLElement, game: Game, boxScore: BoxScore) {

@@ -72,6 +72,7 @@ describe('Leagues, Lineup & Welcome Components', () => {
 
     beforeEach(async () => {
       element = document.createElement('baseball-lineup-setup') as BaseballLineupSetup;
+      element.setAttribute('is-open', 'true');
       document.body.appendChild(element);
       await element.updateComplete;
     });

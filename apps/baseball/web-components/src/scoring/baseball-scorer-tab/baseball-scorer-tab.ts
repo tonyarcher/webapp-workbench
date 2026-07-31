@@ -15,11 +15,19 @@ export class BaseballScorerTab extends LitElement {
 
     render() {
         if (this.noGame) {
-            return html`<p class="empty-state">No active game scoring session.</p>`;
+            return html`
+                <div class="empty-state-container">
+                    <p class="empty-state">No active game scoring session.</p>
+                    <button class="btn btn-primary" @click=${this.onStartNewGame}>Start Local Game Session</button>
+                </div>
+            `;
         }
 
         return html`
-            <h1>Live Scoring: ${this.awayName} @ ${this.homeName}</h1>
+            <div class="header-row">
+                <h1>Live Scoring: ${this.awayName} @ ${this.homeName}</h1>
+                <button class="btn btn-secondary" @click=${this.onOpenLineupSetup}>Setup Lineups</button>
+            </div>
             <div class="scorer-top-grid">
                 <slot name="scoreboard"></slot>
                 <slot name="controls"></slot>
@@ -28,6 +36,14 @@ export class BaseballScorerTab extends LitElement {
                 <slot name="scorebook"></slot>
             </div>
         `;
+    }
+
+    private onStartNewGame() {
+        this.dispatchEvent(new CustomEvent('start-new-game-click', {bubbles: true, composed: true}));
+    }
+
+    private onOpenLineupSetup() {
+        this.dispatchEvent(new CustomEvent('open-lineup-setup-click', {bubbles: true, composed: true}));
     }
 }
 
