@@ -1,10 +1,13 @@
-import { html, css, unsafeCSS, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import dashTabCss from './baseball-dashboard-tab.css?inline';
+import {html, LitElement} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
+import dashTabCssText from './baseball-dashboard-tab.css?inline';
+
+const dashTabSheet = new CSSStyleSheet();
+dashTabSheet.replaceSync(dashTabCssText);
 
 @customElement('baseball-dashboard-tab')
 export class BaseballDashboardTab extends LitElement {
-  static styles = css`${unsafeCSS(dashTabCss)}`;
+  static styles = dashTabSheet;
 
   @property({ type: String, attribute: 'standings-json' }) standingsJson = '[]';
   @property({ type: String, attribute: 'schedule-json' }) scheduleJson = '[]';

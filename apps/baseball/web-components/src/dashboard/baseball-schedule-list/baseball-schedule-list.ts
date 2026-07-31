@@ -1,6 +1,9 @@
-import {css, html, LitElement, unsafeCSS} from 'lit';
+import {html, LitElement} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
-import scheduleCss from './baseball-schedule-list.css?inline';
+import scheduleCssText from './baseball-schedule-list.css?inline';
+
+const scheduleSheet = new CSSStyleSheet();
+scheduleSheet.replaceSync(scheduleCssText);
 
 export interface GameItem {
   id: number;
@@ -14,7 +17,7 @@ export interface GameItem {
 
 @customElement('baseball-schedule-list')
 export class BaseballScheduleList extends LitElement {
-    static styles = css`${unsafeCSS(scheduleCss)}`;
+  static styles = scheduleSheet;
 
   @property({ type: Array }) games: GameItem[] = [];
 

@@ -1,6 +1,9 @@
-import {css, html, LitElement, unsafeCSS} from 'lit';
+import {html, LitElement} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
-import rosterCss from './baseball-roster-table.css?inline';
+import rosterCssText from './baseball-roster-table.css?inline';
+
+const rosterSheet = new CSSStyleSheet();
+rosterSheet.replaceSync(rosterCssText);
 
 export interface RosterPlayer {
   id: number;
@@ -13,7 +16,7 @@ export interface RosterPlayer {
 
 @customElement('baseball-roster-table')
 export class BaseballRosterTable extends LitElement {
-  static styles = css`${unsafeCSS(rosterCss)}`;
+  static styles = rosterSheet;
 
   @property({ type: String, attribute: 'team-name' }) teamName = 'Team Roster';
   @property({ type: Array }) players: RosterPlayer[] = [];

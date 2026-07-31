@@ -1,10 +1,13 @@
-import { html, css, unsafeCSS, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import welcomeCss from './baseball-welcome-screen.css?inline';
+import {html, LitElement} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
+import welcomeCssText from './baseball-welcome-screen.css?inline';
+
+const welcomeSheet = new CSSStyleSheet();
+welcomeSheet.replaceSync(welcomeCssText);
 
 @customElement('baseball-welcome-screen')
 export class BaseballWelcomeScreen extends LitElement {
-  static styles = css`${unsafeCSS(welcomeCss)}`;
+  static styles = welcomeSheet;
 
   @property({ type: Boolean, attribute: 'server-online' }) serverOnline = true;
 

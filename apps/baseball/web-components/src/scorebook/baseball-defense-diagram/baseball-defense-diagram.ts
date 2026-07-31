@@ -1,53 +1,58 @@
-import { html, css, unsafeCSS, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import defenseCss from './baseball-defense-diagram.css?inline';
+import {html, LitElement} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
+import defenseCssText from './baseball-defense-diagram.css?inline';
 
-export interface Fielder {
-  position: string;
-  name: string;
+const defenseSheet = new CSSStyleSheet();
+defenseSheet.replaceSync(defenseCssText);
+
+export interface FielderPosition {
+  posNum: number;
+  posName: string;
+  playerName: string;
+  jerseyNumber: number;
+  topPct: number;
+  leftPct: number;
 }
 
 @customElement('baseball-defense-diagram')
 export class BaseballDefenseDiagram extends LitElement {
-  static styles = css`${unsafeCSS(defenseCss)}`;
+  static styles = defenseSheet;
 
-  @property({ type: Array }) fielders: Fielder[] = [];
-
-  @property({
-    type: String,
-    attribute: 'fielders-json',
-    converter: {
-      fromAttribute: (value: string | null) => {
-        if (!value) return [];
-        try {
-          return JSON.parse(value);
-        } catch {
-          return [];
-        }
-      }
-    }
-  })
-  set fieldersJson(val: Fielder[]) {
-    this.fielders = val;
-  }
+  @property({type: String, attribute: 'defending-team'}) defendingTeam = 'Defending Team';
+  @property({type: Array}) fielders: FielderPosition[] = [];
 
   render() {
-    const positions = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
-
     return html`
-      <div class="field-diagram-card">
-        <h3>DEFENSIVE POSITIONS</h3>
-        <div class="field-diagram-wrapper">
-          <div id="field-diamond-bg"></div>
-          ${positions.map((posCode) => {
-            const valFielder = this.fielders.find((f) => f.position === posCode);
-            const pName = valFielder ? valFielder.name : posCode;
-            return html`
-              <div class="field-position-badge pos-pos-${posCode}">
-                <span>${posCode}: ${pName}</span>
+      <div class="card">
+        <h2>Defensive Alignment - ${this.defendingTeam}</h2>
+
+        <div class="field-container">
+          <div class="foul-line-left"></div>
+          <div class="foul-line-right"></div>
+
+          <div class="infield-diamond">
+            <div class="field-base f-home"></div>
+            <div class="field-base f-first"></div>
+            <div class="field-base f-second"></div>
+            <div class="field-base f-third"></div>
+          </div>
+
+          <div class="pitcher-mound"></div>
+
+          ${this.fielders.map(
+              (f) => html`
+                <div
+                    class="fielder-node"
+                    style="top: ${f.topPct}%; left: ${f.leftPct}%;"
+                >
+                  <div class="pos-badge-icon">${f.posNum}</div>
+                  <div class="fielder-info">
+                    <span class="player-name">${f.playerName}</span>
+                    <span class="pos-code">#${f.jerseyNumber} ${f.posName}</span>
+                  </div>
               </div>
-            `;
-          })}
+              `
+          )}
         </div>
       </div>
     `;

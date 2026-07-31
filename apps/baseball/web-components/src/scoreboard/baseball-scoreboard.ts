@@ -1,10 +1,13 @@
-import { html, css, unsafeCSS, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import scoreboardCss from './baseball-scoreboard.css?inline';
+import {html, LitElement} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
+import scoreboardCssText from './baseball-scoreboard.css?inline';
+
+const scoreboardStyleSheet = new CSSStyleSheet();
+scoreboardStyleSheet.replaceSync(scoreboardCssText);
 
 @customElement('baseball-scoreboard')
 export class BaseballScoreboard extends LitElement {
-  static styles = css`${unsafeCSS(scoreboardCss)}`;
+    static styles = scoreboardStyleSheet;
 
   @property({ type: String, attribute: 'away-name' }) awayName = 'AWAY';
   @property({ type: String, attribute: 'home-name' }) homeName = 'HOME';

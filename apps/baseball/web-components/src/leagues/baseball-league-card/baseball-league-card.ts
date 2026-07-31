@@ -1,10 +1,13 @@
-import { html, css, unsafeCSS, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import leagueCardCss from './baseball-league-card.css?inline';
+import {html, LitElement} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
+import leagueCardCssText from './baseball-league-card.css?inline';
+
+const leagueCardSheet = new CSSStyleSheet();
+leagueCardSheet.replaceSync(leagueCardCssText);
 
 @customElement('baseball-league-card')
 export class BaseballLeagueCard extends LitElement {
-  static styles = css`${unsafeCSS(leagueCardCss)}`;
+  static styles = leagueCardSheet;
 
   @property({ type: String, attribute: 'league-name' }) leagueName = '';
   @property({ type: String, attribute: 'league-details' }) leagueDetails = '';

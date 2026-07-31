@@ -1,65 +1,87 @@
-import { html, css, unsafeCSS, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import navCss from './baseball-nav-bar.css?inline';
+import {html, LitElement} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
+import navBarCssText from './baseball-nav-bar.css?inline';
 
-export interface NavTabItem {
-  id: string;
-  label: string;
-}
+const navBarSheet = new CSSStyleSheet();
+navBarSheet.replaceSync(navBarCssText);
 
 @customElement('baseball-nav-bar')
 export class BaseballNavBar extends LitElement {
-  static styles = css`${unsafeCSS(navCss)}`;
+  static styles = navBarSheet;
 
-  @property({ type: String, attribute: 'active-tab' }) activeTab = 'dashboard';
+  @property({type: String, attribute: 'active-tab'}) activeTab = 'leagues';
   @property({ type: String, attribute: 'user-name' }) userName = '';
 
-  private readonly tabs: NavTabItem[] = [
-    { id: 'dashboard', label: 'Dashboard' },
-    { id: 'scorer', label: 'Scorer' },
-    { id: 'boxscore', label: 'Box Score' },
-    { id: 'stats', label: 'Stats' },
-    { id: 'teams', label: 'Teams' },
-    { id: 'leagues', label: 'Leagues' }
-  ];
+  render() {
+    return html`
+      <header class="navbar">
+        <div class="brand">
+          <span class="logo">⚾</span>
+          <span class="brand-name">GRAND SLAM BASEBALL</span>
+        </div>
 
-  private onTabClick(tabId: string) {
+        <nav class="nav-links">
+          <button
+              class="nav-item ${this.activeTab === 'live-scorer' ? 'active' : ''}"
+              @click=${() => this.onSelectTab('live-scorer')}
+          >
+            Live Scorer
+          </button>
+          <button
+              class="nav-item ${this.activeTab === 'boxscore' ? 'active' : ''}"
+              @click=${() => this.onSelectTab('boxscore')}
+          >
+            Box Score
+          </button>
+          <button
+              class="nav-item ${this.activeTab === 'leagues' ? 'active' : ''}"
+              @click=${() => this.onSelectTab('leagues')}
+          >
+            Leagues
+          </button>
+          <button
+              class="nav-item ${this.activeTab === 'teams' ? 'active' : ''}"
+              @click=${() => this.onSelectTab('teams')}
+          >
+            Teams
+          </button>
+          <button
+              class="nav-item ${this.activeTab === 'games' ? 'active' : ''}"
+              @click=${() => this.onSelectTab('games')}
+          >
+            Dashboard
+          </button>
+          <button
+              class="nav-item ${this.activeTab === 'stats' ? 'active' : ''}"
+              @click=${() => this.onSelectTab('stats')}
+          >
+            Stats
+          </button>
+        </nav>
+
+        <div class="auth-status">
+          ${this.userName
+              ? html`<span class="user-greeting">👤 ${this.userName}</span>`
+              : html`
+                <button
+                  class="nav-item auth-btn ${this.activeTab === 'login' ? 'active' : ''}"
+                  @click=${() => this.onSelectTab('login')}
+                >
+                  Sign In
+                </button>
+              `}
+        </div>
+      </header>
+    `;
+  }
+
+  private onSelectTab(tabId: string) {
     this.dispatchEvent(
       new CustomEvent('tab-selected', {
         detail: { tabId },
         bubbles: true
       })
     );
-  }
-
-  render() {
-    return html`
-      <nav class="nav-container">
-        <div class="brand">
-          <span>⚾ BASEBALL</span>
-          <span class="brand-badge">PRO</span>
-        </div>
-
-        <div class="nav-tabs">
-          ${this.tabs.map(
-            (t) => html`
-              <button
-                class="nav-tab ${this.activeTab === t.id ? 'active' : ''}"
-                @click=${() => this.onTabClick(t.id)}
-              >
-                ${t.label}
-              </button>
-            `
-          )}
-          <button
-            class="nav-tab ${this.activeTab === 'auth' ? 'active' : ''}"
-            @click=${() => this.onTabClick('auth')}
-          >
-            ${this.userName ? `👤 ${this.userName}` : '🔑 Login'}
-          </button>
-        </div>
-      </nav>
-    `;
   }
 }
 

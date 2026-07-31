@@ -1,89 +1,111 @@
-import { html, css, unsafeCSS, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import actionGridCss from './baseball-action-grid.css?inline';
+import {html, LitElement} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
+import actionGridCssText from './baseball-action-grid.css?inline';
+
+const actionGridSheet = new CSSStyleSheet();
+actionGridSheet.replaceSync(actionGridCssText);
 
 @customElement('baseball-action-grid')
 export class BaseballActionGrid extends LitElement {
-  static styles = css`${unsafeCSS(actionGridCss)}`;
+    static styles = actionGridSheet;
 
-  @property({ type: String, attribute: 'current-pitch-type' }) currentPitchType: string | null = null;
-
-  private selectPitchType(pType: string) {
-    const selected = this.currentPitchType === pType ? '' : pType;
-    this.setAttribute('selected-pitch-type', selected);
-    this.dispatchEvent(new Event('pitch-type-selected', { bubbles: true }));
-  }
-
-  private triggerEvent(eventType: string) {
-    this.setAttribute('triggered-event-type', eventType);
-    this.dispatchEvent(new Event('action-triggered', { bubbles: true }));
-  }
-
-  private triggerStep2(eventType: string, label: string) {
-    this.setAttribute('step2-event-type', eventType);
-    this.setAttribute('step2-label', label);
-    this.dispatchEvent(new Event('step2-requested', { bubbles: true }));
-  }
+    @property({type: String, attribute: 'current-pitch-type'}) currentPitchType = '';
 
   render() {
-    const pitchTypes = ['Fastball', 'Breaking Ball', 'Offspeed'];
-
     return html`
-      <div class="flex-gap-sm margin-bottom-md">
-        ${pitchTypes.map((pType) => {
-          const isSelected = pType === this.currentPitchType;
-          return html`
-            <button
-              class="btn ${isSelected ? 'btn-primary' : 'btn-secondary'} flex-grow"
-              @click=${() => this.selectPitchType(pType)}
-            >
-              ${pType}
-            </button>
-          `;
-        })}
-      </div>
+        <div class="card action-card">
+            <h3 class="section-title">PITCH SELECTION (OPTIONAL)</h3>
+            <div class="pitch-types-row">
+                ${['Fastball', 'Curveball', 'Slider', 'Changeup', 'Sinker', 'Cutter'].map((pt) => {
+                    const isSelected = pt === this.currentPitchType;
+                    return html`
+                        <button
+                                class="btn ${isSelected ? 'btn-primary' : 'btn-secondary'}"
+                                @click=${() => this.emitPitchType(pt)}
+                        >
+                            ${pt}
+                        </button>
+                    `;
+                })}
+            </div>
 
-      <div class="text-accent-green margin-bottom-sm">PITCH RESULTS</div>
-      <div class="action-grid-3col margin-bottom-md">
-        <button class="btn btn-action" @click=${() => this.triggerEvent('BALL')}>Ball (B+1)</button>
-        <button class="btn btn-action" @click=${() => this.triggerEvent('STRIKE')}>Strike (S+1)</button>
-        <button class="btn btn-action" @click=${() => this.triggerEvent('FOUL')}>Foul</button>
-      </div>
+            <h3 class="section-title margin-top-md">PITCH RESULTS</h3>
+            <div class="action-grid-3col">
+                <button class="btn btn-action btn-ball" @click=${() => this.emitEvent('BALL')}>BALL</button>
+                <button class="btn btn-action btn-strike" @click=${() => this.emitEvent('STRIKE')}>STRIKE LOOKING
+                </button>
+                <button class="btn btn-action btn-strike" @click=${() => this.emitEvent('STRIKE')}>STRIKE SWINGING
+                </button>
+                <button class="btn btn-action btn-foul" @click=${() => this.emitEvent('FOUL')}>FOUL BALL</button>
+            </div>
 
-      <div class="text-accent-green margin-bottom-sm">PLATE & IN-PLAY RESULTS</div>
-      <div class="action-grid-3col margin-bottom-md">
-        <button class="btn btn-action" @click=${() => this.triggerStep2('SINGLE', 'Single (1B)')}>Single (1B)</button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('DOUBLE', 'Double (2B)')}>Double (2B)</button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('TRIPLE', 'Triple (3B)')}>Triple (3B)</button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('HOME_RUN', 'Home Run (HR)')}>Home Run (HR)</button>
-        <button class="btn btn-action" @click=${() => this.triggerEvent('WALK')}>Walk (BB)</button>
-        <button class="btn btn-action" @click=${() => this.triggerEvent('HIT_BY_PITCH')}>HBP</button>
-        <button class="btn btn-action" @click=${() => this.triggerEvent('STRIKEOUT')}>Strikeout (K)</button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('GROUNDOUT', 'Groundout')}>Groundout</button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('FLYOUT', 'Flyout')}>Flyout</button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('LINE_OUT', 'Line Out')}>Line Out</button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('POP_OUT', 'Pop Out')}>Pop Out</button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('SACRIFICE_FLY', 'Sac Fly')}>Sac Fly</button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('ERROR', 'Reached on Error')}>Reached on Error</button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('FIELDER_CHOICE', "Fielder's Choice")}>Fielder's Choice</button>
-      </div>
-
-      <div class="text-accent-green margin-bottom-sm">BASE RUNNING EVENTS</div>
-      <div class="action-grid-2col">
-        <button class="btn btn-action" @click=${() => this.triggerStep2('STOLEN_BASE', 'Stolen Base')}>
-          Stolen Base
-        </button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('CAUGHT_STEALING', 'Caught Stealing')}>
-          Caught Stealing
-        </button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('PICKED_OFF', 'Picked Off')}>
-          Picked Off
-        </button>
-        <button class="btn btn-action" @click=${() => this.triggerStep2('WILD_PITCH', 'WP / PB / Balk')}>
-          WP / PB / Balk
-        </button>
+            <h3 class="section-title margin-top-md">PLATE & IN-PLAY RESULTS</h3>
+            <div class="action-grid-3col">
+                <button class="btn btn-action btn-hit" @click=${() => this.emitStep2('SINGLE', 'Single (1B)')}>SINGLE
+                    (1B)
+                </button>
+                <button class="btn btn-action btn-hit" @click=${() => this.emitStep2('DOUBLE', 'Double (2B)')}>DOUBLE
+                    (2B)
+                </button>
+                <button class="btn btn-action btn-hit" @click=${() => this.emitStep2('TRIPLE', 'Triple (3B)')}>TRIPLE
+                    (3B)
+                </button>
+                <button class="btn btn-action btn-hit" @click=${() => this.emitStep2('HOME_RUN', 'Home Run (HR)')}>HOME
+                    RUN (HR)
+                </button>
+                <button class="btn btn-action btn-walk" @click=${() => this.emitEvent('WALK')}>WALK (BB)</button>
+                <button class="btn btn-action btn-walk" @click=${() => this.emitEvent('HIT_BY_PITCH')}>HIT BY PITCH
+                    (HBP)
+                </button>
+                <button class="btn btn-action btn-out" @click=${() => this.emitEvent('STRIKEOUT')}>STRIKEOUT (K)
+                </button>
+                <button class="btn btn-action btn-out" @click=${() => this.emitStep2('GROUNDOUT', 'Groundout')}>
+                    GROUNDOUT
+                </button>
+                <button class="btn btn-action btn-out" @click=${() => this.emitStep2('FLYOUT', 'Flyout')}>FLYOUT
+                </button>
+                <button class="btn btn-action btn-out" @click=${() => this.emitStep2('LINE_OUT', 'Line Out')}>LINE OUT
+                </button>
+                <button class="btn btn-action btn-out" @click=${() => this.emitStep2('POP_OUT', 'Pop Out')}>POP OUT
+                </button>
+                <button class="btn btn-action btn-out" @click=${() => this.emitStep2('SACRIFICE_FLY', 'Sac Fly')}>SAC
+                    FLY
+                </button>
+                <button class="btn btn-action btn-out" @click=${() => this.emitStep2('ERROR', 'Error (E)')}>ERROR (E)
+                </button>
+                <button class="btn btn-action btn-out"
+                        @click=${() => this.emitStep2('FIELDER_CHOICE', "Fielder's Choice")}>FIELDER'S CHOICE
+                </button>
+            </div>
       </div>
     `;
+  }
+
+    private emitPitchType(pitchType: string) {
+        this.dispatchEvent(
+            new CustomEvent('pitch-type-selected', {
+                detail: {pitchType},
+                bubbles: true,
+            })
+        );
+  }
+
+    private emitEvent(eventType: string) {
+        this.dispatchEvent(
+            new CustomEvent('trigger-scoring-event', {
+                detail: {eventType},
+                bubbles: true,
+            })
+        );
+  }
+
+    private emitStep2(eventType: string, baseLabel: string) {
+        this.dispatchEvent(
+            new CustomEvent('render-step2', {
+                detail: {eventType, baseLabel},
+                bubbles: true,
+            })
+        );
   }
 }
 

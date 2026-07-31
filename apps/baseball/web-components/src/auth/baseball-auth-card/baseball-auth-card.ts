@@ -1,71 +1,50 @@
-import { html, css, unsafeCSS, LitElement } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import authCss from './baseball-auth-card.css?inline';
+import {html, LitElement} from 'lit';
+import {customElement, property, state} from 'lit/decorators.js';
+import authCardCssText from './baseball-auth-card.css?inline';
+
+const authCardSheet = new CSSStyleSheet();
+authCardSheet.replaceSync(authCardCssText);
 
 @customElement('baseball-auth-card')
 export class BaseballAuthCard extends LitElement {
-  static styles = css`${unsafeCSS(authCss)}`;
+    static styles = authCardSheet;
 
-  @property({ type: String, attribute: 'error-message' }) errorMessage = '';
+    @property({type: Boolean, attribute: 'is-sign-up'}) isSignUp = false;
   @property({ type: String, attribute: 'logged-in-user' }) loggedInUser = '';
+    @property({type: String, attribute: 'error-message'}) errorMessage = '';
 
-  @state() isSignUpMode = false;
-  @state() username = '';
-  @state() password = '';
-
-  private toggleMode() {
-    this.isSignUpMode = !this.isSignUpMode;
-    this.errorMessage = '';
-  }
-
-  private onSubmit(e: Event) {
-    e.preventDefault();
-    this.dispatchEvent(
-      new CustomEvent('auth-submit', {
-        detail: {
-          isSignUp: this.isSignUpMode,
-          username: this.username,
-          password: this.password
-        },
-        bubbles: true
-      })
-    );
-  }
-
-  private onLogout() {
-    this.dispatchEvent(new CustomEvent('auth-logout', { bubbles: true }));
-  }
+    @state() private username = '';
+    @state() private password = '';
 
   render() {
     if (this.loggedInUser) {
       return html`
-        <div class="auth-card">
-          <div class="auth-header">
-            <h2>Welcome, ${this.loggedInUser}!</h2>
-            <p>You are signed in to Baseball Pro account.</p>
-          </div>
-          <button class="btn-submit" @click=${this.onLogout}>Sign Out</button>
+          <div class="card auth-container text-center">
+              <h2 class="welcome-title">Welcome back, ${this.loggedInUser}!</h2>
+              <p class="auth-desc">You are signed in to Grand Slam Baseball.</p>
+              <button class="btn btn-danger margin-top-md" @click=${this.handleLogout}>Sign Out</button>
         </div>
       `;
     }
 
     return html`
-      <div class="auth-card">
-        <div class="auth-header">
-          <h2>${this.isSignUpMode ? 'Create Account' : 'Sign In'}</h2>
-          <p>${this.isSignUpMode ? 'Join Baseball Pro to track games & leagues' : 'Enter your credentials to continue'}</p>
-        </div>
+        <div class="card auth-container">
+            <h2>${this.isSignUp ? 'Create an Account' : 'Sign In'}</h2>
+            <p class="auth-desc">
+                ${this.isSignUp ? 'Join to manage leagues and teams' : 'Access your league account'}
+            </p>
 
         ${this.errorMessage ? html`<div class="error-banner">${this.errorMessage}</div>` : ''}
 
-        <form @submit=${this.onSubmit}>
+            <form @submit=${this.handleSubmit}>
           <div class="form-group">
-            <label>Username</label>
+              <label>Username / Email</label>
             <input
               type="text"
-              required
+              class="form-control"
               .value=${this.username}
               @input=${(e: Event) => (this.username = (e.target as HTMLInputElement).value)}
+              required
             />
           </div>
 
@@ -73,25 +52,48 @@ export class BaseballAuthCard extends LitElement {
             <label>Password</label>
             <input
               type="password"
-              required
+              class="form-control"
               .value=${this.password}
               @input=${(e: Event) => (this.password = (e.target as HTMLInputElement).value)}
+              required
             />
           </div>
 
-          <button type="submit" class="btn-submit">
-            ${this.isSignUpMode ? 'Register Account' : 'Sign In'}
+                <button type="submit" class="btn btn-full margin-top-md">
+                    ${this.isSignUp ? 'Sign Up' : 'Sign In'}
           </button>
         </form>
 
-        <div class="toggle-mode">
-          ${this.isSignUpMode ? 'Already have an account?' : "Don't have an account?"}
-          <span class="toggle-link" @click=${this.toggleMode}>
-            ${this.isSignUpMode ? 'Sign In' : 'Sign Up'}
-          </span>
+            <div class="toggle-mode margin-top-md">
+                <span>${this.isSignUp ? 'Already have an account?' : "Don't have an account?"}</span>
+                <button class="btn-link" @click=${() => (this.isSignUp = !this.isSignUp)}>
+                    ${this.isSignUp ? 'Sign In' : 'Register Now'}
+                </button>
         </div>
       </div>
     `;
+  }
+
+    private handleSubmit(e: Event) {
+    e.preventDefault();
+    this.dispatchEvent(
+      new CustomEvent('auth-submit', {
+        detail: {
+            isSignUp: this.isSignUp,
+          username: this.username,
+            password: this.password,
+        },
+          bubbles: true,
+      })
+    );
+  }
+
+    private handleLogout() {
+        this.dispatchEvent(
+            new CustomEvent('auth-logout', {
+                bubbles: true,
+            })
+        );
   }
 }
 

@@ -1,6 +1,9 @@
-import {css, html, LitElement, unsafeCSS} from 'lit';
+import {html, LitElement} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
-import standingsCss from './baseball-standings-table.css?inline';
+import standingsCssText from './baseball-standings-table.css?inline';
+
+const standingsSheet = new CSSStyleSheet();
+standingsSheet.replaceSync(standingsCssText);
 
 export interface StandingsRow {
   teamName: string;
@@ -14,7 +17,7 @@ export interface StandingsRow {
 
 @customElement('baseball-standings-table')
 export class BaseballStandingsTable extends LitElement {
-    static styles = css`${unsafeCSS(standingsCss)}`;
+  static styles = standingsSheet;
 
   @property({ type: Array }) standings: StandingsRow[] = [];
 
