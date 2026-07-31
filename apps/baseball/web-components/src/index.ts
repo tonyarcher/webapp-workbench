@@ -1,7 +1,7 @@
 import './scoreboard/baseball-scoreboard';
-import './scorebook/baseball-defense-diagram';
+import './scorebook/baseball-defense-diagram/baseball-defense-diagram';
 import './scorebook/baseball-scorebook-grid';
-import './scoring/baseball-matchup-card';
+import './scoring/baseball-matchup-card/baseball-matchup-card';
 import './scoring/baseball-action-grid';
 import './dashboard/baseball-standings-table';
 import './dashboard/baseball-schedule-list';
