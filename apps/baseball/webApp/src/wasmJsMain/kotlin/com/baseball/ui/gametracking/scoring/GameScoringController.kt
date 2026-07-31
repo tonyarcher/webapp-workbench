@@ -129,16 +129,17 @@ class GameScoringController(
         gridEl.innerHTML = ""
 
         gridEl.append.div {
-            div(classes = "text-accent-green font-bold margin-bottom-sm") {
-                +"PITCH TYPE (OPTIONAL)"
-            }
-            renderPitchTypes(optionalPitchType) { pType ->
-                optionalPitchType = pType
-                renderActionGrid()
-            }
-            renderPitchResultsSection { type -> triggerScoringEvent(type) }
+            renderActionGridComponent(
+                parent = this,
+                currentPitchType = optionalPitchType,
+                onPitchTypeSelected = { pType ->
+                    optionalPitchType = pType
+                    renderActionGrid()
+                },
+                onTriggerEvent = { type -> triggerScoringEvent(type) },
+                onRenderStep2 = { type, label -> renderBaseRunningStep2(type, label) },
+            )
             renderPlateResultsSection()
-            renderBaseRunningEventsSection { type, label -> renderBaseRunningStep2(type, label) }
         }
     }
 

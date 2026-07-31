@@ -1,66 +1,55 @@
 package com.baseball.ui.gametracking.scoring
 
 import com.baseball.models.ScoringEventType
+import kotlinx.browser.document
 import kotlinx.html.DIV
-import kotlinx.html.button
 import kotlinx.html.div
-import kotlinx.html.js.onClickFunction
+import kotlinx.html.id
+import org.w3c.dom.Element
+import org.w3c.dom.HTMLElement
 
-internal fun DIV.renderPitchTypes(
+internal fun renderActionGridComponent(
+    parent: DIV,
     currentPitchType: String?,
     onPitchTypeSelected: (String?) -> Unit,
-) {
-    div(classes = "flex-gap-sm margin-bottom-md") {
-        val pitchTypes = listOf("Fastball", "Breaking Ball", "Offspeed")
-        pitchTypes.forEach { pType ->
-            val isSelected = pType == currentPitchType
-            button(classes = if (isSelected) "btn btn-primary flex-grow" else "btn btn-secondary flex-grow") {
-                +pType
-                onClickFunction = {
-                    onPitchTypeSelected(if (isSelected) null else pType)
-                }
-            }
-        }
-    }
-}
-
-internal fun DIV.renderPitchResultsSection(
     onTriggerEvent: (ScoringEventType) -> Unit,
-) {
-    div(classes = "text-accent-green font-bold margin-bottom-sm") {
-        +"PITCH RESULTS"
-    }
-    div(classes = "action-grid-3col") {
-        listOf(
-            ScoringEventType.BALL to "Ball (B+1)",
-            ScoringEventType.STRIKE to "Strike (S+1)",
-            ScoringEventType.FOUL to "Foul",
-        ).forEach { (type, label) ->
-            button(classes = "btn btn-secondary btn-action") {
-                +label
-                onClickFunction = { onTriggerEvent(type) }
-            }
-        }
-    }
-}
-
-internal fun DIV.renderBaseRunningEventsSection(
     onRenderStep2: (ScoringEventType, String) -> Unit,
 ) {
-    div(classes = "text-accent-green font-bold margin-top-md margin-bottom-sm") {
-        +"BASE RUNNING EVENTS"
-    }
-    div(classes = "action-grid-2col") {
-        listOf(
-            ScoringEventType.STOLEN_BASE to "Stolen Base",
-            ScoringEventType.CAUGHT_STEALING to "Caught Stealing",
-            ScoringEventType.PICKED_OFF to "Picked Off",
-            ScoringEventType.WILD_PITCH to "WP / PB / Balk",
-        ).forEach { (type, label) ->
-            button(classes = "btn btn-secondary btn-action") {
-                +label
-                onClickFunction = { onRenderStep2(type, label) }
-            }
-        }
-    }
+    parent.div { id = "action-grid-mount-point" }
+
+    val mountPoint = document.getElementById("action-grid-mount-point") as? HTMLElement ?: return
+    mountPoint.innerHTML = ""
+    val grid = document.createElement("baseball-action-grid")
+    currentPitchType?.let { grid.setAttribute("current-pitch-type", it) }
+
+    bindActionGridEvents(grid, onPitchTypeSelected, onTriggerEvent, onRenderStep2)
+    mountPoint.appendChild(grid)
 }
+
+private fun bindActionGridEvents(
+    grid: Element,
+    onPitchTypeSelected: (String?) -> Unit,
+    onTriggerEvent: (ScoringEventType) -> Unit,
+    onRenderStep2: (ScoringEventType, String) -> Unit,
+) {
+    grid.addEventListener("pitch-type-selected", { event ->
+        val target = event.target as? Element
+        val pitchType = target?.getAttribute("selected-pitch-type")
+        onPitchTypeSelected(if (isNullOrBlankString(pitchType)) null else pitchType)
+    })
+    grid.addEventListener("action-triggered", { event ->
+        val target = event.target as? Element
+        val eventTypeStr = target?.getAttribute("triggered-event-type") ?: ""
+        runCatching { ScoringEventType.valueOf(eventTypeStr) }.getOrNull()?.let(onTriggerEvent)
+    })
+    grid.addEventListener("step2-requested", { event ->
+        val target = event.target as? Element
+        val eventTypeStr = target?.getAttribute("step2-event-type") ?: ""
+        val label = target?.getAttribute("step2-label") ?: ""
+        runCatching { ScoringEventType.valueOf(eventTypeStr) }.getOrNull()?.let { type ->
+            onRenderStep2(type, label)
+        }
+    })
+}
+
+private fun isNullOrBlankString(value: String?): Boolean = value == null || value.isBlank()
