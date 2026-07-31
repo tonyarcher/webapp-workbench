@@ -24,7 +24,7 @@ fun renderScorebookBottomSection(
     teamState: ScorebookTeamState,
     data: ScorebookSectionData,
 ) {
-    container.append.div(classes = "flex-gap-md") {
+    container.append.div(classes = "scorebook-bottom-section") {
         renderDefenseDiagram(this, isHomeBatting, teamState)
         renderOpposingPitchingStats(this, isHomeBatting, data.boxScore)
         renderScoreboardSummary(this, data)
