@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "@web-types/lit": "^2.0.0-3"
+  }
+}

@@ -3,6 +3,7 @@ import './scorebook/baseball-defense-diagram/baseball-defense-diagram';
 import './scorebook/baseball-scorebook-grid';
 import './scoring/baseball-matchup-card/baseball-matchup-card';
 import './scoring/baseball-action-grid';
+import './lineup/baseball-lineup-setup/baseball-lineup-setup';
 import './dashboard/baseball-standings-table';
 import './dashboard/baseball-schedule-list';
 import './stats/baseball-stats-table';
