@@ -1,15 +1,2 @@
 package com.baseball.ui.gametracking.scoring
 
-import com.baseball.models.Game
-import com.baseball.models.Player
-import org.w3c.dom.HTMLElement
-
-fun renderGameScoringControls(
-    rightCol: HTMLElement,
-    game: Game,
-    homeRoster: List<Player>,
-    awayRoster: List<Player>
-) {
-    val controller = GameScoringController(rightCol, game, homeRoster, awayRoster)
-    controller.render()
-}

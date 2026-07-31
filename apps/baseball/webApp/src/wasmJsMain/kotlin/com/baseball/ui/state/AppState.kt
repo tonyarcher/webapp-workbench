@@ -1,6 +1,5 @@
 package com.baseball.ui.state
 
-import com.baseball.models.GameStatus
 import com.baseball.models.League
 import com.baseball.models.Season
 import com.baseball.models.Team
@@ -13,8 +12,6 @@ var selectedLeagueId: Long? = null
 var selectedSeasonId: Long? = null
 var selectedTeamId: Long? = null
 var selectedGameId: Long? = null
-
-var selectedGameStatus: GameStatus? = null
 
 var isSingleGameMode: Boolean = false
 
@@ -37,6 +34,3 @@ object NavTabs {
     const val TAB_REGISTER = "register"
 }
 
-fun saveNavState() {
-    saveAppNavState()
-}

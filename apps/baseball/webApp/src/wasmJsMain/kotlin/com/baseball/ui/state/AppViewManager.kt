@@ -4,12 +4,10 @@ import com.baseball.api
 import com.baseball.auth.UserSession
 import com.baseball.authService
 import com.baseball.game.initGame
-import com.baseball.game.localGame
 import com.baseball.ui.core.launch
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
@@ -47,13 +45,6 @@ object AppViewManager {
         val contentArea = document.getElementById("content-area") as? HTMLElement ?: return
         contentArea.innerHTML = ""
         tabRenderers[currentTab]?.invoke(contentArea)
-    }
-
-    fun isGameInProgress(): Boolean {
-        if (isSingleGameMode) {
-            return localGame?.status == com.baseball.models.GameStatus.IN_PROGRESS
-        }
-        return selectedGameStatus == com.baseball.models.GameStatus.IN_PROGRESS
     }
 
     fun registerTabRenderers(renderers: Map<String, (HTMLElement) -> Unit>) {
@@ -167,7 +158,7 @@ object AppViewManager {
     }
 
     fun updateActiveTabButtons() {
-        println("Active tab: ${AppViewManager.currentTab}")
+        println("Active tab: ${currentTab}")
     }
 }
 
@@ -250,19 +241,10 @@ private object AppRoutingHandler {
         NavTabs.TAB_REGISTER,
     )
 
-    fun goBackToWelcome() {
-        selectedGameId = null
-        AppViewManager.serverConnectionError = null
-        window.location.hash = "welcome"
-    }
 }
 
 fun updateActiveTabButtons() {
     AppViewManager.updateActiveTabButtons()
-}
-
-fun goBackToWelcome() {
-    AppRoutingHandler.goBackToWelcome()
 }
 
 fun renderCurrentTab() {

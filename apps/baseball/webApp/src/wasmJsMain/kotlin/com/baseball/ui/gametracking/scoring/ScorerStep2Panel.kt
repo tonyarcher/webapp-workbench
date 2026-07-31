@@ -14,7 +14,6 @@ class ScorerStep2Panel(
     internal var hasDoublePlay = false
     internal val throwSequence = mutableListOf<Int>()
     internal var isUnassisted = false
-    internal var hrType = "Over the Fence"
     internal val runnerAdvances = mutableMapOf<String, Int>()
 
     init {
