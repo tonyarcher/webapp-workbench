@@ -9,6 +9,8 @@ yarn.lock
 kotlin-js-store/
 .kotlin/
 webApp/src/wasmJsMain/resources/js/web-components.js
+webApp/src/wasmJsMain/resources/styles.css
+webApp/src/wasmJsMain/resources/css/
 webComponents/dist/
 
 # IntelliJ IDEA

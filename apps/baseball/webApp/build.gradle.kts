@@ -53,6 +53,13 @@ kotlin {
     }
 }
 
+val copyStylesheets = tasks.register<Copy>("copyStylesheets") {
+    group = "build"
+    description = "Copies top-level stylesheets to resources"
+    from(file("../styles"))
+    into(file("src/wasmJsMain/resources"))
+}
+
 val buildWebComponents = tasks.register<Exec>("buildWebComponents") {
     group = "build"
     description = "Builds Lit Web Components using Vite"
@@ -71,5 +78,5 @@ val buildWebComponents = tasks.register<Exec>("buildWebComponents") {
 }
 
 tasks.named("wasmJsProcessResources") {
-    dependsOn(buildWebComponents)
+    dependsOn(copyStylesheets, buildWebComponents)
 }

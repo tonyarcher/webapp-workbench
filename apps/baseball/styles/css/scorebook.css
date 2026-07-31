@@ -1,0 +1,55 @@
+/* Traditional Baseball Scorebook Grid System */
+.scorebook-table {
+    border-collapse: collapse;
+    width: 100%;
+    background-color: #f9f7f2;
+    color: #2b2a28;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.scorebook-table th,
+.scorebook-table td {
+    border: 1px solid #5a544a;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+.scorebook-header-cell {
+    background-color: #eae6df;
+    font-weight: bold;
+    text-align: center;
+    color: #1a1918;
+}
+
+.scorebook-batter-name {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.scorebook-sub-name {
+    font-size: 0.75rem;
+    color: #555;
+    padding-left: 0.5rem;
+}
+
+.scorebook-cell-box {
+    width: 44px;
+    height: 44px;
+    position: relative;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.scorebook-cell-content {
+    font-weight: bold;
+    font-size: 0.95rem;
+    color: #111;
+}
+
+.scorebook-cell-sub {
+    font-size: 0.65rem;
+    color: #666;
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+}

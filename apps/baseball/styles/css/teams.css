@@ -1,0 +1,19 @@
+/* Team & Roster Styles */
+.team-item-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.team-item-card:hover {
+    border-color: var(--accent-red);
+    background: rgba(255, 42, 59, 0.05);
+}
+
+.team-item-card.selected {
+    border-color: var(--accent-red);
+    background: rgba(255, 42, 59, 0.1);
+}
