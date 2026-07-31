@@ -8,50 +8,52 @@ import com.baseball.ui.state.currentTab
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.selectedGameId
 import com.baseball.ui.state.updateActiveTabButtons
+import kotlinx.browser.document
 import kotlinx.html.DIV
-import kotlinx.html.TBODY
 import kotlinx.html.button
 import kotlinx.html.div
-import kotlinx.html.h2
 import kotlinx.html.h3
+import kotlinx.html.id
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.p
 import kotlinx.html.span
-import kotlinx.html.table
-import kotlinx.html.tbody
-import kotlinx.html.td
-import kotlinx.html.th
-import kotlinx.html.thead
-import kotlinx.html.tr
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import org.w3c.dom.HTMLElement
+
+@Serializable
+private data class StandingsJs(
+    val teamName: String,
+    val gamesPlayed: Int,
+    val wins: Int,
+    val losses: Int,
+    val winPercentage: Double,
+    val runsScored: Int,
+    val runsAllowed: Int,
+)
 
 internal fun DIV.renderStandingsCard(standings: List<TeamStandings>) {
-    div(classes = "card") {
-        h2 { +"League Standings" }
-        div(classes = "table-container") {
-            table {
-                thead {
-                    tr {
-                        th { +"Team" }; th { +"GP" }; th { +"W" }
-                        th { +"L" }; th { +"PCT" }; th { +"RS" }; th { +"RA" }
-                    }
-                }
-                tbody {
-                    standings.forEach { row -> renderTeamStandings(row) }
-                }
-            }
-        }
+    val rows = standings.map { s ->
+        StandingsJs(
+            teamName = s.teamName,
+            gamesPlayed = s.gamesPlayed,
+            wins = s.wins,
+            losses = s.losses,
+            winPercentage = s.winPercentage,
+            runsScored = s.runsScored,
+            runsAllowed = s.runsAllowed,
+        )
     }
-}
 
-private fun TBODY.renderTeamStandings(row: TeamStandings) {
-    tr {
-        td(classes = "font-bold") { +row.teamName }
-        td { +row.gamesPlayed.toString() }
-        td { +row.wins.toString() }
-        td { +row.losses.toString() }
-        td { +formatWinPercentage(row.winPercentage) }
-        td { +row.runsScored.toString() }
-        td { +row.runsAllowed.toString() }
+    div { id = "standings-table-mount-point" }
+
+    val mountPoint = document.getElementById("standings-table-mount-point") as? HTMLElement
+    if (mountPoint != null) {
+        mountPoint.innerHTML = ""
+        val table = document.createElement("baseball-standings-table")
+        val jsonString = Json.encodeToString(rows)
+        table.setAttribute("standings-json", jsonString)
+        mountPoint.appendChild(table)
     }
 }
 
@@ -59,9 +61,7 @@ internal fun DIV.renderGamesListCard(games: List<Game>) {
     div(classes = "card") {
         h3 { +"Games Schedule (${games.size})" }
         if (games.isEmpty()) {
-            p(classes = "text-muted") {
-                +"No games scheduled yet."
-            }
+            p(classes = "text-muted") { +"No games scheduled yet." }
         } else {
             div(classes = "schedule-list") {
                 games.forEach { g -> renderGameCardItem(g) }
