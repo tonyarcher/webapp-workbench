@@ -90,6 +90,7 @@ export function AppContent() {
       } else if (tab) {
         setCurrentTab(tab);
       }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     };
     nav.addEventListener('tab-selected', handleTabSelected);
     return () => nav.removeEventListener('tab-selected', handleTabSelected);
@@ -351,6 +352,7 @@ function AiInsightsTab() {
   const [aiStatus, setAiStatus] = useState<string>('Checking Chrome Built-in AI...');
   const [aiReasoning, setAiReasoning] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [viewType, setViewType] = useState<'detailed' | 'headline'>('detailed');
 
   useEffect(() => {
     isChromeAiAvailable().then((available) => {
@@ -381,15 +383,27 @@ function AiInsightsTab() {
   return (
     <baseball-tab-page-wrapper page-title="🤖 Chrome Built-in AI — Article Predictor">
       <div className="card padding-lg margin-bottom-lg" style={{ background: 'rgba(22, 26, 36, 0.8)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
           <span style={{ fontSize: '0.9rem', color: '#8e9cae', fontWeight: 600 }}>{aiStatus}</span>
-          <button
-            className="btn btn-primary"
-            onClick={handlePredict}
-            disabled={isAnalyzing}
-          >
-            {isAnalyzing ? 'Analyzing via Chrome AI...' : `Predict Recommendations (${starredCount} Starred)`}
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <label style={{ fontSize: '0.85rem', color: '#8e9cae', fontWeight: 600 }}>View Mode:</label>
+            <select
+              value={viewType}
+              onChange={(e) => setViewType(e.target.value as 'detailed' | 'headline')}
+              className="btn btn-secondary"
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+            >
+              <option value="detailed">Detailed List</option>
+              <option value="headline">Headline View</option>
+            </select>
+            <button
+              className="btn btn-primary"
+              onClick={handlePredict}
+              disabled={isAnalyzing}
+            >
+              {isAnalyzing ? 'Analyzing via Chrome AI...' : `Predict Recommendations (${starredCount} Starred)`}
+            </button>
+          </div>
         </div>
         <p style={{ color: '#8e9cae', fontSize: '0.95rem' }}>
           Star articles below based on your interests. Click <strong>Predict Recommendations</strong> to invoke Chrome's built-in Gemini Nano model (`window.ai.languageModel`) to analyze liked article characteristics and rank unread articles!
@@ -407,55 +421,88 @@ function AiInsightsTab() {
         </div>
       )}
 
-      <div className="action-grid-2col">
-        {articles.map((art) => (
-          <div
-            key={art.id}
-            className="card"
-            style={{
-              borderColor: art.isStarred ? 'var(--accent-yellow, #ffcc00)' : 'var(--border-color)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <span
-                style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  color: 'var(--accent-green, #00b050)',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {art.category}
-              </span>
+      {viewType === 'headline' ? (
+        <div className="card padding-lg" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {articles.map((art) => (
+            <div
+              key={art.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '0.75rem 1rem',
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '8px',
+                borderLeft: art.isStarred ? '4px solid var(--accent-yellow, #ffcc00)' : '4px solid transparent',
+              }}
+            >
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--accent-green, #00b050)', fontWeight: 700, width: '90px' }}>
+                  [{art.category}]
+                </span>
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: '#ffffff' }}>{art.title}</span>
+              </div>
               <button
                 className="btn btn-secondary"
                 onClick={() => toggleStar(art.id)}
-                style={{ padding: '0.25rem 0.6rem', fontSize: '0.9rem' }}
+                style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
               >
                 {art.isStarred ? '⭐ Starred' : '☆ Star'}
               </button>
             </div>
-            <h3 style={{ fontSize: '1.1rem', margin: '0.5rem 0', color: '#ffffff' }}>{art.title}</h3>
-            <p style={{ color: '#8e9cae', fontSize: '0.9rem', marginBottom: '1rem' }}>{art.summary}</p>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {art.tags.map((tag) => (
+          ))}
+        </div>
+      ) : (
+        <div className="action-grid-2col">
+          {articles.map((art) => (
+            <div
+              key={art.id}
+              className="card"
+              style={{
+                borderColor: art.isStarred ? 'var(--accent-yellow, #ffcc00)' : 'var(--border-color)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <span
-                  key={tag}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    borderRadius: '4px',
-                    padding: '0.2rem 0.5rem',
                     fontSize: '0.75rem',
-                    color: '#f5f7fa',
+                    fontWeight: 700,
+                    color: 'var(--accent-green, #00b050)',
+                    textTransform: 'uppercase',
                   }}
                 >
-                  #{tag}
+                  {art.category}
                 </span>
-              ))}
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => toggleStar(art.id)}
+                  style={{ padding: '0.25rem 0.6rem', fontSize: '0.9rem' }}
+                >
+                  {art.isStarred ? '⭐ Starred' : '☆ Star'}
+                </button>
+              </div>
+              <h3 style={{ fontSize: '1.1rem', margin: '0.5rem 0', color: '#ffffff' }}>{art.title}</h3>
+              <p style={{ color: '#8e9cae', fontSize: '0.9rem', marginBottom: '1rem' }}>{art.summary}</p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {art.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      borderRadius: '4px',
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.75rem',
+                      color: '#f5f7fa',
+                    }}
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </baseball-tab-page-wrapper>
   );
 }
