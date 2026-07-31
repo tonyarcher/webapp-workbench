@@ -55,7 +55,7 @@ val webComponentsDist = file("../web-components/dist")
 val externalStylesDir = file("../styles")
 
 /**
- * 1. Register the Vite compiler task cleanly using explicit generic types
+ * 1. Register the Vite compiler and Web Component test tasks cleanly
  */
 val buildWebComponents = tasks.register<Exec>("buildWebComponents") {
     group = "build"
@@ -63,18 +63,38 @@ val buildWebComponents = tasks.register<Exec>("buildWebComponents") {
 
     workingDir = webComponentsProjectDir
 
-    // Checks host OS to invoke correct terminal environment execution strings
     if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
         commandLine("cmd", "/c", "npm run build")
     } else {
         commandLine("npm", "run", "build")
     }
 
-    // Cache management inputs/outputs for incremental builds
     inputs.dir(webComponentsProjectDir.resolve("src"))
     inputs.file(webComponentsProjectDir.resolve("vite.config.ts"))
     inputs.file(webComponentsProjectDir.resolve("tsconfig.json"))
     outputs.dir(webComponentsDist)
+}
+
+val testWebComponents = tasks.register<Exec>("testWebComponents") {
+    group = "verification"
+    description = "Runs unit tests for Lit web components via @web/test-runner"
+
+    workingDir = webComponentsProjectDir
+
+    if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
+        commandLine("cmd", "/c", "npm test")
+    } else {
+        commandLine("npm", "test")
+    }
+
+    inputs.dir(webComponentsProjectDir.resolve("src"))
+    inputs.dir(webComponentsProjectDir.resolve("test"))
+    inputs.file(webComponentsProjectDir.resolve("web-test-runner.config.js"))
+}
+
+// Hook web component tests into standard Gradle verification lifecycle
+tasks.named("check") {
+    dependsOn(testWebComponents)
 }
 
 /**
