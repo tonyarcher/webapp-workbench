@@ -49,7 +49,7 @@ internal fun renderSeasonSelectorCard(container: HTMLElement): SeasonSelectorCon
     val card = container.querySelector("#season-selector-card") as HTMLElement
     val selectS = card.querySelector("#select-season-dropdown") as? HTMLSelectElement
     populateDashboardSeasonsDropdown(selectS)
-    return SeasonSelectorControls(selectS)
+    return SeasonSelectorControls()
 }
 
 private fun DIV.renderActiveSeasonField() {

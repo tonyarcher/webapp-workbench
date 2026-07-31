@@ -6,7 +6,6 @@ import com.baseball.models.BoxScore
 import com.baseball.models.Game
 import com.baseball.models.PlayEvent
 import com.baseball.models.Player
-import com.baseball.models.ScoringEventType
 
 // Domain models used by the engine
 
@@ -26,23 +25,6 @@ data class GameSessionState(
     val homeActivePitcherName: String,
     val awayActivePitcherId: Long,
     val awayActivePitcherName: String,
-)
-
-data class EventData(
-    val resolvedType: ScoringEventType,
-    val outsAdded: Int,
-    val basesMoved: Int,
-    val isWalk: Boolean,
-    val isHbp: Boolean,
-    val description: String,
-)
-
-data class AdvanceData(
-    val homeIdx: Int,
-    val awayIdx: Int,
-    val nextBatter: Player,
-    val nextPitcherId: Long,
-    val nextPitcherName: String,
 )
 
 object PlayEngine {

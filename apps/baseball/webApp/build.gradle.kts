@@ -11,11 +11,11 @@ kotlin {
             commonWebpackConfig {
                 devServer =
                     (
-                        devServer ?: org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
-                            .DevServer()
-                    ).copy(
-                        port = 3000,
-                    )
+                            devServer ?: org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
+                                .DevServer()
+                            ).copy(
+                            port = 3000,
+                        )
             }
             testTask {
                 useMocha {

@@ -8,7 +8,6 @@ import com.baseball.models.League
 import com.baseball.models.PlayEvent
 import com.baseball.models.Player
 import com.baseball.models.PlayerBattingStats
-import com.baseball.models.PlayerFieldingStats
 import com.baseball.models.PlayerPitchingStats
 import com.baseball.models.ScoringEventType
 import com.baseball.models.Season
@@ -218,7 +217,6 @@ class PlayEventEntity {
     @Column(name = "event_timestamp")
     var timestamp: String = ""
 
-    constructor()
     constructor(
         id: Long? = null,
         gameId: Long = 0L,
@@ -366,12 +364,4 @@ class PlayerGameFieldingStatsEntity {
 
     constructor()
 
-    fun toDomain(
-        playerName: String,
-        jerseyNumber: Int,
-        position: String,
-    ) = PlayerFieldingStats(
-        playerId = playerId, playerName = playerName, jerseyNumber = jerseyNumber, position = position,
-        putouts = putouts, assists = assists, errors = errors,
-    )
 }

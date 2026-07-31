@@ -136,6 +136,7 @@ class ScorerBaseRunningStep2Panel(
             val s = throwSequence.joinToString("-")
             if (isUnassisted) "${s}U" else s
         }
+
         eventType == ScoringEventType.CAUGHT_STEALING -> "2-6"
         else -> "1-3"
     }

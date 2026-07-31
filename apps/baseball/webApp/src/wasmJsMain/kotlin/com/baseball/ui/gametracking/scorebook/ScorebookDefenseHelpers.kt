@@ -282,6 +282,7 @@ private fun determineDecisionPitcher(
         } else {
             (teamState.awayRoster.find { it.position == BaseballConstants.Positions.P }?.name ?: "Sonny Gray")
         }
+
         targetHome -> teamState.homeActivePitcherName
         targetAway -> teamState.awayActivePitcherName
         else -> "-"

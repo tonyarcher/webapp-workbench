@@ -141,12 +141,6 @@ class ScorecardParser(
 internal fun getScorebookNotation(ev: PlayEvent): String =
     ScorecardNotationFormatter.getScorebookNotation(ev)
 
-fun getHitLocationNumber(desc: String): String? =
-    ScorecardNotationFormatter.getHitLocationNumber(desc)
-
-internal fun isOutEvent(type: ScoringEventType): Boolean =
-    ScorecardNotationFormatter.isOutEvent(type)
-
 private object ScorecardAdvancementCalculator {
     fun processRunsScoredOnPlay(
         ev: PlayEvent,
@@ -281,6 +275,7 @@ private object ScorecardNotationFormatter {
             ScoringEventType.LINE_OUT,
             ScoringEventType.POP_OUT,
             ScoringEventType.FIELDER_CHOICE -> getOutScorebookNotation(ev, suffix)
+
             else -> getBaseRunningNotation(ev)
         }
     }
@@ -302,14 +297,17 @@ private object ScorecardNotationFormatter {
             ev.description.contains("to Home") -> "SBH"
             else -> "SB"
         }
+
         ScoringEventType.CAUGHT_STEALING -> {
             val match = Regex("Caught Stealing: .* (\\d+(?:-\\d+)*U?)\\)").find(ev.description)
             if (match != null) "CS ${match.groupValues[1]}" else "CS"
         }
+
         ScoringEventType.PICKED_OFF -> {
             val match = Regex("Picked Off: .* (\\d+(?:-\\d+)*U?)\\)").find(ev.description)
             if (match != null) "PO ${match.groupValues[1]}" else "PO"
         }
+
         ScoringEventType.WILD_PITCH -> "WP"
         ScoringEventType.PASSED_BALL -> "PB"
         ScoringEventType.BALK -> "BK"
@@ -379,16 +377,4 @@ private object ScorecardNotationFormatter {
             ScoringEventType.SACRIFICE_FLY,
         )
 
-    fun getInitialBaseForEvent(eventType: ScoringEventType): Int = when (eventType) {
-        ScoringEventType.SINGLE,
-        ScoringEventType.WALK,
-        ScoringEventType.HIT_BY_PITCH,
-        ScoringEventType.ERROR,
-        ScoringEventType.FIELDER_CHOICE -> 1
-
-        ScoringEventType.DOUBLE -> 2
-        ScoringEventType.TRIPLE -> 3
-        ScoringEventType.HOME_RUN -> 4
-        else -> 0
-    }
 }
