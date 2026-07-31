@@ -133,7 +133,7 @@
 
 .th-inning-header {
     border-right: 1px solid #9c9384;
-    width: 75px;
+    width: 52px;
     text-align: center;
 }
 
@@ -171,80 +171,107 @@
     color: #111111;
 }
 
+/* Inning Diamond & Cell Formatting */
+.scorebook-cell-td {
+    border-right: 1px solid #9c9384 !important;
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    min-height: 52px !important;
+    max-width: 52px !important;
+    max-height: 52px !important;
+    padding: 0 !important;
+    text-align: center;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+
 .inning-cell-box {
     position: relative;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    padding: 2px;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto;
+    padding: 0;
     overflow: hidden;
     background-color: #ffffff;
+    box-sizing: border-box;
 }
 
 .inning-diamond-shape {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 26px;
-    height: 26px;
-    margin-top: -13px;
-    margin-left: -13px;
-    border: 1px solid #9c9384;
+    width: 28px;
+    height: 28px;
+    margin-top: -14px;
+    margin-left: -14px;
+    border: 1px dashed #9c9384;
     transform: rotate(45deg);
     z-index: 1;
+    box-sizing: border-box;
 }
 
-.inning-diamond-shape.b1 { border-right: 2px solid #ff2a3b; }
-.inning-diamond-shape.b2 { border-right: 2px solid #ff2a3b; border-top: 2px solid #ff2a3b; }
-.inning-diamond-shape.b3 { border-right: 2px solid #ff2a3b; border-top: 2px solid #ff2a3b; border-left: 2px solid #ff2a3b; }
-.inning-diamond-shape.b4 { border: 2px solid #ff2a3b; background-color: rgba(255, 42, 59, 0.45); }
+.inning-diamond-shape.empty {
+    border: 1px dashed #d2cdc6;
+    background: transparent;
+}
+
+.inning-diamond-shape.b1 { border-right: 2.5px solid #ff2a3b; border-bottom: 2.5px solid #ff2a3b; }
+.inning-diamond-shape.b2 { border-right: 2.5px solid #ff2a3b; border-bottom: 2.5px solid #ff2a3b; border-top: 2.5px solid #ff2a3b; }
+.inning-diamond-shape.b3 { border-right: 2.5px solid #ff2a3b; border-bottom: 2.5px solid #ff2a3b; border-top: 2.5px solid #ff2a3b; border-left: 2.5px solid #ff2a3b; }
+.inning-diamond-shape.b4 { border: 2.5px solid #ff2a3b; background-color: rgba(255, 42, 59, 0.45); }
 
 .notation-tag {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-weight: bold;
+    font-weight: 900;
     font-size: 0.75rem;
-    color: #111111;
-    z-index: 2;
+    color: #111111 !important;
+    text-shadow: 0 0 2px #ffffff;
+    z-index: 10;
 }
 
 .count-tag {
     position: absolute;
     top: 2px;
-    left: 4px;
+    left: 3px;
     font-size: 0.6rem;
-    color: #333333;
+    font-weight: bold;
+    color: #333333 !important;
     font-family: monospace;
+    z-index: 10;
 }
 
 .out-circle {
     position: absolute;
     bottom: 2px;
-    left: 4px;
-    width: 11px;
-    height: 11px;
-    border: 1px solid #ff2a3b;
+    left: 3px;
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid #ff2a3b;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 0.55rem;
-    color: #ff2a3b;
+    font-size: 0.6rem;
+    color: #ff2a3b !important;
     font-weight: bold;
+    background: #ffffff;
+    z-index: 10;
 }
 
 .inning-diagonal-line {
     position: absolute;
-    bottom: -10px;
-    right: -10px;
-    width: 35px;
-    height: 1px;
-    background-color: #5a544a;
+    bottom: 0;
+    right: 0;
+    width: 40px;
+    height: 2px;
+    background-color: #ff2a3b;
     transform: rotate(-45deg);
     transform-origin: bottom right;
-    z-index: 4;
+    z-index: 8;
 }
 
 /* Field Diagram & Defense Styles */
@@ -254,7 +281,9 @@
     color: #2b2a28 !important;
     border-radius: 8px;
     padding: 1rem;
-    flex: 1 1 300px;
+    flex: 1 1 280px;
+    max-width: 100%;
+    box-sizing: border-box;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -309,9 +338,12 @@
 /* Pitchers Box & Bottom Section Cards */
 .scorebook-bottom-section {
     display: flex;
+    flex-wrap: wrap;
     gap: 1.5rem;
     margin-top: 1.5rem;
-    align-items: flex-start;
+    align-items: stretch;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .scorebook-bottom-card {
@@ -320,8 +352,11 @@
     color: #2b2a28 !important;
     border-radius: 8px;
     padding: 1rem;
-    flex: 1 1 300px;
+    flex: 1 1 280px;
+    max-width: 100%;
+    box-sizing: border-box;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
 }
 
 .scorebook-bottom-card h3, .field-diagram-card h3 {

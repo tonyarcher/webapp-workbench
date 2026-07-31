@@ -68,11 +68,16 @@ class GameScoringController(
         rightCol.append {
             div {
                 h2 { +"Plate Matchup" }
-                renderPlateMatchupCard(this, game, homeRoster, awayRoster)
+                div { id = "matchup-card-mount-point" }
             }
             div(classes = "margin-top-md") {
                 id = "action-grid-wrapper"
             }
+        }
+
+        val matchupMount = rightCol.querySelector("#matchup-card-mount-point") as? HTMLElement
+        if (matchupMount != null) {
+            renderPlateMatchupCard(matchupMount, game, homeRoster, awayRoster)
         }
 
         actionGridWrapper = rightCol.querySelector("#action-grid-wrapper") as? HTMLDivElement
