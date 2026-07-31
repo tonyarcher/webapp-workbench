@@ -27,6 +27,7 @@ import com.baseball.ui.state.launch
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.updateActiveTabButtons
 import kotlinx.browser.document
+import kotlinx.serialization.json.Json
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.Event
@@ -90,33 +91,9 @@ object ScorerTabController {
     }
 
     private fun mountScoreboard(container: HTMLElement, game: Game, boxScore: BoxScore) {
-        val maxInning = localEvents.maxOfOrNull { it.inning }?.coerceAtLeast(9) ?: 9
         val scoreboard = document.createElement("baseball-scoreboard")
-        scoreboard.setAttribute("away-name", game.awayTeam.name)
-        scoreboard.setAttribute("home-name", game.homeTeam.name)
-        scoreboard.setAttribute("away-score", game.awayScore.toString())
-        scoreboard.setAttribute("home-score", game.homeScore.toString())
-        scoreboard.setAttribute("away-hits", boxScore.lineScore.awayHits.toString())
-        scoreboard.setAttribute("home-hits", boxScore.lineScore.homeHits.toString())
-        scoreboard.setAttribute("away-errors", boxScore.lineScore.awayErrors.toString())
-        scoreboard.setAttribute("home-errors", boxScore.lineScore.homeErrors.toString())
-        scoreboard.setAttribute("inning", game.gameState.inning.toString())
-        scoreboard.setAttribute("half", game.gameState.half.name)
-        scoreboard.setAttribute("balls", game.gameState.balls.toString())
-        scoreboard.setAttribute("strikes", game.gameState.strikes.toString())
-        scoreboard.setAttribute("outs", game.gameState.outs.toString())
-        game.gameState.runnerFirstId?.let {
-            scoreboard.setAttribute("runner-first", "true")
-            scoreboard.setAttribute("runner-first-name", game.gameState.runnerFirstName ?: "Runner on 1B")
-        }
-        game.gameState.runnerSecondId?.let {
-            scoreboard.setAttribute("runner-second", "true")
-            scoreboard.setAttribute("runner-second-name", game.gameState.runnerSecondName ?: "Runner on 2B")
-        }
-        game.gameState.runnerThirdId?.let {
-            scoreboard.setAttribute("runner-third", "true")
-            scoreboard.setAttribute("runner-third-name", game.gameState.runnerThirdName ?: "Runner on 3B")
-        }
+        scoreboard.setAttribute("game-json", Json.encodeToString(game))
+        scoreboard.setAttribute("box-score-json", Json.encodeToString(boxScore))
         container.appendChild(scoreboard)
     }
 }
