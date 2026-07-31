@@ -26,29 +26,35 @@ Welcome. This file provides the general context, quality mandates, and workflow 
     * Use long, self-documenting, non-abbreviated variable and property names (e.g., `pitcherName`, `cellBackground`,
       `lineupUiContext`).
 
-## 3. Communication & Output Guidelines (ADHD & Speed-Reading Optimized)
+## 3. Testing & Bug Fix Workflow Mandates
+
+* **Test Framework**: Web components are tested using `@web/test-runner` with Playwright Chromium (`npm test` or `./gradlew :webApp:testWebComponents`).
+* **Bug Fix Mandate**: Whenever fixing a bug or regression in a web component or controller, you **MUST** write a reproduction unit test in `web-components/test/` before or alongside fixing the code.
+* **Coverage Mandate**: Maintain a minimum **90% code coverage** threshold across all web component files (`npm run test:coverage`).
+* **Gradle Verification Integration**: All web component unit tests are bound to the Gradle `check` lifecycle (`./gradlew check`).
+
+## 4. Communication & Output Guidelines (ADHD & Speed-Reading Optimized)
 
 * **Speed-Reading Optimized**: Keep all text outputs ultra-concise, direct, and structured with bullet points or bold
   keywords.
 * **No Token Waste**: Avoid fluff, long preambles, re-explaining context, or repeating code snippets needlessly. Get
   straight to the actions, status, or exact diffs.
 
-## 4. Workflow & Git Standards
+## 5. Workflow & Git Standards
 
 * **Branch Management**: Work on feature branches (`feature/<task-name>`) created from `main`. Push feature branches
   upstream and merge via PR upon task completion.
 * **Build & Commit Cadence**: Commit frequently after a successful build. Resolving compiler and build errors
   immediately is mandatory.
+* **Bug Fix Workflow**:
+    1. Reproduce the issue with a failing unit test in `web-components/test/`.
+    2. Implement the fix in the web component or Kotlin controller.
+    3. Verify all tests pass (`npm test` and `./gradlew :webApp:testWebComponents`).
+    4. Verify code coverage meets or exceeds 90% (`npm run test:coverage`).
 
-## 5. Error Handling & Quality Control
+## 6. Error Handling & Quality Control
 
 * **Compiler & Linter Errors**: Resolve all compiler, linter, TypeScript type-check (`tsc`), and build errors
   immediately.
 * **No Suppressions**: Do not add exceptions to linter configurations or use file-level suppression annotations (e.g.,
-  `@file:Suppress`, `/* eslint-disable */`, `// @ts-ignore`). Use code with caution.What Changed & WhyAdded Monorepo
-  Boundaries (Section 1): Explicitly tells the AI agent that the frontend and backend are separate, ensuring it doesn't
-  try to mix Kotlin code with your TypeScript components.Added CSS Strategy Guardrails (Section 1): Codifies your new
-  architecture—global variables at the top level, styling details encapsulated inside the components.Updated Error
-  Boundaries (Section 5): Added TypeScript (tsc) checking alongside compiler/linter rules to catch web component errors
-  early.Whenever you are ready, paste your Kotlin webapp AGENTS.md and we will update it to cleanly consume these web
-  components!
+  `@file:Suppress`, `/* eslint-disable */`, `// @ts-ignore`).
