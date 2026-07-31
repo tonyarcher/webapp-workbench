@@ -56,3 +56,10 @@ h2 {
 .btn:hover {
     background: rgba(255, 255, 255, 0.15);
 }
+
+.league-selector {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 2rem;
+}
