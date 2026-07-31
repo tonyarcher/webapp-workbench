@@ -132,13 +132,20 @@ object AppViewManager {
     private fun renderNavBarAndMain(app: HTMLElement) {
         val nav = document.createElement("baseball-nav-bar")
         nav.setAttribute("active-tab", currentTab)
+        nav.setAttribute("is-single-game-mode", isSingleGameMode.toString())
         currentUserSession?.let {
             nav.setAttribute("user-name", it.firstName)
         }
         nav.addEventListener("tab-selected", { event ->
             val target = event.target as? Element
             val tabId = target?.getAttribute("active-tab") ?: ""
-            if (tabId.isNotEmpty()) currentTab = tabId
+            if (tabId == "welcome") {
+                isWelcomeScreen = true
+                isSingleGameMode = false
+                window.location.hash = NavTabs.TAB_WELCOME
+            } else if (tabId.isNotEmpty()) {
+                currentTab = tabId
+            }
         })
         app.appendChild(nav)
 

@@ -8,6 +8,7 @@ declare module 'react' {
       'baseball-nav-bar': CustomElementProps & {
         'active-tab'?: string;
         'user-name'?: string;
+        'is-single-game-mode'?: string;
       };
       'baseball-welcome-screen': CustomElementProps & {
         'server-online'?: string;

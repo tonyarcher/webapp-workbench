@@ -5,27 +5,69 @@ import { api } from './api';
 
 const queryClient = new QueryClient();
 
+// Seed data for local single game mode
+const defaultGame = {
+  id: 1,
+  awayTeam: { id: 2, name: 'St. Louis Cardinals' },
+  homeTeam: { id: 1, name: 'Chicago Cubs' },
+  awayScore: 0,
+  homeScore: 0,
+  status: 'IN_PROGRESS',
+  gameState: {
+    inning: 1,
+    half: 'TOP',
+    balls: 0,
+    strikes: 0,
+    outs: 0,
+    currentBatterName: 'Nico Hoerner',
+    currentPitcherName: 'Sonny Gray',
+  },
+};
+
+const defaultBoxScore = {
+  awayInnings: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  homeInnings: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  awayRuns: 0,
+  awayHits: 0,
+  awayErrors: 0,
+  homeRuns: 0,
+  homeHits: 0,
+  homeErrors: 0,
+};
+
 export function AppContent() {
   const [currentTab, setCurrentTab] = useState('leagues');
   const [selectedSeasonId] = useState<number | null>(null);
   const [selectedTeamId] = useState<number | null>(null);
   const [isWelcomeScreen, setIsWelcomeScreen] = useState(true);
+  const [isSingleGameMode, setIsSingleGameMode] = useState(false);
+  const [hasActiveGame, setHasActiveGame] = useState(false);
   const [userName, setUserName] = useState('');
 
   const navRef = useRef<HTMLElement>(null);
   const welcomeRef = useRef<HTMLElement>(null);
   const authRef = useRef<HTMLElement>(null);
+  const scorerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const nav = navRef.current;
     if (!nav) return;
     const handleTabSelected = (e: any) => {
       const tab = e.detail?.tabId || e.target?.getAttribute('active-tab');
-      if (tab) setCurrentTab(tab);
+      if (tab === 'welcome') {
+        setIsWelcomeScreen(true);
+        setIsSingleGameMode(false);
+      } else if (tab === 'leagues' && isSingleGameMode) {
+        setIsWelcomeScreen(false);
+        setIsSingleGameMode(false);
+        setCurrentTab('leagues');
+      } else if (tab) {
+        setCurrentTab(tab);
+      }
     };
     nav.addEventListener('tab-selected', handleTabSelected);
     return () => nav.removeEventListener('tab-selected', handleTabSelected);
-  }, [currentTab, isWelcomeScreen]);
+  }, [currentTab, isWelcomeScreen, isSingleGameMode]);
 
   useEffect(() => {
     const welcome = welcomeRef.current;
@@ -34,14 +76,27 @@ export function AppContent() {
       setIsWelcomeScreen(false);
       const mode = e.detail?.mode || e.target?.getAttribute('selected-mode');
       if (mode === 'single') {
+        setIsSingleGameMode(true);
+        setHasActiveGame(true);
         setCurrentTab('live-scorer');
       } else {
+        setIsSingleGameMode(false);
         setCurrentTab('leagues');
       }
     };
     welcome.addEventListener('mode-selected', handleModeSelected);
     return () => welcome.removeEventListener('mode-selected', handleModeSelected);
   }, [isWelcomeScreen]);
+
+  useEffect(() => {
+    const scorer = scorerRef.current;
+    if (!scorer) return;
+    const handleStartNewGame = () => {
+      setHasActiveGame(true);
+    };
+    scorer.addEventListener('start-new-game-click', handleStartNewGame);
+    return () => scorer.removeEventListener('start-new-game-click', handleStartNewGame);
+  }, [currentTab, hasActiveGame]);
 
   useEffect(() => {
     const auth = authRef.current;
@@ -76,6 +131,7 @@ export function AppContent() {
             ref={navRef}
             active-tab={currentTab}
             user-name={userName}
+            is-single-game-mode={isSingleGameMode ? 'true' : 'false'}
           />
           <main id="content-area" className="padding-lg">
             {currentTab === 'leagues' && <LeaguesTab />}
@@ -84,14 +140,56 @@ export function AppContent() {
             {currentTab === 'stats' && <StatsTab selectedSeasonId={selectedSeasonId} />}
             {currentTab === 'login' && <baseball-auth-card ref={authRef} logged-in-user={userName} />}
             {currentTab === 'register' && <baseball-auth-card ref={authRef} is-sign-up="true" logged-in-user={userName} />}
-            {currentTab === 'live-scorer' && <baseball-scorer-tab no-game="true" />}
-            {currentTab === 'boxscore' && <baseball-tab-page-wrapper empty-message="No active box score session." />}
+            {currentTab === 'live-scorer' && (
+              <LiveScorerView
+                ref={scorerRef}
+                hasActiveGame={hasActiveGame}
+                onStartGame={() => setHasActiveGame(true)}
+              />
+            )}
+            {currentTab === 'boxscore' && (
+              <baseball-tab-page-wrapper page-title="Box Score">
+                <baseball-scoreboard
+                  game-json={JSON.stringify(defaultGame)}
+                  box-score-json={JSON.stringify(defaultBoxScore)}
+                />
+              </baseball-tab-page-wrapper>
+            )}
           </main>
         </React.Fragment>
       )}
     </div>
   );
 }
+
+const LiveScorerView = React.forwardRef(({ hasActiveGame }: any, ref: any) => {
+  if (!hasActiveGame) {
+    return (
+      <baseball-scorer-tab
+        ref={ref}
+        no-game="true"
+      />
+    );
+  }
+
+  return (
+    <baseball-scorer-tab
+      ref={ref}
+      away-name="St. Louis Cardinals"
+      home-name="Chicago Cubs"
+    >
+      <div slot="scoreboard">
+        <baseball-scoreboard
+          game-json={JSON.stringify(defaultGame)}
+          box-score-json={JSON.stringify(defaultBoxScore)}
+        />
+      </div>
+      <div slot="controls">
+        <baseball-scoring-controls game-status="active" batter-name="Nico Hoerner" pitcher-name="Sonny Gray" />
+      </div>
+    </baseball-scorer-tab>
+  );
+});
 
 export function App() {
   return (
