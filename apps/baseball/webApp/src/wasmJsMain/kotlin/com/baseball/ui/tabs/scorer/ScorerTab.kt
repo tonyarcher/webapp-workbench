@@ -96,14 +96,14 @@ private fun renderLiveScorerMainView(container: HTMLElement, data: ScorerData) {
     renderScorerHeader(container, data.game)
     container.append {
         div(classes = "scorekeeper-grid") {
-            div(classes = "scoreboard-led") {}
+            div { id = "scoreboard-mount-point" }
             div(classes = "card") { id = "scoring-controls-card" }
         }
     }
     val topGrid = container.querySelector(".scorekeeper-grid") as HTMLElement
-    val scoreboardLed = topGrid.querySelector(".scoreboard-led") as HTMLElement
+    val scoreboardMount = topGrid.querySelector("#scoreboard-mount-point") as HTMLElement
     val scoringControlsCard = topGrid.querySelector("#scoring-controls-card") as HTMLElement
-    renderScorerLedScoreboard(scoreboardLed, data.game)
+    renderScorerLedScoreboard(scoreboardMount, data.game)
     renderGameScoringControls(scoringControlsCard, data.game, data.homeRoster, data.awayRoster)
     renderPlayMonitoringSection(container, data)
     if (isLineupDialogOpen) {
