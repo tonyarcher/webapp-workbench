@@ -84,6 +84,12 @@ export class BaseballNavBar extends LitElement {
                         >
                             Stats
                         </button>
+                        <button
+                                class="nav-item ${this.activeTab === 'ai-insights' ? 'active' : ''}"
+                                @click=${() => this.onSelectTab('ai-insights')}
+                        >
+                            🤖 AI Insights
+                        </button>
                     `}
                 </nav>
 

@@ -2,6 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import '@baseball/web-components/dist/web-components.js';
 import { api } from './api';
+import {
+  type Article,
+  isChromeAiAvailable,
+  predictRecommendedArticles,
+  sampleArticles,
+} from './chrome-ai';
 
 const queryClient = new QueryClient();
 
@@ -138,6 +144,7 @@ export function AppContent() {
             {currentTab === 'teams' && <TeamsTab selectedTeamId={selectedTeamId} />}
             {currentTab === 'dashboard' && <DashboardTab selectedSeasonId={selectedSeasonId} />}
             {currentTab === 'stats' && <StatsTab selectedSeasonId={selectedSeasonId} />}
+            {currentTab === 'ai-insights' && <AiInsightsTab />}
             {currentTab === 'login' && <baseball-auth-card ref={authRef} logged-in-user={userName} />}
             {currentTab === 'register' && <baseball-auth-card ref={authRef} is-sign-up="true" logged-in-user={userName} />}
             {currentTab === 'live-scorer' && (
@@ -315,6 +322,120 @@ function StatsTab({ selectedSeasonId }: { selectedSeasonId: number | null }) {
   return (
     <baseball-tab-page-wrapper page-title="Season Player Statistics">
       <baseball-stats-table rows-json={JSON.stringify(stats?.battingStats || [])} />
+    </baseball-tab-page-wrapper>
+  );
+}
+
+function AiInsightsTab() {
+  const [articles, setArticles] = useState<Article[]>(sampleArticles);
+  const [aiStatus, setAiStatus] = useState<string>('Checking Chrome Built-in AI...');
+  const [aiReasoning, setAiReasoning] = useState<string>('');
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+
+  useEffect(() => {
+    isChromeAiAvailable().then((available) => {
+      setAiStatus(
+        available
+          ? '🟢 Chrome Built-in AI (Prompt API / Gemini Nano) Ready'
+          : '🟡 Chrome Built-in AI not detected (using Heuristic Fallback engine)'
+      );
+    });
+  }, []);
+
+  const toggleStar = (id: number) => {
+    setArticles((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, isStarred: !a.isStarred } : a))
+    );
+  };
+
+  const handlePredict = async () => {
+    setIsAnalyzing(true);
+    const starred = articles.filter((a) => a.isStarred);
+    const { aiReasoning } = await predictRecommendedArticles(starred, articles);
+    setAiReasoning(aiReasoning);
+    setIsAnalyzing(false);
+  };
+
+  const starredCount = articles.filter((a) => a.isStarred).length;
+
+  return (
+    <baseball-tab-page-wrapper page-title="🤖 Chrome Built-in AI — Article Predictor">
+      <div className="card padding-lg margin-bottom-lg" style={{ background: 'rgba(22, 26, 36, 0.8)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <span style={{ fontSize: '0.9rem', color: '#8e9cae', fontWeight: 600 }}>{aiStatus}</span>
+          <button
+            className="btn btn-primary"
+            onClick={handlePredict}
+            disabled={isAnalyzing}
+          >
+            {isAnalyzing ? 'Analyzing via Chrome AI...' : `Predict Recommendations (${starredCount} Starred)`}
+          </button>
+        </div>
+        <p style={{ color: '#8e9cae', fontSize: '0.95rem' }}>
+          Star articles below based on your interests. Click <strong>Predict Recommendations</strong> to invoke Chrome's built-in Gemini Nano model (`window.ai.languageModel`) to analyze liked article characteristics and rank unread articles!
+        </p>
+      </div>
+
+      {aiReasoning && (
+        <div className="card padding-lg margin-bottom-lg" style={{ border: '1px solid var(--accent-green, #00b050)' }}>
+          <h3 style={{ color: 'var(--accent-green-glow, #00e676)', marginBottom: '0.5rem' }}>
+            🤖 AI Prediction & Recommendation Analysis:
+          </h3>
+          <pre style={{ whiteSpace: 'pre-wrap', color: '#f5f7fa', fontFamily: 'inherit', fontSize: '0.95rem' }}>
+            {aiReasoning}
+          </pre>
+        </div>
+      )}
+
+      <div className="action-grid-2col">
+        {articles.map((art) => (
+          <div
+            key={art.id}
+            className="card"
+            style={{
+              borderColor: art.isStarred ? 'var(--accent-yellow, #ffcc00)' : 'var(--border-color)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: 'var(--accent-green, #00b050)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {art.category}
+              </span>
+              <button
+                className="btn btn-secondary"
+                onClick={() => toggleStar(art.id)}
+                style={{ padding: '0.25rem 0.6rem', fontSize: '0.9rem' }}
+              >
+                {art.isStarred ? '⭐ Starred' : '☆ Star'}
+              </button>
+            </div>
+            <h3 style={{ fontSize: '1.1rem', margin: '0.5rem 0', color: '#ffffff' }}>{art.title}</h3>
+            <p style={{ color: '#8e9cae', fontSize: '0.9rem', marginBottom: '1rem' }}>{art.summary}</p>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {art.tags.map((tag) => (
+                <span
+                  key={tag}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    borderRadius: '4px',
+                    padding: '0.2rem 0.5rem',
+                    fontSize: '0.75rem',
+                    color: '#f5f7fa',
+                  }}
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </baseball-tab-page-wrapper>
   );
 }
