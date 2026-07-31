@@ -1,28 +1,36 @@
 package com.baseball.ui.tabs.stats
 
+import com.baseball.api
+import com.baseball.models.PlayerBattingStats
 import com.baseball.ui.core.launch
 import com.baseball.ui.state.selectedSeasonId
-import kotlinx.html.dom.append
-import kotlinx.html.h1
+import kotlinx.browser.document
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLElement
 
-internal var selectedStatsSubTab = "batting" // batting, pitching, fielding
-internal var statsSelectedTeamId: Long? = null // null means All Teams
-
 internal fun renderStatsTab(container: HTMLElement) {
+    container.innerHTML = "<div class='text-center padding-lg'>Loading Stats...</div>"
     launch { setupRenderStatsTab(container) }
 }
 
 internal suspend fun setupRenderStatsTab(container: HTMLElement) {
-    container.append {
-        h1 { +"Season Player Statistics" }
-    }
-    val (selectS, _) = renderStatsFilterCard(container)
-    populateStatsSeasonsDropdown(selectS)
-    if (selectedSeasonId == null) {
-        renderNoSeasonSelectedCard(container)
+    container.innerHTML = ""
+
+    val title = document.createElement("h1")
+    title.textContent = "Season Player Statistics"
+    container.appendChild(title)
+
+    val sId = selectedSeasonId
+    if (sId == null) {
+        val msg = document.createElement("p")
+        msg.textContent = "No season selected."
+        container.appendChild(msg)
         return
     }
-    renderStatsSubTabToggle(container)
-    renderStatsTableSection(container)
+
+    val seasonStats = api.getSeasonStats(sId)
+    val table = document.createElement("baseball-stats-table")
+    table.setAttribute("rows-json", Json.encodeToString<List<PlayerBattingStats>>(seasonStats.battingStats))
+    container.appendChild(table)
 }

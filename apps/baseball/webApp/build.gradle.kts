@@ -39,7 +39,6 @@ kotlin {
                 implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.browser)
-                implementation(libs.kotlinx.html)
             }
         }
         getByName("wasmJsTest") {

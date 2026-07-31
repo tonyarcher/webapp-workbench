@@ -9,3 +9,5 @@ import './dashboard/baseball-schedule-list';
 import './stats/baseball-stats-table';
 import './teams/baseball-roster-table';
 import './leagues/baseball-league-card';
+import './layout/baseball-nav-bar/baseball-nav-bar';
+import './auth/baseball-auth-card/baseball-auth-card';

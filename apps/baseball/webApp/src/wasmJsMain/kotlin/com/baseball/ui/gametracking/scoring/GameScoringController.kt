@@ -19,13 +19,8 @@ import com.baseball.ui.state.currentTab
 import com.baseball.ui.state.isSingleGameMode
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.updateActiveTabButtons
-import kotlinx.html.button
-import kotlinx.html.div
-import kotlinx.html.dom.append
-import kotlinx.html.h2
-import kotlinx.html.id
-import kotlinx.html.js.onClickFunction
-import kotlinx.html.p
+import kotlinx.browser.document
+import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLElement
 
@@ -49,41 +44,46 @@ class GameScoringController(
     }
 
     private fun renderCompletedGame() {
-        rightCol.append {
-            div(classes = "text-center padding-lg") {
-                h2 { +"GAME COMPLETED" }
-                val scoreStr = "${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore}"
-                p { +"Final: $scoreStr" }
+        val container = document.createElement("div") as HTMLDivElement
+        container.className = "text-center padding-lg"
 
-                button(classes = "btn margin-top-md") {
-                    +"View Final Box Score"
-                    onClickFunction = {
-                        currentTab = NavTabs.TAB_BOXSCORE
-                        updateActiveTabButtons()
-                        renderCurrentTab()
-                    }
-                }
-            }
-        }
+        val h2 = document.createElement("h2")
+        h2.textContent = "GAME COMPLETED"
+        container.appendChild(h2)
+
+        val p = document.createElement("p")
+        p.textContent = "Final: ${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore}"
+        container.appendChild(p)
+
+        val btn = document.createElement("button") as HTMLButtonElement
+        btn.className = "btn margin-top-md"
+        btn.textContent = "View Final Box Score"
+        btn.addEventListener("click", {
+            currentTab = NavTabs.TAB_BOXSCORE
+            updateActiveTabButtons()
+            renderCurrentTab()
+        })
+        container.appendChild(btn)
+
+        rightCol.appendChild(container)
     }
 
     private fun renderActiveGameControls() {
-        rightCol.append {
-            div {
-                h2 { +"Plate Matchup" }
-                div { id = "matchup-card-mount-point" }
-            }
-            div(classes = "margin-top-md") {
-                id = "action-grid-wrapper"
-            }
-        }
+        val title = document.createElement("h2")
+        title.textContent = "Plate Matchup"
+        rightCol.appendChild(title)
 
-        val matchupMount = rightCol.querySelector("#matchup-card-mount-point") as? HTMLElement
-        if (matchupMount != null) {
-            renderPlateMatchupCard(matchupMount, game, homeRoster, awayRoster)
-        }
+        val matchupMount = document.createElement("div") as HTMLDivElement
+        matchupMount.id = "matchup-card-mount-point"
+        rightCol.appendChild(matchupMount)
 
-        actionGridWrapper = rightCol.querySelector("#action-grid-wrapper") as? HTMLDivElement
+        val gridWrap = document.createElement("div") as HTMLDivElement
+        gridWrap.id = "action-grid-wrapper"
+        gridWrap.className = "margin-top-md"
+        rightCol.appendChild(gridWrap)
+
+        renderPlateMatchupCard(matchupMount, game, homeRoster, awayRoster)
+        actionGridWrapper = gridWrap
         renderActionGrid()
     }
 

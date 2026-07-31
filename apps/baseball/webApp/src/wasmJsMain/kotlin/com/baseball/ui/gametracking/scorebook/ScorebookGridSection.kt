@@ -1,10 +1,6 @@
 package com.baseball.ui.gametracking.scorebook
 
-import com.baseball.game.localAwayActivePitcherId
-import com.baseball.game.localAwayActivePitcherName
 import com.baseball.game.localAwayRoster
-import com.baseball.game.localHomeActivePitcherId
-import com.baseball.game.localHomeActivePitcherName
 import com.baseball.game.localHomeRoster
 import com.baseball.models.BoxScore
 import com.baseball.models.Game
@@ -44,18 +40,6 @@ fun renderScorecardSheet(
     scorebookEl.setAttribute("slots-json", Json.encodeToString(slots))
 
     container.appendChild(scorebookEl)
-
-    val teamState = ScorebookTeamState(
-        awayRoster = localAwayRoster,
-        homeRoster = localHomeRoster,
-        awayActivePitcherId = localAwayActivePitcherId,
-        homeActivePitcherId = localHomeActivePitcherId,
-        awayActivePitcherName = localAwayActivePitcherName,
-        homeActivePitcherName = localHomeActivePitcherName,
-    )
-
-    val data = ScorebookSectionData(game, boxScore, maxInning)
-    renderScorebookBottomSection(container, isHomeBatting, teamState, data)
 }
 
 @Serializable

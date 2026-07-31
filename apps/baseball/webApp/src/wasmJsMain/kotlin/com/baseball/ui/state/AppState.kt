@@ -38,5 +38,5 @@ object NavTabs {
 }
 
 fun saveNavState() {
-    AppViewManager.saveNavState()
+    saveAppNavState()
 }

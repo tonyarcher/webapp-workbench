@@ -11,13 +11,10 @@ import com.baseball.ui.state.NavTabs
 import com.baseball.ui.tabs.boxscore.renderBoxScoreTab
 import com.baseball.ui.tabs.dashboard.renderSeasonDashboardTab
 import com.baseball.ui.tabs.leagues.renderLeaguesTab
-import com.baseball.ui.tabs.scorer.renderLiveScorerTab
+import com.baseball.ui.tabs.scorer.renderScorerTab
 import com.baseball.ui.tabs.stats.renderStatsTab
 import com.baseball.ui.tabs.teams.renderTeamsTab
 
-// Duplicate tab imports removed
-
-// Global interface instantiations promoting coding by interface inheritance
 val api: BaseballApi = BaseballApiClient()
 val authService: AuthService = AuthManager
 
@@ -28,7 +25,7 @@ fun main() {
             NavTabs.TAB_TEAMS to ::renderTeamsTab,
             NavTabs.TAB_GAMES to ::renderSeasonDashboardTab,
             NavTabs.TAB_STATS to ::renderStatsTab,
-            NavTabs.TAB_LIVE_SCORER to ::renderLiveScorerTab,
+            NavTabs.TAB_LIVE_SCORER to ::renderScorerTab,
             NavTabs.TAB_BOXSCORE to ::renderBoxScoreTab,
             NavTabs.TAB_LOGIN to ::renderLoginTab,
             NavTabs.TAB_REGISTER to ::renderRegisterTab,
