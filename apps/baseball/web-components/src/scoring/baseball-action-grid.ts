@@ -50,6 +50,24 @@ export class BaseballActionGrid extends LitElement {
         <button class="btn btn-action" @click=${() => this.triggerEvent('FOUL')}>Foul</button>
       </div>
 
+      <div class="text-accent-green margin-bottom-sm">PLATE & IN-PLAY RESULTS</div>
+      <div class="action-grid-3col margin-bottom-md">
+        <button class="btn btn-action" @click=${() => this.triggerStep2('SINGLE', 'Single (1B)')}>Single (1B)</button>
+        <button class="btn btn-action" @click=${() => this.triggerStep2('DOUBLE', 'Double (2B)')}>Double (2B)</button>
+        <button class="btn btn-action" @click=${() => this.triggerStep2('TRIPLE', 'Triple (3B)')}>Triple (3B)</button>
+        <button class="btn btn-action" @click=${() => this.triggerStep2('HOME_RUN', 'Home Run (HR)')}>Home Run (HR)</button>
+        <button class="btn btn-action" @click=${() => this.triggerEvent('WALK')}>Walk (BB)</button>
+        <button class="btn btn-action" @click=${() => this.triggerEvent('HIT_BY_PITCH')}>HBP</button>
+        <button class="btn btn-action" @click=${() => this.triggerEvent('STRIKEOUT')}>Strikeout (K)</button>
+        <button class="btn btn-action" @click=${() => this.triggerStep2('GROUNDOUT', 'Groundout')}>Groundout</button>
+        <button class="btn btn-action" @click=${() => this.triggerStep2('FLYOUT', 'Flyout')}>Flyout</button>
+        <button class="btn btn-action" @click=${() => this.triggerStep2('LINE_OUT', 'Line Out')}>Line Out</button>
+        <button class="btn btn-action" @click=${() => this.triggerStep2('POP_OUT', 'Pop Out')}>Pop Out</button>
+        <button class="btn btn-action" @click=${() => this.triggerStep2('SACRIFICE_FLY', 'Sac Fly')}>Sac Fly</button>
+        <button class="btn btn-action" @click=${() => this.triggerStep2('ERROR', 'Reached on Error')}>Reached on Error</button>
+        <button class="btn btn-action" @click=${() => this.triggerStep2('FIELDER_CHOICE', "Fielder's Choice")}>Fielder's Choice</button>
+      </div>
+
       <div class="text-accent-green margin-bottom-sm">BASE RUNNING EVENTS</div>
       <div class="action-grid-2col">
         <button class="btn btn-action" @click=${() => this.triggerStep2('STOLEN_BASE', 'Stolen Base')}>
