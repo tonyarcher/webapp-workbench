@@ -4,10 +4,8 @@ Welcome. This file provides the general context, quality mandates, and workflow 
 
 ## 1. Architecture & Subfolder Boundaries
 
-* **Monorepo Separation**: This project bridges a Kotlin backend webapp and an independent frontend custom elements
-  library (`@baseball/webComponents`).
-* **Framework Agnosticism**: Web components must remain strictly isolated from Kotlin backend logic and future
-  React/TanStack bindings. Keep web components purely standard-compliant.
+* **Monorepo Separation**: This project bridges a Spring Boot backend server (`:server`), a Kotlin shared library (`:shared`), an independent Lit Web Components library (`@baseball/webComponents`), and a TanStack React web application (`tanstack-webApp`).
+* **Framework Agnosticism**: Web components must remain strictly isolated from framework logic and server APIs. Keep web components purely standard-compliant.
 * **CSS Boundary Rule**:
     * **Global Directory**: Holds design tokens, brand colors, fonts, and global variables (`:root`).
     * **Component Directory**: Holds component-specific structure, layout, and shadow DOM styling. Component styles must
@@ -28,10 +26,9 @@ Welcome. This file provides the general context, quality mandates, and workflow 
 
 ## 3. Testing & Bug Fix Workflow Mandates
 
-* **Test Framework**: Web components are tested using `@web/test-runner` with Playwright Chromium (`npm test` or `./gradlew :webApp:testWebComponents`).
-* **Bug Fix Mandate**: Whenever fixing a bug or regression in a web component or controller, you **MUST** write a reproduction unit test in `web-components/test/` before or alongside fixing the code.
+* **Test Framework**: Web components are tested using `@web/test-runner` with Playwright Chromium (`npm test` inside `web-components/`).
+* **Bug Fix Mandate**: Whenever fixing a bug or regression in a web component, you **MUST** write a reproduction unit test in `web-components/test/` before or alongside fixing the code.
 * **Coverage Mandate**: Maintain a minimum **90% code coverage** threshold across all web component files (`npm run test:coverage`).
-* **Gradle Verification Integration**: All web component unit tests are bound to the Gradle `check` lifecycle (`./gradlew check`).
 
 ## 4. Communication & Output Guidelines (ADHD & Speed-Reading Optimized)
 
