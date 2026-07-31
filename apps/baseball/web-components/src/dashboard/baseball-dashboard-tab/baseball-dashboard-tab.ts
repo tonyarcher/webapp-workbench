@@ -11,8 +11,23 @@ export class BaseballDashboardTab extends LitElement {
 
     @property({type: String, attribute: 'standings-json'}) standingsJson = '[]';
     @property({type: String, attribute: 'schedule-json'}) scheduleJson = '[]';
+    @property({type: String, attribute: 'error-message'}) errorMessage = '';
+    @property({type: Boolean, attribute: 'no-season'}) noSeason = false;
 
     render() {
+        if (this.errorMessage) {
+            return html`<div class="server-error-banner">${this.errorMessage}</div>`;
+        }
+
+        if (this.noSeason) {
+            return html`
+                <div class="tab-header">
+                    <h1>Season Dashboard</h1>
+                </div>
+                <p>No season selected. Please select a season.</p>
+            `;
+        }
+
         return html`
             <div class="tab-header">
                 <h1>Season Dashboard</h1>

@@ -10,10 +10,10 @@ import com.baseball.ui.state.AppViewManager
 import com.baseball.ui.state.NavTabs
 import com.baseball.ui.tabs.renderBoxScoreTab
 import com.baseball.ui.tabs.renderLeaguesTab
+import com.baseball.ui.tabs.renderSeasonDashboardTab
+import com.baseball.ui.tabs.renderScorerTab
 import com.baseball.ui.tabs.renderStatsTab
 import com.baseball.ui.tabs.renderTeamsTab
-import com.baseball.ui.tabs.dashboard.renderSeasonDashboardTab
-import com.baseball.ui.tabs.scorer.renderScorerTab
 
 val api: BaseballApi = BaseballApiClient()
 val authService: AuthService = AuthManager

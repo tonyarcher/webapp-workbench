@@ -5,6 +5,7 @@ import './scoring/baseball-matchup-card/baseball-matchup-card';
 import './scoring/baseball-action-grid';
 import './scoring/baseball-step2-panel/baseball-step2-panel';
 import './scoring/baseball-scoring-controls/baseball-scoring-controls';
+import './scoring/baseball-scorer-tab/baseball-scorer-tab';
 import './lineup/baseball-lineup-setup/baseball-lineup-setup';
 import './dashboard/baseball-standings-table/baseball-standings-table';
 import './dashboard/baseball-schedule-list/baseball-schedule-list';
