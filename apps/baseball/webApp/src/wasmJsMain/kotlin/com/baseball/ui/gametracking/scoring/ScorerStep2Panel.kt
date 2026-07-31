@@ -1,40 +1,11 @@
 package com.baseball.ui.gametracking.scoring
 
 import com.baseball.models.ScoringEventType
-import com.baseball.ui.core.css
-import kotlinx.css.Align
-import kotlinx.css.Border
-import kotlinx.css.BorderStyle
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.FontWeight
-import kotlinx.css.JustifyContent
-import kotlinx.css.Padding
-import kotlinx.css.TextAlign
-import kotlinx.css.alignItems
-import kotlinx.css.background
-import kotlinx.css.border
-import kotlinx.css.borderRadius
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.fontSize
-import kotlinx.css.fontWeight
-import kotlinx.css.gap
-import kotlinx.css.justifyContent
-import kotlinx.css.marginBottom
-import kotlinx.css.marginTop
-import kotlinx.css.padding
-import kotlinx.css.pct
-import kotlinx.css.px
-import kotlinx.css.rem
-import kotlinx.css.textAlign
-import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.dom.append
 import kotlinx.html.h3
-import kotlinx.html.js.div
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.span
 
@@ -102,13 +73,8 @@ class ScorerStep2Panel(
         gridEl.innerHTML = ""
 
         gridEl.append.div {
-            h3 {
+            h3(classes = "text-accent-green font-bold margin-bottom-md") {
                 +"Step 2: $baseLabel Details"
-                css {
-                    marginBottom = 1.rem
-                    color = Color("var(--accent-green)")
-                    fontSize = 1.2.rem
-                }
             }
             ScorerStep2OptionsUi.renderOptionsBar(this@ScorerStep2Panel, this)
             if (eventType == ScoringEventType.HOME_RUN) {
@@ -145,12 +111,7 @@ class ScorerStep2Panel(
 
 private object ScorerStep2OptionsUi {
     fun renderOptionsBar(panel: ScorerStep2Panel, parent: DIV) {
-        parent.div {
-            css {
-                display = Display.flex
-                gap = 0.5.rem
-                marginBottom = 1.rem
-            }
+        parent.div(classes = "flex-gap-sm margin-bottom-md") {
             button(classes = if (panel.hasError) "btn btn-danger" else "btn btn-secondary") {
                 +(if (panel.hasError) "Error Active" else "+ Add Error")
                 onClickFunction = {
@@ -187,26 +148,14 @@ private object ScorerStep2OptionsUi {
     }
 
     fun renderHomeRunOptions(panel: ScorerStep2Panel, parent: DIV) {
-        parent.div {
+        parent.div(classes = "text-muted font-bold margin-bottom-sm") {
             +"Home Run Type"
-            css {
-                fontWeight = FontWeight.bold
-                fontSize = 0.9.rem
-                color = Color("var(--text-secondary)")
-                marginBottom = 0.5.rem
-            }
         }
-        parent.div {
-            css {
-                display = Display.flex
-                gap = 0.5.rem
-                marginBottom = 1.rem
-            }
+        parent.div(classes = "flex-gap-sm margin-bottom-md") {
             listOf("Over the Fence", "Inside the Park").forEach { opt ->
                 val active = opt == panel.hrType
-                button(classes = if (active) "btn btn-primary" else "btn btn-secondary") {
+                button(classes = if (active) "btn btn-primary flex-grow" else "btn btn-secondary flex-grow") {
                     +opt
-                    css { put("flex", "1") }
                     onClickFunction = {
                         panel.hrType = opt
                         panel.render()
@@ -221,14 +170,8 @@ private object ScorerStep2RunnerAdvancementUi {
     fun renderRunnersAdvancement(panel: ScorerStep2Panel, parent: DIV) {
         val runnersList = getActiveRunnersList(panel)
         if (runnersList.isNotEmpty()) {
-            parent.div {
+            parent.div(classes = "text-muted font-bold margin-bottom-sm") {
                 +"Runner Base Advancement (Optional)"
-                css {
-                    fontWeight = FontWeight.bold
-                    fontSize = 0.9.rem
-                    color = Color("var(--text-secondary)")
-                    marginBottom = 0.5.rem
-                }
             }
             runnersList.forEach { (runnerId, label) ->
                 renderSingleRunnerAdvancement(panel, parent, runnerId, label)
@@ -262,34 +205,16 @@ private object ScorerStep2RunnerAdvancementUi {
         runnerId: Long,
         label: String,
     ) {
-        parent.div {
-            css {
-                display = Display.flex
-                alignItems = Align.center
-                justifyContent = JustifyContent.spaceBetween
-                marginBottom = 0.5.rem
-                gap = 0.5.rem
-                background = "rgba(255, 255, 255, 0.03)"
-                padding = Padding(0.4.rem)
-                borderRadius = 4.px
-            }
-            span {
+        parent.div(classes = "scorer-runner-row") {
+            span(classes = "font-small flex-grow") {
                 +label
-                css {
-                    fontSize = 0.85.rem
-                    put("flex", "1")
-                }
             }
             renderAdvOptionGroup(panel, this, runnerId)
         }
     }
 
     private fun renderAdvOptionGroup(panel: ScorerStep2Panel, parent: DIV, runnerId: Long) {
-        parent.div {
-            css {
-                display = Display.flex
-                gap = 0.2.rem
-            }
+        parent.div(classes = "flex-gap-xs") {
             val options =
                 if (runnerId == panel.controller.game.gameState.currentBatterId) {
                     listOf(0 to "Out", 1 to "1B", 2 to "2B", 3 to "3B", 4 to "HR")
@@ -319,10 +244,6 @@ private object ScorerStep2RunnerAdvancementUi {
             }
         parent.button(classes = btnClass) {
             +baseLabel
-            css {
-                padding = Padding(0.2.rem, 0.4.rem)
-                fontSize = 0.75.rem
-            }
             onClickFunction = {
                 if (isSelected) {
                     panel.runnerAdvances.remove(runnerId.toString())
@@ -388,28 +309,12 @@ private object ScorerStep2DefensePlayUi {
     }
 
     private fun renderThrowSequenceHeader(panel: ScorerStep2Panel, parent: DIV) {
-        parent.div {
+        parent.div(classes = "text-muted font-bold margin-top-md margin-bottom-sm") {
             +"Defensive Play / Throw Sequence"
-            css {
-                fontWeight = FontWeight.bold
-                fontSize = 0.9.rem
-                color = Color("var(--text-secondary)")
-                marginTop = 1.rem
-                marginBottom = 0.5.rem
-            }
         }
         val displaySeq = getDisplaySequence(panel)
-        parent.div {
+        parent.div(classes = "scorer-sequence-box") {
             +"Sequence: $displaySeq"
-            css {
-                padding = Padding(0.5.rem)
-                background = "rgba(255, 255, 255, 0.05)"
-                border = Border(1.px, BorderStyle.solid, Color("#5a544a"))
-                borderRadius = 4.px
-                fontWeight = FontWeight.bold
-                textAlign = TextAlign.center
-                marginBottom = 0.5.rem
-            }
         }
     }
 
@@ -423,13 +328,7 @@ private object ScorerStep2DefensePlayUi {
     }
 
     private fun renderThrowBuilderButtons(panel: ScorerStep2Panel, parent: DIV) {
-        parent.div {
-            css {
-                display = Display.flex
-                gap = 4.px
-                put("flex-wrap", "wrap")
-                marginBottom = 1.rem
-            }
+        parent.div(classes = "flex-gap-xs margin-bottom-md") {
             renderPosBuilderButtons(panel, this)
             renderControlBuilderButtons(panel, this)
         }
@@ -441,10 +340,6 @@ private object ScorerStep2DefensePlayUi {
             val posNum = idx + 1
             parent.button(classes = "btn btn-secondary") {
                 +label
-                css {
-                    padding = Padding(4.px, 8.px)
-                    fontSize = 0.75.rem
-                }
                 onClickFunction = {
                     if (panel.throwSequence.size < 6) {
                         panel.throwSequence.add(posNum)
@@ -466,10 +361,6 @@ private object ScorerStep2DefensePlayUi {
         ).forEach { (lbl, action) ->
             parent.button(classes = "btn btn-secondary") {
                 +lbl
-                css {
-                    padding = Padding(4.px, 8.px)
-                    fontSize = 0.75.rem
-                }
                 onClickFunction = {
                     action()
                     panel.render()
@@ -479,14 +370,9 @@ private object ScorerStep2DefensePlayUi {
     }
 
     fun renderFooter(panel: ScorerStep2Panel, parent: DIV) {
-        parent.div {
-            css {
-                display = Display.flex
-                gap = 1.rem
-            }
-            button(classes = "btn btn-secondary") {
+        parent.div(classes = "flex-gap-md") {
+            button(classes = "btn btn-secondary flex-grow") {
                 +"Cancel"
-                css { put("flex", "1") }
                 onClickFunction = { panel.controller.renderActionGrid() }
             }
         }
@@ -498,32 +384,17 @@ private object ScorerStep2FielderGridUi {
         if (panel.eventType == ScoringEventType.HOME_RUN && panel.hrType == "Over the Fence") {
             renderFenceHrCompleteButton(panel, parent)
         } else {
-            parent.div {
+            parent.div(classes = "text-muted font-bold margin-top-md margin-bottom-sm") {
                 +"Select Hit/Out Fielder to Complete Play"
-                css {
-                    fontWeight = FontWeight.bold
-                    fontSize = 0.9.rem
-                    color = Color("var(--text-secondary)")
-                    marginTop = 1.rem
-                    marginBottom = 0.5.rem
-                }
             }
             renderFielderButtons(panel, parent)
         }
     }
 
     private fun renderFenceHrCompleteButton(panel: ScorerStep2Panel, parent: DIV) {
-        parent.div {
-            css {
-                marginTop = 1.rem
-                marginBottom = 1.rem
-            }
-            button(classes = "btn btn-primary") {
+        parent.div(classes = "margin-top-md margin-bottom-md") {
+            button(classes = "btn btn-primary btn-full") {
                 +"Complete Play (Home Run)"
-                css {
-                    width = 100.pct
-                    padding = Padding(0.75.rem)
-                }
                 onClickFunction = {
                     val detail = "Home Run (Over the Fence)" + if (panel.hasError) " (with Error)" else ""
                     panel.controller.triggerScoringEvent(
@@ -539,13 +410,11 @@ private object ScorerStep2FielderGridUi {
     }
 
     private fun renderFielderButtons(panel: ScorerStep2Panel, parent: DIV) {
-        parent.div(classes = "action-grid") {
-            css { marginBottom = 1.rem }
+        parent.div(classes = "action-grid-3col margin-bottom-md") {
             val locations = getFielderLocations(panel.isHit)
             renderLocationButtons(panel, this, locations)
             button(classes = "btn btn-action") {
                 +"Unspecified Location"
-                css { background = "rgba(255, 255, 255, 0.1)" }
                 onClickFunction = { panel.submitPlayWithLocation(null) }
             }
         }

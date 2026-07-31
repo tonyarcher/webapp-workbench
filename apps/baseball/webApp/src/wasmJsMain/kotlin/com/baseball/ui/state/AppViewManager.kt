@@ -19,31 +19,9 @@ import com.baseball.game.localPlayersSubbedOut
 import com.baseball.game.saveLocalState
 import com.baseball.models.HalfInning
 import com.baseball.ui.core.DomUiConstants
-import com.baseball.ui.core.css
 import com.baseball.ui.core.launch
 import kotlinx.browser.document
 import kotlinx.browser.window
-import kotlinx.css.Align
-import kotlinx.css.Color
-import kotlinx.css.Cursor
-import kotlinx.css.Display
-import kotlinx.css.FontWeight
-import kotlinx.css.JustifyContent
-import kotlinx.css.Padding
-import kotlinx.css.alignItems
-import kotlinx.css.color
-import kotlinx.css.cursor
-import kotlinx.css.display
-import kotlinx.css.fontSize
-import kotlinx.css.fontWeight
-import kotlinx.css.gap
-import kotlinx.css.justifyContent
-import kotlinx.css.marginBottom
-import kotlinx.css.marginRight
-import kotlinx.css.padding
-import kotlinx.css.pct
-import kotlinx.css.rem
-import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.a
 import kotlinx.html.button
@@ -287,48 +265,21 @@ private object AppWelcomeScreenRenderer {
     }
 
     private fun DIV.renderLoggedInWelcomeHeader(session: UserSession) {
-        div {
-            css {
-                display = Display.flex
-                justifyContent = JustifyContent.flexEnd
-                width = 100.pct
-                marginBottom = 1.rem
-            }
-            span {
+        div(classes = "flex-between margin-bottom-md") {
+            span(classes = "text-accent-yellow font-bold margin-right-md") {
                 +"Logged in as ${session.firstName} "
-                css {
-                    color = Color("var(--accent-yellow)")
-                    fontWeight = FontWeight.bold
-                    marginRight = 1.rem
-                }
             }
-            a {
+            a(classes = "auth-link") {
                 +"Log Out"
-                css {
-                    color = Color("var(--accent-red)")
-                    cursor = Cursor.pointer
-                    put("text-decoration", "underline")
-                }
                 onClickFunction = { authService.logout() }
             }
         }
     }
 
     private fun DIV.renderLoggedOutWelcomeHeader() {
-        div {
-            css {
-                display = Display.flex
-                justifyContent = JustifyContent.flexEnd
-                width = 100.pct
-                marginBottom = 1.rem
-            }
-            a {
+        div(classes = "flex-between margin-bottom-md") {
+            a(classes = "auth-link") {
                 +"Log In / Sign Up"
-                css {
-                    color = Color("var(--accent-yellow)")
-                    cursor = Cursor.pointer
-                    put("text-decoration", "underline")
-                }
                 onClickFunction = { window.location.hash = "login" }
             }
         }
@@ -419,7 +370,6 @@ private object AppHeaderRenderer {
             header {
                 div(classes = "header-container") {
                     div(classes = "logo") {
-                        css { cursor = Cursor.pointer }
                         onClickFunction = { AppRoutingHandler.goBackToWelcome() }
                         span { +"GRAND SLAM" }
                         +" BASEBALL"
@@ -447,39 +397,20 @@ private object AppHeaderRenderer {
     }
 
     private fun DIV.renderLoggedInUserHeaderControls(userSession: UserSession) {
-        div {
-            css {
-                display = Display.flex
-                alignItems = Align.center
-                gap = 1.rem
-                fontSize = 0.9.rem
-                color = Color("var(--text-secondary)")
-            }
-            span {
+        div(classes = "flex-between flex-gap-md font-small text-muted") {
+            span(classes = "font-bold text-accent-yellow") {
                 +"Hello, ${userSession.firstName}!"
-                css {
-                    fontWeight = FontWeight("600")
-                    color = Color("var(--accent-yellow)")
-                }
             }
-            button(classes = "btn btn-secondary") {
+            button(classes = "btn btn-secondary font-small") {
                 +"Log Out"
-                css {
-                    padding = Padding(0.25.rem, 0.5.rem)
-                    fontSize = 0.8.rem
-                }
                 onClickFunction = { authService.logout() }
             }
         }
     }
 
     private fun DIV.renderLoggedOutUserHeaderControls() {
-        button(classes = "btn btn-secondary") {
+        button(classes = "btn btn-secondary font-small") {
             +"Log In"
-            css {
-                padding = Padding(0.25.rem, 0.75.rem)
-                fontSize = 0.85.rem
-            }
             onClickFunction = { window.location.hash = "login" }
         }
     }
@@ -496,9 +427,6 @@ private object AppHeaderRenderer {
             button(classes = "nav-btn") {
                 id = "nav-btn-live"
                 +"Live Scoring"
-                css {
-                    display = if (isSingleGameMode || selectedGameId != null) Display.inlineBlock else Display.none
-                }
                 onClickFunction = { AppViewManager.currentTab = NavTabs.TAB_LIVE_SCORER }
             }
         }

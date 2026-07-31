@@ -13,7 +13,6 @@ import com.baseball.models.Game
 import com.baseball.models.GameStatus
 import com.baseball.models.PlayEvent
 import com.baseball.models.Player
-import com.baseball.ui.core.css
 import com.baseball.ui.core.launch
 import com.baseball.ui.gametracking.lineup.LineupSetupOverlay
 import com.baseball.ui.gametracking.lineup.isLineupDialogOpen
@@ -23,22 +22,6 @@ import com.baseball.ui.state.isSingleGameMode
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.selectedGameId
 import com.baseball.ui.state.selectedGameStatus
-import kotlinx.css.Align
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.JustifyContent
-import kotlinx.css.Padding
-import kotlinx.css.TextAlign
-import kotlinx.css.alignItems
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.gap
-import kotlinx.css.justifyContent
-import kotlinx.css.marginBottom
-import kotlinx.css.marginTop
-import kotlinx.css.padding
-import kotlinx.css.rem
-import kotlinx.css.textAlign
 import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.dom.append
@@ -79,11 +62,7 @@ internal fun renderLiveScorerTab(container: HTMLElement) {
 
 private fun renderNoGameSelectedCard(container: HTMLElement) {
     container.append {
-        div(classes = "card") {
-            css {
-                textAlign = TextAlign.center
-                padding = Padding(3.rem)
-            }
+        div(classes = "card text-center padding-lg") {
             p { +"No game selected. Go to Season Dashboard to select one." }
         }
     }
@@ -113,7 +92,6 @@ private suspend fun loadScorerData(): ScorerData {
     return ScorerData(game, events, boxScore, homeRoster, awayRoster)
 }
 
-
 private fun renderLiveScorerMainView(container: HTMLElement, data: ScorerData) {
     renderScorerHeader(container, data.game)
     container.append {
@@ -136,16 +114,9 @@ private fun renderLiveScorerMainView(container: HTMLElement, data: ScorerData) {
 
 private fun renderScorerHeader(container: HTMLElement, game: Game) {
     container.append {
-        div {
-            css {
-                display = Display.flex
-                justifyContent = JustifyContent.spaceBetween
-                alignItems = Align.center
-                marginBottom = 1.rem
-            }
+        div(classes = "flex-between margin-bottom-md") {
             h1 {
                 +"Live Scoring: ${game.awayTeam.city} @ ${game.homeTeam.city}"
-                css { marginBottom = 0.rem }
             }
             if (isSingleGameMode) {
                 renderSingleGameHeaderActions()
@@ -155,12 +126,10 @@ private fun renderScorerHeader(container: HTMLElement, game: Game) {
 }
 
 private fun kotlinx.html.DIV.renderSingleGameHeaderActions() {
-    div {
-        css { display = Display.flex; gap = 0.5.rem }
+    div(classes = "flex-gap-sm") {
         if (localEvents.isNotEmpty()) {
             button(classes = "btn btn-secondary") {
                 +"⎌ Undo Action"
-                css { padding = Padding(0.5.rem, 1.rem) }
                 onClickFunction = { _: Event ->
                     undoLastLocalEvent()
                     renderCurrentTab()
@@ -169,7 +138,6 @@ private fun kotlinx.html.DIV.renderSingleGameHeaderActions() {
         }
         button(classes = "btn btn-danger") {
             +"New Game"
-            css { padding = Padding(0.5.rem, 1.rem) }
             onClickFunction = { _: Event ->
                 isResetDialogOpen = true
                 renderCurrentTab()
@@ -181,19 +149,13 @@ private fun kotlinx.html.DIV.renderSingleGameHeaderActions() {
 private fun renderScorerErrorCard(container: HTMLElement, errorMsg: String?) {
     container.innerHTML = ""
     container.append {
-        div(classes = "card") {
-            css {
-                textAlign = TextAlign.center
-                padding = Padding(3.rem)
-            }
+        div(classes = "card text-center padding-lg") {
             h2 { +"Failed to load Live Scorer" }
-            p {
-                css { color = Color("var(--text-secondary)") }
+            p(classes = "text-muted") {
                 +"Error: $errorMsg"
             }
-            button(classes = "btn btn-primary") {
+            button(classes = "btn btn-primary margin-top-md") {
                 +"Retry"
-                css { marginTop = 1.rem }
                 onClickFunction = { _: Event -> renderCurrentTab() }
             }
         }

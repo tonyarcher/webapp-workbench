@@ -2,11 +2,6 @@ package com.baseball.ui.gametracking.scorebook
 
 import com.baseball.game.BaseballConstants
 import com.baseball.models.Player
-import com.baseball.ui.core.css
-import kotlinx.css.Position
-import kotlinx.css.left
-import kotlinx.css.position
-import kotlinx.css.top
 import kotlinx.html.DIV
 import kotlinx.html.div
 import kotlinx.html.h3
@@ -58,21 +53,11 @@ private object ScorebookFieldDiagramRenderer {
         activePitcherId: Long?,
         activePitcherName: String,
     ) {
-        val positions = listOf(
-            Triple("P", "50%", "55%"),
-            Triple("C", "50%", "85%"),
-            Triple("1B", "72%", "52%"),
-            Triple("2B", "60%", "38%"),
-            Triple("3B", "28%", "52%"),
-            Triple("SS", "40%", "38%"),
-            Triple("LF", "20%", "22%"),
-            Triple("CF", "50%", "15%"),
-            Triple("RF", "80%", "22%")
-        )
+        val positions = listOf("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF")
 
-        positions.forEach { (posCode, x, y) ->
+        positions.forEach { posCode ->
             val pName = getFielderName(posCode, defPlayers, activePitcherId, activePitcherName)
-            renderFielderBadge(fieldWrapper, posCode, pName, x, y)
+            renderFielderBadge(fieldWrapper, posCode, pName)
         }
     }
 
@@ -92,15 +77,8 @@ private object ScorebookFieldDiagramRenderer {
         fieldWrapper: DIV,
         posCode: String,
         playerName: String,
-        leftPct: String,
-        topPct: String,
     ) {
-        fieldWrapper.div(classes = "field-position-badge") {
-            css {
-                position = Position.absolute
-                left = kotlinx.css.LinearDimension(leftPct)
-                top = kotlinx.css.LinearDimension(topPct)
-            }
+        fieldWrapper.div(classes = "field-position-badge pos-pos-$posCode") {
             span(classes = "font-bold") {
                 +"$posCode: $playerName"
             }

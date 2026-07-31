@@ -1,26 +1,11 @@
 package com.baseball.ui.tabs.stats
 
 import com.baseball.api
-import com.baseball.ui.core.UiConstants
-import com.baseball.ui.core.css
 import com.baseball.ui.core.launch
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.seasonsList
 import com.baseball.ui.state.selectedSeasonId
 import com.baseball.ui.state.teamsList
-import kotlinx.css.Align
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.TextAlign
-import kotlinx.css.alignItems
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.flexGrow
-import kotlinx.css.gap
-import kotlinx.css.marginBottom
-import kotlinx.css.padding
-import kotlinx.css.px
-import kotlinx.css.textAlign
 import kotlinx.html.DIV
 import kotlinx.html.button
 import kotlinx.html.div
@@ -29,7 +14,6 @@ import kotlinx.html.h2
 import kotlinx.html.id
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
-import kotlinx.html.js.option
 import kotlinx.html.label
 import kotlinx.html.option
 import kotlinx.html.p
@@ -42,36 +26,28 @@ import org.w3c.dom.events.Event
 
 internal fun renderStatsFilterCard(container: HTMLElement): Pair<HTMLSelectElement?, HTMLSelectElement?> {
     container.append {
-        div(classes = "dashboard-grid") {
-            css {
-                marginBottom = UiConstants.CARD_MARGIN_BOTTOM
-                display = Display.flex
-                gap = UiConstants.CARD_GAP_LARGE
-                alignItems = Align.flexEnd
-            }
+        div(classes = "flex-between margin-bottom-lg flex-gap-md") {
             renderSeasonDropdownGroup()
             renderTeamDropdownGroup()
             renderLoadStatsBtn(container)
         }
     }
 
-    val filterCard = container.querySelector(".dashboard-grid") as? HTMLDivElement
+    val filterCard = container.querySelector(".flex-between") as? HTMLDivElement
     val selectS = filterCard?.querySelector("#stats-season-dropdown") as? HTMLSelectElement
     val selectT = filterCard?.querySelector("#stats-team-dropdown") as? HTMLSelectElement
     return Pair(selectS, selectT)
 }
 
 private fun DIV.renderSeasonDropdownGroup() {
-    div(classes = "form-group") {
-        css { marginBottom = 0.px; flexGrow = 1.0 }
+    div(classes = "form-group flex-grow") {
         label { +"Select Season" }
         select(classes = "form-control") { id = "stats-season-dropdown" }
     }
 }
 
 private fun DIV.renderTeamDropdownGroup() {
-    div(classes = "form-group") {
-        css { marginBottom = 0.px; flexGrow = 1.0 }
+    div(classes = "form-group flex-grow") {
         label { +"Filter by Team" }
         select(classes = "form-control") {
             id = "stats-team-dropdown"
@@ -121,11 +97,9 @@ internal fun populateStatsSeasonsDropdown(selectEl: HTMLSelectElement?) {
 
 internal fun renderNoSeasonSelectedCard(container: HTMLElement) {
     container.append {
-        div(classes = "card") {
-            css { textAlign = TextAlign.center; padding = UiConstants.CARD_PADDING_LARGE }
-            p {
+        div(classes = "card text-center padding-lg") {
+            p(classes = "text-muted") {
                 +"Please select a season, then click Load Statistics."
-                css { color = Color("var(--text-secondary)") }
             }
         }
     }
@@ -133,8 +107,7 @@ internal fun renderNoSeasonSelectedCard(container: HTMLElement) {
 
 internal fun renderStatsSubTabToggle(container: HTMLElement) {
     container.append {
-        div {
-            css { display = Display.flex; gap = UiConstants.CARD_GAP; marginBottom = UiConstants.CARD_GAP_LARGE }
+        div(classes = "flex-gap-md margin-bottom-lg") {
             renderSubTabBtn("Batting", "batting")
             renderSubTabBtn("Pitching", "pitching")
             renderSubTabBtn("Fielding", "fielding")

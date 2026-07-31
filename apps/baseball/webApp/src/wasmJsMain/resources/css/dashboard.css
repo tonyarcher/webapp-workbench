@@ -1,0 +1,40 @@
+/* Dashboard & Schedule Styles */
+.dashboard-title {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+}
+
+.dashboard-section-header {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #fff;
+}
+
+.schedule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.stat-summary-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.stat-summary-val {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--accent-yellow);
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.stat-summary-lbl {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}

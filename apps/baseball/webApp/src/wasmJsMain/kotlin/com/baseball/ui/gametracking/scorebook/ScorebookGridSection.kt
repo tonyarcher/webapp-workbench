@@ -19,74 +19,9 @@ import com.baseball.models.Player
 import com.baseball.models.PlayerBattingStats
 import com.baseball.models.Team
 import com.baseball.ui.core.DomUiConstants
-import com.baseball.ui.core.css
 import com.baseball.ui.state.renderCurrentTab
 import com.baseball.ui.state.substitutePitcher
 import kotlinx.browser.document
-import kotlinx.css.Align
-import kotlinx.css.Border
-import kotlinx.css.BorderCollapse
-import kotlinx.css.BorderStyle
-import kotlinx.css.BoxSizing
-import kotlinx.css.Color
-import kotlinx.css.Cursor
-import kotlinx.css.Display
-import kotlinx.css.FlexDirection
-import kotlinx.css.FontWeight
-import kotlinx.css.JustifyContent
-import kotlinx.css.LinearDimension
-import kotlinx.css.Overflow
-import kotlinx.css.Padding
-import kotlinx.css.Position
-import kotlinx.css.TextAlign
-import kotlinx.css.VerticalAlign
-import kotlinx.css.alignItems
-import kotlinx.css.background
-import kotlinx.css.backgroundColor
-import kotlinx.css.border
-import kotlinx.css.borderBottom
-import kotlinx.css.borderCollapse
-import kotlinx.css.borderLeft
-import kotlinx.css.borderRadius
-import kotlinx.css.borderRight
-import kotlinx.css.borderTop
-import kotlinx.css.borderTopStyle
-import kotlinx.css.bottom
-import kotlinx.css.boxSizing
-import kotlinx.css.color
-import kotlinx.css.cursor
-import kotlinx.css.display
-import kotlinx.css.flexDirection
-import kotlinx.css.flexGrow
-import kotlinx.css.fontFamily
-import kotlinx.css.fontSize
-import kotlinx.css.fontWeight
-import kotlinx.css.gap
-import kotlinx.css.height
-import kotlinx.css.justifyContent
-import kotlinx.css.left
-import kotlinx.css.letterSpacing
-import kotlinx.css.marginBottom
-import kotlinx.css.marginLeft
-import kotlinx.css.marginTop
-import kotlinx.css.minWidth
-import kotlinx.css.overflow
-import kotlinx.css.overflowX
-import kotlinx.css.padding
-import kotlinx.css.pct
-import kotlinx.css.position
-import kotlinx.css.properties.deg
-import kotlinx.css.properties.rotate
-import kotlinx.css.properties.transform
-import kotlinx.css.properties.translate
-import kotlinx.css.px
-import kotlinx.css.rem
-import kotlinx.css.right
-import kotlinx.css.textAlign
-import kotlinx.css.top
-import kotlinx.css.verticalAlign
-import kotlinx.css.width
-import kotlinx.css.zIndex
 import kotlinx.html.DIV
 import kotlinx.html.TD
 import kotlinx.html.button
@@ -190,16 +125,7 @@ private object ScorebookHeaderPanelUi {
         pitchingTeam: Team,
     ) {
         container.append {
-            div {
-                css {
-                    display = Display.grid
-                    put("grid-template-columns", "150px 1fr 1fr 180px")
-                    border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                    backgroundColor = Color("#eae5dc")
-                    padding = Padding(0.75.rem)
-                    marginBottom = 1.rem
-                    fontWeight = FontWeight.bold
-                }
+            div(classes = "scorebook-header-panel") {
                 renderHeaderPanelCol1(isHomeBatting)
                 renderHeaderPanelCol2(battingTeam, isHomeBatting)
                 renderHeaderPanelCol3(pitchingTeam)
@@ -209,13 +135,8 @@ private object ScorebookHeaderPanelUi {
     }
 
     private fun DIV.renderHeaderPanelCol1(isHomeBatting: Boolean) {
-        div {
+        div(classes = "scorebook-half-tag") {
             +(if (isHomeBatting) "BOTTOM" else "TOP")
-            css {
-                fontSize = 2.rem
-                color = Color("#ff2a3b")
-                letterSpacing = 2.px
-            }
         }
     }
 
@@ -223,52 +144,25 @@ private object ScorebookHeaderPanelUi {
         battingTeam: Team,
         isHomeBatting: Boolean,
     ) {
-        div {
-            css {
-                display = Display.flex
-                flexDirection = FlexDirection.column
-                justifyContent = JustifyContent.center
-            }
+        div(classes = "scorebook-team-info") {
             div { +"TEAM: ${battingTeam.city.uppercase()} ${battingTeam.name.uppercase()}" }
-            div {
+            div(classes = "scorebook-manager-tag") {
                 +"MANAGER: ${if (isHomeBatting) "COUNSELL, C." else "REYNOLDS, J."}"
-                css {
-                    fontSize = 0.85.rem
-                    color = Color("#555")
-                    marginTop = 0.25.rem
-                }
             }
         }
     }
 
     private fun DIV.renderHeaderPanelCol3(pitchingTeam: Team) {
-        div {
-            css {
-                display = Display.flex
-                flexDirection = FlexDirection.column
-                justifyContent = JustifyContent.center
-            }
+        div(classes = "scorebook-pitcher-info") {
             div { +"PITCHING OPPONENT: ${pitchingTeam.name.uppercase()}" }
-            div {
+            div(classes = "scorebook-umpire-tag") {
                 +"UMPIRES: HP: CULBRETH, F. | 1B: NELSON, J."
-                css {
-                    fontSize = 0.85.rem
-                    color = Color("#555")
-                    marginTop = 0.25.rem
-                }
             }
         }
     }
 
     private fun DIV.renderHeaderPanelCol4(game: Game) {
-        div {
-            css {
-                display = Display.flex
-                flexDirection = FlexDirection.column
-                justifyContent = JustifyContent.center
-                alignItems = Align.flexEnd
-                fontSize = 0.8.rem
-            }
+        div(classes = "scorebook-meta-col") {
             div { +"KEEPING SCORE BY: ☑ WEBAPP" }
             div { +"FIRST PITCH: 7:05 PM" }
             renderBenchButton(game)
@@ -277,17 +171,8 @@ private object ScorebookHeaderPanelUi {
 
     private fun DIV.renderBenchButton(game: Game) {
         if (game.status != GameStatus.COMPLETED) {
-            button(classes = "btn") {
+            button(classes = "btn scorebook-bench-btn") {
                 +"Bench & Bullpen"
-                css {
-                    marginTop = 0.4.rem
-                    fontSize = 0.75.rem
-                    padding = Padding(2.px, 8.px)
-                    background = "rgba(0, 0, 0, 0.05)"
-                    border = Border(1.px, BorderStyle.solid, Color("#5a544a"))
-                    borderRadius = 4.px
-                    cursor = Cursor.pointer
-                }
                 onClickFunction = {
                     val drawer = document.getElementById("roster-drawer-element") as? HTMLElement
                     if (drawer != null) {
@@ -316,24 +201,9 @@ private object ScorebookRosterDrawerUi {
         val benchList = if (isHomeBatting) localHomeBench else localAwayBench
 
         container.append {
-            div {
+            div(classes = "roster-drawer") {
                 id = "roster-drawer-element"
-                css {
-                    display = Display.none
-                    backgroundColor = Color("#fcfbfa")
-                    border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                    borderTopStyle = BorderStyle.none
-                    padding = Padding(1.rem)
-                    marginTop = (-1.1).rem
-                    marginBottom = 1.5.rem
-                    fontFamily = "'Courier New', Courier, monospace"
-                }
-
-                div {
-                    css {
-                        display = Display.flex
-                        gap = 2.rem
-                    }
+                div(classes = "roster-drawer-inner") {
                     renderBenchBattersCol(benchList)
                     renderBullpenCol(fieldingBench, activePitcherName, isHome, game)
                 }
@@ -342,8 +212,7 @@ private object ScorebookRosterDrawerUi {
     }
 
     private fun DIV.renderBenchBattersCol(benchList: List<Player>) {
-        div {
-            css { flexGrow = 1.0 }
+        div(classes = "roster-drawer-col") {
             h4 { +"BENCH BATTERS" }
             val batters = benchList.filter {
                 it.position != BaseballConstants.Positions.P && !localPlayersSubbedOut.contains(it.id)
@@ -364,8 +233,7 @@ private object ScorebookRosterDrawerUi {
         isHome: Boolean,
         game: Game,
     ) {
-        div {
-            css { flexGrow = 1.0 }
+        div(classes = "roster-drawer-col") {
             h4 { +"BULLPEN" }
             val pitchers = fieldingBench.filter {
                 it.position == BaseballConstants.Positions.P && it.name != activePitcherName
@@ -385,13 +253,8 @@ private object ScorebookRosterDrawerUi {
 
     private fun DIV.renderCallUpButton(game: Game, isHome: Boolean, pitcherId: Long?) {
         if (game.status != GameStatus.COMPLETED && pitcherId != null) {
-            button(classes = "btn") {
+            button(classes = "btn callup-btn") {
                 +"Call up"
-                css {
-                    marginLeft = 0.5.rem
-                    fontSize = 0.7.rem
-                    padding = Padding(1.px, 4.px)
-                }
                 onClickFunction = {
                     substitutePitcher(isHome, pitcherId)
                     renderCurrentTab()
@@ -435,10 +298,6 @@ private object ScorebookTableGridUi {
         tbodyEl.append {
             tr {
                 id = rowId
-                css {
-                    borderBottom = Border(1.px, BorderStyle.solid, Color("#5a544a"))
-                    height = 42.5.px
-                }
             }
         }
         val tr1 = tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
@@ -455,18 +314,14 @@ private object ScorebookTableGridUi {
                 rowRenderData.cellBackground,
             )
         )
-        ScorebookRowCellUi.renderPosTd(tr1, subPos, rowRenderData.cellBackground)
+        ScorebookRowCellUi.renderPosTd(tr1, subPos)
         return tr1
     }
 
-    private fun createSlotRow(tbodyEl: HTMLTableSectionElement, rowId: String, hasSub: Boolean): HTMLTableRowElement {
+    private fun createSlotRow(tbodyEl: HTMLTableSectionElement, rowId: String): HTMLTableRowElement {
         tbodyEl.append {
             tr {
                 id = rowId
-                css {
-                    borderBottom = Border(1.px, BorderStyle.solid, Color(if (hasSub) "#9c9384" else "#5a544a"))
-                    height = 42.5.px
-                }
             }
         }
         return tbodyEl.querySelector("#$rowId") as HTMLTableRowElement
@@ -486,14 +341,14 @@ private object ScorebookTableGridUi {
         val starterPos =
             params.battingStatsList.find { it.playerName == playerName0 }?.position ?: BaseballConstants.Positions.DH
 
-        val tr0 = createSlotRow(tbodyEl, "slot-row-$slotIdx", hasSub)
+        val tr0 = createSlotRow(tbodyEl, "slot-row-$slotIdx")
 
         ScorebookRowCellUi.renderPlayerCell(
             tr0,
             game,
             PlayerCellData(slotIdx, playerName0, hasSub, params.isHomeBatting, cellBackground)
         )
-        ScorebookRowCellUi.renderPosTd(tr0, starterPos, cellBackground)
+        ScorebookRowCellUi.renderPosTd(tr0, starterPos)
 
         var tr1: HTMLTableRowElement? = null
         if (hasSub) {
@@ -516,34 +371,17 @@ private object ScorebookTableGridUi {
 private object ScorebookTableContainerUi {
     fun buildScorecardTableHtml(container: HTMLElement, maxInning: Int) {
         container.append {
-            div {
+            div(classes = "scorecard-table-wrapper") {
                 id = "scorecard-table-wrapper"
-                css {
-                    width = 100.pct
-                    overflowX = Overflow.auto
-                    border = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                }
                 buildTableStructure(maxInning)
             }
         }
     }
 
     private fun kotlinx.html.DIV.buildTableStructure(maxInning: Int) {
-        table {
+        table(classes = "scorecard-table") {
             id = "scorecard-table-el"
-            css {
-                borderCollapse = BorderCollapse.collapse
-                backgroundColor = Color("#faf9f6")
-                minWidth = 1000.px
-                width = 100.pct
-                color = Color("#2b2a28")
-                fontSize = 0.85.rem
-            }
-            thead {
-                css {
-                    background = "#eae5dc"
-                    borderBottom = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                }
+            thead(classes = "scorecard-thead") {
                 renderScorecardTableHeader(maxInning)
             }
             tbody {
@@ -555,7 +393,6 @@ private object ScorebookTableContainerUi {
     private fun kotlinx.html.THEAD.renderScorecardTableHeader(maxInning: Int) {
         tr {
             id = "scorebook-header-row"
-            css { height = 35.px }
             renderBattersAndPosHeaders()
             renderInningHeaderCols(maxInning)
             renderStatHeaderCols()
@@ -563,69 +400,36 @@ private object ScorebookTableContainerUi {
     }
 
     private fun kotlinx.html.TR.renderBattersAndPosHeaders() {
-        th {
+        th(classes = "th-batter-header") {
             +"BATTERS"
-            css {
-                borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                padding = Padding(0.5.rem)
-                textAlign = TextAlign.left
-                width = 180.px
-            }
         }
-        th {
+        th(classes = "th-pos-header") {
             +"POS"
-            css {
-                borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                padding = Padding(0.5.rem)
-                textAlign = TextAlign.center
-                width = 45.px
-            }
         }
     }
 
     private fun kotlinx.html.TR.renderInningHeaderCols(maxInning: Int) {
         for (inn in 1..maxInning) {
-            th {
+            th(classes = "th-inning-header") {
                 +inn.toString()
-                css {
-                    borderRight = Border(1.px, BorderStyle.solid, Color("#9c9384"))
-                    width = 75.px
-                    textAlign = TextAlign.center
-                }
             }
         }
     }
 
     private fun kotlinx.html.TR.renderStatHeaderCols() {
         listOf("AB", "R", "H", "RBI").forEach { sh ->
-            th {
+            th(classes = if (sh == "AB") "th-stat-header first" else "th-stat-header") {
                 +sh
-                css {
-                    borderLeft = Border(
-                        if (sh == "AB") 2.px else 1.px,
-                        BorderStyle.solid,
-                        Color(if (sh == "AB") "#5a544a" else "#9c9384")
-                    )
-                    width = 45.px
-                    textAlign = TextAlign.center
-                }
             }
         }
     }
 }
 
 private object ScorebookRowCellUi {
-    fun renderPosTd(tr: HTMLTableRowElement, position: String, cellBackground: String) {
+    fun renderPosTd(tr: HTMLTableRowElement, position: String) {
         tr.append {
-            td {
+            td(classes = "text-center font-bold") {
                 +position
-                css {
-                    borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                    padding = Padding(0.5.rem)
-                    textAlign = TextAlign.center
-                    fontWeight = FontWeight.bold
-                    background = cellBackground
-                }
             }
         }
     }
@@ -634,18 +438,8 @@ private object ScorebookRowCellUi {
         slotIdx: Int,
         isHomeBatting: Boolean,
     ) {
-        button {
+        button(classes = "sub-btn-scorebook") {
             +"Sub"
-            css {
-                padding = Padding(2.px, 6.px)
-                fontSize = 0.7.rem
-                backgroundColor = Color("#5a544a")
-                color = Color.white
-                fontWeight = FontWeight.bold
-                border = Border.none
-                borderRadius = 4.px
-                cursor = Cursor.pointer
-            }
             onClickFunction = { event ->
                 val btnEl = event.target as? HTMLButtonElement
                 val parentCell = btnEl?.parentElement?.parentElement as? HTMLElement
@@ -663,20 +457,7 @@ private object ScorebookRowCellUi {
     ) {
         tr.append {
             td {
-                css {
-                    borderRight = Border(2.px, BorderStyle.solid, Color("#5a544a"))
-                    padding = Padding(0.px, 0.5.rem)
-                    verticalAlign = VerticalAlign.middle
-                    background = data.cellBackground
-                    height = 42.5.px
-                }
-                div {
-                    css {
-                        display = Display.flex
-                        justifyContent = JustifyContent.spaceBetween
-                        alignItems = Align.center
-                        width = 100.pct
-                    }
+                div(classes = "player-cell-content") {
                     renderPlayerName(data.playerName)
                     if (!data.hasSub && game.status != GameStatus.COMPLETED) {
                         renderSubButton(data.slotIdx, data.isHomeBatting)
@@ -687,12 +468,8 @@ private object ScorebookRowCellUi {
     }
 
     private fun DIV.renderPlayerName(name: String) {
-        span {
+        span(classes = "player-name-span") {
             +name
-            css {
-                fontWeight = FontWeight.bold
-                fontFamily = "'Courier New', Courier, monospace"
-            }
         }
     }
 
@@ -716,9 +493,9 @@ private object ScorebookRowCellUi {
         ).forEachIndexed { statIdx, selector ->
             val val0 = selector(stat0)
             val val1 = selector(stat1)
-            appendStatTd(tr0, val0, statIdx == 0, rowData.cellBackground)
+            appendStatTd(tr0, val0, statIdx == 0)
             if (hasSub && tr1 != null) {
-                appendStatTd(tr1, val1, statIdx == 0, rowData.cellBackground)
+                appendStatTd(tr1, val1, statIdx == 0)
             }
         }
     }
@@ -727,21 +504,15 @@ private object ScorebookRowCellUi {
         tr: HTMLTableRowElement,
         value: String,
         isFirst: Boolean,
-        bg: String,
     ) {
+        val tdClasses = if (isFirst) {
+            "text-center font-bold th-stat-header first"
+        } else {
+            "text-center font-bold th-stat-header"
+        }
         tr.append {
-            td {
+            td(classes = tdClasses) {
                 +value
-                css {
-                    borderLeft = Border(
-                        if (isFirst) 2.px else 1.px,
-                        BorderStyle.solid,
-                        Color(if (isFirst) "#5a544a" else "#9c9384")
-                    )
-                    textAlign = TextAlign.center
-                    background = bg
-                    fontWeight = FontWeight.bold
-                }
             }
         }
     }
@@ -762,12 +533,12 @@ private object ScorebookInningCellUi {
             val isSubPlay = ev != null && hasSub && ev.batterName == rowData.players[1]
 
             if (isSubPlay && tr1 != null) {
-                renderInningCellWrapper(tr0, null, rowData.cellBackground, params.teamEvents, params.parser)
-                renderInningCellWrapper(tr1, ev, rowData.cellBackground, params.teamEvents, params.parser)
+                renderInningCellWrapper(tr0, null, params.teamEvents, params.parser)
+                renderInningCellWrapper(tr1, ev, params.teamEvents, params.parser)
             } else {
-                renderInningCellWrapper(tr0, ev, rowData.cellBackground, params.teamEvents, params.parser)
+                renderInningCellWrapper(tr0, ev, params.teamEvents, params.parser)
                 if (hasSub && tr1 != null) {
-                    renderInningCellWrapper(tr1, null, rowData.cellBackground, params.teamEvents, params.parser)
+                    renderInningCellWrapper(tr1, null, params.teamEvents, params.parser)
                 }
             }
         }
@@ -776,48 +547,26 @@ private object ScorebookInningCellUi {
     private fun renderInningCellWrapper(
         tr: HTMLTableRowElement,
         ev: PlayEvent?,
-        cellBackground: String,
         teamEvents: List<PlayEvent>,
         parser: ScorecardParser,
     ) {
         tr.append {
-            td {
-                renderInningCell(ev, cellBackground, teamEvents, parser)
+            td(classes = "th-inning-header") {
+                renderInningCell(ev, teamEvents, parser)
             }
         }
     }
 
     private fun TD.renderInningCell(
         ev: PlayEvent?,
-        cellBackground: String,
         teamEvents: List<PlayEvent>,
         parser: ScorecardParser,
     ) {
-        css {
-            borderRight = Border(1.px, BorderStyle.solid, Color("#9c9384"))
-            padding = Padding(0.px)
-            height = 42.5.px
-            width = 75.px
-            background = cellBackground
-        }
-        div {
-            css {
-                position = Position.relative
-                width = 100.pct
-                height = 100.pct
-                boxSizing = BoxSizing.borderBox
-                padding = Padding(2.px)
-                overflow = Overflow.hidden
-            }
+        div(classes = "inning-cell-box") {
             if (ev != null) {
                 renderEventInInningCell(ev, parser, teamEvents)
             } else {
-                div {
-                    css {
-                        width = 100.pct
-                        height = 100.pct
-                    }
-                }
+                div { }
             }
         }
     }
@@ -836,19 +585,8 @@ private object ScorebookInningCellUi {
 
         renderInningDiamond(base)
         ScorebookCellAnnotationUi.renderOutDetails(this, outAtBase, outDetail)
-        div {
+        div(classes = "notation-tag") {
             +notation
-            css {
-                position = Position.absolute
-                top = 50.pct
-                left = 50.pct
-                transform {
-                    translate((-50).pct, (-50).pct)
-                }
-                fontWeight = FontWeight.bold
-                fontSize = 0.75.rem
-                zIndex = 2
-            }
         }
         ScorebookCellAnnotationUi.renderCountBallsStrikes(this, ev)
         ScorebookCellAnnotationUi.renderOutCircle(this, outNum)
@@ -858,34 +596,14 @@ private object ScorebookInningCellUi {
     private fun DIV.renderInningDiamond(
         base: Int,
     ) {
-        div {
-            css {
-                position = Position.absolute
-                top = 50.pct
-                left = 50.pct
-                width = 26.px
-                height = 26.px
-                marginTop = (-13).px
-                marginLeft = (-13).px
-                border = Border(1.px, BorderStyle.dashed, Color("#d2cdc6"))
-                transform { rotate(45.deg) }
-                zIndex = 1
-
-                if (base >= 1) {
-                    borderRight = Border(2.px, BorderStyle.solid, Color("#ff2a3b"))
-                }
-                if (base >= 2) {
-                    borderTop = Border(2.px, BorderStyle.solid, Color("#ff2a3b"))
-                }
-                if (base >= 3) {
-                    borderLeft = Border(2.px, BorderStyle.solid, Color("#ff2a3b"))
-                }
-                if (base >= 4) {
-                    borderBottom = Border(2.px, BorderStyle.solid, Color("#ff2a3b"))
-                    backgroundColor = Color("rgba(255, 42, 59, 0.25)")
-                }
-            }
+        val diamondClass = when (base) {
+            1 -> "inning-diamond-shape b1"
+            2 -> "inning-diamond-shape b2"
+            3 -> "inning-diamond-shape b3"
+            4 -> "inning-diamond-shape b4"
+            else -> "inning-diamond-shape"
         }
+        div(classes = diamondClass) { }
     }
 }
 
@@ -896,53 +614,18 @@ private object ScorebookCellAnnotationUi {
         outDetail: String?,
     ) {
         if (outAtBase != null && outDetail != null) {
-            parent.div {
+            parent.div(classes = "text-accent-red font-bold") {
                 +outDetail
-                val (t, l) =
-                    when (outAtBase) {
-                        1 -> Pair("18px", "48px")
-                        2 -> Pair("1px", "32px")
-                        3 -> Pair("18px", "12px")
-                        else -> Pair("30px", "32px")
-                    }
-                css {
-                    position = Position.absolute
-                    top = t.toPxOrPctOrRem()
-                    left = l.toPxOrPctOrRem()
-                    fontSize = 0.65.rem
-                    color = Color("#ff2a3b")
-                    fontWeight = FontWeight.bold
-                    zIndex = 3
-                }
             }
         }
     }
-
-    private fun String.toPxOrPctOrRem(): LinearDimension =
-        if (endsWith("px")) {
-            substringBefore("px").toInt().px
-        } else if (endsWith("rem")) {
-            substringBefore("rem").toDouble().rem
-        } else if (endsWith("%")) {
-            substringBefore("%").toDouble().pct
-        } else {
-            0.px
-        }
 
     fun renderCountBallsStrikes(
         parent: DIV,
         ev: PlayEvent,
     ) {
         if (ev.balls > 0 || ev.strikes > 0) {
-            parent.div {
-                css {
-                    position = Position.absolute
-                    top = 2.px
-                    left = 4.px
-                    fontSize = 0.6.rem
-                    color = Color("#777")
-                    fontFamily = "monospace"
-                }
+            parent.div(classes = "count-tag") {
                 +"${ev.balls}-${ev.strikes}"
             }
         }
@@ -953,23 +636,8 @@ private object ScorebookCellAnnotationUi {
         outNum: Int?,
     ) {
         if (outNum != null) {
-            parent.div {
+            parent.div(classes = "out-circle") {
                 +outNum.toString()
-                css {
-                    position = Position.absolute
-                    bottom = 2.px
-                    left = 4.px
-                    width = 11.px
-                    height = 11.px
-                    border = Border(1.px, BorderStyle.solid, Color("#ff2a3b"))
-                    borderRadius = 50.pct
-                    display = Display.flex
-                    justifyContent = JustifyContent.center
-                    alignItems = Align.center
-                    fontSize = 0.55.rem
-                    color = Color("#ff2a3b")
-                    fontWeight = FontWeight.bold
-                }
             }
         }
     }
@@ -983,19 +651,7 @@ private object ScorebookCellAnnotationUi {
         val nextPlay = teamEvents.getOrNull(playIdx + 1)
         val endedInning = ev.outsAfter == 3 && (nextPlay == null || nextPlay.inning > ev.inning)
         if (endedInning) {
-            parent.div {
-                css {
-                    position = Position.absolute
-                    bottom = (-10).px
-                    right = (-10).px
-                    width = 35.px
-                    height = 1.px
-                    backgroundColor = Color("#5a544a")
-                    transform { rotate((-45).deg) }
-                    put("transform-origin", "bottom right")
-                    zIndex = 4
-                }
-            }
+            parent.div(classes = "inning-diagonal-line") { }
         }
     }
 }
