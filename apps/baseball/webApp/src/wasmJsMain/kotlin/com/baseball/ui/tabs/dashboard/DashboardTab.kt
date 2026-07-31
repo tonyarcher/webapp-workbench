@@ -22,10 +22,6 @@ internal suspend fun setupRenderSeasonDashboardTab(container: HTMLElement) {
         ensureDashboardDataLoaded()
         container.innerHTML = ""
 
-        val title = document.createElement("h1")
-        title.textContent = "Season Dashboard"
-        container.appendChild(title)
-
         val sId = selectedSeasonId
         if (sId == null) {
             val msg = document.createElement("p")
@@ -36,13 +32,10 @@ internal suspend fun setupRenderSeasonDashboardTab(container: HTMLElement) {
 
         val dash = api.getSeasonDashboard(sId)
 
-        val standingsTable = document.createElement("baseball-standings-table")
-        standingsTable.setAttribute("standings-json", Json.encodeToString(dash.standings))
-        container.appendChild(standingsTable)
-
-        val scheduleList = document.createElement("baseball-schedule-list")
-        scheduleList.setAttribute("schedule-json", Json.encodeToString<List<Game>>(dash.games))
-        container.appendChild(scheduleList)
+        val dashTab = document.createElement("baseball-dashboard-tab")
+        dashTab.setAttribute("standings-json", Json.encodeToString(dash.standings))
+        dashTab.setAttribute("schedule-json", Json.encodeToString<List<Game>>(dash.games))
+        container.appendChild(dashTab)
     } catch (e: IllegalStateException) {
         val err = document.createElement("div")
         err.className = "server-error-banner"

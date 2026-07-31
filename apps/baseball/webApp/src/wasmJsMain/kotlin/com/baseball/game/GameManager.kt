@@ -9,6 +9,8 @@ import com.baseball.models.Team
 import com.baseball.seed.SeedData
 import kotlinx.serialization.Serializable
 
+const val P = "P"
+
 @Serializable
 data class LocalGameState(
     val game: Game?,
@@ -54,18 +56,18 @@ var localAwayBatterIndex = 0
 var localHomeBatterIndex = 0
 val localPlayersSubbedOut = mutableSetOf<Long>()
 
-var localAwayActivePitcherId = SeedData.cardinalsRoster.find { it.position == BaseballConstants.Positions.P }
+var localAwayActivePitcherId = SeedData.cardinalsRoster.find { it.position == P }
     ?.id ?: 210L
 var localAwayActivePitcherName = SeedData.cardinalsRoster.find {
-    it.position == BaseballConstants.Positions.P
+    it.position == P
 }
     ?.name ?: "Sonny Gray"
 var localHomeActivePitcherId = SeedData.cubsRoster.find {
-    it.position == BaseballConstants.Positions.P
+    it.position == P
 }
     ?.id ?: 110L
 var localHomeActivePitcherName = SeedData.cubsRoster.find {
-    it.position == BaseballConstants.Positions.P
+    it.position == P
 }
     ?.name ?: "Justin Steele"
 
@@ -91,18 +93,18 @@ object GameManager : GameService {
         localHomeRoster = SeedData.cubsRoster
         localAwayRoster = SeedData.cardinalsRoster
 
-        val homeP = localHomeRoster.find { it.position == BaseballConstants.Positions.P }
-            ?: Player(110L, 1L, "Justin Steele", BaseballConstants.Positions.P, 35, "L", "L")
-        val awayP = localAwayRoster.find { it.position == BaseballConstants.Positions.P }
-            ?: Player(210L, 2L, "Sonny Gray", BaseballConstants.Positions.P, 54, "R", "R")
+        val homeP = localHomeRoster.find { it.position == P }
+            ?: Player(110L, 1L, "Justin Steele", P, 35, "L", "L")
+        val awayP = localAwayRoster.find { it.position == P }
+            ?: Player(210L, 2L, "Sonny Gray", P, 54, "R", "R")
 
-        val homeLineupPlayers = localHomeRoster.filter { it.position != BaseballConstants.Positions.P }.take(9)
-        val awayLineupPlayers = localAwayRoster.filter { it.position != BaseballConstants.Positions.P }.take(9)
+        val homeLineupPlayers = localHomeRoster.filter { it.position != P }.take(9)
+        val awayLineupPlayers = localAwayRoster.filter { it.position != P }.take(9)
         val homeBenchPlayers = localHomeRoster.filter {
-            it.position == BaseballConstants.Positions.P && it.id != homeP.id
+            it.position == P && it.id != homeP.id
         } + localHomeRoster.drop(10)
         val awayBenchPlayers = localAwayRoster.filter {
-            it.position == BaseballConstants.Positions.P && it.id != awayP.id
+            it.position == P && it.id != awayP.id
         } + localAwayRoster.drop(10)
 
         startNewGame(

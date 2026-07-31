@@ -4,10 +4,12 @@ import com.baseball.api
 import com.baseball.auth.UserSession
 import com.baseball.authService
 import com.baseball.game.initGame
+import com.baseball.game.localGame
 import com.baseball.ui.core.launch
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
@@ -45,6 +47,13 @@ object AppViewManager {
         val contentArea = document.getElementById("content-area") as? HTMLElement ?: return
         contentArea.innerHTML = ""
         tabRenderers[currentTab]?.invoke(contentArea)
+    }
+
+    fun isGameInProgress(): Boolean {
+        if (isSingleGameMode) {
+            return localGame?.status == com.baseball.models.GameStatus.IN_PROGRESS
+        }
+        return selectedGameStatus == com.baseball.models.GameStatus.IN_PROGRESS
     }
 
     fun registerTabRenderers(renderers: Map<String, (HTMLElement) -> Unit>) {
@@ -104,39 +113,30 @@ object AppViewManager {
         app.innerHTML = ""
 
         if (isWelcomeScreen) {
-            renderWelcomeCard(app)
+            renderWelcomeScreenComponent(app)
         } else {
             renderNavBarAndMain(app)
         }
     }
 
-    private fun renderWelcomeCard(app: HTMLElement) {
-        val welcomeCard = document.createElement("div")
-        welcomeCard.className = "welcome-container text-center padding-lg"
-        welcomeCard.innerHTML = """
-            <h1 style='color: #ffcc00; font-size: 2.5rem;'>⚾ GRAND SLAM BASEBALL</h1>
-            <p style='color: #8e9cae; margin-bottom: 2rem;'>Exhibition Mode (Offline) & Full League Season Mode (Online)</p>
-            <div style='display: flex; gap: 1rem; justify-content: center;'>
-                <button id='btn-single-game' class='btn' style='padding: 1rem 2rem; font-size: 1.1rem;'>Single Game Mode</button>
-                <button id='btn-league-mode' class='btn btn-secondary' style='padding: 1rem 2rem; font-size: 1.1rem;'>League Season Mode</button>
-            </div>
-        """.trimIndent()
-        app.appendChild(welcomeCard)
-
-        document.getElementById("btn-single-game")?.addEventListener("click", {
+    private fun renderWelcomeScreenComponent(app: HTMLElement) {
+        val welcome = document.createElement("baseball-welcome-screen")
+        welcome.setAttribute("server-online", serverOnline.toString())
+        welcome.addEventListener("mode-selected", { event ->
+            val target = event.target as? Element
+            val mode = target?.getAttribute("selected-mode") ?: "single"
             serverConnectionError = null
             isWelcomeScreen = false
-            isSingleGameMode = true
-            initGame(forceReset = false)
-            window.location.hash = NavTabs.TAB_LIVE_SCORER
+            if (mode == "single") {
+                isSingleGameMode = true
+                initGame(forceReset = false)
+                window.location.hash = NavTabs.TAB_LIVE_SCORER
+            } else {
+                isSingleGameMode = false
+                window.location.hash = NavTabs.TAB_LEAGUES
+            }
         })
-
-        document.getElementById("btn-league-mode")?.addEventListener("click", {
-            serverConnectionError = null
-            isWelcomeScreen = false
-            isSingleGameMode = false
-            window.location.hash = NavTabs.TAB_LEAGUES
-        })
+        app.appendChild(welcome)
     }
 
     private fun renderNavBarAndMain(app: HTMLElement) {
@@ -158,7 +158,7 @@ object AppViewManager {
     }
 
     fun updateActiveTabButtons() {
-        println("Active tab: ${currentTab}")
+        println("Active tab: ${AppViewManager.currentTab}")
     }
 }
 
@@ -241,10 +241,19 @@ private object AppRoutingHandler {
         NavTabs.TAB_REGISTER,
     )
 
+    fun goBackToWelcome() {
+        selectedGameId = null
+        AppViewManager.serverConnectionError = null
+        window.location.hash = "welcome"
+    }
 }
 
 fun updateActiveTabButtons() {
     AppViewManager.updateActiveTabButtons()
+}
+
+fun goBackToWelcome() {
+    AppRoutingHandler.goBackToWelcome()
 }
 
 fun renderCurrentTab() {

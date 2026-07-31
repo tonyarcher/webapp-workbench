@@ -6,6 +6,8 @@ import './scoring/baseball-action-grid';
 import './lineup/baseball-lineup-setup/baseball-lineup-setup';
 import './dashboard/baseball-standings-table';
 import './dashboard/baseball-schedule-list';
+import './dashboard/baseball-dashboard-tab/baseball-dashboard-tab';
+import './welcome/baseball-welcome-screen/baseball-welcome-screen';
 import './stats/baseball-stats-table';
 import './teams/baseball-roster-table';
 import './leagues/baseball-league-card';

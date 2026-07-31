@@ -1,0 +1,98 @@
+:host {
+  display: block;
+  width: 100%;
+  max-width: 950px;
+  margin: 3rem auto;
+  font-family: 'Outfit', sans-serif;
+  box-sizing: border-box;
+}
+
+.welcome-container {
+  text-align: center;
+  padding: 2rem;
+}
+
+h1 {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: var(--accent-yellow, #ffcc00);
+  margin: 0 0 0.5rem 0;
+  letter-spacing: 1px;
+}
+
+.subtitle {
+  color: #8e9cae;
+  font-size: 1.1rem;
+  margin-bottom: 2.5rem;
+}
+
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .mode-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mode-card {
+  background: var(--bg-card, #161a24);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.mode-card:hover {
+  border-color: var(--accent-red, #ff2a3b);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(255, 42, 59, 0.2);
+}
+
+.mode-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.mode-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.mode-desc {
+  color: #8e9cae;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 1px;
+}
+
+.badge-offline {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.badge-online {
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}

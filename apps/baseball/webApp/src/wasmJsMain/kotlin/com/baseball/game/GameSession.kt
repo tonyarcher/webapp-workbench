@@ -72,13 +72,13 @@ private fun buildBattingStats(
     useDh: Boolean,
 ): List<PlayerBattingStats> {
     val lineupStats = lineup.map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) }
-    val benchStats = bench.filter { useDh || it.position != BaseballConstants.Positions.P }
+    val benchStats = bench.filter { useDh || it.position != P }
         .map { PlayerBattingStats(it.id!!, it.name, it.jerseyNumber, it.position) }
     return lineupStats + benchStats
 }
 
 private fun buildPitchingStats(lineup: List<Player>, bench: List<Player>): List<PlayerPitchingStats> {
-    return (lineup + bench).filter { it.position == BaseballConstants.Positions.P }
+    return (lineup + bench).filter { it.position == P }
         .map { PlayerPitchingStats(it.id!!, it.name, it.jerseyNumber, it.position) }
 }
 

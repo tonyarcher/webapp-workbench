@@ -24,7 +24,7 @@ This file provides rules and context specific to the Kotlin WASM/JS webApp front
 ## 3. UI Component Design & Naming
 
 * **Descriptive Render Parameters**: Use explicit, non-abbreviated variable and property names for UI parameter data
-  classes (e.g., `LineupUiContext`, `RowRenderData`, `ScorecardRenderParams`). Never use short names like `ctx` or
+  classes (e.g., `RowRenderData`, `ScorecardRenderParams`). Never use short names like `ctx` or
   `pName`.
 * **Component Clean Out**: Break up "muddy" or monolithic legacy layout renderers by swapping giant blocks of deep DOM
   trees out for concise Web Component abstractions.
