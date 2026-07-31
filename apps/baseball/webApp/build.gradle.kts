@@ -12,13 +12,11 @@ kotlin {
         binaries.executable()
         browser {
             commonWebpackConfig {
-                devServer =
-                    (
-                            devServer ?: org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
-                                .DevServer()
-                            ).copy(
-                            port = 3000,
-                        )
+                devServer = (
+                        devServer ?: org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig.DevServer()
+                        ).copy(
+                        port = 3000,
+                    )
             }
             testTask {
                 useMocha {
@@ -35,7 +33,6 @@ kotlin {
             dependencies {
                 implementation(project(":shared"))
                 implementation(libs.kotlinx.serialization.json)
-
                 // Ktor client for REST APIs
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.content.negotiation)
@@ -53,30 +50,63 @@ kotlin {
     }
 }
 
-val copyStylesheets = tasks.register<Copy>("copyStylesheets") {
-    group = "build"
-    description = "Copies top-level stylesheets to resources"
-    from(file("../styles"))
-    into(file("src/wasmJsMain/resources"))
-}
+// Point to the relative directories where your external styles and web components live
+val webComponentsProjectDir = file("../web-components")
+val webComponentsDist = file("../web-components/dist")
+val externalStylesDir = file("../styles")
 
+/**
+ * 1. Register the Vite compiler task cleanly using explicit generic types
+ */
 val buildWebComponents = tasks.register<Exec>("buildWebComponents") {
     group = "build"
-    description = "Builds Lit Web Components using Vite"
-    workingDir = file("../webComponents")
-    commandLine(
-        if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
-            listOf("cmd", "/c", "npm", "run", "build")
-        } else {
-            listOf("npm", "run", "build")
-        }
-    )
-    inputs.dir(file("../webComponents/src"))
-    inputs.file(file("../webComponents/package.json"))
-    inputs.file(file("../webComponents/vite.config.ts"))
-    outputs.file(file("src/wasmJsMain/resources/js/web-components.js"))
+    description = "Compiles the multi-component Lit elements via Vite"
+
+    workingDir = webComponentsProjectDir
+
+    // Checks host OS to invoke correct terminal environment execution strings
+    if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
+        commandLine("cmd", "/c", "npm run build")
+    } else {
+        commandLine("npm", "run", "build")
+    }
+
+    // Cache management inputs/outputs for incremental builds
+    inputs.dir(webComponentsProjectDir.resolve("src"))
+    inputs.file(webComponentsProjectDir.resolve("vite.config.ts"))
+    inputs.file(webComponentsProjectDir.resolve("tsconfig.json"))
+    outputs.dir(webComponentsDist)
 }
 
-tasks.named("wasmJsProcessResources") {
-    dependsOn(copyStylesheets, buildWebComponents)
+/**
+ * 2. Hook into the Kotlin Wasm resource processing engine
+ */
+tasks.named<ProcessResources>("wasmJsProcessResources") {
+    // Force this step to run only AFTER the web components are compiled
+    dependsOn(buildWebComponents)
+
+    // Watch your static stylesheet folder for active modifications
+    inputs.dir(externalStylesDir)
+
+    // Pull the compiled Web Components into the virtual 'js' directory structure
+    from(webComponentsDist) {
+        into("js")
+    }
+
+    // Dynamically inject your global stylesheets straight into the final compilation bundle
+    from(externalStylesDir) {
+        into("")
+    }
+}
+
+/**
+ * 3. Clear cache destinations safely on a clean loop
+ */
+tasks.clean {
+    doFirst {
+        // Clears out local Kotlin build destinations automatically
+        if (webComponentsDist.exists()) {
+            webComponentsDist.deleteRecursively()
+        }
+    }
 }

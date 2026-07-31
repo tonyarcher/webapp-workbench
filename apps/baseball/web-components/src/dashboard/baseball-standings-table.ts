@@ -1,5 +1,5 @@
-import { LitElement, html } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import {html, LitElement} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
 
 export interface StandingsRow {
   teamName: string;

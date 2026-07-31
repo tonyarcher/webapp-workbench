@@ -1,0 +1,52 @@
+{
+  "compilerOptions": {
+    /* Target Environment & Output */
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    /* Type Libraries */
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    // Required for browser elements & lit template types
+    "types": [
+      "node"
+    ],
+    // Fixes errors on __dirname, path, and fs inside vite.config.ts
+
+    /* Lit & Decorator Support */
+    "experimentalDecorators": true,
+    // Enables @customElement and @property syntax
+    "useDefineForClassFields": false,
+    // CRITICAL: Prevents breaking Lit's reactive property engine
+
+    /* Vite Compatibility */
+    "isolatedModules": true,
+    // Safely handles individual file compilation with esbuild
+    "esModuleInterop": true,
+    // Simplifies third-party CJS module imports
+
+    /* Strict Quality Controls */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    // Ignores external package type issues to speed up compilation
+    "declaration": true
+    // Creates .d.ts files for vite-plugin-dts to read
+  },
+  "include": [
+    "src/**/*",
+    "vite.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.spec.ts"
+  ]
+}

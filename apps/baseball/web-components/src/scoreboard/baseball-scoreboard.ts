@@ -1,5 +1,5 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import {html, LitElement} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
 
 @customElement('baseball-scoreboard')
 export class BaseballScoreboard extends LitElement {

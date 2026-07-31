@@ -11,7 +11,7 @@ kotlin-js-store/
 webApp/src/wasmJsMain/resources/js/web-components.js
 webApp/src/wasmJsMain/resources/styles.css
 webApp/src/wasmJsMain/resources/css/
-webComponents/dist/
+web-components/dist/
 
 # IntelliJ IDEA
 .idea/
