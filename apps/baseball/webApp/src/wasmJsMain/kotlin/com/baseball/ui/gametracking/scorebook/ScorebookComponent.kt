@@ -4,34 +4,6 @@ import com.baseball.models.BoxScore
 import com.baseball.models.Game
 import com.baseball.models.HalfInning
 import com.baseball.models.PlayEvent
-import com.baseball.ui.core.css
-import kotlinx.css.Align
-import kotlinx.css.Border
-import kotlinx.css.BorderStyle
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.FontWeight
-import kotlinx.css.JustifyContent
-import kotlinx.css.Margin
-import kotlinx.css.Padding
-import kotlinx.css.alignItems
-import kotlinx.css.backgroundColor
-import kotlinx.css.border
-import kotlinx.css.borderBottom
-import kotlinx.css.borderRadius
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.fontFamily
-import kotlinx.css.fontWeight
-import kotlinx.css.gap
-import kotlinx.css.justifyContent
-import kotlinx.css.letterSpacing
-import kotlinx.css.margin
-import kotlinx.css.marginBottom
-import kotlinx.css.padding
-import kotlinx.css.paddingBottom
-import kotlinx.css.px
-import kotlinx.css.rem
 import kotlinx.html.DIV
 import kotlinx.html.button
 import kotlinx.html.div
@@ -88,15 +60,6 @@ private fun renderScorebookWrapper(
     container.append {
         div(classes = "scorebook-wrapper") {
             id = "scorebook-wrapper-element"
-            css {
-                backgroundColor = Color("#fcfbfa")
-                color = Color("#2b2a28")
-                padding = Padding(2.rem)
-                borderRadius = 12.px
-                border = Border(2.px, BorderStyle.solid, Color("#d2cdc6"))
-                put("box-shadow", "0 6px 20px rgba(0, 0, 0, 0.15)")
-                fontFamily = "'Courier New', Courier, monospace"
-            }
             renderScorebookHeader(game, onToggle)
             div {
                 id = "scorebook-sheet-container"
@@ -110,22 +73,9 @@ private fun DIV.renderScorebookHeader(
     game: Game,
     onToggle: (HalfInning) -> Unit,
 ) {
-    div {
-        css {
-            display = Display.flex
-            justifyContent = JustifyContent.spaceBetween
-            alignItems = Align.center
-            borderBottom = Border(2.px, BorderStyle.solid, Color("#d2cdc6"))
-            paddingBottom = 1.rem
-            marginBottom = 1.5.rem
-        }
-        h2 {
+    div(classes = "scorebook-top-bar") {
+        h2(classes = "scorebook-title") {
             +"SCOREBOOK"
-            css {
-                margin = Margin(0.px)
-                fontWeight = FontWeight.bold
-                letterSpacing = 2.px
-            }
         }
         renderToggleButtonGroup(game, onToggle)
     }
@@ -135,26 +85,16 @@ private fun DIV.renderToggleButtonGroup(
     game: Game,
     onToggle: (HalfInning) -> Unit,
 ) {
-    div {
+    div(classes = "flex-gap-sm") {
         id = "toggle-btn-group"
-        css {
-            display = Display.flex
-            gap = 0.5.rem
-        }
         button(classes = "btn btn-primary") {
             id = "btn-away-batting"
             +"${game.awayTeam.abbreviation} BATTING (TOP)"
-            css {
-                padding = Padding(0.5.rem, 1.rem)
-            }
             onClickFunction = { onToggle(HalfInning.TOP) }
         }
         button(classes = "btn btn-secondary") {
             id = "btn-home-batting"
             +"${game.homeTeam.abbreviation} BATTING (BOTTOM)"
-            css {
-                padding = Padding(0.5.rem, 1.rem)
-            }
             onClickFunction = { onToggle(HalfInning.BOTTOM) }
         }
     }

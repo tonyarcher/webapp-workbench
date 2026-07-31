@@ -1,10 +1,13 @@
-@OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
+@OptIn(ExperimentalWasmDsl::class)
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
+    @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         binaries.executable()
         browser {
