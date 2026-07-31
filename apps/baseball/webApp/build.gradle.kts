@@ -52,3 +52,24 @@ kotlin {
         }
     }
 }
+
+val buildWebComponents = tasks.register<Exec>("buildWebComponents") {
+    group = "build"
+    description = "Builds Lit Web Components using Vite"
+    workingDir = file("../webComponents")
+    commandLine(
+        if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
+            listOf("cmd", "/c", "npm", "run", "build")
+        } else {
+            listOf("npm", "run", "build")
+        }
+    )
+    inputs.dir(file("../webComponents/src"))
+    inputs.file(file("../webComponents/package.json"))
+    inputs.file(file("../webComponents/vite.config.ts"))
+    outputs.file(file("src/wasmJsMain/resources/js/web-components.js"))
+}
+
+tasks.named("wasmJsProcessResources") {
+    dependsOn(buildWebComponents)
+}

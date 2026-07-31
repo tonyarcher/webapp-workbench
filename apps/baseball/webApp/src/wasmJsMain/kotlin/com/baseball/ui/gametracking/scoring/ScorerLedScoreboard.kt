@@ -2,10 +2,7 @@ package com.baseball.ui.gametracking.scoring
 
 import com.baseball.models.Game
 import com.baseball.models.HalfInning
-import kotlinx.html.DIV
-import kotlinx.html.div
-import kotlinx.html.dom.append
-import kotlinx.html.span
+import kotlinx.browser.document
 import org.w3c.dom.HTMLElement
 
 fun renderScorerLedScoreboard(
@@ -13,110 +10,30 @@ fun renderScorerLedScoreboard(
     game: Game,
 ) {
     parent.innerHTML = ""
+    val scoreboard = document.createElement("baseball-scoreboard")
 
-    parent.append {
-        div(classes = "scoreboard-led") {
-            renderScoreboardHeader(this, game)
-            renderTeamScores(this, game)
-            renderCountAndSummary(this, game)
-            renderDiamondBases(this, game)
-            renderRunnerDetails(this, game)
-        }
-    }
-}
+    scoreboard.setAttribute("away-name", game.awayTeam.abbreviation)
+    scoreboard.setAttribute("home-name", game.homeTeam.abbreviation)
+    scoreboard.setAttribute("away-score", game.awayScore.toString())
+    scoreboard.setAttribute("home-score", game.homeScore.toString())
+    scoreboard.setAttribute("away-hits", game.awayHits.toString())
+    scoreboard.setAttribute("home-hits", game.homeHits.toString())
+    scoreboard.setAttribute("away-errors", game.awayErrors.toString())
+    scoreboard.setAttribute("home-errors", game.homeErrors.toString())
 
-private fun renderScoreboardHeader(
-    parent: DIV,
-    game: Game,
-) {
-    val inningSymbol = if (game.gameState.half == HalfInning.TOP) "▲" else "▼"
-    parent.div(classes = "scoreboard-header") {
-        span(classes = "inning-display") {
-            +"$inningSymbol Inning ${game.gameState.inning}"
-        }
-        span(classes = "outs-indicator") {
-            val outsStr =
-                when (game.gameState.outs) {
-                    0 -> "No Outs"
-                    1 -> "1 Out"
-                    2 -> "2 Outs"
-                    else -> "3 Outs"
-                }
-            +outsStr
-        }
-    }
-}
+    scoreboard.setAttribute("inning", game.gameState.inning.toString())
+    scoreboard.setAttribute("half", if (game.gameState.half == HalfInning.TOP) "TOP" else "BOTTOM")
+    scoreboard.setAttribute("balls", game.gameState.balls.toString())
+    scoreboard.setAttribute("strikes", game.gameState.strikes.toString())
+    scoreboard.setAttribute("outs", game.gameState.outs.toString())
 
-private fun renderTeamScores(
-    parent: DIV,
-    game: Game,
-) {
-    parent.div(classes = "scoreboard-row") {
-        span(classes = "team-led-name") { +game.awayTeam.abbreviation }
-        span(classes = "team-led-score") { +game.awayScore.toString() }
-    }
-    parent.div(classes = "scoreboard-row") {
-        span(classes = "team-led-name") { +game.homeTeam.abbreviation }
-        span(classes = "team-led-score") { +game.homeScore.toString() }
-    }
-}
+    if (game.gameState.runnerFirstId != null) scoreboard.setAttribute("runner-first", "true")
+    if (game.gameState.runnerSecondId != null) scoreboard.setAttribute("runner-second", "true")
+    if (game.gameState.runnerThirdId != null) scoreboard.setAttribute("runner-third", "true")
 
-private fun renderCountAndSummary(
-    parent: DIV,
-    game: Game,
-) {
-    parent.div(classes = "scoreboard-row margin-top-md") {
-        span(classes = "count-display") {
-            +"Count: ${game.gameState.balls} - ${game.gameState.strikes}"
-        }
-        span(classes = "text-muted font-small") {
-            +(
-                    "R-H-E: ${game.awayScore}-${game.awayHits}-${game.awayErrors} " +
-                            "vs ${game.homeScore}-${game.homeHits}-${game.homeErrors}"
-                    )
-        }
-    }
-}
+    game.gameState.runnerFirstName?.let { scoreboard.setAttribute("runner-first-name", it) }
+    game.gameState.runnerSecondName?.let { scoreboard.setAttribute("runner-second-name", it) }
+    game.gameState.runnerThirdName?.let { scoreboard.setAttribute("runner-third-name", it) }
 
-private fun renderDiamondBases(
-    parent: DIV,
-    game: Game,
-) {
-    parent.div(classes = "diamond-container") {
-        div(classes = "base-diamond") {
-            renderBase("base-first", "1st", game.gameState.runnerFirstId != null)
-            renderBase("base-second", "2nd", game.gameState.runnerSecondId != null)
-            renderBase("base-third", "3rd", game.gameState.runnerThirdId != null)
-            div(classes = "base base-home")
-        }
-    }
-}
-
-private fun DIV.renderBase(
-    baseClass: String,
-    label: String,
-    isOccupied: Boolean,
-) {
-    div(classes = "base $baseClass" + if (isOccupied) " occupied" else "") {
-        div(classes = "base-label") {
-            +label
-        }
-    }
-}
-
-private fun renderRunnerDetails(
-    parent: DIV,
-    game: Game,
-) {
-    parent.div(classes = "text-muted font-small margin-top-md border-top-dark padding-top-sm") {
-        if (game.gameState.runnerFirstName != null) {
-            div { +"1B: ${game.gameState.runnerFirstName}" }
-        }
-        if (game.gameState.runnerSecondName != null) {
-            div { +"2B: ${game.gameState.runnerSecondName}" }
-        }
-        if (game.gameState.runnerThirdName != null) {
-            div { +"3B: ${game.gameState.runnerThirdName}" }
-        }
-    }
+    parent.appendChild(scoreboard)
 }
