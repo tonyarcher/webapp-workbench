@@ -184,7 +184,7 @@
 .linescore-table th, .linescore-table td {
     padding: 0.5rem 0.75rem;
     text-align: center;
-    border: 1px solid rgba(255,255,255,0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .linescore-table th {
@@ -310,6 +310,7 @@
 .mode-card.offline:hover {
     border-color: var(--accent-red);
 }
+
 .mode-card.offline::before {
     background: var(--accent-red);
 }
@@ -317,6 +318,7 @@
 .mode-card.online:hover {
     border-color: var(--accent-yellow);
 }
+
 .mode-card.online::before {
     background: var(--accent-red);
 }
