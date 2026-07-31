@@ -12,6 +12,23 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.w3c.dom.HTMLElement
 
+// Data classes used by the scorecard rendering pipeline
+data class ScorecardRenderParams(
+    val playersByBattingSlot: Array<MutableList<String>>,
+    val battingStatsList: List<PlayerBattingStats>,
+    val teamEvents: List<PlayEvent>,
+    val maxInning: Int,
+    val parser: ScorecardParser,
+    val isHomeBatting: Boolean,
+)
+
+data class RowRenderData(
+    val substitutePlayerName: String,
+    val cellBackground: String,
+)
+
+// ── Scorecard rendering ───────────────────────────────────────────────────────
+
 fun renderScorecardSheet(
     container: HTMLElement,
     game: Game,
@@ -25,19 +42,15 @@ fun renderScorecardSheet(
     val teamEvents = events.filter { it.half == half }
     val maxInning = events.maxOfOrNull { it.inning }?.coerceAtLeast(9) ?: 9
 
-    container.innerHTML = ""
-
     val parser = ScorecardParser(teamEvents, localAwayRoster, localHomeRoster, maxInning)
-
     val scorebookEl = document.createElement("baseball-scorebook-grid")
     scorebookEl.setAttribute("team-name", battingTeam.name)
     scorebookEl.setAttribute("pitcher-opponent", pitchingTeam.name)
     scorebookEl.setAttribute("half-tag", if (isHomeBatting) "BOT" else "TOP")
     scorebookEl.setAttribute("max-inning", maxInning.toString())
+    scorebookEl.setAttribute("slots-json", Json.encodeToString(buildScorebookSlots(isHomeBatting, boxScore, teamEvents, parser, maxInning)))
 
-    val slots = buildScorebookSlots(isHomeBatting, boxScore, teamEvents, parser, maxInning)
-    scorebookEl.setAttribute("slots-json", Json.encodeToString(slots))
-
+    container.innerHTML = ""
     container.appendChild(scorebookEl)
 }
 

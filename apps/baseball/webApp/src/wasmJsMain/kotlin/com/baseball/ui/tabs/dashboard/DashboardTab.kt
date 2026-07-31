@@ -2,7 +2,7 @@ package com.baseball.ui.tabs.dashboard
 
 import com.baseball.api
 import com.baseball.models.Game
-import com.baseball.ui.core.launch
+import com.baseball.ui.state.launch
 import com.baseball.ui.state.leaguesList
 import com.baseball.ui.state.seasonsList
 import com.baseball.ui.state.selectedLeagueId

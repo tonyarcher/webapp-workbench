@@ -8,12 +8,12 @@ import com.baseball.ui.auth.renderLoginTab
 import com.baseball.ui.auth.renderRegisterTab
 import com.baseball.ui.state.AppViewManager
 import com.baseball.ui.state.NavTabs
-import com.baseball.ui.tabs.boxscore.renderBoxScoreTab
+import com.baseball.ui.tabs.renderBoxScoreTab
+import com.baseball.ui.tabs.renderLeaguesTab
+import com.baseball.ui.tabs.renderStatsTab
+import com.baseball.ui.tabs.renderTeamsTab
 import com.baseball.ui.tabs.dashboard.renderSeasonDashboardTab
-import com.baseball.ui.tabs.leagues.renderLeaguesTab
 import com.baseball.ui.tabs.scorer.renderScorerTab
-import com.baseball.ui.tabs.stats.renderStatsTab
-import com.baseball.ui.tabs.teams.renderTeamsTab
 
 val api: BaseballApi = BaseballApiClient()
 val authService: AuthService = AuthManager

@@ -13,7 +13,7 @@ import com.baseball.models.HalfInning
 import com.baseball.models.Player
 import com.baseball.models.ScoringEventRequest
 import com.baseball.models.ScoringEventType
-import com.baseball.ui.core.launch
+import com.baseball.ui.state.launch
 import com.baseball.ui.state.NavTabs
 import com.baseball.ui.state.currentTab
 import com.baseball.ui.state.isSingleGameMode

@@ -4,7 +4,7 @@ import com.baseball.api
 import com.baseball.auth.UserSession
 import com.baseball.authService
 import com.baseball.game.initGame
-import com.baseball.ui.core.launch
+import com.baseball.ui.state.launch
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.serialization.Serializable
