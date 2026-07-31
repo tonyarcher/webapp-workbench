@@ -1,29 +1,5 @@
 package com.baseball.ui.gametracking.lineup
 
-import com.baseball.ui.core.css
-import kotlinx.css.Align
-import kotlinx.css.Border
-import kotlinx.css.BorderStyle
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.FontWeight
-import kotlinx.css.Padding
-import kotlinx.css.alignItems
-import kotlinx.css.background
-import kotlinx.css.border
-import kotlinx.css.borderBottom
-import kotlinx.css.borderRadius
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.flexGrow
-import kotlinx.css.fontWeight
-import kotlinx.css.gap
-import kotlinx.css.marginBottom
-import kotlinx.css.padding
-import kotlinx.css.paddingBottom
-import kotlinx.css.px
-import kotlinx.css.rem
-import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.InputType
 import kotlinx.html.div
@@ -52,13 +28,7 @@ internal fun renderTeamGrid(
     lineupUiContext: LineupUiContext,
     handlers: LineupPitcherChangeHandlers,
 ) {
-    parent.div {
-        css {
-            display = Display.grid
-            put("grid-template-columns", "1fr 1fr")
-            gap = 2.rem
-            marginBottom = 2.rem
-        }
+    parent.div(classes = "team-grid") {
         renderTeamColumn(isHome = false, lineupUiContext, handlers)
         renderTeamColumn(isHome = true, lineupUiContext, handlers)
     }
@@ -69,13 +39,7 @@ internal fun DIV.renderTeamColumn(
     lineupUiContext: LineupUiContext,
     handlers: LineupPitcherChangeHandlers,
 ) {
-    div {
-        css {
-            background = "rgba(255, 255, 255, 0.02)"
-            padding = Padding(1.5.rem)
-            borderRadius = 12.px
-            border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.05)"))
-        }
+    div(classes = "pitcher-card") {
         renderTeamHeader(isHome, lineupUiContext)
         renderPitcherRowIfNeeded(this, isHome, lineupUiContext, handlers)
         renderLineupHeader(this)
@@ -85,14 +49,11 @@ internal fun DIV.renderTeamColumn(
 }
 
 internal fun DIV.renderTeamHeader(isHome: Boolean, lineupUiContext: LineupUiContext) {
-    h2 {
+    val accentClass = if (isHome) "text-accent-yellow" else "text-accent-blue"
+    h2(classes = accentClass) {
         val teamLabel = if (isHome) "Home" else "Away"
         val teamName = if (isHome) lineupUiContext.homeTeamName else lineupUiContext.awayTeamName
         +"$teamLabel Team: $teamName"
-        css {
-            color = Color(if (isHome) "var(--accent-yellow)" else "var(--accent-blue)")
-            marginBottom = 1.rem
-        }
     }
 }
 
@@ -103,21 +64,9 @@ internal fun renderPitcherInputRow(
     onNameChange: (String) -> Unit,
     onNumChange: (String) -> Unit,
 ) {
-    parent.div {
-        css {
-            display = Display.flex
-            gap = 0.5.rem
-            marginBottom = 1.25.rem
-            paddingBottom = 1.rem
-            borderBottom = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.1)"))
-            alignItems = Align.center
-        }
+    parent.div(classes = "flex-gap-sm flex-between") {
         span {
             +"Starting Pitcher:"
-            css {
-                fontWeight = FontWeight.bold
-                width = 100.px
-            }
         }
         renderPitcherNameInput(pitcherName, onNameChange)
         renderPitcherNumberInput(pitcherNumber, onNumChange)
@@ -131,9 +80,6 @@ internal fun DIV.renderPitcherNameInput(
     input(type = InputType.text, classes = "form-control") {
         placeholder = "Pitcher Name"
         value = currentValue
-        css {
-            flexGrow = 1.0
-        }
         onChangeFunction = { event ->
             val txt = (event.target as HTMLInputElement).value
             onPitcherNameChange(txt)
@@ -148,13 +94,9 @@ internal fun DIV.renderPitcherNumberInput(
     input(type = InputType.number, classes = "form-control") {
         placeholder = "No."
         value = currentValue
-        css {
-            width = 60.px
-        }
         onChangeFunction = { event ->
             val txt = (event.target as HTMLInputElement).value
             onPitcherNumberChange(txt)
         }
     }
 }
-
