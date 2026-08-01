@@ -17,6 +17,7 @@
     "lit": "^3.2.0"
   },
   "devDependencies": {
+    "@types/node": "^26.1.2",
     "@xmldom/xmldom": "^0.9.10",
     "fake-indexeddb": "^6.2.5",
     "tsx": "^4.23.1",
