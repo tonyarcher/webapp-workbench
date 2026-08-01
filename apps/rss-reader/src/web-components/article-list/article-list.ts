@@ -3,10 +3,12 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { ref, createRef, type Ref } from 'lit/directives/ref.js';
 import { Virtualizer, elementScroll, observeElementRect, observeElementOffset } from '@tanstack/virtual-core';
 import { libraryKey, QueryController, queryClient } from '../../query';
-import { markAllRead, markArticleRead, refreshFeed, toggleStar } from '../../mutations';
+import { markAllRead, markArticleRead, markReadBefore, markShownRead, refreshFeed, toggleStar } from '../../mutations';
 import { getFeeds, getFolders, queryArticles, type ArticleCursor } from '../../db/db';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 import { formatDate, domainOf } from '../../util';
+import type { MenuAnchor } from '../feed-menu/feed-menu';
+import '../advanced-menu/advanced-menu';
 import styles from './article-list.css?inline';
 
 interface Library {
@@ -14,7 +16,7 @@ interface Library {
   feeds: Feed[];
 }
 
-const PAGE_SIZE = 60;
+const DEFAULT_PAGE_SIZE = 50;
 
 @customElement('article-list')
 export class ArticleList extends LitElement {
@@ -29,6 +31,9 @@ export class ArticleList extends LitElement {
   @state() private sort: ArticleSort = 'hot';
   @state() private cursor = 0;
   @state() private listView: ListViewType = 'detailed';
+  @state() private pageSize = DEFAULT_PAGE_SIZE;
+  @state() private advancedOpen = false;
+  @state() private advancedAnchor: MenuAnchor | null = null;
 
   private scrollElRef: Ref<HTMLDivElement> = createRef();
   private virtualizer!: Virtualizer<HTMLDivElement, HTMLDivElement>;
@@ -72,7 +77,7 @@ export class ArticleList extends LitElement {
   }
 
   override updated(_changed: Map<string, unknown>) {
-    const viewKey = `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}`;
+    const viewKey = `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}`;
     if (viewKey !== this.lastViewKey) {
       this.lastViewKey = viewKey;
       this.reset();
@@ -173,7 +178,7 @@ export class ArticleList extends LitElement {
       feedId,
       unreadOnly: this.unreadOnly,
       sort: this.sort,
-      limit: PAGE_SIZE,
+      limit: this.pageSize,
       cursor,
     });
     this.items = mergeSorted(this.items, res.items, this.sort);
@@ -204,7 +209,7 @@ export class ArticleList extends LitElement {
           feedId: feed.id,
           unreadOnly: this.unreadOnly,
           sort: this.sort,
-          limit: PAGE_SIZE,
+          limit: this.pageSize,
           cursor,
         });
         this.feedHasMore.set(feed.id, res.hasMore);
@@ -277,17 +282,57 @@ export class ArticleList extends LitElement {
     void this.openArticle(this.items[next]);
   };
 
-  private async onMarkAllRead() {
-    if (this.view.kind === 'feed') {
-      await markAllRead(this.view.id);
-    } else if (this.view.kind === 'folder') {
-      for (const feed of this.folderFeeds()) {
-        await markAllRead(feed.id);
+  private async onMarkShownRead() {
+    const ids = this.items.filter((a) => a.read === 0).map((a) => a.id);
+    if (!ids.length) return;
+    this.items = this.items.map((a) => (a.read === 0 ? { ...a, read: 1 } : a));
+    await markShownRead(ids);
+  }
+
+  private onToggleAdvanced(e: Event) {
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    this.advancedAnchor = { x: rect.right, y: rect.bottom + 6 };
+    this.advancedOpen = !this.advancedOpen;
+  }
+
+  private onAdvancedUnread(e: Event) {
+    this.unreadOnly = (e as CustomEvent<boolean>).detail;
+  }
+
+  private scopeLabel(): string {
+    const lib = this.library.data;
+    const view = this.view;
+    if (!lib) return '';
+    if (view.kind === 'feed') {
+      return lib.feeds.find((f) => f.id === view.id)?.title ?? 'Feed';
+    }
+    if (view.kind === 'folder') {
+      return lib.folders.find((f) => f.id === view.id)?.title ?? 'Folder';
+    }
+    return 'All feeds';
+  }
+
+  private async onMarkBefore(e: Event) {
+    const cutoff = (e as CustomEvent<number | null>).detail;
+    if (cutoff === null) {
+      if (this.view.kind === 'feed') {
+        await markAllRead(this.view.id);
+      } else if (this.view.kind === 'folder') {
+        for (const feed of this.folderFeeds()) await markAllRead(feed.id);
+      } else {
+        await markAllRead();
       }
     } else {
-      await markAllRead();
+      const feedIds =
+        this.view.kind === 'feed'
+          ? [this.view.id]
+          : this.view.kind === 'folder'
+            ? this.folderFeeds().map((f) => f.id)
+            : undefined;
+      await markReadBefore(feedIds, cutoff);
     }
-    this.items = this.items.map((a) => ({ ...a, read: 1 }));
+    await this.reset();
   }
 
   private async onRefresh() {
@@ -314,23 +359,6 @@ export class ArticleList extends LitElement {
       <div class="toolbar">
         <h2>${this.viewTitle()}</h2>
         <div class="actions">
-            <label class="filter">
-              <input
-                type="checkbox"
-                .checked=${this.unreadOnly}
-                @change=${(e: Event) => (this.unreadOnly = (e.target as HTMLInputElement).checked)}
-              />
-              Unread only
-            </label>
-            <label class="view-mode">
-              <select
-                .value=${this.listView}
-                @change=${(e: Event) => (this.listView = (e.target as HTMLSelectElement).value as ListViewType)}
-              >
-                <option value="detailed">Detailed List</option>
-                <option value="headline">Headline View</option>
-              </select>
-            </label>
             <label class="sort">
               <select
                 .value=${this.sort}
@@ -341,10 +369,42 @@ export class ArticleList extends LitElement {
                 <option value="oldest">Oldest</option>
               </select>
             </label>
-            <button class="btn" @click=${this.onMarkAllRead}>Mark all as read</button>
+            <label class="view-mode">
+              <select
+                .value=${this.listView}
+                @change=${(e: Event) => (this.listView = (e.target as HTMLSelectElement).value as ListViewType)}
+              >
+                <option value="detailed">Detailed List</option>
+                <option value="headline">Headline View</option>
+              </select>
+            </label>
+            <label class="page-size">
+              <select
+                .value=${this.pageSize}
+                @change=${(e: Event) => (this.pageSize = Number((e.target as HTMLSelectElement).value))}
+                title="Articles shown at a time"
+              >
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="500">500</option>
+              </select>
+            </label>
+            <button class="btn" @click=${this.onMarkShownRead}>Mark shown as read</button>
+            <button class="btn" @click=${this.onToggleAdvanced}>Advanced</button>
             <button class="btn" @click=${this.onRefresh}>Refresh</button>
         </div>
       </div>
+
+      <advanced-menu
+        .open=${this.advancedOpen}
+        .anchor=${this.advancedAnchor}
+        .unreadOnly=${this.unreadOnly}
+        .scopeLabel=${this.scopeLabel()}
+        @unread-change=${this.onAdvancedUnread}
+        @mark-before=${this.onMarkBefore}
+        @close=${() => (this.advancedOpen = false)}
+      ></advanced-menu>
 
       <div class="scroll" ${ref(this.scrollElRef)} @scroll=${() => this.loadMore()}>
         <div class="viewport" style="height: ${this.virtualizer?.getTotalSize() ?? 0}px;">

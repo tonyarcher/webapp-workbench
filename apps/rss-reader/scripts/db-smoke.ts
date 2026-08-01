@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { getDb, putFeed, upsertArticles, queryArticles, markAllRead, setArticleRead, setArticleStarred, deleteFeed, queryRecentArticles, type ArticleCursor } from '../src/db/db';
+import { getDb, putFeed, upsertArticles, queryArticles, markAllRead, markArticlesRead, markReadBefore, setArticleRead, setArticleStarred, deleteFeed, queryRecentArticles, type ArticleCursor } from '../src/db/db';
 import { ingestFeed } from '../src/services/sync';
 import type { Article, Feed, ParsedFeed } from '../src/types';
 
@@ -211,7 +211,37 @@ async function main() {
   const hotD = stored!.hot;
   assert(hotA !== hotD, 'hot recomputed differs after popularity bump');
 
-  // ---- recent articles (daily brief) ----
+  // ---- markArticlesRead / markReadBefore ----
+  await resetDb();
+  const feedG: Feed = { ...feedA, id: 'feed-g', title: 'Feed G' };
+  await putFeed(feedG);
+  const mNow = Date.now();
+  await upsertArticles([
+    makeArticle('feed-g', 'g1', mNow - 1_000, 0),
+    makeArticle('feed-g', 'g2', mNow - 2_000, 0),
+    makeArticle('feed-g', 'g3', mNow - 3_000, 1),
+    makeArticle('feed-g', 'g4', mNow - 4_000, 0),
+  ]);
+  await markArticlesRead(['feed-g:g1', 'feed-g:g4', 'feed-g:g3']);
+  const gAfter = await queryArticles({ feedId: 'feed-g', limit: 100 });
+  assert(
+    ['feed-g:g1', 'feed-g:g4', 'feed-g:g3'].every(
+      (id) => gAfter.items.find((a) => a.id === id)?.read === 1,
+    ),
+    'markArticlesRead sets listed articles read',
+  );
+  const gUnread = await queryArticles({ feedId: 'feed-g', unreadOnly: true, limit: 100 });
+  assert(gUnread.items.length === 1 && gUnread.items[0].id === 'feed-g:g2', 'markArticlesRead keeps other articles unread');
+
+  await markReadBefore('feed-g', mNow - 1_500);
+  const gRemaining = await queryArticles({ feedId: 'feed-g', unreadOnly: true, limit: 100 });
+  assert(gRemaining.items.length === 0, 'markReadBefore marks older-than-cutoff read for a feed');
+
+  await setArticleRead('feed-g:g1', 0);
+  await markReadBefore(undefined, mNow);
+  const allAfter = await queryArticles({ unreadOnly: true, limit: 100 });
+  assert(allAfter.items.length === 0, 'markReadBefore(undefined) applies across all feeds');
+
   await resetDb();
   const feedE: Feed = { ...feedA, id: 'feed-e', title: 'Feed E' };
   await putFeed(feedE);

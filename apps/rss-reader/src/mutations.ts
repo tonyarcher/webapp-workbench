@@ -1,4 +1,4 @@
-import { decrementFeedUnread, deleteFeed as dbDeleteFeed, deleteFolder as dbDeleteFolder, getArticle, markAllRead as dbMarkAllRead, reorderFolders as dbReorderFolders, setArticleRead, setArticleStarred, setFeedFolders } from './db/db';
+import { decrementFeedUnread, deleteFeed as dbDeleteFeed, deleteFolder as dbDeleteFolder, getArticle, markAllRead as dbMarkAllRead, markArticlesRead as dbMarkArticlesRead, markReadBefore as dbMarkReadBefore, reorderFolders as dbReorderFolders, setArticleRead, setArticleStarred, setFeedFolders } from './db/db';
 import { importOpml, exportOpml } from './services/opml';
 import { addFeedFromUrl, syncFeed } from './services/sync';
 import { invalidateArticles, invalidateLibrary, queryClient, updateArticlesInCache, type LibraryData } from './query';
@@ -99,6 +99,22 @@ export async function toggleStar(articleId: string) {
 
 export async function markAllRead(feedId?: string) {
   await dbMarkAllRead(feedId);
+  await invalidateArticles();
+  await invalidateLibrary();
+}
+
+export async function markShownRead(articleIds: string[]) {
+  await dbMarkArticlesRead(articleIds);
+  for (const id of articleIds) updateArticlesInCache(id, { read: 1 });
+  await invalidateLibrary();
+}
+
+export async function markReadBefore(feedIds: string[] | undefined, cutoff: number) {
+  if (feedIds?.length) {
+    for (const id of feedIds) await dbMarkReadBefore(id, cutoff);
+  } else {
+    await dbMarkReadBefore(undefined, cutoff);
+  }
   await invalidateArticles();
   await invalidateLibrary();
 }

@@ -40,19 +40,7 @@
 .btn:hover {
   background: var(--hover);
 }
-.filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text-muted);
-  cursor: pointer;
-  user-select: none;
-}
-.filter input {
-  accent-color: var(--accent);
-}
-.sort select, .view-mode select {
+.sort select, .view-mode select, .page-size select {
   font: inherit;
   font-size: 13px;
   padding: 4px 8px;

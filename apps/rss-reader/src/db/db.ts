@@ -331,6 +331,75 @@ export async function markAllRead(feedId?: string): Promise<void> {
   await tx.done;
 }
 
+export async function markArticlesRead(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const db = await getDb();
+  const tx = db.transaction(['feeds', 'articles'], 'readwrite');
+  const articleStore = tx.objectStore('articles');
+  const feedStore = tx.objectStore('feeds');
+  const unreadCounts = new Map<string, number>();
+  for (const id of ids) {
+    const article = await articleStore.get(id);
+    if (article && article.read === 0) {
+      await articleStore.put({ ...article, read: 1 });
+      unreadCounts.set(article.feedId, (unreadCounts.get(article.feedId) ?? 0) + 1);
+    }
+  }
+  for (const [feedId, count] of unreadCounts) {
+    const feed = await feedStore.get(feedId);
+    if (feed) {
+      feed.unread = Math.max(0, feed.unread - count);
+      await feedStore.put(feed);
+    }
+  }
+  await tx.done;
+}
+
+export async function markReadBefore(feedId: string | undefined, cutoff: number): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(['feeds', 'articles'], 'readwrite');
+  const articleStore = tx.objectStore('articles');
+  const feedStore = tx.objectStore('feeds');
+  const unreadCounts = new Map<string, number>();
+
+  if (feedId) {
+    const lower: [string, number, string] = [feedId, Number.NEGATIVE_INFINITY, ''];
+    const upper: [string, number, string] = [feedId, cutoff, ''];
+    let cursor = await articleStore
+      .index('byFeedDate')
+      .openCursor(IDBKeyRange.bound(lower, upper), 'next');
+    while (cursor) {
+      if (cursor.value.read === 0) {
+        unreadCounts.set(feedId, (unreadCounts.get(feedId) ?? 0) + 1);
+        await cursor.update({ ...cursor.value, read: 1 });
+      }
+      cursor = await cursor.continue();
+    }
+  } else {
+    const lower: [number, number] = [0, Number.NEGATIVE_INFINITY];
+    const upper: [number, number] = [0, cutoff];
+    let cursor = await articleStore
+      .index('byReadDate')
+      .openCursor(IDBKeyRange.bound(lower, upper), 'next');
+    while (cursor) {
+      if (cursor.value.read === 0) {
+        unreadCounts.set(cursor.value.feedId, (unreadCounts.get(cursor.value.feedId) ?? 0) + 1);
+        await cursor.update({ ...cursor.value, read: 1 });
+      }
+      cursor = await cursor.continue();
+    }
+  }
+
+  for (const [feedId, count] of unreadCounts) {
+    const feed = await feedStore.get(feedId);
+    if (feed) {
+      feed.unread = Math.max(0, feed.unread - count);
+      await feedStore.put(feed);
+    }
+  }
+  await tx.done;
+}
+
 export async function decrementFeedUnread(feedId: string): Promise<void> {
   const db = await getDb();
   const feed = await db.get('feeds', feedId);
