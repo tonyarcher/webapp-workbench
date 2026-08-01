@@ -27,6 +27,35 @@ function parseCommentCount(item: Element): number | undefined {
   return Number.isFinite(n) && n >= 0 ? Math.round(n) : undefined;
 }
 
+function isImageType(type: string | null): boolean {
+  return type === null || /^image\//.test(type);
+}
+
+function parseMedia(item: Element): string | undefined {
+  const enclosure = item.getElementsByTagName('enclosure')[0];
+  if (enclosure?.getAttribute('url') && isImageType(enclosure.getAttribute('type'))) {
+    return enclosure.getAttribute('url') ?? undefined;
+  }
+  for (const node of Array.from(item.getElementsByTagNameNS('*', 'content'))) {
+    const url = node.getAttribute('url');
+    if (url && (node.getAttribute('medium') === 'image' || isImageType(node.getAttribute('type')))) {
+      return url;
+    }
+  }
+  return undefined;
+}
+
+function parseAtomMedia(entry: Element): string | undefined {
+  for (const link of Array.from(entry.getElementsByTagName('link'))) {
+    if (link.getAttribute('rel') === 'enclosure') {
+      if (isImageType(link.getAttribute('type')) && link.getAttribute('href')) {
+        return link.getAttribute('href') ?? undefined;
+      }
+    }
+  }
+  return undefined;
+}
+
 export function parseFeedXml(xml: string, fallbackPublished: number): ParsedFeed {
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
   if (doc.getElementsByTagName('parsererror').length > 0) {
@@ -66,6 +95,7 @@ function parseRss(doc: Document, fallbackPublished: number): ParsedFeed {
       author,
       summary: stripHtml(description).slice(0, 500) || undefined,
       content,
+      media: parseMedia(item),
       comments: parseCommentCount(item),
       published,
     };
@@ -107,6 +137,7 @@ function parseAtom(doc: Document, fallbackPublished: number): ParsedFeed {
       author,
       summary: stripHtml(summary).slice(0, 500) || undefined,
       content: content || summary || undefined,
+      media: parseAtomMedia(entry),
       comments: parseCommentCount(entry),
       published,
     };

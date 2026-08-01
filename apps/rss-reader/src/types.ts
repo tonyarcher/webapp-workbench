@@ -34,6 +34,7 @@ export interface Article {
   normLink?: string;
   comments?: number;
   popularity: number;
+  engagement?: number;
   hot: number;
 }
 
@@ -54,6 +55,7 @@ export interface ParsedItem {
   author?: string;
   summary?: string;
   content?: string;
+  media?: string;
   comments?: number;
   published: number;
 }

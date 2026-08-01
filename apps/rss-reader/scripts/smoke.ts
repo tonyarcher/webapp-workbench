@@ -1,6 +1,6 @@
 import { DOMParser } from '@xmldom/xmldom';
 import { parseFeedXml, parseOpml, stripHtml, sanitizeHtml, isFolder } from '../src/services/parser';
-import { normalizeLink, popularityScore, hotScore } from '../src/services/ranking';
+import { normalizeLink, popularityScore, hotScore, contentEngagement, affinityBoostScore, velocityBonus } from '../src/services/ranking';
 import { aiAvailability, aiDiagnostics, aiStatusMessage, runAiPrompt, resetAiAvailability, summarizeArticle } from '../src/ai';
 
 (globalThis as Record<string, unknown>).DOMParser = DOMParser;
@@ -82,10 +82,19 @@ assert(popularityScore(3, 10) === 17, 'popularity combines syndication + comment
 assert(popularityScore(2, 200) === 54, 'popularity caps comments at 50');
 
 const t = Date.parse('2025-07-31T08:30:00Z');
-assert(hotScore(1, t) < hotScore(1, t + 45_000), 'newer article ranks hotter');
-assert(hotScore(1, t) < hotScore(10, t), 'higher popularity ranks hotter at same age');
-assert(hotScore(1, t + 45_000) < hotScore(10, t), '10x popularity offsets ~12.5h age (hot gravity)');
-assert(Number.isFinite(hotScore(1, 0)), 'hotScore finite for very old article');
+assert(hotScore(1, 0, t) < hotScore(1, 0, t + 45_000), 'newer article ranks hotter');
+assert(hotScore(1, 0, t) < hotScore(10, 0, t), 'higher popularity ranks hotter at same age');
+assert(hotScore(1, 0, t + 90_000) < hotScore(10, 0, t), '10x popularity offsets ~1 day age (hot gravity)');
+assert(hotScore(1, 10, t) > hotScore(1, 0, t + 90_000), 'engagement offsets ~1 day of age');
+assert(Number.isFinite(hotScore(1, 0, 0)), 'hotScore finite for very old article');
+
+assert(contentEngagement({ title: 'BREAKING: Top 5 Live!', content: '<p>' + 'word '.repeat(1200) + '</p>' }) >= 8, 'contentEngagement rewards media-less rich story');
+assert(contentEngagement({ title: 'Quiet title' }) === 0, 'contentEngagement floor is 0');
+assert(affinityBoostScore(0) === 0, 'affinityBoostScore 0 for no affinity');
+assert(affinityBoostScore(99) > affinityBoostScore(0), 'affinityBoostScore grows with affinity');
+assert(velocityBonus(0, 1_000) === 0, 'velocityBonus 0 when not syndicated');
+assert(velocityBonus(3, 3_600_000) > 0, 'velocityBonus rewards fresh spread');
+assert(velocityBonus(3, 30 * 3_600_000) === 0, 'velocityBonus decays after a day');
 
 const opml = `<?xml version="1.0"?>
 <opml version="2.0">

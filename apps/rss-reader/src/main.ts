@@ -8,5 +8,7 @@ import './web-components/feed-menu/feed-menu';
 import './web-components/folder-menu/folder-menu';
 import './styles/global.css';
 import { initTheme } from './theme';
+import { recomputeHotIfNeeded } from './db/db';
 
 initTheme();
+void recomputeHotIfNeeded();

@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase, type IDBPCursorWithValue } from 'idb';
+import { contentEngagement, hotScore } from '../services/ranking';
 import type { Article, Feed, Folder } from '../types';
 
 interface ReaderDB extends DBSchema {
@@ -146,6 +147,39 @@ export async function setFeedFolders(feedId: string, folderIds: string[]): Promi
     feed.folderIds = folderIds;
     await db.put('feeds', feed);
   }
+}
+
+// ---- meta (key/value signals, e.g. reading-affinity counters) ----
+
+export async function getMeta(key: string): Promise<unknown> {
+  const rec = await (await getDb()).get('meta', key);
+  return rec?.value;
+}
+
+export async function setMeta(key: string, value: unknown): Promise<void> {
+  await (await getDb()).put('meta', { key, value });
+}
+
+export async function getMetaMany(keys: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (!keys.length) return out;
+  const db = await getDb();
+  const tx = db.transaction('meta', 'readonly');
+  for (const key of keys) {
+    const rec = await tx.store.get(key);
+    if (rec) out.set(key, rec.value as number);
+  }
+  await tx.done;
+  return out;
+}
+
+export async function incrementMeta(key: string, delta: number, decay = 1): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction('meta', 'readwrite');
+  const rec = await tx.store.get(key);
+  const current = (rec?.value as number) ?? 0;
+  await tx.store.put({ key, value: Math.round(current * decay + delta) });
+  await tx.done;
 }
 
 export async function getArticle(id: string): Promise<Article | undefined> {
@@ -421,4 +455,32 @@ export async function queryRecentArticles(since: number, limit = 60): Promise<Ar
     tx.objectStore('articles').index('byPublished').openCursor(range, 'prev'),
     limit,
   );
+}
+
+export const HOT_VERSION = 2;
+
+/**
+ * One-time migration: recompute stored `hot` values after a ranking change.
+ * Runs at startup (not during the DB upgrade, which wipes stores). Existing
+ * articles get a content-based engagement estimate until their feed re-syncs
+ * and fills in affinity/velocity terms.
+ */
+export async function recomputeHotIfNeeded(): Promise<void> {
+  const db = await getDb();
+  const stored = (await db.get('meta', 'hot-version'))?.value as number | undefined;
+  if (stored === HOT_VERSION) return;
+
+  const tx = db.transaction(['articles', 'meta'], 'readwrite');
+  const articleStore = tx.objectStore('articles');
+  let cursor = await articleStore.openCursor();
+  while (cursor) {
+    const article = cursor.value;
+    const engagement = article.engagement ?? contentEngagement(article);
+    article.engagement = engagement;
+    article.hot = hotScore(article.popularity, engagement, article.published);
+    await cursor.update(article);
+    cursor = await cursor.continue();
+  }
+  await tx.objectStore('meta').put({ key: 'hot-version', value: HOT_VERSION });
+  await tx.done;
 }

@@ -1,8 +1,18 @@
-import { decrementFeedUnread, deleteFeed as dbDeleteFeed, deleteFolder as dbDeleteFolder, getArticle, markAllRead as dbMarkAllRead, markArticlesRead as dbMarkArticlesRead, markReadBefore as dbMarkReadBefore, reorderFolders as dbReorderFolders, setArticleRead, setArticleStarred, setFeedFolders } from './db/db';
+import { decrementFeedUnread, deleteFeed as dbDeleteFeed, deleteFolder as dbDeleteFolder, getArticle, incrementMeta, markAllRead as dbMarkAllRead, markArticlesRead as dbMarkArticlesRead, markReadBefore as dbMarkReadBefore, reorderFolders as dbReorderFolders, setArticleRead, setArticleStarred, setFeedFolders } from './db/db';
 import { importOpml, exportOpml } from './services/opml';
 import { addFeedFromUrl, syncFeed } from './services/sync';
 import { invalidateArticles, invalidateLibrary, queryClient, updateArticlesInCache, type LibraryData } from './query';
-import type { Feed, Folder } from './types';
+import { domainOf } from './util';
+import type { Article, Feed, Folder } from './types';
+
+const AFFINITY_DECAY = 0.9;
+
+async function recordAffinity(article: Article, amount = 1) {
+  await incrementMeta(`aff:feed:${article.feedId}`, amount, AFFINITY_DECAY);
+  const host = domainOf(article.link);
+  if (host) await incrementMeta(`aff:domain:${host}`, amount, AFFINITY_DECAY);
+  if (article.author) await incrementMeta(`aff:author:${article.author.toLowerCase()}`, amount, AFFINITY_DECAY);
+}
 
 export async function addFeed(url: string): Promise<Feed> {
   const feed = await addFeedFromUrl(url);
@@ -86,6 +96,7 @@ export async function markArticleRead(articleId: string) {
   if (!article || article.read === 1) return;
   await setArticleRead(articleId, 1);
   await decrementFeedUnread(article.feedId);
+  await recordAffinity(article);
   updateArticlesInCache(articleId, { read: 1 });
   await invalidateLibrary();
 }
@@ -93,8 +104,10 @@ export async function markArticleRead(articleId: string) {
 export async function toggleStar(articleId: string) {
   const article = await getArticle(articleId);
   if (!article) return;
-  await setArticleStarred(articleId, !article.starred);
-  updateArticlesInCache(articleId, { starred: !article.starred });
+  const nowStarred = !article.starred;
+  await setArticleStarred(articleId, nowStarred);
+  if (nowStarred) await recordAffinity(article, 4);
+  updateArticlesInCache(articleId, { starred: nowStarred });
 }
 
 export async function markAllRead(feedId?: string) {

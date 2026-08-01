@@ -43,14 +43,100 @@ export function popularityScore(syndicationCount: number, comments: number): num
   return 1 + 3 * Math.max(0, syndicationCount - 1) + Math.min(Math.max(0, comments), 50);
 }
 
-const REDDIT_EPOCH = 1_134_028_003;
+/**
+ * "Sneaky" engagement proxy derived purely from an article's own structure.
+ * No engagement data exists, so we approximate likely-important stories from
+ * media presence, substance, and clickbait/urgency cues in the title.
+ */
+export interface EngagementInput {
+  title: string;
+  content?: string;
+  summary?: string;
+  author?: string;
+  media?: string;
+}
+
+const URGENCY_WORDS = new Set([
+  'breaking',
+  'live',
+  'exclusive',
+  'just',
+  'update',
+  'top',
+  'best',
+  'new',
+  'analysis',
+  'watch',
+  'explained',
+]);
+
+function stripTags(html: string | undefined): string {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function contentEngagement(input: EngagementInput): number {
+  let score = 0;
+  const content = input.content ?? '';
+  const title = input.title ?? '';
+
+  // media richness
+  if (input.media) {
+    score += 2;
+  } else if (/<img[\s>]/i.test(content)) {
+    score += 2;
+  }
+
+  // substance: longer articles tend to be more significant
+  const words = stripTags(content).split(/\s+/).filter(Boolean).length;
+  if (words >= 1000) score += 3;
+  else if (words >= 250) score += 2;
+  else if (words >= 50) score += 1;
+
+  // title urgency / clickbait cues
+  if (title.includes('!')) score += 1;
+  if (title.includes('?')) score += 1;
+  if (/\b[A-Z]{3,}\b/.test(title)) score += 1;
+  if (/\d/.test(title)) score += 1;
+  const titleWords = title.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  if (titleWords.some((w) => URGENCY_WORDS.has(w))) score += 1;
+  if (title.includes(': ')) score += 1;
+
+  if (input.author) score += 1;
+
+  // link-rich posts (aggregators, research round-ups)
+  if ((content.match(/<a[\s>]/gi) ?? []).length >= 3) score += 1;
+
+  return score;
+}
+
+/** Turn raw accumulated affinity into a bounded per-article boost (0..4). */
+export function affinityBoostScore(affinity: number): number {
+  return Math.min(4, Math.log10(1 + Math.max(0, affinity)) * 1.5);
+}
+
+const VELOCITY_WINDOW_MS = 24 * 3_600_000;
 
 /**
- * Reddit-style hot ranking. Uses a fixed anchor epoch so the score of a story is
- * stable between syncs (no periodic recomputation needed): newer stories rank
- * higher, and a 10x popularity edge offsets roughly 12.5 hours of age.
+ * Reward a story that is spreading across subscribed feeds right now:
+ * each additional feed carrying it contributes more while it's still fresh.
  */
-export function hotScore(popularity: number, publishedMs: number): number {
-  const p = Math.max(popularity, 1);
-  return Math.log10(p) + (publishedMs / 1000 - REDDIT_EPOCH) / 45_000;
+export function velocityBonus(extraFeedCount: number, ageMs: number | undefined): number {
+  if (!ageMs || ageMs < 0 || ageMs > VELOCITY_WINDOW_MS) return 0;
+  const recency = 1 - ageMs / VELOCITY_WINDOW_MS;
+  return Math.min(3, extraFeedCount * recency);
+}
+
+const REDDIT_EPOCH = 1_134_028_003;
+const HOT_GRAVITY = 90_000;
+
+/**
+ * Reddit-style hot ranking with a richer local signal. Uses a fixed anchor epoch
+ * so the score of a story is stable between syncs (no periodic recomputation):
+ * newer stories rank higher, and a ~10x popularity+engagement edge offsets
+ * roughly a day of age.
+ */
+export function hotScore(popularity: number, engagement: number, publishedMs: number): number {
+  const p = Math.max(popularity + Math.max(0, engagement), 1);
+  return Math.log10(p) + (publishedMs / 1000 - REDDIT_EPOCH) / HOT_GRAVITY;
 }
