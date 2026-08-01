@@ -1,0 +1,37 @@
+:host {
+    display: block;
+    overflow: hidden;
+}
+img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    animation: lazy-fade 0.25s ease-in;
+}
+.lazy-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--row-border);
+    animation: lazy-pulse 1.6s ease-in-out infinite;
+}
+.lazy-placeholder.lazy-error {
+    animation: none;
+}
+@keyframes lazy-fade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+@keyframes lazy-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.55;
+    }
+}

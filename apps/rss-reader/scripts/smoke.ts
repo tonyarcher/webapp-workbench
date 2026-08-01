@@ -1,5 +1,7 @@
 import {DOMParser} from '@xmldom/xmldom';
 import {firstImageUrl, isFolder, parseFeedXml, parseOpml, sanitizeHtml, stripHtml} from '../src/services/parser';
+import {interleaveArticles} from '../src/util';
+import type {Article} from '../src/types';
 import {
   affinityBoostScore,
   contentEngagement,
@@ -42,6 +44,7 @@ const rss = `<?xml version="1.0"?>
     <thr:total>42</thr:total>
     <description>&lt;p&gt;A &lt;b&gt;short&lt;/b&gt; summary&lt;/p&gt;</description>
     <content:encoded><![CDATA[<p>Full <b>content</b> here.</p><script>evil()</script>]]></content:encoded>
+    <media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://example.com/thumb.jpg"/>
   </item>
 </channel>
 </rss>`;
@@ -56,6 +59,7 @@ assert(parsed.items[0].comments === 42, 'item slash:comments parsed');
 assert(parsed.items[0].published === Date.parse('Wed, 30 Jul 2025 10:00:00 GMT'), 'item pubDate parsed');
 assert(parsed.items[0].summary === 'A short summary', 'item summary stripped to text');
 assert(parsed.items[0].content?.includes('<b>content</b>') ?? false, 'item content:encoded kept');
+assert(parsed.items[0].media === 'https://example.com/thumb.jpg', 'media:thumbnail parsed');
 
 const sanitized = sanitizeHtml('<p>ok</p><script>bad()</script><img src="x" onerror="bad()">');
 assert(!sanitized.includes('<script'), 'sanitize removes script');
@@ -133,7 +137,37 @@ const standalone = opmlNodes[1];
 assert(!isFolder(standalone) && standalone.xmlUrl === 'https://example.com/feed', 'opml top-level source');
 assert(stripHtml('<p>a&nbsp;b</p>') === 'a b', 'stripHtml collapses whitespace');
 assert(firstImageUrl('<p>text</p><img src="https://img.example/1.jpg" alt="x">') === 'https://img.example/1.jpg', 'firstImageUrl finds first img');
+assert(firstImageUrl('<img src="data:image/gif;base64,xxx" data-src="https://img.example/lazy.jpg">') === 'https://img.example/lazy.jpg', 'firstImageUrl prefers data-src for lazy-loading images');
+assert(firstImageUrl('<img srcset="https://img.example/small.jpg 480w, https://img.example/large.jpg 1200w">') === 'https://img.example/small.jpg', 'firstImageUrl reads srcset');
 assert(firstImageUrl('<p>no image</p>') === undefined, 'firstImageUrl returns undefined without img');
+
+// ---- interleave (diverse hot pages) ----
+const hotArticle = (id: string, hot: number): Article => ({
+    id,
+    feedId: 'f',
+    guid: id,
+    title: id,
+    published: 0,
+    fetchedAt: 0,
+    read: 0,
+    starred: false,
+    popularity: 1,
+    hot,
+});
+const feedA = [hotArticle('a1', 30), hotArticle('a2', 10), hotArticle('a3', 2)];
+const feedB = [hotArticle('b1', 20), hotArticle('b2', 8)];
+const feedC = [hotArticle('c1', 15)];
+const mixed = interleaveArticles([feedA, feedB, feedC], 4);
+assert(mixed.length === 4, 'interleave fills the page');
+assert(mixed[0].id === 'a1', 'interleave starts with the hottest story');
+assert(
+    mixed.map((a) => a.id).join(',') === 'a1,b1,c1,a2',
+    'interleave alternates feeds (a1,b1,c1,a2)',
+);
+assert(interleaveArticles([feedA, feedB, feedC], 10).length === 6, 'interleave returns everything when limit is large');
+assert(interleaveArticles([[], feedB], 3).map((a) => a.id).join(',') === 'b1,b2', 'interleave skips empty feeds');
+assert(interleaveArticles([feedA], 1)[0].id === 'a1', 'interleave with one feed returns its top');
+assert(interleaveArticles([], 5).length === 0, 'interleave empty input returns empty');
 
 // ---- AI module (mock Chrome's built-in model) ----
 const g = globalThis as unknown as Record<string, unknown>;

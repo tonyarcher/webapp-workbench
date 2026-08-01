@@ -15,9 +15,10 @@ import {
 } from '../../mutations';
 import {type ArticleCursor, getFeeds, getFolders, queryArticles} from '../../db/db';
 import type {Article, ArticleSort, Feed, Folder, ListViewType, View} from '../../types';
-import {domainOf, formatDate} from '../../util';
+import {domainOf, formatDate, interleaveArticles} from '../../util';
 import type {MenuAnchor} from '../feed-menu/feed-menu';
 import '../advanced-menu/advanced-menu';
+import '../lazy-img/lazy-img';
 import styles from './article-list.css?inline';
 
 interface Library {
@@ -26,61 +27,28 @@ interface Library {
 }
 
 const DEFAULT_PAGE_SIZE = 50;
-const LIST_VIEW_KEY = 'rss-reader:list-view';
-const CARD_COLS_KEY = 'rss-reader:card-columns';
-const SORT_KEY = 'rss-reader:article-sort';
-const PAGE_SIZE_KEY = 'rss-reader:page-size';
-const UNREAD_KEY = 'rss-reader:unread-only';
+const VIEW_SETTINGS_KEY = 'rss-reader:view-settings';
 const CARD_MIN_WIDTH = 240;
 const CARD_HEIGHT = 264;
 const CARD_ROW_GAP = 12;
 const CARD_ROW_HEIGHT = CARD_HEIGHT + CARD_ROW_GAP;
 
-function loadListView(): ListViewType {
-    try {
-        const v = localStorage.getItem(LIST_VIEW_KEY);
-        if (v === 'headline' || v === 'cards') return v;
-    } catch {
-        // ignore
-    }
-    return 'detailed';
+interface ViewSettings {
+    listView: ListViewType;
+    sort: ArticleSort;
+    pageSize: number;
+    maxCardCols: number;
+    unreadOnly: boolean;
 }
 
-function loadCardCols(): number {
+function readViewSettings(): Record<string, ViewSettings> {
     try {
-        const v = Number(localStorage.getItem(CARD_COLS_KEY));
-        if (v >= 2 && v <= 6) return v;
+        const raw = localStorage.getItem(VIEW_SETTINGS_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw) as Record<string, ViewSettings>;
+        return typeof parsed === 'object' && parsed ? parsed : {};
     } catch {
-        // ignore
-    }
-    return 4;
-}
-
-function loadSort(): ArticleSort {
-    try {
-        const v = localStorage.getItem(SORT_KEY);
-        if (v === 'newest' || v === 'oldest') return v;
-    } catch {
-        // ignore
-    }
-    return 'hot';
-}
-
-function loadPageSize(): number {
-    try {
-        const v = Number(localStorage.getItem(PAGE_SIZE_KEY));
-        if (v === 20 || v === 50 || v === 100 || v === 500) return v;
-    } catch {
-        // ignore
-    }
-    return DEFAULT_PAGE_SIZE;
-}
-
-function loadUnreadOnly(): boolean {
-    try {
-        return localStorage.getItem(UNREAD_KEY) === '1';
-    } catch {
-        return false;
+        return {};
     }
 }
 
@@ -90,17 +58,18 @@ export class ArticleList extends LitElement {
 
     @property({attribute: false}) view: View = {kind: 'all'};
     @property({attribute: false}) resumeArticleId: string | null = null;
+    @property({attribute: false}) active = true;
 
     @state() private items: Article[] = [];
-    @state() private hasMore = false;
     @state() private loading = false;
-    @state() private unreadOnly = loadUnreadOnly();
-    @state() private sort: ArticleSort = loadSort();
+    @state() private unreadOnly = false;
+    @state() private hideRead = false;
+    @state() private sort: ArticleSort = 'hot';
     @state() private cursor = -1;
-    @state() private listView: ListViewType = loadListView();
-    @state() private maxCardCols = loadCardCols();
+    @state() private listView: ListViewType = 'detailed';
+    @state() private maxCardCols = 4;
     @state() private cols = 3;
-    @state() private pageSize = loadPageSize();
+    @state() private pageSize = DEFAULT_PAGE_SIZE;
     @state() private advancedOpen = false;
     @state() private advancedAnchor: MenuAnchor | null = null;
 
@@ -113,6 +82,7 @@ export class ArticleList extends LitElement {
     private lastViewKey = '';
     private lastFolderKey = '';
     private resumeApplied = false;
+    private pendingReset = false;
     private resizeObserver?: ResizeObserver;
 
     private library = new QueryController<Library>(this, () => ({
@@ -149,18 +119,36 @@ export class ArticleList extends LitElement {
         super.connectedCallback();
         window.addEventListener('keydown', this.onKeyDown);
         window.addEventListener('feeds-refreshed', this.onFeedsRefreshed);
+        window.addEventListener('article-read', this.onArticleRead);
     }
 
     override disconnectedCallback() {
         super.disconnectedCallback();
         window.removeEventListener('keydown', this.onKeyDown);
         window.removeEventListener('feeds-refreshed', this.onFeedsRefreshed);
+        window.removeEventListener('article-read', this.onArticleRead);
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
         this.virtualizerCleanup?.();
     }
 
-    override willUpdate(_changed: Map<string, unknown>) {
+    private onArticleRead = (e: Event) => {
+        const id = (e as CustomEvent<string>).detail;
+        let changed = false;
+        this.items = this.items.map((a) => {
+            if (a.id === id && a.read === 0) {
+                changed = true;
+                return {...a, read: 1};
+            }
+            return a;
+        });
+        if (changed) this.requestUpdate();
+    };
+
+    override willUpdate(changed: Map<string, unknown>) {
+        if (changed.has('view')) {
+            this.loadViewSettings();
+        }
         if (this.virtualizer) {
             this.virtualizer.setOptions(this.virtualizerOptions());
             this.virtualizer._willUpdate();
@@ -170,7 +158,21 @@ export class ArticleList extends LitElement {
     override updated(_changed: Map<string, unknown>) {
         const viewKey = `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}`;
         if (viewKey !== this.lastViewKey) {
-            this.lastViewKey = viewKey;
+            this.hideRead = false;
+            this.loadViewSettings();
+            this.lastViewKey = `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}`;
+            if (this.needsLibrary() && !this.library.data) {
+                // Feed-set views need the library (feed list) before loading;
+                // updated() re-fires when the library query resolves.
+                this.pendingReset = true;
+                return;
+            }
+            this.pendingReset = false;
+            this.reset();
+            return;
+        }
+        if (this.pendingReset && this.library.data) {
+            this.pendingReset = false;
             this.reset();
             return;
         }
@@ -181,12 +183,10 @@ export class ArticleList extends LitElement {
                 this.reset();
             }
         }
-        if (this.items.length && this.hasMore && !this.loadingRef) {
-            const el = this.scrollElRef.value;
-            if (el && el.scrollHeight <= el.clientHeight) {
-                this.loadMore();
-            }
-        }
+    }
+
+    private needsLibrary(): boolean {
+        return this.view.kind === 'folder' || (this.view.kind === 'all' && this.sort === 'hot');
     }
 
     override render() {
@@ -202,11 +202,7 @@ export class ArticleList extends LitElement {
                 .value=${this.sort}
                 @change=${(e: Event) => {
                     this.sort = (e.target as HTMLSelectElement).value as ArticleSort;
-                    try {
-                        localStorage.setItem(SORT_KEY, this.sort);
-                    } catch {
-                        // ignore
-                    }
+                    this.saveViewSettings();
                 }}
               >
                 <option value="hot">Hot</option>
@@ -219,11 +215,7 @@ export class ArticleList extends LitElement {
                 .value=${this.listView}
                 @change=${(e: Event) => {
                     this.listView = (e.target as HTMLSelectElement).value as ListViewType;
-                    try {
-                        localStorage.setItem(LIST_VIEW_KEY, this.listView);
-                    } catch {
-                        // ignore
-                    }
+                    this.saveViewSettings();
                 }}
               >
                 <option value="detailed">Detailed List</option>
@@ -238,11 +230,7 @@ export class ArticleList extends LitElement {
                       .value=${this.maxCardCols}
                       @change=${(e: Event) => {
                           this.maxCardCols = Number((e.target as HTMLSelectElement).value);
-                          try {
-                              localStorage.setItem(CARD_COLS_KEY, String(this.maxCardCols));
-                          } catch {
-                              // ignore
-                          }
+                          this.saveViewSettings();
                           this.updateCols();
                       }}
                       title="Maximum card columns"
@@ -261,11 +249,7 @@ export class ArticleList extends LitElement {
                 .value=${this.pageSize}
                 @change=${(e: Event) => {
                     this.pageSize = Number((e.target as HTMLSelectElement).value);
-                    try {
-                        localStorage.setItem(PAGE_SIZE_KEY, String(this.pageSize));
-                    } catch {
-                        // ignore
-                    }
+                    this.saveViewSettings();
                 }}
                 title="Articles shown at a time"
               >
@@ -291,7 +275,7 @@ export class ArticleList extends LitElement {
         @close=${() => (this.advancedOpen = false)}
       ></advanced-menu>
 
-      <div class="scroll" style="--cols: ${this.cols}" ${ref(this.scrollElRef)} @scroll=${() => this.loadMore()}>
+      <div class="scroll" style="--cols: ${this.cols}" ${ref(this.scrollElRef)}>
         <div class="viewport" style="height: ${this.virtualizer?.getTotalSize() ?? 0}px;">
           ${this.listView === 'cards'
           ? virtualItems.map((vi) => {
@@ -378,6 +362,39 @@ export class ArticleList extends LitElement {
         return [];
     }
 
+    private viewKey(): string {
+        if (this.view.kind === 'feed') return `feed:${this.view.id}`;
+        if (this.view.kind === 'folder') return `folder:${this.view.id}`;
+        return 'all';
+    }
+
+    private loadViewSettings() {
+        const saved = readViewSettings()[this.viewKey()];
+        if (!saved) return;
+        this.listView = saved.listView ?? 'detailed';
+        this.sort = saved.sort ?? 'hot';
+        this.pageSize = saved.pageSize ?? DEFAULT_PAGE_SIZE;
+        this.maxCardCols = saved.maxCardCols ?? 4;
+        this.unreadOnly = saved.unreadOnly ?? false;
+        this.updateCols();
+    }
+
+    private saveViewSettings() {
+        const map = readViewSettings();
+        map[this.viewKey()] = {
+            listView: this.listView,
+            sort: this.sort,
+            pageSize: this.pageSize,
+            maxCardCols: this.maxCardCols,
+            unreadOnly: this.unreadOnly,
+        };
+        try {
+            localStorage.setItem(VIEW_SETTINGS_KEY, JSON.stringify(map));
+        } catch {
+            // ignore
+        }
+    }
+
     private reinitVirtualizer() {
         this.virtualizerCleanup?.();
         this.virtualizer = new Virtualizer(this.virtualizerOptions());
@@ -387,7 +404,6 @@ export class ArticleList extends LitElement {
 
     private async reset() {
         this.items = [];
-        this.hasMore = false;
         this.cursors.clear();
         this.feedHasMore.clear();
         this.cursor = -1;
@@ -434,16 +450,19 @@ export class ArticleList extends LitElement {
 
     private async loadSinglePage() {
         const feedId = this.view.kind === 'feed' ? this.view.id : undefined;
+        if (this.view.kind === 'all' && this.sort === 'hot') {
+            await this.loadFeedSetPage(this.library.data?.feeds ?? [], true);
+            return;
+        }
         const cursor = this.cursors.get(feedId ?? 'all');
         const res = await queryArticles({
             feedId,
-            unreadOnly: this.unreadOnly,
+            unreadOnly: this.unreadOnly || this.hideRead,
             sort: this.sort,
             limit: this.pageSize,
             cursor,
         });
         this.items = mergeSorted(this.items, res.items, this.sort);
-        this.hasMore = res.hasMore;
         const last = res.items[res.items.length - 1];
         if (last) {
             this.cursors.set(feedId ?? 'all', this.cursorOf(last));
@@ -451,45 +470,59 @@ export class ArticleList extends LitElement {
     }
 
     private async loadFolderPage() {
-        const feeds = this.folderFeeds();
-        if (!feeds.length) {
-            this.hasMore = false;
+        await this.loadFeedSetPage(this.folderFeeds(), this.sort === 'hot');
+    }
+
+    /**
+     * Load a page across a set of feeds (folder view, or All view with Hot
+     * sort). When `interleave` is set, the page keeps a mix of sources:
+     * each feed contributes roughly its share even if one feed dominates.
+     * Feeds' cursors advance only past stories actually kept, so pagination
+     * never skips anything.
+     */
+    private async loadFeedSetPage(feeds: Feed[], interleave: boolean) {
+        const activeFeeds = feeds.filter((f) => this.feedHasMore.get(f.id) !== false);
+        if (!activeFeeds.length) {
             return;
         }
 
-        const activeFeeds = feeds.filter((f) => this.feedHasMore.get(f.id) !== false);
-        if (!activeFeeds.length) {
-            this.hasMore = false;
-            return;
-        }
+        const perFeed = interleave
+            ? Math.max(1, Math.min(this.pageSize, Math.ceil(this.pageSize / activeFeeds.length)))
+            : this.pageSize;
 
         const results = await Promise.all(
             activeFeeds.map(async (feed) => {
                 const cursor = this.cursors.get(feed.id);
                 const res = await queryArticles({
                     feedId: feed.id,
-                    unreadOnly: this.unreadOnly,
+                    unreadOnly: this.unreadOnly || this.hideRead,
                     sort: this.sort,
-                    limit: this.pageSize,
+                    limit: perFeed,
                     cursor,
                 });
-                this.feedHasMore.set(feed.id, res.hasMore);
-                const last = res.items[res.items.length - 1];
-                if (last) {
-                    this.cursors.set(feed.id, this.cursorOf(last));
-                }
-                return res.items;
+                return {feed, res};
             })
         );
 
-        const merged = results.flat();
-        this.items = mergeSorted(this.items, merged, this.sort);
-        this.hasMore = Array.from(this.feedHasMore.values()).some(Boolean);
-    }
+        const existingIds = new Set(this.items.map((a) => a.id));
+        const fetched = results.flatMap(({res}) => res.items);
+        const fresh = mergeSorted(this.items, fetched, this.sort).filter((a) => !existingIds.has(a.id));
 
-    private async loadMore() {
-        if (!this.hasMore || this.loadingRef) return;
-        await this.loadPage();
+        const kept = interleave
+            ? interleaveArticles(results.map(({res}) => res.items), this.pageSize)
+            : fresh.slice(0, this.pageSize);
+        const keptIds = new Set(kept.map((a) => a.id));
+
+        this.items = mergeSorted(this.items, kept, this.sort);
+
+        for (const {feed, res} of results) {
+            const lastKept = [...res.items].reverse().find((a) => keptIds.has(a.id));
+            if (lastKept) {
+                this.cursors.set(feed.id, this.cursorOf(lastKept));
+            }
+            const discarded = res.items.some((a) => !keptIds.has(a.id) && !existingIds.has(a.id));
+            this.feedHasMore.set(feed.id, res.hasMore || discarded);
+        }
     }
 
     private viewTitle(): string {
@@ -528,6 +561,7 @@ export class ArticleList extends LitElement {
     }
 
     private onKeyDown = (e: KeyboardEvent) => {
+        if (!this.active) return;
         const key = e.key;
         if (key !== 'j' && key !== 'k') return;
         const target = e.target as HTMLElement | null;
@@ -538,17 +572,15 @@ export class ArticleList extends LitElement {
         e.preventDefault();
         const next = Math.max(0, Math.min(this.cursor + (key === 'j' ? 1 : -1), this.items.length - 1));
         this.cursor = next;
-        if (next >= this.items.length - 5 && this.hasMore) {
-            void this.loadMore();
-        }
         void this.openArticle(this.items[next]);
     };
 
     private async onMarkShownRead() {
         const ids = this.items.filter((a) => a.read === 0).map((a) => a.id);
         if (!ids.length) return;
-        this.items = this.items.map((a) => (a.read === 0 ? {...a, read: 1} : a));
         await markShownRead(ids);
+        this.hideRead = true;
+        await this.reset();
     }
 
     private onToggleAdvanced(e: Event) {
@@ -560,11 +592,7 @@ export class ArticleList extends LitElement {
 
     private onAdvancedUnread(e: Event) {
         this.unreadOnly = (e as CustomEvent<boolean>).detail;
-        try {
-            localStorage.setItem(UNREAD_KEY, this.unreadOnly ? '1' : '0');
-        } catch {
-            // ignore
-        }
+        this.saveViewSettings();
     }
 
     private scopeLabel(): string {
@@ -599,6 +627,7 @@ export class ArticleList extends LitElement {
                         : undefined;
             await markReadBefore(feedIds, cutoff);
         }
+        this.hideRead = true;
         await this.reset();
     }
 
@@ -687,7 +716,7 @@ export class ArticleList extends LitElement {
         @click=${() => this.openArticle(article)}
       >
         ${article.image
-        ? html`<img class="grid-card-img" src=${article.image} alt="" loading="lazy" />`
+        ? html`<lazy-img class="grid-card-img" .src=${article.image}></lazy-img>`
         : html`<div class="grid-card-img grid-card-img-empty"></div>`}
         <div class="grid-card-body">
           <div class="grid-card-title-row">

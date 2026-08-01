@@ -42,6 +42,10 @@ function parseMedia(item: Element): string | undefined {
             return url;
         }
     }
+    for (const node of Array.from(item.getElementsByTagNameNS('*', 'thumbnail'))) {
+        const url = node.getAttribute('url');
+        if (url) return url;
+    }
     return undefined;
 }
 
@@ -161,9 +165,18 @@ export function stripHtml(html: string | undefined): string {
 
 /** First image URL inside an HTML string, if any. */
 export function firstImageUrl(html: string | undefined): string | undefined {
-  if (!html) return undefined;
-  const match = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
-  return match?.[1];
+    if (!html) return undefined;
+    // Lazy-loading sites often defer the real URL to data-* attributes.
+    const lazy = /<img[^>]+(?:data-src|data-lazy-src|data-original)=["']([^"']+)["']/i.exec(html);
+    if (lazy) return lazy[1];
+    const src = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
+    if (src) return src[1];
+    const srcset = /<img[^>]+srcset=["']([^"']+)["']/i.exec(html);
+    if (srcset) {
+        const first = srcset[1].split(',')[0]?.trim().split(' ')[0];
+        if (first) return first;
+    }
+    return undefined;
 }
 
 export function sanitizeHtml(html: string | undefined): string {

@@ -458,7 +458,7 @@ export async function queryRecentArticles(since: number, limit = 60): Promise<Ar
     );
 }
 
-export const HOT_VERSION = 3;
+export const HOT_VERSION = 4;
 
 /**
  * One-time migration: recompute stored `hot` values after a ranking change and

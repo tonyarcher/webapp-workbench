@@ -59,21 +59,27 @@ export class AppShell extends LitElement {
             <div class="layout">
                 <source-list .view=${this.route}></source-list>
                 <main>
+                    ${this.route.kind === 'brief'
+                        ? html`
+                            <brief-view
+                                class=${this.article ? 'hidden' : ''}
+                                @open-article=${this.onOpenArticle}
+                            ></brief-view>`
+                        : html`
+                            <article-list
+                                class=${this.article ? 'hidden' : ''}
+                                .view=${this.route}
+                                .active=${!this.article}
+                                .resumeArticleId=${this.resume && JSON.stringify(this.route) === this.resume.view ? this.resume.id : null}
+                                @open-article=${this.onOpenArticle}
+                            ></article-list>`}
                     ${this.article
-                            ? html`
-                                <article-view
-                                        .article=${this.article}
-                                        @close=${this.closeArticle}
-                                ></article-view>`
-                            : this.route.kind === 'brief'
-                                    ? html`
-                                        <brief-view @open-article=${this.onOpenArticle}></brief-view>`
-                                    : html`
-                                        <article-list
-                                                .view=${this.route}
-                                                .resumeArticleId=${this.resume && JSON.stringify(this.route) === this.resume.view ? this.resume.id : null}
-                                                @open-article=${this.onOpenArticle}
-                                        ></article-list>`}
+                        ? html`
+                            <article-view
+                                .article=${this.article}
+                                @close=${this.closeArticle}
+                            ></article-view>`
+                        : ''}
                 </main>
             </div>
             <settings-dialog
@@ -111,6 +117,7 @@ export class AppShell extends LitElement {
         this.article = article;
         this.resume = {view: JSON.stringify(this.route), id: article.id};
         void markArticleRead(article.id);
+        window.dispatchEvent(new CustomEvent('article-read', {detail: article.id}));
     }
 
     private onOpenArticle(e: Event) {

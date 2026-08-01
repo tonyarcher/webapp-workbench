@@ -93,13 +93,18 @@
 
 .row.cards {
     display: grid;
-    grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+    grid-template-columns: repeat(var(--cols, 3), minmax(0, 300px));
+    justify-content: center;
     gap: 12px;
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 16px 12px;
     background: none;
     border-bottom: none;
+}
+
+.row.cards:hover {
+    background: none;
 }
 
 .detail-body {
