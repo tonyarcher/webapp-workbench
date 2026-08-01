@@ -122,7 +122,7 @@ export class ArticleList extends LitElement {
   private folderFeeds(): Feed[] {
     if (this.view.kind === 'folder') {
       const id = this.view.id;
-      return this.library.data?.feeds.filter((f) => f.folderId === id) ?? [];
+      return this.library.data?.feeds.filter((f) => f.folderIds.includes(id)) ?? [];
     }
     return [];
   }

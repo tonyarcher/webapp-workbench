@@ -1,4 +1,4 @@
-import { decrementFeedUnread, deleteFeed as dbDeleteFeed, deleteFolder as dbDeleteFolder, getArticle, markAllRead as dbMarkAllRead, setArticleRead, setArticleStarred } from './db/db';
+import { decrementFeedUnread, deleteFeed as dbDeleteFeed, deleteFolder as dbDeleteFolder, getArticle, markAllRead as dbMarkAllRead, reorderFolders as dbReorderFolders, setArticleRead, setArticleStarred, setFeedFolders } from './db/db';
 import { importOpml, exportOpml } from './services/opml';
 import { addFeedFromUrl, syncFeed } from './services/sync';
 import { invalidateArticles, invalidateLibrary, queryClient, updateArticlesInCache, type LibraryData } from './query';
@@ -56,11 +56,29 @@ export async function deleteFeed(feedId: string) {
 
 export async function deleteFolder(folderId: string) {
   const library = queryClient.getQueryData<LibraryData>(['library']);
-  const feeds = (library?.feeds ?? []).filter((f) => f.folderId === folderId);
+  const feeds = (library?.feeds ?? []).filter((f) => f.folderIds.includes(folderId));
   await dbDeleteFolder(folderId);
+  for (const feed of feeds) {
+    await setFeedFolders(feed.id, feed.folderIds.filter((id) => id !== folderId));
+  }
   await invalidateLibrary();
   await invalidateArticles();
   return feeds;
+}
+
+export async function moveFeed(feedId: string, folderId: string | null) {
+  await setFeedFolders(feedId, folderId ? [folderId] : []);
+  await invalidateLibrary();
+}
+
+export async function setFeedFolderMembership(feedId: string, folderIds: string[]) {
+  await setFeedFolders(feedId, folderIds);
+  await invalidateLibrary();
+}
+
+export async function reorderFolders(folderIds: string[]) {
+  await dbReorderFolders(folderIds);
+  await invalidateLibrary();
 }
 
 export async function markArticleRead(articleId: string) {

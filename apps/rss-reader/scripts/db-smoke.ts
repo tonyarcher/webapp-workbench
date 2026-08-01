@@ -47,7 +47,7 @@ async function main() {
     id: 'feed-a',
     title: 'Feed A',
     url: 'https://a.example/rss',
-    folderId: null,
+    folderIds: [],
     unread: 0,
     addedAt: Date.now(),
   };
@@ -55,7 +55,7 @@ async function main() {
     id: 'feed-b',
     title: 'Feed B',
     url: 'https://b.example/rss',
-    folderId: 'folder-1',
+    folderIds: ['folder-1'],
     unread: 0,
     addedAt: Date.now(),
   };

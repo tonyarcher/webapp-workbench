@@ -122,7 +122,7 @@ export async function addFeedFromUrl(url: string): Promise<Feed> {
     title: parsed.title || url,
     url,
     siteUrl: parsed.siteUrl,
-    folderId: null,
+    folderIds: [],
     unread: 0,
     addedAt: Date.now(),
   };

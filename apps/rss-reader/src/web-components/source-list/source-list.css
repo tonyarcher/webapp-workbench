@@ -17,7 +17,7 @@
   gap: 8px;
   padding: 6px 8px;
   border-radius: 6px;
-  cursor: pointer;
+  cursor: grab;
   color: var(--text);
   user-select: none;
   border: none;
@@ -65,7 +65,7 @@
   gap: 6px;
   padding: 5px 8px;
   border-radius: 6px;
-  cursor: pointer;
+  cursor: grab;
   color: var(--text-muted);
   user-select: none;
 }
@@ -94,13 +94,21 @@
 .feed-row.has-unread .dot {
   opacity: 1;
 }
-.feed-row .actions {
-  display: none;
-  gap: 2px;
+.menu-btn {
   flex: none;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 7px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
 }
-.feed-row:hover .actions {
-  display: flex;
+.menu-btn:hover {
+  background: var(--hover);
+  border-color: var(--accent);
 }
 .icon-btn {
   border: none;
@@ -122,4 +130,37 @@
   letter-spacing: 0.04em;
   color: var(--text-muted);
   padding: 10px 8px 4px;
+}
+.item.dragging,
+.feed-row.dragging {
+  opacity: 0.4;
+}
+.item.drag-over,
+.feed-row.drag-over {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--active-bg);
+}
+nav.drag-over {
+  outline: 1px dashed var(--accent);
+  outline-offset: -4px;
+  border-radius: 8px;
+}
+.drop-zone {
+  display: none;
+  margin: 8px;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.drop-zone.visible {
+  display: block;
+}
+.drop-zone.drag-over {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--active-bg);
 }

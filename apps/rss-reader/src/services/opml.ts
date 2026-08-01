@@ -20,7 +20,8 @@ export async function importOpml(xml: string): Promise<OpmlImportResult> {
       (f) => f.title.toLowerCase() === title.toLowerCase(),
     );
     if (existing) return existing;
-    const folder: Folder = { id: uid(), title, createdAt: Date.now() };
+    const sortOrder = existingFolders.reduce((max, f) => Math.max(max, f.sortOrder ?? 0), 0) + 1;
+    const folder: Folder = { id: uid(), title, createdAt: Date.now(), sortOrder };
     await putFolder(folder);
     existingFolders.push(folder);
     createdFolders.push(folder);
@@ -35,8 +36,8 @@ export async function importOpml(xml: string): Promise<OpmlImportResult> {
   ): Promise<void> => {
     const existing = existingFeeds.find((f) => f.url.toLowerCase() === xmlUrl.toLowerCase());
     if (existing) {
-      if (folderId !== null) {
-        existing.folderId = folderId;
+      if (folderId !== null && !existing.folderIds.includes(folderId)) {
+        existing.folderIds = [...existing.folderIds, folderId];
         await putFeed(existing);
       }
       return;
@@ -46,7 +47,7 @@ export async function importOpml(xml: string): Promise<OpmlImportResult> {
       title: title || xmlUrl,
       url: xmlUrl,
       siteUrl: htmlUrl,
-      folderId,
+      folderIds: folderId ? [folderId] : [],
       unread: 0,
       addedAt: Date.now(),
     };
@@ -85,7 +86,9 @@ export async function exportOpml(): Promise<string> {
 
   const renderSources = (folderId: string | null): string => {
     return feeds
-      .filter((f) => f.folderId === folderId)
+      .filter((f) =>
+        folderId === null ? f.folderIds.length === 0 : f.folderIds.includes(folderId),
+      )
       .map(
         (f) =>
           `    <outline type="rss" text="${escapeXml(f.title)}" title="${escapeXml(f.title)}" xmlUrl="${escapeXml(f.url)}"${f.siteUrl ? ` htmlUrl="${escapeXml(f.siteUrl)}"` : ''}/>`,

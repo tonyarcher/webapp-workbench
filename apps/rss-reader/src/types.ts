@@ -2,6 +2,7 @@ export interface Folder {
   id: string;
   title: string;
   createdAt: number;
+  sortOrder?: number;
 }
 
 export interface Feed {
@@ -10,7 +11,7 @@ export interface Feed {
   url: string;
   siteUrl?: string;
   icon?: string;
-  folderId: string | null;
+  folderIds: string[];
   unread: number;
   addedAt: number;
   lastFetchedAt?: number;

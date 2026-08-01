@@ -67,7 +67,32 @@ export const uid = () =>
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
 export async function getFolders(): Promise<Folder[]> {
-  return (await getDb()).getAll('folders');
+  const db = await getDb();
+  const folders = await db.getAll('folders');
+  if (folders.some((f) => f.sortOrder == null)) {
+    folders.forEach((f, i) => {
+      if (f.sortOrder == null) f.sortOrder = i;
+    });
+    const tx = db.transaction('folders', 'readwrite');
+    for (const folder of folders) await tx.store.put(folder);
+    await tx.done;
+  }
+  return folders.sort(
+    (a, b) => (a.sortOrder ?? Infinity) - (b.sortOrder ?? Infinity) || a.createdAt - b.createdAt || a.title.localeCompare(b.title),
+  );
+}
+
+export async function reorderFolders(folderIds: string[]): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction('folders', 'readwrite');
+  for (let i = 0; i < folderIds.length; i++) {
+    const folder = await tx.store.get(folderIds[i]);
+    if (folder) {
+      folder.sortOrder = i;
+      await tx.store.put(folder);
+    }
+  }
+  await tx.done;
 }
 
 export async function putFolder(folder: Folder): Promise<void> {
@@ -79,15 +104,27 @@ export async function deleteFolder(id: string): Promise<void> {
 }
 
 export async function getFeeds(): Promise<Feed[]> {
-  return (await getDb()).getAll('feeds');
+  const feeds = await (await getDb()).getAll('feeds');
+  return feeds
+    .map(normalizeFeed)
+    .sort(
+      (a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }),
+    );
 }
 
 export async function getFeed(id: string): Promise<Feed | undefined> {
-  return (await getDb()).get('feeds', id);
+  const feed = await (await getDb()).get('feeds', id);
+  return feed ? normalizeFeed(feed) : undefined;
 }
 
 export async function putFeed(feed: Feed): Promise<void> {
   await (await getDb()).put('feeds', feed);
+}
+
+export function normalizeFeed(feed: Feed): Feed {
+  if (Array.isArray(feed.folderIds)) return feed;
+  const legacy = (feed as unknown as { folderId?: string | null }).folderId;
+  return { ...feed, folderIds: legacy ? [legacy] : [] };
 }
 
 export async function deleteFeed(id: string): Promise<void> {
@@ -102,11 +139,11 @@ export async function deleteFeed(id: string): Promise<void> {
   await tx.done;
 }
 
-export async function setFeedFolder(feedId: string, folderId: string | null): Promise<void> {
+export async function setFeedFolders(feedId: string, folderIds: string[]): Promise<void> {
   const db = await getDb();
   const feed = await db.get('feeds', feedId);
   if (feed) {
-    feed.folderId = folderId;
+    feed.folderIds = folderIds;
     await db.put('feeds', feed);
   }
 }
