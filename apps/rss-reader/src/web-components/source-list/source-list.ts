@@ -5,7 +5,8 @@ import { deleteFeed, deleteFolder, moveFeed, refreshFeed, reorderFolders, setFee
 import { getFeeds, getFolders } from '../../db/db';
 import { navigate } from '../../router';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
-import type { Feed, Folder, View } from '../../types';
+import type { Feed, FeedSort, Folder, View } from '../../types';
+import '../feed-list-menu/feed-list-menu';
 import styles from './source-list.css?inline';
 
 interface Library {
@@ -16,12 +17,33 @@ interface Library {
 const COLLAPSED_KEY = 'rss-reader:collapsed-folders';
 const AUTO_HIDE_KEY = 'rss-reader:auto-hide-sidebar';
 const SIDEBAR_WIDTH_KEY = 'rss-reader:sidebar-width';
+const FEED_SORT_KEY = 'rss-reader:feed-sort';
+const HIDE_READ_KEY = 'rss-reader:hide-read-by-folder';
 const MIN_SIDEBAR_WIDTH = 140;
 const MAX_SIDEBAR_WIDTH = 480;
 
 function loadCollapsed(): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(COLLAPSED_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, boolean>;
+    return typeof parsed === 'object' && parsed ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function loadFeedSort(): FeedSort {
+  try {
+    return localStorage.getItem(FEED_SORT_KEY) === 'unread' ? 'unread' : 'alpha';
+  } catch {
+    return 'alpha';
+  }
+}
+
+function loadHideReadByFolder(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(HIDE_READ_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as Record<string, boolean>;
     return typeof parsed === 'object' && parsed ? parsed : {};
@@ -49,9 +71,15 @@ export class SourceList extends LitElement {
   @property({ attribute: 'auto-hide', type: Boolean, reflect: true }) autoHide = loadAutoHide();
   @property({ attribute: 'hover', type: Boolean, reflect: true }) hover = false;
 
+  @state() private feedSort: FeedSort = loadFeedSort();
+  @state() private hideReadByFolder: Record<string, boolean> = loadHideReadByFolder();
+
   private hideTimer: number | null = null;
   private resizing = false;
   private resizeHandleEl: HTMLElement | null = null;
+  private feedListMenuTriggerId: string | null = null;
+  @state() private feedListMenuOpen = false;
+  @state() private feedListMenuAnchor: MenuAnchor | null = null;
 
   private dragging: { kind: 'folder' | 'feed'; id: string } | null = null;
   private dragTargetEl: HTMLElement | null = null;
@@ -213,10 +241,118 @@ export class SourceList extends LitElement {
     return this.libraryData.feeds.reduce((sum, f) => sum + f.unread, 0);
   }
 
+  private filterIcon() {
+    return html`
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M3 4h18l-7 8v5l-4 2v-7L3 4z"></path>
+      </svg>
+    `;
+  }
+
   private folderUnread(folderId: string): number {
     return this.libraryData.feeds
       .filter((f) => f.folderIds.includes(folderId))
       .reduce((sum, f) => sum + f.unread, 0);
+  }
+
+  private sortedFeeds(feeds: Feed[]): Feed[] {
+    if (this.feedSort !== 'unread') return feeds;
+    return [...feeds].sort(
+      (a, b) =>
+        Number(b.unread > 0) - Number(a.unread > 0) ||
+        a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }),
+    );
+  }
+
+  private visibleFeeds(feeds: Feed[], folderKey: string): Feed[] {
+    return this.hideReadByFolder[folderKey] ? feeds.filter((f) => f.unread > 0) : feeds;
+  }
+
+  private folderFeeds(folderId: string): Feed[] {
+    return this.sortedFeeds(
+      this.visibleFeeds(
+        this.libraryData.feeds.filter((f) => f.folderIds.includes(folderId)),
+        folderId,
+      ),
+    );
+  }
+
+  private uncategorizedFeeds(): Feed[] {
+    return this.sortedFeeds(
+      this.libraryData.feeds.filter((f) => f.folderIds.length === 0),
+    );
+  }
+
+  private openFeedListMenu(e: MouseEvent) {
+    e.stopPropagation();
+    const btn = e.currentTarget as HTMLElement;
+    if (this.feedListMenuOpen && this.feedListMenuTriggerId === 'list') {
+      this.feedListMenuOpen = false;
+      this.feedListMenuTriggerId = null;
+      return;
+    }
+    const rect = btn.getBoundingClientRect();
+    this.feedListMenuTriggerId = 'list';
+    this.feedListMenuAnchor = { x: rect.left, y: rect.bottom };
+    this.feedListMenuOpen = true;
+  }
+
+  private closeFeedListMenu() {
+    this.feedListMenuOpen = false;
+    this.feedListMenuTriggerId = null;
+  }
+
+  private onFeedSortChange(e: Event) {
+    this.feedSort = (e as CustomEvent<FeedSort>).detail;
+    try {
+      localStorage.setItem(FEED_SORT_KEY, this.feedSort);
+    } catch {
+      // storage unavailable; sort preference just won't persist
+    }
+  }
+
+  private onHideChange(e: Event) {
+    const { key, unreadOnly } = (e as CustomEvent<{ key: string; unreadOnly: boolean }>).detail;
+    this.hideReadByFolder = { ...this.hideReadByFolder, [key]: unreadOnly };
+    try {
+      localStorage.setItem(HIDE_READ_KEY, JSON.stringify(this.hideReadByFolder));
+    } catch {
+      // storage unavailable; filter preference just won't persist
+    }
+  }
+
+  private onFolderMenuUnreadOnly(e: Event) {
+    const folder = this.folderMenuFolder();
+    if (!folder) return;
+    this.onHideChange(
+      new CustomEvent('folder-toggle', {
+        detail: { key: folder.id, unreadOnly: (e as CustomEvent<boolean>).detail },
+      }),
+    );
+  }
+
+  private async onSortFolders() {
+    const folders = this.libraryData.folders;
+    if (folders.length < 2) return;
+    if (
+      confirm(
+        'Sort folders alphabetically? This replaces your current folder order. You can drag folders to reorder them afterward.',
+      )
+    ) {
+      const ids = [...folders]
+        .sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }))
+        .map((f) => f.id);
+      await reorderFolders(ids);
+      this.closeFeedListMenu();
+    }
   }
 
   private select(view: View) {
@@ -450,7 +586,7 @@ export class SourceList extends LitElement {
   }
 
   private folderRow(folder: Folder) {
-    const feeds = this.libraryData.feeds.filter((f) => f.folderIds.includes(folder.id));
+    const feeds = this.folderFeeds(folder.id);
     const isCollapsed = this.collapsed[folder.id];
     const active = this.isActive({ kind: 'folder', id: folder.id });
     const unread = this.folderUnread(folder.id);
@@ -517,8 +653,8 @@ export class SourceList extends LitElement {
   }
 
   override render() {
-    const { folders, feeds } = this.libraryData;
-    const uncategorized = feeds.filter((f) => f.folderIds.length === 0);
+    const { folders } = this.libraryData;
+    const uncategorized = this.uncategorizedFeeds();
     const allActive = this.isActive({ kind: 'all' });
     const briefActive = this.isActive({ kind: 'brief' });
     const menuFeed = this.menuFeed();
@@ -526,6 +662,11 @@ export class SourceList extends LitElement {
 
     return html`
       <div class="sidebar-head">
+        <button
+          class="pin-btn filter-btn"
+          title="Feed list options"
+          @click=${(e: MouseEvent) => this.openFeedListMenu(e)}
+        >${this.filterIcon()}</button>
         <button
           class="pin-btn"
           title=${this.autoHide ? 'Pin the feed list open' : 'Auto-hide the feed list'}
@@ -581,9 +722,19 @@ export class SourceList extends LitElement {
         .folder=${folderMenuFolder ?? null}
         .open=${this.folderMenuOpen && folderMenuFolder !== undefined}
         .anchor=${this.folderMenuAnchor}
+        .unreadOnly=${folderMenuFolder ? Boolean(this.hideReadByFolder[folderMenuFolder.id]) : false}
         @close=${this.closeFolderMenu}
         @delete=${this.onFolderMenuDelete}
+        @unread-only-change=${this.onFolderMenuUnreadOnly}
       ></folder-menu>
+      <feed-list-menu
+        .open=${this.feedListMenuOpen}
+        .anchor=${this.feedListMenuAnchor}
+        .feedSort=${this.feedSort}
+        @close=${this.closeFeedListMenu}
+        @sort-change=${this.onFeedSortChange}
+        @sort-folders=${this.onSortFolders}
+      ></feed-list-menu>
     `;
   }
 }

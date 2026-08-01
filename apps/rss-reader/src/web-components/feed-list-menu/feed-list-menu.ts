@@ -1,17 +1,16 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import type { Folder } from '../../types';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
-import styles from './folder-menu.css?inline';
+import type { FeedSort } from '../../types';
+import styles from './feed-list-menu.css?inline';
 
-@customElement('folder-menu')
-export class FolderMenu extends LitElement {
+@customElement('feed-list-menu')
+export class FeedListMenu extends LitElement {
   static override styles = unsafeCSS(styles);
 
-  @property({ attribute: false }) folder: Folder | null = null;
   @property({ attribute: false }) open = false;
   @property({ attribute: false }) anchor: MenuAnchor | null = null;
-  @property({ attribute: false }) unreadOnly = false;
+  @property({ attribute: false }) feedSort: FeedSort = 'alpha';
 
   private menuEl: HTMLElement | null = null;
 
@@ -75,52 +74,42 @@ export class FolderMenu extends LitElement {
     this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
   }
 
-  private emitDelete() {
-    this.dispatchEvent(new CustomEvent('delete', { bubbles: true, composed: true }));
-  }
-
-  private onUnreadChange(e: Event) {
-    const checked = (e.target as HTMLInputElement).checked;
+  private setSort(sort: FeedSort) {
+    if (sort === this.feedSort) return;
     this.dispatchEvent(
-      new CustomEvent('unread-only-change', { detail: checked, bubbles: true, composed: true }),
+      new CustomEvent('sort-change', { detail: sort, bubbles: true, composed: true }),
     );
   }
 
+  private emitSortFolders() {
+    this.dispatchEvent(
+      new CustomEvent('sort-folders', { bubbles: true, composed: true }),
+    );
+  }
+
+  private segment(active: boolean, onClick: () => void, label: string) {
+    return html`
+      <button class="segment ${active ? 'active' : ''}" @click=${onClick}>${label}</button>
+    `;
+  }
+
   override render() {
-    const folder = this.folder;
     return html`
       <div popover>
-        ${folder
-          ? html`
-              <div class="head">
-                <h2 title="${folder.title}">${folder.title}</h2>
-              </div>
-              <div class="body">
-                <div class="section">
-                  <h3>View</h3>
-                  <label class="opt">
-                    <input
-                      type="checkbox"
-                      .checked=${this.unreadOnly}
-                      @change=${this.onUnreadChange}
-                    />
-                    <span class="label" title="Only show feeds with unread articles">Unread only</span>
-                  </label>
-                </div>
-                <div class="section">
-                  <h3>Actions</h3>
-                  <div class="actions">
-                    <button class="action danger" @click=${this.emitDelete}>
-                      <span>
-                        Delete folder<br />
-                        <span class="desc">Remove the folder; feeds are removed from it</span>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            `
-          : ''}
+        <div class="section">
+          <h3>Sort</h3>
+          <div class="segments">
+            ${this.segment(this.feedSort === 'alpha', () => this.setSort('alpha'), 'Name A–Z')}
+            ${this.segment(this.feedSort === 'unread', () => this.setSort('unread'), 'Unread first')}
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Folders</h3>
+          <button class="folder-action" @click=${this.emitSortFolders}>
+            Sort folders A–Z
+          </button>
+        </div>
       </div>
     `;
   }
@@ -128,6 +117,6 @@ export class FolderMenu extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'folder-menu': FolderMenu;
+    'feed-list-menu': FeedListMenu;
   }
 }

@@ -39,6 +39,7 @@ export interface Article {
 
 export type ArticleSort = 'hot' | 'newest' | 'oldest';
 export type ListViewType = 'detailed' | 'headline';
+export type FeedSort = 'alpha' | 'unread';
 
 export type View =
   | { kind: 'all' }
