@@ -23,13 +23,14 @@ export class ArticleList extends LitElement {
   static override styles = unsafeCSS(styles);
 
   @property({ attribute: false }) view: View = { kind: 'all' };
+  @property({ attribute: false }) resumeArticleId: string | null = null;
 
   @state() private items: Article[] = [];
   @state() private hasMore = false;
   @state() private loading = false;
   @state() private unreadOnly = false;
   @state() private sort: ArticleSort = 'hot';
-  @state() private cursor = 0;
+  @state() private cursor = -1;
   @state() private listView: ListViewType = 'detailed';
   @state() private pageSize = DEFAULT_PAGE_SIZE;
   @state() private advancedOpen = false;
@@ -43,6 +44,7 @@ export class ArticleList extends LitElement {
   private loadingRef = false;
   private lastViewKey = '';
   private lastFolderKey = '';
+  private resumeApplied = false;
 
   private library = new QueryController<Library>(this, () => ({
     queryKey: libraryKey,
@@ -144,7 +146,7 @@ export class ArticleList extends LitElement {
     this.hasMore = false;
     this.cursors.clear();
     this.feedHasMore.clear();
-    this.cursor = 0;
+    this.cursor = -1;
     const el = this.scrollElRef.value;
     if (el) el.scrollTop = 0;
     this.reinitVirtualizer();
@@ -161,9 +163,20 @@ export class ArticleList extends LitElement {
       } else {
         await this.loadSinglePage();
       }
+      this.applyResume();
     } finally {
       this.loadingRef = false;
       this.loading = false;
+    }
+  }
+
+  private applyResume() {
+    if (this.resumeApplied || this.resumeArticleId == null) return;
+    this.resumeApplied = true;
+    const index = this.items.findIndex((a) => a.id === this.resumeArticleId);
+    if (index >= 0) {
+      this.cursor = index;
+      this.virtualizer?.scrollToIndex(index, { align: 'center' });
     }
   }
 
@@ -256,6 +269,7 @@ export class ArticleList extends LitElement {
       queryClient.invalidateQueries({ queryKey: libraryKey });
     }
     const index = this.items.findIndex((a) => a.id === article.id);
+    this.cursor = index;
     this.dispatchEvent(
       new CustomEvent('open-article', {
         detail: { article, index, items: this.items },
@@ -413,7 +427,7 @@ export class ArticleList extends LitElement {
             if (!article) return html``;
             return html`
               <div
-                class="row ${this.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''}"
+                class="row ${this.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''} ${vi.index === this.cursor ? 'selected' : ''}"
                 data-index=${vi.index}
                 style="transform: translateY(${vi.start}px)"
                 @click=${() => this.openArticle(article)}

@@ -12,6 +12,7 @@ export class AppShell extends LitElement {
   @state() private route: View = { kind: 'all' };
   @state() private article: Article | null = null;
   @state() private settingsOpen = false;
+  @state() private resume: { view: string; id: string } | null = null;
 
   private readContext: { items: Article[]; index: number } | null = null;
   private unsubscribe?: () => void;
@@ -22,6 +23,7 @@ export class AppShell extends LitElement {
     this.unsubscribe = history.subscribe(({ location }) => {
       this.route = parsePath(location.pathname);
       this.closeArticle();
+      this.resume = null;
     });
     window.addEventListener('keydown', this.onKeyDown);
   }
@@ -58,6 +60,7 @@ export class AppShell extends LitElement {
     if (!article) return;
     this.readContext = { ...this.readContext, index };
     this.article = article;
+    this.resume = { view: JSON.stringify(this.route), id: article.id };
     void markArticleRead(article.id);
   }
 
@@ -65,6 +68,7 @@ export class AppShell extends LitElement {
     const detail = (e as CustomEvent<{ article: Article; index: number; items: Article[] }>).detail;
     this.readContext = { items: detail.items, index: detail.index };
     this.article = detail.article;
+    this.resume = { view: JSON.stringify(this.route), id: detail.article.id };
   }
 
   private closeArticle() {
@@ -102,6 +106,7 @@ export class AppShell extends LitElement {
               ? html`<brief-view @open-article=${this.onOpenArticle}></brief-view>`
               : html`<article-list
                   .view=${this.route}
+                  .resumeArticleId=${this.resume && JSON.stringify(this.route) === this.resume.view ? this.resume.id : null}
                   @open-article=${this.onOpenArticle}
                 ></article-list>`}
         </main>

@@ -85,6 +85,10 @@
 .row.read {
   opacity: 0.62;
 }
+.row.selected {
+  box-shadow: inset 3px 0 0 var(--accent);
+  background: var(--active-bg);
+}
 .row-top {
   display: flex;
   align-items: center;
