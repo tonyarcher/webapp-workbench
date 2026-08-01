@@ -1,7 +1,7 @@
 import { LitElement, html, svg, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { libraryKey, QueryController } from '../../query';
-import { deleteFeed, deleteFolder, moveFeed, refreshFeed, reorderFolders, setFeedFolderMembership } from '../../mutations';
+import { deleteFeed, deleteFolder, moveFeed, refreshFeed, refreshFolder, reorderFolders, setFeedFolderMembership, syncAllFeeds } from '../../mutations';
 import { getFeeds, getFolders } from '../../db/db';
 import { navigate } from '../../router';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
@@ -505,6 +505,7 @@ export class SourceList extends LitElement {
     const feed = this.menuFeed();
     if (feed) await this.doRefresh(feed);
     this.closeMenu();
+    window.dispatchEvent(new CustomEvent('feeds-refreshed'));
   }
 
   private async onMenuDelete() {
@@ -567,6 +568,19 @@ export class SourceList extends LitElement {
     this.closeFolderMenu();
   }
 
+  private async onFolderMenuRefresh() {
+    const folder = this.folderMenuFolder();
+    if (folder) await refreshFolder(folder.id);
+    this.closeFolderMenu();
+    window.dispatchEvent(new CustomEvent('feeds-refreshed'));
+  }
+
+  private async onRefreshAll() {
+    await syncAllFeeds();
+    this.closeFeedListMenu();
+    window.dispatchEvent(new CustomEvent('feeds-refreshed'));
+  }
+
   private feedRow(feed: Feed) {
     const active = this.isActive({ kind: 'feed', id: feed.id });
     return html`
@@ -578,8 +592,9 @@ export class SourceList extends LitElement {
         @click=${() => this.select({ kind: 'feed', id: feed.id })}
       >
         <span class="dot"></span>
-        <span class="label" title="${feed.title}">${feed.title}</span>
+        <span class="label" title="${feed.title}${feed.lastError ? ` — ${feed.lastError}` : ''}">${feed.title}</span>
         ${feed.unread > 0 ? html`<span class="badge">${feed.unread}</span>` : ''}
+        ${feed.lastError ? html`<span class="feed-error" title="${feed.lastError}">⚠</span>` : ''}
         ${this.feedActions(feed)}
       </div>
     `;
@@ -725,6 +740,7 @@ export class SourceList extends LitElement {
         .unreadOnly=${folderMenuFolder ? Boolean(this.hideReadByFolder[folderMenuFolder.id]) : false}
         @close=${this.closeFolderMenu}
         @delete=${this.onFolderMenuDelete}
+        @refresh=${this.onFolderMenuRefresh}
         @unread-only-change=${this.onFolderMenuUnreadOnly}
       ></folder-menu>
       <feed-list-menu
@@ -734,6 +750,7 @@ export class SourceList extends LitElement {
         @close=${this.closeFeedListMenu}
         @sort-change=${this.onFeedSortChange}
         @sort-folders=${this.onSortFolders}
+        @refresh-all=${this.onRefreshAll}
       ></feed-list-menu>
     `;
   }

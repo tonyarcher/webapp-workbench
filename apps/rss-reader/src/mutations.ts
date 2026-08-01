@@ -1,9 +1,9 @@
-import { decrementFeedUnread, deleteFeed as dbDeleteFeed, deleteFolder as dbDeleteFolder, getArticle, incrementMeta, markAllRead as dbMarkAllRead, markArticlesRead as dbMarkArticlesRead, markReadBefore as dbMarkReadBefore, reorderFolders as dbReorderFolders, setArticleRead, setArticleStarred, setFeedFolders } from './db/db';
+import { decrementFeedUnread, deleteFeed as dbDeleteFeed, deleteFolder as dbDeleteFolder, getArticle, getFeeds, incrementMeta, markAllRead as dbMarkAllRead, markArticlesRead as dbMarkArticlesRead, markReadBefore as dbMarkReadBefore, reconcileUnreadCounts, reorderFolders as dbReorderFolders, setArticleRead, setArticleStarred, setFeedFolders } from './db/db';
 import { importOpml, exportOpml } from './services/opml';
 import { addFeedFromUrl, syncFeed } from './services/sync';
-import { invalidateArticles, invalidateLibrary, queryClient, updateArticlesInCache, type LibraryData } from './query';
+import { invalidateArticles, invalidateLibrary, updateArticlesInCache } from './query';
 import { domainOf } from './util';
-import type { Article, Feed, Folder } from './types';
+import type { Article, Feed } from './types';
 
 const AFFINITY_DECAY = 0.9;
 
@@ -23,29 +23,46 @@ export async function addFeed(url: string): Promise<Feed> {
 
 export async function refreshFeed(feedId: string) {
   const result = await syncFeed(feedId);
+  await reconcileUnreadCounts();
   await invalidateLibrary();
   await invalidateArticles();
   return result;
 }
 
-export async function syncAllFeeds(onProgress?: (done: number, total: number, title: string) => void) {
-  const { feeds } = queryClient.getQueryData<{ folders: Folder[]; feeds: Feed[] }>(['library']) ?? {
-    folders: [],
-    feeds: [],
-  };
+export async function syncAllFeeds(
+  onProgress?: (done: number, total: number, title: string) => void,
+  feedIds?: string[],
+) {
+  const feeds = await getFeeds();
+  const targets = feedIds ? feeds.filter((f) => feedIds.includes(f.id)) : feeds;
+  const failed: string[] = [];
   let done = 0;
-  for (const feed of feeds) {
-    onProgress?.(done, feeds.length, feed.title);
+  for (const feed of targets) {
+    onProgress?.(done, targets.length, feed.title);
     try {
       await syncFeed(feed.id);
     } catch {
-      // keep going; individual failures are surfaced on the feed row
+      failed.push(feed.title);
     }
     done++;
+    void invalidateLibrary();
+    if (done < targets.length) {
+      await new Promise((r) => setTimeout(r, 600));
+    }
   }
-  onProgress?.(done, feeds.length, '');
+  onProgress?.(done, targets.length, '');
+  await reconcileUnreadCounts();
   await invalidateLibrary();
   await invalidateArticles();
+  return failed;
+}
+
+export async function refreshFolder(folderId: string) {
+  const feeds = await getFeeds();
+  const feedIds = feeds
+    .filter((f) => f.folderIds.includes(folderId))
+    .map((f) => f.id);
+  await syncAllFeeds(undefined, feedIds);
 }
 
 export async function importOpmlFile(xml: string) {
@@ -65,8 +82,7 @@ export async function deleteFeed(feedId: string) {
 }
 
 export async function deleteFolder(folderId: string) {
-  const library = queryClient.getQueryData<LibraryData>(['library']);
-  const feeds = (library?.feeds ?? []).filter((f) => f.folderIds.includes(folderId));
+  const feeds = (await getFeeds()).filter((f) => f.folderIds.includes(folderId));
   await dbDeleteFolder(folderId);
   for (const feed of feeds) {
     await setFeedFolders(feed.id, feed.folderIds.filter((id) => id !== folderId));
@@ -112,6 +128,7 @@ export async function toggleStar(articleId: string) {
 
 export async function markAllRead(feedId?: string) {
   await dbMarkAllRead(feedId);
+  await reconcileUnreadCounts();
   await invalidateArticles();
   await invalidateLibrary();
 }
@@ -119,6 +136,7 @@ export async function markAllRead(feedId?: string) {
 export async function markShownRead(articleIds: string[]) {
   await dbMarkArticlesRead(articleIds);
   for (const id of articleIds) updateArticlesInCache(id, { read: 1 });
+  await reconcileUnreadCounts();
   await invalidateLibrary();
 }
 
@@ -128,6 +146,7 @@ export async function markReadBefore(feedIds: string[] | undefined, cutoff: numb
   } else {
     await dbMarkReadBefore(undefined, cutoff);
   }
+  await reconcileUnreadCounts();
   await invalidateArticles();
   await invalidateLibrary();
 }

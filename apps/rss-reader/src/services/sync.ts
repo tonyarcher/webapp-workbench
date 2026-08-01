@@ -157,22 +157,30 @@ export async function syncFeed(feedId: string): Promise<SyncResult> {
   const feed = await getFeed(feedId);
   if (!feed) throw new Error('Feed not found');
 
-  const xml = await fetchFeedText(feed.url);
-  const parsed = parseFeedXml(xml, Date.now());
+  try {
+    const xml = await fetchFeedText(feed.url);
+    const parsed = parseFeedXml(xml, Date.now());
 
-  const { inserted } = await ingestFeed(feed, parsed);
+    const { inserted } = await ingestFeed(feed, parsed);
 
-  const updated: Feed = {
-    ...feed,
-    title: feed.title === feed.url ? parsed.title : feed.title,
-    siteUrl: parsed.siteUrl || feed.siteUrl,
-    lastFetchedAt: Date.now(),
-    lastError: undefined,
-    unread: feed.unread + inserted,
-  };
-  await putFeed(updated);
+    const updated: Feed = {
+      ...feed,
+      title: feed.title === feed.url ? parsed.title : feed.title,
+      siteUrl: parsed.siteUrl || feed.siteUrl,
+      lastFetchedAt: Date.now(),
+      lastError: undefined,
+      unread: feed.unread + inserted,
+    };
+    await putFeed(updated);
 
-  return { inserted, total: parsed.items.length, title: parsed.title };
+    return { inserted, total: parsed.items.length, title: parsed.title };
+  } catch (err) {
+    await putFeed({
+      ...feed,
+      lastError: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
 }
 
 export async function addFeedFromUrl(url: string): Promise<Feed> {

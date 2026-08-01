@@ -484,3 +484,26 @@ export async function recomputeHotIfNeeded(): Promise<void> {
   await tx.objectStore('meta').put({ key: 'hot-version', value: HOT_VERSION });
   await tx.done;
 }
+
+/**
+ * Set each feed's `unread` counter to the actual number of unread articles,
+ * so the sidebar badge always matches what the article list shows. Protects
+ * against any drift in the increment/decrement counters.
+ */
+export async function reconcileUnreadCounts(): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(['feeds', 'articles'], 'readwrite');
+  const articleStore = tx.objectStore('articles');
+  const feedStore = tx.objectStore('feeds');
+  const feeds = await feedStore.getAll();
+  for (const feed of feeds) {
+    const unread = (await articleStore
+      .index('byFeedRead')
+      .getAllKeys(IDBKeyRange.bound([feed.id, 0], [feed.id, 0]))).length;
+    if (feed.unread !== unread) {
+      feed.unread = unread;
+      await feedStore.put(feed);
+    }
+  }
+  await tx.done;
+}

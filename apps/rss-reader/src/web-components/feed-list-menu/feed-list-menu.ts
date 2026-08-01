@@ -87,6 +87,12 @@ export class FeedListMenu extends LitElement {
     );
   }
 
+  private emitRefreshAll() {
+    this.dispatchEvent(
+      new CustomEvent('refresh-all', { bubbles: true, composed: true }),
+    );
+  }
+
   private segment(active: boolean, onClick: () => void, label: string) {
     return html`
       <button class="segment ${active ? 'active' : ''}" @click=${onClick}>${label}</button>
@@ -108,6 +114,9 @@ export class FeedListMenu extends LitElement {
           <h3>Folders</h3>
           <button class="folder-action" @click=${this.emitSortFolders}>
             Sort folders A–Z
+          </button>
+          <button class="folder-action" @click=${this.emitRefreshAll}>
+            Refresh all feeds
           </button>
         </div>
       </div>

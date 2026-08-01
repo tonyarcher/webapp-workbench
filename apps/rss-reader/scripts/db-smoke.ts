@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { getDb, putFeed, upsertArticles, queryArticles, markAllRead, markArticlesRead, markReadBefore, setArticleRead, setArticleStarred, deleteFeed, queryRecentArticles, type ArticleCursor } from '../src/db/db';
+import { getDb, putFeed, upsertArticles, queryArticles, markAllRead, markArticlesRead, markReadBefore, reconcileUnreadCounts, setArticleRead, setArticleStarred, deleteFeed, queryRecentArticles, type ArticleCursor } from '../src/db/db';
 import { ingestFeed } from '../src/services/sync';
 import type { Article, Feed, ParsedFeed } from '../src/types';
 
@@ -241,6 +241,17 @@ async function main() {
   await markReadBefore(undefined, mNow);
   const allAfter = await queryArticles({ unreadOnly: true, limit: 100 });
   assert(allAfter.items.length === 0, 'markReadBefore(undefined) applies across all feeds');
+
+  // ---- reconcileUnreadCounts corrects a drifted counter ----
+  const dbg = await getDb();
+  await setArticleRead('feed-g:g1', 0);
+  await setArticleRead('feed-g:g2', 0);
+  const drifted = await dbg.get('feeds', 'feed-g');
+  drifted!.unread = 999;
+  await dbg.put('feeds', drifted);
+  await reconcileUnreadCounts();
+  const fixed = await dbg.get('feeds', 'feed-g');
+  assert(fixed!.unread === 2, 'reconcileUnreadCounts resets feed.unread to actual unread count');
 
   await resetDb();
   const feedE: Feed = { ...feedA, id: 'feed-e', title: 'Feed E' };

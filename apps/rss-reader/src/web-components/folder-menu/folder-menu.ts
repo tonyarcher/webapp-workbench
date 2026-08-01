@@ -79,6 +79,10 @@ export class FolderMenu extends LitElement {
     this.dispatchEvent(new CustomEvent('delete', { bubbles: true, composed: true }));
   }
 
+  private emitRefresh() {
+    this.dispatchEvent(new CustomEvent('refresh', { bubbles: true, composed: true }));
+  }
+
   private onUnreadChange(e: Event) {
     const checked = (e.target as HTMLInputElement).checked;
     this.dispatchEvent(
@@ -110,6 +114,12 @@ export class FolderMenu extends LitElement {
                 <div class="section">
                   <h3>Actions</h3>
                   <div class="actions">
+                    <button class="action" @click=${this.emitRefresh}>
+                      <span>
+                        Refresh folder<br />
+                        <span class="desc">Fetch the latest articles from all feeds in this folder</span>
+                      </span>
+                    </button>
                     <button class="action danger" @click=${this.emitDelete}>
                       <span>
                         Delete folder<br />

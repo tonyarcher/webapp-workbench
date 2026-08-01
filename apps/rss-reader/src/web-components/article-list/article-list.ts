@@ -3,7 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { ref, createRef, type Ref } from 'lit/directives/ref.js';
 import { Virtualizer, elementScroll, observeElementRect, observeElementOffset } from '@tanstack/virtual-core';
 import { libraryKey, QueryController, queryClient } from '../../query';
-import { markAllRead, markArticleRead, markReadBefore, markShownRead, refreshFeed, toggleStar } from '../../mutations';
+import { markAllRead, markArticleRead, markReadBefore, markShownRead, refreshFeed, refreshFolder, syncAllFeeds, toggleStar } from '../../mutations';
 import { getFeeds, getFolders, queryArticles, type ArticleCursor } from '../../db/db';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 import { formatDate, domainOf } from '../../util';
@@ -63,13 +63,19 @@ export class ArticleList extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     window.addEventListener('keydown', this.onKeyDown);
+    window.addEventListener('feeds-refreshed', this.onFeedsRefreshed);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('feeds-refreshed', this.onFeedsRefreshed);
     this.virtualizerCleanup?.();
   }
+
+  private onFeedsRefreshed = () => {
+    void this.reset();
+  };
 
   override willUpdate(_changed: Map<string, unknown>) {
     if (this.virtualizer) {
@@ -350,12 +356,19 @@ export class ArticleList extends LitElement {
   }
 
   private async onRefresh() {
-    if (this.view.kind === 'feed') {
-      await refreshFeed(this.view.id);
-    } else if (this.view.kind === 'folder') {
-      for (const feed of this.folderFeeds()) await refreshFeed(feed.id);
+    try {
+      if (this.view.kind === 'feed') {
+        await refreshFeed(this.view.id);
+      } else if (this.view.kind === 'folder') {
+        await refreshFolder(this.view.id);
+      } else {
+        await syncAllFeeds();
+      }
+    } catch {
+      // feed sync errors are surfaced on the feed rows in the sidebar
+    } finally {
+      await this.reset();
     }
-    await this.reset();
   }
 
   private async onStar(e: Event, article: Article) {
