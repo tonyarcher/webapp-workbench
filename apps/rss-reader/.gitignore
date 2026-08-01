@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.local
 .idea/
+/.vscode/launch.json
+/.air/settings.json
