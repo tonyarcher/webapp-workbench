@@ -1,64 +1,72 @@
 [popover] {
-  position: fixed;
-  inset: auto;
-  margin: 0;
-  width: 240px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0;
-  background: var(--panel-bg);
-  color: var(--text);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    width: 240px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0;
+    background: var(--panel-bg);
+    color: var(--text);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
+
 .section {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
 }
+
 .section:last-child {
-  border-bottom: none;
+    border-bottom: none;
 }
+
 .section h3 {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  margin: 0 0 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0 0 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
 .filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text);
-  cursor: pointer;
-  user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
 }
+
 .filter input {
-  accent-color: var(--accent);
-  margin: 0;
+    accent-color: var(--accent);
+    margin: 0;
 }
+
 .mark-options {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
+
 .mark-opt {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 6px 8px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
 }
+
 .mark-opt:hover {
-  background: var(--hover);
+    background: var(--hover);
 }

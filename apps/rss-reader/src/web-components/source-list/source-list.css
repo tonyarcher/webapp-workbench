@@ -1,251 +1,286 @@
 :host {
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  height: 100%;
-  width: var(--sidebar-width, 280px);
-  background: var(--sidebar-bg);
-  border-right: 1px solid var(--border);
-  box-sizing: border-box;
-  transition: width 180ms ease;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    height: 100%;
+    width: var(--sidebar-width, 280px);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    box-sizing: border-box;
+    transition: width 180ms ease;
 }
+
 :host([auto-hide]) {
-  width: 16px;
+    width: 16px;
 }
+
 :host([auto-hide][hover]) {
-  width: var(--sidebar-width, 280px);
+    width: var(--sidebar-width, 280px);
 }
+
 :host([auto-hide]:not([hover])) .sidebar-head,
 :host([auto-hide]:not([hover])) .nav,
 :host([auto-hide]:not([hover])) .resize-handle {
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 120ms ease, visibility 0s linear 120ms;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 120ms ease, visibility 0s linear 120ms;
 }
+
 :host([auto-hide][hover]) .sidebar-head,
 :host([auto-hide][hover]) .nav,
 :host([auto-hide][hover]) .resize-handle {
-  visibility: visible;
-  opacity: 1;
-  transition: opacity 120ms ease;
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 120ms ease;
 }
+
 .sidebar-head {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 2px;
-  flex: none;
-  padding: 6px 10px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+    padding: 6px 10px;
 }
+
 .resize-handle {
-  position: absolute;
-  top: 0;
-  right: -3px;
-  width: 6px;
-  height: 100%;
-  cursor: col-resize;
-  z-index: 20;
-  touch-action: none;
-  background: transparent;
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 20;
+    touch-action: none;
+    background: transparent;
 }
+
 .resize-handle:hover,
 .resize-handle.resizing {
-  background: var(--accent);
-  opacity: 0.35;
+    background: var(--accent);
+    opacity: 0.35;
 }
+
 .pin-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  padding: 4px;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 4px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
+
 .pin-btn:hover {
-  color: var(--text);
-  background: var(--hover);
+    color: var(--text);
+    background: var(--hover);
 }
+
 .pin-btn svg {
-  width: 16px;
-  height: 16px;
+    width: 16px;
+    height: 16px;
 }
+
 .nav {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 8px;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
 }
+
 .item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  cursor: grab;
-  color: var(--text);
-  user-select: none;
-  border: none;
-  background: none;
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  text-align: left;
-  font: inherit;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: grab;
+    color: var(--text);
+    user-select: none;
+    border: none;
+    background: none;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-align: left;
+    font: inherit;
 }
+
 .item:hover {
-  background: var(--hover);
+    background: var(--hover);
 }
+
 .item.active {
-  background: var(--active-bg);
-  color: var(--active-text);
+    background: var(--active-bg);
+    color: var(--active-text);
 }
+
 .item .label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
 .icon {
-  width: 16px;
-  height: 16px;
-  flex: none;
-  opacity: 0.7;
+    width: 16px;
+    height: 16px;
+    flex: none;
+    opacity: 0.7;
 }
+
 .badge {
-  position: absolute;
-  right: 36px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--badge-text);
-  background: var(--badge-bg);
-  border-radius: 10px;
-  padding: 1px 7px;
-  min-width: 18px;
-  text-align: center;
+    position: absolute;
+    right: 36px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--badge-text);
+    background: var(--badge-bg);
+    border-radius: 10px;
+    padding: 1px 7px;
+    min-width: 18px;
+    text-align: center;
 }
+
 .folder-children {
-  padding-left: 14px;
+    padding-left: 14px;
 }
+
 .feed-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  border-radius: 6px;
-  cursor: grab;
-  color: var(--text-muted);
-  user-select: none;
-  min-width: 0;
-  overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: grab;
+    color: var(--text-muted);
+    user-select: none;
+    min-width: 0;
+    overflow: hidden;
 }
+
 .feed-row:hover {
-  background: var(--hover);
-  color: var(--text);
+    background: var(--hover);
+    color: var(--text);
 }
+
 .feed-row.active {
-  background: var(--active-bg);
-  color: var(--active-text);
+    background: var(--active-bg);
+    color: var(--active-text);
 }
+
 .feed-row .label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
 .feed-row .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex: none;
-  opacity: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+    opacity: 0;
 }
+
 .feed-row.has-unread .dot {
-  opacity: 1;
+    opacity: 1;
 }
+
 .feed-error {
-  position: absolute;
-  right: 68px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
-  font-size: 12px;
-  color: var(--danger);
+    position: absolute;
+    right: 68px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    font-size: 12px;
+    color: var(--danger);
 }
+
 .menu-btn {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
-  border: 1px solid var(--border);
-  background: var(--input-bg);
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1;
-  padding: 3px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    border: 1px solid var(--border);
+    background: var(--input-bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1;
+    padding: 3px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
+
 .menu-btn svg {
-  width: 16px;
-  height: 16px;
+    width: 16px;
+    height: 16px;
 }
+
 .menu-btn:hover {
-  background: var(--hover);
-  border-color: var(--accent);
+    background: var(--hover);
+    border-color: var(--accent);
 }
+
 .section-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  padding: 10px 8px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    padding: 10px 8px 4px;
 }
+
 .item.dragging,
 .feed-row.dragging {
-  opacity: 0.4;
+    opacity: 0.4;
 }
+
 .item.drag-over,
 .feed-row.drag-over {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-  background: var(--active-bg);
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    background: var(--active-bg);
 }
+
 nav.drag-over {
-  outline: 1px dashed var(--accent);
-  outline-offset: -4px;
-  border-radius: 8px;
+    outline: 1px dashed var(--accent);
+    outline-offset: -4px;
+    border-radius: 8px;
 }
+
 .drop-zone {
-  display: none;
-  margin: 8px;
-  padding: 12px;
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-muted);
+    display: none;
+    margin: 8px;
+    padding: 12px;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
 }
+
 .drop-zone.visible {
-  display: block;
+    display: block;
 }
+
 .drop-zone.drag-over {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--active-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--active-bg);
 }

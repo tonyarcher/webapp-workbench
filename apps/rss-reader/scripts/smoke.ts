@@ -1,16 +1,30 @@
-import { DOMParser } from '@xmldom/xmldom';
-import { parseFeedXml, parseOpml, stripHtml, sanitizeHtml, isFolder } from '../src/services/parser';
-import { normalizeLink, popularityScore, hotScore, contentEngagement, affinityBoostScore, velocityBonus } from '../src/services/ranking';
-import { aiAvailability, aiDiagnostics, aiStatusMessage, runAiPrompt, resetAiAvailability, summarizeArticle } from '../src/ai';
+import {DOMParser} from '@xmldom/xmldom';
+import {isFolder, parseFeedXml, parseOpml, sanitizeHtml, stripHtml} from '../src/services/parser';
+import {
+  affinityBoostScore,
+  contentEngagement,
+  hotScore,
+  normalizeLink,
+  popularityScore,
+  velocityBonus
+} from '../src/services/ranking';
+import {
+  aiAvailability,
+  aiDiagnostics,
+  aiStatusMessage,
+  resetAiAvailability,
+  runAiPrompt,
+  summarizeArticle
+} from '../src/ai';
 
 (globalThis as Record<string, unknown>).DOMParser = DOMParser;
 
 function assert(cond: boolean, msg: string) {
-  if (!cond) {
-    console.error(`FAIL: ${msg}`);
-    process.exit(1);
-  }
-  console.log(`ok: ${msg}`);
+    if (!cond) {
+        console.error(`FAIL: ${msg}`);
+        process.exit(1);
+    }
+    console.log(`ok: ${msg}`);
 }
 
 const rss = `<?xml version="1.0"?>
@@ -41,7 +55,7 @@ assert(parsed.items[0].author === 'Jane Doe', 'item dc:creator author');
 assert(parsed.items[0].comments === 42, 'item slash:comments parsed');
 assert(parsed.items[0].published === Date.parse('Wed, 30 Jul 2025 10:00:00 GMT'), 'item pubDate parsed');
 assert(parsed.items[0].summary === 'A short summary', 'item summary stripped to text');
-assert(parsed.items[0].content?.includes('<b>content</b>'), 'item content:encoded kept');
+assert(parsed.items[0].content?.includes('<b>content</b>') ?? false, 'item content:encoded kept');
 
 const sanitized = sanitizeHtml('<p>ok</p><script>bad()</script><img src="x" onerror="bad()">');
 assert(!sanitized.includes('<script'), 'sanitize removes script');
@@ -68,7 +82,7 @@ assert(atomParsed.title === 'Atom Blog', 'atom title parsed');
 assert(atomParsed.items[0].guid === 'tag:atom.example,2025:1', 'atom entry id');
 assert(atomParsed.items[0].author === 'Bob', 'atom author');
 assert(atomParsed.items[0].comments === 7, 'atom thr:total parsed');
-assert(atomParsed.items[0].content?.includes('Atom content'), 'atom content');
+assert(atomParsed.items[0].content?.includes('Atom content') ?? false, 'atom content');
 assert(atomParsed.items[0].published === Date.parse('2025-07-31T08:30:00Z'), 'atom updated parsed');
 
 // ---- ranking ----
@@ -88,8 +102,11 @@ assert(hotScore(1, 0, t + 90_000) < hotScore(10, 0, t), '10x popularity offsets 
 assert(hotScore(1, 10, t) > hotScore(1, 0, t + 90_000), 'engagement offsets ~1 day of age');
 assert(Number.isFinite(hotScore(1, 0, 0)), 'hotScore finite for very old article');
 
-assert(contentEngagement({ title: 'BREAKING: Top 5 Live!', content: '<p>' + 'word '.repeat(1200) + '</p>' }) >= 8, 'contentEngagement rewards media-less rich story');
-assert(contentEngagement({ title: 'Quiet title' }) === 0, 'contentEngagement floor is 0');
+assert(contentEngagement({
+    title: 'BREAKING: Top 5 Live!',
+    content: '<p>' + 'word '.repeat(1200) + '</p>'
+}) >= 8, 'contentEngagement rewards media-less rich story');
+assert(contentEngagement({title: 'Quiet title'}) === 0, 'contentEngagement floor is 0');
 assert(affinityBoostScore(0) === 0, 'affinityBoostScore 0 for no affinity');
 assert(affinityBoostScore(99) > affinityBoostScore(0), 'affinityBoostScore grows with affinity');
 assert(velocityBonus(0, 1_000) === 0, 'velocityBonus 0 when not syndicated');
@@ -125,14 +142,15 @@ assert((await aiAvailability()) === 'unsupported', 'ai unavailable when no model
 
 let capturedSystem: string | undefined;
 g.model = {
-  capabilities: async () => ({ available: 'readily' }),
-  create: async ({ systemPrompt }: { systemPrompt?: string }) => {
-    capturedSystem = systemPrompt;
-    return {
-      prompt: async (text: string) => `SUMMARY[${text.slice(0, 59)}]`,
-      destroy: () => {},
-    };
-  },
+    capabilities: async () => ({available: 'readily'}),
+    create: async ({systemPrompt}: { systemPrompt?: string }) => {
+        capturedSystem = systemPrompt;
+        return {
+            prompt: async (text: string) => `SUMMARY[${text.slice(0, 59)}]`,
+            destroy: () => {
+            },
+        };
+    },
 };
 resetAiAvailability();
 assert((await aiAvailability()) === 'readily', 'ai availability detects model.capabilities');
@@ -140,35 +158,36 @@ const out = await runAiPrompt('hello world body');
 assert(out === 'SUMMARY[hello world body]', 'runAiPrompt routes through model.create');
 const articleSummary = await summarizeArticle('My Article', 'body text here');
 assert(
-  articleSummary === 'SUMMARY[Summarize the following article in 4-6 short bullet points.]',
-  'summarizeArticle builds an article prompt',
+    articleSummary === 'SUMMARY[Summarize the following article in 4-6 short bullet points.]',
+    'summarizeArticle builds an article prompt',
 );
 assert(typeof capturedSystem === 'string' && capturedSystem.length > 0, 'summarizeArticle sends a system prompt');
 
 g.model = {
-  capabilities: async () => ({ available: 'readily' }),
-  create: async () => {
-    return {
-      prompt: async () =>
-        new ReadableStream({
-          start(c) {
-            c.enqueue(encoder.encode('streamed '));
-            c.enqueue(encoder.encode('result'));
-            c.close();
-          },
-        }),
-      destroy: () => {},
-    };
-  },
+    capabilities: async () => ({available: 'readily'}),
+    create: async () => {
+        return {
+            prompt: async () =>
+                new ReadableStream({
+                    start(c) {
+                        c.enqueue(encoder.encode('streamed '));
+                        c.enqueue(encoder.encode('result'));
+                        c.close();
+                    },
+                }),
+            destroy: () => {
+            },
+        };
+    },
 };
 const streamed = await runAiPrompt('x');
 assert(streamed === 'streamed result', 'runAiPrompt consumes a streaming response');
 
 g.model = {
-  capabilities: async () => ({ available: 'after-download' }),
-  create: async () => {
-    throw new Error('should not be called');
-  },
+    capabilities: async () => ({available: 'after-download'}),
+    create: async () => {
+        throw new Error('should not be called');
+    },
 };
 resetAiAvailability();
 assert((await aiAvailability()) === 'after-download', 'ai availability reports after-download');
@@ -176,26 +195,29 @@ delete g.model;
 
 // capabilities reports readily but no create() exists -> must be treated as unsupported
 g.model = {
-  capabilities: async () => ({ available: 'readily' }),
+    capabilities: async () => ({available: 'readily'}),
 };
 resetAiAvailability();
 assert((await aiAvailability()) === 'unsupported', 'readily without a create() is reported as unsupported');
 delete g.model;
 
 assert(
-  aiStatusMessage('unsupported').includes('Gemini Nano'),
-  'aiStatusMessage gives actionable guidance for unsupported',
+    aiStatusMessage('unsupported').includes('Gemini Nano'),
+    'aiStatusMessage gives actionable guidance for unsupported',
 );
 assert(
-  aiStatusMessage('after-download').includes('downloading'),
-  'aiStatusMessage covers after-download',
+    aiStatusMessage('after-download').includes('downloading'),
+    'aiStatusMessage covers after-download',
 );
 assert(aiStatusMessage('readily') === '', 'aiStatusMessage empty when readily');
 
 // diagnostics surface what Chrome exposes
 g.model = {
-  capabilities: async () => ({ available: 'readily' }),
-  create: async () => ({ prompt: async (t: string) => t, destroy: () => {} }),
+    capabilities: async () => ({available: 'readily'}),
+    create: async () => ({
+        prompt: async (t: string) => t, destroy: () => {
+        }
+    }),
 };
 resetAiAvailability();
 const diag = await aiDiagnostics();

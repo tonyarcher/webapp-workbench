@@ -1,101 +1,55 @@
-import { LitElement, html, unsafeCSS } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import type { Folder } from '../../types';
-import type { MenuAnchor } from '../feed-menu/feed-menu';
+import {html, LitElement, unsafeCSS} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
+import type {Folder} from '../../types';
+import type {MenuAnchor} from '../feed-menu/feed-menu';
 import styles from './folder-menu.css?inline';
 
 @customElement('folder-menu')
 export class FolderMenu extends LitElement {
-  static override styles = unsafeCSS(styles);
+    static override styles = unsafeCSS(styles);
 
-  @property({ attribute: false }) folder: Folder | null = null;
-  @property({ attribute: false }) open = false;
-  @property({ attribute: false }) anchor: MenuAnchor | null = null;
-  @property({ attribute: false }) unreadOnly = false;
+    @property({attribute: false}) folder: Folder | null = null;
+    @property({attribute: false}) open = false;
+    @property({attribute: false}) anchor: MenuAnchor | null = null;
+    @property({attribute: false}) unreadOnly = false;
 
-  private menuEl: HTMLElement | null = null;
+    private menuEl: HTMLElement | null = null;
 
-  override connectedCallback() {
-    super.connectedCallback();
-    document.addEventListener('click', this.onDocClick);
-    document.addEventListener('keydown', this.onKeyDown);
-  }
-
-  override disconnectedCallback() {
-    super.disconnectedCallback();
-    document.removeEventListener('click', this.onDocClick);
-    document.removeEventListener('keydown', this.onKeyDown);
-  }
-
-  override firstUpdated() {
-    this.menuEl = this.shadowRoot?.querySelector('[popover]') ?? null;
-  }
-
-  override updated(changed: Map<string, unknown>) {
-    if (changed.has('open') || changed.has('anchor')) {
-      if (this.open && this.menuEl) {
-        this.menuEl.style.left = `${this.anchor?.x ?? 0}px`;
-        this.menuEl.style.top = `${this.anchor?.y ?? 0}px`;
-        if (!this.menuEl.matches(':popover-open')) this.menuEl.showPopover();
-        this.clampPosition();
-      } else if (this.menuEl?.matches(':popover-open')) {
-        this.menuEl.hidePopover();
-      }
+    override connectedCallback() {
+        super.connectedCallback();
+        document.addEventListener('click', this.onDocClick);
+        document.addEventListener('keydown', this.onKeyDown);
     }
-  }
 
-  private clampPosition() {
-    const el = this.menuEl;
-    if (!el) return;
-    const margin = 8;
-    const rect = el.getBoundingClientRect();
-    let { left, top } = rect;
-    if (rect.right > window.innerWidth - margin) {
-      left = Math.max(margin, window.innerWidth - rect.width - margin);
+    override disconnectedCallback() {
+        super.disconnectedCallback();
+        document.removeEventListener('click', this.onDocClick);
+        document.removeEventListener('keydown', this.onKeyDown);
     }
-    if (rect.bottom > window.innerHeight - margin) {
-      top = Math.max(margin, (this.anchor?.y ?? top) - rect.height - 10);
+
+    override firstUpdated() {
+        this.menuEl = this.shadowRoot?.querySelector('[popover]') ?? null;
     }
-    if (left !== rect.left) el.style.left = `${left}px`;
-    if (top !== rect.top) el.style.top = `${top}px`;
-  }
 
-  private onDocClick = (e: MouseEvent) => {
-    if (!this.open) return;
-    const target = e.composedPath()[0] as Node | null;
-    if (target && this.menuEl?.contains(target)) return;
-    this.emitClose();
-  };
+    override updated(changed: Map<string, unknown>) {
+        if (changed.has('open') || changed.has('anchor')) {
+            if (this.open && this.menuEl) {
+                this.menuEl.style.left = `${this.anchor?.x ?? 0}px`;
+                this.menuEl.style.top = `${this.anchor?.y ?? 0}px`;
+                if (!this.menuEl.matches(':popover-open')) this.menuEl.showPopover();
+                this.clampPosition();
+            } else if (this.menuEl?.matches(':popover-open')) {
+                this.menuEl.hidePopover();
+            }
+        }
+    }
 
-  private onKeyDown = (e: KeyboardEvent) => {
-    if (this.open && e.key === 'Escape') this.emitClose();
-  };
-
-  private emitClose() {
-    this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
-  }
-
-  private emitDelete() {
-    this.dispatchEvent(new CustomEvent('delete', { bubbles: true, composed: true }));
-  }
-
-  private emitRefresh() {
-    this.dispatchEvent(new CustomEvent('refresh', { bubbles: true, composed: true }));
-  }
-
-  private onUnreadChange(e: Event) {
-    const checked = (e.target as HTMLInputElement).checked;
-    this.dispatchEvent(
-      new CustomEvent('unread-only-change', { detail: checked, bubbles: true, composed: true }),
-    );
-  }
-
-  override render() {
-    const folder = this.folder;
-    return html`
+    override render() {
+        const folder = this.folder;
+        return html`
       <div popover>
         ${folder
-          ? html`
+            ? html`
               <div class="head">
                 <h2 title="${folder.title}">${folder.title}</h2>
               </div>
@@ -130,14 +84,60 @@ export class FolderMenu extends LitElement {
                 </div>
               </div>
             `
-          : ''}
+            : ''}
       </div>
     `;
-  }
+    }
+
+    private clampPosition() {
+        const el = this.menuEl;
+        if (!el) return;
+        const margin = 8;
+        const rect = el.getBoundingClientRect();
+        let {left, top} = rect;
+        if (rect.right > window.innerWidth - margin) {
+            left = Math.max(margin, window.innerWidth - rect.width - margin);
+        }
+        if (rect.bottom > window.innerHeight - margin) {
+            top = Math.max(margin, (this.anchor?.y ?? top) - rect.height - 10);
+        }
+        if (left !== rect.left) el.style.left = `${left}px`;
+        if (top !== rect.top) el.style.top = `${top}px`;
+    }
+
+    private onDocClick = (e: MouseEvent) => {
+        if (!this.open) return;
+        const target = e.composedPath()[0] as Node | null;
+        if (target && this.menuEl?.contains(target)) return;
+        this.emitClose();
+    };
+
+    private onKeyDown = (e: KeyboardEvent) => {
+        if (this.open && e.key === 'Escape') this.emitClose();
+    };
+
+    private emitClose() {
+        this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+    }
+
+    private emitDelete() {
+        this.dispatchEvent(new CustomEvent('delete', {bubbles: true, composed: true}));
+    }
+
+    private emitRefresh() {
+        this.dispatchEvent(new CustomEvent('refresh', {bubbles: true, composed: true}));
+    }
+
+    private onUnreadChange(e: Event) {
+        const checked = (e.target as HTMLInputElement).checked;
+        this.dispatchEvent(
+            new CustomEvent('unread-only-change', {detail: checked, bubbles: true, composed: true}),
+        );
+    }
 }
 
 declare global {
-  interface HTMLElementTagNameMap {
-    'folder-menu': FolderMenu;
-  }
+    interface HTMLElementTagNameMap {
+        'folder-menu': FolderMenu;
+    }
 }

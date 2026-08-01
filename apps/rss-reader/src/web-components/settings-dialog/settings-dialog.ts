@@ -1,115 +1,37 @@
-import { LitElement, html, unsafeCSS } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { getTheme, applyTheme, type Theme } from '../../theme';
-import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
-import { navigate } from '../../router';
+import {html, LitElement, unsafeCSS} from 'lit';
+import {customElement, property, state} from 'lit/decorators.js';
+import {applyTheme, getTheme, type Theme} from '../../theme';
+import {addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds} from '../../mutations';
+import {navigate} from '../../router';
 import styles from './settings-dialog.css?inline';
 
 @customElement('settings-dialog')
 export class SettingsDialog extends LitElement {
-  static override styles = unsafeCSS(styles);
+    static override styles = unsafeCSS(styles);
 
-  @property({ attribute: false }) open = false;
+    @property({attribute: false}) open = false;
 
-  @state() private theme: Theme = 'light';
-  @state() private adding = false;
-  @state() private busy = false;
-  @state() private status = '';
-  @state() private statusError = false;
+    @state() private theme: Theme = 'light';
+    @state() private adding = false;
+    @state() private busy = false;
+    @state() private status = '';
+    @state() private statusError = false;
 
-  private dialogEl: HTMLDialogElement | null = null;
+    private dialogEl: HTMLDialogElement | null = null;
 
-  override updated(changed: Map<string, unknown>) {
-    if (changed.has('open')) {
-      if (this.open) {
-        this.theme = getTheme();
-        this.dialogEl?.showModal();
-      } else {
-        this.dialogEl?.close();
-      }
+    override updated(changed: Map<string, unknown>) {
+        if (changed.has('open')) {
+            if (this.open) {
+                this.theme = getTheme();
+                this.dialogEl?.showModal();
+            } else {
+                this.dialogEl?.close();
+            }
+        }
     }
-  }
 
-  private onDialogClick(e: MouseEvent) {
-    if (e.target === this.dialogEl) {
-      this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
-    }
-  }
-
-  private setTheme(theme: Theme) {
-    this.theme = theme;
-    applyTheme(theme);
-  }
-
-  private openAdd() {
-    this.adding = true;
-    this.status = '';
-    this.statusError = false;
-    this.shadowRoot
-      ?.querySelector<HTMLInputElement>('input[data-add-url]')
-      ?.focus();
-  }
-
-  private async submitAdd() {
-    const input = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]');
-    const url = input?.value.trim() ?? '';
-    if (!url) return;
-    this.busy = true;
-    try {
-      const feed = await addFeed(url);
-      if (input) input.value = '';
-      this.adding = false;
-      this.close();
-      navigate({ kind: 'feed', id: feed.id });
-    } catch (err) {
-      this.status = err instanceof Error ? err.message : 'Could not add feed';
-      this.statusError = true;
-    } finally {
-      this.busy = false;
-    }
-  }
-
-  private async onImportFile(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-    this.busy = true;
-    this.status = '';
-    this.statusError = false;
-    try {
-      const xml = await file.text();
-      await importOpmlFile(xml);
-      this.status = 'Syncing imported feeds…';
-      await syncAllFeeds((done, total) => {
-        this.status = `Syncing ${done + 1}/${total}…`;
-      });
-      this.status = 'Import complete';
-    } catch (err) {
-      this.status = err instanceof Error ? `Import failed: ${err.message}` : 'Import failed';
-      this.statusError = true;
-    } finally {
-      this.busy = false;
-      input.value = '';
-    }
-  }
-
-  private async onExport() {
-    const xml = await exportOpmlFile();
-    const blob = new Blob([xml], { type: 'text/xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'subscriptions.opml';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  private close() {
-    this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
-  }
-
-  override render() {
-    const themeOption = (value: Theme, label: string) => html`
+    override render() {
+        const themeOption = (value: Theme, label: string) => html`
       <button
         class="theme-opt ${this.theme === value ? 'active' : ''}"
         @click=${() => this.setTheme(value)}
@@ -119,12 +41,12 @@ export class SettingsDialog extends LitElement {
       </button>
     `;
 
-    return html`
+        return html`
       <dialog
         @click=${this.onDialogClick}
         @cancel=${(e: Event) => {
-          e.preventDefault();
-          this.close();
+            e.preventDefault();
+            this.close();
         }}
       >
         <div class="head">
@@ -152,21 +74,21 @@ export class SettingsDialog extends LitElement {
                 <span>＋</span>
               </button>
               ${this.adding
-                ? html`
+            ? html`
                     <div class="add-row">
                       <input
                         data-add-url
                         type="url"
                         placeholder="https://example.com/feed.xml"
                         @keydown=${(e: KeyboardEvent) => {
-                          if (e.key === 'Enter') this.submitAdd();
-                        }}
+                if (e.key === 'Enter') this.submitAdd();
+            }}
                       />
                       <button class="btn primary" @click=${this.submitAdd} ?disabled=${this.busy}>Add</button>
                       <button class="btn" @click=${() => (this.adding = false)}>Cancel</button>
                     </div>
                   `
-                : ''}
+            : ''}
               <button class="action" @click=${() => this.shadowRoot?.querySelector<HTMLInputElement>('input[data-import]')?.click()} ?disabled=${this.busy}>
                 <span>
                   Import OPML<br />
@@ -188,15 +110,93 @@ export class SettingsDialog extends LitElement {
         </div>
       </dialog>
     `;
-  }
+    }
 
-  override firstUpdated() {
-    this.dialogEl = this.shadowRoot?.querySelector('dialog') ?? null;
-  }
+    override firstUpdated() {
+        this.dialogEl = this.shadowRoot?.querySelector('dialog') ?? null;
+    }
+
+    private onDialogClick(e: MouseEvent) {
+        if (e.target === this.dialogEl) {
+            this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+        }
+    }
+
+    private setTheme(theme: Theme) {
+        this.theme = theme;
+        applyTheme(theme);
+    }
+
+    private openAdd() {
+        this.adding = true;
+        this.status = '';
+        this.statusError = false;
+        this.shadowRoot
+            ?.querySelector<HTMLInputElement>('input[data-add-url]')
+            ?.focus();
+    }
+
+    private async submitAdd() {
+        const input = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]');
+        const url = input?.value.trim() ?? '';
+        if (!url) return;
+        this.busy = true;
+        try {
+            const feed = await addFeed(url);
+            if (input) input.value = '';
+            this.adding = false;
+            this.close();
+            navigate({kind: 'feed', id: feed.id});
+        } catch (err) {
+            this.status = err instanceof Error ? err.message : 'Could not add feed';
+            this.statusError = true;
+        } finally {
+            this.busy = false;
+        }
+    }
+
+    private async onImportFile(e: Event) {
+        const input = e.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        this.busy = true;
+        this.status = '';
+        this.statusError = false;
+        try {
+            const xml = await file.text();
+            await importOpmlFile(xml);
+            this.status = 'Syncing imported feeds…';
+            await syncAllFeeds((done, total) => {
+                this.status = `Syncing ${done + 1}/${total}…`;
+            });
+            this.status = 'Import complete';
+        } catch (err) {
+            this.status = err instanceof Error ? `Import failed: ${err.message}` : 'Import failed';
+            this.statusError = true;
+        } finally {
+            this.busy = false;
+            input.value = '';
+        }
+    }
+
+    private async onExport() {
+        const xml = await exportOpmlFile();
+        const blob = new Blob([xml], {type: 'text/xml'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'subscriptions.opml';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    private close() {
+        this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+    }
 }
 
 declare global {
-  interface HTMLElementTagNameMap {
-    'settings-dialog': SettingsDialog;
-  }
+    interface HTMLElementTagNameMap {
+        'settings-dialog': SettingsDialog;
+    }
 }
