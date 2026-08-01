@@ -1,0 +1,48 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "openai": {
+      "models": {
+        "gpt-5.6-luna-max": {
+          "name": "GPT-5.6 Luna Max"
+        }
+      }
+    },
+    "deepseek": {
+      "models": {
+        "deepseek-v4-flash-high": {
+          "name": "DeepSeek V4 Flash (High)"
+        }
+      }
+    }
+  },
+  "agent": {
+    "plan": {
+      "mode": "primary",
+      "model": "openai/gpt-5.6-luna-max",
+      "temperature": 0.1,
+      "description": "Master Controller and Planning Agent",
+      "permission": {
+        "edit": "deny"
+      }
+    },
+    "build": {
+      "mode": "primary",
+      "model": "deepseek/deepseek-v4-flash-high",
+      "temperature": 0.3,
+      "description": "Primary Execution and Coding Agent"
+    },
+    "general": {
+      "mode": "subagent",
+      "model": "deepseek/deepseek-v4-flash-high",
+      "temperature": 0.4,
+      "description": "Concurrent multi-step coding and background executor"
+    },
+    "explore": {
+      "mode": "subagent",
+      "model": "deepseek/deepseek-v4-flash-high",
+      "temperature": 0.0,
+      "description": "Fast read-only codebase explorer"
+    }
+  }
+}

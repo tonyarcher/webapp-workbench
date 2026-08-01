@@ -1,0 +1,96 @@
+:root {
+    --bg: #0f1115;
+    --surface: #171a21;
+    --surface-hover: #1e222b;
+    --border: #262b36;
+    --text: #e6e9ef;
+    --text-soft: #b4bac6;
+    --text-dim: #7d8595;
+    --accent: #4c9aff;
+    --upvote: #45b46b;
+    --downvote: #e05a5a;
+    --pinned-bg: rgba(76, 154, 255, 0.15);
+    --pinned-fg: #9dc4ff;
+    --nsfw-bg: rgba(224, 90, 90, 0.15);
+    --nsfw-fg: #ff9d9d;
+    --topbar-height: 52px;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg: #f6f7f9;
+        --surface: #ffffff;
+        --surface-hover: #eef0f4;
+        --border: #dde1e8;
+        --text: #1a1d24;
+        --text-soft: #4a5160;
+        --text-dim: #6f7687;
+        --accent: #1a66d6;
+        --upvote: #1d8a4e;
+        --downvote: #c94a4a;
+        --pinned-bg: rgba(26, 102, 214, 0.1);
+        --pinned-fg: #1a66d6;
+        --nsfw-bg: rgba(201, 74, 74, 0.1);
+        --nsfw-fg: #b33c3c;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        color-scheme: light;
+    }
+}
+
+:root[data-theme='dark'] {
+    --bg: #0f1115;
+    --surface: #171a21;
+    --surface-hover: #1e222b;
+    --border: #262b36;
+    --text: #e6e9ef;
+    --text-soft: #b4bac6;
+    --text-dim: #7d8595;
+    --accent: #4c9aff;
+    --upvote: #45b46b;
+    --downvote: #e05a5a;
+    --pinned-bg: rgba(76, 154, 255, 0.15);
+    --pinned-fg: #9dc4ff;
+    --nsfw-bg: rgba(224, 90, 90, 0.15);
+    --nsfw-fg: #ff9d9d;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-hover: #eef0f4;
+    --border: #dde1e8;
+    --text: #1a1d24;
+    --text-soft: #4a5160;
+    --text-dim: #6f7687;
+    --accent: #1a66d6;
+    --upvote: #1d8a4e;
+    --downvote: #c94a4a;
+    --pinned-bg: rgba(26, 102, 214, 0.1);
+    --pinned-fg: #1a66d6;
+    --nsfw-bg: rgba(201, 74, 74, 0.1);
+    --nsfw-fg: #b33c3c;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    color-scheme: light;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    background: var(--bg);
+    color: var(--text);
+}
+
+#app {
+    height: 100%;
+}

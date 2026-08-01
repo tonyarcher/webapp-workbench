@@ -1,0 +1,90 @@
+.settings-page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+}
+
+.page-title {
+    margin: 0 0 20px;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.section {
+    margin-bottom: 28px;
+}
+
+.section-title {
+    margin: 0 0 6px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.section-hint {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-dim);
+}
+
+.form-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.instance-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+}
+
+.instance-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.save-button {
+    padding: 8px 20px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.save-button:hover:not([disabled]) {
+    background: var(--surface-hover);
+}
+
+.save-button[disabled] {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.form-error {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: var(--downvote);
+}
+
+.form-warning {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: var(--pinned-fg);
+}
+
+.form-ok {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: var(--upvote);
+}
