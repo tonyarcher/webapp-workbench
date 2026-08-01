@@ -34,7 +34,8 @@ export class SettingsDialog extends LitElement {
         const themeOption = (value: Theme, label: string) => html`
       <button
         class="theme-opt ${this.theme === value ? 'active' : ''}"
-        @click=${() => this.setTheme(value)}
+        data-theme=${value}
+        @click=${this.onThemeClick}
       >
         <span class="swatch ${value}"></span>
         ${label}
@@ -85,11 +86,11 @@ export class SettingsDialog extends LitElement {
             }}
                       />
                       <button class="btn primary" @click=${this.submitAdd} ?disabled=${this.busy}>Add</button>
-                      <button class="btn" @click=${() => (this.adding = false)}>Cancel</button>
+                      <button class="btn" @click=${this.cancelAdd}>Cancel</button>
                     </div>
                   `
             : ''}
-              <button class="action" @click=${() => this.shadowRoot?.querySelector<HTMLInputElement>('input[data-import]')?.click()} ?disabled=${this.busy}>
+              <button class="action" @click=${this.onImportClick} ?disabled=${this.busy}>
                 <span>
                   Import OPML<br />
                   <span class="desc">Restore feeds and folders</span>
@@ -125,6 +126,19 @@ export class SettingsDialog extends LitElement {
     private setTheme(theme: Theme) {
         this.theme = theme;
         applyTheme(theme);
+    }
+
+    private onThemeClick(e: Event) {
+        const theme = (e.currentTarget as HTMLElement).dataset.theme as Theme | undefined;
+        if (theme) this.setTheme(theme);
+    }
+
+    private cancelAdd() {
+        this.adding = false;
+    }
+
+    private onImportClick() {
+        this.shadowRoot?.querySelector<HTMLInputElement>('input[data-import]')?.click();
     }
 
     private openAdd() {

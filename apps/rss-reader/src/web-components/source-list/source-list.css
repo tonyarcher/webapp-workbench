@@ -3,7 +3,8 @@
     flex-direction: column;
     position: relative;
     height: 100%;
-    width: var(--sidebar-width, 280px);
+    --sidebar-width: 280px;
+    width: var(--sidebar-width);
     background: var(--sidebar-bg);
     border-right: 1px solid var(--border);
     box-sizing: border-box;
@@ -15,7 +16,7 @@
 }
 
 :host([auto-hide][hover]) {
-    width: var(--sidebar-width, 280px);
+    width: var(--sidebar-width);
 }
 
 :host([auto-hide]:not([hover])) .sidebar-head,
