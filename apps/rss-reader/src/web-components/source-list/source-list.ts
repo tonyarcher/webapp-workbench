@@ -1,4 +1,4 @@
-import { LitElement, html, unsafeCSS } from 'lit';
+import { LitElement, html, svg, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { libraryKey, QueryController } from '../../query';
 import { deleteFeed, deleteFolder, moveFeed, refreshFeed, reorderFolders, setFeedFolderMembership } from '../../mutations';
@@ -14,6 +14,10 @@ interface Library {
 }
 
 const COLLAPSED_KEY = 'rss-reader:collapsed-folders';
+const AUTO_HIDE_KEY = 'rss-reader:auto-hide-sidebar';
+const SIDEBAR_WIDTH_KEY = 'rss-reader:sidebar-width';
+const MIN_SIDEBAR_WIDTH = 140;
+const MAX_SIDEBAR_WIDTH = 480;
 
 function loadCollapsed(): Record<string, boolean> {
   try {
@@ -26,6 +30,14 @@ function loadCollapsed(): Record<string, boolean> {
   }
 }
 
+function loadAutoHide(): boolean {
+  try {
+    return localStorage.getItem(AUTO_HIDE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 @customElement('source-list')
 export class SourceList extends LitElement {
   static override styles = unsafeCSS(styles);
@@ -33,6 +45,13 @@ export class SourceList extends LitElement {
   @property({ attribute: false }) view: View = { kind: 'all' };
 
   @state() private collapsed: Record<string, boolean> = loadCollapsed();
+
+  @property({ attribute: 'auto-hide', type: Boolean, reflect: true }) autoHide = loadAutoHide();
+  @property({ attribute: 'hover', type: Boolean, reflect: true }) hover = false;
+
+  private hideTimer: number | null = null;
+  private resizing = false;
+  private resizeHandleEl: HTMLElement | null = null;
 
   private dragging: { kind: 'folder' | 'feed'; id: string } | null = null;
   private dragTargetEl: HTMLElement | null = null;
@@ -54,18 +73,140 @@ export class SourceList extends LitElement {
   }));
 
   private icon(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash') {
-    const paths = {
-      rss: '<circle cx="6" cy="18" r="2" fill="currentColor"/><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
-      folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.6"/>',
-      all: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="currentColor"/>',
-      refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
-      trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+    const paths: Record<string, ReturnType<typeof svg>> = {
+      rss: svg`<circle cx="6" cy="18" r="2" fill="currentColor"></circle><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path>`,
+      folder: svg`<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.6"></path>`,
+      all: svg`<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle>`,
+      refresh: svg`<path d="M20 11a8 8 0 1 0-2.3 5.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>`,
+      trash: svg`<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>`,
     };
     return html`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[kind]}</svg>`;
   }
 
   private get libraryData(): Library {
     return this.library.data ?? { folders: [], feeds: [] };
+  }
+
+  override connectedCallback() {
+    super.connectedCallback();
+    this.style.setProperty('--sidebar-width', `${this.savedWidth()}px`);
+    this.addEventListener('mouseenter', this.onHoverEnter);
+    this.addEventListener('mouseleave', this.onHoverLeave);
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListener('mouseenter', this.onHoverEnter);
+    this.removeEventListener('mouseleave', this.onHoverLeave);
+    if (this.hideTimer !== null) {
+      clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
+  }
+
+  private onHoverEnter = () => {
+    if (this.hideTimer !== null) {
+      clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
+    this.hover = true;
+  };
+
+  private onHoverLeave = () => {
+    if (this.hideTimer !== null) clearTimeout(this.hideTimer);
+    this.hideTimer = window.setTimeout(() => {
+      this.hideTimer = null;
+      this.hover = false;
+    }, 1500);
+  };
+
+  private savedWidth(): number {
+    try {
+      const raw = localStorage.getItem(SIDEBAR_WIDTH_KEY);
+      const width = raw ? Number(raw) : NaN;
+      return Number.isFinite(width) ? width : 280;
+    } catch {
+      return 280;
+    }
+  }
+
+  private onResizeStart(e: PointerEvent) {
+    if (e.button !== 0) return;
+    const handle = e.currentTarget as HTMLElement;
+    handle.setPointerCapture(e.pointerId);
+    this.resizeHandleEl = handle;
+    this.resizing = true;
+    handle.classList.add('resizing');
+    if (this.hideTimer !== null) {
+      clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
+    this.hover = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
+
+  private onResizeMove(e: PointerEvent) {
+    if (!this.resizing) return;
+    const rect = this.getBoundingClientRect();
+    const width = Math.round(
+      Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, e.clientX - rect.left)),
+    );
+    this.style.setProperty('--sidebar-width', `${width}px`);
+    try {
+      localStorage.setItem(SIDEBAR_WIDTH_KEY, String(width));
+    } catch {
+      // storage unavailable; sidebar width just won't persist
+    }
+  }
+
+  private onResizeEnd(e: PointerEvent) {
+    if (!this.resizing) return;
+    this.resizing = false;
+    this.resizeHandleEl?.classList.remove('resizing');
+    if (this.resizeHandleEl?.hasPointerCapture(e.pointerId)) {
+      this.resizeHandleEl.releasePointerCapture(e.pointerId);
+    }
+    this.resizeHandleEl = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    if (this.autoHide) {
+      const rect = this.getBoundingClientRect();
+      const over =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+      if (!over) this.onHoverLeave();
+    }
+  }
+
+  private toggleAutoHide() {
+    this.autoHide = !this.autoHide;
+    try {
+      localStorage.setItem(AUTO_HIDE_KEY, this.autoHide ? '1' : '0');
+    } catch {
+      // storage unavailable; auto-hide state just won't persist
+    }
+  }
+
+  private pinIcon() {
+    const pin = svg`
+      <line x1="12" x2="12" y1="17" y2="22"></line>
+      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+    `;
+    const off = svg`<line x1="2" x2="22" y1="2" y2="22"></line>`;
+    return html`
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >${pin}${this.autoHide ? off : ''}</svg>
+    `;
   }
 
   private get totalUnread(): number {
@@ -384,6 +525,13 @@ export class SourceList extends LitElement {
     const folderMenuFolder = this.folderMenuFolder();
 
     return html`
+      <div class="sidebar-head">
+        <button
+          class="pin-btn"
+          title=${this.autoHide ? 'Pin the feed list open' : 'Auto-hide the feed list'}
+          @click=${this.toggleAutoHide}
+        >${this.pinIcon()}</button>
+      </div>
       <nav
         class="nav"
         @dragover=${this.onDragOver}
@@ -411,6 +559,14 @@ export class SourceList extends LitElement {
           : ''}
         <div class="drop-zone" data-no-folder>Drop here to move out of folders</div>
       </nav>
+      <div
+        class="resize-handle"
+        title="Drag to resize"
+        @pointerdown=${this.onResizeStart}
+        @pointermove=${this.onResizeMove}
+        @pointerup=${this.onResizeEnd}
+        @pointercancel=${this.onResizeEnd}
+      ></div>
       <feed-menu
         .feed=${menuFeed ?? null}
         .folders=${folders}

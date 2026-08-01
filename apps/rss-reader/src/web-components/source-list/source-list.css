@@ -1,17 +1,84 @@
 :host {
   display: flex;
   flex-direction: column;
+  position: relative;
   height: 100%;
+  width: var(--sidebar-width, 280px);
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border);
   box-sizing: border-box;
+  transition: width 180ms ease;
+}
+:host([auto-hide]) {
+  width: 16px;
+}
+:host([auto-hide][hover]) {
+  width: var(--sidebar-width, 280px);
+}
+:host([auto-hide]:not([hover])) .sidebar-head,
+:host([auto-hide]:not([hover])) .nav,
+:host([auto-hide]:not([hover])) .resize-handle {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 120ms ease, visibility 0s linear 120ms;
+}
+:host([auto-hide][hover]) .sidebar-head,
+:host([auto-hide][hover]) .nav,
+:host([auto-hide][hover]) .resize-handle {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 120ms ease;
+}
+.sidebar-head {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex: none;
+  padding: 6px 10px;
+}
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 20;
+  touch-action: none;
+  background: transparent;
+}
+.resize-handle:hover,
+.resize-handle.resizing {
+  background: var(--accent);
+  opacity: 0.35;
+}
+.pin-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pin-btn:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+.pin-btn svg {
+  width: 16px;
+  height: 16px;
 }
 .nav {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 8px;
 }
 .item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -23,6 +90,8 @@
   border: none;
   background: none;
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
   text-align: left;
   font: inherit;
 }
@@ -35,6 +104,7 @@
 }
 .item .label {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -46,7 +116,11 @@
   opacity: 0.7;
 }
 .badge {
-  flex: none;
+  position: absolute;
+  right: 36px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
   font-size: 11px;
   font-weight: 600;
   color: var(--badge-text);
@@ -60,6 +134,7 @@
   padding-left: 14px;
 }
 .feed-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -68,6 +143,8 @@
   cursor: grab;
   color: var(--text-muted);
   user-select: none;
+  min-width: 0;
+  overflow: hidden;
 }
 .feed-row:hover {
   background: var(--hover);
@@ -79,6 +156,7 @@
 }
 .feed-row .label {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -95,7 +173,11 @@
   opacity: 1;
 }
 .menu-btn {
-  flex: none;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
   border: 1px solid var(--border);
   background: var(--input-bg);
   color: var(--text);

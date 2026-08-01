@@ -60,7 +60,6 @@ header .sub {
   min-height: 0;
 }
 source-list {
-  width: 280px;
   flex: none;
 }
 main {
