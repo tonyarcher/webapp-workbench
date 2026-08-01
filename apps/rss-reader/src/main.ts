@@ -5,6 +5,7 @@ import './web-components/article-view/article-view';
 import './web-components/brief-view/brief-view';
 import './web-components/settings-dialog/settings-dialog';
 import './web-components/feed-menu/feed-menu';
+import './web-components/folder-menu/folder-menu';
 import './styles/global.css';
 import { initTheme } from './theme';
 

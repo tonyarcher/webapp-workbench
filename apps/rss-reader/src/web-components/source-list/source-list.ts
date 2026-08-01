@@ -40,6 +40,10 @@ export class SourceList extends LitElement {
   @state() private menuOpen = false;
   @state() private menuFeedId: string | null = null;
   @state() private menuAnchor: MenuAnchor | null = null;
+  private folderMenuTriggerId: string | null = null;
+  @state() private folderMenuOpen = false;
+  @state() private folderMenuFolderId: string | null = null;
+  @state() private folderMenuAnchor: MenuAnchor | null = null;
 
   private library = new QueryController<Library>(this, () => ({
     queryKey: libraryKey,
@@ -249,6 +253,43 @@ export class SourceList extends LitElement {
     `;
   }
 
+  private menuIcon() {
+    return html`<svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M9 10.2l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  }
+
+  private openFolderMenu(folder: Folder, e: MouseEvent) {
+    e.stopPropagation();
+    const btn = e.currentTarget as HTMLElement;
+    if (this.folderMenuOpen && this.folderMenuTriggerId === folder.id) {
+      this.folderMenuOpen = false;
+      this.folderMenuTriggerId = null;
+      return;
+    }
+    const rect = btn.getBoundingClientRect();
+    this.folderMenuTriggerId = folder.id;
+    this.folderMenuAnchor = { x: rect.left, y: rect.bottom };
+    this.folderMenuFolderId = folder.id;
+    this.folderMenuOpen = true;
+  }
+
+  private closeFolderMenu() {
+    this.folderMenuOpen = false;
+    this.folderMenuTriggerId = null;
+  }
+
+  private folderMenuFolder(): Folder | undefined {
+    return this.libraryData.folders.find((f) => f.id === this.folderMenuFolderId);
+  }
+
+  private async onFolderMenuDelete() {
+    const folder = this.folderMenuFolder();
+    if (folder) await this.doDeleteFolder(folder);
+    this.closeFolderMenu();
+  }
+
   private feedRow(feed: Feed) {
     const active = this.isActive({ kind: 'feed', id: feed.id });
     return html`
@@ -293,13 +334,10 @@ export class SourceList extends LitElement {
           <span class="label" title="${folder.title}">${folder.title}</span>
           ${unread > 0 ? html`<span class="badge">${unread}</span>` : ''}
           <button
-            class="icon-btn"
-            title="Delete folder"
-            @click=${(e: Event) => {
-              e.stopPropagation();
-              this.doDeleteFolder(folder);
-            }}
-          >${this.icon('trash')}</button>
+            class="menu-btn"
+            title="Folder options"
+            @click=${(e: MouseEvent) => this.openFolderMenu(folder, e)}
+          >${this.menuIcon()}</button>
         </div>
         ${isCollapsed
           ? ''
@@ -343,6 +381,7 @@ export class SourceList extends LitElement {
     const allActive = this.isActive({ kind: 'all' });
     const briefActive = this.isActive({ kind: 'brief' });
     const menuFeed = this.menuFeed();
+    const folderMenuFolder = this.folderMenuFolder();
 
     return html`
       <nav
@@ -382,6 +421,13 @@ export class SourceList extends LitElement {
         @delete=${this.onMenuDelete}
         @folders-change=${this.onMenuFoldersChange}
       ></feed-menu>
+      <folder-menu
+        .folder=${folderMenuFolder ?? null}
+        .open=${this.folderMenuOpen && folderMenuFolder !== undefined}
+        .anchor=${this.folderMenuAnchor}
+        @close=${this.closeFolderMenu}
+        @delete=${this.onFolderMenuDelete}
+      ></folder-menu>
     `;
   }
 }

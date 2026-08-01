@@ -101,27 +101,20 @@
   color: var(--text);
   font-size: 14px;
   line-height: 1;
-  padding: 2px 7px 4px;
+  padding: 3px 6px;
   border-radius: 6px;
   cursor: pointer;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.menu-btn svg {
+  width: 16px;
+  height: 16px;
 }
 .menu-btn:hover {
   background: var(--hover);
   border-color: var(--accent);
-}
-.icon-btn {
-  border: none;
-  background: none;
-  padding: 2px;
-  border-radius: 4px;
-  cursor: pointer;
-  color: var(--text-muted);
-  display: inline-flex;
-}
-.icon-btn:hover {
-  background: var(--hover);
-  color: var(--text);
 }
 .section-label {
   font-size: 11px;

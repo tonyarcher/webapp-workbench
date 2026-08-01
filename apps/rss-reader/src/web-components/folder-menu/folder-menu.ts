@@ -1,0 +1,114 @@
+import { LitElement, html, unsafeCSS } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import type { Folder } from '../../types';
+import type { MenuAnchor } from '../feed-menu/feed-menu';
+import styles from './folder-menu.css?inline';
+
+@customElement('folder-menu')
+export class FolderMenu extends LitElement {
+  static override styles = unsafeCSS(styles);
+
+  @property({ attribute: false }) folder: Folder | null = null;
+  @property({ attribute: false }) open = false;
+  @property({ attribute: false }) anchor: MenuAnchor | null = null;
+
+  private menuEl: HTMLElement | null = null;
+
+  override connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener('click', this.onDocClick);
+    document.addEventListener('keydown', this.onKeyDown);
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('click', this.onDocClick);
+    document.removeEventListener('keydown', this.onKeyDown);
+  }
+
+  override firstUpdated() {
+    this.menuEl = this.shadowRoot?.querySelector('[popover]') ?? null;
+  }
+
+  override updated(changed: Map<string, unknown>) {
+    if (changed.has('open') || changed.has('anchor')) {
+      if (this.open && this.menuEl) {
+        this.menuEl.style.left = `${this.anchor?.x ?? 0}px`;
+        this.menuEl.style.top = `${this.anchor?.y ?? 0}px`;
+        if (!this.menuEl.matches(':popover-open')) this.menuEl.showPopover();
+        this.clampPosition();
+      } else if (this.menuEl?.matches(':popover-open')) {
+        this.menuEl.hidePopover();
+      }
+    }
+  }
+
+  private clampPosition() {
+    const el = this.menuEl;
+    if (!el) return;
+    const margin = 8;
+    const rect = el.getBoundingClientRect();
+    let { left, top } = rect;
+    if (rect.right > window.innerWidth - margin) {
+      left = Math.max(margin, window.innerWidth - rect.width - margin);
+    }
+    if (rect.bottom > window.innerHeight - margin) {
+      top = Math.max(margin, (this.anchor?.y ?? top) - rect.height - 10);
+    }
+    if (left !== rect.left) el.style.left = `${left}px`;
+    if (top !== rect.top) el.style.top = `${top}px`;
+  }
+
+  private onDocClick = (e: MouseEvent) => {
+    if (!this.open) return;
+    const target = e.composedPath()[0] as Node | null;
+    if (target && this.menuEl?.contains(target)) return;
+    this.emitClose();
+  };
+
+  private onKeyDown = (e: KeyboardEvent) => {
+    if (this.open && e.key === 'Escape') this.emitClose();
+  };
+
+  private emitClose() {
+    this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
+  }
+
+  private emitDelete() {
+    this.dispatchEvent(new CustomEvent('delete', { bubbles: true, composed: true }));
+  }
+
+  override render() {
+    const folder = this.folder;
+    return html`
+      <div popover>
+        ${folder
+          ? html`
+              <div class="head">
+                <h2 title="${folder.title}">${folder.title}</h2>
+              </div>
+              <div class="body">
+                <div class="section">
+                  <h3>Actions</h3>
+                  <div class="actions">
+                    <button class="action danger" @click=${this.emitDelete}>
+                      <span>
+                        Delete folder<br />
+                        <span class="desc">Remove the folder; feeds are removed from it</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `
+          : ''}
+      </div>
+    `;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'folder-menu': FolderMenu;
+  }
+}
