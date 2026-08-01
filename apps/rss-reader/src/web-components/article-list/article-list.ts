@@ -1,12 +1,13 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ref, createRef, type Ref } from 'lit/directives/ref.js';
 import { Virtualizer, elementScroll, observeElementRect, observeElementOffset } from '@tanstack/virtual-core';
-import { libraryKey, QueryController, queryClient } from '../query';
-import { markAllRead, markArticleRead, refreshFeed, toggleStar } from '../mutations';
-import { getFeeds, getFolders, queryArticles, type ArticleCursor } from '../db/db';
-import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../types';
-import { formatDate, domainOf } from '../util';
+import { libraryKey, QueryController, queryClient } from '../../query';
+import { markAllRead, markArticleRead, refreshFeed, toggleStar } from '../../mutations';
+import { getFeeds, getFolders, queryArticles, type ArticleCursor } from '../../db/db';
+import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
+import { formatDate, domainOf } from '../../util';
+import styles from './article-list.css?inline';
 
 interface Library {
   folders: Folder[];
@@ -17,178 +18,7 @@ const PAGE_SIZE = 60;
 
 @customElement('article-list')
 export class ArticleList extends LitElement {
-  static override styles = css`
-    :host {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      background: var(--bg);
-      box-sizing: border-box;
-    }
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border);
-      flex: none;
-    }
-    .toolbar h2 {
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0;
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .toolbar .actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .btn {
-      font: inherit;
-      font-size: 13px;
-      padding: 5px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text);
-      cursor: pointer;
-    }
-    .btn:hover {
-      background: var(--hover);
-    }
-    .filter {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      color: var(--text-muted);
-      cursor: pointer;
-      user-select: none;
-    }
-    .filter input {
-      accent-color: var(--accent);
-    }
-    .sort select, .view-mode select {
-      font: inherit;
-      font-size: 13px;
-      padding: 4px 8px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--input-bg);
-      color: var(--text);
-      cursor: pointer;
-    }
-    .pop {
-      font-size: 12px;
-      flex: none;
-    }
-    .scroll {
-      flex: 1;
-      overflow-y: auto;
-    }
-    .viewport {
-      position: relative;
-    }
-    .row {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--row-border);
-      cursor: pointer;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      background: var(--bg);
-    }
-    .row.headline {
-      padding: 8px 16px;
-      gap: 0;
-    }
-    .row:hover {
-      background: var(--hover);
-    }
-    .row.read {
-      opacity: 0.62;
-    }
-    .row-top {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .unread-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--accent);
-      flex: none;
-    }
-    .title {
-      flex: 1;
-      font-size: 14px;
-      font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .row.read .title {
-      font-weight: 400;
-    }
-    .meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    .feed-label {
-      font-weight: 600;
-      color: var(--text);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 30%;
-    }
-    .headline-date {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-left: 8px;
-      flex: none;
-    }
-    .summary {
-      font-size: 13px;
-      color: var(--text-muted);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .star {
-      margin-left: auto;
-      border: none;
-      background: none;
-      cursor: pointer;
-      color: var(--star-color);
-      font-size: 15px;
-      padding: 0 2px;
-    }
-    .end {
-      padding: 16px;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 13px;
-    }
-    .empty {
-      padding: 40px 20px;
-      text-align: center;
-      color: var(--text-muted);
-    }
-  `;
+  static override styles = unsafeCSS(styles);
 
   @property({ attribute: false }) view: View = { kind: 'all' };
 

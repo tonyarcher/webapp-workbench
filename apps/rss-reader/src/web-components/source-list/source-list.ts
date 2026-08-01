@@ -1,10 +1,11 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { libraryKey, QueryController } from '../query';
-import { deleteFeed, deleteFolder, refreshFeed } from '../mutations';
-import { getFeeds, getFolders } from '../db/db';
-import { navigate } from '../router';
-import type { Feed, Folder, View } from '../types';
+import { libraryKey, QueryController } from '../../query';
+import { deleteFeed, deleteFolder, refreshFeed } from '../../mutations';
+import { getFeeds, getFolders } from '../../db/db';
+import { navigate } from '../../router';
+import type { Feed, Folder, View } from '../../types';
+import styles from './source-list.css?inline';
 
 interface Library {
   folders: Folder[];
@@ -26,133 +27,7 @@ function loadCollapsed(): Record<string, boolean> {
 
 @customElement('source-list')
 export class SourceList extends LitElement {
-  static override styles = css`
-    :host {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      background: var(--sidebar-bg);
-      border-right: 1px solid var(--border);
-      box-sizing: border-box;
-    }
-    .nav {
-      flex: 1;
-      overflow-y: auto;
-      padding: 8px;
-    }
-    .item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 8px;
-      border-radius: 6px;
-      cursor: pointer;
-      color: var(--text);
-      user-select: none;
-      border: none;
-      background: none;
-      width: 100%;
-      text-align: left;
-      font: inherit;
-    }
-    .item:hover {
-      background: var(--hover);
-    }
-    .item.active {
-      background: var(--active-bg);
-      color: var(--active-text);
-    }
-    .item .label {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .icon {
-      width: 16px;
-      height: 16px;
-      flex: none;
-      opacity: 0.7;
-    }
-    .badge {
-      flex: none;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--badge-text);
-      background: var(--badge-bg);
-      border-radius: 10px;
-      padding: 1px 7px;
-      min-width: 18px;
-      text-align: center;
-    }
-    .folder-children {
-      padding-left: 14px;
-    }
-    .feed-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 8px;
-      border-radius: 6px;
-      cursor: pointer;
-      color: var(--text-muted);
-      user-select: none;
-    }
-    .feed-row:hover {
-      background: var(--hover);
-      color: var(--text);
-    }
-    .feed-row.active {
-      background: var(--active-bg);
-      color: var(--active-text);
-    }
-    .feed-row .label {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .feed-row .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-      flex: none;
-      opacity: 0;
-    }
-    .feed-row.has-unread .dot {
-      opacity: 1;
-    }
-    .feed-row .actions {
-      display: none;
-      gap: 2px;
-      flex: none;
-    }
-    .feed-row:hover .actions {
-      display: flex;
-    }
-    .icon-btn {
-      border: none;
-      background: none;
-      padding: 2px;
-      border-radius: 4px;
-      cursor: pointer;
-      color: var(--text-muted);
-      display: inline-flex;
-    }
-    .icon-btn:hover {
-      background: var(--hover);
-      color: var(--text);
-    }
-    .section-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-muted);
-      padding: 10px 8px 4px;
-    }
-  `;
+  static override styles = unsafeCSS(styles);
 
   @property({ attribute: false }) view: View = { kind: 'all' };
 

@@ -1,7 +1,7 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { QueryController, libraryKey } from '../query';
-import { getFeeds, getFolders, queryRecentArticles } from '../db/db';
+import { QueryController, libraryKey } from '../../query';
+import { getFeeds, getFolders, queryRecentArticles } from '../../db/db';
 import {
   aiAvailability,
   aiDiagnostics,
@@ -9,9 +9,10 @@ import {
   runAiPrompt,
   type AiAvailability,
   type AiDiagnostics,
-} from '../ai';
-import type { Article, Feed, Folder } from '../types';
-import { domainOf, formatDate } from '../util';
+} from '../../ai';
+import type { Article, Feed, Folder } from '../../types';
+import { domainOf, formatDate } from '../../util';
+import styles from './brief-view.css?inline';
 
 interface Library {
   folders: Folder[];
@@ -22,206 +23,7 @@ const MAX_ARTICLES = 40;
 
 @customElement('brief-view')
 export class BriefView extends LitElement {
-  static override styles = css`
-    :host {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      background: var(--bg);
-      box-sizing: border-box;
-      overflow-y: auto;
-    }
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border);
-      flex: none;
-      position: sticky;
-      top: 0;
-      background: var(--bg);
-      z-index: 1;
-    }
-    .toolbar h2 {
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0;
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .toolbar .date {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    .btn {
-      font: inherit;
-      font-size: 13px;
-      padding: 5px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text);
-      cursor: pointer;
-    }
-    .btn:hover {
-      background: var(--hover);
-    }
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-    .body {
-      padding: 16px;
-      max-width: 820px;
-      width: 100%;
-      margin: 0 auto;
-      box-sizing: border-box;
-    }
-    .banner {
-      padding: 10px 14px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--hover);
-      color: var(--text-muted);
-      font-size: 13px;
-      line-height: 1.5;
-      margin-bottom: 16px;
-    }
-    .banner code {
-      background: var(--input-bg);
-      padding: 1px 5px;
-      border-radius: 4px;
-    }
-    .diag summary {
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .diag-body {
-      margin-top: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .diag-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .diag-ok {
-      color: var(--text);
-    }
-    .diag-bad {
-      color: var(--danger);
-    }
-    .summary-card {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px 18px;
-      margin-bottom: 20px;
-      background: var(--panel-bg);
-    }
-    .summary-card .head {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-    .summary-text {
-      font-size: 15px;
-      line-height: 1.7;
-      color: var(--text);
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .spinner {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-    .spinner .spin {
-      width: 16px;
-      height: 16px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-    .section-label {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-muted);
-      margin: 0 0 8px;
-    }
-    .articles {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-      background: var(--panel-bg);
-    }
-    .article {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--row-border);
-      cursor: pointer;
-    }
-    .article:last-child {
-      border-bottom: none;
-    }
-    .article:hover {
-      background: var(--hover);
-    }
-    .article .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-      flex: none;
-      opacity: 0;
-    }
-    .article.unread .dot {
-      opacity: 1;
-    }
-    .article .title {
-      flex: 1;
-      font-size: 14px;
-      font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .article .src {
-      font-size: 12px;
-      color: var(--text-muted);
-      flex: none;
-    }
-    .article .date {
-      font-size: 12px;
-      color: var(--text-muted);
-      flex: none;
-    }
-    .empty {
-      padding: 40px 20px;
-      text-align: center;
-      color: var(--text-muted);
-    }
-  `;
+  static override styles = unsafeCSS(styles);
 
   @state() private availability: AiAvailability | null = null;
   @state() private diagnostics: AiDiagnostics | null = null;

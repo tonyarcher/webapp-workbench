@@ -1,84 +1,13 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { history, parsePath } from '../router';
-import { markArticleRead } from '../mutations';
-import type { Article, View } from '../types';
+import { history, parsePath } from '../../router';
+import { markArticleRead } from '../../mutations';
+import type { Article, View } from '../../types';
+import styles from './app-shell.css?inline';
 
 @customElement('app-shell')
 export class AppShell extends LitElement {
-  static override styles = css`
-    :host {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      width: 100vw;
-      overflow: hidden;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-family);
-      font-size: 14px;
-    }
-    header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 0 16px;
-      height: 48px;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel-bg);
-      flex: none;
-    }
-    header h1 {
-      font-size: 15px;
-      font-weight: 700;
-      margin: 0;
-      letter-spacing: 0.02em;
-    }
-    .logo {
-      width: 22px;
-      height: 22px;
-      color: var(--accent);
-    }
-    header .sub {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    .spacer {
-      flex: 1;
-    }
-    .gear {
-      border: none;
-      background: none;
-      cursor: pointer;
-      color: var(--text-muted);
-      padding: 6px;
-      border-radius: 6px;
-      display: inline-flex;
-    }
-    .gear:hover {
-      color: var(--text);
-      background: var(--hover);
-    }
-    .gear svg {
-      width: 18px;
-      height: 18px;
-    }
-    .layout {
-      flex: 1;
-      display: flex;
-      min-height: 0;
-    }
-    source-list {
-      width: 280px;
-      flex: none;
-    }
-    main {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-    }
-  `;
+  static override styles = unsafeCSS(styles);
 
   @state() private route: View = { kind: 'all' };
   @state() private article: Article | null = null;
