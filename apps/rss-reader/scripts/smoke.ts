@@ -1,5 +1,5 @@
 import {DOMParser} from '@xmldom/xmldom';
-import {isFolder, parseFeedXml, parseOpml, sanitizeHtml, stripHtml} from '../src/services/parser';
+import {firstImageUrl, isFolder, parseFeedXml, parseOpml, sanitizeHtml, stripHtml} from '../src/services/parser';
 import {
   affinityBoostScore,
   contentEngagement,
@@ -132,6 +132,8 @@ assert(isFolder(tech) && tech.children.length === 2, 'opml folder children');
 const standalone = opmlNodes[1];
 assert(!isFolder(standalone) && standalone.xmlUrl === 'https://example.com/feed', 'opml top-level source');
 assert(stripHtml('<p>a&nbsp;b</p>') === 'a b', 'stripHtml collapses whitespace');
+assert(firstImageUrl('<p>text</p><img src="https://img.example/1.jpg" alt="x">') === 'https://img.example/1.jpg', 'firstImageUrl finds first img');
+assert(firstImageUrl('<p>no image</p>') === undefined, 'firstImageUrl returns undefined without img');
 
 // ---- AI module (mock Chrome's built-in model) ----
 const g = globalThis as unknown as Record<string, unknown>;

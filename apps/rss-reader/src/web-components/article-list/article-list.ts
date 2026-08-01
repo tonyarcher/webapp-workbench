@@ -26,6 +26,63 @@ interface Library {
 }
 
 const DEFAULT_PAGE_SIZE = 50;
+const LIST_VIEW_KEY = 'rss-reader:list-view';
+const CARD_COLS_KEY = 'rss-reader:card-columns';
+const SORT_KEY = 'rss-reader:article-sort';
+const PAGE_SIZE_KEY = 'rss-reader:page-size';
+const UNREAD_KEY = 'rss-reader:unread-only';
+const CARD_MIN_WIDTH = 240;
+const CARD_HEIGHT = 264;
+const CARD_ROW_GAP = 12;
+const CARD_ROW_HEIGHT = CARD_HEIGHT + CARD_ROW_GAP;
+
+function loadListView(): ListViewType {
+    try {
+        const v = localStorage.getItem(LIST_VIEW_KEY);
+        if (v === 'headline' || v === 'cards') return v;
+    } catch {
+        // ignore
+    }
+    return 'detailed';
+}
+
+function loadCardCols(): number {
+    try {
+        const v = Number(localStorage.getItem(CARD_COLS_KEY));
+        if (v >= 2 && v <= 6) return v;
+    } catch {
+        // ignore
+    }
+    return 4;
+}
+
+function loadSort(): ArticleSort {
+    try {
+        const v = localStorage.getItem(SORT_KEY);
+        if (v === 'newest' || v === 'oldest') return v;
+    } catch {
+        // ignore
+    }
+    return 'hot';
+}
+
+function loadPageSize(): number {
+    try {
+        const v = Number(localStorage.getItem(PAGE_SIZE_KEY));
+        if (v === 20 || v === 50 || v === 100 || v === 500) return v;
+    } catch {
+        // ignore
+    }
+    return DEFAULT_PAGE_SIZE;
+}
+
+function loadUnreadOnly(): boolean {
+    try {
+        return localStorage.getItem(UNREAD_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
 
 @customElement('article-list')
 export class ArticleList extends LitElement {
@@ -37,11 +94,13 @@ export class ArticleList extends LitElement {
     @state() private items: Article[] = [];
     @state() private hasMore = false;
     @state() private loading = false;
-    @state() private unreadOnly = false;
-    @state() private sort: ArticleSort = 'hot';
+    @state() private unreadOnly = loadUnreadOnly();
+    @state() private sort: ArticleSort = loadSort();
     @state() private cursor = -1;
-    @state() private listView: ListViewType = 'detailed';
-    @state() private pageSize = DEFAULT_PAGE_SIZE;
+    @state() private listView: ListViewType = loadListView();
+    @state() private maxCardCols = loadCardCols();
+    @state() private cols = 3;
+    @state() private pageSize = loadPageSize();
     @state() private advancedOpen = false;
     @state() private advancedAnchor: MenuAnchor | null = null;
 
@@ -54,6 +113,7 @@ export class ArticleList extends LitElement {
     private lastViewKey = '';
     private lastFolderKey = '';
     private resumeApplied = false;
+    private resizeObserver?: ResizeObserver;
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
@@ -67,6 +127,22 @@ export class ArticleList extends LitElement {
         this.virtualizer = new Virtualizer(this.virtualizerOptions());
         this.virtualizer._willUpdate();
         this.virtualizerCleanup = this.virtualizer._didMount();
+        const el = this.scrollElRef.value;
+        if (el) {
+            this.updateCols();
+            this.resizeObserver = new ResizeObserver(() => this.updateCols());
+            this.resizeObserver.observe(el);
+        }
+    }
+
+    private updateCols() {
+        const el = this.scrollElRef.value;
+        if (!el) return;
+        const width = el.clientWidth;
+        const cols = Math.max(1, Math.min(this.maxCardCols, Math.floor(width / CARD_MIN_WIDTH)));
+        if (cols !== this.cols) {
+            this.cols = cols;
+        }
     }
 
     override connectedCallback() {
@@ -79,6 +155,8 @@ export class ArticleList extends LitElement {
         super.disconnectedCallback();
         window.removeEventListener('keydown', this.onKeyDown);
         window.removeEventListener('feeds-refreshed', this.onFeedsRefreshed);
+        this.resizeObserver?.disconnect();
+        this.resizeObserver = undefined;
         this.virtualizerCleanup?.();
     }
 
@@ -122,7 +200,14 @@ export class ArticleList extends LitElement {
             <label class="sort">
               <select
                 .value=${this.sort}
-                @change=${(e: Event) => (this.sort = (e.target as HTMLSelectElement).value as ArticleSort)}
+                @change=${(e: Event) => {
+                    this.sort = (e.target as HTMLSelectElement).value as ArticleSort;
+                    try {
+                        localStorage.setItem(SORT_KEY, this.sort);
+                    } catch {
+                        // ignore
+                    }
+                }}
               >
                 <option value="hot">Hot</option>
                 <option value="newest">Newest</option>
@@ -132,16 +217,56 @@ export class ArticleList extends LitElement {
             <label class="view-mode">
               <select
                 .value=${this.listView}
-                @change=${(e: Event) => (this.listView = (e.target as HTMLSelectElement).value as ListViewType)}
+                @change=${(e: Event) => {
+                    this.listView = (e.target as HTMLSelectElement).value as ListViewType;
+                    try {
+                        localStorage.setItem(LIST_VIEW_KEY, this.listView);
+                    } catch {
+                        // ignore
+                    }
+                }}
               >
                 <option value="detailed">Detailed List</option>
                 <option value="headline">Headline View</option>
+                <option value="cards">Cards</option>
               </select>
             </label>
+            ${this.listView === 'cards'
+            ? html`
+                  <label class="view-mode">
+                    <select
+                      .value=${this.maxCardCols}
+                      @change=${(e: Event) => {
+                          this.maxCardCols = Number((e.target as HTMLSelectElement).value);
+                          try {
+                              localStorage.setItem(CARD_COLS_KEY, String(this.maxCardCols));
+                          } catch {
+                              // ignore
+                          }
+                          this.updateCols();
+                      }}
+                      title="Maximum card columns"
+                    >
+                      <option value="2">2 cols</option>
+                      <option value="3">3 cols</option>
+                      <option value="4">4 cols</option>
+                      <option value="5">5 cols</option>
+                      <option value="6">6 cols</option>
+                    </select>
+                  </label>
+                `
+            : ''}
             <label class="page-size">
               <select
                 .value=${this.pageSize}
-                @change=${(e: Event) => (this.pageSize = Number((e.target as HTMLSelectElement).value))}
+                @change=${(e: Event) => {
+                    this.pageSize = Number((e.target as HTMLSelectElement).value);
+                    try {
+                        localStorage.setItem(PAGE_SIZE_KEY, String(this.pageSize));
+                    } catch {
+                        // ignore
+                    }
+                }}
                 title="Articles shown at a time"
               >
                 <option value="20">20</option>
@@ -166,25 +291,41 @@ export class ArticleList extends LitElement {
         @close=${() => (this.advancedOpen = false)}
       ></advanced-menu>
 
-      <div class="scroll" ${ref(this.scrollElRef)} @scroll=${() => this.loadMore()}>
+      <div class="scroll" style="--cols: ${this.cols}" ${ref(this.scrollElRef)} @scroll=${() => this.loadMore()}>
         <div class="viewport" style="height: ${this.virtualizer?.getTotalSize() ?? 0}px;">
-          ${virtualItems.map((vi) => {
-            const article = this.items[vi.index];
-            if (!article) return html``;
-            return html`
-              <div
-                class="row ${this.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''} ${vi.index === this.cursor ? 'selected' : ''}"
-                data-index=${vi.index}
-                style="transform: translateY(${vi.start}px)"
-                @click=${() => this.openArticle(article)}
-                ${ref((el) => this.virtualizer?.measureElement(el as HTMLDivElement))}
-              >
-                ${this.listView === 'headline'
-                ? this.renderHeadlineRow(article, showFeed)
-                : this.renderRow(article, showFeed)}
-              </div>
-            `;
-        })}
+          ${this.listView === 'cards'
+          ? virtualItems.map((vi) => {
+                const start = vi.index * this.cols;
+                const rowItems = this.items.slice(start, start + this.cols);
+                if (!rowItems.length) return html``;
+                return html`
+                  <div
+                    class="row cards"
+                    data-row=${vi.index}
+                    style="transform: translateY(${vi.start}px)"
+                    ${ref((el) => this.virtualizer?.measureElement(el as HTMLDivElement))}
+                  >
+                    ${rowItems.map((article, c) => this.renderCardRow(article, showFeed, start + c))}
+                  </div>
+                `;
+            })
+          : virtualItems.map((vi) => {
+                const article = this.items[vi.index];
+                if (!article) return html``;
+                return html`
+                  <div
+                    class="row ${this.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''} ${vi.index === this.cursor ? 'selected' : ''}"
+                    data-index=${vi.index}
+                    style="transform: translateY(${vi.start}px)"
+                    @click=${() => this.openArticle(article)}
+                    ${ref((el) => this.virtualizer?.measureElement(el as HTMLDivElement))}
+                  >
+                    ${this.listView === 'headline'
+                    ? this.renderHeadlineRow(article, showFeed)
+                    : this.renderRow(article, showFeed)}
+                  </div>
+                `;
+            })}
         </div>
         ${this.loading ? html`<div class="end">Loading…</div>` : ''}
         ${!this.loading && !this.items.length
@@ -199,11 +340,16 @@ export class ArticleList extends LitElement {
     };
 
     private virtualizerOptions() {
+        const cards = this.listView === 'cards';
         return {
-            count: this.items.length,
+            count: cards
+                ? Math.max(1, Math.ceil(this.items.length / Math.max(1, this.cols)))
+                : this.items.length,
             getScrollElement: () => this.scrollElRef.value ?? null,
-            estimateSize: () => (this.listView === 'headline' ? 46 : 82),
-            getItemKey: (index: number) => this.items[index]?.id ?? index,
+            estimateSize: () =>
+                cards ? CARD_ROW_HEIGHT : this.listView === 'headline' ? 46 : 82,
+            getItemKey: (index: number) =>
+                cards ? `row:${index}` : (this.items[index]?.id ?? index),
             overscan: 8,
             scrollEndThreshold: 300,
             scrollToFn: elementScroll,
@@ -274,7 +420,11 @@ export class ArticleList extends LitElement {
         const index = this.items.findIndex((a) => a.id === this.resumeArticleId);
         if (index >= 0) {
             this.cursor = index;
-            this.virtualizer?.scrollToIndex(index, {align: 'center'});
+            const target =
+                this.listView === 'cards'
+                    ? Math.floor(index / Math.max(1, this.cols))
+                    : index;
+            this.virtualizer?.scrollToIndex(target, {align: 'center'});
         }
     }
 
@@ -410,6 +560,11 @@ export class ArticleList extends LitElement {
 
     private onAdvancedUnread(e: Event) {
         this.unreadOnly = (e as CustomEvent<boolean>).detail;
+        try {
+            localStorage.setItem(UNREAD_KEY, this.unreadOnly ? '1' : '0');
+        } catch {
+            // ignore
+        }
     }
 
     private scopeLabel(): string {
@@ -474,21 +629,36 @@ export class ArticleList extends LitElement {
         const feedTitle = this.feedTitle(article.feedId);
         const popular = article.popularity >= 4;
         return html`
-      <div class="row-top">
-        ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
-        ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
-        <span class="title">${article.title}</span>
-        <button class="star" title="Star" @click=${(e: Event) => this.onStar(e, article)}>
-          ${article.starred ? '★' : '☆'}
-        </button>
+      <div class="detail-body">
+        ${article.image
+        ? html`<img class="detail-img" src=${article.image} alt="" loading="lazy" />`
+        : ''}
+        <div class="detail-text">
+          <div class="row-top">
+            ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
+            ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
+            ${article.link
+            ? html`<a
+                    class="title title-link"
+                    href=${article.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    @click=${(e: Event) => e.stopPropagation()}
+                  >${article.title}</a>`
+            : html`<span class="title">${article.title}</span>`}
+            <button class="star" title="Star" @click=${(e: Event) => this.onStar(e, article)}>
+              ${article.starred ? '★' : '☆'}
+            </button>
+          </div>
+          <div class="meta">
+            ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
+            <span>${domainOf(article.link)}</span>
+            <span>${formatDate(article.published)}</span>
+            ${article.author ? html`<span>by ${article.author}</span>` : ''}
+          </div>
+          ${article.summary ? html`<div class="summary">${article.summary}</div>` : ''}
+        </div>
       </div>
-      <div class="meta">
-        ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-        <span>${domainOf(article.link)}</span>
-        <span>${formatDate(article.published)}</span>
-        ${article.author ? html`<span>by ${article.author}</span>` : ''}
-      </div>
-      ${article.summary ? html`<div class="summary">${article.summary}</div>` : ''}
     `;
     }
 
@@ -505,6 +675,43 @@ export class ArticleList extends LitElement {
         <button class="star" title="Star" @click=${(e: Event) => this.onStar(e, article)}>
           ${article.starred ? '★' : '☆'}
         </button>
+      </div>
+    `;
+    }
+
+    private renderCardRow(article: Article, showFeed: boolean, index: number) {
+        const feedTitle = this.feedTitle(article.feedId);
+        return html`
+      <div
+        class="grid-card ${article.read ? 'read' : ''} ${index === this.cursor ? 'selected' : ''}"
+        @click=${() => this.openArticle(article)}
+      >
+        ${article.image
+        ? html`<img class="grid-card-img" src=${article.image} alt="" loading="lazy" />`
+        : html`<div class="grid-card-img grid-card-img-empty"></div>`}
+        <div class="grid-card-body">
+          <div class="grid-card-title-row">
+            ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
+            ${article.link
+            ? html`<a
+                    class="grid-card-title"
+                    href=${article.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    @click=${(e: Event) => e.stopPropagation()}
+                  >${article.title}</a>`
+            : html`<span class="grid-card-title">${article.title}</span>`}
+            <button class="star" title="Star" @click=${(e: Event) => this.onStar(e, article)}>
+              ${article.starred ? '★' : '☆'}
+            </button>
+          </div>
+          ${article.summary ? html`<div class="grid-card-summary">${article.summary}</div>` : ''}
+          <div class="meta">
+            ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
+            <span>${domainOf(article.link)}</span>
+            <span>${formatDate(article.published)}</span>
+          </div>
+        </div>
       </div>
     `;
     }

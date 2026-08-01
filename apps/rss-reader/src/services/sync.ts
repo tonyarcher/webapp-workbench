@@ -1,5 +1,5 @@
 import {getDb, getFeed, getMetaMany, putFeed, uid} from '../db/db';
-import {parseFeedXml} from './parser';
+import {firstImageUrl, parseFeedXml} from './parser';
 import {fetchFeedText} from './proxy';
 import {
     affinityBoostScore,
@@ -37,6 +37,7 @@ function buildArticle(
         popularity,
         engagement,
         hot: hotScore(popularity, engagement, item.published),
+        image: item.media ?? firstImageUrl(item.content),
     };
 }
 
@@ -139,6 +140,7 @@ export async function ingestFeed(feed: Feed, parsed: ParsedFeed): Promise<{ inse
             const otherAffinity = affMap.get(`aff:feed:${other.feedId}`) ?? 0;
             other.engagement = engagementFor(other, otherAffinity, affMap, velocity);
             other.hot = hotScore(other.popularity, other.engagement, other.published);
+            other.image ??= firstImageUrl(other.content);
             await articleStore.put(other);
         }
     }

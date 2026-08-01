@@ -1,5 +1,6 @@
 import {type DBSchema, type IDBPCursorWithValue, type IDBPDatabase, openDB} from 'idb';
 import {contentEngagement, hotScore} from '../services/ranking';
+import {firstImageUrl} from '../services/parser';
 import type {Article, Feed, Folder} from '../types';
 
 interface ReaderDB extends DBSchema {
@@ -457,13 +458,13 @@ export async function queryRecentArticles(since: number, limit = 60): Promise<Ar
     );
 }
 
-export const HOT_VERSION = 2;
+export const HOT_VERSION = 3;
 
 /**
- * One-time migration: recompute stored `hot` values after a ranking change.
- * Runs at startup (not during the DB upgrade, which wipes stores). Existing
- * articles get a content-based engagement estimate until their feed re-syncs
- * and fills in affinity/velocity terms.
+ * One-time migration: recompute stored `hot` values after a ranking change and
+ * backfill card images. Runs at startup (not during the DB upgrade, which wipes
+ * stores). Existing articles get a content-based engagement estimate until
+ * their feed re-syncs and fills in affinity/velocity terms.
  */
 export async function recomputeHotIfNeeded(): Promise<void> {
     const db = await getDb();
@@ -478,6 +479,7 @@ export async function recomputeHotIfNeeded(): Promise<void> {
         const engagement = article.engagement ?? contentEngagement(article);
         article.engagement = engagement;
         article.hot = hotScore(article.popularity, engagement, article.published);
+        article.image ??= firstImageUrl(article.content);
         await cursor.update(article);
         cursor = await cursor.continue();
     }

@@ -32,14 +32,15 @@ export interface Article {
     read: 0 | 1;
     starred: boolean;
     normLink?: string;
-    comments?: number;
-    popularity: number;
-    engagement?: number;
-    hot: number;
+  comments?: number;
+  popularity: number;
+  engagement?: number;
+  hot: number;
+  image?: string;
 }
 
 export type ArticleSort = 'hot' | 'newest' | 'oldest';
-export type ListViewType = 'detailed' | 'headline';
+export type ListViewType = 'detailed' | 'headline' | 'cards';
 export type FeedSort = 'alpha' | 'unread';
 
 export type View =

@@ -147,16 +147,23 @@ function parseAtom(doc: Document, fallbackPublished: number): ParsedFeed {
 }
 
 export function stripHtml(html: string | undefined): string {
-    if (!html) return '';
-    let text: string;
-    try {
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        const root = (doc as Document & { body?: HTMLElement }).body ?? doc.documentElement;
-        text = root?.textContent ?? '';
-    } catch {
-        text = html.replace(/<[^>]*>/g, ' ');
-    }
-    return text.replace(/\s+/g, ' ').trim();
+  if (!html) return '';
+  let text: string;
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const root = (doc as Document & { body?: HTMLElement }).body ?? doc.documentElement;
+    text = root?.textContent ?? '';
+  } catch {
+    text = html.replace(/<[^>]*>/g, ' ');
+  }
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+/** First image URL inside an HTML string, if any. */
+export function firstImageUrl(html: string | undefined): string | undefined {
+  if (!html) return undefined;
+  const match = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
+  return match?.[1];
 }
 
 export function sanitizeHtml(html: string | undefined): string {
