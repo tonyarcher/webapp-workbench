@@ -42,7 +42,8 @@ export type ListViewType = 'detailed' | 'headline';
 export type View =
   | { kind: 'all' }
   | { kind: 'folder'; id: string }
-  | { kind: 'feed'; id: string };
+  | { kind: 'feed'; id: string }
+  | { kind: 'brief' };
 
 export interface ParsedItem {
   guid: string;

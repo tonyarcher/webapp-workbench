@@ -169,10 +169,12 @@ export class AppShell extends LitElement {
                 .article=${this.article}
                 @close=${this.closeArticle}
               ></article-view>`
-            : html`<article-list
-                .view=${this.route}
-                @open-article=${this.onOpenArticle}
-              ></article-list>`}
+            : this.route.kind === 'brief'
+              ? html`<brief-view @open-article=${this.onOpenArticle}></brief-view>`
+              : html`<article-list
+                  .view=${this.route}
+                  @open-article=${this.onOpenArticle}
+                ></article-list>`}
         </main>
       </div>
       <settings-dialog

@@ -306,3 +306,13 @@ export async function decrementFeedUnread(feedId: string): Promise<void> {
 export async function getAllArticlesCount(): Promise<number> {
   return (await getDb()).count('articles');
 }
+
+export async function queryRecentArticles(since: number, limit = 60): Promise<Article[]> {
+  const db = await getDb();
+  const tx = db.transaction('articles', 'readonly');
+  const range = IDBKeyRange.lowerBound([since, ''], true);
+  return takeFromCursor(
+    tx.objectStore('articles').index('byPublished').openCursor(range, 'prev'),
+    limit,
+  );
+}

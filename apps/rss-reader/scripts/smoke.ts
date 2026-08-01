@@ -1,6 +1,7 @@
 import { DOMParser } from '@xmldom/xmldom';
 import { parseFeedXml, parseOpml, stripHtml, sanitizeHtml, isFolder } from '../src/services/parser';
 import { normalizeLink, popularityScore, hotScore } from '../src/services/ranking';
+import { aiAvailability, aiDiagnostics, aiStatusMessage, runAiPrompt, resetAiAvailability, summarizeArticle } from '../src/ai';
 
 (globalThis as Record<string, unknown>).DOMParser = DOMParser;
 
@@ -105,5 +106,96 @@ assert(isFolder(tech) && tech.children.length === 2, 'opml folder children');
 const standalone = opmlNodes[1];
 assert(!isFolder(standalone) && standalone.xmlUrl === 'https://example.com/feed', 'opml top-level source');
 assert(stripHtml('<p>a&nbsp;b</p>') === 'a b', 'stripHtml collapses whitespace');
+
+// ---- AI module (mock Chrome's built-in model) ----
+const g = globalThis as unknown as Record<string, unknown>;
+const encoder = new TextEncoder();
+
+resetAiAvailability();
+assert((await aiAvailability()) === 'unsupported', 'ai unavailable when no model API present');
+
+let capturedSystem: string | undefined;
+g.model = {
+  capabilities: async () => ({ available: 'readily' }),
+  create: async ({ systemPrompt }: { systemPrompt?: string }) => {
+    capturedSystem = systemPrompt;
+    return {
+      prompt: async (text: string) => `SUMMARY[${text.slice(0, 59)}]`,
+      destroy: () => {},
+    };
+  },
+};
+resetAiAvailability();
+assert((await aiAvailability()) === 'readily', 'ai availability detects model.capabilities');
+const out = await runAiPrompt('hello world body');
+assert(out === 'SUMMARY[hello world body]', 'runAiPrompt routes through model.create');
+const articleSummary = await summarizeArticle('My Article', 'body text here');
+assert(
+  articleSummary === 'SUMMARY[Summarize the following article in 4-6 short bullet points.]',
+  'summarizeArticle builds an article prompt',
+);
+assert(typeof capturedSystem === 'string' && capturedSystem.length > 0, 'summarizeArticle sends a system prompt');
+
+g.model = {
+  capabilities: async () => ({ available: 'readily' }),
+  create: async () => {
+    return {
+      prompt: async () =>
+        new ReadableStream({
+          start(c) {
+            c.enqueue(encoder.encode('streamed '));
+            c.enqueue(encoder.encode('result'));
+            c.close();
+          },
+        }),
+      destroy: () => {},
+    };
+  },
+};
+const streamed = await runAiPrompt('x');
+assert(streamed === 'streamed result', 'runAiPrompt consumes a streaming response');
+
+g.model = {
+  capabilities: async () => ({ available: 'after-download' }),
+  create: async () => {
+    throw new Error('should not be called');
+  },
+};
+resetAiAvailability();
+assert((await aiAvailability()) === 'after-download', 'ai availability reports after-download');
+delete g.model;
+
+// capabilities reports readily but no create() exists -> must be treated as unsupported
+g.model = {
+  capabilities: async () => ({ available: 'readily' }),
+};
+resetAiAvailability();
+assert((await aiAvailability()) === 'unsupported', 'readily without a create() is reported as unsupported');
+delete g.model;
+
+assert(
+  aiStatusMessage('unsupported').includes('Gemini Nano'),
+  'aiStatusMessage gives actionable guidance for unsupported',
+);
+assert(
+  aiStatusMessage('after-download').includes('downloading'),
+  'aiStatusMessage covers after-download',
+);
+assert(aiStatusMessage('readily') === '', 'aiStatusMessage empty when readily');
+
+// diagnostics surface what Chrome exposes
+g.model = {
+  capabilities: async () => ({ available: 'readily' }),
+  create: async () => ({ prompt: async (t: string) => t, destroy: () => {} }),
+};
+resetAiAvailability();
+const diag = await aiDiagnostics();
+assert(diag.hasModelApi === true, 'diagnostics detect window.model');
+assert(diag.capabilitiesValue === 'readily', 'diagnostics report capabilities value');
+assert(diag.available === 'readily', 'diagnostics available is readily');
+delete g.model;
+resetAiAvailability();
+const diag2 = await aiDiagnostics();
+assert(diag2.hasModelApi === false && diag2.hasAiApi === false, 'diagnostics report absent APIs');
 
 console.log('\nAll parser smoke tests passed.');

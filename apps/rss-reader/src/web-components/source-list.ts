@@ -197,7 +197,7 @@ export class SourceList extends LitElement {
 
   private isActive(view: View): boolean {
     if (this.view.kind !== view.kind) return false;
-    if (this.view.kind === 'all') return true;
+    if (this.view.kind === 'all' || this.view.kind === 'brief') return true;
     return (this.view as { id: string }).id === (view as { id: string }).id;
   }
 
@@ -317,9 +317,14 @@ export class SourceList extends LitElement {
     const { folders, feeds } = this.libraryData;
     const uncategorized = feeds.filter((f) => f.folderId === null);
     const allActive = this.isActive({ kind: 'all' });
+    const briefActive = this.isActive({ kind: 'brief' });
 
     return html`
       <nav class="nav">
+        <div class="item ${briefActive ? 'active' : ''}" @click=${() => this.select({ kind: 'brief' })}>
+          <span class="icon">✨</span>
+          <span class="label">Daily Brief</span>
+        </div>
         <div class="item ${allActive ? 'active' : ''}" @click=${() => this.select({ kind: 'all' })}>
           ${this.icon('all')}
           <span class="label">All</span>

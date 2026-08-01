@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { getDb, putFeed, upsertArticles, queryArticles, markAllRead, setArticleRead, setArticleStarred, deleteFeed, type ArticleCursor } from '../src/db/db';
+import { getDb, putFeed, upsertArticles, queryArticles, markAllRead, setArticleRead, setArticleStarred, deleteFeed, queryRecentArticles, type ArticleCursor } from '../src/db/db';
 import { ingestFeed } from '../src/services/sync';
 import type { Article, Feed, ParsedFeed } from '../src/types';
 
@@ -210,6 +210,27 @@ async function main() {
   const hotA = bumped!.hot;
   const hotD = stored!.hot;
   assert(hotA !== hotD, 'hot recomputed differs after popularity bump');
+
+  // ---- recent articles (daily brief) ----
+  await resetDb();
+  const feedE: Feed = { ...feedA, id: 'feed-e', title: 'Feed E' };
+  await putFeed(feedE);
+  const briefNow = Date.now();
+  const recent = [
+    makeArticle('feed-e', 'old', briefNow - 48 * 86_400_000, 0),
+    makeArticle('feed-e', 'yesterday', briefNow - 5 * 3_600_000, 0),
+    makeArticle('feed-e', 'today-new', briefNow - 3_600_000, 0),
+    makeArticle('feed-e', 'today-old', briefNow - 20 * 3_600_000, 0),
+  ];
+  await upsertArticles(recent);
+  const since = briefNow - 24 * 3_600_000;
+  const recentList = await queryRecentArticles(since, 10);
+  assert(recentList.length === 3, 'queryRecentArticles returns articles since cutoff');
+  assert(recentList[0].id === 'feed-e:today-new', 'queryRecentArticles newest first');
+  assert(
+    !recentList.some((a) => a.id === 'feed-e:old'),
+    'queryRecentArticles excludes articles older than cutoff',
+  );
 
   await resetDb();
   console.log('\nAll db smoke tests passed.');

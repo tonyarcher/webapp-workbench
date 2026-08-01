@@ -1,10 +1,15 @@
 import { LitElement, html, css } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { customElement, property } from 'lit/decorators.js';
-import { sanitizeHtml } from '../services/parser';
+import { customElement, property, state } from 'lit/decorators.js';
+import { sanitizeHtml, stripHtml } from '../services/parser';
+import { aiAvailability, aiStatusMessage, summarizeArticle } from '../ai';
 import { toggleStar } from '../mutations';
 import type { Article } from '../types';
 import { domainOf, formatDate } from '../util';
+
+const summaryCache = new Map<string, string>();
+
+const MAX_SUMMARY_CHARS = 12_000;
 
 @customElement('article-view')
 export class ArticleView extends LitElement {
@@ -41,6 +46,10 @@ export class ArticleView extends LitElement {
     .btn:hover {
       background: var(--hover);
     }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
     .btn.primary {
       background: var(--accent);
       color: white;
@@ -76,6 +85,51 @@ export class ArticleView extends LitElement {
     .meta a {
       color: var(--accent);
       text-decoration: none;
+    }
+    .ai-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+      background: var(--hover);
+    }
+    .ai-card .head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .ai-text {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .spinner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .spinner .spin {
+      width: 15px;
+      height: 15px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
     }
     .content {
       font-size: 16px;
@@ -115,11 +169,56 @@ export class ArticleView extends LitElement {
 
   @property({ attribute: false }) article: Article | null = null;
 
+  @state() private summarizing = false;
+  @state() private aiSummary: string | null = null;
+  @state() private aiError = '';
+
+  override updated(changed: Map<string, unknown>) {
+    if (changed.has('article')) {
+      this.aiSummary = null;
+      this.aiError = '';
+    }
+  }
+
   private onStar() {
     if (!this.article) return;
     const next = !this.article.starred;
     this.article = { ...this.article, starred: next };
     void toggleStar(this.article.id);
+  }
+
+  private async onSummarize() {
+    const a = this.article;
+    if (!a || this.summarizing) return;
+    if (this.aiSummary) return;
+
+    const cached = summaryCache.get(a.id);
+    if (cached) {
+      this.aiSummary = cached;
+      return;
+    }
+
+    this.summarizing = true;
+    this.aiError = '';
+    try {
+      const availability = await aiAvailability();
+      if (availability !== 'readily') {
+        this.aiError = aiStatusMessage(availability);
+        return;
+      }
+      const text = stripHtml(a.content ?? '') || a.summary || '';
+      if (!text.trim()) {
+        this.aiError = 'This article has no content to summarize.';
+        return;
+      }
+      const summary = await summarizeArticle(a.title, text.slice(0, MAX_SUMMARY_CHARS));
+      summaryCache.set(a.id, summary);
+      this.aiSummary = summary;
+    } catch (err) {
+      this.aiError = err instanceof Error ? err.message : 'Could not summarize this article';
+    } finally {
+      this.summarizing = false;
+    }
   }
 
   override render() {
@@ -133,6 +232,9 @@ export class ArticleView extends LitElement {
           ← Back
         </button>
         <button class="btn" @click=${this.onStar}>${a.starred ? '★ Unstar' : '☆ Star'}</button>
+        <button class="btn" @click=${this.onSummarize} ?disabled=${this.summarizing}>
+          ${this.summarizing ? 'Summarizing…' : this.aiSummary ? '✓ Summarized' : '✨ Summarize'}
+        </button>
         <div class="spacer"></div>
         ${a.link
           ? html`<a class="btn primary" href=${a.link} target="_blank" rel="noopener noreferrer">View original ↗</a>`
@@ -145,6 +247,15 @@ export class ArticleView extends LitElement {
           <span>${formatDate(a.published)}</span>
           ${a.author ? html`<span>by ${a.author}</span>` : ''}
         </div>
+
+        ${this.aiError
+          ? html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="ai-text" style="color: var(--danger)">${this.aiError}</div></div>`
+          : this.summarizing
+            ? html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="spinner"><span class="spin"></span> Summarizing…</div></div>`
+            : this.aiSummary
+              ? html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="ai-text">${this.aiSummary}</div></div>`
+              : ''}
+
         ${body
           ? html`<div class="content">${unsafeHTML(body)}</div>`
           : a.summary
