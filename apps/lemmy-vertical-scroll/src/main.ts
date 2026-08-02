@@ -7,9 +7,10 @@ if (root) {
 }
 
 // PWA: register the service worker in production builds only — the dev
-// server must stay cache-free while iterating.
+// server must stay cache-free while iterating. BASE_URL keeps the
+// registration working when the app is served from a subpath.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {})
+        navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {})
     })
 }

@@ -25,6 +25,7 @@ import {
     resolveVideoUrl,
     stripImageProxy,
 } from '../src/services/post-media'
+import {safeUrl} from '../src/services/url'
 import {parseView, viewToPath} from '../src/router'
 import {POST_SORTS, PIEFED_POST_SORTS, postSortsFor} from '../src/types'
 import type {LemmyPost} from '../src/types'
@@ -259,10 +260,15 @@ void (async () => {
     assert(request().pathname === '/api/alpha/community/list', 'piefed communities hit alpha community/list')
     assert(query().get('show_nsfw') === 'true', 'piefed community list shows nsfw by default')
     await fetchPiefedCommunities(
+        {instance: 'fedinsfw.app', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Exclude'},
+        capturingFetchImpl({communities: []}),
+    )
+    assert(query().get('show_nsfw') === 'false', 'piefed community list hides nsfw in Exclude mode')
+    await fetchPiefedCommunities(
         {instance: 'fedinsfw.app', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Only'},
         capturingFetchImpl({communities: []}),
     )
-    assert(query().get('show_nsfw') === 'false', 'piefed community list hides nsfw in Only mode')
+    assert(query().get('show_nsfw') === 'true', 'piefed Only degrades to showing nsfw (boolean API)')
     assert(pc.communities[0].subscribers === 10 && pc.communities[0].posts === 5 && pc.communities[0].comments === 2, 'piefed community counts mapped')
 
     const searchHits = await fetchPiefedCommunitySearch('fedinsfw.app', 'nsfw', 20, capturingFetchImpl({communities: [{community: {id: 2, name: 'nsfw2', title: 'NSFW2', actor_id: 'https://fedinsfw.app/c/nsfw2', local: true, icon: null, banner: null, description: null, published: '2026-01-01T00:00:00Z'}, counts: {subscriptions_count: 1, post_count: 1, post_reply_count: 1, published: '2026-01-01T00:00:00Z'}, subscribed: 'NotSubscribed', blocked: false}]}))
@@ -424,10 +430,82 @@ void (async () => {
             rg.candidates.length === 3,
         'redgifs resolves via token flow to sd with poster and candidates',
     )
-    const rgNoUrls = await resolveVideoUrl('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound', rgApi('no-urls'))
+    const rgNoUrls = await resolveVideoUrl('https://www.redgifs.com/watch/nourlsclip', rgApi('no-urls'))
     assert(rgNoUrls.src === null && rgNoUrls.poster === null, 'redgifs without media urls reports failure')
-    const rgBadToken = await resolveVideoUrl('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound', rgApi('bad-token'))
+    const rgBadToken = await resolveVideoUrl('https://www.redgifs.com/watch/badtokenclip', rgApi('bad-token'))
     assert(rgBadToken.src === null, 'redgifs token failure reports failure')
+
+    // memoized: the same clip resolves from cache without another token flow
+    let tokenCalls = 0
+    const countingFetch = (async (input: string | URL | Request): Promise<Response> => {
+        if (String(input).includes('/v2/auth/temporary')) tokenCalls++
+        return rgApi('ok')(input)
+    }) as unknown as typeof fetch
+    await resolveVideoUrl('https://www.redgifs.com/watch/memocacheclip', countingFetch)
+    await resolveVideoUrl('https://www.redgifs.com/watch/memocacheclip', countingFetch)
+    assert(tokenCalls === 1, 'redgifs resolution memoized')
+    await resolveVideoUrl('https://www.redgifs.com/watch/memocacheclip', countingFetch, {force: true})
+    assert(tokenCalls === 2, 'force bypasses the memo cache')
+
+    // ---- url safety ----
+
+    assert(safeUrl('https://example.com/post/1') === 'https://example.com/post/1', 'https url passes')
+    assert(safeUrl('http://example.com/x') === 'http://example.com/x', 'http url passes')
+    assert(safeUrl('javascript:alert(1)') === null, 'javascript url rejected')
+    assert(safeUrl('data:text/html,<script>') === null, 'data url rejected')
+    assert(safeUrl('vbscript:msgbox(1)') === null, 'vbscript url rejected')
+    assert(safeUrl('not a url') === null, 'unparseable url rejected')
+    assert(safeUrl(null) === null, 'null url rejected')
+
+    // ---- response validation ----
+
+    await assertRejects(
+        () => fetchPosts({instance: 'lemmy.ml', feedType: 'All', sort: 'Hot', page: 1, limit: 20}, mockFetchImpl({}, 200)),
+        (e) => e instanceof ApiError && e.status === 200 && /Unexpected response/.test(e.message),
+        'non-JSON 200 body becomes an ApiError',
+    )
+    await assertRejects(
+        () => fetchSite('lemmy.ml', mockFetchImpl({some: 'html-ish json'}, 200)),
+        (e) => e instanceof ApiError && /Unexpected response/.test(e.message),
+        'malformed site response becomes an ApiError',
+    )
+    await assertRejects(
+        () => fetchCommunities({instance: 'lemmy.ml', sort: 'Hot', page: 1, limit: 20}, mockFetchImpl({posts: []}, 200)),
+        (e) => e instanceof ApiError && /Unexpected response/.test(e.message),
+        'wrong-shaped community list becomes an ApiError',
+    )
+
+    // timeout vs network error messaging
+    await assertRejects(
+        () =>
+            fetchPosts(
+                {instance: 'slow.instance', feedType: 'All', sort: 'Hot', page: 1, limit: 20},
+                (async () => {
+                    throw new DOMException('The operation was aborted.', 'TimeoutError')
+                }) as typeof fetch,
+            ),
+        (e) => e instanceof ApiError && /timed out/.test(e.message),
+        'timeout keeps its message',
+    )
+    await assertRejects(
+        () =>
+            fetchPosts(
+                {instance: 'down.instance', feedType: 'All', sort: 'Hot', page: 1, limit: 20},
+                (async () => {
+                    throw new TypeError('Failed to fetch')
+                }) as typeof fetch,
+            ),
+        (e) => e instanceof ApiError && /network error/.test(e.message) && !/timed out/.test(e.message),
+        'non-timeout network errors are labeled network errors',
+    )
+
+    // ---- lemmy community nsfw param ----
+
+    await fetchCommunities(
+        {instance: 'lemmy.ml', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Exclude'},
+        capturingFetchImpl({communities: []}),
+    )
+    assert(query().get('show_nsfw') === 'false', 'lemmy community list forwards Exclude as show_nsfw')
 
     // ---- sorts ----
 

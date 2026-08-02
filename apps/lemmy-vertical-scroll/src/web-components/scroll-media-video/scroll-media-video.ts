@@ -3,6 +3,7 @@ import type {TemplateResult} from 'lit'
 import {customElement, property, state} from 'lit/decorators.js'
 import {ref} from 'lit/directives/ref.js'
 import {resolveVideoUrl} from '../../services/post-media'
+import {safeUrl} from '../../services/url'
 import {getSoundOn, setSoundOn, subscribeSound} from './sound'
 import type {LemmyPost} from '../../types'
 import styles from './scroll-media-video.css?inline'
@@ -81,6 +82,20 @@ export class ScrollMediaVideo extends LitElement {
         this.resolveFailed = true
     }
 
+    private onRetry(): void {
+        this.resolveFailed = false
+        this.src = null
+        this.candidates = []
+        const token = ++this.resolveToken
+        void resolveVideoUrl(this.post?.videoUrl ?? null, fetch, {force: true}).then((resolved) => {
+            if (token !== this.resolveToken) return
+            this.src = resolved.src
+            this.poster = resolved.poster
+            this.candidates = resolved.candidates
+            this.resolveFailed = resolved.src === null
+        })
+    }
+
     /** Stable identity so the ref directive only fires on attach/detach. */
     private readonly onVideoRef = (el: Element | undefined): void => {
         const video = el as HTMLVideoElement | null
@@ -104,10 +119,16 @@ export class ScrollMediaVideo extends LitElement {
 
     override render(): TemplateResult {
         const {post} = this
+        const original = safeUrl(post.postUrl)
         const media = this.resolveFailed
             ? html`<div class="video-fallback">
                 <p class="fallback-text">Video unavailable</p>
-                <a class="fallback-link" href=${post.postUrl} target="_blank" rel="noopener noreferrer">Open original ↗</a>
+                <div class="fallback-actions">
+                    <button class="fallback-button" @click=${this.onRetry}>Retry</button>
+                    ${original
+                        ? html`<a class="fallback-link" href=${original} target="_blank" rel="noopener noreferrer">Open original ↗</a>`
+                        : html``}
+                </div>
             </div>`
             : this.src
               ? html`<video

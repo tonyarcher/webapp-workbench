@@ -39,13 +39,30 @@ export class PostList extends LitElement {
         () => this.onNearEnd(),
     )
     private listEl: HTMLElement | null = null
+    private prevParams = ''
 
     override connectedCallback(): void {
         super.connectedCallback()
         const hydrate = this.communityId === null
-            ? hydratePosts(this.instance, this.feedType, this.sort, this.nsfwFilter)
-            : hydrateCommunityPosts(this.instance, this.communityId, this.sort, this.nsfwFilter)
+            ? hydratePosts(this.instance, this.feedType, this.sort, this.nsfwFilter, this.software)
+            : hydrateCommunityPosts(this.instance, this.communityId, this.sort, this.nsfwFilter, this.software)
         void hydrate
+    }
+
+    /** Reset to the top when the feed source or parameters change. */
+    override willUpdate(_changed: Map<string, unknown>): void {
+        const params = JSON.stringify([
+            this.instance,
+            this.feedType,
+            this.sort,
+            this.nsfwFilter,
+            this.software,
+            this.communityId,
+        ])
+        if (this.prevParams !== '' && params !== this.prevParams) {
+            if (this.listEl) this.listEl.scrollTop = 0
+        }
+        this.prevParams = params
     }
 
     private get posts(): LemmyPost[] {

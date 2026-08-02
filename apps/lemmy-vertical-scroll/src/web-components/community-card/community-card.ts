@@ -2,6 +2,7 @@ import {LitElement, html, nothing, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, property} from 'lit/decorators.js'
 import {compactNumber} from '../../services/format'
+import {safeUrl} from '../../services/url'
 import {navigate} from '../../router'
 import type {LemmyCommunity} from '../../types'
 import styles from './community-card.css?inline'
@@ -21,8 +22,8 @@ export class CommunityCard extends LitElement {
         return html`
             <button class="community-card" @click=${this.open}>
                 <div class="community-icon" aria-hidden="true">
-                    ${community.icon
-                        ? html`<img src=${community.icon} alt="" loading="lazy" referrerpolicy="no-referrer"/>`
+                    ${safeUrl(community.icon)
+                        ? html`<img src=${safeUrl(community.icon)} alt="" loading="lazy" referrerpolicy="no-referrer"/>`
                         : html`<span class="icon-fallback">${community.name.charAt(0).toUpperCase()}</span>`}
                 </div>
                 <div class="community-info">

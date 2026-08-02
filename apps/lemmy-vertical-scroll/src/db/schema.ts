@@ -27,6 +27,10 @@ export function getDB(): Promise<import('idb').IDBPDatabase<LvsDB>> {
                 db.createObjectStore('postsCache', {keyPath: 'key'})
                 db.createObjectStore('communitiesCache', {keyPath: 'key'})
             },
+        }).catch((error) => {
+            // a failed open must not poison the session — allow a retry
+            dbPromise = null
+            throw error
         })
     }
     return dbPromise

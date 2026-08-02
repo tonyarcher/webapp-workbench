@@ -3,6 +3,7 @@ import type {TemplateResult} from 'lit'
 import {customElement, property} from 'lit/decorators.js'
 import {communityQuery, hydrateCommunityPosts, QueryController} from '../../query'
 import {compactNumber, timeAgo} from '../../services/format'
+import {safeUrl} from '../../services/url'
 import type {LemmyCommunity, NsfwFilter, PostSort, Software, ViewMode} from '../../types'
 import '../post-list/post-list'
 import '../scroll-feed/scroll-feed'
@@ -25,7 +26,7 @@ export class CommunityView extends LitElement {
 
     override connectedCallback(): void {
         super.connectedCallback()
-        void hydrateCommunityPosts(this.instance, this.communityId, this.sort, this.nsfwFilter)
+        void hydrateCommunityPosts(this.instance, this.communityId, this.sort, this.nsfwFilter, this.software)
     }
 
     private renderHeader(): TemplateResult {
@@ -37,14 +38,17 @@ export class CommunityView extends LitElement {
             </div>`
         }
         const community = data
+        const banner = safeUrl(community?.banner ?? null)
+        const icon = safeUrl(community?.icon ?? null)
+        const instanceLink = safeUrl(community?.actorId ?? null)
         return html`<div class="community-header">
-            ${community?.banner
-                ? html`<img class="community-banner" src=${community.banner} alt="" referrerpolicy="no-referrer"/>`
+            ${banner
+                ? html`<img class="community-banner" src=${banner} alt="" referrerpolicy="no-referrer"/>`
                 : nothing}
             <div class="community-meta">
                 <div class="community-icon" aria-hidden="true">
-                    ${community?.icon
-                        ? html`<img src=${community.icon} alt="" referrerpolicy="no-referrer"/>`
+                    ${icon
+                        ? html`<img src=${icon} alt="" referrerpolicy="no-referrer"/>`
                         : html`<span class="icon-fallback">${community ? community.name.charAt(0).toUpperCase() : '?'}</span>`}
                 </div>
                 <div class="community-info">
@@ -57,8 +61,8 @@ export class CommunityView extends LitElement {
                         ${community ? html`<span class="stat">${timeAgo(community.published)}</span>` : nothing}
                     </span>
                 </div>
-                ${community
-                    ? html`<a class="external-link" href=${community.actorId} target="_blank" rel="noopener noreferrer">Open on instance</a>`
+                ${instanceLink
+                    ? html`<a class="external-link" href=${instanceLink} target="_blank" rel="noopener noreferrer">Open on instance</a>`
                     : nothing}
             </div>
             ${community?.description ? html`<p class="community-description">${community.description}</p>` : nothing}

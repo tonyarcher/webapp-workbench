@@ -10,11 +10,19 @@ export async function loadSettings(): Promise<Settings> {
     return {...DEFAULT_SETTINGS, ...(record?.value as Partial<Settings> | undefined)}
 }
 
+/**
+ * Read-modify-write inside one readwrite transaction so concurrent saves
+ * never drop each other's patch.
+ */
 export async function saveSettings(patch: Partial<Settings>): Promise<void> {
     const db = await getDB()
-    const current = await loadSettings()
-    const merged: Settings = {...current, ...patch}
     const tx = db.transaction('settings', 'readwrite')
+    const current = await tx.store.get(SETTINGS_KEY)
+    const merged: Settings = {
+        ...DEFAULT_SETTINGS,
+        ...(current?.value as Partial<Settings> | undefined),
+        ...patch,
+    }
     await tx.store.put({key: SETTINGS_KEY, value: merged})
     await tx.done
 }

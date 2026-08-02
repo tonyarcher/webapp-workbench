@@ -132,8 +132,13 @@ export async function apiGet(
             headers: {Accept: 'application/json'},
             signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         })
-    } catch {
-        throw new ApiError(`Could not reach ${instance} (request timed out)`)
+    } catch (error) {
+        const timedOut = error instanceof DOMException && error.name === 'TimeoutError'
+        throw new ApiError(
+            timedOut
+                ? `Could not reach ${instance} (request timed out)`
+                : `Could not reach ${instance} (network error)`,
+        )
     }
     const data = (await response.json().catch(() => null)) as {error?: string} | null
     if (!response.ok) {
@@ -147,6 +152,38 @@ export async function apiGet(
         throw new ApiError(`Instance ${instance} rejected request to ${path}${detail}`, response.status)
     }
     return data
+}
+
+/** Shared guard against 200 responses whose JSON does not match the endpoint shape. */
+function unexpectedResponse(instance: string, path: string): ApiError {
+    return new ApiError(`Unexpected response from ${instance} for ${path}`, 200)
+}
+
+function assertPosts(data: unknown, instance: string, path: string): {posts: RawPostView[]} {
+    if (!data || !Array.isArray((data as {posts?: unknown}).posts)) {
+        throw unexpectedResponse(instance, path)
+    }
+    return data as {posts: RawPostView[]}
+}
+
+function assertCommunities(data: unknown, instance: string, path: string): {communities: RawCommunityView[]} {
+    if (!data || !Array.isArray((data as {communities?: unknown}).communities)) {
+        throw unexpectedResponse(instance, path)
+    }
+    return data as {communities: RawCommunityView[]}
+}
+
+function assertSite(data: unknown, instance: string): {site_view: {site: RawLemmySite}} {
+    const siteView = (data as {site_view?: {site?: RawLemmySite}} | null)?.site_view
+    if (!siteView?.site) throw unexpectedResponse(instance, '/api/v3/site')
+    return data as {site_view: {site: RawLemmySite}}
+}
+
+function assertCommunityView(data: unknown, instance: string, path: string): {community_view: RawCommunityView} {
+    if (!data || !(data as {community_view?: unknown}).community_view) {
+        throw unexpectedResponse(instance, path)
+    }
+    return data as {community_view: RawCommunityView}
 }
 
 function mapPostView(view: RawPostView): LemmyPost {
@@ -212,7 +249,7 @@ function mapCommunityView(view: RawCommunityView): LemmyCommunity {
 // ---- api calls ----
 
 export async function fetchSite(instance: string, fetchImpl: FetchImpl = fetch): Promise<SiteResult> {
-    const data = (await apiGet(instance, '/api/v3/site', {}, fetchImpl)) as {site_view: {site: RawLemmySite}}
+    const data = assertSite(await apiGet(instance, '/api/v3/site', {}, fetchImpl), instance)
     const version = data.site_view.site.version ?? ''
     if (version) return {site: mapSite(data.site_view.site), software: 'lemmy'}
     const detected = await detectSoftware(instance, fetchImpl)
@@ -275,12 +312,11 @@ export async function fetchPosts(
     {instance, feedType, sort, page, limit, nsfwFilter = 'Include'}: PostsQuery,
     fetchImpl: FetchImpl = fetch,
 ): Promise<PostPage> {
-    const data = (await apiGet(
+    const data = assertPosts(
+        await apiGet(instance, '/api/v3/post/list', {type_: feedType, sort, page, limit, nsfw: nsfwFilter}, fetchImpl),
         instance,
         '/api/v3/post/list',
-        {type_: feedType, sort, page, limit, nsfw: nsfwFilter},
-        fetchImpl,
-    )) as {posts: RawPostView[]}
+    )
     return {posts: data.posts.map(mapPostView), page}
 }
 
@@ -290,18 +326,23 @@ export interface CommunitiesQuery {
     page: number
     limit: number
     search?: string
+    nsfwFilter?: NsfwFilter
 }
 
 export async function fetchCommunities(
-    {instance, sort, page, limit, search}: CommunitiesQuery,
+    {instance, sort, page, limit, search, nsfwFilter = 'Include'}: CommunitiesQuery,
     fetchImpl: FetchImpl = fetch,
 ): Promise<CommunityPage> {
-    const data = (await apiGet(
+    const data = assertCommunities(
+        await apiGet(
+            instance,
+            '/api/v3/community/list',
+            {type_: 'All', sort, page, limit, search, show_nsfw: nsfwFilter !== 'Exclude'},
+            fetchImpl,
+        ),
         instance,
         '/api/v3/community/list',
-        {type_: 'All', sort, page, limit, search},
-        fetchImpl,
-    )) as {communities: RawCommunityView[]}
+    )
     return {communities: data.communities.map(mapCommunityView), page}
 }
 
@@ -310,9 +351,11 @@ export async function fetchCommunity(
     communityId: number,
     fetchImpl: FetchImpl = fetch,
 ): Promise<LemmyCommunity> {
-    const data = (await apiGet(instance, '/api/v3/community', {id: communityId}, fetchImpl)) as {
-        community_view: RawCommunityView
-    }
+    const data = assertCommunityView(
+        await apiGet(instance, '/api/v3/community', {id: communityId}, fetchImpl),
+        instance,
+        '/api/v3/community',
+    )
     return mapCommunityView(data.community_view)
 }
 
@@ -329,11 +372,15 @@ export async function fetchCommunityPosts(
     {instance, communityId, sort, page, limit, nsfwFilter = 'Include'}: CommunityPostsQuery,
     fetchImpl: FetchImpl = fetch,
 ): Promise<PostPage> {
-    const data = (await apiGet(
+    const data = assertPosts(
+        await apiGet(
+            instance,
+            '/api/v3/post/list',
+            {community_id: communityId, sort, page, limit, nsfw: nsfwFilter},
+            fetchImpl,
+        ),
         instance,
         '/api/v3/post/list',
-        {community_id: communityId, sort, page, limit, nsfw: nsfwFilter},
-        fetchImpl,
-    )) as {posts: RawPostView[]}
+    )
     return {posts: data.posts.map(mapPostView), page}
 }

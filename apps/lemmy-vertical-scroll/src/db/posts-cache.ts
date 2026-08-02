@@ -15,7 +15,7 @@ export async function getPostsCache(key: string, ttlMs: number): Promise<LemmyPo
     const entry = await db.get('postsCache', key)
     if (!entry) return null
     if (Date.now() - entry.fetchedAt >= ttlMs) {
-        void deletePostsCache(key)
+        void deletePostsCache(key).catch(() => {})
         return null
     }
     return entry.posts

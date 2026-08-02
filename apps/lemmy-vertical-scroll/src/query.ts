@@ -55,24 +55,27 @@ export const postsKey = (
     feedType: FeedType,
     sort: PostSort,
     nsfwFilter: NsfwFilter,
-): QueryKey => ['posts', instance, feedType, sort, nsfwFilter]
+    software: Software,
+): QueryKey => ['posts', instance, feedType, sort, nsfwFilter, software]
 export const communitiesKey = (
     instance: string,
     sort: CommunitySort,
     search: string,
     nsfwFilter: NsfwFilter,
-): QueryKey => ['communities', instance, sort, search, nsfwFilter]
-export const communityKey = (instance: string, communityId: number): QueryKey => [
-    'community',
-    instance,
-    communityId,
-]
+    software: Software,
+): QueryKey => ['communities', instance, sort, search, nsfwFilter, software]
+export const communityKey = (
+    instance: string,
+    communityId: number,
+    software: Software,
+): QueryKey => ['community', instance, communityId, software]
 export const communityPostsKey = (
     instance: string,
     communityId: number,
     sort: PostSort,
     nsfwFilter: NsfwFilter,
-): QueryKey => ['communityPosts', instance, communityId, sort, nsfwFilter]
+    software: Software,
+): QueryKey => ['communityPosts', instance, communityId, sort, nsfwFilter, software]
 
 // ---- idb cache keys ----
 
@@ -81,18 +84,20 @@ export function postsCacheKey(
     feedType: FeedType,
     sort: PostSort,
     nsfwFilter: NsfwFilter,
+    software: Software,
     page: number,
 ): string {
-    return `posts:${instance}:${feedType}:${sort}:${nsfwFilter}:${page}`
+    return `posts:${instance}:${feedType}:${sort}:${nsfwFilter}:${software}:${page}`
 }
 
 export function communitiesCacheKey(
     instance: string,
     sort: CommunitySort,
     nsfwFilter: NsfwFilter,
+    software: Software,
     page: number,
 ): string {
-    return `communities:${instance}:${sort}:${nsfwFilter}:${page}`
+    return `communities:${instance}:${sort}:${nsfwFilter}:${software}:${page}`
 }
 
 export function communityPostsCacheKey(
@@ -100,9 +105,10 @@ export function communityPostsCacheKey(
     communityId: number,
     sort: PostSort,
     nsfwFilter: NsfwFilter,
+    software: Software,
     page: number,
 ): string {
-    return `communityPosts:${instance}:${communityId}:${sort}:${nsfwFilter}:${page}`
+    return `communityPosts:${instance}:${communityId}:${sort}:${nsfwFilter}:${software}:${page}`
 }
 
 // ---- query options ----
@@ -121,7 +127,7 @@ export function communityQuery(
     software: Software,
 ): QueryObserverOptions<LemmyCommunity> {
     return {
-        queryKey: communityKey(instance, communityId),
+        queryKey: communityKey(instance, communityId, software),
         queryFn: () =>
             software === 'piefed'
                 ? fetchPiefedCommunity(instance, communityId)
@@ -140,14 +146,14 @@ export function postsInfiniteQuery(
     nsfwFilter: NsfwFilter,
 ): InfinitePostsOptions {
     return {
-        queryKey: postsKey(instance, feedType, sort, nsfwFilter),
+        queryKey: postsKey(instance, feedType, sort, nsfwFilter, software),
         initialPageParam: 1,
         queryFn: async ({pageParam}) => {
             const page =
                 software === 'piefed'
                     ? await fetchPiefedPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter})
                     : await fetchPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter})
-            void putPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, pageParam), page.posts).catch(() => {})
+            void putPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, software, pageParam), page.posts).catch(() => {})
             return page
         },
         getNextPageParam: (lastPage) => (lastPage.posts.length > 0 ? lastPage.page + 1 : undefined),
@@ -163,7 +169,7 @@ export function communityPostsInfiniteQuery(
     nsfwFilter: NsfwFilter,
 ): InfinitePostsOptions {
     return {
-        queryKey: communityPostsKey(instance, communityId, sort, nsfwFilter),
+        queryKey: communityPostsKey(instance, communityId, sort, nsfwFilter, software),
         initialPageParam: 1,
         queryFn: async ({pageParam}) => {
             const page =
@@ -184,7 +190,7 @@ export function communityPostsInfiniteQuery(
                           limit: PAGE_SIZE,
                           nsfwFilter,
                       })
-            void putPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, pageParam), page.posts).catch(() => {})
+            void putPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, software, pageParam), page.posts).catch(() => {})
             return page
         },
         getNextPageParam: (lastPage) => (lastPage.posts.length > 0 ? lastPage.page + 1 : undefined),
@@ -208,7 +214,7 @@ export function communitiesInfiniteQuery(
     nsfwFilter: NsfwFilter,
 ): InfiniteCommunitiesOptions {
     return {
-        queryKey: communitiesKey(instance, sort, search, nsfwFilter),
+        queryKey: communitiesKey(instance, sort, search, nsfwFilter, software),
         initialPageParam: 1,
         queryFn: async ({pageParam}) => {
             if (software === 'piefed') {
@@ -230,7 +236,7 @@ export function communitiesInfiniteQuery(
                 search: search || undefined,
             })
             if (!search) {
-                void putCommunitiesCache(communitiesCacheKey(instance, sort, nsfwFilter, pageParam), page.communities).catch(() => {})
+                void putCommunitiesCache(communitiesCacheKey(instance, sort, nsfwFilter, software, pageParam), page.communities).catch(() => {})
             }
             return page
         },
@@ -270,10 +276,11 @@ export function hydratePosts(
     feedType: FeedType,
     sort: PostSort,
     nsfwFilter: NsfwFilter,
+    software: Software,
 ): Promise<void> {
     return hydratePages(
-        postsKey(instance, feedType, sort, nsfwFilter),
-        (page) => getPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, page), CACHE_TTL_MS),
+        postsKey(instance, feedType, sort, nsfwFilter, software),
+        (page) => getPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, software, page), CACHE_TTL_MS),
         'posts',
     )
 }
@@ -283,10 +290,12 @@ export function hydrateCommunityPosts(
     communityId: number,
     sort: PostSort,
     nsfwFilter: NsfwFilter,
+    software: Software,
 ): Promise<void> {
     return hydratePages(
-        communityPostsKey(instance, communityId, sort, nsfwFilter),
-        (page) => getPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, page), CACHE_TTL_MS),
+        communityPostsKey(instance, communityId, sort, nsfwFilter, software),
+        (page) =>
+            getPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, software, page), CACHE_TTL_MS),
         'posts',
     )
 }
@@ -296,11 +305,12 @@ export function hydrateCommunities(
     sort: CommunitySort,
     search: string,
     nsfwFilter: NsfwFilter,
+    software: Software,
 ): Promise<void> {
     if (search) return Promise.resolve()
     return hydratePages(
-        communitiesKey(instance, sort, '', nsfwFilter),
-        (page) => getCommunitiesCache(communitiesCacheKey(instance, sort, nsfwFilter, page), CACHE_TTL_MS),
+        communitiesKey(instance, sort, '', nsfwFilter, software),
+        (page) => getCommunitiesCache(communitiesCacheKey(instance, sort, nsfwFilter, software, page), CACHE_TTL_MS),
         'communities',
     )
 }

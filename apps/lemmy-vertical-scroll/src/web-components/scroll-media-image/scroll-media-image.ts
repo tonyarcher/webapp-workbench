@@ -1,6 +1,7 @@
 import {LitElement, html, nothing, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, property, state} from 'lit/decorators.js'
+import {safeUrl} from '../../services/url'
 import styles from './scroll-media-image.css?inline'
 
 const DRAG_THRESHOLD_PX = 40
@@ -16,28 +17,35 @@ export class ScrollMediaImage extends LitElement {
     private dragStartX = 0
     private dragDelta = 0
     private dragged = false
+    private readonly onDragMove = (move: PointerEvent): void => {
+        this.dragDelta = move.clientX - this.dragStartX
+        if (Math.abs(this.dragDelta) > 6) this.dragged = true
+        if (this.dragged) this.requestUpdate()
+    }
+    private readonly onDragEnd = (): void => {
+        window.removeEventListener('pointermove', this.onDragMove)
+        window.removeEventListener('pointerup', this.onDragEnd)
+        window.removeEventListener('pointercancel', this.onDragEnd)
+        if (this.dragDelta < -DRAG_THRESHOLD_PX) this.next()
+        else if (this.dragDelta > DRAG_THRESHOLD_PX) this.prev()
+        this.dragDelta = 0
+    }
+
+    override disconnectedCallback(): void {
+        super.disconnectedCallback()
+        window.removeEventListener('pointermove', this.onDragMove)
+        window.removeEventListener('pointerup', this.onDragEnd)
+        window.removeEventListener('pointercancel', this.onDragEnd)
+    }
 
     private onPointerDown(event: PointerEvent): void {
         if (event.pointerType === 'mouse') event.preventDefault()
         this.dragStartX = event.clientX
         this.dragDelta = 0
         this.dragged = false
-        const onMove = (move: PointerEvent): void => {
-            this.dragDelta = move.clientX - this.dragStartX
-            if (Math.abs(this.dragDelta) > 6) this.dragged = true
-            if (this.dragged) this.requestUpdate()
-        }
-        const onUp = (): void => {
-            window.removeEventListener('pointermove', onMove)
-            window.removeEventListener('pointerup', onUp)
-            window.removeEventListener('pointercancel', onUp)
-            if (this.dragDelta < -DRAG_THRESHOLD_PX) this.next()
-            else if (this.dragDelta > DRAG_THRESHOLD_PX) this.prev()
-            this.dragDelta = 0
-        }
-        window.addEventListener('pointermove', onMove)
-        window.addEventListener('pointerup', onUp)
-        window.addEventListener('pointercancel', onUp)
+        window.addEventListener('pointermove', this.onDragMove)
+        window.addEventListener('pointerup', this.onDragEnd)
+        window.addEventListener('pointercancel', this.onDragEnd)
     }
 
     private onClick(event: Event): void {
@@ -96,9 +104,14 @@ export class ScrollMediaImage extends LitElement {
             >
                 <div class="carousel-track" style="transform: translateX(${-this.index * 100}%)">
                     ${this.images.map(
-                        (src) => html`<div class="carousel-slide">
-                            <img class="media-img" src=${src} alt="" loading="eager" draggable="false" referrerpolicy="no-referrer"/>
-                        </div>`,
+                        (src) => {
+                            const safe = safeUrl(src)
+                            return html`<div class="carousel-slide">
+                                ${safe
+                                    ? html`<img class="media-img" src=${safe} alt="" loading="lazy" draggable="false" referrerpolicy="no-referrer"/>`
+                                    : html``}
+                            </div>`
+                        },
                     )}
                 </div>
                 ${single ? nothing : this.renderArrows()}

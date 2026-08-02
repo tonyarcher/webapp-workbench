@@ -24,19 +24,41 @@
       "description": "Master Controller and Planning Agent",
       "permission": {
         "edit": "deny"
-      }
+      },
+      "prompt": "You are the planner for the lemmy-vertical-scroll project. Produce a short task list naming the modules touched, the risks, and which smoke assertions must be added. Never edit files. Hand the plan to the build agent."
     },
     "build": {
       "mode": "primary",
       "model": "deepseek/deepseek-v4-flash-high",
       "temperature": 0.3,
-      "description": "Primary Execution and Coding Agent"
+      "description": "Primary Execution and Coding Agent",
+      "prompt": "You are the implementer for lemmy-vertical-scroll. Follow AGENTS.md strictly. After every change run `npx tsc --noEmit` and `npm run test`; both must pass before you report done. If you touched src/services, src/db, src/query.ts, src/mutations.ts, src/router.ts, or src/types.ts, add smoke assertions covering the new behavior. Never run git commit or git push. Never modify AGENTS.md or opencode.json unless the task explicitly asks. Finish with a summary: files changed, assertions added, and the exact verification command output."
+    },
+    "review": {
+      "mode": "primary",
+      "model": "openai/gpt-5.6-luna-max",
+      "temperature": 0.1,
+      "description": "Independent read-only reviewer; runs verification and issues APPROVE or REQUEST-CHANGES",
+      "tools": {
+        "write": false,
+        "edit": false
+      },
+      "permission": {
+        "bash": "allow",
+        "edit": "deny",
+        "write": "deny"
+      },
+      "prompt": "You are the independent reviewer for lemmy-vertical-scroll. You are read-only. Inspect `git status` and `git diff` and read every changed file, not just the summary. Independently run `npx tsc --noEmit` and `npm run test` (never `npm run build`, which writes dist). Verify AGENTS.md compliance (formatting, naming, state flow, comments), confirm smoke assertions cover every changed pure-logic/db/query module, check that no remote URL is bound to href/src without safeUrl(), and confirm opencode.json and AGENTS.md were not modified unless requested. Output APPROVE or REQUEST-CHANGES with specific findings. Never edit."
     },
     "general": {
       "mode": "subagent",
       "model": "deepseek/deepseek-v4-flash-high",
       "temperature": 0.4,
-      "description": "Concurrent multi-step coding and background executor"
+      "description": "Concurrent research and background executor (read-only)",
+      "permission": {
+        "edit": "deny",
+        "write": "deny"
+      }
     },
     "explore": {
       "mode": "subagent",

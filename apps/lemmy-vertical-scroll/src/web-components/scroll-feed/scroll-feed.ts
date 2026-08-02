@@ -18,6 +18,8 @@ const WHEEL_THRESHOLD_PX = 40
 const WHEEL_COOLDOWN_MS = 900
 const PREFETCH_LOOKAHEAD = 3
 const DRAG_THRESHOLD_PX = 40
+/** Slides rendered on each side of the active one; keeps DOM and media work bounded. */
+const SLIDE_WINDOW = 2
 
 @customElement('lvs-scroll-feed')
 export class ScrollFeed extends LitElement {
@@ -47,12 +49,13 @@ export class ScrollFeed extends LitElement {
     private dragging = false
     private scrollRaf: number | null = null
     private scrollTimer: ReturnType<typeof setTimeout> | null = null
+    private prevParams = ''
 
     override connectedCallback(): void {
         super.connectedCallback()
         const hydrate = this.communityId === null
-            ? hydratePosts(this.instance, this.feedType, this.sort, this.nsfwFilter)
-            : hydrateCommunityPosts(this.instance, this.communityId, this.sort, this.nsfwFilter)
+            ? hydratePosts(this.instance, this.feedType, this.sort, this.nsfwFilter, this.software)
+            : hydrateCommunityPosts(this.instance, this.communityId, this.sort, this.nsfwFilter, this.software)
         void hydrate
         window.addEventListener('keydown', this.onWindowKeydown)
         // wheel must be non-passive so the container never double-scrolls
@@ -63,7 +66,27 @@ export class ScrollFeed extends LitElement {
         super.disconnectedCallback()
         window.removeEventListener('keydown', this.onWindowKeydown)
         this.removeEventListener('wheel', this.onWheel)
+        window.removeEventListener('pointermove', this.onDragMove)
+        window.removeEventListener('pointerup', this.onDragEnd)
+        window.removeEventListener('pointercancel', this.onDragEnd)
         this.cancelScroll()
+    }
+
+    /** Reset to the top when the feed source or parameters change. */
+    override willUpdate(_changed: Map<string, unknown>): void {
+        const params = JSON.stringify([
+            this.instance,
+            this.feedType,
+            this.sort,
+            this.nsfwFilter,
+            this.software,
+            this.communityId,
+        ])
+        if (this.prevParams !== '' && params !== this.prevParams) {
+            if (this.viewport) this.viewport.scrollTop = 0
+            this.activeIndex = 0
+        }
+        this.prevParams = params
     }
 
     private get posts(): LemmyPost[] {
@@ -140,6 +163,7 @@ export class ScrollFeed extends LitElement {
 
     private nextSlide(): void {
         if (this.activeIndex < this.posts.length - 1) this.scrollToSlide(this.activeIndex + 1)
+        else this.onNearEnd()
     }
 
     private prevSlide(): void {
@@ -161,7 +185,18 @@ export class ScrollFeed extends LitElement {
     private onWindowKeydown = (event: KeyboardEvent): void => {
         if (!this.isConnected) return
         const target = event.target as HTMLElement | null
-        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
+        // never hijack keys from form controls or links
+        if (
+            target &&
+            (target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.tagName === 'SELECT' ||
+                target.tagName === 'BUTTON' ||
+                target.tagName === 'A' ||
+                target.isContentEditable)
+        ) {
+            return
+        }
         switch (event.key) {
             case 'ArrowDown':
             case 'PageDown':
@@ -189,27 +224,29 @@ export class ScrollFeed extends LitElement {
         if (this.query.hasNextPage && !this.query.isFetchingNextPage) this.query.fetchNextPage()
     }
 
+    /** Stable drag handlers so disconnect can remove them mid-gesture. */
+    private readonly onDragMove = (move: PointerEvent): void => {
+        this.dragDelta = move.clientY - this.dragStartY
+    }
+    private readonly onDragEnd = (): void => {
+        window.removeEventListener('pointermove', this.onDragMove)
+        window.removeEventListener('pointerup', this.onDragEnd)
+        window.removeEventListener('pointercancel', this.onDragEnd)
+        this.dragging = false
+        if (this.dragDelta < -DRAG_THRESHOLD_PX) this.nextSlide()
+        else if (this.dragDelta > DRAG_THRESHOLD_PX) this.prevSlide()
+        this.dragDelta = 0
+    }
+
     private onPointerDown(event: PointerEvent): void {
         if (event.pointerType !== 'mouse') return
         event.preventDefault()
         this.dragStartY = event.clientY
         this.dragDelta = 0
         this.dragging = true
-        const onMove = (move: PointerEvent): void => {
-            this.dragDelta = move.clientY - this.dragStartY
-        }
-        const onUp = (): void => {
-            window.removeEventListener('pointermove', onMove)
-            window.removeEventListener('pointerup', onUp)
-            window.removeEventListener('pointercancel', onUp)
-            this.dragging = false
-            if (this.dragDelta < -DRAG_THRESHOLD_PX) this.nextSlide()
-            else if (this.dragDelta > DRAG_THRESHOLD_PX) this.prevSlide()
-            this.dragDelta = 0
-        }
-        window.addEventListener('pointermove', onMove)
-        window.addEventListener('pointerup', onUp)
-        window.addEventListener('pointercancel', onUp)
+        window.addEventListener('pointermove', this.onDragMove)
+        window.addEventListener('pointerup', this.onDragEnd)
+        window.addEventListener('pointercancel', this.onDragEnd)
     }
 
     private renderState(): TemplateResult | null {
@@ -243,6 +280,9 @@ export class ScrollFeed extends LitElement {
     }
 
     private renderSlides(): TemplateResult {
+        const count = this.posts.length
+        const from = Math.max(0, this.activeIndex - SLIDE_WINDOW)
+        const to = Math.min(count - 1, this.activeIndex + SLIDE_WINDOW)
         return html`
             <div
                 class="scroll-viewport${this.dragging ? ' dragging' : ''}"
@@ -250,12 +290,17 @@ export class ScrollFeed extends LitElement {
                 @scroll=${this.onScroll}
                 @pointerdown=${this.onPointerDown}
             >
-                <div class="slides">
-                    ${this.posts.map((post, index) => html`<section class="slide" key=${post.id}>
-                        <div class="slide-inner${index === this.activeIndex ? ' active' : ''}">
-                            <lvs-scroll-post .post=${post} .active=${index === this.activeIndex}></lvs-scroll-post>
-                        </div>
-                    </section>`)}
+                <div class="slides" style="height: ${count * 100}%">
+                    ${this.posts.map((post, index) => {
+                        const visible = index >= from && index <= to
+                        return html`<section class="slide" style="transform: translateY(${index * 100}%)">
+                            <div class="slide-inner${index === this.activeIndex ? ' active' : ''}">
+                                ${visible
+                                    ? html`<lvs-scroll-post .post=${post} .active=${index === this.activeIndex}></lvs-scroll-post>`
+                                    : html`<div class="slide-placeholder"></div>`}
+                            </div>
+                        </section>`
+                    })}
                 </div>
             </div>
             <div class="feed-chrome">

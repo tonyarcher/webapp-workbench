@@ -9,7 +9,7 @@ import type {
     PostSort,
     SiteResult,
 } from '../types'
-import {apiGet} from './lemmy'
+import {apiGet, ApiError} from './lemmy'
 import {classifyPost, extractImageUrls} from './post-media'
 
 // ---- raw piefed alpha api shapes (snake_case wire format) ----
@@ -152,16 +152,40 @@ function mapCommunityView(view: RawPiefedCommunityView): LemmyCommunity {
 
 // ---- api calls ----
 
+function unexpectedResponse(instance: string, path: string): ApiError {
+    return new ApiError(`Unexpected response from ${instance} for ${path}`, 200)
+}
+
+function assertPosts(data: unknown, instance: string, path: string): {posts: RawPiefedPostView[]} {
+    if (!data || !Array.isArray((data as {posts?: unknown}).posts)) throw unexpectedResponse(instance, path)
+    return data as {posts: RawPiefedPostView[]}
+}
+
+function assertCommunities(data: unknown, instance: string, path: string): {communities: RawPiefedCommunityView[]} {
+    if (!data || !Array.isArray((data as {communities?: unknown}).communities)) {
+        throw unexpectedResponse(instance, path)
+    }
+    return data as {communities: RawPiefedCommunityView[]}
+}
+
+function assertCommunityView(data: unknown, instance: string, path: string): {community_view: RawPiefedCommunityView} {
+    if (!data || !(data as {community_view?: unknown}).community_view) {
+        throw unexpectedResponse(instance, path)
+    }
+    return data as {community_view: RawPiefedCommunityView}
+}
+
 export async function fetchPiefedSite(instance: string, fetchImpl: typeof fetch = fetch): Promise<SiteResult> {
     const data = (await apiGet(instance, '/api/alpha/site', {}, fetchImpl, null)) as {
-        site: RawPiefedSite
-        version: string
+        site?: RawPiefedSite
+        version?: string
     }
+    if (!data?.site) throw unexpectedResponse(instance, '/api/alpha/site')
     return {
         site: {
             name: data.site.name,
             actorId: data.site.actor_id,
-            version: data.version,
+            version: data.version ?? '',
             icon: data.site.icon,
             description: data.site.description,
         },
@@ -182,13 +206,11 @@ export async function fetchPiefedPosts(
     {instance, feedType, sort, page, limit, nsfwFilter = 'Include'}: PiefedPostsQuery,
     fetchImpl: typeof fetch = fetch,
 ): Promise<PostPage> {
-    const data = (await apiGet(
+    const data = assertPosts(
+        await apiGet(instance, '/api/alpha/post/list', {type_: feedType, sort, page, limit, nsfw: nsfwFilter}, fetchImpl, null),
         instance,
         '/api/alpha/post/list',
-        {type_: feedType, sort, page, limit, nsfw: nsfwFilter},
-        fetchImpl,
-        null,
-    )) as {posts: RawPiefedPostView[]}
+    )
     return {posts: data.posts.map(mapPostView), page}
 }
 
@@ -205,13 +227,17 @@ export async function fetchPiefedCommunityPosts(
     {instance, communityId, sort, page, limit, nsfwFilter = 'Include'}: PiefedCommunityPostsQuery,
     fetchImpl: typeof fetch = fetch,
 ): Promise<PostPage> {
-    const data = (await apiGet(
+    const data = assertPosts(
+        await apiGet(
+            instance,
+            '/api/alpha/post/list',
+            {community_id: communityId, sort, page, limit, nsfw: nsfwFilter},
+            fetchImpl,
+            null,
+        ),
         instance,
         '/api/alpha/post/list',
-        {community_id: communityId, sort, page, limit, nsfw: nsfwFilter},
-        fetchImpl,
-        null,
-    )) as {posts: RawPiefedPostView[]}
+    )
     return {posts: data.posts.map(mapPostView), page}
 }
 
@@ -227,13 +253,19 @@ export async function fetchPiefedCommunities(
     {instance, sort, page, limit, nsfwFilter = 'Include'}: PiefedCommunitiesQuery,
     fetchImpl: typeof fetch = fetch,
 ): Promise<CommunityPage> {
-    const data = (await apiGet(
+    // PieFed's community list only accepts a boolean; 'Only' cannot be
+    // expressed, so it degrades to showing NSFW like 'Include'.
+    const data = assertCommunities(
+        await apiGet(
+            instance,
+            '/api/alpha/community/list',
+            {type_: 'All', sort, page, limit, show_nsfw: nsfwFilter !== 'Exclude'},
+            fetchImpl,
+            null,
+        ),
         instance,
         '/api/alpha/community/list',
-        {type_: 'All', sort, page, limit, show_nsfw: nsfwFilter !== 'Only'},
-        fetchImpl,
-        null,
-    )) as {communities: RawPiefedCommunityView[]}
+    )
     return {communities: data.communities.map(mapCommunityView), page}
 }
 
@@ -243,15 +275,19 @@ export async function fetchPiefedCommunitySearch(
     search: string,
     limit: number,
     fetchImpl: typeof fetch = fetch,
-    nsfwFilter = 'Include',
+    nsfwFilter: NsfwFilter = 'Include',
 ): Promise<LemmyCommunity[]> {
-    const data = (await apiGet(
+    const data = assertCommunities(
+        await apiGet(
+            instance,
+            '/api/alpha/search',
+            {q: search, type_: 'Communities', limit, nsfw: nsfwFilter},
+            fetchImpl,
+            null,
+        ),
         instance,
         '/api/alpha/search',
-        {q: search, type_: 'Communities', limit, nsfw: nsfwFilter},
-        fetchImpl,
-        null,
-    )) as {communities: RawPiefedCommunityView[]}
+    )
     return data.communities.map(mapCommunityView)
 }
 
@@ -260,12 +296,10 @@ export async function fetchPiefedCommunity(
     communityId: number,
     fetchImpl: typeof fetch = fetch,
 ): Promise<LemmyCommunity> {
-    const data = (await apiGet(
+    const data = assertCommunityView(
+        await apiGet(instance, '/api/alpha/community', {id: communityId}, fetchImpl, null),
         instance,
         '/api/alpha/community',
-        {id: communityId},
-        fetchImpl,
-        null,
-    )) as {community_view: RawPiefedCommunityView}
+    )
     return mapCommunityView(data.community_view)
 }

@@ -102,19 +102,28 @@ export interface ResolvedVideo {
     candidates: string[]
 }
 
+const RESOLVE_CACHE_TTL_MS = 10 * 60_000
+const resolveCache = new Map<string, {value: ResolvedVideo; at: number}>()
+
 /**
  * Resolves a video source for the scroll player. Direct media files pass
  * through unchanged; redgifs watch pages use the public token flow to get
  * the gif's media URLs. The bucket serves plain media requests fine — no
  * CORS probing needed, the <video> element reports failures itself.
+ * Results are memoized (bounded TTL) so scrolling back through the feed
+ * does not re-contact the embed provider for the same clips.
  */
 export async function resolveVideoUrl(
     videoUrl: string | null,
     fetchImpl: typeof fetch = fetch,
+    opts?: {force?: boolean},
 ): Promise<ResolvedVideo> {
     if (!videoUrl) return {src: null, poster: null, candidates: []}
     const id = redgifsId(videoUrl)
     if (!id || urlHasVideoExt(videoUrl)) return {src: videoUrl, poster: null, candidates: []}
+    const cached = resolveCache.get(videoUrl)
+    if (!opts?.force && cached && Date.now() - cached.at < RESOLVE_CACHE_TTL_MS) return cached.value
+    let resolved: ResolvedVideo
     try {
         const tokenResponse = await fetchImpl(`https://api.redgifs.com/v2/auth/temporary?path=/ifr/${id}`, {
             headers: {Accept: 'application/json'},
@@ -136,12 +145,14 @@ export async function resolveVideoUrl(
         }
         const urls = gif?.urls ?? {}
         const candidates = [urls.sd, urls.hd, urls.silent].filter((url): url is string => !!url)
-        return {
+        resolved = {
             src: candidates[0] ?? null,
             poster: urls.poster ?? urls.thumbnail ?? null,
             candidates,
         }
     } catch {
-        return {src: null, poster: null, candidates: []}
+        resolved = {src: null, poster: null, candidates: []}
     }
+    resolveCache.set(videoUrl, {value: resolved, at: Date.now()})
+    return resolved
 }

@@ -1,6 +1,6 @@
 import {LitElement, html, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
-import {customElement, property} from 'lit/decorators.js'
+import {customElement, property, state} from 'lit/decorators.js'
 import {ref} from 'lit/directives/ref.js'
 import {communitiesInfiniteQuery, hydrateCommunities, InfiniteQueryController} from '../../query'
 import {navigate} from '../../router'
@@ -30,13 +30,21 @@ export class CommunityList extends LitElement {
         () => this.onNearEnd(),
     )
     private listEl: HTMLElement | null = null
-    private search = ''
+    @state() private search = ''
     private searchTimer: ReturnType<typeof setTimeout> | null = null
     private prevSearch = ''
 
     override connectedCallback(): void {
         super.connectedCallback()
-        void hydrateCommunities(this.instance, this.sort, '', this.nsfwFilter)
+        void hydrateCommunities(this.instance, this.sort, '', this.nsfwFilter, this.software)
+    }
+
+    override disconnectedCallback(): void {
+        super.disconnectedCallback()
+        if (this.searchTimer) {
+            clearTimeout(this.searchTimer)
+            this.searchTimer = null
+        }
     }
 
     override updated(changed: Map<string, unknown>): void {

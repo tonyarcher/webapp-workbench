@@ -153,7 +153,19 @@ export class AppShell extends LitElement {
             ></lvs-settings-view>`
         }
         // feed/communities/community views need to know the instance software first
-        if (!this.siteController.value.data) return html`<div class="boot-skeleton"></div>`
+        const site = this.siteController.value
+        if (site.status === 'error') {
+            const detail = site.error instanceof Error ? site.error.message : String(site.error ?? '')
+            return html`<div class="boot-error">
+                <p class="state-title">Could not reach ${this.instance}</p>
+                <p class="state-detail">${detail}</p>
+                <div class="state-actions">
+                    <button class="retry-button" @click=${() => this.siteController.refetch()}>Retry</button>
+                    <button class="retry-button" @click=${() => navigate({kind: 'settings'})}>Change instance</button>
+                </div>
+            </div>`
+        }
+        if (!site.data) return html`<div class="boot-skeleton"></div>`
         const postSort = this.clampSort(settings.postSort, postSortsFor(this.software))
         switch (this.view.kind) {
             case 'feed':

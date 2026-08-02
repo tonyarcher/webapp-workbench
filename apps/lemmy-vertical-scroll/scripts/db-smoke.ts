@@ -77,6 +77,17 @@ void (async () => {
     const again = await loadSettings()
     assert(again.instance === 'test.instance' && again.postSort === 'TopAll', 'patches accumulate')
 
+    // concurrent saves must not drop each other's patch
+    await Promise.all([
+        saveSettings({feedType: 'Local'}),
+        saveSettings({nsfwFilter: 'Exclude'}),
+    ])
+    const concurrent = await loadSettings()
+    assert(
+        concurrent.feedType === 'Local' && concurrent.nsfwFilter === 'Exclude',
+        'concurrent saves both persist',
+    )
+
     // ---- posts cache ----
 
     await putPostsCache('posts:test.instance:All:Hot:1', [post])

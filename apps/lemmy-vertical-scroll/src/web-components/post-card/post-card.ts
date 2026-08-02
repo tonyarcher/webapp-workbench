@@ -2,6 +2,7 @@ import {LitElement, html, nothing, svg, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, property} from 'lit/decorators.js'
 import {compactNumber, timeAgo} from '../../services/format'
+import {safeUrl} from '../../services/url'
 import {navigate} from '../../router'
 import type {LemmyPost} from '../../types'
 import styles from './post-card.css?inline'
@@ -31,8 +32,10 @@ export class PostCard extends LitElement {
             ${post.pinnedLocal || post.pinnedCommunity ? html`<span class="badge pinned">Pinned</span>` : nothing}
             ${post.nsfw ? html`<span class="badge nsfw">NSFW</span>` : nothing}
         </span>`
-        const title = post.url
-            ? html`<a class="card-title" href=${post.url} target="_blank" rel="noopener noreferrer">${post.name}</a>`
+        const postUrl = safeUrl(post.url)
+        const thumbnail = safeUrl(post.thumbnailUrl)
+        const title = postUrl
+            ? html`<a class="card-title" href=${postUrl} target="_blank" rel="noopener noreferrer">${post.name}</a>`
             : html`<span class="card-title">${post.name}</span>`
         return html`
             <article class="post-card">
@@ -44,8 +47,8 @@ export class PostCard extends LitElement {
                     ${meta}
                     ${title}
                     ${post.body ? html`<p class="card-text">${post.body}</p>` : nothing}
-                    ${post.thumbnailUrl
-                        ? html`<img class="card-thumb" src=${post.thumbnailUrl} alt="" loading="lazy" referrerpolicy="no-referrer"/>`
+                    ${thumbnail
+                        ? html`<img class="card-thumb" src=${thumbnail} alt="" loading="lazy" referrerpolicy="no-referrer"/>`
                         : nothing}
                     <span class="card-actions">
                         <span class="stat"><span class="stat-icon up">${UP_ICON}</span>${compactNumber(post.upvotes)}</span>

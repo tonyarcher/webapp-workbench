@@ -4,7 +4,7 @@ import {queryClient, settingsKey} from './query'
 import type {CommunitySort, FeedType, NsfwFilter, PostSort, Settings, ViewMode} from './types'
 
 function patchSettings(patch: Partial<Settings>): void {
-    void saveSettings(patch)
+    void saveSettings(patch).catch((error) => console.error('saveSettings failed', error))
     queryClient.setQueryData<Settings>(settingsKey, (old) => (old ? {...old, ...patch} : undefined))
 }
 
@@ -12,8 +12,8 @@ function patchSettings(patch: Partial<Settings>): void {
 export function setInstance(instance: string): void {
     patchSettings({instance})
     queryClient.removeQueries({predicate: (query) => query.queryKey[0] !== 'settings'})
-    void clearPostsCache()
-    void clearCommunitiesCache()
+    void clearPostsCache().catch(() => {})
+    void clearCommunitiesCache().catch(() => {})
 }
 
 export function setFeedType(feedType: FeedType): void {

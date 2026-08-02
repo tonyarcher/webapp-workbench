@@ -3,6 +3,7 @@ import type {TemplateResult} from 'lit'
 import {customElement, property} from 'lit/decorators.js'
 import {classifyPost} from '../../services/post-media'
 import {compactNumber, timeAgo} from '../../services/format'
+import {safeUrl} from '../../services/url'
 import type {LemmyPost} from '../../types'
 import '../scroll-media-image/scroll-media-image'
 import '../scroll-media-text/scroll-media-text'
@@ -35,10 +36,12 @@ export class ScrollPost extends LitElement {
     }
 
     private renderLinkChip(): TemplateResult {
-        if (classifyPost(this.post) !== 'link' || !this.post.linkUrl) return html``
+        if (classifyPost(this.post) !== 'link') return html``
+        const link = safeUrl(this.post.linkUrl)
+        if (!link) return html``
         return html`<a
             class="link-chip"
-            href=${this.post.linkUrl}
+            href=${link}
             target="_blank"
             rel="noopener noreferrer"
             @click=${(e: Event) => e.stopPropagation()}
@@ -48,6 +51,7 @@ export class ScrollPost extends LitElement {
     override render(): TemplateResult {
         const {post} = this
         const isVideo = classifyPost(post) === 'video'
+        const original = safeUrl(post.postUrl)
         return html`
             <div class="scroll-post">
                 <div class="media-wrap">${this.renderMedia()}</div>
@@ -65,7 +69,9 @@ export class ScrollPost extends LitElement {
                         <span class="stat up">${UP_ICON} ${compactNumber(post.upvotes)}</span>
                         <span class="stat down">${DOWN_ICON} ${compactNumber(post.downvotes)}</span>
                         <span class="stat">${COMMENT_ICON} ${compactNumber(post.comments)}</span>
-                        <a class="open-link" href=${post.postUrl} target="_blank" rel="noopener noreferrer">Open original ↗</a>
+                        ${original
+                            ? html`<a class="open-link" href=${original} target="_blank" rel="noopener noreferrer">Open original ↗</a>`
+                            : html``}
                     </div>
                 </div>
             </div>

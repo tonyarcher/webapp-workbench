@@ -5,8 +5,9 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "tsc --noEmit && vite build",
-        "test": "tsx scripts/smoke.ts && tsx scripts/db-smoke.ts"
+        "build": "tsc --noEmit && vite build && node scripts/stamp-sw.mjs",
+        "test": "tsx scripts/smoke.ts && tsx scripts/db-smoke.ts && tsx scripts/query-smoke.ts",
+        "verify": "npm run build && npm run test"
     },
     "dependencies": {
         "@tanstack/history": "^1.162.0",

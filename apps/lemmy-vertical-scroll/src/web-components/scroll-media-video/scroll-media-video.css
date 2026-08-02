@@ -76,15 +76,25 @@
     font-size: 14px;
 }
 
-.fallback-link {
+.fallback-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.fallback-link,
+.fallback-button {
     color: #fff;
     font-size: 13px;
     text-decoration: none;
     padding: 8px 16px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.15);
+    border: none;
+    cursor: pointer;
+    font: inherit;
 }
 
-.fallback-link:hover {
+.fallback-link:hover,
+.fallback-button:hover {
     background: rgba(255, 255, 255, 0.25);
 }
