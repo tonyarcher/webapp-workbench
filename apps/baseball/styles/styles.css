@@ -50,7 +50,7 @@ h1, h2, h3 {
     font-weight: 700;
 }
 
-/* --- Utilities used by Kotlin-rendered DOM ------------------ */
+/* --- Utilities shared by the React app and web components ---- */
 
 /* Grid layouts */
 .action-grid-2col {
@@ -185,16 +185,4 @@ h1, h2, h3 {
 
 .padding-lg {
     padding: 2rem;
-}
-
-/* Server error banner — rendered by Kotlin on API failures */
-.server-error-banner {
-    background: rgba(255, 59, 48, 0.15);
-    border: 1px solid rgba(255, 59, 48, 0.3);
-    border-radius: 8px;
-    color: #ff8e88;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    font-weight: 500;
 }
