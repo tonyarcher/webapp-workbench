@@ -259,4 +259,70 @@ describe('Scoring Components', () => {
       expect(opened).to.be.true;
     });
   });
+
+  describe('Shadow DOM event boundary regression', () => {
+    it('crosses the action-grid shadow boundary to an outer host listener', async () => {
+      const host = document.createElement('div');
+      const shadow = host.attachShadow({ mode: 'open' });
+      document.body.appendChild(host);
+
+      const grid = document.createElement('baseball-action-grid') as BaseballActionGrid;
+      shadow.appendChild(grid);
+      await grid.updateComplete;
+
+      let received: string | null = null;
+      host.addEventListener('trigger-scoring-event', (e: Event) => {
+        received = (e as CustomEvent).detail?.eventType ?? null;
+      });
+
+      const ballBtn = grid.shadowRoot!.querySelector('.btn-ball') as HTMLElement;
+      ballBtn.click();
+
+      expect(received).to.equal('BALL');
+      host.remove();
+    });
+
+    it('crosses action-grid and scoring-controls shadow roots to a document listener', async () => {
+      const controls = document.createElement('baseball-scoring-controls') as BaseballScoringControls;
+      document.body.appendChild(controls);
+      await controls.updateComplete;
+
+      let received: string | null = null;
+      const handler = (e: Event) => {
+        received = (e as CustomEvent).detail?.eventType ?? null;
+      };
+      document.body.addEventListener('trigger-scoring-event', handler);
+
+      const actionGrid = controls.shadowRoot!.querySelector('baseball-action-grid') as BaseballActionGrid;
+      const ballBtn = actionGrid.shadowRoot!.querySelector('.btn-ball') as HTMLElement;
+      ballBtn.click();
+
+      expect(received).to.equal('BALL');
+      document.body.removeEventListener('trigger-scoring-event', handler);
+      controls.remove();
+    });
+
+    it('reaches a document listener with render-step2 detail', async () => {
+      const controls = document.createElement('baseball-scoring-controls') as BaseballScoringControls;
+      document.body.appendChild(controls);
+      await controls.updateComplete;
+
+      let receivedEventType = '';
+      let receivedLabel = '';
+      const handler = (e: Event) => {
+        receivedEventType = (e as CustomEvent).detail?.eventType ?? '';
+        receivedLabel = (e as CustomEvent).detail?.baseLabel ?? '';
+      };
+      document.body.addEventListener('render-step2', handler);
+
+      const actionGrid = controls.shadowRoot!.querySelector('baseball-action-grid') as BaseballActionGrid;
+      const singleBtn = actionGrid.shadowRoot!.querySelector('.btn-hit') as HTMLElement;
+      singleBtn.click();
+
+      expect(receivedEventType).to.equal('SINGLE');
+      expect(receivedLabel).to.equal('Single (1B)');
+      document.body.removeEventListener('render-step2', handler);
+      controls.remove();
+    });
+  });
 });

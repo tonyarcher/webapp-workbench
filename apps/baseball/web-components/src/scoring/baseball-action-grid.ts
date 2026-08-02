@@ -93,6 +93,7 @@ export class BaseballActionGrid extends LitElement {
             new CustomEvent('pitch-type-selected', {
                 detail: {pitchType},
                 bubbles: true,
+                composed: true,
             })
         );
     }
@@ -102,6 +103,7 @@ export class BaseballActionGrid extends LitElement {
             new CustomEvent('trigger-scoring-event', {
                 detail: {eventType},
                 bubbles: true,
+                composed: true,
             })
         );
     }
@@ -111,6 +113,7 @@ export class BaseballActionGrid extends LitElement {
             new CustomEvent('render-step2', {
                 detail: {eventType, baseLabel},
                 bubbles: true,
+                composed: true,
             })
         );
     }
