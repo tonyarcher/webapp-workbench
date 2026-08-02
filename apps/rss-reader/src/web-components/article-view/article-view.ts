@@ -1,7 +1,7 @@
 import {html, LitElement, unsafeCSS} from 'lit';
 import {unsafeHTML} from 'lit/directives/unsafe-html.js';
 import {customElement, property, state} from 'lit/decorators.js';
-import {sanitizeHtml, stripHtml} from '../../services/parser';
+import {sanitizeHtml, safeHttpUrl, stripHtml} from '../../services/parser';
 import {aiAvailability, aiStatusMessage, summarizeArticle} from '../../ai';
 import {toggleStar} from '../../mutations';
 import type {Article} from '../../types';
@@ -33,6 +33,7 @@ export class ArticleView extends LitElement {
         const a = this.article;
         if (!a) return html``;
         const body = a.content ? sanitizeHtml(a.content) : '';
+        const link = safeHttpUrl(a.link);
 
         return html`
       <div class="toolbar">
@@ -47,8 +48,8 @@ export class ArticleView extends LitElement {
           ${this.summarizing ? 'Summarizing…' : this.aiSummary ? '✓ Summarized' : '✨ Summarize'}
         </button>
         <div class="spacer"></div>
-        ${a.link
-            ? html`<a class="btn primary" href=${a.link} target="_blank" rel="noopener noreferrer">View original ↗</a>`
+        ${link
+            ? html`<a class="btn primary" href=${link} target="_blank" rel="noopener noreferrer">View original ↗</a>`
             : ''}
       </div>
       <div class="body">
@@ -81,6 +82,9 @@ export class ArticleView extends LitElement {
         const next = !this.article.starred;
         this.article = {...this.article, starred: next};
         void toggleStar(this.article.id);
+        window.dispatchEvent(
+            new CustomEvent('article-starred', {detail: {id: this.article.id, starred: next}}),
+        );
     }
 
     private async onSummarize() {
@@ -108,6 +112,8 @@ export class ArticleView extends LitElement {
                 return;
             }
             const summary = await summarizeArticle(a.title, text.slice(0, MAX_SUMMARY_CHARS));
+            // Discard results that land after the user navigated to another article.
+            if (this.article?.id !== a.id) return;
             summaryCache.set(a.id, summary);
             this.aiSummary = summary;
         } catch (err) {

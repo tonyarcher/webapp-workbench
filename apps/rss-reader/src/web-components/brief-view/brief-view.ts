@@ -1,7 +1,8 @@
 import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, state} from 'lit/decorators.js';
-import {libraryKey, QueryController} from '../../query';
+import {libraryKey, queryClient, QueryController} from '../../query';
 import {getFeeds, getFolders, queryRecentArticles} from '../../db/db';
+import {markArticleRead} from '../../mutations';
 import {
     aiAvailability,
     type AiAvailability,
@@ -61,7 +62,49 @@ export class BriefView extends LitElement {
         });
     }
 
+    override connectedCallback() {
+        super.connectedCallback();
+        this.scheduleMidnightRollover();
+    }
+
+    override disconnectedCallback() {
+        super.disconnectedCallback();
+        if (this.midnightTimer !== null) clearTimeout(this.midnightTimer);
+        this.midnightTimer = null;
+    }
+
+    private midnightTimer: number | null = null;
+
+    private scheduleMidnightRollover() {
+        if (this.midnightTimer !== null) clearTimeout(this.midnightTimer);
+        const now = new Date();
+        const nextMidnight = new Date(now);
+        nextMidnight.setHours(24, 0, 1, 0);
+        this.midnightTimer = window.setTimeout(() => {
+            this.midnightTimer = null;
+            this.rolloverDay();
+            this.scheduleMidnightRollover();
+        }, nextMidnight.getTime() - now.getTime());
+    }
+
+    private rolloverDay(): boolean {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (today.getTime() !== this.startOfToday.getTime()) {
+            this.startOfToday = today;
+            this.generatedFor = '';
+            this.summary = '';
+            this.requestUpdate();
+            return true;
+        }
+        return false;
+    }
+
     override updated(_changed: Map<string, unknown>) {
+        // Rolls the day over even when idle (timer), not just on updates.
+        // Return early so a new-day brief can't be generated from the
+        // previous day's articles before the query key refreshes.
+        if (this.rolloverDay()) return;
         if (
             this.availability === 'readily' &&
             this.articles.data?.length &&
@@ -128,7 +171,14 @@ export class BriefView extends LitElement {
               <div class="articles">
                 ${articles.map(
                 (a) => html`
-                    <div class="article ${a.read === 0 ? 'unread' : ''}" @click=${() => this.openArticle(a)}>
+                    <div
+                      class="article ${a.read === 0 ? 'unread' : ''}"
+                      role="button"
+                      tabindex="0"
+                      aria-label="Open ${a.title}"
+                      @click=${() => this.openArticle(a)}
+                      @keydown=${(e: KeyboardEvent) => this.onRowKey(e, a)}
+                    >
                       <span class="dot"></span>
                       <span class="title">${a.title}</span>
                       <span class="src">${this.feedTitle(a.feedId) || domainOf(a.link)}</span>
@@ -141,6 +191,13 @@ export class BriefView extends LitElement {
             : html`<div class="empty">No articles published today yet. Sync your feeds and check back.</div>`}
       </div>
     `;
+    }
+
+    private onRowKey(e: KeyboardEvent, article: Article) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            this.openArticle(article);
+        }
     }
 
     private feedTitle(feedId: string): string {
@@ -172,7 +229,10 @@ export class BriefView extends LitElement {
                 ``,
                 `Write a concise daily brief covering these stories. Use short markdown bullets. Highlight the most important items first. Do not mention "the user" or "the reader".`,
             ].join('\n');
-            this.summary = await runAiPrompt(prompt, systemPrompt);
+            const summary = await runAiPrompt(prompt, systemPrompt);
+            // Discard results that land after the day rolled over mid-generation.
+            if (this.generatedFor !== this.startOfToday.toDateString()) return;
+            this.summary = summary;
         } catch (err) {
             this.error = err instanceof Error ? err.message : 'Could not generate the brief';
         } finally {
@@ -181,6 +241,13 @@ export class BriefView extends LitElement {
     }
 
     private openArticle(article: Article) {
+        if (article.read === 0) {
+            // Chain the brief refresh after the write so a refetch can't win
+            // the race and re-show the article as unread.
+            void markArticleRead(article.id).then(() =>
+                queryClient.invalidateQueries({queryKey: ['brief']}),
+            );
+        }
         const items = this.articles.data ?? [];
         const index = items.findIndex((a) => a.id === article.id);
         this.dispatchEvent(

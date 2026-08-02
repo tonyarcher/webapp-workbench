@@ -1,5 +1,6 @@
 import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
+import {safeHttpUrl} from '../../services/parser';
 import styles from './lazy-img.css?inline';
 
 /**
@@ -44,6 +45,13 @@ export class LazyImg extends LitElement {
 
     private load() {
         if (!this.src || this.state !== 'waiting') return;
+        // Legacy records may predate parse-time filtering; never load
+        // non-http(s) sources.
+        const src = safeHttpUrl(this.src);
+        if (!src) {
+            this.state = 'error';
+            return;
+        }
         this.state = 'loading';
         const img = document.createElement('img');
         img.alt = '';
@@ -54,7 +62,7 @@ export class LazyImg extends LitElement {
         img.addEventListener('error', () => {
             this.state = 'error';
         });
-        img.src = this.src;
+        img.src = src;
         this.img = img;
     }
 

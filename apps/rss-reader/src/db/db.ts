@@ -1,4 +1,4 @@
-import {type DBSchema, type IDBPCursorWithValue, type IDBPDatabase, openDB} from 'idb';
+import {type DBSchema, type IDBPCursorWithValue, type IDBPDatabase, type IDBPTransaction, type StoreNames, openDB} from 'idb';
 import {contentEngagement, hotScore} from '../services/ranking';
 import {firstImageUrl} from '../services/parser';
 import type {Article, Feed, Folder} from '../types';
@@ -33,34 +33,77 @@ interface ReaderDB extends DBSchema {
     };
 }
 
+type UpgradeTx = IDBPTransaction<ReaderDB, StoreNames<ReaderDB>[], 'versionchange'>;
+
+type ArticleIndexName =
+    | 'byFeedId'
+    | 'byPublished'
+    | 'byFeedDate'
+    | 'byReadDate'
+    | 'byFeedRead'
+    | 'byLink'
+    | 'byHot'
+    | 'byFeedHot';
+
+const ARTICLE_INDEXES: [ArticleIndexName, string | string[]][] = [
+    ['byFeedId', 'feedId'],
+    ['byPublished', ['published', 'id']],
+    ['byFeedDate', ['feedId', 'published', 'id']],
+    ['byReadDate', ['read', 'published']],
+    ['byFeedRead', ['feedId', 'read']],
+    ['byLink', 'normLink'],
+    ['byHot', ['hot', 'id']],
+    ['byFeedHot', ['feedId', 'hot', 'id']],
+];
+
+/**
+ * Create missing stores/indexes without ever deleting existing ones. Older
+ * builds wiped every store on upgrade, destroying subscriptions and read
+ * state; this keeps user data and only adds whatever the current schema
+ * needs.
+ */
+function ensureSchema(db: IDBPDatabase<ReaderDB>, tx: UpgradeTx) {
+    if (!db.objectStoreNames.contains('folders')) {
+        db.createObjectStore('folders', {keyPath: 'id'});
+    }
+    if (!db.objectStoreNames.contains('feeds')) {
+        const feeds = db.createObjectStore('feeds', {keyPath: 'id'});
+        feeds.createIndex('byFolderId', 'folderId');
+    }
+    if (!db.objectStoreNames.contains('articles')) {
+        const articles = db.createObjectStore('articles', {keyPath: 'id'});
+        for (const [name, keyPath] of ARTICLE_INDEXES) articles.createIndex(name, keyPath as never);
+    }
+    if (!db.objectStoreNames.contains('meta')) {
+        db.createObjectStore('meta', {keyPath: 'key'});
+    }
+
+    const feeds = tx.objectStore('feeds');
+    if (!feeds.indexNames.contains('byFolderId')) feeds.createIndex('byFolderId', 'folderId');
+    const articles = tx.objectStore('articles');
+    for (const [name, keyPath] of ARTICLE_INDEXES) {
+        if (!articles.indexNames.contains(name)) articles.createIndex(name, keyPath as never);
+    }
+}
+
 let dbPromise: Promise<IDBPDatabase<ReaderDB>> | undefined;
 
 export function getDb() {
     if (!dbPromise) {
         dbPromise = openDB<ReaderDB>('rss-reader', 4, {
             upgrade(db, _oldVersion, _newVersion, tx) {
-                if (db.objectStoreNames.contains('folders')) db.deleteObjectStore('folders');
-                if (db.objectStoreNames.contains('feeds')) db.deleteObjectStore('feeds');
-                if (db.objectStoreNames.contains('articles')) db.deleteObjectStore('articles');
-                if (db.objectStoreNames.contains('meta')) db.deleteObjectStore('meta');
-                db.createObjectStore('folders', {keyPath: 'id'});
-                const feeds = db.createObjectStore('feeds', {keyPath: 'id'});
-                feeds.createIndex('byFolderId', 'folderId');
-                const articles = db.createObjectStore('articles', {keyPath: 'id'});
-                articles.createIndex('byFeedId', 'feedId');
-                articles.createIndex('byPublished', ['published', 'id']);
-                articles.createIndex('byFeedDate', ['feedId', 'published', 'id']);
-                articles.createIndex('byReadDate', ['read', 'published']);
-                articles.createIndex('byFeedRead', ['feedId', 'read']);
-                articles.createIndex('byLink', 'normLink');
-                articles.createIndex('byHot', ['hot', 'id']);
-                articles.createIndex('byFeedHot', ['feedId', 'hot', 'id']);
-                db.createObjectStore('meta', {keyPath: 'key'});
-                void tx;
+                ensureSchema(db, tx);
             },
         });
     }
     return dbPromise;
+}
+
+/** Close the cached connection and drop it (used by tests to reopen fresh). */
+export async function closeDb(): Promise<void> {
+    const pending = dbPromise;
+    dbPromise = undefined;
+    if (pending) (await pending).close();
 }
 
 export const uid = () =>
@@ -103,6 +146,24 @@ export async function putFolder(folder: Folder): Promise<void> {
 
 export async function deleteFolder(id: string): Promise<void> {
     await (await getDb()).delete('folders', id);
+}
+
+/** Delete a folder and strip it from every feed in one transaction. */
+export async function deleteFolderTx(folderId: string): Promise<void> {
+    const db = await getDb();
+    const tx = db.transaction(['folders', 'feeds'], 'readwrite');
+    await tx.objectStore('folders').delete(folderId);
+    let cursor = await tx.objectStore('feeds').openCursor();
+    while (cursor) {
+        // normalizeFeed guards legacy feeds stored with only `folderId`
+        const feed = normalizeFeed(cursor.value);
+        if (feed.folderIds.includes(folderId)) {
+            feed.folderIds = feed.folderIds.filter((id) => id !== folderId);
+            await cursor.update(feed);
+        }
+        cursor = await cursor.continue();
+    }
+    await tx.done;
 }
 
 export async function getFeeds(): Promise<Feed[]> {
@@ -187,6 +248,116 @@ export async function getArticle(id: string): Promise<Article | undefined> {
     return (await getDb()).get('articles', id);
 }
 
+/** All stored copies of a canonical link (syndication lookup). */
+export async function queryArticlesByLink(link: string): Promise<Article[]> {
+    const db = await getDb();
+    return db.getAllFromIndex('articles', 'byLink', link);
+}
+
+export interface BumpSpec {
+    /** Article id of the copy to bump. */
+    id: string;
+    /** affinityBoostScore(...) computed for that copy's feed/domain/author. */
+    affinityBoost: number;
+    velocity: number;
+}
+
+export interface IngestResult {
+    inserted: number;
+    unread: number;
+}
+
+/**
+ * Single-transaction feed ingest: upsert articles (preserving read/starred),
+ * apply syndication bumps, and fold new articles into the feed's unread
+ * counter together, so a failure mid-ingest can't leave counters and
+ * articles out of sync. Copies are only bumped for links this ingest newly
+ * inserted (syndication grew) — re-ingests are inert.
+ *
+ * Concurrency: the feed's unread counter is read inside the transaction
+ * (never trusting the caller's snapshot), and each bump re-reads the current
+ * copy before applying the +3 delta, so concurrent mark-read/star changes
+ * or other syncs can't be overwritten by stale snapshots. If the feed was
+ * deleted while a sync was in flight, the ingest is a no-op (no resurrection);
+ * `createIfMissing` allows brand-new feeds (addFeedFromUrl) to be written.
+ */
+export async function ingestArticlesTx(
+    items: Article[],
+    bumpsByLink: ReadonlyMap<string, ReadonlyMap<string, BumpSpec>>,
+    feedPatch: Feed,
+    createIfMissing: boolean,
+): Promise<IngestResult> {
+    const db = await getDb();
+    const tx = db.transaction(['articles', 'feeds'], 'readwrite');
+    const currentFeed = await tx.objectStore('feeds').get(feedPatch.id);
+    if (!currentFeed && !createIfMissing) {
+        await tx.done;
+        return {inserted: 0, unread: 0};
+    }
+
+    const store = tx.objectStore('articles');
+    let inserted = 0;
+    const insertedLinks = new Set<string>();
+    for (const article of items) {
+        const existing = await store.get(article.id);
+        if (existing) {
+            await store.put({...existing, ...article, read: existing.read, starred: existing.starred});
+        } else {
+            await store.put(article);
+            inserted++;
+            if (article.normLink) insertedLinks.add(article.normLink);
+        }
+    }
+    // A copy carries exactly one canonical link, and specs are deduped by
+    // article id per link (a feed can list the same story twice).
+    for (const link of insertedLinks) {
+        for (const spec of bumpsByLink.get(link)?.values() ?? []) {
+            const current = await store.get(spec.id);
+            if (!current) continue;
+            const popularity = current.popularity + 3;
+            const engagement = contentEngagement(current) + spec.affinityBoost + spec.velocity;
+            await store.put({
+                ...current,
+                popularity,
+                engagement,
+                hot: hotScore(popularity, engagement, current.published),
+                image: current.image ?? firstImageUrl(current.content),
+            });
+        }
+    }
+    const unread = (currentFeed?.unread ?? 0) + inserted;
+    const merged = currentFeed
+        ? {
+            ...currentFeed,
+            // Only the sync-managed fields; never revert concurrent edits
+            // to folderIds/unread/read state made while the fetch was in flight.
+            title: feedPatch.title,
+            siteUrl: feedPatch.siteUrl,
+            lastFetchedAt: feedPatch.lastFetchedAt,
+            lastError: feedPatch.lastError,
+            unread,
+        }
+        : {...feedPatch, unread};
+    await tx.objectStore('feeds').put(merged);
+    await tx.done;
+    return {inserted, unread};
+}
+
+/**
+ * Surface a sync error on a feed only if it still exists — a no-op when the
+ * feed was deleted while its fetch was in flight, so failures can't
+ * resurrect a deleted feed.
+ */
+export async function updateFeedErrorIfExists(feedId: string, lastError: string): Promise<void> {
+    const db = await getDb();
+    const tx = db.transaction('feeds', 'readwrite');
+    const feed = await tx.store.get(feedId);
+    if (feed) {
+        await tx.store.put({...feed, lastError});
+    }
+    await tx.done;
+}
+
 export async function upsertArticles(articles: Article[]): Promise<number> {
     const db = await getDb();
     const tx = db.transaction('articles', 'readwrite');
@@ -261,9 +432,10 @@ export async function queryArticles({
         let list = sorted;
         if (cursor) {
             const idx = list.findIndex((a) => a.id === cursor.id);
-            if (idx >= 0) list = list.slice(idx + 1);
+            if (idx < 0) return {items: [], hasMore: false};
+            list = list.slice(idx + 1);
         }
-        return {items: list.slice(0, limit), hasMore: false};
+        return {items: list.slice(0, limit), hasMore: list.length > limit};
     }
 
     let range: IDBKeyRange | undefined;
@@ -435,13 +607,28 @@ export async function markReadBefore(feedId: string | undefined, cutoff: number)
     await tx.done;
 }
 
-export async function decrementFeedUnread(feedId: string): Promise<void> {
+/**
+ * Mark one article read and decrement its feed's unread counter in a single
+ * transaction, so concurrent callers can't double-decrement. Returns whether
+ * the article was actually flipped (false if already read or missing).
+ */
+export async function markArticleReadTx(articleId: string): Promise<boolean> {
     const db = await getDb();
-    const feed = await db.get('feeds', feedId);
+    const tx = db.transaction(['articles', 'feeds'], 'readwrite');
+    const article = await tx.objectStore('articles').get(articleId);
+    if (!article || article.read === 1) {
+        await tx.done;
+        return false;
+    }
+    article.read = 1;
+    await tx.objectStore('articles').put(article);
+    const feed = await tx.objectStore('feeds').get(article.feedId);
     if (feed && feed.unread > 0) {
         feed.unread -= 1;
-        await db.put('feeds', feed);
+        await tx.objectStore('feeds').put(feed);
     }
+    await tx.done;
+    return true;
 }
 
 export async function getAllArticlesCount(): Promise<number> {

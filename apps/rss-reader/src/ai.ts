@@ -106,7 +106,9 @@ function normalizeAvailability(value: string | undefined): AiAvailability {
 let cachedAvailability: AiAvailability | undefined;
 
 function setAvailability(value: AiAvailability): AiAvailability {
-    cachedAvailability = value;
+    // 'after-download' is transient — re-probe on the next call instead of
+    // caching it forever, so the UI can retry once the model finishes.
+    if (value !== 'after-download') cachedAvailability = value;
     return value;
 }
 

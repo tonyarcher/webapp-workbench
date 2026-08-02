@@ -1,4 +1,4 @@
-import {getDb, getFeed, getMetaMany, putFeed, uid} from '../db/db';
+import {type BumpSpec, getFeed, getMetaMany, ingestArticlesTx, queryArticlesByLink, uid, updateFeedErrorIfExists} from '../db/db';
 import {firstImageUrl, parseFeedXml} from './parser';
 import {fetchFeedText} from './proxy';
 import {
@@ -59,12 +59,17 @@ function engagementFor(
  *   - syndication: how many distinct subscribed feeds carry the same canonical link
  *   - comments: comment count reported by the feed itself
  *   - engagement: content/structure proxy + reading affinity + syndication velocity
- * Also bumps the popularity of already-stored copies of the same story from
- * other feeds, since this feed's copy adds to their syndication.
+ * Existing copies of the same story only get their popularity bumped when this
+ * sync actually inserted a new copy (i.e. syndication grew), so repeated
+ * refreshes don't inflate scores without bound. All storage happens in a
+ * single db-layer transaction (see ingestArticlesTx).
  */
-export async function ingestFeed(feed: Feed, parsed: ParsedFeed): Promise<{ inserted: number }> {
-    const db = await getDb();
-
+export async function ingestFeed(
+    feed: Feed,
+    parsed: ParsedFeed,
+    feedPatch: Feed,
+    createIfMissing: boolean,
+): Promise<{ inserted: number; unread: number }> {
     const hosts = new Set<string>();
     const authors = new Set<string>();
     for (const item of parsed.items) {
@@ -74,33 +79,43 @@ export async function ingestFeed(feed: Feed, parsed: ParsedFeed): Promise<{ inse
         }
         if (item.author) authors.add(item.author.toLowerCase());
     }
-    const metaKeys = [`aff:feed:${feed.id}`];
-    for (const host of hosts) metaKeys.push(`aff:domain:${host}`);
-    for (const author of authors) metaKeys.push(`aff:author:${author}`);
-    const affMap = await getMetaMany(metaKeys);
-    const feedAffinity = affMap.get(`aff:feed:${feed.id}`) ?? 0;
 
     const now = Date.now();
-    const tx = db.transaction('articles', 'readwrite');
-    const articleStore = tx.objectStore('articles');
 
     const links = new Set(
         parsed.items.map((item) => (item.link ? normalizeLink(item.link) : undefined)).filter((l): l is string => Boolean(l)),
     );
 
-    const linkInfo = new Map<string, { otherFeeds: number; minPublished: number | undefined }>();
+    const linkInfo = new Map<string, { matches: Article[]; otherFeeds: number; minPublished: number | undefined }>();
     for (const link of links) {
-        const matches = await articleStore.index('byLink').getAll(link);
+        const matches = await queryArticlesByLink(link);
         const feeds = new Set(matches.map((m) => m.feedId));
         feeds.delete(feed.id);
         let minPublished: number | undefined;
         for (const m of matches) {
             if (m.published < (minPublished ?? Number.POSITIVE_INFINITY)) minPublished = m.published;
         }
-        linkInfo.set(link, {otherFeeds: feeds.size, minPublished});
+        linkInfo.set(link, {matches, otherFeeds: feeds.size, minPublished});
     }
 
-    let inserted = 0;
+    // Affinity keys for the incoming feed AND every syndicated copy that might
+    // get bumped, so their feed/domain/author affinity isn't silently zero.
+    const metaKeys = [`aff:feed:${feed.id}`];
+    for (const host of hosts) metaKeys.push(`aff:domain:${host}`);
+    for (const author of authors) metaKeys.push(`aff:author:${author}`);
+    for (const info of linkInfo.values()) {
+        for (const other of info.matches) {
+            metaKeys.push(`aff:feed:${other.feedId}`);
+            const host = domainOf(other.link);
+            if (host) metaKeys.push(`aff:domain:${host}`);
+            if (other.author) metaKeys.push(`aff:author:${other.author.toLowerCase()}`);
+        }
+    }
+    const affMap = await getMetaMany(metaKeys);
+    const feedAffinity = affMap.get(`aff:feed:${feed.id}`) ?? 0;
+
+    const items: Article[] = [];
+    const bumpsByLink = new Map<string, Map<string, BumpSpec>>();
     for (const item of parsed.items) {
         const normLink = item.link ? normalizeLink(item.link) : undefined;
         const info = normLink ? linkInfo.get(normLink) : undefined;
@@ -110,43 +125,36 @@ export async function ingestFeed(feed: Feed, parsed: ParsedFeed): Promise<{ inse
             ? velocityBonus(info?.otherFeeds ?? 0, info?.minPublished !== undefined ? now - info.minPublished : undefined)
             : 0;
         const engagement = engagementFor(item, feedAffinity, affMap, velocity);
-        const article = buildArticle(feed.id, item, popularity, engagement);
+        items.push(buildArticle(feed.id, item, popularity, engagement));
+        if (!normLink || !info || info.otherFeeds === 0) continue;
 
-        const existing = await articleStore.get(article.id);
-        if (existing) {
-            await articleStore.put({
-                ...existing,
-                ...article,
-                read: existing.read,
-                starred: existing.starred,
-            });
-        } else {
-            await articleStore.put(article);
-            inserted++;
-        }
-    }
-
-    for (const link of links) {
-        const info = linkInfo.get(link);
-        if (!info || info.otherFeeds === 0) continue;
-        const velocity = velocityBonus(
+        // Candidate bumps for this link; ingestArticlesTx applies them only
+        // for links this ingest actually inserted, re-reading each copy in
+        // the transaction so concurrent changes are never clobbered. Keyed by
+        // article id so a feed listing the same story twice bumps once.
+        const velocityForBumps = velocityBonus(
             info.otherFeeds,
             info.minPublished !== undefined ? now - info.minPublished : undefined,
         );
-        const matches = await articleStore.index('byLink').getAll(link);
-        for (const other of matches) {
+        let specsById = bumpsByLink.get(normLink);
+        if (!specsById) {
+            specsById = new Map<string, BumpSpec>();
+            bumpsByLink.set(normLink, specsById);
+        }
+        for (const other of info.matches) {
             if (other.feedId === feed.id) continue;
-            other.popularity += 3;
             const otherAffinity = affMap.get(`aff:feed:${other.feedId}`) ?? 0;
-            other.engagement = engagementFor(other, otherAffinity, affMap, velocity);
-            other.hot = hotScore(other.popularity, other.engagement, other.published);
-            other.image ??= firstImageUrl(other.content);
-            await articleStore.put(other);
+            const domainAffinity = other.link ? (affMap.get(`aff:domain:${domainOf(other.link)}`) ?? 0) : 0;
+            const authorAffinity = other.author ? (affMap.get(`aff:author:${other.author.toLowerCase()}`) ?? 0) : 0;
+            specsById.set(other.id, {
+                id: other.id,
+                affinityBoost: affinityBoostScore(otherAffinity + domainAffinity + authorAffinity),
+                velocity: velocityForBumps,
+            });
         }
     }
 
-    await tx.done;
-    return {inserted};
+    return ingestArticlesTx(items, bumpsByLink, feedPatch, createIfMissing);
 }
 
 export interface SyncResult {
@@ -163,24 +171,22 @@ export async function syncFeed(feedId: string): Promise<SyncResult> {
         const xml = await fetchFeedText(feed.url);
         const parsed = parseFeedXml(xml, Date.now());
 
-        const {inserted} = await ingestFeed(feed, parsed);
-
-        const updated: Feed = {
+        const patch: Feed = {
             ...feed,
             title: feed.title === feed.url ? parsed.title : feed.title,
             siteUrl: parsed.siteUrl || feed.siteUrl,
             lastFetchedAt: Date.now(),
             lastError: undefined,
-            unread: feed.unread + inserted,
         };
-        await putFeed(updated);
+        // The patch is persisted inside the ingest transaction with the
+        // freshly computed unread counter (read in-transaction, not from
+        // the caller's snapshot).
+        const {inserted} = await ingestFeed(feed, parsed, patch, false);
 
         return {inserted, total: parsed.items.length, title: parsed.title};
     } catch (err) {
-        await putFeed({
-            ...feed,
-            lastError: err instanceof Error ? err.message : String(err),
-        });
+        // If the feed was deleted mid-sync, don't recreate it with an error.
+        await updateFeedErrorIfExists(feed.id, err instanceof Error ? err.message : String(err));
         throw err;
     }
 }
@@ -197,12 +203,11 @@ export async function addFeedFromUrl(url: string): Promise<Feed> {
         folderIds: [],
         unread: 0,
         addedAt: Date.now(),
+        lastFetchedAt: Date.now(),
     };
 
-    const {inserted} = await ingestFeed(feed, parsed);
-    feed.unread = inserted;
-    feed.lastFetchedAt = Date.now();
-    await putFeed(feed);
+    const {unread} = await ingestFeed(feed, parsed, feed, true);
+    feed.unread = unread;
 
     return feed;
 }

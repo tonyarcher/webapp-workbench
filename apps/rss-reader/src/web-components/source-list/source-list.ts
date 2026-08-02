@@ -1,6 +1,6 @@
 import {html, LitElement, svg, unsafeCSS} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
-import {libraryKey, QueryController} from '../../query';
+import {libraryKey, queryClient, QueryController} from '../../query';
 import {
     deleteFeed,
     deleteFolder,
@@ -159,11 +159,28 @@ export class SourceList extends LitElement {
         @drop=${this.onDrop}
         @dragend=${this.onDragEnd}
       >
-        <div class="item ${briefActive ? 'active' : ''}" @click=${() => this.select({kind: 'brief'})}>
+        ${this.library.error
+            ? html`<div class="nav-error">Could not load feeds. <button @click=${this.onRetryLibrary}>Retry</button></div>`
+            : ''}
+        <div
+          class="item ${briefActive ? 'active' : ''}"
+          role="button"
+          tabindex="0"
+          aria-label="Daily Brief"
+          @click=${() => this.select({kind: 'brief'})}
+          @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'brief'})}
+        >
           <span class="icon">✨</span>
           <span class="label">Daily Brief</span>
         </div>
-        <div class="item ${allActive ? 'active' : ''}" @click=${() => this.select({kind: 'all'})}>
+        <div
+          class="item ${allActive ? 'active' : ''}"
+          role="button"
+          tabindex="0"
+          aria-label="All feeds"
+          @click=${() => this.select({kind: 'all'})}
+          @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'all'})}
+        >
           ${this.icon('all')}
           <span class="label">All</span>
           ${this.totalUnread > 0 ? html`<span class="badge">${this.totalUnread}</span>` : ''}
@@ -675,6 +692,19 @@ export class SourceList extends LitElement {
         window.dispatchEvent(new CustomEvent('feeds-refreshed'));
     }
 
+    private onItemKey(e: KeyboardEvent, view: View) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        // Let child controls (menu buttons, toggles) handle their own keys.
+        const tag = (e.target as HTMLElement | null)?.tagName;
+        if (tag === 'A' || tag === 'BUTTON' || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+        e.preventDefault();
+        this.select(view);
+    }
+
+    private onRetryLibrary() {
+        void queryClient.invalidateQueries({queryKey: libraryKey});
+    }
+
     private feedRow(feed: Feed) {
         const active = this.isActive({kind: 'feed', id: feed.id});
         return html`
@@ -682,8 +712,12 @@ export class SourceList extends LitElement {
         class="feed-row ${active ? 'active' : ''} ${feed.unread > 0 ? 'has-unread' : ''}"
         data-feed-id="${feed.id}"
         draggable="true"
+        role="button"
+        tabindex="0"
+        aria-label="Open feed ${feed.title}"
         @dragstart=${(e: DragEvent) => this.onDragStart(e, 'feed', feed.id)}
         @click=${() => this.select({kind: 'feed', id: feed.id})}
+        @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'feed', id: feed.id})}
       >
         <span class="dot"></span>
         <span class="label" title="${feed.title}${feed.lastError ? ` — ${feed.lastError}` : ''}">${feed.title}</span>
@@ -705,8 +739,12 @@ export class SourceList extends LitElement {
           class="item ${active ? 'active' : ''}"
           data-folder-id="${folder.id}"
           draggable="true"
+          role="button"
+          tabindex="0"
+          aria-label="Open folder ${folder.title}"
           @dragstart=${(e: DragEvent) => this.onDragStart(e, 'folder', folder.id)}
           @click=${() => this.select({kind: 'folder', id: folder.id})}
+          @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'folder', id: folder.id})}
         >
           <span
             class="icon"

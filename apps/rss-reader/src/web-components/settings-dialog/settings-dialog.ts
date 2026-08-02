@@ -180,10 +180,15 @@ export class SettingsDialog extends LitElement {
             const xml = await file.text();
             await importOpmlFile(xml);
             this.status = 'Syncing imported feeds…';
-            await syncAllFeeds((done, total) => {
+            const failed = await syncAllFeeds((done, total) => {
                 this.status = `Syncing ${done + 1}/${total}…`;
             });
-            this.status = 'Import complete';
+            if (failed.length) {
+                this.status = `Import complete, but ${failed.length} feed(s) failed: ${failed.join(', ')}`;
+                this.statusError = true;
+            } else {
+                this.status = 'Import complete';
+            }
         } catch (err) {
             this.status = err instanceof Error ? `Import failed: ${err.message}` : 'Import failed';
             this.statusError = true;
@@ -194,14 +199,24 @@ export class SettingsDialog extends LitElement {
     }
 
     private async onExport() {
-        const xml = await exportOpmlFile();
-        const blob = new Blob([xml], {type: 'text/xml'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'subscriptions.opml';
-        a.click();
-        URL.revokeObjectURL(url);
+        this.busy = true;
+        try {
+            const xml = await exportOpmlFile();
+            const blob = new Blob([xml], {type: 'text/xml'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'subscriptions.opml';
+            a.click();
+            URL.revokeObjectURL(url);
+            this.status = 'Exported subscriptions.opml';
+            this.statusError = false;
+        } catch (err) {
+            this.status = err instanceof Error ? `Export failed: ${err.message}` : 'Export failed';
+            this.statusError = true;
+        } finally {
+            this.busy = false;
+        }
     }
 
     private close() {

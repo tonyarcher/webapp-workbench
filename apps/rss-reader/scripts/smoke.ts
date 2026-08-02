@@ -1,5 +1,6 @@
-import {DOMParser} from '@xmldom/xmldom';
-import {firstImageUrl, isFolder, parseFeedXml, parseOpml, sanitizeHtml, stripHtml} from '../src/services/parser';
+import {DOMParser, XMLSerializer} from '@xmldom/xmldom';
+import {firstImageUrl, isFolder, parseFeedXml, parseOpml, safeHttpUrl, sanitizeHtml, stripHtml} from '../src/services/parser';
+import {fetchFeedText, FetchError, validateFeedUrl} from '../src/services/proxy';
 import {interleaveArticles} from '../src/util';
 import type {Article} from '../src/types';
 import {
@@ -20,6 +21,7 @@ import {
 } from '../src/ai';
 
 (globalThis as Record<string, unknown>).DOMParser = DOMParser;
+(globalThis as Record<string, unknown>).XMLSerializer = XMLSerializer;
 
 function assert(cond: boolean, msg: string) {
     if (!cond) {
@@ -64,6 +66,65 @@ assert(parsed.items[0].media === 'https://example.com/thumb.jpg', 'media:thumbna
 const sanitized = sanitizeHtml('<p>ok</p><script>bad()</script><img src="x" onerror="bad()">');
 assert(!sanitized.includes('<script'), 'sanitize removes script');
 assert(!sanitized.includes('onerror'), 'sanitize removes on* attrs');
+
+// ---- sanitizer allowlist + URL schemes ----
+const sanitizedSafe = sanitizeHtml(
+    '<p onclick="x()" style="color:red" class="y">ok <b>bold</b></p>' +
+        '<a href="javascript:alert(1)">bad</a><a href="https://ok.example/x">good</a>' +
+        '<img src="data:image/png;base64,AAA" alt="bad">' +
+        '<img src="https://img.example/a.png" onerror="x()" width="10">' +
+        '<svg><script>alert(1)</script></svg><unknown>keep me</unknown>'
+);
+assert(!sanitizedSafe.includes('javascript:'), 'sanitize strips javascript: hrefs');
+assert(!sanitizedSafe.includes('onerror') && !sanitizedSafe.includes('onclick'), 'sanitize strips event handlers');
+assert(!sanitizedSafe.includes('style=') && !sanitizedSafe.includes('class='), 'sanitize strips style/class attributes');
+assert(!sanitizedSafe.includes('data:image'), 'sanitize strips data: image urls');
+assert(sanitizedSafe.includes('https://ok.example/x'), 'sanitize keeps safe links');
+assert(sanitizedSafe.includes('https://img.example/a.png'), 'sanitize keeps safe img src');
+assert(sanitizedSafe.includes('<b>bold</b>'), 'sanitize keeps formatting tags');
+assert(!sanitizedSafe.includes('<script'), 'sanitize drops script elements (incl. inside svg)');
+assert(sanitizedSafe.includes('keep me'), 'sanitize unwraps unknown tags keeping their text');
+
+assert(safeHttpUrl('https://example.com/a') === 'https://example.com/a', 'safeHttpUrl keeps https');
+assert(safeHttpUrl('http://example.com/a') === 'http://example.com/a', 'safeHttpUrl keeps http');
+assert(safeHttpUrl('javascript:alert(1)') === undefined, 'safeHttpUrl blocks javascript:');
+assert(safeHttpUrl('data:text/html,x') === undefined, 'safeHttpUrl blocks data:');
+assert(safeHttpUrl('//example.com/x') === undefined, 'safeHttpUrl blocks protocol-relative (no base)');
+
+// ---- non-feed documents rejected ----
+let threw = false;
+try {
+    parseFeedXml('<html><body><p>not a feed</p></body></html>', Date.now());
+} catch {
+    threw = true;
+}
+assert(threw, 'parseFeedXml rejects HTML documents');
+const minimal = parseFeedXml(
+    '<?xml version="1.0"?><rss version="2.0"><channel><title>Minimal</title></channel></rss>',
+    0,
+);
+assert(minimal.title === 'Minimal', 'parseFeedXml accepts minimal rss');
+
+// ---- anonymous items without guid/link key off published+title (legacy-compatible) ----
+const anon = parseFeedXml(
+    `<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>` +
+        `<item><title>Same</title><pubDate>Wed, 30 Jul 2025 10:00:00 GMT</pubDate><description>first</description></item>` +
+        `<item><title>Same</title><pubDate>Wed, 30 Jul 2025 10:00:00 GMT</pubDate><description>second</description></item>` +
+        `</channel></rss>`,
+    0,
+);
+assert(anon.items[0].guid === anon.items[1].guid, 'identical anonymous items dedupe to the same guid');
+assert(
+    anon.items[0].guid === `${Date.parse('Wed, 30 Jul 2025 10:00:00 GMT')}-t`,
+    'anonymous guid keeps the historic published-channelTitle format',
+);
+
+const unsafeLink = parseFeedXml(
+    '<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>' +
+        '<item><title>x</title><link>javascript:alert(1)</link></item></channel></rss>',
+    0,
+);
+assert(unsafeLink.items[0].link === undefined, 'unsafe item links are dropped at parse time');
 
 const atom = `<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:thr="http://purl.org/syndication/thread/1.0">
@@ -140,6 +201,7 @@ assert(firstImageUrl('<p>text</p><img src="https://img.example/1.jpg" alt="x">')
 assert(firstImageUrl('<img src="data:image/gif;base64,xxx" data-src="https://img.example/lazy.jpg">') === 'https://img.example/lazy.jpg', 'firstImageUrl prefers data-src for lazy-loading images');
 assert(firstImageUrl('<img srcset="https://img.example/small.jpg 480w, https://img.example/large.jpg 1200w">') === 'https://img.example/small.jpg', 'firstImageUrl reads srcset');
 assert(firstImageUrl('<p>no image</p>') === undefined, 'firstImageUrl returns undefined without img');
+assert(firstImageUrl('<img src="data:image/gif;base64,xxx">') === undefined, 'firstImageUrl rejects data: urls');
 
 // ---- interleave (diverse hot pages) ----
 const hotArticle = (id: string, hot: number): Article => ({
@@ -264,5 +326,71 @@ delete g.model;
 resetAiAvailability();
 const diag2 = await aiDiagnostics();
 assert(diag2.hasModelApi === false && diag2.hasAiApi === false, 'diagnostics report absent APIs');
+
+// ---- proxy: URL validation, size limit, timeout mapping ----
+assert(
+    validateFeedUrl('https://example.com/feed.xml') === 'https://example.com/feed.xml',
+    'validateFeedUrl accepts absolute https',
+);
+assert(
+    validateFeedUrl(' http://example.com/feed ') === 'http://example.com/feed',
+    'validateFeedUrl trims and accepts absolute http',
+);
+const invalidUrls: [string, string][] = [
+    ['javascript:alert(1)', 'javascript: scheme'],
+    ['data:text/html,x', 'data: scheme'],
+    ['ftp://example.com/feed', 'ftp: scheme'],
+    ['/relative/path', 'relative path'],
+    ['https://user:pass@example.com/', 'embedded credentials'],
+];
+for (const [url, label] of invalidUrls) {
+    let rejected = false;
+    try {
+        validateFeedUrl(url);
+    } catch {
+        rejected = true;
+    }
+    assert(rejected, `validateFeedUrl rejects ${label}`);
+}
+
+const g2 = globalThis as unknown as Record<string, unknown>;
+const realFetch = g2.fetch;
+try {
+    g2.fetch = async () => new Response('<rss/>', {status: 200});
+    assert((await fetchFeedText('https://ok.example/feed')) === '<rss/>', 'fetchFeedText returns the proxied body');
+
+    g2.fetch = async () => {
+        const chunk = new Uint8Array(1024 * 1024);
+        return new Response(
+            new ReadableStream({
+                start(controller) {
+                    for (let i = 0; i < 6; i++) controller.enqueue(chunk);
+                    controller.close();
+                },
+            }),
+            {status: 200},
+        );
+    };
+    let oversized = false;
+    try {
+        await fetchFeedText('https://ok.example/big');
+    } catch (err) {
+        oversized = err instanceof FetchError && err.message === 'Feed is too large';
+    }
+    assert(oversized, 'fetchFeedText rejects oversized responses');
+
+    g2.fetch = async () => {
+        throw new DOMException('aborted', 'AbortError');
+    };
+    let timedOut = false;
+    try {
+        await fetchFeedText('https://ok.example/slow');
+    } catch (err) {
+        timedOut = err instanceof FetchError && err.message.includes('timed out');
+    }
+    assert(timedOut, 'fetchFeedText maps aborts to a timeout FetchError');
+} finally {
+    g2.fetch = realFetch;
+}
 
 console.log('\nAll parser smoke tests passed.');

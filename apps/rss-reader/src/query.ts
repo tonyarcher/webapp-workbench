@@ -55,6 +55,10 @@ export class QueryController<T = unknown> implements ReactiveController {
         return this.result.data;
     }
 
+    get error(): Error | undefined {
+        return this.result.error ?? undefined;
+    }
+
     hostConnected() {
         this.unsubscribe = this.observer.subscribe((result) => {
             this.result = result as QueryObserverResult<T, Error>;

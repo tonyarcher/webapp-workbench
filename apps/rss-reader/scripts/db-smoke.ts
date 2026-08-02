@@ -1,21 +1,28 @@
 import 'fake-indexeddb/auto';
+import {deleteDB, openDB} from 'idb';
 import {
   type ArticleCursor,
+  closeDb,
   deleteFeed,
+  deleteFolderTx,
   getDb,
+  getFeeds,
   markAllRead,
+  markArticleReadTx,
   markArticlesRead,
   markReadBefore,
   putFeed,
+  putFolder,
   queryArticles,
   queryRecentArticles,
   reconcileUnreadCounts,
   setArticleRead,
   setArticleStarred,
+  updateFeedErrorIfExists,
   upsertArticles
 } from '../src/db/db';
 import {ingestFeed} from '../src/services/sync';
-import type {Article, Feed, ParsedFeed} from '../src/types';
+import type {Article, Feed, Folder, ParsedFeed} from '../src/types';
 
 function assert(cond: boolean, msg: string) {
     if (!cond) {
@@ -198,11 +205,13 @@ async function main() {
             },
         ],
     };
-    const r1 = await ingestFeed(feedC, parsedC);
+    const r1 = await ingestFeed(feedC, parsedC, feedC, false);
     assert(r1.inserted === 1, 'ingest inserts article (no syndication yet)');
     let stored = await (await getDb()).get('articles', 'feed-c:c1');
     assert(stored!.popularity === 6, 'popularity = 1 base + 5 comments');
     assert(stored!.normLink === storyLink, 'normLink canonicalized (tracking params stripped)');
+    const feedCAfter = await (await getDb()).get('feeds', 'feed-c');
+    assert(feedCAfter!.unread === 1, 'ingest folds new articles into feed.unread atomically');
 
     const parsedD: ParsedFeed = {
         title: 'Feed D',
@@ -215,7 +224,7 @@ async function main() {
             },
         ],
     };
-    const r2 = await ingestFeed(feedD, parsedD);
+    const r2 = await ingestFeed(feedD, parsedD, feedD, false);
     assert(r2.inserted === 1, 'ingest inserts syndicated copy');
     stored = await (await getDb()).get('articles', 'feed-d:d1');
     assert(stored!.popularity === 4, 'syndicated copy: 1 + 3*(2 feeds - 1)');
@@ -224,6 +233,179 @@ async function main() {
     const hotA = bumped!.hot;
     const hotD = stored!.hot;
     assert(hotA !== hotD, 'hot recomputed differs after popularity bump');
+
+    // ---- repeated syncs must not inflate syndication ----
+    const r3 = await ingestFeed(feedD, parsedD, feedD, false);
+    assert(r3.inserted === 0, 're-ingest of the same feed inserts nothing new');
+    const cAfterRepeat = await (await getDb()).get('articles', 'feed-c:c1');
+    assert(cAfterRepeat!.popularity === 9, 're-ingest does not bump existing copies again');
+    const dAfterRepeat = await (await getDb()).get('articles', 'feed-d:d1');
+    assert(dAfterRepeat!.popularity === 4, 're-ingest keeps the feed copy stable');
+
+    // ---- a feed listing the same story twice bumps the copy once ----
+    await resetDb();
+    const feedE1: Feed = {...feedA, id: 'feed-e1', title: 'E1'};
+    const feedE2: Feed = {...feedB, id: 'feed-e2', title: 'E2'};
+    await putFeed(feedE1);
+    await putFeed(feedE2);
+    const dupLink = 'dup.example.com/story';
+    await ingestFeed(
+        feedE1,
+        {title: 'E1', items: [{guid: 'e1-1', title: 'Story', link: `https://${dupLink}`, published: now - 10_000}]},
+        feedE1,
+        false,
+    );
+    await ingestFeed(
+        feedE2,
+        {
+            title: 'E2',
+            items: [
+                {guid: 'e2-1', title: 'Story', link: `https://${dupLink}`, published: now - 9_000},
+                {guid: 'e2-2', title: 'Story (dup)', link: `https://${dupLink}`, published: now - 8_000},
+            ],
+        },
+        feedE2,
+        false,
+    );
+    const e1Copy = await (await getDb()).get('articles', 'feed-e1:e1-1');
+    assert(e1Copy!.popularity === 4, 'duplicate links in one feed bump the syndicated copy exactly once');
+
+    // ---- an in-flight sync of a deleted feed must not resurrect it ----
+    await resetDb();
+    const feedRace: Feed = {...feedA, id: 'feed-race', title: 'Race'};
+    await putFeed(feedRace);
+    const parsedRace: ParsedFeed = {
+        title: 'Race',
+        items: [{guid: 'r1', title: 'x', link: 'https://race.example/1', published: now}],
+    };
+    await deleteFeed('feed-race');
+    const raceResult = await ingestFeed(feedRace, parsedRace, feedRace, false);
+    assert(raceResult.inserted === 0, 'in-flight ingest of a deleted feed inserts nothing');
+    const resurrected = await (await getDb()).get('feeds', 'feed-race');
+    assert(resurrected === undefined, 'in-flight ingest does not resurrect a deleted feed');
+    assert((await (await getDb()).getAll('articles')).length === 0, 'in-flight ingest of a deleted feed writes no articles');
+
+    // ---- sync error surfacing must not resurrect a deleted feed ----
+    await resetDb();
+    const feedErr: Feed = {...feedA, id: 'feed-err', title: 'Err'};
+    await putFeed(feedErr);
+    await updateFeedErrorIfExists('feed-err', 'boom');
+    const errFeed = await (await getDb()).get('feeds', 'feed-err');
+    assert(errFeed!.lastError === 'boom', 'updateFeedErrorIfExists surfaces sync errors on live feeds');
+    await deleteFeed('feed-err');
+    await updateFeedErrorIfExists('feed-err', 'boom');
+    assert((await (await getDb()).get('feeds', 'feed-err')) === undefined, 'updateFeedErrorIfExists does not resurrect a deleted feed');
+
+    // ---- atomic mark-read: concurrent calls decrement unread once ----
+    await resetDb();
+    const feedR: Feed = {...feedA, id: 'feed-r', title: 'Feed R', unread: 2};
+    await putFeed(feedR);
+    await upsertArticles([
+        makeArticle('feed-r', 'r1', Date.now() - 1_000, 0),
+        makeArticle('feed-r', 'r2', Date.now() - 2_000, 0),
+    ]);
+    const [first, second] = await Promise.all([
+        markArticleReadTx('feed-r:r1'),
+        markArticleReadTx('feed-r:r1'),
+    ]);
+    assert(first !== second, 'concurrent mark-read: only one caller flips the article');
+    const rFeed = await (await getDb()).get('feeds', 'feed-r');
+    assert(rFeed!.unread === 1, 'concurrent mark-read decrements unread exactly once');
+    const rArticle = await (await getDb()).get('articles', 'feed-r:r1');
+    assert(rArticle!.read === 1, 'concurrent mark-read marks the article read');
+
+    // ---- atomic folder delete: folder and memberships removed together ----
+    await resetDb();
+    const folderX: Folder = {id: 'folder-x', title: 'X', createdAt: 1};
+    await putFolder(folderX);
+    const feedFx: Feed = {...feedA, id: 'feed-fx', url: 'https://fx.example/rss', folderIds: ['folder-x'], unread: 0, addedAt: 1};
+    await putFeed(feedFx);
+    await deleteFolderTx('folder-x');
+    const foldersAfter = await (await getDb()).getAll('folders');
+    assert(!foldersAfter.some((f) => f.id === 'folder-x'), 'deleteFolderTx removes the folder');
+    const fxAfter = await (await getDb()).get('feeds', 'feed-fx');
+    assert(fxAfter!.folderIds.length === 0, 'deleteFolderTx strips folder membership from feeds');
+
+    // ---- folder deletion on legacy (folderId-only) feeds must not crash ----
+    await resetDb();
+    const legacyFolder: Folder = {id: 'legacy-folder-x', title: 'LegacyX', createdAt: 1};
+    await putFolder(legacyFolder);
+    await (await getDb()).put('feeds', {
+        id: 'feed-legacy-x',
+        title: 'Legacy Feed',
+        url: 'https://legacyx.example/rss',
+        folderId: 'legacy-folder-x',
+        unread: 0,
+        addedAt: 1,
+    } as unknown as Feed);
+    await deleteFolderTx('legacy-folder-x');
+    const foldersAfterLegacy = await (await getDb()).getAll('folders');
+    assert(!foldersAfterLegacy.some((f) => f.id === 'legacy-folder-x'), 'deleteFolderTx handles legacy folder deletion');
+    const lx = await (await getDb()).get('feeds', 'feed-legacy-x');
+    assert(lx != null && Array.isArray(lx.folderIds) && lx.folderIds.length === 0, 'deleteFolderTx normalizes legacy feeds and strips membership');
+
+    // ---- unread pagination reports hasMore accurately ----
+    await resetDb();
+    const feedU: Feed = {...feedA, id: 'feed-u', title: 'Feed U'};
+    await putFeed(feedU);
+    await upsertArticles(
+        Array.from({length: 5}, (_, i) => makeArticle('feed-u', `u${i}`, Date.now() - i * 1_000, 0)),
+    );
+    const unreadPage1 = await queryArticles({unreadOnly: true, limit: 2});
+    assert(unreadPage1.items.length === 2 && unreadPage1.hasMore === true, 'unread query reports hasMore when more remain');
+    const unreadCursor: ArticleCursor = {
+        key: unreadPage1.items[unreadPage1.items.length - 1].published,
+        id: unreadPage1.items[unreadPage1.items.length - 1].id,
+    };
+    const unreadPage2 = await queryArticles({unreadOnly: true, limit: 2, cursor: unreadCursor});
+    assert(unreadPage2.items.length === 2 && unreadPage2.hasMore === true, 'unread pagination continues');
+    const unreadCursor2: ArticleCursor = {
+        key: unreadPage2.items[unreadPage2.items.length - 1].published,
+        id: unreadPage2.items[unreadPage2.items.length - 1].id,
+    };
+    const unreadPage3 = await queryArticles({unreadOnly: true, limit: 2, cursor: unreadCursor2});
+    assert(unreadPage3.items.length === 1 && unreadPage3.hasMore === false, 'unread pagination ends with hasMore false');
+
+    // ---- non-destructive upgrade: legacy data survives reopening ----
+    await closeDb();
+    await deleteDB('rss-reader');
+    const legacy = await openDB('rss-reader', 1, {
+        upgrade(db) {
+            db.createObjectStore('folders', {keyPath: 'id'});
+            db.createObjectStore('feeds', {keyPath: 'id'});
+            db.createObjectStore('articles', {keyPath: 'id'});
+            db.createObjectStore('meta', {keyPath: 'key'});
+        },
+    });
+    await legacy.put('feeds', {
+        id: 'legacy-feed',
+        title: 'Legacy',
+        url: 'https://legacy.example/feed',
+        folderId: 'legacy-folder',
+        unread: 2,
+        addedAt: 1,
+    });
+    await legacy.put('articles', {
+        id: 'legacy-feed:a1',
+        feedId: 'legacy-feed',
+        guid: 'a1',
+        title: 'A',
+        published: 1,
+        fetchedAt: 1,
+        read: 0,
+        starred: false,
+    });
+    legacy.close();
+    await closeDb();
+    const migrated = await getFeeds();
+    assert(migrated.length === 1 && migrated[0].folderIds[0] === 'legacy-folder', 'upgrade preserves legacy feeds (folderId normalized)');
+    const legacyArticles = await (await getDb()).getAll('articles');
+    assert(legacyArticles.length === 1, 'upgrade preserves legacy articles');
+    const legacyFeed = await (await getDb()).get('feeds', 'legacy-feed');
+    assert(legacyFeed!.unread === 2, 'upgrade preserves feed counters');
+    await closeDb();
+    await deleteDB('rss-reader');
+    await getDb();
 
     // ---- markArticlesRead / markReadBefore ----
     await resetDb();
@@ -262,7 +444,7 @@ async function main() {
     await setArticleRead('feed-g:g2', 0);
     const drifted = await dbg.get('feeds', 'feed-g');
     drifted!.unread = 999;
-    await dbg.put('feeds', drifted);
+    await dbg.put('feeds', drifted!);
     await reconcileUnreadCounts();
     const fixed = await dbg.get('feeds', 'feed-g');
     assert(fixed!.unread === 2, 'reconcileUnreadCounts resets feed.unread to actual unread count');

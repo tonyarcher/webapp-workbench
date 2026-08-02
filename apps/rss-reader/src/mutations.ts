@@ -1,16 +1,15 @@
 import {
-    decrementFeedUnread,
     deleteFeed as dbDeleteFeed,
-    deleteFolder as dbDeleteFolder,
+    deleteFolderTx as dbDeleteFolderTx,
     getArticle,
     getFeeds,
     incrementMeta,
     markAllRead as dbMarkAllRead,
+    markArticleReadTx,
     markArticlesRead as dbMarkArticlesRead,
     markReadBefore as dbMarkReadBefore,
     reconcileUnreadCounts,
     reorderFolders as dbReorderFolders,
-    setArticleRead,
     setArticleStarred,
     setFeedFolders
 } from './db/db';
@@ -97,14 +96,9 @@ export async function deleteFeed(feedId: string) {
 }
 
 export async function deleteFolder(folderId: string) {
-    const feeds = (await getFeeds()).filter((f) => f.folderIds.includes(folderId));
-    await dbDeleteFolder(folderId);
-    for (const feed of feeds) {
-        await setFeedFolders(feed.id, feed.folderIds.filter((id) => id !== folderId));
-    }
+    await dbDeleteFolderTx(folderId);
     await invalidateLibrary();
     await invalidateArticles();
-    return feeds;
 }
 
 export async function moveFeed(feedId: string, folderId: string | null) {
@@ -125,11 +119,12 @@ export async function reorderFolders(folderIds: string[]) {
 export async function markArticleRead(articleId: string) {
     const article = await getArticle(articleId);
     if (!article || article.read === 1) return;
-    await setArticleRead(articleId, 1);
-    await decrementFeedUnread(article.feedId);
-    await recordAffinity(article);
-    updateArticlesInCache(articleId, {read: 1});
-    await invalidateLibrary();
+    const changed = await markArticleReadTx(articleId);
+    if (changed) {
+        await recordAffinity(article);
+        updateArticlesInCache(articleId, {read: 1});
+        await invalidateLibrary();
+    }
 }
 
 export async function toggleStar(articleId: string) {

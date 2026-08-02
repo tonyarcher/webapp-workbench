@@ -1,5 +1,20 @@
 import type {OpmlFolder, OpmlNode, OpmlSource, ParsedFeed} from '../types';
 
+/**
+ * Returns the URL if it is absolute http(s), else undefined. Blocks
+ * javascript:, data:, vbscript:, file: and other active/embedded schemes in
+ * feed-supplied hrefs and image sources.
+ */
+export function safeHttpUrl(url: string | undefined | null): string | undefined {
+    if (!url) return undefined;
+    try {
+        const u = new URL(url.trim());
+        return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 function el(root: Document, name: string): Element | null {
     return root.getElementsByTagName(name)[0] ?? null;
 }
@@ -34,17 +49,17 @@ function isImageType(type: string | null): boolean {
 function parseMedia(item: Element): string | undefined {
     const enclosure = item.getElementsByTagName('enclosure')[0];
     if (enclosure?.getAttribute('url') && isImageType(enclosure.getAttribute('type'))) {
-        return enclosure.getAttribute('url') ?? undefined;
+        return safeHttpUrl(enclosure.getAttribute('url'));
     }
     for (const node of Array.from(item.getElementsByTagNameNS('*', 'content'))) {
         const url = node.getAttribute('url');
         if (url && (node.getAttribute('medium') === 'image' || isImageType(node.getAttribute('type')))) {
-            return url;
+            return safeHttpUrl(url);
         }
     }
     for (const node of Array.from(item.getElementsByTagNameNS('*', 'thumbnail'))) {
         const url = node.getAttribute('url');
-        if (url) return url;
+        if (url) return safeHttpUrl(url);
     }
     return undefined;
 }
@@ -53,12 +68,14 @@ function parseAtomMedia(entry: Element): string | undefined {
     for (const link of Array.from(entry.getElementsByTagName('link'))) {
         if (link.getAttribute('rel') === 'enclosure') {
             if (isImageType(link.getAttribute('type')) && link.getAttribute('href')) {
-                return link.getAttribute('href') ?? undefined;
+                return safeHttpUrl(link.getAttribute('href'));
             }
         }
     }
     return undefined;
 }
+
+const FEED_ROOTS = new Set(['rss', 'feed', 'rdf']);
 
 export function parseFeedXml(xml: string, fallbackPublished: number): ParsedFeed {
     const doc = new DOMParser().parseFromString(xml, 'text/xml');
@@ -68,8 +85,12 @@ export function parseFeedXml(xml: string, fallbackPublished: number): ParsedFeed
 
     const root = doc.documentElement;
     const tag = root?.tagName?.toLowerCase() ?? '';
+    const base = tag.split(':').pop() ?? '';
+    if (!FEED_ROOTS.has(base)) {
+        throw new Error('Not a valid RSS/Atom feed (HTML or other document)');
+    }
 
-    if (tag === 'feed') {
+    if (base === 'feed') {
         return parseAtom(doc, fallbackPublished);
     }
     return parseRss(doc, fallbackPublished);
@@ -82,7 +103,7 @@ function parseRss(doc: Document, fallbackPublished: number): ParsedFeed {
 
     const items = Array.from(doc.getElementsByTagName('item')).map((item) => {
         const guid = childText(item, 'guid') || childText(item, 'link') || '';
-        const link = childText(item, 'link') || undefined;
+        const link = safeHttpUrl(childText(item, 'link'));
         const dcDate = item.getElementsByTagNameNS('*', 'date')[0]?.textContent?.trim();
         const dcCreator = item.getElementsByTagNameNS('*', 'creator')[0]?.textContent?.trim();
         const pubDate = childText(item, 'pubDate') || dcDate;
@@ -93,6 +114,9 @@ function parseRss(doc: Document, fallbackPublished: number): ParsedFeed {
         const published = parseDate(pubDate, fallbackPublished);
 
         return {
+            // Anonymous items (no guid/link) key off published+title, matching
+            // the historic id format so upgrading readers never re-insert
+            // stored articles as duplicates.
             guid: guid || `${published}-${title}`,
             title: childText(item, 'title') || '(untitled)',
             link,
@@ -114,16 +138,18 @@ function parseAtom(doc: Document, fallbackPublished: number): ParsedFeed {
 
     let siteUrl: string | undefined;
     for (const link of Array.from(feedEl.getElementsByTagName('link'))) {
-        if (!siteUrl || link.getAttribute('rel') === 'alternate') {
-            siteUrl = link.getAttribute('href') || undefined;
+        const href = safeHttpUrl(link.getAttribute('href'));
+        if (href && (!siteUrl || link.getAttribute('rel') === 'alternate')) {
+            siteUrl = href;
         }
     }
 
     const items = Array.from(doc.getElementsByTagName('entry')).map((entry) => {
         let link: string | undefined;
         for (const l of Array.from(entry.getElementsByTagName('link'))) {
-            if (!link || l.getAttribute('rel') === 'alternate') {
-                link = l.getAttribute('href') || undefined;
+            const href = safeHttpUrl(l.getAttribute('href'));
+            if (href && (!link || l.getAttribute('rel') === 'alternate')) {
+                link = href;
             }
         }
         const published =
@@ -163,42 +189,150 @@ export function stripHtml(html: string | undefined): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
-/** First image URL inside an HTML string, if any. */
+/** First image URL inside an HTML string, if any (http(s) only). */
 export function firstImageUrl(html: string | undefined): string | undefined {
     if (!html) return undefined;
     // Lazy-loading sites often defer the real URL to data-* attributes.
     const lazy = /<img[^>]+(?:data-src|data-lazy-src|data-original)=["']([^"']+)["']/i.exec(html);
-    if (lazy) return lazy[1];
+    if (lazy) return safeHttpUrl(lazy[1]);
     const src = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
-    if (src) return src[1];
+    if (src) return safeHttpUrl(src[1]);
     const srcset = /<img[^>]+srcset=["']([^"']+)["']/i.exec(html);
     if (srcset) {
         const first = srcset[1].split(',')[0]?.trim().split(' ')[0];
-        if (first) return first;
+        if (first) return safeHttpUrl(first);
     }
     return undefined;
 }
 
+const SAFE_TAGS = new Set([
+    'p',
+    'div',
+    'span',
+    'br',
+    'hr',
+    'a',
+    'img',
+    'ul',
+    'ol',
+    'li',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'blockquote',
+    'pre',
+    'code',
+    'em',
+    'strong',
+    'b',
+    'i',
+    'u',
+    's',
+    'small',
+    'table',
+    'thead',
+    'tbody',
+    'tfoot',
+    'tr',
+    'td',
+    'th',
+    'caption',
+    'figure',
+    'figcaption',
+]);
+
+const ATTR_ALLOWLIST: Record<string, Set<string>> = {
+    a: new Set(['href', 'title']),
+    img: new Set(['src', 'srcset', 'alt', 'title', 'width', 'height']),
+    td: new Set(['colspan', 'rowspan']),
+    th: new Set(['colspan', 'rowspan']),
+};
+
+// Tags that get removed wholesale (content included) rather than unwrapped.
+const DROP_TAGS = new Set(['script', 'style', 'iframe', 'object', 'embed', 'template', 'svg', 'math']);
+
+function safeUrlValue(value: string): string | null {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('//')) {
+        return safeHttpUrl(`https:${trimmed}`) ?? null;
+    }
+    return safeHttpUrl(trimmed) ?? null;
+}
+
+function safeSrcset(value: string): string | null {
+    const out: string[] = [];
+    for (const candidate of value.split(',')) {
+        const parts = candidate.trim().split(/\s+/);
+        const url = parts[0];
+        if (!url) return null;
+        const safe = safeUrlValue(url);
+        if (!safe) return null;
+        out.push([safe, ...parts.slice(1)].join(' '));
+    }
+    return out.length ? out.join(', ') : null;
+}
+
+/**
+ * Allowlist-based HTML sanitizer for feed article bodies. Keeps formatting,
+ * links, images, and tables; strips every other tag, attribute, and URL
+ * scheme. Unknown tags are unwrapped (children kept) so text survives.
+ */
 export function sanitizeHtml(html: string | undefined): string {
     if (!html) return '';
     let doc: Document;
     try {
-        doc = new DOMParser().parseFromString(html, 'text/html');
+        // Wrapped in a div so both browsers and xmldom (smoke tests) parse
+        // fragments with multiple root elements.
+        doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
     } catch {
         return stripHtml(html);
     }
     const root = (doc as Document & { body?: HTMLElement }).body ?? doc.documentElement;
     for (const node of Array.from(root.getElementsByTagName('*'))) {
         const tag = node.tagName.toLowerCase();
-        if (['script', 'style', 'iframe', 'object', 'embed'].includes(tag)) {
+        if (DROP_TAGS.has(tag)) {
             node.parentNode?.removeChild(node);
             continue;
         }
+        const allowedAttrs = ATTR_ALLOWLIST[tag] ?? new Set<string>();
         for (const attr of Array.from(node.attributes)) {
-            if (/^on/i.test(attr.name)) node.removeAttribute(attr.name);
+            const name = attr.name.toLowerCase();
+            if (!allowedAttrs.has(name)) {
+                node.removeAttribute(attr.name);
+                continue;
+            }
+            if (name === 'href' || name === 'src') {
+                const safe = safeUrlValue(attr.value);
+                if (safe) {
+                    node.setAttribute(name, safe);
+                } else {
+                    node.removeAttribute(name);
+                }
+            } else if (name === 'srcset') {
+                const safe = safeSrcset(attr.value);
+                if (safe) {
+                    node.setAttribute(name, safe);
+                } else {
+                    node.removeAttribute(name);
+                }
+            }
+        }
+        if (!SAFE_TAGS.has(tag)) {
+            const parent = node.parentNode;
+            if (parent) {
+                while (node.firstChild) parent.insertBefore(node.firstChild, node);
+                parent.removeChild(node);
+            }
         }
     }
-    return (doc as Document & { body?: HTMLElement }).body?.innerHTML ?? '';
+    // Browsers expose body.innerHTML; xmldom (smoke tests) serializes the
+    // wrapper element instead. Either way, unwrap the injected <div>.
+    const body = (doc as Document & { body?: HTMLElement }).body;
+    const serialized = body ? body.innerHTML : new XMLSerializer().serializeToString(root);
+    return serialized.replace(/^<div[^>]*>/, '').replace(/<\/div>\s*$/, '');
 }
 
 function parseOpmlNode(outline: Element): OpmlNode {

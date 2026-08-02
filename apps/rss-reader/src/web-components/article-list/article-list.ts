@@ -14,6 +14,7 @@ import {
     toggleStar
 } from '../../mutations';
 import {type ArticleCursor, getFeeds, getFolders, queryArticles} from '../../db/db';
+import {safeHttpUrl} from '../../services/parser';
 import type {Article, ArticleSort, Feed, Folder, ListViewType, View} from '../../types';
 import {domainOf, formatDate, interleaveArticles} from '../../util';
 import type {MenuAnchor} from '../feed-menu/feed-menu';
@@ -78,6 +79,8 @@ export class ArticleList extends LitElement {
     private virtualizerCleanup?: () => void;
     private cursors = new Map<string, ArticleCursor | undefined>();
     private feedHasMore = new Map<string, boolean>();
+    private hasMoreSingle = true;
+    private gen = 0;
     private loadingRef = false;
     private lastViewKey = '';
     private lastFolderKey = '';
@@ -120,6 +123,7 @@ export class ArticleList extends LitElement {
         window.addEventListener('keydown', this.onKeyDown);
         window.addEventListener('feeds-refreshed', this.onFeedsRefreshed);
         window.addEventListener('article-read', this.onArticleRead);
+        window.addEventListener('article-starred', this.onArticleStarred);
     }
 
     override disconnectedCallback() {
@@ -127,10 +131,24 @@ export class ArticleList extends LitElement {
         window.removeEventListener('keydown', this.onKeyDown);
         window.removeEventListener('feeds-refreshed', this.onFeedsRefreshed);
         window.removeEventListener('article-read', this.onArticleRead);
+        window.removeEventListener('article-starred', this.onArticleStarred);
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
         this.virtualizerCleanup?.();
     }
+
+    private onArticleStarred = (e: Event) => {
+        const {id, starred} = (e as CustomEvent<{ id: string; starred: boolean }>).detail;
+        let changed = false;
+        this.items = this.items.map((a) => {
+            if (a.id === id && a.starred !== starred) {
+                changed = true;
+                return {...a, starred};
+            }
+            return a;
+        });
+        if (changed) this.requestUpdate();
+    };
 
     private onArticleRead = (e: Event) => {
         const id = (e as CustomEvent<string>).detail;
@@ -275,7 +293,7 @@ export class ArticleList extends LitElement {
         @close=${() => (this.advancedOpen = false)}
       ></advanced-menu>
 
-      <div class="scroll" style="--cols: ${this.cols}" ${ref(this.scrollElRef)}>
+      <div class="scroll" style="--cols: ${this.cols}" ${ref(this.scrollElRef)} @scroll=${this.onScroll}>
         <div class="viewport" style="height: ${this.virtualizer?.getTotalSize() ?? 0}px;">
           ${this.listView === 'cards'
           ? virtualItems.map((vi) => {
@@ -301,7 +319,11 @@ export class ArticleList extends LitElement {
                     class="row ${this.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''} ${vi.index === this.cursor ? 'selected' : ''}"
                     data-index=${vi.index}
                     style="transform: translateY(${vi.start}px)"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Open ${article.title}"
                     @click=${() => this.openArticle(article)}
+                    @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}
                     ${ref((el) => this.virtualizer?.measureElement(el as HTMLDivElement))}
                   >
                     ${this.listView === 'headline'
@@ -315,8 +337,42 @@ export class ArticleList extends LitElement {
         ${!this.loading && !this.items.length
             ? html`<div class="empty">No articles yet. Hit Refresh to sync this view.</div>`
             : ''}
+        ${this.library.error && this.view.kind !== 'feed'
+            ? html`<div class="empty">Could not load your feeds. <button class="btn" @click=${this.onRetryLibrary}>Retry</button></div>`
+            : ''}
       </div>
     `;
+    }
+
+    private onRetryLibrary() {
+        void queryClient.invalidateQueries({queryKey: libraryKey});
+    }
+
+    private onRowKey(e: KeyboardEvent, article: Article) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        // Let child links/buttons handle their own keys.
+        const tag = (e.target as HTMLElement | null)?.tagName;
+        if (tag === 'A' || tag === 'BUTTON' || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+        e.preventDefault();
+        void this.openArticle(article);
+    }
+
+    private onScroll = () => {
+        if (this.loadingRef || !this.canLoadMore()) return;
+        const el = this.scrollElRef.value;
+        if (!el) return;
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
+            void this.loadPage();
+        }
+    };
+
+    private canLoadMore(): boolean {
+        if (this.view.kind === 'feed' || (this.view.kind === 'all' && this.sort !== 'hot')) {
+            return this.hasMoreSingle;
+        }
+        const feeds = this.view.kind === 'folder' ? this.folderFeeds() : this.library.data?.feeds ?? [];
+        if (!feeds.length) return false;
+        return feeds.some((f) => this.feedHasMore.get(f.id) !== false);
     }
 
     private onFeedsRefreshed = () => {
@@ -403,9 +459,11 @@ export class ArticleList extends LitElement {
     }
 
     private async reset() {
+        this.gen++;
         this.items = [];
         this.cursors.clear();
         this.feedHasMore.clear();
+        this.hasMoreSingle = true;
         this.cursor = -1;
         const el = this.scrollElRef.value;
         if (el) el.scrollTop = 0;
@@ -413,20 +471,33 @@ export class ArticleList extends LitElement {
         await this.loadPage();
     }
 
+    /**
+     * Fetch the next page for the current view. Pages accumulate (infinite
+     * scroll); `reset()` bumps the generation so in-flight results for a
+     * previous view are discarded instead of shown.
+     */
     private async loadPage() {
-        if (this.loadingRef) return;
+        if (this.loadingRef) {
+            this.pendingReset = true;
+            return;
+        }
+        const gen = this.gen;
         this.loadingRef = true;
         this.loading = true;
         try {
             if (this.view.kind === 'folder') {
-                await this.loadFolderPage();
+                await this.loadFolderPage(gen);
             } else {
-                await this.loadSinglePage();
+                await this.loadSinglePage(gen);
             }
             this.applyResume();
         } finally {
             this.loadingRef = false;
             this.loading = false;
+            if (this.pendingReset) {
+                this.pendingReset = false;
+                void this.reset();
+            }
         }
     }
 
@@ -448,10 +519,10 @@ export class ArticleList extends LitElement {
         return this.sort === 'hot' ? {key: article.hot, id: article.id} : {key: article.published, id: article.id};
     }
 
-    private async loadSinglePage() {
+    private async loadSinglePage(gen: number) {
         const feedId = this.view.kind === 'feed' ? this.view.id : undefined;
         if (this.view.kind === 'all' && this.sort === 'hot') {
-            await this.loadFeedSetPage(this.library.data?.feeds ?? [], true);
+            await this.loadFeedSetPage(this.library.data?.feeds ?? [], true, gen);
             return;
         }
         const cursor = this.cursors.get(feedId ?? 'all');
@@ -462,6 +533,8 @@ export class ArticleList extends LitElement {
             limit: this.pageSize,
             cursor,
         });
+        if (gen !== this.gen) return;
+        this.hasMoreSingle = res.hasMore;
         this.items = mergeSorted(this.items, res.items, this.sort);
         const last = res.items[res.items.length - 1];
         if (last) {
@@ -469,26 +542,25 @@ export class ArticleList extends LitElement {
         }
     }
 
-    private async loadFolderPage() {
-        await this.loadFeedSetPage(this.folderFeeds(), this.sort === 'hot');
+    private async loadFolderPage(gen: number) {
+        await this.loadFeedSetPage(this.folderFeeds(), this.sort === 'hot', gen);
     }
 
     /**
      * Load a page across a set of feeds (folder view, or All view with Hot
-     * sort). When `interleave` is set, the page keeps a mix of sources:
-     * each feed contributes roughly its share even if one feed dominates.
-     * Feeds' cursors advance only past stories actually kept, so pagination
-     * never skips anything.
+     * sort). Each feed contributes a bounded share of the page so N feeds
+     * read roughly pageSize records total, not N * pageSize. When `interleave`
+     * is set, the page keeps a mix of sources: each feed contributes roughly
+     * its share even if one feed dominates. Feeds' cursors advance only past
+     * stories actually kept, so pagination never skips anything.
      */
-    private async loadFeedSetPage(feeds: Feed[], interleave: boolean) {
+    private async loadFeedSetPage(feeds: Feed[], interleave: boolean, gen: number) {
         const activeFeeds = feeds.filter((f) => this.feedHasMore.get(f.id) !== false);
         if (!activeFeeds.length) {
             return;
         }
 
-        const perFeed = interleave
-            ? Math.max(1, Math.min(this.pageSize, Math.ceil(this.pageSize / activeFeeds.length)))
-            : this.pageSize;
+        const perFeed = Math.max(1, Math.min(this.pageSize, Math.ceil(this.pageSize / activeFeeds.length)));
 
         const results = await Promise.all(
             activeFeeds.map(async (feed) => {
@@ -503,6 +575,7 @@ export class ArticleList extends LitElement {
                 return {feed, res};
             })
         );
+        if (gen !== this.gen) return;
 
         const existingIds = new Set(this.items.map((a) => a.id));
         const fetched = results.flatMap(({res}) => res.items);
@@ -657,19 +730,21 @@ export class ArticleList extends LitElement {
     private renderRow(article: Article, showFeed: boolean) {
         const feedTitle = this.feedTitle(article.feedId);
         const popular = article.popularity >= 4;
+        const link = safeHttpUrl(article.link);
+        const image = safeHttpUrl(article.image);
         return html`
       <div class="detail-body">
-        ${article.image
-        ? html`<img class="detail-img" src=${article.image} alt="" loading="lazy" />`
+        ${image
+        ? html`<img class="detail-img" src=${image} alt="" loading="lazy" />`
         : ''}
         <div class="detail-text">
           <div class="row-top">
             ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
             ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
-            ${article.link
+            ${link
             ? html`<a
                     class="title title-link"
-                    href=${article.link}
+                    href=${link}
                     target="_blank"
                     rel="noopener noreferrer"
                     @click=${(e: Event) => e.stopPropagation()}
@@ -710,10 +785,15 @@ export class ArticleList extends LitElement {
 
     private renderCardRow(article: Article, showFeed: boolean, index: number) {
         const feedTitle = this.feedTitle(article.feedId);
+        const link = safeHttpUrl(article.link);
         return html`
       <div
         class="grid-card ${article.read ? 'read' : ''} ${index === this.cursor ? 'selected' : ''}"
+        role="button"
+        tabindex="0"
+        aria-label="Open ${article.title}"
         @click=${() => this.openArticle(article)}
+        @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}
       >
         ${article.image
         ? html`<lazy-img class="grid-card-img" .src=${article.image}></lazy-img>`
@@ -721,10 +801,10 @@ export class ArticleList extends LitElement {
         <div class="grid-card-body">
           <div class="grid-card-title-row">
             ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
-            ${article.link
+            ${link
             ? html`<a
                     class="grid-card-title"
-                    href=${article.link}
+                    href=${link}
                     target="_blank"
                     rel="noopener noreferrer"
                     @click=${(e: Event) => e.stopPropagation()}
