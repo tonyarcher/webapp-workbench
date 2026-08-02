@@ -21,6 +21,7 @@ import {
     classifyPost,
     extractImageUrls,
     isRedgifsUrl,
+    redgifsEmbedUrl,
     redgifsId,
     resolveVideoUrl,
     stripImageProxy,
@@ -403,55 +404,25 @@ void (async () => {
         'untyped redgifs url classifies video',
     )
 
-    const direct = await resolveVideoUrl('https://x.com/video.mp4')
+    const direct = resolveVideoUrl('https://x.com/video.mp4')
     assert(direct.src === 'https://x.com/video.mp4' && direct.poster === null && direct.candidates.length === 0, 'direct video passes through')
-    const unsafeVideo = await resolveVideoUrl('javascript:alert(1)')
+    const unsafeVideo = resolveVideoUrl('javascript:alert(1)')
     assert(unsafeVideo.src === null, 'unsafe direct video url rejected')
 
-    // redgifs resolves exact-case media via the CORS-open oEmbed endpoint
-    const oembedFetch = (thumbnail: string | null): typeof fetch =>
-        (async (input: string | URL | Request): Promise<Response> => {
-            if (!String(input).includes('/v1/oembed')) return new Response('bad', {status: 500})
-            return new Response(JSON.stringify({thumbnail_url: thumbnail}), {
-                status: thumbnail ? 200 : 404,
-                headers: {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            })
-        }) as unknown as typeof fetch
-
-    const rg = await resolveVideoUrl(
-        'https://www.redgifs.com/watch/steeldeadlyitaliangreyhound',
-        oembedFetch('https://media.redgifs.com/SteelDeadlyItaliangreyhound-poster.jpg'),
+    // redgifs plays through the official embed player, not a <video> element
+    assert(
+        redgifsEmbedUrl('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound') ===
+            'https://www.redgifs.com/ifr/steeldeadlyitaliangreyhound',
+        'redgifs watch url maps to the embed player',
     )
     assert(
-        rg.src === 'https://media.redgifs.com/SteelDeadlyItaliangreyhound-mobile.mp4' &&
-            rg.poster === 'https://media.redgifs.com/SteelDeadlyItaliangreyhound-poster.jpg' &&
-            rg.candidates.length === 3,
-        'redgifs resolves exact-case mobile mp4 with poster via oEmbed',
+        redgifsEmbedUrl('https://redgifs.com/ifr/abc123') === 'https://www.redgifs.com/ifr/abc123',
+        'redgifs ifr url maps to the embed player',
     )
-    assert(
-        rg.candidates[1] === 'https://media.redgifs.com/SteelDeadlyItaliangreyhound.mp4' &&
-            rg.candidates[2] === 'https://media.redgifs.com/SteelDeadlyItaliangreyhound-silent.mp4',
-        'redgifs candidate order is mobile, plain, silent',
-    )
-    const rgIframe = await resolveVideoUrl(
-        'https://redgifs.com/ifr/abc123',
-        oembedFetch('https://media.redgifs.com/Abc123-poster.jpg'),
-    )
-    assert(rgIframe.src === 'https://media.redgifs.com/Abc123-mobile.mp4', 'redgifs ifr url resolves too')
-
-    // oEmbed failure (removed/unknown gif) falls back to the lowercase slug
-    const rgFallback = await resolveVideoUrl('https://www.redgifs.com/watch/azurejoyouskentrosaurus', oembedFetch(null))
-    assert(rgFallback.src === 'https://media.redgifs.com/azurejoyouskentrosaurus-mobile.mp4', 'oEmbed failure uses lowercase slug')
-
-    // memoized: same id resolves from cache without another oEmbed call
-    let oembedCalls = 0
-    const countingFetch = (async (input: string | URL | Request): Promise<Response> => {
-        if (String(input).includes('/v1/oembed')) oembedCalls++
-        return oembedFetch('https://media.redgifs.com/MemoCacheClip-poster.jpg')(input)
-    }) as unknown as typeof fetch
-    await resolveVideoUrl('https://www.redgifs.com/watch/memocacheclip', countingFetch)
-    await resolveVideoUrl('https://www.redgifs.com/watch/memocacheclip', countingFetch)
-    assert(oembedCalls === 1, 'redgifs oEmbed lookup memoized')
+    assert(redgifsEmbedUrl('https://media.redgifs.com/x-mobile.mp4') === null, 'media file gets no embed')
+    assert(redgifsEmbedUrl('https://example.com/v.mp4') === null, 'non-redgifs url gets no embed')
+    assert(redgifsEmbedUrl('javascript:alert(1)') === null, 'unsafe url gets no embed')
+    assert(resolveVideoUrl('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound').src === null, 'resolveVideoUrl leaves redgifs to the embed player')
 
     // ---- url safety ----
 

@@ -2,7 +2,7 @@ import {LitElement, html, svg, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, property, state} from 'lit/decorators.js'
 import {ref} from 'lit/directives/ref.js'
-import {resolveVideoUrl} from '../../services/post-media'
+import {redgifsEmbedUrl, resolveVideoUrl} from '../../services/post-media'
 import {safeUrl} from '../../services/url'
 import {getSoundOn, setSoundOn, subscribeSound} from './sound'
 import type {LemmyPost} from '../../types'
@@ -49,15 +49,14 @@ export class ScrollMediaVideo extends LitElement {
             this.poster = null
             this.candidates = []
             this.resolveFailed = false
+            if (redgifsEmbedUrl(this.post?.videoUrl ?? null)) return
             const token = ++this.resolveToken
-            // embed pages (redgifs) resolve their exact-case media via oEmbed
-            void resolveVideoUrl(this.post?.videoUrl ?? null).then((resolved) => {
-                if (token !== this.resolveToken) return
-                this.src = resolved.src
-                this.poster = resolved.poster
-                this.candidates = resolved.candidates
-                this.resolveFailed = resolved.src === null
-            })
+            const resolved = resolveVideoUrl(this.post?.videoUrl ?? null)
+            if (token !== this.resolveToken) return
+            this.src = resolved.src
+            this.poster = resolved.poster
+            this.candidates = resolved.candidates
+            this.resolveFailed = resolved.src === null
         }
     }
 
@@ -87,13 +86,12 @@ export class ScrollMediaVideo extends LitElement {
         this.src = null
         this.candidates = []
         const token = ++this.resolveToken
-        void resolveVideoUrl(this.post?.videoUrl ?? null).then((resolved) => {
-            if (token !== this.resolveToken) return
-            this.src = resolved.src
-            this.poster = resolved.poster
-            this.candidates = resolved.candidates
-            this.resolveFailed = resolved.src === null
-        })
+        const resolved = resolveVideoUrl(this.post?.videoUrl ?? null)
+        if (token !== this.resolveToken) return
+        this.src = resolved.src
+        this.poster = resolved.poster
+        this.candidates = resolved.candidates
+        this.resolveFailed = resolved.src === null
     }
 
     /** Stable identity so the ref directive only fires on attach/detach. */
@@ -117,7 +115,28 @@ export class ScrollMediaVideo extends LitElement {
         }
     }
 
-    override render(): TemplateResult {
+    private renderEmbed(): TemplateResult {
+        const embedUrl = redgifsEmbedUrl(this.post?.videoUrl ?? null)
+        // the embed player is only mounted while the slide is active, so
+        // off-screen gifs never play or load
+        if (!embedUrl) return html``
+        return html`
+            <div class="media-stage embed">
+                ${this.active
+                    ? html`<iframe
+                        class="media-iframe"
+                        src=${embedUrl}
+                        title="Embedded video"
+                        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                        allowfullscreen
+                        referrerpolicy="no-referrer"
+                    ></iframe>`
+                    : html`<div class="embed-placeholder"></div>`}
+            </div>
+        `
+    }
+
+    private renderNative(): TemplateResult {
         const {post} = this
         const original = safeUrl(post.postUrl)
         const media = this.resolveFailed
@@ -155,6 +174,10 @@ export class ScrollMediaVideo extends LitElement {
                     : html``}
             </div>
         `
+    }
+
+    override render(): TemplateResult {
+        return redgifsEmbedUrl(this.post?.videoUrl ?? null) ? this.renderEmbed() : this.renderNative()
     }
 }
 
