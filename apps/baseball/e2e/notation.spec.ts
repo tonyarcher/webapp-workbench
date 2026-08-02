@@ -42,6 +42,24 @@ test('draws advancement arcs when a runner advances on a double', async ({ page 
 
   const awayScorebook = page.locator('baseball-scorebook-grid').first();
   await expect(awayScorebook.locator('.advancement-line')).toHaveCount(1);
+  await expect(awayScorebook.locator('.diamond').nth(0).locator('.advancement-line')).toHaveCount(1);
+  await expect(awayScorebook.locator('.diamond').nth(9).locator('.advancement-line')).toHaveCount(0);
+});
+
+test('marks the runner who scores in his own cell, not the batter\'s', async ({ page }) => {
+  await startGame(page);
+
+  for (let i = 0; i < 4; i++) {
+    await page.getByRole('button', { name: 'SINGLE (1B)' }).click();
+    await page.getByRole('button', { name: 'Right Field' }).click();
+  }
+
+  const awayScorebook = page.locator('baseball-scorebook-grid').first();
+  const firstBatterCell = awayScorebook.locator('.diamond').nth(0);
+  const fourthBatterCell = awayScorebook.locator('.diamond').nth(27);
+  await expect(firstBatterCell.locator('.advancement-line.scored')).toHaveCount(1);
+  await expect(firstBatterCell).toHaveClass(/scored/);
+  await expect(fourthBatterCell.locator('.advancement-line')).toHaveCount(0);
 });
 
 test('shows the batter on first base in the field after a single', async ({ page }) => {

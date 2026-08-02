@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-const SAVE_KEY = 'baseball.local-game.v1';
+const DB_NAME = 'baseball-db';
+const STORE = 'games';
+const RECORD_KEY = 'current';
 
 function row(
   slotIdx: number,
@@ -59,14 +61,38 @@ const completedGame = {
 };
 
 async function seedCompletedGame(page: import('@playwright/test').Page) {
-  await page.addInitScript(([key, data]) => {
-    localStorage.setItem(key, JSON.stringify(data));
-  }, [SAVE_KEY, completedGame] as const);
+  await page.evaluate(
+    ([dbName, store, key, data]) => {
+      return new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open(dbName, 1);
+        request.onupgradeneeded = () => {
+          const database = request.result;
+          if (!database.objectStoreNames.contains(store)) {
+            database.createObjectStore(store);
+          }
+        };
+        request.onsuccess = () => {
+          const database = request.result;
+          const tx = database.transaction(store, 'readwrite');
+          tx.objectStore(store).put(data, key);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    },
+    [DB_NAME, STORE, RECORD_KEY, completedGame] as const
+  );
+}
+
+async function openSeededGame(page: import('@playwright/test').Page) {
+  await page.goto('/');
+  await seedCompletedGame(page);
+  await page.reload();
 }
 
 test('shows a final box score for a completed game', async ({ page }) => {
-  await seedCompletedGame(page);
-  await page.goto('/');
+  await openSeededGame(page);
 
   await expect(page.getByTestId('local-game-state')).toBeVisible();
   await expect(page.getByTestId('engine-state-badge')).toHaveText('10 inn · FINAL · Away 2 · Home 3');
@@ -97,8 +123,7 @@ test('shows a final box score for a completed game', async ({ page }) => {
 });
 
 test('opens the box score from the completed controls', async ({ page }) => {
-  await seedCompletedGame(page);
-  await page.goto('/');
+  await openSeededGame(page);
 
   await page.getByRole('button', { name: 'View Final Box Score' }).click();
   await expect(page.getByTestId('box-score-modal')).toBeVisible();

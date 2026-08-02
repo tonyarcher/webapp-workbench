@@ -1,0 +1,148 @@
+import { QueryClient, QueryObserver } from '@tanstack/query-core';
+import type { LiveLocalGameState } from './game-state';
+import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
+import { createGame, reduceGame } from './rule-engine';
+import type { EngineGameState, EngineInitOptions, ScoringEvent, ScoringEventType } from './rule-engine';
+import { clearGameState, loadGameState, saveGameState } from './save-state';
+import { DEFAULT_AWAY_LINEUP, DEFAULT_HOME_LINEUP } from './default-lineups';
+
+export const GAME_QUERY_KEY = ['game'] as const;
+
+export type GameQueryResult = LiveLocalGameState | null | undefined;
+
+const ALL_ENGINE_EVENT_TYPES: ScoringEventType[] = [
+  'BALL',
+  'STRIKE',
+  'FOUL',
+  'STRIKEOUT',
+  'WALK',
+  'HIT_BY_PITCH',
+  'SINGLE',
+  'DOUBLE',
+  'TRIPLE',
+  'HOME_RUN',
+  'GROUNDOUT',
+  'FLYOUT',
+  'LINE_OUT',
+  'POP_OUT',
+  'SACRIFICE_FLY',
+  'ERROR',
+  'FIELDER_CHOICE',
+];
+
+export class GameStore {
+  readonly queryClient: QueryClient;
+  private observer: QueryObserver<GameQueryResult, Error>;
+
+  constructor(queryClient = new QueryClient()) {
+    this.queryClient = queryClient;
+    this.observer = new QueryObserver<GameQueryResult, Error>(this.queryClient, {
+      queryKey: GAME_QUERY_KEY,
+    });
+  }
+
+  subscribe(callback: (game: GameQueryResult) => void): () => void {
+    callback(this.observer.getCurrentResult().data);
+    return this.observer.subscribe((result) => callback(result.data));
+  }
+
+  async hydrate(): Promise<void> {
+    const saved = await loadGameState();
+    this.queryClient.setQueryData(GAME_QUERY_KEY, saved);
+  }
+
+  current(): LiveLocalGameState | null {
+    return this.queryClient.getQueryData<GameQueryResult>(GAME_QUERY_KEY) ?? null;
+  }
+
+  get canUndo(): boolean {
+    const state = this.current();
+    return state ? state.historyIndex > 0 : false;
+  }
+
+  get canRedo(): boolean {
+    const state = this.current();
+    return state ? state.historyIndex < state.events.length : false;
+  }
+
+  startGame(setup: LocalGameSetup): void {
+    this.commit({
+      setup,
+      engine: createGame(buildEngineOptions(setup)),
+      historyIndex: 0,
+      events: [],
+    });
+  }
+
+  recordEvent(record: LocalGameEventRecord): void {
+    const previous = this.current();
+    if (!previous) return;
+    const nextEngine = reduceEngineState(previous.engine, record);
+    this.commit({
+      ...previous,
+      engine: nextEngine,
+      historyIndex: previous.historyIndex + 1,
+      events: [...previous.events.slice(0, previous.historyIndex), record],
+    });
+  }
+
+  undo(): void {
+    this.applyHistory((this.current()?.historyIndex ?? 0) - 1);
+  }
+
+  redo(): void {
+    this.applyHistory((this.current()?.historyIndex ?? 0) + 1);
+  }
+
+  newGame(): void {
+    this.queryClient.setQueryData(GAME_QUERY_KEY, null);
+    void clearGameState();
+  }
+
+  private applyHistory(historyIndex: number): void {
+    const state = this.current();
+    if (!state) return;
+    if (historyIndex < 0 || historyIndex > state.events.length) return;
+    const base = createGame(buildEngineOptions(state.setup));
+    let engine = base;
+    for (const record of state.events.slice(0, historyIndex)) {
+      engine = reduceEngineState(engine, record);
+    }
+    this.commit({ ...state, engine, historyIndex });
+  }
+
+  private commit(state: LiveLocalGameState): void {
+    this.queryClient.setQueryData(GAME_QUERY_KEY, state);
+    void saveGameState(state);
+  }
+}
+
+function buildEngineOptions(setup: LocalGameSetup): EngineInitOptions {
+  return {
+    homeName: setup.homeTeamName,
+    awayName: setup.awayTeamName,
+    homeLineup: DEFAULT_HOME_LINEUP.map((player) => ({ batterName: player.batterName, position: player.position })),
+    awayLineup: DEFAULT_AWAY_LINEUP.map((player) => ({ batterName: player.batterName, position: player.position })),
+    totalInnings: setup.innings,
+  };
+}
+
+function reduceEngineState(engine: EngineGameState, record: LocalGameEventRecord): EngineGameState {
+  const scoringEvent = toScoringEvent(record);
+  if (!scoringEvent) return engine;
+  return reduceGame(engine, scoringEvent);
+}
+
+function toScoringEvent(record: LocalGameEventRecord): ScoringEvent | null {
+  const eventType = record.eventType as ScoringEventType;
+  if (!ALL_ENGINE_EVENT_TYPES.includes(eventType)) return null;
+  const event: ScoringEvent = { type: eventType };
+  const fieldPos = Number(record.detail?.fieldPos);
+  if (Number.isFinite(fieldPos) && fieldPos >= 1 && fieldPos <= 9) {
+    event.fieldPos = fieldPos;
+  }
+  if (record.detail?.doublePlay === true) {
+    event.doublePlay = true;
+  }
+  return event;
+}

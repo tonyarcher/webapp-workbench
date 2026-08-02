@@ -4,6 +4,8 @@ export type RunnersOnBase = [boolean, boolean, boolean];
 
 export type RunnerSlots = [number | null, number | null, number | null];
 
+export type RunnerInnings = [number | null, number | null, number | null];
+
 export type ScoringEventType =
   | 'BALL'
   | 'STRIKE'
@@ -74,6 +76,7 @@ export interface EngineGameState {
   homeScore: number;
   runners: RunnersOnBase;
   runnerSlots: RunnerSlots;
+  runnerInnings: RunnerInnings;
   awayBatterIdx: number;
   homeBatterIdx: number;
   awayRunsByInning: number[];
@@ -112,6 +115,7 @@ export function createGame(options: EngineInitOptions): EngineGameState {
     homeScore: 0,
     runners: [false, false, false],
     runnerSlots: [null, null, null],
+    runnerInnings: [null, null, null],
     awayBatterIdx: 0,
     homeBatterIdx: 0,
     awayRunsByInning: [],
@@ -143,6 +147,7 @@ function createTeamLineup(
 
 export function reduceGame(game: EngineGameState, event: ScoringEvent): EngineGameState {
   if (game.over) return game;
+  game = ensureRunnerInnings(game);
 
   const lineup = battingLineup(game);
   if (lineup.rows.length === 0) return game;
@@ -215,7 +220,7 @@ function updateBatterStats(
 }
 
 function updateRunnerState(game: EngineGameState, state: RunnerState): EngineGameState {
-  return { ...game, runners: state.runners, runnerSlots: state.runnerSlots };
+  return { ...game, runners: state.runners, runnerSlots: state.runnerSlots, runnerInnings: state.runnerInnings };
 }
 
 function currentBatterSlot(game: EngineGameState): number {
@@ -241,7 +246,7 @@ function finalCell(
   notation: string,
   base: number,
   outNum: number | null,
-  opts: { run?: boolean; rbiCount?: number; advancements?: Advancement[] } = {}
+  opts: { run?: boolean; rbiCount?: number } = {}
 ): EngineAtBatCell {
   return {
     count: `${game.balls}-${game.strikes}`,
@@ -251,7 +256,6 @@ function finalCell(
     hasEndedInningLine: false,
     run: opts.run ?? false,
     rbiCount: opts.rbiCount ?? 0,
-    advancements: opts.advancements,
   };
 }
 
@@ -276,18 +280,18 @@ function handleStrikeout(game: EngineGameState): EngineGameState {
 
 function handleWalk(game: EngineGameState): EngineGameState {
   const batterSlot = currentBatterSlot(game);
-  const advanced = advanceRunnerState(game.runners, game.runnerSlots, 1);
+  const advanced = advanceRunnerState(game.runners, game.runnerSlots, game.runnerInnings, 1);
   const runsScored = countRunsScored(game.runners, 1);
-  const placed = placeBatterState(advanced, 1, batterSlot);
+  const placed = placeBatterState(advanced, 1, batterSlot, game.inning);
   const withState = updateRunnerState(game, placed);
   const scored = addRuns(withState, runsScored);
-  const withCell = setCurrentBatterCell(
+  const withArcs = applyRunnerAdvancements(
     scored,
-    finalCell(game, 'BB', 1, null, {
-      rbiCount: runsScored,
-      advancements: runnerAdvancementsForWalk(game.runners),
-    })
+    runnerAdvancementsForWalk(game.runners),
+    game.runnerSlots,
+    game.runnerInnings
   );
+  const withCell = setCurrentBatterCell(withArcs, finalCell(game, 'BB', 1, null, { rbiCount: runsScored }));
   const withStats = updateBatterStats(withCell, (row) => ({
     ...row,
     atBats: row.atBats + 1,
@@ -299,19 +303,24 @@ function handleWalk(game: EngineGameState): EngineGameState {
 function handleHit(game: EngineGameState, eventType: ScoringEventType): EngineGameState {
   const bases = hitBaseCount(eventType);
   const batterSlot = currentBatterSlot(game);
-  const advanced = advanceRunnerState(game.runners, game.runnerSlots, bases);
+  const advanced = advanceRunnerState(game.runners, game.runnerSlots, game.runnerInnings, bases);
   const runsScored = countRunsScored(game.runners, bases);
-  const placed = bases === 4 ? advanced : placeBatterState(advanced, bases, batterSlot);
+  const placed = bases === 4 ? advanced : placeBatterState(advanced, bases, batterSlot, game.inning);
   const withState = updateRunnerState(game, placed);
   const withRunnerRuns = addRuns(withState, runsScored);
   const withBatterRun = bases === 4 ? scoreRunForBatter(withRunnerRuns) : withRunnerRuns;
+  const withArcs = applyRunnerAdvancements(
+    withBatterRun,
+    runnerAdvancementsForHit(game.runners, bases),
+    game.runnerSlots,
+    game.runnerInnings
+  );
   const rbiCount = runsScored + (bases === 4 ? 1 : 0);
   const withCell = setCurrentBatterCell(
-    withBatterRun,
+    withArcs,
     finalCell(game, hitNotation(eventType), bases === 4 ? 0 : bases, null, {
       run: bases === 4,
       rbiCount,
-      advancements: runnerAdvancementsForHit(game.runners, bases),
     })
   );
   const withStats = updateBatterStats(withCell, (row) => ({
@@ -334,7 +343,6 @@ function handleInPlayOut(
   const withCell = setCurrentBatterCell(resetCounts(game), {
     ...finalCell(game, inPlayOutNotation(eventType, fieldPos, forceDoublePlay), 0, game.outs + 1, {
       rbiCount: sacFly && game.runners[2] ? 1 : 0,
-      advancements: sacFly ? runnerAdvancementsForSacrifice(game.runners) : undefined,
     }),
     hasEndedInningLine: game.outs + outsAdded >= 3,
   });
@@ -352,7 +360,33 @@ function handleInPlayOut(
 function handleReachOnError(game: EngineGameState, eventType: ScoringEventType, fieldPos?: number): EngineGameState {
   const notation = (eventType === 'ERROR' ? 'E' : 'FC') + (fieldPos ? String(fieldPos) : '');
   const charged = eventType === 'ERROR' ? chargeError(game) : game;
-  const withCell = setCurrentBatterCell(charged, finalCell(game, notation, 1, null));
+  const batterSlot = currentBatterSlot(charged);
+  if (eventType === 'FIELDER_CHOICE') {
+    // The fielder retires the forced runner on first; the batter is safe at first.
+    const cleared = updateRunnerState(charged, clearRunnerOnFirst(charged));
+    const placed = placeBatterState(
+      { runners: cleared.runners, runnerSlots: cleared.runnerSlots, runnerInnings: cleared.runnerInnings },
+      1,
+      batterSlot,
+      cleared.inning
+    );
+    const withState = updateRunnerState(cleared, placed);
+    const withCell = setCurrentBatterCell(withState, finalCell(game, notation, 1, null));
+    return advancePlate(recordAtBat(resetCounts(withCell)));
+  }
+  // Error: every runner advances safely, like a walk.
+  const advanced = advanceRunnerState(charged.runners, charged.runnerSlots, charged.runnerInnings, 1);
+  const runsScored = countRunsScored(charged.runners, 1);
+  const placed = placeBatterState(advanced, 1, batterSlot, charged.inning);
+  const withState = updateRunnerState(charged, placed);
+  const withRuns = addRuns(withState, runsScored);
+  const withArcs = applyRunnerAdvancements(
+    withRuns,
+    runnerAdvancementsForWalk(charged.runners),
+    charged.runnerSlots,
+    charged.runnerInnings
+  );
+  const withCell = setCurrentBatterCell(withArcs, finalCell(game, notation, 1, null, { rbiCount: runsScored }));
   return advancePlate(recordAtBat(resetCounts(withCell)));
 }
 
@@ -364,34 +398,95 @@ function chargeError(game: EngineGameState): EngineGameState {
 interface RunnerState {
   runners: RunnersOnBase;
   runnerSlots: RunnerSlots;
+  runnerInnings: RunnerInnings;
 }
 
-function advanceRunnerState(runners: RunnersOnBase, runnerSlots: RunnerSlots, bases: number): RunnerState {
+function ensureRunnerInnings(game: EngineGameState): EngineGameState {
+  if (game.runnerInnings) return game;
+  // Old saves predate runnerInnings. Any runner on base must have reached it
+  // this inning (inning flips clear the bases), so their origin inning is the
+  // current one.
+  const runnerInnings: RunnerInnings = [null, null, null];
+  for (const base of runnersOn(game.runners)) {
+    runnerInnings[base - 1] = game.inning;
+  }
+  return { ...game, runnerInnings };
+}
+
+function advanceRunnerState(
+  runners: RunnersOnBase,
+  runnerSlots: RunnerSlots,
+  runnerInnings: RunnerInnings,
+  bases: number
+): RunnerState {
   const nextRunners: RunnersOnBase = [false, false, false];
   const nextSlots: RunnerSlots = [null, null, null];
+  const nextInnings: RunnerInnings = [null, null, null];
   for (const base of runnersOn(runners)) {
     const destination = base + bases;
     if (destination > 3) continue;
     nextRunners[destination - 1] = true;
     nextSlots[destination - 1] = runnerSlots[base - 1] ?? null;
+    nextInnings[destination - 1] = runnerInnings[base - 1] ?? null;
   }
-  return { runners: nextRunners, runnerSlots: nextSlots };
+  return { runners: nextRunners, runnerSlots: nextSlots, runnerInnings: nextInnings };
 }
 
-function placeBatterState(state: RunnerState, bases: number, batterSlot: number): RunnerState {
+function placeBatterState(state: RunnerState, bases: number, batterSlot: number, inning: number): RunnerState {
   if (bases === 4) return state;
   const nextRunners: RunnersOnBase = [...state.runners] as RunnersOnBase;
   const nextSlots: RunnerSlots = [...state.runnerSlots] as RunnerSlots;
+  const nextInnings: RunnerInnings = [...state.runnerInnings] as RunnerInnings;
   nextRunners[bases - 1] = true;
   nextSlots[bases - 1] = batterSlot;
-  return { runners: nextRunners, runnerSlots: nextSlots };
+  nextInnings[bases - 1] = inning;
+  return { runners: nextRunners, runnerSlots: nextSlots, runnerInnings: nextInnings };
 }
 
 function clearRunnerOnFirst(game: EngineGameState): RunnerState {
   return {
     runners: [false, game.runners[1], game.runners[2]],
     runnerSlots: [null, game.runnerSlots[1], game.runnerSlots[2]],
+    runnerInnings: [null, game.runnerInnings[1], game.runnerInnings[2]],
   };
+}
+
+function applyRunnerAdvancements(
+  game: EngineGameState,
+  advancements: Advancement[],
+  runnerSlots: RunnerSlots,
+  runnerInnings: RunnerInnings
+): EngineGameState {
+  let result = game;
+  for (const advancement of advancements) {
+    const slot = runnerSlots[advancement.from - 1];
+    const inning = runnerInnings[advancement.from - 1];
+    if (slot == null || inning == null) continue;
+    result = appendAdvancement(result, slot, inning, advancement);
+  }
+  return result;
+}
+
+function appendAdvancement(game: EngineGameState, slot: number, inning: number, advancement: Advancement): EngineGameState {
+  const lineup = battingLineup(game);
+  const rowIndex = lineup.rows.findIndex((row) => row.slotIdx === slot);
+  if (rowIndex < 0) return game;
+  const key = String(inning);
+  const rows = lineup.rows.map((row, index) => {
+    if (index !== rowIndex) return row;
+    const cell = row.innings[key];
+    if (!cell) return row;
+    return {
+      ...row,
+      innings: {
+        ...row.innings,
+        [key]: { ...cell, advancements: [...(cell.advancements ?? []), advancement] },
+      },
+    };
+  });
+  const updatedLineup = { ...lineup, rows };
+  if (game.half === 'TOP') return { ...game, awayLineup: updatedLineup };
+  return { ...game, homeLineup: updatedLineup };
 }
 
 function countRunsScored(runners: RunnersOnBase, bases: number): number {
@@ -421,8 +516,15 @@ function scoreRunnerFromThird(game: EngineGameState): EngineGameState {
   const advanced = updateRunnerState(game, {
     runners: [game.runners[0], game.runners[1], false],
     runnerSlots: [game.runnerSlots[0], game.runnerSlots[1], null],
+    runnerInnings: [game.runnerInnings[0], game.runnerInnings[1], null],
   });
-  return scoreRunForBatter(advanced);
+  const withArc = applyRunnerAdvancements(
+    advanced,
+    runnerAdvancementsForSacrifice(game.runners),
+    game.runnerSlots,
+    game.runnerInnings
+  );
+  return scoreRunForBatter(withArc);
 }
 
 function recordAtBat(game: EngineGameState): EngineGameState {
@@ -452,6 +554,7 @@ function flipInning(game: EngineGameState): EngineGameState {
     outs: 0,
     runners: [false, false, false],
     runnerSlots: [null, null, null],
+    runnerInnings: [null, null, null],
     balls: 0,
     strikes: 0,
     awayBatterIdx: 0,

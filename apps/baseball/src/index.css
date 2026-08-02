@@ -1,5 +1,5 @@
 /* Import global design tokens and styles from top-level styles directory */
-@import "../../styles/styles.css";
+@import "../styles/styles.css";
 
 /* Reset Vite template container overrides to allow global full-width radial dark background */
 #root {

@@ -1,4 +1,4 @@
-import {html, LitElement} from 'lit';
+import {html, svg, LitElement} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
 import scorebookCssText from './baseball-scorebook-grid.css?inline';
 
@@ -107,9 +107,10 @@ export class BaseballScorebookGrid extends LitElement {
     private renderCell(cell: ScorebookCellDto | null) {
         const baseClass = cell?.base ? `b${cell.base}` : '';
         const endClass = cell?.hasEndedInningLine ? 'ended-inning' : '';
+        const scored = cell?.run === true || (cell?.advancements ?? []).some((advancement) => advancement.scored);
 
         return html`
-      <div class="diamond ${baseClass} ${endClass}">
+      <div class="diamond ${baseClass} ${endClass} ${scored ? 'scored' : ''}">
         ${cell?.run ? html`<div class="run-dot" data-testid="run-dot"></div>` : ''}
         ${this.renderAdvancements(cell)}
         ${cell?.notation ? html`
@@ -129,7 +130,7 @@ export class BaseballScorebookGrid extends LitElement {
         if (advancements.length === 0) return '';
 
         const lines = advancements.map(
-            (advancement) => html`
+            (advancement) => svg`
         <line
           class="advancement-line ${advancement.scored ? 'scored' : ''}"
           x1="${basePointX(advancement.from)}"

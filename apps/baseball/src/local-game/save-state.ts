@@ -1,8 +1,12 @@
-import type { LiveLocalGameState } from '../App';
+import { openDB } from 'idb';
+import type { DBSchema, IDBPDatabase } from 'idb';
+import type { LiveLocalGameState } from './game-state';
 import type { EngineGameState } from './rule-engine';
 import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
 
-export const SAVE_STORAGE_KEY = 'baseball.local-game.v1';
+export const SAVE_DB_NAME = 'baseball-db';
+export const SAVE_STORE_NAME = 'games';
+export const SAVE_RECORD_KEY = 'current';
 export const SAVE_STATE_VERSION = 4;
 
 export interface PersistedGameState {
@@ -14,10 +18,21 @@ export interface PersistedGameState {
   events: LocalGameEventRecord[];
 }
 
-export interface GameStateStore {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
+interface BaseballDB extends DBSchema {
+  [SAVE_STORE_NAME]: {
+    key: string;
+    value: PersistedGameState;
+  };
+}
+
+export function openGameDB(): Promise<IDBPDatabase<BaseballDB>> {
+  return openDB<BaseballDB>(SAVE_DB_NAME, 1, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains(SAVE_STORE_NAME)) {
+        db.createObjectStore(SAVE_STORE_NAME);
+      }
+    },
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -72,7 +87,7 @@ function isLocalGameEventRecord(value: unknown): value is LocalGameEventRecord {
   );
 }
 
-function isPersistedGameState(value: unknown): value is PersistedGameState {
+export function isValidPersistedGameState(value: unknown): value is PersistedGameState {
   if (!isRecord(value)) return false;
   if (value.version !== SAVE_STATE_VERSION) return false;
   if (typeof value.savedAt !== 'string') return false;
@@ -83,7 +98,21 @@ function isPersistedGameState(value: unknown): value is PersistedGameState {
   return value.historyIndex >= 0 && value.historyIndex <= value.events.length;
 }
 
-export function serializeGameState(state: LiveLocalGameState, now = new Date()): string {
+export async function loadGameState(
+  db: Promise<IDBPDatabase<BaseballDB>> = openGameDB()
+): Promise<LiveLocalGameState | null> {
+  const database = await db;
+  const raw = await database.get(SAVE_STORE_NAME, SAVE_RECORD_KEY);
+  if (!isValidPersistedGameState(raw)) return null;
+  return { setup: raw.setup, engine: raw.engine, historyIndex: raw.historyIndex, events: raw.events };
+}
+
+export async function saveGameState(
+  state: LiveLocalGameState,
+  db: Promise<IDBPDatabase<BaseballDB>> = openGameDB(),
+  now = new Date()
+): Promise<void> {
+  const database = await db;
   const persisted: PersistedGameState = {
     version: SAVE_STATE_VERSION,
     savedAt: now.toISOString(),
@@ -92,50 +121,12 @@ export function serializeGameState(state: LiveLocalGameState, now = new Date()):
     historyIndex: state.historyIndex,
     events: state.events,
   };
-  return JSON.stringify(persisted);
+  await database.put(SAVE_STORE_NAME, persisted, SAVE_RECORD_KEY);
 }
 
-export function deserializeGameState(raw: string | null): LiveLocalGameState | null {
-  if (raw === null) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return null;
-  }
-  if (!isPersistedGameState(parsed)) return null;
-  return { setup: parsed.setup, engine: parsed.engine, historyIndex: parsed.historyIndex, events: parsed.events };
-}
-
-function defaultStore(): GameStateStore | null {
-  if (typeof globalThis === 'undefined') return null;
-  const storage = (globalThis as { localStorage?: GameStateStore }).localStorage;
-  return storage ?? null;
-}
-
-export function loadGameState(store: GameStateStore | null = defaultStore()): LiveLocalGameState | null {
-  if (!store) return null;
-  try {
-    return deserializeGameState(store.getItem(SAVE_STORAGE_KEY));
-  } catch {
-    return null;
-  }
-}
-
-export function persistGameState(state: LiveLocalGameState, store: GameStateStore | null = defaultStore()): void {
-  if (!store) return;
-  try {
-    store.setItem(SAVE_STORAGE_KEY, serializeGameState(state));
-  } catch {
-    // storage can be unavailable (quota, disabled); the game still works in memory
-  }
-}
-
-export function clearGameState(store: GameStateStore | null = defaultStore()): void {
-  if (!store) return;
-  try {
-    store.removeItem(SAVE_STORAGE_KEY);
-  } catch {
-    // ignore storage errors
-  }
+export async function clearGameState(
+  db: Promise<IDBPDatabase<BaseballDB>> = openGameDB()
+): Promise<void> {
+  const database = await db;
+  await database.delete(SAVE_STORE_NAME, SAVE_RECORD_KEY);
 }

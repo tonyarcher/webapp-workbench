@@ -1,5 +1,33 @@
 {
+  "name": "baseball-tracker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "oxlint",
+    "test:unit": "vitest run",
+    "test:e2e": "npm run build:components && playwright test",
+    "build:components": "npm --prefix web-components run build",
+    "test": "npm run test:unit"
+  },
+  "dependencies": {
+    "@baseball/web-components": "file:./web-components",
+    "@tanstack/history": "^1.103.4",
+    "@tanstack/query-core": "^5.80.0",
+    "@tanstack/virtual-core": "^3.13.0",
+    "idb": "^8.0.0",
+    "lit": "^3.2.0"
+  },
   "devDependencies": {
-    "@web-types/lit": "^2.0.0-3"
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.1.2",
+    "fake-indexeddb": "^6.2.5",
+    "oxlint": "^1.75.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
   }
 }

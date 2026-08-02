@@ -24,6 +24,12 @@ export class BaseballScoringControls extends LitElement {
     @property({type: String, attribute: 'pitcher-name'}) pitcherName = '';
     @property({type: String, attribute: 'pitcher-stats'}) pitcherStats = '';
 
+    // Active state — live game situation
+    @property({type: Number, attribute: 'balls'}) balls = 0;
+    @property({type: Number, attribute: 'strikes'}) strikes = 0;
+    @property({type: Number, attribute: 'outs'}) outs = 0;
+    @property({type: String, attribute: 'live-inning-text'}) liveInningText = '';
+
     // Active state — action panel mode ('action-grid' | 'step2')
     @property({type: String, attribute: 'current-pitch-type'}) currentPitchType = '';
     @property({type: String, attribute: 'panel-mode'}) panelMode: 'action-grid' | 'step2' = 'action-grid';
@@ -55,6 +61,14 @@ export class BaseballScoringControls extends LitElement {
         return html`
             <div class="active-controls">
                 <h2>Plate Matchup</h2>
+                <div class="live-situation" aria-live="polite">
+                    <span class="live-situation-inning">${this.liveInningText || 'Live'}</span>
+                    <span class="live-situation-count">${this.balls} balls · ${this.strikes} strikes · ${this.outs} outs</span>
+                    <span class="live-situation-score">
+                        <span class="team-score">${this.awayName || 'AWY'} ${this.awayScore}</span>
+                        <span class="team-score">${this.homeName || 'HOM'} ${this.homeScore}</span>
+                    </span>
+                </div>
                 <baseball-matchup-card
                     batter-name="${this.batterName}"
                     batter-stats="${this.batterStats}"

@@ -49,11 +49,11 @@ describe('buildBoxScore', () => {
     expect(box.away.runsByInning).toEqual([1]);
     expect(box.away.errors).toBe(1);
     expect(box.home.runs).toBe(2);
-    expect(box.home.hits).toBe(2);
+    expect(box.home.hits).toBe(1);
     expect(box.home.runsByInning).toEqual([2]);
     expect(box.home.errors).toBe(0);
     expect(box.away.batting[0]).toMatchObject({ player: 'Brendan Donovan', ab: 4, runs: 1, hits: 1, rbi: 1 });
-    expect(box.home.batting[0]).toMatchObject({ player: 'Ian Happ', ab: 3, runs: 2, hits: 2, rbi: 2 });
+    expect(box.home.batting[0]).toMatchObject({ player: 'Ian Happ', ab: 2, runs: 1, hits: 1, rbi: 2 });
   });
 
   it('reports the number of innings columns as at least the configured total', () => {

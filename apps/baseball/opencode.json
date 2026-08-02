@@ -1,0 +1,44 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "build",
+  "small_model": "opencode-go/deepseek-v4-flash",
+  "agent": {
+    "plan": {
+      "mode": "primary",
+      "model": "opencode-go/gpt-5.6-luna",
+      "variant": "max",
+      "description": "Master Controller and Planning Agent",
+      "permission": {
+        "edit": "deny"
+      }
+    },
+    "build": {
+      "mode": "primary",
+      "model": "opencode-go/deepseek-v4-flash",
+      "variant": "max",
+      "temperature": 0.3,
+      "description": "Primary Execution and Coding Agent"
+    },
+    "general": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "variant": "high",
+      "temperature": 0.4,
+      "description": "Concurrent multi-step coding and background executor"
+    },
+    "explore": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "variant": "high",
+      "temperature": 0,
+      "description": "Fast read-only codebase explorer"
+    },
+    "review": {
+      "mode": "subagent",
+      "model": "opencode-go/gpt-5.6-luna",
+      "variant": "high",
+      "temperature": 0.1,
+      "prompt": "You are in code review mode. Focus on: - Code quality and best practices - Potential bugs and edge cases - Performance implications - Security considerations. Provide constructive feedback without making direct changes."
+    }
+  },
+}

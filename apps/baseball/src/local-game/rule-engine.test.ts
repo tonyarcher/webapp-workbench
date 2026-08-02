@@ -472,6 +472,40 @@ describe('rule engine: fielding positions and run marks', () => {
     expect(game.awayLineup.rows[1].innings['1']).toMatchObject({ notation: 'FC4' });
   });
 
+  it('places the batter on first base when he reaches on an error', () => {
+    const game = reduceGame(createDefaultGame(), { type: 'ERROR', fieldPos: 6 });
+    expect(game.runners).toEqual([true, false, false]);
+    expect(game.runnerSlots).toEqual([1, null, null]);
+    expect(game.runnerInnings).toEqual([1, null, null]);
+  });
+
+  it('advances runners one base when a batter reaches on an error', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'));
+    game = reduceGame(game, { type: 'ERROR', fieldPos: 6 });
+    expect(game.runners).toEqual([true, true, false]);
+    expect(game.runnerSlots).toEqual([2, 1, null]);
+    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([{ from: 1, to: 2, scored: false }]);
+  });
+
+  it('scores the runner from third with an RBI when the bases are loaded and the batter reaches on an error', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'));
+    game = reduceGame(game, { type: 'ERROR', fieldPos: 6 });
+    expect(game.awayScore).toBe(1);
+    expect(game.awayLineup.rows[3].innings['1']).toMatchObject({ notation: 'E6', base: 1, rbiCount: 1 });
+    expect(game.awayLineup.rows[0].innings['1'].advancements).toContainEqual({ from: 3, to: 4, scored: true });
+  });
+
+  it('retires the forced runner on first and puts the batter on base on a fielder\'s choice', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'));
+    game = reduceGame(game, { type: 'FIELDER_CHOICE', fieldPos: 4 });
+    expect(game.runners).toEqual([true, false, false]);
+    expect(game.runnerSlots).toEqual([2, null, null]);
+    expect(game.awayLineup.rows[0].innings['1'].advancements).toBeUndefined();
+  });
+
   it('marks a solo home run with a run dot and one RBI', () => {
     const game = reduceGame(createDefaultGame(), event('HOME_RUN'));
     const cell = game.awayLineup.rows[0].innings['1'];
@@ -505,59 +539,83 @@ describe('rule engine: fielding positions and run marks', () => {
 });
 
 describe('rule engine: runner advancement arcs', () => {
-  it('advances a runner from first to third on a double', () => {
+  it('advances a runner from first to third on a double, marked in the runner\'s own cell', () => {
     let game = createDefaultGame();
     game = apply(game, event('SINGLE'));
     game = reduceGame(game, event('DOUBLE'));
-    const cell = game.awayLineup.rows[1].innings['1'];
+    const cell = game.awayLineup.rows[0].innings['1'];
     expect(cell.advancements).toEqual([{ from: 1, to: 3, scored: false }]);
+    expect(game.awayLineup.rows[1].innings['1'].advancements).toBeUndefined();
+  });
+
+  it('advances the first batter to second when a second batter singles', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'));
+    game = reduceGame(game, event('SINGLE'));
+    expect(game.runners).toEqual([true, true, false]);
+    expect(game.runnerSlots).toEqual([2, 1, null]);
+    const cell = game.awayLineup.rows[0].innings['1'];
+    expect(cell.advancements).toEqual([{ from: 1, to: 2, scored: false }]);
+    expect(game.awayLineup.rows[1].innings['1'].advancements).toBeUndefined();
   });
 
   it('advances runners one base on a walk and scores the runner from third', () => {
     let game = createDefaultGame();
     game = apply(game, event('WALK'), event('WALK'), event('WALK'));
     game = reduceGame(game, event('WALK'));
-    const cell = game.awayLineup.rows[3].innings['1'];
-    expect(cell.advancements).toEqual([
+    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([
       { from: 1, to: 2, scored: false },
       { from: 2, to: 3, scored: false },
       { from: 3, to: 4, scored: true },
     ]);
-  });
-
-  it('moves runners up on a single, advancing the lead runner to third', () => {
-    let game = createDefaultGame();
-    game = apply(game, event('SINGLE'), event('SINGLE'));
-    game = reduceGame(game, event('SINGLE'));
-    const cell = game.awayLineup.rows[2].innings['1'];
-    expect(cell.advancements).toEqual([
+    expect(game.awayLineup.rows[1].innings['1'].advancements).toEqual([
       { from: 1, to: 2, scored: false },
       { from: 2, to: 3, scored: false },
     ]);
+    expect(game.awayLineup.rows[2].innings['1'].advancements).toEqual([{ from: 1, to: 2, scored: false }]);
+    expect(game.awayLineup.rows[3].innings['1'].advancements).toBeUndefined();
   });
 
-  it('scores runners from first and second on a triple', () => {
+  it('moves runners up on a single, marking each runner\'s advance in their own cell', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'), event('SINGLE'));
+    game = reduceGame(game, event('SINGLE'));
+    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([
+      { from: 1, to: 2, scored: false },
+      { from: 2, to: 3, scored: false },
+    ]);
+    expect(game.awayLineup.rows[1].innings['1'].advancements).toEqual([{ from: 1, to: 2, scored: false }]);
+    expect(game.awayLineup.rows[2].innings['1'].advancements).toBeUndefined();
+  });
+
+  it('scores runners from first and second on a triple, marking each scorer in their own cell', () => {
     let game = createDefaultGame();
     game = apply(game, event('SINGLE'), event('SINGLE'));
     game = reduceGame(game, event('TRIPLE'));
-    const cell = game.awayLineup.rows[2].innings['1'];
-    expect(cell.advancements).toEqual([
-      { from: 1, to: 4, scored: true },
+    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([
+      { from: 1, to: 2, scored: false },
       { from: 2, to: 4, scored: true },
     ]);
+    expect(game.awayLineup.rows[1].innings['1'].advancements).toEqual([{ from: 1, to: 4, scored: true }]);
   });
 
   it('records a sacrifice fly advancement when a runner scores from third', () => {
     let game = createDefaultGame();
     game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'));
     game = reduceGame(game, { type: 'SACRIFICE_FLY', fieldPos: 8 });
-    const cell = game.awayLineup.rows[3].innings['1'];
-    expect(cell.advancements).toEqual([{ from: 3, to: 4, scored: true }]);
+    const cell = game.awayLineup.rows[0].innings['1'];
+    expect(cell.advancements).toEqual([
+      { from: 1, to: 2, scored: false },
+      { from: 2, to: 3, scored: false },
+      { from: 3, to: 4, scored: true },
+    ]);
+    expect(game.awayLineup.rows[1].innings['1'].advancements).toEqual([{ from: 1, to: 2, scored: false }]);
+    expect(game.awayLineup.rows[2].innings['1'].advancements).toBeUndefined();
   });
 
   it('keeps advancement records empty for a home run with no runners', () => {
     const game = reduceGame(createDefaultGame(), event('HOME_RUN'));
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([]);
+    expect(game.awayLineup.rows[0].innings['1'].advancements).toBeUndefined();
   });
 
   it('leaves advancements unset for outs and strikeouts', () => {
@@ -608,6 +666,30 @@ describe('rule engine: runner identity', () => {
     game = apply(game, event('WALK'));
     game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
     expect(game.runnerSlots).toEqual([null, null, null]);
+  });
+
+  it('tracks the inning where each runner reached base', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'), event('SINGLE'));
+    expect(game.runnerSlots).toEqual([4, 3, 2]);
+    expect(game.runnerInnings).toEqual([1, 1, 1]);
+  });
+
+  it('records the origin inning of a runner from a later inning', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    game = reduceGame(game, event('SINGLE'));
+    expect(game.inning).toBe(2);
+    expect(game.runnerSlots).toEqual([1, null, null]);
+    expect(game.runnerInnings).toEqual([2, null, null]);
+  });
+
+  it('clears runner origin innings when the inning flips', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('WALK'));
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    expect(game.runnerInnings).toEqual([null, null, null]);
   });
 });
 
