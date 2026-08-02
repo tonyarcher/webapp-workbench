@@ -49,6 +49,14 @@ test('starts a local game without contacting a server', async ({ page }) => {
   const awayLedScore = page.locator('baseball-scoreboard .team-led-score').nth(0);
   await expect(awayLedScore).toHaveText('1');
 
+  const exportButton = page.getByTestId('export-scorebook-button');
+  await expect(exportButton).toBeVisible();
+
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.getByTestId('local-game-state')).toBeHidden();
+  await expect(awayScorebook).toBeVisible();
+  await page.emulateMedia({ media: 'screen' });
+
   await page.getByTestId('new-game-button').click();
   await expect(startButton).toBeVisible();
 });

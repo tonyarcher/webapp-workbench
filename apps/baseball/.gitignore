@@ -12,6 +12,7 @@ webApp/src/wasmJsMain/resources/js/web-components.js
 webApp/src/wasmJsMain/resources/styles.css
 webApp/src/wasmJsMain/resources/css/
 web-components/dist/
+web-components/coverage/
 
 # IntelliJ IDEA
 .idea/

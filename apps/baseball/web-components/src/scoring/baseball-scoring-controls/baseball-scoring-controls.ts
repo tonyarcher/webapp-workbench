@@ -66,16 +66,11 @@ export class BaseballScoringControls extends LitElement {
                         <baseball-step2-panel
                             base-label=${this.step2Label}
                             ?is-hit=${this.step2IsHit}
-                            @location-selected=${(e: CustomEvent) => this.emit('location-selected', e.detail)}
-                            @cancel-step2=${() => this.emit('cancel-step2', {})}
                         ></baseball-step2-panel>
                     `
             : html`
                         <baseball-action-grid
                             current-pitch-type=${this.currentPitchType}
-                            @pitch-type-selected=${(e: CustomEvent) => this.emit('pitch-type-selected', e.detail)}
-                            @trigger-scoring-event=${(e: CustomEvent) => this.emit('trigger-scoring-event', e.detail)}
-                            @render-step2=${(e: CustomEvent) => this.emit('render-step2', e.detail)}
                         ></baseball-action-grid>
                     `}
             </div>

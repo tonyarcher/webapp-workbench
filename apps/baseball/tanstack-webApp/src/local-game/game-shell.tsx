@@ -27,6 +27,10 @@ export function LocalGameShell({ setup, engine, events, onEventRecorded, onNewGa
   const [step2IsHit, setStep2IsHit] = useState(false);
   const [lineupOpen, setLineupOpen] = useState(false);
 
+  const onExportScorebook = () => {
+    window.print();
+  };
+
   const shellRef = useRef<HTMLDivElement>(null);
   const pendingEventTypeRef = useRef<string>('');
   const pendingBaseLabelRef = useRef<string>('');
@@ -198,6 +202,9 @@ export function LocalGameShell({ setup, engine, events, onEventRecorded, onNewGa
               {engineBadge(engine)}
             </span>
           </h2>
+          <button className="btn btn-secondary" onClick={onExportScorebook} data-testid="export-scorebook-button">
+            Export Scorebook (PDF)
+          </button>
           <button className="btn btn-secondary" onClick={onNewGame} data-testid="new-game-button">
             New Game
           </button>

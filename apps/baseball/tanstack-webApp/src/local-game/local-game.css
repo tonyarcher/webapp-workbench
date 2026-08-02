@@ -88,3 +88,18 @@
   color: var(--text-secondary);
   word-break: break-word;
 }
+
+@media print {
+  .local-setup {
+    display: none;
+  }
+
+  .event-log {
+    display: none;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
