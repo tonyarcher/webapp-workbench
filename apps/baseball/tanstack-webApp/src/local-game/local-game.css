@@ -67,6 +67,18 @@
   font-family: 'Share Tech Mono', monospace;
 }
 
+.engine-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(0, 176, 80, 0.15);
+  color: var(--accent-green, #00b050);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.8rem;
+  vertical-align: middle;
+}
+
 .event-type {
   font-weight: 700;
   color: var(--accent-green, #00b050);

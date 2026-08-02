@@ -20,3 +20,15 @@ export const DEFAULT_HOME_LINEUP: LocalScorebookSlot[] = [
   { slotIdx: 8, batterName: 'Michael Busch', position: '1B', atBats: 0, runs: 0, hits: 0, rbi: 0, innings: {} },
   { slotIdx: 9, batterName: 'Patrick Wisdom', position: '3B', atBats: 0, runs: 0, hits: 0, rbi: 0, innings: {} },
 ];
+
+export const DEFAULT_AWAY_LINEUP: LocalScorebookSlot[] = [
+  { slotIdx: 1, batterName: 'Brendan Donovan', position: '2B', atBats: 0, runs: 0, hits: 0, rbi: 0, innings: {} },
+  { slotIdx: 2, batterName: 'Paul Goldschmidt', position: '1B', atBats: 0, runs: 0, hits: 0, rbi: 0, innings: {} },
+  { slotIdx: 3, batterName: 'Nolan Arenado', position: '3B', atBats: 0, runs: 0, hits: 0, rbi: 0, innings: {} },
+  { slotIdx: 4, batterName: 'Willson Contreras', position: 'DH', atBats: 0, runs: 0, hits: 0, rbi: 0, innings: {} },
+  { slotIdx: 5, batterName: 'Lars Nootbaar', position: 'CF', atBats: 0, runs: 0, hits: 0, rbi: 0, innings: {} },
+  { slotIdx: 6, batterName: 'Alec Burleson', position: 'LF', atBats: 0, runs: 0, hits: 0, rbi: 0, innings: {} },
+  { slotIdx: 7, batterName: 'Jordan Walker', position: 'RF', atBats: 0, runs: 0, hits: 0, rbi: 0, innings: {} },
+  { slotIdx: 8, batterName: 'Tommy Edman', position: 'SS', atBats: 0, runs: 0, hits: 0, rbi: 0, innings: {} },
+  { slotIdx: 9, batterName: 'Iván Herrera', position: 'C', atBats: 0, runs: 0, hits: 0, rbi: 0, innings: {} },
+];

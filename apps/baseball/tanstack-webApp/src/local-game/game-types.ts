@@ -11,11 +11,6 @@ export interface LocalGameEventRecord {
   detail: Record<string, unknown>;
 }
 
-export interface LocalGameState {
-  setup: LocalGameSetup | null;
-  events: LocalGameEventRecord[];
-}
-
 export const DEFAULT_GAME_SETUP: LocalGameSetup = {
   homeTeamName: 'Chicago Cubs',
   awayTeamName: 'St. Louis Cardinals',
