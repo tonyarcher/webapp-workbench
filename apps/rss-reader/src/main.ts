@@ -11,4 +11,12 @@ import {initTheme} from './theme';
 import {recomputeHotIfNeeded, reconcileUnreadCounts} from './db/db';
 
 initTheme();
-void recomputeHotIfNeeded().then(() => reconcileUnreadCounts());
+void recomputeHotIfNeeded()
+    .then(() => reconcileUnreadCounts())
+    .catch((err) => console.error('startup database maintenance failed', err));
+
+// PWA install + offline support; registration in dev would fight HMR, so only
+// the production bundle gets the service worker.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    void navigator.serviceWorker.register('/sw.js');
+}

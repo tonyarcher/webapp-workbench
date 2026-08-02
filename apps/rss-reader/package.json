@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/write-sw.mjs",
     "preview": "vite preview",
     "test": "tsx scripts/smoke.ts && tsx scripts/db-smoke.ts"
   },
