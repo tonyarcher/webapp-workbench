@@ -34,6 +34,8 @@ test('starts a local game without contacting a server', async ({ page }) => {
 
   await page.getByRole('button', { name: 'STRIKEOUT (K)' }).click();
   await expect(badge).toHaveText('Top 1 · 0 balls · 0 strikes · 1 outs');
+  const awayScorebook = page.locator('baseball-scorebook-grid').first();
+  await expect(awayScorebook.locator('.play-desc').first()).toHaveText('K');
 
   await page.getByRole('button', { name: 'WALK (BB)', exact: true }).click();
   await page.getByRole('button', { name: 'WALK (BB)', exact: true }).click();
