@@ -26,7 +26,6 @@ export class ScrollMediaVideo extends LitElement {
 
     private video: HTMLVideoElement | null = null
     private unsubscribeSound: (() => void) | null = null
-    private resolveToken = 0
 
     override connectedCallback(): void {
         super.connectedCallback()
@@ -40,24 +39,16 @@ export class ScrollMediaVideo extends LitElement {
         super.disconnectedCallback()
         this.unsubscribeSound?.()
         this.unsubscribeSound = null
-        this.resolveToken++
     }
 
     override willUpdate(changed: Map<string, unknown>): void {
         if (changed.has('post')) {
-            this.src = null
-            this.poster = null
-            this.candidates = []
-            this.resolveFailed = false
-            const token = ++this.resolveToken
-            // embed pages (redgifs) resolve to a direct media file asynchronously
-            void resolveVideoUrl(this.post?.videoUrl ?? null).then((resolved) => {
-                if (token !== this.resolveToken) return
-                this.src = resolved.src
-                this.poster = resolved.poster
-                this.candidates = resolved.candidates
-                this.resolveFailed = resolved.src === null
-            })
+            // embed pages (redgifs) map to direct media files synchronously
+            const resolved = resolveVideoUrl(this.post?.videoUrl ?? null)
+            this.src = resolved.src
+            this.poster = resolved.poster
+            this.candidates = resolved.candidates
+            this.resolveFailed = resolved.src === null
         }
     }
 
@@ -86,14 +77,11 @@ export class ScrollMediaVideo extends LitElement {
         this.resolveFailed = false
         this.src = null
         this.candidates = []
-        const token = ++this.resolveToken
-        void resolveVideoUrl(this.post?.videoUrl ?? null, fetch, {force: true}).then((resolved) => {
-            if (token !== this.resolveToken) return
-            this.src = resolved.src
-            this.poster = resolved.poster
-            this.candidates = resolved.candidates
-            this.resolveFailed = resolved.src === null
-        })
+        const resolved = resolveVideoUrl(this.post?.videoUrl ?? null)
+        this.src = resolved.src
+        this.poster = resolved.poster
+        this.candidates = resolved.candidates
+        this.resolveFailed = resolved.src === null
     }
 
     /** Stable identity so the ref directive only fires on attach/detach. */

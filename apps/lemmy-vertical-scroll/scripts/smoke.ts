@@ -403,51 +403,27 @@ void (async () => {
         'untyped redgifs url classifies video',
     )
 
-    const direct = await resolveVideoUrl('https://x.com/video.mp4', mockFetchImpl({}, 200))
+    const direct = resolveVideoUrl('https://x.com/video.mp4')
     assert(direct.src === 'https://x.com/video.mp4' && direct.poster === null && direct.candidates.length === 0, 'direct video passes through')
-    const unsafeVideo = await resolveVideoUrl('javascript:alert(1)', mockFetchImpl({}, 200))
+    const unsafeVideo = resolveVideoUrl('javascript:alert(1)')
     assert(unsafeVideo.src === null, 'unsafe direct video url rejected')
 
-    const rgApi = (mode: 'ok' | 'bad-token' | 'no-urls'): typeof fetch =>
-        (async (input: string | URL | Request): Promise<Response> => {
-            const url = String(input)
-            if (url.includes('/v2/auth/temporary')) {
-                if (mode === 'bad-token') return new Response('unauthorized', {status: 401})
-                return new Response(JSON.stringify({token: 'tok123'}), {status: 200, headers: {'Content-Type': 'application/json'}})
-            }
-            if (url.includes('/v2/gifs/')) {
-                if (mode === 'no-urls') return new Response(JSON.stringify({gif: {urls: {}}}), {status: 200, headers: {'Content-Type': 'application/json'}})
-                return new Response(
-                    JSON.stringify({gif: {urls: {sd: 'https://media.redgifs.com/x-mobile.mp4', hd: 'https://media.redgifs.com/x.mp4', silent: 'https://media.redgifs.com/x-silent.mp4', poster: 'https://media.redgifs.com/x-poster.jpg'}}}),
-                    {status: 200, headers: {'Content-Type': 'application/json'}},
-                )
-            }
-            return new Response('bad', {status: 500})
-        }) as unknown as typeof fetch
-
-    const rg = await resolveVideoUrl('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound', rgApi('ok'))
+    // redgifs maps to the platform's fixed media URL pattern, no API call
+    const rg = resolveVideoUrl('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound')
     assert(
-        rg.src === 'https://media.redgifs.com/x-mobile.mp4' &&
-            rg.poster === 'https://media.redgifs.com/x-poster.jpg' &&
+        rg.src === 'https://media.redgifs.com/steeldeadlyitaliangreyhound-mobile.mp4' &&
+            rg.poster === 'https://media.redgifs.com/steeldeadlyitaliangreyhound-poster.jpg' &&
             rg.candidates.length === 3,
-        'redgifs resolves via token flow to sd with poster and candidates',
+        'redgifs resolves to mobile mp4 with poster and fallback candidates',
     )
-    const rgNoUrls = await resolveVideoUrl('https://www.redgifs.com/watch/nourlsclip', rgApi('no-urls'))
-    assert(rgNoUrls.src === null && rgNoUrls.poster === null, 'redgifs without media urls reports failure')
-    const rgBadToken = await resolveVideoUrl('https://www.redgifs.com/watch/badtokenclip', rgApi('bad-token'))
-    assert(rgBadToken.src === null, 'redgifs token failure reports failure')
-
-    // memoized: the same clip resolves from cache without another token flow
-    let tokenCalls = 0
-    const countingFetch = (async (input: string | URL | Request): Promise<Response> => {
-        if (String(input).includes('/v2/auth/temporary')) tokenCalls++
-        return rgApi('ok')(input)
-    }) as unknown as typeof fetch
-    await resolveVideoUrl('https://www.redgifs.com/watch/memocacheclip', countingFetch)
-    await resolveVideoUrl('https://www.redgifs.com/watch/memocacheclip', countingFetch)
-    assert(tokenCalls === 1, 'redgifs resolution memoized')
-    await resolveVideoUrl('https://www.redgifs.com/watch/memocacheclip', countingFetch, {force: true})
-    assert(tokenCalls === 2, 'force bypasses the memo cache')
+    assert(
+        rg.candidates[1] === 'https://media.redgifs.com/steeldeadlyitaliangreyhound.mp4' &&
+            rg.candidates[2] === 'https://media.redgifs.com/steeldeadlyitaliangreyhound-silent.mp4',
+        'redgifs candidate order is mobile, plain, silent',
+    )
+    const rgIframe = resolveVideoUrl('https://redgifs.com/ifr/abc123')
+    assert(rgIframe.src === 'https://media.redgifs.com/abc123-mobile.mp4', 'redgifs ifr url resolves too')
+    assert(resolveVideoUrl('https://www.redgifs.com/watch/xyz').poster !== null, 'redgifs poster pattern present')
 
     // ---- url safety ----
 

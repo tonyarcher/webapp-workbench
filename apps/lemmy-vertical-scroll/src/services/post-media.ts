@@ -103,22 +103,16 @@ export interface ResolvedVideo {
     candidates: string[]
 }
 
-const RESOLVE_CACHE_TTL_MS = 10 * 60_000
-const resolveCache = new Map<string, {value: ResolvedVideo; at: number}>()
+const REDGIFS_MEDIA_BASE = 'https://media.redgifs.com/'
 
 /**
  * Resolves a video source for the scroll player. Direct media files pass
- * through unchanged; redgifs watch pages use the public token flow to get
- * the gif's media URLs. The bucket serves plain media requests fine — no
- * CORS probing needed, the <video> element reports failures itself.
- * Results are memoized (bounded TTL) so scrolling back through the feed
- * does not re-contact the embed provider for the same clips.
+ * through unchanged. Redgifs watch pages map to the platform's fixed media
+ * URL pattern — no API call involved, so removed gifs or CORS-less error
+ * responses can never produce console noise. The <video> element tries each
+ * candidate in order and reports failures itself.
  */
-export async function resolveVideoUrl(
-    videoUrl: string | null,
-    fetchImpl: typeof fetch = fetch,
-    opts?: {force?: boolean},
-): Promise<ResolvedVideo> {
+export function resolveVideoUrl(videoUrl: string | null): ResolvedVideo {
     if (!videoUrl) return {src: null, poster: null, candidates: []}
     const id = redgifsId(videoUrl)
     // direct media files pass through, but only for safe schemes
@@ -126,49 +120,16 @@ export async function resolveVideoUrl(
         const safe = safeUrl(videoUrl)
         return safe ? {src: safe, poster: null, candidates: []} : {src: null, poster: null, candidates: []}
     }
-    const cached = resolveCache.get(videoUrl)
-    if (!opts?.force && cached && Date.now() - cached.at < RESOLVE_CACHE_TTL_MS) return cached.value
-    let resolved: ResolvedVideo
-    try {
-        const tokenResponse = await fetchImpl(`https://api.redgifs.com/v2/auth/temporary?path=/ifr/${id}`, {
-            headers: {Accept: 'application/json'},
-            signal: AbortSignal.timeout(10_000),
-        })
-        if (!tokenResponse.ok) return {src: null, poster: null, candidates: []}
-        const {token} = (await tokenResponse.json()) as {token?: string}
-        if (!token) return {src: null, poster: null, candidates: []}
-        const gifResponse = await fetchImpl(
-            `https://api.redgifs.com/v2/gifs/${id}?views=yes&users=yes&niches=yes`,
-            {
-                headers: {Accept: 'application/json', Authorization: `Bearer ${token}`},
-                signal: AbortSignal.timeout(10_000),
-            },
-        )
-        if (!gifResponse.ok) return {src: null, poster: null, candidates: []}
-        const {gif} = (await gifResponse.json()) as {
-            gif?: {urls?: {sd?: string; hd?: string; silent?: string; poster?: string; thumbnail?: string}}
-        }
-        const urls = gif?.urls ?? {}
-        const candidates = [urls.sd, urls.hd, urls.silent]
-            .map((url) => safeUrl(url ?? null))
-            .filter((url): url is string => !!url)
-        resolved = {
-            src: candidates[0] ?? null,
-            poster: safeUrl(urls.poster ?? urls.thumbnail ?? null),
-            candidates,
-        }
-    } catch {
-        resolved = {src: null, poster: null, candidates: []}
-    }
-    resolveCache.set(videoUrl, {value: resolved, at: Date.now()})
-    pruneResolveCache()
-    return resolved
-}
-
-/** Drop expired entries so the memo never grows unbounded. */
-function pruneResolveCache(): void {
-    const cutoff = Date.now() - RESOLVE_CACHE_TTL_MS
-    for (const [key, entry] of resolveCache) {
-        if (entry.at < cutoff) resolveCache.delete(key)
+    const candidates = [
+        `${REDGIFS_MEDIA_BASE}${id}-mobile.mp4`,
+        `${REDGIFS_MEDIA_BASE}${id}.mp4`,
+        `${REDGIFS_MEDIA_BASE}${id}-silent.mp4`,
+    ]
+        .map((url) => safeUrl(url))
+        .filter((url): url is string => !!url)
+    return {
+        src: candidates[0] ?? null,
+        poster: safeUrl(`${REDGIFS_MEDIA_BASE}${id}-poster.jpg`),
+        candidates,
     }
 }
