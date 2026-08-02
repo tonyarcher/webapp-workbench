@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import '@baseball/web-components/dist/web-components.js';
 import { LocalGameSetupScreen } from './local-game/game-setup-screen';
 import { LocalGameShell } from './local-game/game-shell';
 import { createGame, reduceGame } from './local-game/rule-engine';
+import { clearGameState, loadGameState, persistGameState } from './local-game/save-state';
 import type { EngineGameState, EngineInitOptions, ScoringEvent, ScoringEventType } from './local-game/rule-engine';
 import type { LocalGameEventRecord, LocalGameSetup } from './local-game/game-types';
 
@@ -33,7 +34,15 @@ const ALL_ENGINE_EVENT_TYPES: ScoringEventType[] = [
 ];
 
 export default function App() {
-  const [game, setGame] = useState<LiveLocalGameState | null>(null);
+  const [game, setGame] = useState<LiveLocalGameState | null>(() => loadGameState());
+
+  useEffect(() => {
+    if (game) {
+      persistGameState(game);
+    } else {
+      clearGameState();
+    }
+  }, [game]);
 
   const handleStartGame = useCallback((setup: LocalGameSetup) => {
     const options: EngineInitOptions = {
