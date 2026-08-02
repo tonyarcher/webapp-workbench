@@ -152,6 +152,10 @@ function reduceEngineState(engine: EngineGameState, record: LocalGameEventRecord
 function toScoringEvent(record: LocalGameEventRecord): ScoringEvent | null {
   const eventType = record.eventType as ScoringEventType;
   if (!ALL_ENGINE_EVENT_TYPES.includes(eventType)) return null;
-  const base = Number(record.detail?.base ?? record.detail?.position ?? NaN);
-  return Number.isNaN(base) ? { type: eventType } : { type: eventType, base };
+  const event: ScoringEvent = { type: eventType };
+  const fieldPos = Number(record.detail?.fieldPos);
+  if (Number.isFinite(fieldPos) && fieldPos >= 1 && fieldPos <= 9) {
+    event.fieldPos = fieldPos;
+  }
+  return event;
 }

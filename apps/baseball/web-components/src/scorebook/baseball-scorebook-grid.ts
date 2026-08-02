@@ -11,6 +11,8 @@ export interface ScorebookCellDto {
     outNum?: number | null;
     count?: string | null;
     hasEndedInningLine?: boolean;
+    run?: boolean;
+    rbiCount?: number;
 }
 
 export interface ScorebookSlotDto {
@@ -101,12 +103,15 @@ export class BaseballScorebookGrid extends LitElement {
 
         return html`
       <div class="diamond ${baseClass} ${endClass}">
+        ${cell?.run ? html`<div class="run-dot" data-testid="run-dot"></div>` : ''}
         ${cell?.notation ? html`
           <div class="play-desc">${cell.notation}</div>` : ''}
         ${cell?.outNum ? html`
           <div class="out-circle">${cell.outNum}</div>` : ''}
         ${cell?.count ? html`
           <div class="count-badge">${cell.count}</div>` : ''}
+        ${cell?.rbiCount ? html`
+          <div class="rbi-badge">RBI ${cell.rbiCount}</div>` : ''}
       </div>
     `;
     }

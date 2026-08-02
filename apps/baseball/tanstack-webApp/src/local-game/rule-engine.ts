@@ -24,6 +24,7 @@ export type ScoringEventType =
 export interface ScoringEvent {
   type: ScoringEventType;
   base?: number;
+  fieldPos?: number;
 }
 
 export interface EngineAtBatCell {
@@ -32,10 +33,12 @@ export interface EngineAtBatCell {
   base: number;
   outNum: number | null;
   hasEndedInningLine: boolean;
+  run?: boolean;
+  rbiCount?: number;
 }
 
 export function emptyAtBatCell(): EngineAtBatCell {
-  return { count: '0-0', notation: '', base: 0, outNum: null, hasEndedInningLine: false };
+  return { count: '0-0', notation: '', base: 0, outNum: null, hasEndedInningLine: false, run: false, rbiCount: 0 };
 }
 
 export interface EngineScorebookRow {
@@ -83,6 +86,8 @@ export interface EngineInitOptions {
   awayLineup: Array<{ batterName: string; position: string }>;
   totalInnings: number;
 }
+
+import { hitBaseCount, hitNotation, inPlayOutNotation } from './notation';
 
 const OUT_EVENT_TYPES: ScoringEventType[] = ['GROUNDOUT', 'FLYOUT', 'LINE_OUT', 'POP_OUT', 'SACRIFICE_FLY', 'STRIKEOUT'];
 const HIT_EVENT_TYPES: ScoringEventType[] = ['SINGLE', 'DOUBLE', 'TRIPLE', 'HOME_RUN'];
@@ -161,11 +166,11 @@ export function reduceGame(game: EngineGameState, event: ScoringEvent): EngineGa
     case 'LINE_OUT':
     case 'POP_OUT':
     case 'SACRIFICE_FLY':
-      result = handleInPlayOut(game, event.type);
+      result = handleInPlayOut(game, event.type, event.fieldPos);
       break;
     case 'ERROR':
     case 'FIELDER_CHOICE':
-      result = handleReachOnError(game, event.type);
+      result = handleReachOnError(game, event.type, event.fieldPos);
       break;
     default:
       return game;
@@ -216,13 +221,21 @@ function setCurrentBatterCell(game: EngineGameState, cell: EngineAtBatCell): Eng
   return { ...game, homeLineup: updatedLineup };
 }
 
-function finalCell(game: EngineGameState, notation: string, base: number, outNum: number | null): EngineAtBatCell {
+function finalCell(
+  game: EngineGameState,
+  notation: string,
+  base: number,
+  outNum: number | null,
+  opts: { run?: boolean; rbiCount?: number } = {}
+): EngineAtBatCell {
   return {
     count: `${game.balls}-${game.strikes}`,
     notation,
     base,
     outNum,
     hasEndedInningLine: false,
+    run: opts.run ?? false,
+    rbiCount: opts.rbiCount ?? 0,
   };
 }
 
@@ -249,7 +262,7 @@ function handleWalk(game: EngineGameState): EngineGameState {
   const { runners, runsScored } = walkRunners(game.runners);
   const advanced = updateRunners(game, runners);
   const scored = addRuns(advanced, runsScored);
-  const withCell = setCurrentBatterCell(scored, finalCell(game, 'BB', 1, null));
+  const withCell = setCurrentBatterCell(scored, finalCell(game, 'BB', 1, null, { rbiCount: runsScored }));
   const withStats = updateBatterStats(withCell, (row) => ({
     ...row,
     atBats: row.atBats + 1,
@@ -264,7 +277,11 @@ function handleHit(game: EngineGameState, eventType: ScoringEventType): EngineGa
   const withBatter = updateRunners(game, placeBatter(runners, bases));
   const withRunnerRuns = addRuns(withBatter, runsScored);
   const withBatterRun = bases === 4 ? scoreRunForBatter(withRunnerRuns) : withRunnerRuns;
-  const withCell = setCurrentBatterCell(withBatterRun, finalCell(game, hitNotation(eventType), bases === 4 ? 0 : bases, null));
+  const rbiCount = runsScored + (bases === 4 ? 1 : 0);
+  const withCell = setCurrentBatterCell(
+    withBatterRun,
+    finalCell(game, hitNotation(eventType), bases === 4 ? 0 : bases, null, { run: bases === 4, rbiCount })
+  );
   const withStats = updateBatterStats(withCell, (row) => ({
     ...row,
     atBats: row.atBats + 1,
@@ -273,20 +290,23 @@ function handleHit(game: EngineGameState, eventType: ScoringEventType): EngineGa
   return advancePlate(resetCounts(withStats));
 }
 
-function handleInPlayOut(game: EngineGameState, eventType: ScoringEventType): EngineGameState {
+function handleInPlayOut(game: EngineGameState, eventType: ScoringEventType, fieldPos?: number): EngineGameState {
+  const sacFly = eventType === 'SACRIFICE_FLY' || eventType === 'FLYOUT';
   const withCell = setCurrentBatterCell(resetCounts(game), {
-    ...finalCell(game, inPlayOutNotation(eventType), 0, game.outs + 1),
+    ...finalCell(game, inPlayOutNotation(eventType, fieldPos), 0, game.outs + 1, {
+      rbiCount: sacFly && game.runners[2] ? 1 : 0,
+    }),
     hasEndedInningLine: game.outs === 2,
   });
   const withAtBat = recordAtBat(withCell);
-  if (eventType === 'SACRIFICE_FLY' || eventType === 'FLYOUT') {
+  if (sacFly) {
     return recordOut(advancePlate(scoreRunnerFromThird(withAtBat)));
   }
   return recordOut(advancePlate(withAtBat));
 }
 
-function handleReachOnError(game: EngineGameState, eventType: ScoringEventType): EngineGameState {
-  const notation = eventType === 'ERROR' ? 'E' : 'FC';
+function handleReachOnError(game: EngineGameState, eventType: ScoringEventType, fieldPos?: number): EngineGameState {
+  const notation = (eventType === 'ERROR' ? 'E' : 'FC') + (fieldPos ? String(fieldPos) : '');
   const charged = eventType === 'ERROR' ? chargeError(game) : game;
   const withCell = setCurrentBatterCell(charged, finalCell(game, notation, 1, null));
   return advancePlate(recordAtBat(resetCounts(withCell)));
@@ -295,38 +315,6 @@ function handleReachOnError(game: EngineGameState, eventType: ScoringEventType):
 function chargeError(game: EngineGameState): EngineGameState {
   if (game.half === 'TOP') return { ...game, homeErrors: game.homeErrors + 1 };
   return { ...game, awayErrors: game.awayErrors + 1 };
-}
-
-function hitNotation(eventType: ScoringEventType): string {
-  switch (eventType) {
-    case 'SINGLE':
-      return '1B';
-    case 'DOUBLE':
-      return '2B';
-    case 'TRIPLE':
-      return '3B';
-    case 'HOME_RUN':
-      return 'HR';
-    default:
-      return '';
-  }
-}
-
-function inPlayOutNotation(eventType: ScoringEventType): string {
-  switch (eventType) {
-    case 'GROUNDOUT':
-      return 'GO';
-    case 'FLYOUT':
-      return 'FO';
-    case 'LINE_OUT':
-      return 'LO';
-    case 'POP_OUT':
-      return 'PO';
-    case 'SACRIFICE_FLY':
-      return 'SF';
-    default:
-      return '';
-  }
 }
 
 function walkRunners(runners: RunnersOnBase): { runners: RunnersOnBase; runsScored: number } {
@@ -446,21 +434,6 @@ function setTeamScore(game: EngineGameState, value: number): EngineGameState {
   const homeRunsByInning = [...game.homeRunsByInning];
   homeRunsByInning[game.inning - 1] = (homeRunsByInning[game.inning - 1] ?? 0) + delta;
   return { ...game, homeScore: value, homeRunsByInning };
-}
-
-function hitBaseCount(eventType: ScoringEventType): number {
-  switch (eventType) {
-    case 'SINGLE':
-      return 1;
-    case 'DOUBLE':
-      return 2;
-    case 'TRIPLE':
-      return 3;
-    case 'HOME_RUN':
-      return 4;
-    default:
-      return 0;
-  }
 }
 
 export function isHitEventType(eventType: string): boolean {

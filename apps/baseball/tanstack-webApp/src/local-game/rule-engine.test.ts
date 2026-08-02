@@ -437,3 +437,69 @@ describe('rule engine: per-inning runs and errors', () => {
     expect(game.homeErrors).toBe(0);
   });
 });
+
+describe('rule engine: fielding positions and run marks', () => {
+  it('records a groundout with the fielding positions', () => {
+    const game = reduceGame(createDefaultGame(), { type: 'GROUNDOUT', fieldPos: 6 });
+    const cell = game.awayLineup.rows[0].innings['1'];
+    expect(cell).toMatchObject({ notation: '6-3', outNum: 1 });
+  });
+
+  it('records a groundout fielded by first base without a pair', () => {
+    const game = reduceGame(createDefaultGame(), { type: 'GROUNDOUT', fieldPos: 3 });
+    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({ notation: '3' });
+  });
+
+  it('falls back to GO without a fielding position', () => {
+    const game = reduceGame(createDefaultGame(), event('GROUNDOUT'));
+    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({ notation: 'GO' });
+  });
+
+  it('records flyout, lineout, popout, and sac fly with positions', () => {
+    let game = reduceGame(createDefaultGame(), { type: 'FLYOUT', fieldPos: 8 });
+    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({ notation: '8' });
+    game = reduceGame(game, { type: 'LINE_OUT', fieldPos: 9 });
+    expect(game.awayLineup.rows[1].innings['1']).toMatchObject({ notation: 'L9' });
+    game = reduceGame(game, { type: 'POP_OUT', fieldPos: 6 });
+    expect(game.awayLineup.rows[2].innings['1']).toMatchObject({ notation: 'P6' });
+  });
+
+  it('records an error and fielder choice with the fielder position', () => {
+    let game = reduceGame(createDefaultGame(), { type: 'ERROR', fieldPos: 6 });
+    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({ notation: 'E6' });
+    expect(game.homeErrors).toBe(1);
+    game = reduceGame(game, { type: 'FIELDER_CHOICE', fieldPos: 4 });
+    expect(game.awayLineup.rows[1].innings['1']).toMatchObject({ notation: 'FC4' });
+  });
+
+  it('marks a solo home run with a run dot and one RBI', () => {
+    const game = reduceGame(createDefaultGame(), event('HOME_RUN'));
+    const cell = game.awayLineup.rows[0].innings['1'];
+    expect(cell).toMatchObject({ notation: 'HR', run: true, rbiCount: 1 });
+  });
+
+  it('marks a single driving in a runner with an RBI but no run dot', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'), event('DOUBLE'));
+    game = reduceGame(game, event('SINGLE'));
+    const cell = game.awayLineup.rows[2].innings['1'];
+    expect(cell).toMatchObject({ notation: '1B', run: false, rbiCount: 1 });
+  });
+
+  it('marks a bases-loaded walk with an RBI but no run dot', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'));
+    game = reduceGame(game, event('WALK'));
+    const cell = game.awayLineup.rows[3].innings['1'];
+    expect(cell).toMatchObject({ notation: 'BB', run: false, rbiCount: 1 });
+  });
+
+  it('marks a sacrifice fly scoring a runner with an RBI', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'));
+    game = reduceGame(game, { type: 'SACRIFICE_FLY', fieldPos: 8 });
+    const cell = game.awayLineup.rows[3].innings['1'];
+    expect(cell).toMatchObject({ notation: 'SF8', run: false, rbiCount: 1 });
+    expect(game.outs).toBe(1);
+  });
+});

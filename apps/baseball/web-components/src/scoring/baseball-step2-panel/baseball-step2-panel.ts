@@ -44,10 +44,15 @@ export class BaseballStep2Panel extends LitElement {
 
     private selectLocation(location: string | null) {
         this.dispatchEvent(new CustomEvent('location-selected', {
-            detail: {location},
+            detail: {location, fieldPos: this.fieldPosFromLabel(location)},
             bubbles: true,
             composed: true,
         }));
+    }
+
+    private fieldPosFromLabel(location: string | null): number | null {
+        const match = location?.match(/\((\d+)\)$/);
+        return match ? Number(match[1]) : null;
     }
 
     private cancelStep2() {
