@@ -89,6 +89,78 @@
   word-break: break-word;
 }
 
+.box-score-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1.5rem;
+}
+
+.box-score-modal {
+  background: var(--bg-card, #1e2432);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 900px;
+  width: 100%;
+  max-height: 85vh;
+  overflow: auto;
+}
+
+.box-score-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.box-score-header h3 {
+  margin: 0;
+}
+
+.line-score-table,
+.batting-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1.25rem;
+}
+
+.line-score-table th,
+.line-score-table td,
+.batting-table th,
+.batting-table td {
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  padding: 0.4rem 0.6rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.line-score-table th:first-child,
+.line-score-table td:first-child,
+.batting-table th:first-child,
+.batting-table td:first-child {
+  text-align: left;
+}
+
+.box-score-total {
+  font-weight: 800;
+}
+
+.batting-tables {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.batting-table caption {
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
 @media print {
   .local-setup {
     display: none;

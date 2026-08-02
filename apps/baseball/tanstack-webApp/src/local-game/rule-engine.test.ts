@@ -189,13 +189,13 @@ describe('rule engine: outs and inning flips', () => {
     expect(game.half).toBe('TOP');
   });
 
-  it('keeps the home team batting when trailing in the final inning', () => {
+  it('ends the game when the home team walks off in the final inning', () => {
     let game = createDefaultGame(1);
     game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
     game = apply(game, event('HOME_RUN'));
     expect(game.half).toBe('BOTTOM');
     expect(game.inning).toBe(1);
-    expect(game.over).toBe(false);
+    expect(game.over).toBe(true);
   });
 
   it('ends the game early when the home team leads in the final inning', () => {
@@ -350,5 +350,90 @@ describe('rule engine: scorebook cells', () => {
     const cell = game.awayLineup.rows[2].innings['1'];
     expect(cell.notation).toBe('K');
     expect(game.homeLineup.rows[0].innings).toEqual({});
+  });
+});
+
+describe('rule engine: extra innings and game ending', () => {
+  it('continues into an extra inning when the final inning ends tied', () => {
+    let game = createDefaultGame(1);
+    game = apply(game, event('HOME_RUN'));
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    game = apply(game, event('HOME_RUN'));
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    expect(game.over).toBe(false);
+    expect(game.inning).toBe(2);
+    expect(game.half).toBe('TOP');
+  });
+
+  it('ends on a walk-off home run in an extra inning', () => {
+    let game: EngineGameState = { ...createDefaultGame(1), inning: 2, half: 'TOP', awayScore: 1, homeScore: 1, over: false };
+    game = apply(game, event('HOME_RUN'));
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    game = apply(game, event('HOME_RUN'));
+    expect(game.over).toBe(false);
+    game = reduceGame(game, event('HOME_RUN'));
+    expect(game.over).toBe(true);
+    expect(game.homeScore).toBe(3);
+  });
+
+  it('does not end the game when home takes a lead before the final inning', () => {
+    let game = createDefaultGame(2);
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    game = reduceGame(game, event('HOME_RUN'));
+    expect(game.over).toBe(false);
+    expect(game.half).toBe('BOTTOM');
+    expect(game.homeScore).toBe(1);
+  });
+
+  it('skips the bottom of the final inning when home is already leading', () => {
+    let game: EngineGameState = { ...createDefaultGame(2), inning: 2, half: 'TOP', awayScore: 0, homeScore: 1, over: false };
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    expect(game.over).toBe(true);
+    expect(game.inning).toBe(2);
+  });
+
+  it('ends on a walk-off home run in the bottom of the final inning', () => {
+    let game: EngineGameState = { ...createDefaultGame(2), inning: 2, half: 'BOTTOM', awayScore: 1, homeScore: 1, over: false };
+    game = reduceGame(game, event('HOME_RUN'));
+    expect(game.over).toBe(true);
+    expect(game.homeScore).toBe(2);
+  });
+
+  it('ends when the away team wins the final inning outright', () => {
+    let game = createDefaultGame(1);
+    game = apply(game, event('HOME_RUN'));
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    expect(game.over).toBe(true);
+    expect(game.awayScore).toBe(1);
+    expect(game.homeScore).toBe(0);
+  });
+});
+
+describe('rule engine: per-inning runs and errors', () => {
+  it('records runs by inning for each team', () => {
+    let game = createDefaultGame(1);
+    game = apply(game, event('HOME_RUN'));
+    expect(game.awayRunsByInning).toEqual([1]);
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    game = apply(game, event('HOME_RUN'), event('HOME_RUN'));
+    expect(game.homeRunsByInning).toEqual([2]);
+    expect(game.awayRunsByInning).toEqual([1]);
+  });
+
+  it('charges errors to the fielding team', () => {
+    let game = createDefaultGame();
+    game = reduceGame(game, event('ERROR'));
+    expect(game.homeErrors).toBe(1);
+    expect(game.awayErrors).toBe(0);
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    game = reduceGame(game, event('ERROR'));
+    expect(game.awayErrors).toBe(1);
+    expect(game.homeErrors).toBe(1);
+  });
+
+  it('does not charge a fielder choice as an error', () => {
+    const game = reduceGame(createDefaultGame(), event('FIELDER_CHOICE'));
+    expect(game.homeErrors).toBe(0);
   });
 });

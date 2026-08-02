@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
 import { DEFAULT_AWAY_LINEUP, DEFAULT_HOME_LINEUP } from './default-lineups';
+import { buildBoxScore } from './box-score';
+import type { BoxScoreTeam } from './box-score';
 import type { EngineGameState, EngineScorebookRow } from './rule-engine';
 import './local-game.css';
 
@@ -40,6 +42,7 @@ export function LocalGameShell({
   const [step2Label, setStep2Label] = useState('');
   const [step2IsHit, setStep2IsHit] = useState(false);
   const [lineupOpen, setLineupOpen] = useState(false);
+  const [boxScoreOpen, setBoxScoreOpen] = useState(false);
 
   const onExportScorebook = () => {
     window.print();
@@ -114,6 +117,9 @@ export function LocalGameShell({
       setLineupOpen(false);
       record('save-lineup-setup', {});
     };
+    const handleViewBoxScore = () => {
+      setBoxScoreOpen(true);
+    };
 
     root.addEventListener('trigger-scoring-event', handleTriggerScoringEvent);
     root.addEventListener('pitch-type-selected', handlePitchTypeSelected);
@@ -123,6 +129,7 @@ export function LocalGameShell({
     root.addEventListener('open-lineup-setup-click', handleOpenLineupSetup);
     root.addEventListener('close-lineup-setup', handleCloseLineupSetup);
     root.addEventListener('save-lineup-setup', handleSaveLineupSetup);
+    root.addEventListener('view-boxscore', handleViewBoxScore);
 
     return () => {
       root.removeEventListener('trigger-scoring-event', handleTriggerScoringEvent);
@@ -133,6 +140,7 @@ export function LocalGameShell({
       root.removeEventListener('open-lineup-setup-click', handleOpenLineupSetup);
       root.removeEventListener('close-lineup-setup', handleCloseLineupSetup);
       root.removeEventListener('save-lineup-setup', handleSaveLineupSetup);
+      root.removeEventListener('view-boxscore', handleViewBoxScore);
     };
   }, [onEventRecorded]);
 
@@ -160,8 +168,15 @@ export function LocalGameShell({
     },
   };
 
+  const boxScore = buildBoxScore(engine);
+
   const boxScoreJson = {
-    lineScore: { awayHits: 0, homeHits: 0, awayErrors: 0, homeErrors: 0 },
+    lineScore: {
+      awayHits: boxScore.away.hits,
+      homeHits: boxScore.home.hits,
+      awayErrors: boxScore.away.errors,
+      homeErrors: boxScore.home.errors,
+    },
   };
 
   return (
@@ -225,6 +240,9 @@ export function LocalGameShell({
           <button className="btn btn-secondary" onClick={onExportScorebook} data-testid="export-scorebook-button">
             Export Scorebook (PDF)
           </button>
+          <button className="btn btn-secondary" onClick={() => setBoxScoreOpen(true)} data-testid="box-score-button">
+            Box Score
+          </button>
           <button className="btn btn-secondary" onClick={onNewGame} data-testid="new-game-button">
             New Game
           </button>
@@ -247,8 +265,97 @@ export function LocalGameShell({
             ))}
           </ul>
         )}
+        {boxScoreOpen && (
+          <div className="box-score-overlay" data-testid="box-score-modal" onClick={() => setBoxScoreOpen(false)}>
+            <div className="box-score-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="box-score-header">
+                <h3>Box Score</h3>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setBoxScoreOpen(false)}
+                  data-testid="close-box-score-button"
+                >
+                  Close
+                </button>
+              </div>
+              <table className="line-score-table">
+                <thead>
+                  <tr>
+                    <th>Team</th>
+                    {inningColumns(boxScore.innings).map((n) => (
+                      <th key={n}>{n}</th>
+                    ))}
+                    <th>R</th>
+                    <th>H</th>
+                    <th>E</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <LineScoreRow team={boxScore.away} innings={boxScore.innings} />
+                  <LineScoreRow team={boxScore.home} innings={boxScore.innings} />
+                </tbody>
+              </table>
+              <div className="batting-tables">
+                <BattingTable team={boxScore.away} />
+                <BattingTable team={boxScore.home} />
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </main>
+  );
+}
+
+function inningColumns(total: number): number[] {
+  return Array.from({ length: total }, (_, index) => index + 1);
+}
+
+function LineScoreRow({ team, innings }: { team: BoxScoreTeam; innings: number }) {
+  return (
+    <tr data-testid={`line-score-row-${team.name}`}>
+      <td>{team.name}</td>
+      {inningColumns(innings).map((n) => (
+        <td key={n} data-testid={`inning-${team.name}-${n}`}>
+          {team.runsByInning[n - 1] ?? 0}
+        </td>
+      ))}
+      <td className="box-score-total" data-testid={`runs-${team.name}`}>
+        {team.runs}
+      </td>
+      <td data-testid={`hits-${team.name}`}>{team.hits}</td>
+      <td data-testid={`errors-${team.name}`}>{team.errors}</td>
+    </tr>
+  );
+}
+
+function BattingTable({ team }: { team: BoxScoreTeam }) {
+  return (
+    <table className="batting-table" data-testid={`batting-table-${team.name}`}>
+      <caption>{team.name} Batting</caption>
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th>AB</th>
+          <th>R</th>
+          <th>H</th>
+          <th>RBI</th>
+          <th>BB</th>
+        </tr>
+      </thead>
+      <tbody>
+        {team.batting.map((line) => (
+          <tr key={line.player}>
+            <td>{line.player}</td>
+            <td>{line.ab}</td>
+            <td>{line.runs}</td>
+            <td>{line.hits}</td>
+            <td>{line.rbi}</td>
+            <td>{line.walks}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 

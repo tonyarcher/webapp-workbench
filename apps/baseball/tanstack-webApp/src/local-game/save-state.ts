@@ -3,7 +3,7 @@ import type { EngineGameState } from './rule-engine';
 import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
 
 export const SAVE_STORAGE_KEY = 'baseball.local-game.v1';
-export const SAVE_STATE_VERSION = 2;
+export const SAVE_STATE_VERSION = 3;
 
 export interface PersistedGameState {
   version: number;
@@ -42,6 +42,12 @@ function isEngineGameState(value: unknown): value is EngineGameState {
     value.runners.length === 3 &&
     typeof value.awayBatterIdx === 'number' &&
     typeof value.homeBatterIdx === 'number' &&
+    Array.isArray(value.awayRunsByInning) &&
+    value.awayRunsByInning.every((run: unknown) => typeof run === 'number') &&
+    Array.isArray(value.homeRunsByInning) &&
+    value.homeRunsByInning.every((run: unknown) => typeof run === 'number') &&
+    typeof value.awayErrors === 'number' &&
+    typeof value.homeErrors === 'number' &&
     typeof value.totalInnings === 'number' &&
     typeof value.over === 'boolean'
   );

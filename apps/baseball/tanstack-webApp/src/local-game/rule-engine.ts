@@ -68,6 +68,10 @@ export interface EngineGameState {
   runners: RunnersOnBase;
   awayBatterIdx: number;
   homeBatterIdx: number;
+  awayRunsByInning: number[];
+  homeRunsByInning: number[];
+  awayErrors: number;
+  homeErrors: number;
   totalInnings: number;
   over: boolean;
 }
@@ -97,6 +101,10 @@ export function createGame(options: EngineInitOptions): EngineGameState {
     runners: [false, false, false],
     awayBatterIdx: 0,
     homeBatterIdx: 0,
+    awayRunsByInning: [],
+    homeRunsByInning: [],
+    awayErrors: 0,
+    homeErrors: 0,
     totalInnings: options.totalInnings,
     over: false,
   };
@@ -126,34 +134,44 @@ export function reduceGame(game: EngineGameState, event: ScoringEvent): EngineGa
   const lineup = battingLineup(game);
   if (lineup.rows.length === 0) return game;
 
+  let result: EngineGameState;
   switch (event.type) {
     case 'BALL':
-      return handleBall(game);
+      result = handleBall(game);
+      break;
     case 'STRIKE':
     case 'FOUL':
-      return handleStrike(game, event.type === 'FOUL');
+      result = handleStrike(game, event.type === 'FOUL');
+      break;
     case 'STRIKEOUT':
-      return handleStrikeout(game);
+      result = handleStrikeout(game);
+      break;
     case 'WALK':
     case 'HIT_BY_PITCH':
-      return handleWalk(game);
+      result = handleWalk(game);
+      break;
     case 'SINGLE':
     case 'DOUBLE':
     case 'TRIPLE':
     case 'HOME_RUN':
-      return handleHit(game, event.type);
+      result = handleHit(game, event.type);
+      break;
     case 'GROUNDOUT':
     case 'FLYOUT':
     case 'LINE_OUT':
     case 'POP_OUT':
     case 'SACRIFICE_FLY':
-      return handleInPlayOut(game, event.type);
+      result = handleInPlayOut(game, event.type);
+      break;
     case 'ERROR':
     case 'FIELDER_CHOICE':
-      return handleReachOnError(game, event.type);
+      result = handleReachOnError(game, event.type);
+      break;
+    default:
+      return game;
   }
 
-  return game;
+  return endOnWalkOff(result);
 }
 
 function battingLineup(game: EngineGameState): EngineTeamLineup {
@@ -269,8 +287,14 @@ function handleInPlayOut(game: EngineGameState, eventType: ScoringEventType): En
 
 function handleReachOnError(game: EngineGameState, eventType: ScoringEventType): EngineGameState {
   const notation = eventType === 'ERROR' ? 'E' : 'FC';
-  const withCell = setCurrentBatterCell(game, finalCell(game, notation, 1, null));
+  const charged = eventType === 'ERROR' ? chargeError(game) : game;
+  const withCell = setCurrentBatterCell(charged, finalCell(game, notation, 1, null));
   return advancePlate(recordAtBat(resetCounts(withCell)));
+}
+
+function chargeError(game: EngineGameState): EngineGameState {
+  if (game.half === 'TOP') return { ...game, homeErrors: game.homeErrors + 1 };
+  return { ...game, awayErrors: game.awayErrors + 1 };
 }
 
 function hitNotation(eventType: ScoringEventType): string {
@@ -376,6 +400,8 @@ function advancePlate(game: EngineGameState): EngineGameState {
 }
 
 function flipInning(game: EngineGameState): EngineGameState {
+  const completedHalf = game.half;
+  const completedInning = game.inning;
   const flipped: EngineGameState = {
     ...game,
     outs: 0,
@@ -387,17 +413,22 @@ function flipInning(game: EngineGameState): EngineGameState {
     half: game.half === 'TOP' ? 'BOTTOM' : 'TOP',
     inning: game.half === 'BOTTOM' ? game.inning + 1 : game.inning,
   };
-  if (isGameOverAfter(flipped)) return { ...flipped, over: true };
+  if (isGameOverAfter(flipped, completedHalf, completedInning)) return { ...flipped, over: true };
   return flipped;
 }
 
-function isGameOverAfter(game: EngineGameState): boolean {
-  const finalInning = game.totalInnings;
-  const homeLead = game.homeScore > game.awayScore;
-  const homeBattingLast = game.half === 'BOTTOM';
-  if (game.inning >= finalInning && homeBattingLast && homeLead) return true;
-  if (game.inning > finalInning) return true;
-  return false;
+function isGameOverAfter(game: EngineGameState, completedHalf: BattingHalf, completedInning: number): boolean {
+  if (completedInning < game.totalInnings) return false;
+  if (completedHalf === 'TOP') return game.homeScore > game.awayScore;
+  return game.homeScore !== game.awayScore;
+}
+
+function endOnWalkOff(game: EngineGameState): EngineGameState {
+  if (game.over) return game;
+  if (game.half !== 'BOTTOM') return game;
+  if (game.inning < game.totalInnings) return game;
+  if (game.homeScore <= game.awayScore) return game;
+  return { ...game, over: true };
 }
 
 function teamScore(game: EngineGameState): number {
@@ -405,8 +436,16 @@ function teamScore(game: EngineGameState): number {
 }
 
 function setTeamScore(game: EngineGameState, value: number): EngineGameState {
-  if (game.half === 'TOP') return { ...game, awayScore: value };
-  return { ...game, homeScore: value };
+  const delta = value - teamScore(game);
+  if (delta <= 0) return game;
+  if (game.half === 'TOP') {
+    const awayRunsByInning = [...game.awayRunsByInning];
+    awayRunsByInning[game.inning - 1] = (awayRunsByInning[game.inning - 1] ?? 0) + delta;
+    return { ...game, awayScore: value, awayRunsByInning };
+  }
+  const homeRunsByInning = [...game.homeRunsByInning];
+  homeRunsByInning[game.inning - 1] = (homeRunsByInning[game.inning - 1] ?? 0) + delta;
+  return { ...game, homeScore: value, homeRunsByInning };
 }
 
 function hitBaseCount(eventType: ScoringEventType): number {
