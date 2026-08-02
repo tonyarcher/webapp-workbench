@@ -3,13 +3,14 @@ import type { EngineGameState } from './rule-engine';
 import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
 
 export const SAVE_STORAGE_KEY = 'baseball.local-game.v1';
-export const SAVE_STATE_VERSION = 1;
+export const SAVE_STATE_VERSION = 2;
 
 export interface PersistedGameState {
   version: number;
   savedAt: string;
   setup: LocalGameSetup;
   engine: EngineGameState;
+  historyIndex: number;
   events: LocalGameEventRecord[];
 }
 
@@ -71,7 +72,9 @@ function isPersistedGameState(value: unknown): value is PersistedGameState {
   if (typeof value.savedAt !== 'string') return false;
   if (!isLocalGameSetup(value.setup)) return false;
   if (!isEngineGameState(value.engine)) return false;
-  return Array.isArray(value.events) && value.events.every(isLocalGameEventRecord);
+  if (!Array.isArray(value.events) || !value.events.every(isLocalGameEventRecord)) return false;
+  if (typeof value.historyIndex !== 'number' || !Number.isInteger(value.historyIndex)) return false;
+  return value.historyIndex >= 0 && value.historyIndex <= value.events.length;
 }
 
 export function serializeGameState(state: LiveLocalGameState, now = new Date()): string {
@@ -80,6 +83,7 @@ export function serializeGameState(state: LiveLocalGameState, now = new Date()):
     savedAt: now.toISOString(),
     setup: state.setup,
     engine: state.engine,
+    historyIndex: state.historyIndex,
     events: state.events,
   };
   return JSON.stringify(persisted);
@@ -94,7 +98,7 @@ export function deserializeGameState(raw: string | null): LiveLocalGameState | n
     return null;
   }
   if (!isPersistedGameState(parsed)) return null;
-  return { setup: parsed.setup, engine: parsed.engine, events: parsed.events };
+  return { setup: parsed.setup, engine: parsed.engine, historyIndex: parsed.historyIndex, events: parsed.events };
 }
 
 function defaultStore(): GameStateStore | null {

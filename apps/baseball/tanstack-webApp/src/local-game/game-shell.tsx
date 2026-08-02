@@ -8,7 +8,11 @@ interface LocalGameShellProps {
   setup: LocalGameSetup;
   engine: EngineGameState;
   events: LocalGameEventRecord[];
+  canUndo: boolean;
+  canRedo: boolean;
   onEventRecorded: (event: LocalGameEventRecord) => void;
+  onUndo: () => void;
+  onRedo: () => void;
   onNewGame: () => void;
 }
 
@@ -21,7 +25,17 @@ function nextEventId(): number {
   return eventSequence;
 }
 
-export function LocalGameShell({ setup, engine, events, onEventRecorded, onNewGame }: LocalGameShellProps) {
+export function LocalGameShell({
+  setup,
+  engine,
+  events,
+  canUndo,
+  canRedo,
+  onEventRecorded,
+  onUndo,
+  onRedo,
+  onNewGame,
+}: LocalGameShellProps) {
   const [panelMode, setPanelMode] = useState<'action-grid' | 'step2'>('action-grid');
   const [step2Label, setStep2Label] = useState('');
   const [step2IsHit, setStep2IsHit] = useState(false);
@@ -202,6 +216,12 @@ export function LocalGameShell({ setup, engine, events, onEventRecorded, onNewGa
               {engineBadge(engine)}
             </span>
           </h2>
+          <button className="btn btn-secondary" onClick={onUndo} disabled={!canUndo} data-testid="undo-button">
+            Undo
+          </button>
+          <button className="btn btn-secondary" onClick={onRedo} disabled={!canRedo} data-testid="redo-button">
+            Redo
+          </button>
           <button className="btn btn-secondary" onClick={onExportScorebook} data-testid="export-scorebook-button">
             Export Scorebook (PDF)
           </button>
@@ -210,8 +230,7 @@ export function LocalGameShell({ setup, engine, events, onEventRecorded, onNewGa
           </button>
         </div>
         <p className="text-muted">
-          Scoring events advance the count, outs, inning, and score. PDF export and roster import arrive in later
-          phases.
+          Scoring events advance the count, outs, inning, and score. Use Undo/Redo to correct mistakes.
         </p>
         {events.length === 0 ? (
           <p className="text-muted" data-testid="no-events-message">

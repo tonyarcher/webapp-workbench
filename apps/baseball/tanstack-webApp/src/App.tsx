@@ -10,6 +10,7 @@ import type { LocalGameEventRecord, LocalGameSetup } from './local-game/game-typ
 export interface LiveLocalGameState {
   setup: LocalGameSetup;
   engine: EngineGameState;
+  historyIndex: number;
   events: LocalGameEventRecord[];
 }
 
@@ -45,42 +46,34 @@ export default function App() {
   }, [game]);
 
   const handleStartGame = useCallback((setup: LocalGameSetup) => {
-    const options: EngineInitOptions = {
-      homeName: setup.homeTeamName,
-      awayName: setup.awayTeamName,
-      homeLineup: [
-        { batterName: 'Nico Hoerner', position: '2B' },
-        { batterName: 'Dansby Swanson', position: 'SS' },
-        { batterName: 'Ian Happ', position: 'LF' },
-        { batterName: 'Seiya Suzuki', position: 'RF' },
-        { batterName: 'Cody Bellinger', position: 'CF' },
-        { batterName: 'Christopher Morel', position: 'DH' },
-        { batterName: 'Miguel Amaya', position: 'C' },
-        { batterName: 'Michael Busch', position: '1B' },
-        { batterName: 'Patrick Wisdom', position: '3B' },
-      ],
-      awayLineup: [
-        { batterName: 'Brendan Donovan', position: '2B' },
-        { batterName: 'Paul Goldschmidt', position: '1B' },
-        { batterName: 'Nolan Arenado', position: '3B' },
-        { batterName: 'Willson Contreras', position: 'DH' },
-        { batterName: 'Lars Nootbaar', position: 'CF' },
-        { batterName: 'Alec Burleson', position: 'LF' },
-        { batterName: 'Jordan Walker', position: 'RF' },
-        { batterName: 'Tommy Edman', position: 'SS' },
-        { batterName: 'Iván Herrera', position: 'C' },
-      ],
-      totalInnings: setup.innings,
-    };
-    setGame({ setup, engine: createGame(options), events: [] });
+    const options = buildEngineOptions(setup);
+    setGame({ setup, engine: createGame(options), historyIndex: 0, events: [] });
   }, []);
 
   const handleEventRecorded = useCallback((record: LocalGameEventRecord) => {
     setGame((previous) => {
       if (!previous) return previous;
-      const { engine, events } = previous;
-      const nextEngine = reduceEngineState(engine, record);
-      return { ...previous, engine: nextEngine, events: [...events, record] };
+      const nextEngine = reduceEngineState(previous.engine, record);
+      return {
+        ...previous,
+        engine: nextEngine,
+        historyIndex: previous.historyIndex + 1,
+        events: [...previous.events.slice(0, previous.historyIndex), record],
+      };
+    });
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    setGame((previous) => {
+      if (!previous || previous.historyIndex === 0) return previous;
+      return applyHistory(previous, previous.historyIndex - 1);
+    });
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    setGame((previous) => {
+      if (!previous || previous.historyIndex >= previous.events.length) return previous;
+      return applyHistory(previous, previous.historyIndex + 1);
     });
   }, []);
 
@@ -96,14 +89,58 @@ export default function App() {
       <LocalGameShell
         setup={game.setup}
         engine={game.engine}
-        events={game.events}
+        events={game.events.slice(0, game.historyIndex)}
+        canUndo={game.historyIndex > 0}
+        canRedo={game.historyIndex < game.events.length}
         onEventRecorded={handleEventRecorded}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
         onNewGame={handleNewGame}
       />
     );
-  }, [game, handleStartGame, handleEventRecorded, handleNewGame]);
+  }, [game, handleStartGame, handleEventRecorded, handleUndo, handleRedo, handleNewGame]);
 
   return content;
+}
+
+function applyHistory(state: LiveLocalGameState, historyIndex: number): LiveLocalGameState {
+  const base = createGame(buildEngineOptions(state.setup));
+  const appliedEvents = state.events.slice(0, historyIndex);
+  let engine = base;
+  for (const record of appliedEvents) {
+    engine = reduceEngineState(engine, record);
+  }
+  return { ...state, engine, historyIndex };
+}
+
+function buildEngineOptions(setup: LocalGameSetup): EngineInitOptions {
+  return {
+    homeName: setup.homeTeamName,
+    awayName: setup.awayTeamName,
+    homeLineup: [
+      { batterName: 'Nico Hoerner', position: '2B' },
+      { batterName: 'Dansby Swanson', position: 'SS' },
+      { batterName: 'Ian Happ', position: 'LF' },
+      { batterName: 'Seiya Suzuki', position: 'RF' },
+      { batterName: 'Cody Bellinger', position: 'CF' },
+      { batterName: 'Christopher Morel', position: 'DH' },
+      { batterName: 'Miguel Amaya', position: 'C' },
+      { batterName: 'Michael Busch', position: '1B' },
+      { batterName: 'Patrick Wisdom', position: '3B' },
+    ],
+    awayLineup: [
+      { batterName: 'Brendan Donovan', position: '2B' },
+      { batterName: 'Paul Goldschmidt', position: '1B' },
+      { batterName: 'Nolan Arenado', position: '3B' },
+      { batterName: 'Willson Contreras', position: 'DH' },
+      { batterName: 'Lars Nootbaar', position: 'CF' },
+      { batterName: 'Alec Burleson', position: 'LF' },
+      { batterName: 'Jordan Walker', position: 'RF' },
+      { batterName: 'Tommy Edman', position: 'SS' },
+      { batterName: 'Iván Herrera', position: 'C' },
+    ],
+    totalInnings: setup.innings,
+  };
 }
 
 function reduceEngineState(engine: EngineGameState, record: LocalGameEventRecord): EngineGameState {

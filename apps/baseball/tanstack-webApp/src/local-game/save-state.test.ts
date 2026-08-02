@@ -32,6 +32,7 @@ function sampleGame(): LiveLocalGameState {
   return {
     setup: { homeTeamName: 'Chicago Cubs', awayTeamName: 'St. Louis Cardinals', innings: 9 },
     engine: createGame(ENGINE_OPTIONS),
+    historyIndex: 2,
     events: [
       { id: 1, eventType: 'STRIKE', occurredAt: '2026-08-01T00:00:00.000Z', detail: {} },
       { id: 2, eventType: 'SINGLE', occurredAt: '2026-08-01T00:00:01.000Z', detail: { base: 1 } },
@@ -104,6 +105,30 @@ describe('deserializeGameState', () => {
     const raw = serializeGameState(game);
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     parsed.events = 'not-an-array';
+    expect(deserializeGameState(JSON.stringify(parsed))).toBeNull();
+  });
+
+  it('returns null when historyIndex is missing', () => {
+    const game = sampleGame();
+    const raw = serializeGameState(game);
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    delete parsed.historyIndex;
+    expect(deserializeGameState(JSON.stringify(parsed))).toBeNull();
+  });
+
+  it('returns null when historyIndex exceeds the number of events', () => {
+    const game = sampleGame();
+    const raw = serializeGameState(game);
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    parsed.historyIndex = 5;
+    expect(deserializeGameState(JSON.stringify(parsed))).toBeNull();
+  });
+
+  it('returns null when historyIndex is negative', () => {
+    const game = sampleGame();
+    const raw = serializeGameState(game);
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    parsed.historyIndex = -1;
     expect(deserializeGameState(JSON.stringify(parsed))).toBeNull();
   });
 });
