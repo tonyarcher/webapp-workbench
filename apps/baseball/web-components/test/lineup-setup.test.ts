@@ -58,4 +58,19 @@ describe('BaseballLineupSetup', () => {
     await element.updateComplete;
     expect(element.shadowRoot!.textContent).to.equal('');
   });
+
+  it('is hidden and never intercepts pointer events when closed', async () => {
+    element.removeAttribute('is-open');
+    await element.updateComplete;
+    expect(getComputedStyle(element).display).to.equal('none');
+  });
+
+  it('becomes a full-screen overlay only when open', async () => {
+    element.setAttribute('is-open', '');
+    await element.updateComplete;
+    const styles = getComputedStyle(element);
+    expect(styles.display).to.equal('flex');
+    expect(styles.position).to.equal('fixed');
+    expect(styles.zIndex).to.equal('1000');
+  });
 });
