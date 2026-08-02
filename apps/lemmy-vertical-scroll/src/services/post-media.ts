@@ -104,15 +104,35 @@ export interface ResolvedVideo {
 }
 
 const REDGIFS_MEDIA_BASE = 'https://media.redgifs.com/'
+const OEMBED_CACHE_TTL_MS = 10 * 60_000
+const oembedCache = new Map<string, {base: string; at: number}>()
+
+function redgifsCandidatesFor(base: string): ResolvedVideo {
+    const candidates = [
+        `${REDGIFS_MEDIA_BASE}${base}-mobile.mp4`,
+        `${REDGIFS_MEDIA_BASE}${base}.mp4`,
+        `${REDGIFS_MEDIA_BASE}${base}-silent.mp4`,
+    ]
+        .map((url) => safeUrl(url))
+        .filter((url): url is string => !!url)
+    return {
+        src: candidates[0] ?? null,
+        poster: safeUrl(`${REDGIFS_MEDIA_BASE}${base}-poster.jpg`),
+        candidates,
+    }
+}
 
 /**
  * Resolves a video source for the scroll player. Direct media files pass
- * through unchanged. Redgifs watch pages map to the platform's fixed media
- * URL pattern — no API call involved, so removed gifs or CORS-less error
- * responses can never produce console noise. The <video> element tries each
- * candidate in order and reports failures itself.
+ * through unchanged. Redgifs watch pages use the oEmbed endpoint, which is
+ * CORS-open on every response (no console noise for removed gifs) and
+ * returns the exact-case media filename that the lowercased watch slug
+ * cannot provide. The <video> element tries each candidate in order.
  */
-export function resolveVideoUrl(videoUrl: string | null): ResolvedVideo {
+export async function resolveVideoUrl(
+    videoUrl: string | null,
+    fetchImpl: typeof fetch = fetch,
+): Promise<ResolvedVideo> {
     if (!videoUrl) return {src: null, poster: null, candidates: []}
     const id = redgifsId(videoUrl)
     // direct media files pass through, but only for safe schemes
@@ -120,16 +140,37 @@ export function resolveVideoUrl(videoUrl: string | null): ResolvedVideo {
         const safe = safeUrl(videoUrl)
         return safe ? {src: safe, poster: null, candidates: []} : {src: null, poster: null, candidates: []}
     }
-    const candidates = [
-        `${REDGIFS_MEDIA_BASE}${id}-mobile.mp4`,
-        `${REDGIFS_MEDIA_BASE}${id}.mp4`,
-        `${REDGIFS_MEDIA_BASE}${id}-silent.mp4`,
-    ]
-        .map((url) => safeUrl(url))
-        .filter((url): url is string => !!url)
-    return {
-        src: candidates[0] ?? null,
-        poster: safeUrl(`${REDGIFS_MEDIA_BASE}${id}-poster.jpg`),
-        candidates,
+    const cached = oembedCache.get(id)
+    if (cached && Date.now() - cached.at < OEMBED_CACHE_TTL_MS) return redgifsCandidatesFor(cached.base)
+    try {
+        const response = await fetchImpl(
+            `https://api.redgifs.com/v1/oembed?url=${encodeURIComponent(`https://www.redgifs.com/watch/${id}`)}`,
+            {
+                headers: {Accept: 'application/json'},
+                signal: AbortSignal.timeout(10_000),
+            },
+        )
+        if (response.ok) {
+            const data = (await response.json()) as {thumbnail_url?: string}
+            const base = data?.thumbnail_url
+                ?.replace(/^https:\/\/media\.redgifs\.com\//, '')
+                .replace(/-poster\.jpg$/, '')
+            if (base) {
+                oembedCache.set(id, {base, at: Date.now()})
+                pruneOembedCache()
+                return redgifsCandidatesFor(base)
+            }
+        }
+    } catch {
+        // fall through to the lowercase slug as a best effort
+    }
+    return redgifsCandidatesFor(id)
+}
+
+/** Drop expired entries so the memo never grows unbounded. */
+function pruneOembedCache(): void {
+    const cutoff = Date.now() - OEMBED_CACHE_TTL_MS
+    for (const [key, entry] of oembedCache) {
+        if (entry.at < cutoff) oembedCache.delete(key)
     }
 }
