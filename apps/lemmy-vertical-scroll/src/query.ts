@@ -226,7 +226,9 @@ export function communitiesInfiniteQuery(
                             : []
                     return {communities, page: pageParam}
                 }
-                return fetchPiefedCommunities({instance, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter})
+                const page = await fetchPiefedCommunities({instance, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter})
+                void putCommunitiesCache(communitiesCacheKey(instance, sort, nsfwFilter, software, pageParam), page.communities).catch(() => {})
+                return page
             }
             const page = await fetchCommunities({
                 instance,
@@ -234,6 +236,7 @@ export function communitiesInfiniteQuery(
                 page: pageParam,
                 limit: PAGE_SIZE,
                 search: search || undefined,
+                nsfwFilter,
             })
             if (!search) {
                 void putCommunitiesCache(communitiesCacheKey(instance, sort, nsfwFilter, software, pageParam), page.communities).catch(() => {})

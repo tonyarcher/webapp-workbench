@@ -1,4 +1,5 @@
 import type {LemmyPost} from '../types'
+import {safeUrl} from './url'
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)(\?|#|$)/i
 const VIDEO_EXT = /\.(mp4|webm|mov|m4v|ogg|ogv)(\?|#|$)/i
@@ -120,7 +121,11 @@ export async function resolveVideoUrl(
 ): Promise<ResolvedVideo> {
     if (!videoUrl) return {src: null, poster: null, candidates: []}
     const id = redgifsId(videoUrl)
-    if (!id || urlHasVideoExt(videoUrl)) return {src: videoUrl, poster: null, candidates: []}
+    // direct media files pass through, but only for safe schemes
+    if (!id || urlHasVideoExt(videoUrl)) {
+        const safe = safeUrl(videoUrl)
+        return safe ? {src: safe, poster: null, candidates: []} : {src: null, poster: null, candidates: []}
+    }
     const cached = resolveCache.get(videoUrl)
     if (!opts?.force && cached && Date.now() - cached.at < RESOLVE_CACHE_TTL_MS) return cached.value
     let resolved: ResolvedVideo
@@ -144,15 +149,26 @@ export async function resolveVideoUrl(
             gif?: {urls?: {sd?: string; hd?: string; silent?: string; poster?: string; thumbnail?: string}}
         }
         const urls = gif?.urls ?? {}
-        const candidates = [urls.sd, urls.hd, urls.silent].filter((url): url is string => !!url)
+        const candidates = [urls.sd, urls.hd, urls.silent]
+            .map((url) => safeUrl(url ?? null))
+            .filter((url): url is string => !!url)
         resolved = {
             src: candidates[0] ?? null,
-            poster: urls.poster ?? urls.thumbnail ?? null,
+            poster: safeUrl(urls.poster ?? urls.thumbnail ?? null),
             candidates,
         }
     } catch {
         resolved = {src: null, poster: null, candidates: []}
     }
     resolveCache.set(videoUrl, {value: resolved, at: Date.now()})
+    pruneResolveCache()
     return resolved
+}
+
+/** Drop expired entries so the memo never grows unbounded. */
+function pruneResolveCache(): void {
+    const cutoff = Date.now() - RESOLVE_CACHE_TTL_MS
+    for (const [key, entry] of resolveCache) {
+        if (entry.at < cutoff) resolveCache.delete(key)
+    }
 }

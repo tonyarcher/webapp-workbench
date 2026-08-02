@@ -405,6 +405,8 @@ void (async () => {
 
     const direct = await resolveVideoUrl('https://x.com/video.mp4', mockFetchImpl({}, 200))
     assert(direct.src === 'https://x.com/video.mp4' && direct.poster === null && direct.candidates.length === 0, 'direct video passes through')
+    const unsafeVideo = await resolveVideoUrl('javascript:alert(1)', mockFetchImpl({}, 200))
+    assert(unsafeVideo.src === null, 'unsafe direct video url rejected')
 
     const rgApi = (mode: 'ok' | 'bad-token' | 'no-urls'): typeof fetch =>
         (async (input: string | URL | Request): Promise<Response> => {

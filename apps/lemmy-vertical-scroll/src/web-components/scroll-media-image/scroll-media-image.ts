@@ -13,10 +13,10 @@ export class ScrollMediaImage extends LitElement {
     @property({attribute: false}) images: string[] = []
 
     @state() private index = 0
+    @state() private dragged = false
 
     private dragStartX = 0
     private dragDelta = 0
-    private dragged = false
     private readonly onDragMove = (move: PointerEvent): void => {
         this.dragDelta = move.clientX - this.dragStartX
         if (Math.abs(this.dragDelta) > 6) this.dragged = true

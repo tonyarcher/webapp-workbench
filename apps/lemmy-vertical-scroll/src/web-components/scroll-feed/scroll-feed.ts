@@ -34,6 +34,7 @@ export class ScrollFeed extends LitElement {
     @property({attribute: false}) communityId: number | null = null
 
     @state() private activeIndex = 0
+    @state() private dragging = false
 
     private readonly query = new InfiniteQueryController<PostPage>(this, () =>
         this.communityId === null
@@ -46,7 +47,6 @@ export class ScrollFeed extends LitElement {
     private lastWheelMove = 0
     private dragStartY = 0
     private dragDelta = 0
-    private dragging = false
     private scrollRaf: number | null = null
     private scrollTimer: ReturnType<typeof setTimeout> | null = null
     private prevParams = ''
@@ -290,10 +290,13 @@ export class ScrollFeed extends LitElement {
                 @scroll=${this.onScroll}
                 @pointerdown=${this.onPointerDown}
             >
+                <!-- the track is count viewports tall; every slide is exactly one
+                     viewport, positioned by index. Non-window slides stay as cheap
+                     placeholders so scroll-snap anchors and geometry stay correct. -->
                 <div class="slides" style="height: ${count * 100}%">
                     ${this.posts.map((post, index) => {
                         const visible = index >= from && index <= to
-                        return html`<section class="slide" style="transform: translateY(${index * 100}%)">
+                        return html`<section class="slide" style="transform: translateY(${index * 100}%); height: ${100 / count}%">
                             <div class="slide-inner${index === this.activeIndex ? ' active' : ''}">
                                 ${visible
                                     ? html`<lvs-scroll-post .post=${post} .active=${index === this.activeIndex}></lvs-scroll-post>`

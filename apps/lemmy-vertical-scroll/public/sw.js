@@ -39,7 +39,9 @@ self.addEventListener('fetch', (event) => {
     if (request.method !== 'GET') return
     const url = new URL(request.url)
     if (url.origin !== self.location.origin) return
-    if (url.pathname.startsWith(API_PREFIX)) return
+    // never cache API traffic: exclude both a scope-relative prefix and the
+    // root /api/ path (apiGet requests root paths even under a subpath host)
+    if (url.pathname.startsWith(API_PREFIX) || url.pathname.startsWith('/api/')) return
     event.respondWith(
         fetch(request)
             .then(async (response) => {
