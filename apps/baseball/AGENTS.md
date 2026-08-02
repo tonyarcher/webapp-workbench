@@ -42,4 +42,4 @@ Vite + TypeScript + Lit baseball scorekeeping app. Entirely client-side; no back
 1. Make focused changes; for bug fixes, write a failing regression test before/with the fix.
 2. Run the full suite: lint, unit tests, component tests, e2e tests, and `npm run build`.
 3. Always run the review agent (the built-in `review` subagent) on the changes and address its findings.
-4. Once review passes, commit with a conventional message (`feat:`, `fix:`, `refactor:`, `chore:`, `test:`, `docs:`) and push to `main` — no separate approval needed.
+4. Once review passes, ask the user for approval to commit and push before doing so. When approved, use a conventional commit message (`feat:`, `fix:`, `refactor:`, `chore:`, `test:`, `docs:`) and push to `main`.
