@@ -184,6 +184,20 @@ describe('Scoring Components', () => {
       expect(shadow.textContent).to.include('GAME COMPLETED');
       expect(shadow.textContent).to.include('Final: Cubs 6, Cardinals 4');
     });
+
+    it('emits view-boxscore from completed state', async () => {
+      element.setAttribute('game-status', 'completed');
+      await element.updateComplete;
+
+      let viewed = false;
+      element.addEventListener('view-boxscore', () => { viewed = true; });
+
+      const shadow = element.shadowRoot!;
+      const viewBtn = Array.from(shadow.querySelectorAll('.btn')).find(btn => btn.textContent?.includes('View Final Box Score')) as HTMLElement;
+      viewBtn.click();
+
+      expect(viewed).to.be.true;
+    });
   });
 
   describe('BaseballScorerTab', () => {
@@ -214,6 +228,35 @@ describe('Scoring Components', () => {
 
       const shadow = element.shadowRoot!;
       expect(shadow.textContent).to.include('No active game scoring session');
+    });
+
+    it('emits start-new-game-click from empty state button', async () => {
+      element.setAttribute('no-game', 'true');
+      await element.updateComplete;
+
+      let started = false;
+      element.addEventListener('start-new-game-click', () => { started = true; });
+
+      const shadow = element.shadowRoot!;
+      const startBtn = shadow.querySelector('.btn-primary') as HTMLElement;
+      startBtn.click();
+
+      expect(started).to.be.true;
+    });
+
+    it('emits open-lineup-setup-click from setup lineups button', async () => {
+      element.setAttribute('away-name', 'Cubs');
+      element.setAttribute('home-name', 'Sox');
+      await element.updateComplete;
+
+      let opened = false;
+      element.addEventListener('open-lineup-setup-click', () => { opened = true; });
+
+      const shadow = element.shadowRoot!;
+      const setupBtn = Array.from(shadow.querySelectorAll('.btn-secondary')).find(btn => btn.textContent?.includes('Setup Lineups')) as HTMLElement;
+      setupBtn.click();
+
+      expect(opened).to.be.true;
     });
   });
 });
