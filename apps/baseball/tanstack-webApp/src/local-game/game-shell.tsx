@@ -19,6 +19,26 @@ interface LocalGameShellProps {
 }
 
 const HIT_EVENT_TYPES = new Set(['SINGLE', 'DOUBLE', 'TRIPLE', 'HOME_RUN']);
+const DOUBLE_PLAY_EVENT_TYPES = new Set(['GROUNDOUT', 'LINE_OUT']);
+const SCORING_EVENT_TYPES = new Set([
+  'BALL',
+  'STRIKE',
+  'FOUL',
+  'STRIKEOUT',
+  'WALK',
+  'HIT_BY_PITCH',
+  'SINGLE',
+  'DOUBLE',
+  'TRIPLE',
+  'HOME_RUN',
+  'GROUNDOUT',
+  'FLYOUT',
+  'LINE_OUT',
+  'POP_OUT',
+  'SACRIFICE_FLY',
+  'ERROR',
+  'FIELDER_CHOICE',
+]);
 
 let eventSequence = 0;
 
@@ -41,6 +61,7 @@ export function LocalGameShell({
   const [panelMode, setPanelMode] = useState<'action-grid' | 'step2'>('action-grid');
   const [step2Label, setStep2Label] = useState('');
   const [step2IsHit, setStep2IsHit] = useState(false);
+  const [step2DoublePlayAvailable, setStep2DoublePlayAvailable] = useState(false);
   const [lineupOpen, setLineupOpen] = useState(false);
   const [boxScoreOpen, setBoxScoreOpen] = useState(false);
 
@@ -87,6 +108,7 @@ export function LocalGameShell({
       pendingBaseLabelRef.current = String(detail.baseLabel ?? '');
       setStep2Label(String(detail.baseLabel ?? ''));
       setStep2IsHit(HIT_EVENT_TYPES.has(eventType));
+      setStep2DoublePlayAvailable(DOUBLE_PLAY_EVENT_TYPES.has(eventType));
       setPanelMode('step2');
       recordOnce(event, 'render-step2', detail);
     };
@@ -163,8 +185,12 @@ export function LocalGameShell({
       runnerFirstId: engine.runners[0] ? 1 : 0,
       runnerSecondId: engine.runners[1] ? 1 : 0,
       runnerThirdId: engine.runners[2] ? 1 : 0,
+      runnerFirstName: runnerOnBaseName(engine, 0),
+      runnerSecondName: runnerOnBaseName(engine, 1),
+      runnerThirdName: runnerOnBaseName(engine, 2),
       currentBatterName: currentBatter,
       currentPitcherName: currentPitcher,
+      lastPlay: lastPlayLabel(events),
     },
   };
 
@@ -198,6 +224,7 @@ export function LocalGameShell({
               panel-mode={panelMode}
               step2-label={step2Label}
               step2-is-hit={step2IsHit ? '' : undefined}
+              step2-double-play-available={step2DoublePlayAvailable ? '' : undefined}
             />
           </div>
           <div slot="scorebook">
@@ -363,6 +390,24 @@ function battingBatterName(engine: EngineGameState): string {
   const lineup = engine.half === 'TOP' ? engine.awayLineup : engine.homeLineup;
   const index = engine.half === 'TOP' ? engine.awayBatterIdx : engine.homeBatterIdx;
   return lineup.rows[index % lineup.rows.length]?.batterName ?? 'Current Batter';
+}
+
+function runnerOnBaseName(engine: EngineGameState, baseIndex: number): string {
+  const slot = (engine.runnerSlots ?? [null, null, null])[baseIndex];
+  if (slot === null || slot === undefined) return '';
+  const lineup = engine.half === 'TOP' ? engine.awayLineup : engine.homeLineup;
+  return lineup.rows.find((row) => row.slotIdx === slot)?.batterName ?? '';
+}
+
+function lastPlayLabel(events: LocalGameEventRecord[]): string {
+  const last = [...events].reverse().find((event) => SCORING_EVENT_TYPES.has(event.eventType));
+  if (!last) return 'Awaiting first play';
+  const detail = last.detail ?? {};
+  const parts = [last.eventType];
+  if (detail.doublePlay === true) parts.push('DOUBLE PLAY');
+  if (detail.location) parts.push(String(detail.location));
+  if (detail.fieldPos) parts.push(`F${detail.fieldPos}`);
+  return parts.join(' · ');
 }
 
 function pitchingTeam(engine: EngineGameState): { name: string } {

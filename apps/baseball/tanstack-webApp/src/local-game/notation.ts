@@ -68,14 +68,16 @@ export function hitNotation(eventType: ScoringEventType): string {
   }
 }
 
-export function inPlayOutNotation(eventType: ScoringEventType, fieldPos?: number): string {
+export function inPlayOutNotation(eventType: ScoringEventType, fieldPos?: number, doublePlay = false): string {
   switch (eventType) {
     case 'GROUNDOUT':
+      if (doublePlay) return fieldPos ? `${fieldPos}-4-3` : 'GO-DP';
       if (fieldPos) return fieldPos === 3 ? '3' : `${fieldPos}-3`;
       return 'GO';
     case 'FLYOUT':
       return fieldPos ? `${fieldPos}` : 'FO';
     case 'LINE_OUT':
+      if (doublePlay) return fieldPos ? `L${fieldPos}-4-3` : 'LO-DP';
       return fieldPos ? `L${fieldPos}` : 'LO';
     case 'POP_OUT':
       return fieldPos ? `P${fieldPos}` : 'PO';

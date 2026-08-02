@@ -11,6 +11,9 @@ export class BaseballStep2Panel extends LitElement {
 
     @property({type: String, attribute: 'base-label'}) baseLabel = '';
     @property({type: Boolean, attribute: 'is-hit'}) isHit = false;
+    @property({type: Boolean, attribute: 'double-play-available'}) doublePlayAvailable = false;
+
+    private doublePlayActive = false;
 
     private get locations(): string[] {
         return this.isHit
@@ -25,6 +28,16 @@ export class BaseballStep2Panel extends LitElement {
         return html`
             <div class="step2-card">
                 <h3 class="step2-title">Step 2: ${this.baseLabel} Details</h3>
+                ${this.doublePlayAvailable ? html`
+                    <label class="double-play-toggle">
+                        <input
+                            type="checkbox"
+                            .checked=${this.doublePlayActive}
+                            @change=${(event: Event) => (this.doublePlayActive = (event.target as HTMLInputElement).checked)}
+                        />
+                        Double Play (two outs)
+                    </label>
+                ` : ''}
                 <div class="location-grid">
                     ${this.locations.map(loc => html`
                         <button class="btn btn-action" @click=${() => this.selectLocation(loc)}>
@@ -44,7 +57,11 @@ export class BaseballStep2Panel extends LitElement {
 
     private selectLocation(location: string | null) {
         this.dispatchEvent(new CustomEvent('location-selected', {
-            detail: {location, fieldPos: this.fieldPosFromLabel(location)},
+            detail: {
+                location,
+                fieldPos: this.fieldPosFromLabel(location),
+                doublePlay: this.doublePlayAvailable ? this.doublePlayActive : false,
+            },
             bubbles: true,
             composed: true,
         }));

@@ -46,6 +46,18 @@
     margin-bottom: 0.5rem;
 }
 
+.last-play-display {
+    margin: 0.75rem 0;
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid var(--accent-red, #ff2a3b);
+    background: rgba(255, 42, 59, 0.08);
+    border-radius: 0 8px 8px 0;
+    color: var(--accent-yellow, #ffcc00);
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+}
+
 .team-led-name {
     font-size: 1.25rem;
     font-weight: 800;

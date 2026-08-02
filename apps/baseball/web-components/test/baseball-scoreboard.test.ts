@@ -88,4 +88,25 @@ describe('BaseballScoreboard', () => {
     expect(shadow.textContent).to.include('2B: Lead Runner');
     expect(shadow.textContent).to.include('3B: Third Runner');
   });
+
+  it('renders the last play banner from game-json', async () => {
+    const game = {
+      gameState: {
+        lastPlay: 'SINGLE · Right Field',
+      }
+    };
+
+    element.setAttribute('game-json', JSON.stringify(game));
+    await element.updateComplete;
+
+    const shadow = element.shadowRoot!;
+    expect(shadow.textContent).to.include('SINGLE · Right Field');
+  });
+
+  it('renders the last play banner from the last-play attribute', async () => {
+    element.lastPlay = 'GROUNDOUT · DOUBLE PLAY';
+    await element.updateComplete;
+
+    expect(element.shadowRoot!.textContent).to.include('GROUNDOUT · DOUBLE PLAY');
+  });
 });

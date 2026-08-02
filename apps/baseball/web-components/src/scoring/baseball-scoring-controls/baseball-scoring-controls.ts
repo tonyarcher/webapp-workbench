@@ -29,6 +29,7 @@ export class BaseballScoringControls extends LitElement {
     @property({type: String, attribute: 'panel-mode'}) panelMode: 'action-grid' | 'step2' = 'action-grid';
     @property({type: String, attribute: 'step2-label'}) step2Label = '';
     @property({type: Boolean, attribute: 'step2-is-hit'}) step2IsHit = false;
+    @property({type: Boolean, attribute: 'step2-double-play-available'}) step2DoublePlayAvailable = false;
 
     render() {
         return this.gameStatus === 'completed'
@@ -66,6 +67,7 @@ export class BaseballScoringControls extends LitElement {
                         <baseball-step2-panel
                             base-label=${this.step2Label}
                             ?is-hit=${this.step2IsHit}
+                            ?double-play-available=${this.step2DoublePlayAvailable}
                         ></baseball-step2-panel>
                     `
             : html`

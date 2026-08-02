@@ -3,7 +3,7 @@ import type { EngineGameState } from './rule-engine';
 import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
 
 export const SAVE_STORAGE_KEY = 'baseball.local-game.v1';
-export const SAVE_STATE_VERSION = 3;
+export const SAVE_STATE_VERSION = 4;
 
 export interface PersistedGameState {
   version: number;

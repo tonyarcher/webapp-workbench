@@ -157,5 +157,8 @@ function toScoringEvent(record: LocalGameEventRecord): ScoringEvent | null {
   if (Number.isFinite(fieldPos) && fieldPos >= 1 && fieldPos <= 9) {
     event.fieldPos = fieldPos;
   }
+  if (record.detail?.doublePlay === true) {
+    event.doublePlay = true;
+  }
   return event;
 }

@@ -567,3 +567,82 @@ describe('rule engine: runner advancement arcs', () => {
     expect(game.awayLineup.rows[1].innings['1'].advancements).toBeUndefined();
   });
 });
+
+describe('rule engine: runner identity', () => {
+  it('tracks which batter occupies first base after a single', () => {
+    const game = reduceGame(createDefaultGame(), event('SINGLE'));
+    expect(game.runnerSlots).toEqual([1, null, null]);
+    expect(game.runners).toEqual([true, false, false]);
+  });
+
+  it('shifts runner slots when a later batter hits a double', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'));
+    game = reduceGame(game, event('DOUBLE'));
+    expect(game.runnerSlots).toEqual([null, 2, 1]);
+  });
+
+  it('walks the batter to first and shuffles the other runners', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('WALK'), event('WALK'));
+    expect(game.runnerSlots).toEqual([2, 1, null]);
+  });
+
+  it('scores a runner from third on a sacrifice fly and clears that base slot', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('WALK'), event('SINGLE'), event('SINGLE'));
+    game = reduceGame(game, { type: 'SACRIFICE_FLY', fieldPos: 8 });
+    expect(game.runnerSlots).toEqual([3, 2, null]);
+    expect(game.awayScore).toBe(1);
+  });
+
+  it('clears all runner slots after a home run', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'));
+    game = reduceGame(game, event('HOME_RUN'));
+    expect(game.runnerSlots).toEqual([null, null, null]);
+  });
+
+  it('clears runner slots when the inning flips', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('WALK'));
+    game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
+    expect(game.runnerSlots).toEqual([null, null, null]);
+  });
+});
+
+describe('rule engine: double plays', () => {
+  it('records two outs on a 6-4-3 double play and retires the runner on first', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'));
+    game = reduceGame(game, { type: 'GROUNDOUT', fieldPos: 6, doublePlay: true });
+    expect(game.outs).toBe(2);
+    expect(game.runners).toEqual([false, false, false]);
+    expect(game.runnerSlots).toEqual([null, null, null]);
+    expect(game.awayLineup.rows[1].innings['1']).toMatchObject({ notation: '6-4-3', outNum: 1 });
+  });
+
+  it('keeps runners on second and third when a force double play retires first', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('WALK'), event('SINGLE'), event('SINGLE'));
+    game = reduceGame(game, { type: 'GROUNDOUT', fieldPos: 6, doublePlay: true });
+    expect(game.runners).toEqual([false, true, true]);
+    expect(game.runnerSlots).toEqual([null, 2, 1]);
+    expect(game.outs).toBe(2);
+  });
+
+  it('flips the inning when a double play records the third out', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'), event('STRIKEOUT'));
+    game = reduceGame(game, { type: 'GROUNDOUT', fieldPos: 6, doublePlay: true });
+    expect(game.outs).toBe(0);
+    expect(game.half).toBe('BOTTOM');
+    expect(game.awayLineup.rows[2].innings['1'].hasEndedInningLine).toBe(true);
+  });
+
+  it('records a single out when a double play is requested without a runner on first', () => {
+    const game = reduceGame(createDefaultGame(), { type: 'GROUNDOUT', fieldPos: 4, doublePlay: true });
+    expect(game.outs).toBe(1);
+    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({ notation: '4-3' });
+  });
+});

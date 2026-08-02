@@ -38,6 +38,13 @@ describe('inPlayOutNotation', () => {
     expect(inPlayOutNotation('SACRIFICE_FLY', 8)).toBe('SF8');
   });
 
+  it('uses the double-play sequence when a double play is flagged', () => {
+    expect(inPlayOutNotation('GROUNDOUT', 6, true)).toBe('6-4-3');
+    expect(inPlayOutNotation('LINE_OUT', 9, true)).toBe('L9-4-3');
+    expect(inPlayOutNotation('GROUNDOUT', undefined, true)).toBe('GO-DP');
+    expect(inPlayOutNotation('LINE_OUT', undefined, true)).toBe('LO-DP');
+  });
+
   it('falls back to generic notation without a position', () => {
     expect(inPlayOutNotation('GROUNDOUT')).toBe('GO');
     expect(inPlayOutNotation('FLYOUT')).toBe('FO');

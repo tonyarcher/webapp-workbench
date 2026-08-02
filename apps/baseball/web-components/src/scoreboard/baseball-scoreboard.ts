@@ -32,6 +32,8 @@ export class BaseballScoreboard extends LitElement {
     @property({type: String, attribute: 'runner-second-name'}) runnerSecondName = '';
     @property({type: String, attribute: 'runner-third-name'}) runnerThirdName = '';
 
+    @property({type: String, attribute: 'last-play'}) lastPlay = '';
+
     @property({
         type: String,
         attribute: 'game-json',
@@ -70,6 +72,7 @@ export class BaseballScoreboard extends LitElement {
         const balls = g?.gameState?.balls ?? this.balls;
         const strikes = g?.gameState?.strikes ?? this.strikes;
         const outs = g?.gameState?.outs ?? this.outs;
+        const lastPlay = g?.gameState?.lastPlay ?? this.lastPlay;
 
         const runnerFirst = g ? !!g.gameState?.runnerFirstId : this.runnerFirst;
         const runnerSecond = g ? !!g.gameState?.runnerSecondId : this.runnerSecond;
@@ -105,6 +108,8 @@ export class BaseballScoreboard extends LitElement {
             R-H-E: ${awayScore}-${awayHits}-${awayErrors} vs ${homeScore}-${homeHits}-${homeErrors}
           </span>
                 </div>
+
+                <div class="last-play-display" data-testid="last-play">${lastPlay}</div>
 
                 <div class="diamond-container">
                     <div class="base-diamond">

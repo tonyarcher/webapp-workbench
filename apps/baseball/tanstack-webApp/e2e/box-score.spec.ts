@@ -16,7 +16,7 @@ function row(
 }
 
 const completedGame = {
-  version: 3,
+  version: 4,
   savedAt: new Date().toISOString(),
   setup: { homeTeamName: 'Chicago Cubs', awayTeamName: 'St. Louis Cardinals', innings: 9 },
   engine: {
@@ -44,6 +44,7 @@ const completedGame = {
     awayScore: 2,
     homeScore: 3,
     runners: [false, false, false],
+    runnerSlots: [null, null, null],
     awayBatterIdx: 0,
     homeBatterIdx: 0,
     awayRunsByInning: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0],

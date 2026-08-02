@@ -151,6 +151,34 @@ describe('Scoring Components', () => {
 
       expect(cancelled).to.be.true;
     });
+
+    it('shows the double play toggle only when double-play-available is set', async () => {
+      element.setAttribute('base-label', 'Groundout');
+      await element.updateComplete;
+      expect(element.shadowRoot!.querySelector('.double-play-toggle')).to.be.null;
+
+      element.setAttribute('double-play-available', 'true');
+      await element.updateComplete;
+      expect(element.shadowRoot!.querySelector('.double-play-toggle')).to.not.be.null;
+    });
+
+    it('emits doublePlay in location-selected when the toggle is checked', async () => {
+      element.setAttribute('double-play-available', 'true');
+      await element.updateComplete;
+
+      let emitted = false;
+      element.addEventListener('location-selected', (e: any) => {
+        emitted = e.detail?.doublePlay === true;
+      });
+
+      const shadow = element.shadowRoot!;
+      const checkbox = shadow.querySelector('.double-play-toggle input') as HTMLInputElement;
+      checkbox.click();
+      const locBtn = shadow.querySelector('.btn-action') as HTMLElement;
+      locBtn.click();
+
+      expect(emitted).to.be.true;
+    });
   });
 
   describe('BaseballScoringControls', () => {

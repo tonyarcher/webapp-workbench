@@ -43,3 +43,28 @@ test('draws advancement arcs when a runner advances on a double', async ({ page 
   const awayScorebook = page.locator('baseball-scorebook-grid').first();
   await expect(awayScorebook.locator('.advancement-line')).toHaveCount(1);
 });
+
+test('shows the batter on first base in the field after a single', async ({ page }) => {
+  await startGame(page);
+
+  await page.getByRole('button', { name: 'SINGLE (1B)' }).click();
+  await page.getByRole('button', { name: 'Right Field' }).click();
+
+  const scoreboard = page.locator('baseball-scoreboard').first();
+  await expect(scoreboard).toContainText('1B: Brendan Donovan');
+  await expect(scoreboard).toContainText('SINGLE · Right Field');
+});
+
+test('records a 6-4-3 double play for two outs', async ({ page }) => {
+  await startGame(page);
+
+  await page.getByRole('button', { name: 'SINGLE (1B)' }).click();
+  await page.getByRole('button', { name: 'Right Field' }).click();
+  await page.getByRole('button', { name: 'GROUNDOUT', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Double Play (two outs)' }).check();
+  await page.getByRole('button', { name: 'Shortstop (6)' }).click();
+
+  const awayScorebook = page.locator('baseball-scorebook-grid').first();
+  await expect(awayScorebook.locator('.play-desc').nth(1)).toHaveText('6-4-3');
+  await expect(page.locator('baseball-scoreboard').first()).toContainText('2 Outs');
+});
