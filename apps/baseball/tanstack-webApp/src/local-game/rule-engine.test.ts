@@ -503,3 +503,67 @@ describe('rule engine: fielding positions and run marks', () => {
     expect(game.outs).toBe(1);
   });
 });
+
+describe('rule engine: runner advancement arcs', () => {
+  it('advances a runner from first to third on a double', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'));
+    game = reduceGame(game, event('DOUBLE'));
+    const cell = game.awayLineup.rows[1].innings['1'];
+    expect(cell.advancements).toEqual([{ from: 1, to: 3, scored: false }]);
+  });
+
+  it('advances runners one base on a walk and scores the runner from third', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('WALK'), event('WALK'), event('WALK'));
+    game = reduceGame(game, event('WALK'));
+    const cell = game.awayLineup.rows[3].innings['1'];
+    expect(cell.advancements).toEqual([
+      { from: 1, to: 2, scored: false },
+      { from: 2, to: 3, scored: false },
+      { from: 3, to: 4, scored: true },
+    ]);
+  });
+
+  it('moves runners up on a single, advancing the lead runner to third', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'), event('SINGLE'));
+    game = reduceGame(game, event('SINGLE'));
+    const cell = game.awayLineup.rows[2].innings['1'];
+    expect(cell.advancements).toEqual([
+      { from: 1, to: 2, scored: false },
+      { from: 2, to: 3, scored: false },
+    ]);
+  });
+
+  it('scores runners from first and second on a triple', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'), event('SINGLE'));
+    game = reduceGame(game, event('TRIPLE'));
+    const cell = game.awayLineup.rows[2].innings['1'];
+    expect(cell.advancements).toEqual([
+      { from: 1, to: 4, scored: true },
+      { from: 2, to: 4, scored: true },
+    ]);
+  });
+
+  it('records a sacrifice fly advancement when a runner scores from third', () => {
+    let game = createDefaultGame();
+    game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'));
+    game = reduceGame(game, { type: 'SACRIFICE_FLY', fieldPos: 8 });
+    const cell = game.awayLineup.rows[3].innings['1'];
+    expect(cell.advancements).toEqual([{ from: 3, to: 4, scored: true }]);
+  });
+
+  it('keeps advancement records empty for a home run with no runners', () => {
+    const game = reduceGame(createDefaultGame(), event('HOME_RUN'));
+    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([]);
+  });
+
+  it('leaves advancements unset for outs and strikeouts', () => {
+    let game = reduceGame(createDefaultGame(), { type: 'GROUNDOUT', fieldPos: 6 });
+    expect(game.awayLineup.rows[0].innings['1'].advancements).toBeUndefined();
+    game = reduceGame(game, event('STRIKEOUT'));
+    expect(game.awayLineup.rows[1].innings['1'].advancements).toBeUndefined();
+  });
+});

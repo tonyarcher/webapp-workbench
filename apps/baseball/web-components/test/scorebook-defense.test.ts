@@ -105,5 +105,52 @@ describe('Scorebook Components', () => {
       const shadow = element.shadowRoot!;
       expect(shadow.querySelector('.run-dot')).to.be.null;
     });
+
+    it('renders basepath arcs for runner advancements', async () => {
+      element.setAttribute('max-inning', '9');
+
+      const slots = [
+        {
+          slotIdx: 1,
+          batterName: 'Dansby Swanson',
+          position: 'SS',
+          innings: {
+            1: {
+              notation: '3B',
+              base: 3,
+              advancements: [
+                { from: 1, to: 3, scored: false },
+                { from: 2, to: 4, scored: true }
+              ]
+            }
+          }
+        }
+      ];
+      element.setAttribute('slots-json', JSON.stringify(slots));
+      await element.updateComplete;
+
+      const shadow = element.shadowRoot!;
+      const svg = shadow.querySelector('.advancement-svg');
+      expect(svg).to.not.be.null;
+      expect(svg!.querySelectorAll('line.advancement-line')).to.have.length(2);
+      expect(shadow.querySelector('line.advancement-line.scored')).to.not.be.null;
+    });
+
+    it('renders no arcs when a cell has no advancements', async () => {
+      element.setAttribute('max-inning', '9');
+
+      const slots = [
+        {
+          slotIdx: 1,
+          batterName: 'Nico Hoerner',
+          position: '2B',
+          innings: { 1: { notation: 'K', base: 0 } }
+        }
+      ];
+      element.setAttribute('slots-json', JSON.stringify(slots));
+      await element.updateComplete;
+
+      expect(element.shadowRoot!.querySelector('.advancement-svg')).to.be.null;
+    });
   });
 });

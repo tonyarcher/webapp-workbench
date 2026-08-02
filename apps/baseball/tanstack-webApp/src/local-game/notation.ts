@@ -1,4 +1,42 @@
-import type { ScoringEventType } from './rule-engine';
+import type { RunnersOnBase, ScoringEventType } from './rule-engine';
+
+export interface Advancement {
+  from: number;
+  to: number;
+  scored: boolean;
+}
+
+export function runnerAdvancementsForHit(runners: RunnersOnBase, bases: number): Advancement[] {
+  return advanceOccupiedRunners(runners, bases);
+}
+
+export function runnerAdvancementsForWalk(runners: RunnersOnBase): Advancement[] {
+  return advanceOccupiedRunners(runners, 1);
+}
+
+export function runnerAdvancementsForSacrifice(runners: RunnersOnBase): Advancement[] {
+  return runners[2] ? [{ from: 3, to: 4, scored: true }] : [];
+}
+
+function advanceOccupiedRunners(runners: RunnersOnBase, bases: number): Advancement[] {
+  const advancements: Advancement[] = [];
+  for (const base of occupiedBases(runners)) {
+    const destination = base + bases;
+    if (destination > 3) {
+      advancements.push({ from: base, to: 4, scored: true });
+    } else {
+      advancements.push({ from: base, to: destination, scored: false });
+    }
+  }
+  return advancements;
+}
+
+function occupiedBases(runners: RunnersOnBase): number[] {
+  return runners.reduce<number[]>((bases, occupied, index) => {
+    if (occupied) bases.push(index + 1);
+    return bases;
+  }, []);
+}
 
 export function hitBaseCount(eventType: ScoringEventType): number {
   switch (eventType) {

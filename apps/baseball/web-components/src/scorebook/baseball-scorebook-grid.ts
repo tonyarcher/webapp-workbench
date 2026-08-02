@@ -5,6 +5,12 @@ import scorebookCssText from './baseball-scorebook-grid.css?inline';
 const scorebookSheet = new CSSStyleSheet();
 scorebookSheet.replaceSync(scorebookCssText);
 
+export interface ScorebookCellAdvancementDto {
+    from: number;
+    to: number;
+    scored: boolean;
+}
+
 export interface ScorebookCellDto {
     notation?: string | null;
     base?: number;
@@ -13,6 +19,7 @@ export interface ScorebookCellDto {
     hasEndedInningLine?: boolean;
     run?: boolean;
     rbiCount?: number;
+    advancements?: ScorebookCellAdvancementDto[];
 }
 
 export interface ScorebookSlotDto {
@@ -104,6 +111,7 @@ export class BaseballScorebookGrid extends LitElement {
         return html`
       <div class="diamond ${baseClass} ${endClass}">
         ${cell?.run ? html`<div class="run-dot" data-testid="run-dot"></div>` : ''}
+        ${this.renderAdvancements(cell)}
         ${cell?.notation ? html`
           <div class="play-desc">${cell.notation}</div>` : ''}
         ${cell?.outNum ? html`
@@ -114,6 +122,50 @@ export class BaseballScorebookGrid extends LitElement {
           <div class="rbi-badge">RBI ${cell.rbiCount}</div>` : ''}
       </div>
     `;
+    }
+
+    private renderAdvancements(cell: ScorebookCellDto | null) {
+        const advancements = cell?.advancements ?? [];
+        if (advancements.length === 0) return '';
+
+        const lines = advancements.map(
+            (advancement) => html`
+        <line
+          class="advancement-line ${advancement.scored ? 'scored' : ''}"
+          x1="${basePointX(advancement.from)}"
+          y1="${basePointY(advancement.from)}"
+          x2="${basePointX(advancement.to)}"
+          y2="${basePointY(advancement.to)}"
+        ></line>
+      `
+        );
+        return html`<svg class="advancement-svg" viewBox="0 0 52 52" data-testid="advancement-svg">${lines}</svg>`;
+    }
+}
+
+function basePointX(base: number): number {
+    switch (base) {
+        case 1:
+            return 46;
+        case 2:
+            return 26;
+        case 3:
+            return 6;
+        default:
+            return 26;
+    }
+}
+
+function basePointY(base: number): number {
+    switch (base) {
+        case 1:
+            return 26;
+        case 2:
+            return 6;
+        case 3:
+            return 26;
+        default:
+            return 46;
     }
 }
 

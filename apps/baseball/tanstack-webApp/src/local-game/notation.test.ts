@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { hitBaseCount, hitNotation, inPlayOutNotation } from './notation';
+import {
+  hitBaseCount,
+  hitNotation,
+  inPlayOutNotation,
+  runnerAdvancementsForHit,
+  runnerAdvancementsForSacrifice,
+  runnerAdvancementsForWalk,
+} from './notation';
 
 describe('hitBaseCount', () => {
   it('maps each hit type to its base count', () => {
@@ -37,5 +44,42 @@ describe('inPlayOutNotation', () => {
     expect(inPlayOutNotation('LINE_OUT')).toBe('LO');
     expect(inPlayOutNotation('POP_OUT')).toBe('PO');
     expect(inPlayOutNotation('SACRIFICE_FLY')).toBe('SF');
+  });
+});
+
+describe('runnerAdvancementsForHit', () => {
+  it('returns empty when there are no runners', () => {
+    expect(runnerAdvancementsForHit([false, false, false], 1)).toEqual([]);
+  });
+
+  it('advances a runner from first to third on a double', () => {
+    expect(runnerAdvancementsForHit([true, false, false], 2)).toEqual([{ from: 1, to: 3, scored: false }]);
+  });
+
+  it('scores runners whose destination passes home plate', () => {
+    expect(runnerAdvancementsForHit([true, true, false], 3)).toEqual([
+      { from: 1, to: 4, scored: true },
+      { from: 2, to: 4, scored: true },
+    ]);
+  });
+});
+
+describe('runnerAdvancementsForWalk', () => {
+  it('moves each runner up one base and scores the runner on third', () => {
+    expect(runnerAdvancementsForWalk([true, true, true])).toEqual([
+      { from: 1, to: 2, scored: false },
+      { from: 2, to: 3, scored: false },
+      { from: 3, to: 4, scored: true },
+    ]);
+  });
+});
+
+describe('runnerAdvancementsForSacrifice', () => {
+  it('scores a runner from third on a sacrifice', () => {
+    expect(runnerAdvancementsForSacrifice([false, false, true])).toEqual([{ from: 3, to: 4, scored: true }]);
+  });
+
+  it('returns empty when no runner is on third', () => {
+    expect(runnerAdvancementsForSacrifice([true, false, false])).toEqual([]);
   });
 });

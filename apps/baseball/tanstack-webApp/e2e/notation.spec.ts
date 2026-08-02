@@ -31,3 +31,15 @@ test('marks a home run with a run dot and RBI badge', async ({ page }) => {
   await expect(awayScorebook.locator('.play-desc').first()).toHaveText('HR');
   await expect(awayScorebook.locator('.run-dot')).toHaveCount(1);
 });
+
+test('draws advancement arcs when a runner advances on a double', async ({ page }) => {
+  await startGame(page);
+
+  await page.getByRole('button', { name: 'SINGLE (1B)' }).click();
+  await page.getByRole('button', { name: 'Right Field' }).click();
+  await page.getByRole('button', { name: 'DOUBLE (2B)' }).click();
+  await page.getByRole('button', { name: 'Right Field' }).click();
+
+  const awayScorebook = page.locator('baseball-scorebook-grid').first();
+  await expect(awayScorebook.locator('.advancement-line')).toHaveCount(1);
+});

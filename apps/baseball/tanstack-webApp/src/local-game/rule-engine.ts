@@ -35,6 +35,7 @@ export interface EngineAtBatCell {
   hasEndedInningLine: boolean;
   run?: boolean;
   rbiCount?: number;
+  advancements?: Advancement[];
 }
 
 export function emptyAtBatCell(): EngineAtBatCell {
@@ -88,6 +89,8 @@ export interface EngineInitOptions {
 }
 
 import { hitBaseCount, hitNotation, inPlayOutNotation } from './notation';
+import { runnerAdvancementsForHit, runnerAdvancementsForSacrifice, runnerAdvancementsForWalk } from './notation';
+import type { Advancement } from './notation';
 
 const OUT_EVENT_TYPES: ScoringEventType[] = ['GROUNDOUT', 'FLYOUT', 'LINE_OUT', 'POP_OUT', 'SACRIFICE_FLY', 'STRIKEOUT'];
 const HIT_EVENT_TYPES: ScoringEventType[] = ['SINGLE', 'DOUBLE', 'TRIPLE', 'HOME_RUN'];
@@ -226,7 +229,7 @@ function finalCell(
   notation: string,
   base: number,
   outNum: number | null,
-  opts: { run?: boolean; rbiCount?: number } = {}
+  opts: { run?: boolean; rbiCount?: number; advancements?: Advancement[] } = {}
 ): EngineAtBatCell {
   return {
     count: `${game.balls}-${game.strikes}`,
@@ -236,6 +239,7 @@ function finalCell(
     hasEndedInningLine: false,
     run: opts.run ?? false,
     rbiCount: opts.rbiCount ?? 0,
+    advancements: opts.advancements,
   };
 }
 
@@ -262,7 +266,13 @@ function handleWalk(game: EngineGameState): EngineGameState {
   const { runners, runsScored } = walkRunners(game.runners);
   const advanced = updateRunners(game, runners);
   const scored = addRuns(advanced, runsScored);
-  const withCell = setCurrentBatterCell(scored, finalCell(game, 'BB', 1, null, { rbiCount: runsScored }));
+  const withCell = setCurrentBatterCell(
+    scored,
+    finalCell(game, 'BB', 1, null, {
+      rbiCount: runsScored,
+      advancements: runnerAdvancementsForWalk(game.runners),
+    })
+  );
   const withStats = updateBatterStats(withCell, (row) => ({
     ...row,
     atBats: row.atBats + 1,
@@ -280,7 +290,11 @@ function handleHit(game: EngineGameState, eventType: ScoringEventType): EngineGa
   const rbiCount = runsScored + (bases === 4 ? 1 : 0);
   const withCell = setCurrentBatterCell(
     withBatterRun,
-    finalCell(game, hitNotation(eventType), bases === 4 ? 0 : bases, null, { run: bases === 4, rbiCount })
+    finalCell(game, hitNotation(eventType), bases === 4 ? 0 : bases, null, {
+      run: bases === 4,
+      rbiCount,
+      advancements: runnerAdvancementsForHit(game.runners, bases),
+    })
   );
   const withStats = updateBatterStats(withCell, (row) => ({
     ...row,
@@ -295,6 +309,7 @@ function handleInPlayOut(game: EngineGameState, eventType: ScoringEventType, fie
   const withCell = setCurrentBatterCell(resetCounts(game), {
     ...finalCell(game, inPlayOutNotation(eventType, fieldPos), 0, game.outs + 1, {
       rbiCount: sacFly && game.runners[2] ? 1 : 0,
+      advancements: sacFly ? runnerAdvancementsForSacrifice(game.runners) : undefined,
     }),
     hasEndedInningLine: game.outs === 2,
   });
