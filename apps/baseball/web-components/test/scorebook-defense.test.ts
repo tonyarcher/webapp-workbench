@@ -225,6 +225,28 @@ describe('Scorebook Components', () => {
         expect(colors.bottom).to.equal(GRAY);
         expect(colors.left).to.equal(GRAY);
       });
+
+      it('draws a small forward-slash inning-end mark through the cell corner', async () => {
+        const diamond = await renderCell({ notation: 'K', base: 0, outNum: 3, hasEndedInningLine: true });
+        expect(diamond.classList.contains('ended-inning')).to.be.true;
+        const after = getComputedStyle(diamond, '::after');
+        expect(after.width).to.equal('30px');
+        expect(after.height).to.equal('2px');
+        expect(after.left).to.equal('37px');
+        expect(after.top).to.equal('51px');
+        expect(parseFloat(after.left) + parseFloat(after.width)).to.be.above(52);
+        expect(after.transformOrigin).to.equal('15px 1px');
+        const z = parseFloat(after.zIndex);
+        expect(z).to.be.above(0);
+        expect(z).to.be.below(10);
+        const [a, b] = (after.transform.match(/matrix\(([^)]+)\)/)?.[1] ?? '')
+          .split(',').map(Number);
+        expect(a).to.be.closeTo(0.7071, 0.001);
+        expect(b).to.be.closeTo(-0.7071, 0.001);
+        const badgeCorner = { x: 52 - 3, y: 52 - 2 };
+        const distance = Math.abs((badgeCorner.x - 52) * -1 - (badgeCorner.y - 52) * 1) / Math.SQRT2;
+        expect(distance).to.be.above(1);
+      });
     });
 
     describe('advancement arc coordinates', () => {

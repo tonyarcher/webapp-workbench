@@ -31,6 +31,7 @@
     width: 100%;
     overflow-x: auto;
     border: 2px solid #5a544a;
+    padding-bottom: 12px;
 }
 
 .scorebook-table {
@@ -159,13 +160,14 @@
 .diamond.ended-inning::after {
     content: '';
     position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 40px;
+    width: 30px;
     height: 2px;
     background-color: #ff2a3b;
-    transform: rotate(45deg);
-    transform-origin: bottom right;
+    left: 37px;
+    top: 51px;
+    transform: rotate(-45deg);
+    transform-origin: center;
+    z-index: 5;
 }
 
 .play-desc {
