@@ -277,12 +277,13 @@ export async function fetchPiefedCommunitySearch(
     limit: number,
     fetchImpl: typeof fetch = fetch,
     nsfwFilter: NsfwFilter = 'Include',
+    type: FeedType = 'All',
 ): Promise<LemmyCommunity[]> {
     const data = assertCommunities(
         await apiGet(
             instance,
             '/api/alpha/search',
-            {q: search, type_: 'Communities', limit, nsfw: nsfwFilter},
+            {q: search, type_: 'Communities', listing_type: type, limit, nsfw: nsfwFilter},
             fetchImpl,
             null,
         ),

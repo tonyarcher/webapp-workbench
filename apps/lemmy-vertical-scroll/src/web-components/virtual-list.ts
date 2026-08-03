@@ -72,6 +72,8 @@ export class VirtualizerController<TItem extends {id: number}> implements Reacti
         if (!this.virtualizer) {
             if (!this.getScrollEl()?.isConnected) return
             this.virtualizer = new Virtualizer<HTMLElement, HTMLElement>(this.buildOptions(this.items.length))
+            // never let measurement reflows move the user's scroll position
+            this.virtualizer.shouldAdjustScrollPositionOnItemSizeChange = () => false
         }
         this.virtualizer.setOptions(this.buildOptions(this.items.length))
         this.virtualizer._willUpdate()

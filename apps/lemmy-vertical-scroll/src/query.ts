@@ -225,7 +225,7 @@ export function communitiesInfiniteQuery(
                     // PieFed community search is one-shot (no reliable pagination)
                     const communities =
                         pageParam === 1
-                            ? await fetchPiefedCommunitySearch(instance, search, PAGE_SIZE, fetch, nsfwFilter)
+                            ? await fetchPiefedCommunitySearch(instance, search, PAGE_SIZE, fetch, nsfwFilter, type)
                             : []
                     return {communities, page: pageParam}
                 }

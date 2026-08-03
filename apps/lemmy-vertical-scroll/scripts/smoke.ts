@@ -286,6 +286,9 @@ void (async () => {
 
     const searchHits = await fetchPiefedCommunitySearch('fedinsfw.app', 'nsfw', 20, capturingFetchImpl({communities: [{community: {id: 2, name: 'nsfw2', title: 'NSFW2', actor_id: 'https://fedinsfw.app/c/nsfw2', local: true, icon: null, banner: null, description: null, published: '2026-01-01T00:00:00Z'}, counts: {subscriptions_count: 1, post_count: 1, post_reply_count: 1, published: '2026-01-01T00:00:00Z'}, subscribed: 'NotSubscribed', blocked: false}]}))
     assert(request().pathname === '/api/alpha/search' && query().get('type_') === 'Communities', 'piefed search hits alpha search')
+    assert(query().get('listing_type') === 'All', 'piefed search defaults to All listing')
+    await fetchPiefedCommunitySearch('fedinsfw.app', 'nsfw', 20, capturingFetchImpl({communities: []}), 'Include', 'Local')
+    assert(query().get('listing_type') === 'Local', 'piefed search forwards Local listing')
     assert(searchHits.length === 1 && searchHits[0].name === 'nsfw2', 'piefed search mapped')
 
     const single = await fetchPiefedCommunity('fedinsfw.app', 7, capturingFetchImpl({community_view: {community: {id: 7, name: 'x', title: 'X', actor_id: 'https://fedinsfw.app/c/x', local: true, icon: null, banner: null, description: null, published: '2026-01-01T00:00:00Z'}, counts: {subscriptions_count: 3, post_count: 2, post_reply_count: 1, published: '2026-01-01T00:00:00Z'}, subscribed: 'Subscribed', blocked: false}}))

@@ -34,6 +34,8 @@ export class CommunityList extends LitElement {
     @state() private search = ''
     private searchTimer: ReturnType<typeof setTimeout> | null = null
     private prevSearch = ''
+    private prevParams = ''
+    private resetScroll = false
 
     override connectedCallback(): void {
         super.connectedCallback()
@@ -48,10 +50,25 @@ export class CommunityList extends LitElement {
         }
     }
 
+    /** Reset to the top when the listing parameters change. */
+    override willUpdate(_changed: Map<string, unknown>): void {
+        const params = JSON.stringify([this.instance, this.type, this.sort, this.nsfwFilter, this.software])
+        if (this.prevParams !== '' && params !== this.prevParams) {
+            this.resetScroll = true
+            if (this.listEl) this.listEl.scrollTop = 0
+        }
+        this.prevParams = params
+    }
+
     override updated(changed: Map<string, unknown>): void {
         super.updated(changed)
         if (this.search !== this.prevSearch) {
             this.prevSearch = this.search
+            this.resetScroll = true
+        }
+        // apply after render too, so virtualizer scroll adjustments can't win
+        if (this.resetScroll) {
+            this.resetScroll = false
             if (this.listEl) this.listEl.scrollTop = 0
         }
     }
