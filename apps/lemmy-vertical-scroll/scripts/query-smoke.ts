@@ -75,7 +75,7 @@ void (async () => {
     )
     assert(communityKey('lemmy.ml', 7, 'piefed').includes('piefed'), 'communityKey carries software')
     assert(communityPostsKey('lemmy.ml', 7, 'Hot', 'Include', 'piefed').includes('piefed'), 'communityPostsKey carries software')
-    assert(communitiesKey('lemmy.ml', 'Hot', '', 'Include', 'piefed').includes('piefed'), 'communitiesKey carries software')
+    assert(communitiesKey('lemmy.ml', 'All', 'Hot', '', 'Include', 'piefed').includes('piefed'), 'communitiesKey carries software')
 
     // ---- cold-start hydration seeds the query cache from idb ----
 
@@ -89,9 +89,9 @@ void (async () => {
     )
     await clearPostsCache()
 
-    await putCommunitiesCache('communities:lemmy.ml:Hot:Include:piefed:1', [community])
-    await hydrateCommunities('lemmy.ml', 'Hot', '', 'Include', 'piefed')
-    const seededCommunities = queryClient.getQueryData(communitiesKey('lemmy.ml', 'Hot', '', 'Include', 'piefed'))
+    await putCommunitiesCache('communities:lemmy.ml:All:Hot:Include:piefed:1', [community])
+    await hydrateCommunities('lemmy.ml', 'All', 'Hot', '', 'Include', 'piefed')
+    const seededCommunities = queryClient.getQueryData(communitiesKey('lemmy.ml', 'All', 'Hot', '', 'Include', 'piefed'))
     assert(
         !!seededCommunities &&
             (seededCommunities as {pages: {communities: LemmyCommunity[]}[]}).pages[0].communities[0].name === 'main',

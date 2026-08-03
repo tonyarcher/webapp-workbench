@@ -322,6 +322,7 @@ export async function fetchPosts(
 
 export interface CommunitiesQuery {
     instance: string
+    type: FeedType
     sort: CommunitySort
     page: number
     limit: number
@@ -330,14 +331,14 @@ export interface CommunitiesQuery {
 }
 
 export async function fetchCommunities(
-    {instance, sort, page, limit, search, nsfwFilter = 'Include'}: CommunitiesQuery,
+    {instance, type, sort, page, limit, search, nsfwFilter = 'Include'}: CommunitiesQuery,
     fetchImpl: FetchImpl = fetch,
 ): Promise<CommunityPage> {
     const data = assertCommunities(
         await apiGet(
             instance,
             '/api/v3/community/list',
-            {type_: 'All', sort, page, limit, search, show_nsfw: nsfwFilter !== 'Exclude'},
+            {type_: type, sort, page, limit, search, show_nsfw: nsfwFilter !== 'Exclude'},
             fetchImpl,
         ),
         instance,

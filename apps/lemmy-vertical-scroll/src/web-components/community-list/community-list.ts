@@ -4,7 +4,7 @@ import {customElement, property, state} from 'lit/decorators.js'
 import {ref} from 'lit/directives/ref.js'
 import {communitiesInfiniteQuery, hydrateCommunities, InfiniteQueryController} from '../../query'
 import {navigate} from '../../router'
-import type {CommunityPage, CommunitySort, LemmyCommunity, NsfwFilter, Software} from '../../types'
+import type {CommunityPage, CommunitySort, FeedType, LemmyCommunity, NsfwFilter, Software} from '../../types'
 import {VirtualizerController} from '../virtual-list'
 import '../community-card/community-card'
 import styles from './community-list.css?inline'
@@ -16,12 +16,13 @@ export class CommunityList extends LitElement {
     static override styles = unsafeCSS(styles)
 
     @property({attribute: false}) instance = ''
+    @property({attribute: false}) type: FeedType = 'All'
     @property({attribute: false}) sort: CommunitySort = 'Hot'
     @property({attribute: false}) software: Software = 'lemmy'
     @property({attribute: false}) nsfwFilter: NsfwFilter = 'Include'
 
     private readonly query = new InfiniteQueryController<CommunityPage>(this, () =>
-        communitiesInfiniteQuery(this.instance, this.sort, this.search, this.software, this.nsfwFilter),
+        communitiesInfiniteQuery(this.instance, this.type, this.sort, this.search, this.software, this.nsfwFilter),
     )
     private readonly virtualizer = new VirtualizerController<LemmyCommunity>(
         this,
@@ -36,7 +37,7 @@ export class CommunityList extends LitElement {
 
     override connectedCallback(): void {
         super.connectedCallback()
-        void hydrateCommunities(this.instance, this.sort, '', this.nsfwFilter, this.software)
+        void hydrateCommunities(this.instance, this.type, this.sort, '', this.nsfwFilter, this.software)
     }
 
     override disconnectedCallback(): void {

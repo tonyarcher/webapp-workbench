@@ -243,6 +243,7 @@ export async function fetchPiefedCommunityPosts(
 
 export interface PiefedCommunitiesQuery {
     instance: string
+    type: FeedType
     sort: CommunitySort
     page: number
     limit: number
@@ -250,7 +251,7 @@ export interface PiefedCommunitiesQuery {
 }
 
 export async function fetchPiefedCommunities(
-    {instance, sort, page, limit, nsfwFilter = 'Include'}: PiefedCommunitiesQuery,
+    {instance, type, sort, page, limit, nsfwFilter = 'Include'}: PiefedCommunitiesQuery,
     fetchImpl: typeof fetch = fetch,
 ): Promise<CommunityPage> {
     // PieFed's community list only accepts a boolean; 'Only' cannot be
@@ -259,7 +260,7 @@ export async function fetchPiefedCommunities(
         await apiGet(
             instance,
             '/api/alpha/community/list',
-            {type_: 'All', sort, page, limit, show_nsfw: nsfwFilter !== 'Exclude'},
+            {type_: type, sort, page, limit, show_nsfw: nsfwFilter !== 'Exclude'},
             fetchImpl,
             null,
         ),

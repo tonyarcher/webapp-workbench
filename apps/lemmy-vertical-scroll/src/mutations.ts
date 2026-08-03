@@ -20,6 +20,10 @@ export function setFeedType(feedType: FeedType): void {
     patchSettings({feedType})
 }
 
+export function setCommunityType(communityType: FeedType): void {
+    patchSettings({communityType})
+}
+
 export function setPostSort(postSort: PostSort): void {
     patchSettings({postSort})
 }

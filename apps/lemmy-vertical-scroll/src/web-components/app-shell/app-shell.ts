@@ -1,7 +1,7 @@
 import {LitElement, html, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, state} from 'lit/decorators.js'
-import {setCommunitySort, setFeedType, setNsfwFilter, setPostSort, setViewMode} from '../../mutations'
+import {setCommunitySort, setCommunityType, setFeedType, setNsfwFilter, setPostSort, setViewMode} from '../../mutations'
 import {QueryController, settingsQuery, siteQuery} from '../../query'
 import {getHistory, navigate, parseView} from '../../router'
 import {communitySortsFor, postSortsFor} from '../../types'
@@ -97,6 +97,18 @@ export class AppShell extends LitElement {
         </select>`
     }
 
+    private onCommunityTypeChange(event: Event): void {
+        setCommunityType((event.target as HTMLSelectElement).value as FeedType)
+    }
+
+    private renderFeedTypeSelect(value: FeedType, onchange: (e: Event) => void): TemplateResult {
+        return html`<select class="sort-select" title="Community listing" @change=${onchange}>
+            ${(['All', 'Local'] as const).map(
+                (type) => html`<option value=${type} ?selected=${type === value}>${type}</option>`,
+            )}
+        </select>`
+    }
+
     private renderSortSelect(
         value: PostSort,
         onchange: (e: Event) => void,
@@ -117,11 +129,7 @@ export class AppShell extends LitElement {
                 return html`
                     ${this.renderViewModeSelect(settings.viewMode)}
                     ${this.renderNsfwSelect(settings.nsfwFilter)}
-                    <select class="sort-select" @change=${this.onFeedTypeChange}>
-                        ${(['All', 'Local'] as const).map(
-                            (type) => html`<option value=${type} ?selected=${type === settings.feedType}>${type}</option>`,
-                        )}
-                    </select>
+                    ${this.renderFeedTypeSelect(settings.feedType, this.onFeedTypeChange)}
                     ${this.renderSortSelect(settings.postSort, this.onPostSortChange, postSorts)}
                 `
             case 'community':
@@ -131,7 +139,10 @@ export class AppShell extends LitElement {
                     ${this.renderSortSelect(settings.postSort, this.onPostSortChange, postSorts)}
                 `
             case 'communities':
-                return this.renderSortSelect(settings.communitySort, this.onCommunitySortChange, communitySorts)
+                return html`
+                    ${this.renderFeedTypeSelect(settings.communityType, this.onCommunityTypeChange)}
+                    ${this.renderSortSelect(settings.communitySort, this.onCommunitySortChange, communitySorts)}
+                `
             case 'settings':
                 return html``
         }
@@ -188,6 +199,7 @@ export class AppShell extends LitElement {
             case 'communities':
                 return html`<lvs-community-list
                     .instance=${this.instance}
+                    .type=${settings.communityType}
                     .sort=${this.clampSort(settings.communitySort, communitySortsFor(this.software))}
                     .software=${this.software}
                     .nsfwFilter=${settings.nsfwFilter}

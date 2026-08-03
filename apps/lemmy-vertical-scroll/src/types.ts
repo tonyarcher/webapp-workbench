@@ -133,6 +133,7 @@ export interface CommunityPage {
 export interface Settings {
     instance: string
     feedType: FeedType
+    communityType: FeedType
     postSort: PostSort
     communitySort: CommunitySort
     nsfwFilter: NsfwFilter
@@ -221,6 +222,7 @@ export function communitySortsFor(software: Software): CommunitySort[] {
 export const DEFAULT_SETTINGS: Settings = {
     instance: 'lemmy.ml',
     feedType: 'All',
+    communityType: 'All',
     postSort: 'Hot',
     communitySort: 'Hot',
     nsfwFilter: 'Include',

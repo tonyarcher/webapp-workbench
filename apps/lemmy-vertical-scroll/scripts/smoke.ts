@@ -179,12 +179,18 @@ void (async () => {
     // ---- fetchCommunities / fetchCommunityPosts / fetchSite ----
 
     await fetchCommunities(
-        {instance: 'lemmy.ml', sort: 'TopMonth', page: 1, limit: 20, search: 'rust'},
+        {instance: 'lemmy.ml', type: 'All', sort: 'TopMonth', page: 1, limit: 20, search: 'rust'},
         capturingFetchImpl({communities: []}),
     )
     assert(request().pathname === '/api/v3/community/list', 'communities hit community/list')
     assert(query().get('search') === 'rust', 'search param forwarded')
     assert(query().get('sort') === 'TopMonth' && query().get('type_') === 'All', 'community sort params')
+
+    await fetchCommunities(
+        {instance: 'lemmy.ml', type: 'Local', sort: 'Hot', page: 1, limit: 20},
+        capturingFetchImpl({communities: []}),
+    )
+    assert(query().get('type_') === 'Local', 'community listing type forwarded')
 
     await fetchCommunityPosts(
         {instance: 'lemmy.ml', communityId: 7, sort: 'New', page: 1, limit: 20},
@@ -255,18 +261,24 @@ void (async () => {
     assert(query().get('community_id') === '7', 'piefed community posts send community_id')
 
     const pc =     await fetchPiefedCommunities(
-        {instance: 'fedinsfw.app', sort: 'Hot', page: 1, limit: 20},
+        {instance: 'fedinsfw.app', type: 'All', sort: 'Hot', page: 1, limit: 20},
         capturingFetchImpl({communities: [{community: {id: 1, name: 'main', title: 'Main', actor_id: 'https://fedinsfw.app/c/main', local: true, icon: null, banner: null, description: null, published: '2026-01-01T00:00:00Z'}, counts: {subscriptions_count: 10, post_count: 5, post_reply_count: 2, published: '2026-01-01T00:00:00Z'}, subscribed: 'NotSubscribed', blocked: false}]}),
     )
     assert(request().pathname === '/api/alpha/community/list', 'piefed communities hit alpha community/list')
+    assert(query().get('type_') === 'All', 'piefed community list defaults to All')
+    await fetchPiefedCommunities(
+        {instance: 'fedinsfw.app', type: 'Local', sort: 'Hot', page: 1, limit: 20},
+        capturingFetchImpl({communities: []}),
+    )
+    assert(query().get('type_') === 'Local', 'piefed community listing type forwarded')
     assert(query().get('show_nsfw') === 'true', 'piefed community list shows nsfw by default')
     await fetchPiefedCommunities(
-        {instance: 'fedinsfw.app', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Exclude'},
+        {instance: 'fedinsfw.app', type: 'All', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Exclude'},
         capturingFetchImpl({communities: []}),
     )
     assert(query().get('show_nsfw') === 'false', 'piefed community list hides nsfw in Exclude mode')
     await fetchPiefedCommunities(
-        {instance: 'fedinsfw.app', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Only'},
+        {instance: 'fedinsfw.app', type: 'All', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Only'},
         capturingFetchImpl({communities: []}),
     )
     assert(query().get('show_nsfw') === 'true', 'piefed Only degrades to showing nsfw (boolean API)')
@@ -447,7 +459,7 @@ void (async () => {
         'malformed site response becomes an ApiError',
     )
     await assertRejects(
-        () => fetchCommunities({instance: 'lemmy.ml', sort: 'Hot', page: 1, limit: 20}, mockFetchImpl({posts: []}, 200)),
+        () => fetchCommunities({instance: 'lemmy.ml', type: 'All', sort: 'Hot', page: 1, limit: 20}, mockFetchImpl({posts: []}, 200)),
         (e) => e instanceof ApiError && /Unexpected response/.test(e.message),
         'wrong-shaped community list becomes an ApiError',
     )
@@ -479,7 +491,7 @@ void (async () => {
     // ---- lemmy community nsfw param ----
 
     await fetchCommunities(
-        {instance: 'lemmy.ml', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Exclude'},
+        {instance: 'lemmy.ml', type: 'All', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Exclude'},
         capturingFetchImpl({communities: []}),
     )
     assert(query().get('show_nsfw') === 'false', 'lemmy community list forwards Exclude as show_nsfw')
