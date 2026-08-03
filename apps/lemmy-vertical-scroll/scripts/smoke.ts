@@ -16,13 +16,11 @@ import {
     fetchPiefedSite,
 } from '../src/services/piefed'
 import {compactNumber, timeAgo} from '../src/services/format'
+import {embedPosterFor, embedProviderForUrl, embedUrlFor} from '../src/services/embeds'
 import {
     aspectRatioFromUrl,
     classifyPost,
     extractImageUrls,
-    isRedgifsUrl,
-    redgifsEmbedUrl,
-    redgifsId,
     resolveVideoUrl,
     stripImageProxy,
 } from '../src/services/post-media'
@@ -401,14 +399,16 @@ void (async () => {
     )
     assert(aspectRatioFromUrl('https://x/foo_1280x720.png') === 16 / 9, 'pictrs aspect ratio parsed')
 
-    // ---- redgifs embeds ----
+    // ---- embed providers (redgifs, youtube) ----
 
-    assert(redgifsId('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound') === 'steeldeadlyitaliangreyhound', 'redgifs watch id')
-    assert(redgifsId('https://redgifs.com/ifr/abc123') === 'abc123', 'redgifs ifr id')
-    assert(redgifsId('https://media.redgifs.com/SteelDeadlyItaliangreyhound-mobile.mp4') === null, 'media file is not a page id')
-    assert(redgifsId('https://example.com/watch/xyz') === null, 'non-redgifs url rejected')
-    assert(isRedgifsUrl('https://www.redgifs.com/watch/xyz'), 'isRedgifsUrl true')
-    assert(!isRedgifsUrl('https://x.com/v.mp4'), 'isRedgifsUrl false for direct file')
+    assert(embedProviderForUrl('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound')?.name === 'redgifs', 'redgifs watch provider')
+    assert(embedProviderForUrl('https://redgifs.com/ifr/abc123')?.name === 'redgifs', 'redgifs ifr provider')
+    assert(embedProviderForUrl('https://media.redgifs.com/SteelDeadlyItaliangreyhound-mobile.mp4') === null, 'media file is not a page id')
+    assert(embedProviderForUrl('https://example.com/watch/xyz') === null, 'non-redgifs url rejected')
+    assert(embedUrlFor('https://x.com/v.mp4') === null, 'no embed for direct file')
+    assert(embedProviderForUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')?.name === 'youtube', 'youtube watch provider')
+    assert(embedProviderForUrl('https://youtu.be/dQw4w9WgXcQ')?.name === 'youtube', 'youtu.be provider')
+    assert(embedProviderForUrl('https://example.com/watch?v=dQw4w9WgXcQ') === null, 'non-youtube host with watch param rejected')
 
     assert(
         classifyPost(makePost({postType: 'Link', url: 'https://www.redgifs.com/watch/steeldeadlyitaliangreyhound'})) === 'video',
@@ -418,26 +418,89 @@ void (async () => {
         classifyPost(makePost({url: 'https://redgifs.com/watch/abc'})) === 'video',
         'untyped redgifs url classifies video',
     )
+    assert(
+        classifyPost(makePost({postType: 'Link', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'})) === 'video',
+        'lemmy youtube link classifies video',
+    )
+    assert(
+        classifyPost(makePost({url: 'https://youtu.be/dQw4w9WgXcQ'})) === 'video',
+        'untyped youtube url classifies video',
+    )
 
     const direct = resolveVideoUrl('https://x.com/video.mp4')
     assert(direct.src === 'https://x.com/video.mp4' && direct.poster === null && direct.candidates.length === 0, 'direct video passes through')
     const unsafeVideo = resolveVideoUrl('javascript:alert(1)')
     assert(unsafeVideo.src === null, 'unsafe direct video url rejected')
 
-    // redgifs plays through the official embed player, not a <video> element
+    // embed sites play through the official embed player, not a <video> element
     assert(
-        redgifsEmbedUrl('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound') ===
+        embedUrlFor('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound') ===
             'https://www.redgifs.com/ifr/steeldeadlyitaliangreyhound',
         'redgifs watch url maps to the embed player',
     )
     assert(
-        redgifsEmbedUrl('https://redgifs.com/ifr/abc123') === 'https://www.redgifs.com/ifr/abc123',
+        embedUrlFor('https://redgifs.com/ifr/abc123') === 'https://www.redgifs.com/ifr/abc123',
         'redgifs ifr url maps to the embed player',
     )
-    assert(redgifsEmbedUrl('https://media.redgifs.com/x-mobile.mp4') === null, 'media file gets no embed')
-    assert(redgifsEmbedUrl('https://example.com/v.mp4') === null, 'non-redgifs url gets no embed')
-    assert(redgifsEmbedUrl('javascript:alert(1)') === null, 'unsafe url gets no embed')
+    assert(embedUrlFor('https://media.redgifs.com/x-mobile.mp4') === null, 'media file gets no embed')
+    assert(embedUrlFor('https://example.com/v.mp4') === null, 'non-redgifs url gets no embed')
+    assert(embedUrlFor('javascript:alert(1)') === null, 'unsafe url gets no embed')
     assert(resolveVideoUrl('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound').src === null, 'resolveVideoUrl leaves redgifs to the embed player')
+
+    // ---- youtube embeds ----
+
+    assert(
+        embedUrlFor('https://www.youtube.com/watch?v=dQw4w9WgXcQ') === 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        'youtube watch url maps to nocookie embed',
+    )
+    assert(
+        embedUrlFor('https://youtu.be/dQw4w9WgXcQ') === 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        'youtu.be url maps to nocookie embed',
+    )
+    assert(
+        embedUrlFor('https://www.youtube.com/shorts/dQw4w9WgXcQ') === 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        'youtube shorts url maps to nocookie embed',
+    )
+    assert(
+        embedUrlFor('https://www.youtube.com/embed/dQw4w9WgXcQ') === 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        'youtube embed url maps to nocookie embed',
+    )
+    assert(
+        embedUrlFor('https://www.youtube.com/live/dQw4w9WgXcQ') === 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        'youtube live url maps to nocookie embed',
+    )
+    assert(
+        embedUrlFor('https://m.youtube.com/watch?v=dQw4w9WgXcQ') === 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        'mobile youtube host maps to nocookie embed',
+    )
+    assert(
+        embedUrlFor('https://music.youtube.com/watch?v=dQw4w9WgXcQ') === 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        'music youtube host maps to nocookie embed',
+    )
+    assert(
+        embedUrlFor('https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL123') ===
+            'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        'playlist param ignored',
+    )
+    assert(embedUrlFor('https://www.youtube.com/watch?v=short') === null, 'too-short youtube id rejected')
+    assert(embedUrlFor('https://notyoutube.com/watch?v=dQw4w9WgXcQ') === null, 'lookalike youtube host rejected')
+    assert(embedUrlFor('javascript:alert(1)') === null, 'unsafe youtube url rejected')
+    assert(resolveVideoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ').src === null, 'resolveVideoUrl leaves youtube to the embed player')
+    assert(
+        embedProviderForUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')?.iframeReferrerPolicy ===
+            'strict-origin-when-cross-origin',
+        'youtube iframe sends origin so the player can configure',
+    )
+    assert(
+        embedProviderForUrl('https://www.redgifs.com/watch/xyz')?.iframeReferrerPolicy === undefined,
+        'redgifs iframe keeps the no-referrer default',
+    )
+
+    assert(
+        embedPosterFor('https://www.youtube.com/watch?v=dQw4w9WgXcQ') === 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+        'youtube placeholder poster from thumbnail feed',
+    )
+    assert(embedPosterFor('https://www.redgifs.com/watch/steeldeadlyitaliangreyhound') === null, 'redgifs has no placeholder poster')
 
     // ---- url safety ----
 

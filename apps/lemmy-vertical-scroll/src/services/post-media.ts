@@ -1,27 +1,13 @@
 import type {LemmyPost} from '../types'
 import {safeUrl} from './url'
+import {embedProviderForUrl} from './embeds'
+import {stripImageProxy} from './embeds/util'
+
+export {stripImageProxy}
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)(\?|#|$)/i
 const VIDEO_EXT = /\.(mp4|webm|mov|m4v|ogg|ogv)(\?|#|$)/i
 const IMAGE_LINK_RE = /!\[[^\]]*\]\((\S+)\)/g
-const REDGIFS_RE = /(?:^|[./])redgifs\.com\/(?:watch|ifr|i)\/([a-zA-Z0-9_-]+)/i
-
-/**
- * Resolves the final URL an instance-side image proxy is fronting, so
- * content-type inference can see the real extension.
- */
-export function stripImageProxy(url: string): string {
-    try {
-        const parsed = new URL(url)
-        if (parsed.pathname.includes('/image_proxy') || parsed.pathname.includes('/proxy/image')) {
-            const target = parsed.searchParams.get('url')
-            if (target) return target
-        }
-    } catch {
-        // not a URL we can parse — fall through
-    }
-    return url
-}
 
 function urlHasImageExt(url: string): boolean {
     return IMAGE_EXT.test(stripImageProxy(url))
@@ -47,7 +33,7 @@ export function classifyPost(post: LemmyPost): 'image' | 'video' | 'text' | 'lin
         case 'Link':
             break
     }
-    if (post.url && redgifsId(post.url)) return 'video'
+    if (post.url && embedProviderForUrl(post.url)) return 'video'
     if (post.videoUrl || (post.url && urlHasVideoExt(post.url))) return 'video'
     if (post.url && urlHasImageExt(post.url)) return 'image'
     if (post.url) return 'link'
@@ -83,17 +69,7 @@ export function aspectRatioFromUrl(url: string | null): number | null {
     return w > 0 && h > 0 ? w / h : null
 }
 
-// ---- embed providers (redgifs and friends) ----
-
-/** Extracts the redgifs clip id from a watch/embed page URL, or null. */
-export function redgifsId(url: string): string | null {
-    const match = stripImageProxy(url).match(REDGIFS_RE)
-    return match ? match[1] : null
-}
-
-export function isRedgifsUrl(url: string | null): boolean {
-    return !!url && redgifsId(url) !== null
-}
+// ---- embed providers ----
 
 export interface ResolvedVideo {
     /** First source to try. */
@@ -104,23 +80,14 @@ export interface ResolvedVideo {
 }
 
 /**
- * Redgifs refuses cross-origin media loads from browsers (403 + text/html,
- * which the browser ORB-blocks), so redgifs posts are played through the
- * platform's official embed player instead of a <video> element.
- */
-export function redgifsEmbedUrl(url: string | null): string | null {
-    const id = redgifsId(url ?? '')
-    return id ? safeUrl(`https://www.redgifs.com/ifr/${id}`) : null
-}
-
-/**
  * Resolves a direct media source for the scroll player. Only used for
- * non-redgifs videos; redgifs posts go through redgifsEmbedUrl instead.
+ * non-embed videos; embed-site posts are played through the provider's
+ * official iframe player (see the embeds registry) instead of a <video>.
  */
 export function resolveVideoUrl(videoUrl: string | null): ResolvedVideo {
     if (!videoUrl) return {src: null, poster: null, candidates: []}
-    // redgifs pages must go through the embed player, never a <video> element
-    if (redgifsId(videoUrl)) return {src: null, poster: null, candidates: []}
+    // embed-site pages must go through the iframe player, never a <video> element
+    if (embedProviderForUrl(videoUrl)) return {src: null, poster: null, candidates: []}
     const safe = safeUrl(videoUrl)
     return safe ? {src: safe, poster: null, candidates: []} : {src: null, poster: null, candidates: []}
 }

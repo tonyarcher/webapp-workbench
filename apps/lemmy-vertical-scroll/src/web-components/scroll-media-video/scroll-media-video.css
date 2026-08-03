@@ -29,9 +29,18 @@
 }
 
 .embed-placeholder {
+    position: relative;
     width: 100%;
     height: 100%;
     background: #000;
+    overflow: hidden;
+}
+
+.embed-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0.6;
 }
 
 .sound-button {

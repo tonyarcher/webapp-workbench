@@ -2,7 +2,8 @@ import {LitElement, html, svg, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, property, state} from 'lit/decorators.js'
 import {ref} from 'lit/directives/ref.js'
-import {redgifsEmbedUrl, resolveVideoUrl} from '../../services/post-media'
+import {resolveVideoUrl} from '../../services/post-media'
+import {embedPosterFor, embedProviderForUrl, embedUrlFor} from '../../services/embeds'
 import {safeUrl} from '../../services/url'
 import {getSoundOn, setSoundOn, subscribeSound} from './sound'
 import type {LemmyPost} from '../../types'
@@ -52,7 +53,7 @@ export class ScrollMediaVideo extends LitElement {
             this.poster = null
             this.candidates = []
             this.resolveFailed = false
-            if (redgifsEmbedUrl(this.post?.videoUrl ?? null)) return
+            if (embedUrlFor(this.post?.videoUrl ?? null)) return
             const token = ++this.resolveToken
             const resolved = resolveVideoUrl(this.post?.videoUrl ?? null)
             if (token !== this.resolveToken) return
@@ -134,9 +135,12 @@ export class ScrollMediaVideo extends LitElement {
     }
 
     private renderEmbed(): TemplateResult {
-        const embedUrl = redgifsEmbedUrl(this.post?.videoUrl ?? null)
+        const videoUrl = this.post?.videoUrl ?? null
+        const provider = embedProviderForUrl(videoUrl)
+        const embedUrl = embedUrlFor(videoUrl)
+        const poster = embedPosterFor(videoUrl)
         // the embed player is only mounted while the slide is active, so
-        // off-screen gifs never play or load
+        // off-screen gifs/videos never play or load
         if (!embedUrl) return html``
         return html`
             <div class="media-stage embed">
@@ -144,12 +148,16 @@ export class ScrollMediaVideo extends LitElement {
                     ? html`<iframe
                         class="media-iframe"
                         src=${embedUrl}
-                        title="Embedded video"
+                        title="${provider?.name ?? 'embedded'} video"
                         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                         allowfullscreen
-                        referrerpolicy="no-referrer"
+                        referrerpolicy=${provider?.iframeReferrerPolicy ?? 'no-referrer'}
                     ></iframe>`
-                    : html`<div class="embed-placeholder"></div>`}
+                    : html`<div class="embed-placeholder">
+                        ${poster
+                            ? html`<img class="embed-poster" src=${poster} alt="" loading="lazy">`
+                            : html``}
+                    </div>`}
             </div>
         `
     }
@@ -202,7 +210,7 @@ export class ScrollMediaVideo extends LitElement {
     }
 
     override render(): TemplateResult {
-        return redgifsEmbedUrl(this.post?.videoUrl ?? null) ? this.renderEmbed() : this.renderNative()
+        return embedUrlFor(this.post?.videoUrl ?? null) ? this.renderEmbed() : this.renderNative()
     }
 }
 
