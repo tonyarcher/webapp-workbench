@@ -59,6 +59,46 @@
     display: block;
 }
 
+/* big center play/pause affordance: always visible while paused,
+   fades in on hover while playing */
+.center-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 76px;
+    height: 76px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.center-play.playing {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.media-stage:hover .center-play.playing {
+    opacity: 0.85;
+    pointer-events: auto;
+}
+
+.center-play:hover {
+    background: rgba(0, 0, 0, 0.75);
+}
+
+.center-play svg {
+    display: block;
+}
+
 .video-spinner {
     width: 40px;
     height: 40px;

@@ -10,6 +10,8 @@ import styles from './scroll-media-video.css?inline'
 
 const SOUND_ON_ICON = svg`<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M3 8v4h3l4 3.5v-11L6 8H3Zm10.5 2a3 3 0 0 0-1.5-2.6v5.2a3 3 0 0 0 1.5-2.6Zm-1.5-5.8v1.7a4.8 4.8 0 0 1 0 8.2v1.7a6.5 6.5 0 0 0 0-11.6Z" fill="currentColor"/></svg>`
 const SOUND_OFF_ICON = svg`<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M3 8v4h3l4 3.5v-11L6 8H3Zm13.3-.3L15 9l-1.3-1.3-.9.9L14.1 10l-1.3 1.3.9.9L15 10.9l1.3 1.3.9-.9L15.9 10l1.3-1.3-.9-.9Z" fill="currentColor"/></svg>`
+const PLAY_ICON = svg`<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M8 5.5v13l11-6.5Z" fill="currentColor"/></svg>`
+const PAUSE_ICON = svg`<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M7 5h3.5v14H7ZM13.5 5H17v14h-3.5Z" fill="currentColor"/></svg>`
 
 @customElement('lvs-scroll-media-video')
 export class ScrollMediaVideo extends LitElement {
@@ -23,6 +25,7 @@ export class ScrollMediaVideo extends LitElement {
     @state() private poster: string | null = null
     @state() private candidates: string[] = []
     @state() private resolveFailed = false
+    @state() private playing = false
 
     private video: HTMLVideoElement | null = null
     private unsubscribeSound: (() => void) | null = null
@@ -100,8 +103,23 @@ export class ScrollMediaVideo extends LitElement {
         this.video = video
         if (video) {
             video.muted = !this.soundOn
+            const sync = (): void => {
+                this.playing = !video.paused
+            }
+            video.addEventListener('play', sync)
+            video.addEventListener('pause', sync)
+            sync()
             if (this.active) void video.play().catch(() => {})
         }
+    }
+
+    private onTogglePlay(event: Event): void {
+        event.preventDefault()
+        event.stopPropagation()
+        const video = this.video
+        if (!video) return
+        if (video.paused) void video.play().catch(() => {})
+        else video.pause()
     }
 
     private onToggleSound(event: Event): void {
@@ -165,6 +183,13 @@ export class ScrollMediaVideo extends LitElement {
         return html`
             <div class="media-stage">
                 ${media}
+                ${this.src && !this.resolveFailed
+                    ? html`<button
+                        class="center-play${this.playing ? ' playing' : ''}"
+                        aria-label=${this.playing ? 'Pause video' : 'Play video'}
+                        @click=${this.onTogglePlay}
+                    >${this.playing ? PAUSE_ICON : PLAY_ICON}</button>`
+                    : html``}
                 ${this.src && !this.resolveFailed
                     ? html`<button
                         class="sound-button${this.soundOn ? ' on' : ''}"
