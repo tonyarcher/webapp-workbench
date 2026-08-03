@@ -32,6 +32,27 @@ TanStack for everything, with web components as the UI surface:
   price-data access (proxies to avoid CORS, centralizes caching + rate limiting).
 - **Charting**: TradingView `lightweight-charts` (Apache-2.0), wrapped in `sg-portfolio-chart`.
 
+## Subagent delegation (the primary agent MUST delegate)
+
+The primary agent's model is reserved for orchestrating; **bulk dev work runs on cheaper subagent
+models configured globally in `opencode.json`** (`general`/`explore` → `opencode-go/mimo-v2.5`,
+`review` → `opencode-go/gpt-5.6-luna`). Do not do large self-contained work inline — hand it off.
+
+- **`explore`** (read-only, cheap): all codebase research — locating files, reading implementations,
+  grepping, understanding existing patterns before you write. Never search/read the repo yourself for
+  a large task; dispatch `explore`.
+- **`general`** (cheap, can edit): any self-contained implementation chunk — a new component, a
+  server fn, a service, a test file, a refactor, config wiring, a fix with a clear repro. Write a
+  precise spec (exact file paths, function signatures, schema shapes, conventions to follow, the
+  verification command to run) and require it to report what it changed and the verification result.
+  Review its diff (read the files / `git diff`) before accepting; do not blindly trust a cheap model.
+- **`review`** (runs automatically after code changes, before commit): always dispatch it on your
+  changes and fix or consciously defer its findings. On this repo the reviewer is a stronger model —
+  use it as the quality gate for cheap-subagent output.
+- Keep delegation **vertical**: the subagent does a whole coherent task, not one micro-step.
+  Batch related edits into a single `general` call with a full spec. Give it every convention it
+  needs (see below) so it does not have to ask.
+
 ## Repository layout
 
 ```
