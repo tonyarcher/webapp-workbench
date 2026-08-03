@@ -1,0 +1,46 @@
+import type { Bar, Interval, Quote, SymbolSearchResult } from '@stock-game/shared'
+import type { PriceProvider } from '../providers/types'
+
+export function fakeProvider(overrides?: {
+  quote?: Quote
+  bars?: Bar[]
+}): PriceProvider {
+  return {
+    id: 'fake',
+    async getQuote(symbol: string): Promise<Quote> {
+      return (
+        overrides?.quote ?? {
+          symbol,
+          name: symbol,
+          price: 50,
+          currency: 'USD',
+          exchange: 'TEST',
+          time: 0,
+          delayMinutes: 0,
+        }
+      )
+    },
+    async getBars(
+      _symbol: string,
+      _interval: Interval,
+      from: number,
+      to: number,
+    ): Promise<Bar[]> {
+      return (overrides?.bars ?? []).filter((bar) => bar.time >= from && bar.time <= to)
+    },
+    async search(_query: string): Promise<SymbolSearchResult[]> {
+      return []
+    },
+  }
+}
+
+export function dayBar(date: string, close: number): Bar {
+  return {
+    time: Date.parse(date) + 14 * 60 * 60 * 1000 + 30 * 60 * 1000,
+    open: close,
+    high: close,
+    low: close,
+    close,
+    volume: 1000,
+  }
+}

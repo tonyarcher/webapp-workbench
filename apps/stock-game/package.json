@@ -1,0 +1,25 @@
+{
+  "name": "stock-game",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "app"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=app",
+    "dev:app": "npm run dev --workspace=app",
+    "build": "npm run build --workspace=app",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "eslint .",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.9.0",
+    "typescript-eslint": "^8.65.0"
+  }
+}
