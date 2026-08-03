@@ -1,0 +1,7 @@
+import './sg-portfolio-chart'
+import './sg-holdings-table'
+import './sg-symbol-search'
+import './sg-trades-table'
+import './sg-orders-table'
+import './sg-trade-form'
+import './sg-settings-form'

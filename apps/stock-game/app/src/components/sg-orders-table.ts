@@ -1,5 +1,4 @@
 import { LitElement, html } from 'lit'
-import { property } from 'lit/decorators.js'
 import type { Order } from '@stock-game/shared'
 import { fmtDateTime, fmtNumber } from '../lib/format'
 import { tableStyles } from './shared-styles'
@@ -8,8 +7,13 @@ import { defineElement } from './define'
 export class SgOrdersTable extends LitElement {
   static override styles = tableStyles
 
-  @property({ attribute: false }) orders: Order[] = []
-  @property({ type: Boolean }) busy = false
+  static override properties = {
+    orders: { attribute: false },
+    busy: { type: Boolean },
+  }
+
+  orders: Order[] = []
+  busy = false
 
   private onCancel(orderId: number): void {
     this.dispatchEvent(

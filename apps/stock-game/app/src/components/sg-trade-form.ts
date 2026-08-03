@@ -1,5 +1,4 @@
 import { LitElement, css, html } from 'lit'
-import { property } from 'lit/decorators.js'
 import type { PropertyValues } from 'lit'
 import {
   placeOrderRequestSchema,
@@ -16,7 +15,9 @@ import { fmtMoney, fmtPrice } from '../lib/format'
 import { SgSymbolSearch } from './sg-symbol-search'
 import { defineElement } from './define'
 
-type SubmitDetail = { mode: 'backdated'; data: PlaceTradeRequest } | { mode: 'scheduled'; data: PlaceOrderRequest }
+type SubmitDetail =
+  | { mode: 'backdated'; data: PlaceTradeRequest }
+  | { mode: 'scheduled'; data: PlaceOrderRequest }
 
 export class SgTradeForm extends LitElement {
   static override styles = css`
@@ -123,12 +124,31 @@ export class SgTradeForm extends LitElement {
     }
   `
 
-  @property({ attribute: false }) results: SymbolSearchResult[] = []
-  @property({ attribute: false }) quote: Quote | null = null
-  @property({ type: Number }) cashCents = 0
-  @property({ attribute: false }) holdings: HoldingsEntry[] = []
-  @property({ type: Boolean }) busy = false
-  @property({ type: String }) symbol = ''
+  static override properties = {
+    results: { attribute: false },
+    query: { type: String },
+    quote: { attribute: false },
+    cashCents: { type: Number },
+    holdings: { attribute: false },
+    busy: { type: Boolean },
+    symbol: { type: String },
+    searching: { type: Boolean },
+    searchError: { attribute: false },
+    quoteLoading: { type: Boolean },
+    quoteError: { attribute: false },
+  }
+
+  results: SymbolSearchResult[] = []
+  query = ''
+  quote: Quote | null = null
+  cashCents = 0
+  holdings: HoldingsEntry[] = []
+  busy = false
+  symbol = ''
+  searching = false
+  searchError: string | null = null
+  quoteLoading = false
+  quoteError: string | null = null
 
   private typedSymbol = ''
   private side: Side = 'buy'
@@ -177,7 +197,12 @@ export class SgTradeForm extends LitElement {
       return
     }
     if (this.mode === 'backdated') {
-      const parsed = placeTradeRequestSchema.safeParse({ symbol, side: this.side, qty: this.qty, at: ms })
+      const parsed = placeTradeRequestSchema.safeParse({
+        symbol,
+        side: this.side,
+        qty: this.qty,
+        at: ms,
+      })
       if (!parsed.success) {
         this.error = 'Invalid trade details'
         return
@@ -188,7 +213,12 @@ export class SgTradeForm extends LitElement {
         this.error = 'Scheduled execution time must be in the future'
         return
       }
-      const parsed = placeOrderRequestSchema.safeParse({ symbol, side: this.side, qty: this.qty, executeAt: ms })
+      const parsed = placeOrderRequestSchema.safeParse({
+        symbol,
+        side: this.side,
+        qty: this.qty,
+        executeAt: ms,
+      })
       if (!parsed.success) {
         this.error = 'Invalid order details'
         return
@@ -235,7 +265,11 @@ export class SgTradeForm extends LitElement {
         <label>Symbol</label>
         <sg-symbol-search
           .results=${this.results}
-          @sg-symbol-input=${(event: CustomEvent<{ value: string }>) => this.onSymbolTyped(event)}
+          .query=${this.query}
+          .searching=${this.searching}
+          .error=${this.searchError}
+          @sg-symbol-input=${(event: CustomEvent<{ value: string }>) =>
+            this.onSymbolTyped(event)}
           @sg-symbol-select=${(event: CustomEvent<SymbolSearchResult>) =>
             this.onSymbolSelected(event)}
         ></sg-symbol-search>
@@ -326,7 +360,11 @@ export class SgTradeForm extends LitElement {
                 ${cost !== undefined ? html` · Est. ${fmtMoney(cost)}` : ''}
               </div>
             `
-          : html`<span class="muted">Select a symbol to see the current price.</span>`}
+          : this.quoteError !== null
+            ? html`<span class="error">${this.quoteError}</span>`
+            : this.quoteLoading
+              ? html`<span class="muted">Loading quote…</span>`
+              : html`<span class="muted">Select a symbol to see the current price.</span>`}
         <div class="muted">Cash available: ${fmtMoney(this.cashCents)}</div>
       </div>
 

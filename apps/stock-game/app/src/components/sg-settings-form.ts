@@ -1,5 +1,4 @@
 import { LitElement, css, html } from 'lit'
-import { property } from 'lit/decorators.js'
 import { z } from 'zod'
 import { symbolSchema, type GameConfig } from '@stock-game/shared'
 import { defineElement } from './define'
@@ -82,8 +81,13 @@ export class SgSettingsForm extends LitElement {
     }
   `
 
-  @property({ attribute: false }) config: GameConfig | null = null
-  @property({ type: Boolean }) busy = false
+  static override properties = {
+    config: { attribute: false },
+    busy: { type: Boolean },
+  }
+
+  config: GameConfig | null = null
+  busy = false
 
   private error: string | undefined
   private startDateDraft = ''

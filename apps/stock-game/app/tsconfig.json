@@ -6,7 +6,7 @@
     "types": ["vite/client", "node"],
     "moduleResolution": "bundler",
     "verbatimModuleSyntax": false,
-    "experimentalDecorators": true
+    "useDefineForClassFields": false
   },
   "include": ["src", "vite.config.ts", "vitest.config.ts"]
 }

@@ -1,5 +1,4 @@
 import { LitElement, css, html } from 'lit'
-import { property } from 'lit/decorators.js'
 import type { SymbolSearchResult } from '@stock-game/shared'
 import { defineElement } from './define'
 
@@ -54,6 +53,15 @@ export class SgSymbolSearch extends LitElement {
       background: var(--bg-hover, #1f2430);
     }
 
+    li.status {
+      cursor: default;
+      color: var(--text-muted, #9aa4b2);
+    }
+
+    li.status.error {
+      color: var(--negative, #f85149);
+    }
+
     .sym {
       font-weight: 600;
       min-width: 70px;
@@ -67,14 +75,28 @@ export class SgSymbolSearch extends LitElement {
     }
   `
 
-  @property({ type: String }) placeholder = 'Search symbol or company…'
-  @property({ attribute: false }) results: SymbolSearchResult[] = []
-  @property({ type: Boolean }) open = false
-  @property({ type: String }) value = ''
+  static override properties = {
+    placeholder: { type: String },
+    results: { attribute: false },
+    open: { type: Boolean },
+    value: { type: String },
+    query: { type: String },
+    searching: { type: Boolean },
+    error: { attribute: false },
+  }
+
+  placeholder = 'Search symbol or company…'
+  results: SymbolSearchResult[] = []
+  open = false
+  value = ''
+  query = ''
+  searching = false
+  error: string | null = null
 
   private debounce?: number
 
   override render() {
+    const pending = this.value.trim() !== this.query
     return html`
       <input
         class="input"
@@ -86,17 +108,23 @@ export class SgSymbolSearch extends LitElement {
         }}
         @keydown=${(event: KeyboardEvent) => this.onKeydown(event)}
       />
-      ${this.open && this.results.length > 0
+      ${this.open && this.value.trim().length > 0
         ? html`
             <ul class="results">
-              ${this.results.map(
-                (result) => html`
-                  <li @click=${() => this.select(result)}>
-                    <span class="sym">${result.symbol}</span>
-                    <span class="name">${result.name}</span>
-                  </li>
-                `,
-              )}
+              ${pending || this.searching
+                ? html`<li class="status">Searching…</li>`
+                : this.error !== null
+                  ? html`<li class="status error">${this.error}</li>`
+                  : this.results.length === 0
+                    ? html`<li class="status">No matches</li>`
+                    : this.results.map(
+                        (result) => html`
+                          <li @click=${() => this.select(result)}>
+                            <span class="sym">${result.symbol}</span>
+                            <span class="name">${result.name}</span>
+                          </li>
+                        `,
+                      )}
             </ul>
           `
         : ''}

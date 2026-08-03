@@ -1,5 +1,4 @@
 import { LitElement, html } from 'lit'
-import { property } from 'lit/decorators.js'
 import type { PropertyValues, TemplateResult } from 'lit'
 import {
   createColumnHelper,
@@ -7,7 +6,7 @@ import {
   getCoreRowModel,
   getSortedRowModel,
 } from '@tanstack/table-core'
-import type { Cell, Table } from '@tanstack/table-core'
+import type { Cell, Table, TableState } from '@tanstack/table-core'
 import type { HoldingsEntry } from '@stock-game/shared'
 import { fmtMoney, fmtMoneySigned, fmtNumber, fmtPct, fmtPrice } from '../lib/format'
 import { tableStyles } from './shared-styles'
@@ -38,19 +37,25 @@ const HEADER_LABELS: Record<string, string> = {
 export class SgHoldingsTable extends LitElement {
   static override styles = tableStyles
 
-  @property({ attribute: false }) holdings: HoldingsEntry[] = []
+  static override properties = {
+    holdings: { attribute: false },
+  }
+
+  holdings: HoldingsEntry[] = []
 
   private table: Table<HoldingsEntry>
+  private state: TableState
 
   constructor() {
     super()
     this.table = createTable<HoldingsEntry>({
       data: [],
       columns,
-      state: { sorting: [] },
+      state: {},
+      initialState: { sorting: [] },
       onStateChange: (updater) => {
-        const next = typeof updater === 'function' ? updater(this.table.getState()) : updater
-        void next
+        this.state = typeof updater === 'function' ? updater(this.state) : updater
+        this.table.setOptions((prev) => ({ ...prev, state: this.state }))
         this.requestUpdate()
       },
       getCoreRowModel: getCoreRowModel(),
@@ -58,6 +63,8 @@ export class SgHoldingsTable extends LitElement {
       getRowId: (row) => row.symbol,
       renderFallbackValue: '',
     })
+    this.state = this.table.initialState
+    this.table.setOptions((prev) => ({ ...prev, state: this.state }))
   }
 
   override willUpdate(changed: PropertyValues): void {

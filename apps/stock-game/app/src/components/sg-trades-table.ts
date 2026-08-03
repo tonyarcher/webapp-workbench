@@ -1,5 +1,4 @@
 import { LitElement, html } from 'lit'
-import { property } from 'lit/decorators.js'
 import type { Trade } from '@stock-game/shared'
 import { fmtDate, fmtMoney, fmtNumber, fmtPrice } from '../lib/format'
 import { tableStyles } from './shared-styles'
@@ -8,7 +7,11 @@ import { defineElement } from './define'
 export class SgTradesTable extends LitElement {
   static override styles = tableStyles
 
-  @property({ attribute: false }) trades: Trade[] = []
+  static override properties = {
+    trades: { attribute: false },
+  }
+
+  trades: Trade[] = []
 
   override render() {
     if (this.trades.length === 0) {

@@ -32,15 +32,23 @@ declare module 'react' {
       'sg-symbol-search': ElementProps & {
         results?: SymbolSearchResult[]
         value?: string
+        query?: string
         placeholder?: string
+        searching?: boolean
+        error?: string | null
       }
       'sg-trade-form': ElementProps & {
         results?: SymbolSearchResult[]
+        query?: string
         quote?: Quote | null
         cashCents?: number
         holdings?: HoldingsEntry[]
         busy?: boolean
         symbol?: string
+        searching?: boolean
+        searchError?: string | null
+        quoteLoading?: boolean
+        quoteError?: string | null
       }
       'sg-settings-form': ElementProps & {
         config?: GameConfig | null

@@ -1,5 +1,4 @@
 import { LitElement, css, html } from 'lit'
-import { property } from 'lit/decorators.js'
 import {
   createChart,
   ColorType,
@@ -28,7 +27,11 @@ export class SgPortfolioChart extends LitElement {
     }
   `
 
-  @property({ attribute: false }) points: PortfolioChartPoint[] = []
+  static override properties = {
+    points: { attribute: false },
+  }
+
+  points: PortfolioChartPoint[] = []
 
   private chart: IChartApi | undefined
   private series: ISeriesApi<'Line'> | undefined

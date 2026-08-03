@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { getQueryClient } from '../lib/queryClient'
+import '../components/index'
 import '../styles.css'
 
 export const Route = createRootRoute({

@@ -117,19 +117,30 @@ the app degrades gracefully (rate limits surface as a clear user error, not a cr
 
 - Lit elements live in `app/src/components/`. They register themselves via `defineElement`
   (guarded, so imports are SSR-safe even though the app runs in SPA mode).
+- **Reactive properties use Lit's decorator-free API**: `static properties = { ... }` + plain class
+  fields — NOT `@property` decorators. Decorators are banned because bundler emit broke Lit
+  reactivity (blank elements). This requires `useDefineForClassFields: false` in `app/tsconfig.json`
+  (class fields compile to assignments that go through Lit's accessors; do not remove it).
 - Public data flows in via **properties** (`.results`, `.holdings`, `.quote`, etc.), never via
   direct DOM.
 - Actions flow out via **custom events** (`sg-trade-submit`, `sg-symbol-select`, `sg-navigate`).
 - React route shells own query hooks/mutations and translate events into mutations/route
-  navigation (event listeners attached via the `useCustomEvents` ref-bridge).
+  navigation (event listeners attached via the `useCustomEvents` callback-ref bridge — attach in
+  the ref callback, not in a `useEffect`).
 - Custom elements must render standalone (no React inside Lit) and must be usable with no JS
   framework — that's the point of web components.
+- Every element is imported (side-effect) from `app/src/components/index.ts`, which is imported
+  once in `__root.tsx`. Register components there, never rely on incidental imports (a type-only
+  import gets tree-shaken and the element never registers).
 
 ## Testing
 
-- `app/src/server/**/*.test.ts` run by vitest (`npm test`). Priority tests: provider JSON parsing
-  and the portfolio value-series replay (cash + holdings math). Keep them free of live network calls
-  (fixtures/inline JSON, `testing/fakeProvider.ts`).
+- `app/src/**/*.test.ts` run by vitest (`npm test`). Server tests (`src/server/**`) run in node and
+  must stay network-free (fixtures/inline JSON, `testing/fakeProvider.ts`). Component tests
+  (`src/components/render.test.ts`) run in jsdom and assert each `sg-*` element renders and reacts
+  to property changes — the regression guard for Lit reactivity.
+- Priority server tests: provider JSON parsing and the portfolio value-series replay (cash +
+  holdings math).
 - Run `npm test` before considering a change done.
 
 ## Gotchas
@@ -142,3 +153,6 @@ the app degrades gracefully (rate limits surface as a clear user error, not a cr
   file and unit-test it. Yahoo daily bars are timestamped ~14:30 UTC, not midnight.
 - The app runs in TanStack Start **SPA mode** (`spa: { enabled: true }` in `vite.config.ts`) so Lit
   components and client-only data fetching behave cleanly; server functions still run server-side.
+- If a `sg-*` element renders blank, the usual culprit is Lit class-field shadowing — do not "fix"
+  it by adding decorators back; re-add `useDefineForClassFields: false` or check the `static
+  properties` wiring, and cover it in `render.test.ts`.

@@ -85,7 +85,12 @@ function Trade() {
           ref={ref}
           symbol={search.symbol ?? ''}
           results={searchQ.data ?? []}
+          query={query}
+          searching={searchQ.isFetching}
+          searchError={searchQ.isError ? String(searchQ.error) : null}
           quote={quoteQ.data ?? null}
+          quoteLoading={quoteQ.isFetching}
+          quoteError={quoteQ.isError ? String(quoteQ.error) : null}
           cashCents={configQ.data?.startingCashCents ?? 0}
           holdings={holdingsQ.data ?? []}
           busy={mutation.isPending}
@@ -95,7 +100,11 @@ function Trade() {
       </div>
       <div className="card">
         <h2>Recent trades</h2>
-        <sg-trades-table trades={tradesQ.data ?? []} />
+        {tradesQ.isError ? (
+          <div className="error">Failed to load trades: {String(tradesQ.error)}</div>
+        ) : (
+          <sg-trades-table trades={tradesQ.data ?? []} />
+        )}
       </div>
     </>
   )
