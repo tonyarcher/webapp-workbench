@@ -14,6 +14,13 @@
           "name": "DeepSeek V4 Flash (High)"
         }
       }
+    },
+    "gemini": {
+      "models": {
+        "gemini-flash-3.6": {
+          "name": "Gemini Flash 3.6"
+        }
+      }
     }
   },
   "agent": {
@@ -36,7 +43,7 @@
     },
     "review": {
       "mode": "primary",
-      "model": "openai/gpt-5.6-luna-max",
+      "model": "gemini/gemini-flash-3.6",
       "temperature": 0.1,
       "description": "Independent read-only reviewer; runs verification and issues APPROVE or REQUEST-CHANGES",
       "tools": {
