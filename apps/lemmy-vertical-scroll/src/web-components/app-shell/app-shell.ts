@@ -11,7 +11,6 @@ import '../community-list/community-list'
 import '../community-view/community-view'
 import '../post-list/post-list'
 import '../scroll-feed/scroll-feed'
-import '../server-switcher/server-switcher'
 import '../settings-view/settings-view'
 import styles from './app-shell.css?inline'
 
@@ -50,11 +49,6 @@ export class AppShell extends LitElement {
 
     private get instance(): string {
         return this.settings?.instance ?? ''
-    }
-
-    private get siteName(): string {
-        const data = this.siteController.value.data
-        return data?.site.name ?? this.instance
     }
 
     private get software(): Software {
@@ -285,7 +279,6 @@ export class AppShell extends LitElement {
                 </nav>
                 <div class="topbar-right">
                     ${this.renderContextControls()}
-                    <lvs-server-switcher .instance=${this.instance} .activeName=${this.siteName}></lvs-server-switcher>
                     <lvs-account-button .instance=${this.instance} .software=${this.software}></lvs-account-button>
                 </div>
             </header>

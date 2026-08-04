@@ -33,11 +33,14 @@ export class AccountButton extends LitElement {
         document.removeEventListener('pointerdown', this.onDocumentPointerDown)
     }
 
-    /** Stable identity so the listener can be removed; closes the dropdown on outside taps. */
+    /**
+     * Stable identity so the listener can be removed; closes the dropdown on outside taps.
+     * Uses composedPath() because event.target is retargeted to the shadow host for
+     * listeners outside the shadow root, which would falsely treat inside-clicks as "outside".
+     */
     private readonly onDocumentPointerDown = (event: PointerEvent): void => {
         if (!this.open) return
-        const target = event.target as Node | null
-        if (target && this.renderRoot.contains(target)) return
+        if (event.composedPath().includes(this)) return
         this.open = false
     }
 
