@@ -239,6 +239,28 @@ void (async () => {
     const lemmySite = await fetchSite('lemmy.ml', capturingFetchImpl({site_view: {site: {name: 'Lemmy', actor_id: 'https://lemmy.ml', version: '0.19.4', icon: null, description: null}}}))
     assert(lemmySite.software === 'lemmy', 'versioned site is lemmy')
 
+    // Modern Lemmy (0.19.19+) reports version at the top level, not on site_view.site
+    const modernLemmy = await fetchSite('modern.example', fetchSequence([
+        {site_view: {site: {name: 'Modern', actor_id: 'https://modern.example', version: '', icon: null, description: null}}, version: '0.19.19'},
+        {},  // alpha probe returns nothing
+    ]))
+    assert(modernLemmy.software === 'lemmy', 'modern lemmy detected via top-level version prefix')
+    assert(modernLemmy.site.version === '0.19.19', 'modern lemmy version read from top level')
+
+    // PieFed compat /api/v3/site also has a top-level version; alpha probe takes precedence
+    const piefedCompat = await fetchSite('piefed.example', fetchSequence([
+        {site_view: {site: {name: 'Piefed', actor_id: 'https://piefed.example', version: '', icon: null, description: null}}, version: '1.7.9'},
+        {version: '1.7.9'},
+    ]))
+    assert(piefedCompat.software === 'piefed', 'piefed detected via alpha probe despite compat top-level version')
+
+    // PieFed top-level version alone (alpha probe failed) is still detected via 1.x prefix
+    const piefedPrefix = await fetchSite('piefed2.example', fetchSequence([
+        {site_view: {site: {name: 'Piefed2', actor_id: 'https://piefed2.example', version: '', icon: null, description: null}}, version: '1.7.9'},
+        {},  // alpha probe returns nothing
+    ]))
+    assert(piefedPrefix.software === 'piefed', 'piefed detected via 1.x version prefix')
+
     // ---- piefed provider ----
 
     const piefedPost = {

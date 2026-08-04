@@ -215,10 +215,10 @@ function assertCommunities(data: unknown, instance: string, path: string): {comm
     return data as {communities: RawCommunityView[]}
 }
 
-function assertSite(data: unknown, instance: string): {site_view: {site: RawLemmySite}} {
+function assertSite(data: unknown, instance: string): {site_view: {site: RawLemmySite}; version?: string} {
     const siteView = (data as {site_view?: {site?: RawLemmySite}} | null)?.site_view
     if (!siteView?.site) throw unexpectedResponse(instance, '/api/v3/site')
-    return data as {site_view: {site: RawLemmySite}}
+    return data as {site_view: {site: RawLemmySite}; version?: string}
 }
 
 function assertCommunityView(data: unknown, instance: string, path: string): {community_view: RawCommunityView} {
@@ -335,19 +335,36 @@ export async function loginLemmy(
 
 export async function fetchSite(instance: string, fetchImpl: FetchImpl = fetch): Promise<SiteResult> {
     const data = assertSite(await apiGet(instance, '/api/v3/site', {}, fetchImpl), instance)
-    const version = data.site_view.site.version ?? ''
-    if (version) return {site: mapSite(data.site_view.site), software: 'lemmy'}
+
+    // Step 1: legacy Lemmy (≤0.19.18) puts the version on site_view.site
+    const legacyVersion = data.site_view.site.version ?? ''
+    if (legacyVersion) return {site: mapSite(data.site_view.site), software: 'lemmy'}
+
+    // Step 2: PieFed's own API is the only definitive software probe
     const detected = await detectSoftware(instance, fetchImpl)
-    return {
-        site: {...mapSite(data.site_view.site), version: detected.version},
-        software: detected.software,
+    if (detected.software === 'piefed') {
+        return {site: {...mapSite(data.site_view.site), version: detected.version}, software: 'piefed'}
     }
+
+    // Step 3: modern Lemmy (0.19.19+) and PieFed compat both expose the version
+    // at the top level of the GetSite response; discriminate by version prefix
+    // (Lemmy 0.x, PieFed 1.x).
+    const topLevelVersion = typeof data.version === 'string' && data.version ? data.version : ''
+    if (topLevelVersion.startsWith('0.')) {
+        return {site: {...mapSite(data.site_view.site), version: topLevelVersion}, software: 'lemmy'}
+    }
+    if (topLevelVersion.startsWith('1.')) {
+        return {site: {...mapSite(data.site_view.site), version: topLevelVersion}, software: 'piefed'}
+    }
+
+    return {site: {...mapSite(data.site_view.site), version: topLevelVersion}, software: 'unknown'}
 }
 
 /**
- * A Lemmy site response without a version string means the instance is not
- * Lemmy (PieFed exposes `/api/v3/site` for compatibility but nothing else).
- * Probe PieFed's own API; anything else stays unknown.
+ * Probe PieFed's own API endpoint — the only definitive software check.
+ * Modern Lemmy and PieFed compat both expose a top-level version at
+ * /api/v3/site, so the caller discriminates by version prefix after
+ * this probe returns "unknown".
  */
 async function detectSoftware(
     instance: string,
