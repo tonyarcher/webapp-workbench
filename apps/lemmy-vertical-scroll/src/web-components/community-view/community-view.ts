@@ -19,6 +19,8 @@ export class CommunityView extends LitElement {
     @property({attribute: false}) software: Software = 'lemmy'
     @property({attribute: false}) nsfwFilter: NsfwFilter = 'Include'
     @property({attribute: false}) viewMode: ViewMode = 'list'
+    /** Bearer jwt when logged in; '' when anonymous. */
+    @property({attribute: false}) auth = ''
 
     private readonly communityController = new QueryController<LemmyCommunity>(this, () =>
         communityQuery(this.instance, this.communityId, this.software),
@@ -26,7 +28,7 @@ export class CommunityView extends LitElement {
 
     override connectedCallback(): void {
         super.connectedCallback()
-        void hydrateCommunityPosts(this.instance, this.communityId, this.sort, this.nsfwFilter, this.software)
+        void hydrateCommunityPosts(this.instance, this.communityId, this.sort, this.nsfwFilter, this.software, this.auth)
     }
 
     private renderHeader(): TemplateResult {
@@ -77,6 +79,7 @@ export class CommunityView extends LitElement {
                 .software=${this.software}
                 .nsfwFilter=${this.nsfwFilter}
                 .communityId=${this.communityId}
+                .auth=${this.auth}
             ></lvs-scroll-feed>`
             : html`<lvs-post-list
                 .instance=${this.instance}
@@ -84,6 +87,7 @@ export class CommunityView extends LitElement {
                 .software=${this.software}
                 .nsfwFilter=${this.nsfwFilter}
                 .communityId=${this.communityId}
+                .auth=${this.auth}
             ></lvs-post-list>`
         if (this.viewMode === 'scroll') {
             // scroll mode is a pure post feed — no community header, matching the feed tab

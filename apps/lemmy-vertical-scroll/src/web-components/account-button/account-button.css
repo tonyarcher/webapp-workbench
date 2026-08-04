@@ -1,0 +1,117 @@
+:host {
+    display: inline-flex;
+    position: relative;
+}
+
+.account {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.account.logged-in {
+    max-width: 260px;
+}
+
+.account-name {
+    font-size: 12px;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.login-toggle {
+    padding: 5px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.login-toggle:hover:not(:disabled),
+.login-toggle.open {
+    color: var(--text);
+    border-color: var(--accent);
+}
+
+.login-toggle:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+.logout-button {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.logout-button:hover {
+    color: var(--text);
+    border-color: var(--downvote);
+}
+
+.login-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 260px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.login-dropdown input {
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+}
+
+.login-dropdown input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.account-error {
+    margin: 0;
+    font-size: 12px;
+    color: var(--downvote);
+    overflow-wrap: anywhere;
+}
+
+.login-submit {
+    padding: 7px 12px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.login-submit:disabled {
+    opacity: 0.6;
+    cursor: default;
+}

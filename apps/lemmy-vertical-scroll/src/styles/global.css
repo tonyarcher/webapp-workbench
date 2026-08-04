@@ -11,6 +11,7 @@
     --downvote: #e05a5a;
     --pinned-bg: rgba(76, 154, 255, 0.15);
     --pinned-fg: #9dc4ff;
+    --on-accent: #ffffff;
     --nsfw-bg: rgba(224, 90, 90, 0.15);
     --nsfw-fg: #ff9d9d;
     --topbar-height: 52px;
@@ -32,6 +33,7 @@
         --downvote: #c94a4a;
         --pinned-bg: rgba(26, 102, 214, 0.1);
         --pinned-fg: #1a66d6;
+        --on-accent: #ffffff;
         --nsfw-bg: rgba(201, 74, 74, 0.1);
         --nsfw-fg: #b33c3c;
         --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -52,6 +54,7 @@
     --downvote: #e05a5a;
     --pinned-bg: rgba(76, 154, 255, 0.15);
     --pinned-fg: #9dc4ff;
+    --on-accent: #ffffff;
     --nsfw-bg: rgba(224, 90, 90, 0.15);
     --nsfw-fg: #ff9d9d;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
@@ -71,6 +74,7 @@
     --downvote: #c94a4a;
     --pinned-bg: rgba(26, 102, 214, 0.1);
     --pinned-fg: #1a66d6;
+    --on-accent: #ffffff;
     --nsfw-bg: rgba(201, 74, 74, 0.1);
     --nsfw-fg: #b33c3c;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);

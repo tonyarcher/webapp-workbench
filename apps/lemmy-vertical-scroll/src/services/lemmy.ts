@@ -6,6 +6,7 @@ import type {
     LemmyPost,
     LemmySite,
     NsfwFilter,
+    PostFeedType,
     PostPage,
     PostSort,
     SiteResult,
@@ -112,6 +113,7 @@ const LEMMY_404_HINT =
  * GET helper shared by the Lemmy and PieFed providers. Read endpoints accept
  * both POST (JSON body) and GET (query params); GET is used because
  * Cloudflare-fronted instances reject POST from non-browser clients.
+ * An optional jwt adds the Authorization header for logged-in requests.
  */
 export async function apiGet(
     instance: string,
@@ -119,6 +121,7 @@ export async function apiGet(
     params: Record<string, string | number | boolean | undefined>,
     fetchImpl: FetchImpl,
     hint404: string | null = LEMMY_404_HINT,
+    auth?: string,
 ): Promise<unknown> {
     const query = new URLSearchParams()
     for (const [key, value] of Object.entries(params)) {
@@ -126,10 +129,12 @@ export async function apiGet(
     }
     let response: Awaited<ReturnType<FetchImpl>>
     try {
+        const headers: Record<string, string> = {Accept: 'application/json'}
+        if (auth) headers.Authorization = `Bearer ${auth}`
         // AbortSignal.timeout converts proxies that stall requests into a catchable error
         response = await fetchImpl(`https://${instance}${path}?${query.toString()}`, {
             method: 'GET',
-            headers: {Accept: 'application/json'},
+            headers,
             signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         })
     } catch (error) {
@@ -149,6 +154,43 @@ export async function apiGet(
                 response.status,
             )
         }
+        throw new ApiError(`Instance ${instance} rejected request to ${path}${detail}`, response.status)
+    }
+    return data
+}
+
+/**
+ * POST helper for write-ish endpoints (login). Sends a JSON body and shares
+ * the GET helper's timeout and error handling.
+ */
+export async function apiPost(
+    instance: string,
+    path: string,
+    body: Record<string, unknown>,
+    fetchImpl: FetchImpl,
+    auth?: string,
+): Promise<unknown> {
+    let response: Awaited<ReturnType<FetchImpl>>
+    try {
+        const headers: Record<string, string> = {'Content-Type': 'application/json'}
+        if (auth) headers.Authorization = `Bearer ${auth}`
+        response = await fetchImpl(`https://${instance}${path}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        })
+    } catch (error) {
+        const timedOut = error instanceof DOMException && error.name === 'TimeoutError'
+        throw new ApiError(
+            timedOut
+                ? `Could not reach ${instance} (request timed out)`
+                : `Could not reach ${instance} (network error)`,
+        )
+    }
+    const data = (await response.json().catch(() => null)) as {error?: string} | null
+    if (!response.ok) {
+        const detail = data?.error ? `: ${data.error}` : ''
         throw new ApiError(`Instance ${instance} rejected request to ${path}${detail}`, response.status)
     }
     return data
@@ -246,6 +288,49 @@ function mapCommunityView(view: RawCommunityView): LemmyCommunity {
     }
 }
 
+// ---- auth ----
+
+/** Result of a successful login; the jwt is the bearer credential for every later request. */
+export interface LoginResult {
+    jwt: string
+    username: string
+}
+
+/**
+ * POST /api/v3/user/login. Lemmy has returned the jwt both as a bare string
+ * and (in some 0.19.x builds) as `{jwt, registration_created}`; both shapes
+ * are accepted. `stay_logged_in` keeps the token from expiring after a week.
+ */
+export async function loginLemmy(
+    instance: string,
+    usernameOrEmail: string,
+    password: string,
+    totpToken?: string,
+    fetchImpl: FetchImpl = fetch,
+): Promise<LoginResult> {
+    const body: Record<string, string | boolean> = {
+        username_or_email: usernameOrEmail,
+        password,
+        stay_logged_in: true,
+    }
+    if (totpToken) body.totp_2fa_token = totpToken
+    const data = (await apiPost(instance, '/api/v3/user/login', body, fetchImpl)) as {
+        jwt?: string | {jwt: string} | null
+        registration_created?: boolean
+        verify_email_sent?: boolean
+    } | null
+    if (!data) throw unexpectedResponse(instance, '/api/v3/user/login')
+    if (data.registration_created) {
+        throw new ApiError('That account is registered but not yet approved by the instance.')
+    }
+    if (data.verify_email_sent) {
+        throw new ApiError('Verify your email address before logging in.')
+    }
+    const jwt = typeof data.jwt === 'string' ? data.jwt : data.jwt?.jwt
+    if (!jwt) throw new ApiError('Login failed — check your username and password.', 401)
+    return {jwt, username: usernameOrEmail}
+}
+
 // ---- api calls ----
 
 export async function fetchSite(instance: string, fetchImpl: FetchImpl = fetch): Promise<SiteResult> {
@@ -301,19 +386,20 @@ function mapSite(site: RawLemmySite): LemmySite {
 
 export interface PostsQuery {
     instance: string
-    feedType: FeedType
+    feedType: PostFeedType
     sort: PostSort
     page: number
     limit: number
     nsfwFilter?: NsfwFilter
+    auth?: string
 }
 
 export async function fetchPosts(
-    {instance, feedType, sort, page, limit, nsfwFilter = 'Include'}: PostsQuery,
+    {instance, feedType, sort, page, limit, nsfwFilter = 'Include', auth}: PostsQuery,
     fetchImpl: FetchImpl = fetch,
 ): Promise<PostPage> {
     const data = assertPosts(
-        await apiGet(instance, '/api/v3/post/list', {type_: feedType, sort, page, limit, nsfw: nsfwFilter}, fetchImpl),
+        await apiGet(instance, '/api/v3/post/list', {type_: feedType, sort, page, limit, nsfw: nsfwFilter}, fetchImpl, undefined, auth),
         instance,
         '/api/v3/post/list',
     )
@@ -328,10 +414,11 @@ export interface CommunitiesQuery {
     limit: number
     search?: string
     nsfwFilter?: NsfwFilter
+    auth?: string
 }
 
 export async function fetchCommunities(
-    {instance, type, sort, page, limit, search, nsfwFilter = 'Include'}: CommunitiesQuery,
+    {instance, type, sort, page, limit, search, nsfwFilter = 'Include', auth}: CommunitiesQuery,
     fetchImpl: FetchImpl = fetch,
 ): Promise<CommunityPage> {
     const data = assertCommunities(
@@ -340,6 +427,8 @@ export async function fetchCommunities(
             '/api/v3/community/list',
             {type_: type, sort, page, limit, search, show_nsfw: nsfwFilter !== 'Exclude'},
             fetchImpl,
+            undefined,
+            auth,
         ),
         instance,
         '/api/v3/community/list',
@@ -367,10 +456,11 @@ export interface CommunityPostsQuery {
     page: number
     limit: number
     nsfwFilter?: NsfwFilter
+    auth?: string
 }
 
 export async function fetchCommunityPosts(
-    {instance, communityId, sort, page, limit, nsfwFilter = 'Include'}: CommunityPostsQuery,
+    {instance, communityId, sort, page, limit, nsfwFilter = 'Include', auth}: CommunityPostsQuery,
     fetchImpl: FetchImpl = fetch,
 ): Promise<PostPage> {
     const data = assertPosts(
@@ -379,6 +469,8 @@ export async function fetchCommunityPosts(
             '/api/v3/post/list',
             {community_id: communityId, sort, page, limit, nsfw: nsfwFilter},
             fetchImpl,
+            undefined,
+            auth,
         ),
         instance,
         '/api/v3/post/list',

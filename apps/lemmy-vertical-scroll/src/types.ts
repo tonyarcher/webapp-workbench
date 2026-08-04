@@ -1,6 +1,8 @@
 // ---- api enums ----
 
-export type FeedType = 'All' | 'Local'
+export type FeedType = 'All' | 'Local' | 'Subscribed' | 'ModeratorView'
+/** Post feeds additionally accept Lemmy's newest Suggested listing (posts only). */
+export type PostFeedType = FeedType | 'Suggested'
 export type ViewMode = 'list' | 'scroll'
 export type NsfwFilter = 'Include' | 'Exclude' | 'Only'
 export const NSFW_FILTERS: NsfwFilter[] = ['Include', 'Exclude', 'Only']
@@ -132,12 +134,38 @@ export interface CommunityPage {
 
 export interface Settings {
     instance: string
-    feedType: FeedType
+    feedType: PostFeedType
     communityType: FeedType
     postSort: PostSort
     communitySort: CommunitySort
     nsfwFilter: NsfwFilter
     viewMode: ViewMode
+}
+
+// ---- auth ----
+
+/** Per-instance login session; the jwt is the only credential kept (never the password). */
+export interface AuthSession {
+    jwt: string
+    username: string
+}
+
+// ---- servers ----
+
+/** A server the user has connected to; persisted per host. */
+export interface ServerRecord {
+    host: string
+    name: string
+    software: Software
+    addedAt: number
+    lastUsedAt: number
+}
+
+/** A suggested server shown in the popular picker (bundled + live registry). */
+export interface PopularServer {
+    host: string
+    name: string
+    nsfw: boolean
 }
 
 // ---- routing ----

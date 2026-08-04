@@ -5,6 +5,7 @@ import {
     fetchCommunityPosts,
     fetchPosts,
     fetchSite,
+    loginLemmy,
     normalizeInstanceUrl,
 } from '../src/services/lemmy'
 import {
@@ -14,6 +15,7 @@ import {
     fetchPiefedCommunitySearch,
     fetchPiefedPosts,
     fetchPiefedSite,
+    loginPiefed,
 } from '../src/services/piefed'
 import {compactNumber, timeAgo} from '../src/services/format'
 import {embedPosterFor, embedProviderForUrl, embedUrlFor} from '../src/services/embeds'
@@ -24,6 +26,7 @@ import {
     resolveVideoUrl,
     stripImageProxy,
 } from '../src/services/post-media'
+import {fetchRegistryPopular, mergePopular, parseRegistryCsv, POPULAR_SERVERS} from '../src/services/registry'
 import {safeUrl} from '../src/services/url'
 import {parseView, viewToPath} from '../src/router'
 import {POST_SORTS, PIEFED_POST_SORTS, postSortsFor} from '../src/types'
@@ -70,6 +73,31 @@ function fetchSequence(bodies: unknown[], status = 200): typeof fetch {
         index++
         return new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}})
     }) as unknown as typeof fetch
+}
+
+let lastRequestDetails: {url: string; method: string; headers: Headers; body: string} | null = null
+/** Records method/headers/body so auth behavior can be asserted; also feeds `request()`/`query()`. */
+function capturingAuthFetchImpl(body: unknown, status = 200): typeof fetch {
+    return (async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+        lastRequest = {url: String(input)}
+        lastRequestDetails = {
+            url: String(input),
+            method: init?.method ?? 'GET',
+            headers: new Headers(init?.headers),
+            body: init?.body ? String(init.body) : '',
+        }
+        return mockFetchImpl(body, status)(input, init)
+    }) as unknown as typeof fetch
+}
+
+function lastBody(): Record<string, unknown> {
+    if (!lastRequestDetails) throw new Error('FAIL: no request captured')
+    return JSON.parse(lastRequestDetails.body) as Record<string, unknown>
+}
+
+function lastHeaders(): Headers {
+    if (!lastRequestDetails) throw new Error('FAIL: no request captured')
+    return lastRequestDetails.headers
 }
 
 // ---- normalizeInstanceUrl ----
@@ -128,12 +156,12 @@ void (async () => {
 
     await fetchPosts(
         {instance: 'lemmy.ml', feedType: 'All', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Exclude'},
-        capturingFetchImpl({posts: []}),
+        capturingAuthFetchImpl({posts: []}),
     )
     assert(query().get('nsfw') === 'Exclude', 'posts forward nsfwFilter Exclude')
     await fetchPosts(
         {instance: 'lemmy.ml', feedType: 'All', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Only'},
-        capturingFetchImpl({posts: []}),
+        capturingAuthFetchImpl({posts: []}),
     )
     assert(query().get('nsfw') === 'Only', 'posts forward nsfwFilter Only')
     assert(page.posts.length === 1, 'posts mapped')
@@ -245,7 +273,7 @@ void (async () => {
     assert(query().get('nsfw') === 'Include', 'piefed posts default to including nsfw')
     await fetchPiefedPosts(
         {instance: 'fedinsfw.app', feedType: 'All', sort: 'Hot', page: 1, limit: 20, nsfwFilter: 'Exclude'},
-        capturingFetchImpl({posts: []}),
+        capturingAuthFetchImpl({posts: []}),
     )
     assert(query().get('nsfw') === 'Exclude', 'piefed posts forward nsfwFilter')
     assert(pp.posts[0].communityTitle === 'NSFW' && pp.posts[0].score === 42, 'piefed post mapped')
@@ -297,6 +325,109 @@ void (async () => {
 
     await fetchCommunity('lemmy.ml', 7, capturingFetchImpl({community_view: {community: rawPost.community, counts: {subscribers: 10, posts: 5, comments: 2}, subscribed: 'NotSubscribed', blocked: false}}))
     assert(request().pathname === '/api/v3/community' && query().get('id') === '7', 'community by id')
+
+    // ---- auth headers on feed fetches ----
+
+    await fetchPosts(
+        {instance: 'lemmy.ml', feedType: 'All', sort: 'Hot', page: 1, limit: 20, auth: 'tok123'},
+        capturingAuthFetchImpl({posts: []}),
+    )
+    assert(lastHeaders().get('Authorization') === 'Bearer tok123', 'logged-in feed sends Authorization header')
+    await fetchPosts(
+        {instance: 'lemmy.ml', feedType: 'All', sort: 'Hot', page: 1, limit: 20},
+        capturingAuthFetchImpl({posts: []}),
+    )
+    assert(lastHeaders().get('Authorization') === null, 'anonymous feed sends no Authorization header')
+    await fetchPosts(
+        {instance: 'lemmy.ml', feedType: 'Subscribed', sort: 'Hot', page: 1, limit: 20, auth: 'tok123'},
+        capturingAuthFetchImpl({posts: []}),
+    )
+    assert(query().get('type_') === 'Subscribed', 'Subscribed listing forwarded as type_')
+
+    // ---- login ----
+
+    const lemmyLogin = await loginLemmy('lemmy.ml', 'bob', 'secret', undefined, capturingAuthFetchImpl({jwt: 'jwtA'}))
+    assert(lastRequestDetails!.method === 'POST', 'login uses POST')
+    assert(new URL(lastRequestDetails!.url).pathname === '/api/v3/user/login', 'lemmy login hits user/login')
+    assert(lastHeaders().get('Authorization') === null, 'login itself sends no auth header')
+    const loginBody = lastBody()
+    assert(
+        loginBody.username_or_email === 'bob' && loginBody.password === 'secret',
+        'login body carries username and password',
+    )
+    assert(loginBody.stay_logged_in === true, 'lemmy login stays logged in')
+    assert(lemmyLogin.jwt === 'jwtA' && lemmyLogin.username === 'bob', 'lemmy login returns session')
+
+    await loginLemmy('lemmy.ml', 'bob', 'secret', '123456', capturingAuthFetchImpl({jwt: 'jwtB'}))
+    assert(lastBody().totp_2fa_token === '123456', 'totp token forwarded when provided')
+
+    const objJwt = await loginLemmy('lemmy.ml', 'bob', 'secret', undefined, capturingAuthFetchImpl({jwt: {jwt: 'jwtC', registration_created: false}}))
+    assert(objJwt.jwt === 'jwtC', 'object-shaped jwt parsed')
+
+    await assertRejects(
+        () => loginLemmy('lemmy.ml', 'bob', 'secret', undefined, capturingAuthFetchImpl({registration_created: true})),
+        (e) => e instanceof ApiError && /approved/.test(e.message),
+        'pending registration surfaces as an ApiError',
+    )
+    await assertRejects(
+        () => loginLemmy('lemmy.ml', 'bob', 'secret', undefined, capturingAuthFetchImpl({verify_email_sent: true})),
+        (e) => e instanceof ApiError && /email/i.test(e.message),
+        'unverified email surfaces as an ApiError',
+    )
+    await assertRejects(
+        () => loginLemmy('lemmy.ml', 'bob', 'secret', undefined, capturingAuthFetchImpl({})),
+        (e) => e instanceof ApiError && e.status === 401 && /username and password/.test(e.message),
+        'missing jwt maps to bad credentials',
+    )
+    await assertRejects(
+        () => loginLemmy('lemmy.ml', 'bob', 'wrong', undefined, capturingAuthFetchImpl({error: 'incorrect_password'}, 401)),
+        (e) => e instanceof ApiError && e.status === 401,
+        'login 401 keeps the status',
+    )
+
+    const piefedLogin = await loginPiefed('piefed.social', 'bob', 'secret', capturingAuthFetchImpl({jwt: 'pjwt'}))
+    assert(new URL(lastRequestDetails!.url).pathname === '/api/alpha/user/login', 'piefed login hits alpha user/login')
+    assert(lastBody().username_or_email === 'bob', 'piefed login accepts username_or_email')
+    assert(piefedLogin.jwt === 'pjwt' && piefedLogin.username === 'bob', 'piefed login returns session')
+
+    // ---- popular server registry ----
+
+    const csv = [
+        'Instance,NU,NC,Fed,Adult,↓V,Users,BI,BB,UT,MO,Version',
+        '[Lemmy.World](https://lemmy.world),Yes,Yes,Yes,Yes,Yes,18459,172,1,99%,12,0.19.3',
+        '[Small](https://small.example),Yes,Yes,Yes,Yes,Yes,5,1,0,100%,3,0.19.3',
+        '[NSFW Place](https://lemmynsfw.com),Yes,Yes,Yes,Yes,No,3577,177,26,99%,12,0.19.3',
+        'malformed line without a markdown link',
+        '[NoUsers](https://nousers.example),Yes,Yes,Yes,Yes,Yes,?,1,0,100%,3,0.19.3',
+        '',
+    ].join('\n')
+    const parsed = parseRegistryCsv(csv)
+    assert(parsed.length === 3, 'registry parse skips malformed and empty rows')
+    assert(parsed[0].host === 'lemmy.world' && parsed[0].name === 'Lemmy.World', 'registry sorts by monthly users')
+    assert(parsed[1].host === 'lemmynsfw.com' && parsed[1].nsfw === true, 'registry tags known NSFW hosts')
+    assert(parsed[2].host === 'small.example', 'registry keeps smaller instances after the top')
+    assert(!parsed.some((s) => s.host === 'nousers.example'), 'registry drops rows with invalid user counts')
+
+    const failedRegistry = await fetchRegistryPopular(
+        (async () => {
+            throw new TypeError('network down')
+        }) as typeof fetch,
+    )
+    assert(failedRegistry.length === 0, 'registry network failure yields an empty list')
+    const nonOkRegistry = await fetchRegistryPopular(
+        (async () => new Response('boom', {status: 500})) as typeof fetch,
+    )
+    assert(nonOkRegistry.length === 0, 'registry non-ok response yields an empty list')
+
+    const merged = mergePopular(POPULAR_SERVERS, [
+        {host: 'lemmy.world', name: 'Lemmy.World', nsfw: false},
+        {host: 'brand.new', name: 'Brand New', nsfw: false},
+    ])
+    assert(merged[0].host === 'lemmy.world', 'registry entries rank before bundled duplicates')
+    assert(merged.length === POPULAR_SERVERS.length + 1, 'merge dedupes overlapping hosts')
+    assert(merged.some((s) => s.host === 'brand.new'), 'merge keeps registry-only hosts')
+    assert(POPULAR_SERVERS.some((s) => s.host === 'lemmynsfw.com' && s.nsfw), 'bundled list flags NSFW instances')
+    assert(POPULAR_SERVERS.some((s) => s.host === 'piefed.social'), 'bundled list covers PieFed')
 
     // ---- format ----
 

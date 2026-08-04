@@ -72,26 +72,6 @@
     max-width: 160px;
 }
 
-.instance-chip {
-    padding: 5px 12px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: var(--bg);
-    color: var(--text-dim);
-    font: inherit;
-    font-size: 12px;
-    cursor: pointer;
-    max-width: 220px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.instance-chip:hover {
-    color: var(--text);
-    border-color: var(--accent);
-}
-
 .view {
     flex: 1;
     min-height: 0;

@@ -13,13 +13,17 @@ import {
     PAGE_SIZE,
 } from './types'
 import type {
+    AuthSession,
     CommunityPage,
     CommunitySort,
     FeedType,
     LemmyCommunity,
     NsfwFilter,
+    PopularServer,
+    PostFeedType,
     PostPage,
     PostSort,
+    ServerRecord,
     Settings,
     SiteResult,
     Software,
@@ -30,7 +34,12 @@ import {
     putCommunitiesCache,
     putPostsCache,
 } from './db/posts-cache'
+import {getAuth, listAuthSessions} from './db/auth'
+import type {StoredAuthSession} from './db/auth'
+import {getRegistryCache, putRegistryCache} from './db/registry'
+import {listServers} from './db/servers'
 import {loadSettings} from './db/settings'
+import {fetchRegistryPopular, mergePopular, POPULAR_SERVERS, REGISTRY_TTL_MS} from './services/registry'
 import {fetchCommunities, fetchCommunity, fetchCommunityPosts, fetchPosts, fetchSite} from './services/lemmy'
 import {
     fetchPiefedCommunities,
@@ -50,13 +59,18 @@ export const queryClient = new QueryClient({
 
 export const settingsKey = ['settings'] as const
 export const siteKey = (instance: string): QueryKey => ['site', instance]
+export const authKey = (instance: string): QueryKey => ['auth', instance]
+export const serversKey = ['servers'] as const
+export const authSessionsKey = ['authSessions'] as const
+export const popularServersKey = ['popularServers'] as const
 export const postsKey = (
     instance: string,
-    feedType: FeedType,
+    feedType: PostFeedType,
     sort: PostSort,
     nsfwFilter: NsfwFilter,
     software: Software,
-): QueryKey => ['posts', instance, feedType, sort, nsfwFilter, software]
+    auth: string,
+): QueryKey => ['posts', instance, feedType, sort, nsfwFilter, software, auth]
 export const communitiesKey = (
     instance: string,
     type: FeedType,
@@ -64,7 +78,8 @@ export const communitiesKey = (
     search: string,
     nsfwFilter: NsfwFilter,
     software: Software,
-): QueryKey => ['communities', instance, type, sort, search, nsfwFilter, software]
+    auth: string,
+): QueryKey => ['communities', instance, type, sort, search, nsfwFilter, software, auth]
 export const communityKey = (
     instance: string,
     communityId: number,
@@ -76,19 +91,21 @@ export const communityPostsKey = (
     sort: PostSort,
     nsfwFilter: NsfwFilter,
     software: Software,
-): QueryKey => ['communityPosts', instance, communityId, sort, nsfwFilter, software]
+    auth: string,
+): QueryKey => ['communityPosts', instance, communityId, sort, nsfwFilter, software, auth]
 
 // ---- idb cache keys ----
 
 export function postsCacheKey(
     instance: string,
-    feedType: FeedType,
+    feedType: PostFeedType,
     sort: PostSort,
     nsfwFilter: NsfwFilter,
     software: Software,
+    auth: string,
     page: number,
 ): string {
-    return `posts:${instance}:${feedType}:${sort}:${nsfwFilter}:${software}:${page}`
+    return `posts:${instance}:${feedType}:${sort}:${nsfwFilter}:${software}:${auth}:${page}`
 }
 
 export function communitiesCacheKey(
@@ -97,9 +114,10 @@ export function communitiesCacheKey(
     sort: CommunitySort,
     nsfwFilter: NsfwFilter,
     software: Software,
+    auth: string,
     page: number,
 ): string {
-    return `communities:${instance}:${type}:${sort}:${nsfwFilter}:${software}:${page}`
+    return `communities:${instance}:${type}:${sort}:${nsfwFilter}:${software}:${auth}:${page}`
 }
 
 export function communityPostsCacheKey(
@@ -108,9 +126,10 @@ export function communityPostsCacheKey(
     sort: PostSort,
     nsfwFilter: NsfwFilter,
     software: Software,
+    auth: string,
     page: number,
 ): string {
-    return `communityPosts:${instance}:${communityId}:${sort}:${nsfwFilter}:${software}:${page}`
+    return `communityPosts:${instance}:${communityId}:${sort}:${nsfwFilter}:${software}:${auth}:${page}`
 }
 
 // ---- query options ----
@@ -121,6 +140,43 @@ export function settingsQuery(): QueryObserverOptions<Settings> {
 
 export function siteQuery(instance: string): QueryObserverOptions<SiteResult> {
     return {queryKey: siteKey(instance), queryFn: () => fetchSite(instance), staleTime: 5 * 60_000}
+}
+
+/** Per-instance login session; null when anonymous. Sessions never expire in cache. */
+export function authQuery(instance: string): QueryObserverOptions<AuthSession | null> {
+    return {queryKey: authKey(instance), queryFn: () => getAuth(instance), staleTime: Infinity}
+}
+
+/** Every saved login session, keyed by host — used to mark which servers have accounts. */
+export function authSessionsQuery(): QueryObserverOptions<StoredAuthSession[]> {
+    return {queryKey: authSessionsKey, queryFn: () => listAuthSessions(), staleTime: Infinity}
+}
+
+/** Servers the user has connected to, most-recently-used first. */
+export function serversQuery(): QueryObserverOptions<ServerRecord[]> {
+    return {
+        queryKey: serversKey,
+        queryFn: async () => {
+            const servers = await listServers()
+            return [...servers].sort((a, b) => b.lastUsedAt - a.lastUsedAt)
+        },
+        staleTime: Infinity,
+    }
+}
+
+/** Popular servers = live lemmy registry (24h cached) merged over the bundled list. */
+export function popularServersQuery(): QueryObserverOptions<PopularServer[]> {
+    return {
+        queryKey: popularServersKey,
+        queryFn: async () => {
+            const cached = await getRegistryCache(REGISTRY_TTL_MS)
+            if (cached) return mergePopular(POPULAR_SERVERS, cached)
+            const registry = await fetchRegistryPopular()
+            if (registry.length) void putRegistryCache(registry).catch(() => {})
+            return mergePopular(POPULAR_SERVERS, registry)
+        },
+        staleTime: REGISTRY_TTL_MS,
+    }
 }
 
 export function communityQuery(
@@ -142,20 +198,21 @@ type InfinitePostsOptions = InfiniteQueryObserverOptions<PostPage, Error, Infini
 
 export function postsInfiniteQuery(
     instance: string,
-    feedType: FeedType,
+    feedType: PostFeedType,
     sort: PostSort,
     software: Software,
     nsfwFilter: NsfwFilter,
+    auth: string,
 ): InfinitePostsOptions {
     return {
-        queryKey: postsKey(instance, feedType, sort, nsfwFilter, software),
+        queryKey: postsKey(instance, feedType, sort, nsfwFilter, software, auth),
         initialPageParam: 1,
         queryFn: async ({pageParam}) => {
             const page =
                 software === 'piefed'
-                    ? await fetchPiefedPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter})
-                    : await fetchPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter})
-            void putPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, software, pageParam), page.posts).catch(() => {})
+                    ? await fetchPiefedPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
+                    : await fetchPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
+            void putPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, software, auth, pageParam), page.posts).catch(() => {})
             return page
         },
         getNextPageParam: (lastPage) => (lastPage.posts.length > 0 ? lastPage.page + 1 : undefined),
@@ -169,9 +226,10 @@ export function communityPostsInfiniteQuery(
     sort: PostSort,
     software: Software,
     nsfwFilter: NsfwFilter,
+    auth: string,
 ): InfinitePostsOptions {
     return {
-        queryKey: communityPostsKey(instance, communityId, sort, nsfwFilter, software),
+        queryKey: communityPostsKey(instance, communityId, sort, nsfwFilter, software, auth),
         initialPageParam: 1,
         queryFn: async ({pageParam}) => {
             const page =
@@ -183,6 +241,7 @@ export function communityPostsInfiniteQuery(
                           page: pageParam,
                           limit: PAGE_SIZE,
                           nsfwFilter,
+                          auth,
                       })
                     : await fetchCommunityPosts({
                           instance,
@@ -191,8 +250,9 @@ export function communityPostsInfiniteQuery(
                           page: pageParam,
                           limit: PAGE_SIZE,
                           nsfwFilter,
+                          auth,
                       })
-            void putPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, software, pageParam), page.posts).catch(() => {})
+            void putPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, software, auth, pageParam), page.posts).catch(() => {})
             return page
         },
         getNextPageParam: (lastPage) => (lastPage.posts.length > 0 ? lastPage.page + 1 : undefined),
@@ -215,9 +275,10 @@ export function communitiesInfiniteQuery(
     search: string,
     software: Software,
     nsfwFilter: NsfwFilter,
+    auth: string,
 ): InfiniteCommunitiesOptions {
     return {
-        queryKey: communitiesKey(instance, type, sort, search, nsfwFilter, software),
+        queryKey: communitiesKey(instance, type, sort, search, nsfwFilter, software, auth),
         initialPageParam: 1,
         queryFn: async ({pageParam}) => {
             if (software === 'piefed') {
@@ -225,12 +286,12 @@ export function communitiesInfiniteQuery(
                     // PieFed community search is one-shot (no reliable pagination)
                     const communities =
                         pageParam === 1
-                            ? await fetchPiefedCommunitySearch(instance, search, PAGE_SIZE, fetch, nsfwFilter, type)
+                            ? await fetchPiefedCommunitySearch(instance, search, PAGE_SIZE, fetch, nsfwFilter, type, auth)
                             : []
                     return {communities, page: pageParam}
                 }
-                const page = await fetchPiefedCommunities({instance, type, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter})
-                void putCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, software, pageParam), page.communities).catch(() => {})
+                const page = await fetchPiefedCommunities({instance, type, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
+                void putCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, software, auth, pageParam), page.communities).catch(() => {})
                 return page
             }
             const page = await fetchCommunities({
@@ -241,9 +302,10 @@ export function communitiesInfiniteQuery(
                 limit: PAGE_SIZE,
                 search: search || undefined,
                 nsfwFilter,
+                auth,
             })
             if (!search) {
-                void putCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, software, pageParam), page.communities).catch(() => {})
+                void putCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, software, auth, pageParam), page.communities).catch(() => {})
             }
             return page
         },
@@ -280,14 +342,15 @@ async function hydratePages(
 
 export function hydratePosts(
     instance: string,
-    feedType: FeedType,
+    feedType: PostFeedType,
     sort: PostSort,
     nsfwFilter: NsfwFilter,
     software: Software,
+    auth: string,
 ): Promise<void> {
     return hydratePages(
-        postsKey(instance, feedType, sort, nsfwFilter, software),
-        (page) => getPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, software, page), CACHE_TTL_MS),
+        postsKey(instance, feedType, sort, nsfwFilter, software, auth),
+        (page) => getPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, software, auth, page), CACHE_TTL_MS),
         'posts',
     )
 }
@@ -298,11 +361,12 @@ export function hydrateCommunityPosts(
     sort: PostSort,
     nsfwFilter: NsfwFilter,
     software: Software,
+    auth: string,
 ): Promise<void> {
     return hydratePages(
-        communityPostsKey(instance, communityId, sort, nsfwFilter, software),
+        communityPostsKey(instance, communityId, sort, nsfwFilter, software, auth),
         (page) =>
-            getPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, software, page), CACHE_TTL_MS),
+            getPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, software, auth, page), CACHE_TTL_MS),
         'posts',
     )
 }
@@ -314,11 +378,12 @@ export function hydrateCommunities(
     search: string,
     nsfwFilter: NsfwFilter,
     software: Software,
+    auth: string,
 ): Promise<void> {
     if (search) return Promise.resolve()
     return hydratePages(
-        communitiesKey(instance, type, sort, '', nsfwFilter, software),
-        (page) => getCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, software, page), CACHE_TTL_MS),
+        communitiesKey(instance, type, sort, '', nsfwFilter, software, auth),
+        (page) => getCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, software, auth, page), CACHE_TTL_MS),
         'communities',
     )
 }

@@ -10,7 +10,7 @@ import {
     postsInfiniteQuery,
 } from '../../query'
 import {navigate} from '../../router'
-import type {FeedType, LemmyPost, NsfwFilter, PostPage, PostSort, Software} from '../../types'
+import type {LemmyPost, NsfwFilter, PostFeedType, PostPage, PostSort, Software} from '../../types'
 import '../scroll-post/scroll-post'
 import styles from './scroll-feed.css?inline'
 
@@ -26,10 +26,12 @@ export class ScrollFeed extends LitElement {
     static override styles = unsafeCSS(styles)
 
     @property({attribute: false}) instance = ''
-    @property({attribute: false}) feedType: FeedType = 'All'
+    @property({attribute: false}) feedType: PostFeedType = 'All'
     @property({attribute: false}) sort: PostSort = 'Hot'
     @property({attribute: false}) software: Software = 'lemmy'
     @property({attribute: false}) nsfwFilter: NsfwFilter = 'Include'
+    /** Bearer jwt when logged in; '' when anonymous. */
+    @property({attribute: false}) auth = ''
     /** When set, scrolls this community's posts instead of the main feed. */
     @property({attribute: false}) communityId: number | null = null
 
@@ -38,8 +40,8 @@ export class ScrollFeed extends LitElement {
 
     private readonly query = new InfiniteQueryController<PostPage>(this, () =>
         this.communityId === null
-            ? postsInfiniteQuery(this.instance, this.feedType, this.sort, this.software, this.nsfwFilter)
-            : communityPostsInfiniteQuery(this.instance, this.communityId, this.sort, this.software, this.nsfwFilter),
+            ? postsInfiniteQuery(this.instance, this.feedType, this.sort, this.software, this.nsfwFilter, this.auth)
+            : communityPostsInfiniteQuery(this.instance, this.communityId, this.sort, this.software, this.nsfwFilter, this.auth),
     )
 
     private viewport: HTMLElement | null = null
@@ -54,8 +56,8 @@ export class ScrollFeed extends LitElement {
     override connectedCallback(): void {
         super.connectedCallback()
         const hydrate = this.communityId === null
-            ? hydratePosts(this.instance, this.feedType, this.sort, this.nsfwFilter, this.software)
-            : hydrateCommunityPosts(this.instance, this.communityId, this.sort, this.nsfwFilter, this.software)
+            ? hydratePosts(this.instance, this.feedType, this.sort, this.nsfwFilter, this.software, this.auth)
+            : hydrateCommunityPosts(this.instance, this.communityId, this.sort, this.nsfwFilter, this.software, this.auth)
         void hydrate
         window.addEventListener('keydown', this.onWindowKeydown)
         // wheel must be non-passive so the container never double-scrolls
@@ -81,6 +83,7 @@ export class ScrollFeed extends LitElement {
             this.nsfwFilter,
             this.software,
             this.communityId,
+            this.auth,
         ])
         if (this.prevParams !== '' && params !== this.prevParams) {
             if (this.viewport) this.viewport.scrollTop = 0

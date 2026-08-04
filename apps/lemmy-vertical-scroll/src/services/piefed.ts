@@ -5,11 +5,13 @@ import type {
     LemmyCommunity,
     LemmyPost,
     NsfwFilter,
+    PostFeedType,
     PostPage,
     PostSort,
     SiteResult,
 } from '../types'
-import {apiGet, ApiError} from './lemmy'
+import {apiGet, apiPost, ApiError} from './lemmy'
+import type {LoginResult} from './lemmy'
 import {classifyPost, extractImageUrls} from './post-media'
 
 // ---- raw piefed alpha api shapes (snake_case wire format) ----
@@ -195,19 +197,20 @@ export async function fetchPiefedSite(instance: string, fetchImpl: typeof fetch 
 
 export interface PiefedPostsQuery {
     instance: string
-    feedType: FeedType
+    feedType: PostFeedType
     sort: PostSort
     page: number
     limit: number
     nsfwFilter?: NsfwFilter
+    auth?: string
 }
 
 export async function fetchPiefedPosts(
-    {instance, feedType, sort, page, limit, nsfwFilter = 'Include'}: PiefedPostsQuery,
+    {instance, feedType, sort, page, limit, nsfwFilter = 'Include', auth}: PiefedPostsQuery,
     fetchImpl: typeof fetch = fetch,
 ): Promise<PostPage> {
     const data = assertPosts(
-        await apiGet(instance, '/api/alpha/post/list', {type_: feedType, sort, page, limit, nsfw: nsfwFilter}, fetchImpl, null),
+        await apiGet(instance, '/api/alpha/post/list', {type_: feedType, sort, page, limit, nsfw: nsfwFilter}, fetchImpl, null, auth),
         instance,
         '/api/alpha/post/list',
     )
@@ -221,10 +224,11 @@ export interface PiefedCommunityPostsQuery {
     page: number
     limit: number
     nsfwFilter?: NsfwFilter
+    auth?: string
 }
 
 export async function fetchPiefedCommunityPosts(
-    {instance, communityId, sort, page, limit, nsfwFilter = 'Include'}: PiefedCommunityPostsQuery,
+    {instance, communityId, sort, page, limit, nsfwFilter = 'Include', auth}: PiefedCommunityPostsQuery,
     fetchImpl: typeof fetch = fetch,
 ): Promise<PostPage> {
     const data = assertPosts(
@@ -234,6 +238,7 @@ export async function fetchPiefedCommunityPosts(
             {community_id: communityId, sort, page, limit, nsfw: nsfwFilter},
             fetchImpl,
             null,
+            auth,
         ),
         instance,
         '/api/alpha/post/list',
@@ -248,10 +253,11 @@ export interface PiefedCommunitiesQuery {
     page: number
     limit: number
     nsfwFilter?: NsfwFilter
+    auth?: string
 }
 
 export async function fetchPiefedCommunities(
-    {instance, type, sort, page, limit, nsfwFilter = 'Include'}: PiefedCommunitiesQuery,
+    {instance, type, sort, page, limit, nsfwFilter = 'Include', auth}: PiefedCommunitiesQuery,
     fetchImpl: typeof fetch = fetch,
 ): Promise<CommunityPage> {
     // PieFed's community list only accepts a boolean; 'Only' cannot be
@@ -263,6 +269,7 @@ export async function fetchPiefedCommunities(
             {type_: type, sort, page, limit, show_nsfw: nsfwFilter !== 'Exclude'},
             fetchImpl,
             null,
+            auth,
         ),
         instance,
         '/api/alpha/community/list',
@@ -278,6 +285,7 @@ export async function fetchPiefedCommunitySearch(
     fetchImpl: typeof fetch = fetch,
     nsfwFilter: NsfwFilter = 'Include',
     type: FeedType = 'All',
+    auth?: string,
 ): Promise<LemmyCommunity[]> {
     const data = assertCommunities(
         await apiGet(
@@ -286,6 +294,7 @@ export async function fetchPiefedCommunitySearch(
             {q: search, type_: 'Communities', listing_type: type, limit, nsfw: nsfwFilter},
             fetchImpl,
             null,
+            auth,
         ),
         instance,
         '/api/alpha/search',
@@ -304,4 +313,29 @@ export async function fetchPiefedCommunity(
         '/api/alpha/community',
     )
     return mapCommunityView(data.community_view)
+}
+
+// ---- auth ----
+
+/**
+ * PieFed mirrors the Lemmy login contract: POST the alpha route with a
+ * username/email and password, get back a jwt used as a bearer credential.
+ */
+export async function loginPiefed(
+    instance: string,
+    username: string,
+    password: string,
+    fetchImpl: typeof fetch = fetch,
+): Promise<LoginResult> {
+    const data = (await apiPost(instance, '/api/alpha/user/login', {username_or_email: username, password}, fetchImpl)) as {
+        jwt?: string | {jwt: string} | null
+        registration_created?: boolean
+    } | null
+    if (!data) throw unexpectedResponse(instance, '/api/alpha/user/login')
+    if (data.registration_created) {
+        throw new ApiError('That account is registered but not yet approved by the instance.')
+    }
+    const jwt = typeof data.jwt === 'string' ? data.jwt : data.jwt?.jwt
+    if (!jwt) throw new ApiError('Login failed — check your username and password.', 401)
+    return {jwt, username}
 }

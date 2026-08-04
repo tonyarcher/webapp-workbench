@@ -2,14 +2,16 @@ import {LitElement, html, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, state} from 'lit/decorators.js'
 import {setCommunitySort, setCommunityType, setFeedType, setNsfwFilter, setPostSort, setViewMode} from '../../mutations'
-import {QueryController, settingsQuery, siteQuery} from '../../query'
+import {authQuery, QueryController, settingsQuery, siteQuery} from '../../query'
 import {getHistory, navigate, parseView} from '../../router'
 import {communitySortsFor, postSortsFor} from '../../types'
-import type {FeedType, NsfwFilter, PostSort, Settings, SiteResult, Software, View, ViewMode} from '../../types'
+import type {AuthSession, FeedType, NsfwFilter, PostFeedType, PostSort, Settings, SiteResult, Software, View, ViewMode} from '../../types'
+import '../account-button/account-button'
 import '../community-list/community-list'
 import '../community-view/community-view'
 import '../post-list/post-list'
 import '../scroll-feed/scroll-feed'
+import '../server-switcher/server-switcher'
 import '../settings-view/settings-view'
 import styles from './app-shell.css?inline'
 
@@ -24,6 +26,9 @@ export class AppShell extends LitElement {
         const instance = this.settingsController.value.data?.instance
         return instance ? siteQuery(instance) : {...siteQuery(''), enabled: false}
     })
+    private readonly authController = new QueryController<AuthSession | null>(this, () =>
+        authQuery(this.settingsController.value.data?.instance ?? ''),
+    )
     private unlisten: (() => void) | null = null
     override connectedCallback(): void {
         super.connectedCallback()
@@ -56,8 +61,16 @@ export class AppShell extends LitElement {
         return this.siteController.value.data?.software ?? 'lemmy'
     }
 
+    private get authJwt(): string {
+        return this.authController.value.data?.jwt ?? ''
+    }
+
+    private get loggedIn(): boolean {
+        return !!this.authController.value.data
+    }
+
     private onFeedTypeChange(event: Event): void {
-        setFeedType((event.target as HTMLSelectElement).value as FeedType)
+        setFeedType((event.target as HTMLSelectElement).value as PostFeedType)
     }
 
     private onPostSortChange(event: Event): void {
@@ -101,9 +114,46 @@ export class AppShell extends LitElement {
         setCommunityType((event.target as HTMLSelectElement).value as FeedType)
     }
 
-    private renderFeedTypeSelect(value: FeedType, onchange: (e: Event) => void): TemplateResult {
+    /** Post feed listing: Subscribed on both softwares, Suggested on Lemmy — only when logged in. */
+    private postFeedTypes(): PostFeedType[] {
+        const types: PostFeedType[] = ['All', 'Local']
+        if (this.loggedIn) {
+            types.push('Subscribed')
+            if (this.software === 'lemmy') types.push('Suggested')
+        }
+        return types
+    }
+
+    /** Community listing: Subscribed on both softwares, ModeratorView on Lemmy — only when logged in. */
+    private communityFeedTypes(): FeedType[] {
+        const types: FeedType[] = ['All', 'Local']
+        if (this.loggedIn) {
+            types.push('Subscribed')
+            if (this.software === 'lemmy') types.push('ModeratorView')
+        }
+        return types
+    }
+
+    /** Falls back to All when the saved listing is unavailable for this software/login state. */
+    private clampFeedType(type: PostFeedType): PostFeedType {
+        return this.postFeedTypes().includes(type) ? type : 'All'
+    }
+
+    private clampCommunityType(type: FeedType): FeedType {
+        return this.communityFeedTypes().includes(type) ? type : 'All'
+    }
+
+    private renderFeedTypeSelect(value: PostFeedType, onchange: (e: Event) => void): TemplateResult {
+        return html`<select class="sort-select" title="Feed listing" @change=${onchange}>
+            ${this.postFeedTypes().map(
+                (type) => html`<option value=${type} ?selected=${type === value}>${type}</option>`,
+            )}
+        </select>`
+    }
+
+    private renderCommunityTypeSelect(value: FeedType, onchange: (e: Event) => void): TemplateResult {
         return html`<select class="sort-select" title="Community listing" @change=${onchange}>
-            ${(['All', 'Local'] as const).map(
+            ${this.communityFeedTypes().map(
                 (type) => html`<option value=${type} ?selected=${type === value}>${type}</option>`,
             )}
         </select>`
@@ -129,7 +179,7 @@ export class AppShell extends LitElement {
                 return html`
                     ${this.renderViewModeSelect(settings.viewMode)}
                     ${this.renderNsfwSelect(settings.nsfwFilter)}
-                    ${this.renderFeedTypeSelect(settings.feedType, this.onFeedTypeChange)}
+                    ${this.renderFeedTypeSelect(this.clampFeedType(settings.feedType), this.onFeedTypeChange)}
                     ${this.renderSortSelect(settings.postSort, this.onPostSortChange, postSorts)}
                 `
             case 'community':
@@ -140,7 +190,7 @@ export class AppShell extends LitElement {
                 `
             case 'communities':
                 return html`
-                    ${this.renderFeedTypeSelect(settings.communityType, this.onCommunityTypeChange)}
+                    ${this.renderCommunityTypeSelect(this.clampCommunityType(settings.communityType), this.onCommunityTypeChange)}
                     ${this.renderSortSelect(settings.communitySort, this.onCommunitySortChange, communitySorts)}
                 `
             case 'settings':
@@ -183,26 +233,29 @@ export class AppShell extends LitElement {
                 if (settings.viewMode === 'scroll') {
                     return html`<lvs-scroll-feed
                         .instance=${this.instance}
-                        .feedType=${settings.feedType}
+                        .feedType=${this.clampFeedType(settings.feedType)}
                         .sort=${postSort}
                         .software=${this.software}
                         .nsfwFilter=${settings.nsfwFilter}
+                        .auth=${this.authJwt}
                     ></lvs-scroll-feed>`
                 }
                 return html`<lvs-post-list
                     .instance=${this.instance}
-                    .feedType=${settings.feedType}
+                    .feedType=${this.clampFeedType(settings.feedType)}
                     .sort=${postSort}
                     .software=${this.software}
                     .nsfwFilter=${settings.nsfwFilter}
+                    .auth=${this.authJwt}
                 ></lvs-post-list>`
             case 'communities':
                 return html`<lvs-community-list
                     .instance=${this.instance}
-                    .type=${settings.communityType}
+                    .type=${this.clampCommunityType(settings.communityType)}
                     .sort=${this.clampSort(settings.communitySort, communitySortsFor(this.software))}
                     .software=${this.software}
                     .nsfwFilter=${settings.nsfwFilter}
+                    .auth=${this.authJwt}
                 ></lvs-community-list>`
             case 'community':
                 return html`<lvs-community-view
@@ -212,6 +265,7 @@ export class AppShell extends LitElement {
                     .software=${this.software}
                     .nsfwFilter=${settings.nsfwFilter}
                     .viewMode=${settings.viewMode}
+                    .auth=${this.authJwt}
                 ></lvs-community-view>`
         }
     }
@@ -231,9 +285,8 @@ export class AppShell extends LitElement {
                 </nav>
                 <div class="topbar-right">
                     ${this.renderContextControls()}
-                    <button class="instance-chip" title="Instance settings" @click=${() => navigate({kind: 'settings'})}>
-                        ${this.siteName}
-                    </button>
+                    <lvs-server-switcher .instance=${this.instance} .activeName=${this.siteName}></lvs-server-switcher>
+                    <lvs-account-button .instance=${this.instance} .software=${this.software}></lvs-account-button>
                 </div>
             </header>
             <main class="view">${this.renderView()}</main>

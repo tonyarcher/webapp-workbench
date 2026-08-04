@@ -20,9 +20,11 @@ export class CommunityList extends LitElement {
     @property({attribute: false}) sort: CommunitySort = 'Hot'
     @property({attribute: false}) software: Software = 'lemmy'
     @property({attribute: false}) nsfwFilter: NsfwFilter = 'Include'
+    /** Bearer jwt when logged in; '' when anonymous. */
+    @property({attribute: false}) auth = ''
 
     private readonly query = new InfiniteQueryController<CommunityPage>(this, () =>
-        communitiesInfiniteQuery(this.instance, this.type, this.sort, this.search, this.software, this.nsfwFilter),
+        communitiesInfiniteQuery(this.instance, this.type, this.sort, this.search, this.software, this.nsfwFilter, this.auth),
     )
     private readonly virtualizer = new VirtualizerController<LemmyCommunity>(
         this,
@@ -39,7 +41,7 @@ export class CommunityList extends LitElement {
 
     override connectedCallback(): void {
         super.connectedCallback()
-        void hydrateCommunities(this.instance, this.type, this.sort, '', this.nsfwFilter, this.software)
+        void hydrateCommunities(this.instance, this.type, this.sort, '', this.nsfwFilter, this.software, this.auth)
     }
 
     override disconnectedCallback(): void {
@@ -52,7 +54,7 @@ export class CommunityList extends LitElement {
 
     /** Reset to the top when the listing parameters change. */
     override willUpdate(_changed: Map<string, unknown>): void {
-        const params = JSON.stringify([this.instance, this.type, this.sort, this.nsfwFilter, this.software])
+        const params = JSON.stringify([this.instance, this.type, this.sort, this.nsfwFilter, this.software, this.auth])
         if (this.prevParams !== '' && params !== this.prevParams) {
             this.resetScroll = true
             if (this.listEl) this.listEl.scrollTop = 0
