@@ -27,6 +27,7 @@ import {
     stripImageProxy,
 } from '../src/services/post-media'
 import {fetchRegistryPopular, mergePopular, parseRegistryCsv, POPULAR_SERVERS} from '../src/services/registry'
+import {clientFilterPosts} from '../src/query'
 import {safeUrl} from '../src/services/url'
 import {parseView, viewToPath} from '../src/router'
 import {POST_SORTS, PIEFED_POST_SORTS, postSortsFor} from '../src/types'
@@ -450,6 +451,19 @@ void (async () => {
     assert(merged.some((s) => s.host === 'brand.new'), 'merge keeps registry-only hosts')
     assert(POPULAR_SERVERS.some((s) => s.host === 'lemmynsfw.com' && s.nsfw), 'bundled list flags NSFW instances')
     assert(POPULAR_SERVERS.some((s) => s.host === 'piefed.social'), 'bundled list covers PieFed')
+
+    // ---- NSFW client-side filter ----
+
+    const nsfwPost = makePost({nsfw: true})
+    const sfwPost = makePost({nsfw: false})
+    const mixed = [sfwPost, nsfwPost, sfwPost, nsfwPost, sfwPost]
+
+    assert(clientFilterPosts(mixed, 'Include').length === 5, 'Include returns all')
+    assert(clientFilterPosts(mixed, 'Exclude').length === 3, 'Exclude removes NSFW')
+    assert(clientFilterPosts(mixed, 'Exclude').every((p: LemmyPost) => !p.nsfw), 'Exclude only has SFW')
+    assert(clientFilterPosts(mixed, 'Only').length === 2, 'Only keeps NSFW')
+    assert(clientFilterPosts(mixed, 'Only').every((p: LemmyPost) => p.nsfw), 'Only has NSFW')
+    assert(clientFilterPosts([], 'Only').length === 0, 'filter handles empty')
 
     // ---- format ----
 

@@ -18,6 +18,7 @@ import type {
     CommunitySort,
     FeedType,
     LemmyCommunity,
+    LemmyPost,
     NsfwFilter,
     PopularServer,
     PostFeedType,
@@ -196,6 +197,23 @@ export function communityQuery(
 
 type InfinitePostsOptions = InfiniteQueryObserverOptions<PostPage, Error, InfiniteData<PostPage, number>, QueryKey, number>
 
+/**
+ * Modern Lemmy (0.19.19+) and PieFed silently ignore the `nsfw`/`show_nsfw`
+ * query params — NSFW filtering was moved to per-user account settings.
+ * We handle it client-side by filtering the raw page. Variable page sizes
+ * (e.g. 18/20 for Exclude) are fine; the virtualizer adapts to item count.
+ */
+export function clientFilterPosts(posts: LemmyPost[], nsfwFilter: NsfwFilter): LemmyPost[] {
+    if (nsfwFilter === 'Only') return posts.filter((p) => p.nsfw)
+    if (nsfwFilter === 'Exclude') return posts.filter((p) => !p.nsfw)
+    return posts
+}
+
+/** Extended PostPage that carries the raw page size for pagination decisions. */
+interface FilteredPostPage extends PostPage {
+    rawCount: number
+}
+
 export function postsInfiniteQuery(
     instance: string,
     feedType: PostFeedType,
@@ -212,10 +230,19 @@ export function postsInfiniteQuery(
                 software === 'piefed'
                     ? await fetchPiefedPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
                     : await fetchPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
-            void putPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, software, auth, pageParam), page.posts).catch(() => {})
-            return page
+            const filtered = clientFilterPosts(page.posts, nsfwFilter)
+            void putPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, software, auth, pageParam), filtered).catch(() => {})
+            return {posts: filtered, page: page.page, rawCount: page.posts.length}
         },
-        getNextPageParam: (lastPage) => (lastPage.posts.length > 0 ? lastPage.page + 1 : undefined),
+        // rawCount from the queryFn tracks the unfiltered page size;
+        // fallback to posts.length for hydrated pages that lack it
+        getNextPageParam: (lastPage) => {
+            // rawCount is the unfiltered page size from the live queryFn;
+            // hydrated pages lack it — treat as PAGE_SIZE (continue) rather than
+            // the filtered count, which could be 0 and would falsely stop the feed.
+            const rawCount = (lastPage as FilteredPostPage).rawCount ?? PAGE_SIZE
+            return rawCount > 0 ? lastPage.page + 1 : undefined
+        },
         staleTime: 30_000,
     }
 }
@@ -252,10 +279,14 @@ export function communityPostsInfiniteQuery(
                           nsfwFilter,
                           auth,
                       })
-            void putPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, software, auth, pageParam), page.posts).catch(() => {})
-            return page
+            const filtered = clientFilterPosts(page.posts, nsfwFilter)
+            void putPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, software, auth, pageParam), filtered).catch(() => {})
+            return {posts: filtered, page: page.page, rawCount: page.posts.length}
         },
-        getNextPageParam: (lastPage) => (lastPage.posts.length > 0 ? lastPage.page + 1 : undefined),
+        getNextPageParam: (lastPage) => {
+            const rawCount = (lastPage as FilteredPostPage).rawCount ?? PAGE_SIZE
+            return rawCount > 0 ? lastPage.page + 1 : undefined
+        },
         staleTime: 30_000,
     }
 }
