@@ -14,7 +14,8 @@
         "@tanstack/query-core": "^5.101.4",
         "@tanstack/virtual-core": "^3.17.7",
         "idb": "^8.0.3",
-        "lit": "^3.3.3"
+        "lit": "^3.3.3",
+        "vertical-scroll-core": "github:tonyarcher/vertical-scroll-core#v0.1.0"
     },
     "devDependencies": {
         "fake-indexeddb": "^6.2.5",
