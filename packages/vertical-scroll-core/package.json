@@ -1,0 +1,35 @@
+{
+    "name": "vertical-scroll-core",
+    "version": "0.1.0",
+    "type": "module",
+    "description": "Generic vertical scroller components for Lit — TikTok-style media slides with wheel/keyboard/drag paging.",
+    "license": "MIT",
+    "files": [
+        "dist"
+    ],
+    "main": "./dist/vertical-scroll-core.es.js",
+    "module": "./dist/vertical-scroll-core.es.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/vertical-scroll-core.es.js"
+        }
+    },
+    "scripts": {
+        "build": "vite build",
+        "test": "tsx scripts/smoke.ts",
+        "prepare": "npm run build"
+    },
+    "peerDependencies": {
+        "lit": "^3.0.0"
+    },
+    "devDependencies": {
+        "@typescript/typescript6": "^6.0.2",
+        "lit": "^3.3.3",
+        "tsx": "^4.23.1",
+        "typescript": "^7.0.2",
+        "vite": "^8.2.0",
+        "vite-plugin-dts": "^5.0.3"
+    }
+}

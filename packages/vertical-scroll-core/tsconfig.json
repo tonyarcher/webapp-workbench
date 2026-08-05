@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "skipLibCheck": true,
+        "declaration": true,
+        "declarationDir": "./dist",
+        "emitDeclarationOnly": true,
+        "allowImportingTsExtensions": true,
+        "outDir": "./dist",
+        "experimentalDecorators": true,
+        "useDefineForClassFields": false,
+        "types": ["vite/client"]
+    },
+    "include": ["src", "scripts"]
+}
