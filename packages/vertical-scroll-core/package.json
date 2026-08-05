@@ -7,13 +7,13 @@
     "files": [
         "dist"
     ],
-    "main": "./dist/vertical-scroll-core.es.js",
-    "module": "./dist/vertical-scroll-core.es.js",
+    "main": "./dist/vertical-scroll-core.js",
+    "module": "./dist/vertical-scroll-core.js",
     "types": "./dist/index.d.ts",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
-            "import": "./dist/vertical-scroll-core.es.js"
+            "import": "./dist/vertical-scroll-core.js"
         }
     },
     "scripts": {
