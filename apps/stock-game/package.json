@@ -11,9 +11,9 @@
     "dev": "npm run dev --workspace=app",
     "dev:app": "npm run dev --workspace=app",
     "build": "npm run build --workspace=app",
-    "typecheck": "npm run typecheck --workspaces",
+    "typecheck": "npm run typecheck -w @stock-game/app && npm run typecheck -w @stock-game/shared",
     "lint": "eslint .",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test -w @stock-game/app && npm run test -w @stock-game/shared --if-present"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

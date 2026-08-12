@@ -1,0 +1,21 @@
+{
+  "name": "tonyarcher-apps",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Monorepo for tonyarcher's apps: baseball, rss-reader, stock-game, lemmy-vertical-scroll.",
+  "workspaces": [
+    "apps/*",
+    "apps/stock-game/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "dev:baseball": "npm run dev -w baseball-tracker",
+    "dev:rss-reader": "npm run dev -w rss-reader",
+    "dev:stock-game": "npm run dev -w stock-game",
+    "dev:lemmy": "npm run dev -w lemmy-vertical-scroll"
+  }
+}

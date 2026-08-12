@@ -10,11 +10,11 @@
     "lint": "oxlint",
     "test:unit": "vitest run",
     "test:e2e": "npm run build:components && playwright test",
-    "build:components": "npm --prefix web-components run build",
+    "build:components": "npm run build --prefix ../../packages/web-components",
     "test": "npm run test:unit"
   },
   "dependencies": {
-    "@baseball/web-components": "file:./web-components",
+    "@baseball/web-components": "*",
     "@tanstack/history": "^1.103.4",
     "@tanstack/query-core": "^5.80.0",
     "@tanstack/virtual-core": "^3.13.0",

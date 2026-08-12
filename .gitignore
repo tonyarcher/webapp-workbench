@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+
+# Editor / tooling
+.idea/
+.vscode/
+.air/
+.cursor/
+.gemini/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log

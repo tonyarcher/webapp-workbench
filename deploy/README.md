@@ -4,6 +4,11 @@ Docker Compose stack that runs a reverse-proxy gateway in front of the Baseball
 app. It is designed to run on a remote Ubuntu host with Docker (or K3s / a
 Docker-compatible container runtime) already installed.
 
+> Status: the monorepo migration moved Baseball to `apps/baseball/` and the
+> gateway stack paths (Dockerfile `COPY`/`npm ci` steps, compose build contexts)
+> still need updating for the new layout. Deployment work is deferred; do not
+> use this stack until `deploy/` is reworked for the monorepo structure.
+
 ## Layout
 
 - `docker-compose.yml` — the stack definition.
