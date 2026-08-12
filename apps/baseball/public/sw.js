@@ -1,5 +1,22 @@
-const CACHE_NAME = 'grand-slam-baseball-v3';
-const ASSETS_TO_CACHE = ['/', '/index.html', '/manifest.json', '/icons.svg', '/favicon.svg'];
+const CACHE_NAME = 'grand-slam-baseball-v4';
+const scope = new URL(self.registration.scope).pathname;
+const scopeRoot = scope === '/' ? '/' : scope;
+
+// Base path for asset URLs, ending in '/'. At the root scope this is '/', so
+// paths like `/index.html` are produced explicitly (never protocol-relative
+// `//index.html`). Under a subpath like `/baseball/` the scope is preserved.
+const assetBase = scopeRoot;
+
+// Cache paths are derived from the service worker's registration scope so the
+// worker works both at the app root (dev/tests) and under a subpath like
+// `/baseball/` in production.
+const ASSETS_TO_CACHE = [
+  scopeRoot,
+  `${assetBase}index.html`,
+  `${assetBase}manifest.json`,
+  `${assetBase}icons.svg`,
+  `${assetBase}favicon.svg`,
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -32,15 +49,16 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, copy);
-          });
+        .then(async (response) => {
+          if (response.ok && response.type === 'basic') {
+            const copy = response.clone();
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(request, copy);
+          }
           return response;
         })
         .catch(() => {
-          return caches.match(request).then((cached) => cached || caches.match('/index.html'));
+          return caches.match(request).then((cached) => cached || caches.match(`${assetBase}index.html`));
         })
     );
     return;
@@ -48,12 +66,11 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     fetch(request)
-      .then((response) => {
-        if (response && response.status === 200 && response.type === 'basic') {
+      .then(async (response) => {
+        if (response.ok && response.type === 'basic') {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, copy);
-          });
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(request, copy);
         }
         return response;
       })

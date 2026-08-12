@@ -4,6 +4,7 @@ import type { RouterHistory } from '@tanstack/history';
 import { GameStore } from './game-store';
 import type { GameQueryResult } from './game-store';
 import type { LocalGameSetup } from './game-types';
+import { addBasePath, stripBasePath } from './base-path';
 import './setup-screen';
 import './game-shell';
 
@@ -44,12 +45,14 @@ export class BaseballApp extends LitElement {
   }
 
   private syncRoute() {
+    const base = import.meta.env.BASE_URL;
+    const path = stripBasePath(this.history.location.pathname, base);
     if (this.game) {
-      if (this.history.location.pathname !== '/game') {
-        this.history.replace('/game');
+      if (path !== '/game') {
+        this.history.replace(addBasePath('/game', base));
       }
-    } else if (this.history.location.pathname !== '/') {
-      this.history.replace('/');
+    } else if (path !== '/') {
+      this.history.replace(addBasePath('/', base));
     }
   }
 

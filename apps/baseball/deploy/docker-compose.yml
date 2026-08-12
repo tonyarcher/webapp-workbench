@@ -1,0 +1,30 @@
+# Reverse-proxy gateway stack for the Baseball deployment.
+#   gateway  - nginx Alpine, port 80; serves `/` (hello) and routes subpaths.
+#   baseball - builds and serves the Baseball Vite app under /baseball/.
+# The placeholder routes (/stock-game/, /lemmy-vertical-scroll/, /rss-reader/)
+# are NOT defined here yet — add them as services below when ready.
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - baseball
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  baseball:
+    build:
+      context: ..
+      dockerfile: deploy/baseball/Dockerfile
+    restart: unless-stopped
+    networks:
+      - baseball
+
+networks:
+  baseball:
+    driver: bridge

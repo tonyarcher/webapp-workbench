@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gateway</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #1b1e24, #0f1115);
+        color: #e8eaed;
+      }
+      .card {
+        background: #23272f;
+        border: 1px solid #3a3f4a;
+        border-radius: 16px;
+        padding: 2.5rem 3rem;
+        text-align: center;
+        max-width: 90vw;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      }
+      h1 { margin: 0 0 0.5rem; font-size: 2.2rem; }
+      p { margin: 0.4rem 0; color: #b6bcc8; }
+      code {
+        background: #14161b;
+        border: 1px solid #3a3f4a;
+        border-radius: 8px;
+        padding: 0.35rem 0.7rem;
+        font-size: 0.9rem;
+      }
+      .route { font-size: 1.1rem; margin-top: 1rem; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Hello, world!</h1>
+      <p>This is the reverse-proxy gateway root page.</p>
+      <p class="route">
+        You requested route <code id="route">/</code>
+      </p>
+      <p>
+        Baseball is served at
+        <a href="/baseball/">/baseball/</a>.
+      </p>
+    </main>
+    <script>
+      document.getElementById('route').textContent = window.location.pathname || '/';
+    </script>
+  </body>
+</html>

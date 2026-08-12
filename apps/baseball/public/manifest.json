@@ -3,12 +3,13 @@
   "name": "Grand Slam Baseball Tracker",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "./favicon.svg",
       "type": "image/svg+xml",
       "sizes": "192x192 512x512"
     }
   ],
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
   "background_color": "#07080a",
   "theme_color": "#ff2a3b",
   "display": "standalone",

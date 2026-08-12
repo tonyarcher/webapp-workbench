@@ -7,6 +7,7 @@ const { version } = JSON.parse(readFileSync(new URL('./package.json', import.met
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: process.env.APP_BASE_PATH ?? '/',
   define: {
     __APP_VERSION__: JSON.stringify(version),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
