@@ -614,8 +614,8 @@ export class SourceList extends LitElement {
 
     private async onMenuRefresh() {
         const feed = this.menuFeed();
-        if (feed) await this.doRefresh(feed);
         this.closeMenu();
+        if (feed) await this.doRefresh(feed);
         window.dispatchEvent(new CustomEvent('feeds-refreshed'));
     }
 
@@ -681,14 +681,14 @@ export class SourceList extends LitElement {
 
     private async onFolderMenuRefresh() {
         const folder = this.folderMenuFolder();
-        if (folder) await refreshFolder(folder.id);
         this.closeFolderMenu();
+        if (folder) await refreshFolder(folder.id);
         window.dispatchEvent(new CustomEvent('feeds-refreshed'));
     }
 
     private async onRefreshAll() {
-        await syncAllFeeds();
         this.closeFeedListMenu();
+        await syncAllFeeds();
         window.dispatchEvent(new CustomEvent('feeds-refreshed'));
     }
 

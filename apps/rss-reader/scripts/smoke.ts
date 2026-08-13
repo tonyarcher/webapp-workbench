@@ -12,6 +12,8 @@ import {
   popularityScore,
   velocityBonus
 } from '../src/services/ranking';
+import {createCoalescer} from '../src/services/coalesce';
+import {allSyncKey, isSetSyncKey, setKeyIncludesFeed} from '../src/services/sync-keys';
 import {
   aiAvailability,
   aiDiagnostics,
@@ -442,5 +444,75 @@ assert(
   'rotating offsets across the window visit every feed at least once over ceil(n/size) pages',
 );
 assert(feedWindow(manyFeeds, 0, 20).length === 10, 'feedWindow never returns more feeds than exist');
+
+// ---- elevator-button coalescing ----
+{
+  const c = createCoalescer<string, number>();
+  let calls = 0;
+  const fn = async () => {
+    calls++;
+    await new Promise((r) => setTimeout(r, 10));
+    return 42;
+  };
+  const [a, b] = await Promise.all([c.run('k', fn), c.run('k', fn)]);
+  assert(calls === 1, 'concurrent run for the same key invokes fn once');
+  assert(a === 42 && b === 42, 'concurrent callers resolve to the same value');
+
+  let calls2 = 0;
+  const fn2 = async () => {
+    calls2++;
+    return 7;
+  };
+  assert((await c.run('k', fn2)) === 7, 'a later run after settle invokes a new fn');
+  assert(calls2 === 1, 'post-settle run starts a fresh job');
+
+  let callsA = 0;
+  let callsB = 0;
+  const other = createCoalescer<string, number>();
+  const [ra, rb] = await Promise.all([
+    other.run('a', async () => {
+      callsA++;
+      await new Promise((r) => setTimeout(r, 5));
+      return 1;
+    }),
+    other.run('b', async () => {
+      callsB++;
+      await new Promise((r) => setTimeout(r, 5));
+      return 2;
+    }),
+  ]);
+  assert(callsA === 1 && callsB === 1, 'different keys run independently');
+  assert(ra === 1 && rb === 2, 'different keys resolve to their own values');
+
+  const failing = createCoalescer<string, number>();
+  const bad = async () => {
+    throw new Error('boom');
+  };
+  let badThrew = false;
+  try {
+    await failing.run('k', bad);
+  } catch {
+    badThrew = true;
+  }
+  assert(badThrew, 'a rejected job propagates the error');
+  let retried = 0;
+  assert((await failing.run('k', async () => {
+    retried++;
+    return 9;
+  })) === 9, 'a rejected job is cleared so the next run starts fresh');
+  assert(retried === 1, 'post-failure run invokes a new fn exactly once');
+}
+
+// ---- sync keys ----
+assert(allSyncKey() === 'all', 'allSyncKey() keys the whole-library sync');
+assert(allSyncKey(undefined) === 'all', 'allSyncKey(undefined) keys the whole-library sync');
+assert(allSyncKey([]) === null, 'allSyncKey([]) is null so an empty folder cannot claim the global slot');
+assert(allSyncKey(['b', 'a']) === allSyncKey(['a', 'b']), 'set keys are order-independent');
+assert(allSyncKey(['b', 'a']) === 'set:a\0b', 'set keys are sorted and NUL-joined');
+assert(setKeyIncludesFeed(allSyncKey(['a', 'b'])!, 'a') === true, 'set key includes a member id');
+assert(setKeyIncludesFeed(allSyncKey(['a', 'b'])!, 'c') === false, 'set key excludes a non-member id');
+assert(setKeyIncludesFeed('all', 'a') === false, 'the all key never claims a specific feed');
+assert(isSetSyncKey('all') === false, 'the all key is not a feed-set key');
+assert(isSetSyncKey(allSyncKey(['a'])!) === true, 'a set key is a feed-set key');
 
 console.log('\nAll parser smoke tests passed.');

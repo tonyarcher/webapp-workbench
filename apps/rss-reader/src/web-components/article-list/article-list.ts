@@ -74,6 +74,7 @@ export class ArticleList extends LitElement {
     @state() private pageSize = DEFAULT_PAGE_SIZE;
     @state() private advancedOpen = false;
     @state() private advancedAnchor: MenuAnchor | null = null;
+    @state() private refreshing = false;
 
     private scrollElRef: Ref<HTMLDivElement> = createRef();
     private virtualizer!: Virtualizer<HTMLDivElement, HTMLDivElement>;
@@ -89,6 +90,7 @@ export class ArticleList extends LitElement {
     private pendingReset = false;
     private resizeObserver?: ResizeObserver;
     private feedWindowOffset = 0;
+    private refreshJob: Promise<void> | null = null;
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
@@ -281,7 +283,7 @@ export class ArticleList extends LitElement {
             </label>
             <button class="btn" @click=${this.onMarkShownRead}>Mark shown as read</button>
             <button class="btn" @click=${this.onToggleAdvanced}>Advanced</button>
-            <button class="btn" @click=${this.onRefresh}>Refresh</button>
+            <button class="btn" @click=${this.onRefresh}>${this.refreshing ? 'Refreshing…' : 'Refresh'}</button>
         </div>
       </div>
 
@@ -716,6 +718,21 @@ export class ArticleList extends LitElement {
     }
 
     private async onRefresh() {
+        // Elevator button: a refresh already in flight just joins it.
+        if (this.refreshJob) {
+            await this.refreshJob;
+            return;
+        }
+        this.refreshJob = this.runRefresh();
+        try {
+            await this.refreshJob;
+        } finally {
+            this.refreshJob = null;
+        }
+    }
+
+    private async runRefresh() {
+        this.refreshing = true;
         try {
             if (this.view.kind === 'feed') {
                 await refreshFeed(this.view.id);
@@ -727,7 +744,11 @@ export class ArticleList extends LitElement {
         } catch {
             // feed sync errors are surfaced on the feed rows in the sidebar
         } finally {
-            await this.reset();
+            try {
+                await this.reset();
+            } finally {
+                this.refreshing = false;
+            }
         }
     }
 

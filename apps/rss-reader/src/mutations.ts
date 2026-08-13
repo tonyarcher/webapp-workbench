@@ -15,11 +15,19 @@ import {
 } from './db/db';
 import {exportOpml, importOpml} from './services/opml';
 import {addFeedFromUrl, syncFeed} from './services/sync';
+import {createCoalescer} from './services/coalesce';
+import {ALL_SYNC_KEY, allSyncKey, isSetSyncKey, setKeyIncludesFeed} from './services/sync-keys';
 import {invalidateArticles, invalidateLibrary, updateArticlesInCache} from './query';
 import {domainOf} from './util';
 import type {Article, Feed} from './types';
+import type {SyncResult} from './services/sync';
 
 const AFFINITY_DECAY = 0.9;
+
+// Elevator-button coalescing for refreshes: mashing Refresh joins the
+// in-flight job rather than spawning a second sync.
+const allSyncs = createCoalescer<string, string[]>();
+const feedSyncs = createCoalescer<string, SyncResult>();
 
 async function recordAffinity(article: Article, amount = 1) {
     await incrementMeta(`aff:feed:${article.feedId}`, amount, AFFINITY_DECAY);
@@ -36,14 +44,47 @@ export async function addFeed(url: string): Promise<Feed> {
 }
 
 export async function refreshFeed(feedId: string) {
-    const result = await syncFeed(feedId);
-    await reconcileUnreadCounts();
-    await invalidateLibrary();
-    await invalidateArticles();
-    return result;
+    // An all-feeds sync is already covering this feed: nod and return.
+    if (allSyncs.has(ALL_SYNC_KEY)) {
+        await allSyncs.get(ALL_SYNC_KEY)!;
+        return {inserted: 0, total: 0, title: ''};
+    }
+    // A folder/feed-set sync in flight may include this feed: join it.
+    const setJob = allSyncs
+        .keys()
+        .filter(isSetSyncKey)
+        .find((k) => setKeyIncludesFeed(k, feedId));
+    if (setJob) {
+        await allSyncs.get(setJob)!;
+        return {inserted: 0, total: 0, title: ''};
+    }
+    return feedSyncs.run(feedId, async () => {
+        const result = await syncFeed(feedId);
+        await reconcileUnreadCounts();
+        await invalidateLibrary();
+        await invalidateArticles();
+        return result;
+    });
 }
 
 export async function syncAllFeeds(
+    onProgress?: (done: number, total: number, title: string) => void,
+    feedIds?: string[],
+) {
+    // A full refresh is in flight and this call is a subset of it: nod along.
+    // Callers with onProgress (OPML import) wait, then start a fresh run so
+    // feeds added after the covering job began are still synced.
+    if (allSyncs.has(ALL_SYNC_KEY)) {
+        const existing = allSyncs.get(ALL_SYNC_KEY)!;
+        if (!onProgress) return existing;
+        await existing;
+    }
+    const key = allSyncKey(feedIds);
+    if (key === null) return [];
+    return allSyncs.run(key, () => runSyncAllFeeds(onProgress, feedIds));
+}
+
+async function runSyncAllFeeds(
     onProgress?: (done: number, total: number, title: string) => void,
     feedIds?: string[],
 ) {
