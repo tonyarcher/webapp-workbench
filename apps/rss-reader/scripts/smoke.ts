@@ -2,7 +2,7 @@ import {DOMParser, XMLSerializer} from '@xmldom/xmldom';
 import {firstImageUrl, isFolder, parseFeedXml, parseOpml, safeHttpUrl, sanitizeHtml, stripHtml} from '../src/services/parser';
 import {fetchFeedText, FetchError, validateFeedUrl} from '../src/services/proxy';
 import {interleaveArticles} from '../src/util';
-import {capItems, feedWindow, MAX_LIST_ITEMS} from '../src/services/pagination';
+import {capItems, feedWindow, MAX_LIST_ITEMS, perFeedLimit} from '../src/services/pagination';
 import type {Article, Feed} from '../src/types';
 import {
   affinityBoostScore,
@@ -444,6 +444,15 @@ assert(
   'rotating offsets across the window visit every feed at least once over ceil(n/size) pages',
 );
 assert(feedWindow(manyFeeds, 0, 20).length === 10, 'feedWindow never returns more feeds than exist');
+
+// ---- per-feed share backfill limit ----
+assert(perFeedLimit(50, 1) === 50, 'perFeedLimit one feed fills the page');
+assert(perFeedLimit(50, 3) === 17, 'perFeedLimit few feeds share the page (ceil)');
+assert(perFeedLimit(50, 50) === 1, 'perFeedLimit one-from-each when feeds == pageSize');
+assert(perFeedLimit(50, 200) === 1, 'perFeedLimit never more than one when feeds exceed pageSize');
+assert(perFeedLimit(20, 5) === 4, 'perFeedLimit splits 20 across 5 feeds');
+assert(perFeedLimit(50, 0) === 0, 'perFeedLimit zero feeds returns 0');
+assert(perFeedLimit(0, 3) === 0, 'perFeedLimit zero pageSize returns 0');
 
 // ---- elevator-button coalescing ----
 {

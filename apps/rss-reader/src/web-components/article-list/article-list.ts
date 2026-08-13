@@ -15,9 +15,9 @@ import {
 } from '../../mutations';
 import {type ArticleCursor, getFeeds, getFolders, queryArticles} from '../../db/db';
 import {safeHttpUrl} from '../../services/parser';
-import {capItems, feedWindow, MAX_LIST_ITEMS} from '../../services/pagination';
+import {capItems, feedWindow, MAX_LIST_ITEMS, perFeedLimit} from '../../services/pagination';
 import type {Article, ArticleSort, Feed, Folder, ListViewType, View} from '../../types';
-import {domainOf, formatDate} from '../../util';
+import {domainOf, formatDate, interleaveArticles} from '../../util';
 import type {MenuAnchor} from '../feed-menu/feed-menu';
 import '../advanced-menu/advanced-menu';
 import '../lazy-img/lazy-img';
@@ -557,11 +557,12 @@ export class ArticleList extends LitElement {
      * Load a page across a set of feeds (folder view, or All view with Hot
      * sort). Each page covers a bounded rotating window of at most `pageSize`
      * feeds (so ~2300 feeds touch a handful of feeds per fetch, not all of
-     * them), fetching one item per feed per page with bounded concurrency.
-     * Because the window is at most pageSize feeds, a page fetches at most
-     * pageSize items total, none of which are ever dropped. Feeds' cursors
-     * always advance past the item they returned, so nothing is silently
-     * discarded and no feed is re-fetched.
+     * them), with bounded concurrency. Each feed contributes a share of the
+     * page (`perFeedLimit`) so a folder with few feeds still fills the page;
+     * hot sort interleaves the feeds for diversity. When a feed is empty or
+     * exhausted, one backfill pass tops the page up from feeds that still have
+     * items. Cursors only advance past the items actually kept, so discarded
+     * items are never silently skipped forever.
      *
      * Accepted tradeoff: in newest/oldest folder views a later page can insert
      * items above the current viewport (window rotation), which can shift the
@@ -575,39 +576,68 @@ export class ArticleList extends LitElement {
 
         const window = feedWindow(activeFeeds, this.feedWindowOffset, this.pageSize);
         this.feedWindowOffset += window.length;
-        const perFeed = 1;
 
-        const results: { feed: Feed; res: { items: Article[]; hasMore: boolean } }[] = [];
-        for (let i = 0; i < window.length; i += 12) {
-            if (gen !== this.gen) return;
-            const batch = await Promise.all(
-                window.slice(i, i + 12).map(async (feed) => {
-                    const cursor = this.cursors.get(feed.id);
-                    const res = await queryArticles({
-                        feedId: feed.id,
-                        unreadOnly: this.unreadOnly || this.hideRead,
-                        sort: this.sort,
-                        limit: perFeed,
-                        cursor,
-                    });
-                    return {feed, res};
-                })
-            );
-            results.push(...batch);
-        }
-        if (gen !== this.gen) return;
+        const pages = new Map<string, Article[]>();
+        const lastHasMore = new Map<string, boolean>();
+
+        const fetchFeeds = async (targets: Feed[], perFeed: number) => {
+            for (let i = 0; i < targets.length; i += 12) {
+                if (gen !== this.gen) return;
+                await Promise.all(
+                    targets.slice(i, i + 12).map(async (feed) => {
+                        const accumulated = pages.get(feed.id) ?? [];
+                        const cursor =
+                            accumulated.length
+                                ? this.cursorOf(accumulated[accumulated.length - 1])
+                                : this.cursors.get(feed.id);
+                        const res = await queryArticles({
+                            feedId: feed.id,
+                            unreadOnly: this.unreadOnly || this.hideRead,
+                            sort: this.sort,
+                            limit: perFeed,
+                            cursor,
+                        });
+                        pages.set(feed.id, [...accumulated, ...res.items]);
+                        lastHasMore.set(feed.id, res.hasMore);
+                    }),
+                );
+            }
+        };
+
+        const pick = (): Article[] => {
+            const kept =
+                this.sort === 'hot'
+                    ? interleaveArticles(window.map((f) => pages.get(f.id) ?? []), this.pageSize)
+                    : mergeSorted([], window.flatMap((f) => pages.get(f.id) ?? []), this.sort).slice(0, this.pageSize);
+            return kept.filter((a) => !existingIds.has(a.id));
+        };
 
         const existingIds = new Set(this.items.map((a) => a.id));
-        const fetched = results.flatMap(({res}) => res.items).filter((a) => !existingIds.has(a.id));
+        await fetchFeeds(window, perFeedLimit(this.pageSize, window.length));
+        if (gen !== this.gen) return;
 
-        this.items = capItems(mergeSorted(this.items, fetched, this.sort));
-
-        for (const {feed, res} of results) {
-            const last = res.items[res.items.length - 1];
-            if (last) {
-                this.cursors.set(feed.id, this.cursorOf(last));
+        let kept = pick();
+        if (kept.length < this.pageSize) {
+            const more = window.filter((f) => lastHasMore.get(f.id) === true);
+            if (more.length) {
+                await fetchFeeds(more, perFeedLimit(this.pageSize - kept.length, more.length));
+                if (gen !== this.gen) return;
+                kept = pick();
             }
-            this.feedHasMore.set(feed.id, res.hasMore);
+        }
+
+        const keptIds = new Set(kept.map((a) => a.id));
+        this.items = capItems(mergeSorted(this.items, kept, this.sort));
+
+        for (const feed of window) {
+            const items = pages.get(feed.id) ?? [];
+            const keptItem = [...items].reverse().find((a) => keptIds.has(a.id));
+            if (keptItem) {
+                this.cursors.set(feed.id, this.cursorOf(keptItem));
+            }
+            const discarded =
+                items.some((a) => !keptIds.has(a.id) && !existingIds.has(a.id));
+            this.feedHasMore.set(feed.id, (lastHasMore.get(feed.id) ?? false) || discarded);
         }
     }
 
