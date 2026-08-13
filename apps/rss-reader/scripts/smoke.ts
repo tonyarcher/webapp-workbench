@@ -404,6 +404,10 @@ assert(
   'capItems keeps the head of the list (drops the least-relevant tail)',
 );
 assert(capItems([1, 2, 3]).length === 3, 'capItems passes through lists under the cap');
+assert(capItems(overCap, 20).length === 20, 'capItems honors an explicit page-size cap');
+assert(capItems([1, 2, 3], 20).length === 3, 'capItems does not pad when under the page-size cap');
+assert(capItems(overCap, 0).length === 0, 'capItems with max 0 returns empty');
+assert(capItems(overCap, -1).length === 0, 'capItems with negative max returns empty');
 
 const makeFeed = (id: string): Feed => ({
   id,

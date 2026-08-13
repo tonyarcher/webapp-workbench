@@ -3,13 +3,12 @@ import type {Feed} from '../types';
 export const MAX_LIST_ITEMS = 1000;
 
 /**
- * Bound a list to MAX_LIST_ITEMS. The list simply stops growing at the cap:
- * once a page already holds MAX_LIST_ITEMS items, `canLoadMore()` returns
- * false so no further items are fetched, keeping the head of the current sort
- * order and avoiding unbounded memory growth.
+ * Bound a list to `max` (default MAX_LIST_ITEMS). Keeps the head. Returns
+ * an empty list when `max` is not positive.
  */
-export function capItems<T>(items: T[]): T[] {
-    return items.length > MAX_LIST_ITEMS ? items.slice(0, MAX_LIST_ITEMS) : items;
+export function capItems<T>(items: T[], max: number = MAX_LIST_ITEMS): T[] {
+    if (max <= 0) return [];
+    return items.length > max ? items.slice(0, max) : items;
 }
 
 /**

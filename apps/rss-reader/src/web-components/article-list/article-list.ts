@@ -15,7 +15,7 @@ import {
 } from '../../mutations';
 import {type ArticleCursor, getFeeds, getFolders, queryArticles} from '../../db/db';
 import {safeHttpUrl} from '../../services/parser';
-import {capItems, feedWindow, MAX_LIST_ITEMS, perFeedLimit} from '../../services/pagination';
+import {capItems, feedWindow, perFeedLimit} from '../../services/pagination';
 import type {Article, ArticleSort, Feed, Folder, ListViewType, View} from '../../types';
 import {domainOf, formatDate, interleaveArticles} from '../../util';
 import type {MenuAnchor} from '../feed-menu/feed-menu';
@@ -29,6 +29,13 @@ interface Library {
 }
 
 const DEFAULT_PAGE_SIZE = 50;
+const PAGE_SIZES = [20, 50, 100, 500] as const;
+
+function clampPageSize(n: unknown): number {
+    return typeof n === 'number' && (PAGE_SIZES as readonly number[]).includes(n)
+        ? n
+        : DEFAULT_PAGE_SIZE;
+}
 const VIEW_SETTINGS_KEY = 'rss-reader:view-settings';
 const CARD_MIN_WIDTH = 240;
 // 16:9 media (168px at the 300px column cap) + text block. Must match
@@ -375,7 +382,7 @@ export class ArticleList extends LitElement {
     };
 
     private canLoadMore(): boolean {
-        if (this.items.length >= MAX_LIST_ITEMS) return false;
+        if (this.items.length >= this.pageSize) return false;
         if (this.view.kind === 'feed' || (this.view.kind === 'all' && this.sort !== 'hot')) {
             return this.hasMoreSingle;
         }
@@ -438,7 +445,7 @@ export class ArticleList extends LitElement {
         if (!saved) return;
         this.listView = saved.listView ?? 'detailed';
         this.sort = saved.sort ?? 'hot';
-        this.pageSize = saved.pageSize ?? DEFAULT_PAGE_SIZE;
+        this.pageSize = clampPageSize(saved.pageSize);
         this.maxCardCols = saved.maxCardCols ?? 4;
         this.unreadOnly = saved.unreadOnly ?? false;
         this.updateCols();
@@ -546,7 +553,7 @@ export class ArticleList extends LitElement {
         });
         if (gen !== this.gen) return;
         this.hasMoreSingle = res.hasMore;
-        this.items = capItems(mergeSorted(this.items, res.items, this.sort));
+        this.items = capItems(mergeSorted(this.items, res.items, this.sort), this.pageSize); // shown-at-a-time cap
         const last = res.items[res.items.length - 1];
         if (last) {
             this.cursors.set(feedId ?? 'all', this.cursorOf(last));
@@ -631,7 +638,7 @@ export class ArticleList extends LitElement {
         }
 
         const keptIds = new Set(kept.map((a) => a.id));
-        this.items = capItems(mergeSorted(this.items, kept, this.sort));
+        this.items = capItems(mergeSorted(this.items, kept, this.sort), this.pageSize); // shown-at-a-time cap
 
         for (const feed of window) {
             const items = pages.get(feed.id) ?? [];
