@@ -64,7 +64,12 @@ export class AppShell extends LitElement {
                             <brief-view
                                 @open-article=${this.onOpenArticle}
                             ></brief-view>`
-                        : html`
+                        : this.route.kind === 'today'
+                            ? html`
+                                <today-view
+                                    @open-article=${this.onOpenArticle}
+                                ></today-view>`
+                            : html`
                             <article-list
                                 .view=${this.route}
                                 .active=${!this.article}

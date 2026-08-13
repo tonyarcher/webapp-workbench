@@ -47,7 +47,8 @@ export type View =
     | { kind: 'all' }
     | { kind: 'folder'; id: string }
     | { kind: 'feed'; id: string }
-    | { kind: 'brief' };
+    | { kind: 'brief' }
+    | { kind: 'today' };
 
 export interface ParsedItem {
     guid: string;

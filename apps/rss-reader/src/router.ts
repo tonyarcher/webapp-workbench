@@ -14,6 +14,9 @@ export function parsePath(pathname: string): View {
     if (parts[0] === 'brief') {
         return {kind: 'brief'};
     }
+    if (parts[0] === 'today') {
+        return {kind: 'today'};
+    }
     return {kind: 'all'};
 }
 
@@ -23,6 +26,8 @@ export function viewToPath(view: View): string {
             return '/all';
         case 'brief':
             return '/brief';
+        case 'today':
+            return '/today';
         case 'folder':
             return `/folder/${encodeURIComponent(view.id)}`;
         case 'feed':

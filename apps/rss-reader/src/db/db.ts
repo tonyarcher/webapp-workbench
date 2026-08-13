@@ -627,6 +627,26 @@ export async function queryRecentArticles(since: number, limit = 60): Promise<Ar
     );
 }
 
+/**
+ * All articles published at or after `since`, newest first, in one index
+ * walk (the range itself stops at the cutoff; `maxScan` only guards against
+ * pathological days). Used by the Today view, which groups the full day's
+ * output per folder instead of paging it.
+ */
+export async function queryTodayArticles(since: number, maxScan = 10_000): Promise<Article[]> {
+    const db = await getDb();
+    const tx = db.transaction('articles', 'readonly');
+    const range = IDBKeyRange.lowerBound([since, ''], true);
+    const out: Article[] = [];
+    let cursor = await tx.objectStore('articles').index('byPublished').openCursor(range, 'prev');
+    while (cursor && out.length < maxScan) {
+        out.push(cursor.value as Article);
+        cursor = await cursor.continue();
+    }
+    await tx.done;
+    return out;
+}
+
 export const HOT_VERSION = 4;
 
 /**

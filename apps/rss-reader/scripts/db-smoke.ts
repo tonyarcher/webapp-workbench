@@ -15,6 +15,7 @@ import {
   putFolder,
   queryArticles,
   queryRecentArticles,
+  queryTodayArticles,
   reconcileUnreadCounts,
   setArticleRead,
   setArticleStarred,
@@ -569,6 +570,30 @@ async function main() {
         u2SmallOldest.items.map((a) => a.id).join(',') === u2ExpectedOldest.map((a) => a.id).join(','),
         'small-N unread results match the exact expected oldest set',
     );
+
+    // ---- queryTodayArticles (Today view feed) ----
+    await resetDb();
+    await putFeed(feedA);
+    await putFeed(feedB);
+    const tNow = Date.now();
+    const tYesterday = tNow - 2 * 86_400_000;
+    const tArticles = [
+        makeArticle('feed-a', 't-old', tYesterday),
+        makeArticle('feed-a', 't1', tNow - 3000),
+        makeArticle('feed-b', 't2', tNow - 2000),
+        makeArticle('feed-a', 't3', tNow - 1000),
+    ];
+    await upsertArticles(tArticles);
+    const today = await queryTodayArticles(tNow - 86_400_000);
+    assert(today.length === 3, 'queryTodayArticles returns only articles since the cutoff');
+    assert(
+        today.map((a) => a.guid).join(',') === 't3,t2,t1',
+        'queryTodayArticles returns newest first',
+    );
+    const capped = await queryTodayArticles(tNow - 86_400_000, 2);
+    assert(capped.length === 2, 'queryTodayArticles honors the maxScan cap');
+    const none = await queryTodayArticles(tNow + 86_400_000);
+    assert(none.length === 0, 'queryTodayArticles returns nothing for a future cutoff');
 
     await resetDb();
     console.log('\nAll db smoke tests passed.');

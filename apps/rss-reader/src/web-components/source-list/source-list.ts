@@ -13,9 +13,11 @@ import {
 } from '../../mutations';
 import {getFeeds, getFolders} from '../../db/db';
 import {navigate} from '../../router';
+import {loadTodaySettings, pruneTodaySettings, saveTodaySettings, type TodaySettings} from '../../services/today-settings';
 import type {MenuAnchor} from '../feed-menu/feed-menu';
 import type {Feed, FeedSort, Folder, View} from '../../types';
 import '../feed-list-menu/feed-list-menu';
+import '../today-menu/today-menu';
 import styles from './source-list.css?inline';
 
 interface Library {
@@ -97,6 +99,9 @@ export class SourceList extends LitElement {
     @state() private folderMenuOpen = false;
     @state() private folderMenuFolderId: string | null = null;
     @state() private folderMenuAnchor: MenuAnchor | null = null;
+    @state() private todayMenuOpen = false;
+    @state() private todayMenuAnchor: MenuAnchor | null = null;
+    @state() private todaySettings: TodaySettings = loadTodaySettings();
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
@@ -136,6 +141,7 @@ export class SourceList extends LitElement {
         const uncategorized = this.uncategorizedFeeds();
         const allActive = this.isActive({kind: 'all'});
         const briefActive = this.isActive({kind: 'brief'});
+        const todayActive = this.isActive({kind: 'today'});
         const menuFeed = this.menuFeed();
         const folderMenuFolder = this.folderMenuFolder();
 
@@ -172,6 +178,22 @@ export class SourceList extends LitElement {
         >
           <span class="icon">✨</span>
           <span class="label">Daily Brief</span>
+        </div>
+        <div
+          class="item ${todayActive ? 'active' : ''}"
+          role="button"
+          tabindex="0"
+          aria-label="Today"
+          @click=${() => this.select({kind: 'today'})}
+          @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'today'})}
+        >
+          <span class="icon">🗓</span>
+          <span class="label">Today</span>
+          <button
+            class="menu-btn"
+            title="Today options"
+            @click=${(e: MouseEvent) => this.openTodayMenu(e)}
+          >${this.menuIcon()}</button>
         </div>
         <div
           class="item ${allActive ? 'active' : ''}"
@@ -233,6 +255,14 @@ export class SourceList extends LitElement {
         @sort-folders=${this.onSortFolders}
         @refresh-all=${this.onRefreshAll}
       ></feed-list-menu>
+      <today-menu
+        .open=${this.todayMenuOpen}
+        .anchor=${this.todayMenuAnchor}
+        .folders=${folders}
+        .settings=${this.todaySettings}
+        @close=${() => (this.todayMenuOpen = false)}
+        @settings-change=${this.onTodaySettingsChange}
+      ></today-menu>
     `;
     }
 
@@ -472,7 +502,7 @@ export class SourceList extends LitElement {
 
     private isActive(view: View): boolean {
         if (this.view.kind !== view.kind) return false;
-        if (this.view.kind === 'all' || this.view.kind === 'brief') return true;
+        if (this.view.kind === 'all' || this.view.kind === 'brief' || this.view.kind === 'today') return true;
         return (this.view as { id: string }).id === (view as { id: string }).id;
     }
 
@@ -667,6 +697,23 @@ export class SourceList extends LitElement {
     private closeFolderMenu() {
         this.folderMenuOpen = false;
         this.folderMenuTriggerId = null;
+    }
+
+    private openTodayMenu(e: MouseEvent) {
+        e.stopPropagation();
+        const btn = e.currentTarget as HTMLElement;
+        this.todayMenuOpen = !this.todayMenuOpen;
+        if (this.todayMenuOpen) {
+            const rect = btn.getBoundingClientRect();
+            this.todayMenuAnchor = {x: rect.left, y: rect.bottom};
+        }
+    }
+
+    private onTodaySettingsChange(e: Event) {
+        const next = (e as CustomEvent<TodaySettings>).detail;
+        this.todaySettings = pruneTodaySettings(next, this.libraryData.folders.map((f) => f.id));
+        saveTodaySettings(this.todaySettings);
+        window.dispatchEvent(new CustomEvent('today-settings-changed'));
     }
 
     private folderMenuFolder(): Folder | undefined {
