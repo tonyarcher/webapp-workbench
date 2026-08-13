@@ -349,6 +349,16 @@ export class ArticleList extends LitElement {
             })}
         </div>
         ${this.loading ? html`<div class="end">Loading…</div>` : ''}
+        ${!this.loading && this.items.length
+            ? html`
+                <div class="mark-end">
+                  <button
+                    class="mark-end-btn"
+                    ?disabled=${!this.items.some((a) => a.read === 0)}
+                    @click=${this.onMarkShownRead}
+                  >Mark shown as read</button>
+                </div>`
+            : ''}
         ${!this.loading && !this.items.length
             ? html`<div class="empty">No articles yet. Hit Refresh to sync this view.</div>`
             : ''}

@@ -196,7 +196,8 @@
 .grid-card-title {
     flex: 1;
     min-width: 0;
-    font-size: 14px;
+    font-size: 17px;
+    line-height: 1.3;
     font-weight: 600;
     color: inherit;
     text-decoration: none;
@@ -316,6 +317,36 @@
     text-align: center;
     color: var(--text-muted);
     font-size: 13px;
+}
+
+.mark-end {
+    display: flex;
+    justify-content: center;
+    padding: 88px 16px 120px;
+}
+
+.mark-end-btn {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    padding: 8px 22px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--panel-bg);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.mark-end-btn:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--accent);
+    background: var(--hover);
+}
+
+.mark-end-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
 }
 
 .empty {
