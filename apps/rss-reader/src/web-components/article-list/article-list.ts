@@ -15,8 +15,9 @@ import {
 } from '../../mutations';
 import {type ArticleCursor, getFeeds, getFolders, queryArticles} from '../../db/db';
 import {safeHttpUrl} from '../../services/parser';
+import {capItems, feedWindow, MAX_LIST_ITEMS} from '../../services/pagination';
 import type {Article, ArticleSort, Feed, Folder, ListViewType, View} from '../../types';
-import {domainOf, formatDate, interleaveArticles} from '../../util';
+import {domainOf, formatDate} from '../../util';
 import type {MenuAnchor} from '../feed-menu/feed-menu';
 import '../advanced-menu/advanced-menu';
 import '../lazy-img/lazy-img';
@@ -87,6 +88,7 @@ export class ArticleList extends LitElement {
     private resumeApplied = false;
     private pendingReset = false;
     private resizeObserver?: ResizeObserver;
+    private feedWindowOffset = 0;
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
@@ -367,6 +369,7 @@ export class ArticleList extends LitElement {
     };
 
     private canLoadMore(): boolean {
+        if (this.items.length >= MAX_LIST_ITEMS) return false;
         if (this.view.kind === 'feed' || (this.view.kind === 'all' && this.sort !== 'hot')) {
             return this.hasMoreSingle;
         }
@@ -465,6 +468,8 @@ export class ArticleList extends LitElement {
         this.feedHasMore.clear();
         this.hasMoreSingle = true;
         this.cursor = -1;
+        this.feedWindowOffset = 0;
+        this.lastFolderKey = this.folderFeeds().map((f) => f.id).join(',');
         const el = this.scrollElRef.value;
         if (el) el.scrollTop = 0;
         this.reinitVirtualizer();
@@ -522,7 +527,7 @@ export class ArticleList extends LitElement {
     private async loadSinglePage(gen: number) {
         const feedId = this.view.kind === 'feed' ? this.view.id : undefined;
         if (this.view.kind === 'all' && this.sort === 'hot') {
-            await this.loadFeedSetPage(this.library.data?.feeds ?? [], true, gen);
+            await this.loadFeedSetPage(this.library.data?.feeds ?? [], gen);
             return;
         }
         const cursor = this.cursors.get(feedId ?? 'all');
@@ -535,7 +540,7 @@ export class ArticleList extends LitElement {
         });
         if (gen !== this.gen) return;
         this.hasMoreSingle = res.hasMore;
-        this.items = mergeSorted(this.items, res.items, this.sort);
+        this.items = capItems(mergeSorted(this.items, res.items, this.sort));
         const last = res.items[res.items.length - 1];
         if (last) {
             this.cursors.set(feedId ?? 'all', this.cursorOf(last));
@@ -543,58 +548,64 @@ export class ArticleList extends LitElement {
     }
 
     private async loadFolderPage(gen: number) {
-        await this.loadFeedSetPage(this.folderFeeds(), this.sort === 'hot', gen);
+        await this.loadFeedSetPage(this.folderFeeds(), gen);
     }
 
     /**
      * Load a page across a set of feeds (folder view, or All view with Hot
-     * sort). Each feed contributes a bounded share of the page so N feeds
-     * read roughly pageSize records total, not N * pageSize. When `interleave`
-     * is set, the page keeps a mix of sources: each feed contributes roughly
-     * its share even if one feed dominates. Feeds' cursors advance only past
-     * stories actually kept, so pagination never skips anything.
+     * sort). Each page covers a bounded rotating window of at most `pageSize`
+     * feeds (so ~2300 feeds touch a handful of feeds per fetch, not all of
+     * them), fetching one item per feed per page with bounded concurrency.
+     * Because the window is at most pageSize feeds, a page fetches at most
+     * pageSize items total, none of which are ever dropped. Feeds' cursors
+     * always advance past the item they returned, so nothing is silently
+     * discarded and no feed is re-fetched.
+     *
+     * Accepted tradeoff: in newest/oldest folder views a later page can insert
+     * items above the current viewport (window rotation), which can shift the
+     * scroll position.
      */
-    private async loadFeedSetPage(feeds: Feed[], interleave: boolean, gen: number) {
+    private async loadFeedSetPage(feeds: Feed[], gen: number) {
         const activeFeeds = feeds.filter((f) => this.feedHasMore.get(f.id) !== false);
         if (!activeFeeds.length) {
             return;
         }
 
-        const perFeed = Math.max(1, Math.min(this.pageSize, Math.ceil(this.pageSize / activeFeeds.length)));
+        const window = feedWindow(activeFeeds, this.feedWindowOffset, this.pageSize);
+        this.feedWindowOffset += window.length;
+        const perFeed = 1;
 
-        const results = await Promise.all(
-            activeFeeds.map(async (feed) => {
-                const cursor = this.cursors.get(feed.id);
-                const res = await queryArticles({
-                    feedId: feed.id,
-                    unreadOnly: this.unreadOnly || this.hideRead,
-                    sort: this.sort,
-                    limit: perFeed,
-                    cursor,
-                });
-                return {feed, res};
-            })
-        );
+        const results: { feed: Feed; res: { items: Article[]; hasMore: boolean } }[] = [];
+        for (let i = 0; i < window.length; i += 12) {
+            if (gen !== this.gen) return;
+            const batch = await Promise.all(
+                window.slice(i, i + 12).map(async (feed) => {
+                    const cursor = this.cursors.get(feed.id);
+                    const res = await queryArticles({
+                        feedId: feed.id,
+                        unreadOnly: this.unreadOnly || this.hideRead,
+                        sort: this.sort,
+                        limit: perFeed,
+                        cursor,
+                    });
+                    return {feed, res};
+                })
+            );
+            results.push(...batch);
+        }
         if (gen !== this.gen) return;
 
         const existingIds = new Set(this.items.map((a) => a.id));
-        const fetched = results.flatMap(({res}) => res.items);
-        const fresh = mergeSorted(this.items, fetched, this.sort).filter((a) => !existingIds.has(a.id));
+        const fetched = results.flatMap(({res}) => res.items).filter((a) => !existingIds.has(a.id));
 
-        const kept = interleave
-            ? interleaveArticles(results.map(({res}) => res.items), this.pageSize)
-            : fresh.slice(0, this.pageSize);
-        const keptIds = new Set(kept.map((a) => a.id));
-
-        this.items = mergeSorted(this.items, kept, this.sort);
+        this.items = capItems(mergeSorted(this.items, fetched, this.sort));
 
         for (const {feed, res} of results) {
-            const lastKept = [...res.items].reverse().find((a) => keptIds.has(a.id));
-            if (lastKept) {
-                this.cursors.set(feed.id, this.cursorOf(lastKept));
+            const last = res.items[res.items.length - 1];
+            if (last) {
+                this.cursors.set(feed.id, this.cursorOf(last));
             }
-            const discarded = res.items.some((a) => !keptIds.has(a.id) && !existingIds.has(a.id));
-            this.feedHasMore.set(feed.id, res.hasMore || discarded);
+            this.feedHasMore.set(feed.id, res.hasMore);
         }
     }
 

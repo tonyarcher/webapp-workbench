@@ -59,7 +59,9 @@ export async function syncAllFeeds(
             failed.push(feed.title);
         }
         done++;
-        void invalidateLibrary();
+        // Throttled refresh: keeps sidebar counts fresh during long syncs
+        // without invalidating on every feed.
+        if (done % 20 === 0) void invalidateLibrary();
         if (done < targets.length) {
             await new Promise((r) => setTimeout(r, 600));
         }

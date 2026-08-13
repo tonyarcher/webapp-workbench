@@ -390,18 +390,6 @@ export interface ArticleQuery {
     limit?: number;
 }
 
-function articleComparator(sort: ArticleSort) {
-    switch (sort) {
-        case 'hot':
-            return (a: Article, b: Article) => b.hot - a.hot || a.id.localeCompare(b.id);
-        case 'oldest':
-            return (a: Article, b: Article) => a.published - b.published || a.id.localeCompare(b.id);
-        case 'newest':
-        default:
-            return (a: Article, b: Article) => b.published - a.published || a.id.localeCompare(b.id);
-    }
-}
-
 export async function queryArticles({
                                         feedId,
                                         unreadOnly,
@@ -421,22 +409,6 @@ export async function queryArticles({
             ? 'byHot'
             : 'byPublished';
     const descending = sort !== 'oldest';
-
-    if (unreadOnly) {
-        const all = feedId
-            ? await store.index('byFeedRead').getAll(IDBKeyRange.bound([feedId, 0], [feedId, 0]))
-            : await store
-                .index('byReadDate')
-                .getAll(IDBKeyRange.bound([0, Number.NEGATIVE_INFINITY], [0, Number.POSITIVE_INFINITY]));
-        const sorted = [...all].sort(articleComparator(sort));
-        let list = sorted;
-        if (cursor) {
-            const idx = list.findIndex((a) => a.id === cursor.id);
-            if (idx < 0) return {items: [], hasMore: false};
-            list = list.slice(idx + 1);
-        }
-        return {items: list.slice(0, limit), hasMore: list.length > limit};
-    }
 
     let range: IDBKeyRange | undefined;
     if (feedId) {
@@ -461,23 +433,33 @@ export async function queryArticles({
     const raw = await takeFromCursor(
         store.index(indexName).openCursor(range, descending ? 'prev' : 'next'),
         limit,
+        unreadOnly ? (a: Article) => a.read === 0 : undefined,
     );
 
     const hasMore = raw.length >= limit;
     return {items: raw, hasMore};
 }
 
+/**
+ * Walk a cursor collecting up to `limit` values. When `keep` is provided, rows
+ * that fail the predicate are skipped but still consume cursor progress, so
+ * only kept rows count toward the limit and the cursor never re-reads them.
+ */
 async function takeFromCursor(
     cursorReq: Promise<
         | IDBPCursorWithValue<ReaderDB, ['articles'], 'articles', string, 'readonly'>
         | null
     >,
     limit: number,
+    keep?: (article: Article) => boolean,
 ): Promise<Article[]> {
     const out: Article[] = [];
     let cursor = await cursorReq;
     while (cursor && out.length < limit) {
-        out.push(cursor.value as Article);
+        const article = cursor.value as Article;
+        if (!keep || keep(article)) {
+            out.push(article);
+        }
         cursor = await cursor.continue();
     }
     return out;

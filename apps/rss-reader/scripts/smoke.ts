@@ -2,7 +2,8 @@ import {DOMParser, XMLSerializer} from '@xmldom/xmldom';
 import {firstImageUrl, isFolder, parseFeedXml, parseOpml, safeHttpUrl, sanitizeHtml, stripHtml} from '../src/services/parser';
 import {fetchFeedText, FetchError, validateFeedUrl} from '../src/services/proxy';
 import {interleaveArticles} from '../src/util';
-import type {Article} from '../src/types';
+import {capItems, feedWindow, MAX_LIST_ITEMS} from '../src/services/pagination';
+import type {Article, Feed} from '../src/types';
 import {
   affinityBoostScore,
   contentEngagement,
@@ -392,5 +393,54 @@ try {
 } finally {
     g2.fetch = realFetch;
 }
+
+// ---- pagination helpers: capItems / feedWindow ----
+const overCap = Array.from({length: MAX_LIST_ITEMS + 5}, (_, i) => i);
+assert(capItems(overCap).length === MAX_LIST_ITEMS, 'capItems caps a list at MAX_LIST_ITEMS');
+assert(
+  capItems(overCap).every((v, i) => v === i),
+  'capItems keeps the head of the list (drops the least-relevant tail)',
+);
+assert(capItems([1, 2, 3]).length === 3, 'capItems passes through lists under the cap');
+
+const makeFeed = (id: string): Feed => ({
+  id,
+  title: id,
+  url: `https://${id}.example/rss`,
+  folderIds: [],
+  unread: 0,
+  addedAt: 0,
+});
+const manyFeeds = Array.from({length: 10}, (_, i) => makeFeed(`f${i}`));
+const smallFeeds = manyFeeds.slice(0, 3);
+
+assert(feedWindow(smallFeeds, 0, 5) === smallFeeds, 'feedWindow returns feeds unchanged when the set fits the size');
+assert(feedWindow(smallFeeds, 7, 5) === smallFeeds, 'feedWindow ignores offset when the set fits the size');
+assert(
+  feedWindow(manyFeeds, 0, 4).map((f) => f.id).join(',') === 'f0,f1,f2,f3',
+  'feedWindow starts at the offset and returns size feeds',
+);
+assert(
+  feedWindow(manyFeeds, 4, 4).map((f) => f.id).join(',') === 'f4,f5,f6,f7',
+  'feedWindow advances the window with the offset',
+);
+assert(
+  feedWindow(manyFeeds, 8, 4).map((f) => f.id).join(',') === 'f8,f9,f0,f1',
+  'feedWindow wraps around the end of the list',
+);
+assert(
+  feedWindow(manyFeeds, 12, 4).map((f) => f.id).join(',') === 'f2,f3,f4,f5',
+  'feedWindow rotates by offset modulo the feed count',
+);
+const sevenFeeds = Array.from({length: 7}, (_, i) => makeFeed(`n${i}`));
+const visitedFeeds = new Set<string>();
+for (const off of [0, 3, 6]) {
+    for (const f of feedWindow(sevenFeeds, off, 3)) visitedFeeds.add(f.id);
+}
+assert(
+  visitedFeeds.size === 7,
+  'rotating offsets across the window visit every feed at least once over ceil(n/size) pages',
+);
+assert(feedWindow(manyFeeds, 0, 20).length === 10, 'feedWindow never returns more feeds than exist');
 
 console.log('\nAll parser smoke tests passed.');
