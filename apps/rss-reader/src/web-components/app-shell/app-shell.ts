@@ -62,25 +62,26 @@ export class AppShell extends LitElement {
                     ${this.route.kind === 'brief'
                         ? html`
                             <brief-view
-                                class=${this.article ? 'hidden' : ''}
                                 @open-article=${this.onOpenArticle}
                             ></brief-view>`
                         : html`
                             <article-list
-                                class=${this.article ? 'hidden' : ''}
                                 .view=${this.route}
                                 .active=${!this.article}
                                 .resumeArticleId=${this.resume && JSON.stringify(this.route) === this.resume.view ? this.resume.id : null}
                                 @open-article=${this.onOpenArticle}
                             ></article-list>`}
-                    ${this.article
-                        ? html`
+                </main>
+                ${this.article
+                    ? html`
+                        <div class="article-overlay">
+                            <div class="article-backdrop" @click=${this.closeArticle}></div>
                             <article-view
                                 .article=${this.article}
                                 @close=${this.closeArticle}
-                            ></article-view>`
-                        : ''}
-                </main>
+                            ></article-view>
+                        </div>`
+                    : ''}
             </div>
             <settings-dialog
                     .open=${this.settingsOpen}

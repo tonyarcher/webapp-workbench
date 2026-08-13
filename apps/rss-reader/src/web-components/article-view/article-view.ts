@@ -53,7 +53,9 @@ export class ArticleView extends LitElement {
             : ''}
       </div>
       <div class="body">
-        <h1>${a.title}</h1>
+        <h1>${link
+            ? html`<a href=${link} target="_blank" rel="noopener noreferrer">${a.title}</a>`
+            : a.title}</h1>
         <div class="meta">
           <span>${domainOf(a.link) || 'unknown source'}</span>
           <span>${formatDate(a.published)}</span>

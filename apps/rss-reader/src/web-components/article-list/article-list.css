@@ -95,10 +95,10 @@
     display: grid;
     grid-template-columns: repeat(var(--cols, 3), minmax(0, 300px));
     justify-content: center;
-    gap: 12px;
+    gap: 16px;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 16px 12px;
+    padding: 0 16px 16px;
     background: none;
     border-bottom: none;
 }
@@ -141,9 +141,9 @@
 }
 
 .grid-card {
-    height: 264px;
+    height: 320px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
     background: var(--panel-bg);
     display: flex;
@@ -168,7 +168,7 @@
 
 .grid-card-img {
     width: 100%;
-    height: 120px;
+    height: 168px;
     object-fit: cover;
     flex: none;
     background: var(--hover);
@@ -183,8 +183,8 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 8px 12px 10px;
+    gap: 8px;
+    padding: 12px 14px 14px;
 }
 
 .grid-card-title-row {

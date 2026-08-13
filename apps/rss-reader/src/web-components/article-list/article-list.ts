@@ -31,8 +31,10 @@ interface Library {
 const DEFAULT_PAGE_SIZE = 50;
 const VIEW_SETTINGS_KEY = 'rss-reader:view-settings';
 const CARD_MIN_WIDTH = 240;
-const CARD_HEIGHT = 264;
-const CARD_ROW_GAP = 12;
+// 16:9 media (168px at the 300px column cap) + text block. Must match
+// .grid-card / .grid-card-img / .row.cards gap in article-list.css.
+const CARD_HEIGHT = 320;
+const CARD_ROW_GAP = 16;
 const CARD_ROW_HEIGHT = CARD_HEIGHT + CARD_ROW_GAP;
 
 interface ViewSettings {
@@ -91,6 +93,8 @@ export class ArticleList extends LitElement {
     private resizeObserver?: ResizeObserver;
     private feedWindowOffset = 0;
     private refreshJob: Promise<void> | null = null;
+    private refreshJobKey: string | null = null;
+    private refreshGen = 0;
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
@@ -747,21 +751,35 @@ export class ArticleList extends LitElement {
         await this.reset();
     }
 
+    private viewRefreshKey(): string {
+        if (this.view.kind === 'feed') return `feed:${this.view.id}`;
+        if (this.view.kind === 'folder') return `folder:${this.view.id}`;
+        return 'all';
+    }
+
     private async onRefresh() {
-        // Elevator button: a refresh already in flight just joins it.
-        if (this.refreshJob) {
+        // Elevator button for the current view only. A different folder/feed
+        // starts its own job instead of waiting on an unrelated sync.
+        const key = this.viewRefreshKey();
+        if (this.refreshJob && this.refreshJobKey === key) {
             await this.refreshJob;
             return;
         }
-        this.refreshJob = this.runRefresh();
+        const job = this.runRefresh();
+        this.refreshJob = job;
+        this.refreshJobKey = key;
         try {
-            await this.refreshJob;
+            await job;
         } finally {
-            this.refreshJob = null;
+            if (this.refreshJob === job) {
+                this.refreshJob = null;
+                this.refreshJobKey = null;
+            }
         }
     }
 
     private async runRefresh() {
+        const mine = ++this.refreshGen;
         this.refreshing = true;
         try {
             if (this.view.kind === 'feed') {
@@ -777,7 +795,7 @@ export class ArticleList extends LitElement {
             try {
                 await this.reset();
             } finally {
-                this.refreshing = false;
+                if (mine === this.refreshGen) this.refreshing = false;
             }
         }
     }
@@ -831,12 +849,21 @@ export class ArticleList extends LitElement {
     private renderHeadlineRow(article: Article, showFeed: boolean) {
         const feedTitle = this.feedTitle(article.feedId);
         const popular = article.popularity >= 4;
+        const link = safeHttpUrl(article.link);
         return html`
       <div class="row-top">
         ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
         ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
         ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-        <span class="title">${article.title}</span>
+        ${link
+            ? html`<a
+                    class="title title-link"
+                    href=${link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    @click=${(e: Event) => e.stopPropagation()}
+                  >${article.title}</a>`
+            : html`<span class="title">${article.title}</span>`}
         <span class="headline-date">${formatDate(article.published)}</span>
         <button class="star" title="Star" @click=${(e: Event) => this.onStar(e, article)}>
           ${article.starred ? '★' : '☆'}

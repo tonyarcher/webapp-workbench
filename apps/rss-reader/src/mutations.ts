@@ -16,7 +16,7 @@ import {
 import {exportOpml, importOpml} from './services/opml';
 import {addFeedFromUrl, syncFeed} from './services/sync';
 import {createCoalescer} from './services/coalesce';
-import {ALL_SYNC_KEY, allSyncKey, isSetSyncKey, setKeyIncludesFeed} from './services/sync-keys';
+import {ALL_SYNC_KEY, allSyncKey} from './services/sync-keys';
 import {invalidateArticles, invalidateLibrary, updateArticlesInCache} from './query';
 import {domainOf} from './util';
 import type {Article, Feed} from './types';
@@ -44,20 +44,8 @@ export async function addFeed(url: string): Promise<Feed> {
 }
 
 export async function refreshFeed(feedId: string) {
-    // An all-feeds sync is already covering this feed: nod and return.
-    if (allSyncs.has(ALL_SYNC_KEY)) {
-        await allSyncs.get(ALL_SYNC_KEY)!;
-        return {inserted: 0, total: 0, title: ''};
-    }
-    // A folder/feed-set sync in flight may include this feed: join it.
-    const setJob = allSyncs
-        .keys()
-        .filter(isSetSyncKey)
-        .find((k) => setKeyIncludesFeed(k, feedId));
-    if (setJob) {
-        await allSyncs.get(setJob)!;
-        return {inserted: 0, total: 0, title: ''};
-    }
+    // Same-feed mash only. Do not join an all/folder job — that would block
+    // this button on feeds the user did not ask to refresh.
     return feedSyncs.run(feedId, async () => {
         const result = await syncFeed(feedId);
         await reconcileUnreadCounts();
@@ -71,16 +59,14 @@ export async function syncAllFeeds(
     onProgress?: (done: number, total: number, title: string) => void,
     feedIds?: string[],
 ) {
-    // A full refresh is in flight and this call is a subset of it: nod along.
-    // Callers with onProgress (OPML import) wait, then start a fresh run so
-    // feeds added after the covering job began are still synced.
-    if (allSyncs.has(ALL_SYNC_KEY)) {
-        const existing = allSyncs.get(ALL_SYNC_KEY)!;
-        if (!onProgress) return existing;
-        await existing;
-    }
+    // Same-scope mash only (exact key). A folder refresh must not wait for
+    // an in-flight all-sync, and vice versa. OPML import (onProgress) waits
+    // out a covering all-job so newly added feeds still get their own run.
     const key = allSyncKey(feedIds);
     if (key === null) return [];
+    if (onProgress && key === ALL_SYNC_KEY && allSyncs.has(ALL_SYNC_KEY)) {
+        await allSyncs.get(ALL_SYNC_KEY)!;
+    }
     return allSyncs.run(key, () => runSyncAllFeeds(onProgress, feedIds));
 }
 

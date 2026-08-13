@@ -67,6 +67,7 @@ header .sub {
     flex: 1;
     display: flex;
     min-height: 0;
+    position: relative;
 }
 
 source-list {
@@ -80,6 +81,32 @@ main {
     flex-direction: column;
 }
 
-.hidden {
-    display: none;
+/* Covers sidebar + list. Backdrop clicks only close — they never reach
+   folder rows or other articles. Gutter stays visible to dismiss. */
+.article-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.article-backdrop {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, #000 22%, transparent);
+    cursor: pointer;
+}
+
+/* ~65–75ch reading column lives inside article-view (760px). The panel
+   is a reader stage: 1120px on desktop, and always leaves a dismiss
+   strip (52px phone → 240px desktop) so the folder list stays tappable. */
+.article-overlay article-view {
+    position: relative;
+    width: min(1120px, calc(100% - clamp(52px, 14vw, 240px)));
+    height: 100%;
+    flex: none;
+    min-width: 0;
+    border-left: 1px solid var(--border);
+    box-shadow: -12px 0 32px rgba(0, 0, 0, 0.18);
 }
