@@ -15,9 +15,12 @@ Docker-compatible container runtime) already installed.
 - `stock-game/` — Dockerfile + `server-host.mjs`, a tiny dependency-free Node HTTP host that runs the built TanStack Start fetch handler.
 
 All app Dockerfiles use the repo root as the build context (`context: ..` in
-compose) and build via `npm ci`/workspace builds. Each app container listens
-on port `3000` internally; the gateway proxies `/` subpaths and strips the
-prefix. The `gateway` image is built from the `deploy/` context.
+compose). Inside the containers the Windows-generated lockfile is discarded
+and dependencies are resolved fresh (npm records only the generating
+platform's native binaries — issue npm/cli#4828), so the images install the
+correct Linux binaries. Each app container listens on port `3000` internally;
+the gateway strips the prefix for the static apps and passes `/stock-game/`
+through unchanged. The `gateway` image is built from the `deploy/` context.
 
 ## Routes
 
@@ -26,7 +29,7 @@ prefix. The `gateway` image is built from the `deploy/` context.
 | `/` | hello-world page |
 | `/baseball/` | Baseball app (nginx static, prefix stripped) |
 | `/rss-reader/` | RSS Reader (nginx static, prefix stripped) |
-| `/stock-game/` | Stock Game (node server, prefix stripped) |
+| `/stock-game/` | Stock Game (node server, basepath-aware, prefix NOT stripped) |
 | `/lemmy-vertical-scroll/` | Lemmy Vertical Scroll (nginx static, prefix stripped) |
 
 The bare paths (e.g. `/stock-game`) redirect to their trailing-slash forms.
@@ -44,7 +47,9 @@ correctly behind the gateway.
 - **Stock Game** runs a TanStack Start app (SPA mode with server functions).
   Its build is served by the built-in fetch handler, hosted by
   `server-host.mjs` (a plain Node HTTP server with no dependencies). It reads
-  `PORT` (default `3000`) and `STOCK_GAME_DB` for its SQLite database.
+  `PORT` (default `3000`), `STOCK_GAME_DB` for its SQLite database, and
+  `APP_BASE_PATH` (`/stock-game/`) so static client files are served under the
+  base path.
 
 ## Build and run
 

@@ -2,11 +2,12 @@
 #   gateway  - nginx Alpine, port 80; serves `/` (hello) and routes subpaths.
 #   baseball - nginx static, serves the Baseball Vite app under /baseball/.
 #   rss-reader - nginx static, serves the RSS reader under /rss-reader/.
-#   stock-game - node server, serves the TanStack Start app under /stock-game/.
+#   stock-game - node server, serves the TanStack Start app under /stock-game/
+#                (basepath-aware; the gateway does NOT strip its prefix).
 #   lemmy-vertical-scroll - nginx static, serves the Lemmy feed under
 #                           /lemmy-vertical-scroll/.
-# Each app listens on port 3000 internally and is proxied by the gateway with
-# its prefix stripped.
+# Each app listens on port 3000 internally; the gateway strips the prefix for
+# the static apps and passes /stock-game/ through unchanged.
 
 services:
   gateway:

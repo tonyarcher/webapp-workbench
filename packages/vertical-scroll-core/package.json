@@ -28,7 +28,7 @@
         "@typescript/typescript6": "^6.0.2",
         "lit": "^3.3.3",
         "tsx": "^4.23.1",
-        "typescript": "^7.0.2",
+        "typescript": "7.0.2",
         "vite": "^8.2.0",
         "vite-plugin-dts": "^5.0.3"
     }

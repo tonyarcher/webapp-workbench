@@ -13,6 +13,13 @@ const { default: handler } = await import(
 
 const port = Number(process.env.PORT ?? 3000)
 const clientDir = path.join(process.cwd(), 'dist/client')
+// The app is served under a base path (e.g. /stock-game/): the fetch handler
+// is basepath-aware, and static client files are requested with the base
+// prefix, so strip it before mapping to dist/client.
+const basePath = (process.env.APP_BASE_PATH ?? '').replace(/\/+$/, '')
+if (basePath && !basePath.startsWith('/')) {
+  console.warn(`server-host: APP_BASE_PATH "${basePath}" lacks a leading slash; static assets will 404`)
+}
 
 const CONTENT_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -41,6 +48,9 @@ async function serveStatic(req, res, url) {
     pathname = decodeURIComponent(url.pathname)
   } catch {
     return false
+  }
+  if (basePath && pathname.startsWith(`${basePath}/`)) {
+    pathname = pathname.slice(basePath.length)
   }
   const rel = pathname.replace(/^\/+/, '')
   const file = path.resolve(clientDir, rel)

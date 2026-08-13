@@ -3,10 +3,25 @@
 # %BASE_URL%, scope-relative SW), so it builds with the default base. Stage 2
 # serves the static output via nginx.
 
-FROM node:22-alpine AS build
+# glibc (slim, not alpine): typescript 7's native compiler is glibc-only, and
+# vite's native binaries (rollup, esbuild) need linux placements.
+FROM node:22-slim AS build
 WORKDIR /app
+# npm 11 (pinned): the bundled npm 10.9.8 skips optional platform binaries of
+# nested workspace deps (typescript 7 native compiler, @rollup/*, @esbuild/*).
+RUN npm install -g npm@11.19.0 --no-audit --no-fund
 COPY . .
-RUN npm ci
+# The committed lockfile is generated on Windows, so npm ci/install on linux
+# cannot fetch platform-specific optional binaries — an npm limitation
+# (issue #4828). Resolve fresh from manifests.
+RUN rm -f package-lock.json && npm install --no-audit --no-fund
+# npm skips optional platform binaries of nested packages: typescript 7's
+# native compiler (@typescript/typescript-linux-x64) is an optional dep of the
+# nested typescript@7 in apps/lemmy-vertical-scroll and is not installed.
+# Install it explicitly (tsc finds it via import.meta.resolve from the root).
+# Bump the version together with lemmy's typescript dependency.
+RUN npm install --no-save --no-audit --no-fund @typescript/typescript-linux-x64@7.0.2
+RUN npm run build --prefix packages/vertical-scroll-core
 RUN npm run build -w lemmy-vertical-scroll
 
 FROM nginx:alpine AS runtime
