@@ -1,13 +1,9 @@
 # Deployment
 
-Docker Compose stack that runs a reverse-proxy gateway in front of the Baseball
-app. It is designed to run on a remote Ubuntu host with Docker (or K3s / a
+Docker Compose stack that runs a reverse-proxy gateway in front of four
+SPA apps (Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll). It is
+designed to run on a remote Ubuntu host with Docker (or K3s / a
 Docker-compatible container runtime) already installed.
-
-> Status: the monorepo migration moved Baseball to `apps/baseball/` and the
-> gateway stack paths (Dockerfile `COPY`/`npm ci` steps, compose build contexts)
-> still need updating for the new layout. Deployment work is deferred; do not
-> use this stack until `deploy/` is reworked for the monorepo structure.
 
 ## Layout
 
@@ -15,21 +11,40 @@ Docker-compatible container runtime) already installed.
 - `nginx/default.conf` — gateway config copied into the `gateway` image.
 - `hello/index.html` — static hello-world page copied into the `gateway` image and served at the root `/`.
 - `gateway/` — Dockerfile that builds the `gateway` image from the `deploy/` context.
-- `baseball/` — Dockerfile + nginx config for the Baseball app.
+- `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/` — Dockerfiles + nginx configs for the static apps.
+- `stock-game/` — Dockerfile + `server-host.mjs`, a tiny dependency-free Node HTTP host that runs the built TanStack Start fetch handler.
+
+All app Dockerfiles use the repo root as the build context (`context: ..` in
+compose) and build via `npm ci`/workspace builds. Each app container listens
+on port `3000` internally; the gateway proxies `/` subpaths and strips the
+prefix. The `gateway` image is built from the `deploy/` context.
 
 ## Routes
 
 | Route | Target |
 |---|---|
 | `/` | hello-world page |
-| `/baseball/` | Baseball app (prefix stripped) |
-| `/stock-game/` | placeholder — no service yet |
-| `/lemmy-vertical-scroll/` | placeholder — no service yet |
-| `/rss-reader/` | placeholder — no service yet |
+| `/baseball/` | Baseball app (nginx static, prefix stripped) |
+| `/rss-reader/` | RSS Reader (nginx static, prefix stripped) |
+| `/stock-game/` | Stock Game (node server, prefix stripped) |
+| `/lemmy-vertical-scroll/` | Lemmy Vertical Scroll (nginx static, prefix stripped) |
 
-The three placeholder routes are defined in the gateway config and resolved at
-runtime via Docker DNS. The gateway starts even though those services are not
-defined; requests to them return `502` until a matching service exists.
+The bare paths (e.g. `/stock-game`) redirect to their trailing-slash forms.
+Each app is served under its own subpath with the base baked in at build time
+(`APP_BASE_PATH`), so relative assets, manifests, and service workers resolve
+correctly behind the gateway.
+
+## How each app is served
+
+- **Baseball, RSS Reader, Lemmy Vertical Scroll** are static Vite builds served
+  by an nginx container. The gateway strips the app's prefix and nginx serves
+  the built `dist/` at the root, with gzip, an SPA fallback to `index.html`,
+  no-cache for the shell/service worker, and long-lived immutable caching for
+  hashed `/assets/`.
+- **Stock Game** runs a TanStack Start app (SPA mode with server functions).
+  Its build is served by the built-in fetch handler, hosted by
+  `server-host.mjs` (a plain Node HTTP server with no dependencies). It reads
+  `PORT` (default `3000`) and `STOCK_GAME_DB` for its SQLite database.
 
 ## Build and run
 
@@ -37,18 +52,19 @@ From the `deploy/` directory (or from the repo root with
 `docker compose -f deploy/docker-compose.yml`):
 
 ```sh
-docker compose build
-docker compose up -d
+docker compose up -d --build
 ```
 
 The gateway listens on port `80`. Visit `http://<host>/` for the hello page and
-`http://<host>/baseball/` for the app.
+`http://<host>/baseball/` (plus `/rss-reader/`, `/stock-game/`,
+`/lemmy-vertical-scroll/`) for the apps. Use `docker compose ps` to inspect
+state and `docker compose logs -f <service>` to tail a service's logs.
 
 ## Remote Docker daemon (SSH tunnel)
 
 The gateway config and hello page are baked into the `gateway` image (no bind
-mounts), and the `baseball` build uses a build context from the repo root. Both
-are pushed through the Docker client to the remote daemon, so you can drive a
+mounts), and each app build uses a build context from the repo root. All of it
+is pushed through the Docker client to the remote daemon, so you can drive a
 remote server from WSL or any machine.
 
 Set `DOCKER_HOST` to point at the SSH-tunneled daemon, then build/up from the
@@ -60,32 +76,17 @@ repo root or the `deploy/` directory:
 export DOCKER_HOST=tcp://127.0.0.1:2375
 
 # From the deploy/ directory:
-docker compose build
-docker compose up -d
+docker compose up -d --build
 
 # Or from the repo root:
-docker compose -f deploy/docker-compose.yml build
-docker compose -f deploy/docker-compose.yml up -d
+docker compose -f deploy/docker-compose.yml up -d --build
 ```
 
 Image builds send the whole build context through the tunnel to the remote
-daemon, which assembles and runs the builds there. Use `docker compose up -d
---build` to rebuild and recreate, and `docker compose ps` to inspect state.
+daemon, which assembles and runs the builds there.
 
-## Enabling a placeholder route
+## Data
 
-Each placeholder expects a service whose hostname matches the route name and
-which listens on port `3000`. To enable one, add a service to
-`docker-compose.yml`. For example, for `/stock-game/`:
-
-```yaml
-  stock-game:
-    image: your-stock-game-image:tag   # or build: ...
-    restart: unless-stopped
-    networks:
-      - baseball
-```
-
-No gateway changes are required — the route name and service name already
-match. If a service needs a different hostname or port, update the matching
-`set $upstream_*` variable in `deploy/nginx/default.conf` accordingly.
+Stock Game stores its SQLite database at `/app/data/stock-game.db` inside its
+container (ephemeral unless a volume is mounted there). The nginx-served apps
+are stateless.

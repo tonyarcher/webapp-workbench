@@ -18,5 +18,5 @@ void recomputeHotIfNeeded()
 // PWA install + offline support; registration in dev would fight HMR, so only
 // the production bundle gets the service worker.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-    void navigator.serviceWorker.register('/sw.js');
+    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
 }

@@ -1,0 +1,46 @@
+# tonyarcher-apps
+
+Tony's personal playground of nginx-fronted TypeScript applications. Every app
+is an SPA, focused on one thing, and served behind the same reverse-proxy
+gateway.
+
+## Apps
+
+| Path | App | Stack | Focus |
+|---|---|---|---|
+| `apps/baseball/` | Baseball tracker | Vite + Lit + TanStack core | Scorekeeping, client-side only |
+| `apps/rss-reader/` | RSS reader | Vite + Lit + TanStack core | Feed reading, PWA, hash routing |
+| `apps/stock-game/` | Stock game | TanStack Start (SPA) + React + Lit | Paper trading, SQLite server layer |
+| `apps/lemmy-vertical-scroll/` | Lemmy scroller | Vite + Lit + TanStack core | Vertical feed scrolling |
+
+## Packages
+
+| Path | Package | Purpose |
+|---|---|---|
+| `packages/web-components/` | `@baseball/web-components` | Baseball UI component library |
+| `packages/vertical-scroll-core/` | `vertical-scroll-core` | Generic vertical-scroller components |
+
+## Getting started
+
+```sh
+npm install        # installs all workspaces (builds library dists)
+npm run build      # builds every workspace
+npm test           # runs every workspace's tests
+```
+
+One app at a time:
+
+```sh
+npm run dev:baseball
+npm run dev:rss-reader
+npm run dev:stock-game
+npm run dev:lemmy
+```
+
+Each app directory carries its own `AGENTS.md` with detailed conventions.
+
+## Deployment
+
+`deploy/` holds the nginx reverse-proxy gateway stack: hello world at `/` and
+each app under its own path (`/baseball/`, `/rss-reader/`, `/stock-game/`,
+`/lemmy-vertical-scroll/`). See `deploy/README.md` for build/run instructions.

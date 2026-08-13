@@ -8,20 +8,26 @@ import {fileURLToPath} from 'node:url';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const dist = path.join(root, 'dist');
+const BASE = process.env.APP_BASE_PATH ?? '/';
+// Normalize to a leading-slash, trailing-slash form ("/rss-reader/" or "/") so
+// path joins never produce "//" or "/rss-readerassets/…" concatenations.
+const normalizedBase = BASE.startsWith('/') ? BASE : `/${BASE}`;
+const base = normalizedBase.endsWith('/') ? normalizedBase : `${normalizedBase}/`;
 
 const template = await readFile(path.join(root, 'scripts', 'sw.template.js'), 'utf8');
 
+const baseOf = (p) => `${base.replace(/\/$/, '')}${p}`;
 const assets = [
-    '/',
-    '/index.html',
-    '/manifest.webmanifest',
-    '/favicon.svg',
-    '/icon-192.png',
-    '/icon-512.png',
+    baseOf('/'),
+    baseOf('/index.html'),
+    baseOf('/manifest.webmanifest'),
+    baseOf('/favicon.svg'),
+    baseOf('/icon-192.png'),
+    baseOf('/icon-512.png'),
 ];
 try {
     const files = (await readdir(path.join(dist, 'assets'))).sort();
-    for (const file of files) assets.push(`/assets/${file}`);
+    for (const file of files) assets.push(`${base}assets/${file}`);
 } catch {
     // no assets directory yet — the build script always runs after vite build,
     // so this only happens when dist is missing entirely
@@ -33,9 +39,11 @@ try {
 const hashInput = Buffer.concat(
     await Promise.all(
         assets
-            .filter((url) => url !== '/')
+            .filter((url) => url !== baseOf('/'))
             .map(async (url) => {
-                const rel = url.replace(/^\//, '');
+                const rel = url.startsWith(base)
+                    ? url.slice(base.length).replace(/^\//, '')
+                    : url.replace(/^\//, '');
                 try {
                     return await readFile(path.join(dist, rel));
                 } catch {

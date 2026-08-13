@@ -11,6 +11,9 @@
 const ASSETS = __ASSETS__;
 const CACHE = 'rss-reader-' + __CACHE_HASH__;
 const CACHE_PREFIX = 'rss-reader-';
+// Scope-relative shell URL so the offline fallback matches the precache keys
+// both at the app root and under a subpath like /rss-reader/.
+const INDEX = new URL('./index.html', self.registration.scope).href;
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -49,11 +52,11 @@ self.addEventListener('fetch', (event) => {
                     // overwrite the offline fallback.
                     if (response.ok) {
                         const copy = response.clone();
-                        void caches.open(CACHE).then((cache) => cache.put('/index.html', copy));
+                        void caches.open(CACHE).then((cache) => cache.put(INDEX, copy));
                     }
                     return response;
                 })
-                .catch(() => caches.match('/index.html')),
+                .catch(() => caches.match(INDEX)),
         );
         return;
     }
