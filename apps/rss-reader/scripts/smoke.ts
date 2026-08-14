@@ -33,10 +33,9 @@ import {
 (globalThis as Record<string, unknown>).DOMParser = DOMParser;
 (globalThis as Record<string, unknown>).XMLSerializer = XMLSerializer;
 
-function assert(cond: boolean, msg: string) {
+function assert(cond: boolean, msg: string): asserts cond {
     if (!cond) {
-        console.error(`FAIL: ${msg}`);
-        process.exit(1);
+        throw new Error(`FAIL: ${msg}`);
     }
     console.log(`ok: ${msg}`);
 }
@@ -547,15 +546,17 @@ gStorage.localStorage = {
   setItem: (k: string, v: string) => void mem.set(k, String(v)),
   removeItem: (k: string) => void mem.delete(k),
 };
-saveTodaySettings({excludedFolderIds: ['a', 'b'], perFolder: 3});
+saveTodaySettings({excludedFolderIds: ['a', 'b'], perFolder: 3, unreadOnly: true, listView: 'cards'});
 const roundTrip = loadTodaySettings();
 assert(roundTrip.excludedFolderIds.join(',') === 'a,b', 'today settings save/load round trip');
 assert(roundTrip.perFolder === 3, 'today settings round trip keeps the amount');
+assert(roundTrip.unreadOnly === true, 'today settings round trip keeps unread-only');
+assert(roundTrip.listView === 'cards', 'today settings round trip keeps list view');
 
 mem.set('rss-reader:today-settings', JSON.stringify({excludedFolderIds: ['a'], perFolder: 7}));
 assert(loadTodaySettings().perFolder === DEFAULT_PER_FOLDER, 'today settings clamp an unknown amount');
 
-const pruned = pruneTodaySettings({excludedFolderIds: ['a', 'b'], perFolder: 5}, ['a', 'c']);
+const pruned = pruneTodaySettings({excludedFolderIds: ['a', 'b'], perFolder: 5, unreadOnly: false, listView: 'detailed'}, ['a', 'c']);
 assert(pruned.excludedFolderIds.join(',') === 'a', 'today settings prune deleted folder ids');
 
 // ---- today sections ----
@@ -603,6 +604,13 @@ assert(emptySections.length === 0, 'today sections omit folders with no articles
 assert(
   buildTodaySections(dayArticles, [tFeedA], [folder1], [], 5).length === 1,
   'today sections drop articles of unknown feeds',
+);
+
+const mixedRead = dayArticles.map((a) => a.id === 'a1' ? {...a, read: 1 as const} : a);
+const unreadOnly = buildTodaySections(mixedRead, [tFeedA, tFeedB, tFeedC], [folder1, folder2], [], 2, true);
+assert(
+  unreadOnly[0].articles.map((a) => a.id).join(',') === 'c1,a2',
+  'today unread-only skips read articles before taking the per-folder quota',
 );
 
 console.log('\nAll parser smoke tests passed.');

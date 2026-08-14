@@ -17,11 +17,13 @@ export function buildTodaySections(
     folders: Folder[],
     excludedFolderIds: string[],
     perFolder: number,
+    unreadOnly = false,
 ): TodaySection[] {
     const feedById = new Map(feeds.map((f) => [f.id, f]));
     const excluded = new Set(excludedFolderIds);
     const buckets = new Map<string, Article[]>();
     for (const article of articles) {
+        if (unreadOnly && article.read !== 0) continue;
         const feed = feedById.get(article.feedId);
         if (!feed) continue;
         for (const folderId of feed.folderIds) {

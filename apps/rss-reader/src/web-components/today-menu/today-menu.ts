@@ -1,7 +1,7 @@
 import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
 import type {Folder} from '../../types';
-import {DEFAULT_PER_FOLDER, PER_FOLDER_OPTIONS, type TodaySettings} from '../../services/today-settings';
+import {DEFAULT_PER_FOLDER, defaultTodaySettings, PER_FOLDER_OPTIONS, type TodaySettings} from '../../services/today-settings';
 import type {MenuAnchor} from '../feed-menu/feed-menu';
 import styles from './today-menu.css?inline';
 
@@ -12,10 +12,7 @@ export class TodayMenu extends LitElement {
     @property({attribute: false}) open = false;
     @property({attribute: false}) anchor: MenuAnchor | null = null;
     @property({attribute: false}) folders: Folder[] = [];
-    @property({attribute: false}) settings: TodaySettings = {
-        excludedFolderIds: [],
-        perFolder: DEFAULT_PER_FOLDER,
-    };
+    @property({attribute: false}) settings: TodaySettings = defaultTodaySettings();
 
     @state() private excluded = new Set<string>();
     @state() private perFolder = DEFAULT_PER_FOLDER;
@@ -152,7 +149,11 @@ export class TodayMenu extends LitElement {
     private emitChange() {
         this.dispatchEvent(
             new CustomEvent('settings-change', {
-                detail: {excludedFolderIds: Array.from(this.excluded), perFolder: this.perFolder},
+                detail: {
+                    ...this.settings,
+                    excludedFolderIds: Array.from(this.excluded),
+                    perFolder: this.perFolder,
+                },
                 bubbles: true,
                 composed: true,
             }),

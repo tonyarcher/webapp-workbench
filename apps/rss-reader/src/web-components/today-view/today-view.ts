@@ -4,10 +4,17 @@ import {libraryKey, queryClient, QueryController} from '../../query';
 import {getFeeds, getFolders, queryTodayArticles} from '../../db/db';
 import {markArticleRead, toggleStar} from '../../mutations';
 import {safeHttpUrl} from '../../services/parser';
-import {loadTodaySettings, pruneTodaySettings, type TodaySettings} from '../../services/today-settings';
+import {
+    loadTodaySettings,
+    pruneTodaySettings,
+    saveTodaySettings,
+    type TodayListView,
+    type TodaySettings,
+} from '../../services/today-settings';
 import {buildTodaySections} from '../../services/today';
 import type {Article, Feed, Folder} from '../../types';
 import {domainOf, formatDate} from '../../util';
+import '../lazy-img/lazy-img';
 import styles from './today-view.css?inline';
 
 interface Library {
@@ -113,6 +120,7 @@ export class TodayView extends LitElement {
             folders,
             settings.excludedFolderIds,
             settings.perFolder,
+            settings.unreadOnly,
         );
         const todayLabel = this.startOfToday.toLocaleDateString([], {
             weekday: 'short',
@@ -124,9 +132,27 @@ export class TodayView extends LitElement {
       <div class="toolbar">
         <h2>Today</h2>
         <span class="date">${todayLabel}</span>
+        <label class="unread-toggle">
+          <input
+            type="checkbox"
+            .checked=${settings.unreadOnly}
+            @change=${(e: Event) => this.setUnreadOnly((e.target as HTMLInputElement).checked)}
+          />
+          Unread only
+        </label>
+        <label class="view-mode">
+          <select
+            .value=${settings.listView}
+            @change=${(e: Event) => this.setListView((e.target as HTMLSelectElement).value as TodayListView)}
+          >
+            <option value="detailed">Detailed List</option>
+            <option value="headline">Headline View</option>
+            <option value="cards">Cards</option>
+          </select>
+        </label>
       </div>
 
-      <div class="body">
+      <div class="body ${settings.listView}">
         ${this.articles.error
             ? html`<div class="empty" style="color: var(--danger)">Could not load today's articles.</div>`
             : !folders.length
@@ -138,31 +164,99 @@ export class TodayView extends LitElement {
                             (section) => html`
                           <section class="today-section">
                             <h3 class="section-head">${section.folder.title}</h3>
-                            <div class="section-articles">
-                              ${section.articles.map((a) => this.renderRow(a, feeds))}
+                            <div class="section-articles ${settings.listView}">
+                              ${section.articles.map((a) => this.renderItem(a, feeds, settings.listView))}
                             </div>
                           </section>
                         `,
                         )
-                        : html`<div class="empty">Nothing published today in these folders yet. Hit Refresh to sync.</div>`}
+                        : html`<div class="empty">${settings.unreadOnly
+                            ? 'Nothing unread today in these folders.'
+                            : 'Nothing published today in these folders yet. Hit Refresh to sync.'}</div>`}
       </div>
     `;
     }
 
-    private renderRow(article: Article, feeds: Feed[]) {
+    private persist(next: TodaySettings) {
+        this.settings = next;
+        saveTodaySettings(next);
+        window.dispatchEvent(new CustomEvent('today-settings-changed'));
+    }
+
+    private setUnreadOnly(unreadOnly: boolean) {
+        this.persist({...this.settings, unreadOnly});
+    }
+
+    private setListView(listView: TodayListView) {
+        this.persist({...this.settings, listView});
+    }
+
+    private renderItem(article: Article, feeds: Feed[], listView: TodayListView) {
+        if (listView === 'cards') return this.renderCard(article, feeds);
+        if (listView === 'headline') return this.renderHeadline(article, feeds);
+        return this.renderDetailed(article, feeds);
+    }
+
+    private renderDetailed(article: Article, feeds: Feed[]) {
         const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
         const link = safeHttpUrl(article.link);
+        const image = safeHttpUrl(article.image);
         return html`
       <div
-        class="today-row ${article.read ? 'read' : ''}"
+        class="row ${article.read ? 'read' : ''}"
         role="button"
         tabindex="0"
         aria-label="Open ${article.title}"
         @click=${() => this.openArticle(article)}
         @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}
       >
-        ${article.read === 0 ? html`<span class="dot"></span>` : ''}
-        ${link
+        <div class="detail-body">
+          ${image ? html`<img class="detail-img" src=${image} alt="" loading="lazy" />` : ''}
+          <div class="detail-text">
+            <div class="row-top">
+              ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
+              ${link
+                ? html`<a
+                        class="title title-link"
+                        href=${link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        @click=${(e: Event) => e.stopPropagation()}
+                      >${article.title}</a>`
+                : html`<span class="title">${article.title}</span>`}
+              <button class="star" title="Star" aria-label="Star" @click=${(e: Event) => this.onStar(e, article)}>
+                ${article.starred ? '★' : '☆'}
+              </button>
+            </div>
+            <div class="meta">
+              ${feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
+              <span>${domainOf(article.link)}</span>
+              <span>${formatDate(article.published)}</span>
+              ${article.author ? html`<span>by ${article.author}</span>` : ''}
+            </div>
+            ${article.summary ? html`<div class="summary">${article.summary}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    }
+
+    private renderHeadline(article: Article, feeds: Feed[]) {
+        const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
+        const link = safeHttpUrl(article.link);
+        return html`
+      <div
+        class="row headline ${article.read ? 'read' : ''}"
+        role="button"
+        tabindex="0"
+        aria-label="Open ${article.title}"
+        @click=${() => this.openArticle(article)}
+        @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}
+      >
+        <div class="row-top">
+          ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
+          ${feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
+          ${link
             ? html`<a
                     class="title title-link"
                     href=${link}
@@ -171,14 +265,53 @@ export class TodayView extends LitElement {
                     @click=${(e: Event) => e.stopPropagation()}
                   >${article.title}</a>`
             : html`<span class="title">${article.title}</span>`}
-        <span class="meta">
-          ${feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-          <span>${domainOf(article.link)}</span>
-          <span>${formatDate(article.published)}</span>
-        </span>
-        <button class="star" title="Star" @click=${(e: Event) => this.onStar(e, article)}>
-          ${article.starred ? '★' : '☆'}
-        </button>
+          <span class="headline-date">${formatDate(article.published)}</span>
+          <button class="star" title="Star" aria-label="Star" @click=${(e: Event) => this.onStar(e, article)}>
+            ${article.starred ? '★' : '☆'}
+          </button>
+        </div>
+      </div>
+    `;
+    }
+
+    private renderCard(article: Article, feeds: Feed[]) {
+        const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
+        const link = safeHttpUrl(article.link);
+        return html`
+      <div
+        class="grid-card ${article.read ? 'read' : ''}"
+        role="button"
+        tabindex="0"
+        aria-label="Open ${article.title}"
+        @click=${() => this.openArticle(article)}
+        @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}
+      >
+        ${article.image
+            ? html`<lazy-img class="grid-card-img" .src=${article.image}></lazy-img>`
+            : html`<div class="grid-card-img grid-card-img-empty"></div>`}
+        <div class="grid-card-body">
+          <div class="grid-card-title-row">
+            ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
+            ${link
+                ? html`<a
+                        class="grid-card-title"
+                        href=${link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        @click=${(e: Event) => e.stopPropagation()}
+                      >${article.title}</a>`
+                : html`<span class="grid-card-title">${article.title}</span>`}
+            <button class="star" title="Star" aria-label="Star" @click=${(e: Event) => this.onStar(e, article)}>
+              ${article.starred ? '★' : '☆'}
+            </button>
+          </div>
+          ${article.summary ? html`<div class="grid-card-summary">${article.summary}</div>` : ''}
+          <div class="meta">
+            ${feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
+            <span>${domainOf(article.link)}</span>
+            <span>${formatDate(article.published)}</span>
+          </div>
+        </div>
       </div>
     `;
     }
@@ -219,6 +352,7 @@ export class TodayView extends LitElement {
             this.library.data?.folders ?? [],
             settings.excludedFolderIds,
             settings.perFolder,
+            settings.unreadOnly,
         );
         // A feed in two folders lands in both sections; dedupe so overlay
         // j/k navigation visits each article once.
