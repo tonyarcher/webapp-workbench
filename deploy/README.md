@@ -53,17 +53,52 @@ correctly behind the gateway.
 
 ## Build and run
 
-From the `deploy/` directory (or from the repo root with
-`docker compose -f deploy/docker-compose.yml`):
+From the repo root, use the OS deploy script. It rebuilds images and starts
+the stack, and it picks a Docker engine automatically (see below):
 
 ```sh
-docker compose up -d --build
+./deploy.sh            # Linux / macOS / Git Bash
+.\deploy.ps1           # Windows PowerShell
+npm run deploy         # same entry point
 ```
+
+Useful flags:
+
+```sh
+./deploy.sh --local            # force the local Docker engine
+./deploy.sh --remote           # force the SSH-tunneled remote engine
+./deploy.sh --no-build         # start without rebuilding images
+./deploy.sh --build-only       # build images only
+./deploy.sh --status           # docker compose ps
+./deploy.sh --down             # stop and remove the stack
+```
+
+## One app
+
+Pass an app name to rebuild that image and recreate only that service.
+Do this from the repo root — not from `apps/<name>/`. The Dockerfiles use
+the monorepo as the build context, and tunnel vs local Docker lives in
+one place.
+
+```sh
+./deploy.sh rss                # rebuild + roll out rss-reader
+./deploy.sh baseball           # also accepted: baseball-tracker
+./deploy.sh lemmy stock
+./deploy.sh --remote rss
+./deploy.sh --build-only lemmy
+```
+
+Short names: `baseball`, `rss`, `stock`, `lemmy`, `gateway`.
+
+A local `./build.sh rss` compiles that workspace on this machine. It is
+optional before deploy: each image already runs `npm install` / `npm run
+build` inside Docker (needed for Linux native binaries). Use the local
+build when you want a faster typecheck/compile before sending context
+through the tunnel.
 
 The gateway listens on port `80`. Visit `http://<host>/` for the hello page and
 `http://<host>/baseball/` (plus `/rss-reader/`, `/stock-game/`,
-`/lemmy-vertical-scroll/`) for the apps. Use `docker compose ps` to inspect
-state and `docker compose logs -f <service>` to tail a service's logs.
+`/lemmy-vertical-scroll/`) for the apps.
 
 ## Remote Docker daemon (SSH tunnel)
 
@@ -72,23 +107,21 @@ mounts), and each app build uses a build context from the repo root. All of it
 is pushed through the Docker client to the remote daemon, so you can drive a
 remote server from WSL or any machine.
 
-Set `DOCKER_HOST` to point at the SSH-tunneled daemon, then build/up from the
-repo root or the `deploy/` directory:
+If an SSH tunnel is already exposing the remote daemon on `127.0.0.1:2375`,
+`./deploy.sh` / `.\deploy.ps1` uses it. Otherwise they fall back to local
+Docker. Override with `--local`, `--remote`, `DEPLOY_TARGET`, or `DOCKER_HOST`.
 
 ```sh
-# In a terminal with an SSH tunnel exposing the remote daemon on
-# 127.0.0.1:2375, point the Docker client at it:
-export DOCKER_HOST=tcp://127.0.0.1:2375
+# Optional: expose the remote daemon yourself, then deploy.
+# The script also detects this tunnel without setting DOCKER_HOST.
+ssh -N -L 2375:/var/run/docker.sock user@remote-host
 
-# From the deploy/ directory:
-docker compose up -d --build
-
-# Or from the repo root:
-docker compose -f deploy/docker-compose.yml up -d --build
+./deploy.sh --remote
 ```
 
-Image builds send the whole build context through the tunnel to the remote
-daemon, which assembles and runs the builds there.
+`DOCKER_TUNNEL` changes the tunnel URL (default `tcp://127.0.0.1:2375`). A
+root `.dockerignore` keeps `node_modules/`, `dist/`, and `.git` out of the
+build context so tunnel uploads stay small.
 
 ## Data
 

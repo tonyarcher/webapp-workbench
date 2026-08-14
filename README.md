@@ -43,4 +43,8 @@ Each app directory carries its own `AGENTS.md` with detailed conventions.
 
 `deploy/` holds the nginx reverse-proxy gateway stack: hello world at `/` and
 each app under its own path (`/baseball/`, `/rss-reader/`, `/stock-game/`,
-`/lemmy-vertical-scroll/`). See `deploy/README.md` for build/run instructions.
+`/lemmy-vertical-scroll/`). From the repo root, `./build.sh` / `.\build.ps1`
+builds workspaces locally and `./deploy.sh` / `.\deploy.ps1` brings the
+compose stack up (auto-selects a local Docker engine or an SSH-tunneled
+remote daemon). Pass an app name to do one service: `./deploy.sh rss`.
+See `deploy/README.md` for details.

@@ -32,6 +32,8 @@ directory carries its own `AGENTS.md` with its conventions — read it before to
 | Typecheck all | `npm run typecheck` |
 | Lint all | `npm run lint` |
 | Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:stock-game` / `dev:lemmy` |
+| Build (OS script) | `./build.sh` or `.\build.ps1` (`./build.sh rss` for one app) |
+| Deploy compose stack | `./deploy.sh` or `.\deploy.ps1` (auto local Docker vs SSH tunnel; `./deploy.sh rss` rebuilds one app) |
 
 Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm test`).
 

@@ -16,6 +16,7 @@
     "dev:baseball": "npm run dev -w baseball-tracker",
     "dev:rss-reader": "npm run dev -w rss-reader",
     "dev:stock-game": "npm run dev -w stock-game",
-    "dev:lemmy": "npm run dev -w lemmy-vertical-scroll"
+    "dev:lemmy": "npm run dev -w lemmy-vertical-scroll",
+    "deploy": "node scripts/deploy.mjs"
   }
 }
