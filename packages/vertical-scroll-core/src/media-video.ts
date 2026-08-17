@@ -27,8 +27,13 @@ export class ScrollMediaVideo extends LitElement {
     @state() private candidates: string[] = []
     @state() private resolveFailed = false
     @state() private playing = false
+    @state() private embedTime = 0
+    @state() private embedDuration = 0
 
     private video: HTMLVideoElement | null = null
+    private iframe: HTMLIFrameElement | null = null
+    private stage: HTMLElement | null = null
+    private embedReady = false
     private unsubscribeSound: (() => void) | null = null
     private resolveToken = 0
 
@@ -37,14 +42,29 @@ export class ScrollMediaVideo extends LitElement {
         this.unsubscribeSound = subscribeSound((sound) => {
             this.soundOn = sound
             if (this.video) this.video.muted = !sound
+            this.syncEmbedPlayback()
         })
+        window.addEventListener('message', this.onEmbedMessage)
     }
 
     override disconnectedCallback(): void {
         super.disconnectedCallback()
         this.unsubscribeSound?.()
         this.unsubscribeSound = null
+        window.removeEventListener('message', this.onEmbedMessage)
+        this.iframe = null
+        this.embedReady = false
         this.resolveToken++
+    }
+
+    /**
+     * Embeds are classified from either field (`classifyScrollItem` checks
+     * `url` so a Link post whose page is an embed site still becomes a
+     * video slide). The player must read the same pair or those slides
+     * render as "Video unavailable".
+     */
+    private embedSource(): string | null {
+        return this.item?.videoUrl ?? this.item?.url ?? null
     }
 
     override willUpdate(changed: Map<string, unknown>): void {
@@ -53,9 +73,13 @@ export class ScrollMediaVideo extends LitElement {
             this.poster = null
             this.candidates = []
             this.resolveFailed = false
-            if (embedUrlFor(this.item?.videoUrl ?? null)) return
+            this.embedReady = false
+            this.playing = false
+            this.embedTime = 0
+            this.embedDuration = 0
+            if (embedUrlFor(this.embedSource())) return
             const token = ++this.resolveToken
-            const resolved = resolveVideoUrl(this.item?.videoUrl ?? null)
+            const resolved = resolveVideoUrl(this.item?.videoUrl ?? this.item?.url ?? null)
             if (token !== this.resolveToken) return
             this.src = resolved.src
             this.poster = resolved.poster
@@ -65,12 +89,107 @@ export class ScrollMediaVideo extends LitElement {
     }
 
     override updated(changed: Map<string, unknown>): void {
-        if (changed.has('active') || changed.has('src')) {
+        if (changed.has('active') || changed.has('src') || changed.has('soundOn')) {
             if (this.active) {
                 void this.video?.play().catch(() => {})
             } else {
                 this.video?.pause()
             }
+            this.syncEmbedPlayback()
+        }
+        if (changed.has('active')) this.applyEmbedScale()
+    }
+
+    /** Stable identity so the ref directive only fires on attach/detach. */
+    private readonly onIframeRef = (el: Element | undefined): void => {
+        const iframe = (el as HTMLIFrameElement | undefined) ?? null
+        if (iframe === this.iframe) return
+        this.iframe = iframe
+        this.embedReady = false
+        if (iframe) {
+            this.applyEmbedScale()
+            this.syncEmbedPlayback()
+        }
+    }
+
+    /** Stable identity so the ref directive only fires on attach/detach. */
+    private readonly onStageRef = (el: Element | undefined): void => {
+        const stage = (el as HTMLElement | undefined) ?? null
+        if (stage === this.stage) return
+        this.stage = stage
+        this.applyEmbedScale()
+    }
+
+    /**
+     * TikTok's embed card is a fixed 325px-wide white card. Scale it so the
+     * 9:16 video fills the slide height; the white card-info below the video
+     * overflows the iframe viewport and is cropped. pointer-events: none
+     * keeps the wheel from scrolling the iframe internally (which would
+     * fight the viewport paging).
+     */
+    private applyEmbedScale(): void {
+        const iframe = this.iframe
+        const stage = this.stage
+        const aspect = embedProviderForUrl(this.embedSource())?.iframeAspect
+        if (!iframe || !stage || !aspect || stage.clientHeight === 0) return
+        const CARD_WIDTH = 325
+        const videoHeight = CARD_WIDTH / aspect
+        // iframe is taller than the video so the white card-info sits below
+        // the viewport (no internal scrollbar); the parent clips it.
+        const iframeHeight = videoHeight + 280
+        const scale = Math.min(stage.clientHeight / videoHeight, stage.clientWidth / CARD_WIDTH)
+        iframe.style.width = `${CARD_WIDTH}px`
+        iframe.style.height = `${iframeHeight}px`
+        iframe.style.transform = `translateX(-50%) scale(${scale})`
+    }
+
+    private readonly onEmbedMessage = (event: MessageEvent): void => {
+        if (!this.iframe || event.source !== this.iframe.contentWindow) return
+        const provider = embedProviderForUrl(this.embedSource())
+        const parsed = provider?.parsePlayerMessage?.(event.data)
+        if (parsed) {
+            if (parsed.type === 'ready') {
+                this.embedReady = true
+                this.syncEmbedPlayback()
+                return
+            }
+            if (parsed.type === 'playing') this.playing = true
+            if (parsed.type === 'paused' || parsed.type === 'ended') this.playing = false
+            if (parsed.type === 'time' && !this.seeking) {
+                this.embedTime = parsed.currentTime
+                this.embedDuration = parsed.duration
+            }
+            return
+        }
+        if (!provider?.isPlayerReadyMessage?.(event.data)) return
+        this.embedReady = true
+        this.syncEmbedPlayback()
+    }
+
+    private onIframeLoad(): void {
+        // player/v1 sometimes plays from autoplay=1 before posting ready;
+        // treat load as ready enough to send mute/play.
+        this.embedReady = true
+        this.syncEmbedPlayback()
+    }
+
+    /**
+     * Drive a scriptable embed (TikTok player/v1) via postMessage. Mute
+     * before play so the browser autoplay policy allows it; unmute only
+     * when the session sound flag is on (may still fail without a gesture).
+     */
+    private syncEmbedPlayback(): void {
+        const win = this.iframe?.contentWindow
+        const provider = embedProviderForUrl(this.embedSource())
+        if (!win || !provider?.commandPlayer || !this.embedReady) return
+        if (this.active) {
+            provider.commandPlayer(win, 'mute')
+            provider.commandPlayer(win, 'play')
+            if (this.soundOn) provider.commandPlayer(win, 'unmute')
+            this.playing = true
+        } else {
+            provider.commandPlayer(win, 'pause')
+            this.playing = false
         }
     }
 
@@ -123,36 +242,123 @@ export class ScrollMediaVideo extends LitElement {
         else video.pause()
     }
 
+    private seeking = false
+
+    private onEmbedTap(event: Event): void {
+        event.preventDefault()
+        event.stopPropagation()
+        const win = this.iframe?.contentWindow
+        const provider = embedProviderForUrl(this.embedSource())
+        if (!win || !provider?.commandPlayer) return
+        if (this.playing) {
+            provider.commandPlayer(win, 'pause')
+            this.playing = false
+        } else {
+            provider.commandPlayer(win, 'play')
+            this.playing = true
+        }
+    }
+
+    private onSeekInput(event: Event): void {
+        event.stopPropagation()
+        this.seeking = true
+        this.embedTime = Number((event.target as HTMLInputElement).value)
+    }
+
+    private onSeekCommit(event: Event): void {
+        event.stopPropagation()
+        const win = this.iframe?.contentWindow
+        const provider = embedProviderForUrl(this.embedSource())
+        const seconds = Number((event.target as HTMLInputElement).value)
+        this.embedTime = seconds
+        this.seeking = false
+        if (win && provider?.seekPlayer) provider.seekPlayer(win, seconds)
+    }
+
+    private formatTime(seconds: number): string {
+        if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
+        const whole = Math.floor(seconds)
+        const mins = Math.floor(whole / 60)
+        const secs = whole % 60
+        return `${mins}:${secs.toString().padStart(2, '0')}`
+    }
+
     private onToggleSound(event: Event): void {
         event.preventDefault()
         event.stopPropagation()
-        setSoundOn(!this.soundOn)
+        const next = !this.soundOn
+        setSoundOn(next)
         const video = this.video
         if (video) {
-            video.muted = !this.soundOn
-            if (this.soundOn && this.active) void video.play().catch(() => {})
+            video.muted = !next
+            if (next && this.active) void video.play().catch(() => {})
+        }
+        const win = this.iframe?.contentWindow
+        const provider = embedProviderForUrl(this.embedSource())
+        if (win && provider?.commandPlayer) {
+            provider.commandPlayer(win, next ? 'unmute' : 'mute')
         }
     }
 
     private renderEmbed(): TemplateResult {
-        const videoUrl = this.item?.videoUrl ?? null
+        const videoUrl = this.embedSource()
         const provider = embedProviderForUrl(videoUrl)
         const embedUrl = embedUrlFor(videoUrl)
-        const poster = embedPosterFor(videoUrl)
-        // the embed player is only mounted while the slide is active, so
-        // off-screen gifs/videos never play or load
+        const poster = this.item?.thumbnailUrl ?? embedPosterFor(videoUrl)
         if (!embedUrl) return html``
+        // Unload on scroll: the iframe mounts only while the slide is
+        // active, so the previous clip's sound stops and memory is freed.
+        const mount = this.active
+        const framed = provider?.iframeAspect ? ' framed' : ''
+        const scriptable = !!provider?.commandPlayer
         return html`
-            <div class="media-stage embed">
-                ${this.active
-                    ? html`<iframe
-                        class="media-iframe"
-                        src=${embedUrl}
-                        title="${provider?.name ?? 'embedded'} video"
-                        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                        allowfullscreen
-                        referrerpolicy=${provider?.iframeReferrerPolicy ?? 'no-referrer'}
-                    ></iframe>`
+            <div class="media-stage embed" ${ref(this.onStageRef)}>
+                ${mount
+                    ? html`<div class="embed-frame${framed}">
+                        <iframe
+                            class="media-iframe"
+                            src=${embedUrl}
+                            title="${provider?.name ?? 'embedded'} video"
+                            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                            scrolling="no"
+                            referrerpolicy=${provider?.iframeReferrerPolicy ?? 'no-referrer'}
+                            @load=${this.onIframeLoad}
+                            ${ref(this.onIframeRef)}
+                        ></iframe>
+                    </div>
+                    ${scriptable
+                        ? html`<div class="letterbox-side left"></div>
+                        <div class="letterbox-side right"></div>
+                        <button class="embed-tap" aria-label=${this.playing ? 'Pause video' : 'Play video'} @click=${this.onEmbedTap}></button>
+                        <button
+                            class="center-play${this.playing ? ' playing' : ''}"
+                            aria-label=${this.playing ? 'Pause video' : 'Play video'}
+                            @click=${this.onEmbedTap}
+                        >${this.playing ? PAUSE_ICON : PLAY_ICON}</button>
+                        <button
+                            class="sound-button${this.soundOn ? ' on' : ''}"
+                            aria-label=${this.soundOn ? 'Mute video' : 'Unmute video'}
+                            @click=${this.onToggleSound}
+                        >${this.soundOn ? SOUND_ON_ICON : SOUND_OFF_ICON}</button>
+                        ${this.embedDuration > 0
+                            ? html`<div class="seek-bar">
+                                <span class="seek-time">${this.formatTime(this.embedTime)}</span>
+                                <input
+                                    class="seek-input"
+                                    type="range"
+                                    min="0"
+                                    max=${this.embedDuration}
+                                    step="0.1"
+                                    .value=${String(this.embedTime)}
+                                    aria-label="Seek"
+                                    @pointerdown=${(event: Event) => event.stopPropagation()}
+                                    @input=${this.onSeekInput}
+                                    @change=${this.onSeekCommit}
+                                >
+                                <span class="seek-time">${this.formatTime(this.embedDuration)}</span>
+                            </div>`
+                            : html``}`
+                        : html``}`
                     : html`<div class="embed-placeholder">
                         ${poster
                             ? html`<img class="embed-poster" src=${poster} alt="" loading="lazy">`
@@ -210,7 +416,7 @@ export class ScrollMediaVideo extends LitElement {
     }
 
     override render(): TemplateResult {
-        return embedUrlFor(this.item?.videoUrl ?? null) ? this.renderEmbed() : this.renderNative()
+        return embedUrlFor(this.embedSource()) ? this.renderEmbed() : this.renderNative()
     }
 }
 

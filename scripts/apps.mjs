@@ -30,6 +30,13 @@ export const APPS = [
     summary: "Lemmy vertical scroll (also builds vertical-scroll-core)",
   },
   {
+    id: "tiktok-scroll",
+    service: "tiktok-scroll",
+    workspaces: ["vertical-scroll-core", "tiktok-scroll"],
+    aliases: ["tiktok-scroll", "tiktok", "apps/tiktok-scroll"],
+    summary: "TikTok list vertical scroll (also builds vertical-scroll-core)",
+  },
+  {
     id: "gateway",
     service: "gateway",
     workspaces: [],

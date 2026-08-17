@@ -2,7 +2,7 @@
   "name": "tonyarcher-apps",
   "private": true,
   "version": "0.1.0",
-  "description": "Monorepo for tonyarcher's apps: baseball, rss-reader, stock-game, lemmy-vertical-scroll.",
+  "description": "Monorepo for tonyarcher's apps: baseball, rss-reader, stock-game, lemmy-vertical-scroll, tiktok-scroll.",
   "workspaces": [
     "apps/*",
     "apps/stock-game/*",
@@ -17,6 +17,7 @@
     "dev:rss-reader": "npm run dev -w rss-reader",
     "dev:stock-game": "npm run dev -w stock-game",
     "dev:lemmy": "npm run dev -w lemmy-vertical-scroll",
+    "dev:tiktok": "npm run dev -w tiktok-scroll",
     "deploy": "node scripts/deploy.mjs"
   }
 }

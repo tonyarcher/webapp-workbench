@@ -1,7 +1,8 @@
 # Deployment
 
-Docker Compose stack that runs a reverse-proxy gateway in front of four
-SPA apps (Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll). It is
+Docker Compose stack that runs a reverse-proxy gateway in front of five
+SPA apps (Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll, TikTok
+Scroll). It is
 designed to run on a remote Ubuntu host with Docker (or K3s / a
 Docker-compatible container runtime) already installed.
 
@@ -11,7 +12,7 @@ Docker-compatible container runtime) already installed.
 - `nginx/default.conf` — gateway config copied into the `gateway` image.
 - `hello/index.html` — static hello-world page copied into the `gateway` image and served at the root `/`.
 - `gateway/` — Dockerfile that builds the `gateway` image from the `deploy/` context.
-- `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/` — Dockerfiles + nginx configs for the static apps.
+- `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `tiktok-scroll/` — Dockerfiles + nginx configs for the static apps.
 - `stock-game/` — Dockerfile + `server-host.mjs`, a tiny dependency-free Node HTTP host that runs the built TanStack Start fetch handler.
 
 All app Dockerfiles use the repo root as the build context (`context: ..` in
@@ -31,6 +32,7 @@ through unchanged. The `gateway` image is built from the `deploy/` context.
 | `/rss-reader/` | RSS Reader (nginx static, prefix stripped) |
 | `/stock-game/` | Stock Game (node server, basepath-aware, prefix NOT stripped) |
 | `/lemmy-vertical-scroll/` | Lemmy Vertical Scroll (nginx static, prefix stripped) |
+| `/tiktok-scroll/` | TikTok Scroll (nginx static, prefix stripped) |
 
 The bare paths (e.g. `/stock-game`) redirect to their trailing-slash forms.
 Each app is served under its own subpath with the base baked in at build time
@@ -39,7 +41,7 @@ correctly behind the gateway.
 
 ## How each app is served
 
-- **Baseball, RSS Reader, Lemmy Vertical Scroll** are static Vite builds served
+- **Baseball, RSS Reader, Lemmy Vertical Scroll, TikTok Scroll** are static Vite builds served
   by an nginx container. The gateway strips the app's prefix and nginx serves
   the built `dist/` at the root, with gzip, an SPA fallback to `index.html`,
   no-cache for the shell/service worker, and long-lived immutable caching for
@@ -88,7 +90,7 @@ one place.
 ./deploy.sh --build-only lemmy
 ```
 
-Short names: `baseball`, `rss`, `stock`, `lemmy`, `gateway`.
+Short names: `baseball`, `rss`, `stock`, `lemmy`, `tiktok`, `gateway`.
 
 A local `./build.sh rss` compiles that workspace on this machine. It is
 optional before deploy: each image already runs `npm install` / `npm run
@@ -98,7 +100,7 @@ through the tunnel.
 
 The gateway listens on port `80`. Visit `http://<host>/` for the hello page and
 `http://<host>/baseball/` (plus `/rss-reader/`, `/stock-game/`,
-`/lemmy-vertical-scroll/`) for the apps.
+`/lemmy-vertical-scroll/`, `/tiktok-scroll/`) for the apps.
 
 ## Remote Docker daemon (SSH tunnel)
 

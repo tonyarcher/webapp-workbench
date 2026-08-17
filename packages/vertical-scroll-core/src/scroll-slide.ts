@@ -2,6 +2,7 @@ import {LitElement, html, nothing, svg, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, property, state} from 'lit/decorators.js'
 import {classifyScrollItem} from './media'
+import {embedProviderForUrl} from './embeds'
 import {compactNumber, timeAgo} from './format'
 import {safeUrl} from './url'
 import type {ScrollItem} from './types'
@@ -77,6 +78,19 @@ export class ScrollSlide extends LitElement {
         const isVideo = classifyScrollItem(item) === 'video'
         const original = safeUrl(item.originalUrl ?? null)
         const subtitle = item.metaLine ?? (item.date ? timeAgo(item.date) : null)
+        // TikTok embeds already show author/caption inside the player; the
+        // app-style overlay would duplicate it, so keep only the open link.
+        const isTiktokEmbed = embedProviderForUrl(item.videoUrl ?? item.url ?? null)?.name === 'tiktok'
+        if (isTiktokEmbed) {
+            return html`
+                <div class="scroll-slide">
+                    <div class="media-wrap">${this.renderMedia()}</div>
+                    ${original
+                        ? html`<a class="open-chip" href=${original} target="_blank" rel="noopener noreferrer">Open original ↗</a>`
+                        : nothing}
+                </div>
+            `
+        }
         return html`
             <div class="scroll-slide">
                 <div class="media-wrap">${this.renderMedia()}</div>

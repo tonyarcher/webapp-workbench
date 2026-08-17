@@ -10,6 +10,7 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
+    contain: paint;
     color: var(--text);
     background: var(--bg);
 }
@@ -154,6 +155,27 @@
 }
 
 .link-chip:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+/* Minimal overlay for TikTok embed slides: a single open-original chip so
+   the video stays full-bleed without the app-style description bar. */
+.open-chip {
+    position: absolute;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-size: 13px;
+    text-decoration: none;
+    z-index: 3;
+    pointer-events: auto;
+}
+
+.open-chip:hover {
     background: rgba(0, 0, 0, 0.7);
 }
 

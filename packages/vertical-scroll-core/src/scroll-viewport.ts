@@ -21,6 +21,8 @@ export class ScrollViewport extends LitElement {
     @property({attribute: false}) loading = false
     @property({attribute: false}) error: string | null = null
     @property({attribute: false}) resetKey = ''
+    /** Slide to land on after mount / resetKey. Used to restore a saved position. */
+    @property({attribute: false}) startIndex = 0
 
     @state() private activeIndex = 0
     @state() private dragging = false
@@ -33,7 +35,7 @@ export class ScrollViewport extends LitElement {
     private scrollRaf: number | null = null
     private scrollTimer: ReturnType<typeof setTimeout> | null = null
     private prevResetKey = ''
-    private prevItems: ScrollItem[] = []
+    private startApplied = false
 
     override connectedCallback(): void {
         super.connectedCallback()
@@ -52,18 +54,19 @@ export class ScrollViewport extends LitElement {
         this.cancelScroll()
     }
 
-    /** Reset to the top when the resetKey or items identity changes. */
+    /** Reset when resetKey changes (a new list). Enriching items in place
+     *  must not jump the viewport. Lands on startIndex, not always 0. */
     override willUpdate(changed: Map<string, unknown>): void {
-        if (changed.has('resetKey') || changed.has('items')) {
+        if (changed.has('resetKey')) {
             const keyChanged = this.prevResetKey !== '' && this.prevResetKey !== this.resetKey
-            const itemsChanged = this.prevItems.length > 0 && this.prevItems !== this.items
-            if (keyChanged || itemsChanged) {
-                if (this.viewport) this.viewport.scrollTop = 0
-                this.activeIndex = 0
-            }
+            if (keyChanged) this.startApplied = false
             this.prevResetKey = this.resetKey
-            this.prevItems = this.items
         }
+        if (changed.has('startIndex')) this.startApplied = false
+    }
+
+    override updated(_changed: Map<string, unknown>): void {
+        this.applyStartIndex()
     }
 
     /** Stable identity so the ref directive only fires on attach/detach, not every render. */
@@ -71,10 +74,26 @@ export class ScrollViewport extends LitElement {
         const viewport = el as HTMLElement | null
         if (viewport === this.viewport) return
         this.viewport = viewport
-        if (viewport) {
-            viewport.scrollTop = 0
-            this.activeIndex = 0
-        }
+        this.startApplied = false
+        if (viewport) this.applyStartIndex()
+    }
+
+    private applyStartIndex(): void {
+        const viewport = this.viewport
+        if (this.startApplied || !viewport || viewport.clientHeight === 0 || this.items.length === 0) return
+        const target = Math.max(0, Math.min(this.startIndex, this.items.length - 1))
+        viewport.scrollTop = target * viewport.clientHeight
+        this.activeIndex = target
+        this.startApplied = true
+        this.onScroll()
+    }
+
+    /**
+     * Jump to a slide. Used by app chrome (progress rail). Clamps to
+     * `[0, items.length)`.
+     */
+    goToIndex(index: number): void {
+        this.scrollToSlide(index)
     }
 
     /**

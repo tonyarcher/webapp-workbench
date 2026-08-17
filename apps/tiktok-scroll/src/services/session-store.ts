@@ -1,0 +1,108 @@
+import type {SavedSession, SkippedLink, TikTokLink} from '../types'
+
+export const SESSION_KEY = 'tts-session'
+const PROGRESS_KEY = 'tts-session-progress'
+
+function compactLink(link: TikTokLink): TikTokLink {
+    const out: TikTokLink = {id: link.id, url: link.url}
+    if (link.author) out.author = link.author
+    if (link.date) out.date = link.date
+    if (link.pageUrl) out.pageUrl = link.pageUrl
+    if (link.title) out.title = link.title
+    return out
+}
+
+function isLink(value: unknown): value is TikTokLink {
+    if (!value || typeof value !== 'object') return false
+    const link = value as TikTokLink
+    return typeof link.id === 'string' && link.id.length > 0 && typeof link.url === 'string' && link.url.length > 0
+}
+
+function isSkipped(value: unknown): value is SkippedLink {
+    if (!value || typeof value !== 'object') return false
+    const skipped = value as SkippedLink
+    return (
+        typeof skipped.url === 'string' &&
+        (skipped.reason === 'short-link' || skipped.reason === 'no-id' || skipped.reason === 'not-tiktok')
+    )
+}
+
+/** Parse a stored session blob. Returns null when missing or corrupt. */
+export function parseSession(raw: string | null): SavedSession | null {
+    if (!raw) return null
+    try {
+        const data = JSON.parse(raw) as unknown
+        if (!data || typeof data !== 'object') return null
+        const session = data as Partial<SavedSession>
+        if (session.version !== 1 || !Array.isArray(session.items) || session.items.length === 0) return null
+        const items = session.items.filter(isLink)
+        if (items.length === 0) return null
+        const skipped = Array.isArray(session.skipped) ? session.skipped.filter(isSkipped) : []
+        const activeIndex = typeof session.activeIndex === 'number' && session.activeIndex >= 0 ? Math.floor(session.activeIndex) : 0
+        const maxSeen = typeof session.maxSeen === 'number' && session.maxSeen >= 0 ? Math.floor(session.maxSeen) : activeIndex
+        return {version: 1, items, skipped, activeIndex, maxSeen}
+    } catch {
+        return null
+    }
+}
+
+export function serializeSession(session: SavedSession): string {
+    const payload: SavedSession = {
+        version: 1,
+        items: session.items.map(compactLink),
+        skipped: session.skipped,
+        activeIndex: session.activeIndex,
+        maxSeen: session.maxSeen,
+    }
+    return JSON.stringify(payload)
+}
+
+export function loadSession(): SavedSession | null {
+    try {
+        const session = parseSession(localStorage.getItem(SESSION_KEY))
+        if (!session) return null
+        const progressRaw = localStorage.getItem(PROGRESS_KEY)
+        if (progressRaw) {
+            const progress = JSON.parse(progressRaw) as {activeIndex?: unknown; maxSeen?: unknown}
+            if (typeof progress.activeIndex === 'number' && progress.activeIndex >= 0) {
+                session.activeIndex = Math.floor(progress.activeIndex)
+            }
+            if (typeof progress.maxSeen === 'number' && progress.maxSeen >= 0) {
+                session.maxSeen = Math.floor(progress.maxSeen)
+            }
+        }
+        return session
+    } catch {
+        return null
+    }
+}
+
+export function saveSession(session: SavedSession): void {
+    try {
+        localStorage.setItem(SESSION_KEY, serializeSession(session))
+        localStorage.setItem(
+            PROGRESS_KEY,
+            JSON.stringify({activeIndex: session.activeIndex, maxSeen: session.maxSeen}),
+        )
+    } catch {
+        // quota / private mode — list stays in memory for this visit
+    }
+}
+
+/** Write only the cursor so scrolling a long list does not re-serialize every row. */
+export function saveProgress(activeIndex: number, maxSeen: number): void {
+    try {
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify({activeIndex, maxSeen}))
+    } catch {
+        // ignore
+    }
+}
+
+export function clearSession(): void {
+    try {
+        localStorage.removeItem(SESSION_KEY)
+        localStorage.removeItem(PROGRESS_KEY)
+    } catch {
+        // ignore
+    }
+}

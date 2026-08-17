@@ -3,6 +3,8 @@
     height: 100%;
     position: relative;
     user-select: none;
+    overflow: hidden;
+    contain: paint;
 }
 
 .scroll-viewport {
@@ -12,6 +14,11 @@
     overscroll-behavior: contain;
     scroll-snap-type: y mandatory;
     touch-action: pan-y;
+    scrollbar-width: none;
+}
+
+.scroll-viewport::-webkit-scrollbar {
+    display: none;
 }
 
 .scroll-viewport.no-snap {

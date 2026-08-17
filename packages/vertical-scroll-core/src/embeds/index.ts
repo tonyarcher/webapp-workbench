@@ -1,14 +1,15 @@
 import type {EmbedProvider} from './types'
 import {REDGIFS} from './redgifs'
+import {TIKTOK} from './tiktok'
 import {YOUTUBE} from './youtube'
 import {stripImageProxy} from './util'
 
-export type {EmbedProvider} from './types'
+export type {EmbedProvider, EmbedPlayerEvent} from './types'
 
 /** All built-in embed providers, in matching priority order. */
-export const EMBED_PROVIDERS: readonly EmbedProvider[] = [REDGIFS, YOUTUBE]
+export const EMBED_PROVIDERS: readonly EmbedProvider[] = [REDGIFS, TIKTOK, YOUTUBE]
 
-const registeredProviders: EmbedProvider[] = [REDGIFS, YOUTUBE]
+const registeredProviders: EmbedProvider[] = [REDGIFS, TIKTOK, YOUTUBE]
 
 export function registerEmbedProvider(provider: EmbedProvider): void {
     registeredProviders.push(provider)

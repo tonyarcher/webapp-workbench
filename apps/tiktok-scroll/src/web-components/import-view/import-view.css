@@ -1,0 +1,142 @@
+:host {
+    display: block;
+    height: 100%;
+}
+
+.import {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 48px 24px;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.title {
+    margin: 0;
+    font-size: 22px;
+    color: var(--text);
+}
+
+.help {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-soft);
+    text-align: center;
+}
+
+.file-input {
+    font: inherit;
+    font-size: 13px;
+    color: var(--text-soft);
+}
+
+.paste {
+    width: 100%;
+    min-height: 180px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.paste:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.load-button,
+.start-button {
+    padding: 8px 20px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.load-button:hover {
+    background: var(--surface-hover);
+}
+
+.start-button {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+}
+
+.start-button:hover {
+    filter: brightness(1.1);
+}
+
+.summary {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-soft);
+}
+
+.skipped {
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    box-sizing: border-box;
+}
+
+.skipped-title {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.skipped-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.skipped-item {
+    display: flex;
+    gap: 8px;
+    padding: 2px 0;
+    font-size: 12px;
+}
+
+.skipped-reason {
+    flex: none;
+    color: var(--accent);
+}
+
+.skipped-url {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-dim);
+}
+
+.skipped-hint {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--text-dim);
+}
