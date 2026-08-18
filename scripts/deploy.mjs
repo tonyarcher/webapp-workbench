@@ -369,7 +369,7 @@ async function main() {
   }
 
   if (!existsSync(join(ROOT, COMPOSE_FILE))) {
-    throw new Error(`Missing ${COMPOSE_FILE} (run this from the tonyarcher-apps repo).`);
+    throw new Error(`Missing ${COMPOSE_FILE} (run this from the webapp-workbench repo).`);
   }
 
   const { services, composeExtras } = splitExtra(flags.extra);

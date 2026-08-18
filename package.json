@@ -1,8 +1,8 @@
 {
-  "name": "tonyarcher-apps",
+  "name": "webapp-workbench",
   "private": true,
   "version": "0.1.0",
-  "description": "Monorepo for tonyarcher's apps: baseball, rss-reader, stock-game, lemmy-vertical-scroll, tiktok-scroll.",
+  "description": "Sandbox of small web apps: baseball tracker, rss-reader, stock-game, lemmy-vertical-scroll, tiktok-scroll.",
   "workspaces": [
     "apps/*",
     "apps/stock-game/*",

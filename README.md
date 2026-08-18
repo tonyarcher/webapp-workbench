@@ -1,8 +1,8 @@
-# tonyarcher-apps
+# webapp-workbench
 
-Tony's personal playground of nginx-fronted TypeScript applications. Every app
-is an SPA, focused on one thing, and served behind the same reverse-proxy
-gateway.
+A sandbox of small webapp ideas collected over the years — personal tools and a
+portfolio. Every app is an SPA, focused on one thing, and served behind the
+same reverse-proxy gateway.
 
 ## Apps
 

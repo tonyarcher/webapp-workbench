@@ -4,7 +4,7 @@ Instructions for AI agents working in this monorepo. Keep responses concise and 
 
 ## Project
 
-npm-workspaces monorepo for tonyarcher's personal apps. All apps are TypeScript + Vite; each app
+npm-workspaces monorepo of small TypeScript web apps (tools and portfolio pieces). All apps are TypeScript + Vite; each app
 directory carries its own `AGENTS.md` with its conventions — read it before touching that app.
 
 ## Layout
