@@ -86,10 +86,10 @@ function parsePlayerMessage(data: unknown): EmbedPlayerEvent | null {
 }
 
 function commandPlayer(win: Window, command: 'play' | 'pause' | 'mute' | 'unmute'): void {
+    // Official host→player methods take void; mute's extra `value: true`
+    // was leaving some players in a ducked "background" volume after unMute.
     const type = command === 'unmute' ? 'unMute' : command
-    const msg: Record<string, unknown> = {type, [TIKTOK_PLAYER_FLAG]: true}
-    if (command === 'mute') msg.value = true
-    win.postMessage(msg, TIKTOK_PLAYER_ORIGIN)
+    win.postMessage({type, [TIKTOK_PLAYER_FLAG]: true}, TIKTOK_PLAYER_ORIGIN)
 }
 
 function seekPlayer(win: Window, seconds: number): void {
@@ -114,7 +114,7 @@ export const TIKTOK: EmbedProvider = {
         // play_button=0 so our tap overlay + sound toggle own the chrome.
         return id
             ? safeUrl(
-                  `https://www.tiktok.com/player/v1/${id}?autoplay=1&loop=1&play_button=0&music_info=0&description=0&rel=0&progress_bar=0&volume_control=0&fullscreen_button=0`,
+                   `https://www.tiktok.com/player/v1/${id}?autoplay=1&loop=1&muted=0&play_button=0&music_info=0&description=0&rel=0&progress_bar=0&volume_control=0&fullscreen_button=0`,
               )
             : null
     },

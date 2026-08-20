@@ -208,15 +208,16 @@ export class ScrollMediaVideo extends LitElement {
 
     /**
      * Drive a scriptable embed (TikTok player/v1) via postMessage. Mute
-     * before play so the browser autoplay policy allows it; unmute only
-     * when the session sound flag is on (may still fail without a gesture).
+     * before play only while the session is silent so autoplay is allowed.
+     * Once the user has turned sound on, skip mute — mute+unMute in the
+     * same turn can leave the embed at a ducked volume.
      */
     private syncEmbedPlayback(): void {
         const win = this.iframe?.contentWindow
         const provider = embedProviderForUrl(this.embedSource())
         if (!win || !provider?.commandPlayer || !this.embedReady) return
         if (this.active) {
-            provider.commandPlayer(win, 'mute')
+            if (!this.soundOn) provider.commandPlayer(win, 'mute')
             provider.commandPlayer(win, 'play')
             if (this.soundOn) provider.commandPlayer(win, 'unmute')
             this.setPlaying(true)
