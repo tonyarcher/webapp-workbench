@@ -41,6 +41,18 @@
     height: 100%;
 }
 
+/* 56.25vh = 9/16 of viewport height. Extra iframe width is where
+   player/v1 composites a second, blurred copy of the clip. */
+.embed-frame.portrait {
+    width: min(100%, 56.25vh);
+    height: 100%;
+    flex: none;
+}
+
+.embed-frame.portrait iframe {
+    pointer-events: none;
+}
+
 .embed-frame.framed {
     position: absolute;
     inset: 0;
@@ -65,25 +77,6 @@
     padding: 0;
     background: none;
     cursor: pointer;
-}
-
-/* Cover the player's blurred/zoomed side fill so only the 9:16 picture shows. */
-.letterbox-side {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    z-index: 3;
-    width: max(0px, calc((100% - 56.25vh) / 2));
-    background: #000;
-    pointer-events: none;
-}
-
-.letterbox-side.left {
-    left: 0;
-}
-
-.letterbox-side.right {
-    right: 0;
 }
 
 .seek-bar {

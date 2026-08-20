@@ -325,11 +325,14 @@ export class ScrollMediaVideo extends LitElement {
         // active, so the previous clip's sound stops and memory is freed.
         const mount = this.active
         const framed = provider?.iframeAspect ? ' framed' : ''
+        // player/v1 paints a blurred clone in extra iframe width; 9:16
+        // leaves it no canvas for that fill (and no second decoder).
+        const portrait = provider?.name === 'tiktok' ? ' portrait' : ''
         const scriptable = !!provider?.commandPlayer
         return html`
             <div class="media-stage embed" ${ref(this.onStageRef)}>
                 ${mount
-                    ? html`<div class="embed-frame${framed}">
+                    ? html`<div class="embed-frame${framed}${portrait}">
                         <iframe
                             class="media-iframe"
                             src=${embedUrl}
@@ -342,9 +345,7 @@ export class ScrollMediaVideo extends LitElement {
                         ></iframe>
                     </div>
                     ${scriptable
-                        ? html`<div class="letterbox-side left"></div>
-                        <div class="letterbox-side right"></div>
-                        <button class="embed-tap" aria-label=${this.playing ? 'Pause video' : 'Play video'} @click=${this.onEmbedTap}></button>
+                        ? html`<button class="embed-tap" aria-label=${this.playing ? 'Pause video' : 'Play video'} @click=${this.onEmbedTap}></button>
                         <button
                             class="sound-button${this.soundOn ? ' on' : ''}"
                             aria-label=${this.soundOn ? 'Mute video' : 'Unmute video'}

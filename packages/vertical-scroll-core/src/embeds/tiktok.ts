@@ -109,8 +109,9 @@ export const TIKTOK: EmbedProvider = {
     embedUrl(url) {
         const id = tiktokId(url ?? '')
         // player/v1 is a full-bleed video player — no 325px white card, no
-        // giant init play button, no description column. play_button=0 so
-        // our tap overlay + sound toggle own the chrome.
+        // giant init play button, no description column. The iframe is
+        // sized 9:16 so the player never paints its blurred side-fill.
+        // play_button=0 so our tap overlay + sound toggle own the chrome.
         return id
             ? safeUrl(
                   `https://www.tiktok.com/player/v1/${id}?autoplay=1&loop=1&play_button=0&music_info=0&description=0&rel=0&progress_bar=0&volume_control=0&fullscreen_button=0`,
