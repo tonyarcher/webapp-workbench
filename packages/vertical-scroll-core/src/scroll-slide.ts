@@ -6,9 +6,9 @@ import {embedProviderForUrl} from './embeds'
 import {compactNumber, timeAgo} from './format'
 import {safeUrl} from './url'
 import type {ScrollItem} from './types'
+import {ScrollMediaVideo} from './media-video'
 import './media-image'
 import './media-text'
-import './media-video'
 import styles from './scroll-slide.css?inline'
 
 const UP_ICON = svg`<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M6 2 11 10H1Z" fill="currentColor"/></svg>`
@@ -34,6 +34,11 @@ export class ScrollSlide extends LitElement {
 
     private toggleExpanded(): void {
         this.expanded = !this.expanded
+    }
+
+    togglePlay(): void {
+        const video = this.renderRoot.querySelector('vsc-media-video') as ScrollMediaVideo | null
+        video?.togglePlay()
     }
 
     private renderMedia(): TemplateResult {
@@ -78,16 +83,23 @@ export class ScrollSlide extends LitElement {
         const isVideo = classifyScrollItem(item) === 'video'
         const original = safeUrl(item.originalUrl ?? null)
         const subtitle = item.metaLine ?? (item.date ? timeAgo(item.date) : null)
-        // TikTok embeds already show author/caption inside the player; the
-        // app-style overlay would duplicate it, so keep only the open link.
+        // TikTok player/v1 hides its own author/caption (description=0), so
+        // the slide owns a letterbox meta stack instead of the app overlay bar.
         const isTiktokEmbed = embedProviderForUrl(item.videoUrl ?? item.url ?? null)?.name === 'tiktok'
         if (isTiktokEmbed) {
+            const authorLabel = item.author ? `@${item.author}` : null
+            const caption = item.title && item.title !== authorLabel && item.title !== `TikTok ${item.id}` ? item.title : null
+            const metaEmpty = !authorLabel && !caption && !original
             return html`
                 <div class="scroll-slide">
                     <div class="media-wrap">${this.renderMedia()}</div>
-                    ${original
-                        ? html`<a class="open-chip" href=${original} target="_blank" rel="noopener noreferrer">Open original ↗</a>`
-                        : nothing}
+                    ${metaEmpty
+                        ? nothing
+                        : html`<div class="slide-meta">
+                            ${authorLabel ? html`<div class="meta-author">${authorLabel}</div>` : nothing}
+                            ${caption ? html`<div class="meta-caption">${caption}</div>` : nothing}
+                            ${original ? html`<a class="meta-open" href=${original} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>Open original ↗</a>` : nothing}
+                        </div>`}
                 </div>
             `
         }

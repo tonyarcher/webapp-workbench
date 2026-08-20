@@ -158,28 +158,66 @@
     background: rgba(0, 0, 0, 0.7);
 }
 
-/* Minimal overlay for TikTok embed slides: a single open-original chip so
-   the video stays full-bleed without the app-style description bar. */
-.open-chip {
+/* Left letterbox. Sidebar may set --slide-meta-left to sit in the
+   remaining black beside the list. Gutter max-width only applies when
+   the viewport is wider than 9:16; otherwise a compact fallback. */
+.slide-meta {
     position: absolute;
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 8px 14px;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.5);
+    left: var(--slide-meta-left, 16px);
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    z-index: 4;
+    max-width: min(220px, 60vw);
+    pointer-events: none;
     color: #fff;
-    font-size: 13px;
-    text-decoration: none;
-    z-index: 3;
-    pointer-events: auto;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.open-chip:hover {
-    background: rgba(0, 0, 0, 0.7);
+@media (min-aspect-ratio: 10/16) {
+    .slide-meta {
+        max-width: min(260px, calc((100% - 56.25vh) / 2 - 32px));
+    }
+}
+
+.meta-author {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.meta-caption {
+    font-size: 13px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.meta-open {
+    pointer-events: auto;
+    margin-top: 2px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    text-decoration: none;
+    width: fit-content;
+}
+
+.meta-open:hover {
+    color: #fff;
+    text-decoration: underline;
 }
 
 @media (max-width: 768px) {
+    .slide-meta {
+        bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+        max-width: min(60%, 220px);
+    }
+
     .slide-overlay {
         padding: 20px 16px calc(12px + env(safe-area-inset-bottom, 0px));
     }

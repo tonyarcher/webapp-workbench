@@ -152,51 +152,6 @@
     display: block;
 }
 
-/* Center play: faded while paused unless hovered/focused; hidden while
-   playing unless the stage is highlighted. */
-.center-play {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 76px;
-    height: 76px;
-    border: none;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.55);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 5;
-    opacity: 0.35;
-    transition: opacity 0.2s ease;
-}
-
-.media-stage:hover .center-play,
-.center-play:focus-visible {
-    opacity: 1;
-}
-
-.center-play.playing {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.media-stage:hover .center-play.playing {
-    opacity: 0.85;
-    pointer-events: auto;
-}
-
-.center-play:hover {
-    background: rgba(0, 0, 0, 0.75);
-}
-
-.center-play svg {
-    display: block;
-}
-
 .video-spinner {
     width: 40px;
     height: 40px;

@@ -67,6 +67,8 @@ export class ProgressSidebar extends LitElement {
                     ${this.items.map((item, index) => {
                         const active = index === this.activeIndex
                         const seen = index <= this.maxSeen
+                        const user = item.author ? `@${item.author}` : null
+                        const label = item.date && user ? `${item.date} / ${user}` : item.date ?? user ?? item.id
                         return html`<li class="row${active ? ' active' : ''}${seen ? ' seen' : ''}">
                             <button
                                 class="row-button"
@@ -75,7 +77,7 @@ export class ProgressSidebar extends LitElement {
                                 @click=${this.onJump}
                             >
                                 <span class="row-num">#${index + 1}</span>
-                                <span class="row-label">${item.author ? `@${item.author}` : item.date ? item.date : item.id}</span>
+                                <span class="row-label">${label}</span>
                             </button>
                         </li>`
                     })}

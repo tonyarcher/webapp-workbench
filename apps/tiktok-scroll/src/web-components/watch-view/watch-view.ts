@@ -10,6 +10,8 @@ import 'vertical-scroll-core'
 import '../progress-sidebar/progress-sidebar'
 import styles from './watch-view.css?inline'
 
+const MAX_OEMBED_ATTEMPTS = 3
+
 @customElement('tts-watch-view')
 export class WatchView extends LitElement {
     static override styles = unsafeCSS(styles)
@@ -29,12 +31,11 @@ export class WatchView extends LitElement {
     private viewport: ScrollViewport | null = null
     private prevItems: TikTokLink[] = []
     private resolving = new Set<string>()
+    private resolveAttempts = new Map<string, number>()
     private resolveAbort: AbortController | null = null
     private listGen = 0
-    /** Ad blockers return ERR_BLOCKED_BY_CLIENT for tiktok.com/oembed; stop after a couple of fails. */
-    private oembedDisabled = false
-    private oembedFails = 0
     private progressTimer: ReturnType<typeof setTimeout> | null = null
+    private linksSaveTimer: ReturnType<typeof setTimeout> | null = null
 
     override willUpdate(changed: Map<string, unknown>): void {
         if (changed.has('items')) {
@@ -50,25 +51,33 @@ export class WatchView extends LitElement {
                 this.activeIndex = this.startIndex
                 this.maxSeen = Math.max(this.startMaxSeen, this.startIndex)
                 this.resolving.clear()
-                this.oembedFails = 0
+                this.resolveAttempts.clear()
                 this.resolveAround(this.activeIndex)
             }
         }
     }
 
-    /** Resolve the real `/@user/video/{id}` page for the active clip and a few ahead. */
+    /** Resolve author/title for the active clip and a few ahead. Failed
+     *  probes are retried when the slide is visited again (abort is not a
+     *  failure). After a few misses we stop that id so a blocker cannot
+     *  hammer oEmbed on every scroll. */
     private resolveAround(index: number): void {
-        if (this.oembedDisabled) return
         const signal = this.resolveAbort?.signal
         const to = Math.min(this.links.length, index + 4)
         for (let i = index; i < to; i++) {
             const link = this.links[i]
             if (!link || link.pageUrl || this.resolving.has(link.id)) continue
+            if ((this.resolveAttempts.get(link.id) ?? 0) >= MAX_OEMBED_ATTEMPTS) continue
             this.resolving.add(link.id)
             void resolveTiktokOEmbed(link.id, signal)
                 .then((info) => {
-                    if (!info || signal?.aborted) return
-                    this.oembedFails = 0
+                    this.resolving.delete(link.id)
+                    if (signal?.aborted) return
+                    if (!info) {
+                        this.resolveAttempts.set(link.id, (this.resolveAttempts.get(link.id) ?? 0) + 1)
+                        return
+                    }
+                    this.resolveAttempts.delete(link.id)
                     const itemIndex = this.links.findIndex((item) => item.id === link.id)
                     if (itemIndex < 0) return
                     const current = this.links[itemIndex]
@@ -85,10 +94,12 @@ export class WatchView extends LitElement {
                     const scrollItems = this.scrollItems.slice()
                     scrollItems[itemIndex] = toScrollItem(next, itemIndex, links.length)
                     this.scrollItems = scrollItems
+                    this.scheduleLinksSave()
                 })
-                .catch(() => {
-                    this.oembedFails += 1
-                    if (this.oembedFails >= 2) this.oembedDisabled = true
+                .catch((err: unknown) => {
+                    this.resolving.delete(link.id)
+                    if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) return
+                    this.resolveAttempts.set(link.id, (this.resolveAttempts.get(link.id) ?? 0) + 1)
                 })
         }
     }
@@ -103,6 +114,20 @@ export class WatchView extends LitElement {
         this.maxSeen = Math.max(this.maxSeen, event.detail.index)
         this.resolveAround(event.detail.index)
         this.scheduleProgress()
+    }
+
+    private scheduleLinksSave(): void {
+        if (this.linksSaveTimer !== null) clearTimeout(this.linksSaveTimer)
+        this.linksSaveTimer = setTimeout(() => {
+            this.linksSaveTimer = null
+            this.dispatchEvent(
+                new CustomEvent('links-enriched', {
+                    detail: {items: this.links},
+                    bubbles: true,
+                    composed: true,
+                }),
+            )
+        }, 400)
     }
 
     private scheduleProgress(): void {
@@ -121,7 +146,6 @@ export class WatchView extends LitElement {
 
     private onJump(event: CustomEvent<{index: number}>): void {
         this.viewport?.goToIndex(event.detail.index)
-        this.sidebarOpen = false
     }
 
     private onBackdrop(): void {
@@ -148,6 +172,10 @@ export class WatchView extends LitElement {
         window.removeEventListener('pagehide', this.flushProgress)
         this.resolveAbort?.abort()
         this.resolveAbort = null
+        if (this.linksSaveTimer !== null) {
+            clearTimeout(this.linksSaveTimer)
+            this.linksSaveTimer = null
+        }
         this.flushProgress()
     }
 
@@ -188,9 +216,6 @@ export class WatchView extends LitElement {
                     @new-list=${this.emitNewList}
                     @close=${this.onBackdrop}
                 ></tts-progress-sidebar>
-                ${this.sidebarOpen
-                    ? html`<button class="backdrop" aria-label="Close list" @click=${this.onBackdrop}></button>`
-                    : html``}
                 <vsc-scroll-viewport
                     .items=${this.scrollItems}
                     .resetKey=${this.resetKey}

@@ -9,6 +9,7 @@
     background: var(--bg);
     overflow: hidden;
     isolation: isolate;
+    --slide-meta-left: 16px;
 }
 
 vsc-scroll-viewport {
@@ -59,14 +60,8 @@ vsc-scroll-viewport {
     visibility: hidden;
 }
 
-.backdrop {
-    position: absolute;
-    inset: 0;
-    z-index: 9;
-    border: none;
-    padding: 0;
-    background: var(--backdrop);
-    cursor: pointer;
+.watch:has(.sidebar.open) {
+    --slide-meta-left: calc(min(280px, 86vw) + 16px);
 }
 
 @media (prefers-reduced-motion: reduce) {

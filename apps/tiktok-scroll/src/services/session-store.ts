@@ -9,6 +9,7 @@ function compactLink(link: TikTokLink): TikTokLink {
     if (link.date) out.date = link.date
     if (link.pageUrl) out.pageUrl = link.pageUrl
     if (link.title) out.title = link.title
+    if (link.thumbnailUrl) out.thumbnailUrl = link.thumbnailUrl
     return out
 }
 
@@ -86,6 +87,18 @@ export function saveSession(session: SavedSession): void {
         )
     } catch {
         // quota / private mode — list stays in memory for this visit
+    }
+}
+
+/** Write enriched author/title/pageUrl without touching the progress cursor. */
+export function saveSessionItems(items: TikTokLink[]): void {
+    try {
+        const session = parseSession(localStorage.getItem(SESSION_KEY))
+        if (!session) return
+        session.items = items.map(compactLink)
+        localStorage.setItem(SESSION_KEY, serializeSession(session))
+    } catch {
+        // ignore
     }
 }
 

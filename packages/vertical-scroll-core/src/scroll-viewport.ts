@@ -1,9 +1,11 @@
-import {LitElement, html, unsafeCSS} from 'lit'
+import {LitElement, html, nothing, svg, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, property, state} from 'lit/decorators.js'
 import {ref} from 'lit/directives/ref.js'
 import type {ScrollItem} from './types'
-import './scroll-slide'
+import {classifyScrollItem} from './media'
+import {embedProviderForUrl} from './embeds'
+import {ScrollSlide} from './scroll-slide'
 import styles from './scroll-viewport.css?inline'
 
 const WHEEL_THRESHOLD_PX = 40
@@ -12,6 +14,8 @@ const PREFETCH_LOOKAHEAD = 3
 const DRAG_THRESHOLD_PX = 40
 /** Slides rendered on each side of the active one; keeps DOM and media work bounded. */
 const SLIDE_WINDOW = 2
+const VIEWPORT_PLAY_ICON = svg`<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5.5v13l11-6.5Z" fill="currentColor"/></svg>`
+const VIEWPORT_PAUSE_ICON = svg`<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 5h3.5v14H7ZM13.5 5H17v14h-3.5Z" fill="currentColor"/></svg>`
 
 @customElement('vsc-scroll-viewport')
 export class ScrollViewport extends LitElement {
@@ -26,6 +30,7 @@ export class ScrollViewport extends LitElement {
 
     @state() private activeIndex = 0
     @state() private dragging = false
+    @state() private playing = false
 
     private viewport: HTMLElement | null = null
     private wheelDelta = 0
@@ -59,7 +64,10 @@ export class ScrollViewport extends LitElement {
     override willUpdate(changed: Map<string, unknown>): void {
         if (changed.has('resetKey')) {
             const keyChanged = this.prevResetKey !== '' && this.prevResetKey !== this.resetKey
-            if (keyChanged) this.startApplied = false
+            if (keyChanged) {
+                this.startApplied = false
+                this.playing = false
+            }
             this.prevResetKey = this.resetKey
         }
         if (changed.has('startIndex')) this.startApplied = false
@@ -191,9 +199,13 @@ export class ScrollViewport extends LitElement {
         switch (event.key) {
             case 'ArrowDown':
             case 'PageDown':
-            case ' ':
                 event.preventDefault()
                 this.nextSlide()
+                break
+            case ' ':
+                event.preventDefault()
+                if (this.activeCanPlayPause()) this.toggleActivePlay()
+                else this.nextSlide()
                 break
             case 'ArrowUp':
             case 'PageUp':
@@ -209,6 +221,7 @@ export class ScrollViewport extends LitElement {
         const index = Math.round(viewport.scrollTop / viewport.clientHeight)
         if (index !== this.activeIndex) {
             this.activeIndex = index
+            if (!this.activeCanPlayPause()) this.playing = false
             this.dispatchEvent(new CustomEvent('active-index-change', {
                 detail: {index},
                 bubbles: true,
@@ -251,6 +264,30 @@ export class ScrollViewport extends LitElement {
         this.dispatchEvent(new CustomEvent('retry', {bubbles: true, composed: true}))
     }
 
+    private onPlaybackChange(event: CustomEvent<{playing: boolean}>): void {
+        // Inactive slides pause on leave and would clobber the chrome icon
+        // when paging backward (DOM order updates the new active first).
+        const active = this.renderRoot.querySelector('.slide-inner.active')
+        if (active && event.composedPath().includes(active)) this.playing = event.detail.playing
+    }
+
+    /**
+     * Native files and scriptable embeds (TikTok) can be driven; YouTube-style
+     * iframes have no commandPlayer, and image/text slides have no player.
+     */
+    private activeCanPlayPause(): boolean {
+        const item = this.items[this.activeIndex]
+        if (!item || classifyScrollItem(item) !== 'video') return false
+        const provider = embedProviderForUrl(item.videoUrl ?? item.url ?? null)
+        return provider ? !!provider.commandPlayer : true
+    }
+
+    private toggleActivePlay(event?: Event): void {
+        if (event?.currentTarget instanceof HTMLElement) event.currentTarget.blur()
+        const slide = this.renderRoot.querySelector('.slide-inner.active vsc-scroll-slide') as ScrollSlide | null
+        slide?.togglePlay()
+    }
+
     private renderState(): TemplateResult | null {
         if (this.loading && !this.items.length) {
             return html`<div class="scroll-state"><div class="skeleton-slide"></div></div>`
@@ -282,6 +319,7 @@ export class ScrollViewport extends LitElement {
                 ${ref(this.onViewportRef)}
                 @scroll=${this.onScroll}
                 @pointerdown=${this.onPointerDown}
+                @playback-change=${this.onPlaybackChange}
             >
                 <!-- the track is count viewports tall; every slide is exactly one
                      viewport, positioned by index. Non-window slides stay as cheap
@@ -301,6 +339,9 @@ export class ScrollViewport extends LitElement {
             </div>
             <div class="feed-chrome">
                 <button class="nav-arrow prev" aria-label="Previous post" @click=${this.prevSlide}>↑</button>
+                ${this.activeCanPlayPause()
+                    ? html`<button class="nav-arrow play" aria-label=${this.playing ? 'Pause video' : 'Play video'} @click=${this.toggleActivePlay}>${this.playing ? VIEWPORT_PAUSE_ICON : VIEWPORT_PLAY_ICON}</button>`
+                    : nothing}
                 <button class="nav-arrow next" aria-label="Next post" @click=${this.nextSlide}>↓</button>
             </div>
         `

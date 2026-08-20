@@ -1,8 +1,8 @@
 import {LitElement, html, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, state} from 'lit/decorators.js'
-import type {ParseResult, SavedSession} from '../../types'
-import {clearSession, loadSession, saveProgress, saveSession} from '../../services/session-store'
+import type {ParseResult, SavedSession, TikTokLink} from '../../types'
+import {clearSession, loadSession, saveProgress, saveSession, saveSessionItems} from '../../services/session-store'
 import '../import-view/import-view'
 import '../watch-view/watch-view'
 import styles from './app-shell.css?inline'
@@ -57,6 +57,13 @@ export class AppShell extends LitElement {
         saveProgress(event.detail.index, event.detail.maxSeen)
     }
 
+    /** Persist oEmbed author/title without replacing the items reference
+     *  (that would remount the watch view and abort in-flight probes). */
+    private onLinksEnriched(event: CustomEvent<{items: TikTokLink[]}>): void {
+        if (event.detail.items.length === 0) return
+        saveSessionItems(event.detail.items)
+    }
+
     override render(): TemplateResult {
         const result = this.result
         if (result && result.items.length > 0) {
@@ -67,6 +74,7 @@ export class AppShell extends LitElement {
                 .startMaxSeen=${this.startMaxSeen}
                 @new-list=${this.onNewList}
                 @progress=${this.onProgress}
+                @links-enriched=${this.onLinksEnriched}
             ></tts-watch-view>`
         }
         return html`<tts-import-view @import-parsed=${this.onImportParsed}></tts-import-view>`

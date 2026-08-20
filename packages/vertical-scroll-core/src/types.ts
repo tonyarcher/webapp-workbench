@@ -13,6 +13,7 @@ export interface ScrollItem {
     metaLine?: string
     stats?: {up: number; down: number; comments: number} | null
     date?: string | null
+    author?: string
 }
 
 export type ScrollMediaKind = 'image' | 'video' | 'text' | 'link'

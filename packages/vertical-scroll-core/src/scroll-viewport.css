@@ -97,6 +97,10 @@
     background: rgba(0, 0, 0, 0.6);
 }
 
+.nav-arrow.play svg {
+    display: block;
+}
+
 .loading-dot {
     width: 18px;
     height: 18px;

@@ -11,8 +11,6 @@ import styles from './media-video.css?inline'
 
 const SOUND_ON_ICON = svg`<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M3 8v4h3l4 3.5v-11L6 8H3Zm10.5 2a3 3 0 0 0-1.5-2.6v5.2a3 3 0 0 0 1.5-2.6Zm-1.5-5.8v1.7a4.8 4.8 0 0 1 0 8.2v1.7a6.5 6.5 0 0 0 0-11.6Z" fill="currentColor"/></svg>`
 const SOUND_OFF_ICON = svg`<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M3 8v4h3l4 3.5v-11L6 8H3Zm13.3-.3L15 9l-1.3-1.3-.9.9L14.1 10l-1.3 1.3.9.9L15 10.9l1.3 1.3.9-.9L15.9 10l1.3-1.3-.9-.9Z" fill="currentColor"/></svg>`
-const PLAY_ICON = svg`<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M8 5.5v13l11-6.5Z" fill="currentColor"/></svg>`
-const PAUSE_ICON = svg`<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M7 5h3.5v14H7ZM13.5 5H17v14h-3.5Z" fill="currentColor"/></svg>`
 
 @customElement('vsc-media-video')
 export class ScrollMediaVideo extends LitElement {
@@ -36,6 +34,35 @@ export class ScrollMediaVideo extends LitElement {
     private embedReady = false
     private unsubscribeSound: (() => void) | null = null
     private resolveToken = 0
+
+    private setPlaying(next: boolean): void {
+        if (this.playing === next) return
+        this.playing = next
+        this.dispatchEvent(new CustomEvent('playback-change', {
+            detail: {playing: next},
+            bubbles: true,
+            composed: true,
+        }))
+    }
+
+    togglePlay(): void {
+        if (!this.active) return
+        if (embedUrlFor(this.embedSource())) {
+            const win = this.iframe?.contentWindow
+            const provider = embedProviderForUrl(this.embedSource())
+            if (!win || !provider?.commandPlayer) return
+            if (this.playing) {
+                provider.commandPlayer(win, 'pause')
+                this.setPlaying(false)
+            } else {
+                provider.commandPlayer(win, 'play')
+                this.setPlaying(true)
+            }
+        } else if (this.video) {
+            if (this.video.paused) void this.video.play().catch(() => {})
+            else this.video.pause()
+        }
+    }
 
     override connectedCallback(): void {
         super.connectedCallback()
@@ -69,6 +96,12 @@ export class ScrollMediaVideo extends LitElement {
 
     override willUpdate(changed: Map<string, unknown>): void {
         if (changed.has('item')) {
+            const prev = changed.get('item') as ScrollItem | undefined
+            const prevEmbed = embedUrlFor(prev?.videoUrl ?? prev?.url ?? null)
+            const nextEmbed = embedUrlFor(this.embedSource())
+            // oEmbed enrichment rewrites pageUrl/author but keeps the same
+            // player id — remounting would drop embedReady and desync chrome.
+            if (prevEmbed && prevEmbed === nextEmbed) return
             this.src = null
             this.poster = null
             this.candidates = []
@@ -77,7 +110,7 @@ export class ScrollMediaVideo extends LitElement {
             this.playing = false
             this.embedTime = 0
             this.embedDuration = 0
-            if (embedUrlFor(this.embedSource())) return
+            if (nextEmbed) return
             const token = ++this.resolveToken
             const resolved = resolveVideoUrl(this.item?.videoUrl ?? this.item?.url ?? null)
             if (token !== this.resolveToken) return
@@ -153,8 +186,8 @@ export class ScrollMediaVideo extends LitElement {
                 this.syncEmbedPlayback()
                 return
             }
-            if (parsed.type === 'playing') this.playing = true
-            if (parsed.type === 'paused' || parsed.type === 'ended') this.playing = false
+            if (parsed.type === 'playing') this.setPlaying(true)
+            if (parsed.type === 'paused' || parsed.type === 'ended') this.setPlaying(false)
             if (parsed.type === 'time' && !this.seeking) {
                 this.embedTime = parsed.currentTime
                 this.embedDuration = parsed.duration
@@ -186,10 +219,10 @@ export class ScrollMediaVideo extends LitElement {
             provider.commandPlayer(win, 'mute')
             provider.commandPlayer(win, 'play')
             if (this.soundOn) provider.commandPlayer(win, 'unmute')
-            this.playing = true
+            this.setPlaying(true)
         } else {
             provider.commandPlayer(win, 'pause')
-            this.playing = false
+            this.setPlaying(false)
         }
     }
 
@@ -224,7 +257,7 @@ export class ScrollMediaVideo extends LitElement {
         if (video) {
             video.muted = !this.soundOn
             const sync = (): void => {
-                this.playing = !video.paused
+                this.setPlaying(!video.paused)
             }
             video.addEventListener('play', sync)
             video.addEventListener('pause', sync)
@@ -233,30 +266,12 @@ export class ScrollMediaVideo extends LitElement {
         }
     }
 
-    private onTogglePlay(event: Event): void {
-        event.preventDefault()
-        event.stopPropagation()
-        const video = this.video
-        if (!video) return
-        if (video.paused) void video.play().catch(() => {})
-        else video.pause()
-    }
-
     private seeking = false
 
     private onEmbedTap(event: Event): void {
         event.preventDefault()
         event.stopPropagation()
-        const win = this.iframe?.contentWindow
-        const provider = embedProviderForUrl(this.embedSource())
-        if (!win || !provider?.commandPlayer) return
-        if (this.playing) {
-            provider.commandPlayer(win, 'pause')
-            this.playing = false
-        } else {
-            provider.commandPlayer(win, 'play')
-            this.playing = true
-        }
+        this.togglePlay()
     }
 
     private onSeekInput(event: Event): void {
@@ -331,11 +346,6 @@ export class ScrollMediaVideo extends LitElement {
                         <div class="letterbox-side right"></div>
                         <button class="embed-tap" aria-label=${this.playing ? 'Pause video' : 'Play video'} @click=${this.onEmbedTap}></button>
                         <button
-                            class="center-play${this.playing ? ' playing' : ''}"
-                            aria-label=${this.playing ? 'Pause video' : 'Play video'}
-                            @click=${this.onEmbedTap}
-                        >${this.playing ? PAUSE_ICON : PLAY_ICON}</button>
-                        <button
                             class="sound-button${this.soundOn ? ' on' : ''}"
                             aria-label=${this.soundOn ? 'Mute video' : 'Unmute video'}
                             @click=${this.onToggleSound}
@@ -397,13 +407,6 @@ export class ScrollMediaVideo extends LitElement {
         return html`
             <div class="media-stage">
                 ${media}
-                ${this.src && !this.resolveFailed
-                    ? html`<button
-                        class="center-play${this.playing ? ' playing' : ''}"
-                        aria-label=${this.playing ? 'Pause video' : 'Play video'}
-                        @click=${this.onTogglePlay}
-                    >${this.playing ? PAUSE_ICON : PLAY_ICON}</button>`
-                    : html``}
                 ${this.src && !this.resolveFailed
                     ? html`<button
                         class="sound-button${this.soundOn ? ' on' : ''}"

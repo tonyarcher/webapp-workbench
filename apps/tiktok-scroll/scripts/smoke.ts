@@ -181,7 +181,7 @@ function assert(cond: unknown, msg: string): void {
 // no-author title fallback
 {
     const item = toScrollItem({id: '181818', url: 'https://www.tiktok.com/v/181818'}, 1, 2)
-    assert(item.title === 'TikTok 181818', 'no-author title fallback')
+    assert(item.title === '', 'no-author title stays empty until oembed')
 }
 
 // export date lands in metaLine
@@ -209,13 +209,30 @@ function assert(cond: unknown, msg: string): void {
     )
     assert(item.originalUrl === 'https://www.tiktok.com/@ufo.phenom/video/7463395292222672170', 'pageUrl for original')
     assert(item.title === '@ufo.phenom', 'author title')
+    assert(item.author === 'ufo.phenom', 'author field set')
+}
+
+// oembed caption is title
+{
+    const item = toScrollItem(
+        {
+            id: '202020',
+            url: 'https://www.tiktok.com/@u/video/202020',
+            author: 'u',
+            title: 'a funny clip',
+        },
+        0,
+        1,
+    )
+    assert(item.title === 'a funny clip', 'oembed caption is title')
+    assert(item.author === 'u', 'author field set')
 }
 
 // session persist / restore
 {
     const session = {
         version: 1 as const,
-        items: [{id: '1', url: 'https://www.tiktokv.com/share/video/1/', date: '2026-01-01'}],
+        items: [{id: '1', url: 'https://www.tiktokv.com/share/video/1/', date: '2026-01-01', thumbnailUrl: 'https://example.com/t.jpg'}],
         skipped: [{url: 'https://vm.tiktok.com/x/', reason: 'short-link' as const}],
         activeIndex: 12,
         maxSeen: 20,
@@ -224,7 +241,7 @@ function assert(cond: unknown, msg: string): void {
     assert(roundTrip !== null, 'session parses')
     assert(roundTrip?.items[0].id === '1', 'session item id')
     assert(roundTrip?.items[0].date === '2026-01-01', 'session date kept')
-    assert(roundTrip?.items[0].thumbnailUrl === undefined, 'thumbnail stripped')
+    assert(roundTrip?.items[0].thumbnailUrl === 'https://example.com/t.jpg', 'thumbnail kept')
     assert(roundTrip?.activeIndex === 12, 'session index')
     assert(roundTrip?.skipped[0].reason === 'short-link', 'session skipped')
     assert(parseSession(null) === null, 'empty session')
