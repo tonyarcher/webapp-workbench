@@ -1,54 +1,36 @@
 import {
-    deleteFeed as dbDeleteFeed,
-    deleteFolderTx as dbDeleteFolderTx,
-    getArticle,
-    getFeeds,
-    incrementMeta,
-    markAllRead as dbMarkAllRead,
-    markArticleReadTx,
-    markArticlesRead as dbMarkArticlesRead,
-    markReadBefore as dbMarkReadBefore,
-    reconcileUnreadCounts,
-    reorderFolders as dbReorderFolders,
-    setArticleStarred,
-    setFeedFolders
-} from './db/db';
+    addFeed as apiAddFeed,
+    deleteFeed as apiDeleteFeed,
+    deleteFolder as apiDeleteFolder,
+    readAll as apiReadAll,
+    readBefore as apiReadBefore,
+    reorderFolders as apiReorderFolders,
+    recordAffinity,
+    requestSync,
+    setFeedFolders as apiSetFeedFolders,
+    updateArticleState,
+} from './services/api';
 import {exportOpml, importOpml} from './services/opml';
-import {addFeedFromUrl, syncFeed} from './services/sync';
 import {createCoalescer} from './services/coalesce';
-import {ALL_SYNC_KEY, allSyncKey} from './services/sync-keys';
-import {invalidateArticles, invalidateLibrary, updateArticlesInCache} from './query';
-import {domainOf} from './util';
-import type {Article, Feed} from './types';
-import type {SyncResult} from './services/sync';
-
-const AFFINITY_DECAY = 0.9;
+import {allSyncKey} from './services/sync-keys';
+import {invalidateArticles, invalidateLibrary, updateArticlesInCache, getArticleFromCache, libraryKey, queryClient, type LibraryData} from './query';
+import type {Feed} from './types';
 
 // Elevator-button coalescing for refreshes: mashing Refresh joins the
 // in-flight job rather than spawning a second sync.
-const allSyncs = createCoalescer<string, string[]>();
-const feedSyncs = createCoalescer<string, SyncResult>();
-
-async function recordAffinity(article: Article, amount = 1) {
-    await incrementMeta(`aff:feed:${article.feedId}`, amount, AFFINITY_DECAY);
-    const host = domainOf(article.link);
-    if (host) await incrementMeta(`aff:domain:${host}`, amount, AFFINITY_DECAY);
-    if (article.author) await incrementMeta(`aff:author:${article.author.toLowerCase()}`, amount, AFFINITY_DECAY);
-}
+const allSyncs = createCoalescer<string, { queued: number }>();
+const feedSyncs = createCoalescer<string, { queued: number }>();
 
 export async function addFeed(url: string): Promise<Feed> {
-    const feed = await addFeedFromUrl(url);
+    const feed = await apiAddFeed(url);
     await invalidateLibrary();
     await invalidateArticles();
     return feed;
 }
 
 export async function refreshFeed(feedId: string) {
-    // Same-feed mash only. Do not join an all/folder job — that would block
-    // this button on feeds the user did not ask to refresh.
     return feedSyncs.run(feedId, async () => {
-        const result = await syncFeed(feedId);
-        await reconcileUnreadCounts();
+        const result = await requestSync({feedIds: [feedId]});
         await invalidateLibrary();
         await invalidateArticles();
         return result;
@@ -59,52 +41,22 @@ export async function syncAllFeeds(
     onProgress?: (done: number, total: number, title: string) => void,
     feedIds?: string[],
 ) {
-    // Same-scope mash only (exact key). A folder refresh must not wait for
-    // an in-flight all-sync, and vice versa. OPML import (onProgress) waits
-    // out a covering all-job so newly added feeds still get their own run.
     const key = allSyncKey(feedIds);
-    if (key === null) return [];
-    if (onProgress && key === ALL_SYNC_KEY && allSyncs.has(ALL_SYNC_KEY)) {
-        await allSyncs.get(ALL_SYNC_KEY)!;
-    }
-    return allSyncs.run(key, () => runSyncAllFeeds(onProgress, feedIds));
-}
-
-async function runSyncAllFeeds(
-    onProgress?: (done: number, total: number, title: string) => void,
-    feedIds?: string[],
-) {
-    const feeds = await getFeeds();
-    const targets = feedIds ? feeds.filter((f) => feedIds.includes(f.id)) : feeds;
-    const failed: string[] = [];
-    let done = 0;
-    for (const feed of targets) {
-        onProgress?.(done, targets.length, feed.title);
-        try {
-            await syncFeed(feed.id);
-        } catch {
-            failed.push(feed.title);
-        }
-        done++;
-        // Throttled refresh: keeps sidebar counts fresh during long syncs
-        // without invalidating on every feed.
-        if (done % 20 === 0) void invalidateLibrary();
-        if (done < targets.length) {
-            await new Promise((r) => setTimeout(r, 600));
-        }
-    }
-    onProgress?.(done, targets.length, '');
-    await reconcileUnreadCounts();
+    if (key === null) return 0;
+    onProgress?.(0, 0, '');
+    const result = await allSyncs.run(key, () => requestSync(feedIds ? {feedIds} : undefined));
     await invalidateLibrary();
     await invalidateArticles();
-    return failed;
+    onProgress?.(1, 1, '');
+    return result.queued;
 }
 
 export async function refreshFolder(folderId: string) {
-    const feeds = await getFeeds();
-    const feedIds = feeds
+    const lib = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
+    const feedIds = lib?.feeds
         .filter((f) => f.folderIds.includes(folderId))
-        .map((f) => f.id);
+        .map((f) => f.id) ?? [];
+    if (!feedIds.length) return;
     await syncAllFeeds(undefined, feedIds);
 }
 
@@ -119,73 +71,62 @@ export async function exportOpmlFile(): Promise<string> {
 }
 
 export async function deleteFeed(feedId: string) {
-    await dbDeleteFeed(feedId);
+    await apiDeleteFeed(feedId);
     await invalidateLibrary();
     await invalidateArticles();
 }
 
 export async function deleteFolder(folderId: string) {
-    await dbDeleteFolderTx(folderId);
+    await apiDeleteFolder(folderId);
     await invalidateLibrary();
     await invalidateArticles();
 }
 
 export async function moveFeed(feedId: string, folderId: string | null) {
-    await setFeedFolders(feedId, folderId ? [folderId] : []);
+    await apiSetFeedFolders(feedId, folderId ? [folderId] : []);
     await invalidateLibrary();
 }
 
 export async function setFeedFolderMembership(feedId: string, folderIds: string[]) {
-    await setFeedFolders(feedId, folderIds);
+    await apiSetFeedFolders(feedId, folderIds);
     await invalidateLibrary();
 }
 
 export async function reorderFolders(folderIds: string[]) {
-    await dbReorderFolders(folderIds);
+    await apiReorderFolders(folderIds);
     await invalidateLibrary();
 }
 
 export async function markArticleRead(articleId: string) {
-    const article = await getArticle(articleId);
-    if (!article || article.read === 1) return;
-    const changed = await markArticleReadTx(articleId);
-    if (changed) {
-        await recordAffinity(article);
-        updateArticlesInCache(articleId, {read: 1});
-        await invalidateLibrary();
-    }
+    updateArticlesInCache(articleId, {read: 1});
+    void recordAffinity(articleId, 1).catch(() => {});
+    void updateArticleState([{id: articleId, read: true}]).catch(() => {});
+    await invalidateLibrary();
 }
 
 export async function toggleStar(articleId: string) {
-    const article = await getArticle(articleId);
-    if (!article) return;
-    const nowStarred = !article.starred;
-    await setArticleStarred(articleId, nowStarred);
-    if (nowStarred) await recordAffinity(article, 4);
+    const article = getArticleFromCache(articleId);
+    const nowStarred = !(article?.starred ?? false);
     updateArticlesInCache(articleId, {starred: nowStarred});
+    void updateArticleState([{id: articleId, starred: nowStarred}]).catch(() => {});
+    if (nowStarred) void recordAffinity(articleId, 4).catch(() => {});
 }
 
 export async function markAllRead(feedId?: string) {
-    await dbMarkAllRead(feedId);
-    await reconcileUnreadCounts();
+    await apiReadAll(feedId);
     await invalidateArticles();
     await invalidateLibrary();
 }
 
 export async function markShownRead(articleIds: string[]) {
-    await dbMarkArticlesRead(articleIds);
     for (const id of articleIds) updateArticlesInCache(id, {read: 1});
-    await reconcileUnreadCounts();
+    // One batched write for the whole visible page.
+    void updateArticleState(articleIds.map((id) => ({id, read: true}))).catch(() => {});
     await invalidateLibrary();
 }
 
 export async function markReadBefore(feedIds: string[] | undefined, cutoff: number) {
-    if (feedIds?.length) {
-        for (const id of feedIds) await dbMarkReadBefore(id, cutoff);
-    } else {
-        await dbMarkReadBefore(undefined, cutoff);
-    }
-    await reconcileUnreadCounts();
+    await apiReadBefore(feedIds, cutoff);
     await invalidateArticles();
     await invalidateLibrary();
 }

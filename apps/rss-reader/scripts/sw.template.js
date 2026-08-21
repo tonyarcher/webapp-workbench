@@ -44,6 +44,12 @@ self.addEventListener('fetch', (event) => {
     if (request.method !== 'GET') return;
     if (new URL(request.url).origin !== self.location.origin) return;
 
+    const pathname = new URL(request.url).pathname;
+    if (pathname.startsWith('/api') || pathname.startsWith('/rss-reader/api')) {
+        event.respondWith(fetch(request));
+        return;
+    }
+
     if (request.mode === 'navigate') {
         event.respondWith(
             fetch(request)

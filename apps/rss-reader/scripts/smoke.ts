@@ -613,4 +613,41 @@ assert(
   'today unread-only skips read articles before taking the per-folder quota',
 );
 
+// ---- api.ts: apiUrl joins base + path ----
+import {apiUrl} from '../src/services/api';
+import {buildMigratePayload} from '../src/services/migrate-export';
+
+assert(apiUrl('/library').endsWith('/api/library'), 'apiUrl appends path to /api base');
+assert(apiUrl('/feeds').endsWith('/api/feeds'), 'apiUrl handles /feeds path');
+
+// ---- migrate-export: buildMigratePayload shape + aff: filtering ----
+const migrateFolders = [
+    {id: 'f1', title: 'Tech', createdAt: 0, sortOrder: 0},
+    {id: 'f2', title: 'News', createdAt: 0, sortOrder: 1},
+];
+const migrateFeeds = [
+    {id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: ['f1'], unread: 0, addedAt: 0},
+    {id: 'b', title: 'B', url: 'https://b.example/rss', folderIds: ['f1', 'f2'], unread: 0, addedAt: 0},
+];
+const migrateArticles = [
+    {id: 'a:1', feedId: 'a', guid: '1', title: 'Art 1', link: 'https://a.example/1', published: 0, fetchedAt: 0, read: 1 as const, starred: true, popularity: 1, hot: 0},
+    {id: 'b:2', feedId: 'b', guid: '2', title: 'Art 2', link: 'https://b.example/2', published: 0, fetchedAt: 0, read: 0 as const, starred: false, popularity: 1, hot: 0},
+];
+const metaEntries = [
+    {key: 'aff:feed:a', value: 5},
+    {key: 'aff:domain:example.com', value: 3},
+    {key: 'other-key', value: 'ignored'},
+];
+const payload = buildMigratePayload(migrateFolders, migrateFeeds, migrateArticles, metaEntries);
+assert(payload.folders.length === 2, 'migrate payload has 2 folders');
+assert(payload.feeds.length === 2, 'migrate payload has 2 feeds');
+assert(payload.feeds[0].folderTitles?.join(',') === 'Tech', 'migrate payload maps folderIds to titles');
+assert(payload.feeds[1].folderTitles?.join(',') === 'Tech,News', 'migrate payload maps multi-folder feed');
+assert(payload.states.length === 2, 'migrate payload has 2 states');
+assert(payload.states[0].read === true, 'migrate payload read=1 maps to true');
+assert(payload.states[0].starred === true, 'migrate payload starred maps correctly');
+assert(payload.states[1].read === false, 'migrate payload read=0 maps to false');
+assert(payload.affinity.length === 2, 'migrate payload filters aff: keys only');
+assert(payload.affinity.every((a) => a.key.startsWith('aff:')), 'migrate payload affinity keys start with aff:');
+
 console.log('\nAll parser smoke tests passed.');

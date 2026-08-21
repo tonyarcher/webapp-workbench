@@ -1,7 +1,7 @@
 import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, state} from 'lit/decorators.js';
 import {libraryKey, queryClient, QueryController} from '../../query';
-import {getFeeds, getFolders, queryRecentArticles} from '../../db/db';
+import {getLibrary, fetchArticlesPage} from '../../services/api';
 import {markArticleRead} from '../../mutations';
 import {
     aiAvailability,
@@ -42,15 +42,15 @@ export class BriefView extends LitElement {
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
-        queryFn: async () => {
-            const [folders, feeds] = await Promise.all([getFolders(), getFeeds()]);
-            return {folders, feeds};
-        },
+        queryFn: () => getLibrary(),
     }));
 
     private articles = new QueryController<Article[]>(this, () => ({
         queryKey: ['brief', this.startOfToday.toDateString()],
-        queryFn: () => queryRecentArticles(this.startOfToday.getTime(), MAX_ARTICLES),
+        queryFn: async () => {
+            const res = await fetchArticlesPage({since: this.startOfToday.getTime(), sort: 'newest', limit: MAX_ARTICLES});
+            return res.items;
+        },
     }));
 
     override firstUpdated() {

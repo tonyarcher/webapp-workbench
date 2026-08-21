@@ -2,8 +2,13 @@ import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
 import {applyTheme, getTheme, type Theme} from '../../theme';
 import {addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds} from '../../mutations';
+import {migrateLibrary} from '../../services/api';
+import {buildMigratePayload, readIdbForMigration} from '../../services/migrate-export';
+import {invalidateArticles, invalidateLibrary} from '../../query';
 import {navigate} from '../../router';
 import styles from './settings-dialog.css?inline';
+
+const MIGRATE_SIZE_LIMIT = 1_800_000;
 
 @customElement('settings-dialog')
 export class SettingsDialog extends LitElement {
@@ -14,6 +19,7 @@ export class SettingsDialog extends LitElement {
     @state() private theme: Theme = 'light';
     @state() private adding = false;
     @state() private busy = false;
+    @state() private migrating = false;
     @state() private status = '';
     @state() private statusError = false;
 
@@ -104,6 +110,13 @@ export class SettingsDialog extends LitElement {
                 </span>
                 <span>⬇</span>
               </button>
+              <button class="action" @click=${this.onMigrate} ?disabled=${this.busy || this.migrating}>
+                <span>
+                  Upload local library<br />
+                  <span class="desc">Migrate IndexedDB data to the server</span>
+                </span>
+                <span>${this.migrating ? '⏳' : '⬆'}</span>
+              </button>
             </div>
             <input type="file" data-import accept=".opml,.xml,text/xml,application/xml" style="display:none" @change=${this.onImportFile} />
             ${this.status ? html`<div class="status ${this.statusError ? 'error' : ''}">${this.status}</div>` : ''}
@@ -180,15 +193,10 @@ export class SettingsDialog extends LitElement {
             const xml = await file.text();
             await importOpmlFile(xml);
             this.status = 'Syncing imported feeds…';
-            const failed = await syncAllFeeds((done, total) => {
+            await syncAllFeeds((done, total) => {
                 this.status = `Syncing ${done + 1}/${total}…`;
             });
-            if (failed.length) {
-                this.status = `Import complete, but ${failed.length} feed(s) failed: ${failed.join(', ')}`;
-                this.statusError = true;
-            } else {
-                this.status = 'Import complete';
-            }
+            this.status = 'Import complete';
         } catch (err) {
             this.status = err instanceof Error ? `Import failed: ${err.message}` : 'Import failed';
             this.statusError = true;
@@ -216,6 +224,39 @@ export class SettingsDialog extends LitElement {
             this.statusError = true;
         } finally {
             this.busy = false;
+        }
+    }
+
+    private async onMigrate() {
+        this.migrating = true;
+        this.status = '';
+        this.statusError = false;
+        try {
+            const {folders, feeds, articles, metaEntries} = await readIdbForMigration();
+            if (!feeds.length && !folders.length) {
+                this.status = 'No local data to migrate.';
+                this.statusError = false;
+                return;
+            }
+            const payload = buildMigratePayload(folders, feeds, articles, metaEntries);
+            const json = JSON.stringify(payload);
+            if (json.length > MIGRATE_SIZE_LIMIT) {
+                throw new Error(
+                    `Payload too large (${Math.round(json.length / 1024)} KB). Use OPML import instead.`,
+                );
+            }
+            const result = await migrateLibrary(payload);
+            this.status = `Migrated ${result.feedsAdded} feeds, ${result.foldersAdded} folders, ${result.statesQueued} states. Syncing…`;
+            this.statusError = false;
+            await invalidateLibrary();
+            await invalidateArticles();
+            await syncAllFeeds();
+            this.status = 'Migration complete';
+        } catch (err) {
+            this.status = err instanceof Error ? `Migration failed: ${err.message}` : 'Migration failed';
+            this.statusError = true;
+        } finally {
+            this.migrating = false;
         }
     }
 

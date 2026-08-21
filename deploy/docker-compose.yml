@@ -2,6 +2,10 @@
 #   gateway  - nginx Alpine, port 80; serves `/` (hello) and routes subpaths.
 #   baseball - nginx static, serves the Baseball Vite app under /baseball/.
 #   rss-reader - nginx static, serves the RSS reader under /rss-reader/.
+#   rss-api    - node server, JSON API + feed poller for the RSS reader under
+#                /rss-reader/api/ (prefix stripped by the gateway).
+#   postgres   - shared Postgres instance; each app gets its own database.
+#                Data persists in the `pgdata` named volume across rebuilds.
 #   stock-game - node server, serves the TanStack Start app under /stock-game/
 #                (basepath-aware; the gateway does NOT strip its prefix).
 #   lemmy-vertical-scroll - nginx static, serves the Lemmy feed under
@@ -21,9 +25,43 @@ services:
     depends_on:
       - baseball
       - rss-reader
+      - rss-api
       - stock-game
       - lemmy-vertical-scroll
       - tiktok-scroll
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: rss
+      POSTGRES_PASSWORD: rss
+      POSTGRES_DB: rss
+      # Subpath under the data dir so the mount root stays owned by root.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rss -d rss"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  rss-api:
+    build:
+      context: ..
+      dockerfile: deploy/rss-api/Dockerfile
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://rss:rss@postgres:5432/rss
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - baseball
@@ -71,3 +109,6 @@ services:
 networks:
   baseball:
     driver: bridge
+
+volumes:
+  pgdata:

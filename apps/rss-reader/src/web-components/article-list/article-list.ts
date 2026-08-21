@@ -13,7 +13,7 @@ import {
     syncAllFeeds,
     toggleStar
 } from '../../mutations';
-import {type ArticleCursor, getFeeds, getFolders, queryArticles} from '../../db/db';
+import {getLibrary, fetchArticlesPage} from '../../services/api';
 import {safeHttpUrl} from '../../services/parser';
 import {capItems, feedWindow, perFeedLimit} from '../../services/pagination';
 import type {Article, ArticleSort, Feed, Folder, ListViewType, View} from '../../types';
@@ -88,7 +88,7 @@ export class ArticleList extends LitElement {
     private scrollElRef: Ref<HTMLDivElement> = createRef();
     private virtualizer!: Virtualizer<HTMLDivElement, HTMLDivElement>;
     private virtualizerCleanup?: () => void;
-    private cursors = new Map<string, ArticleCursor | undefined>();
+    private cursors = new Map<string, string | undefined>();
     private feedHasMore = new Map<string, boolean>();
     private hasMoreSingle = true;
     private gen = 0;
@@ -105,10 +105,7 @@ export class ArticleList extends LitElement {
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
-        queryFn: async () => {
-            const [folders, feeds] = await Promise.all([getFolders(), getFeeds()]);
-            return {folders, feeds};
-        },
+        queryFn: () => getLibrary(),
     }));
 
     override firstUpdated() {
@@ -543,10 +540,6 @@ export class ArticleList extends LitElement {
         }
     }
 
-    private cursorOf(article: Article): ArticleCursor {
-        return this.sort === 'hot' ? {key: article.hot, id: article.id} : {key: article.published, id: article.id};
-    }
-
     private async loadSinglePage(gen: number) {
         const feedId = this.view.kind === 'feed' ? this.view.id : undefined;
         if (this.view.kind === 'all' && this.sort === 'hot') {
@@ -554,19 +547,19 @@ export class ArticleList extends LitElement {
             return;
         }
         const cursor = this.cursors.get(feedId ?? 'all');
-        const res = await queryArticles({
-            feedId,
+        const scope = feedId ? `feed:${feedId}` : undefined;
+        const res = await fetchArticlesPage({
+            scope,
             unreadOnly: this.unreadOnly || this.hideRead,
             sort: this.sort,
             limit: this.pageSize,
             cursor,
         });
         if (gen !== this.gen) return;
-        this.hasMoreSingle = res.hasMore;
+        this.hasMoreSingle = res.nextCursor !== undefined;
         this.items = capItems(mergeSorted(this.items, res.items, this.sort), this.pageSize); // shown-at-a-time cap
-        const last = res.items[res.items.length - 1];
-        if (last) {
-            this.cursors.set(feedId ?? 'all', this.cursorOf(last));
+        if (res.nextCursor) {
+            this.cursors.set(feedId ?? 'all', res.nextCursor);
         }
     }
 
@@ -609,17 +602,20 @@ export class ArticleList extends LitElement {
                         const accumulated = pages.get(feed.id) ?? [];
                         const cursor =
                             accumulated.length
-                                ? this.cursorOf(accumulated[accumulated.length - 1])
+                                ? this.cursors.get(feed.id)
                                 : this.cursors.get(feed.id);
-                        const res = await queryArticles({
-                            feedId: feed.id,
+                        const res = await fetchArticlesPage({
+                            scope: `feed:${feed.id}`,
                             unreadOnly: this.unreadOnly || this.hideRead,
                             sort: this.sort,
                             limit: perFeed,
                             cursor,
                         });
                         pages.set(feed.id, [...accumulated, ...res.items]);
-                        lastHasMore.set(feed.id, res.hasMore);
+                        lastHasMore.set(feed.id, res.nextCursor !== undefined);
+                        if (res.nextCursor) {
+                            this.cursors.set(feed.id, res.nextCursor);
+                        }
                     }),
                 );
             }
@@ -647,18 +643,10 @@ export class ArticleList extends LitElement {
             }
         }
 
-        const keptIds = new Set(kept.map((a) => a.id));
         this.items = capItems(mergeSorted(this.items, kept, this.sort), this.pageSize); // shown-at-a-time cap
 
         for (const feed of window) {
-            const items = pages.get(feed.id) ?? [];
-            const keptItem = [...items].reverse().find((a) => keptIds.has(a.id));
-            if (keptItem) {
-                this.cursors.set(feed.id, this.cursorOf(keptItem));
-            }
-            const discarded =
-                items.some((a) => !keptIds.has(a.id) && !existingIds.has(a.id));
-            this.feedHasMore.set(feed.id, (lastHasMore.get(feed.id) ?? false) || discarded);
+            this.feedHasMore.set(feed.id, lastHasMore.get(feed.id) ?? false);
         }
     }
 

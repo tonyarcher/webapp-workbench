@@ -1,7 +1,7 @@
 import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, state} from 'lit/decorators.js';
 import {libraryKey, queryClient, QueryController} from '../../query';
-import {getFeeds, getFolders, queryTodayArticles} from '../../db/db';
+import {getLibrary, fetchArticlesPage} from '../../services/api';
 import {markArticleRead, toggleStar} from '../../mutations';
 import {safeHttpUrl} from '../../services/parser';
 import {
@@ -39,15 +39,15 @@ export class TodayView extends LitElement {
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
-        queryFn: async () => {
-            const [folders, feeds] = await Promise.all([getFolders(), getFeeds()]);
-            return {folders, feeds};
-        },
+        queryFn: () => getLibrary(),
     }));
 
     private articles = new QueryController<Article[]>(this, () => ({
         queryKey: ['today', this.startOfToday.toDateString()],
-        queryFn: () => queryTodayArticles(this.startOfToday.getTime()),
+        queryFn: async () => {
+            const res = await fetchArticlesPage({since: this.startOfToday.getTime(), sort: 'newest', limit: 10_000});
+            return res.items;
+        },
     }));
 
     override connectedCallback() {

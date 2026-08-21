@@ -11,7 +11,7 @@ import {
     setFeedFolderMembership,
     syncAllFeeds
 } from '../../mutations';
-import {getFeeds, getFolders} from '../../db/db';
+import {getLibrary} from '../../services/api';
 import {navigate} from '../../router';
 import {loadTodaySettings, pruneTodaySettings, saveTodaySettings, type TodaySettings} from '../../services/today-settings';
 import type {MenuAnchor} from '../feed-menu/feed-menu';
@@ -105,10 +105,7 @@ export class SourceList extends LitElement {
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
-        queryFn: async () => {
-            const [folders, feeds] = await Promise.all([getFolders(), getFeeds()]);
-            return {folders, feeds};
-        },
+        queryFn: () => getLibrary(),
     }));
 
     private get libraryData(): Library {

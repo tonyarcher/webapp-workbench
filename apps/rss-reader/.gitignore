@@ -4,3 +4,4 @@ dist/
 .idea/
 /.vscode/launch.json
 /.air/settings.json
+dist-server/

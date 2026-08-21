@@ -1,0 +1,10 @@
+export const PORT = Number(process.env.PORT ?? 3001);
+export const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://rss:rss@localhost:5432/rss';
+export const POLL_TICK_MS = Number(process.env.POLL_TICK_MS ?? 60_000);
+export const POLL_MAX_AGE_MS = Number(process.env.POLL_MAX_AGE_MS ?? 15 * 60_000);
+export const POLL_BATCH = 5;
+export const FETCH_TIMEOUT_MS = 15_000;
+export const MAX_FEED_BYTES = 5 * 1024 * 1024;
+export const MAX_ARTICLES_PER_FEED = 400;
+export const MAX_CONTENT_BYTES = 256 * 1024;
+export const PAGE_LIMIT_DEFAULT = 50;

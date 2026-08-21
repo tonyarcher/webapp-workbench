@@ -20,7 +20,7 @@ export function articlesKey(params: {
     feedId?: string;
     unreadOnly?: boolean;
     sort?: 'hot' | 'newest' | 'oldest';
-    cursor?: { key: number; id: string };
+    cursor?: string;
 }) {
     return ['articles', params] as const;
 }
@@ -91,6 +91,17 @@ export function updateArticlesInCache(articleId: string, patch: Partial<Article>
             queryClient.setQueryData(query.queryKey, {...data, items: next});
         }
     }
+}
+
+/** Current article state from any cached page — lets toggles stay optimistic
+ *  without a server round-trip to read the prior value. */
+export function getArticleFromCache(articleId: string): Article | undefined {
+    for (const query of queryClient.getQueryCache().findAll({queryKey: ['articles']})) {
+        const data = query.state.data as { items: Article[] } | undefined;
+        const found = data?.items.find((a) => a.id === articleId);
+        if (found) return found;
+    }
+    return undefined;
 }
 
 export function invalidateLibrary() {
