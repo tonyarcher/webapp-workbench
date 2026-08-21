@@ -2,7 +2,7 @@ import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, state} from 'lit/decorators.js';
 import {libraryKey, queryClient, QueryController} from '../../query';
 import {getLibrary, fetchArticlesPage} from '../../services/api';
-import {markArticleRead, toggleStar} from '../../mutations';
+import {markArticleRead, markShownRead, toggleStar} from '../../mutations';
 import {safeHttpUrl} from '../../services/parser';
 import {
     loadTodaySettings,
@@ -150,6 +150,7 @@ export class TodayView extends LitElement {
             <option value="cards">Cards</option>
           </select>
         </label>
+        <button class="btn" @click=${this.onMarkShownRead}>Mark shown as read</button>
       </div>
 
       <div class="body ${settings.listView}">
@@ -173,6 +174,16 @@ export class TodayView extends LitElement {
                         : html`<div class="empty">${settings.unreadOnly
                             ? 'Nothing unread today in these folders.'
                             : 'Nothing published today in these folders yet. Hit Refresh to sync.'}</div>`}
+        ${sections.length
+            ? html`
+            <div class="mark-end">
+              <button
+                class="mark-end-btn"
+                ?disabled=${!this.visibleArticles(articles, feeds, folders, settings).some((a) => a.read === 0)}
+                @click=${this.onMarkShownRead}
+              >Mark shown as read</button>
+            </div>`
+            : ''}
       </div>
     `;
     }
@@ -337,6 +348,38 @@ export class TodayView extends LitElement {
         );
     }
 
+    /** The articles actually on screen after exclusions, per-folder caps,
+     *  and unread-only — same set in j/k order. A feed in two folders lands
+     *  in both sections; dedupe so each article counts once. */
+    private visibleArticles(
+        articles = this.articles.data ?? [],
+        feeds = this.library.data?.feeds ?? [],
+        folders = this.library.data?.folders ?? [],
+        settings = pruneTodaySettings(this.settings, folders.map((f) => f.id)),
+    ): Article[] {
+        const sections = buildTodaySections(
+            articles,
+            feeds,
+            folders,
+            settings.excludedFolderIds,
+            settings.perFolder,
+            settings.unreadOnly,
+        );
+        const seen = new Set<string>();
+        return sections.flatMap((s) => s.articles).filter((a) => {
+            if (seen.has(a.id)) return false;
+            seen.add(a.id);
+            return true;
+        });
+    }
+
+    private async onMarkShownRead() {
+        const ids = this.visibleArticles().filter((a) => a.read === 0).map((a) => a.id);
+        if (!ids.length) return;
+        await markShownRead(ids);
+        await queryClient.invalidateQueries({queryKey: ['today']});
+    }
+
     private openArticle(article: Article) {
         if (article.read === 0) {
             // Chain the query refresh after the write so a refetch can't win
@@ -345,23 +388,7 @@ export class TodayView extends LitElement {
                 queryClient.invalidateQueries({queryKey: ['today']}),
             );
         }
-        const settings = pruneTodaySettings(this.settings, this.library.data?.folders.map((f) => f.id) ?? []);
-        const sections = buildTodaySections(
-            this.articles.data ?? [],
-            this.library.data?.feeds ?? [],
-            this.library.data?.folders ?? [],
-            settings.excludedFolderIds,
-            settings.perFolder,
-            settings.unreadOnly,
-        );
-        // A feed in two folders lands in both sections; dedupe so overlay
-        // j/k navigation visits each article once.
-        const seen = new Set<string>();
-        const items = sections.flatMap((s) => s.articles).filter((a) => {
-            if (seen.has(a.id)) return false;
-            seen.add(a.id);
-            return true;
-        });
+        const items = this.visibleArticles();
         const index = items.findIndex((a) => a.id === article.id);
         this.dispatchEvent(
             new CustomEvent('open-article', {

@@ -35,6 +35,51 @@
     color: var(--text-muted);
 }
 
+.btn {
+    font: inherit;
+    font-size: 13px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.btn:hover {
+    background: var(--hover);
+}
+
+.mark-end {
+    display: flex;
+    justify-content: center;
+    padding: 88px 16px 120px;
+}
+
+.mark-end-btn {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    padding: 8px 22px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--panel-bg);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.mark-end-btn:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--accent);
+    background: var(--hover);
+}
+
+.mark-end-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
 .unread-toggle {
     display: flex;
     align-items: center;
