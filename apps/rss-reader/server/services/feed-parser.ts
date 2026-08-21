@@ -145,7 +145,9 @@ function parseRss(doc: Document, fallbackPublished: number): ParsedFeed {
             author,
             summary: stripHtml(description).slice(0, 500) || undefined,
             content,
-            media: parseMedia(item),
+            // WordPress-style feeds (cnevpost etc.) carry images only inside
+            // the description/content HTML — fall back to the first <img>.
+            media: parseMedia(item) ?? firstImageUrl(content),
             comments: parseCommentCount(item),
             published,
         };
@@ -189,7 +191,7 @@ function parseAtom(doc: Document, fallbackPublished: number): ParsedFeed {
             author,
             summary: stripHtml(summary).slice(0, 500) || undefined,
             content: content || summary || undefined,
-            media: parseAtomMedia(entry),
+            media: parseAtomMedia(entry) ?? firstImageUrl(content || summary || undefined),
             comments: parseCommentCount(entry),
             published,
         };
@@ -211,4 +213,21 @@ export function stripHtml(html: string | undefined): string {
         text = html.replace(/<[^>]*>/g, ' ');
     }
     return text.replace(/\s+/g, ' ').trim();
+}
+
+/** First image URL inside an HTML string, if any (http(s) only). Mirrors
+ *  src/services/parser.ts so client and server agree on thumbnails. */
+export function firstImageUrl(html: string | undefined): string | undefined {
+    if (!html) return undefined;
+    // Lazy-loading sites often defer the real URL to data-* attributes.
+    const lazy = /<img[^>]+(?:data-src|data-lazy-src|data-original)=["']([^"']+)["']/i.exec(html);
+    if (lazy) return safeHttpUrl(lazy[1]);
+    const src = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
+    if (src) return safeHttpUrl(src[1]);
+    const srcset = /<img[^>]+srcset=["']([^"']+)["']/i.exec(html);
+    if (srcset) {
+        const first = srcset[1].split(',')[0]?.trim().split(' ')[0];
+        if (first) return safeHttpUrl(first);
+    }
+    return undefined;
 }

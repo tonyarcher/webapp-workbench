@@ -79,6 +79,45 @@ assert(cRss.items[0].published === sRss.items[0].published, 'rss item published 
 assert(cRss.items[0].summary === sRss.items[0].summary, 'rss item summary parity');
 assert(cRss.items[0].media === sRss.items[0].media, 'rss item media parity');
 
+// ---- image fallback: WordPress-style feeds embed <img> in the description
+// HTML with no media elements (cnevpost). Both parsers must find it. ----
+const imgInDescription = `<?xml version="1.0"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel>
+  <title>WP Feed</title>
+  <link>https://wp.example</link>
+  <item>
+    <title>Has description img</title>
+    <link>https://wp.example/a</link>
+    <guid>wp-a</guid>
+    <pubDate>Wed, 30 Jul 2025 10:00:00 GMT</pubDate>
+    <description><![CDATA[<p><img src="https://wp.example/images/lead.jpg" alt="" /></p><p>Body text.</p>]]></description>
+  </item>
+  <item>
+    <title>Img only in content:encoded</title>
+    <link>https://wp.example/b</link>
+    <guid>wp-b</guid>
+    <pubDate>Wed, 30 Jul 2025 09:00:00 GMT</pubDate>
+    <description><![CDATA[<p>Plain text, no image.</p>]]></description>
+    <content:encoded><![CDATA[<figure><img src="https://wp.example/images/encoded.png" /></figure>]]></content:encoded>
+  </item>
+  <item>
+    <title>No image anywhere</title>
+    <link>https://wp.example/c</link>
+    <guid>wp-c</guid>
+    <pubDate>Wed, 30 Jul 2025 08:00:00 GMT</pubDate>
+    <description><![CDATA[<p>Just words.</p>]]></description>
+  </item>
+</channel>
+</rss>`;
+const cImg = clientParseFeedXml(imgInDescription, now);
+const sImg = serverParseFeedXml(imgInDescription, now);
+assert(sImg.items[0].media === 'https://wp.example/images/lead.jpg', 'server extracts img from description html');
+assert(sImg.items[1].media === 'https://wp.example/images/encoded.png', 'server extracts img from content:encoded');
+assert(sImg.items[2].media === undefined, 'server leaves media undefined without any image');
+// No client parity asserts here: the legacy client parser left HTML images
+// to its ingest step, so ParsedItem.media intentionally differs across sides.
+
 // ---- Atom entry ----
 const atom = `<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:thr="http://purl.org/syndication/thread/1.0">
