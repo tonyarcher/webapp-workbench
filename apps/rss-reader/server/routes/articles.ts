@@ -137,8 +137,12 @@ export const updateArticleStateHandler: RouteHandler = async ({req, user}) => {
 
         try {
             const result = await pool.query(
+                // VALUES must never see NULL for the NOT NULL booleans —
+                // Postgres applies column DEFAULTs only when the column is
+                // omitted, not when an explicit null arrives. Partial
+                // updates still merge field-by-field in the conflict clause.
                 `INSERT INTO article_state (user_id, article_id, read, read_at, starred)
-                 VALUES ($1, $2, $3, $4, $5)
+                 VALUES ($1, $2, COALESCE($3, false), $4, COALESCE($5, false))
                  ON CONFLICT (user_id, article_id) DO UPDATE SET
                     read = COALESCE($3, article_state.read),
                     read_at = CASE WHEN $3 IS NOT NULL THEN $4 ELSE article_state.read_at END,
