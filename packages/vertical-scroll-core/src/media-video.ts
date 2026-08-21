@@ -156,9 +156,10 @@ export class ScrollMediaVideo extends LitElement {
     /**
      * TikTok's embed card is a fixed 325px-wide white card. Scale it so the
      * 9:16 video fills the slide height; the white card-info below the video
-     * overflows the iframe viewport and is cropped. pointer-events: none
+     * overflows the iframe viewport and is cropped. The center tap overlay
      * keeps the wheel from scrolling the iframe internally (which would
-     * fight the viewport paging).
+     * fight the viewport paging); left/right edges stay clickable so
+     * photo-carousel chevrons work.
      */
     private applyEmbedScale(): void {
         const iframe = this.iframe
