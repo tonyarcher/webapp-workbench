@@ -27,10 +27,12 @@ export async function ingestFeed(
     try {
         parsed = parseFeedXml(xml, Date.now());
     } catch (err) {
+        // Back off like a success would: leaving last_fetched_at NULL makes
+        // broken feeds retry every tick and starve healthy ones in the queue.
         await pool.query(
-            `INSERT INTO feed_sync (feed_id, last_error)
-             VALUES ($1, $2)
-             ON CONFLICT (feed_id) DO UPDATE SET last_error = EXCLUDED.last_error, last_fetched_at = NULL`,
+            `INSERT INTO feed_sync (feed_id, last_fetched_at, last_error)
+             VALUES ($1, now(), $2)
+             ON CONFLICT (feed_id) DO UPDATE SET last_error = EXCLUDED.last_error, last_fetched_at = now()`,
             [feedRow.id, err instanceof Error ? err.message : String(err)],
         );
         throw err;

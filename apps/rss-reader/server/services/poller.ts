@@ -100,10 +100,24 @@ async function pollFeed(feedId: string): Promise<void> {
     const feed = feedRows[0];
     if (!feed) return;
 
-    const result = await fetchFeedText(feed.xml_url, {
-        etag: sync.etag ?? undefined,
-        lastModified: sync.last_modified ?? undefined,
-    });
+    let result;
+    try {
+        result = await fetchFeedText(feed.xml_url, {
+            etag: sync.etag ?? undefined,
+            lastModified: sync.last_modified ?? undefined,
+        });
+    } catch (err) {
+        // Fetch-phase failure: back off for a full poll interval instead of
+        // leaving last_fetched_at NULL (which would retry every tick and
+        // starve the rest of the queue).
+        await pool.query(
+            `INSERT INTO feed_sync (feed_id, last_fetched_at, last_error)
+             VALUES ($1, now(), $2)
+             ON CONFLICT (feed_id) DO UPDATE SET last_fetched_at = now(), last_error = EXCLUDED.last_error`,
+            [feedId, err instanceof Error ? err.message : String(err)],
+        );
+        throw err;
+    }
 
     if (result.status === 304) {
         await pool.query(
