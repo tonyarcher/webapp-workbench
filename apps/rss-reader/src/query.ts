@@ -7,7 +7,10 @@ export const queryClient = new QueryClient({
         queries: {
             staleTime: 30_000,
             gcTime: 5 * 60_000,
-            refetchOnWindowFocus: false,
+            // The server is the source of truth and mutates outside any
+            // client event (poller ingests), so counts must refresh when
+            // the user returns to the tab.
+            refetchOnWindowFocus: true,
             retry: 1,
         },
     },

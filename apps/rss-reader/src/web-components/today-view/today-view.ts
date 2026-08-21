@@ -40,6 +40,7 @@ export class TodayView extends LitElement {
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
         queryFn: () => getLibrary(),
+        refetchInterval: 60_000,
     }));
 
     private articles = new QueryController<Article[]>(this, () => ({

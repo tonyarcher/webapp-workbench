@@ -106,6 +106,7 @@ export class ArticleList extends LitElement {
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
         queryFn: () => getLibrary(),
+        refetchInterval: 60_000,
     }));
 
     override firstUpdated() {
@@ -357,7 +358,9 @@ export class ArticleList extends LitElement {
                 </div>`
             : ''}
         ${!this.loading && !this.items.length
-            ? html`<div class="empty">No articles yet. Hit Refresh to sync this view.</div>`
+            ? html`<div class="empty">${this.unreadOnly || this.hideRead
+                ? 'Nothing unread here — "Unread only" is filtering this view.'
+                : 'No articles yet. Hit Refresh to sync this view.'}</div>`
             : ''}
         ${this.library.error && this.view.kind !== 'feed'
             ? html`<div class="empty">Could not load your feeds. <button class="btn" @click=${this.onRetryLibrary}>Retry</button></div>`

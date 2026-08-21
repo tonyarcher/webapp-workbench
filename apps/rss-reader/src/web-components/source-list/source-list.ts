@@ -106,6 +106,7 @@ export class SourceList extends LitElement {
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
         queryFn: () => getLibrary(),
+        refetchInterval: 60_000,
     }));
 
     private get libraryData(): Library {
