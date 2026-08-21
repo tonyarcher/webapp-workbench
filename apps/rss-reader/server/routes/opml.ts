@@ -126,5 +126,15 @@ export const importOpmlHandler: RouteHandler = async ({req, user}) => {
 
     await processNodes(nodes);
 
+    // Every feed must carry poll state: a missing feed_sync row reads as
+    // "never polled" in the due queue, and bulk imports without this created
+    // a hundreds-deep NULLS-FIRST haystack that starved healthy feeds.
+    await pool.query(
+        `INSERT INTO feed_sync (feed_id)
+         SELECT f.id FROM feeds f WHERE f.user_id = $1
+         ON CONFLICT (feed_id) DO NOTHING`,
+        [user.id],
+    );
+
     return {addedFeeds, addedFolders};
 };
