@@ -13,7 +13,14 @@ export const APPS = [
     service: "rss-reader",
     workspaces: ["rss-reader"],
     aliases: ["rss-reader", "rss", "apps/rss-reader"],
-    summary: "RSS reader",
+    summary: "RSS reader (static SPA)",
+  },
+  {
+    id: "rss-api",
+    service: "rss-api",
+    workspaces: ["rss-reader"],
+    aliases: ["rss-api", "api", "apps/rss-reader/server"],
+    summary: "RSS reader API + feed poller",
   },
   {
     id: "stock-game",
