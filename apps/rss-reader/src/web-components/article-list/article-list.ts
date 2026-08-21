@@ -600,16 +600,12 @@ export class ArticleList extends LitElement {
                 await Promise.all(
                     targets.slice(i, i + 12).map(async (feed) => {
                         const accumulated = pages.get(feed.id) ?? [];
-                        const cursor =
-                            accumulated.length
-                                ? this.cursors.get(feed.id)
-                                : this.cursors.get(feed.id);
                         const res = await fetchArticlesPage({
                             scope: `feed:${feed.id}`,
                             unreadOnly: this.unreadOnly || this.hideRead,
                             sort: this.sort,
                             limit: perFeed,
-                            cursor,
+                            cursor: this.cursors.get(feed.id),
                         });
                         pages.set(feed.id, [...accumulated, ...res.items]);
                         lastHasMore.set(feed.id, res.nextCursor !== undefined);
@@ -809,7 +805,7 @@ export class ArticleList extends LitElement {
         e.stopPropagation();
         const starred = !article.starred;
         this.items = this.items.map((a) => (a.id === article.id ? {...a, starred} : a));
-        await toggleStar(article.id);
+        await toggleStar(article.id, starred);
     }
 
     private renderRow(article: Article, showFeed: boolean) {

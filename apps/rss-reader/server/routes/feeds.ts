@@ -45,8 +45,16 @@ export const createFeedHandler: RouteHandler = async ({req, user}) => {
         feedRow = rows[0];
     }
 
-    // Insert folder_feeds memberships
+    // Insert folder_feeds memberships (validating ownership so a bogus
+    // folderId can't 500 after the feed row already committed)
     if (body.folderIds && body.folderIds.length > 0) {
+        const {rows: owned} = await pool.query<{ id: string }>(
+            'SELECT id FROM folders WHERE user_id = $1 AND id = ANY($2::uuid[])',
+            [user.id, body.folderIds],
+        );
+        if (owned.length !== body.folderIds.length) {
+            throw new HttpError(400, 'Unknown folder in folderIds');
+        }
         const client = await pool.connect();
         try {
             await client.query('BEGIN');

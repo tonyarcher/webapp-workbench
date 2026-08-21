@@ -35,6 +35,16 @@ export function route(method: string, pattern: string, handler: RouteHandler): R
 
 // ---- pattern matching ----
 
+/** decodeURIComponent that tolerates malformed sequences (cookies/paths are
+ *  attacker-controlled; a raw URIError here would 500 the request). */
+function safeDecode(value: string): string {
+    try {
+        return decodeURIComponent(value);
+    } catch {
+        return value;
+    }
+}
+
 export function matchRoute(pattern: string, pathname: string): Record<string, string> | null {
     const pp = pattern.split('/');
     const pa = pathname.split('/');
@@ -42,7 +52,7 @@ export function matchRoute(pattern: string, pathname: string): Record<string, st
     const params: Record<string, string> = {};
     for (let i = 0; i < pp.length; i++) {
         if (pp[i].startsWith(':')) {
-            params[pp[i].slice(1)] = decodeURIComponent(pa[i]);
+            params[pp[i].slice(1)] = safeDecode(pa[i]);
         } else if (pp[i] !== pa[i]) {
             return null;
         }
@@ -102,7 +112,7 @@ export function parseCookies(header: string | undefined): Record<string, string>
         if (idx < 0) continue;
         const key = pair.slice(0, idx).trim();
         const val = pair.slice(idx + 1).trim();
-        if (key) out[key] = decodeURIComponent(val);
+        if (key) out[key] = safeDecode(val);
     }
     return out;
 }
@@ -128,42 +138,50 @@ export function createDispatcher(
     ensureUser: (req: IncomingMessage, res: ServerResponse) => Promise<{ id: string; label: string }>,
 ): (req: IncomingMessage, res: ServerResponse) => void {
     return (req, res) => {
-        const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
-        const pathname = url.pathname;
-        const method = req.method ?? 'GET';
+        void (async () => {
+            // Everything up to and including the handler lives in one try:
+            // ensureUser touches the DB and cookies are attacker-controlled,
+            // so a throw outside this block would crash the process.
+            try {
+                const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+                const method = req.method ?? 'GET';
 
-        for (const r of routes) {
-            if (r.method !== method) continue;
-            const params = matchRoute(r.pattern, pathname);
-            if (params === null) continue;
-
-            void (async () => {
-                const user = await ensureUser(req, res);
-                const ctx: RouteCtx = {
-                    req,
-                    res,
-                    params,
-                    query: url.searchParams,
-                    user,
-                };
-                try {
-                    const result = await r.handler(ctx);
-                    if (!res.headersSent && result !== undefined) {
-                        sendJson(res, 200, result);
-                    }
-                } catch (err) {
-                    const status = err instanceof HttpError ? err.status : 500;
-                    const message = err instanceof Error ? err.message : String(err);
-                    if (status >= 500) console.error(err);
-                    if (!res.headersSent) {
-                        sendJson(res, status, {error: message});
-                    }
+                let matched: Route | undefined;
+                let params: Record<string, string> = {};
+                for (const r of routes) {
+                    if (r.method !== method) continue;
+                    const p = matchRoute(r.pattern, url.pathname);
+                    if (p === null) continue;
+                    matched = r;
+                    params = p;
+                    break;
                 }
-            })();
-            return;
-        }
+                if (!matched) {
+                    sendJson(res, 404, {error: 'not found'});
+                    return;
+                }
 
-        sendJson(res, 404, {error: 'not found'});
+                const user = await ensureUser(req, res);
+                const result = await matched.handler({req, res, params, query: url.searchParams, user});
+                if (!res.headersSent && result !== undefined) {
+                    sendJson(res, 200, result);
+                }
+            } catch (err) {
+                const status = err instanceof HttpError ? err.status : 500;
+                // Never echo internal error text to the caller.
+                const message = status >= 500
+                    ? 'internal error'
+                    : err instanceof Error
+                        ? err.message
+                        : String(err);
+                if (status >= 500) console.error(err);
+                if (!res.headersSent) {
+                    sendJson(res, status, {error: message});
+                } else {
+                    res.destroy();
+                }
+            }
+        })();
     };
 }
 

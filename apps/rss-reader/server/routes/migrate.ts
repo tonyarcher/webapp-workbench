@@ -44,12 +44,18 @@ export const migrateLibraryHandler: RouteHandler = async ({req, user}) => {
         const feedMap = new Map<string, string>();
         if (body.feeds) {
             for (const f of body.feeds) {
+                let hostTitle = f.url;
+                try {
+                    hostTitle = new URL(f.url).hostname;
+                } catch {
+                    // keep raw url as title for malformed entries
+                }
                 const {rows} = await client.query(
                     `INSERT INTO feeds (user_id, xml_url, title, site_url)
                      VALUES ($1, $2, $3, $4)
                      ON CONFLICT (user_id, xml_url) DO UPDATE SET title = EXCLUDED.title
                      RETURNING id`,
-                    [user.id, f.url, f.title ?? new URL(f.url).hostname, f.siteUrl ?? null],
+                    [user.id, f.url, f.title ?? hostTitle, f.siteUrl ?? null],
                 );
                 const feedId = rows[0].id;
                 feedMap.set(f.url, feedId);

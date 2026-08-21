@@ -83,7 +83,7 @@ export class ArticleView extends LitElement {
         if (!this.article) return;
         const next = !this.article.starred;
         this.article = {...this.article, starred: next};
-        void toggleStar(this.article.id);
+        void toggleStar(this.article.id, next);
         window.dispatchEvent(
             new CustomEvent('article-starred', {detail: {id: this.article.id, starred: next}}),
         );

@@ -329,7 +329,7 @@ export class TodayView extends LitElement {
         const starred = !article.starred;
         // Chain the refetch after the write so it can't win the race and
         // re-show the old star state.
-        void toggleStar(article.id).then(() =>
+        void toggleStar(article.id, starred).then(() =>
             queryClient.invalidateQueries({queryKey: ['today']}),
         );
         window.dispatchEvent(

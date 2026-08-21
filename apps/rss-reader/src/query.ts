@@ -93,17 +93,6 @@ export function updateArticlesInCache(articleId: string, patch: Partial<Article>
     }
 }
 
-/** Current article state from any cached page — lets toggles stay optimistic
- *  without a server round-trip to read the prior value. */
-export function getArticleFromCache(articleId: string): Article | undefined {
-    for (const query of queryClient.getQueryCache().findAll({queryKey: ['articles']})) {
-        const data = query.state.data as { items: Article[] } | undefined;
-        const found = data?.items.find((a) => a.id === articleId);
-        if (found) return found;
-    }
-    return undefined;
-}
-
 export function invalidateLibrary() {
     return queryClient.invalidateQueries({queryKey: libraryKey});
 }

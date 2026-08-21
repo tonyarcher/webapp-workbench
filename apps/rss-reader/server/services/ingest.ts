@@ -43,10 +43,11 @@ export async function ingestFeed(
 
     const client = await pool.connect();
     let inserted = 0;
+    // Syndication counts only need recomputing for stories this sync touched.
+    const affectedLinks = new Set<string>();
     try {
         await client.query('BEGIN');
 
-        const insertedIds = new Set<string>();
         for (const item of parsed.items) {
             const articleId = makeArticleId(feedRow.id, item.guid);
             const contentHtml = sanitizeHtml(item.content ?? item.summary);
@@ -59,17 +60,28 @@ export async function ingestFeed(
             const normLink = link ? normalizeLink(link) : null;
             const domain = link ? domainOf(link) : null;
             const publishedAt = new Date(item.published);
+            // Computed here where we already hold the text — avoids reloading
+            // every stored article on each poll (was an N+1 per feed).
+            const engagement = contentEngagement({
+                title: item.title || '(untitled)',
+                content: truncatedContent || undefined,
+                summary: summary || undefined,
+                author: item.author,
+                media: image ?? undefined,
+            });
+            if (normLink) affectedLinks.add(normLink);
 
             // xmax=0 in RETURNING distinguishes insert from conflict-update.
             const {rows} = await client.query<{ was_inserted: boolean }>(
-                `INSERT INTO articles (id, feed_id, guid, title, link, norm_link, domain, author, summary, content_html, image, comments, published_at, fetched_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                `INSERT INTO articles (id, feed_id, guid, title, link, norm_link, domain, author, summary, content_html, image, comments, engagement, published_at, fetched_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                  ON CONFLICT (id) DO UPDATE SET
                     title = EXCLUDED.title,
                     content_html = EXCLUDED.content_html,
                     summary = EXCLUDED.summary,
                     image = EXCLUDED.image,
                     comments = EXCLUDED.comments,
+                    engagement = EXCLUDED.engagement,
                     fetched_at = now()
                  RETURNING (xmax = 0) AS was_inserted`,
                 [
@@ -85,13 +97,13 @@ export async function ingestFeed(
                     truncatedContent || null,
                     image,
                     item.comments ?? null,
+                    engagement,
                     publishedAt,
                     now,
                 ],
             );
-            if (rows[0]?.was_inserted) insertedIds.add(articleId);
+            if (rows[0]?.was_inserted) inserted++;
         }
-        inserted = insertedIds.size;
 
         await client.query('COMMIT');
     } catch (err) {
@@ -101,63 +113,64 @@ export async function ingestFeed(
         client.release();
     }
 
-    // ---- compute engagement scores ----
-    const {rows: articles} = await pool.query<{ id: string; title: string; content_html: string | null; summary: string | null; author: string | null; image: string | null }>(
-        'SELECT id, title, content_html, summary, author, image FROM articles WHERE feed_id = $1',
-        [feedRow.id],
-    );
-
-    for (const a of articles) {
-        const engagement = contentEngagement({
-            title: a.title,
-            content: a.content_html ?? undefined,
-            summary: a.summary ?? undefined,
-            author: a.author ?? undefined,
-            media: a.image ?? undefined,
-        });
-        await pool.query(
-            'UPDATE articles SET engagement = $1 WHERE id = $2',
-            [engagement, a.id],
-        );
-    }
-
     // ---- compute popularity + hot (mirrors ranking.ts formulas exactly) ----
     // popularityScore = 1 + 3*(syndication-1) + min(comments, 50)
     // hotScore = log10(max(popularity + max(engagement,0), 1))
     //            + (epochSec - anchor)/90000
-    await pool.query(
-        `UPDATE articles a
-         SET popularity = 1 + 3 * GREATEST(sub.cnt - 1, 0)
-                          + LEAST(GREATEST(COALESCE(a.comments, 0), 0), 50),
-              hot = log(GREATEST(
-                        1 + 3 * GREATEST(sub.cnt - 1, 0)
-                        + LEAST(GREATEST(COALESCE(a.comments, 0), 0), 50)
-                        + GREATEST(a.engagement, 0), 1)::numeric)
-                   + (EXTRACT(EPOCH FROM a.published_at) - 1134028003) / 90000
-         FROM (
-            SELECT norm_link, COUNT(DISTINCT feed_id) AS cnt
-            FROM articles
-            WHERE norm_link IS NOT NULL AND feed_id IN (
+    // Scoped to links this sync touched so unrelated feeds' rows don't shift
+    // mid-pagination. Linkless items have no syndication group; they still
+    // get base popularity like the client did.
+    if (affectedLinks.size > 0) {
+        await pool.query(
+            `UPDATE articles a
+             SET popularity = 1 + 3 * GREATEST(sub.cnt - 1, 0)
+                              + LEAST(GREATEST(COALESCE(a.comments, 0), 0), 50),
+                  hot = log(GREATEST(
+                            1 + 3 * GREATEST(sub.cnt - 1, 0)
+                            + LEAST(GREATEST(COALESCE(a.comments, 0), 0), 50)
+                            + GREATEST(a.engagement, 0), 1)::numeric)
+                       + (EXTRACT(EPOCH FROM a.published_at) - 1134028003) / 90000
+             FROM (
+                SELECT norm_link, COUNT(DISTINCT feed_id) AS cnt
+                FROM articles
+                WHERE norm_link = ANY($2::text[]) AND feed_id IN (
+                    SELECT id FROM feeds WHERE user_id = $1
+                )
+                GROUP BY norm_link
+             ) sub
+             WHERE a.norm_link = sub.norm_link AND a.feed_id IN (
                 SELECT id FROM feeds WHERE user_id = $1
-            )
-            GROUP BY norm_link
-         ) sub
-         WHERE a.norm_link = sub.norm_link AND a.feed_id IN (
-            SELECT id FROM feeds WHERE user_id = $1
-         )`,
-        [userId],
+             )`,
+            [userId, [...affectedLinks]],
+        );
+    }
+    await pool.query(
+        `UPDATE articles
+         SET popularity = 1 + LEAST(GREATEST(COALESCE(comments, 0), 0), 50),
+             hot = log(GREATEST(
+                       1 + LEAST(GREATEST(COALESCE(comments, 0), 0), 50)
+                       + GREATEST(engagement, 0), 1)::numeric)
+                  + (EXTRACT(EPOCH FROM published_at) - 1134028003) / 90000
+         WHERE feed_id = $1 AND norm_link IS NULL`,
+        [feedRow.id],
     );
 
     // ---- prune per feed ----
+    // Keep-set is the newest N of ALL articles; starred ones are then exempt
+    // from deletion at any age (the NOT EXISTS lives in the outer WHERE —
+    // putting it inside the keep-set instead would spare nothing).
     await pool.query(
-        `DELETE FROM articles
-         WHERE feed_id = $1
-           AND id NOT IN (
-             SELECT id FROM articles
-             WHERE feed_id = $1
-               AND NOT EXISTS (SELECT 1 FROM article_state s WHERE s.article_id = articles.id AND s.starred)
-             ORDER BY published_at DESC
-             LIMIT $2
+        `DELETE FROM articles a
+         WHERE a.feed_id = $1
+           AND NOT EXISTS (
+               SELECT 1 FROM article_state s
+               WHERE s.article_id = a.id AND s.starred
+           )
+           AND a.id NOT IN (
+               SELECT id FROM articles
+               WHERE feed_id = $1
+               ORDER BY published_at DESC
+               LIMIT $2
            )`,
         [feedRow.id, MAX_ARTICLES_PER_FEED],
     );

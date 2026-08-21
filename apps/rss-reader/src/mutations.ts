@@ -13,7 +13,7 @@ import {
 import {exportOpml, importOpml} from './services/opml';
 import {createCoalescer} from './services/coalesce';
 import {allSyncKey} from './services/sync-keys';
-import {invalidateArticles, invalidateLibrary, updateArticlesInCache, getArticleFromCache, libraryKey, queryClient, type LibraryData} from './query';
+import {invalidateArticles, invalidateLibrary, updateArticlesInCache, libraryKey, queryClient, type LibraryData} from './query';
 import type {Feed} from './types';
 
 // Elevator-button coalescing for refreshes: mashing Refresh joins the
@@ -100,13 +100,18 @@ export async function reorderFolders(folderIds: string[]) {
 export async function markArticleRead(articleId: string) {
     updateArticlesInCache(articleId, {read: 1});
     void recordAffinity(articleId, 1).catch(() => {});
-    void updateArticleState([{id: articleId, read: true}]).catch(() => {});
+    // Awaited so a subsequent unread-only refetch can't race this write.
+    try {
+        await updateArticleState([{id: articleId, read: true}]);
+    } catch (err) {
+        console.error('markArticleRead failed', err);
+    }
     await invalidateLibrary();
 }
 
-export async function toggleStar(articleId: string) {
-    const article = getArticleFromCache(articleId);
-    const nowStarred = !(article?.starred ?? false);
+/** The caller supplies the toggled value — it always has the article in hand,
+ *  and no shared cache holds article pages to read the prior state from. */
+export async function toggleStar(articleId: string, nowStarred: boolean) {
     updateArticlesInCache(articleId, {starred: nowStarred});
     void updateArticleState([{id: articleId, starred: nowStarred}]).catch(() => {});
     if (nowStarred) void recordAffinity(articleId, 4).catch(() => {});
@@ -120,8 +125,13 @@ export async function markAllRead(feedId?: string) {
 
 export async function markShownRead(articleIds: string[]) {
     for (const id of articleIds) updateArticlesInCache(id, {read: 1});
-    // One batched write for the whole visible page.
-    void updateArticleState(articleIds.map((id) => ({id, read: true}))).catch(() => {});
+    // Awaited: callers refetch unread-only lists right after this returns,
+    // and firing blind would let just-read articles reappear.
+    try {
+        await updateArticleState(articleIds.map((id) => ({id, read: true})));
+    } catch (err) {
+        console.error('markShownRead failed', err);
+    }
     await invalidateLibrary();
 }
 

@@ -78,7 +78,7 @@ function escXml(s: string): string {
 export const importOpmlHandler: RouteHandler = async ({req, user}) => {
     const body = await readJsonBody(req) as { xml?: string } | null;
     if (!body?.xml || typeof body.xml !== 'string') {
-                throw new HttpError(400, 'xml string is required');
+        throw new HttpError(400, 'xml string is required');
     }
 
     const {parseOpml} = await import('../services/opml-parse.js');

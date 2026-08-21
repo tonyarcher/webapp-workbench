@@ -13,10 +13,15 @@ export const getArticlesHandler: RouteHandler = async ({user, query}) => {
     const unreadOnly = query.get('unreadOnly') === '1';
     const sort = (query.get('sort') ?? 'newest') as 'newest' | 'oldest' | 'hot';
     const cursor = query.get('cursor');
-    const limit = Math.min(Number(query.get('limit') || PAGE_LIMIT_DEFAULT), 200);
+    // Today view legitimately pulls a day's worth in one page; list views
+    // stay at the default. Clamp instead of trusting client input.
+    const rawLimit = Number(query.get('limit') || PAGE_LIMIT_DEFAULT);
+    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.floor(rawLimit), 1), 10_000) : PAGE_LIMIT_DEFAULT;
     const since = query.get('since');
 
     const decoded = cursor ? decodeCursor(cursor) : null;
+    // A tampered cursor (non-numeric k) is ignored rather than 500'd.
+    const validCursor = decoded && typeof decoded.k === 'number' && typeof decoded.id === 'string' ? decoded : null;
 
     const conditions: string[] = [];
     const params: unknown[] = [user.id];
@@ -52,18 +57,18 @@ export const getArticlesHandler: RouteHandler = async ({user, query}) => {
     }
 
     // Cursor filter
-    if (decoded) {
+    if (validCursor) {
         if (sort === 'newest') {
             conditions.push('(a.published_at, a.id) < ($' + paramIdx + ', $' + (paramIdx + 1) + ')');
-            params.push(new Date(decoded.k as number), decoded.id);
+            params.push(new Date(validCursor.k as number), validCursor.id);
             paramIdx += 2;
         } else if (sort === 'oldest') {
             conditions.push('(a.published_at, a.id) > ($' + paramIdx + ', $' + (paramIdx + 1) + ')');
-            params.push(new Date(decoded.k as number), decoded.id);
+            params.push(new Date(validCursor.k as number), validCursor.id);
             paramIdx += 2;
         } else {
             conditions.push('(a.hot, a.id) < ($' + paramIdx + ', $' + (paramIdx + 1) + ')');
-            params.push(decoded.k, decoded.id);
+            params.push(validCursor.k, validCursor.id);
             paramIdx += 2;
         }
     }
@@ -130,22 +135,27 @@ export const updateArticleStateHandler: RouteHandler = async ({req, user}) => {
 
         const readAt = u.read === true ? new Date() : u.read === false ? null : undefined;
 
-        const result = await pool.query(
-            `INSERT INTO article_state (user_id, article_id, read, read_at, starred)
-             VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT (user_id, article_id) DO UPDATE SET
-                read = COALESCE($3, article_state.read),
-                read_at = CASE WHEN $3 IS NOT NULL THEN $4 ELSE article_state.read_at END,
-                starred = COALESCE($5, article_state.starred)`,
-            [
-                user.id,
-                u.id,
-                u.read ?? null,
-                readAt ?? null,
-                u.starred ?? null,
-            ],
-        );
-        if (result.rowCount) updated += result.rowCount;
+        try {
+            const result = await pool.query(
+                `INSERT INTO article_state (user_id, article_id, read, read_at, starred)
+                 VALUES ($1, $2, $3, $4, $5)
+                 ON CONFLICT (user_id, article_id) DO UPDATE SET
+                    read = COALESCE($3, article_state.read),
+                    read_at = CASE WHEN $3 IS NOT NULL THEN $4 ELSE article_state.read_at END,
+                    starred = COALESCE($5, article_state.starred)`,
+                [
+                    user.id,
+                    u.id,
+                    u.read ?? null,
+                    readAt ?? null,
+                    u.starred ?? null,
+                ],
+            );
+            if (result.rowCount) updated += result.rowCount;
+        } catch (err) {
+            // 23503: article pruned between page render and this write — skip.
+            if ((err as {code?: string}).code !== '23503') throw err;
+        }
     }
 
     return {ok: true, updated};
@@ -173,6 +183,7 @@ export const readBeforeHandler: RouteHandler = async ({req, user}) => {
                  SELECT $1, a.id, true, now()
                  FROM articles a
                  WHERE a.feed_id = $2 AND a.published_at < $3
+                   AND a.feed_id IN (SELECT id FROM feeds WHERE user_id = $1)
                  ON CONFLICT (user_id, article_id) DO UPDATE SET
                     read = true,
                     read_at = COALESCE(article_state.read_at, now())`,
@@ -185,6 +196,7 @@ export const readBeforeHandler: RouteHandler = async ({req, user}) => {
              SELECT $1, a.id, true, now()
              FROM articles a
              WHERE a.published_at < $2
+               AND a.feed_id IN (SELECT id FROM feeds WHERE user_id = $1)
              ON CONFLICT (user_id, article_id) DO UPDATE SET
                 read = true,
                 read_at = COALESCE(article_state.read_at, now())`,
@@ -210,6 +222,7 @@ export const readAllHandler: RouteHandler = async ({req, user}) => {
              SELECT $1, a.id, true, now()
              FROM articles a
              WHERE a.feed_id = $2
+               AND a.feed_id IN (SELECT id FROM feeds WHERE user_id = $1)
              ON CONFLICT (user_id, article_id) DO UPDATE SET
                 read = true,
                 read_at = COALESCE(article_state.read_at, now())`,
@@ -220,6 +233,7 @@ export const readAllHandler: RouteHandler = async ({req, user}) => {
             `INSERT INTO article_state (user_id, article_id, read, read_at)
              SELECT $1, a.id, true, now()
              FROM articles a
+             WHERE a.feed_id IN (SELECT id FROM feeds WHERE user_id = $1)
              ON CONFLICT (user_id, article_id) DO UPDATE SET
                 read = true,
                 read_at = COALESCE(article_state.read_at, now())`,

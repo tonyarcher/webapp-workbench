@@ -20,7 +20,16 @@ export const syncHandler: RouteHandler = async ({req, user}) => {
         );
         feedIds = rows.map((r) => r.id);
     } else if (typeof body.scope === 'object' && Array.isArray(body.scope.feedIds)) {
-        feedIds = body.scope.feedIds;
+        // Ownership filter: a client must not force-refetch another user's
+        // feeds by guessing UUIDs.
+        const requested = body.scope.feedIds.filter((id) => typeof id === 'string');
+        if (requested.length > 0) {
+            const {rows} = await pool.query<{ id: string }>(
+                'SELECT id FROM feeds WHERE user_id = $1 AND id = ANY($2::uuid[])',
+                [user.id, requested],
+            );
+            feedIds = rows.map((r) => r.id);
+        }
     }
 
     if (feedIds.length > 0) {
