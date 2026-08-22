@@ -33,6 +33,7 @@ import {
     velocityBonus as sVelocityBonus,
 } from '../server/services/ranking.js';
 import {encodeCursor, decodeCursor} from '../server/cursor.js';
+import {isPrivateIp} from '../server/services/fetcher.js';
 
 function assert(cond: boolean, msg: string): asserts cond {
     if (!cond) {
@@ -40,6 +41,31 @@ function assert(cond: boolean, msg: string): asserts cond {
     }
     console.log(`ok: ${msg}`);
 }
+
+// ====================================================================
+// SSRF: isPrivateIp
+// ====================================================================
+
+assert(isPrivateIp('127.0.0.1'), 'loopback is private');
+assert(isPrivateIp('10.1.2.3'), '10/8 is private');
+assert(isPrivateIp('192.168.1.1'), '192.168/16 is private');
+assert(isPrivateIp('172.16.0.1'), '172.16/12 low is private');
+assert(isPrivateIp('172.31.255.255'), '172.16/12 high is private');
+assert(isPrivateIp('169.254.1.1'), 'link-local is private');
+assert(isPrivateIp('100.64.0.1'), 'CGNAT is private');
+assert(isPrivateIp('0.0.0.0'), '0/8 is private');
+assert(isPrivateIp('::1'), 'ipv6 loopback is private');
+assert(isPrivateIp('::'), 'ipv6 unspecified is private');
+assert(isPrivateIp('::ffff:127.0.0.1'), 'mapped ipv6 loopback is private');
+assert(isPrivateIp('::ffff:7f00:1'), 'mapped ipv6 hex form is private');
+assert(isPrivateIp('fc00::1'), 'ULA fc00 is private');
+assert(isPrivateIp('fd12::1'), 'ULA fd00 is private');
+assert(isPrivateIp('fe80::1'), 'ipv6 link-local is private');
+assert(!isPrivateIp('::ffff:8.8.8.8'), 'mapped ipv6 public is public');
+assert(!isPrivateIp('8.8.8.8'), '8.8.8.8 is public');
+assert(!isPrivateIp('1.1.1.1'), '1.1.1.1 is public');
+assert(!isPrivateIp('172.32.0.1'), '172.32 is public (outside 172.16/12)');
+assert(!isPrivateIp('100.63.255.255'), '100.63 is public (outside CGNAT)');
 
 // ====================================================================
 // parser parity

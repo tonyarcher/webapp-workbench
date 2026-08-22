@@ -1,9 +1,9 @@
 import {createServer, type Server} from 'node:http';
 import {PORT} from './env.js';
-import {migrate, getPool} from './db.js';
+import {migrate, closePool} from './db.js';
 import {route, createDispatcher} from './http.js';
 import {ensureUser} from './users.js';
-import {startPoller, stopPoller} from './services/poller.js';
+import {startPoller, drainPoller} from './services/poller.js';
 
 // ---- routes ----
 
@@ -50,23 +50,39 @@ export interface RunningServer {
 
 export async function startServer(
     port = Number(process.env.PORT ?? PORT),
+    host = process.env.LISTEN_HOST ?? '0.0.0.0',
 ): Promise<RunningServer> {
     await migrate();
-    startPoller();
 
     const dispatch = createDispatcher(routes, ensureUser);
 
     return new Promise<RunningServer>((resolve, reject) => {
         const srv: Server = createServer(dispatch);
-        srv.listen(port, () => {
+        let resolved = false;
+        srv.on('error', (err) => {
+            if (!resolved) {
+                reject(err);
+                return;
+            }
+            console.error('rss-api server error:', err);
+        });
+        srv.listen(port, host, () => {
+            resolved = true;
+            // Start the poller only after we actually bound — a listen
+            // failure must not leave a live interval behind.
+            startPoller();
             const assignedPort = (srv.address() as {port: number}).port;
+            let closed = false;
             const shutdown = async () => {
-                stopPoller();
-                await new Promise<void>((res) => srv.close(() => res()));
-                await getPool().end();
+                if (closed) return;
+                closed = true;
+                await drainPoller();
+                await new Promise<void>((res, rej) => {
+                    srv.close((e) => (e ? rej(e) : res()));
+                });
+                await closePool();
             };
             resolve({port: assignedPort, close: shutdown});
         });
-        srv.on('error', reject);
     });
 }

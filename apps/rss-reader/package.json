@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/write-sw.mjs",
     "preview": "vite preview",
-    "test": "tsx scripts/smoke.ts && tsx scripts/db-smoke.ts && tsx scripts/server-smoke.ts && tsx scripts/integration.ts",
+    "test": "tsc -p scripts/tsconfig.json && tsx scripts/smoke.ts && tsx scripts/db-smoke.ts && tsx scripts/server-smoke.ts && tsx scripts/integration.ts",
     "dev:server": "tsx watch server/index.ts",
     "build:server": "tsc -p server/tsconfig.json",
     "start:server": "node dist-server/index.js"

@@ -15,6 +15,6 @@ startServer()
     // Fatal on purpose: compose restarts us once Postgres is reachable,
     // and a half-started listener-less process would be worse.
     .catch((err) => {
-        console.error('rss-api failed to migrate:', err);
+        console.error('rss-api failed to start:', err);
         process.exit(1);
     });

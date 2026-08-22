@@ -31,6 +31,15 @@ export async function migrate(): Promise<void> {
     migrated = true;
 }
 
+/** End the singleton pool so a later getPool() opens a fresh one. */
+export async function closePool(): Promise<void> {
+    if (!pool) return;
+    const p = pool;
+    await p.end();
+    pool = null;
+    migrated = false;
+}
+
 // ---- row mappers ----
 
 export function mapFeed(row: FeedRow & { unread?: string | number; folder_ids?: string[]; last_fetched_at?: Date | null; last_error?: string | null }): ApiFeed {

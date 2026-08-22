@@ -49,15 +49,15 @@ export function isPrivateIp(ip: string): boolean {
  * redirect hop — a public URL can 302 into the intranet.
  */
 async function assertPublicHost(url: URL): Promise<void> {
-    // Test escape hatch: lets integration suites serve fixture feeds from
-    // loopback without weakening the guard in real deployments.
-    if (process.env.RSS_ALLOW_LOCAL_FETCH === '1') return;
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
         throw new Error('Only http/https URLs are allowed');
     }
     if (url.username || url.password) {
         throw new Error('URLs with credentials are not allowed');
     }
+    // Test escape hatch: lets integration suites serve fixture feeds from
+    // loopback. Protocol/credential checks still run. Compose never sets this.
+    if (process.env.RSS_ALLOW_LOCAL_FETCH === '1') return;
     const hostname = url.hostname.replace(/^\[|\]$/g, '');
     if (isIP(hostname)) {
         if (isPrivateIp(hostname)) throw new Error('Refusing to fetch a private address');

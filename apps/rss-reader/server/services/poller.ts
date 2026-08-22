@@ -9,8 +9,11 @@ import type {FeedRow} from '../types.js';
 let timer: ReturnType<typeof setInterval> | null = null;
 let inFlight = false;
 let forceQueue: string[] = [];
+let stopped = false;
+let tickPromise: Promise<void> | null = null;
 
 export function startPoller(): void {
+    stopped = false;
     if (timer) return;
     timer = setInterval(() => {
         void tick().catch((err) => {
@@ -20,14 +23,28 @@ export function startPoller(): void {
 }
 
 export function stopPoller(): void {
+    stopped = true;
     if (timer) {
         clearInterval(timer);
         timer = null;
     }
 }
 
+/** Stop the interval and wait for any in-flight tick to finish. */
+export async function drainPoller(): Promise<void> {
+    stopPoller();
+    if (tickPromise) {
+        try {
+            await tickPromise;
+        } catch {
+            // already logged inside tick
+        }
+    }
+}
+
 /** Kick the poller to process due feeds immediately. */
 export function tickNow(): void {
+    if (stopped) return;
     void tick().catch((err) => {
         console.error('poller tickNow error:', err);
     });
@@ -41,9 +58,23 @@ export function queueFeeds(ids: string[]): void {
 // ---- tick ----
 
 async function tick(): Promise<void> {
-    if (inFlight) return;
+    if (inFlight || stopped) return;
     inFlight = true;
+    const running = runTick();
+    tickPromise = running;
     try {
+        await running;
+    } finally {
+        inFlight = false;
+        if (tickPromise === running) tickPromise = null;
+    }
+}
+
+async function runTick(): Promise<void> {
+    // Drain feeds queued while a pass was in flight instead of waiting
+    // for the next interval. `stopped` aborts the loop on shutdown.
+    do {
+        if (stopped) return;
         const pool = getPool();
 
         const dueIds: string[] = [...new Set(forceQueue)];
@@ -66,15 +97,14 @@ async function tick(): Promise<void> {
         }
 
         for (const feedId of dueIds.slice(0, POLL_BATCH)) {
+            if (stopped) return;
             try {
                 await pollFeed(feedId);
             } catch (err) {
                 console.error('poller: feed ' + feedId + ' failed:', err);
             }
         }
-    } finally {
-        inFlight = false;
-    }
+    } while (!stopped && forceQueue.length > 0);
 }
 
 async function pollFeed(feedId: string): Promise<void> {
