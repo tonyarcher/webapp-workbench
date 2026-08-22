@@ -140,7 +140,11 @@ export const updateArticleStateHandler: RouteHandler = async ({req, user}) => {
 
     // Ownership pre-filter: only articles living in the caller's own feeds
     // are writable, so foreign ids become no-ops instead of state rows.
-    const requestedIds = body.updates.map((u) => u.id).filter((id) => isUuid(id));
+    // Article ids are sha256 hex hashes, NOT uuids — never gate them
+    // through isUuid here.
+    const requestedIds = body.updates
+        .map((u) => u.id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0);
     const ownedIds = new Set<string>();
     if (requestedIds.length > 0) {
         const {rows: owned} = await pool.query<{ id: string }>(
