@@ -282,7 +282,9 @@
 }
 
 .grid-card {
-    height: 420px;
+    /* min-height, not height: short summaries shrink their card instead of
+       leaving a dead zone above the pinned meta line. */
+    min-height: 420px;
     border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;
