@@ -40,8 +40,8 @@ const VIEW_SETTINGS_KEY = 'rss-reader:view-settings';
 const CARD_MIN_WIDTH = 240;
 // 16:9 media (168px at the 300px column cap) + text block. Must match
 // .grid-card / .grid-card-img / .row.cards gap in article-list.css.
-const CARD_HEIGHT = 320;
-const CARD_ROW_GAP = 16;
+const CARD_HEIGHT = 420;
+const CARD_ROW_GAP = 32;
 const CARD_ROW_HEIGHT = CARD_HEIGHT + CARD_ROW_GAP;
 
 interface ViewSettings {
