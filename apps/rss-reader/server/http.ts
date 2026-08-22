@@ -2,6 +2,14 @@ import type {IncomingMessage, ServerResponse} from 'node:http';
 
 // ---- errors ----
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Guards path/body ids before they reach uuid-typed SQL parameters —
+ *  an unparseable value would surface as a 500 cast error otherwise. */
+export function isUuid(value: string | undefined | null): boolean {
+    return !!value && UUID_RE.test(value);
+}
+
 export class HttpError extends Error {
     constructor(
         public status: number,
