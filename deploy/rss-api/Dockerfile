@@ -16,6 +16,9 @@ COPY . .
 # (same workaround as the other app images — npm issue #4828).
 RUN rm -f package-lock.json && npm install --no-audit --no-fund
 RUN npm run build:server -w rss-reader
+# Drop devDependencies (typescript, embedded-postgres test binaries, …) so
+# the runtime image ships only pg + linkedom.
+RUN npm prune --omit=dev
 
 FROM node:22-slim AS runtime
 WORKDIR /app

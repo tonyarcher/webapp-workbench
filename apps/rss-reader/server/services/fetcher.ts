@@ -6,7 +6,7 @@ import {FETCH_TIMEOUT_MS, MAX_FEED_BYTES} from '../env.js';
 
 const MAX_REDIRECTS = 5;
 
-function isPrivateIp(ip: string): boolean {
+export function isPrivateIp(ip: string): boolean {
     // IPv4-mapped IPv6 literals (::ffff:127.0.0.1) connect as plain IPv4 —
     // normalize before checking, and treat any other ::ffff: form (hex
     // notation like ::ffff:7f00:1) as private outright.
@@ -49,6 +49,9 @@ function isPrivateIp(ip: string): boolean {
  * redirect hop — a public URL can 302 into the intranet.
  */
 async function assertPublicHost(url: URL): Promise<void> {
+    // Test escape hatch: lets integration suites serve fixture feeds from
+    // loopback without weakening the guard in real deployments.
+    if (process.env.RSS_ALLOW_LOCAL_FETCH === '1') return;
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
         throw new Error('Only http/https URLs are allowed');
     }

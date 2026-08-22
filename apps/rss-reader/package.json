@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/write-sw.mjs",
     "preview": "vite preview",
-    "test": "tsx scripts/smoke.ts && tsx scripts/db-smoke.ts && tsx scripts/server-smoke.ts",
+    "test": "tsx scripts/smoke.ts && tsx scripts/db-smoke.ts && tsx scripts/server-smoke.ts && tsx scripts/integration.ts",
     "dev:server": "tsx watch server/index.ts",
     "build:server": "tsc -p server/tsconfig.json",
     "start:server": "node dist-server/index.js"
@@ -25,6 +25,7 @@
     "@types/node": "^26.1.2",
     "@types/pg": "^8.11.0",
     "@xmldom/xmldom": "^0.9.10",
+    "embedded-postgres": "17.10.0-beta.17",
     "fake-indexeddb": "^6.2.5",
     "tsx": "^4.23.1",
     "typescript": "^5.6.0",
