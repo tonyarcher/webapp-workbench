@@ -27,10 +27,10 @@ export const getArticlesHandler: RouteHandler = async ({user, query}) => {
     const params: unknown[] = [user.id];
     let paramIdx = 2;
 
-    // Scope filtering — every scope also constrains to the caller's own
-    // feeds so foreign UUIDs enumerate nothing (they 404-equivalent to empty).
+    // Scope filtering — every scope, including "all", constrains to the
+    // caller's own feeds. An unscoped all would leak other users' articles.
     if (scope === 'all') {
-        // no extra condition
+        conditions.push('a.feed_id IN (SELECT id FROM feeds WHERE user_id = $1)');
     } else if (scope.startsWith('feed:')) {
         const feedId = scope.slice(5);
         if (!isUuid(feedId)) throw new HttpError(400, 'invalid feed id');
