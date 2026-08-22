@@ -110,10 +110,16 @@ export async function markArticleRead(articleId: string) {
 }
 
 /** The caller supplies the toggled value — it always has the article in hand,
- *  and no shared cache holds article pages to read the prior state from. */
+ *  and no shared cache holds article pages to read the prior state from.
+ *  The write is awaited: today-view chains its refetch on this resolving,
+ *  so a fire-and-forget would let the GET re-show the old star state. */
 export async function toggleStar(articleId: string, nowStarred: boolean) {
     updateArticlesInCache(articleId, {starred: nowStarred});
-    void updateArticleState([{id: articleId, starred: nowStarred}]).catch(() => {});
+    try {
+        await updateArticleState([{id: articleId, starred: nowStarred}]);
+    } catch (err) {
+        console.error('toggleStar failed', err);
+    }
     if (nowStarred) void recordAffinity(articleId, 4).catch(() => {});
 }
 

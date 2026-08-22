@@ -1,5 +1,5 @@
 import {getPool} from '../db.js';
-import {HttpError, readJsonBody} from '../http.js';
+import {HttpError, isUuid, readJsonBody} from '../http.js';
 import type {RouteHandler} from '../http.js';
 import {mapArticle} from '../db.js';
 import {encodeCursor, decodeCursor} from '../cursor.js';
@@ -27,20 +27,28 @@ export const getArticlesHandler: RouteHandler = async ({user, query}) => {
     const params: unknown[] = [user.id];
     let paramIdx = 2;
 
-    // Scope filtering
+    // Scope filtering — every scope also constrains to the caller's own
+    // feeds so foreign UUIDs enumerate nothing (they 404-equivalent to empty).
     if (scope === 'all') {
         // no extra condition
     } else if (scope.startsWith('feed:')) {
-        conditions.push('a.feed_id = $' + paramIdx);
-        params.push(scope.slice(5));
+        const feedId = scope.slice(5);
+        if (!isUuid(feedId)) throw new HttpError(400, 'invalid feed id');
+        conditions.push(`a.feed_id = $${paramIdx} AND a.feed_id IN (SELECT id FROM feeds WHERE user_id = $1)`);
+        params.push(feedId);
         paramIdx++;
     } else if (scope.startsWith('folder:')) {
+        const folderId = scope.slice(7);
+        if (!isUuid(folderId)) throw new HttpError(400, 'invalid folder id');
         conditions.push(`a.feed_id IN (
             SELECT ff.feed_id FROM folder_feeds ff
-            WHERE ff.folder_id = $${paramIdx}
+            JOIN folders fo ON fo.id = ff.folder_id
+            WHERE ff.folder_id = $${paramIdx} AND fo.user_id = $1
         )`);
-        params.push(scope.slice(7));
+        params.push(folderId);
         paramIdx++;
+    } else {
+        throw new HttpError(400, 'invalid scope');
     }
 
     // Unread filter
@@ -50,9 +58,10 @@ export const getArticlesHandler: RouteHandler = async ({user, query}) => {
 
     // Since filter
     if (since) {
-        const sinceDate = new Date(Number(since));
+        const sinceMs = Number(since);
+        if (!Number.isFinite(sinceMs)) throw new HttpError(400, 'invalid since');
         conditions.push('a.published_at >= $' + paramIdx);
-        params.push(sinceDate);
+        params.push(new Date(sinceMs));
         paramIdx++;
     }
 
@@ -129,8 +138,22 @@ export const updateArticleStateHandler: RouteHandler = async ({req, user}) => {
     const pool = getPool();
     let updated = 0;
 
+    // Ownership pre-filter: only articles living in the caller's own feeds
+    // are writable, so foreign ids become no-ops instead of state rows.
+    const requestedIds = body.updates.map((u) => u.id).filter((id) => isUuid(id));
+    const ownedIds = new Set<string>();
+    if (requestedIds.length > 0) {
+        const {rows: owned} = await pool.query<{ id: string }>(
+            `SELECT a.id FROM articles a
+             WHERE a.id = ANY($1::text[])
+               AND a.feed_id IN (SELECT id FROM feeds WHERE user_id = $2)`,
+            [requestedIds, user.id],
+        );
+        for (const row of owned) ownedIds.add(row.id);
+    }
+
     for (const u of body.updates) {
-        if (!u.id) continue;
+        if (!u.id || !ownedIds.has(u.id)) continue;
         if (u.read === undefined && u.starred === undefined) continue;
 
         const readAt = u.read === true ? new Date() : u.read === false ? null : undefined;
@@ -176,6 +199,9 @@ export const readBeforeHandler: RouteHandler = async ({req, user}) => {
     if (!body?.cutoff || typeof body.cutoff !== 'number') {
         throw new HttpError(400, 'cutoff (epoch ms) is required');
     }
+    if (body.feedIds?.some((id) => !isUuid(id))) {
+        throw new HttpError(400, 'invalid feed id');
+    }
 
     const pool = getPool();
     const cutoffDate = new Date(body.cutoff);
@@ -217,6 +243,9 @@ export const readAllHandler: RouteHandler = async ({req, user}) => {
     const body = await readJsonBody(req) as {
         feedId?: string;
     } | null;
+    if (body?.feedId && !isUuid(body.feedId)) {
+        throw new HttpError(400, 'invalid feed id');
+    }
 
     const pool = getPool();
 

@@ -1,5 +1,5 @@
 ﻿import {getPool} from '../db.js';
-import {HttpError, readJsonBody} from '../http.js';
+import {HttpError, isUuid, readJsonBody} from '../http.js';
 import type {RouteHandler} from '../http.js';
 import {mapFeed, mapFolder} from '../db.js';
 
@@ -60,6 +60,7 @@ export const createFolderHandler: RouteHandler = async ({req, user}) => {
 // ---- DELETE /folders/:id ----
 
 export const deleteFolderHandler: RouteHandler = async ({params, user}) => {
+    if (!isUuid(params.id)) throw new HttpError(400, 'invalid folder id');
     const pool = getPool();
     await pool.query(
         'DELETE FROM folders WHERE id = $1 AND user_id = $2',

@@ -1,5 +1,5 @@
 ﻿import {getPool} from '../db.js';
-import {HttpError, readJsonBody} from '../http.js';
+import {HttpError, isUuid, readJsonBody} from '../http.js';
 import type {RouteHandler} from '../http.js';
 import {mapFeed} from '../db.js';
 import {safeHttpUrl} from '../services/feed-parser.js';
@@ -25,6 +25,21 @@ export const createFeedHandler: RouteHandler = async ({req, user}) => {
 
     const pool = getPool();
 
+    // Validate folder ownership BEFORE any insert — a bogus folderId must
+    // not leave an orphan feed row behind.
+    if (body.folderIds && body.folderIds.length > 0) {
+        if (body.folderIds.some((id) => !isUuid(id))) {
+            throw new HttpError(400, 'Unknown folder in folderIds');
+        }
+        const {rows: owned} = await pool.query<{ id: string }>(
+            'SELECT id FROM folders WHERE user_id = $1 AND id = ANY($2::uuid[])',
+            [user.id, body.folderIds],
+        );
+        if (owned.length !== body.folderIds.length) {
+            throw new HttpError(400, 'Unknown folder in folderIds');
+        }
+    }
+
     // Insert feed (dedupe by user + xml_url)
     const {rows: feedRows} = await pool.query(
         `INSERT INTO feeds (user_id, xml_url, title)
@@ -45,16 +60,8 @@ export const createFeedHandler: RouteHandler = async ({req, user}) => {
         feedRow = rows[0];
     }
 
-    // Insert folder_feeds memberships (validating ownership so a bogus
-    // folderId can't 500 after the feed row already committed)
+    // Insert folder_feeds memberships (ownership already verified above)
     if (body.folderIds && body.folderIds.length > 0) {
-        const {rows: owned} = await pool.query<{ id: string }>(
-            'SELECT id FROM folders WHERE user_id = $1 AND id = ANY($2::uuid[])',
-            [user.id, body.folderIds],
-        );
-        if (owned.length !== body.folderIds.length) {
-            throw new HttpError(400, 'Unknown folder in folderIds');
-        }
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
@@ -92,10 +99,12 @@ export const createFeedHandler: RouteHandler = async ({req, user}) => {
             );
         }
     } catch (err) {
+        // Back off like the poller does — leaving last_fetched_at NULL would
+        // re-queue this feed at the front of every tick.
         await pool.query(
-            `INSERT INTO feed_sync (feed_id, last_error)
-             VALUES ($1, $2)
-             ON CONFLICT (feed_id) DO UPDATE SET last_error = EXCLUDED.last_error`,
+            `INSERT INTO feed_sync (feed_id, last_fetched_at, last_error)
+             VALUES ($1, now(), $2)
+             ON CONFLICT (feed_id) DO UPDATE SET last_error = EXCLUDED.last_error, last_fetched_at = now()`,
             [feedRow.id, err instanceof Error ? err.message : String(err)],
         );
     }
@@ -126,6 +135,7 @@ export const createFeedHandler: RouteHandler = async ({req, user}) => {
 // ---- DELETE /feeds/:id ----
 
 export const deleteFeedHandler: RouteHandler = async ({params, user}) => {
+    if (!isUuid(params.id)) throw new HttpError(400, 'invalid feed id');
     const pool = getPool();
     const result = await pool.query(
         'DELETE FROM feeds WHERE id = $1 AND user_id = $2',
@@ -138,9 +148,13 @@ export const deleteFeedHandler: RouteHandler = async ({params, user}) => {
 // ---- PUT /feeds/:id/folders ----
 
 export const updateFeedFoldersHandler: RouteHandler = async ({req, params, user}) => {
+    if (!isUuid(params.id)) throw new HttpError(400, 'invalid feed id');
     const body = await readJsonBody(req) as { folderIds?: string[] } | null;
     if (!Array.isArray(body?.folderIds)) {
         throw new HttpError(400, 'folderIds array is required');
+    }
+    if (body.folderIds.some((id) => !isUuid(id))) {
+        throw new HttpError(400, 'Unknown folder in folderIds');
     }
 
     const pool = getPool();
@@ -151,6 +165,16 @@ export const updateFeedFoldersHandler: RouteHandler = async ({req, params, user}
         [params.id, user.id],
     );
     if (!rows[0]) throw new HttpError(404, 'Feed not found');
+
+    // Folder ownership too — body-supplied folderIds would otherwise allow
+    // injecting a feed into another user's folder.
+    const {rows: owned} = await pool.query<{ id: string }>(
+        'SELECT id FROM folders WHERE user_id = $1 AND id = ANY($2::uuid[])',
+        [user.id, body.folderIds],
+    );
+    if (owned.length !== body.folderIds.length) {
+        throw new HttpError(400, 'Unknown folder in folderIds');
+    }
 
     const client = await pool.connect();
     try {

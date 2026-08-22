@@ -213,8 +213,11 @@ export async function ingestFeed(
                     read_at = COALESCE(EXCLUDED.read_at, article_state.read_at)`,
                 [p.user_id, matched[0].id, p.read, p.read_at, p.starred],
             );
+            // Matched rows are consumed; unmatched ones stay pending so a
+            // later ingest (feed window shifts, backfill) can still apply
+            // them — the 48h sweep below is what finally discards those.
+            await pool.query('DELETE FROM pending_article_state WHERE id = $1', [p.id]);
         }
-        await pool.query('DELETE FROM pending_article_state WHERE id = $1', [p.id]);
     }
 
     // Delete old unmatched pending rows (>48h)

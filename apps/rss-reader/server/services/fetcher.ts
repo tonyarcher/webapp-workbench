@@ -7,21 +7,29 @@ import {FETCH_TIMEOUT_MS, MAX_FEED_BYTES} from '../env.js';
 const MAX_REDIRECTS = 5;
 
 function isPrivateIp(ip: string): boolean {
-    const v4 = isIP(ip) === 4;
-    if (v4) {
+    // IPv4-mapped IPv6 literals (::ffff:127.0.0.1) connect as plain IPv4 —
+    // normalize before checking, and treat any other ::ffff: form (hex
+    // notation like ::ffff:7f00:1) as private outright.
+    const lower = ip.toLowerCase();
+    if (lower.startsWith('::ffff:')) {
+        const mapped = lower.slice(7);
+        return isIP(mapped) === 4 ? isPrivateIp(mapped) : true;
+    }
+    if (isIP(ip) === 4) {
         const parts = ip.split('.').map(Number);
-        // 0.0.0.0/8, 10/8, 127/8, 169.254/16, 172.16/12, 192.168/16
+        // 0.0.0.0/8, 10/8, 127/8, 169.254/16, 172.16/12, 192.168/16,
+        // 100.64/10 (CGNAT — cloud metadata ranges live here)
         return (
             parts[0] === 0 ||
             parts[0] === 10 ||
             parts[0] === 127 ||
+            (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) ||
             (parts[0] === 169 && parts[1] === 254) ||
             (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
             (parts[0] === 192 && parts[1] === 168)
         );
     }
     // ::1, fc00::/7 (ULA), fe80::/10 (link-local), unspecified
-    const lower = ip.toLowerCase();
     return (
         lower === '::1' ||
         lower === '::' ||
