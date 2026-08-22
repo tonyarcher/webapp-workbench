@@ -393,10 +393,14 @@ export class ArticleList extends LitElement {
 
     private canLoadMore(): boolean {
         if (this.items.length >= this.pageSize) return false;
-        if (this.view.kind === 'feed' || (this.view.kind === 'all' && this.sort !== 'hot')) {
+        if (
+            this.view.kind === 'feed' ||
+            this.view.kind === 'folder' ||
+            (this.view.kind === 'all' && this.sort !== 'hot')
+        ) {
             return this.hasMoreSingle;
         }
-        const feeds = this.view.kind === 'folder' ? this.folderFeeds() : this.library.data?.feeds ?? [];
+        const feeds = this.library.data?.feeds ?? [];
         if (!feeds.length) return false;
         return feeds.some((f) => this.feedHasMore.get(f.id) !== false);
     }
@@ -567,85 +571,111 @@ export class ArticleList extends LitElement {
     }
 
     private async loadFolderPage(gen: number) {
-        await this.loadFeedSetPage(this.folderFeeds(), gen);
+        if (this.view.kind !== 'folder') return;
+        // One scoped query — do not window per-feed. A folder like Low has
+        // 50 feeds and 12 unread on 3 of them; a pageSize-sized window of
+        // the added_at-ordered list can miss those 3, return 0 items, and
+        // then never scroll (empty list) so the rest of the folder is stuck.
+        const key = `folder:${this.view.id}`;
+        const cursor = this.cursors.get(key);
+        const res = await fetchArticlesPage({
+            scope: key,
+            unreadOnly: this.unreadOnly || this.hideRead,
+            sort: this.sort,
+            limit: this.pageSize,
+            cursor,
+        });
+        if (gen !== this.gen) return;
+        this.hasMoreSingle = res.nextCursor !== undefined;
+        this.items = capItems(mergeSorted(this.items, res.items, this.sort), this.pageSize);
+        if (res.nextCursor) {
+            this.cursors.set(key, res.nextCursor);
+        }
     }
 
     /**
-     * Load a page across a set of feeds (folder view, or All view with Hot
-     * sort). Each page covers a bounded rotating window of at most `pageSize`
-     * feeds (so ~2300 feeds touch a handful of feeds per fetch, not all of
-     * them), with bounded concurrency. Each feed contributes a share of the
-     * page (`perFeedLimit`) so a folder with few feeds still fills the page;
-     * hot sort interleaves the feeds for diversity. When a feed is empty or
-     * exhausted, one backfill pass tops the page up from feeds that still have
-     * items. Cursors only advance past the items actually kept, so discarded
-     * items are never silently skipped forever.
+     * Load a page across a set of feeds (All view with Hot sort). Each page
+     * covers a bounded rotating window of at most `pageSize` feeds (so ~2300
+     * feeds touch a handful of feeds per fetch, not all of them), with bounded
+     * concurrency. Each feed contributes a share of the page (`perFeedLimit`)
+     * so a small set still fills the page; hot sort interleaves the feeds for
+     * diversity. When a feed is empty or exhausted, one backfill pass tops the
+     * page up from feeds that still have items. Empty windows are skipped so
+     * an all-read slice cannot trap the list with nothing to scroll.
      *
      * Accepted tradeoff: in newest/oldest folder views a later page can insert
      * items above the current viewport (window rotation), which can shift the
      * scroll position.
      */
     private async loadFeedSetPage(feeds: Feed[], gen: number) {
-        const activeFeeds = feeds.filter((f) => this.feedHasMore.get(f.id) !== false);
-        if (!activeFeeds.length) {
-            return;
-        }
-
-        const window = feedWindow(activeFeeds, this.feedWindowOffset, this.pageSize);
-        this.feedWindowOffset += window.length;
-
-        const pages = new Map<string, Article[]>();
-        const lastHasMore = new Map<string, boolean>();
-
-        const fetchFeeds = async (targets: Feed[], perFeed: number) => {
-            for (let i = 0; i < targets.length; i += 12) {
-                if (gen !== this.gen) return;
-                await Promise.all(
-                    targets.slice(i, i + 12).map(async (feed) => {
-                        const accumulated = pages.get(feed.id) ?? [];
-                        const res = await fetchArticlesPage({
-                            scope: `feed:${feed.id}`,
-                            unreadOnly: this.unreadOnly || this.hideRead,
-                            sort: this.sort,
-                            limit: perFeed,
-                            cursor: this.cursors.get(feed.id),
-                        });
-                        pages.set(feed.id, [...accumulated, ...res.items]);
-                        lastHasMore.set(feed.id, res.nextCursor !== undefined);
-                        if (res.nextCursor) {
-                            this.cursors.set(feed.id, res.nextCursor);
-                        }
-                    }),
-                );
+        // Skip empty windows (all-read feeds in this slice) instead of
+        // rendering an empty list that cannot scroll to the next window.
+        // Terminates: each empty window marks its feeds exhausted.
+        while (true) {
+            const activeFeeds = feeds.filter((f) => this.feedHasMore.get(f.id) !== false);
+            if (!activeFeeds.length) {
+                return;
             }
-        };
 
-        const pick = (): Article[] => {
-            const kept =
-                this.sort === 'hot'
-                    ? interleaveArticles(window.map((f) => pages.get(f.id) ?? []), this.pageSize)
-                    : mergeSorted([], window.flatMap((f) => pages.get(f.id) ?? []), this.sort).slice(0, this.pageSize);
-            return kept.filter((a) => !existingIds.has(a.id));
-        };
+            const window = feedWindow(activeFeeds, this.feedWindowOffset, this.pageSize);
+            this.feedWindowOffset += window.length;
 
-        const existingIds = new Set(this.items.map((a) => a.id));
-        await fetchFeeds(window, perFeedLimit(this.pageSize, window.length));
-        if (gen !== this.gen) return;
+            const pages = new Map<string, Article[]>();
+            const lastHasMore = new Map<string, boolean>();
 
-        let kept = pick();
-        if (kept.length < this.pageSize) {
-            const more = window.filter((f) => lastHasMore.get(f.id) === true);
-            if (more.length) {
-                await fetchFeeds(more, perFeedLimit(this.pageSize - kept.length, more.length));
-                if (gen !== this.gen) return;
-                kept = pick();
+            const fetchFeeds = async (targets: Feed[], perFeed: number) => {
+                for (let i = 0; i < targets.length; i += 12) {
+                    if (gen !== this.gen) return;
+                    await Promise.all(
+                        targets.slice(i, i + 12).map(async (feed) => {
+                            const accumulated = pages.get(feed.id) ?? [];
+                            const res = await fetchArticlesPage({
+                                scope: `feed:${feed.id}`,
+                                unreadOnly: this.unreadOnly || this.hideRead,
+                                sort: this.sort,
+                                limit: perFeed,
+                                cursor: this.cursors.get(feed.id),
+                            });
+                            pages.set(feed.id, [...accumulated, ...res.items]);
+                            lastHasMore.set(feed.id, res.nextCursor !== undefined);
+                            if (res.nextCursor) {
+                                this.cursors.set(feed.id, res.nextCursor);
+                            }
+                        }),
+                    );
+                }
+            };
+
+            const existingIds = new Set(this.items.map((a) => a.id));
+            const pick = (): Article[] => {
+                const picked =
+                    this.sort === 'hot'
+                        ? interleaveArticles(window.map((f) => pages.get(f.id) ?? []), this.pageSize)
+                        : mergeSorted([], window.flatMap((f) => pages.get(f.id) ?? []), this.sort).slice(0, this.pageSize);
+                return picked.filter((a) => !existingIds.has(a.id));
+            };
+
+            await fetchFeeds(window, perFeedLimit(this.pageSize, window.length));
+            if (gen !== this.gen) return;
+
+            let kept = pick();
+            if (kept.length < this.pageSize) {
+                const more = window.filter((f) => lastHasMore.get(f.id) === true);
+                if (more.length) {
+                    await fetchFeeds(more, perFeedLimit(this.pageSize - kept.length, more.length));
+                    if (gen !== this.gen) return;
+                    kept = pick();
+                }
             }
-        }
 
-        this.items = capItems(mergeSorted(this.items, kept, this.sort), this.pageSize); // shown-at-a-time cap
+            for (const feed of window) {
+                this.feedHasMore.set(feed.id, lastHasMore.get(feed.id) ?? false);
+            }
 
-        for (const feed of window) {
-            this.feedHasMore.set(feed.id, lastHasMore.get(feed.id) ?? false);
+            if (kept.length > 0) {
+                this.items = capItems(mergeSorted(this.items, kept, this.sort), this.pageSize);
+                return;
+            }
         }
     }
 

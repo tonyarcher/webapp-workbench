@@ -833,6 +833,49 @@ try {
         );
     }
 
+    // ==============================================================
+    // Scenario 15: folder scope + unreadOnly (Low-folder regression)
+    // A folder can have many all-read feeds and a few with unread.
+    // scope=folder&unreadOnly=1 must still return those unread items.
+    // ==============================================================
+
+    {
+        const created = await api(sessionA, 'POST', '/folders', {title: 'Low'});
+        assert(created.status === 200, 'POST /folders Low returns 200');
+        const folderId = (created.data as {id: string}).id;
+
+        // Scenario 11 inserted extra unread rows into feed A after the earlier
+        // read-all — make A actually all-read so the folder is mixed.
+        await api(sessionA, 'POST', '/articles/read-all', {feedId: feedAId});
+
+        const putA = await api(sessionA, 'PUT', `/feeds/${feedAId}/folders`, {folderIds: [folderId]});
+        assert(putA.status === 200, 'assign feed A (all-read) to Low');
+        const putB = await api(sessionA, 'PUT', `/feeds/${feedBId}/folders`, {folderIds: [folderId]});
+        assert(putB.status === 200, 'assign feed B (has unread) to Low');
+
+        const unread = await api(
+            sessionA,
+            'GET',
+            `/articles?scope=folder:${folderId}&unreadOnly=1&limit=50`,
+        );
+        assert(unread.status === 200, 'GET folder unreadOnly returns 200');
+        const unreadItems = (unread.data as {items: Array<{feedId: string; read: number}>}).items;
+        assert(unreadItems.length > 0, 'folder unreadOnly is not empty when some member feeds have unread');
+        assert(
+            unreadItems.every((a) => a.read === 0),
+            'folder unreadOnly returns only unread articles',
+        );
+        const folderFeedIds = new Set([feedAId, feedBId]);
+        assert(
+            unreadItems.every((a) => folderFeedIds.has(a.feedId)),
+            'folder unreadOnly does not leak articles from outside the folder',
+        );
+        assert(
+            unreadItems.every((a) => a.feedId === feedBId),
+            'folder unreadOnly skips the all-read member feed',
+        );
+    }
+
     console.log('\nAll integration tests passed.');
 } finally {
     globalThis.fetch = REAL_FETCH;
