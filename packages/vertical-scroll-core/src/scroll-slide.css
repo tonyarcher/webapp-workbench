@@ -186,6 +186,19 @@
     font-weight: 600;
 }
 
+/* Anchor form of the byline: the meta stack is pointer-events:none, so the
+   link opts back in and matches the Open original styling. */
+a.meta-author {
+    pointer-events: auto;
+    color: #fff;
+    text-decoration: none;
+    width: fit-content;
+}
+
+a.meta-author:hover {
+    text-decoration: underline;
+}
+
 .meta-caption {
     font-size: 13px;
     line-height: 1.35;

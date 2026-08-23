@@ -88,6 +88,11 @@ export class ScrollSlide extends LitElement {
         const isTiktokEmbed = embedProviderForUrl(item.videoUrl ?? item.url ?? null)?.name === 'tiktok'
         if (isTiktokEmbed) {
             const authorLabel = item.author ? `@${item.author}` : null
+            // Profile link for the byline. Author handles are [A-Za-z0-9._-];
+            // encode anyway and let safeUrl have final say on the scheme.
+            const authorUrl = item.author
+                ? safeUrl(`https://www.tiktok.com/@${encodeURIComponent(item.author)}`)
+                : null
             const caption = item.title && item.title !== authorLabel && item.title !== `TikTok ${item.id}` ? item.title : null
             const metaEmpty = !authorLabel && !caption && !original
             return html`
@@ -96,7 +101,11 @@ export class ScrollSlide extends LitElement {
                     ${metaEmpty
                         ? nothing
                         : html`<div class="slide-meta">
-                            ${authorLabel ? html`<div class="meta-author">${authorLabel}</div>` : nothing}
+                            ${authorLabel && authorUrl
+                                ? html`<a class="meta-author" href=${authorUrl} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${authorLabel}</a>`
+                                : authorLabel
+                                    ? html`<div class="meta-author">${authorLabel}</div>`
+                                    : nothing}
                             ${caption ? html`<div class="meta-caption">${caption}</div>` : nothing}
                             ${original ? html`<a class="meta-open" href=${original} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>Open original ↗</a>` : nothing}
                         </div>`}
