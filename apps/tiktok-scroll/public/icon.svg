@@ -1,10 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-    <rect width="512" height="512" rx="104" fill="#0f1115"/>
-    <rect x="8" y="8" width="496" height="496" rx="98" fill="none" stroke="#262b36" stroke-width="12"/>
-    <path d="M176 168v176l140-88Z" fill="#fe2c55"/>
-    <g fill="#fe2c55">
-        <rect x="352" y="168" width="88" height="14" rx="7"/>
-        <rect x="352" y="249" width="88" height="14" rx="7"/>
-        <rect x="352" y="330" width="88" height="14" rx="7"/>
-    </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="100%" height="100%">
+  <rect width="64" height="64" rx="16" fill="#12131A"/>
+  <!-- Heart Icon -->
+  <path d="M32 46L19.5 33.5C16.5 30.5 16.5 25.5 19.5 22.5C22.5 19.5 27.5 19.5 30.5 22.5L32 24L33.5 22.5C36.5 19.5 41.5 19.5 44.5 22.5C47.5 25.5 47.5 30.5 44.5 33.5L32 46Z" fill="#FF2E93"/>
+  <!-- Vertical Scroll Track with Back Arrow -->
+  <path d="M10 20V44" stroke="#3A3F58" stroke-width="3" stroke-linecap="round"/>
+  <path d="M10 16L6 22H14L10 16Z" fill="#00F0FF"/>
+  <!-- Minimal Data Nodes -->
+  <circle cx="54" cy="20" r="2" fill="#3A3F58"/>
+  <circle cx="54" cy="32" r="2" fill="#3A3F58"/>
+  <circle cx="54" cy="44" r="2" fill="#3A3F58"/>
 </svg>
