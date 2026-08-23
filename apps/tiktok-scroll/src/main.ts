@@ -3,7 +3,7 @@ import './styles/global.css'
 
 const root = document.getElementById('app')
 if (root) {
-    root.appendChild(document.createElement('tts-app-shell'))
+    root.appendChild(document.createElement('cs-app-shell'))
 }
 
 // PWA: register the service worker in production builds only — the dev

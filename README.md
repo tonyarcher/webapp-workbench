@@ -12,7 +12,7 @@ same reverse-proxy gateway.
 | `apps/rss-reader/` | RSS reader | Vite + Lit + TanStack core | Feed reading, PWA, hash routing |
 | `apps/stock-game/` | Stock game | TanStack Start (SPA) + React + Lit | Paper trading, SQLite server layer |
 | `apps/lemmy-vertical-scroll/` | Lemmy scroller | Vite + Lit + TanStack core | Vertical feed scrolling |
-| `apps/tiktok-scroll/` | TikTok scroller | Vite + Lit + vertical-scroll-core | Import a TikTok link list and scroll it |
+| `apps/tiktok-scroll/` | Clipstack | Vite + Lit + vertical-scroll-core | Import a short-video link list and scroll it |
 
 ## Packages
 

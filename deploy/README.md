@@ -1,8 +1,7 @@
 # Deployment
 
 Docker Compose stack that runs a reverse-proxy gateway in front of five
-SPA apps (Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll, TikTok
-Scroll). It is
+SPA apps (Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll, Clipstack). It is
 designed to run on a remote Ubuntu host with Docker (or K3s / a
 Docker-compatible container runtime) already installed.
 
@@ -32,7 +31,7 @@ through unchanged. The `gateway` image is built from the `deploy/` context.
 | `/rss-reader/` | RSS Reader (nginx static, prefix stripped) |
 | `/stock-game/` | Stock Game (node server, basepath-aware, prefix NOT stripped) |
 | `/lemmy-vertical-scroll/` | Lemmy Vertical Scroll (nginx static, prefix stripped) |
-| `/tiktok-scroll/` | TikTok Scroll (nginx static, prefix stripped) |
+| `/tiktok-scroll/` | Clipstack (nginx static, prefix stripped) |
 
 The bare paths (e.g. `/stock-game`) redirect to their trailing-slash forms.
 Each app is served under its own subpath with the base baked in at build time
@@ -41,7 +40,7 @@ correctly behind the gateway.
 
 ## How each app is served
 
-- **Baseball, RSS Reader, Lemmy Vertical Scroll, TikTok Scroll** are static Vite builds served
+- **Baseball, RSS Reader, Lemmy Vertical Scroll, Clipstack** are static Vite builds served
   by an nginx container. The gateway strips the app's prefix and nginx serves
   the built `dist/` at the root, with gzip, an SPA fallback to `index.html`,
   no-cache for the shell/service worker, and long-lived immutable caching for

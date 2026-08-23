@@ -11,5 +11,5 @@ const version = createHash('sha1').update(assets).digest('hex').slice(0, 10)
 
 const swPath = join(dist, 'sw.js')
 const sw = readFileSync(swPath, 'utf8')
-const stamped = sw.replace(/const VERSION = '[^']*'/, `const VERSION = 'tts-${version}'`)
+const stamped = sw.replace(/const VERSION = '[^']*'/, `const VERSION = 'cs-${version}'`)
 writeFileSync(swPath, stamped)

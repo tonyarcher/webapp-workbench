@@ -16,7 +16,7 @@ directory carries its own `AGENTS.md` with its conventions — read it before to
   workspaces `app/` (`@stock-game/app`) and `shared/` (`@stock-game/shared`); SQLite server layer.
 - `apps/lemmy-vertical-scroll/` — Vite + Lit vertical feed scroller. Depends on
   `vertical-scroll-core` from `packages/vertical-scroll-core` (workspace link, was a GitHub git dep).
-- `apps/tiktok-scroll/` — Vite + Lit TikTok list scroller. Depends on
+- `apps/tiktok-scroll/` — Clipstack (Vite + Lit short-video list scroller). Depends on
   `vertical-scroll-core`. Import a txt/csv of TikTok links and scroll them.
 - `packages/web-components/` — `@baseball/web-components` Lit component library.
 - `packages/vertical-scroll-core/` — `vertical-scroll-core` Lit library; `prepare` builds `dist/`

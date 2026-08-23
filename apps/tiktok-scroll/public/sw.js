@@ -2,7 +2,7 @@
    never intercepted — the app needs a live connection for embeds.
    All paths are scope-relative so the app can be served from a subpath;
    VERSION is stamped per build by scripts/stamp-sw.mjs. */
-const VERSION = 'tts-v1'
+const VERSION = 'cs-v1'
 const SHELL = ['./', './index.html', './manifest.webmanifest']
 const INDEX_FALLBACK = new URL('./index.html', self.registration.scope).href
 const API_PREFIX = new URL('./api/', self.registration.scope).pathname

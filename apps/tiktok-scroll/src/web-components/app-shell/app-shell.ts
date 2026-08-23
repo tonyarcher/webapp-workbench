@@ -7,7 +7,7 @@ import '../import-view/import-view'
 import '../watch-view/watch-view'
 import styles from './app-shell.css?inline'
 
-@customElement('tts-app-shell')
+@customElement('cs-app-shell')
 export class AppShell extends LitElement {
     static override styles = unsafeCSS(styles)
 
@@ -67,7 +67,7 @@ export class AppShell extends LitElement {
     override render(): TemplateResult {
         const result = this.result
         if (result && result.items.length > 0) {
-            return html`<tts-watch-view
+            return html`<cs-watch-view
                 .items=${result.items}
                 .skippedCount=${result.skipped.length}
                 .startIndex=${this.startIndex}
@@ -75,14 +75,14 @@ export class AppShell extends LitElement {
                 @new-list=${this.onNewList}
                 @progress=${this.onProgress}
                 @links-enriched=${this.onLinksEnriched}
-            ></tts-watch-view>`
+            ></cs-watch-view>`
         }
-        return html`<tts-import-view @import-parsed=${this.onImportParsed}></tts-import-view>`
+        return html`<cs-import-view @import-parsed=${this.onImportParsed}></cs-import-view>`
     }
 }
 
 declare global {
     interface HTMLElementTagNameMap {
-        'tts-app-shell': AppShell
+        'cs-app-shell': AppShell
     }
 }

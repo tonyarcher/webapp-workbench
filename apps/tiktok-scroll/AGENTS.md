@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Code style and project conventions for tiktok-scroll.
+Code style and project conventions for Clipstack (`apps/tiktok-scroll`).
 
 ## Stack
 
@@ -54,12 +54,12 @@ Always run `npm run build` and `npm run test` before finishing a change.
 
 ## Lit components
 
-- `@customElement('tts-name')`, `@property()` for public API, `@property({attribute: false})` for object/boolean props, `@state() private` for internal state (a plain field is not reactive — anything the template reads must be `@state()` or a property)
+- `@customElement('cs-name')`, `@property()` for public API, `@property({attribute: false})` for object/boolean props, `@state() private` for internal state (a plain field is not reactive — anything the template reads must be `@state()` or a property)
 - `static override styles = unsafeCSS(styles)` with `import styles from './x.css?inline'`
 - Private fields declared after decorators, typed explicitly
 - Lifecycle: `willUpdate` for reacting to prop changes, `updated` for DOM side effects, `connectedCallback`/`disconnectedCallback` for global listeners (always remove in disconnect)
 - `ref` callbacks must have stable identity (arrow-function fields) so they only fire on attach/detach — inline arrows re-invoke on every render and can reset scroll positions
-- `declare global { interface HTMLElementTagNameMap { 'tts-name': TtsName; } }` at the bottom of every component file
+- `declare global { interface HTMLElementTagNameMap { 'cs-name': CsName; } }` at the bottom of every component file
 - Events dispatched as `new CustomEvent('name', {detail, bubbles: true, composed: true})`
 - Templates: 6-space indent, property bindings with `.checked=${...}`, handlers with `@click=${this.emitX}`, conditional branches via ternaries inside `${...}`
 
