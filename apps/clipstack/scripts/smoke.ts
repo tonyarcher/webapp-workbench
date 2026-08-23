@@ -106,7 +106,7 @@ function assert(cond: unknown, msg: string): void {
     const r = parseLinkList('https://example.com/x')
     assert(r.items.length === 0, 'non-tiktok not playable')
     assert(r.skipped.length === 1, 'non-tiktok skipped')
-    assert(r.skipped[0].reason === 'not-tiktok', 'non-tiktok reason')
+    assert(r.skipped[0].reason === 'unsupported', 'unsupported host reason')
 }
 
 // duplicate video id kept once (first)
@@ -169,6 +169,46 @@ function assert(cond: unknown, msg: string): void {
     assert(r.items[0].url === 'https://www.tiktokv.com/share/video/7648217925408607502/', 'bare share kept')
 }
 
+// Instagram reel + /p/ + nested user path
+{
+    const r = parseLinkList(
+        'https://www.instagram.com/reel/CxYz123AbCd/\nhttps://www.instagram.com/p/AbCdEfGhIjK/\nhttps://www.instagram.com/someone/reel/LmNoPqRsTuV/',
+    )
+    assert(r.items.length === 3, 'three instagram playable')
+    assert(r.items[0].provider === 'instagram' && r.items[0].id === 'CxYz123AbCd', 'reel id')
+    assert(r.items[1].provider === 'instagram' && r.items[1].id === 'AbCdEfGhIjK', 'p id')
+    assert(r.items[2].author === 'someone' && r.items[2].id === 'LmNoPqRsTuV', 'user/reel author')
+}
+
+// mixed TikTok + Instagram list
+{
+    const r = parseLinkList(
+        'https://www.tiktok.com/@a/video/202020\nhttps://www.instagram.com/reel/MixEdClip01/',
+    )
+    assert(r.items.length === 2, 'mixed list length')
+    assert(r.items[0].provider === 'tiktok' && r.items[1].provider === 'instagram', 'mixed providers')
+}
+
+// Instagram short links skipped
+{
+    const r = parseLinkList('https://l.instagram.com/foo\nhttps://www.instagram.com/share/reel/xxxx/')
+    assert(r.items.length === 0, 'ig short links not playable')
+    assert(r.skipped.length === 2 && r.skipped.every((s) => s.reason === 'short-link'), 'ig short-link reasons')
+}
+
+// Instagram JSON export href blob
+{
+    const r = parseLinkList('{"saved_saved_media":[{"string_list_data":[{"href":"https://www.instagram.com/reel/JsonCode01/"}]}]}')
+    assert(r.items.length === 1, 'json href parsed')
+    assert(r.items[0].id === 'JsonCode01', 'json href id')
+}
+
+// Date: still stamps the next Instagram URL
+{
+    const r = parseLinkList('Date: 2026-03-01 12:00:00 UTC\nhttps://www.instagram.com/reel/DateStamp1/')
+    assert(r.items[0]?.date === '2026-03-01 12:00:00 UTC', 'ig date attached')
+}
+
 // toScrollItem mapping + classification
 {
     const item = toScrollItem({id: '171717', url: 'https://www.tiktok.com/@u/video/171717', author: 'u'}, 0, 3)
@@ -176,6 +216,15 @@ function assert(cond: unknown, msg: string): void {
     assert(item.mediaType === 'Video', 'mediaType Video')
     assert(item.metaLine === '1 of 3', 'metaLine')
     assert(classifyScrollItem(item) === 'video', 'classifies as video')
+}
+
+{
+    const ig = toScrollItem(
+        {id: 'CxYz123AbCd', url: 'https://www.instagram.com/reel/CxYz123AbCd/', provider: 'instagram'},
+        0,
+        1,
+    )
+    assert(classifyScrollItem(ig) === 'video', 'instagram classifies as video')
 }
 
 // no-author title fallback

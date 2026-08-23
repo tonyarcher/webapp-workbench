@@ -1,7 +1,6 @@
-# Multi-stage build for the TikTok list scroller, served under
-# /tiktok-scroll/. The app is already subpath-safe (base './',
-# %BASE_URL%, scope-relative SW), so it builds with the default base. Stage 2
-# serves the static output via nginx.
+# Multi-stage build for Clipstack, served under /clipstack/. The app is
+# already subpath-safe (base './', %BASE_URL%, scope-relative SW), so it
+# builds with the default base. Stage 2 serves the static output via nginx.
 
 # glibc (slim, not alpine): typescript 7's native compiler is glibc-only, and
 # vite's native binaries (rollup, esbuild) need linux placements.
@@ -17,14 +16,14 @@ COPY . .
 RUN rm -f package-lock.json && npm install --no-audit --no-fund
 # npm skips optional platform binaries of nested packages: typescript 7's
 # native compiler (@typescript/typescript-linux-x64) is an optional dep of the
-# nested typescript@7 in apps/tiktok-scroll and is not installed.
+# nested typescript@7 in apps/clipstack and is not installed.
 # Install it explicitly (tsc finds it via import.meta.resolve from the root).
-# Bump the version together with tiktok-scroll's typescript dependency.
+# Bump the version together with clipstack's typescript dependency.
 RUN npm install --no-save --no-audit --no-fund @typescript/typescript-linux-x64@7.0.2
 RUN npm run build --prefix packages/vertical-scroll-core
 RUN npm run build -w clipstack
 
 FROM nginx:alpine AS runtime
-COPY --from=build /app/apps/tiktok-scroll/dist /usr/share/nginx/html
-COPY deploy/tiktok-scroll/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/apps/clipstack/dist /usr/share/nginx/html
+COPY deploy/clipstack/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 3000

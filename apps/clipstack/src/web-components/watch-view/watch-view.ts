@@ -4,7 +4,7 @@ import {customElement, property, state} from 'lit/decorators.js'
 import {ref} from 'lit/directives/ref.js'
 import {toScrollItem} from '../../services/to-scroll-item'
 import {resolveTiktokOEmbed} from '../../services/resolve-oembed'
-import type {TikTokLink} from '../../types'
+import type {ClipLink} from '../../types'
 import type {ScrollItem, ScrollViewport} from 'vertical-scroll-core'
 import 'vertical-scroll-core'
 import '../progress-sidebar/progress-sidebar'
@@ -16,12 +16,12 @@ const MAX_OEMBED_ATTEMPTS = 3
 export class WatchView extends LitElement {
     static override styles = unsafeCSS(styles)
 
-    @property({attribute: false}) items: TikTokLink[] = []
+    @property({attribute: false}) items: ClipLink[] = []
     @property({attribute: false}) skippedCount = 0
     @property({attribute: false}) startIndex = 0
     @property({attribute: false}) startMaxSeen = 0
 
-    @state() private links: TikTokLink[] = []
+    @state() private links: ClipLink[] = []
     @state() private scrollItems: ScrollItem[] = []
     @state() private activeIndex = 0
     @state() private maxSeen = 0
@@ -29,7 +29,7 @@ export class WatchView extends LitElement {
     @state() private sidebarOpen = false
 
     private viewport: ScrollViewport | null = null
-    private prevItems: TikTokLink[] = []
+    private prevItems: ClipLink[] = []
     private resolving = new Set<string>()
     private resolveAttempts = new Map<string, number>()
     private resolveAbort: AbortController | null = null
@@ -66,7 +66,7 @@ export class WatchView extends LitElement {
         const to = Math.min(this.links.length, index + 4)
         for (let i = index; i < to; i++) {
             const link = this.links[i]
-            if (!link || link.pageUrl || this.resolving.has(link.id)) continue
+            if (!link || link.pageUrl || link.provider === 'instagram' || this.resolving.has(link.id)) continue
             if ((this.resolveAttempts.get(link.id) ?? 0) >= MAX_OEMBED_ATTEMPTS) continue
             this.resolving.add(link.id)
             void resolveTiktokOEmbed(link.id, signal)
@@ -81,7 +81,7 @@ export class WatchView extends LitElement {
                     const itemIndex = this.links.findIndex((item) => item.id === link.id)
                     if (itemIndex < 0) return
                     const current = this.links[itemIndex]
-                    const next: TikTokLink = {
+                    const next: ClipLink = {
                         ...current,
                         author: info.author ?? current.author,
                         title: info.title ?? current.title,

@@ -2,14 +2,14 @@ import {LitElement, html, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, property} from 'lit/decorators.js'
 import {ref} from 'lit/directives/ref.js'
-import type {TikTokLink} from '../../types'
+import type {ClipLink} from '../../types'
 import styles from './progress-sidebar.css?inline'
 
 @customElement('cs-progress-sidebar')
 export class ProgressSidebar extends LitElement {
     static override styles = unsafeCSS(styles)
 
-    @property({attribute: false}) items: TikTokLink[] = []
+    @property({attribute: false}) items: ClipLink[] = []
     @property({attribute: false}) activeIndex = 0
     @property({attribute: false}) maxSeen = 0
     @property({attribute: false}) skippedCount = 0

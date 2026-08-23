@@ -1,12 +1,13 @@
-import type {SavedSession, SkippedLink, TikTokLink} from '../types'
+import type {SavedSession, SkippedLink, ClipLink} from '../types'
 
 export const SESSION_KEY = 'cs-session'
 const PROGRESS_KEY = 'cs-session-progress'
 const LEGACY_SESSION_KEY = 'tts-session'
 const LEGACY_PROGRESS_KEY = 'tts-session-progress'
 
-function compactLink(link: TikTokLink): TikTokLink {
-    const out: TikTokLink = {id: link.id, url: link.url}
+function compactLink(link: ClipLink): ClipLink {
+    const out: ClipLink = {id: link.id, url: link.url}
+    if (link.provider) out.provider = link.provider
     if (link.author) out.author = link.author
     if (link.date) out.date = link.date
     if (link.pageUrl) out.pageUrl = link.pageUrl
@@ -15,9 +16,9 @@ function compactLink(link: TikTokLink): TikTokLink {
     return out
 }
 
-function isLink(value: unknown): value is TikTokLink {
+function isLink(value: unknown): value is ClipLink {
     if (!value || typeof value !== 'object') return false
-    const link = value as TikTokLink
+    const link = value as ClipLink
     return typeof link.id === 'string' && link.id.length > 0 && typeof link.url === 'string' && link.url.length > 0
 }
 
@@ -26,7 +27,10 @@ function isSkipped(value: unknown): value is SkippedLink {
     const skipped = value as SkippedLink
     return (
         typeof skipped.url === 'string' &&
-        (skipped.reason === 'short-link' || skipped.reason === 'no-id' || skipped.reason === 'not-tiktok')
+        (skipped.reason === 'short-link' ||
+            skipped.reason === 'no-id' ||
+            skipped.reason === 'not-tiktok' ||
+            skipped.reason === 'unsupported')
     )
 }
 
@@ -99,7 +103,7 @@ export function saveSession(session: SavedSession): void {
 }
 
 /** Write enriched author/title/pageUrl without touching the progress cursor. */
-export function saveSessionItems(items: TikTokLink[]): void {
+export function saveSessionItems(items: ClipLink[]): void {
     try {
         const session = parseSession(readStored(SESSION_KEY, LEGACY_SESSION_KEY))
         if (!session) return

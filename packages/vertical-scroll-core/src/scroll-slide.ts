@@ -83,16 +83,16 @@ export class ScrollSlide extends LitElement {
         const isVideo = classifyScrollItem(item) === 'video'
         const original = safeUrl(item.originalUrl ?? null)
         const subtitle = item.metaLine ?? (item.date ? timeAgo(item.date) : null)
-        // TikTok player/v1 hides its own author/caption (description=0), so
-        // the slide owns a letterbox meta stack instead of the app overlay bar.
-        const isTiktokEmbed = embedProviderForUrl(item.videoUrl ?? item.url ?? null)?.name === 'tiktok'
-        if (isTiktokEmbed) {
+        // TikTok/Instagram embeds hide or crowd their own chrome, so the
+        // slide owns a letterbox meta stack instead of the app overlay bar.
+        const providerName = embedProviderForUrl(item.videoUrl ?? item.url ?? null)?.name
+        const letterbox = providerName === 'tiktok' || providerName === 'instagram'
+        if (letterbox) {
             const authorLabel = item.author ? `@${item.author}` : null
-            // Profile link for the byline. Author handles are [A-Za-z0-9._-];
-            // encode anyway and let safeUrl have final say on the scheme.
-            const authorUrl = item.author
-                ? safeUrl(`https://www.tiktok.com/@${encodeURIComponent(item.author)}`)
-                : null
+            const profileHost = providerName === 'instagram'
+                ? `https://www.instagram.com/${encodeURIComponent(item.author ?? '')}/`
+                : `https://www.tiktok.com/@${encodeURIComponent(item.author ?? '')}`
+            const authorUrl = item.author ? safeUrl(profileHost) : null
             const caption = item.title && item.title !== authorLabel && item.title !== `TikTok ${item.id}` ? item.title : null
             const metaEmpty = !authorLabel && !caption && !original
             return html`

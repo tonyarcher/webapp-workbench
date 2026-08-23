@@ -1,6 +1,10 @@
-export interface TikTokLink {
+export type ClipProvider = 'tiktok' | 'instagram'
+
+export interface ClipLink {
     id: string
     url: string
+    /** Missing on sessions saved before Instagram support — treat as tiktok. */
+    provider?: ClipProvider
     author?: string
     /** ISO-ish timestamp from a TikTok data-export `Date:` line, if present. */
     date?: string
@@ -12,17 +16,17 @@ export interface TikTokLink {
 
 export interface SkippedLink {
     url: string
-    reason: 'short-link' | 'no-id' | 'not-tiktok'
+    reason: 'short-link' | 'no-id' | 'not-tiktok' | 'unsupported'
 }
 
 export interface ParseResult {
-    items: TikTokLink[]
+    items: ClipLink[]
     skipped: SkippedLink[]
 }
 
 export interface SavedSession {
     version: 1
-    items: TikTokLink[]
+    items: ClipLink[]
     skipped: SkippedLink[]
     activeIndex: number
     maxSeen: number

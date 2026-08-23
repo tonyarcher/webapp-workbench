@@ -1,11 +1,11 @@
 # AGENTS.md
 
-Code style and project conventions for Clipstack (`apps/tiktok-scroll`).
+Code style and project conventions for Clipstack (`apps/clipstack`).
 
 ## Stack
 
 - TypeScript (strict), Vite, Lit web components
-- `vertical-scroll-core` for the vertical scroller and TikTok embed player
+- `vertical-scroll-core` for the vertical scroller and embed players
 - No TanStack, no IndexedDB, no router — list + position persist in localStorage so a refresh resumes
 - No framework, no UI library: plain Lit custom elements
 - Smoke tests with `tsx`, no test framework
@@ -25,7 +25,7 @@ Always run `npm run build` and `npm run test` before finishing a change.
 ## Architecture
 
 - `src/types.ts` — all shared domain types in one file (interfaces + string-literal types)
-- `src/services/` — pure, testable logic; no DOM or component imports. Actual modules: `parse-list.ts` (URL extraction + TikTok classification), `to-scroll-item.ts` (TikTokLink → ScrollItem), `session-store.ts` (localStorage list + position), `resolve-oembed.ts`
+- `src/services/` — pure, testable logic; no DOM or component imports. Actual modules: `parse-list.ts` (URL extraction + classification), `to-scroll-item.ts` (ClipLink → ScrollItem), `session-store.ts` (localStorage list + position), `resolve-oembed.ts`
 - `src/web-components/<name>/<name>.ts` + `<name>.css` — one folder per component; co-located stylesheet imported with `?inline`
 - `public/` — PWA files (manifest, icon, service worker). All PWA paths must be base-relative (`%BASE_URL%` / `import.meta.env.BASE_URL`) so the app works from a subpath
 - `scripts/` — smoke tests (`smoke.ts` services) with a simple `assert(cond, msg)` helper, no framework; `stamp-sw.mjs` bumps the service-worker cache version at build time

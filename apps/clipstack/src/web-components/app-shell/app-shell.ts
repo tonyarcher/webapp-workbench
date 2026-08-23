@@ -1,7 +1,7 @@
 import {LitElement, html, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, state} from 'lit/decorators.js'
-import type {ParseResult, SavedSession, TikTokLink} from '../../types'
+import type {ParseResult, SavedSession, ClipLink} from '../../types'
 import {clearSession, loadSession, saveProgress, saveSession, saveSessionItems} from '../../services/session-store'
 import '../import-view/import-view'
 import '../watch-view/watch-view'
@@ -59,7 +59,7 @@ export class AppShell extends LitElement {
 
     /** Persist oEmbed author/title without replacing the items reference
      *  (that would remount the watch view and abort in-flight probes). */
-    private onLinksEnriched(event: CustomEvent<{items: TikTokLink[]}>): void {
+    private onLinksEnriched(event: CustomEvent<{items: ClipLink[]}>): void {
         if (event.detail.items.length === 0) return
         saveSessionItems(event.detail.items)
     }
