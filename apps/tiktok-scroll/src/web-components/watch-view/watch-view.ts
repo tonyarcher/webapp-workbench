@@ -12,7 +12,7 @@ import styles from './watch-view.css?inline'
 
 const MAX_OEMBED_ATTEMPTS = 3
 
-@customElement('tts-watch-view')
+@customElement('cs-watch-view')
 export class WatchView extends LitElement {
     static override styles = unsafeCSS(styles)
 
@@ -206,7 +206,7 @@ export class WatchView extends LitElement {
                     aria-expanded=${this.sidebarOpen}
                     @click=${this.onToggleSidebar}
                 >☰</button>
-                <tts-progress-sidebar
+                <cs-progress-sidebar
                     class=${this.sidebarOpen ? 'sidebar open' : 'sidebar'}
                     .items=${this.links}
                     .activeIndex=${this.activeIndex}
@@ -215,7 +215,7 @@ export class WatchView extends LitElement {
                     @jump=${this.onJump}
                     @new-list=${this.emitNewList}
                     @close=${this.onBackdrop}
-                ></tts-progress-sidebar>
+                ></cs-progress-sidebar>
                 <vsc-scroll-viewport
                     .items=${this.scrollItems}
                     .resetKey=${this.resetKey}
@@ -230,6 +230,6 @@ export class WatchView extends LitElement {
 
 declare global {
     interface HTMLElementTagNameMap {
-        'tts-watch-view': WatchView
+        'cs-watch-view': WatchView
     }
 }

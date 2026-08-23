@@ -10,8 +10,7 @@
 #                (basepath-aware; the gateway does NOT strip its prefix).
 #   lemmy-vertical-scroll - nginx static, serves the Lemmy feed under
 #                           /lemmy-vertical-scroll/.
-#   tiktok-scroll - nginx static, serves the TikTok list scroller under
-#                   /tiktok-scroll/.
+  #   tiktok-scroll - nginx static, serves Clipstack under /tiktok-scroll/.
 # Each app listens on port 3000 internally; the gateway strips the prefix for
 # the static apps and passes /stock-game/ through unchanged.
 

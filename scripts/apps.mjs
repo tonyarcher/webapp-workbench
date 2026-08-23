@@ -39,9 +39,9 @@ export const APPS = [
   {
     id: "tiktok-scroll",
     service: "tiktok-scroll",
-    workspaces: ["vertical-scroll-core", "tiktok-scroll"],
-    aliases: ["tiktok-scroll", "tiktok", "apps/tiktok-scroll"],
-    summary: "TikTok list vertical scroll (also builds vertical-scroll-core)",
+    workspaces: ["vertical-scroll-core", "clipstack"],
+    aliases: ["tiktok-scroll", "tiktok", "clipstack", "apps/tiktok-scroll"],
+    summary: "Clipstack — short-video list scroller (also builds vertical-scroll-core)",
   },
   {
     id: "gateway",

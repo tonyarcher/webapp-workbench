@@ -5,7 +5,7 @@ import {parseLinkList} from '../../services/parse-list'
 import type {ParseResult} from '../../types'
 import styles from './import-view.css?inline'
 
-@customElement('tts-import-view')
+@customElement('cs-import-view')
 export class ImportView extends LitElement {
     static override styles = unsafeCSS(styles)
 
@@ -70,7 +70,7 @@ export class ImportView extends LitElement {
         const skipped = result?.skipped.length ?? 0
         return html`
             <div class="import">
-                <h1 class="title">TikTok Scroll</h1>
+                <h1 class="title">Clipstack</h1>
                 <p class="help">Paste TikTok links, or drop a .txt / .csv — including a TikTok data-export Like List or Favorite Videos file.</p>
                 <input class="file-input" type="file" accept=".txt,.csv,text/plain,text/csv" @change=${this.onFileChange}>
                 <textarea
@@ -94,6 +94,6 @@ export class ImportView extends LitElement {
 
 declare global {
     interface HTMLElementTagNameMap {
-        'tts-import-view': ImportView
+        'cs-import-view': ImportView
     }
 }

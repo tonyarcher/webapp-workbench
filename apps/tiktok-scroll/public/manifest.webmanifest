@@ -1,7 +1,7 @@
 {
-    "name": "TikTok Scroll",
-    "short_name": "TikTok Scroll",
-    "description": "Import a list of TikTok links and scroll them vertically.",
+    "name": "Clipstack",
+    "short_name": "Clipstack",
+    "description": "Import a list of short-video links and scroll them vertically.",
     "start_url": "./",
     "scope": "./",
     "display": "standalone",

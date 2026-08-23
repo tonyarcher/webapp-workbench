@@ -32,6 +32,8 @@
 }
 
 .brand-name {
+    flex: 1;
+    min-width: 0;
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 0.01em;
@@ -39,13 +41,22 @@
     user-select: none;
 }
 
+/* New list lives after the last clip so it takes a deliberate scroll. */
+.scroller {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
 .toolbar {
-    flex: none;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 12px 0;
-}.new-list,
+    padding: 12px 12px 20px;
+    border-top: 1px solid var(--border);
+}
+
+.new-list,
 .close {
     padding: 6px 12px;
     border: 1px solid var(--border);
@@ -96,12 +107,9 @@
 }
 
 .list {
-    flex: 1;
-    min-height: 0;
     margin: 0;
-    padding: 0 8px 16px;
+    padding: 0 8px 8px;
     list-style: none;
-    overflow-y: auto;
 }
 
 .row {

@@ -22,7 +22,7 @@ RUN rm -f package-lock.json && npm install --no-audit --no-fund
 # Bump the version together with tiktok-scroll's typescript dependency.
 RUN npm install --no-save --no-audit --no-fund @typescript/typescript-linux-x64@7.0.2
 RUN npm run build --prefix packages/vertical-scroll-core
-RUN npm run build -w tiktok-scroll
+RUN npm run build -w clipstack
 
 FROM nginx:alpine AS runtime
 COPY --from=build /app/apps/tiktok-scroll/dist /usr/share/nginx/html

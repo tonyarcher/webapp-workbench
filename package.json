@@ -2,7 +2,7 @@
   "name": "webapp-workbench",
   "private": true,
   "version": "0.1.0",
-  "description": "Sandbox of small web apps: baseball tracker, rss-reader, stock-game, lemmy-vertical-scroll, tiktok-scroll.",
+  "description": "Sandbox of small web apps: baseball tracker, rss-reader, stock-game, lemmy-vertical-scroll, clipstack.",
   "workspaces": [
     "apps/*",
     "apps/stock-game/*",
@@ -17,7 +17,8 @@
     "dev:rss-reader": "npm run dev -w rss-reader",
     "dev:stock-game": "npm run dev -w stock-game",
     "dev:lemmy": "npm run dev -w lemmy-vertical-scroll",
-    "dev:tiktok": "npm run dev -w tiktok-scroll",
+    "dev:tiktok": "npm run dev -w clipstack",
+    "dev:clipstack": "npm run dev -w clipstack",
     "deploy": "node scripts/deploy.mjs"
   }
 }

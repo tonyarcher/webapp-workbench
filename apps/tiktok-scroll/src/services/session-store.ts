@@ -1,7 +1,9 @@
 import type {SavedSession, SkippedLink, TikTokLink} from '../types'
 
-export const SESSION_KEY = 'tts-session'
-const PROGRESS_KEY = 'tts-session-progress'
+export const SESSION_KEY = 'cs-session'
+const PROGRESS_KEY = 'cs-session-progress'
+const LEGACY_SESSION_KEY = 'tts-session'
+const LEGACY_PROGRESS_KEY = 'tts-session-progress'
 
 function compactLink(link: TikTokLink): TikTokLink {
     const out: TikTokLink = {id: link.id, url: link.url}
@@ -58,11 +60,15 @@ export function serializeSession(session: SavedSession): string {
     return JSON.stringify(payload)
 }
 
+function readStored(key: string, legacy: string): string | null {
+    return localStorage.getItem(key) ?? localStorage.getItem(legacy)
+}
+
 export function loadSession(): SavedSession | null {
     try {
-        const session = parseSession(localStorage.getItem(SESSION_KEY))
+        const session = parseSession(readStored(SESSION_KEY, LEGACY_SESSION_KEY))
         if (!session) return null
-        const progressRaw = localStorage.getItem(PROGRESS_KEY)
+        const progressRaw = readStored(PROGRESS_KEY, LEGACY_PROGRESS_KEY)
         if (progressRaw) {
             const progress = JSON.parse(progressRaw) as {activeIndex?: unknown; maxSeen?: unknown}
             if (typeof progress.activeIndex === 'number' && progress.activeIndex >= 0) {
@@ -85,6 +91,8 @@ export function saveSession(session: SavedSession): void {
             PROGRESS_KEY,
             JSON.stringify({activeIndex: session.activeIndex, maxSeen: session.maxSeen}),
         )
+        localStorage.removeItem(LEGACY_SESSION_KEY)
+        localStorage.removeItem(LEGACY_PROGRESS_KEY)
     } catch {
         // quota / private mode — list stays in memory for this visit
     }
@@ -93,7 +101,7 @@ export function saveSession(session: SavedSession): void {
 /** Write enriched author/title/pageUrl without touching the progress cursor. */
 export function saveSessionItems(items: TikTokLink[]): void {
     try {
-        const session = parseSession(localStorage.getItem(SESSION_KEY))
+        const session = parseSession(readStored(SESSION_KEY, LEGACY_SESSION_KEY))
         if (!session) return
         session.items = items.map(compactLink)
         localStorage.setItem(SESSION_KEY, serializeSession(session))
@@ -115,6 +123,8 @@ export function clearSession(): void {
     try {
         localStorage.removeItem(SESSION_KEY)
         localStorage.removeItem(PROGRESS_KEY)
+        localStorage.removeItem(LEGACY_SESSION_KEY)
+        localStorage.removeItem(LEGACY_PROGRESS_KEY)
     } catch {
         // ignore
     }
