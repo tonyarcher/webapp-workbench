@@ -45,13 +45,20 @@ assert(compactNumber(3400000) === '3.4M', 'compactNumber M')
 assert(embedUrlFor('https://www.youtube.com/watch?v=dQw4w9WgXcQ')?.includes('youtube-nocookie.com'), 'youtube embed')
 assert(embedUrlFor('https://www.redgifs.com/watch/abc')?.includes('redgifs.com'), 'redgifs embed')
 assert(embedUrlFor('https://example.com/x') === null, 'no embed for plain url')
-assert(EMBED_PROVIDERS.length === 3, 'built-in count includes tiktok')
+assert(EMBED_PROVIDERS.length === 4, 'built-in count includes instagram')
 assert(embedUrlFor('https://www.tiktok.com/@user/video/1234567890')?.includes('tiktok.com/player/v1/1234567890'), 'tiktok @user/video embed')
 assert(embedUrlFor('https://www.tiktok.com/@user/video/1234567890')?.includes('autoplay=1'), 'tiktok autoplay param')
 assert(embedUrlFor('https://www.tiktok.com/@user/video/1234567890')?.includes('muted=0'), 'tiktok not locked muted')
 assert(embedUrlFor('https://m.tiktok.com/v/1234567890.html')?.includes('player/v1/1234567890'), 'tiktok mobile embed')
 assert(embedUrlFor('https://www.tiktok.com/embed/v2/1234567890')?.includes('player/v1/1234567890'), 'tiktok embed/v2 url')
 assert(embedUrlFor('https://www.tiktok.com/player/v1/1234567890')?.includes('player/v1/1234567890'), 'tiktok player url')
+assert(embedUrlFor('https://www.instagram.com/reel/CxYz123AbCd/')?.includes('/p/CxYz123AbCd/embed'), 'instagram reel embed')
+assert(embedUrlFor('https://www.instagram.com/p/CxYz123AbCd/')?.includes('/p/CxYz123AbCd/embed'), 'instagram p embed')
+assert(embedUrlFor('https://www.instagram.com/someone/reel/CxYz123AbCd/')?.includes('/p/CxYz123AbCd/embed'), 'instagram user/reel embed')
+assert(embedUrlFor('https://www.instagr.am/reel/CxYz123AbCd/')?.includes('/p/CxYz123AbCd/embed'), 'instagr.am reel embed')
+assert(embedUrlFor('https://l.instagram.com/p/CxYz123AbCd/') === null, 'instagram l. short host has no id')
+assert(embedUrlFor('https://www.instagram.com/share/reel/xxxx/') === null, 'instagram share path has no id')
+assert(embedProviderForUrl('https://www.instagram.com/reel/CxYz123AbCd/')?.name === 'instagram', 'instagram provider name')
 assert(embedUrlFor('https://vm.tiktok.com/ZMxxxx/') === null, 'tiktok short link has no id')
 assert(
     embedUrlFor('https://www.tiktokv.com/share/video/7450092027154566446/')?.includes('player/v1/7450092027154566446'),
@@ -84,7 +91,7 @@ const FAKE: EmbedProvider = {
     poster() { return null },
 }
 registerEmbedProvider(FAKE)
-assert(EMBED_PROVIDERS.length === 3, 'built-in count unchanged after register')
+assert(EMBED_PROVIDERS.length === 4, 'built-in count unchanged after register')
 assert(embedUrlFor('https://example-embed.test/v/abc')?.includes('example-embed.test/embed/abc'), 'registered provider')
 
 // stripImageProxy

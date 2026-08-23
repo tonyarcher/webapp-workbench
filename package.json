@@ -17,7 +17,6 @@
     "dev:rss-reader": "npm run dev -w rss-reader",
     "dev:stock-game": "npm run dev -w stock-game",
     "dev:lemmy": "npm run dev -w lemmy-vertical-scroll",
-    "dev:tiktok": "npm run dev -w clipstack",
     "dev:clipstack": "npm run dev -w clipstack",
     "deploy": "node scripts/deploy.mjs"
   }

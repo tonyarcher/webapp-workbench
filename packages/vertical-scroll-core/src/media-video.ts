@@ -329,7 +329,7 @@ export class ScrollMediaVideo extends LitElement {
         const framed = provider?.iframeAspect ? ' framed' : ''
         // player/v1 paints a blurred clone in extra iframe width; 9:16
         // leaves it no canvas for that fill (and no second decoder).
-        const portrait = provider?.name === 'tiktok' ? ' portrait' : ''
+        const portrait = provider?.name === 'tiktok' || provider?.name === 'instagram' ? ' portrait' : ''
         const scriptable = !!provider?.commandPlayer
         return html`
             <div class="media-stage embed" ${ref(this.onStageRef)}>

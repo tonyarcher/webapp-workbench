@@ -1,5 +1,5 @@
 import {safeUrl} from 'vertical-scroll-core'
-import type {ParseResult, SkippedLink, TikTokLink} from '../types'
+import type {ClipProvider, ParseResult, SkippedLink, ClipLink} from '../types'
 
 const URL_RE = /https?:\/\/[^\s<>"'`]+/gi
 const ID_RE = /^\d{6,32}$/
@@ -18,10 +18,25 @@ export function isTiktokHost(hostname: string): boolean {
     )
 }
 
+export function isInstagramHost(hostname: string): boolean {
+    const host = hostname.toLowerCase()
+    return (
+        host === 'instagram.com' ||
+        host.endsWith('.instagram.com') ||
+        host === 'instagr.am' ||
+        host.endsWith('.instagr.am')
+    )
+}
+
 /** Short links (vm/vt hosts, /t/ paths) resolve server-side and carry no video id. */
-function isShortLink(parsed: URL): boolean {
+function isTiktokShortLink(parsed: URL): boolean {
     const host = parsed.hostname.toLowerCase()
     return host === 'vm.tiktok.com' || host === 'vt.tiktok.com' || parsed.pathname.startsWith('/t/')
+}
+
+function isInstagramShortLink(parsed: URL): boolean {
+    const host = parsed.hostname.toLowerCase()
+    return host === 'l.instagram.com' || host.endsWith('.l.instagram.com') || parsed.pathname.startsWith('/share/')
 }
 
 function validId(raw: string): string | null {
@@ -53,6 +68,25 @@ function authorFromPath(path: string): string | null {
     return match ? match[1] : null
 }
 
+const IG_CODE_RE = /^[A-Za-z0-9_-]{5,64}$/
+
+function instagramShortcode(path: string): string | null {
+    const normalized = path.replace(/\/+$/, '') || '/'
+    const direct = normalized.match(/^\/(reel|reels|p)\/([A-Za-z0-9_-]{5,64})(?:\/|$)/)
+    if (direct && IG_CODE_RE.test(direct[2])) return direct[2]
+    const nested = normalized.match(/^\/[^/]+\/(reel|reels|p)\/([A-Za-z0-9_-]{5,64})(?:\/|$)/)
+    if (nested && IG_CODE_RE.test(nested[2])) return nested[2]
+    return null
+}
+
+function instagramAuthor(path: string): string | null {
+    const nested = path.match(/^\/([^/]+)\/(reel|reels|p)\//)
+    if (!nested) return null
+    const user = nested[1]
+    if (user === 'reel' || user === 'reels' || user === 'p' || user === 'share') return null
+    return user
+}
+
 /**
  * Splits the raw input into cells first (CSV separators), then pulls URLs
  * out of each cell. Splitting on commas/tabs/semicolons keeps a URL in its
@@ -77,7 +111,7 @@ const DATE_LINE = /^Date:\s*(.+)$/i
  * `@user` 404s on tiktok.com, so we never invent that path.
  */
 export function parseLinkList(input: string): ParseResult {
-    const items: TikTokLink[] = []
+    const items: ClipLink[] = []
     const skipped: SkippedLink[] = []
     const seenIds = new Set<string>()
     const seenSkipped = new Set<string>()
@@ -101,32 +135,58 @@ export function parseLinkList(input: string): ParseResult {
             } catch {
                 continue
             }
-            if (!isTiktokHost(parsed.hostname)) {
+            let provider: ClipProvider | null = null
+            let id: string | null = null
+            let author: string | null = null
+
+            if (isInstagramHost(parsed.hostname)) {
+                if (isInstagramShortLink(parsed)) {
+                    if (!seenSkipped.has(safe)) {
+                        seenSkipped.add(safe)
+                        skipped.push({url: safe, reason: 'short-link'})
+                    }
+                    continue
+                }
+                id = instagramShortcode(parsed.pathname)
+                if (!id) {
+                    if (!seenSkipped.has(safe)) {
+                        seenSkipped.add(safe)
+                        skipped.push({url: safe, reason: 'no-id'})
+                    }
+                    continue
+                }
+                provider = 'instagram'
+                author = instagramAuthor(parsed.pathname)
+            } else if (isTiktokHost(parsed.hostname)) {
+                if (isTiktokShortLink(parsed)) {
+                    if (!seenSkipped.has(safe)) {
+                        seenSkipped.add(safe)
+                        skipped.push({url: safe, reason: 'short-link'})
+                    }
+                    continue
+                }
+                id = tiktokVideoId(parsed.pathname)
+                if (!id) {
+                    if (!seenSkipped.has(safe)) {
+                        seenSkipped.add(safe)
+                        skipped.push({url: safe, reason: 'no-id'})
+                    }
+                    continue
+                }
+                provider = 'tiktok'
+                author = authorFromPath(parsed.pathname)
+            } else {
                 if (!seenSkipped.has(safe)) {
                     seenSkipped.add(safe)
-                    skipped.push({url: safe, reason: 'not-tiktok'})
+                    skipped.push({url: safe, reason: 'unsupported'})
                 }
                 continue
             }
-            if (isShortLink(parsed)) {
-                if (!seenSkipped.has(safe)) {
-                    seenSkipped.add(safe)
-                    skipped.push({url: safe, reason: 'short-link'})
-                }
-                continue
-            }
-            const id = tiktokVideoId(parsed.pathname)
-            if (!id) {
-                if (!seenSkipped.has(safe)) {
-                    seenSkipped.add(safe)
-                    skipped.push({url: safe, reason: 'no-id'})
-                }
-                continue
-            }
-            if (seenIds.has(id)) continue
-            seenIds.add(id)
-            const author = authorFromPath(parsed.pathname)
-            const link: TikTokLink = {id, url: safe}
+
+            const dedupe = `${provider}:${id}`
+            if (seenIds.has(dedupe)) continue
+            seenIds.add(dedupe)
+            const link: ClipLink = {id, url: safe, provider}
             if (author) link.author = author
             if (date) link.date = date
             items.push(link)

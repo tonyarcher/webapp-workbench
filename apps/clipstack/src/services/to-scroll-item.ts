@@ -1,7 +1,7 @@
 import type {ScrollItem} from 'vertical-scroll-core'
-import type {TikTokLink} from '../types'
+import type {ClipLink} from '../types'
 
-export function toScrollItem(link: TikTokLink, index: number, total: number): ScrollItem {
+export function toScrollItem(link: ClipLink, index: number, total: number): ScrollItem {
     const page = link.pageUrl ?? link.url
     return {
         id: link.id,

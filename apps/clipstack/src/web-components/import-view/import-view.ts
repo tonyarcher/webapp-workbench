@@ -71,8 +71,8 @@ export class ImportView extends LitElement {
         return html`
             <div class="import">
                 <h1 class="title">Clipstack</h1>
-                <p class="help">Paste TikTok links, or drop a .txt / .csv — including a TikTok data-export Like List or Favorite Videos file.</p>
-                <input class="file-input" type="file" accept=".txt,.csv,text/plain,text/csv" @change=${this.onFileChange}>
+                <p class="help">Paste TikTok or Instagram links, or drop a .txt / .csv / .json — including a TikTok Like List or an Instagram data-export JSON.</p>
+                <input class="file-input" type="file" accept=".txt,.csv,.json,text/plain,text/csv,application/json" @change=${this.onFileChange}>
                 <textarea
                     class="paste"
                     placeholder="https://www.tiktok.com/@user/video/1234567890"
