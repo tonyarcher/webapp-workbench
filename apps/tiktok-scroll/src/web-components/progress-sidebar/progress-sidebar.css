@@ -9,15 +9,43 @@
     height: 100%;
 }
 
+/* Brand block: large glyph + wordmark, hairline rule underneath so the
+   action row reads as a separate group (Spotify/Discord sidebar pattern). */
+.brand {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.brand-glyph {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    /* Soft dual-accent glow lifted from the mark's pink/cyan */
+    box-shadow:
+        0 2px 12px rgba(255, 46, 147, 0.28),
+        0 2px 18px rgba(0, 240, 255, 0.12);
+}
+
+.brand-name {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: var(--text);
+    user-select: none;
+}
+
 .toolbar {
     flex: none;
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 12px 12px 0;
-}
-
-.new-list,
+}.new-list,
 .close {
     padding: 6px 12px;
     border: 1px solid var(--border);
