@@ -55,6 +55,8 @@ export function refreshTokenPath(): string {
     return '/oauth/token';
 }
 
+export const TRAKT_VERIFICATION_URL = 'https://trakt.tv/activate';
+
 export interface TraktDeviceCode {
     deviceCode: string;
     userCode: string;
@@ -70,17 +72,38 @@ export interface TraktToken {
     createdAt?: number;
 }
 
+/** Only accept a Trakt-hosted https URL; anything else falls back to the
+ *  canonical activation URL so an untrusted value can never reach an `href`. */
+function safeVerificationUrl(value: string | undefined): string {
+    if (value) {
+        try {
+            const url = new URL(value);
+            if (url.protocol === 'https:' && (url.hostname === 'trakt.tv' || url.hostname.endsWith('.trakt.tv'))) {
+                return url.href;
+            }
+        } catch {
+            // fall through to the safe constant
+        }
+    }
+    return TRAKT_VERIFICATION_URL;
+}
+
 export function parseDeviceCodeResponse(json: unknown): TraktDeviceCode | null {
     if (!isRecord(json)) return null;
     const deviceCode = asString(json.device_code);
     const userCode = asString(json.user_code);
-    const verificationUrl = asString(json.verification_url);
     const expiresIn = asNumber(json.expires_in);
     const interval = asNumber(json.interval);
-    if (!deviceCode || !userCode || !verificationUrl || expiresIn === undefined || interval === undefined) {
+    if (!deviceCode || !userCode || expiresIn === undefined || interval === undefined) {
         return null;
     }
-    return {deviceCode, userCode, verificationUrl, expiresIn, interval};
+    return {
+        deviceCode,
+        userCode,
+        verificationUrl: safeVerificationUrl(asString(json.verification_url)),
+        expiresIn,
+        interval,
+    };
 }
 
 export function parseTokenResponse(json: unknown): TraktToken | null {
@@ -286,6 +309,7 @@ export async function fetchTraktEvents({
     includeHistory = true,
     now = Date.now(),
     onProgress,
+    onTruncate,
 }: {
     fetch: FetchLike;
     baseUrl: string;
@@ -295,6 +319,7 @@ export async function fetchTraktEvents({
     includeHistory?: boolean;
     now?: number;
     onProgress?: (progress: SyncProgress) => void;
+    onTruncate?: (info: {type: 'shows' | 'movies'; page: number}) => void;
 }): Promise<CalEvent[]> {
     const headers = traktHeaders(clientId, accessToken);
     const events: CalEvent[] = [];
@@ -364,6 +389,10 @@ export async function fetchTraktEvents({
                 if (items.length === 0) break;
                 if (Number.isFinite(pageCount) && page >= pageCount) break;
                 if (items.length < TRAKT_HISTORY_PAGE_SIZE) break;
+                if (page === TRAKT_HISTORY_MAX_PAGES) {
+                    onTruncate?.({type, page});
+                    break;
+                }
             }
         }
     }

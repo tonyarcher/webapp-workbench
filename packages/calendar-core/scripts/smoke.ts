@@ -2,10 +2,12 @@ import type {CalEvent, FetchLike, WriteResult} from '../src/types';
 import {escapeText, eventsToIcs, foldLine, formatUtcDate, formatUtcStamp} from '../src/ics';
 import {dedupEvents} from '../src/dedup';
 import {collectEvents, writeEvents} from '../src/sync';
-import {fnv1a, joinUrl, utf8ByteLength} from '../src/util';
+import {fnv1a, fnv1a64, joinUrl, utf8ByteLength} from '../src/util';
 import {
+    TRAKT_VERIFICATION_URL,
     calendarShowsPath,
     calendarWindows,
+    fetchTraktEvents,
     mapCalendarMovie,
     mapCalendarShow,
     mapHistoryItem,
@@ -90,6 +92,9 @@ assert(joinUrl('./', 'api/trakt') === './api/trakt', 'join ./');
 assert(joinUrl('/calendar-sync/', 'api/trakt') === '/calendar-sync/api/trakt', 'join subpath');
 assert(joinUrl('https://api.trakt.tv', '/calendars/my/shows') === 'https://api.trakt.tv/calendars/my/shows', 'join host');
 assert(fnv1a('a') !== fnv1a('b'), 'fnv distinct');
+assert(/^[0-9a-f]{16}$/.test(fnv1a64('x')), 'fnv1a64 16 hex chars');
+assert(fnv1a64('same') === fnv1a64('same'), 'fnv1a64 deterministic');
+assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
 
 // Trakt mappers
 {
@@ -152,6 +157,39 @@ assert(fnv1a('a') !== fnv1a('b'), 'fnv distinct');
         interval: 5,
     });
     assert(code?.userCode === 'ABCD', 'device user code');
+
+    // Unsafe verification URLs are never trusted as hrefs
+    const unsafe = parseDeviceCodeResponse({
+        device_code: 'dev',
+        user_code: 'EFGH',
+        verification_url: 'javascript:alert(1)',
+        expires_in: 600,
+        interval: 5,
+    });
+    assert(unsafe?.verificationUrl === TRAKT_VERIFICATION_URL, 'javascript url sanitized');
+    assert(parseDeviceCodeResponse({
+        device_code: 'dev',
+        user_code: 'IJKL',
+        verification_url: 'https://evil.example.com/activate',
+        expires_in: 600,
+        interval: 5,
+    })?.verificationUrl === TRAKT_VERIFICATION_URL, 'untrusted host sanitized');
+    // suffix spoof (trakt.tv.evil.com) is not a trakt.tv host
+    assert(parseDeviceCodeResponse({
+        device_code: 'dev',
+        user_code: 'MNOP',
+        verification_url: 'https://trakt.tv.evil.com/activate',
+        expires_in: 600,
+        interval: 5,
+    })?.verificationUrl === TRAKT_VERIFICATION_URL, 'trakt suffix spoof sanitized');
+    // a real trakt.tv URL (case-normalized) is kept
+    assert(parseDeviceCodeResponse({
+        device_code: 'dev',
+        user_code: 'QRST',
+        verification_url: 'HTTPS://TRAKT.TV/activate',
+        expires_in: 600,
+        interval: 5,
+    })?.verificationUrl === 'https://trakt.tv/activate', 'case-insensitive trakt host kept');
     const token = parseTokenResponse({
         access_token: 'a',
         refresh_token: 'r',
@@ -292,6 +330,36 @@ assert(fnv1a('a') !== fnv1a('b'), 'fnv distinct');
         async () => [{...sample, uid: 'b'}],
     ]);
     assert(collected.length === 2, 'collect both loaders');
+}
+
+// Trakt history truncation surfaces via onTruncate when the max page cap is hit
+{
+    // a full page (page size 100) so the loop can only end by hitting the cap
+    const fullPage = () => ({
+        ok: true,
+        status: 200,
+        headers: {get: (name: string) => (name === 'x-pagination-page-count' ? '1000' : null)},
+        json: async () =>
+            Array.from({length: 100}, (_, i) => ({
+                watched_at: `2026-01-01T00:${String(i % 60).padStart(2, '0')}:00Z`,
+                type: 'episode',
+                episode: {season: 1, number: 1, runtime: 30, ids: {trakt: i}},
+                show: {title: 'S', ids: {trakt: i, slug: 's'}},
+            })),
+        text: async () => '',
+    });
+    const truncated: Array<{type: string; page: number}> = [];
+    await fetchTraktEvents({
+        fetch: fullPage,
+        baseUrl: 'https://example.test',
+        clientId: 'cid',
+        accessToken: 'tok',
+        includeCalendar: false,
+        includeHistory: true,
+        onTruncate: (info) => truncated.push({type: info.type, page: info.page}),
+    });
+    assert(truncated.length === 2, 'truncation reported for shows and movies');
+    assert(truncated[0]?.page === 50, 'truncation at max page');
 }
 
 console.log('smoke.ts: all assertions passed');

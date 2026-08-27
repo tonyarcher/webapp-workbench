@@ -10,7 +10,7 @@ export type {
 export {escapeText, eventsToIcs, foldLine, formatUtcDate, formatUtcStamp} from './ics';
 export {dedupEvents} from './dedup';
 export {collectEvents, writeEvents} from './sync';
-export {joinUrl, fnv1a, utcYmd} from './util';
+export {joinUrl, fnv1a, fnv1a64, utcYmd} from './util';
 
 export {
     DEFAULT_CALENDAR_FUTURE_DAYS,
@@ -21,6 +21,7 @@ export {
     TRAKT_HISTORY_MAX_PAGES,
     TRAKT_HISTORY_PAGE_SIZE,
     TRAKT_MAX_CALENDAR_DAYS,
+    TRAKT_VERIFICATION_URL,
     TraktHttpError,
     calendarMoviesPath,
     calendarShowsPath,

@@ -33,20 +33,33 @@ export class AppShell extends LitElement {
     @state() private netflixSkipped = 0;
     @state() private progress: SyncProgress | null = null;
     @state() private error = '';
+    @state() private notice = '';
     @state() private busy: 'trakt' | 'netflix' | 'all' | 'ics' | 'google' | 'connect-trakt' | null = null;
     @state() private deviceFlow: DeviceFlowView | null = null;
 
     private abort: AbortController | null = null;
     private netflixText = '';
+    private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
     override disconnectedCallback(): void {
         super.disconnectedCallback();
         this.abort?.abort();
+        if (this.saveTimer !== null) clearTimeout(this.saveTimer);
     }
 
     private persist(next: AppSettings): void {
         this.settings = next;
-        saveSettings(next);
+        // Debounce the localStorage write so typing a token/secret doesn't
+        // write on every keystroke; the final value always wins.
+        if (this.saveTimer !== null) clearTimeout(this.saveTimer);
+        this.saveTimer = setTimeout(() => {
+            this.saveTimer = null;
+            saveSettings(next);
+        }, 200);
+    }
+
+    private showNotice(msg: string): void {
+        this.notice = msg;
     }
 
     private merged(): CalEvent[] {
@@ -154,6 +167,7 @@ export class AppShell extends LitElement {
                 includeCalendar: this.settings.trakt.includeCalendar,
                 includeHistory: this.settings.trakt.includeHistory,
                 onProgress: this.onProgress,
+                onTruncate: (info) => this.showNotice(`Trakt ${info.type} history goes back further than this app pulls (page ${info.page}); older entries were not synced.`),
             });
         try {
             this.traktEvents = await run();
@@ -183,6 +197,7 @@ export class AppShell extends LitElement {
                     includeCalendar: this.settings.trakt.includeCalendar,
                     includeHistory: this.settings.trakt.includeHistory,
                     onProgress: this.onProgress,
+                    onTruncate: (info) => this.showNotice(`Trakt ${info.type} history goes back further than this app pulls (page ${info.page}); older entries were not synced.`),
                 });
                 return;
             }
@@ -375,7 +390,7 @@ export class AppShell extends LitElement {
             : traktReady
                 ? 'Connected'
                 : 'Not connected';
-        const netflixStatus = this.netflixEvents.length
+        const netflixStatus = this.netflixEvents.length || this.netflixSkipped
             ? `${this.netflixEvents.length} events${this.netflixSkipped ? `, ${this.netflixSkipped} skipped` : ''}`
             : 'No file loaded';
         return html`
@@ -383,6 +398,7 @@ export class AppShell extends LitElement {
                 <h1 class="title">Calendar Sync</h1>
                 <p class="lede">Pull upcoming airings and watch history from Trakt, import a Netflix viewing export, then download an .ics or push a dedicated Google Calendar (shows up in Gmail).</p>
                 ${this.error ? html`<p class="banner">${this.error}</p>` : html``}
+                ${this.notice && !this.error ? html`<p class="notice">${this.notice}</p>` : html``}
                 ${progress
                     ? html`<div class="progress">
                         <cal-progress-bar
