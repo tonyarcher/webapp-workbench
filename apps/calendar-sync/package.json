@@ -1,0 +1,21 @@
+{
+    "name": "calendar-sync",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc --noEmit && vite build && node scripts/stamp-sw.mjs",
+        "test": "tsx scripts/smoke.ts",
+        "verify": "npm run build && npm run test"
+    },
+    "dependencies": {
+        "calendar-core": "*",
+        "lit": "^3.3.3"
+    },
+    "devDependencies": {
+        "tsx": "^4.23.1",
+        "typescript": "~6.0.2",
+        "vite": "^8.2.0"
+    }
+}

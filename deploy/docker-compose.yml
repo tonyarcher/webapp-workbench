@@ -10,7 +10,9 @@
 #                (basepath-aware; the gateway does NOT strip its prefix).
 #   lemmy-vertical-scroll - nginx static, serves the Lemmy feed under
 #                           /lemmy-vertical-scroll/.
-  #   clipstack - nginx static, serves Clipstack under /clipstack/.
+#   clipstack - nginx static, serves Clipstack under /clipstack/.
+#   calendar-sync - nginx static + Trakt API proxy, serves Calendar Sync
+#                   under /calendar-sync/.
 # Each app listens on port 3000 internally; the gateway strips the prefix for
 # the static apps and passes /stock-game/ through unchanged.
 
@@ -28,6 +30,7 @@ services:
       - stock-game
       - lemmy-vertical-scroll
       - clipstack
+      - calendar-sync
     restart: unless-stopped
     networks:
       - baseball
@@ -101,6 +104,14 @@ services:
     build:
       context: ..
       dockerfile: deploy/clipstack/Dockerfile
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  calendar-sync:
+    build:
+      context: ..
+      dockerfile: deploy/calendar-sync/Dockerfile
     restart: unless-stopped
     networks:
       - baseball
