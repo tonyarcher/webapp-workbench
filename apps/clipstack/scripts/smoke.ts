@@ -219,6 +219,16 @@ function assert(cond: unknown, msg: string): void {
 }
 
 {
+    const named = toScrollItem(
+        {id: '212121', url: 'https://www.tiktok.com/@cool/video/212121', author: 'cool', authorName: 'Cool User'},
+        0,
+        1,
+    )
+    assert(named.author === 'cool', 'handle passed through')
+    assert(named.authorName === 'Cool User', 'display name passed through')
+}
+
+{
     const ig = toScrollItem(
         {id: 'CxYz123AbCd', url: 'https://www.instagram.com/reel/CxYz123AbCd/', provider: 'instagram'},
         0,

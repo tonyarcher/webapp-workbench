@@ -167,7 +167,9 @@
     bottom: calc(20px + env(safe-area-inset-bottom, 0px));
     z-index: 4;
     max-width: min(220px, 60vw);
-    pointer-events: none;
+    pointer-events: auto;
+    user-select: text;
+    -webkit-user-select: text;
     color: #fff;
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
     display: flex;
@@ -181,9 +183,15 @@
     }
 }
 
-.meta-author {
+.meta-name {
     font-size: 14px;
+    font-weight: 700;
+}
+
+.meta-author {
+    font-size: 13px;
     font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
 }
 
 /* Anchor form of the byline: the meta stack is pointer-events:none, so the

@@ -14,6 +14,8 @@ export interface ScrollItem {
     stats?: {up: number; down: number; comments: number} | null
     date?: string | null
     author?: string
+    /** Display name when it differs from `author` (the handle). */
+    authorName?: string
 }
 
 export type ScrollMediaKind = 'image' | 'video' | 'text' | 'link'
