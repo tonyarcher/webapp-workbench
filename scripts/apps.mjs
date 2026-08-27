@@ -44,6 +44,13 @@ export const APPS = [
     summary: "Clipstack — short-video list scroller (also builds vertical-scroll-core)",
   },
   {
+    id: "calendar-sync",
+    service: "calendar-sync",
+    workspaces: ["calendar-core", "calendar-sync"],
+    aliases: ["calendar-sync", "calendar", "cal", "apps/calendar-sync"],
+    summary: "Calendar sync (also builds calendar-core)",
+  },
+  {
     id: "gateway",
     service: "gateway",
     workspaces: [],

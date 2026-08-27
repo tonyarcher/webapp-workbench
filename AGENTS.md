@@ -18,12 +18,16 @@ directory carries its own `AGENTS.md` with its conventions — read it before to
   `vertical-scroll-core` from `packages/vertical-scroll-core` (workspace link, was a GitHub git dep).
 - `apps/clipstack/` — Clipstack (Vite + Lit short-video list scroller). Depends on
   `vertical-scroll-core`. Import a txt/csv of TikTok/Instagram links and scroll them.
+- `apps/calendar-sync/` — Vite + Lit calendar sync (Trakt + Netflix → ICS / Google Calendar).
+  Depends on `calendar-core` from `packages/calendar-core`.
 - `packages/web-components/` — `@baseball/web-components` Lit component library.
 - `packages/vertical-scroll-core/` — `vertical-scroll-core` Lit library; `prepare` builds `dist/`
   on install, so consumers must reinstall (or run its `build`) after changes.
+- `packages/calendar-core/` — `calendar-core` ICS/Trakt/Netflix/Google Calendar helpers;
+  `prepare` builds `dist/` on install.
 - `deploy/` — Docker Compose reverse-proxy gateway stack (hello world at `/`, apps under
   `/baseball/`, `/rss-reader/`, `/stock-game/`, `/lemmy-vertical-scroll/`,
-  `/clipstack/`).
+  `/clipstack/`, `/calendar-sync/`).
 
 ## Commands (run from the repo root)
 
@@ -34,7 +38,7 @@ directory carries its own `AGENTS.md` with its conventions — read it before to
 | Test all | `npm test` |
 | Typecheck all | `npm run typecheck` |
 | Lint all | `npm run lint` |
-| Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` |
+| Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` |
 | Build (OS script) | `./build.sh` or `.\build.ps1` (`./build.sh rss` for one app) |
 | Deploy compose stack | `./deploy.sh` or `.\deploy.ps1` (auto local Docker vs SSH tunnel; `./deploy.sh rss` rebuilds one app) |
 

@@ -1,7 +1,8 @@
 # Deployment
 
-Docker Compose stack that runs a reverse-proxy gateway in front of five
-SPA apps (Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll, Clipstack). It is
+Docker Compose stack that runs a reverse-proxy gateway in front of six
+SPA apps (Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll, Clipstack,
+Calendar Sync). It is
 designed to run on a remote Ubuntu host with Docker (or K3s / a
 Docker-compatible container runtime) already installed.
 
@@ -11,7 +12,7 @@ Docker-compatible container runtime) already installed.
 - `nginx/default.conf` — gateway config copied into the `gateway` image.
 - `hello/index.html` — static hello-world page copied into the `gateway` image and served at the root `/`.
 - `gateway/` — Dockerfile that builds the `gateway` image from the `deploy/` context.
-- `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `clipstack/` — Dockerfiles + nginx configs for the static apps.
+- `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `clipstack/`, `calendar-sync/` — Dockerfiles + nginx configs for the static apps. Calendar Sync also proxies `/api/trakt/` to api.trakt.tv.
 - `stock-game/` — Dockerfile + `server-host.mjs`, a tiny dependency-free Node HTTP host that runs the built TanStack Start fetch handler.
 
 All app Dockerfiles use the repo root as the build context (`context: ..` in
@@ -32,6 +33,7 @@ through unchanged. The `gateway` image is built from the `deploy/` context.
 | `/stock-game/` | Stock Game (node server, basepath-aware, prefix NOT stripped) |
 | `/lemmy-vertical-scroll/` | Lemmy Vertical Scroll (nginx static, prefix stripped) |
 | `/clipstack/` | Clipstack (nginx static, prefix stripped) |
+| `/calendar-sync/` | Calendar Sync (nginx static + Trakt proxy, prefix stripped) |
 
 The bare paths (e.g. `/stock-game`) redirect to their trailing-slash forms.
 Each app is served under its own subpath with the base baked in at build time
@@ -40,11 +42,12 @@ correctly behind the gateway.
 
 ## How each app is served
 
-- **Baseball, RSS Reader, Lemmy Vertical Scroll, Clipstack** are static Vite builds served
+- **Baseball, RSS Reader, Lemmy Vertical Scroll, Clipstack, Calendar Sync** are static Vite builds served
   by an nginx container. The gateway strips the app's prefix and nginx serves
   the built `dist/` at the root, with gzip, an SPA fallback to `index.html`,
   no-cache for the shell/service worker, and long-lived immutable caching for
-  hashed `/assets/`.
+  hashed `/assets/`. Calendar Sync's nginx also reverse-proxies `/api/trakt/`
+  to `https://api.trakt.tv` (Trakt has no CORS).
 - **Stock Game** runs a TanStack Start app (SPA mode with server functions).
   Its build is served by the built-in fetch handler, hosted by
   `server-host.mjs` (a plain Node HTTP server with no dependencies). It reads
@@ -89,7 +92,7 @@ one place.
 ./deploy.sh --build-only lemmy
 ```
 
-Short names: `baseball`, `rss`, `stock`, `lemmy`, `clipstack`, `gateway`.
+Short names: `baseball`, `rss`, `stock`, `lemmy`, `clipstack`, `calendar`, `gateway`.
 
 A local `./build.sh rss` compiles that workspace on this machine. It is
 optional before deploy: each image already runs `npm install` / `npm run
@@ -99,7 +102,7 @@ through the tunnel.
 
 The gateway listens on port `80`. Visit `http://<host>/` for the hello page and
 `http://<host>/baseball/` (plus `/rss-reader/`, `/stock-game/`,
-`/lemmy-vertical-scroll/`, `/clipstack/`) for the apps.
+`/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`) for the apps.
 
 ## Remote Docker daemon (SSH tunnel)
 

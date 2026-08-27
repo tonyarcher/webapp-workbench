@@ -1,0 +1,25 @@
+{
+    "name": "Calendar Sync",
+    "short_name": "Cal Sync",
+    "description": "Sync Trakt and Netflix history into ICS and Google Calendar.",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "lang": "en",
+    "background_color": "#0f1115",
+    "theme_color": "#0f1115",
+    "icons": [
+        {
+            "src": "icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "maskable"
+        }
+    ]
+}

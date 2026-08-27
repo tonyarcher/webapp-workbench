@@ -1,0 +1,85 @@
+:host {
+    display: block;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    box-sizing: border-box;
+}
+
+.name {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.help {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-soft);
+}
+
+.status {
+    margin: 0;
+    font-size: 13px;
+    color: var(--ok);
+}
+
+.status.idle {
+    color: var(--text-dim);
+}
+
+.status.error {
+    color: var(--danger);
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: auto;
+}
+
+button,
+::slotted(button),
+::slotted(label) {
+    font: inherit;
+}
+
+button {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-hover);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+    filter: brightness(1.1);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+}
+
+.slot {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}

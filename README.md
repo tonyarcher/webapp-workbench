@@ -13,6 +13,7 @@ same reverse-proxy gateway.
 | `apps/stock-game/` | Stock game | TanStack Start (SPA) + React + Lit | Paper trading, SQLite server layer |
 | `apps/lemmy-vertical-scroll/` | Lemmy scroller | Vite + Lit + TanStack core | Vertical feed scrolling |
 | `apps/clipstack/` | Clipstack | Vite + Lit + vertical-scroll-core | Import a short-video link list and scroll it |
+| `apps/calendar-sync/` | Calendar Sync | Vite + Lit + calendar-core | Trakt + Netflix → ICS / Google Calendar |
 
 ## Packages
 
@@ -20,6 +21,7 @@ same reverse-proxy gateway.
 |---|---|---|
 | `packages/web-components/` | `@baseball/web-components` | Baseball UI component library |
 | `packages/vertical-scroll-core/` | `vertical-scroll-core` | Generic vertical-scroller components |
+| `packages/calendar-core/` | `calendar-core` | ICS emit, Trakt/Netflix mappers, Google Calendar helpers |
 
 ## Getting started
 
@@ -37,6 +39,7 @@ npm run dev:rss-reader
 npm run dev:stock-game
 npm run dev:lemmy
 npm run dev:clipstack
+npm run dev:calendar-sync
 ```
 
 Each app directory carries its own `AGENTS.md` with detailed conventions.
@@ -45,7 +48,7 @@ Each app directory carries its own `AGENTS.md` with detailed conventions.
 
 `deploy/` holds the nginx reverse-proxy gateway stack: hello world at `/` and
 each app under its own path (`/baseball/`, `/rss-reader/`, `/stock-game/`,
-`/lemmy-vertical-scroll/`, `/clipstack/`). From the repo root, `./build.sh` / `.\build.ps1`
+`/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`). From the repo root, `./build.sh` / `.\build.ps1`
 builds workspaces locally and `./deploy.sh` / `.\deploy.ps1` brings the
 compose stack up (auto-selects a local Docker engine or an SSH-tunneled
 remote daemon). Pass an app name to do one service: `./deploy.sh rss`.

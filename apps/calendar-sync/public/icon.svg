@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="100%" height="100%">
+  <rect width="64" height="64" rx="16" fill="#12131A"/>
+  <rect x="12" y="16" width="40" height="36" rx="6" fill="#1E222B" stroke="#5B9FD4" stroke-width="2"/>
+  <rect x="12" y="16" width="40" height="10" rx="6" fill="#5B9FD4"/>
+  <rect x="12" y="22" width="40" height="4" fill="#5B9FD4"/>
+  <circle cx="22" cy="14" r="2.5" fill="#E6E9EF"/>
+  <circle cx="42" cy="14" r="2.5" fill="#E6E9EF"/>
+  <rect x="20" y="32" width="6" height="6" rx="1" fill="#7DCEA0"/>
+  <rect x="29" y="32" width="6" height="6" rx="1" fill="#3A3F58"/>
+  <rect x="38" y="32" width="6" height="6" rx="1" fill="#3A3F58"/>
+  <rect x="20" y="41" width="6" height="6" rx="1" fill="#3A3F58"/>
+  <rect x="29" y="41" width="6" height="6" rx="1" fill="#3A3F58"/>
+  <rect x="38" y="41" width="6" height="6" rx="1" fill="#5B9FD4"/>
+</svg>

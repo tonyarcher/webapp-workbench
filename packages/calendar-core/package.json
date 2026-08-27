@@ -1,0 +1,30 @@
+{
+    "name": "calendar-core",
+    "version": "0.1.0",
+    "type": "module",
+    "description": "Calendar event types, ICS emit, Trakt/Netflix mappers, and Google Calendar request helpers.",
+    "license": "MIT",
+    "files": [
+        "dist"
+    ],
+    "main": "./dist/calendar-core.js",
+    "module": "./dist/calendar-core.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/calendar-core.js"
+        }
+    },
+    "scripts": {
+        "build": "vite build",
+        "test": "tsx scripts/smoke.ts",
+        "prepare": "npm run build"
+    },
+    "devDependencies": {
+        "tsx": "^4.23.1",
+        "typescript": "~6.0.2",
+        "vite": "^8.2.0",
+        "vite-plugin-dts": "^5.0.3"
+    }
+}
