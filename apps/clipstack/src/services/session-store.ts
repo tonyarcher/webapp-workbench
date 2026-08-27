@@ -9,6 +9,7 @@ function compactLink(link: ClipLink): ClipLink {
     const out: ClipLink = {id: link.id, url: link.url}
     if (link.provider) out.provider = link.provider
     if (link.author) out.author = link.author
+    if (link.authorName) out.authorName = link.authorName
     if (link.date) out.date = link.date
     if (link.pageUrl) out.pageUrl = link.pageUrl
     if (link.title) out.title = link.title

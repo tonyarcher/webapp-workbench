@@ -84,6 +84,7 @@ export class WatchView extends LitElement {
                     const next: ClipLink = {
                         ...current,
                         author: info.author ?? current.author,
+                        authorName: info.authorName ?? current.authorName,
                         title: info.title ?? current.title,
                         pageUrl: info.pageUrl ?? current.pageUrl,
                         thumbnailUrl: info.thumbnailUrl ?? current.thumbnailUrl,

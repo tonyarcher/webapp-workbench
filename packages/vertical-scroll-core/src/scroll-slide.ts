@@ -88,23 +88,26 @@ export class ScrollSlide extends LitElement {
         const providerName = embedProviderForUrl(item.videoUrl ?? item.url ?? null)?.name
         const letterbox = providerName === 'tiktok' || providerName === 'instagram'
         if (letterbox) {
-            const authorLabel = item.author ? `@${item.author}` : null
+            const handle = item.author ? `@${item.author}` : null
+            const displayName = item.authorName?.trim() || null
+            const showName = displayName && displayName !== item.author && displayName !== handle
             const profileHost = providerName === 'instagram'
                 ? `https://www.instagram.com/${encodeURIComponent(item.author ?? '')}/`
                 : `https://www.tiktok.com/@${encodeURIComponent(item.author ?? '')}`
             const authorUrl = item.author ? safeUrl(profileHost) : null
-            const caption = item.title && item.title !== authorLabel && item.title !== `TikTok ${item.id}` ? item.title : null
-            const metaEmpty = !authorLabel && !caption && !original
+            const caption = item.title && item.title !== handle && item.title !== displayName && item.title !== `TikTok ${item.id}` ? item.title : null
+            const metaEmpty = !handle && !showName && !caption && !original
             return html`
                 <div class="scroll-slide">
                     <div class="media-wrap">${this.renderMedia()}</div>
                     ${metaEmpty
                         ? nothing
-                        : html`<div class="slide-meta">
-                            ${authorLabel && authorUrl
-                                ? html`<a class="meta-author" href=${authorUrl} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${authorLabel}</a>`
-                                : authorLabel
-                                    ? html`<div class="meta-author">${authorLabel}</div>`
+                        : html`<div class="slide-meta" @pointerdown=${(e: Event) => e.stopPropagation()}>
+                            ${showName ? html`<div class="meta-name">${displayName}</div>` : nothing}
+                            ${handle && authorUrl
+                                ? html`<a class="meta-author" href=${authorUrl} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${handle}</a>`
+                                : handle
+                                    ? html`<div class="meta-author">${handle}</div>`
                                     : nothing}
                             ${caption ? html`<div class="meta-caption">${caption}</div>` : nothing}
                             ${original ? html`<a class="meta-open" href=${original} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>Open original ↗</a>` : nothing}

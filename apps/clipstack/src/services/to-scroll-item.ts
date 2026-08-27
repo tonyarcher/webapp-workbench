@@ -7,6 +7,7 @@ export function toScrollItem(link: ClipLink, index: number, total: number): Scro
         id: link.id,
         title: link.title ?? (link.author ? `@${link.author}` : ''),
         author: link.author,
+        authorName: link.authorName,
         mediaType: 'Video',
         videoUrl: page,
         url: page,
