@@ -43,6 +43,16 @@ export function fnv1a(text: string): string {
     return (hash >>> 0).toString(16);
 }
 
+/** 64-bit FNV-1a, used for stable IDs where a 32-bit hash is too collision-prone. */
+export function fnv1a64(text: string): string {
+    let hash = 0xcbf29ce484222325n;
+    for (let i = 0; i < text.length; i++) {
+        hash ^= BigInt(text.charCodeAt(i));
+        hash = (hash * 0x100000001b3n) & 0xffffffffffffffffn;
+    }
+    return hash.toString(16).padStart(16, '0');
+}
+
 export function pad2(n: number): string {
     return String(n).padStart(2, '0');
 }

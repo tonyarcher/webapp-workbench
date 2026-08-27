@@ -1,5 +1,5 @@
 import type {CalEvent} from './types';
-import {asArray, fnv1a, isRecord} from './util';
+import {asArray, fnv1a64, isRecord} from './util';
 
 export const DEFAULT_NETFLIX_MINUTES = 60;
 const DAY_MS = 86_400_000;
@@ -106,7 +106,7 @@ function pickField(record: Record<string, unknown>, names: string[]): string | u
 function toEvent(title: string, dateRaw: string): CalEvent | null {
     const parsed = parseFlexibleDate(dateRaw);
     if (!parsed) return null;
-    const uid = `cal-sync:netflix:${fnv1a(`${title}|${dateRaw}`)}`;
+    const uid = `cal-sync:netflix:${fnv1a64(`${title}|${dateRaw}`)}`;
     if (parsed.hasTime) {
         return {
             uid,
