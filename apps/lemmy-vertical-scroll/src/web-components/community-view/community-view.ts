@@ -1,4 +1,4 @@
-import {LitElement, html, nothing, unsafeCSS} from 'lit'
+import {LitElement, html, unsafeCSS} from 'lit'
 import type {TemplateResult} from 'lit'
 import {customElement, property} from 'lit/decorators.js'
 import {communityQuery, hydrateCommunityPosts, QueryController} from '../../query'

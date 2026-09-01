@@ -291,7 +291,7 @@ async function fetchPiefedCommunitiesPage(instance: string, type: FeedType, sort
         return {communities, page: pageParam}
     }
     const page = await fetchPiefedCommunities({instance, type, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
-    void putCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, software, auth, pageParam), page.communities).catch(() => {})
+    void putCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, 'piefed', auth, pageParam), page.communities).catch(() => {})
     return page
 }
 
