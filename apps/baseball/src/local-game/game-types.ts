@@ -1,7 +1,17 @@
+export interface LineupPlayer {
+  batterName: string;
+  position: string;
+  jerseyNumber?: number;
+}
+
 export interface LocalGameSetup {
   homeTeamName: string;
   awayTeamName: string;
   innings: number;
+  homeLineup?: LineupPlayer[];
+  awayLineup?: LineupPlayer[];
+  homePitcherName?: string;
+  awayPitcherName?: string;
 }
 
 export interface LocalGameEventRecord {

@@ -83,6 +83,22 @@ export class BaseballActionGrid extends LitElement {
                     <button class="btn btn-action btn-out"
                             @click=${() => this.emitStep2('FIELDER_CHOICE', "Fielder's Choice")}>FIELDER'S CHOICE
                     </button>
+                    <button class="btn btn-action btn-out" @click=${() => this.emitStep2('SACRIFICE_BUNT', 'Sac Bunt')}>
+                        SAC BUNT
+                    </button>
+                </div>
+
+                <h3 class="section-title margin-top-md">BASERUNNING</h3>
+                <div class="action-grid-3col">
+                    <button class="btn btn-action" @click=${() => this.emitEvent('STOLEN_BASE', {base: 2})}>SB 2B</button>
+                    <button class="btn btn-action" @click=${() => this.emitEvent('STOLEN_BASE', {base: 3})}>SB 3B</button>
+                    <button class="btn btn-action" @click=${() => this.emitEvent('STOLEN_BASE', {base: 4})}>SB HOME</button>
+                    <button class="btn btn-action" @click=${() => this.emitEvent('CAUGHT_STEALING', {base: 2})}>CS 2B</button>
+                    <button class="btn btn-action" @click=${() => this.emitEvent('CAUGHT_STEALING', {base: 3})}>CS 3B</button>
+                    <button class="btn btn-action" @click=${() => this.emitEvent('CAUGHT_STEALING', {base: 4})}>CS HOME</button>
+                    <button class="btn btn-action" @click=${() => this.emitEvent('WILD_PITCH')}>WILD PITCH</button>
+                    <button class="btn btn-action" @click=${() => this.emitEvent('PASSED_BALL')}>PASSED BALL</button>
+                    <button class="btn btn-action" @click=${() => this.emitEvent('BALK')}>BALK</button>
                 </div>
             </div>
         `;
@@ -98,10 +114,10 @@ export class BaseballActionGrid extends LitElement {
         );
     }
 
-    private emitEvent(eventType: string) {
+    private emitEvent(eventType: string, extra: Record<string, unknown> = {}) {
         this.dispatchEvent(
             new CustomEvent('trigger-scoring-event', {
-                detail: {eventType},
+                detail: {eventType, ...extra},
                 bubbles: true,
                 composed: true,
             })

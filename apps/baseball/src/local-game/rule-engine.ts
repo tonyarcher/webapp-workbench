@@ -22,14 +22,31 @@ export type ScoringEventType =
   | 'LINE_OUT'
   | 'POP_OUT'
   | 'SACRIFICE_FLY'
+  | 'SACRIFICE_BUNT'
   | 'ERROR'
-  | 'FIELDER_CHOICE';
+  | 'FIELDER_CHOICE'
+  | 'STOLEN_BASE'
+  | 'CAUGHT_STEALING'
+  | 'WILD_PITCH'
+  | 'PASSED_BALL'
+  | 'BALK'
+  | 'SET_LINEUP';
+
+export interface LineupAssignment {
+  batterName: string;
+  position: string;
+  jerseyNumber?: number;
+}
 
 export interface ScoringEvent {
   type: ScoringEventType;
   base?: number;
   fieldPos?: number;
   doublePlay?: boolean;
+  homeLineup?: LineupAssignment[];
+  awayLineup?: LineupAssignment[];
+  homePitcherName?: string;
+  awayPitcherName?: string;
 }
 
 export interface EngineAtBatCell {
@@ -51,6 +68,7 @@ export interface EngineScorebookRow {
   slotIdx: number;
   batterName: string;
   position: string;
+  jerseyNumber: number;
   atBats: number;
   runs: number;
   hits: number;
@@ -61,6 +79,7 @@ export interface EngineScorebookRow {
 
 export interface EngineTeamLineup {
   name: string;
+  pitcherName: string;
   rows: EngineScorebookRow[];
 }
 
@@ -90,22 +109,38 @@ export interface EngineGameState {
 export interface EngineInitOptions {
   homeName: string;
   awayName: string;
-  homeLineup: Array<{ batterName: string; position: string }>;
-  awayLineup: Array<{ batterName: string; position: string }>;
+  homeLineup: LineupAssignment[];
+  awayLineup: LineupAssignment[];
   totalInnings: number;
+  homePitcherName?: string;
+  awayPitcherName?: string;
 }
 
 import { hitBaseCount, hitNotation, inPlayOutNotation } from './notation';
-import { runnerAdvancementsForHit, runnerAdvancementsForSacrifice, runnerAdvancementsForWalk } from './notation';
+import {
+  runnerAdvancementsForHit,
+  runnerAdvancementsForSacrifice,
+  runnerAdvancementsForSteal,
+  runnerAdvancementsForWalk,
+} from './notation';
 import type { Advancement } from './notation';
 
-const OUT_EVENT_TYPES: ScoringEventType[] = ['GROUNDOUT', 'FLYOUT', 'LINE_OUT', 'POP_OUT', 'SACRIFICE_FLY', 'STRIKEOUT'];
+const OUT_EVENT_TYPES: ScoringEventType[] = [
+  'GROUNDOUT',
+  'FLYOUT',
+  'LINE_OUT',
+  'POP_OUT',
+  'SACRIFICE_FLY',
+  'SACRIFICE_BUNT',
+  'STRIKEOUT',
+  'CAUGHT_STEALING',
+];
 const HIT_EVENT_TYPES: ScoringEventType[] = ['SINGLE', 'DOUBLE', 'TRIPLE', 'HOME_RUN'];
 
 export function createGame(options: EngineInitOptions): EngineGameState {
   return {
-    awayLineup: createTeamLineup(options.awayName, options.awayLineup),
-    homeLineup: createTeamLineup(options.homeName, options.homeLineup),
+    awayLineup: createTeamLineup(options.awayName, options.awayLineup, options.awayPitcherName),
+    homeLineup: createTeamLineup(options.homeName, options.homeLineup, options.homePitcherName),
     inning: 1,
     half: 'TOP',
     balls: 0,
@@ -127,14 +162,12 @@ export function createGame(options: EngineInitOptions): EngineGameState {
   };
 }
 
-function createTeamLineup(
-  name: string,
-  lineup: Array<{ batterName: string; position: string }>
-): EngineTeamLineup {
+function createTeamLineup(name: string, lineup: LineupAssignment[], pitcherName?: string): EngineTeamLineup {
   const rows = lineup.map((player, index) => ({
     slotIdx: index + 1,
     batterName: player.batterName,
     position: player.position,
+    jerseyNumber: player.jerseyNumber ?? 0,
     atBats: 0,
     runs: 0,
     hits: 0,
@@ -142,12 +175,23 @@ function createTeamLineup(
     walks: 0,
     innings: {},
   }));
-  return { name, rows };
+  return { name, pitcherName: resolvePitcherName(name, lineup, pitcherName), rows };
+}
+
+function resolvePitcherName(teamName: string, lineup: LineupAssignment[], explicit?: string): string {
+  const trimmed = explicit?.trim();
+  if (trimmed) return trimmed;
+  const fromOrder = lineup.find((player) => player.position === 'P');
+  return fromOrder?.batterName ?? `${teamName} pitcher`;
 }
 
 export function reduceGame(game: EngineGameState, event: ScoringEvent): EngineGameState {
   if (game.over) return game;
   game = ensureRunnerInnings(game);
+
+  if (event.type === 'SET_LINEUP') {
+    return handleSetLineup(game, event);
+  }
 
   const lineup = battingLineup(game);
   if (lineup.rows.length === 0) return game;
@@ -166,7 +210,7 @@ export function reduceGame(game: EngineGameState, event: ScoringEvent): EngineGa
       break;
     case 'WALK':
     case 'HIT_BY_PITCH':
-      result = handleWalk(game);
+      result = handleWalk(game, event.type);
       break;
     case 'SINGLE':
     case 'DOUBLE':
@@ -183,9 +227,23 @@ export function reduceGame(game: EngineGameState, event: ScoringEvent): EngineGa
     case 'SACRIFICE_FLY':
       result = handleInPlayOut(game, event.type, event.fieldPos);
       break;
+    case 'SACRIFICE_BUNT':
+      result = handleSacrificeBunt(game, event.fieldPos);
+      break;
     case 'ERROR':
     case 'FIELDER_CHOICE':
       result = handleReachOnError(game, event.type, event.fieldPos);
+      break;
+    case 'STOLEN_BASE':
+      result = handleStolenBase(game, event.base);
+      break;
+    case 'CAUGHT_STEALING':
+      result = handleCaughtStealing(game, event.base);
+      break;
+    case 'WILD_PITCH':
+    case 'PASSED_BALL':
+    case 'BALK':
+      result = handleWildAdvance(game, event.type);
       break;
     default:
       return game;
@@ -260,7 +318,7 @@ function finalCell(
 }
 
 function handleBall(game: EngineGameState): EngineGameState {
-  if (game.balls === 3) return handleWalk(game);
+  if (game.balls === 3) return handleWalk(game, 'WALK');
   return { ...game, balls: game.balls + 1 };
 }
 
@@ -278,24 +336,25 @@ function handleStrikeout(game: EngineGameState): EngineGameState {
   return recordOut(advancePlate(recordAtBat(resetCounts(withCell))));
 }
 
-function handleWalk(game: EngineGameState): EngineGameState {
+function handleWalk(game: EngineGameState, eventType: 'WALK' | 'HIT_BY_PITCH'): EngineGameState {
   const batterSlot = currentBatterSlot(game);
   const advanced = advanceRunnerState(game.runners, game.runnerSlots, game.runnerInnings, 1);
   const runsScored = countRunsScored(game.runners, 1);
   const placed = placeBatterState(advanced, 1, batterSlot, game.inning);
   const withState = updateRunnerState(game, placed);
-  const scored = addRuns(withState, runsScored);
+  const scored = creditPlateAppearanceRuns(withState, game.runners, game.runnerSlots, 1, 0);
   const withArcs = applyRunnerAdvancements(
     scored,
     runnerAdvancementsForWalk(game.runners),
     game.runnerSlots,
     game.runnerInnings
   );
-  const withCell = setCurrentBatterCell(withArcs, finalCell(game, 'BB', 1, null, { rbiCount: runsScored }));
+  const notation = eventType === 'HIT_BY_PITCH' ? 'HBP' : 'BB';
+  const withCell = setCurrentBatterCell(withArcs, finalCell(game, notation, 1, null, { rbiCount: runsScored }));
   const withStats = updateBatterStats(withCell, (row) => ({
     ...row,
-    atBats: row.atBats + 1,
-    walks: row.walks + 1,
+    walks: eventType === 'WALK' ? row.walks + 1 : row.walks,
+    rbi: row.rbi + runsScored,
   }));
   return advancePlate(resetCounts(withStats));
 }
@@ -307,15 +366,16 @@ function handleHit(game: EngineGameState, eventType: ScoringEventType): EngineGa
   const runsScored = countRunsScored(game.runners, bases);
   const placed = bases === 4 ? advanced : placeBatterState(advanced, bases, batterSlot, game.inning);
   const withState = updateRunnerState(game, placed);
-  const withRunnerRuns = addRuns(withState, runsScored);
-  const withBatterRun = bases === 4 ? scoreRunForBatter(withRunnerRuns) : withRunnerRuns;
+  const batterRun = bases === 4 ? 1 : 0;
+  const withRunnerRuns = creditPlateAppearanceRuns(withState, game.runners, game.runnerSlots, bases, batterRun);
+  const withBatterRun = batterRun ? creditRunToSlot(withRunnerRuns, batterSlot) : withRunnerRuns;
   const withArcs = applyRunnerAdvancements(
     withBatterRun,
     runnerAdvancementsForHit(game.runners, bases),
     game.runnerSlots,
     game.runnerInnings
   );
-  const rbiCount = runsScored + (bases === 4 ? 1 : 0);
+  const rbiCount = runsScored + batterRun;
   const withCell = setCurrentBatterCell(
     withArcs,
     finalCell(game, hitNotation(eventType), bases === 4 ? 0 : bases, null, {
@@ -327,6 +387,7 @@ function handleHit(game: EngineGameState, eventType: ScoringEventType): EngineGa
     ...row,
     atBats: row.atBats + 1,
     hits: row.hits + 1,
+    rbi: row.rbi + rbiCount,
   }));
   return advancePlate(resetCounts(withStats));
 }
@@ -337,7 +398,7 @@ function handleInPlayOut(
   fieldPos?: number,
   doublePlay?: boolean
 ): EngineGameState {
-  const sacFly = eventType === 'SACRIFICE_FLY' || eventType === 'FLYOUT';
+  const sacFly = eventType === 'SACRIFICE_FLY';
   const forceDoublePlay = Boolean(doublePlay) && game.outs <= 1 && game.runners[0] && !sacFly;
   const outsAdded = forceDoublePlay ? 2 : 1;
   const withCell = setCurrentBatterCell(resetCounts(game), {
@@ -346,7 +407,7 @@ function handleInPlayOut(
     }),
     hasEndedInningLine: game.outs + outsAdded >= 3,
   });
-  const withAtBat = recordAtBat(withCell);
+  const withAtBat = sacFly ? withCell : recordAtBat(withCell);
   if (forceDoublePlay) {
     const withoutLeadRunner = updateRunnerState(withAtBat, clearRunnerOnFirst(game));
     return recordOut(recordOut(advancePlate(withoutLeadRunner)));
@@ -379,15 +440,198 @@ function handleReachOnError(game: EngineGameState, eventType: ScoringEventType, 
   const runsScored = countRunsScored(charged.runners, 1);
   const placed = placeBatterState(advanced, 1, batterSlot, charged.inning);
   const withState = updateRunnerState(charged, placed);
-  const withRuns = addRuns(withState, runsScored);
+  const withRuns = creditPlateAppearanceRuns(withState, charged.runners, charged.runnerSlots, 1, 0);
+  const withRbi = updateBatterStats(withRuns, (row) => ({ ...row, rbi: row.rbi + runsScored }));
   const withArcs = applyRunnerAdvancements(
-    withRuns,
+    withRbi,
     runnerAdvancementsForWalk(charged.runners),
     charged.runnerSlots,
     charged.runnerInnings
   );
   const withCell = setCurrentBatterCell(withArcs, finalCell(game, notation, 1, null, { rbiCount: runsScored }));
   return advancePlate(recordAtBat(resetCounts(withCell)));
+}
+
+function handleSetLineup(game: EngineGameState, event: ScoringEvent): EngineGameState {
+  return {
+    ...game,
+    homeLineup: overlayLineup(game.homeLineup, event.homeLineup, event.homePitcherName),
+    awayLineup: overlayLineup(game.awayLineup, event.awayLineup, event.awayPitcherName),
+  };
+}
+
+function overlayLineup(
+  lineup: EngineTeamLineup,
+  incoming: LineupAssignment[] | undefined,
+  pitcherName?: string
+): EngineTeamLineup {
+  if (!incoming || incoming.length === 0) {
+    const nextPitcher = pitcherName?.trim();
+    return nextPitcher ? { ...lineup, pitcherName: nextPitcher } : lineup;
+  }
+  const rows = lineup.rows.map((row, index) => {
+    const src = incoming[index];
+    if (!src) return row;
+    return {
+      ...row,
+      batterName: src.batterName.trim() || row.batterName,
+      position: src.position.trim() || row.position,
+      jerseyNumber: src.jerseyNumber ?? row.jerseyNumber ?? 0,
+    };
+  });
+  return {
+    ...lineup,
+    rows,
+    pitcherName: resolvePitcherName(lineup.name, incoming, pitcherName ?? lineup.pitcherName),
+  };
+}
+
+function handleSacrificeBunt(game: EngineGameState, fieldPos?: number): EngineGameState {
+  const notation = inPlayOutNotation('SACRIFICE_BUNT', fieldPos);
+  const endsInning = game.outs >= 2;
+  const withCell = setCurrentBatterCell(game, {
+    ...finalCell(game, notation, 0, game.outs + 1, {
+      rbiCount: !endsInning && game.runners[2] ? 1 : 0,
+    }),
+    hasEndedInningLine: endsInning,
+  });
+  if (endsInning) {
+    return recordOut(advancePlate(resetCounts(withCell)));
+  }
+  const advanced = advanceRunnerState(game.runners, game.runnerSlots, game.runnerInnings, 1);
+  const runsScored = countRunsScored(game.runners, 1);
+  const withState = updateRunnerState(withCell, advanced);
+  const withRuns = creditPlateAppearanceRuns(withState, game.runners, game.runnerSlots, 1, 0);
+  const withRbi = updateBatterStats(withRuns, (row) => ({ ...row, rbi: row.rbi + runsScored }));
+  const withArcs = applyRunnerAdvancements(
+    withRbi,
+    runnerAdvancementsForWalk(game.runners),
+    game.runnerSlots,
+    game.runnerInnings
+  );
+  return recordOut(advancePlate(resetCounts(withArcs)));
+}
+
+function stealFromBase(toBase: number | undefined): number | null {
+  if (toBase === 2 || toBase === 3) return toBase - 1;
+  if (toBase === 4) return 3;
+  return null;
+}
+
+function handleStolenBase(game: EngineGameState, toBase?: number): EngineGameState {
+  const from = stealFromBase(toBase);
+  if (from == null) return game;
+  if (!game.runners[from - 1]) return game;
+  const destination = toBase === 4 ? 4 : (toBase as number);
+  if (destination <= 3 && game.runners[destination - 1]) return game;
+  const slot = game.runnerSlots[from - 1];
+  const originInning = game.runnerInnings[from - 1];
+  const next = clearBase(game, from);
+  if (destination === 4) {
+    const scored = addTeamScore(next, 1);
+    const withRunner = creditRunToSlot(scored, slot);
+    return applyStealArc(withRunner, slot, originInning, from, 4);
+  }
+  const occupied = occupyBase(next, destination, slot, originInning);
+  return applyStealArc(occupied, slot, originInning, from, destination);
+}
+
+function handleCaughtStealing(game: EngineGameState, toBase?: number): EngineGameState {
+  const from = stealFromBase(toBase);
+  if (from == null) return game;
+  if (!game.runners[from - 1]) return game;
+  const destination = toBase === 4 ? 4 : (toBase as number);
+  const slot = game.runnerSlots[from - 1];
+  const originInning = game.runnerInnings[from - 1];
+  const marked = markCaughtStealingCell(game, slot, originInning, from, destination);
+  const cleared = clearBase(marked, from);
+  return recordOut(cleared);
+}
+
+function markCaughtStealingCell(
+  game: EngineGameState,
+  slot: number | null,
+  originInning: number | null,
+  from: number,
+  to: number
+): EngineGameState {
+  if (slot == null || originInning == null) return game;
+  const destination = to > 3 ? 4 : to;
+  const withArc = appendAdvancement(game, slot, originInning, { from, to: destination, scored: false });
+  const lineup = battingLineup(withArc);
+  const key = String(originInning);
+  const rows = lineup.rows.map((row) => {
+    if (row.slotIdx !== slot) return row;
+    const cell = row.innings[key];
+    if (!cell) return row;
+    const notation = cell.notation.endsWith(' CS') ? cell.notation : `${cell.notation} CS`.trim();
+    return {
+      ...row,
+      innings: {
+        ...row.innings,
+        [key]: {
+          ...cell,
+          notation,
+          outNum: game.outs + 1,
+          hasEndedInningLine: game.outs >= 2,
+        },
+      },
+    };
+  });
+  const updatedLineup = { ...lineup, rows };
+  if (withArc.half === 'TOP') return { ...withArc, awayLineup: updatedLineup };
+  return { ...withArc, homeLineup: updatedLineup };
+}
+
+function handleWildAdvance(game: EngineGameState, eventType: 'WILD_PITCH' | 'PASSED_BALL' | 'BALK'): EngineGameState {
+  void eventType;
+  const advanced = advanceRunnerState(game.runners, game.runnerSlots, game.runnerInnings, 1);
+  const withState = updateRunnerState(game, advanced);
+  const withRuns = creditPlateAppearanceRuns(withState, game.runners, game.runnerSlots, 1, 0);
+  return applyRunnerAdvancements(
+    withRuns,
+    runnerAdvancementsForWalk(game.runners),
+    game.runnerSlots,
+    game.runnerInnings
+  );
+}
+
+function clearBase(game: EngineGameState, base: number): EngineGameState {
+  const runners = [...game.runners] as RunnersOnBase;
+  const runnerSlots = [...game.runnerSlots] as RunnerSlots;
+  const runnerInnings = [...game.runnerInnings] as RunnerInnings;
+  runners[base - 1] = false;
+  runnerSlots[base - 1] = null;
+  runnerInnings[base - 1] = null;
+  return updateRunnerState(game, { runners, runnerSlots, runnerInnings });
+}
+
+function occupyBase(
+  game: EngineGameState,
+  base: number,
+  slot: number | null,
+  originInning: number | null
+): EngineGameState {
+  const runners = [...game.runners] as RunnersOnBase;
+  const runnerSlots = [...game.runnerSlots] as RunnerSlots;
+  const runnerInnings = [...game.runnerInnings] as RunnerInnings;
+  runners[base - 1] = true;
+  runnerSlots[base - 1] = slot;
+  runnerInnings[base - 1] = originInning;
+  return updateRunnerState(game, { runners, runnerSlots, runnerInnings });
+}
+
+function applyStealArc(
+  game: EngineGameState,
+  slot: number | null,
+  originInning: number | null,
+  from: number,
+  to: number
+): EngineGameState {
+  if (slot == null || originInning == null) return game;
+  const [advancement] = runnerAdvancementsForSteal(from, to);
+  if (!advancement) return game;
+  return appendAdvancement(game, slot, originInning, advancement);
 }
 
 function chargeError(game: EngineGameState): EngineGameState {
@@ -500,19 +744,39 @@ function runnersOn(runners: RunnersOnBase): number[] {
   }, []);
 }
 
-function addRuns(game: EngineGameState, runsScored: number): EngineGameState {
+function addTeamScore(game: EngineGameState, runsScored: number): EngineGameState {
   if (runsScored <= 0) return game;
-  const withScore = setTeamScore(game, teamScore(game) + runsScored);
-  return updateBatterStats(withScore, (row) => ({ ...row, rbi: row.rbi + runsScored }));
+  return setTeamScore(game, teamScore(game) + runsScored);
 }
 
-function scoreRunForBatter(game: EngineGameState): EngineGameState {
-  const withScore = setTeamScore(game, teamScore(game) + 1);
-  return updateBatterStats(withScore, (row) => ({ ...row, runs: row.runs + 1, rbi: row.rbi + 1 }));
+function creditRunToSlot(game: EngineGameState, slot: number | null): EngineGameState {
+  if (slot == null) return game;
+  const lineup = battingLineup(game);
+  const rows = lineup.rows.map((row) => (row.slotIdx === slot ? { ...row, runs: row.runs + 1 } : row));
+  const updatedLineup = { ...lineup, rows };
+  if (game.half === 'TOP') return { ...game, awayLineup: updatedLineup };
+  return { ...game, homeLineup: updatedLineup };
+}
+
+function creditPlateAppearanceRuns(
+  game: EngineGameState,
+  runners: RunnersOnBase,
+  runnerSlots: RunnerSlots,
+  bases: number,
+  extraRuns: number
+): EngineGameState {
+  let result = addTeamScore(game, countRunsScored(runners, bases) + extraRuns);
+  for (const base of runnersOn(runners)) {
+    if (base + bases > 3) {
+      result = creditRunToSlot(result, runnerSlots[base - 1]);
+    }
+  }
+  return result;
 }
 
 function scoreRunnerFromThird(game: EngineGameState): EngineGameState {
   if (!game.runners[2]) return game;
+  const slot = game.runnerSlots[2];
   const advanced = updateRunnerState(game, {
     runners: [game.runners[0], game.runners[1], false],
     runnerSlots: [game.runnerSlots[0], game.runnerSlots[1], null],
@@ -524,7 +788,9 @@ function scoreRunnerFromThird(game: EngineGameState): EngineGameState {
     game.runnerSlots,
     game.runnerInnings
   );
-  return scoreRunForBatter(withArc);
+  const withScore = addTeamScore(withArc, 1);
+  const withRunner = creditRunToSlot(withScore, slot);
+  return updateBatterStats(withRunner, (row) => ({ ...row, rbi: row.rbi + 1 }));
 }
 
 function recordAtBat(game: EngineGameState): EngineGameState {
@@ -557,8 +823,6 @@ function flipInning(game: EngineGameState): EngineGameState {
     runnerInnings: [null, null, null],
     balls: 0,
     strikes: 0,
-    awayBatterIdx: 0,
-    homeBatterIdx: 0,
     half: game.half === 'TOP' ? 'BOTTOM' : 'TOP',
     inning: game.half === 'BOTTOM' ? game.inning + 1 : game.inning,
   };

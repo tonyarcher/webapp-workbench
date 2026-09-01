@@ -82,7 +82,7 @@ function expectedCell(pre: EngineGameState, event: ScoringEvent): EngineAtBatCel
       const runsScored = countRunsScored(runners, 1);
       return {
         count,
-        notation: 'BB',
+        notation: event.type === 'HIT_BY_PITCH' ? 'HBP' : 'BB',
         base: 1,
         outNum: null,
         hasEndedInningLine: false,
@@ -111,7 +111,7 @@ function expectedCell(pre: EngineGameState, event: ScoringEvent): EngineAtBatCel
     case 'FLYOUT':
     case 'POP_OUT':
     case 'SACRIFICE_FLY': {
-      const sacFly = event.type === 'SACRIFICE_FLY' || event.type === 'FLYOUT';
+      const sacFly = event.type === 'SACRIFICE_FLY';
       const forceDoublePlay = Boolean(event.doublePlay) && pre.outs <= 1 && runners[0] && !sacFly;
       const outsAdded = forceDoublePlay ? 2 : 1;
       return {
@@ -224,7 +224,8 @@ interface ModelRunner {
 interface ScorebookModel {
   half: 'TOP' | 'BOTTOM';
   inning: number;
-  batterIdx: number;
+  awayBatterIdx: number;
+  homeBatterIdx: number;
   outs: number;
   runners: ModelRunner[];
   expectedCells: Map<string, Advancement[]>;
@@ -235,12 +236,25 @@ function createScorebookModel(): ScorebookModel {
   return {
     half: 'TOP',
     inning: 1,
-    batterIdx: 0,
+    awayBatterIdx: 0,
+    homeBatterIdx: 0,
     outs: 0,
     runners: [],
     expectedCells: new Map(),
     appearances: new Map(),
   };
+}
+
+function modelBatterIdx(model: ScorebookModel): number {
+  return model.half === 'TOP' ? model.awayBatterIdx : model.homeBatterIdx;
+}
+
+function advanceModelBatter(model: ScorebookModel, rowCount: number): void {
+  if (model.half === 'TOP') {
+    model.awayBatterIdx = (model.awayBatterIdx + 1) % rowCount;
+  } else {
+    model.homeBatterIdx = (model.homeBatterIdx + 1) % rowCount;
+  }
 }
 
 function isOutType(type: ScoringEventType): boolean {
@@ -271,7 +285,7 @@ function baseCountFor(type: ScoringEventType): number {
 // and which cells received an arc this event.
 function applyModelEvent(model: ScorebookModel, event: ScoringEvent, rowCount: number): { runs: number; touched: string[] } {
   const touched: string[] = [];
-  const batterSlot = (model.batterIdx % rowCount) + 1;
+  const batterSlot = (modelBatterIdx(model) % rowCount) + 1;
   const batterKey = `${model.half}:${batterSlot}:${model.inning}`;
   const priorAppearances = model.appearances.get(batterKey) ?? 0;
   model.appearances.set(batterKey, priorAppearances + 1);
@@ -282,7 +296,7 @@ function applyModelEvent(model: ScorebookModel, event: ScoringEvent, rowCount: n
     touched.push(batterKey);
   }
 
-  const sacFly = event.type === 'SACRIFICE_FLY' || event.type === 'FLYOUT';
+  const sacFly = event.type === 'SACRIFICE_FLY';
   const forceDoublePlay =
     Boolean(event.doublePlay) &&
     model.outs <= 1 &&
@@ -338,15 +352,13 @@ function applyModelEvent(model: ScorebookModel, event: ScoringEvent, rowCount: n
 
   const batterScores = event.type === 'HOME_RUN';
 
+  advanceModelBatter(model, rowCount);
   model.outs += isOutType(event.type) ? (forceDoublePlay ? 2 : 1) : 0;
   if (model.outs >= 3) {
     model.outs = 0;
     model.runners = [];
-    model.batterIdx = 0;
     model.half = model.half === 'TOP' ? 'BOTTOM' : 'TOP';
     if (model.half === 'TOP') model.inning += 1;
-  } else {
-    model.batterIdx = (model.batterIdx + 1) % rowCount;
   }
 
   return { runs: scoredArcs + (batterScores ? 1 : 0), touched };

@@ -29,8 +29,10 @@ describe('BaseballLineupSetup', () => {
     await element.updateComplete;
 
     const shadow = element.shadowRoot!;
-    expect(shadow.textContent).to.include('#3 Brendan Donovan');
-    expect(shadow.textContent).to.include('#2 Nico Hoerner');
+    const awayName = shadow.querySelector('[data-testid="away-slot-1-name"]') as HTMLInputElement;
+    const homeName = shadow.querySelector('[data-testid="home-slot-1-name"]') as HTMLInputElement;
+    expect(awayName.value).to.equal('Brendan Donovan');
+    expect(homeName.value).to.equal('Nico Hoerner');
   });
 
   it('emits close-lineup-setup on close and cancel button click', async () => {
@@ -44,13 +46,48 @@ describe('BaseballLineupSetup', () => {
   });
 
   it('emits save-lineup-setup on confirm button click', async () => {
-    let saved = false;
-    element.addEventListener('save-lineup-setup', () => { saved = true; });
+    element.setAttribute(
+      'away-lineup-json',
+      JSON.stringify(Array.from({ length: 9 }, (_, i) => ({ id: i + 1, name: `Away ${i + 1}`, jerseyNumber: i + 1, position: 'DH' })))
+    );
+    element.setAttribute(
+      'home-lineup-json',
+      JSON.stringify(Array.from({ length: 9 }, (_, i) => ({ id: i + 1, name: `Home ${i + 1}`, jerseyNumber: i + 1, position: 'DH' })))
+    );
+    await element.updateComplete;
 
-    const shadow = element.shadowRoot!;
-    const saveBtn = shadow.querySelector('.btn-primary') as HTMLElement;
+    let savedName = '';
+    element.addEventListener('save-lineup-setup', ((event: CustomEvent) => {
+      savedName = event.detail?.awayLineup?.[0]?.name ?? '';
+    }) as EventListener);
+
+    const saveBtn = element.shadowRoot!.querySelector('[data-testid="lineup-save-button"]') as HTMLElement;
     saveBtn.click();
-    expect(saved).to.be.true;
+    expect(savedName).to.equal('Away 1');
+  });
+
+  it('lets a scorer edit a batter name before saving', async () => {
+    element.setAttribute(
+      'away-lineup-json',
+      JSON.stringify(Array.from({ length: 9 }, (_, i) => ({ id: i + 1, name: `Away ${i + 1}`, jerseyNumber: i + 1, position: 'RF' })))
+    );
+    element.setAttribute(
+      'home-lineup-json',
+      JSON.stringify(Array.from({ length: 9 }, (_, i) => ({ id: i + 1, name: `Home ${i + 1}`, jerseyNumber: i + 1, position: '2B' })))
+    );
+    await element.updateComplete;
+
+    const nameInput = element.shadowRoot!.querySelector('[data-testid="away-slot-1-name"]') as HTMLInputElement;
+    nameInput.value = 'Tony Gwynn';
+    nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    await element.updateComplete;
+
+    let savedName = '';
+    element.addEventListener('save-lineup-setup', ((event: CustomEvent) => {
+      savedName = event.detail?.awayLineup?.[0]?.name ?? '';
+    }) as EventListener);
+    (element.shadowRoot!.querySelector('[data-testid="lineup-save-button"]') as HTMLElement).click();
+    expect(savedName).to.equal('Tony Gwynn');
   });
 
   it('renders nothing when is-open is not set', async () => {

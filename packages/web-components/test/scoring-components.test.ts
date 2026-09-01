@@ -29,6 +29,9 @@ describe('Scoring Components', () => {
       expect(shadow.textContent).to.include('PITCH SELECTION');
       expect(shadow.textContent).to.include('PITCH RESULTS');
       expect(shadow.textContent).to.include('PLATE & IN-PLAY RESULTS');
+      expect(shadow.textContent).to.include('BASERUNNING');
+      expect(shadow.textContent).to.include('SB 2B');
+      expect(shadow.textContent).to.include('SAC BUNT');
     });
 
     it('emits pitch-type-selected event when pitch type button is clicked', async () => {

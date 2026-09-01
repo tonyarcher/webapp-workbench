@@ -5,6 +5,7 @@ import {
   inPlayOutNotation,
   runnerAdvancementsForHit,
   runnerAdvancementsForSacrifice,
+  runnerAdvancementsForSteal,
   runnerAdvancementsForWalk,
 } from './notation';
 
@@ -88,5 +89,22 @@ describe('runnerAdvancementsForSacrifice', () => {
 
   it('returns empty when no runner is on third', () => {
     expect(runnerAdvancementsForSacrifice([true, false, false])).toEqual([]);
+  });
+});
+
+describe('runnerAdvancementsForSteal', () => {
+  it('marks a steal of second', () => {
+    expect(runnerAdvancementsForSteal(1, 2)).toEqual([{ from: 1, to: 2, scored: false }]);
+  });
+
+  it('marks a steal of home as scored', () => {
+    expect(runnerAdvancementsForSteal(3, 4)).toEqual([{ from: 3, to: 4, scored: true }]);
+  });
+});
+
+describe('sacrifice bunt notation', () => {
+  it('records SH with an optional fielder', () => {
+    expect(inPlayOutNotation('SACRIFICE_BUNT')).toBe('SH');
+    expect(inPlayOutNotation('SACRIFICE_BUNT', 1)).toBe('SH1');
   });
 });

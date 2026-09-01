@@ -1,15 +1,90 @@
 import {html, LitElement} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import {customElement, property, state} from 'lit/decorators.js';
+import type {PropertyValues} from 'lit';
 import lineupSetupCssText from './baseball-lineup-setup.css?inline';
 
 const lineupSetupSheet = new CSSStyleSheet();
 lineupSetupSheet.replaceSync(lineupSetupCssText);
+
+export const FIELD_POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'] as const;
 
 export interface PlayerInfo {
     id: number;
     name: string;
     jerseyNumber: number;
     position: string;
+}
+
+export interface LineupDraft {
+    homeLineup: PlayerInfo[];
+    awayLineup: PlayerInfo[];
+    homePitcherName: string;
+    awayPitcherName: string;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+    return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+}
+
+function normalizePlayer(raw: unknown, index: number): PlayerInfo {
+    const record = asRecord(raw);
+    const name = String(record?.name ?? record?.batterName ?? '');
+    const jerseyRaw = Number(record?.jerseyNumber);
+    const position = String(record?.position ?? FIELD_POSITIONS[index] ?? 'DH');
+    const id = Number(record?.id ?? index + 1);
+    return {
+        id: Number.isFinite(id) ? id : index + 1,
+        name,
+        jerseyNumber: Number.isFinite(jerseyRaw) ? jerseyRaw : 0,
+        position: position || 'DH',
+    };
+}
+
+function padLineup(players: PlayerInfo[]): PlayerInfo[] {
+    const next = players.slice(0, 9).map((player, index) => ({...player, id: index + 1}));
+    while (next.length < 9) {
+        const index = next.length;
+        next.push({
+            id: index + 1,
+            name: '',
+            jerseyNumber: 0,
+            position: FIELD_POSITIONS[index] ?? 'DH',
+        });
+    }
+    return next;
+}
+
+function parseLineup(value: unknown): PlayerInfo[] {
+    if (!Array.isArray(value)) return padLineup([]);
+    return padLineup(value.map((entry, index) => normalizePlayer(entry, index)));
+}
+
+function lineupConverter(val: string | null): PlayerInfo[] {
+    if (!val) return padLineup([]);
+    try {
+        return parseLineup(JSON.parse(val));
+    } catch {
+        return padLineup([]);
+    }
+}
+
+function cloneLineup(players: PlayerInfo[]): PlayerInfo[] {
+    return players.map((player) => ({...player}));
+}
+
+function validateLineup(players: PlayerInfo[], teamLabel: string): string[] {
+    const errors: string[] = [];
+    if (players.some((player) => !player.name.trim())) {
+        errors.push(`${teamLabel}: every batting slot needs a name.`);
+    }
+    const defensive = players
+        .map((player) => player.position)
+        .filter((position) => position && position !== 'DH');
+    const duplicates = defensive.filter((position, index) => defensive.indexOf(position) !== index);
+    if (duplicates.length > 0) {
+        errors.push(`${teamLabel}: duplicate positions (${[...new Set(duplicates)].join(', ')}).`);
+    }
+    return errors;
 }
 
 @customElement('baseball-lineup-setup')
@@ -19,105 +94,235 @@ export class BaseballLineupSetup extends LitElement {
     @property({type: String, attribute: 'home-team-name'}) homeTeamName = 'Home Team';
     @property({type: String, attribute: 'away-team-name'}) awayTeamName = 'Away Team';
     @property({type: Boolean, attribute: 'is-open'}) isOpen = false;
+    @property({type: String, attribute: 'variant'}) variant: 'modal' | 'embedded' = 'modal';
+    @property({type: String, attribute: 'home-pitcher-name'}) homePitcherName = '';
+    @property({type: String, attribute: 'away-pitcher-name'}) awayPitcherName = '';
 
     @property({
         type: Array,
         attribute: 'home-lineup-json',
-        converter: {
-            fromAttribute: (val: string | null): PlayerInfo[] => {
-                if (!val) return [];
-                try { return JSON.parse(val); } catch { return []; }
-            }
-        }
+        converter: {fromAttribute: lineupConverter},
     })
-    homeLineup: PlayerInfo[] = [];
+    homeLineup: PlayerInfo[] = padLineup([]);
 
     @property({
         type: Array,
         attribute: 'away-lineup-json',
-        converter: {
-            fromAttribute: (val: string | null): PlayerInfo[] => {
-                if (!val) return [];
-                try { return JSON.parse(val); } catch { return []; }
-            }
-        }
+        converter: {fromAttribute: lineupConverter},
     })
-    awayLineup: PlayerInfo[] = [];
+    awayLineup: PlayerInfo[] = padLineup([]);
 
     @property({
         type: Array,
         attribute: 'home-bench-json',
-        converter: {
-            fromAttribute: (val: string | null): PlayerInfo[] => {
-                if (!val) return [];
-                try { return JSON.parse(val); } catch { return []; }
-            }
-        }
+        converter: {fromAttribute: lineupConverter},
     })
     homeBench: PlayerInfo[] = [];
 
     @property({
         type: Array,
         attribute: 'away-bench-json',
-        converter: {
-            fromAttribute: (val: string | null): PlayerInfo[] => {
-                if (!val) return [];
-                try { return JSON.parse(val); } catch { return []; }
-            }
-        }
+        converter: {fromAttribute: lineupConverter},
     })
     awayBench: PlayerInfo[] = [];
 
+    @state() private draftHome: PlayerInfo[] = padLineup([]);
+    @state() private draftAway: PlayerInfo[] = padLineup([]);
+    @state() private draftHomePitcher = '';
+    @state() private draftAwayPitcher = '';
+    @state() private errors: string[] = [];
+
+    getLineups(): LineupDraft {
+        return {
+            homeLineup: cloneLineup(this.draftHome),
+            awayLineup: cloneLineup(this.draftAway),
+            homePitcherName: this.draftHomePitcher,
+            awayPitcherName: this.draftAwayPitcher,
+        };
+    }
+
+    protected willUpdate(changed: PropertyValues<this>) {
+        if (!this.hasUpdated) {
+            this.syncDraftFromProps();
+            return;
+        }
+        if (this.variant === 'modal' && changed.has('isOpen') && this.isOpen) {
+            this.syncDraftFromProps();
+            this.errors = [];
+            return;
+        }
+        const lineupChanged =
+            changed.has('homeLineup') ||
+            changed.has('awayLineup') ||
+            changed.has('homePitcherName') ||
+            changed.has('awayPitcherName');
+        if (lineupChanged && !this.hasDraftEdits()) {
+            this.syncDraftFromProps();
+        }
+    }
+
+    protected firstUpdated() {
+        this.emitChange();
+    }
+
     render() {
-        if (!this.isOpen) return html``;
+        if (this.variant === 'modal' && !this.isOpen) return html``;
 
-        return html`
-            <div class="overlay-backdrop">
-                <div class="dialog-card">
-                    <div class="dialog-header">
-                        <h2>Lineup & Bench Setup</h2>
-                        <button class="close-btn" @click=${this.onClose}>&times;</button>
-                    </div>
-
-                    <div class="team-grid">
-                        <div class="team-column">
-                            <h3>${this.awayTeamName} (Away)</h3>
-                            <div class="lineup-list">
-                                ${this.awayLineup.map(
-                                        (p, i) => html`
-                                            <div class="lineup-slot">
-                                                <span class="slot-idx">${i + 1}.</span>
-                                                <span class="player-name">#${p.jerseyNumber} ${p.name}</span>
-                                                <span class="pos-badge">${p.position}</span>
-                                            </div>
-                                        `
-                                )}
-                            </div>
-                        </div>
-
-                        <div class="team-column">
-                            <h3>${this.homeTeamName} (Home)</h3>
-                            <div class="lineup-list">
-                                ${this.homeLineup.map(
-                                        (p, i) => html`
-                                            <div class="lineup-slot">
-                                                <span class="slot-idx">${i + 1}.</span>
-                                                <span class="player-name">#${p.jerseyNumber} ${p.name}</span>
-                                                <span class="pos-badge">${p.position}</span>
-                                            </div>
-                                        `
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="dialog-footer margin-top-lg">
-                        <button class="btn btn-secondary" @click=${this.onClose}>Cancel</button>
-                        <button class="btn btn-primary" @click=${this.onSave}>Confirm & Save Lineups</button>
-                    </div>
+        const body = html`
+            <div class=${this.variant === 'modal' ? 'modal-container' : 'embedded-editor'} data-testid="lineup-editor">
+                ${this.variant === 'modal'
+                    ? html`
+                          <div class="modal-header">
+                              <h2>Lineup & Bench Setup</h2>
+                              <button class="btn btn-secondary" type="button" @click=${this.onClose} aria-label="Close">
+                                  &times;
+                              </button>
+                          </div>
+                      `
+                    : html`<h2>Starting lineups</h2>`}
+                ${this.errors.length
+                    ? html`<div class="error-banner" data-testid="lineup-error">${this.errors.join(' ')}</div>`
+                    : ''}
+                <div class="lineup-grid">
+                    ${this.renderTeam('away', this.awayTeamName, this.draftAway, this.draftAwayPitcher)}
+                    ${this.renderTeam('home', this.homeTeamName, this.draftHome, this.draftHomePitcher)}
                 </div>
+                ${this.variant === 'modal'
+                    ? html`
+                          <div class="footer-actions">
+                              <button class="btn btn-secondary" type="button" @click=${this.onClose}>Cancel</button>
+                              <button
+                                  class="btn"
+                                  type="button"
+                                  data-testid="lineup-save-button"
+                                  @click=${this.onSave}
+                              >
+                                  Confirm & Save Lineups
+                              </button>
+                          </div>
+                      `
+                    : html`<p class="hint">Edit names, numbers, and positions. The batting order is the slot order.</p>`}
             </div>
         `;
+
+        return this.variant === 'modal' ? html`<div class="overlay-catch">${body}</div>` : body;
+    }
+
+    private renderTeam(team: 'home' | 'away', name: string, lineup: PlayerInfo[], pitcherName: string) {
+        return html`
+            <div class="team-card">
+                <h3 class="team-title">${name} (${team === 'away' ? 'Away' : 'Home'})</h3>
+                <div class="pitcher-section">
+                    <label for="${team}-pitcher-input">Pitcher</label>
+                    <input
+                        id="${team}-pitcher-input"
+                        class="form-control input-flex"
+                        data-testid="${team}-pitcher-input"
+                        .value=${pitcherName}
+                        @input=${(event: Event) => this.setPitcher(team, (event.target as HTMLInputElement).value)}
+                    />
+                </div>
+                <div class="lineup-grid-header">
+                    <span></span>
+                    <span>Batter</span>
+                    <span>#</span>
+                    <span>Pos</span>
+                </div>
+                ${lineup.map(
+                    (player, index) => html`
+                        <div class="slot-row">
+                            <span class="slot-num">${index + 1}</span>
+                            <input
+                                class="form-control input-flex"
+                                data-testid="${team}-slot-${index + 1}-name"
+                                .value=${player.name}
+                                @input=${(event: Event) =>
+                                    this.updatePlayer(team, index, 'name', (event.target as HTMLInputElement).value)}
+                            />
+                            <input
+                                class="form-control input-num"
+                                data-testid="${team}-slot-${index + 1}-jersey"
+                                type="number"
+                                min="0"
+                                max="99"
+                                .value=${player.jerseyNumber ? String(player.jerseyNumber) : ''}
+                                @input=${(event: Event) =>
+                                    this.updatePlayer(
+                                        team,
+                                        index,
+                                        'jerseyNumber',
+                                        (event.target as HTMLInputElement).value
+                                    )}
+                            />
+                            <select
+                                class="form-control select-pos"
+                                data-testid="${team}-slot-${index + 1}-position"
+                                .value=${player.position}
+                                @change=${(event: Event) =>
+                                    this.updatePlayer(team, index, 'position', (event.target as HTMLSelectElement).value)}
+                            >
+                                ${FIELD_POSITIONS.map(
+                                    (position) => html`
+                                        <option value=${position} ?selected=${player.position === position}>
+                                            ${position}
+                                        </option>
+                                    `
+                                )}
+                            </select>
+                        </div>
+                    `
+                )}
+            </div>
+        `;
+    }
+
+    private syncDraftFromProps() {
+        this.draftHome = cloneLineup(padLineup(this.homeLineup));
+        this.draftAway = cloneLineup(padLineup(this.awayLineup));
+        this.draftHomePitcher = this.homePitcherName;
+        this.draftAwayPitcher = this.awayPitcherName;
+    }
+
+    private hasDraftEdits(): boolean {
+        return this.draftHome.some((player) => player.name.trim()) || this.draftAway.some((player) => player.name.trim());
+    }
+
+    private setPitcher(team: 'home' | 'away', value: string) {
+        if (team === 'home') this.draftHomePitcher = value;
+        else this.draftAwayPitcher = value;
+        this.emitChange();
+    }
+
+    private updatePlayer(team: 'home' | 'away', index: number, field: 'name' | 'jerseyNumber' | 'position', value: string) {
+        const target = team === 'home' ? [...this.draftHome] : [...this.draftAway];
+        const current = target[index];
+        if (!current) return;
+        if (field === 'jerseyNumber') {
+            const parsed = Number(value);
+            target[index] = {...current, jerseyNumber: Number.isFinite(parsed) ? parsed : 0};
+        } else {
+            target[index] = {...current, [field]: value};
+        }
+        if (team === 'home') this.draftHome = target;
+        else this.draftAway = target;
+        this.emitChange();
+    }
+
+    private emitChange() {
+        this.dispatchEvent(
+            new CustomEvent('lineup-change', {
+                detail: this.getLineups(),
+                bubbles: true,
+                composed: true,
+            })
+        );
+    }
+
+    private collectErrors(): string[] {
+        return [
+            ...validateLineup(this.draftAway, this.awayTeamName),
+            ...validateLineup(this.draftHome, this.homeTeamName),
+        ];
     }
 
     private onClose() {
@@ -127,13 +332,18 @@ export class BaseballLineupSetup extends LitElement {
     }
 
     private onSave() {
+        const errors = this.collectErrors().filter((error) => error.includes('needs a name'));
+        if (errors.length > 0) {
+            this.errors = errors;
+            return;
+        }
+        this.errors = this.collectErrors();
         this.isOpen = false;
         this.removeAttribute('is-open');
         this.dispatchEvent(
             new CustomEvent('save-lineup-setup', {
                 detail: {
-                    homeLineup: this.homeLineup,
-                    awayLineup: this.awayLineup,
+                    ...this.getLineups(),
                     homeBench: this.homeBench,
                     awayBench: this.awayBench,
                 },
