@@ -36,91 +36,74 @@ export class SettingsDialog extends LitElement {
         }
     }
 
-    override render() {
-        const themeOption = (value: Theme, label: string) => html`
-      <button
-        class="theme-opt ${this.theme === value ? 'active' : ''}"
-        data-theme=${value}
-        @click=${this.onThemeClick}
-      >
+    private renderThemeOption(value: Theme, label: string) {
+        return html`
+      <button class="theme-opt ${this.theme === value ? 'active' : ''}" data-theme=${value} @click=${this.onThemeClick}>
         <span class="swatch ${value}"></span>
         ${label}
       </button>
     `;
+    }
 
+    private renderAppearanceSection() {
         return html`
-      <dialog
-        @click=${this.onDialogClick}
-        @cancel=${(e: Event) => {
-            e.preventDefault();
-            this.close();
-        }}
-      >
+      <div class="section">
+        <h3>Appearance</h3>
+        <div class="theme-row">
+          ${this.renderThemeOption('light', 'Light')}
+          ${this.renderThemeOption('dark', 'Dark grey')}
+          ${this.renderThemeOption('oled', 'Lights out')}
+        </div>
+      </div>
+    `;
+    }
+
+    private renderAddRow() {
+        if (!this.adding) return html``;
+        return html`
+      <div class="add-row">
+        <input data-add-url type="url" placeholder="https://example.com/feed.xml" @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter') this.submitAdd(); }} />
+        <button class="btn primary" @click=${this.submitAdd} ?disabled=${this.busy}>Add</button>
+        <button class="btn" @click=${this.cancelAdd}>Cancel</button>
+      </div>
+    `;
+    }
+
+    private renderFeedsSection() {
+        return html`
+      <div class="section">
+        <h3>Feeds</h3>
+        <div class="actions">
+          <button class="action" @click=${this.openAdd} ?disabled=${this.busy}>
+            <span>Add feed<br /><span class="desc">Subscribe by RSS/Atom URL</span></span><span>＋</span>
+          </button>
+          ${this.renderAddRow()}
+          <button class="action" @click=${this.onImportClick} ?disabled=${this.busy}>
+            <span>Import OPML<br /><span class="desc">Restore feeds and folders</span></span><span>⬆</span>
+          </button>
+          <button class="action" @click=${this.onExport} ?disabled=${this.busy}>
+            <span>Export OPML<br /><span class="desc">Back up your subscriptions</span></span><span>⬇</span>
+          </button>
+          <button class="action" @click=${this.onMigrate} ?disabled=${this.busy || this.migrating}>
+            <span>Upload local library<br /><span class="desc">Migrate IndexedDB data to the server</span></span><span>${this.migrating ? '⏳' : '⬆'}</span>
+          </button>
+        </div>
+        <input type="file" data-import accept=".opml,.xml,text/xml,application/xml" style="display:none" @change=${this.onImportFile} />
+        ${this.status ? html`<div class="status ${this.statusError ? 'error' : ''}">${this.status}</div>` : ''}
+      </div>
+    `;
+    }
+
+    override render() {
+        return html`
+      <dialog @click=${this.onDialogClick} @cancel=${(e: Event) => { e.preventDefault(); this.close(); }}>
         <div class="head">
           <h2>Settings</h2>
           <button class="close" title="Close" @click=${this.close}>✕</button>
         </div>
         <div class="body">
-          <div class="section">
-            <h3>Appearance</h3>
-            <div class="theme-row">
-              ${themeOption('light', 'Light')}
-              ${themeOption('dark', 'Dark grey')}
-              ${themeOption('oled', 'Lights out')}
-            </div>
-          </div>
-
-          <div class="section">
-            <h3>Feeds</h3>
-            <div class="actions">
-              <button class="action" @click=${this.openAdd} ?disabled=${this.busy}>
-                <span>
-                  Add feed<br />
-                  <span class="desc">Subscribe by RSS/Atom URL</span>
-                </span>
-                <span>＋</span>
-              </button>
-              ${this.adding
-            ? html`
-                    <div class="add-row">
-                      <input
-                        data-add-url
-                        type="url"
-                        placeholder="https://example.com/feed.xml"
-                        @keydown=${(e: KeyboardEvent) => {
-                if (e.key === 'Enter') this.submitAdd();
-            }}
-                      />
-                      <button class="btn primary" @click=${this.submitAdd} ?disabled=${this.busy}>Add</button>
-                      <button class="btn" @click=${this.cancelAdd}>Cancel</button>
-                    </div>
-                  `
-            : ''}
-              <button class="action" @click=${this.onImportClick} ?disabled=${this.busy}>
-                <span>
-                  Import OPML<br />
-                  <span class="desc">Restore feeds and folders</span>
-                </span>
-                <span>⬆</span>
-              </button>
-              <button class="action" @click=${this.onExport} ?disabled=${this.busy}>
-                <span>
-                  Export OPML<br />
-                  <span class="desc">Back up your subscriptions</span>
-                </span>
-                <span>⬇</span>
-              </button>
-              <button class="action" @click=${this.onMigrate} ?disabled=${this.busy || this.migrating}>
-                <span>
-                  Upload local library<br />
-                  <span class="desc">Migrate IndexedDB data to the server</span>
-                </span>
-                <span>${this.migrating ? '⏳' : '⬆'}</span>
-              </button>
-            </div>
-            <input type="file" data-import accept=".opml,.xml,text/xml,application/xml" style="display:none" @change=${this.onImportFile} />
-            ${this.status ? html`<div class="status ${this.statusError ? 'error' : ''}">${this.status}</div>` : ''}
-          </div>
+          ${this.renderAppearanceSection()}
+          ${this.renderFeedsSection()}
         </div>
       </dialog>
     `;
@@ -227,31 +210,33 @@ export class SettingsDialog extends LitElement {
         }
     }
 
+    private async prepareMigratePayload() {
+        const {folders, feeds, articles, metaEntries} = await readIdbForMigration();
+        if (!feeds.length && !folders.length) return null;
+        const payload = buildMigratePayload(folders, feeds, articles, metaEntries);
+        const json = JSON.stringify(payload);
+        if (json.length > MIGRATE_SIZE_LIMIT) throw new Error(`Payload too large (${Math.round(json.length / 1024)} KB). Use OPML import instead.`);
+        return payload;
+    }
+
+    private async runMigrateWithPayload(payload: ReturnType<typeof buildMigratePayload>) {
+        const result = await migrateLibrary(payload);
+        this.status = `Migrated ${result.feedsAdded} feeds, ${result.foldersAdded} folders, ${result.statesQueued} states. Syncing…`;
+        this.statusError = false;
+        await invalidateLibrary();
+        await invalidateArticles();
+        await syncAllFeeds();
+        this.status = 'Migration complete';
+    }
+
     private async onMigrate() {
         this.migrating = true;
         this.status = '';
         this.statusError = false;
         try {
-            const {folders, feeds, articles, metaEntries} = await readIdbForMigration();
-            if (!feeds.length && !folders.length) {
-                this.status = 'No local data to migrate.';
-                this.statusError = false;
-                return;
-            }
-            const payload = buildMigratePayload(folders, feeds, articles, metaEntries);
-            const json = JSON.stringify(payload);
-            if (json.length > MIGRATE_SIZE_LIMIT) {
-                throw new Error(
-                    `Payload too large (${Math.round(json.length / 1024)} KB). Use OPML import instead.`,
-                );
-            }
-            const result = await migrateLibrary(payload);
-            this.status = `Migrated ${result.feedsAdded} feeds, ${result.foldersAdded} folders, ${result.statesQueued} states. Syncing…`;
-            this.statusError = false;
-            await invalidateLibrary();
-            await invalidateArticles();
-            await syncAllFeeds();
-            this.status = 'Migration complete';
+            const payload = await this.prepareMigratePayload();
+            if (!payload) { this.status = 'No local data to migrate.'; return; }
+            await this.runMigrateWithPayload(payload);
         } catch (err) {
             this.status = err instanceof Error ? `Migration failed: ${err.message}` : 'Migration failed';
             this.statusError = true;

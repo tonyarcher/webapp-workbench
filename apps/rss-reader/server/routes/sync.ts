@@ -1,47 +1,34 @@
-﻿import {getPool} from '../db.js';
+import {getPool} from '../db.js';
 import {readJsonBody} from '../http.js';
 import type {RouteHandler} from '../http.js';
 import {queueFeeds} from '../services/poller.js';
 
 // ---- POST /sync ----
 
-export const syncHandler: RouteHandler = async ({req, user}) => {
-    const body = await readJsonBody(req) as {
-        scope?: 'all' | { feedIds?: string[] };
-    } | null;
-
+async function resolveSyncIds(scope: unknown, userId: string): Promise<string[]> {
     const pool = getPool();
-    let feedIds: string[] = [];
-
-    if (body?.scope === 'all' || !body?.scope) {
-        const {rows} = await pool.query<{ id: string }>(
-            'SELECT id FROM feeds WHERE user_id = $1',
-            [user.id],
-        );
-        feedIds = rows.map((r) => r.id);
-    } else if (typeof body.scope === 'object' && Array.isArray(body.scope.feedIds)) {
-        // Ownership filter: a client must not force-refetch another user's
-        // feeds by guessing UUIDs.
-        const requested = body.scope.feedIds.filter((id) => typeof id === 'string');
-        if (requested.length > 0) {
-            const {rows} = await pool.query<{ id: string }>(
-                'SELECT id FROM feeds WHERE user_id = $1 AND id = ANY($2::uuid[])',
-                [user.id, requested],
-            );
-            feedIds = rows.map((r) => r.id);
-        }
+    if (scope === 'all' || !scope) {
+        const {rows} = await pool.query<{ id: string }>('SELECT id FROM feeds WHERE user_id = $1', [userId]);
+        return rows.map((r) => r.id);
     }
-
-    if (feedIds.length > 0) {
-        await pool.query(
-            `UPDATE feed_sync SET last_fetched_at = NULL
-             WHERE feed_id = ANY($1::uuid[])`,
-            [feedIds],
-        );
+    if (typeof scope === 'object' && scope !== null && Array.isArray((scope as { feedIds?: unknown }).feedIds)) {
+        const requested = (scope as { feedIds: unknown[] }).feedIds.filter((id) => typeof id === 'string') as string[];
+        if (!requested.length) return [];
+        const {rows} = await pool.query<{ id: string }>('SELECT id FROM feeds WHERE user_id = $1 AND id = ANY($2::uuid[])', [userId, requested]);
+        return rows.map((r) => r.id);
     }
+    return [];
+}
 
-    // Kick the poller
+async function resetSync(feedIds: string[]): Promise<void> {
+    if (!feedIds.length) return;
+    await getPool().query(`UPDATE feed_sync SET last_fetched_at = NULL WHERE feed_id = ANY($1::uuid[])`, [feedIds]);
+}
+
+export const syncHandler: RouteHandler = async ({req, user}) => {
+    const body = await readJsonBody(req) as { scope?: 'all' | { feedIds?: string[] } } | null;
+    const feedIds = await resolveSyncIds(body?.scope, user.id);
+    await resetSync(feedIds);
     queueFeeds(feedIds);
-
     return {queued: feedIds.length};
 };

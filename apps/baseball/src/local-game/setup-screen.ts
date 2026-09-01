@@ -36,11 +36,31 @@ function toEditorJson(players: LineupPlayer[]): string {
 
 function fromEditorPlayers(players: EditorPlayer[] | undefined, fallback: LineupPlayer[]): LineupPlayer[] {
   if (!players || players.length === 0) return fallback;
-  return players.slice(0, 9).map((player, index) => ({
-    batterName: String(player.batterName ?? player.name ?? '').trim() || fallback[index]?.batterName || `Batter ${index + 1}`,
-    position: String(player.position ?? fallback[index]?.position ?? 'DH').trim() || 'DH',
-    jerseyNumber: Number(player.jerseyNumber ?? fallback[index]?.jerseyNumber ?? 0),
-  }));
+  return players.slice(0, 9).map((player, index) => mapEditorPlayer(player, fallback[index], index));
+}
+
+function mapEditorPlayer(player: EditorPlayer, fallback: LineupPlayer | undefined, index: number): LineupPlayer {
+  return {
+    batterName: resolveBatterName(player, fallback, index),
+    position: resolvePosition(player, fallback),
+    jerseyNumber: resolveJersey(player, fallback),
+  };
+}
+
+function resolveBatterName(player: EditorPlayer, fallback: LineupPlayer | undefined, index: number): string {
+  const raw = String(player.batterName ?? player.name ?? '').trim();
+  if (raw) return raw;
+  if (fallback?.batterName) return fallback.batterName;
+  return `Batter ${index + 1}`;
+}
+
+function resolvePosition(player: EditorPlayer, fallback: LineupPlayer | undefined): string {
+  const raw = String(player.position ?? fallback?.position ?? 'DH').trim();
+  return raw || 'DH';
+}
+
+function resolveJersey(player: EditorPlayer, fallback: LineupPlayer | undefined): number {
+  return Number(player.jerseyNumber ?? fallback?.jerseyNumber ?? 0);
 }
 
 export class BaseballSetupScreen extends LitElement {
@@ -95,37 +115,44 @@ export class BaseballSetupScreen extends LitElement {
             Everything runs entirely in your browser. Set the batting orders before first pitch — names, numbers, and
             positions actually stick.
           </p>
-          <form class="local-setup-form" @submit=${this.handleSubmit}>
-            <label for="home-team-input">Home Team</label>
-            <input id="home-team-input" data-testid="home-team-input" name="home-team" value="${DEFAULT_GAME_SETUP.homeTeamName}" />
-            <label for="away-team-input">Away Team</label>
-            <input id="away-team-input" data-testid="away-team-input" name="away-team" value="${DEFAULT_GAME_SETUP.awayTeamName}" />
-            <label for="innings-input">Innings</label>
-            <input
-              id="innings-input"
-              data-testid="innings-input"
-              name="innings"
-              type="number"
-              min="1"
-              max="9"
-              value="${DEFAULT_GAME_SETUP.innings}"
-            />
-            <baseball-lineup-setup
-              variant="embedded"
-              home-team-name=${DEFAULT_GAME_SETUP.homeTeamName}
-              away-team-name=${DEFAULT_GAME_SETUP.awayTeamName}
-              home-pitcher-name=${DEFAULT_HOME_PITCHER}
-              away-pitcher-name=${DEFAULT_AWAY_PITCHER}
-              home-lineup-json=${toEditorJson(toLineupPlayers(DEFAULT_HOME_LINEUP))}
-              away-lineup-json=${toEditorJson(toLineupPlayers(DEFAULT_AWAY_LINEUP))}
-              @lineup-change=${this.handleLineupChange}
-            ></baseball-lineup-setup>
-            <button type="submit" class="btn btn-primary" data-testid="start-game-button">
-              Start Local Game
-            </button>
-          </form>
+          ${this.renderForm()}
         </div>
       </main>
+    `;
+  }
+
+  private renderForm() {
+    return html`
+      <form class="local-setup-form" @submit=${this.handleSubmit}>
+        ${this.renderTeamInputs()} ${this.renderLineupEditor()}
+        <button type="submit" class="btn btn-primary" data-testid="start-game-button">Start Local Game</button>
+      </form>
+    `;
+  }
+
+  private renderTeamInputs() {
+    return html`
+      <label for="home-team-input">Home Team</label>
+      <input id="home-team-input" data-testid="home-team-input" name="home-team" value="${DEFAULT_GAME_SETUP.homeTeamName}" />
+      <label for="away-team-input">Away Team</label>
+      <input id="away-team-input" data-testid="away-team-input" name="away-team" value="${DEFAULT_GAME_SETUP.awayTeamName}" />
+      <label for="innings-input">Innings</label>
+      <input id="innings-input" data-testid="innings-input" name="innings" type="number" min="1" max="9" value="${DEFAULT_GAME_SETUP.innings}" />
+    `;
+  }
+
+  private renderLineupEditor() {
+    return html`
+      <baseball-lineup-setup
+        variant="embedded"
+        home-team-name=${DEFAULT_GAME_SETUP.homeTeamName}
+        away-team-name=${DEFAULT_GAME_SETUP.awayTeamName}
+        home-pitcher-name=${DEFAULT_HOME_PITCHER}
+        away-pitcher-name=${DEFAULT_AWAY_PITCHER}
+        home-lineup-json=${toEditorJson(toLineupPlayers(DEFAULT_HOME_LINEUP))}
+        away-lineup-json=${toEditorJson(toLineupPlayers(DEFAULT_AWAY_LINEUP))}
+        @lineup-change=${this.handleLineupChange}
+      ></baseball-lineup-setup>
     `;
   }
 }

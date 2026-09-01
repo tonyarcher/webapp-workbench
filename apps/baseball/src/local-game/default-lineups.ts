@@ -49,23 +49,25 @@ export function toLineupPlayers(slots: LocalScorebookSlot[]): LineupPlayer[] {
   }));
 }
 
+function emptyLineupPlayer(): LineupPlayer {
+  return { batterName: '', position: 'DH', jerseyNumber: 0 };
+}
+
+function playerFromUnknown(entry: unknown): LineupPlayer {
+  if (typeof entry !== 'object' || entry === null) return emptyLineupPlayer();
+  const record = entry as Record<string, unknown>;
+  const name = record.batterName ?? record.name;
+  const jerseyRaw = Number(record.jerseyNumber);
+  const position = String(record.position ?? '').trim();
+  return {
+    batterName: String(name ?? '').trim(),
+    position: position || 'DH',
+    jerseyNumber: Number.isFinite(jerseyRaw) ? jerseyRaw : 0,
+  };
+}
+
 export function lineupPlayersFromUnknown(value: unknown): LineupPlayer[] | undefined {
   if (!Array.isArray(value) || value.length === 0) return undefined;
-  const players: LineupPlayer[] = [];
-  for (const entry of value) {
-    if (typeof entry !== 'object' || entry === null) {
-      players.push({ batterName: '', position: 'DH', jerseyNumber: 0 });
-      continue;
-    }
-    const record = entry as Record<string, unknown>;
-    const batterName = String(record.batterName ?? record.name ?? '').trim();
-    const position = String(record.position ?? '').trim();
-    const jerseyRaw = Number(record.jerseyNumber);
-    players.push({
-      batterName,
-      position: position || 'DH',
-      jerseyNumber: Number.isFinite(jerseyRaw) ? jerseyRaw : 0,
-    });
-  }
+  const players = value.map(playerFromUnknown);
   return players.length > 0 ? players : undefined;
 }

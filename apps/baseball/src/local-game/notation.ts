@@ -44,54 +44,49 @@ function occupiedBases(runners: RunnersOnBase): number[] {
   }, []);
 }
 
+const HIT_BASES: Partial<Record<ScoringEventType, number>> = {
+  SINGLE: 1,
+  DOUBLE: 2,
+  TRIPLE: 3,
+  HOME_RUN: 4,
+};
+
+const HIT_MARKS: Partial<Record<ScoringEventType, string>> = {
+  SINGLE: '1B',
+  DOUBLE: '2B',
+  TRIPLE: '3B',
+  HOME_RUN: 'HR',
+};
+
 export function hitBaseCount(eventType: ScoringEventType): number {
-  switch (eventType) {
-    case 'SINGLE':
-      return 1;
-    case 'DOUBLE':
-      return 2;
-    case 'TRIPLE':
-      return 3;
-    case 'HOME_RUN':
-      return 4;
-    default:
-      return 0;
-  }
+  return HIT_BASES[eventType] ?? 0;
 }
 
 export function hitNotation(eventType: ScoringEventType): string {
-  switch (eventType) {
-    case 'SINGLE':
-      return '1B';
-    case 'DOUBLE':
-      return '2B';
-    case 'TRIPLE':
-      return '3B';
-    case 'HOME_RUN':
-      return 'HR';
-    default:
-      return '';
-  }
+  return HIT_MARKS[eventType] ?? '';
+}
+
+function withPos(prefix: string, fieldPos: number | undefined, fallback: string): string {
+  return fieldPos ? `${prefix}${fieldPos}` : fallback;
+}
+
+function groundoutNotation(fieldPos?: number, doublePlay = false): string {
+  if (doublePlay) return fieldPos ? `${fieldPos}-4-3` : 'GO-DP';
+  if (!fieldPos) return 'GO';
+  return fieldPos === 3 ? '3' : `${fieldPos}-3`;
+}
+
+function lineoutNotation(fieldPos?: number, doublePlay = false): string {
+  if (doublePlay) return fieldPos ? `L${fieldPos}-4-3` : 'LO-DP';
+  return withPos('L', fieldPos, 'LO');
 }
 
 export function inPlayOutNotation(eventType: ScoringEventType, fieldPos?: number, doublePlay = false): string {
-  switch (eventType) {
-    case 'GROUNDOUT':
-      if (doublePlay) return fieldPos ? `${fieldPos}-4-3` : 'GO-DP';
-      if (fieldPos) return fieldPos === 3 ? '3' : `${fieldPos}-3`;
-      return 'GO';
-    case 'FLYOUT':
-      return fieldPos ? `${fieldPos}` : 'FO';
-    case 'LINE_OUT':
-      if (doublePlay) return fieldPos ? `L${fieldPos}-4-3` : 'LO-DP';
-      return fieldPos ? `L${fieldPos}` : 'LO';
-    case 'POP_OUT':
-      return fieldPos ? `P${fieldPos}` : 'PO';
-    case 'SACRIFICE_FLY':
-      return fieldPos ? `SF${fieldPos}` : 'SF';
-    case 'SACRIFICE_BUNT':
-      return fieldPos ? `SH${fieldPos}` : 'SH';
-    default:
-      return '';
-  }
+  if (eventType === 'GROUNDOUT') return groundoutNotation(fieldPos, doublePlay);
+  if (eventType === 'FLYOUT') return fieldPos ? `${fieldPos}` : 'FO';
+  if (eventType === 'LINE_OUT') return lineoutNotation(fieldPos, doublePlay);
+  if (eventType === 'POP_OUT') return withPos('P', fieldPos, 'PO');
+  if (eventType === 'SACRIFICE_FLY') return withPos('SF', fieldPos, 'SF');
+  if (eventType === 'SACRIFICE_BUNT') return withPos('SH', fieldPos, 'SH');
+  return '';
 }

@@ -21,6 +21,67 @@ const errorSchema = z.object({
   message: z.string().optional(),
 })
 
+const quoteSchema = z.object({
+  symbol: z.string(),
+  name: z.string().optional(),
+  close: z.string(),
+  currency: z.string().optional(),
+  exchange: z.string().optional(),
+  timestamp: z.string().optional(),
+})
+
+const barsSchema = z.object({
+  status: z.literal('ok').optional(),
+  values: z.array(
+    z.object({
+      datetime: z.string(),
+      open: z.string(),
+      high: z.string(),
+      low: z.string(),
+      close: z.string(),
+      volume: z.string(),
+    }),
+  ),
+})
+
+const searchSchema = z.object({
+  data: z.array(
+    z.object({
+      symbol: z.string(),
+      name: z.string().optional(),
+      exchange: z.string().optional(),
+      instrument_type: z.string().optional(),
+    }),
+  ),
+})
+
+function mapBars(values: z.infer<typeof barsSchema>['values']): Bar[] {
+  return values.map((value) => ({
+    time: parseTwelveDataDate(value.datetime),
+    open: parseNumber(value.open, 'open'),
+    high: parseNumber(value.high, 'high'),
+    low: parseNumber(value.low, 'low'),
+    close: parseNumber(value.close, 'close'),
+    volume: Math.round(parseNumber(value.volume, 'volume')),
+  }))
+}
+
+function parseBarsResponse(json: unknown): Bar[] {
+  const parsed = barsSchema.safeParse(json)
+  if (!parsed.success) throw new ProviderError(extractErrorMessage(json, 'Twelve Data bars failed'))
+  return mapBars(parsed.data.values)
+}
+
+function buildBarsUrl(symbol: string, interval: Interval, from: number, to: number, apiKey: string): string {
+  const startDate = toDateString(from)
+  const endDate = toDateString(to)
+  return (
+    `${TWELVEDATA_BASE}/time_series` +
+    `?symbol=${encodeURIComponent(symbol)}&interval=${INTERVAL_MAP[interval]}` +
+    `&start_date=${startDate}&end_date=${endDate}&outputsize=5000&apikey=${apiKey}`
+  )
+}
+
 export class TwelveDataProvider implements PriceProvider {
   readonly id = 'twelvedata'
 
@@ -29,19 +90,8 @@ export class TwelveDataProvider implements PriceProvider {
   async getQuote(symbol: string): Promise<Quote> {
     const url = `${TWELVEDATA_BASE}/quote?symbol=${encodeURIComponent(symbol)}&apikey=${this.apiKey}`
     const json = await this.fetchJson(url)
-    const parsed = z
-      .object({
-        symbol: z.string(),
-        name: z.string().optional(),
-        close: z.string(),
-        currency: z.string().optional(),
-        exchange: z.string().optional(),
-        timestamp: z.string().optional(),
-      })
-      .safeParse(json)
-    if (!parsed.success) {
-      throw new ProviderError(extractErrorMessage(json, 'Twelve Data quote failed'))
-    }
+    const parsed = quoteSchema.safeParse(json)
+    if (!parsed.success) throw new ProviderError(extractErrorMessage(json, 'Twelve Data quote failed'))
     return {
       symbol: parsed.data.symbol,
       name: parsed.data.name ?? parsed.data.symbol,
@@ -54,59 +104,16 @@ export class TwelveDataProvider implements PriceProvider {
   }
 
   async getBars(symbol: string, interval: Interval, from: number, to: number): Promise<Bar[]> {
-    const startDate = toDateString(from)
-    const endDate = toDateString(to)
-    const url =
-      `${TWELVEDATA_BASE}/time_series` +
-      `?symbol=${encodeURIComponent(symbol)}&interval=${INTERVAL_MAP[interval]}` +
-      `&start_date=${startDate}&end_date=${endDate}&outputsize=5000&apikey=${this.apiKey}`
+    const url = buildBarsUrl(symbol, interval, from, to, this.apiKey)
     const json = await this.fetchJson(url)
-    const parsed = z
-      .object({
-        status: z.literal('ok').optional(),
-        values: z.array(
-          z.object({
-            datetime: z.string(),
-            open: z.string(),
-            high: z.string(),
-            low: z.string(),
-            close: z.string(),
-            volume: z.string(),
-          }),
-        ),
-      })
-      .safeParse(json)
-    if (!parsed.success) {
-      throw new ProviderError(extractErrorMessage(json, 'Twelve Data bars failed'))
-    }
-    return parsed.data.values.map((value) => ({
-      time: parseTwelveDataDate(value.datetime),
-      open: parseNumber(value.open, 'open'),
-      high: parseNumber(value.high, 'high'),
-      low: parseNumber(value.low, 'low'),
-      close: parseNumber(value.close, 'close'),
-      volume: Math.round(parseNumber(value.volume, 'volume')),
-    }))
+    return parseBarsResponse(json)
   }
 
   async search(query: string): Promise<SymbolSearchResult[]> {
     const url = `${TWELVEDATA_BASE}/symbol_search?symbol=${encodeURIComponent(query)}&apikey=${this.apiKey}`
     const json = await this.fetchJson(url)
-    const parsed = z
-      .object({
-        data: z.array(
-          z.object({
-            symbol: z.string(),
-            name: z.string().optional(),
-            exchange: z.string().optional(),
-            instrument_type: z.string().optional(),
-          }),
-        ),
-      })
-      .safeParse(json)
-    if (!parsed.success) {
-      throw new ProviderError(extractErrorMessage(json, 'Twelve Data search failed'))
-    }
+    const parsed = searchSchema.safeParse(json)
+    if (!parsed.success) throw new ProviderError(extractErrorMessage(json, 'Twelve Data search failed'))
     return parsed.data.data.map((item) => ({
       symbol: item.symbol,
       name: item.name ?? item.symbol,
@@ -122,9 +129,7 @@ export class TwelveDataProvider implements PriceProvider {
     } catch {
       throw new ProviderError('Network error reaching Twelve Data')
     }
-    if (!res.ok) {
-      throw new ProviderError(`Twelve Data request failed with status ${res.status}`)
-    }
+    if (!res.ok) throw new ProviderError(`Twelve Data request failed with status ${res.status}`)
     return (await res.json()) as unknown
   }
 }
@@ -136,14 +141,7 @@ function parseTwelveDataDate(value: string): number {
     if (!day) return Date.parse(value)
     return Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]))
   }
-  return Date.UTC(
-    Number(match[1]),
-    Number(match[2]) - 1,
-    Number(match[3]),
-    Number(match[4]),
-    Number(match[5]),
-    Number(match[6] ?? '0'),
-  )
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]), Number(match[6] ?? '0'))
 }
 
 function toDateString(ms: number): string {
@@ -152,9 +150,7 @@ function toDateString(ms: number): string {
 
 function parseNumber(value: string, label: string): number {
   const num = Number(value)
-  if (!Number.isFinite(num)) {
-    throw new ProviderError(`Twelve Data returned a non-numeric ${label}: ${value}`)
-  }
+  if (!Number.isFinite(num)) throw new ProviderError(`Twelve Data returned a non-numeric ${label}: ${value}`)
   return num
 }
 

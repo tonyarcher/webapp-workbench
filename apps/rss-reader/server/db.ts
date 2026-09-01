@@ -57,6 +57,20 @@ export function mapFeed(row: FeedRow & { unread?: string | number; folder_ids?: 
     return feed;
 }
 
+function applyArticleOptionals(
+    article: ApiArticle,
+    row: { link: string | null; author: string | null; summary: string | null; content_html: string | null; image: string | null; norm_link: string | null; comments: number | null; engagement: number },
+) {
+    if (row.link) article.link = row.link;
+    if (row.author) article.author = row.author;
+    if (row.summary) article.summary = row.summary;
+    if (row.content_html) article.content = row.content_html;
+    if (row.image) article.image = row.image;
+    if (row.norm_link) article.normLink = row.norm_link;
+    if (row.comments != null) article.comments = row.comments;
+    if (row.engagement) article.engagement = row.engagement;
+}
+
 export function mapArticle(
     row: { id: string; feed_id: string; guid: string; title: string; link: string | null; norm_link: string | null; domain: string | null; author: string | null; summary: string | null; content_html: string | null; image: string | null; comments: number | null; published_at: Date; fetched_at: Date; popularity: number; engagement: number; hot: number; read?: boolean; starred?: boolean },
 ): ApiArticle {
@@ -72,14 +86,7 @@ export function mapArticle(
         popularity: row.popularity,
         hot: row.hot,
     };
-    if (row.link) article.link = row.link;
-    if (row.author) article.author = row.author;
-    if (row.summary) article.summary = row.summary;
-    if (row.content_html) article.content = row.content_html;
-    if (row.image) article.image = row.image;
-    if (row.norm_link) article.normLink = row.norm_link;
-    if (row.comments != null) article.comments = row.comments;
-    if (row.engagement) article.engagement = row.engagement;
+    applyArticleOptionals(article, row);
     return article;
 }
 

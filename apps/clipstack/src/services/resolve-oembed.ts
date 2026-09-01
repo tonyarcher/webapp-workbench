@@ -16,29 +16,49 @@ export interface OEmbedInfo {
  */
 const OEMBED_TIMEOUT_MS = 8_000
 
+function combinedSignal(signal: AbortSignal | undefined): AbortSignal {
+    const timeout = AbortSignal.timeout(OEMBED_TIMEOUT_MS)
+    return signal ? AbortSignal.any([signal, timeout]) : timeout
+}
+
+function extractString(data: Record<string, unknown>, key: string): string | undefined {
+    const v = data[key]
+    return typeof v === 'string' && v ? v : undefined
+}
+
+function thumbFrom(data: Record<string, unknown>): string | undefined {
+    const raw = data.thumbnail_url
+    return typeof raw === 'string' ? safeUrl(raw) ?? undefined : undefined
+}
+
+function hasValue(...vals: (string | undefined)[]): boolean {
+    return vals.some((v) => !!v)
+}
+
+function assignInfo(target: OEmbedInfo, key: keyof OEmbedInfo, value: string | undefined): void {
+    if (value) target[key] = value
+}
+
+function buildInfo(id: string, data: Record<string, unknown>): OEmbedInfo | null {
+    const author = extractString(data, 'author_unique_id')
+    const authorName = extractString(data, 'author_name')
+    const title = extractString(data, 'title')
+    const thumbnailUrl = thumbFrom(data)
+    const pageUrl = author ? `https://www.tiktok.com/@${author}/video/${id}` : undefined
+    if (!hasValue(author, authorName, title, pageUrl, thumbnailUrl)) return null
+    const info: OEmbedInfo = {}
+    assignInfo(info, 'author', author)
+    assignInfo(info, 'authorName', authorName)
+    assignInfo(info, 'title', title)
+    assignInfo(info, 'pageUrl', pageUrl)
+    assignInfo(info, 'thumbnailUrl', thumbnailUrl)
+    return info
+}
+
 export async function resolveTiktokOEmbed(id: string, signal?: AbortSignal): Promise<OEmbedInfo | null> {
     const probe = `https://www.tiktok.com/oembed?url=${encodeURIComponent(`https://www.tiktok.com/@x/video/${id}`)}`
-    const timeout = AbortSignal.timeout(OEMBED_TIMEOUT_MS)
-    const combined = signal ? AbortSignal.any([signal, timeout]) : timeout
-    const response = await fetch(probe, {signal: combined})
+    const response = await fetch(probe, {signal: combinedSignal(signal)})
     if (!response.ok) return null
-    const data = (await response.json()) as {
-        author_unique_id?: unknown
-        author_name?: unknown
-        title?: unknown
-        thumbnail_url?: unknown
-    }
-    const author = typeof data.author_unique_id === 'string' && data.author_unique_id ? data.author_unique_id : undefined
-    const authorName = typeof data.author_name === 'string' && data.author_name ? data.author_name : undefined
-    const title = typeof data.title === 'string' && data.title ? data.title : undefined
-    const thumbnailUrl = typeof data.thumbnail_url === 'string' ? safeUrl(data.thumbnail_url) ?? undefined : undefined
-    const pageUrl = author ? `https://www.tiktok.com/@${author}/video/${id}` : undefined
-    if (!author && !authorName && !title && !pageUrl && !thumbnailUrl) return null
-    const info: OEmbedInfo = {}
-    if (author) info.author = author
-    if (authorName) info.authorName = authorName
-    if (title) info.title = title
-    if (pageUrl) info.pageUrl = pageUrl
-    if (thumbnailUrl) info.thumbnailUrl = thumbnailUrl
-    return info
+    const data = (await response.json()) as Record<string, unknown>
+    return buildInfo(id, data)
 }

@@ -17,25 +17,31 @@ function urlHasVideoExt(url: string): boolean {
     return VIDEO_EXT.test(stripImageProxy(url))
 }
 
-/**
- * Classifies a scroll item for the scroll view. Explicit provider types win
- * (PieFed's post_type, newer Lemmy's post_url_content_type); otherwise the
- * item URL is inspected, decoding instance image proxies first.
- */
+function mediaTypeKind(mediaType: ScrollItem['mediaType']): 'image' | 'video' | 'text' | null {
+    if (mediaType === 'Image') return 'image'
+    if (mediaType === 'Video') return 'video'
+    if (mediaType === 'Discussion') return 'text'
+    return null
+}
+
+function isEmbedVideo(url: string | null | undefined): boolean {
+    return !!url && !!embedProviderForUrl(url)
+}
+
+function isDirectVideo(item: ScrollItem): boolean {
+    return !!item.videoUrl || (!!item.url && urlHasVideoExt(item.url))
+}
+
+function isImage(item: ScrollItem): boolean {
+    return !!item.url && urlHasImageExt(item.url)
+}
+
 export function classifyScrollItem(item: ScrollItem): 'image' | 'video' | 'text' | 'link' {
-    switch (item.mediaType) {
-        case 'Image':
-            return 'image'
-        case 'Video':
-            return 'video'
-        case 'Discussion':
-            return 'text'
-        case 'Link':
-            break
-    }
-    if (item.url && embedProviderForUrl(item.url)) return 'video'
-    if (item.videoUrl || (item.url && urlHasVideoExt(item.url))) return 'video'
-    if (item.url && urlHasImageExt(item.url)) return 'image'
+    const explicit = mediaTypeKind(item.mediaType)
+    if (explicit) return explicit
+    if (isEmbedVideo(item.url)) return 'video'
+    if (isDirectVideo(item)) return 'video'
+    if (isImage(item)) return 'image'
     if (item.url) return 'link'
     return 'text'
 }

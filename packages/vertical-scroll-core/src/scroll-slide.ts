@@ -78,66 +78,83 @@ export class ScrollSlide extends LitElement {
         </span>`
     }
 
-    override render(): TemplateResult {
-        const {item} = this
-        const isVideo = classifyScrollItem(item) === 'video'
-        const original = safeUrl(item.originalUrl ?? null)
-        const subtitle = item.metaLine ?? (item.date ? timeAgo(item.date) : null)
-        // TikTok/Instagram embeds hide or crowd their own chrome, so the
-        // slide owns a letterbox meta stack instead of the app overlay bar.
+    private isLetterbox(): boolean {
+        const providerName = embedProviderForUrl(this.item.videoUrl ?? this.item.url ?? null)?.name
+        return providerName === 'tiktok' || providerName === 'instagram'
+    }
+
+    private handleFor(item: ScrollItem): string | null {
+        return item.author ? `@${item.author}` : null
+    }
+
+    private displayNameFor(item: ScrollItem): string | null {
+        return item.authorName?.trim() || null
+    }
+
+    private shouldShowName(displayName: string | null, handle: string | null, author: string | undefined): boolean {
+        return !!displayName && displayName !== author && displayName !== handle
+    }
+
+    private captionFor(item: ScrollItem, handle: string | null, displayName: string | null): string | null {
+        if (!item.title) return null
+        if (item.title === handle || item.title === displayName || item.title === `TikTok ${item.id}`) return null
+        return item.title
+    }
+
+    private profileUrl(item: ScrollItem): string | null {
+        if (!item.author) return null
         const providerName = embedProviderForUrl(item.videoUrl ?? item.url ?? null)?.name
-        const letterbox = providerName === 'tiktok' || providerName === 'instagram'
-        if (letterbox) {
-            const handle = item.author ? `@${item.author}` : null
-            const displayName = item.authorName?.trim() || null
-            const showName = displayName && displayName !== item.author && displayName !== handle
-            const profileHost = providerName === 'instagram'
-                ? `https://www.instagram.com/${encodeURIComponent(item.author ?? '')}/`
-                : `https://www.tiktok.com/@${encodeURIComponent(item.author ?? '')}`
-            const authorUrl = item.author ? safeUrl(profileHost) : null
-            const caption = item.title && item.title !== handle && item.title !== displayName && item.title !== `TikTok ${item.id}` ? item.title : null
-            const metaEmpty = !handle && !showName && !caption && !original
-            return html`
-                <div class="scroll-slide">
-                    <div class="media-wrap">${this.renderMedia()}</div>
-                    ${metaEmpty
-                        ? nothing
-                        : html`<div class="slide-meta" @pointerdown=${(e: Event) => e.stopPropagation()}>
-                            ${showName ? html`<div class="meta-name">${displayName}</div>` : nothing}
-                            ${handle && authorUrl
-                                ? html`<a class="meta-author" href=${authorUrl} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${handle}</a>`
-                                : handle
-                                    ? html`<div class="meta-author">${handle}</div>`
-                                    : nothing}
-                            ${caption ? html`<div class="meta-caption">${caption}</div>` : nothing}
-                            ${original ? html`<a class="meta-open" href=${original} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>Open original ↗</a>` : nothing}
-                        </div>`}
-                </div>
-            `
-        }
-        return html`
-            <div class="scroll-slide">
-                <div class="media-wrap">${this.renderMedia()}</div>
-                ${this.renderLinkChip()}
-                <div class="slide-overlay${isVideo ? ' video' : ''}${this.expanded ? ' expanded' : ''}">
-                    <div class="overlay-bar">
-                        ${subtitle ? html`<div class="meta-row"><span class="meta-text">${subtitle}</span></div>` : nothing}
-                        <div class="overlay-actions">
-                            ${this.renderStats()}
-                            ${original
-                                ? html`<a class="open-link" href=${original} target="_blank" rel="noopener noreferrer">Open original ↗</a>`
-                                : nothing}
-                            <button
-                                class="expand-button"
-                                aria-label=${this.expanded ? 'Collapse post info' : 'Show post info'}
-                                @click=${this.toggleExpanded}
-                            >${this.expanded ? COLLAPSE_ICON : EXPAND_ICON}</button>
-                        </div>
-                    </div>
-                    ${this.expanded ? html`<h3 class="slide-title">${item.title}</h3>` : nothing}
-                </div>
-            </div>
-        `
+        const host = providerName === 'instagram' ? `https://www.instagram.com/${encodeURIComponent(item.author)}/` : `https://www.tiktok.com/@${encodeURIComponent(item.author)}`
+        return safeUrl(host)
+    }
+
+    private isMetaEmpty(handle: string | null, showName: boolean, caption: string | null, original: string | null): boolean {
+        return !handle && !showName && !caption && !original
+    }
+
+    private renderLetterboxMeta(): TemplateResult {
+        const {item} = this
+        const handle = this.handleFor(item)
+        const displayName = this.displayNameFor(item)
+        const showName = this.shouldShowName(displayName, handle, item.author)
+        const caption = this.captionFor(item, handle, displayName)
+        const original = safeUrl(item.originalUrl ?? null)
+        if (this.isMetaEmpty(handle, showName, caption, original)) return html``
+        const authorUrl = this.profileUrl(item)
+        return html`<div class="slide-meta" @pointerdown=${(e: Event) => e.stopPropagation()}>${showName ? html`<div class="meta-name">${displayName}</div>` : nothing}${this.renderLetterboxAuthor(handle, authorUrl)}${caption ? html`<div class="meta-caption">${caption}</div>` : nothing}${original ? html`<a class="meta-open" href=${original} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>Open original ↗</a>` : nothing}</div>`
+    }
+
+    private renderLetterboxAuthor(handle: string | null, authorUrl: string | null): TemplateResult {
+        if (handle && authorUrl) return html`<a class="meta-author" href=${authorUrl} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${handle}</a>`
+        if (handle) return html`<div class="meta-author">${handle}</div>`
+        return html``
+    }
+
+    private renderLetterboxSlide(): TemplateResult {
+        return html`<div class="scroll-slide"><div class="media-wrap">${this.renderMedia()}</div>${this.renderLetterboxMeta()}</div>`
+    }
+
+    private subtitleText(): string | null {
+        return this.item.metaLine ?? (this.item.date ? timeAgo(this.item.date) : null)
+    }
+
+    private renderSubtitle(): TemplateResult {
+        const subtitle = this.subtitleText()
+        return subtitle ? html`<div class="meta-row"><span class="meta-text">${subtitle}</span></div>` : html``
+    }
+
+    private renderOriginalLink(): TemplateResult {
+        const original = safeUrl(this.item.originalUrl ?? null)
+        return original ? html`<a class="open-link" href=${original} target="_blank" rel="noopener noreferrer">Open original ↗</a>` : html``
+    }
+
+    private renderStandardSlide(): TemplateResult {
+        const isVideo = classifyScrollItem(this.item) === 'video'
+        return html`<div class="scroll-slide"><div class="media-wrap">${this.renderMedia()}</div>${this.renderLinkChip()}<div class="slide-overlay${isVideo ? ' video' : ''}${this.expanded ? ' expanded' : ''}"><div class="overlay-bar">${this.renderSubtitle()}<div class="overlay-actions">${this.renderStats()}${this.renderOriginalLink()}<button class="expand-button" aria-label=${this.expanded ? 'Collapse post info' : 'Show post info'} @click=${this.toggleExpanded}>${this.expanded ? COLLAPSE_ICON : EXPAND_ICON}</button></div></div>${this.expanded ? html`<h3 class="slide-title">${this.item.title}</h3>` : nothing}</div></div>`
+    }
+
+    override render(): TemplateResult {
+        return this.isLetterbox() ? this.renderLetterboxSlide() : this.renderStandardSlide()
     }
 }
 

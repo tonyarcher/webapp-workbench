@@ -197,71 +197,40 @@ export class AppShell extends LitElement {
         return sorts.includes(sort) ? sort : 'Hot'
     }
 
+    private renderSettings(settings: Settings): TemplateResult {
+        return html`<lvs-settings-view .settings=${settings} .site=${this.siteController.value.data?.site ?? null} .software=${this.software}></lvs-settings-view>`
+    }
+
+    private renderBootError(): TemplateResult {
+        const detail = this.siteController.value.error instanceof Error ? this.siteController.value.error.message : String(this.siteController.value.error ?? '')
+        return html`<div class="boot-error"><p class="state-title">Could not reach ${this.instance}</p><p class="state-detail">${detail}</p><div class="state-actions"><button class="retry-button" @click=${() => this.siteController.refetch()}>Retry</button><button class="retry-button" @click=${() => navigate({kind: 'settings'})}>Change instance</button></div></div>`
+    }
+
+    private renderFeed(settings: Settings, postSort: PostSort): TemplateResult {
+        if (settings.viewMode === 'scroll') return html`<lvs-scroll-feed .instance=${this.instance} .feedType=${this.clampFeedType(settings.feedType)} .sort=${postSort} .software=${this.software} .nsfwFilter=${settings.nsfwFilter} .auth=${this.authJwt}></lvs-scroll-feed>`
+        return html`<lvs-post-list .instance=${this.instance} .feedType=${this.clampFeedType(settings.feedType)} .sort=${postSort} .software=${this.software} .nsfwFilter=${settings.nsfwFilter} .auth=${this.authJwt}></lvs-post-list>`
+    }
+
+    private renderCommunities(settings: Settings): TemplateResult {
+        return html`<lvs-community-list .instance=${this.instance} .type=${this.clampCommunityType(settings.communityType)} .sort=${this.clampSort(settings.communitySort, communitySortsFor(this.software))} .software=${this.software} .nsfwFilter=${settings.nsfwFilter} .auth=${this.authJwt}></lvs-community-list>`
+    }
+
+    private renderCommunity(settings: Settings, postSort: PostSort): TemplateResult {
+        const view = this.view as {kind: 'community'; communityId: number}
+        return html`<lvs-community-view .instance=${this.instance} .communityId=${view.communityId} .sort=${postSort} .software=${this.software} .nsfwFilter=${settings.nsfwFilter} .viewMode=${settings.viewMode} .auth=${this.authJwt}></lvs-community-view>`
+    }
+
     private renderView(): TemplateResult {
         const settings = this.settings
         if (!settings) return html`<div class="boot-skeleton"></div>`
-        if (this.view.kind === 'settings') {
-            return html`<lvs-settings-view
-                .settings=${settings}
-                .site=${this.siteController.value.data?.site ?? null}
-                .software=${this.software}
-            ></lvs-settings-view>`
-        }
-        // feed/communities/community views need to know the instance software first
+        if (this.view.kind === 'settings') return this.renderSettings(settings)
         const site = this.siteController.value
-        if (site.status === 'error') {
-            const detail = site.error instanceof Error ? site.error.message : String(site.error ?? '')
-            return html`<div class="boot-error">
-                <p class="state-title">Could not reach ${this.instance}</p>
-                <p class="state-detail">${detail}</p>
-                <div class="state-actions">
-                    <button class="retry-button" @click=${() => this.siteController.refetch()}>Retry</button>
-                    <button class="retry-button" @click=${() => navigate({kind: 'settings'})}>Change instance</button>
-                </div>
-            </div>`
-        }
+        if (site.status === 'error') return this.renderBootError()
         if (!site.data) return html`<div class="boot-skeleton"></div>`
         const postSort = this.clampSort(settings.postSort, postSortsFor(this.software))
-        switch (this.view.kind) {
-            case 'feed':
-                if (settings.viewMode === 'scroll') {
-                    return html`<lvs-scroll-feed
-                        .instance=${this.instance}
-                        .feedType=${this.clampFeedType(settings.feedType)}
-                        .sort=${postSort}
-                        .software=${this.software}
-                        .nsfwFilter=${settings.nsfwFilter}
-                        .auth=${this.authJwt}
-                    ></lvs-scroll-feed>`
-                }
-                return html`<lvs-post-list
-                    .instance=${this.instance}
-                    .feedType=${this.clampFeedType(settings.feedType)}
-                    .sort=${postSort}
-                    .software=${this.software}
-                    .nsfwFilter=${settings.nsfwFilter}
-                    .auth=${this.authJwt}
-                ></lvs-post-list>`
-            case 'communities':
-                return html`<lvs-community-list
-                    .instance=${this.instance}
-                    .type=${this.clampCommunityType(settings.communityType)}
-                    .sort=${this.clampSort(settings.communitySort, communitySortsFor(this.software))}
-                    .software=${this.software}
-                    .nsfwFilter=${settings.nsfwFilter}
-                    .auth=${this.authJwt}
-                ></lvs-community-list>`
-            case 'community':
-                return html`<lvs-community-view
-                    .instance=${this.instance}
-                    .communityId=${this.view.communityId}
-                    .sort=${postSort}
-                    .software=${this.software}
-                    .nsfwFilter=${settings.nsfwFilter}
-                    .viewMode=${settings.viewMode}
-                    .auth=${this.authJwt}
-                ></lvs-community-view>`
-        }
+        if (this.view.kind === 'feed') return this.renderFeed(settings, postSort)
+        if (this.view.kind === 'communities') return this.renderCommunities(settings)
+        return this.renderCommunity(settings, postSort)
     }
 
     private navClass(kind: View['kind']): string {

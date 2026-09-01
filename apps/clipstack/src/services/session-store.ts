@@ -35,19 +35,32 @@ function isSkipped(value: unknown): value is SkippedLink {
     )
 }
 
-/** Parse a stored session blob. Returns null when missing or corrupt. */
+function toIndex(value: unknown, fallback: number): number {
+    return typeof value === 'number' && value >= 0 ? Math.floor(value) : fallback
+}
+
+function parseSessionItems(rawItems: unknown): ClipLink[] | null {
+    if (!Array.isArray(rawItems)) return null
+    const items = rawItems.filter(isLink)
+    return items.length > 0 ? items : null
+}
+
+function parseSkipped(raw: unknown): SkippedLink[] {
+    return Array.isArray(raw) ? raw.filter(isSkipped) : []
+}
+
 export function parseSession(raw: string | null): SavedSession | null {
     if (!raw) return null
     try {
         const data = JSON.parse(raw) as unknown
         if (!data || typeof data !== 'object') return null
         const session = data as Partial<SavedSession>
-        if (session.version !== 1 || !Array.isArray(session.items) || session.items.length === 0) return null
-        const items = session.items.filter(isLink)
-        if (items.length === 0) return null
-        const skipped = Array.isArray(session.skipped) ? session.skipped.filter(isSkipped) : []
-        const activeIndex = typeof session.activeIndex === 'number' && session.activeIndex >= 0 ? Math.floor(session.activeIndex) : 0
-        const maxSeen = typeof session.maxSeen === 'number' && session.maxSeen >= 0 ? Math.floor(session.maxSeen) : activeIndex
+        if (session.version !== 1) return null
+        const items = parseSessionItems(session.items)
+        if (!items) return null
+        const skipped = parseSkipped(session.skipped)
+        const activeIndex = toIndex(session.activeIndex, 0)
+        const maxSeen = toIndex(session.maxSeen, activeIndex)
         return {version: 1, items, skipped, activeIndex, maxSeen}
     } catch {
         return null

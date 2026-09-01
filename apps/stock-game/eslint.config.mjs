@@ -37,12 +37,18 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+      'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': ['error', { max: 30, skipBlankLines: true, skipComments: true }],
+      complexity: ['error', 10],
     },
   },
   {
     files: ['**/*.test.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
+      'max-lines': 'off',
+      'max-lines-per-function': 'off',
+      complexity: 'off',
     },
   },
   {

@@ -147,73 +147,28 @@ export class SettingsView extends LitElement {
         `
     }
 
+    private softwareLabel(): string | null {
+        if (this.software === 'piefed') return 'PieFed'
+        if (this.software === 'lemmy') return 'Lemmy'
+        return null
+    }
+
+    private renderServersSection(siteName: string, label: string | null, version: string | undefined, servers: ServerRecord[]): TemplateResult {
+        return html`<section class="section"><h2 class="section-title">Servers</h2><p class="section-hint">Add any Lemmy or PieFed server — it is validated before connecting. Saved servers and their logins live in this browser only; one server is active at a time.</p><div class="form-row"><input class="instance-input" type="text" placeholder="lemmy.world" .value=${this.input} @input=${this.onInput} @keydown=${(e: KeyboardEvent) => {if (e.key === 'Enter') void this.onSave()}}><button class="save-button" .disabled=${this.validating} @click=${() => void this.onSave()}>${this.validating ? 'Checking…' : 'Add server'}</button></div>${this.error ? html`<p class="form-error">${this.error}</p>` : nothing}${this.warning ? html`<p class="form-warning">${this.warning}</p>` : nothing}${this.saved ? html`<p class="form-ok">Connected. Feeds will reload.</p>` : nothing}<p class="section-hint">Connected to <strong>${siteName}</strong>${label && version ? ` · ${label} ${version}` : ''}</p>${servers.length ? html`<div class="server-list">${servers.map((server) => this.renderServerRow(server))}</div>` : nothing}</section>`
+    }
+
+    private renderPopularSection(): TemplateResult {
+        return html`<section class="section"><h2 class="section-title">Popular servers</h2><p class="section-hint">A curated list, plus the current top Lemmy instances from the public registry. Tap one to connect.</p>${this.renderPopular(this.popularController.value.data ?? [])}</section>`
+    }
+
+    private renderStorageSection(): TemplateResult {
+        return html`<section class="section"><h2 class="section-title">Storage</h2><p class="section-hint">Cached posts and communities are kept for 10 minutes and reused on load.</p><button class="save-button" .disabled=${this.clearing} @click=${() => void this.onClearCache()}>${this.clearing ? 'Clearing…' : 'Clear cached data'}</button></section>`
+    }
+
     override render(): TemplateResult {
         const siteName = this.site?.name ?? this.settings.instance
-        const softwareLabel =
-            this.software === 'piefed' ? 'PieFed' : this.software === 'lemmy' ? 'Lemmy' : null
-        const version = this.site?.version
         const servers = this.serversController.value.data ?? []
-        return html`
-            <div class="settings-page">
-                <h1 class="page-title">Settings</h1>
-
-                <section class="section">
-                    <h2 class="section-title">Servers</h2>
-                    <p class="section-hint">
-                        Add any Lemmy or PieFed server — it is validated before connecting. Saved servers and
-                        their logins live in this browser only; one server is active at a time.
-                    </p>
-                    <div class="form-row">
-                        <input
-                            class="instance-input"
-                            type="text"
-                            placeholder="lemmy.world"
-                            .value=${this.input}
-                            @input=${this.onInput}
-                            @keydown=${(e: KeyboardEvent) => {
-                                if (e.key === 'Enter') void this.onSave()
-                            }}
-                        />
-                        <button class="save-button" .disabled=${this.validating} @click=${() => void this.onSave()}>
-                            ${this.validating ? 'Checking…' : 'Add server'}
-                        </button>
-                    </div>
-                    ${this.error ? html`<p class="form-error">${this.error}</p>` : nothing}
-                    ${this.warning ? html`<p class="form-warning">${this.warning}</p>` : nothing}
-                    ${this.saved ? html`<p class="form-ok">Connected. Feeds will reload.</p>` : nothing}
-                    <p class="section-hint">
-                        Connected to <strong>${siteName}</strong>${softwareLabel && version ? ` · ${softwareLabel} ${version}` : ''}
-                    </p>
-                    ${servers.length
-                        ? html`<div class="server-list">${servers.map((server) => this.renderServerRow(server))}</div>`
-                        : nothing}
-                </section>
-
-                <section class="section">
-                    <h2 class="section-title">Popular servers</h2>
-                    <p class="section-hint">
-                        A curated list, plus the current top Lemmy instances from the public registry. Tap one to connect.
-                    </p>
-                    ${this.renderPopular(this.popularController.value.data ?? [])}
-                </section>
-
-                <section class="section">
-                    <h2 class="section-title">Storage</h2>
-                    <p class="section-hint">Cached posts and communities are kept for 10 minutes and reused on load.</p>
-                    <button class="save-button" .disabled=${this.clearing} @click=${() => void this.onClearCache()}>
-                        ${this.clearing ? 'Clearing…' : 'Clear cached data'}
-                    </button>
-                </section>
-
-                <section class="section">
-                    <h2 class="section-title">Account</h2>
-                    <p class="section-hint">
-                        Use the <strong>Log in</strong> button in the top bar to unlock Subscribed, Suggested,
-                        and Moderator feeds. Each server keeps its own session; you are logged into one at a time.
-                    </p>
-                </section>
-            </div>
-        `
+        return html`<div class="settings-page"><h1 class="page-title">Settings</h1>${this.renderServersSection(siteName, this.softwareLabel(), this.site?.version, servers)}${this.renderPopularSection()}${this.renderStorageSection()}<section class="section"><h2 class="section-title">Account</h2><p class="section-hint">Use the <strong>Log in</strong> button in the top bar to unlock Subscribed, Suggested, and Moderator feeds. Each server keeps its own session; you are logged into one at a time.</p></section></div>`
     }
 }
 

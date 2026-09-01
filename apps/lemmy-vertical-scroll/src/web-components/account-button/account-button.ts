@@ -98,73 +98,25 @@ export class AccountButton extends LitElement {
         this.open = false
     }
 
+    private renderLoggedIn(session: AuthSession): TemplateResult {
+        return html`<div class="account logged-in"><span class="account-name" title="Logged in to ${this.instance}">${session.username}</span><button class="logout-button" @click=${this.onLogout}>Log out</button></div>`
+    }
+
+    private renderTotp(): TemplateResult {
+        if (this.software === 'piefed') return html``
+        return html`<input class="account-totp" type="text" inputmode="numeric" placeholder="2FA code (optional)" autocomplete="one-time-code" .value=${this.totp} @input=${this.onTotpInput}>`
+    }
+
+    private renderDropdown(): TemplateResult {
+        if (!this.open) return html``
+        return html`<form class="login-dropdown" @submit=${(e: Event) => {e.preventDefault(); void this.onSubmit()}}><input class="account-username" type="text" placeholder="Username or email" autocomplete="username" .value=${this.username} @input=${this.onUsernameInput}><input class="account-password" type="password" placeholder="Password" autocomplete="current-password" .value=${this.password} @input=${this.onPasswordInput}>${this.renderTotp()}${this.error ? html`<p class="account-error">${this.error}</p>` : nothing}<button class="login-submit" type="submit" .disabled=${this.busy}>${this.busy ? 'Logging in…' : 'Log in'}</button></form>`
+    }
+
     override render(): TemplateResult {
         const session = this.authController.value.data
-        if (session) {
-            return html`
-                <div class="account logged-in">
-                    <span class="account-name" title="Logged in to ${this.instance}">${session.username}</span>
-                    <button class="logout-button" @click=${this.onLogout}>Log out</button>
-                </div>
-            `
-        }
+        if (session) return this.renderLoggedIn(session)
         const disabled = this.software === 'unknown' || !this.instance
-        return html`
-            <div class="account">
-                <button
-                    class="login-toggle${this.open ? ' open' : ''}"
-                    aria-expanded=${this.open}
-                    title=${disabled ? 'Connect an instance first' : 'Log in to this instance'}
-                    .disabled=${disabled}
-                    @click=${this.onToggle}
-                >Log in</button>
-                ${this.open
-                    ? html`
-                        <form
-                            class="login-dropdown"
-                            @submit=${(e: Event) => {
-                                e.preventDefault()
-                                void this.onSubmit()
-                            }}
-                        >
-                            <input
-                                class="account-username"
-                                type="text"
-                                placeholder="Username or email"
-                                autocomplete="username"
-                                .value=${this.username}
-                                @input=${this.onUsernameInput}
-                            />
-                            <input
-                                class="account-password"
-                                type="password"
-                                placeholder="Password"
-                                autocomplete="current-password"
-                                .value=${this.password}
-                                @input=${this.onPasswordInput}
-                            />
-                            ${this.software === 'piefed'
-                                ? nothing
-                                : html`
-                                    <input
-                                        class="account-totp"
-                                        type="text"
-                                        inputmode="numeric"
-                                        placeholder="2FA code (optional)"
-                                        autocomplete="one-time-code"
-                                        .value=${this.totp}
-                                        @input=${this.onTotpInput}
-                                    />
-                                `}
-                            ${this.error ? html`<p class="account-error">${this.error}</p>` : nothing}
-                            <button class="login-submit" type="submit" .disabled=${this.busy}>
-                                ${this.busy ? 'Logging in…' : 'Log in'}
-                            </button>
-                        </form>
-                    `
-                    : nothing}
-            </div>
-        `
+        return html`<div class="account"><button class="login-toggle${this.open ? ' open' : ''}" aria-expanded=${this.open} title=${disabled ? 'Connect an instance first' : 'Log in to this instance'} .disabled=${disabled} @click=${this.onToggle}>Log in</button>${this.renderDropdown()}</div>`
     }
 }
 

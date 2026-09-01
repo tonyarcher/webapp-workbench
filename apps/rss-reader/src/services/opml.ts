@@ -7,67 +7,50 @@ export interface OpmlImportResult {
     feeds: Feed[];
 }
 
+async function ensureFolder(title: string, existingFolders: Folder[], createdFolders: Folder[]): Promise<Folder> {
+    const existing = existingFolders.find((f) => f.title.toLowerCase() === title.toLowerCase());
+    if (existing) return existing;
+    const sortOrder = existingFolders.reduce((max, f) => Math.max(max, f.sortOrder ?? 0), 0) + 1;
+    const folder: Folder = {id: uid(), title, createdAt: Date.now(), sortOrder};
+    await putFolder(folder);
+    existingFolders.push(folder);
+    createdFolders.push(folder);
+    return folder;
+}
+
+async function addFeed(xmlUrl: string, title: string, htmlUrl: string | undefined, folderId: string | null, existingFeeds: Feed[], createdFeeds: Feed[]): Promise<void> {
+    const existing = existingFeeds.find((f) => f.url.toLowerCase() === xmlUrl.toLowerCase());
+    if (existing) {
+        if (folderId !== null && !existing.folderIds.includes(folderId)) {
+            existing.folderIds = [...existing.folderIds, folderId];
+            await putFeed(existing);
+        }
+        return;
+    }
+    const feed: Feed = {id: uid(), title: title || xmlUrl, url: xmlUrl, siteUrl: htmlUrl, folderIds: folderId ? [folderId] : [], unread: 0, addedAt: Date.now()};
+    await putFeed(feed);
+    existingFeeds.push(feed);
+    createdFeeds.push(feed);
+}
+
+async function walkNodes(nodes: OpmlNode[], folderId: string | null, existingFolders: Folder[], createdFolders: Folder[], existingFeeds: Feed[], createdFeeds: Feed[]): Promise<void> {
+    for (const node of nodes) {
+        if (isFolder(node)) {
+            const folder = await ensureFolder(node.title, existingFolders, createdFolders);
+            await walkNodes(node.children, folder.id, existingFolders, createdFolders, existingFeeds, createdFeeds);
+        } else {
+            await addFeed(node.xmlUrl, node.title, node.htmlUrl, folderId, existingFeeds, createdFeeds);
+        }
+    }
+}
+
 export async function importOpml(xml: string): Promise<OpmlImportResult> {
     const nodes = parseOpml(xml);
     const existingFolders = await getFolders();
     const existingFeeds = await getFeeds();
-
     const createdFolders: Folder[] = [];
     const createdFeeds: Feed[] = [];
-
-    const ensureFolder = async (title: string): Promise<Folder> => {
-        const existing = existingFolders.find(
-            (f) => f.title.toLowerCase() === title.toLowerCase(),
-        );
-        if (existing) return existing;
-        const sortOrder = existingFolders.reduce((max, f) => Math.max(max, f.sortOrder ?? 0), 0) + 1;
-        const folder: Folder = {id: uid(), title, createdAt: Date.now(), sortOrder};
-        await putFolder(folder);
-        existingFolders.push(folder);
-        createdFolders.push(folder);
-        return folder;
-    };
-
-    const addFeed = async (
-        xmlUrl: string,
-        title: string,
-        htmlUrl: string | undefined,
-        folderId: string | null,
-    ): Promise<void> => {
-        const existing = existingFeeds.find((f) => f.url.toLowerCase() === xmlUrl.toLowerCase());
-        if (existing) {
-            if (folderId !== null && !existing.folderIds.includes(folderId)) {
-                existing.folderIds = [...existing.folderIds, folderId];
-                await putFeed(existing);
-            }
-            return;
-        }
-        const feed: Feed = {
-            id: uid(),
-            title: title || xmlUrl,
-            url: xmlUrl,
-            siteUrl: htmlUrl,
-            folderIds: folderId ? [folderId] : [],
-            unread: 0,
-            addedAt: Date.now(),
-        };
-        await putFeed(feed);
-        existingFeeds.push(feed);
-        createdFeeds.push(feed);
-    };
-
-    const walk = async (nodes: OpmlNode[], folderId: string | null) => {
-        for (const node of nodes) {
-            if (isFolder(node)) {
-                const folder = await ensureFolder(node.title);
-                await walk(node.children, folder.id);
-            } else {
-                await addFeed(node.xmlUrl, node.title, node.htmlUrl, folderId);
-            }
-        }
-    };
-
-    await walk(nodes, null);
+    await walkNodes(nodes, null, existingFolders, createdFolders, existingFeeds, createdFeeds);
     return {folders: createdFolders, feeds: createdFeeds};
 }
 

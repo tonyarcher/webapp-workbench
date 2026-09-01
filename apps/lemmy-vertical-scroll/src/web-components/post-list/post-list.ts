@@ -77,61 +77,35 @@ export class PostList extends LitElement {
         if (this.query.hasNextPage && !this.query.isFetchingNextPage) this.query.fetchNextPage()
     }
 
+    private renderPaused(): TemplateResult {
+        return html`<div class="list-state"><p class="state-title">Waiting for network</p><p class="state-detail">The browser reports being offline — reconnecting and retrying.</p><button class="retry-button" @click=${() => this.query.refetch()}>Retry now</button></div>`
+    }
+
+    private renderPending(): TemplateResult {
+        return html`<div class="list-state">${Array.from({length: 5}, () => html`<div class="skeleton-row"></div>`)}</div>`
+    }
+
+    private renderError(error: unknown): TemplateResult {
+        return html`<div class="list-state error"><p class="state-title">Could not load the feed</p><p class="state-detail">${error instanceof Error ? error.message : String(error)}</p><div class="state-actions"><button class="retry-button" @click=${() => this.query.refetch()}>Retry</button><button class="retry-button" @click=${() => navigate({kind: 'settings'})}>Change instance</button></div></div>`
+    }
+
+    private renderMore(): TemplateResult {
+        if (this.query.isFetchingNextPage) return html`<span class="spinner" aria-label="Loading more"></span>`
+        if (this.query.hasNextPage) return html`<span class="more-hint"></span>`
+        return html`<span class="end-hint">You are all caught up</span>`
+    }
+
+    private renderList(): TemplateResult {
+        return html`<div class="list-scroller" ${ref((el) => {this.listEl = el as HTMLElement | null})}><div class="list-spacer" style="height: ${this.virtualizer.totalSize}px">${this.virtualizer.virtualItems.map((item) => {const post = this.posts[item.index]; return html`<div class="list-item" data-index=${item.index} style="transform: translateY(${item.start}px)" ${ref((el) => this.virtualizer.measureElement(el as HTMLElement | null))}><lvs-post-card .post=${post}></lvs-post-card></div>`})}</div><div class="list-more">${this.renderMore()}</div></div>`
+    }
+
     private renderState(): TemplateResult {
         const {status, error, fetchStatus} = this.query.value
-        if (status === 'pending' && fetchStatus === 'paused') {
-            return html`<div class="list-state">
-                <p class="state-title">Waiting for network</p>
-                <p class="state-detail">The browser reports being offline — reconnecting and retrying.</p>
-                <button class="retry-button" @click=${() => this.query.refetch()}>Retry now</button>
-            </div>`
-        }
-        if (status === 'pending') {
-            return html`<div class="list-state">
-                ${Array.from({length: 5}, () => html`<div class="skeleton-row"></div>`)}
-            </div>`
-        }
-        if (status === 'error') {
-            return html`<div class="list-state error">
-                <p class="state-title">Could not load the feed</p>
-                <p class="state-detail">${error instanceof Error ? error.message : String(error)}</p>
-                <div class="state-actions">
-                    <button class="retry-button" @click=${() => this.query.refetch()}>Retry</button>
-                    <button class="retry-button" @click=${() => navigate({kind: 'settings'})}>Change instance</button>
-                </div>
-            </div>`
-        }
-        if (this.posts.length === 0) {
-            return html`<div class="list-state">
-                <p class="state-title">Nothing here yet</p>
-            </div>`
-        }
-        return html`
-            <div class="list-scroller" ${ref((el) => {
-                this.listEl = el as HTMLElement | null
-            })}>
-                <div class="list-spacer" style="height: ${this.virtualizer.totalSize}px">
-                    ${this.virtualizer.virtualItems.map((item) => {
-                        const post = this.posts[item.index]
-                        return html`<div
-                            class="list-item"
-                            data-index=${item.index}
-                            style="transform: translateY(${item.start}px)"
-                            ${ref((el) => this.virtualizer.measureElement(el as HTMLElement | null))}
-                        >
-                            <lvs-post-card .post=${post}></lvs-post-card>
-                        </div>`
-                    })}
-                </div>
-                <div class="list-more">
-                    ${this.query.isFetchingNextPage
-                        ? html`<span class="spinner" aria-label="Loading more"></span>`
-                        : this.query.hasNextPage
-                          ? html`<span class="more-hint"></span>`
-                          : html`<span class="end-hint">You are all caught up</span>`}
-                </div>
-            </div>
-        `
+        if (status === 'pending' && fetchStatus === 'paused') return this.renderPaused()
+        if (status === 'pending') return this.renderPending()
+        if (status === 'error') return this.renderError(error)
+        if (this.posts.length === 0) return html`<div class="list-state"><p class="state-title">Nothing here yet</p></div>`
+        return this.renderList()
     }
 
     override render(): TemplateResult {

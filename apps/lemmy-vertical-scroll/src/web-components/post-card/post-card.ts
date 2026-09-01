@@ -21,43 +21,23 @@ export class PostCard extends LitElement {
         navigate({kind: 'community', communityId: this.post.communityId})
     }
 
-    override render(): TemplateResult {
+    private renderMeta(): TemplateResult {
         const {post} = this
-        const meta = html`<span class="card-meta">
-            <button class="link-button" @click=${this.onCommunityClick}>${post.communityTitle}</button>
-            <span class="meta-sep">•</span>
-            <span>${post.creatorDisplayName ?? post.creatorName}</span>
-            <span class="meta-sep">•</span>
-            <span>${timeAgo(post.published)}</span>
-            ${post.pinnedLocal || post.pinnedCommunity ? html`<span class="badge pinned">Pinned</span>` : nothing}
-            ${post.nsfw ? html`<span class="badge nsfw">NSFW</span>` : nothing}
-        </span>`
-        const postUrl = safeUrl(post.url)
-        const thumbnail = safeUrl(post.thumbnailUrl)
-        const title = postUrl
-            ? html`<a class="card-title" href=${postUrl} target="_blank" rel="noopener noreferrer">${post.name}</a>`
-            : html`<span class="card-title">${post.name}</span>`
-        return html`
-            <article class="post-card">
-                <div class="score-column">
-                    <span class="score-value">${compactNumber(post.score)}</span>
-                    <span class="score-label">score</span>
-                </div>
-                <div class="card-body">
-                    ${meta}
-                    ${title}
-                    ${post.body ? html`<p class="card-text">${post.body}</p>` : nothing}
-                    ${thumbnail
-                        ? html`<img class="card-thumb" src=${thumbnail} alt="" loading="lazy" referrerpolicy="no-referrer"/>`
-                        : nothing}
-                    <span class="card-actions">
-                        <span class="stat"><span class="stat-icon up">${UP_ICON}</span>${compactNumber(post.upvotes)}</span>
-                        <span class="stat"><span class="stat-icon down">${DOWN_ICON}</span>${compactNumber(post.downvotes)}</span>
-                        <span class="stat"><span class="stat-icon">${COMMENT_ICON}</span>${compactNumber(post.comments)}</span>
-                    </span>
-                </div>
-            </article>
-        `
+        return html`<span class="card-meta"><button class="link-button" @click=${this.onCommunityClick}>${post.communityTitle}</button><span class="meta-sep">•</span><span>${post.creatorDisplayName ?? post.creatorName}</span><span class="meta-sep">•</span><span>${timeAgo(post.published)}</span>${post.pinnedLocal || post.pinnedCommunity ? html`<span class="badge pinned">Pinned</span>` : nothing}${post.nsfw ? html`<span class="badge nsfw">NSFW</span>` : nothing}</span>`
+    }
+
+    private renderTitle(): TemplateResult {
+        const postUrl = safeUrl(this.post.url)
+        return postUrl ? html`<a class="card-title" href=${postUrl} target="_blank" rel="noopener noreferrer">${this.post.name}</a>` : html`<span class="card-title">${this.post.name}</span>`
+    }
+
+    private renderThumb(): TemplateResult {
+        const thumbnail = safeUrl(this.post.thumbnailUrl)
+        return thumbnail ? html`<img class="card-thumb" src=${thumbnail} alt="" loading="lazy" referrerpolicy="no-referrer"/>` : html``
+    }
+
+    override render(): TemplateResult {
+        return html`<article class="post-card"><div class="score-column"><span class="score-value">${compactNumber(this.post.score)}</span><span class="score-label">score</span></div><div class="card-body">${this.renderMeta()}${this.renderTitle()}${this.post.body ? html`<p class="card-text">${this.post.body}</p>` : nothing}${this.renderThumb()}<span class="card-actions"><span class="stat"><span class="stat-icon up">${UP_ICON}</span>${compactNumber(this.post.upvotes)}</span><span class="stat"><span class="stat-icon down">${DOWN_ICON}</span>${compactNumber(this.post.downvotes)}</span><span class="stat"><span class="stat-icon">${COMMENT_ICON}</span>${compactNumber(this.post.comments)}</span></span></div></article>`
     }
 }
 

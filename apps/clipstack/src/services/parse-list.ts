@@ -110,87 +110,88 @@ const DATE_LINE = /^Date:\s*(.+)$/i
  * (paste / csv). Export share URLs are kept as-is; `/video/{id}` without
  * `@user` 404s on tiktok.com, so we never invent that path.
  */
+function pushSkipped(skipped: SkippedLink[], seen: Set<string>, url: string, reason: SkippedLink['reason']): void {
+    if (seen.has(url)) return
+    seen.add(url)
+    skipped.push({url, reason})
+}
+
+function parseInstagram(parsed: URL, safe: string, skipped: SkippedLink[], seen: Set<string>): {id: string; author: string | null} | null {
+    if (isInstagramShortLink(parsed)) {
+        pushSkipped(skipped, seen, safe, 'short-link')
+        return null
+    }
+    const id = instagramShortcode(parsed.pathname)
+    if (!id) {
+        pushSkipped(skipped, seen, safe, 'no-id')
+        return null
+    }
+    return {id, author: instagramAuthor(parsed.pathname)}
+}
+
+function parseTiktok(parsed: URL, safe: string, skipped: SkippedLink[], seen: Set<string>): {id: string; author: string | null} | null {
+    if (isTiktokShortLink(parsed)) {
+        pushSkipped(skipped, seen, safe, 'short-link')
+        return null
+    }
+    const id = tiktokVideoId(parsed.pathname)
+    if (!id) {
+        pushSkipped(skipped, seen, safe, 'no-id')
+        return null
+    }
+    return {id, author: authorFromPath(parsed.pathname)}
+}
+
+function parseUrlEntry(parsed: URL, safe: string, skipped: SkippedLink[], seen: Set<string>): {provider: ClipProvider; id: string; author: string | null} | null {
+    if (isInstagramHost(parsed.hostname)) {
+        const res = parseInstagram(parsed, safe, skipped, seen)
+        return res ? {provider: 'instagram', ...res} : null
+    }
+    if (isTiktokHost(parsed.hostname)) {
+        const res = parseTiktok(parsed, safe, skipped, seen)
+        return res ? {provider: 'tiktok', ...res} : null
+    }
+    pushSkipped(skipped, seen, safe, 'unsupported')
+    return null
+}
+
+function processLine(line: string, pending: {date: string | undefined}, items: ClipLink[], skipped: SkippedLink[], seenIds: Set<string>, seenSkipped: Set<string>): void {
+    for (const raw of extractUrls(line)) {
+        const safe = safeUrl(raw)
+        if (!safe) continue
+        const date = pending.date
+        pending.date = undefined
+        let parsed: URL
+        try {
+            parsed = new URL(safe)
+        } catch {
+            continue
+        }
+        const entry = parseUrlEntry(parsed, safe, skipped, seenSkipped)
+        if (!entry) continue
+        const dedupe = `${entry.provider}:${entry.id}`
+        if (seenIds.has(dedupe)) continue
+        seenIds.add(dedupe)
+        const link: ClipLink = {id: entry.id, url: safe, provider: entry.provider}
+        if (entry.author) link.author = entry.author
+        if (date) link.date = date
+        items.push(link)
+    }
+}
+
 export function parseLinkList(input: string): ParseResult {
     const items: ClipLink[] = []
     const skipped: SkippedLink[] = []
     const seenIds = new Set<string>()
     const seenSkipped = new Set<string>()
-    let pendingDate: string | undefined
+    const pending: {date: string | undefined} = {date: undefined}
     for (const line of input.split(/\r?\n/)) {
         const dateMatch = line.match(DATE_LINE)
         if (dateMatch) {
-            pendingDate = dateMatch[1].trim()
+            pending.date = dateMatch[1].trim()
             continue
         }
-        for (const raw of extractUrls(line)) {
-            const safe = safeUrl(raw)
-            if (!safe) continue
-            // consume Date: once per following URL, even if that URL is skipped,
-            // so a short-link after Date: cannot stamp the next playable item
-            const date = pendingDate
-            pendingDate = undefined
-            let parsed: URL
-            try {
-                parsed = new URL(safe)
-            } catch {
-                continue
-            }
-            let provider: ClipProvider | null = null
-            let id: string | null = null
-            let author: string | null = null
-
-            if (isInstagramHost(parsed.hostname)) {
-                if (isInstagramShortLink(parsed)) {
-                    if (!seenSkipped.has(safe)) {
-                        seenSkipped.add(safe)
-                        skipped.push({url: safe, reason: 'short-link'})
-                    }
-                    continue
-                }
-                id = instagramShortcode(parsed.pathname)
-                if (!id) {
-                    if (!seenSkipped.has(safe)) {
-                        seenSkipped.add(safe)
-                        skipped.push({url: safe, reason: 'no-id'})
-                    }
-                    continue
-                }
-                provider = 'instagram'
-                author = instagramAuthor(parsed.pathname)
-            } else if (isTiktokHost(parsed.hostname)) {
-                if (isTiktokShortLink(parsed)) {
-                    if (!seenSkipped.has(safe)) {
-                        seenSkipped.add(safe)
-                        skipped.push({url: safe, reason: 'short-link'})
-                    }
-                    continue
-                }
-                id = tiktokVideoId(parsed.pathname)
-                if (!id) {
-                    if (!seenSkipped.has(safe)) {
-                        seenSkipped.add(safe)
-                        skipped.push({url: safe, reason: 'no-id'})
-                    }
-                    continue
-                }
-                provider = 'tiktok'
-                author = authorFromPath(parsed.pathname)
-            } else {
-                if (!seenSkipped.has(safe)) {
-                    seenSkipped.add(safe)
-                    skipped.push({url: safe, reason: 'unsupported'})
-                }
-                continue
-            }
-
-            const dedupe = `${provider}:${id}`
-            if (seenIds.has(dedupe)) continue
-            seenIds.add(dedupe)
-            const link: ClipLink = {id, url: safe, provider}
-            if (author) link.author = author
-            if (date) link.date = date
-            items.push(link)
-        }
+        processLine(line, pending, items, skipped, seenIds, seenSkipped)
     }
     return {items, skipped}
 }

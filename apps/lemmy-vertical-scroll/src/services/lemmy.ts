@@ -115,6 +115,27 @@ const LEMMY_404_HINT =
  * Cloudflare-fronted instances reject POST from non-browser clients.
  * An optional jwt adds the Authorization header for logged-in requests.
  */
+function buildQuery(params: Record<string, string | number | boolean | undefined>): string {
+    const query = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined) query.set(key, String(value))
+    }
+    return query.toString()
+}
+
+function isTimeout(error: unknown): boolean {
+    return error instanceof DOMException && error.name === 'TimeoutError'
+}
+
+function throwNetworkError(instance: string, error: unknown): never {
+    throw new ApiError(isTimeout(error) ? `Could not reach ${instance} (request timed out)` : `Could not reach ${instance} (network error)`)
+}
+
+function throwGetError(instance: string, path: string, status: number, detail: string, hint404: string | null): never {
+    if (status === 404 && hint404) throw new ApiError(`${instance} does not appear to run a Lemmy-compatible API (${path} returned 404). ${hint404}`, status)
+    throw new ApiError(`Instance ${instance} rejected request to ${path}${detail}`, status)
+}
+
 export async function apiGet(
     instance: string,
     path: string,
@@ -123,39 +144,17 @@ export async function apiGet(
     hint404: string | null = LEMMY_404_HINT,
     auth?: string,
 ): Promise<unknown> {
-    const query = new URLSearchParams()
-    for (const [key, value] of Object.entries(params)) {
-        if (value !== undefined) query.set(key, String(value))
-    }
+    const query = buildQuery(params)
     let response: Awaited<ReturnType<FetchImpl>>
     try {
         const headers: Record<string, string> = {Accept: 'application/json'}
         if (auth) headers.Authorization = `Bearer ${auth}`
-        // AbortSignal.timeout converts proxies that stall requests into a catchable error
-        response = await fetchImpl(`https://${instance}${path}?${query.toString()}`, {
-            method: 'GET',
-            headers,
-            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        })
+        response = await fetchImpl(`https://${instance}${path}?${query}`, {method: 'GET', headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)})
     } catch (error) {
-        const timedOut = error instanceof DOMException && error.name === 'TimeoutError'
-        throw new ApiError(
-            timedOut
-                ? `Could not reach ${instance} (request timed out)`
-                : `Could not reach ${instance} (network error)`,
-        )
+        throwNetworkError(instance, error)
     }
     const data = (await response.json().catch(() => null)) as {error?: string} | null
-    if (!response.ok) {
-        const detail = data?.error ? `: ${data.error}` : ''
-        if (response.status === 404 && hint404) {
-            throw new ApiError(
-                `${instance} does not appear to run a Lemmy-compatible API (${path} returned 404). ${hint404}`,
-                response.status,
-            )
-        }
-        throw new ApiError(`Instance ${instance} rejected request to ${path}${detail}`, response.status)
-    }
+    if (!response.ok) throwGetError(instance, path, response.status, data?.error ? `: ${data.error}` : '', hint404)
     return data
 }
 
@@ -174,25 +173,12 @@ export async function apiPost(
     try {
         const headers: Record<string, string> = {'Content-Type': 'application/json'}
         if (auth) headers.Authorization = `Bearer ${auth}`
-        response = await fetchImpl(`https://${instance}${path}`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        })
+        response = await fetchImpl(`https://${instance}${path}`, {method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)})
     } catch (error) {
-        const timedOut = error instanceof DOMException && error.name === 'TimeoutError'
-        throw new ApiError(
-            timedOut
-                ? `Could not reach ${instance} (request timed out)`
-                : `Could not reach ${instance} (network error)`,
-        )
+        throwNetworkError(instance, error)
     }
     const data = (await response.json().catch(() => null)) as {error?: string} | null
-    if (!response.ok) {
-        const detail = data?.error ? `: ${data.error}` : ''
-        throw new ApiError(`Instance ${instance} rejected request to ${path}${detail}`, response.status)
-    }
+    if (!response.ok) throw new ApiError(`Instance ${instance} rejected request to ${path}${data?.error ? `: ${data.error}` : ''}`, response.status)
     return data
 }
 
@@ -228,45 +214,18 @@ function assertCommunityView(data: unknown, instance: string, path: string): {co
     return data as {community_view: RawCommunityView}
 }
 
-function mapPostView(view: RawPostView): LemmyPost {
+function basePost(view: RawPostView): LemmyPost {
     const {post, community, creator, counts} = view
-    const base: LemmyPost = {
-        id: post.id,
-        name: post.name,
-        url: post.url,
-        body: post.body,
-        thumbnailUrl: post.thumbnail_url,
-        nsfw: post.nsfw,
-        pinnedLocal: post.pinned_local,
-        pinnedCommunity: post.pinned_community,
-        published: post.published,
-        communityId: community.id,
-        communityName: community.name,
-        communityActorId: community.actor_id,
-        communityTitle: community.title,
-        communityIcon: community.icon,
-        creatorActorId: creator.actor_id,
-        creatorName: creator.name,
-        creatorDisplayName: creator.display_name,
-        creatorAvatar: creator.avatar,
-        score: counts.score,
-        upvotes: counts.upvotes,
-        downvotes: counts.downvotes,
-        comments: counts.comments,
-        myVote: view.my_vote ?? null,
-        postUrl: post.ap_id,
-        postType: post.post_url_content_type ?? null,
-        imageUrls: [],
-        videoUrl: null,
-        linkUrl: null,
-    }
+    return {id: post.id, name: post.name, url: post.url, body: post.body, thumbnailUrl: post.thumbnail_url, nsfw: post.nsfw, pinnedLocal: post.pinned_local, pinnedCommunity: post.pinned_community, published: post.published, communityId: community.id, communityName: community.name, communityActorId: community.actor_id, communityTitle: community.title, communityIcon: community.icon, creatorActorId: creator.actor_id, creatorName: creator.name, creatorDisplayName: creator.display_name, creatorAvatar: creator.avatar, score: counts.score, upvotes: counts.upvotes, downvotes: counts.downvotes, comments: counts.comments, myVote: view.my_vote ?? null, postUrl: post.ap_id, postType: post.post_url_content_type ?? null, imageUrls: [], videoUrl: null, linkUrl: null}
+}
+
+function enrichPost(base: LemmyPost): LemmyPost {
     const kind = classifyPost(base)
-    return {
-        ...base,
-        imageUrls: extractImageUrls(base),
-        videoUrl: kind === 'video' ? base.url : null,
-        linkUrl: kind === 'link' ? base.url : null,
-    }
+    return {...base, imageUrls: extractImageUrls(base), videoUrl: kind === 'video' ? base.url : null, linkUrl: kind === 'link' ? base.url : null}
+}
+
+function mapPostView(view: RawPostView): LemmyPost {
+    return enrichPost(basePost(view))
 }
 
 function mapCommunityView(view: RawCommunityView): LemmyCommunity {

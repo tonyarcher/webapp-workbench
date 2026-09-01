@@ -151,27 +151,29 @@ function reduceEngineState(engine: EngineGameState, record: LocalGameEventRecord
   return reduceGame(engine, scoringEvent);
 }
 
+function boundedInt(value: unknown, min: number, max: number): number | undefined {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) return undefined;
+  return parsed;
+}
+
+function applyLineupDetail(event: ScoringEvent, detail: Record<string, unknown>): void {
+  event.homeLineup = lineupPlayersFromUnknown(detail.homeLineup);
+  event.awayLineup = lineupPlayersFromUnknown(detail.awayLineup);
+  event.homePitcherName = optionalString(detail.homePitcherName);
+  event.awayPitcherName = optionalString(detail.awayPitcherName);
+}
+
 function toScoringEvent(record: LocalGameEventRecord): ScoringEvent | null {
   const eventType = record.eventType as ScoringEventType;
   if (!ALL_ENGINE_EVENT_TYPES.includes(eventType)) return null;
   const event: ScoringEvent = { type: eventType };
-  const fieldPos = Number(record.detail?.fieldPos);
-  if (Number.isFinite(fieldPos) && fieldPos >= 1 && fieldPos <= 9) {
-    event.fieldPos = fieldPos;
-  }
-  const base = Number(record.detail?.base);
-  if (Number.isFinite(base) && base >= 1 && base <= 4) {
-    event.base = base;
-  }
-  if (record.detail?.doublePlay === true) {
-    event.doublePlay = true;
-  }
-  if (eventType === 'SET_LINEUP') {
-    event.homeLineup = lineupPlayersFromUnknown(record.detail?.homeLineup);
-    event.awayLineup = lineupPlayersFromUnknown(record.detail?.awayLineup);
-    event.homePitcherName = optionalString(record.detail?.homePitcherName);
-    event.awayPitcherName = optionalString(record.detail?.awayPitcherName);
-  }
+  const fieldPos = boundedInt(record.detail?.fieldPos, 1, 9);
+  const base = boundedInt(record.detail?.base, 1, 4);
+  if (fieldPos !== undefined) event.fieldPos = fieldPos;
+  if (base !== undefined) event.base = base;
+  if (record.detail?.doublePlay === true) event.doublePlay = true;
+  if (eventType === 'SET_LINEUP') applyLineupDetail(event, record.detail);
   return event;
 }
 

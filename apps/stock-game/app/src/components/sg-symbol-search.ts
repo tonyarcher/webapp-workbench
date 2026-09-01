@@ -1,4 +1,5 @@
 import { LitElement, css, html } from 'lit'
+import type { TemplateResult } from 'lit'
 import type { SymbolSearchResult } from '@stock-game/shared'
 import { defineElement } from './define'
 
@@ -95,40 +96,49 @@ export class SgSymbolSearch extends LitElement {
 
   private debounce?: number
 
-  override render() {
+  private renderInput(): TemplateResult {
+    return html`<input
+      class="input"
+      .value=${this.value}
+      placeholder=${this.placeholder}
+      @input=${(event: Event) => this.onInput(event)}
+      @focus=${() => {
+        this.open = true
+      }}
+      @keydown=${(event: KeyboardEvent) => this.onKeydown(event)}
+    />`
+  }
+
+  private renderStatus(text: string, error = false): TemplateResult {
+    return html`<li class=${error ? 'status error' : 'status'}>${text}</li>`
+  }
+
+  private renderResultItems(): TemplateResult {
+    return html`${this.results.map(
+      (result) => html`
+        <li @click=${() => this.select(result)}>
+          <span class="sym">${result.symbol}</span>
+          <span class="name">${result.name}</span>
+        </li>
+      `,
+    )}`
+  }
+
+  private renderListContent(): TemplateResult {
     const pending = this.value.trim() !== this.query
-    return html`
-      <input
-        class="input"
-        .value=${this.value}
-        placeholder=${this.placeholder}
-        @input=${(event: Event) => this.onInput(event)}
-        @focus=${() => {
-          this.open = true
-        }}
-        @keydown=${(event: KeyboardEvent) => this.onKeydown(event)}
-      />
-      ${this.open && this.value.trim().length > 0
-        ? html`
-            <ul class="results">
-              ${pending || this.searching
-                ? html`<li class="status">Searching…</li>`
-                : this.error !== null
-                  ? html`<li class="status error">${this.error}</li>`
-                  : this.results.length === 0
-                    ? html`<li class="status">No matches</li>`
-                    : this.results.map(
-                        (result) => html`
-                          <li @click=${() => this.select(result)}>
-                            <span class="sym">${result.symbol}</span>
-                            <span class="name">${result.name}</span>
-                          </li>
-                        `,
-                      )}
-            </ul>
-          `
-        : ''}
-    `
+    if (pending || this.searching) return this.renderStatus('Searching…')
+    if (this.error !== null) return this.renderStatus(this.error, true)
+    if (this.results.length === 0) return this.renderStatus('No matches')
+    return this.renderResultItems()
+  }
+
+  private renderResults(): TemplateResult {
+    if (!this.open || this.value.trim().length === 0) return html``
+    return html`<ul class="results">${this.renderListContent()}</ul>`
+  }
+
+  override render(): TemplateResult {
+    return html`${this.renderInput()} ${this.renderResults()}`
   }
 
   private onInput(event: Event): void {

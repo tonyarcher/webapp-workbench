@@ -174,36 +174,68 @@ function parseInstant(raw: unknown): number | undefined {
     return Number.isFinite(ms) ? ms : undefined;
 }
 
-export function mapCalendarShow(item: unknown): CalEvent | null {
-    if (!isRecord(item)) return null;
+function episodeBasics(item: Record<string, unknown>): {episode: Record<string, unknown>; show: Record<string, unknown>; start: number} | null {
     const start = parseInstant(item.first_aired);
     if (start === undefined) return null;
     const episode = isRecord(item.episode) ? item.episode : undefined;
     const show = isRecord(item.show) ? item.show : undefined;
     if (!episode || !show) return null;
+    return {episode, show, start};
+}
+
+function episodeIds(show: Record<string, unknown>, episode: Record<string, unknown>): {showId: number; season: number; number: number} | null {
     const showId = idsTrakt(show.ids);
     const season = asNumber(episode.season);
-    const number = asNumber(episode.number);
-    if (showId === undefined || season === undefined || number === undefined) return null;
+    const num = asNumber(episode.number);
+    if (showId === undefined || season === undefined || num === undefined) return null;
+    return {showId, season, number: num};
+}
+
+function episodeTitle(show: Record<string, unknown>, episode: Record<string, unknown>, season: number, num: number): string {
     const showTitle = asString(show.title) ?? 'Show';
     const epTitle = asString(episode.title);
-    const title = epTitle
-        ? `${showTitle} S${pad2(season)}E${pad2(number)}: ${epTitle}`
-        : `${showTitle} S${pad2(season)}E${pad2(number)}`;
-    const end = start + runtimeMs(episode.runtime ?? show.runtime, DEFAULT_EPISODE_MINUTES);
+    const base = `${showTitle} S${pad2(season)}E${pad2(num)}`;
+    return epTitle ? `${base}: ${epTitle}` : base;
+}
+
+function episodeUrl(show: Record<string, unknown>, season: number, num: number): string | undefined {
     const slug = idsSlug(show.ids);
-    const url = slug
-        ? `https://trakt.tv/shows/${slug}/seasons/${season}/episodes/${number}`
-        : undefined;
+    return slug ? `https://trakt.tv/shows/${slug}/seasons/${season}/episodes/${num}` : undefined;
+}
+
+export function mapCalendarShow(item: unknown): CalEvent | null {
+    if (!isRecord(item)) return null;
+    const base = episodeBasics(item);
+    if (!base) return null;
+    const ids = episodeIds(base.show, base.episode);
+    if (!ids) return null;
     return {
-        uid: `cal-sync:trakt:air:show:${showId}:s${season}e${number}`,
+        uid: `cal-sync:trakt:air:show:${ids.showId}:s${ids.season}e${ids.number}`,
         source: 'trakt',
-        title,
-        start,
-        end,
+        title: episodeTitle(base.show, base.episode, ids.season, ids.number),
+        start: base.start,
+        end: base.start + runtimeMs(base.episode.runtime ?? base.show.runtime, DEFAULT_EPISODE_MINUTES),
         allDay: false,
-        url,
+        url: episodeUrl(base.show, ids.season, ids.number),
     };
+}
+
+function movieStart(item: Record<string, unknown>): number | undefined {
+    const released = asString(item.released);
+    const start = released ? Date.parse(`${released}T00:00:00Z`) : parseInstant(item.first_aired);
+    if (start === undefined || !Number.isFinite(start)) return undefined;
+    return start;
+}
+
+function movieTitle(movie: Record<string, unknown>): string {
+    const year = asNumber(movie.year);
+    const name = asString(movie.title) ?? 'Movie';
+    return year !== undefined ? `${name} (${year})` : name;
+}
+
+function movieUrl(movie: Record<string, unknown>): string | undefined {
+    const slug = idsSlug(movie.ids);
+    return slug ? `https://trakt.tv/movies/${slug}` : undefined;
 }
 
 export function mapCalendarMovie(item: unknown): CalEvent | null {
@@ -212,73 +244,64 @@ export function mapCalendarMovie(item: unknown): CalEvent | null {
     if (!movie) return null;
     const movieId = idsTrakt(movie.ids);
     if (movieId === undefined) return null;
-    const released = asString(item.released);
-    const start = released ? Date.parse(`${released}T00:00:00Z`) : parseInstant(item.first_aired);
-    if (start === undefined || !Number.isFinite(start)) return null;
-    const year = asNumber(movie.year);
-    const name = asString(movie.title) ?? 'Movie';
-    const title = year !== undefined ? `${name} (${year})` : name;
-    const slug = idsSlug(movie.ids);
+    const start = movieStart(item);
+    if (start === undefined) return null;
     return {
         uid: `cal-sync:trakt:air:movie:${movieId}:${utcYmd(start)}`,
         source: 'trakt',
-        title,
+        title: movieTitle(movie),
         start,
         end: start + DAY_MS,
         allDay: true,
-        url: slug ? `https://trakt.tv/movies/${slug}` : undefined,
+        url: movieUrl(movie),
     };
+}
+
+function mapHistoryEpisode(item: Record<string, unknown>, start: number): CalEvent | null {
+    const episode = isRecord(item.episode) ? item.episode : undefined;
+    const show = isRecord(item.show) ? item.show : undefined;
+    if (!episode || !show) return null;
+    const ids = episodeIds(show, episode);
+    if (!ids) return null;
+    return {
+        uid: `cal-sync:trakt:watch:show:${ids.showId}:s${ids.season}e${ids.number}:${start}`,
+        source: 'trakt',
+        title: episodeTitle(show, episode, ids.season, ids.number),
+        start,
+        end: start + runtimeMs(episode.runtime ?? show.runtime, DEFAULT_EPISODE_MINUTES),
+        allDay: false,
+        description: 'Watched',
+        url: episodeUrl(show, ids.season, ids.number),
+    };
+}
+
+function mapHistoryMovie(item: Record<string, unknown>, start: number): CalEvent | null {
+    const movie = isRecord(item.movie) ? item.movie : undefined;
+    if (!movie) return null;
+    const movieId = idsTrakt(movie.ids);
+    if (movieId === undefined) return null;
+    return {
+        uid: `cal-sync:trakt:watch:movie:${movieId}:${start}`,
+        source: 'trakt',
+        title: movieTitle(movie),
+        start,
+        end: start + runtimeMs(movie.runtime, DEFAULT_MOVIE_MINUTES),
+        allDay: false,
+        description: 'Watched',
+        url: movieUrl(movie),
+    };
+}
+
+function isEpisodeHistory(item: Record<string, unknown>): boolean {
+    return asString(item.type) === 'episode' || isRecord(item.episode);
 }
 
 export function mapHistoryItem(item: unknown): CalEvent | null {
     if (!isRecord(item)) return null;
     const start = parseInstant(item.watched_at);
     if (start === undefined) return null;
-    const type = asString(item.type);
-    if (type === 'episode' || isRecord(item.episode)) {
-        const episode = isRecord(item.episode) ? item.episode : undefined;
-        const show = isRecord(item.show) ? item.show : undefined;
-        if (!episode || !show) return null;
-        const showId = idsTrakt(show.ids);
-        const season = asNumber(episode.season);
-        const number = asNumber(episode.number);
-        if (showId === undefined || season === undefined || number === undefined) return null;
-        const showTitle = asString(show.title) ?? 'Show';
-        const epTitle = asString(episode.title);
-        const title = epTitle
-            ? `${showTitle} S${pad2(season)}E${pad2(number)}: ${epTitle}`
-            : `${showTitle} S${pad2(season)}E${pad2(number)}`;
-        const slug = idsSlug(show.ids);
-        return {
-            uid: `cal-sync:trakt:watch:show:${showId}:s${season}e${number}:${start}`,
-            source: 'trakt',
-            title,
-            start,
-            end: start + runtimeMs(episode.runtime ?? show.runtime, DEFAULT_EPISODE_MINUTES),
-            allDay: false,
-            description: 'Watched',
-            url: slug
-                ? `https://trakt.tv/shows/${slug}/seasons/${season}/episodes/${number}`
-                : undefined,
-        };
-    }
-    const movie = isRecord(item.movie) ? item.movie : undefined;
-    if (!movie) return null;
-    const movieId = idsTrakt(movie.ids);
-    if (movieId === undefined) return null;
-    const year = asNumber(movie.year);
-    const name = asString(movie.title) ?? 'Movie';
-    const slug = idsSlug(movie.ids);
-    return {
-        uid: `cal-sync:trakt:watch:movie:${movieId}:${start}`,
-        source: 'trakt',
-        title: year !== undefined ? `${name} (${year})` : name,
-        start,
-        end: start + runtimeMs(movie.runtime, DEFAULT_MOVIE_MINUTES),
-        allDay: false,
-        description: 'Watched',
-        url: slug ? `https://trakt.tv/movies/${slug}` : undefined,
-    };
+    if (isEpisodeHistory(item)) return mapHistoryEpisode(item, start);
+    return mapHistoryMovie(item, start);
 }
 
 async function traktGet(
@@ -298,6 +321,99 @@ async function traktGet(
         throw new TraktHttpError(res.status, msg ?? `Trakt HTTP ${res.status}`);
     }
     return {status: res.status, json, headers: res.headers};
+}
+
+async function fetchCalendarWindow(
+    fetchImpl: FetchLike,
+    baseUrl: string,
+    headers: Record<string, string>,
+    window: {start: string; days: number},
+    events: CalEvent[],
+): Promise<void> {
+    const shows = await traktGet(fetchImpl, joinUrl(baseUrl, calendarShowsPath(window.start, window.days)), headers);
+    for (const item of asArray(shows.json) ?? []) {
+        const event = mapCalendarShow(item);
+        if (event) events.push(event);
+    }
+    const movies = await traktGet(fetchImpl, joinUrl(baseUrl, calendarMoviesPath(window.start, window.days)), headers);
+    for (const item of asArray(movies.json) ?? []) {
+        const event = mapCalendarMovie(item);
+        if (event) events.push(event);
+    }
+}
+
+async function loadCalendarEvents(
+    fetchImpl: FetchLike,
+    baseUrl: string,
+    headers: Record<string, string>,
+    now: number,
+    events: CalEvent[],
+    onProgress?: (progress: SyncProgress) => void,
+): Promise<void> {
+    const from = now - DEFAULT_CALENDAR_PAST_DAYS * DAY_MS;
+    const to = now + DEFAULT_CALENDAR_FUTURE_DAYS * DAY_MS;
+    const windows = calendarWindows(from, to);
+    const total = windows.length * 2;
+    let processed = 0;
+    for (const window of windows) {
+        onProgress?.({phase: 'fetch', done: processed, total, label: `calendar ${window.start}`});
+        await fetchCalendarWindow(fetchImpl, baseUrl, headers, window, events);
+        processed += 2;
+        onProgress?.({phase: 'fetch', done: processed, total, label: `calendar ${window.start}`});
+    }
+}
+
+function historyShouldStop(itemsLength: number, page: number, pageCount: number): boolean {
+    if (itemsLength === 0) return true;
+    if (Number.isFinite(pageCount) && page >= pageCount) return true;
+    if (itemsLength < TRAKT_HISTORY_PAGE_SIZE) return true;
+    return false;
+}
+
+async function fetchHistoryBatch(fetchImpl: FetchLike, baseUrl: string, headers: Record<string, string>, type: 'shows' | 'movies', page: number): Promise<{items: unknown[]; pageCount: number; resHeaders: {get(n: string): string | null}}> {
+    const res = await traktGet(fetchImpl, joinUrl(baseUrl, historyPath(type, page, TRAKT_HISTORY_PAGE_SIZE)), headers);
+    return {items: asArray(res.json) ?? [], pageCount: Number(res.headers.get('x-pagination-page-count')), resHeaders: res.headers};
+}
+
+function appendHistory(items: unknown[], events: CalEvent[]): void {
+    for (const item of items) {
+        const event = mapHistoryItem(item);
+        if (event) events.push(event);
+    }
+}
+
+function historyAction(itemsLen: number, page: number, pageCount: number): 'stop' | 'truncate' | 'next' {
+    if (historyShouldStop(itemsLen, page, pageCount)) return 'stop';
+    if (page === TRAKT_HISTORY_MAX_PAGES) return 'truncate';
+    return 'next';
+}
+
+async function loadHistoryType(fetchImpl: FetchLike, baseUrl: string, headers: Record<string, string>, type: 'shows' | 'movies', events: CalEvent[], onProgress?: (p: SyncProgress) => void, onTruncate?: (info: {type: 'shows' | 'movies'; page: number}) => void): Promise<void> {
+    for (let page = 1; page <= TRAKT_HISTORY_MAX_PAGES; page++) {
+        onProgress?.({phase: 'fetch', done: page - 1, label: `history ${type} page ${page}`});
+        const batch = await fetchHistoryBatch(fetchImpl, baseUrl, headers, type, page);
+        appendHistory(batch.items, events);
+        onProgress?.({phase: 'fetch', done: page, total: Number.isFinite(batch.pageCount) && batch.pageCount > 0 ? batch.pageCount : undefined, label: `history ${type} page ${page}`});
+        const action = historyAction(batch.items.length, page, batch.pageCount);
+        if (action === 'stop') break;
+        if (action === 'truncate') {
+            onTruncate?.({type, page});
+            break;
+        }
+    }
+}
+
+async function loadHistoryEvents(
+    fetchImpl: FetchLike,
+    baseUrl: string,
+    headers: Record<string, string>,
+    events: CalEvent[],
+    onProgress?: (progress: SyncProgress) => void,
+    onTruncate?: (info: {type: 'shows' | 'movies'; page: number}) => void,
+): Promise<void> {
+    for (const type of ['shows', 'movies'] as const) {
+        await loadHistoryType(fetchImpl, baseUrl, headers, type, events, onProgress, onTruncate);
+    }
 }
 
 export async function fetchTraktEvents({
@@ -323,80 +439,8 @@ export async function fetchTraktEvents({
 }): Promise<CalEvent[]> {
     const headers = traktHeaders(clientId, accessToken);
     const events: CalEvent[] = [];
-    let processed = 0;
-
-    if (includeCalendar) {
-        const from = now - DEFAULT_CALENDAR_PAST_DAYS * DAY_MS;
-        const to = now + DEFAULT_CALENDAR_FUTURE_DAYS * DAY_MS;
-        const windows = calendarWindows(from, to);
-        const total = windows.length * 2;
-        for (const window of windows) {
-            onProgress?.({
-                phase: 'fetch',
-                done: processed,
-                total,
-                label: `calendar ${window.start}`,
-            });
-            const shows = await traktGet(
-                fetchImpl,
-                joinUrl(baseUrl, calendarShowsPath(window.start, window.days)),
-                headers,
-            );
-            for (const item of asArray(shows.json) ?? []) {
-                const event = mapCalendarShow(item);
-                if (event) events.push(event);
-            }
-            processed++;
-            const movies = await traktGet(
-                fetchImpl,
-                joinUrl(baseUrl, calendarMoviesPath(window.start, window.days)),
-                headers,
-            );
-            for (const item of asArray(movies.json) ?? []) {
-                const event = mapCalendarMovie(item);
-                if (event) events.push(event);
-            }
-            processed++;
-            onProgress?.({phase: 'fetch', done: processed, total, label: `calendar ${window.start}`});
-        }
-    }
-
-    if (includeHistory) {
-        for (const type of ['shows', 'movies'] as const) {
-            for (let page = 1; page <= TRAKT_HISTORY_MAX_PAGES; page++) {
-                onProgress?.({
-                    phase: 'fetch',
-                    done: page - 1,
-                    label: `history ${type} page ${page}`,
-                });
-                const res = await traktGet(
-                    fetchImpl,
-                    joinUrl(baseUrl, historyPath(type, page, TRAKT_HISTORY_PAGE_SIZE)),
-                    headers,
-                );
-                const items = asArray(res.json) ?? [];
-                for (const item of items) {
-                    const event = mapHistoryItem(item);
-                    if (event) events.push(event);
-                }
-                const pageCount = Number(res.headers.get('x-pagination-page-count'));
-                onProgress?.({
-                    phase: 'fetch',
-                    done: page,
-                    total: Number.isFinite(pageCount) && pageCount > 0 ? pageCount : undefined,
-                    label: `history ${type} page ${page}`,
-                });
-                if (items.length === 0) break;
-                if (Number.isFinite(pageCount) && page >= pageCount) break;
-                if (items.length < TRAKT_HISTORY_PAGE_SIZE) break;
-                if (page === TRAKT_HISTORY_MAX_PAGES) {
-                    onTruncate?.({type, page});
-                    break;
-                }
-            }
-        }
-    }
-
+    if (includeCalendar) await loadCalendarEvents(fetchImpl, baseUrl, headers, now, events, onProgress);
+    if (includeHistory) await loadHistoryEvents(fetchImpl, baseUrl, headers, events, onProgress, onTruncate);
     onProgress?.({phase: 'convert', done: events.length, total: events.length});
     return events;
 }

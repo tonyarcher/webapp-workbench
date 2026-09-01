@@ -1,67 +1,38 @@
 import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
 import {createRef, ref, type Ref} from 'lit/directives/ref.js';
-import {elementScroll, observeElementOffset, observeElementRect, Virtualizer} from '@tanstack/virtual-core';
+import {Virtualizer} from '@tanstack/virtual-core';
 import {libraryKey, queryClient, QueryController} from '../../query';
-import {
-    markAllRead,
-    markArticleRead,
-    markReadBefore,
-    markShownRead,
-    refreshFeed,
-    refreshFolder,
-    syncAllFeeds,
-    toggleStar
-} from '../../mutations';
-import {getLibrary, fetchArticlesPage} from '../../services/api';
-import {safeHttpUrl} from '../../services/parser';
-import {capItems, feedWindow, perFeedLimit} from '../../services/pagination';
+import {getLibrary} from '../../services/api';
+import {markBeforeAction, markShownReadAction, openArticleAction, toggleStarAction} from './article-list-actions';
+import {refreshFeed, refreshFolder, syncAllFeeds} from '../../mutations';
 import type {Article, ArticleSort, Feed, Folder, ListViewType, View} from '../../types';
-import {domainOf, formatDate, interleaveArticles} from '../../util';
 import type {MenuAnchor} from '../feed-menu/feed-menu';
 import '../advanced-menu/advanced-menu';
 import '../lazy-img/lazy-img';
 import styles from './article-list.css?inline';
+import {cardRowTemplate, detailRowTemplate, headlineRowTemplate} from './article-list-render';
+import {fetchFolderPage, fetchSinglePage, fetchFeedSetWindow, getActiveFeeds, nextWindow} from './article-list-paging';
 
 interface Library {
     folders: Folder[];
     feeds: Feed[];
 }
 
-const DEFAULT_PAGE_SIZE = 50;
-const PAGE_SIZES = [20, 50, 100, 500] as const;
-
-function clampPageSize(n: unknown): number {
-    return typeof n === 'number' && (PAGE_SIZES as readonly number[]).includes(n)
-        ? n
-        : DEFAULT_PAGE_SIZE;
-}
-const VIEW_SETTINGS_KEY = 'rss-reader:view-settings';
-const CARD_MIN_WIDTH = 240;
-// 16:9 media (168px at the 300px column cap) + text block. Must match
-// .grid-card / .grid-card-img / .row.cards gap in article-list.css.
-const CARD_HEIGHT = 420;
-const CARD_ROW_GAP = 32;
-const CARD_ROW_HEIGHT = CARD_HEIGHT + CARD_ROW_GAP;
-
-interface ViewSettings {
-    listView: ListViewType;
-    sort: ArticleSort;
-    pageSize: number;
-    maxCardCols: number;
-    unreadOnly: boolean;
-}
-
-function readViewSettings(): Record<string, ViewSettings> {
-    try {
-        const raw = localStorage.getItem(VIEW_SETTINGS_KEY);
-        if (!raw) return {};
-        const parsed = JSON.parse(raw) as Record<string, ViewSettings>;
-        return typeof parsed === 'object' && parsed ? parsed : {};
-    } catch {
-        return {};
-    }
-}
+import {
+    CARD_MIN_WIDTH,
+    clampPageSize,
+    DEFAULT_PAGE_SIZE,
+    feedTitleOf,
+    folderFeedsOf,
+    readViewSettings,
+    scopeLabelOf,
+    viewKeyOf,
+    viewRefreshKeyOf,
+    viewTitleOf,
+    VIEW_SETTINGS_KEY,
+    virtualizerOptionsFor,
+} from './article-list-helpers';
 
 @customElement('article-list')
 export class ArticleList extends LitElement {
@@ -223,149 +194,81 @@ export class ArticleList extends LitElement {
     override render() {
         const virtualItems = this.virtualizer?.getVirtualItems() ?? [];
         const showFeed = this.view.kind !== 'feed';
+        return html`
+      ${this.renderToolbar()}
+      ${this.renderAdvancedMenu()}
+      ${this.renderScroll(virtualItems, showFeed)}
+    `;
+    }
 
+    private renderToolbar() {
         return html`
       <div class="toolbar">
         <h2>${this.viewTitle()}</h2>
         <div class="actions">
-            <label class="sort">
-              <select
-                .value=${this.sort}
-                @change=${(e: Event) => {
-                    this.sort = (e.target as HTMLSelectElement).value as ArticleSort;
-                    this.saveViewSettings();
-                }}
-              >
-                <option value="hot">Hot</option>
-                <option value="newest">Newest</option>
-                <option value="oldest">Oldest</option>
-              </select>
-            </label>
-            <label class="view-mode">
-              <select
-                .value=${this.listView}
-                @change=${(e: Event) => {
-                    this.listView = (e.target as HTMLSelectElement).value as ListViewType;
-                    this.saveViewSettings();
-                }}
-              >
-                <option value="detailed">Detailed List</option>
-                <option value="headline">Headline View</option>
-                <option value="cards">Cards</option>
-              </select>
-            </label>
-            ${this.listView === 'cards'
-            ? html`
-                  <label class="view-mode">
-                    <select
-                      .value=${this.maxCardCols}
-                      @change=${(e: Event) => {
-                          this.maxCardCols = Number((e.target as HTMLSelectElement).value);
-                          this.saveViewSettings();
-                          this.updateCols();
-                      }}
-                      title="Maximum card columns"
-                    >
-                      <option value="2">2 cols</option>
-                      <option value="3">3 cols</option>
-                      <option value="4">4 cols</option>
-                      <option value="5">5 cols</option>
-                      <option value="6">6 cols</option>
-                    </select>
-                  </label>
-                `
-            : ''}
-            <label class="page-size">
-              <select
-                .value=${this.pageSize}
-                @change=${(e: Event) => {
-                    this.pageSize = Number((e.target as HTMLSelectElement).value);
-                    this.saveViewSettings();
-                }}
-                title="Articles shown at a time"
-              >
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-                <option value="500">500</option>
-              </select>
-            </label>
-            <button class="btn" @click=${this.onMarkShownRead}>Mark shown as read</button>
-            <button class="btn" @click=${this.onToggleAdvanced}>Advanced</button>
-            <button class="btn" @click=${this.onRefresh}>${this.refreshing ? 'Refreshing…' : 'Refresh'}</button>
+          ${this.renderSortSelect()}${this.renderViewSelect()}${this.renderCardColsSelect()}${this.renderPageSizeSelect()}
+          <button class="btn" @click=${this.onMarkShownRead}>Mark shown as read</button>
+          <button class="btn" @click=${this.onToggleAdvanced}>Advanced</button>
+          <button class="btn" @click=${this.onRefresh}>${this.refreshing ? 'Refreshing…' : 'Refresh'}</button>
         </div>
       </div>
+    `;
+    }
 
-      <advanced-menu
-        .open=${this.advancedOpen}
-        .anchor=${this.advancedAnchor}
-        .unreadOnly=${this.unreadOnly}
-        .scopeLabel=${this.scopeLabel()}
-        @unread-change=${this.onAdvancedUnread}
-        @mark-before=${this.onMarkBefore}
-        @close=${() => (this.advancedOpen = false)}
-      ></advanced-menu>
+    private renderSortSelect() {
+        return html`<label class="sort"><select .value=${this.sort} @change=${(e: Event) => { this.sort = (e.target as HTMLSelectElement).value as ArticleSort; this.saveViewSettings(); }}><option value="hot">Hot</option><option value="newest">Newest</option><option value="oldest">Oldest</option></select></label>`;
+    }
 
+    private renderViewSelect() {
+        return html`<label class="view-mode"><select .value=${this.listView} @change=${(e: Event) => { this.listView = (e.target as HTMLSelectElement).value as ListViewType; this.saveViewSettings(); }}><option value="detailed">Detailed List</option><option value="headline">Headline View</option><option value="cards">Cards</option></select></label>`;
+    }
+
+    private renderCardColsSelect() {
+        if (this.listView !== 'cards') return html``;
+        return html`<label class="view-mode"><select .value=${this.maxCardCols} @change=${(e: Event) => { this.maxCardCols = Number((e.target as HTMLSelectElement).value); this.saveViewSettings(); this.updateCols(); }} title="Maximum card columns"><option value="2">2 cols</option><option value="3">3 cols</option><option value="4">4 cols</option><option value="5">5 cols</option><option value="6">6 cols</option></select></label>`;
+    }
+
+    private renderPageSizeSelect() {
+        return html`<label class="page-size"><select .value=${this.pageSize} @change=${(e: Event) => { this.pageSize = Number((e.target as HTMLSelectElement).value); this.saveViewSettings(); }} title="Articles shown at a time"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option></select></label>`;
+    }
+
+    private renderAdvancedMenu() {
+        return html`<advanced-menu .open=${this.advancedOpen} .anchor=${this.advancedAnchor} .unreadOnly=${this.unreadOnly} .scopeLabel=${this.scopeLabel()} @unread-change=${this.onAdvancedUnread} @mark-before=${this.onMarkBefore} @close=${() => (this.advancedOpen = false)}></advanced-menu>`;
+    }
+
+    private renderScroll(virtualItems: ReturnType<Virtualizer<HTMLDivElement, HTMLDivElement>['getVirtualItems']>, showFeed: boolean) {
+        return html`
       <div class="scroll" style="--cols: ${this.cols}" ${ref(this.scrollElRef)} @scroll=${this.onScroll}>
-        <div class="viewport" style="height: ${this.virtualizer?.getTotalSize() ?? 0}px;">
-          ${this.listView === 'cards'
-          ? virtualItems.map((vi) => {
-                const start = vi.index * this.cols;
-                const rowItems = this.items.slice(start, start + this.cols);
-                if (!rowItems.length) return html``;
-                return html`
-                  <div
-                    class="row cards"
-                    data-row=${vi.index}
-                    style="transform: translateY(${vi.start}px)"
-                    ${ref((el) => this.virtualizer?.measureElement(el as HTMLDivElement))}
-                  >
-                    ${rowItems.map((article, c) => this.renderCardRow(article, showFeed, start + c))}
-                  </div>
-                `;
-            })
-          : virtualItems.map((vi) => {
-                const article = this.items[vi.index];
-                if (!article) return html``;
-                return html`
-                  <div
-                    class="row ${this.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''} ${vi.index === this.cursor ? 'selected' : ''}"
-                    data-index=${vi.index}
-                    style="transform: translateY(${vi.start}px)"
-                    role="button"
-                    tabindex="0"
-                    aria-label="Open ${article.title}"
-                    @click=${() => this.openArticle(article)}
-                    @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}
-                    ${ref((el) => this.virtualizer?.measureElement(el as HTMLDivElement))}
-                  >
-                    ${this.listView === 'headline'
-                    ? this.renderHeadlineRow(article, showFeed)
-                    : this.renderRow(article, showFeed)}
-                  </div>
-                `;
-            })}
-        </div>
-        ${this.loading ? html`<div class="end">Loading…</div>` : ''}
-        ${!this.loading && this.items.length
-            ? html`
-                <div class="mark-end">
-                  <button
-                    class="mark-end-btn"
-                    ?disabled=${!this.items.some((a) => a.read === 0)}
-                    @click=${this.onMarkShownRead}
-                  >Mark shown as read</button>
-                </div>`
-            : ''}
-        ${!this.loading && !this.items.length
-            ? html`<div class="empty">${this.unreadOnly || this.hideRead
-                ? 'Nothing unread here — "Unread only" is filtering this view.'
-                : 'No articles yet. Hit Refresh to sync this view.'}</div>`
-            : ''}
-        ${this.library.error && this.view.kind !== 'feed'
-            ? html`<div class="empty">Could not load your feeds. <button class="btn" @click=${this.onRetryLibrary}>Retry</button></div>`
-            : ''}
+        <div class="viewport" style="height: ${this.virtualizer?.getTotalSize() ?? 0}px;">${this.renderVirtualRows(virtualItems, showFeed)}</div>
+        ${this.renderScrollFooter()}
       </div>
+    `;
+    }
+
+    private renderVirtualRows(virtualItems: ReturnType<Virtualizer<HTMLDivElement, HTMLDivElement>['getVirtualItems']>, showFeed: boolean) {
+        if (this.listView === 'cards') return virtualItems.map((vi) => this.renderCardVirtualRow(vi, showFeed));
+        return virtualItems.map((vi) => this.renderListVirtualRow(vi, showFeed));
+    }
+
+    private renderCardVirtualRow(vi: { index: number; start: number }, showFeed: boolean) {
+        const start = vi.index * this.cols;
+        const rowItems = this.items.slice(start, start + this.cols);
+        if (!rowItems.length) return html``;
+        return html`<div class="row cards" data-row=${vi.index} style="transform: translateY(${vi.start}px)" ${ref((el) => this.virtualizer?.measureElement(el as HTMLDivElement))}>${rowItems.map((article, c) => this.renderCardRow(article, showFeed, start + c))}</div>`;
+    }
+
+    private renderListVirtualRow(vi: { index: number; start: number }, showFeed: boolean) {
+        const article = this.items[vi.index];
+        if (!article) return html``;
+        return html`<div class="row ${this.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''} ${vi.index === this.cursor ? 'selected' : ''}" data-index=${vi.index} style="transform: translateY(${vi.start}px)" role="button" tabindex="0" aria-label="Open ${article.title}" @click=${() => this.openArticle(article)} @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)} ${ref((el) => this.virtualizer?.measureElement(el as HTMLDivElement))}>${this.listView === 'headline' ? this.renderHeadlineRow(article, showFeed) : this.renderRow(article, showFeed)}</div>`;
+    }
+
+    private renderScrollFooter() {
+        return html`
+      ${this.loading ? html`<div class="end">Loading…</div>` : ''}
+      ${!this.loading && this.items.length ? html`<div class="mark-end"><button class="mark-end-btn" ?disabled=${!this.items.some((a) => a.read === 0)} @click=${this.onMarkShownRead}>Mark shown as read</button></div>` : ''}
+      ${!this.loading && !this.items.length ? html`<div class="empty">${this.unreadOnly || this.hideRead ? 'Nothing unread here — "Unread only" is filtering this view.' : 'No articles yet. Hit Refresh to sync this view.'}</div>` : ''}
+      ${this.library.error && this.view.kind !== 'feed' ? html`<div class="empty">Could not load your feeds. <button class="btn" @click=${this.onRetryLibrary}>Retry</button></div>` : ''}
     `;
     }
 
@@ -409,50 +312,11 @@ export class ArticleList extends LitElement {
         void this.reset();
     };
 
-    private virtualizerOptions() {
-        const cards = this.listView === 'cards';
-        return {
-            count: cards
-                ? Math.max(1, Math.ceil(this.items.length / Math.max(1, this.cols)))
-                : this.items.length,
-            getScrollElement: () => this.scrollElRef.value ?? null,
-            estimateSize: () =>
-                cards ? CARD_ROW_HEIGHT : this.listView === 'headline' ? 46 : 82,
-            getItemKey: (index: number) =>
-                cards ? `row:${index}` : (this.items[index]?.id ?? index),
-            overscan: 8,
-            scrollEndThreshold: 300,
-            scrollToFn: elementScroll,
-            observeElementRect,
-            observeElementOffset,
-            measureElement: (
-                element: HTMLDivElement,
-                entry: ResizeObserverEntry | undefined,
-                instance: Virtualizer<HTMLDivElement, HTMLDivElement>,
-            ) => {
-                const box = entry?.borderBoxSize?.[0];
-                if (box && box.blockSize > 0) return Math.round(box.blockSize);
-                const height = element.offsetHeight;
-                if (height > 0) return height;
-                return instance.options.estimateSize(instance.indexFromElement(element));
-            },
-            onChange: () => this.requestUpdate(),
-        };
-    }
+    private virtualizerOptions() { return virtualizerOptionsFor(this as never); }
 
-    private folderFeeds(): Feed[] {
-        if (this.view.kind === 'folder') {
-            const id = this.view.id;
-            return this.library.data?.feeds.filter((f) => f.folderIds.includes(id)) ?? [];
-        }
-        return [];
-    }
+    private folderFeeds(): Feed[] { return folderFeedsOf(this.view, this.library.data); }
 
-    private viewKey(): string {
-        if (this.view.kind === 'feed') return `feed:${this.view.id}`;
-        if (this.view.kind === 'folder') return `folder:${this.view.id}`;
-        return 'all';
-    }
+    private viewKey(): string { return viewKeyOf(this.view); }
 
     private loadViewSettings() {
         const saved = readViewSettings()[this.viewKey()];
@@ -553,189 +417,68 @@ export class ArticleList extends LitElement {
             await this.loadFeedSetPage(this.library.data?.feeds ?? [], gen);
             return;
         }
-        const cursor = this.cursors.get(feedId ?? 'all');
-        const scope = feedId ? `feed:${feedId}` : undefined;
-        const res = await fetchArticlesPage({
-            scope,
-            unreadOnly: this.unreadOnly || this.hideRead,
-            sort: this.sort,
-            limit: this.pageSize,
-            cursor,
-        });
+        const res = await fetchSinglePage(feedId, this.cursors, this.unreadOnly, this.hideRead, this.sort, this.pageSize, this.items);
         if (gen !== this.gen) return;
-        this.hasMoreSingle = res.nextCursor !== undefined;
-        this.items = capItems(mergeSorted(this.items, res.items, this.sort), this.pageSize); // shown-at-a-time cap
-        if (res.nextCursor) {
-            this.cursors.set(feedId ?? 'all', res.nextCursor);
-        }
+        this.hasMoreSingle = res.hasMore;
+        this.items = res.items;
+        if (res.nextCursor) this.cursors.set(feedId ?? 'all', res.nextCursor);
     }
 
     private async loadFolderPage(gen: number) {
         if (this.view.kind !== 'folder') return;
-        // One scoped query — do not window per-feed. A folder like Low has
-        // 50 feeds and 12 unread on 3 of them; a pageSize-sized window of
-        // the added_at-ordered list can miss those 3, return 0 items, and
-        // then never scroll (empty list) so the rest of the folder is stuck.
         const key = `folder:${this.view.id}`;
-        const cursor = this.cursors.get(key);
-        const res = await fetchArticlesPage({
-            scope: key,
-            unreadOnly: this.unreadOnly || this.hideRead,
-            sort: this.sort,
-            limit: this.pageSize,
-            cursor,
-        });
+        const res = await fetchFolderPage(key, this.cursors, this.unreadOnly, this.hideRead, this.sort, this.pageSize, this.items);
         if (gen !== this.gen) return;
-        this.hasMoreSingle = res.nextCursor !== undefined;
-        this.items = capItems(mergeSorted(this.items, res.items, this.sort), this.pageSize);
-        if (res.nextCursor) {
-            this.cursors.set(key, res.nextCursor);
-        }
+        this.hasMoreSingle = res.hasMore;
+        this.items = res.items;
+        if (res.nextCursor) this.cursors.set(key, res.nextCursor);
     }
 
-    /**
-     * Load a page across a set of feeds (All view with Hot sort). Each page
-     * covers a bounded rotating window of at most `pageSize` feeds (so ~2300
-     * feeds touch a handful of feeds per fetch, not all of them), with bounded
-     * concurrency. Each feed contributes a share of the page (`perFeedLimit`)
-     * so a small set still fills the page; hot sort interleaves the feeds for
-     * diversity. When a feed is empty or exhausted, one backfill pass tops the
-     * page up from feeds that still have items. Empty windows are skipped so
-     * an all-read slice cannot trap the list with nothing to scroll.
-     *
-     * Accepted tradeoff: in newest/oldest folder views a later page can insert
-     * items above the current viewport (window rotation), which can shift the
-     * scroll position.
-     */
     private async loadFeedSetPage(feeds: Feed[], gen: number) {
-        // Skip empty windows (all-read feeds in this slice) instead of
-        // rendering an empty list that cannot scroll to the next window.
-        // Terminates: each empty window marks its feeds exhausted.
         while (true) {
-            const activeFeeds = feeds.filter((f) => this.feedHasMore.get(f.id) !== false);
-            if (!activeFeeds.length) {
-                return;
-            }
-
-            const window = feedWindow(activeFeeds, this.feedWindowOffset, this.pageSize);
-            this.feedWindowOffset += window.length;
-
-            const pages = new Map<string, Article[]>();
-            const lastHasMore = new Map<string, boolean>();
-
-            const fetchFeeds = async (targets: Feed[], perFeed: number) => {
-                for (let i = 0; i < targets.length; i += 12) {
-                    if (gen !== this.gen) return;
-                    await Promise.all(
-                        targets.slice(i, i + 12).map(async (feed) => {
-                            const accumulated = pages.get(feed.id) ?? [];
-                            const res = await fetchArticlesPage({
-                                scope: `feed:${feed.id}`,
-                                unreadOnly: this.unreadOnly || this.hideRead,
-                                sort: this.sort,
-                                limit: perFeed,
-                                cursor: this.cursors.get(feed.id),
-                            });
-                            pages.set(feed.id, [...accumulated, ...res.items]);
-                            lastHasMore.set(feed.id, res.nextCursor !== undefined);
-                            if (res.nextCursor) {
-                                this.cursors.set(feed.id, res.nextCursor);
-                            }
-                        }),
-                    );
-                }
-            };
-
-            const existingIds = new Set(this.items.map((a) => a.id));
-            const pick = (): Article[] => {
-                const picked =
-                    this.sort === 'hot'
-                        ? interleaveArticles(window.map((f) => pages.get(f.id) ?? []), this.pageSize)
-                        : mergeSorted([], window.flatMap((f) => pages.get(f.id) ?? []), this.sort).slice(0, this.pageSize);
-                return picked.filter((a) => !existingIds.has(a.id));
-            };
-
-            await fetchFeeds(window, perFeedLimit(this.pageSize, window.length));
-            if (gen !== this.gen) return;
-
-            let kept = pick();
-            if (kept.length < this.pageSize) {
-                const more = window.filter((f) => lastHasMore.get(f.id) === true);
-                if (more.length) {
-                    await fetchFeeds(more, perFeedLimit(this.pageSize - kept.length, more.length));
-                    if (gen !== this.gen) return;
-                    kept = pick();
-                }
-            }
-
-            for (const feed of window) {
-                this.feedHasMore.set(feed.id, lastHasMore.get(feed.id) ?? false);
-            }
-
-            if (kept.length > 0) {
-                this.items = capItems(mergeSorted(this.items, kept, this.sort), this.pageSize);
+            const active = getActiveFeeds(feeds, this.feedHasMore);
+            if (!active.length) return;
+            const windowFeeds = nextWindow(active, this.feedWindowOffset, this.pageSize);
+            this.feedWindowOffset += windowFeeds.length;
+            const result = await fetchFeedSetWindow(windowFeeds, this.cursors, this.feedHasMore, this.unreadOnly, this.hideRead, this.sort, this.pageSize, this.items, gen, () => this.gen);
+            if (!result || gen !== this.gen) return;
+            for (const [id, hasMore] of result.hasMoreEntries) this.feedHasMore.set(id, hasMore);
+            if (result.kept.length) {
+                this.items = result.items;
                 return;
             }
         }
     }
 
-    private viewTitle(): string {
-        const lib = this.library.data;
-        if (!lib) return 'Articles';
-        if (this.view.kind === 'feed') {
-            const id = this.view.id;
-            return lib.feeds.find((f) => f.id === id)?.title ?? 'Feed';
-        }
-        if (this.view.kind === 'folder') {
-            const id = this.view.id;
-            return lib.folders.find((f) => f.id === id)?.title ?? 'Folder';
-        }
-        return 'All';
+    private viewTitle(): string { return viewTitleOf(this.view, this.library.data); }
+
+    private feedTitle(feedId: string): string | undefined { return feedTitleOf(feedId, this.library.data); }
+
+    private async openArticle(article: Article) { await openArticleAction(this as never, article); }
+
+    private isKeyHandlingIgnored(e: KeyboardEvent): boolean {
+        if (!this.active) return true;
+        if (e.key !== 'j' && e.key !== 'k') return true;
+        const tag = (e.target as HTMLElement | null)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+        if (document.querySelector('dialog[open]')) return true;
+        if (!this.items.length) return true;
+        return false;
     }
 
-    private feedTitle(feedId: string): string | undefined {
-        return this.library.data?.feeds.find((f) => f.id === feedId)?.title;
-    }
-
-    private async openArticle(article: Article) {
-        if (article.read === 0) {
-            this.items = this.items.map((a) => (a.id === article.id ? {...a, read: 1} : a));
-            await markArticleRead(article.id);
-            queryClient.invalidateQueries({queryKey: libraryKey});
-        }
-        const index = this.items.findIndex((a) => a.id === article.id);
-        this.cursor = index;
-        this.dispatchEvent(
-            new CustomEvent('open-article', {
-                detail: {article, index, items: this.items},
-                bubbles: true,
-                composed: true,
-            }),
-        );
+    private nextCursorIndex(key: string): number {
+        return Math.max(0, Math.min(this.cursor + (key === 'j' ? 1 : -1), this.items.length - 1));
     }
 
     private onKeyDown = (e: KeyboardEvent) => {
-        if (!this.active) return;
-        const key = e.key;
-        if (key !== 'j' && key !== 'k') return;
-        const target = e.target as HTMLElement | null;
-        const tag = target?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-        if (document.querySelector('dialog[open]')) return;
-        if (!this.items.length) return;
+        if (this.isKeyHandlingIgnored(e)) return;
         e.preventDefault();
-        const next = Math.max(0, Math.min(this.cursor + (key === 'j' ? 1 : -1), this.items.length - 1));
+        const next = this.nextCursorIndex(e.key);
         this.cursor = next;
         void this.openArticle(this.items[next]);
     };
 
-    private async onMarkShownRead() {
-        const ids = this.items.filter((a) => a.read === 0).map((a) => a.id);
-        if (!ids.length) return;
-        await markShownRead(ids);
-        this.hideRead = true;
-        await this.reset();
-    }
+    private async onMarkShownRead() { await markShownReadAction(this as never); }
 
     private onToggleAdvanced(e: Event) {
         e.stopPropagation();
@@ -749,47 +492,14 @@ export class ArticleList extends LitElement {
         this.saveViewSettings();
     }
 
-    private scopeLabel(): string {
-        const lib = this.library.data;
-        const view = this.view;
-        if (!lib) return '';
-        if (view.kind === 'feed') {
-            return lib.feeds.find((f) => f.id === view.id)?.title ?? 'Feed';
-        }
-        if (view.kind === 'folder') {
-            return lib.folders.find((f) => f.id === view.id)?.title ?? 'Folder';
-        }
-        return 'All feeds';
-    }
+    private scopeLabel(): string { return scopeLabelOf(this.view, this.library.data); }
 
     private async onMarkBefore(e: Event) {
         const cutoff = (e as CustomEvent<number | null>).detail;
-        if (cutoff === null) {
-            if (this.view.kind === 'feed') {
-                await markAllRead(this.view.id);
-            } else if (this.view.kind === 'folder') {
-                for (const feed of this.folderFeeds()) await markAllRead(feed.id);
-            } else {
-                await markAllRead();
-            }
-        } else {
-            const feedIds =
-                this.view.kind === 'feed'
-                    ? [this.view.id]
-                    : this.view.kind === 'folder'
-                        ? this.folderFeeds().map((f) => f.id)
-                        : undefined;
-            await markReadBefore(feedIds, cutoff);
-        }
-        this.hideRead = true;
-        await this.reset();
+        await markBeforeAction(this as never, cutoff);
     }
 
-    private viewRefreshKey(): string {
-        if (this.view.kind === 'feed') return `feed:${this.view.id}`;
-        if (this.view.kind === 'folder') return `folder:${this.view.id}`;
-        return 'all';
-    }
+    private viewRefreshKey(): string { return viewRefreshKeyOf(this.view); }
 
     private async onRefresh() {
         // Elevator button for the current view only. A different folder/feed
@@ -836,129 +546,20 @@ export class ArticleList extends LitElement {
 
     private async onStar(e: Event, article: Article) {
         e.stopPropagation();
-        const starred = !article.starred;
-        this.items = this.items.map((a) => (a.id === article.id ? {...a, starred} : a));
-        await toggleStar(article.id, starred);
+        await toggleStarAction(this as never, article);
     }
 
     private renderRow(article: Article, showFeed: boolean) {
-        const feedTitle = this.feedTitle(article.feedId);
-        const popular = article.popularity >= 4;
-        const link = safeHttpUrl(article.link);
-        const image = safeHttpUrl(article.image);
-        return html`
-      <div class="detail-body">
-        ${image
-        ? html`<img class="detail-img" src=${image} alt="" loading="lazy" />`
-        : ''}
-        <div class="detail-text">
-          <div class="row-top">
-            ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
-            ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
-            ${link
-            ? html`<a
-                    class="title title-link"
-                    href=${link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    @click=${(e: Event) => e.stopPropagation()}
-                  >${article.title}</a>`
-            : html`<span class="title">${article.title}</span>`}
-            <button class="star" title="Star" @click=${(e: Event) => this.onStar(e, article)}>
-              ${article.starred ? '★' : '☆'}
-            </button>
-          </div>
-          <div class="meta">
-            ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-            <span>${domainOf(article.link)}</span>
-            <span>${formatDate(article.published)}</span>
-            ${article.author ? html`<span>by ${article.author}</span>` : ''}
-          </div>
-          ${article.summary ? html`<div class="summary">${article.summary}</div>` : ''}
-        </div>
-      </div>
-    `;
+        return detailRowTemplate(article, showFeed, this.feedTitle(article.feedId), (e, a) => this.onStar(e, a));
     }
 
     private renderHeadlineRow(article: Article, showFeed: boolean) {
-        const feedTitle = this.feedTitle(article.feedId);
-        const popular = article.popularity >= 4;
-        const link = safeHttpUrl(article.link);
-        return html`
-      <div class="row-top">
-        ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
-        ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
-        ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-        ${link
-            ? html`<a
-                    class="title title-link"
-                    href=${link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    @click=${(e: Event) => e.stopPropagation()}
-                  >${article.title}</a>`
-            : html`<span class="title">${article.title}</span>`}
-        <span class="headline-date">${formatDate(article.published)}</span>
-        <button class="star" title="Star" @click=${(e: Event) => this.onStar(e, article)}>
-          ${article.starred ? '★' : '☆'}
-        </button>
-      </div>
-    `;
+        return headlineRowTemplate(article, showFeed, this.feedTitle(article.feedId), (e, a) => this.onStar(e, a));
     }
 
     private renderCardRow(article: Article, showFeed: boolean, index: number) {
-        const feedTitle = this.feedTitle(article.feedId);
-        const link = safeHttpUrl(article.link);
-        return html`
-      <div
-        class="grid-card ${article.read ? 'read' : ''} ${index === this.cursor ? 'selected' : ''}"
-        role="button"
-        tabindex="0"
-        aria-label="Open ${article.title}"
-        @click=${() => this.openArticle(article)}
-        @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}
-      >
-        ${article.image
-        ? html`<lazy-img class="grid-card-img" .src=${article.image}></lazy-img>`
-        : html`<div class="grid-card-img grid-card-img-empty"></div>`}
-        <div class="grid-card-body">
-          <div class="grid-card-title-row">
-            ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
-            ${link
-            ? html`<a
-                    class="grid-card-title"
-                    href=${link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    @click=${(e: Event) => e.stopPropagation()}
-                  >${article.title}</a>`
-            : html`<span class="grid-card-title">${article.title}</span>`}
-            <button class="star" title="Star" @click=${(e: Event) => this.onStar(e, article)}>
-              ${article.starred ? '★' : '☆'}
-            </button>
-          </div>
-          ${article.summary ? html`<div class="grid-card-summary">${article.summary}</div>` : ''}
-          <div class="meta">
-            ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-            <span>${domainOf(article.link)}</span>
-            <span>${formatDate(article.published)}</span>
-          </div>
-        </div>
-      </div>
-    `;
+        return cardRowTemplate(article, showFeed, this.feedTitle(article.feedId), index === this.cursor, (e, a) => this.onStar(e, a), (a) => this.openArticle(a), (e, a) => this.onRowKey(e, a));
     }
-}
-
-function mergeSorted(current: Article[], incoming: Article[], sort: ArticleSort): Article[] {
-    const seen = new Map(current.map((a) => [a.id, a]));
-    for (const article of incoming) seen.set(article.id, article);
-    const cmp =
-        sort === 'hot'
-            ? (a: Article, b: Article) => b.hot - a.hot || a.id.localeCompare(b.id)
-            : sort === 'oldest'
-                ? (a: Article, b: Article) => a.published - b.published || a.id.localeCompare(b.id)
-                : (a: Article, b: Article) => b.published - a.published || a.id.localeCompare(b.id);
-    return Array.from(seen.values()).sort(cmp);
 }
 
 declare global {

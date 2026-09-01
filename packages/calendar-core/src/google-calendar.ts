@@ -76,46 +76,54 @@ export async function googleInsertEvent(
     return 'fail';
 }
 
+async function safeJson(res: {json(): Promise<unknown>}): Promise<unknown> {
+    try {
+        return await res.json();
+    } catch {
+        return undefined;
+    }
+}
+
+function findCalendarId(items: unknown[], summary: string): string | undefined {
+    for (const item of items) {
+        if (!isRecord(item)) continue;
+        if (asString(item.summary) !== summary) continue;
+        const id = asString(item.id);
+        if (id) return id;
+    }
+    return undefined;
+}
+
+async function searchExistingCalendar(fetchImpl: FetchLike, accessToken: string, summary: string, apiBase: string): Promise<string | undefined> {
+    const list = await fetchImpl(joinUrl(apiBase, calendarListPath()), {
+        method: 'GET',
+        headers: googleHeaders(accessToken),
+    });
+    if (!list.ok) return undefined;
+    const json = await safeJson(list);
+    const items = isRecord(json) ? asArray(json.items) ?? [] : [];
+    return findCalendarId(items, summary);
+}
+
+async function createCalendar(fetchImpl: FetchLike, accessToken: string, summary: string, apiBase: string): Promise<string> {
+    const created = await fetchImpl(joinUrl(apiBase, calendarsInsertPath()), {
+        method: 'POST',
+        headers: googleHeaders(accessToken),
+        body: JSON.stringify({summary}),
+    });
+    const createdJson = await safeJson(created);
+    const id = isRecord(createdJson) ? asString(createdJson.id) : undefined;
+    if (!created.ok || !id) throw new Error(`Google calendar create failed (${created.status})`);
+    return id;
+}
+
 export async function findOrCreateCalendar(
     fetchImpl: FetchLike,
     accessToken: string,
     summary = GOOGLE_CALENDAR_NAME,
     apiBase = GOOGLE_CALENDAR_API,
 ): Promise<string> {
-    const list = await fetchImpl(joinUrl(apiBase, calendarListPath()), {
-        method: 'GET',
-        headers: googleHeaders(accessToken),
-    });
-    if (list.ok) {
-        let json: unknown;
-        try {
-            json = await list.json();
-        } catch {
-            json = undefined;
-        }
-        const items = isRecord(json) ? asArray(json.items) ?? [] : [];
-        for (const item of items) {
-            if (!isRecord(item)) continue;
-            if (asString(item.summary) === summary) {
-                const id = asString(item.id);
-                if (id) return id;
-            }
-        }
-    }
-    const created = await fetchImpl(joinUrl(apiBase, calendarsInsertPath()), {
-        method: 'POST',
-        headers: googleHeaders(accessToken),
-        body: JSON.stringify({summary}),
-    });
-    let createdJson: unknown;
-    try {
-        createdJson = await created.json();
-    } catch {
-        createdJson = undefined;
-    }
-    const id = isRecord(createdJson) ? asString(createdJson.id) : undefined;
-    if (!created.ok || !id) {
-        throw new Error(`Google calendar create failed (${created.status})`);
-    }
-    return id;
+    const existing = await searchExistingCalendar(fetchImpl, accessToken, summary, apiBase);
+    if (existing) return existing;
+    return createCalendar(fetchImpl, accessToken, summary, apiBase);
 }

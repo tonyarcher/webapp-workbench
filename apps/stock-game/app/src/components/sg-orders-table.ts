@@ -1,4 +1,5 @@
 import { LitElement, html } from 'lit'
+import type { TemplateResult } from 'lit'
 import type { Order } from '@stock-game/shared'
 import { fmtDateTime, fmtNumber } from '../lib/format'
 import { tableStyles } from './shared-styles'
@@ -25,48 +26,49 @@ export class SgOrdersTable extends LitElement {
     )
   }
 
-  override render() {
-    if (this.orders.length === 0) {
-      return html`<p class="muted">No scheduled orders.</p>`
-    }
-    return html`
-      <table class="sg-table">
-        <thead>
-          <tr>
-            <th>Execute At</th>
-            <th>Symbol</th>
-            <th>Side</th>
-            <th class="num">Shares</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          ${this.orders.map(
-            (order) => html`
-              <tr>
-                <td>${fmtDateTime(order.executeAt)}</td>
-                <td>${order.symbol}</td>
-                <td class=${order.side === 'buy' ? 'positive' : 'negative'}>
-                  ${order.side}
-                </td>
-                <td class="num">${fmtNumber(order.qty)}</td>
-                <td>${order.status}</td>
-                <td>
-                  ${order.status === 'pending'
-                    ? html`
-                        <button ?disabled=${this.busy} @click=${() => this.onCancel(order.id)}>
-                          Cancel
-                        </button>
-                      `
-                    : ''}
-                </td>
-              </tr>
-            `,
-          )}
-        </tbody>
-      </table>
-    `
+  private renderEmpty(): TemplateResult {
+    return html`<p class="muted">No scheduled orders.</p>`
+  }
+
+  private renderCancel(order: Order): TemplateResult {
+    if (order.status !== 'pending') return html``
+    return html`<button ?disabled=${this.busy} @click=${() => this.onCancel(order.id)}>
+      Cancel
+    </button>`
+  }
+
+  private renderOrderRow(order: Order): TemplateResult {
+    return html`<tr>
+      <td>${fmtDateTime(order.executeAt)}</td>
+      <td>${order.symbol}</td>
+      <td class=${order.side === 'buy' ? 'positive' : 'negative'}>${order.side}</td>
+      <td class="num">${fmtNumber(order.qty)}</td>
+      <td>${order.status}</td>
+      <td>${this.renderCancel(order)}</td>
+    </tr>`
+  }
+
+  private renderTable(): TemplateResult {
+    return html`<table class="sg-table">
+      <thead>
+        <tr>
+          <th>Execute At</th>
+          <th>Symbol</th>
+          <th>Side</th>
+          <th class="num">Shares</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${this.orders.map((order) => this.renderOrderRow(order))}
+      </tbody>
+    </table>`
+  }
+
+  override render(): TemplateResult {
+    if (this.orders.length === 0) return this.renderEmpty()
+    return this.renderTable()
   }
 }
 

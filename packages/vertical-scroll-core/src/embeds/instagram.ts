@@ -14,40 +14,45 @@ function pathSegmentAfter(path: string, prefix: string): string | null {
     return rest.split('/')[0] || null
 }
 
-/**
- * Instagram reel/post shortcode from a page URL. Short links
- * (l.instagram.com, /share/…) have no code and return null.
- */
-export function instagramId(url: string): string | null {
-    if (!IG_HOST_RE.test(url)) return null
-    let parsed: URL
+function parseUrlSafe(url: string): URL | null {
     try {
-        parsed = new URL(url)
+        return new URL(url)
     } catch {
         return null
     }
-    const host = parsed.hostname.toLowerCase()
-    const isIg =
-        host === 'instagram.com' ||
-        host.endsWith('.instagram.com') ||
-        host === 'instagr.am' ||
-        host.endsWith('.instagr.am')
-    if (!isIg) return null
-    if (host === 'l.instagram.com' || host.endsWith('.l.instagram.com')) return null
+}
 
-    const path = parsed.pathname.replace(/\/+$/, '') || '/'
-    if (path.startsWith('/share/')) return null
+function isIgHost(host: string): boolean {
+    return host === 'instagram.com' || host.endsWith('.instagram.com') || host === 'instagr.am' || host.endsWith('.instagr.am')
+}
 
+function isIgShortHost(host: string): boolean {
+    return host === 'l.instagram.com' || host.endsWith('.l.instagram.com')
+}
+
+function codeFromPrefixed(path: string): string | null {
     for (const prefix of ['/reel/', '/reels/', '/p/']) {
         const code = isValidCode(pathSegmentAfter(path + '/', prefix))
         if (code) return code
     }
+    return null
+}
 
-    // /{user}/reel/{code} or /{user}/p/{code}
+function codeFromNested(path: string): string | null {
     const nested = path.match(/^\/[^/]+\/(reel|reels|p)\/([A-Za-z0-9_-]{5,64})(?:\/|$)/)
     if (nested) return isValidCode(nested[2])
-
     return null
+}
+
+export function instagramId(url: string): string | null {
+    if (!IG_HOST_RE.test(url)) return null
+    const parsed = parseUrlSafe(url)
+    if (!parsed) return null
+    const host = parsed.hostname.toLowerCase()
+    if (!isIgHost(host) || isIgShortHost(host)) return null
+    const path = parsed.pathname.replace(/\/+$/, '') || '/'
+    if (path.startsWith('/share/')) return null
+    return codeFromPrefixed(path) ?? codeFromNested(path)
 }
 
 export const INSTAGRAM: EmbedProvider = {

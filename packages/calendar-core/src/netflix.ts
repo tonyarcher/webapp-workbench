@@ -40,6 +40,43 @@ export function parseFlexibleDate(raw: string): {ms: number; hasTime: boolean} |
     return null;
 }
 
+function stepQuoted(text: string, i: number, cell: string): {cell: string; next: number; inQuotes: boolean} {
+    const c = text[i];
+    if (c === '"') {
+        if (text[i + 1] === '"') return {cell: cell + '"', next: i + 2, inQuotes: true};
+        return {cell, next: i + 1, inQuotes: false};
+    }
+    return {cell: cell + (c ?? ''), next: i + 1, inQuotes: true};
+}
+
+function stepUnquoted(
+    text: string,
+    i: number,
+    cell: string,
+    row: string[],
+    rows: string[][],
+): {cell: string; row: string[]; next: number; inQuotes: boolean} | null {
+    const c = text[i];
+    if (c === '"') return {cell, row, next: i + 1, inQuotes: true};
+    if (c === ',') {
+        row.push(cell);
+        return {cell: '', row, next: i + 1, inQuotes: false};
+    }
+    if (c === '\n' || c === '\r') {
+        const skip = c === '\r' && text[i + 1] === '\n' ? 1 : 0;
+        row.push(cell);
+        if (row.some((value) => value.length > 0)) rows.push(row);
+        return {cell: '', row: [], next: i + 1 + skip, inQuotes: false};
+    }
+    return null;
+}
+
+function finalizeCsv(rows: string[][], row: string[], cell: string): string[][] {
+    row.push(cell);
+    if (row.some((value) => value.length > 0)) rows.push(row);
+    return rows;
+}
+
 export function parseCsv(text: string): string[][] {
     const rows: string[][] = [];
     let row: string[] = [];
@@ -47,48 +84,25 @@ export function parseCsv(text: string): string[][] {
     let i = 0;
     let inQuotes = false;
     while (i < text.length) {
-        const c = text[i];
         if (inQuotes) {
-            if (c === '"') {
-                if (text[i + 1] === '"') {
-                    cell += '"';
-                    i += 2;
-                    continue;
-                }
-                inQuotes = false;
-                i++;
-                continue;
-            }
-            cell += c;
-            i++;
+            const res = stepQuoted(text, i, cell);
+            cell = res.cell;
+            i = res.next;
+            inQuotes = res.inQuotes;
             continue;
         }
-        if (c === '"') {
-            inQuotes = true;
-            i++;
+        const res = stepUnquoted(text, i, cell, row, rows);
+        if (res) {
+            cell = res.cell;
+            row = res.row;
+            i = res.next;
+            inQuotes = res.inQuotes;
             continue;
         }
-        if (c === ',') {
-            row.push(cell);
-            cell = '';
-            i++;
-            continue;
-        }
-        if (c === '\n' || c === '\r') {
-            if (c === '\r' && text[i + 1] === '\n') i++;
-            row.push(cell);
-            cell = '';
-            if (row.some((value) => value.length > 0)) rows.push(row);
-            row = [];
-            i++;
-            continue;
-        }
-        cell += c;
+        cell += text[i] ?? '';
         i++;
     }
-    row.push(cell);
-    if (row.some((value) => value.length > 0)) rows.push(row);
-    return rows;
+    return finalizeCsv(rows, row, cell);
 }
 
 function pickField(record: Record<string, unknown>, names: string[]): string | undefined {
@@ -163,48 +177,48 @@ function recordsFromJson(data: unknown): unknown[] | null {
     return null;
 }
 
-function parseCsvExport(text: string): NetflixParseResult {
-    const rows = parseCsv(text);
-    if (rows.length === 0) return {events: [], skipped: []};
+function resolveCsvColumns(rows: string[][]): {titleCol: number; dateCol: number; startRow: number} {
     const header = rows[0]?.map((cell) => cell.trim().toLowerCase()) ?? [];
     const titleIdx = header.findIndex((cell) => TITLE_KEYS.includes(cell));
     const dateIdx = header.findIndex((cell) => DATE_KEYS.includes(cell) || cell.includes('date'));
-    const hasHeader = titleIdx >= 0;
-    let titleCol = 0;
-    let dateCol = 1;
-    let startRow = 0;
-    if (hasHeader) {
-        titleCol = titleIdx;
-        dateCol = dateIdx >= 0 ? dateIdx : 1;
-        startRow = 1;
-    } else if (rows[0]) {
-        const dateInFirst = rows[0].findIndex((cell) => parseFlexibleDate(cell) !== null);
-        if (dateInFirst >= 0) {
-            dateCol = dateInFirst;
-            titleCol = dateInFirst === 0 ? 1 : 0;
-        }
+    if (titleIdx >= 0) return {titleCol: titleIdx, dateCol: dateIdx >= 0 ? dateIdx : 1, startRow: 1};
+    const first = rows[0];
+    if (first) {
+        const dateInFirst = first.findIndex((cell) => parseFlexibleDate(cell) !== null);
+        if (dateInFirst >= 0) return {titleCol: dateInFirst === 0 ? 1 : 0, dateCol: dateInFirst, startRow: 0};
     }
+    return {titleCol: 0, dateCol: 1, startRow: 0};
+}
+
+function rowToResult(row: string[], titleCol: number, dateCol: number): {event: CalEvent} | {skipped: NetflixSkipped} {
+    const title = (row[titleCol] ?? '').trim();
+    const dateRaw = (row[dateCol] ?? '').trim();
+    const line = row.join(',');
+    if (!title) return {skipped: {line, reason: 'no-title'}};
+    if (!dateRaw) return {skipped: {line: title, reason: 'no-date'}};
+    const event = toEvent(title, dateRaw);
+    if (!event) return {skipped: {line, reason: 'no-date'}};
+    return {event};
+}
+
+function collectCsvEvents(rows: string[][], titleCol: number, dateCol: number, startRow: number): NetflixParseResult {
     const events: CalEvent[] = [];
     const skipped: NetflixSkipped[] = [];
     for (let i = startRow; i < rows.length; i++) {
         const row = rows[i];
         if (!row) continue;
-        const title = (row[titleCol] ?? '').trim();
-        const dateRaw = (row[dateCol] ?? '').trim();
-        const line = row.join(',');
-        if (!title) {
-            skipped.push({line, reason: 'no-title'});
-            continue;
-        }
-        if (!dateRaw) {
-            skipped.push({line: title, reason: 'no-date'});
-            continue;
-        }
-        const event = toEvent(title, dateRaw);
-        if (!event) skipped.push({line, reason: 'no-date'});
-        else events.push(event);
+        const res = rowToResult(row, titleCol, dateCol);
+        if ('event' in res) events.push(res.event);
+        else skipped.push(res.skipped);
     }
     return {events, skipped};
+}
+
+function parseCsvExport(text: string): NetflixParseResult {
+    const rows = parseCsv(text);
+    if (rows.length === 0) return {events: [], skipped: []};
+    const cols = resolveCsvColumns(rows);
+    return collectCsvEvents(rows, cols.titleCol, cols.dateCol, cols.startRow);
 }
 
 export function parseNetflixExport(text: string): NetflixParseResult {

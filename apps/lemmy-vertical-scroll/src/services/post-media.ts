@@ -17,25 +17,31 @@ function urlHasVideoExt(url: string): boolean {
     return VIDEO_EXT.test(stripImageProxy(url))
 }
 
-/**
- * Classifies a post for the scroll view. Explicit provider types win
- * (PieFed's post_type, newer Lemmy's post_url_content_type); otherwise the
- * post URL is inspected, decoding instance image proxies first.
- */
+function postTypeKind(postType: LemmyPost['postType']): 'image' | 'video' | 'text' | null {
+    if (postType === 'Image') return 'image'
+    if (postType === 'Video') return 'video'
+    if (postType === 'Discussion') return 'text'
+    return null
+}
+
+function isEmbedVideo(url: string | null): boolean {
+    return !!url && !!embedProviderForUrl(url)
+}
+
+function isDirectVideo(post: LemmyPost): boolean {
+    return !!post.videoUrl || (!!post.url && urlHasVideoExt(post.url))
+}
+
+function isImage(post: LemmyPost): boolean {
+    return !!post.url && urlHasImageExt(post.url)
+}
+
 export function classifyPost(post: LemmyPost): 'image' | 'video' | 'text' | 'link' {
-    switch (post.postType) {
-        case 'Image':
-            return 'image'
-        case 'Video':
-            return 'video'
-        case 'Discussion':
-            return 'text'
-        case 'Link':
-            break
-    }
-    if (post.url && embedProviderForUrl(post.url)) return 'video'
-    if (post.videoUrl || (post.url && urlHasVideoExt(post.url))) return 'video'
-    if (post.url && urlHasImageExt(post.url)) return 'image'
+    const explicit = postTypeKind(post.postType)
+    if (explicit) return explicit
+    if (isEmbedVideo(post.url)) return 'video'
+    if (isDirectVideo(post)) return 'video'
+    if (isImage(post)) return 'image'
     if (post.url) return 'link'
     return 'text'
 }

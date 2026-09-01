@@ -48,41 +48,35 @@ export interface RunningServer {
     close(): Promise<void>;
 }
 
+function makeShutdown(srv: Server): () => Promise<void> {
+    let closed = false;
+    return async () => {
+        if (closed) return;
+        closed = true;
+        await drainPoller();
+        await new Promise<void>((res, rej) => { srv.close((e) => (e ? rej(e) : res())); });
+        await closePool();
+    };
+}
+
 export async function startServer(
     port = Number(process.env.PORT ?? PORT),
     host = process.env.LISTEN_HOST ?? '0.0.0.0',
 ): Promise<RunningServer> {
     await migrate();
-
     const dispatch = createDispatcher(routes, ensureUser);
-
     return new Promise<RunningServer>((resolve, reject) => {
         const srv: Server = createServer(dispatch);
         let resolved = false;
         srv.on('error', (err) => {
-            if (!resolved) {
-                reject(err);
-                return;
-            }
-            console.error('rss-api server error:', err);
+            if (!resolved) reject(err);
+            else console.error('rss-api server error:', err);
         });
         srv.listen(port, host, () => {
             resolved = true;
-            // Start the poller only after we actually bound — a listen
-            // failure must not leave a live interval behind.
             startPoller();
             const assignedPort = (srv.address() as {port: number}).port;
-            let closed = false;
-            const shutdown = async () => {
-                if (closed) return;
-                closed = true;
-                await drainPoller();
-                await new Promise<void>((res, rej) => {
-                    srv.close((e) => (e ? rej(e) : res()));
-                });
-                await closePool();
-            };
-            resolve({port: assignedPort, close: shutdown});
+            resolve({port: assignedPort, close: makeShutdown(srv)});
         });
     });
 }

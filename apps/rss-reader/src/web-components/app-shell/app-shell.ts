@@ -35,85 +35,89 @@ export class AppShell extends LitElement {
     }
 
     override render() {
+        return html`${this.renderHeader()}<div class="layout"><source-list .view=${this.route}></source-list><main>${this.renderMain()}</main>${this.renderOverlay()}</div>${this.renderSettings()}`;
+    }
+
+    private renderHeader() {
         return html`
             <header>
-                <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="6" cy="18" r="2" fill="currentColor"/>
-                    <path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none"
-                          stroke-linecap="round"/>
-                    <path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none"
-                          stroke-linecap="round"/>
-                </svg>
-                <h1>RSS Reader</h1>
-                <span class="sub">your feeds, in one place</span>
-                <div class="spacer"></div>
-                <button class="gear" title="Settings" @click=${() => (this.settingsOpen = true)}>
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" fill="none" stroke="currentColor"
-                              stroke-width="1.7"/>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-                              fill="none" stroke="currentColor" stroke-width="1.5"/>
-                    </svg>
-                </button>
-            </header>
-            <div class="layout">
-                <source-list .view=${this.route}></source-list>
-                <main>
-                    ${this.route.kind === 'brief'
-                        ? html`
-                            <brief-view
-                                @open-article=${this.onOpenArticle}
-                            ></brief-view>`
-                        : this.route.kind === 'today'
-                            ? html`
-                                <today-view
-                                    @open-article=${this.onOpenArticle}
-                                ></today-view>`
-                            : html`
-                            <article-list
-                                .view=${this.route}
-                                .active=${!this.article}
-                                .resumeArticleId=${this.resume && JSON.stringify(this.route) === this.resume.view ? this.resume.id : null}
-                                @open-article=${this.onOpenArticle}
-                            ></article-list>`}
-                </main>
-                ${this.article
-                    ? html`
-                        <div class="article-overlay">
-                            <div class="article-backdrop" @click=${this.closeArticle}></div>
-                            <article-view
-                                .article=${this.article}
-                                @close=${this.closeArticle}
-                            ></article-view>
-                        </div>`
-                    : ''}
-            </div>
-            <settings-dialog
-                    .open=${this.settingsOpen}
-                    @close=${() => (this.settingsOpen = false)}
-            ></settings-dialog>
-        `;
+                <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2" fill="currentColor"/><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                <h1>RSS Reader</h1><span class="sub">your feeds, in one place</span><div class="spacer"></div>
+                <button class="gear" title="Settings" @click=${() => (this.settingsOpen = true)}>${this.renderGearIcon()}</button>
+            </header>`;
+    }
+
+    private renderGearIcon() {
+        return html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`;
+    }
+
+    private renderMain() {
+        if (this.route.kind === 'brief') return html`<brief-view @open-article=${this.onOpenArticle}></brief-view>`;
+        if (this.route.kind === 'today') return html`<today-view @open-article=${this.onOpenArticle}></today-view>`;
+        return html`<article-list .view=${this.route} .active=${!this.article} .resumeArticleId=${this.resumeArticleId} @open-article=${this.onOpenArticle}></article-list>`;
+    }
+
+    private get resumeArticleId(): string | null {
+        if (!this.resume) return null;
+        return JSON.stringify(this.route) === this.resume.view ? this.resume.id : null;
+    }
+
+    private renderOverlay() {
+        if (!this.article) return '';
+        return html`<div class="article-overlay"><div class="article-backdrop" @click=${this.closeArticle}></div><article-view .article=${this.article} @close=${this.closeArticle}></article-view></div>`;
+    }
+
+    private renderSettings() {
+        return html`<settings-dialog .open=${this.settingsOpen} @close=${() => (this.settingsOpen = false)}></settings-dialog>`;
     }
 
     private onKeyDown = (e: KeyboardEvent) => {
         if (!this.readContext) return;
-        const target = e.target as HTMLElement | null;
-        const tag = target?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-        if (document.querySelector('dialog[open]')) return;
-
-        const {items, index} = this.readContext;
-        if (e.key === 'j' || e.key === 'ArrowDown') {
-            e.preventDefault();
-            if (index < items.length - 1) this.openAt(index + 1);
-        } else if (e.key === 'k' || e.key === 'ArrowUp') {
-            e.preventDefault();
-            if (index > 0) this.openAt(index - 1);
-        } else if (e.key === 'Escape' || e.key === 'ArrowLeft' || e.key === 'Backspace') {
-            e.preventDefault();
-            this.closeArticle();
-        }
+        if (this.shouldIgnoreKey(e)) return;
+        this.handleNavKey(e);
     };
+
+    private shouldIgnoreKey(e: KeyboardEvent): boolean {
+        const tag = (e.target as HTMLElement | null)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+        if (document.querySelector('dialog[open]')) return true;
+        return false;
+    }
+
+    private handleNavKey(e: KeyboardEvent) {
+        if (!this.readContext) return;
+        const {items, index} = this.readContext;
+        if (this.isNextKey(e.key)) this.handleNext(e, items, index);
+        else if (this.isPrevKey(e.key)) this.handlePrev(e, index);
+        else if (this.isCloseKey(e.key)) this.handleClose(e);
+    }
+
+    private isNextKey(key: string): boolean {
+        return key === 'j' || key === 'ArrowDown';
+    }
+
+    private isPrevKey(key: string): boolean {
+        return key === 'k' || key === 'ArrowUp';
+    }
+
+    private isCloseKey(key: string): boolean {
+        return key === 'Escape' || key === 'ArrowLeft' || key === 'Backspace';
+    }
+
+    private handleNext(e: KeyboardEvent, items: Article[], index: number) {
+        e.preventDefault();
+        if (index < items.length - 1) this.openAt(index + 1);
+    }
+
+    private handlePrev(e: KeyboardEvent, index: number) {
+        e.preventDefault();
+        if (index > 0) this.openAt(index - 1);
+    }
+
+    private handleClose(e: KeyboardEvent) {
+        e.preventDefault();
+        this.closeArticle();
+    }
 
     private openAt(index: number) {
         if (!this.readContext) return;

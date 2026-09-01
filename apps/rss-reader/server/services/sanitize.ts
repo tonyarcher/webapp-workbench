@@ -92,11 +92,51 @@ export function stripHtml(html: string | undefined): string {
     return text.replace(/\s+/g, ' ').trim();
 }
 
-/**
- * Allowlist-based HTML sanitizer for feed article bodies. Keeps formatting,
- * links, images, and tables; strips every other tag, attribute, and URL
- * scheme. Unknown tags are unwrapped (children kept) so text survives.
- */
+function handleAllowedAttr(node: Element, name: string, value: string): void {
+    if (name === 'href' || name === 'src') {
+        const safe = safeUrlValue(value);
+        if (safe) (node as Element).setAttribute(name, safe);
+        else (node as Element).removeAttribute(name);
+        return;
+    }
+    if (name === 'srcset') {
+        const safe = safeSrcset(value);
+        if (safe) (node as Element).setAttribute(name, safe);
+        else (node as Element).removeAttribute(name);
+    }
+}
+
+function sanitizeNodeAttrs(node: Element, tag: string): void {
+    const allowed = ATTR_ALLOWLIST[tag] ?? new Set<string>();
+    for (const attr of Array.from((node as Element).attributes)) {
+        const name = attr.name.toLowerCase();
+        if (!allowed.has(name)) {
+            (node as Element).removeAttribute(attr.name);
+            continue;
+        }
+        handleAllowedAttr(node as Element, name, attr.value);
+    }
+}
+
+function unwrapNode(node: Element): void {
+    const parent = node.parentNode;
+    if (!parent) return;
+    while (node.firstChild) parent.insertBefore(node.firstChild, node);
+    parent.removeChild(node);
+}
+
+function sanitizeRoot(root: Element): void {
+    for (const node of Array.from(root.querySelectorAll('*'))) {
+        const tag = (node as Element).tagName.toLowerCase();
+        if (DROP_TAGS.has(tag)) {
+            node.parentNode?.removeChild(node);
+            continue;
+        }
+        sanitizeNodeAttrs(node as Element, tag);
+        if (!SAFE_TAGS.has(tag)) unwrapNode(node as Element);
+    }
+}
+
 export function sanitizeHtml(html: string | undefined): string {
     if (!html) return '';
     let document: ReturnType<typeof parseHTML>['document'];
@@ -105,45 +145,7 @@ export function sanitizeHtml(html: string | undefined): string {
     } catch {
         return stripHtml(html);
     }
-    // linkedom puts content on documentElement, not body
-    const root = document.documentElement;
-    for (const node of Array.from(root.querySelectorAll('*'))) {
-        const tag = node.tagName.toLowerCase();
-        if (DROP_TAGS.has(tag)) {
-            node.parentNode?.removeChild(node);
-            continue;
-        }
-        const allowedAttrs = ATTR_ALLOWLIST[tag] ?? new Set<string>();
-        for (const attr of Array.from(node.attributes)) {
-            const name = attr.name.toLowerCase();
-            if (!allowedAttrs.has(name)) {
-                node.removeAttribute(attr.name);
-                continue;
-            }
-            if (name === 'href' || name === 'src') {
-                const safe = safeUrlValue(attr.value);
-                if (safe) {
-                    node.setAttribute(name, safe);
-                } else {
-                    node.removeAttribute(name);
-                }
-            } else if (name === 'srcset') {
-                const safe = safeSrcset(attr.value);
-                if (safe) {
-                    node.setAttribute(name, safe);
-                } else {
-                    node.removeAttribute(name);
-                }
-            }
-        }
-        if (!SAFE_TAGS.has(tag)) {
-            const parent = node.parentNode;
-            if (parent) {
-                while (node.firstChild) parent.insertBefore(node.firstChild, node);
-                parent.removeChild(node);
-            }
-        }
-    }
-    // root IS the wrapper div; innerHTML gives us the sanitized content
-    return root.innerHTML ?? '';
+    const root = document.documentElement as unknown as Element;
+    sanitizeRoot(root);
+    return (root as unknown as {innerHTML?: string}).innerHTML ?? '';
 }

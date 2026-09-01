@@ -309,7 +309,8 @@ assert((await aiAvailability()) === 'unsupported', 'readily without a create() i
 delete g.model;
 
 assert(
-    aiStatusMessage('unsupported').includes('Gemini Nano'),
+    aiStatusMessage('unsupported').includes('LanguageModel') &&
+        aiStatusMessage('unsupported').includes('localhost'),
     'aiStatusMessage gives actionable guidance for unsupported',
 );
 assert(
@@ -335,6 +336,46 @@ delete g.model;
 resetAiAvailability();
 const diag2 = await aiDiagnostics();
 assert(diag2.hasModelApi === false && diag2.hasAiApi === false, 'diagnostics report absent APIs');
+assert(diag2.hasLanguageModelGlobal === false, 'diagnostics report absent LanguageModel');
+
+// Chrome 138+ Prompt API: global LanguageModel.availability() / create()
+g.LanguageModel = {
+    availability: async () => 'available',
+    create: async ({initialPrompts}: { initialPrompts?: Array<{ role: string; content: string }> } = {}) => {
+        capturedSystem = initialPrompts?.[0]?.content;
+        return {
+            prompt: async (text: string) => `LM[${text.slice(0, 20)}]`,
+            destroy: () => {
+            },
+        };
+    },
+};
+resetAiAvailability();
+assert((await aiAvailability()) === 'readily', 'LanguageModel.availability available maps to readily');
+const lmOut = await runAiPrompt('hello from prompt api', 'be concise');
+assert(lmOut === 'LM[hello from prompt ap]', 'runAiPrompt routes through LanguageModel.create');
+assert(capturedSystem === 'be concise', 'LanguageModel.create receives system prompt as initialPrompts');
+const lmDiag = await aiDiagnostics();
+assert(lmDiag.hasLanguageModelGlobal === true, 'diagnostics detect LanguageModel');
+assert(lmDiag.capabilitiesValue === 'available', 'diagnostics report LanguageModel availability');
+g.LanguageModel = {
+    availability: async () => 'downloadable',
+    create: async () => {
+        throw new Error('should not be called');
+    },
+};
+resetAiAvailability();
+assert((await aiAvailability()) === 'after-download', 'LanguageModel downloadable maps to after-download');
+g.LanguageModel = {
+    availability: async () => 'unavailable',
+    create: async () => {
+        throw new Error('should not be called');
+    },
+};
+resetAiAvailability();
+assert((await aiAvailability()) === 'no', 'LanguageModel unavailable maps to no');
+delete g.LanguageModel;
+resetAiAvailability();
 
 // ---- proxy: URL validation, size limit, timeout mapping ----
 assert(
