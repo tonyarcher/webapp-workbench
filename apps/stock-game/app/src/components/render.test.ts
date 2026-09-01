@@ -291,4 +291,34 @@ describe('custom elements render and react to properties', () => {
     expect(pointsCall?.[1]?.value).toBe(200)
     el.remove()
   })
+
+  it('sg-trade-form Max sizes buy to affordable qty', async () => {
+    const { maxAffordableQty } = await import('../lib/max-qty')
+    const el = mount<SgTradeForm>('sg-trade-form', { cashCents: 1_000_000, quote: QUOTE, commissionCents: 0, symbol: 'AAPL' })
+    await tick()
+    const maxBtn = el.shadowRoot?.querySelector('button.max') as HTMLButtonElement | null
+    expect(maxBtn).not.toBeNull()
+    expect(maxBtn!.textContent).toContain('Max')
+    maxBtn!.click()
+    await tick()
+    const input = el.shadowRoot?.querySelector('.shares-row input') as HTMLInputElement | null
+    expect(input!.value).toBe(String(maxAffordableQty(1_000_000, 234.56, 0)))
+    el.remove()
+  })
+
+  it('sg-trade-form Max sizes sell to held qty', async () => {
+    const el = mount<SgTradeForm>('sg-trade-form', { cashCents: 1_000_000, quote: QUOTE, commissionCents: 0, symbol: 'AAPL', holdings: [HOLDING] })
+    await tick()
+    const buttons = [...(el.shadowRoot?.querySelectorAll('button') ?? [])] as HTMLButtonElement[]
+    const sellBtn = buttons.find((b) => b.textContent.trim() === 'Sell')
+    expect(sellBtn).not.toBeUndefined()
+    sellBtn!.click()
+    await tick()
+    const maxBtn = el.shadowRoot?.querySelector('button.max') as HTMLButtonElement | null
+    maxBtn!.click()
+    await tick()
+    const input = el.shadowRoot?.querySelector('.shares-row input') as HTMLInputElement | null
+    expect(input!.value).toBe('10')
+    el.remove()
+  })
 })
