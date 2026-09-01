@@ -21,13 +21,18 @@ function StatCard({ label, value, extraClass }: { label: string; value: string; 
   return <div className="card stat"><div className="label">{label}</div><div className={`value ${extraClass ?? ''}`}>{value}</div></div>
 }
 
-function StatsRow({ totalCents, cashCents, holdingsCents, totalReturnPct }: { totalCents: number; cashCents: number; holdingsCents: number; totalReturnPct: number }): React.JSX.Element {
+function StatsRow({ totalCents, cashCents, holdingsCents, totalReturnPct, totalGainCents }: { totalCents: number; cashCents: number; holdingsCents: number; totalReturnPct: number; totalGainCents: number }): React.JSX.Element {
   const cls = totalReturnPct >= 0 ? 'positive' : 'negative'
-  return <div className="row"><StatCard label="Total value" value={fmtMoney(totalCents)} /><StatCard label="Cash" value={fmtMoney(cashCents)} /><StatCard label="Holdings" value={fmtMoney(holdingsCents)} /><StatCard label="Total return" value={fmtPct(totalReturnPct)} extraClass={cls} /></div>
+  const gainCls = totalGainCents >= 0 ? 'positive' : 'negative'
+  return <div className="row"><StatCard label="Total value" value={fmtMoney(totalCents)} /><StatCard label="Cash" value={fmtMoney(cashCents)} /><StatCard label="Holdings" value={fmtMoney(holdingsCents)} /><StatCard label="Total return" value={fmtPct(totalReturnPct)} extraClass={cls} /><StatCard label="Gain / Loss" value={fmtMoney(totalGainCents)} extraClass={gainCls} /></div>
 }
 
 function toPoints(series: PortfolioSeries) {
   return series.points.map((point) => ({ time: point.time, value: point.totalCents / 100 }))
+}
+
+function toGainPoints(series: PortfolioSeries) {
+  return series.points.map((point) => ({ time: point.time, value: point.gainCents / 100 }))
 }
 
 function DashboardContent({ config, series, holdings }: { config: GameConfig; series: PortfolioSeries; holdings: unknown }): React.JSX.Element {
@@ -36,7 +41,9 @@ function DashboardContent({ config, series, holdings }: { config: GameConfig; se
   const cash = last?.cashCents ?? config.startingCashCents
   const holdingsCents = last?.holdingsCents ?? 0
   const points = toPoints(series)
-  return <><h1>Dashboard</h1><StatsRow totalCents={totalCents} cashCents={cash} holdingsCents={holdingsCents} totalReturnPct={series.totalReturnPct} /><div className="card"><h2>Portfolio value over time</h2><sg-portfolio-chart points={points} /></div><div className="card"><h2>Holdings</h2><sg-holdings-table holdings={holdings as never} /></div></>
+  const gainPoints = toGainPoints(series)
+  const totalGainCents = series.totalGainCents
+  return <><h1>Dashboard</h1><StatsRow totalCents={totalCents} cashCents={cash} holdingsCents={holdingsCents} totalReturnPct={series.totalReturnPct} totalGainCents={totalGainCents} /><div className="card"><h2>Value and gain/loss</h2><sg-portfolio-chart points={points} gainPoints={gainPoints} /></div><div className="card"><h2>Holdings</h2><sg-holdings-table holdings={holdings as never} /></div></>
 }
 
 function hasError(a: { isError: boolean }, b: { isError: boolean }, c: { isError: boolean }): boolean {

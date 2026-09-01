@@ -18,6 +18,7 @@ declare module 'react' {
     interface IntrinsicElements {
       'sg-portfolio-chart': ElementProps & {
         points?: Array<{ time: number; value: number }>
+        gainPoints?: Array<{ time: number; value: number }>
       }
       'sg-holdings-table': ElementProps & {
         holdings?: HoldingsEntry[]

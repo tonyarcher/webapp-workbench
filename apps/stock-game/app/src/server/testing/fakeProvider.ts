@@ -20,6 +20,10 @@ export function fakeProvider(overrides?: { quote?: Quote; bars?: Bar[] }): Price
   }
 }
 
-export function dayBar(date: string, close: number): Bar {
-  return { time: Date.parse(date) + 14 * 60 * 60 * 1000 + 30 * 60 * 1000, open: close, high: close, low: close, close, volume: 1000 }
+export function dayBar(date: string, close: number, overrides?: { open?: number; high?: number; low?: number }): Bar {
+  const time = Date.parse(date) + 14 * 60 * 60 * 1000 + 30 * 60 * 1000
+  const open = overrides?.open ?? close
+  const high = overrides?.high ?? close
+  const low = overrides?.low ?? close
+  return { time, open, high, low, close, volume: 1000 }
 }

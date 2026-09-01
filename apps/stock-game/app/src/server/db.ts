@@ -6,7 +6,9 @@ import type {
   GameConfig,
   Order,
   OrderStatus,
+  OrderType,
   Side,
+  Tif,
   Trade,
   TradeMode,
 } from '@stock-game/shared'
@@ -38,6 +40,11 @@ export interface Repo {
     qty: number
     executeAt: number
     createdAt: number
+    orderType?: OrderType
+    tif?: Tif
+    limitPrice?: number | null
+    stopPrice?: number | null
+    expiresAt?: number | null
   }): Order
   getPendingOrders(now: number): Order[]
   fillOrderWithTrade(
@@ -82,6 +89,11 @@ interface OrderRow {
   status: OrderStatus
   created_at: number
   trade_id: number | null
+  order_type: OrderType
+  tif: Tif
+  limit_price: number | null
+  stop_price: number | null
+  expires_at: number | null
 }
 
 interface BarRow {
@@ -121,6 +133,11 @@ function toOrder(row: OrderRow): Order {
     status: row.status,
     createdAt: row.created_at,
     tradeId: row.trade_id,
+    orderType: row.order_type,
+    tif: row.tif,
+    limitPrice: row.limit_price,
+    stopPrice: row.stop_price,
+    expiresAt: row.expires_at,
   }
 }
 
@@ -152,7 +169,7 @@ function prepareStatements(db: Db): Statements {
       `INSERT INTO trades (symbol, side, qty, price, cash_delta_cents, mode, executed_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
     insertOrderStmt: db.prepare(
-      `INSERT INTO orders (symbol, side, qty, execute_at, status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)`,
+      `INSERT INTO orders (symbol, side, qty, execute_at, status, created_at, order_type, tif, limit_price, stop_price, expires_at) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
     ),
     upsertBarStmt: db.prepare(
       `INSERT OR REPLACE INTO price_cache (symbol, interval, date, open, high, low, close, volume) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -278,9 +295,34 @@ function repoListOrders(db: Db): Order[] {
   return rows.map(toOrder)
 }
 
+function resolveOrderDefaults(order: Parameters<Repo['insertOrder']>[0]): { orderType: string; tif: string } {
+  return { orderType: order.orderType ?? 'market', tif: order.tif ?? 'GTC' }
+}
+
 function repoInsertOrder(_db: Db, stmts: Statements, order: Parameters<Repo['insertOrder']>[0]): Order {
-  const result = stmts.insertOrderStmt.run(order.symbol, order.side, order.qty, order.executeAt, order.createdAt)
+  const { orderType, tif } = resolveOrderDefaults(order)
+  const result = stmts.insertOrderStmt.run(
+    order.symbol,
+    order.side,
+    order.qty,
+    order.executeAt,
+    order.createdAt,
+    orderType,
+    tif,
+    order.limitPrice ?? null,
+    order.stopPrice ?? null,
+    order.expiresAt ?? null,
+  )
   const id = Number(result.lastInsertRowid)
+  return orderFromInsert(id, order, orderType, tif)
+}
+
+function orderFromInsert(
+  id: number,
+  order: Parameters<Repo['insertOrder']>[0],
+  orderType: string,
+  tif: string,
+): Order {
   return toOrder({
     id,
     symbol: order.symbol,
@@ -290,6 +332,11 @@ function repoInsertOrder(_db: Db, stmts: Statements, order: Parameters<Repo['ins
     status: 'pending',
     created_at: order.createdAt,
     trade_id: null,
+    order_type: orderType as OrderRow['order_type'],
+    tif: tif as OrderRow['tif'],
+    limit_price: order.limitPrice ?? null,
+    stop_price: order.stopPrice ?? null,
+    expires_at: order.expiresAt ?? null,
   })
 }
 
@@ -326,13 +373,56 @@ export function openRepo(path = getEnv().dbPath): Repo {
 const MIGRATION_SQL = `
     CREATE TABLE IF NOT EXISTS game_config (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS price_cache (symbol TEXT NOT NULL, interval TEXT NOT NULL, date INTEGER NOT NULL, open REAL NOT NULL, high REAL NOT NULL, low REAL NOT NULL, close REAL NOT NULL, volume INTEGER NOT NULL, PRIMARY KEY (symbol, interval, date));
-    CREATE TABLE IF NOT EXISTS trades (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, side TEXT NOT NULL CHECK (side IN ('buy', 'sell')), qty INTEGER NOT NULL CHECK (qty > 0), price REAL NOT NULL, cash_delta_cents INTEGER NOT NULL, mode TEXT NOT NULL CHECK (mode IN ('backdated', 'scheduled')), executed_at INTEGER NOT NULL, created_at INTEGER NOT NULL);
-    CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, side TEXT NOT NULL CHECK (side IN ('buy', 'sell')), qty INTEGER NOT NULL CHECK (qty > 0), execute_at INTEGER NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'filled', 'cancelled')), created_at INTEGER NOT NULL, trade_id INTEGER UNIQUE REFERENCES trades(id));
+    CREATE TABLE IF NOT EXISTS trades (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, side TEXT NOT NULL CHECK (side IN ('buy', 'sell', 'short', 'cover')), qty INTEGER NOT NULL CHECK (qty > 0), price REAL NOT NULL, cash_delta_cents INTEGER NOT NULL, mode TEXT NOT NULL CHECK (mode IN ('backdated', 'scheduled')), executed_at INTEGER NOT NULL, created_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, side TEXT NOT NULL CHECK (side IN ('buy', 'sell', 'short', 'cover')), qty INTEGER NOT NULL CHECK (qty > 0), execute_at INTEGER NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'filled', 'cancelled')), created_at INTEGER NOT NULL, trade_id INTEGER UNIQUE REFERENCES trades(id), order_type TEXT NOT NULL DEFAULT 'market' CHECK (order_type IN ('market', 'limit', 'stop', 'stopLimit')), tif TEXT NOT NULL DEFAULT 'GTC' CHECK (tif IN ('DAY', 'GTC')), limit_price REAL, stop_price REAL, expires_at INTEGER);
     CREATE INDEX IF NOT EXISTS idx_price_cache_lookup ON price_cache (symbol, interval);
     CREATE INDEX IF NOT EXISTS idx_trades_executed ON trades (executed_at);
     CREATE INDEX IF NOT EXISTS idx_orders_pending ON orders (status, execute_at);
   `
 
+function needsMigration(db: Db): boolean {
+  const row = db.prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='trades'`).get() as { sql: string } | undefined
+  if (!row) return false
+  return !row.sql.includes("'short'")
+}
+
+function migrateTradesTable(db: Db): void {
+  db.exec(`
+    CREATE TABLE trades_new (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, side TEXT NOT NULL CHECK (side IN ('buy', 'sell', 'short', 'cover')), qty INTEGER NOT NULL CHECK (qty > 0), price REAL NOT NULL, cash_delta_cents INTEGER NOT NULL, mode TEXT NOT NULL CHECK (mode IN ('backdated', 'scheduled')), executed_at INTEGER NOT NULL, created_at INTEGER NOT NULL);
+    INSERT INTO trades_new (id, symbol, side, qty, price, cash_delta_cents, mode, executed_at, created_at) SELECT id, symbol, side, qty, price, cash_delta_cents, mode, executed_at, created_at FROM trades;
+    DROP TABLE trades;
+    ALTER TABLE trades_new RENAME TO trades;
+  `)
+}
+
+function migrateOrdersTable(db: Db): void {
+  const cols = db.prepare(`PRAGMA table_info(orders)`).all() as Array<{ name: string }>
+  const hasOrderType = cols.some((c) => c.name === 'order_type')
+  if (hasOrderType) return
+  db.exec(`
+    CREATE TABLE orders_new (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, side TEXT NOT NULL CHECK (side IN ('buy', 'sell', 'short', 'cover')), qty INTEGER NOT NULL CHECK (qty > 0), execute_at INTEGER NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'filled', 'cancelled')), created_at INTEGER NOT NULL, trade_id INTEGER UNIQUE REFERENCES trades(id), order_type TEXT NOT NULL DEFAULT 'market' CHECK (order_type IN ('market', 'limit', 'stop', 'stopLimit')), tif TEXT NOT NULL DEFAULT 'GTC' CHECK (tif IN ('DAY', 'GTC')), limit_price REAL, stop_price REAL, expires_at INTEGER);
+    INSERT INTO orders_new (id, symbol, side, qty, execute_at, status, created_at, trade_id, order_type, tif, limit_price, stop_price, expires_at) SELECT id, symbol, side, qty, execute_at, status, created_at, trade_id, 'market', 'GTC', NULL, NULL, NULL FROM orders;
+    DROP TABLE orders;
+    ALTER TABLE orders_new RENAME TO orders;
+  `)
+}
+
+function runMigrations(db: Db): void {
+  db.exec('PRAGMA foreign_keys = OFF')
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    if (needsMigration(db)) migrateTradesTable(db)
+    migrateOrdersTable(db)
+    db.exec('COMMIT')
+  } catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  } finally {
+    db.exec('PRAGMA foreign_keys = ON')
+  }
+}
+
 function migrate(db: Db): void {
   db.exec(MIGRATION_SQL)
+  runMigrations(db)
 }
