@@ -94,31 +94,40 @@ export class ScrollMediaVideo extends LitElement {
         return this.item?.videoUrl ?? this.item?.url ?? null
     }
 
+    private isSameEmbed(prev: ScrollItem | undefined, nextEmbed: string | null): boolean {
+        const prevEmbed = embedUrlFor(prev?.videoUrl ?? prev?.url ?? null)
+        return !!prevEmbed && prevEmbed === nextEmbed
+    }
+
+    private resetPlaybackState(): void {
+        this.src = null
+        this.poster = null
+        this.candidates = []
+        this.resolveFailed = false
+        this.embedReady = false
+        this.playing = false
+        this.embedTime = 0
+        this.embedDuration = 0
+    }
+
+    private resolveNativeSource(): void {
+        const token = ++this.resolveToken
+        const resolved = resolveVideoUrl(this.item?.videoUrl ?? this.item?.url ?? null)
+        if (token !== this.resolveToken) return
+        this.src = resolved.src
+        this.poster = resolved.poster
+        this.candidates = resolved.candidates
+        this.resolveFailed = resolved.src === null
+    }
+
     override willUpdate(changed: Map<string, unknown>): void {
-        if (changed.has('item')) {
-            const prev = changed.get('item') as ScrollItem | undefined
-            const prevEmbed = embedUrlFor(prev?.videoUrl ?? prev?.url ?? null)
-            const nextEmbed = embedUrlFor(this.embedSource())
-            // oEmbed enrichment rewrites pageUrl/author but keeps the same
-            // player id — remounting would drop embedReady and desync chrome.
-            if (prevEmbed && prevEmbed === nextEmbed) return
-            this.src = null
-            this.poster = null
-            this.candidates = []
-            this.resolveFailed = false
-            this.embedReady = false
-            this.playing = false
-            this.embedTime = 0
-            this.embedDuration = 0
-            if (nextEmbed) return
-            const token = ++this.resolveToken
-            const resolved = resolveVideoUrl(this.item?.videoUrl ?? this.item?.url ?? null)
-            if (token !== this.resolveToken) return
-            this.src = resolved.src
-            this.poster = resolved.poster
-            this.candidates = resolved.candidates
-            this.resolveFailed = resolved.src === null
-        }
+        if (!changed.has('item')) return
+        const prev = changed.get('item') as ScrollItem | undefined
+        const nextEmbed = embedUrlFor(this.embedSource())
+        if (this.isSameEmbed(prev, nextEmbed)) return
+        this.resetPlaybackState()
+        if (nextEmbed) return
+        this.resolveNativeSource()
     }
 
     override updated(changed: Map<string, unknown>): void {
@@ -177,24 +186,27 @@ export class ScrollMediaVideo extends LitElement {
         iframe.style.transform = `translateX(-50%) scale(${scale})`
     }
 
+    private handleParsedMessage(parsed: import('./embeds/types').EmbedPlayerEvent | null): boolean {
+        if (!parsed) return false
+        if (parsed.type === 'ready') {
+            this.embedReady = true
+            this.syncEmbedPlayback()
+            return true
+        }
+        if (parsed.type === 'playing') this.setPlaying(true)
+        if (parsed.type === 'paused' || parsed.type === 'ended') this.setPlaying(false)
+        if (parsed.type === 'time' && !this.seeking) {
+            this.embedTime = parsed.currentTime
+            this.embedDuration = parsed.duration
+        }
+        return true
+    }
+
     private readonly onEmbedMessage = (event: MessageEvent): void => {
         if (!this.iframe || event.source !== this.iframe.contentWindow) return
         const provider = embedProviderForUrl(this.embedSource())
         const parsed = provider?.parsePlayerMessage?.(event.data)
-        if (parsed) {
-            if (parsed.type === 'ready') {
-                this.embedReady = true
-                this.syncEmbedPlayback()
-                return
-            }
-            if (parsed.type === 'playing') this.setPlaying(true)
-            if (parsed.type === 'paused' || parsed.type === 'ended') this.setPlaying(false)
-            if (parsed.type === 'time' && !this.seeking) {
-                this.embedTime = parsed.currentTime
-                this.embedDuration = parsed.duration
-            }
-            return
-        }
+        if (this.handleParsedMessage(parsed ?? null)) return
         if (!provider?.isPlayerReadyMessage?.(event.data)) return
         this.embedReady = true
         this.syncEmbedPlayback()
@@ -317,108 +329,73 @@ export class ScrollMediaVideo extends LitElement {
         }
     }
 
+    private renderEmbedFrame(embedUrl: string, providerName: string | undefined, policy: string): TemplateResult {
+        return html`<div class="embed-frame${this.embedFrameClass()}">
+            <iframe
+                class="media-iframe"
+                src=${embedUrl}
+                title="${providerName ?? 'embedded'} video"
+                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                scrolling="no"
+                referrerpolicy=${policy}
+                @load=${this.onIframeLoad}
+                ${ref(this.onIframeRef)}
+            ></iframe>
+        </div>`
+    }
+
+    private embedFrameClass(): string {
+        const provider = embedProviderForUrl(this.embedSource())
+        const framed = provider?.iframeAspect ? ' framed' : ''
+        const portrait = provider?.name === 'tiktok' || provider?.name === 'instagram' ? ' portrait' : ''
+        return `${framed}${portrait}`
+    }
+
+    private renderEmbedControls(): TemplateResult {
+        if (!embedProviderForUrl(this.embedSource())?.commandPlayer) return html``
+        return html`<button class="embed-tap" aria-label=${this.playing ? 'Pause video' : 'Play video'} @click=${this.onEmbedTap}></button>
+            <button class="sound-button${this.soundOn ? ' on' : ''}" aria-label=${this.soundOn ? 'Mute video' : 'Unmute video'} @click=${this.onToggleSound}>${this.soundOn ? SOUND_ON_ICON : SOUND_OFF_ICON}</button>
+            ${this.renderSeekBar()}`
+    }
+
+    private renderSeekBar(): TemplateResult {
+        if (this.embedDuration <= 0) return html``
+        return html`<div class="seek-bar">
+            <span class="seek-time">${this.formatTime(this.embedTime)}</span>
+            <input class="seek-input" type="range" min="0" max=${this.embedDuration} step="0.1" .value=${String(this.embedTime)} aria-label="Seek" @pointerdown=${(event: Event) => event.stopPropagation()} @input=${this.onSeekInput} @change=${this.onSeekCommit}>
+            <span class="seek-time">${this.formatTime(this.embedDuration)}</span>
+        </div>`
+    }
+
+    private renderEmbedPlaceholder(poster: string | null): TemplateResult {
+        return html`<div class="embed-placeholder">${poster ? html`<img class="embed-poster" src=${poster} alt="" loading="lazy">` : html``}</div>`
+    }
+
     private renderEmbed(): TemplateResult {
         const videoUrl = this.embedSource()
-        const provider = embedProviderForUrl(videoUrl)
         const embedUrl = embedUrlFor(videoUrl)
-        const poster = this.item?.thumbnailUrl ?? embedPosterFor(videoUrl)
         if (!embedUrl) return html``
-        // Unload on scroll: the iframe mounts only while the slide is
-        // active, so the previous clip's sound stops and memory is freed.
-        const mount = this.active
-        const framed = provider?.iframeAspect ? ' framed' : ''
-        // player/v1 paints a blurred clone in extra iframe width; 9:16
-        // leaves it no canvas for that fill (and no second decoder).
-        const portrait = provider?.name === 'tiktok' || provider?.name === 'instagram' ? ' portrait' : ''
-        const scriptable = !!provider?.commandPlayer
-        return html`
-            <div class="media-stage embed" ${ref(this.onStageRef)}>
-                ${mount
-                    ? html`<div class="embed-frame${framed}${portrait}">
-                        <iframe
-                            class="media-iframe"
-                            src=${embedUrl}
-                            title="${provider?.name ?? 'embedded'} video"
-                            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                            scrolling="no"
-                            referrerpolicy=${provider?.iframeReferrerPolicy ?? 'no-referrer'}
-                            @load=${this.onIframeLoad}
-                            ${ref(this.onIframeRef)}
-                        ></iframe>
-                    </div>
-                    ${scriptable
-                        ? html`<button class="embed-tap" aria-label=${this.playing ? 'Pause video' : 'Play video'} @click=${this.onEmbedTap}></button>
-                        <button
-                            class="sound-button${this.soundOn ? ' on' : ''}"
-                            aria-label=${this.soundOn ? 'Mute video' : 'Unmute video'}
-                            @click=${this.onToggleSound}
-                        >${this.soundOn ? SOUND_ON_ICON : SOUND_OFF_ICON}</button>
-                        ${this.embedDuration > 0
-                            ? html`<div class="seek-bar">
-                                <span class="seek-time">${this.formatTime(this.embedTime)}</span>
-                                <input
-                                    class="seek-input"
-                                    type="range"
-                                    min="0"
-                                    max=${this.embedDuration}
-                                    step="0.1"
-                                    .value=${String(this.embedTime)}
-                                    aria-label="Seek"
-                                    @pointerdown=${(event: Event) => event.stopPropagation()}
-                                    @input=${this.onSeekInput}
-                                    @change=${this.onSeekCommit}
-                                >
-                                <span class="seek-time">${this.formatTime(this.embedDuration)}</span>
-                            </div>`
-                            : html``}`
-                        : html``}`
-                    : html`<div class="embed-placeholder">
-                        ${poster
-                            ? html`<img class="embed-poster" src=${poster} alt="" loading="lazy">`
-                            : html``}
-                    </div>`}
-            </div>
-        `
+        const provider = embedProviderForUrl(videoUrl)
+        const poster = this.item?.thumbnailUrl ?? embedPosterFor(videoUrl)
+        return html`<div class="media-stage embed" ${ref(this.onStageRef)}>
+            ${this.active ? html`${this.renderEmbedFrame(embedUrl, provider?.name, provider?.iframeReferrerPolicy ?? 'no-referrer')}${this.renderEmbedControls()}` : this.renderEmbedPlaceholder(poster)}
+        </div>`
+    }
+
+    private renderNativeMedia(original: string | null): TemplateResult {
+        if (this.resolveFailed) return html`<div class="video-fallback"><p class="fallback-text">Video unavailable</p><div class="fallback-actions"><button class="fallback-button" @click=${this.onRetry}>Retry</button>${original ? html`<a class="fallback-link" href=${original} target="_blank" rel="noopener noreferrer">Open original ↗</a>` : html``}</div></div>`
+        if (this.src) return html`<video class="media-video" src=${this.src} poster=${this.poster ?? ''} playsinline loop preload="metadata" controls @error=${this.onVideoError} ${ref(this.onVideoRef)}></video>`
+        return html`<span class="video-spinner" aria-label="Loading video"></span>`
+    }
+
+    private renderNativeSound(): TemplateResult {
+        if (!this.src || this.resolveFailed) return html``
+        return html`<button class="sound-button${this.soundOn ? ' on' : ''}" aria-label=${this.soundOn ? 'Mute video' : 'Unmute video'} @click=${this.onToggleSound}>${this.soundOn ? SOUND_ON_ICON : SOUND_OFF_ICON}</button>`
     }
 
     private renderNative(): TemplateResult {
-        const {item} = this
-        const original = safeUrl(item.originalUrl ?? null)
-        const media = this.resolveFailed
-            ? html`<div class="video-fallback">
-                <p class="fallback-text">Video unavailable</p>
-                <div class="fallback-actions">
-                    <button class="fallback-button" @click=${this.onRetry}>Retry</button>
-                    ${original
-                        ? html`<a class="fallback-link" href=${original} target="_blank" rel="noopener noreferrer">Open original ↗</a>`
-                        : html``}
-                </div>
-            </div>`
-            : this.src
-              ? html`<video
-                    class="media-video"
-                    src=${this.src}
-                    poster=${this.poster ?? ''}
-                    playsinline
-                    loop
-                    preload="metadata"
-                    controls
-                    @error=${this.onVideoError}
-                    ${ref(this.onVideoRef)}
-                ></video>`
-              : html`<span class="video-spinner" aria-label="Loading video"></span>`
-        return html`
-            <div class="media-stage">
-                ${media}
-                ${this.src && !this.resolveFailed
-                    ? html`<button
-                        class="sound-button${this.soundOn ? ' on' : ''}"
-                        aria-label=${this.soundOn ? 'Mute video' : 'Unmute video'}
-                        @click=${this.onToggleSound}
-                    >${this.soundOn ? SOUND_ON_ICON : SOUND_OFF_ICON}</button>`
-                    : html``}
-            </div>
-        `
+        const original = safeUrl(this.item.originalUrl ?? null)
+        return html`<div class="media-stage">${this.renderNativeMedia(original)}${this.renderNativeSound()}</div>`
     }
 
     override render(): TemplateResult {

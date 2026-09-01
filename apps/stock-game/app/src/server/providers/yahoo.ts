@@ -5,12 +5,7 @@ import { ProviderError, type PriceProvider } from './types'
 const YAHOO_BASE = 'https://query1.finance.yahoo.com'
 
 const yahooChartResultSchema = z.object({
-  chart: z
-    .object({
-      result: z.array(z.unknown()).optional(),
-      error: z.unknown().optional(),
-    })
-    .optional(),
+  chart: z.object({ result: z.array(z.unknown()).optional(), error: z.unknown().optional() }).optional(),
 })
 
 const chartBlockSchema = z.object({
@@ -73,6 +68,54 @@ interface ChartBlock {
     | undefined
 }
 
+function resolvePrice(meta: ChartBlock['meta'], bars: Bar[]): number | undefined {
+  return meta?.regularMarketPrice ?? bars.at(-1)?.close
+}
+
+function resolveTime(meta: ChartBlock['meta'], bars: Bar[]): number {
+  if (meta?.regularMarketTime != null) return meta.regularMarketTime * 1000
+  return bars.at(-1)?.time ?? Date.now()
+}
+
+function requireSymbol(meta: ChartBlock['meta'], fallback: string): string {
+  if (!meta?.symbol) throw new ProviderError(`No quote data for ${fallback}`)
+  return meta.symbol
+}
+
+function requirePrice(meta: ChartBlock['meta'], bars: Bar[], symbol: string): number {
+  const price = resolvePrice(meta, bars)
+  if (price === undefined || !Number.isFinite(price)) throw new ProviderError(`No quote data for ${symbol}`)
+  return round2(price)
+}
+
+function quoteName(meta: ChartBlock['meta'], fallback: string): string {
+  if (meta?.shortName) return meta.shortName
+  if (meta?.longName) return meta.longName
+  return fallback
+}
+
+function quoteCurrency(meta: ChartBlock['meta']): string {
+  return meta?.currency ?? 'USD'
+}
+
+function quoteExchange(meta: ChartBlock['meta']): string {
+  if (meta?.fullExchangeName) return meta.fullExchangeName
+  if (meta?.exchangeName) return meta.exchangeName
+  return ''
+}
+
+function buildQuote(symbol: string, meta: ChartBlock['meta'], bars: Bar[]): Quote {
+  return {
+    symbol: requireSymbol(meta, symbol),
+    name: quoteName(meta, symbol),
+    price: requirePrice(meta, bars, symbol),
+    currency: quoteCurrency(meta),
+    exchange: quoteExchange(meta),
+    time: resolveTime(meta, bars),
+    delayMinutes: 15,
+  }
+}
+
 export class YahooProvider implements PriceProvider {
   readonly id = 'yahoo'
 
@@ -80,28 +123,8 @@ export class YahooProvider implements PriceProvider {
     const url = `${YAHOO_BASE}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`
     const json = await this.fetchJson(url)
     const block = parseChartBlock(json)
-    const meta = block.meta
-    if (!meta?.symbol) {
-      throw new ProviderError(`No quote data for ${symbol}`)
-    }
     const bars = parseBars(block)
-    const lastClose = bars.at(-1)?.close
-    const price = meta.regularMarketPrice ?? lastClose
-    if (price === undefined || !Number.isFinite(price)) {
-      throw new ProviderError(`No quote data for ${symbol}`)
-    }
-    return {
-      symbol: meta.symbol ?? symbol,
-      name: meta.shortName ?? meta.longName ?? symbol,
-      price: round2(price),
-      currency: meta.currency ?? 'USD',
-      exchange: meta.fullExchangeName ?? meta.exchangeName ?? '',
-      time:
-        meta.regularMarketTime != null
-          ? meta.regularMarketTime * 1000
-          : (bars.at(-1)?.time ?? Date.now()),
-      delayMinutes: 15,
-    }
+    return buildQuote(symbol, block.meta, bars)
   }
 
   async getBars(symbol: string, interval: Interval, from: number, to: number): Promise<Bar[]> {
@@ -115,9 +138,7 @@ export class YahooProvider implements PriceProvider {
   }
 
   async search(query: string): Promise<SymbolSearchResult[]> {
-    const url =
-      `${YAHOO_BASE}/v1/finance/search` +
-      `?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`
+    const url = `${YAHOO_BASE}/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`
     const json = await this.fetchJson(url)
     const parsed = z
       .object({
@@ -132,9 +153,7 @@ export class YahooProvider implements PriceProvider {
         ),
       })
       .safeParse(json)
-    if (!parsed.success) {
-      throw new ProviderError('Yahoo search returned an unexpected shape')
-    }
+    if (!parsed.success) throw new ProviderError('Yahoo search returned an unexpected shape')
     return parsed.data.quotes
       .filter((quote) => quote.symbol.length > 0)
       .map((quote) => ({
@@ -148,75 +167,71 @@ export class YahooProvider implements PriceProvider {
   private async fetchJson(url: string): Promise<unknown> {
     let res: Response
     try {
-      res = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (stock-game; like Gecko) stock-game' },
-      })
+      res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (stock-game; like Gecko) stock-game' } })
     } catch {
       throw new ProviderError('Network error reaching Yahoo Finance')
     }
-    if (res.status === 429) {
-      throw new ProviderError('Yahoo Finance rate limit hit (429). Try again in a minute.')
-    }
-    if (!res.ok) {
-      throw new ProviderError(`Yahoo Finance request failed with status ${res.status}`)
-    }
+    if (res.status === 429) throw new ProviderError('Yahoo Finance rate limit hit (429). Try again in a minute.')
+    if (!res.ok) throw new ProviderError(`Yahoo Finance request failed with status ${res.status}`)
     return (await res.json()) as unknown
   }
 }
 
 export function parseChartBlock(json: unknown): ChartBlock {
   const parsed = yahooChartResultSchema.safeParse(json)
-  if (!parsed.success) {
-    throw new ProviderError('Yahoo Finance returned an unexpected payload')
-  }
+  if (!parsed.success) throw new ProviderError('Yahoo Finance returned an unexpected payload')
   const result = parsed.data.chart?.result
-  if (!result || result.length === 0) {
-    throw new ProviderError('Yahoo Finance returned no data')
-  }
+  if (!result || result.length === 0) throw new ProviderError('Yahoo Finance returned no data')
   const first = result[0]
   const block = chartBlockSchema.safeParse(first)
-  if (!block.success) {
-    throw new ProviderError('Yahoo Finance returned an unexpected payload')
-  }
+  if (!block.success) throw new ProviderError('Yahoo Finance returned an unexpected payload')
   return block.data
+}
+
+function isValidNumber(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function coalesce(value: number | null | undefined, fallback: number): number {
+  return value ?? fallback
+}
+
+function areAllValid(values: unknown[]): boolean {
+  for (const value of values) if (!isValidNumber(value)) return false
+  return true
+}
+
+function createBar(
+  time: number | null | undefined,
+  openValue: number | null | undefined,
+  highValue: number | null | undefined,
+  lowValue: number | null | undefined,
+  closeValue: number | null | undefined,
+  volumeValue: number | null | undefined,
+): Bar | null {
+  if (time == null || closeValue == null) return null
+  const open = coalesce(openValue, closeValue)
+  const high = coalesce(highValue, closeValue)
+  const low = coalesce(lowValue, closeValue)
+  const volume = coalesce(volumeValue, 0)
+  if (!areAllValid([time, closeValue, open, high, low])) return null
+  return { time: time * 1000, open, high, low, close: closeValue, volume }
+}
+
+function collectBars(timestamps: Array<number | null>, open: Array<number | null>, high: Array<number | null>, low: Array<number | null>, close: Array<number | null>, volume: Array<number | null>): Bar[] {
+  const bars: Bar[] = []
+  for (let i = 0; i < timestamps.length; i++) {
+    const bar = createBar(timestamps[i] ?? null, open[i], high[i], low[i], close[i] ?? null, volume[i])
+    if (bar) bars.push(bar)
+  }
+  return bars
 }
 
 export function parseBars(block: ChartBlock): Bar[] {
   const timestamps = block.timestamp
   const quote = block.indicators?.quote?.[0]
   if (!timestamps || !quote) return []
-  const open = quote.open ?? []
-  const high = quote.high ?? []
-  const low = quote.low ?? []
-  const close = quote.close ?? []
-  const volume = quote.volume ?? []
-  const bars: Bar[] = []
-  for (let i = 0; i < timestamps.length; i++) {
-    const time = timestamps[i]
-    const closeValue = close[i]
-    if (time == null || closeValue == null) continue
-    const openValue = open[i] ?? closeValue
-    const highValue = high[i] ?? closeValue
-    const lowValue = low[i] ?? closeValue
-    if (
-      !Number.isFinite(time) ||
-      !Number.isFinite(closeValue) ||
-      !Number.isFinite(openValue) ||
-      !Number.isFinite(highValue) ||
-      !Number.isFinite(lowValue)
-    ) {
-      continue
-    }
-    bars.push({
-      time: time * 1000,
-      open: openValue,
-      high: highValue,
-      low: lowValue,
-      close: closeValue,
-      volume: volume[i] ?? 0,
-    })
-  }
-  return bars
+  return collectBars(timestamps, quote.open ?? [], quote.high ?? [], quote.low ?? [], quote.close ?? [], quote.volume ?? [])
 }
 
 function round2(value: number): number {

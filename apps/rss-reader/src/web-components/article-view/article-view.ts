@@ -34,49 +34,44 @@ export class ArticleView extends LitElement {
         if (!a) return html``;
         const body = a.content ? sanitizeHtml(a.content) : '';
         const link = safeHttpUrl(a.link);
+        return html`${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderAiCard()}${this.renderBody(body, a)}</div>`;
+    }
 
+    private renderToolbar(a: Article, link: string | undefined) {
+        const label = this.summarizing ? 'Summarizing…' : this.aiSummary ? '✓ Summarized' : '✨ Summarize';
         return html`
       <div class="toolbar">
-        <button class="btn" @click=${() => this.dispatchEvent(new CustomEvent('close', {
-            bubbles: true,
-            composed: true
-        }))}>
-          ← Back
-        </button>
+        <button class="btn" @click=${this.emitClose}>← Back</button>
         <button class="btn" @click=${this.onStar}>${a.starred ? '★ Unstar' : '☆ Star'}</button>
-        <button class="btn" @click=${this.onSummarize} ?disabled=${this.summarizing}>
-          ${this.summarizing ? 'Summarizing…' : this.aiSummary ? '✓ Summarized' : '✨ Summarize'}
-        </button>
+        <button class="btn" @click=${this.onSummarize} ?disabled=${this.summarizing}>${label}</button>
         <div class="spacer"></div>
-        ${link
-            ? html`<a class="btn primary" href=${link} target="_blank" rel="noopener noreferrer">View original ↗</a>`
-            : ''}
-      </div>
-      <div class="body">
-        <h1>${link
-            ? html`<a href=${link} target="_blank" rel="noopener noreferrer">${a.title}</a>`
-            : a.title}</h1>
-        <div class="meta">
-          <span>${domainOf(a.link) || 'unknown source'}</span>
-          <span>${formatDate(a.published)}</span>
-          ${a.author ? html`<span>by ${a.author}</span>` : ''}
-        </div>
+        ${link ? html`<a class="btn primary" href=${link} target="_blank" rel="noopener noreferrer">View original ↗</a>` : ''}
+      </div>`;
+    }
 
-        ${this.aiError
-            ? html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="ai-text" style="color: var(--danger)">${this.aiError}</div></div>`
-            : this.summarizing
-                ? html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="spinner"><span class="spin"></span> Summarizing…</div></div>`
-                : this.aiSummary
-                    ? html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="ai-text">${this.aiSummary}</div></div>`
-                    : ''}
+    private emitClose = () => {
+        this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+    };
 
-        ${body
-            ? html`<div class="content">${unsafeHTML(body)}</div>`
-            : a.summary
-                ? html`<div class="content">${a.summary}</div>`
-                : html`<p class="content">No content available for this article.</p>`}
-      </div>
-    `;
+    private renderTitle(a: Article, link: string | undefined) {
+        return html`<h1>${link ? html`<a href=${link} target="_blank" rel="noopener noreferrer">${a.title}</a>` : a.title}</h1>`;
+    }
+
+    private renderMeta(a: Article) {
+        return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}</div>`;
+    }
+
+    private renderAiCard() {
+        if (this.aiError) return html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="ai-text" style="color: var(--danger)">${this.aiError}</div></div>`;
+        if (this.summarizing) return html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="spinner"><span class="spin"></span> Summarizing…</div></div>`;
+        if (this.aiSummary) return html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="ai-text">${this.aiSummary}</div></div>`;
+        return '';
+    }
+
+    private renderBody(body: string, a: Article) {
+        if (body) return html`<div class="content">${unsafeHTML(body)}</div>`;
+        if (a.summary) return html`<div class="content">${a.summary}</div>`;
+        return html`<p class="content">No content available for this article.</p>`;
     }
 
     private onStar() {
@@ -89,32 +84,45 @@ export class ArticleView extends LitElement {
         );
     }
 
+    private shouldSkipSummarize(a: Article | null): boolean {
+        if (!a || this.summarizing) return true;
+        if (this.aiSummary) return true;
+        return false;
+    }
+
+    private tryCached(a: Article): boolean {
+        const cached = summaryCache.get(a.id);
+        if (!cached) return false;
+        this.aiSummary = cached;
+        return true;
+    }
+
+    private async ensureAiReady(): Promise<boolean> {
+        const availability = await aiAvailability();
+        if (availability === 'readily') return true;
+        this.aiError = aiStatusMessage(availability);
+        return false;
+    }
+
+    private getSummarizeText(a: Article): string | null {
+        const text = stripHtml(a.content ?? '') || a.summary || '';
+        if (text.trim()) return text;
+        this.aiError = 'This article has no content to summarize.';
+        return null;
+    }
+
     private async onSummarize() {
         const a = this.article;
-        if (!a || this.summarizing) return;
-        if (this.aiSummary) return;
-
-        const cached = summaryCache.get(a.id);
-        if (cached) {
-            this.aiSummary = cached;
-            return;
-        }
-
+        if (this.shouldSkipSummarize(a)) return;
+        if (!a) return;
+        if (this.tryCached(a)) return;
         this.summarizing = true;
         this.aiError = '';
         try {
-            const availability = await aiAvailability();
-            if (availability !== 'readily') {
-                this.aiError = aiStatusMessage(availability);
-                return;
-            }
-            const text = stripHtml(a.content ?? '') || a.summary || '';
-            if (!text.trim()) {
-                this.aiError = 'This article has no content to summarize.';
-                return;
-            }
+            if (!(await this.ensureAiReady())) return;
+            const text = this.getSummarizeText(a);
+            if (!text) return;
             const summary = await summarizeArticle(a.title, text.slice(0, MAX_SUMMARY_CHARS));
-            // Discard results that land after the user navigated to another article.
             if (this.article?.id !== a.id) return;
             summaryCache.set(a.id, summary);
             this.aiSummary = summary;

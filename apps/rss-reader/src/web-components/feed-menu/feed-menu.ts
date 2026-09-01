@@ -38,79 +38,70 @@ export class FeedMenu extends LitElement {
     }
 
     override updated(changed: Map<string, unknown>) {
-        if (changed.has('feed')) {
-            this.selected = new Set(this.feed?.folderIds ?? []);
-        }
-        if (changed.has('open') || changed.has('anchor')) {
-            if (this.open && this.menuEl) {
-                this.menuEl.style.left = `${this.anchor?.x ?? 0}px`;
-                this.menuEl.style.top = `${this.anchor?.y ?? 0}px`;
-                if (!this.menuEl.matches(':popover-open')) this.menuEl.showPopover();
-                this.clampPosition();
-            } else if (this.menuEl?.matches(':popover-open')) {
-                this.menuEl.hidePopover();
-            }
-        }
+        this.syncSelected(changed);
+        this.syncPopover(changed);
+    }
+
+    private syncSelected(changed: Map<string, unknown>) {
+        if (changed.has('feed')) this.selected = new Set(this.feed?.folderIds ?? []);
+    }
+
+    private syncPopover(changed: Map<string, unknown>) {
+        if (!changed.has('open') && !changed.has('anchor')) return;
+        if (this.open && this.menuEl) this.openPopover();
+        else if (this.menuEl?.matches(':popover-open')) this.menuEl.hidePopover();
+    }
+
+    private openPopover() {
+        if (!this.menuEl) return;
+        this.menuEl.style.left = `${this.anchor?.x ?? 0}px`;
+        this.menuEl.style.top = `${this.anchor?.y ?? 0}px`;
+        if (!this.menuEl.matches(':popover-open')) this.menuEl.showPopover();
+        this.clampPosition();
     }
 
     override render() {
-        const feed = this.feed;
-        return html`
-      <div popover>
-        ${feed
-            ? html`
-              <div class="head">
-                <h2 title="${feed.title}">${feed.title}</h2>
-              </div>
-              <div class="body">
-                <div class="section">
-                  <h3>Folders</h3>
-                  ${this.folders.length
-                ? html`
-                        <div class="folder-list">
-                          ${this.folders.map(
-                    (folder) => html`
-                              <label class="folder-opt">
-                                <input
-                                  type="checkbox"
-                                  .checked=${this.selected.has(folder.id)}
-                                  @change=${(e: Event) =>
-                        this.toggleFolder(
-                            folder.id,
-                            (e.target as HTMLInputElement).checked,
-                        )}
-                                />
-                                <span class="label" title="${folder.title}">${folder.title}</span>
-                              </label>
-                            `,
-                )}
-                        </div>
-                      `
-                : html`<div class="hint">No folders yet. Import an OPML file to create some.</div>`}
-                </div>
+        return html`<div popover>${this.renderContent()}</div>`;
+    }
 
-                <div class="section">
-                  <h3>Actions</h3>
-                  <div class="actions">
-                    <button class="action" @click=${this.emitRefresh}>
-                      <span>
-                        Refresh feed<br />
-                        <span class="desc">Fetch the latest articles now</span>
-                      </span>
-                    </button>
-                    <button class="action danger" @click=${this.emitDelete}>
-                      <span>
-                        Delete feed<br />
-                        <span class="desc">Remove the feed and its articles</span>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            `
-            : ''}
-      </div>
-    `;
+    private renderContent() {
+        const feed = this.feed;
+        if (!feed) return '';
+        return html`
+              <div class="head"><h2 title="${feed.title}">${feed.title}</h2></div>
+              <div class="body">
+                <div class="section"><h3>Folders</h3>${this.renderFolderSection()}</div>
+                <div class="section"><h3>Actions</h3>${this.renderActions()}</div>
+              </div>`;
+    }
+
+    private renderFolderSection() {
+        if (!this.folders.length) return html`<div class="hint">No folders yet. Import an OPML file to create some.</div>`;
+        return html`<div class="folder-list">${this.folders.map((f) => this.renderFolderOpt(f))}</div>`;
+    }
+
+    private renderFolderOpt(folder: Folder) {
+        return html`
+              <label class="folder-opt">
+                <input
+                  type="checkbox"
+                  .checked=${this.selected.has(folder.id)}
+                  @change=${(e: Event) => this.toggleFolder(folder.id, (e.target as HTMLInputElement).checked)}
+                />
+                <span class="label" title="${folder.title}">${folder.title}</span>
+              </label>`;
+    }
+
+    private renderActions() {
+        return html`
+              <div class="actions">
+                <button class="action" @click=${this.emitRefresh}>
+                  <span>Refresh feed<br /><span class="desc">Fetch the latest articles now</span></span>
+                </button>
+                <button class="action danger" @click=${this.emitDelete}>
+                  <span>Delete feed<br /><span class="desc">Remove the feed and its articles</span></span>
+                </button>
+              </div>`;
     }
 
     private clampPosition() {

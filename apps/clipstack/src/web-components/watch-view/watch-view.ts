@@ -57,51 +57,51 @@ export class WatchView extends LitElement {
         }
     }
 
-    /** Resolve author/title for the active clip and a few ahead. Failed
-     *  probes are retried when the slide is visited again (abort is not a
-     *  failure). After a few misses we stop that id so a blocker cannot
-     *  hammer oEmbed on every scroll. */
+    private shouldResolve(link: ClipLink | undefined): boolean {
+        return !!link && !link.pageUrl && link.provider !== 'instagram' && !this.resolving.has(link.id) && (this.resolveAttempts.get(link.id) ?? 0) < MAX_OEMBED_ATTEMPTS
+    }
+
+    private applyOEmbed(linkId: string, info: Awaited<ReturnType<typeof resolveTiktokOEmbed>>): void {
+        if (!info) {
+            this.resolveAttempts.set(linkId, (this.resolveAttempts.get(linkId) ?? 0) + 1)
+            return
+        }
+        this.resolveAttempts.delete(linkId)
+        const itemIndex = this.links.findIndex((item) => item.id === linkId)
+        if (itemIndex < 0) return
+        const current = this.links[itemIndex]
+        const next: ClipLink = {...current, author: info.author ?? current.author, authorName: info.authorName ?? current.authorName, title: info.title ?? current.title, pageUrl: info.pageUrl ?? current.pageUrl, thumbnailUrl: info.thumbnailUrl ?? current.thumbnailUrl}
+        const links = this.links.slice()
+        links[itemIndex] = next
+        this.links = links
+        const scrollItems = this.scrollItems.slice()
+        scrollItems[itemIndex] = toScrollItem(next, itemIndex, links.length)
+        this.scrollItems = scrollItems
+        this.scheduleLinksSave()
+    }
+
+    private resolveOne(link: ClipLink, signal: AbortSignal | undefined): void {
+        this.resolving.add(link.id)
+        void resolveTiktokOEmbed(link.id, signal)
+            .then((info) => {
+                this.resolving.delete(link.id)
+                if (signal?.aborted) return
+                this.applyOEmbed(link.id, info)
+            })
+            .catch((err: unknown) => {
+                this.resolving.delete(link.id)
+                if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) return
+                this.resolveAttempts.set(link.id, (this.resolveAttempts.get(link.id) ?? 0) + 1)
+            })
+    }
+
     private resolveAround(index: number): void {
         const signal = this.resolveAbort?.signal
         const to = Math.min(this.links.length, index + 4)
         for (let i = index; i < to; i++) {
             const link = this.links[i]
-            if (!link || link.pageUrl || link.provider === 'instagram' || this.resolving.has(link.id)) continue
-            if ((this.resolveAttempts.get(link.id) ?? 0) >= MAX_OEMBED_ATTEMPTS) continue
-            this.resolving.add(link.id)
-            void resolveTiktokOEmbed(link.id, signal)
-                .then((info) => {
-                    this.resolving.delete(link.id)
-                    if (signal?.aborted) return
-                    if (!info) {
-                        this.resolveAttempts.set(link.id, (this.resolveAttempts.get(link.id) ?? 0) + 1)
-                        return
-                    }
-                    this.resolveAttempts.delete(link.id)
-                    const itemIndex = this.links.findIndex((item) => item.id === link.id)
-                    if (itemIndex < 0) return
-                    const current = this.links[itemIndex]
-                    const next: ClipLink = {
-                        ...current,
-                        author: info.author ?? current.author,
-                        authorName: info.authorName ?? current.authorName,
-                        title: info.title ?? current.title,
-                        pageUrl: info.pageUrl ?? current.pageUrl,
-                        thumbnailUrl: info.thumbnailUrl ?? current.thumbnailUrl,
-                    }
-                    const links = this.links.slice()
-                    links[itemIndex] = next
-                    this.links = links
-                    const scrollItems = this.scrollItems.slice()
-                    scrollItems[itemIndex] = toScrollItem(next, itemIndex, links.length)
-                    this.scrollItems = scrollItems
-                    this.scheduleLinksSave()
-                })
-                .catch((err: unknown) => {
-                    this.resolving.delete(link.id)
-                    if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) return
-                    this.resolveAttempts.set(link.id, (this.resolveAttempts.get(link.id) ?? 0) + 1)
-                })
+            if (!this.shouldResolve(link)) continue
+            this.resolveOne(link!, signal)
         }
     }
 

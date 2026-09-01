@@ -43,50 +43,49 @@ export class AdvancedMenu extends LitElement {
     }
 
     override updated(changed: Map<string, unknown>) {
-        if (changed.has('open') || changed.has('anchor')) {
-            if (this.open && this.menuEl) {
-                this.menuEl.style.left = `${this.anchor?.x ?? 0}px`;
-                this.menuEl.style.top = `${this.anchor?.y ?? 0}px`;
-                if (!this.menuEl.matches(':popover-open')) this.menuEl.showPopover();
-                this.clampPosition();
-            } else if (this.menuEl?.matches(':popover-open')) {
-                this.menuEl.hidePopover();
-            }
-        }
+        this.syncPopover(changed);
+    }
+
+    private syncPopover(changed: Map<string, unknown>) {
+        if (!changed.has('open') && !changed.has('anchor')) return;
+        if (this.open && this.menuEl) this.openPopover();
+        else if (this.menuEl?.matches(':popover-open')) this.menuEl.hidePopover();
+    }
+
+    private openPopover() {
+        if (!this.menuEl) return;
+        this.menuEl.style.left = `${this.anchor?.x ?? 0}px`;
+        this.menuEl.style.top = `${this.anchor?.y ?? 0}px`;
+        if (!this.menuEl.matches(':popover-open')) this.menuEl.showPopover();
+        this.clampPosition();
     }
 
     override render() {
-        const title = this.scopeLabel
-            ? `Mark as read in ${this.scopeLabel}`
-            : 'Mark as read';
+        return html`<div popover>${this.renderFilter()}${this.renderMark()}</div>`;
+    }
+
+    private renderFilter() {
         return html`
-            <div popover>
                 <div class="section">
                     <h3>Filter</h3>
                     <label class="filter">
-                        <input
-                                type="checkbox"
-                                .checked=${this.unreadOnly}
-                                @change=${this.onUnreadChange}
-                        />
+                        <input type="checkbox" .checked=${this.unreadOnly} @change=${this.onUnreadChange} />
                         Unread only
                     </label>
-                </div>
+                </div>`;
+    }
 
+    private renderMark() {
+        const title = this.scopeLabel ? `Mark as read in ${this.scopeLabel}` : 'Mark as read';
+        return html`
                 <div class="section">
                     <h3 title="${title}">${title}</h3>
-                    <div class="mark-options">
-                        ${AGE_OPTIONS.map(
-                                (opt) => html`
-                                    <button class="mark-opt" @click=${() => this.emitMarkBefore(opt.age)}>
-                                        ${opt.label}
-                                    </button>
-                                `,
-                        )}
-                    </div>
-                </div>
-            </div>
-        `;
+                    <div class="mark-options">${AGE_OPTIONS.map((o) => this.renderMarkOpt(o))}</div>
+                </div>`;
+    }
+
+    private renderMarkOpt(opt: { label: string; age: number | null }) {
+        return html`<button class="mark-opt" @click=${() => this.emitMarkBefore(opt.age)}>${opt.label}</button>`;
     }
 
     private clampPosition() {

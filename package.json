@@ -12,7 +12,7 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
+    "lint": "oxlint apps packages --disable-nested-config && npm run lint --workspaces --if-present",
     "dev:baseball": "npm run dev -w baseball-tracker",
     "dev:rss-reader": "npm run dev -w rss-reader",
     "dev:stock-game": "npm run dev -w stock-game",
@@ -20,5 +20,8 @@
     "dev:clipstack": "npm run dev -w clipstack",
     "dev:calendar-sync": "npm run dev -w calendar-sync",
     "deploy": "node scripts/deploy.mjs"
+  },
+  "devDependencies": {
+    "oxlint": "^1.75.0"
   }
 }

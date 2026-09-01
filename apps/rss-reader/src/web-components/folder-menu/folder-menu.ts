@@ -32,61 +32,56 @@ export class FolderMenu extends LitElement {
     }
 
     override updated(changed: Map<string, unknown>) {
-        if (changed.has('open') || changed.has('anchor')) {
-            if (this.open && this.menuEl) {
-                this.menuEl.style.left = `${this.anchor?.x ?? 0}px`;
-                this.menuEl.style.top = `${this.anchor?.y ?? 0}px`;
-                if (!this.menuEl.matches(':popover-open')) this.menuEl.showPopover();
-                this.clampPosition();
-            } else if (this.menuEl?.matches(':popover-open')) {
-                this.menuEl.hidePopover();
-            }
-        }
+        this.syncPopover(changed);
+    }
+
+    private syncPopover(changed: Map<string, unknown>) {
+        if (!changed.has('open') && !changed.has('anchor')) return;
+        if (this.open && this.menuEl) this.openPopover();
+        else if (this.menuEl?.matches(':popover-open')) this.menuEl.hidePopover();
+    }
+
+    private openPopover() {
+        if (!this.menuEl) return;
+        this.menuEl.style.left = `${this.anchor?.x ?? 0}px`;
+        this.menuEl.style.top = `${this.anchor?.y ?? 0}px`;
+        if (!this.menuEl.matches(':popover-open')) this.menuEl.showPopover();
+        this.clampPosition();
     }
 
     override render() {
+        return html`<div popover>${this.renderContent()}</div>`;
+    }
+
+    private renderContent() {
         const folder = this.folder;
+        if (!folder) return '';
         return html`
-      <div popover>
-        ${folder
-            ? html`
-              <div class="head">
-                <h2 title="${folder.title}">${folder.title}</h2>
-              </div>
+              <div class="head"><h2 title="${folder.title}">${folder.title}</h2></div>
               <div class="body">
-                <div class="section">
-                  <h3>View</h3>
+                <div class="section"><h3>View</h3>${this.renderViewOpt()}</div>
+                <div class="section"><h3>Actions</h3>${this.renderActions()}</div>
+              </div>`;
+    }
+
+    private renderViewOpt() {
+        return html`
                   <label class="opt">
-                    <input
-                      type="checkbox"
-                      .checked=${this.unreadOnly}
-                      @change=${this.onUnreadChange}
-                    />
+                    <input type="checkbox" .checked=${this.unreadOnly} @change=${this.onUnreadChange} />
                     <span class="label" title="Only show feeds with unread articles">Unread only</span>
-                  </label>
-                </div>
-                <div class="section">
-                  <h3>Actions</h3>
+                  </label>`;
+    }
+
+    private renderActions() {
+        return html`
                   <div class="actions">
                     <button class="action" @click=${this.emitRefresh}>
-                      <span>
-                        Refresh folder<br />
-                        <span class="desc">Fetch the latest articles from all feeds in this folder</span>
-                      </span>
+                      <span>Refresh folder<br /><span class="desc">Fetch the latest articles from all feeds in this folder</span></span>
                     </button>
                     <button class="action danger" @click=${this.emitDelete}>
-                      <span>
-                        Delete folder<br />
-                        <span class="desc">Remove the folder; feeds are removed from it</span>
-                      </span>
+                      <span>Delete folder<br /><span class="desc">Remove the folder; feeds are removed from it</span></span>
                     </button>
-                  </div>
-                </div>
-              </div>
-            `
-            : ''}
-      </div>
-    `;
+                  </div>`;
     }
 
     private clampPosition() {

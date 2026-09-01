@@ -1,16 +1,7 @@
-import {html, LitElement, svg, unsafeCSS} from 'lit';
+import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
 import {libraryKey, queryClient, QueryController} from '../../query';
-import {
-    deleteFeed,
-    deleteFolder,
-    moveFeed,
-    refreshFeed,
-    refreshFolder,
-    reorderFolders,
-    setFeedFolderMembership,
-    syncAllFeeds
-} from '../../mutations';
+import {deleteFeed, deleteFolder, refreshFeed, refreshFolder, reorderFolders, setFeedFolderMembership, syncAllFeeds} from '../../mutations';
 import {getLibrary} from '../../services/api';
 import {navigate} from '../../router';
 import {loadTodaySettings, pruneTodaySettings, saveTodaySettings, type TodaySettings} from '../../services/today-settings';
@@ -19,6 +10,9 @@ import type {Feed, FeedSort, Folder, View} from '../../types';
 import '../feed-list-menu/feed-list-menu';
 import '../today-menu/today-menu';
 import styles from './source-list.css?inline';
+import {feedRowTemplate, filterIconTemplate, folderRowTemplate, iconTemplate, menuIconTemplate, pinIconTemplate} from './source-list-render';
+import {dropFolderId, folderFeedsFor, folderUnreadFor, uncategorizedFor} from './source-list-helpers';
+import {handleDragOver, handleDragStart, handleEndDrag, handleFeedMove, handleFolderReorder} from './source-list-drag';
 
 interface Library {
     folders: Folder[];
@@ -137,143 +131,68 @@ export class SourceList extends LitElement {
     override render() {
         const {folders} = this.libraryData;
         const uncategorized = this.uncategorizedFeeds();
-        const allActive = this.isActive({kind: 'all'});
-        const briefActive = this.isActive({kind: 'brief'});
-        const todayActive = this.isActive({kind: 'today'});
         const menuFeed = this.menuFeed();
         const folderMenuFolder = this.folderMenuFolder();
-
         return html`
-      <div class="sidebar-head">
-        <button
-          class="pin-btn filter-btn"
-          title="Feed list options"
-          @click=${(e: MouseEvent) => this.openFeedListMenu(e)}
-        >${this.filterIcon()}</button>
-        <button
-          class="pin-btn"
-          title=${this.autoHide ? 'Pin the feed list open' : 'Auto-hide the feed list'}
-          @click=${this.toggleAutoHide}
-        >${this.pinIcon()}</button>
-      </div>
-      <nav
-        class="nav"
-        @dragover=${this.onDragOver}
-        @dragleave=${this.onDragLeave}
-        @drop=${this.onDrop}
-        @dragend=${this.onDragEnd}
-      >
-        ${this.library.error
-            ? html`<div class="nav-error">Could not load feeds. <button @click=${this.onRetryLibrary}>Retry</button></div>`
-            : ''}
-        <div
-          class="item ${briefActive ? 'active' : ''}"
-          role="button"
-          tabindex="0"
-          aria-label="Daily Brief"
-          @click=${() => this.select({kind: 'brief'})}
-          @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'brief'})}
-        >
-          <span class="icon">✨</span>
-          <span class="label">Daily Brief</span>
-        </div>
-        <div
-          class="item ${todayActive ? 'active' : ''}"
-          role="button"
-          tabindex="0"
-          aria-label="Today"
-          @click=${() => this.select({kind: 'today'})}
-          @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'today'})}
-        >
-          <span class="icon">🗓</span>
-          <span class="label">Today</span>
-          <button
-            class="menu-btn"
-            title="Today options"
-            @click=${(e: MouseEvent) => this.openTodayMenu(e)}
-          >${this.menuIcon()}</button>
-        </div>
-        <div
-          class="item ${allActive ? 'active' : ''}"
-          role="button"
-          tabindex="0"
-          aria-label="All feeds"
-          @click=${() => this.select({kind: 'all'})}
-          @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'all'})}
-        >
-          ${this.icon('all')}
-          <span class="label">All</span>
-          ${this.totalUnread > 0 ? html`<span class="badge">${this.totalUnread}</span>` : ''}
-        </div>
-
-        ${folders.map((folder) => this.folderRow(folder))}
-
-        ${uncategorized.length
-            ? html`
-              <div class="section-label">No folder</div>
-              ${uncategorized.map((feed) => this.feedRow(feed))}
-            `
-            : ''}
-        <div class="drop-zone" data-no-folder>Drop here to move out of folders</div>
-      </nav>
-      <div
-        class="resize-handle"
-        title="Drag to resize"
-        @pointerdown=${this.onResizeStart}
-        @pointermove=${this.onResizeMove}
-        @pointerup=${this.onResizeEnd}
-        @pointercancel=${this.onResizeEnd}
-      ></div>
-      <feed-menu
-        .feed=${menuFeed ?? null}
-        .folders=${folders}
-        .open=${this.menuOpen && menuFeed !== undefined}
-        .anchor=${this.menuAnchor}
-        @close=${this.closeMenu}
-        @refresh=${this.onMenuRefresh}
-        @delete=${this.onMenuDelete}
-        @folders-change=${this.onMenuFoldersChange}
-      ></feed-menu>
-      <folder-menu
-        .folder=${folderMenuFolder ?? null}
-        .open=${this.folderMenuOpen && folderMenuFolder !== undefined}
-        .anchor=${this.folderMenuAnchor}
-        .unreadOnly=${folderMenuFolder ? Boolean(this.hideReadByFolder[folderMenuFolder.id]) : false}
-        @close=${this.closeFolderMenu}
-        @delete=${this.onFolderMenuDelete}
-        @refresh=${this.onFolderMenuRefresh}
-        @unread-only-change=${this.onFolderMenuUnreadOnly}
-      ></folder-menu>
-      <feed-list-menu
-        .open=${this.feedListMenuOpen}
-        .anchor=${this.feedListMenuAnchor}
-        .feedSort=${this.feedSort}
-        @close=${this.closeFeedListMenu}
-        @sort-change=${this.onFeedSortChange}
-        @sort-folders=${this.onSortFolders}
-        @refresh-all=${this.onRefreshAll}
-      ></feed-list-menu>
-      <today-menu
-        .open=${this.todayMenuOpen}
-        .anchor=${this.todayMenuAnchor}
-        .folders=${folders}
-        .settings=${this.todaySettings}
-        @close=${() => (this.todayMenuOpen = false)}
-        @settings-change=${this.onTodaySettingsChange}
-      ></today-menu>
+      ${this.renderHead()}
+      ${this.renderNav(folders, uncategorized)}
+      ${this.renderResizeHandle()}
+      ${this.renderMenus(folders, menuFeed, folderMenuFolder)}
     `;
     }
 
-    private icon(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash') {
-        const paths: Record<string, ReturnType<typeof svg>> = {
-            rss: svg`<circle cx="6" cy="18" r="2" fill="currentColor"></circle><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path>`,
-            folder: svg`<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.6"></path>`,
-            all: svg`<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle>`,
-            refresh: svg`<path d="M20 11a8 8 0 1 0-2.3 5.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>`,
-            trash: svg`<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>`,
-        };
-        return html`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[kind]}</svg>`;
+    private renderHead() {
+        return html`<div class="sidebar-head"><button class="pin-btn filter-btn" title="Feed list options" @click=${(e: MouseEvent) => this.openFeedListMenu(e)}>${this.filterIcon()}</button><button class="pin-btn" title=${this.autoHide ? 'Pin the feed list open' : 'Auto-hide the feed list'} @click=${this.toggleAutoHide}>${this.pinIcon()}</button></div>`;
     }
+
+    private renderNav(folders: Folder[], uncategorized: Feed[]) {
+        return html`<nav class="nav" @dragover=${this.onDragOver} @dragleave=${this.onDragLeave} @drop=${this.onDrop} @dragend=${this.onDragEnd}>${this.renderNavError()}${this.renderStaticNav()}${folders.map((folder) => this.folderRow(folder))}${this.renderUncategorized(uncategorized)}<div class="drop-zone" data-no-folder>Drop here to move out of folders</div></nav>`;
+    }
+
+    private renderNavError() {
+        return this.library.error ? html`<div class="nav-error">Could not load feeds. <button @click=${this.onRetryLibrary}>Retry</button></div>` : '';
+    }
+
+    private renderStaticNav() {
+        return html`
+      ${this.renderBriefNav()}${this.renderTodayNav()}${this.renderAllNav()}
+    `;
+    }
+
+    private renderBriefNav() {
+        const active = this.isActive({kind: 'brief'});
+        return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="Daily Brief" @click=${() => this.select({kind: 'brief'})} @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'brief'})}><span class="icon">✨</span><span class="label">Daily Brief</span></div>`;
+    }
+
+    private renderTodayNav() {
+        const active = this.isActive({kind: 'today'});
+        return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="Today" @click=${() => this.select({kind: 'today'})} @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'today'})}><span class="icon">🗓</span><span class="label">Today</span><button class="menu-btn" title="Today options" @click=${(e: MouseEvent) => this.openTodayMenu(e)}>${this.menuIcon()}</button></div>`;
+    }
+
+    private renderAllNav() {
+        const active = this.isActive({kind: 'all'});
+        return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="All feeds" @click=${() => this.select({kind: 'all'})} @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'all'})}>${this.icon('all')}<span class="label">All</span>${this.totalUnread > 0 ? html`<span class="badge">${this.totalUnread}</span>` : ''}</div>`;
+    }
+
+    private renderUncategorized(uncategorized: Feed[]) {
+        if (!uncategorized.length) return html``;
+        return html`<div class="section-label">No folder</div>${uncategorized.map((feed) => this.feedRow(feed))}`;
+    }
+
+    private renderResizeHandle() {
+        return html`<div class="resize-handle" title="Drag to resize" @pointerdown=${this.onResizeStart} @pointermove=${this.onResizeMove} @pointerup=${this.onResizeEnd} @pointercancel=${this.onResizeEnd}></div>`;
+    }
+
+    private renderMenus(folders: Folder[], menuFeed: Feed | undefined, folderMenuFolder: Folder | undefined) {
+        return html`
+      <feed-menu .feed=${menuFeed ?? null} .folders=${folders} .open=${this.menuOpen && menuFeed !== undefined} .anchor=${this.menuAnchor} @close=${this.closeMenu} @refresh=${this.onMenuRefresh} @delete=${this.onMenuDelete} @folders-change=${this.onMenuFoldersChange}></feed-menu>
+      <folder-menu .folder=${folderMenuFolder ?? null} .open=${this.folderMenuOpen && folderMenuFolder !== undefined} .anchor=${this.folderMenuAnchor} .unreadOnly=${folderMenuFolder ? Boolean(this.hideReadByFolder[folderMenuFolder.id]) : false} @close=${this.closeFolderMenu} @delete=${this.onFolderMenuDelete} @refresh=${this.onFolderMenuRefresh} @unread-only-change=${this.onFolderMenuUnreadOnly}></folder-menu>
+      <feed-list-menu .open=${this.feedListMenuOpen} .anchor=${this.feedListMenuAnchor} .feedSort=${this.feedSort} @close=${this.closeFeedListMenu} @sort-change=${this.onFeedSortChange} @sort-folders=${this.onSortFolders} @refresh-all=${this.onRefreshAll}></feed-list-menu>
+      <today-menu .open=${this.todayMenuOpen} .anchor=${this.todayMenuAnchor} .folders=${folders} .settings=${this.todaySettings} @close=${() => (this.todayMenuOpen = false)} @settings-change=${this.onTodaySettingsChange}></today-menu>
+    `;
+    }
+
+    private icon(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash') { return iconTemplate(kind); }
 
     private onHoverEnter = () => {
         if (this.hideTimer !== null) {
@@ -361,74 +280,15 @@ export class SourceList extends LitElement {
         }
     }
 
-    private pinIcon() {
-        const pin = svg`
-      <line x1="12" x2="12" y1="17" y2="22"></line>
-      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
-    `;
-        const off = svg`<line x1="2" x2="22" y1="2" y2="22"></line>`;
-        return html`
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >${pin}${this.autoHide ? off : ''}</svg>
-    `;
-    }
+    private pinIcon() { return pinIconTemplate(this.autoHide); }
 
-    private filterIcon() {
-        return html`
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M3 4h18l-7 8v5l-4 2v-7L3 4z"></path>
-      </svg>
-    `;
-    }
+    private filterIcon() { return filterIconTemplate(); }
 
-    private folderUnread(folderId: string): number {
-        return this.libraryData.feeds
-            .filter((f) => f.folderIds.includes(folderId))
-            .reduce((sum, f) => sum + f.unread, 0);
-    }
+    private folderUnread(folderId: string): number { return folderUnreadFor(this.libraryData.feeds, folderId); }
 
-    private sortedFeeds(feeds: Feed[]): Feed[] {
-        if (this.feedSort !== 'unread') return feeds;
-        return [...feeds].sort(
-            (a, b) =>
-                Number(b.unread > 0) - Number(a.unread > 0) ||
-                a.title.localeCompare(b.title, undefined, {numeric: true, sensitivity: 'base'}),
-        );
-    }
+    private folderFeeds(folderId: string): Feed[] { return folderFeedsFor(this.libraryData.feeds, folderId, this.feedSort, this.hideReadByFolder); }
 
-    private visibleFeeds(feeds: Feed[], folderKey: string): Feed[] {
-        return this.hideReadByFolder[folderKey] ? feeds.filter((f) => f.unread > 0) : feeds;
-    }
-
-    private folderFeeds(folderId: string): Feed[] {
-        return this.sortedFeeds(
-            this.visibleFeeds(
-                this.libraryData.feeds.filter((f) => f.folderIds.includes(folderId)),
-                folderId,
-            ),
-        );
-    }
-
-    private uncategorizedFeeds(): Feed[] {
-        return this.sortedFeeds(
-            this.libraryData.feeds.filter((f) => f.folderIds.length === 0),
-        );
-    }
+    private uncategorizedFeeds(): Feed[] { return uncategorizedFor(this.libraryData.feeds, this.feedSort); }
 
     private openFeedListMenu(e: MouseEvent) {
         e.stopPropagation();
@@ -514,35 +374,9 @@ export class SourceList extends LitElement {
         }
     }
 
-    private onDragStart(e: DragEvent, kind: 'folder' | 'feed', id: string) {
-        this.dragging = {kind, id};
-        if (e.dataTransfer) {
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', JSON.stringify({kind, id}));
-        }
-        (e.target as HTMLElement).closest('.item, .feed-row')?.classList.add('dragging');
-        if (kind === 'feed') {
-            this.shadowRoot?.querySelector('[data-no-folder]')?.classList.add('visible');
-        }
-    }
+    private onDragStart(e: DragEvent, kind: 'folder' | 'feed', id: string) { handleDragStart(this as never, e, kind, id); }
 
-    private onDragOver(e: DragEvent) {
-        if (!this.dragging) return;
-        e.preventDefault();
-        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-        const selector =
-            this.dragging.kind === 'feed'
-                ? '[data-folder-id], [data-feed-id], [data-no-folder]'
-                : '[data-folder-id]';
-        const target =
-            (e.target as HTMLElement).closest<HTMLElement>(selector) ??
-            (this.shadowRoot?.querySelector('.nav') as HTMLElement | null);
-        if (this.dragTargetEl !== target) {
-            this.dragTargetEl?.classList.remove('drag-over');
-            this.dragTargetEl = target;
-            this.dragTargetEl?.classList.add('drag-over');
-        }
-    }
+    private onDragOver(e: DragEvent) { handleDragOver(this as never, e); }
 
     private onDragLeave(e: DragEvent) {
         const nav = this.shadowRoot?.querySelector('.nav');
@@ -555,66 +389,24 @@ export class SourceList extends LitElement {
         this.dragTargetEl = null;
     }
 
-    private dropTarget(e: DragEvent): { folderId: string | null } {
-        const selector =
-            this.dragging?.kind === 'feed' ? '[data-folder-id], [data-feed-id]' : '[data-folder-id]';
-        const el = (e.target as HTMLElement).closest<HTMLElement>(selector);
-        if (el?.dataset.folderId) return {folderId: el.dataset.folderId};
-        if (el?.dataset.feedId) {
-            const feed = this.libraryData.feeds.find((f) => f.id === el.dataset.feedId);
-            return {folderId: feed?.folderIds[0] ?? null};
-        }
-        return {folderId: null};
-    }
+    private dropTarget(e: DragEvent): { folderId: string | null } { return {folderId: dropFolderId(this.dragging?.kind ?? null, e.target as HTMLElement, this.libraryData.feeds)}; }
 
     private async onDrop(e: DragEvent) {
         e.preventDefault();
         if (!this.dragging) return;
         const target = this.dropTarget(e);
-        if (this.dragging.kind === 'folder') {
-            await this.applyFolderReorder(this.dragging.id, target);
-        } else {
-            await this.applyFeedMove(this.dragging.id, target);
-        }
+        if (this.dragging.kind === 'folder') await this.applyFolderReorder(this.dragging.id, target);
+        else await this.applyFeedMove(this.dragging.id, target);
         this.endDrag();
     }
 
-    private onDragEnd() {
-        this.endDrag();
-    }
+    private onDragEnd() { handleEndDrag(this as never); }
 
-    private endDrag() {
-        this.dragging = null;
-        this.shadowRoot?.querySelector('.dragging')?.classList.remove('dragging');
-        this.shadowRoot?.querySelector('[data-no-folder]')?.classList.remove('visible');
-        this.clearDragOver();
-    }
+    private endDrag() { handleEndDrag(this as never); }
 
-    private async applyFolderReorder(folderId: string, target: { folderId: string | null }) {
-        const ids = this.libraryData.folders.map((f) => f.id);
-        const from = ids.indexOf(folderId);
-        if (from < 0) return;
-        ids.splice(from, 1);
-        const targetId = target.folderId;
-        if (targetId && targetId !== folderId) {
-            const to = ids.indexOf(targetId);
-            ids.splice(to < 0 ? ids.length : to, 0, folderId);
-        } else {
-            ids.push(folderId);
-        }
-        await reorderFolders(ids);
-    }
+    private async applyFolderReorder(folderId: string, target: { folderId: string | null }) { await handleFolderReorder(this as never, folderId, target); }
 
-    private async applyFeedMove(feedId: string, target: { folderId: string | null }) {
-        const feed = this.libraryData.feeds.find((f) => f.id === feedId);
-        if (!feed) return;
-        const next = target.folderId ? [target.folderId] : [];
-        const same =
-            feed.folderIds.length === next.length && feed.folderIds.every((id, i) => id === next[i]);
-        if (same) return;
-        await moveFeed(feedId, target.folderId);
-        if (target.folderId && this.collapsed[target.folderId]) this.toggleFolder(target.folderId);
-    }
+    private async applyFeedMove(feedId: string, target: { folderId: string | null }) { await handleFeedMove(this as never, feedId, target); }
 
     private openMenu(feed: Feed, e: MouseEvent) {
         e.stopPropagation();
@@ -670,12 +462,7 @@ export class SourceList extends LitElement {
     `;
     }
 
-    private menuIcon() {
-        return html`<svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="1.6"/>
-      <path d="M9 10.2l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`;
-    }
+    private menuIcon() { return menuIconTemplate(); }
 
     private openFolderMenu(folder: Folder, e: MouseEvent) {
         e.stopPropagation();
@@ -752,67 +539,15 @@ export class SourceList extends LitElement {
 
     private feedRow(feed: Feed) {
         const active = this.isActive({kind: 'feed', id: feed.id});
-        return html`
-      <div
-        class="feed-row ${active ? 'active' : ''} ${feed.unread > 0 ? 'has-unread' : ''}"
-        data-feed-id="${feed.id}"
-        draggable="true"
-        role="button"
-        tabindex="0"
-        aria-label="Open feed ${feed.title}"
-        @dragstart=${(e: DragEvent) => this.onDragStart(e, 'feed', feed.id)}
-        @click=${() => this.select({kind: 'feed', id: feed.id})}
-        @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'feed', id: feed.id})}
-      >
-        <span class="dot"></span>
-        <span class="label" title="${feed.title}${feed.lastError ? ` — ${feed.lastError}` : ''}">${feed.title}</span>
-        ${feed.unread > 0 ? html`<span class="badge">${feed.unread}</span>` : ''}
-        ${feed.lastError ? html`<span class="feed-error" title="${feed.lastError}">⚠</span>` : ''}
-        ${this.feedActions(feed)}
-      </div>
-    `;
+        return feedRowTemplate(feed, active, (f) => this.select({kind: 'feed', id: f.id}), (e, f) => this.onItemKey(e, {kind: 'feed', id: f.id}), (e, f) => this.onDragStart(e, 'feed', f.id), this.feedActions(feed));
     }
 
     private folderRow(folder: Folder) {
         const feeds = this.folderFeeds(folder.id);
-        const isCollapsed = this.collapsed[folder.id];
+        const isCollapsed = Boolean(this.collapsed[folder.id]);
         const active = this.isActive({kind: 'folder', id: folder.id});
         const unread = this.folderUnread(folder.id);
-        return html`
-      <div>
-        <div
-          class="item ${active ? 'active' : ''}"
-          data-folder-id="${folder.id}"
-          draggable="true"
-          role="button"
-          tabindex="0"
-          aria-label="Open folder ${folder.title}"
-          @dragstart=${(e: DragEvent) => this.onDragStart(e, 'folder', folder.id)}
-          @click=${() => this.select({kind: 'folder', id: folder.id})}
-          @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'folder', id: folder.id})}
-        >
-          <span
-            class="icon"
-            style="cursor:pointer"
-            @click=${(e: Event) => {
-            e.stopPropagation();
-            this.toggleFolder(folder.id);
-        }}
-          >${isCollapsed ? '▸' : '▾'}</span>
-          ${this.icon('folder')}
-          <span class="label" title="${folder.title}">${folder.title}</span>
-          ${unread > 0 ? html`<span class="badge">${unread}</span>` : ''}
-          <button
-            class="menu-btn"
-            title="Folder options"
-            @click=${(e: MouseEvent) => this.openFolderMenu(folder, e)}
-          >${this.menuIcon()}</button>
-        </div>
-        ${isCollapsed
-            ? ''
-            : html`<div class="folder-children">${feeds.map((f) => this.feedRow(f))}</div>`}
-      </div>
-    `;
+        return folderRowTemplate(folder, feeds, isCollapsed, active, unread, (f) => this.select({kind: 'folder', id: f.id}), (e, f) => this.onItemKey(e, {kind: 'folder', id: f.id}), (e, f) => this.onDragStart(e, 'folder', f.id), (id) => this.toggleFolder(id), (e, f) => this.openFolderMenu(f, e), (feed) => this.feedRow(feed));
     }
 
     private async doRefresh(feed: Feed) {

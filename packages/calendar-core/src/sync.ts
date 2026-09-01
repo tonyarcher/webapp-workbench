@@ -16,6 +16,39 @@ export async function collectEvents(
     return all;
 }
 
+async function handleWrite(
+    event: CalEvent,
+    known: ReadonlySet<string>,
+    writeOne: (event: CalEvent) => Promise<WriteResult>,
+    state: {succeeded: number; failed: number; newUids: string[]},
+): Promise<void> {
+    if (known.has(event.uid)) {
+        state.succeeded++;
+        return;
+    }
+    const result = await writeOne(event);
+    if (result === 'fail') state.failed++;
+    else {
+        state.succeeded++;
+        state.newUids.push(event.uid);
+    }
+}
+
+function emitProgress(
+    event: CalEvent,
+    total: number,
+    state: {succeeded: number; failed: number},
+    onProgress?: (progress: SyncProgress) => void,
+): void {
+    onProgress?.({
+        phase: 'write',
+        done: state.succeeded + state.failed,
+        total,
+        failed: state.failed,
+        label: event.title,
+    });
+}
+
 export async function writeEvents({
     events,
     writtenUids,
@@ -28,31 +61,12 @@ export async function writeEvents({
     onProgress?: (progress: SyncProgress) => void;
 }): Promise<{done: number; failed: number; newUids: string[]}> {
     const known = writtenUids ?? new Set<string>();
-    let succeeded = 0;
-    let failed = 0;
-    const newUids: string[] = [];
+    const state = {succeeded: 0, failed: 0, newUids: [] as string[]};
     const total = events.length;
-    for (let i = 0; i < events.length; i++) {
-        const event = events[i];
+    for (const event of events) {
         if (!event) continue;
-        if (known.has(event.uid)) {
-            succeeded++;
-        } else {
-            const result = await writeOne(event);
-            if (result === 'fail') failed++;
-            else {
-                succeeded++;
-                newUids.push(event.uid);
-            }
-        }
-        const processed = succeeded + failed;
-        onProgress?.({
-            phase: 'write',
-            done: processed,
-            total,
-            failed,
-            label: event.title,
-        });
+        await handleWrite(event, known, writeOne, state);
+        emitProgress(event, total, state, onProgress);
     }
-    return {done: succeeded, failed, newUids};
+    return {done: state.succeeded, failed: state.failed, newUids: state.newUids};
 }

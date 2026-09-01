@@ -15,29 +15,48 @@ function pathSegmentAfter(path: string, prefix: string): string | null {
     return rest.split('/')[0] || null
 }
 
-function youtubeId(url: string): string | null {
-    if (!YOUTUBE_HOST_RE.test(url)) return null
-    let parsed: URL
+function parseUrlSafe(url: string): URL | null {
     try {
-        parsed = new URL(url)
+        return new URL(url)
     } catch {
         return null
     }
+}
+
+function isYoutuHost(host: string): boolean {
+    return host === 'youtu.be'
+}
+
+function isYoutubeHost(host: string): boolean {
+    return host === 'youtube.com' || host.endsWith('.youtube.com')
+}
+
+function isNocookieHost(host: string): boolean {
+    return host === 'youtube-nocookie.com' || host.endsWith('.youtube-nocookie.com')
+}
+
+function youtubeIdFromWatch(parsed: URL): string | null {
+    if (parsed.pathname === '/watch' || parsed.pathname.startsWith('/watch/')) {
+        return isValidId(parsed.searchParams.get('v'))
+    }
+    return null
+}
+
+function youtubeIdFromPath(parsed: URL): string | null {
+    for (const prefix of ['/embed/', '/shorts/', '/live/']) {
+        const id = pathSegmentAfter(parsed.pathname, prefix)
+        if (id) return isValidId(id)
+    }
+    return null
+}
+
+function youtubeId(url: string): string | null {
+    if (!YOUTUBE_HOST_RE.test(url)) return null
+    const parsed = parseUrlSafe(url)
+    if (!parsed) return null
     const host = parsed.hostname.toLowerCase()
-    if (host === 'youtu.be') {
-        return isValidId(pathSegmentAfter(parsed.pathname, '/'))
-    }
-    const isYoutube = host === 'youtube.com' || host.endsWith('.youtube.com')
-    const isNocookie = host === 'youtube-nocookie.com' || host.endsWith('.youtube-nocookie.com')
-    if (isYoutube || isNocookie) {
-        if (parsed.pathname === '/watch' || parsed.pathname.startsWith('/watch/')) {
-            return isValidId(parsed.searchParams.get('v'))
-        }
-        for (const prefix of ['/embed/', '/shorts/', '/live/']) {
-            const id = pathSegmentAfter(parsed.pathname, prefix)
-            if (id) return isValidId(id)
-        }
-    }
+    if (isYoutuHost(host)) return isValidId(pathSegmentAfter(parsed.pathname, '/'))
+    if (isYoutubeHost(host) || isNocookieHost(host)) return youtubeIdFromWatch(parsed) ?? youtubeIdFromPath(parsed)
     return null
 }
 

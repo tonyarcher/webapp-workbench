@@ -124,8 +124,17 @@ export class BriefView extends LitElement {
             month: 'short',
             day: 'numeric',
         });
-        const message = this.availabilityMessage();
+        return html`
+      ${this.renderToolbar(todayLabel, articles)}
+      <div class="body">
+        ${this.renderBanners()}
+        ${this.renderDiagSection()}
+        ${articles.length ? this.renderCovered(articles) : html`<div class="empty">No articles published today yet. Sync your feeds and check back.</div>`}
+      </div>
+    `;
+    }
 
+    private renderToolbar(todayLabel: string, articles: Article[]) {
         return html`
       <div class="toolbar">
         <h2>✨ Daily Brief</h2>
@@ -134,62 +143,65 @@ export class BriefView extends LitElement {
           ${this.generating ? 'Writing…' : 'Regenerate'}
         </button>
       </div>
+    `;
+    }
 
-      <div class="body">
-        ${message ? html`<div class="banner">${message}</div>` : ''}
-        ${this.error ? html`<div class="banner" style="color: var(--danger)">${this.error}</div>` : ''}
-        ${this.diagnostics && this.diagnostics.available !== 'readily'
-            ? html`
-              <details class="banner diag">
-                <summary>Why? Browser diagnostics</summary>
-                <div class="diag-body">
-                  ${this.renderDiagRow('Model API (window.model)', this.diagnostics.hasModelApi)}
-                  ${this.renderDiagRow('window.ai object', this.diagnostics.hasAiApi)}
-                  ${this.renderDiagRow('languageModel API', this.diagnostics.hasLanguageModelApi)}
-                  ${this.renderDiagRow(
-                'Reported capability',
-                this.diagnostics.capabilitiesValue ?? 'none',
-            )}
-                  ${this.renderDiagRow('Served from localhost', this.diagnostics.isLocalhost)}
-                  ${this.renderDiagRow('Secure context (HTTPS)', this.diagnostics.isSecureContext)}
-                </div>
-              </details>
-            `
-            : ''}
+    private renderBanners() {
+        const message = this.availabilityMessage();
+        return html`
+      ${message ? html`<div class="banner">${message}</div>` : ''}
+      ${this.error ? html`<div class="banner" style="color: var(--danger)">${this.error}</div>` : ''}
+    `;
+    }
 
-        ${articles.length
-            ? html`
-              <div class="summary-card">
-                <div class="head">✨ Daily Brief</div>
-                ${this.generating
-                ? html`<div class="spinner"><span class="spin"></span> Summarizing ${articles.length} articles…</div>`
-                : this.summary
-                    ? html`<div class="summary-text">${this.summary}</div>`
-                    : html`<div class="spinner"><span class="spin"></span> Reading today’s articles…</div>`}
-              </div>
+    private renderDiagSection() {
+        if (!this.diagnostics || this.diagnostics.available === 'readily') return html``;
+        return html`
+      <details class="banner diag">
+        <summary>Why? Browser diagnostics</summary>
+        <div class="diag-body">
+          ${this.renderDiagRow('Model API (window.model)', this.diagnostics.hasModelApi)}
+          ${this.renderDiagRow('window.ai object', this.diagnostics.hasAiApi)}
+          ${this.renderDiagRow('languageModel API', this.diagnostics.hasLanguageModelApi)}
+          ${this.renderDiagRow('Reported capability', this.diagnostics.capabilitiesValue ?? 'none')}
+          ${this.renderDiagRow('Served from localhost', this.diagnostics.isLocalhost)}
+          ${this.renderDiagRow('Secure context (HTTPS)', this.diagnostics.isSecureContext)}
+        </div>
+      </details>
+    `;
+    }
 
-              <h3 class="section-label">Covered today (${articles.length})</h3>
-              <div class="articles">
-                ${articles.map(
-                (a) => html`
-                    <div
-                      class="article ${a.read === 0 ? 'unread' : ''}"
-                      role="button"
-                      tabindex="0"
-                      aria-label="Open ${a.title}"
-                      @click=${() => this.openArticle(a)}
-                      @keydown=${(e: KeyboardEvent) => this.onRowKey(e, a)}
-                    >
-                      <span class="dot"></span>
-                      <span class="title">${a.title}</span>
-                      <span class="src">${this.feedTitle(a.feedId) || domainOf(a.link)}</span>
-                      <span class="date">${formatDate(a.published)}</span>
-                    </div>
-                  `,
-            )}
-              </div>
-            `
-            : html`<div class="empty">No articles published today yet. Sync your feeds and check back.</div>`}
+    private renderCovered(articles: Article[]) {
+        return html`
+      <div class="summary-card">
+        <div class="head">✨ Daily Brief</div>
+        ${this.renderSummaryState(articles)}
+      </div>
+      <h3 class="section-label">Covered today (${articles.length})</h3>
+      <div class="articles">${articles.map((a) => this.renderArticleRow(a))}</div>
+    `;
+    }
+
+    private renderSummaryState(articles: Article[]) {
+        if (this.generating) return html`<div class="spinner"><span class="spin"></span> Summarizing ${articles.length} articles…</div>`;
+        if (this.summary) return html`<div class="summary-text">${this.summary}</div>`;
+        return html`<div class="spinner"><span class="spin"></span> Reading today’s articles…</div>`;
+    }
+
+    private renderArticleRow(a: Article) {
+        return html`
+      <div
+        class="article ${a.read === 0 ? 'unread' : ''}"
+        role="button"
+        tabindex="0"
+        aria-label="Open ${a.title}"
+        @click=${() => this.openArticle(a)}
+        @keydown=${(e: KeyboardEvent) => this.onRowKey(e, a)}
+      >
+        <span class="dot"></span>
+        <span class="title">${a.title}</span>
+        <span class="src">${this.feedTitle(a.feedId) || domainOf(a.link)}</span>
+        <span class="date">${formatDate(a.published)}</span>
       </div>
     `;
     }
@@ -205,33 +217,42 @@ export class BriefView extends LitElement {
         return this.library.data?.feeds.find((f) => f.id === feedId)?.title ?? '';
     }
 
+    private buildPromptLines(articles: Article[]): string[] {
+        return articles.map((a, i) => {
+            const feed = this.feedTitle(a.feedId);
+            return `${i + 1}. "${a.title}"${feed ? ` — ${feed}` : ''}${a.link ? ` (${a.link})` : ''}`;
+        });
+    }
+
+    private buildPrompt(lines: string[]): { prompt: string; systemPrompt: string } {
+        const systemPrompt = 'You are a news briefing assistant. Turn a reader\'s daily RSS articles into a clear, scannable daily brief. Group related stories, keep it factual and neutral, and never invent details.';
+        const prompt = [
+            `Here are today's articles from the reader's feeds (newest first):`,
+            ``,
+            lines.join('\n'),
+            ``,
+            `Write a concise daily brief covering these stories. Use short markdown bullets. Highlight the most important items first. Do not mention "the user" or "the reader".`,
+        ].join('\n');
+        return {prompt, systemPrompt};
+    }
+
+    private async ensureAvailable(): Promise<boolean> {
+        const status = await aiAvailability();
+        if (status !== 'readily') { this.availability = status; return false; }
+        return true;
+    }
+
     private async generate() {
         const articles = this.articles.data ?? [];
         if (!articles.length) return;
-        const status = await aiAvailability();
-        if (status !== 'readily') {
-            this.availability = status;
-            return;
-        }
+        if (!await this.ensureAvailable()) return;
         this.generatedFor = this.startOfToday.toDateString();
         this.generating = true;
         this.error = '';
         try {
-            const lines = articles.map((a, i) => {
-                const feed = this.feedTitle(a.feedId);
-                return `${i + 1}. "${a.title}"${feed ? ` — ${feed}` : ''}${a.link ? ` (${a.link})` : ''}`;
-            });
-            const systemPrompt =
-                'You are a news briefing assistant. Turn a reader\'s daily RSS articles into a clear, scannable daily brief. Group related stories, keep it factual and neutral, and never invent details.';
-            const prompt = [
-                `Here are today's articles from the reader's feeds (newest first):`,
-                ``,
-                lines.join('\n'),
-                ``,
-                `Write a concise daily brief covering these stories. Use short markdown bullets. Highlight the most important items first. Do not mention "the user" or "the reader".`,
-            ].join('\n');
+            const lines = this.buildPromptLines(articles);
+            const {prompt, systemPrompt} = this.buildPrompt(lines);
             const summary = await runAiPrompt(prompt, systemPrompt);
-            // Discard results that land after the day rolled over mid-generation.
             if (this.generatedFor !== this.startOfToday.toDateString()) return;
             this.summary = summary;
         } catch (err) {

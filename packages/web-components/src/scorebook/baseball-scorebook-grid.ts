@@ -59,70 +59,94 @@ export class BaseballScorebookGrid extends LitElement {
 
     render() {
         const inningsArray = Array.from({length: this.maxInning}, (_, i) => i + 1);
-
         return html`
       <div class="card scorebook-container">
         <h2 class="scorebook-title">${this.teamName} - Scorebook Sheet</h2>
-
         <div class="table-wrapper">
           <table class="scorebook-table">
-            <thead>
-              <tr>
-                <th class="col-slot">#</th>
-                <th class="col-name">Batter</th>
-                <th class="col-pos">POS</th>
-                ${inningsArray.map((inn) => html`<th class="col-inning">${inn}</th>`)}
-                <th class="col-stat">AB</th>
-                <th class="col-stat">R</th>
-                <th class="col-stat">H</th>
-                <th class="col-stat">RBI</th>
-              </tr>
-            </thead>
-            <tbody>
-            ${(this.rows ?? []).map(
-            (row) => html`
-                  <tr>
-                    <td class="col-slot font-bold">${row.slotIdx}</td>
-                    <td class="col-name">${row.batterName}</td>
-                    <td class="col-pos text-secondary">${row.position}</td>
-                    ${inningsArray.map((inn) => html`
-                      <td class="col-inning">
-                        ${this.renderCell(row.innings?.[inn] ?? null)}
-                      </td>
-                    `)}
-                    <td class="col-stat">${row.atBats ?? 0}</td>
-                    <td class="col-stat">${row.runs ?? 0}</td>
-                    <td class="col-stat">${row.hits ?? 0}</td>
-                    <td class="col-stat">${row.rbi ?? 0}</td>
-                  </tr>
-                `
-        )}
-            </tbody>
+            ${this.renderTableHead(inningsArray)} ${this.renderTableBody(inningsArray)}
           </table>
         </div>
       </div>
     `;
     }
 
-    private renderCell(cell: ScorebookCellDto | null) {
-        const baseClass = cell?.base ? `b${cell.base}` : '';
-        const endClass = cell?.hasEndedInningLine ? 'ended-inning' : '';
-        const scored = cell?.run === true || (cell?.advancements ?? []).some((advancement) => advancement.scored);
-
+    private renderTableHead(inningsArray: number[]) {
         return html`
-      <div class="diamond ${baseClass} ${endClass} ${scored ? 'scored' : ''}">
-        ${cell?.run ? html`<div class="run-dot" data-testid="run-dot"></div>` : ''}
-        ${this.renderAdvancements(cell)}
-        ${cell?.notation ? html`
-          <div class="play-desc">${cell.notation}</div>` : ''}
-        ${cell?.outNum ? html`
-          <div class="out-circle">${cell.outNum}</div>` : ''}
-        ${cell?.count ? html`
-          <div class="count-badge">${cell.count}</div>` : ''}
-        ${cell?.rbiCount ? html`
-          <div class="rbi-badge">RBI ${cell.rbiCount}</div>` : ''}
+          <thead>
+            <tr>
+              <th class="col-slot">#</th>
+              <th class="col-name">Batter</th>
+              <th class="col-pos">POS</th>
+              ${inningsArray.map((inn) => html`<th class="col-inning">${inn}</th>`)}
+              <th class="col-stat">AB</th>
+              <th class="col-stat">R</th>
+              <th class="col-stat">H</th>
+              <th class="col-stat">RBI</th>
+            </tr>
+          </thead>
+        `;
+    }
+
+    private renderTableBody(inningsArray: number[]) {
+        return html` <tbody>${(this.rows ?? []).map((row) => this.renderRow(row, inningsArray))}</tbody> `;
+    }
+
+    private renderRow(row: ScorebookSlotDto, inningsArray: number[]) {
+        return html`
+          <tr>
+            <td class="col-slot font-bold">${row.slotIdx}</td>
+            <td class="col-name">${row.batterName}</td>
+            <td class="col-pos text-secondary">${row.position}</td>
+            ${inningsArray.map((inn) => html`<td class="col-inning">${this.renderCell(row.innings?.[inn] ?? null)}</td>`)}
+            <td class="col-stat">${row.atBats ?? 0}</td>
+            <td class="col-stat">${row.runs ?? 0}</td>
+            <td class="col-stat">${row.hits ?? 0}</td>
+            <td class="col-stat">${row.rbi ?? 0}</td>
+          </tr>
+        `;
+    }
+
+    private renderCell(cell: ScorebookCellDto | null) {
+        return html`
+      <div class="diamond ${this.cellBaseClass(cell)} ${this.cellEndClass(cell)} ${this.isScored(cell) ? 'scored' : ''}">
+        ${this.renderRunDot(cell)} ${this.renderAdvancements(cell)} ${this.renderNotation(cell)}
+        ${this.renderOutNum(cell)} ${this.renderCountBadge(cell)} ${this.renderRbiBadge(cell)}
       </div>
     `;
+    }
+
+    private cellBaseClass(cell: ScorebookCellDto | null): string {
+        return cell?.base ? `b${cell.base}` : '';
+    }
+
+    private cellEndClass(cell: ScorebookCellDto | null): string {
+        return cell?.hasEndedInningLine ? 'ended-inning' : '';
+    }
+
+    private isScored(cell: ScorebookCellDto | null): boolean {
+        if (cell?.run === true) return true;
+        return (cell?.advancements ?? []).some((advancement) => advancement.scored);
+    }
+
+    private renderRunDot(cell: ScorebookCellDto | null) {
+        return cell?.run ? html`<div class="run-dot" data-testid="run-dot"></div>` : '';
+    }
+
+    private renderNotation(cell: ScorebookCellDto | null) {
+        return cell?.notation ? html`<div class="play-desc">${cell.notation}</div>` : '';
+    }
+
+    private renderOutNum(cell: ScorebookCellDto | null) {
+        return cell?.outNum ? html`<div class="out-circle">${cell.outNum}</div>` : '';
+    }
+
+    private renderCountBadge(cell: ScorebookCellDto | null) {
+        return cell?.count ? html`<div class="count-badge">${cell.count}</div>` : '';
+    }
+
+    private renderRbiBadge(cell: ScorebookCellDto | null) {
+        return cell?.rbiCount ? html`<div class="rbi-badge">RBI ${cell.rbiCount}</div>` : '';
     }
 
     private renderAdvancements(cell: ScorebookCellDto | null) {

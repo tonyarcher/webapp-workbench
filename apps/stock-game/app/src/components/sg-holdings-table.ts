@@ -6,7 +6,7 @@ import {
   getCoreRowModel,
   getSortedRowModel,
 } from '@tanstack/table-core'
-import type { Cell, Table, TableState } from '@tanstack/table-core'
+import type { Cell, Header, HeaderGroup, Row, Table, TableState } from '@tanstack/table-core'
 import type { HoldingsEntry } from '@stock-game/shared'
 import { fmtMoney, fmtMoneySigned, fmtNumber, fmtPct, fmtPrice } from '../lib/format'
 import { tableStyles } from './shared-styles'
@@ -32,6 +32,27 @@ const HEADER_LABELS: Record<string, string> = {
   marketValueCents: 'Value',
   unrealizedPnlCents: 'Unrealized',
   unrealizedPnlPct: 'Return',
+}
+
+function formatCellValue(id: string, value: unknown): string {
+  const num = Number(value)
+  if (id === 'symbol') return String(value)
+  if (id === 'qty') return fmtNumber(num)
+  if (id === 'avgCostCents') return fmtMoney(num)
+  if (id === 'currentPrice') return fmtPrice(num)
+  if (id === 'marketValueCents') return fmtMoney(num)
+  if (id === 'unrealizedPnlCents') return fmtMoneySigned(num)
+  if (id === 'unrealizedPnlPct') return fmtPct(num)
+  return String(value)
+}
+
+function cellClassName(id: string, value: number): string {
+  const parts: string[] = []
+  if (id !== 'symbol') parts.push('num')
+  if (id === 'unrealizedPnlCents' || id === 'unrealizedPnlPct') {
+    parts.push(value >= 0 ? 'positive' : 'negative')
+  }
+  return parts.join(' ')
 }
 
 export class SgHoldingsTable extends LitElement {
@@ -83,38 +104,38 @@ export class SgHoldingsTable extends LitElement {
     )
   }
 
-  override render() {
+  private renderHeaderCell(header: Header<HoldingsEntry, unknown>): TemplateResult {
+    const sorted = header.column.getIsSorted()
+    const label = HEADER_LABELS[header.column.id] ?? header.column.id
+    const indicator = sorted === 'asc' ? ' ▲' : sorted === 'desc' ? ' ▼' : ''
+    const cls = header.column.id === 'symbol' ? '' : 'num'
+    return html`<th class=${cls} @click=${() => header.column.toggleSorting()}>
+      ${label}${indicator}
+    </th>`
+  }
+
+  private renderHeaderGroup(group: HeaderGroup<HoldingsEntry>): TemplateResult {
+    return html`<tr>
+      ${group.headers.map((header) => this.renderHeaderCell(header))}
+    </tr>`
+  }
+
+  private renderRow(row: Row<HoldingsEntry>): TemplateResult {
+    return html`<tr @click=${() => this.onRowClick(row.original.symbol)}>
+      ${row.getVisibleCells().map((cell) => this.renderCell(cell))}
+    </tr>`
+  }
+
+  override render(): TemplateResult {
     const rows = this.table.getRowModel().rows
+    const groups = this.table.getHeaderGroups()
     return html`
       <table class="sg-table">
         <thead>
-          ${this.table.getHeaderGroups().map(
-            (group) => html`
-              <tr>
-                ${group.headers.map((header) => {
-                  const sorted = header.column.getIsSorted()
-                  return html`
-                    <th
-                      class=${header.column.id === 'symbol' ? '' : 'num'}
-                      @click=${() => header.column.toggleSorting()}
-                    >
-                      ${HEADER_LABELS[header.column.id] ?? header.column.id}
-                      ${sorted === 'asc' ? ' ▲' : sorted === 'desc' ? ' ▼' : ''}
-                    </th>
-                  `
-                })}
-              </tr>
-            `,
-          )}
+          ${groups.map((group) => this.renderHeaderGroup(group))}
         </thead>
         <tbody>
-          ${rows.map(
-            (row) => html`
-              <tr @click=${() => this.onRowClick(row.original.symbol)}>
-                ${row.getVisibleCells().map((cell) => this.renderCell(cell))}
-              </tr>
-            `,
-          )}
+          ${rows.map((row) => this.renderRow(row))}
         </tbody>
       </table>
     `
@@ -123,41 +144,8 @@ export class SgHoldingsTable extends LitElement {
   private renderCell(cell: Cell<HoldingsEntry, unknown>): TemplateResult {
     const id = cell.column.id
     const value = Number(cell.getValue())
-    const isNumber = id !== 'symbol'
-    const pnl = id === 'unrealizedPnlCents' || id === 'unrealizedPnlPct'
-    const className = [
-      isNumber ? 'num' : '',
-      pnl ? (value >= 0 ? 'positive' : 'negative') : '',
-    ]
-      .filter((part) => part.length > 0)
-      .join(' ')
-
-    let text: string
-    switch (id) {
-      case 'symbol':
-        text = String(cell.getValue())
-        break
-      case 'qty':
-        text = fmtNumber(value)
-        break
-      case 'avgCostCents':
-        text = fmtMoney(value)
-        break
-      case 'currentPrice':
-        text = fmtPrice(value)
-        break
-      case 'marketValueCents':
-        text = fmtMoney(value)
-        break
-      case 'unrealizedPnlCents':
-        text = fmtMoneySigned(value)
-        break
-      case 'unrealizedPnlPct':
-        text = fmtPct(value)
-        break
-      default:
-        text = String(cell.getValue())
-    }
+    const className = cellClassName(id, value)
+    const text = formatCellValue(id, cell.getValue())
     return html`<td class=${className}>${text}</td>`
   }
 }

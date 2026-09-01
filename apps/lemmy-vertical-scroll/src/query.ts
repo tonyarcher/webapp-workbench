@@ -247,6 +247,18 @@ export function postsInfiniteQuery(
     }
 }
 
+async function fetchCommunityPostsPage(instance: string, communityId: number, sort: PostSort, software: Software, nsfwFilter: NsfwFilter, auth: string, pageParam: number): Promise<FilteredPostPage> {
+    const page = software === 'piefed' ? await fetchPiefedCommunityPosts({instance, communityId, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth}) : await fetchCommunityPosts({instance, communityId, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
+    const filtered = clientFilterPosts(page.posts, nsfwFilter)
+    void putPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, software, auth, pageParam), filtered).catch(() => {})
+    return {posts: filtered, page: page.page, rawCount: page.posts.length}
+}
+
+function nextPostPage(lastPage: PostPage): number | undefined {
+    const rawCount = (lastPage as FilteredPostPage).rawCount ?? PAGE_SIZE
+    return rawCount > 0 ? lastPage.page + 1 : undefined
+}
+
 export function communityPostsInfiniteQuery(
     instance: string,
     communityId: number,
@@ -255,40 +267,7 @@ export function communityPostsInfiniteQuery(
     nsfwFilter: NsfwFilter,
     auth: string,
 ): InfinitePostsOptions {
-    return {
-        queryKey: communityPostsKey(instance, communityId, sort, nsfwFilter, software, auth),
-        initialPageParam: 1,
-        queryFn: async ({pageParam}) => {
-            const page =
-                software === 'piefed'
-                    ? await fetchPiefedCommunityPosts({
-                          instance,
-                          communityId,
-                          sort,
-                          page: pageParam,
-                          limit: PAGE_SIZE,
-                          nsfwFilter,
-                          auth,
-                      })
-                    : await fetchCommunityPosts({
-                          instance,
-                          communityId,
-                          sort,
-                          page: pageParam,
-                          limit: PAGE_SIZE,
-                          nsfwFilter,
-                          auth,
-                      })
-            const filtered = clientFilterPosts(page.posts, nsfwFilter)
-            void putPostsCache(communityPostsCacheKey(instance, communityId, sort, nsfwFilter, software, auth, pageParam), filtered).catch(() => {})
-            return {posts: filtered, page: page.page, rawCount: page.posts.length}
-        },
-        getNextPageParam: (lastPage) => {
-            const rawCount = (lastPage as FilteredPostPage).rawCount ?? PAGE_SIZE
-            return rawCount > 0 ? lastPage.page + 1 : undefined
-        },
-        staleTime: 30_000,
-    }
+    return {queryKey: communityPostsKey(instance, communityId, sort, nsfwFilter, software, auth), initialPageParam: 1, queryFn: ({pageParam}) => fetchCommunityPostsPage(instance, communityId, sort, software, nsfwFilter, auth, pageParam), getNextPageParam: nextPostPage, staleTime: 30_000}
 }
 
 type InfiniteCommunitiesOptions = InfiniteQueryObserverOptions<
@@ -299,6 +278,23 @@ type InfiniteCommunitiesOptions = InfiniteQueryObserverOptions<
     number
 >
 
+async function fetchCommunitiesPage(instance: string, type: FeedType, sort: CommunitySort, search: string, software: Software, nsfwFilter: NsfwFilter, auth: string, pageParam: number): Promise<CommunityPage> {
+    if (software === 'piefed') return fetchPiefedCommunitiesPage(instance, type, sort, search, nsfwFilter, auth, pageParam)
+    const page = await fetchCommunities({instance, type, sort, page: pageParam, limit: PAGE_SIZE, search: search || undefined, nsfwFilter, auth})
+    if (!search) void putCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, software, auth, pageParam), page.communities).catch(() => {})
+    return page
+}
+
+async function fetchPiefedCommunitiesPage(instance: string, type: FeedType, sort: CommunitySort, search: string, nsfwFilter: NsfwFilter, auth: string, pageParam: number): Promise<CommunityPage> {
+    if (search) {
+        const communities = pageParam === 1 ? await fetchPiefedCommunitySearch(instance, search, PAGE_SIZE, fetch, nsfwFilter, type, auth) : []
+        return {communities, page: pageParam}
+    }
+    const page = await fetchPiefedCommunities({instance, type, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
+    void putCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, software, auth, pageParam), page.communities).catch(() => {})
+    return page
+}
+
 export function communitiesInfiniteQuery(
     instance: string,
     type: FeedType,
@@ -308,41 +304,7 @@ export function communitiesInfiniteQuery(
     nsfwFilter: NsfwFilter,
     auth: string,
 ): InfiniteCommunitiesOptions {
-    return {
-        queryKey: communitiesKey(instance, type, sort, search, nsfwFilter, software, auth),
-        initialPageParam: 1,
-        queryFn: async ({pageParam}) => {
-            if (software === 'piefed') {
-                if (search) {
-                    // PieFed community search is one-shot (no reliable pagination)
-                    const communities =
-                        pageParam === 1
-                            ? await fetchPiefedCommunitySearch(instance, search, PAGE_SIZE, fetch, nsfwFilter, type, auth)
-                            : []
-                    return {communities, page: pageParam}
-                }
-                const page = await fetchPiefedCommunities({instance, type, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
-                void putCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, software, auth, pageParam), page.communities).catch(() => {})
-                return page
-            }
-            const page = await fetchCommunities({
-                instance,
-                type,
-                sort,
-                page: pageParam,
-                limit: PAGE_SIZE,
-                search: search || undefined,
-                nsfwFilter,
-                auth,
-            })
-            if (!search) {
-                void putCommunitiesCache(communitiesCacheKey(instance, type, sort, nsfwFilter, software, auth, pageParam), page.communities).catch(() => {})
-            }
-            return page
-        },
-        getNextPageParam: (lastPage) => (lastPage.communities.length > 0 ? lastPage.page + 1 : undefined),
-        staleTime: 30_000,
-    }
+    return {queryKey: communitiesKey(instance, type, sort, search, nsfwFilter, software, auth), initialPageParam: 1, queryFn: ({pageParam}) => fetchCommunitiesPage(instance, type, sort, search, software, nsfwFilter, auth, pageParam), getNextPageParam: (lastPage) => (lastPage.communities.length > 0 ? lastPage.page + 1 : undefined), staleTime: 30_000}
 }
 
 // ---- cold-start hydration from idb ----

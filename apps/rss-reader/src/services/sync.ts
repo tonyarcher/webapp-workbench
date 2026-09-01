@@ -64,96 +64,101 @@ function engagementFor(
  * refreshes don't inflate scores without bound. All storage happens in a
  * single db-layer transaction (see ingestArticlesTx).
  */
-export async function ingestFeed(
-    feed: Feed,
-    parsed: ParsedFeed,
-    feedPatch: Feed,
-    createIfMissing: boolean,
-): Promise<{ inserted: number; unread: number }> {
+function collectHostsAuthors(items: ParsedItem[]): {hosts: Set<string>; authors: Set<string>} {
     const hosts = new Set<string>();
     const authors = new Set<string>();
-    for (const item of parsed.items) {
+    for (const item of items) {
         if (item.link) {
             const host = domainOf(item.link);
             if (host) hosts.add(host);
         }
         if (item.author) authors.add(item.author.toLowerCase());
     }
+    return {hosts, authors};
+}
 
-    const now = Date.now();
+function collectLinks(items: ParsedItem[]): Set<string> {
+    return new Set(items.map((it) => (it.link ? normalizeLink(it.link) : undefined)).filter((l): l is string => Boolean(l)));
+}
 
-    const links = new Set(
-        parsed.items.map((item) => (item.link ? normalizeLink(item.link) : undefined)).filter((l): l is string => Boolean(l)),
-    );
-
-    const linkInfo = new Map<string, { matches: Article[]; otherFeeds: number; minPublished: number | undefined }>();
+async function buildLinkInfo(links: Set<string>, feedId: string): Promise<Map<string, {matches: Article[]; otherFeeds: number; minPublished: number | undefined}>> {
+    const m = new Map<string, {matches: Article[]; otherFeeds: number; minPublished: number | undefined}>();
     for (const link of links) {
         const matches = await queryArticlesByLink(link);
-        const feeds = new Set(matches.map((m) => m.feedId));
-        feeds.delete(feed.id);
+        const feeds = new Set(matches.map((x) => x.feedId));
+        feeds.delete(feedId);
         let minPublished: number | undefined;
-        for (const m of matches) {
-            if (m.published < (minPublished ?? Number.POSITIVE_INFINITY)) minPublished = m.published;
-        }
-        linkInfo.set(link, {matches, otherFeeds: feeds.size, minPublished});
+        for (const mm of matches) if (mm.published < (minPublished ?? Number.POSITIVE_INFINITY)) minPublished = mm.published;
+        m.set(link, {matches, otherFeeds: feeds.size, minPublished});
     }
+    return m;
+}
 
-    // Affinity keys for the incoming feed AND every syndicated copy that might
-    // get bumped, so their feed/domain/author affinity isn't silently zero.
-    const metaKeys = [`aff:feed:${feed.id}`];
-    for (const host of hosts) metaKeys.push(`aff:domain:${host}`);
-    for (const author of authors) metaKeys.push(`aff:author:${author}`);
-    for (const info of linkInfo.values()) {
-        for (const other of info.matches) {
-            metaKeys.push(`aff:feed:${other.feedId}`);
-            const host = domainOf(other.link);
-            if (host) metaKeys.push(`aff:domain:${host}`);
-            if (other.author) metaKeys.push(`aff:author:${other.author.toLowerCase()}`);
-        }
+function buildMetaKeys(feed: Feed, hosts: Set<string>, authors: Set<string>, linkInfo: Map<string, {matches: Article[]}>): string[] {
+    const keys = [`aff:feed:${feed.id}`];
+    for (const h of hosts) keys.push(`aff:domain:${h}`);
+    for (const a of authors) keys.push(`aff:author:${a}`);
+    for (const info of linkInfo.values()) for (const other of info.matches) {
+        keys.push(`aff:feed:${other.feedId}`);
+        const host = domainOf(other.link);
+        if (host) keys.push(`aff:domain:${host}`);
+        if (other.author) keys.push(`aff:author:${other.author.toLowerCase()}`);
     }
-    const affMap = await getMetaMany(metaKeys);
-    const feedAffinity = affMap.get(`aff:feed:${feed.id}`) ?? 0;
+    return keys;
+}
 
+function bumpsFor(itemInfo: {matches: Article[]; otherFeeds: number; minPublished: number | undefined}, affMap: Map<string, number>, feedId: string): Map<string, BumpSpec> {
+    const velocity = velocityBonus(itemInfo.otherFeeds, itemInfo.minPublished !== undefined ? Date.now() - itemInfo.minPublished : undefined);
+    const out = new Map<string, BumpSpec>();
+    for (const other of itemInfo.matches) {
+        if (other.feedId === feedId) continue;
+        const otherAffinity = affMap.get(`aff:feed:${other.feedId}`) ?? 0;
+        const dAff = other.link ? (affMap.get(`aff:domain:${domainOf(other.link)}`) ?? 0) : 0;
+        const aAff = other.author ? (affMap.get(`aff:author:${other.author.toLowerCase()}`) ?? 0) : 0;
+        out.set(other.id, {id: other.id, affinityBoost: affinityBoostScore(otherAffinity + dAff + aAff), velocity});
+    }
+    return out;
+}
+
+function itemMetrics(item: ParsedItem, linkInfo: Map<string, {matches: Article[]; otherFeeds: number; minPublished: number | undefined}>, now: number): {normLink: string | undefined; info: {matches: Article[]; otherFeeds: number; minPublished: number | undefined} | undefined; popularity: number; velocity: number} {
+    const normLink = item.link ? normalizeLink(item.link) : undefined;
+    const info = normLink ? linkInfo.get(normLink) : undefined;
+    const otherFeeds = info?.otherFeeds ?? 0;
+    const popularity = popularityScore(otherFeeds + 1, item.comments ?? 0);
+    const velocity = normLink ? velocityBonus(otherFeeds, info?.minPublished !== undefined ? now - info.minPublished : undefined) : 0;
+    return {normLink, info, popularity, velocity};
+}
+
+function mergeBumps(bumpsByLink: Map<string, Map<string, BumpSpec>>, normLink: string, specs: Map<string, BumpSpec>): void {
+    let existing = bumpsByLink.get(normLink);
+    if (!existing) { existing = new Map<string, BumpSpec>(); bumpsByLink.set(normLink, existing); }
+    for (const [k, v] of specs) if (!existing.has(k)) existing.set(k, v);
+}
+
+function buildItemsAndBumps(parsed: ParsedFeed, feed: Feed, linkInfo: Map<string, {matches: Article[]; otherFeeds: number; minPublished: number | undefined}>, affMap: Map<string, number>, feedAffinity: number, now: number): {items: Article[]; bumpsByLink: Map<string, Map<string, BumpSpec>>} {
     const items: Article[] = [];
     const bumpsByLink = new Map<string, Map<string, BumpSpec>>();
     for (const item of parsed.items) {
-        const normLink = item.link ? normalizeLink(item.link) : undefined;
-        const info = normLink ? linkInfo.get(normLink) : undefined;
-        const otherFeeds = info?.otherFeeds ?? 0;
-        const popularity = popularityScore(otherFeeds + 1, item.comments ?? 0);
-        const velocity = normLink
-            ? velocityBonus(info?.otherFeeds ?? 0, info?.minPublished !== undefined ? now - info.minPublished : undefined)
-            : 0;
-        const engagement = engagementFor(item, feedAffinity, affMap, velocity);
-        items.push(buildArticle(feed.id, item, popularity, engagement));
+        const {normLink, info, popularity, velocity} = itemMetrics(item, linkInfo, now);
+        items.push(buildArticle(feed.id, item, popularity, engagementFor(item, feedAffinity, affMap, velocity)));
         if (!normLink || !info || info.otherFeeds === 0) continue;
-
-        // Candidate bumps for this link; ingestArticlesTx applies them only
-        // for links this ingest actually inserted, re-reading each copy in
-        // the transaction so concurrent changes are never clobbered. Keyed by
-        // article id so a feed listing the same story twice bumps once.
-        const velocityForBumps = velocityBonus(
-            info.otherFeeds,
-            info.minPublished !== undefined ? now - info.minPublished : undefined,
-        );
-        let specsById = bumpsByLink.get(normLink);
-        if (!specsById) {
-            specsById = new Map<string, BumpSpec>();
-            bumpsByLink.set(normLink, specsById);
-        }
-        for (const other of info.matches) {
-            if (other.feedId === feed.id) continue;
-            const otherAffinity = affMap.get(`aff:feed:${other.feedId}`) ?? 0;
-            const domainAffinity = other.link ? (affMap.get(`aff:domain:${domainOf(other.link)}`) ?? 0) : 0;
-            const authorAffinity = other.author ? (affMap.get(`aff:author:${other.author.toLowerCase()}`) ?? 0) : 0;
-            specsById.set(other.id, {
-                id: other.id,
-                affinityBoost: affinityBoostScore(otherAffinity + domainAffinity + authorAffinity),
-                velocity: velocityForBumps,
-            });
-        }
+        mergeBumps(bumpsByLink, normLink, bumpsFor(info, affMap, feed.id));
     }
+    return {items, bumpsByLink};
+}
 
+export async function ingestFeed(
+    feed: Feed,
+    parsed: ParsedFeed,
+    feedPatch: Feed,
+    createIfMissing: boolean,
+): Promise<{inserted: number; unread: number}> {
+    const {hosts, authors} = collectHostsAuthors(parsed.items);
+    const links = collectLinks(parsed.items);
+    const linkInfo = await buildLinkInfo(links, feed.id);
+    const affMap = await getMetaMany(buildMetaKeys(feed, hosts, authors, linkInfo));
+    const feedAffinity = affMap.get(`aff:feed:${feed.id}`) ?? 0;
+    const {items, bumpsByLink} = buildItemsAndBumps(parsed, feed, linkInfo, affMap, feedAffinity, Date.now());
     return ingestArticlesTx(items, bumpsByLink, feedPatch, createIfMissing);
 }
 

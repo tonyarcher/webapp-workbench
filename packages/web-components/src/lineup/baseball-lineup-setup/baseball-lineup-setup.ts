@@ -28,16 +28,31 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function normalizePlayer(raw: unknown, index: number): PlayerInfo {
     const record = asRecord(raw);
-    const name = String(record?.name ?? record?.batterName ?? '');
-    const jerseyRaw = Number(record?.jerseyNumber);
-    const position = String(record?.position ?? FIELD_POSITIONS[index] ?? 'DH');
-    const id = Number(record?.id ?? index + 1);
     return {
-        id: Number.isFinite(id) ? id : index + 1,
-        name,
-        jerseyNumber: Number.isFinite(jerseyRaw) ? jerseyRaw : 0,
-        position: position || 'DH',
+        id: resolvePlayerId(record, index),
+        name: resolvePlayerName(record),
+        jerseyNumber: resolvePlayerJersey(record),
+        position: resolvePlayerPosition(record, index),
     };
+}
+
+function resolvePlayerName(record: Record<string, unknown> | null): string {
+    return String(record?.name ?? record?.batterName ?? '');
+}
+
+function resolvePlayerJersey(record: Record<string, unknown> | null): number {
+    const jerseyRaw = Number(record?.jerseyNumber);
+    return Number.isFinite(jerseyRaw) ? jerseyRaw : 0;
+}
+
+function resolvePlayerPosition(record: Record<string, unknown> | null, index: number): string {
+    const raw = String(record?.position ?? FIELD_POSITIONS[index] ?? 'DH');
+    return raw || 'DH';
+}
+
+function resolvePlayerId(record: Record<string, unknown> | null, index: number): number {
+    const id = Number(record?.id ?? index + 1);
+    return Number.isFinite(id) ? id : index + 1;
 }
 
 function padLineup(players: PlayerInfo[]): PlayerInfo[] {
@@ -167,113 +182,124 @@ export class BaseballLineupSetup extends LitElement {
 
     render() {
         if (this.variant === 'modal' && !this.isOpen) return html``;
-
-        const body = html`
-            <div class=${this.variant === 'modal' ? 'modal-container' : 'embedded-editor'} data-testid="lineup-editor">
-                ${this.variant === 'modal'
-                    ? html`
-                          <div class="modal-header">
-                              <h2>Lineup & Bench Setup</h2>
-                              <button class="btn btn-secondary" type="button" @click=${this.onClose} aria-label="Close">
-                                  &times;
-                              </button>
-                          </div>
-                      `
-                    : html`<h2>Starting lineups</h2>`}
-                ${this.errors.length
-                    ? html`<div class="error-banner" data-testid="lineup-error">${this.errors.join(' ')}</div>`
-                    : ''}
-                <div class="lineup-grid">
-                    ${this.renderTeam('away', this.awayTeamName, this.draftAway, this.draftAwayPitcher)}
-                    ${this.renderTeam('home', this.homeTeamName, this.draftHome, this.draftHomePitcher)}
-                </div>
-                ${this.variant === 'modal'
-                    ? html`
-                          <div class="footer-actions">
-                              <button class="btn btn-secondary" type="button" @click=${this.onClose}>Cancel</button>
-                              <button
-                                  class="btn"
-                                  type="button"
-                                  data-testid="lineup-save-button"
-                                  @click=${this.onSave}
-                              >
-                                  Confirm & Save Lineups
-                              </button>
-                          </div>
-                      `
-                    : html`<p class="hint">Edit names, numbers, and positions. The batting order is the slot order.</p>`}
-            </div>
-        `;
-
+        const body = this.renderBody();
         return this.variant === 'modal' ? html`<div class="overlay-catch">${body}</div>` : body;
+    }
+
+    private renderBody() {
+        return html`
+          <div class=${this.variant === 'modal' ? 'modal-container' : 'embedded-editor'} data-testid="lineup-editor">
+            ${this.renderHeader()} ${this.renderError()} ${this.renderGrid()} ${this.renderFooter()}
+          </div>
+        `;
+    }
+
+    private renderHeader() {
+        if (this.variant === 'modal') {
+            return html`
+              <div class="modal-header">
+                <h2>Lineup & Bench Setup</h2>
+                <button class="btn btn-secondary" type="button" @click=${this.onClose} aria-label="Close">&times;</button>
+              </div>
+            `;
+        }
+        return html`<h2>Starting lineups</h2>`;
+    }
+
+    private renderError() {
+        return this.errors.length ? html`<div class="error-banner" data-testid="lineup-error">${this.errors.join(' ')}</div>` : '';
+    }
+
+    private renderGrid() {
+        return html`
+          <div class="lineup-grid">
+            ${this.renderTeam('away', this.awayTeamName, this.draftAway, this.draftAwayPitcher)}
+            ${this.renderTeam('home', this.homeTeamName, this.draftHome, this.draftHomePitcher)}
+          </div>
+        `;
+    }
+
+    private renderFooter() {
+        if (this.variant === 'modal') return this.renderModalFooter();
+        return html`<p class="hint">Edit names, numbers, and positions. The batting order is the slot order.</p>`;
+    }
+
+    private renderModalFooter() {
+        return html`
+          <div class="footer-actions">
+            <button class="btn btn-secondary" type="button" @click=${this.onClose}>Cancel</button>
+            <button class="btn" type="button" data-testid="lineup-save-button" @click=${this.onSave}>Confirm & Save Lineups</button>
+          </div>
+        `;
     }
 
     private renderTeam(team: 'home' | 'away', name: string, lineup: PlayerInfo[], pitcherName: string) {
         return html`
             <div class="team-card">
                 <h3 class="team-title">${name} (${team === 'away' ? 'Away' : 'Home'})</h3>
-                <div class="pitcher-section">
-                    <label for="${team}-pitcher-input">Pitcher</label>
-                    <input
-                        id="${team}-pitcher-input"
-                        class="form-control input-flex"
-                        data-testid="${team}-pitcher-input"
-                        .value=${pitcherName}
-                        @input=${(event: Event) => this.setPitcher(team, (event.target as HTMLInputElement).value)}
-                    />
-                </div>
-                <div class="lineup-grid-header">
-                    <span></span>
-                    <span>Batter</span>
-                    <span>#</span>
-                    <span>Pos</span>
-                </div>
-                ${lineup.map(
-                    (player, index) => html`
-                        <div class="slot-row">
-                            <span class="slot-num">${index + 1}</span>
-                            <input
-                                class="form-control input-flex"
-                                data-testid="${team}-slot-${index + 1}-name"
-                                .value=${player.name}
-                                @input=${(event: Event) =>
-                                    this.updatePlayer(team, index, 'name', (event.target as HTMLInputElement).value)}
-                            />
-                            <input
-                                class="form-control input-num"
-                                data-testid="${team}-slot-${index + 1}-jersey"
-                                type="number"
-                                min="0"
-                                max="99"
-                                .value=${player.jerseyNumber ? String(player.jerseyNumber) : ''}
-                                @input=${(event: Event) =>
-                                    this.updatePlayer(
-                                        team,
-                                        index,
-                                        'jerseyNumber',
-                                        (event.target as HTMLInputElement).value
-                                    )}
-                            />
-                            <select
-                                class="form-control select-pos"
-                                data-testid="${team}-slot-${index + 1}-position"
-                                .value=${player.position}
-                                @change=${(event: Event) =>
-                                    this.updatePlayer(team, index, 'position', (event.target as HTMLSelectElement).value)}
-                            >
-                                ${FIELD_POSITIONS.map(
-                                    (position) => html`
-                                        <option value=${position} ?selected=${player.position === position}>
-                                            ${position}
-                                        </option>
-                                    `
-                                )}
-                            </select>
-                        </div>
-                    `
-                )}
+                ${this.renderPitcherInput(team, pitcherName)} ${this.renderGridHeader()} ${this.renderSlots(team, lineup)}
             </div>
         `;
+    }
+
+    private renderPitcherInput(team: 'home' | 'away', pitcherName: string) {
+        return html`
+          <div class="pitcher-section">
+            <label for="${team}-pitcher-input">Pitcher</label>
+            <input
+                id="${team}-pitcher-input"
+                class="form-control input-flex"
+                data-testid="${team}-pitcher-input"
+                .value=${pitcherName}
+                @input=${(event: Event) => this.setPitcher(team, (event.target as HTMLInputElement).value)}
+            />
+          </div>
+        `;
+    }
+
+    private renderGridHeader() {
+        return html`
+          <div class="lineup-grid-header"><span></span><span>Batter</span><span>#</span><span>Pos</span></div>
+        `;
+    }
+
+    private renderSlots(team: 'home' | 'away', lineup: PlayerInfo[]) {
+        return html`${lineup.map((player, index) => this.renderSlotRow(team, player, index))}`;
+    }
+
+    private renderSlotRow(team: 'home' | 'away', player: PlayerInfo, index: number) {
+        return html`
+          <div class="slot-row">
+            <span class="slot-num">${index + 1}</span>
+            <input
+                class="form-control input-flex"
+                data-testid="${team}-slot-${index + 1}-name"
+                .value=${player.name}
+                @input=${(event: Event) => this.updatePlayer(team, index, 'name', (event.target as HTMLInputElement).value)}
+            />
+            <input
+                class="form-control input-num"
+                data-testid="${team}-slot-${index + 1}-jersey"
+                type="number"
+                min="0"
+                max="99"
+                .value=${player.jerseyNumber ? String(player.jerseyNumber) : ''}
+                @input=${(event: Event) => this.updatePlayer(team, index, 'jerseyNumber', (event.target as HTMLInputElement).value)}
+            />
+            <select
+                class="form-control select-pos"
+                data-testid="${team}-slot-${index + 1}-position"
+                .value=${player.position}
+                @change=${(event: Event) => this.updatePlayer(team, index, 'position', (event.target as HTMLSelectElement).value)}
+            >
+              ${FIELD_POSITIONS.map((position) => this.renderPositionOption(position, player.position))}
+            </select>
+          </div>
+        `;
+    }
+
+    private renderPositionOption(position: string, selected: string) {
+        return html`<option value=${position} ?selected=${selected === position}>${position}</option>`;
     }
 
     private syncDraftFromProps() {

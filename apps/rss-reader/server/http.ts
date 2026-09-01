@@ -141,56 +141,47 @@ export function setCookie(res: ServerResponse, name: string, value: string, opts
 
 const COOKIE_OPTS = 'Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000';
 
+function findMatched(routes: Route[], method: string, pathname: string): {route: Route | undefined; params: Record<string, string>} {
+    for (const r of routes) {
+        if (r.method !== method) continue;
+        const p = matchRoute(r.pattern, pathname);
+        if (p === null) continue;
+        return {route: r, params: p};
+    }
+    return {route: undefined, params: {}};
+}
+
+function errorStatus(err: unknown): number {
+    return err instanceof HttpError ? err.status : 500;
+}
+
+function errorMessage(err: unknown, status: number): string {
+    if (status >= 500) return 'internal error';
+    if (err instanceof Error) return err.message;
+    return String(err);
+}
+
+async function handleDispatch(req: IncomingMessage, res: ServerResponse, routes: Route[], ensureUser: (req: IncomingMessage, res: ServerResponse) => Promise<{id: string; label: string}>): Promise<void> {
+    try {
+        const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+        const {route, params} = findMatched(routes, req.method ?? 'GET', url.pathname);
+        if (!route) { sendJson(res, 404, {error: 'not found'}); return; }
+        const user = await ensureUser(req, res);
+        const result = await route.handler({req, res, params, query: url.searchParams, user});
+        if (!res.headersSent && result !== undefined) sendJson(res, 200, result);
+    } catch (err) {
+        const status = errorStatus(err);
+        if (status >= 500) console.error(err);
+        if (!res.headersSent) sendJson(res, status, {error: errorMessage(err, status)});
+        else res.destroy();
+    }
+}
+
 export function createDispatcher(
     routes: Route[],
-    ensureUser: (req: IncomingMessage, res: ServerResponse) => Promise<{ id: string; label: string }>,
+    ensureUser: (req: IncomingMessage, res: ServerResponse) => Promise<{id: string; label: string}>,
 ): (req: IncomingMessage, res: ServerResponse) => void {
-    return (req, res) => {
-        void (async () => {
-            // Everything up to and including the handler lives in one try:
-            // ensureUser touches the DB and cookies are attacker-controlled,
-            // so a throw outside this block would crash the process.
-            try {
-                const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
-                const method = req.method ?? 'GET';
-
-                let matched: Route | undefined;
-                let params: Record<string, string> = {};
-                for (const r of routes) {
-                    if (r.method !== method) continue;
-                    const p = matchRoute(r.pattern, url.pathname);
-                    if (p === null) continue;
-                    matched = r;
-                    params = p;
-                    break;
-                }
-                if (!matched) {
-                    sendJson(res, 404, {error: 'not found'});
-                    return;
-                }
-
-                const user = await ensureUser(req, res);
-                const result = await matched.handler({req, res, params, query: url.searchParams, user});
-                if (!res.headersSent && result !== undefined) {
-                    sendJson(res, 200, result);
-                }
-            } catch (err) {
-                const status = err instanceof HttpError ? err.status : 500;
-                // Never echo internal error text to the caller.
-                const message = status >= 500
-                    ? 'internal error'
-                    : err instanceof Error
-                        ? err.message
-                        : String(err);
-                if (status >= 500) console.error(err);
-                if (!res.headersSent) {
-                    sendJson(res, status, {error: message});
-                } else {
-                    res.destroy();
-                }
-            }
-        })();
-    };
+    return (req, res) => { void handleDispatch(req, res, routes, ensureUser); };
 }
 
 export {COOKIE_OPTS};

@@ -1,4 +1,4 @@
-﻿import {getPool} from '../db.js';
+import {getPool} from '../db.js';
 import {HttpError, isUuid, readJsonBody} from '../http.js';
 import type {RouteHandler} from '../http.js';
 import {mapFeed, mapFolder} from '../db.js';

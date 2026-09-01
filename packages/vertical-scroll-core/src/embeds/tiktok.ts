@@ -20,39 +20,41 @@ function pathSegmentAfter(path: string, prefix: string): string | null {
  * Extracts the numeric TikTok video id from a page/embed URL.
  * Short links (vm.tiktok.com, /t/…) have no id and return null.
  */
-function tiktokId(url: string): string | null {
-    if (!TIKTOK_HOST_RE.test(url)) return null
-    let parsed: URL
+function parseUrlSafe(url: string): URL | null {
     try {
-        parsed = new URL(url)
+        return new URL(url)
     } catch {
         return null
     }
-    const host = parsed.hostname.toLowerCase()
-    const isTiktok =
-        host === 'tiktok.com' ||
-        host.endsWith('.tiktok.com') ||
-        host === 'tiktokv.com' ||
-        host.endsWith('.tiktokv.com')
-    if (!isTiktok) return null
+}
 
-    const path = parsed.pathname
-    // /share/video/ is the official data-export form (tiktokv.com)
+function isTiktokHost(host: string): boolean {
+    return host === 'tiktok.com' || host.endsWith('.tiktok.com') || host === 'tiktokv.com' || host.endsWith('.tiktokv.com')
+}
+
+function idFromPrefixes(path: string): string | null {
     for (const prefix of ['/share/video/', '/video/', '/embed/v2/', '/player/v1/', '/v/']) {
         const raw = pathSegmentAfter(path, prefix)
         if (!raw) continue
-        // mobile pages look like /v/1234567890.html
         const id = raw.replace(/\.html$/i, '')
         const valid = isValidId(id)
         if (valid) return valid
     }
+    return null
+}
 
-    // /@user/video/{id} — pathname is not prefixed with /video/, so the
-    // loop above misses it.
+function idFromAtVideo(path: string): string | null {
     const atVideo = path.match(/\/video\/(\d+)/)
     if (atVideo) return isValidId(atVideo[1])
-
     return null
+}
+
+function tiktokId(url: string): string | null {
+    if (!TIKTOK_HOST_RE.test(url)) return null
+    const parsed = parseUrlSafe(url)
+    if (!parsed) return null
+    if (!isTiktokHost(parsed.hostname.toLowerCase())) return null
+    return idFromPrefixes(parsed.pathname) ?? idFromAtVideo(parsed.pathname)
 }
 
 const TIKTOK_PLAYER_ORIGIN = 'https://www.tiktok.com'
@@ -63,25 +65,29 @@ function isPlayerReadyMessage(data: unknown): boolean {
     return parsePlayerMessage(data)?.type === 'ready'
 }
 
+function stateEvent(value: unknown): EmbedPlayerEvent | null {
+    if (value === 1) return {type: 'playing'}
+    if (value === 2) return {type: 'paused'}
+    if (value === 0) return {type: 'ended'}
+    return null
+}
+
+function timeEvent(value: unknown): EmbedPlayerEvent | null {
+    if (!value || typeof value !== 'object') return null
+    const v = value as {currentTime?: unknown; duration?: unknown}
+    const currentTime = typeof v.currentTime === 'number' ? v.currentTime : null
+    const duration = typeof v.duration === 'number' ? v.duration : null
+    if (currentTime === null || duration === null || duration <= 0) return null
+    return {type: 'time', currentTime, duration}
+}
+
 function parsePlayerMessage(data: unknown): EmbedPlayerEvent | null {
     if (!data || typeof data !== 'object') return null
     const msg = data as Record<string, unknown>
     if (msg[TIKTOK_PLAYER_FLAG] !== true) return null
     if (msg.type === 'onPlayerReady') return {type: 'ready'}
-    if (msg.type === 'onStateChange') {
-        // player/v1 mirrors YouTube-style codes: 1 playing, 2 paused, 0 ended
-        if (msg.value === 1) return {type: 'playing'}
-        if (msg.value === 2) return {type: 'paused'}
-        if (msg.value === 0) return {type: 'ended'}
-        return null
-    }
-    if (msg.type === 'onCurrentTime' && msg.value && typeof msg.value === 'object') {
-        const value = msg.value as {currentTime?: unknown; duration?: unknown}
-        const currentTime = typeof value.currentTime === 'number' ? value.currentTime : null
-        const duration = typeof value.duration === 'number' ? value.duration : null
-        if (currentTime === null || duration === null || duration <= 0) return null
-        return {type: 'time', currentTime, duration}
-    }
+    if (msg.type === 'onStateChange') return stateEvent(msg.value)
+    if (msg.type === 'onCurrentTime') return timeEvent(msg.value)
     return null
 }
 

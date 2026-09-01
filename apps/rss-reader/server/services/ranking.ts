@@ -77,38 +77,46 @@ function stripTags(html: string | undefined): string {
     return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function mediaScore(input: EngagementInput, content: string): number {
+    if (input.media) return 2;
+    if (/<img[\s>]/i.test(content)) return 2;
+    return 0;
+}
+
+function substanceScore(content: string): number {
+    const words = stripTags(content).split(/\s+/).filter(Boolean).length;
+    if (words >= 1000) return 3;
+    if (words >= 250) return 2;
+    if (words >= 50) return 1;
+    return 0;
+}
+
+function titleScore(title: string): number {
+    let s = 0;
+    if (title.includes('!')) s += 1;
+    if (title.includes('?')) s += 1;
+    if (/\b[A-Z]{3,}\b/.test(title)) s += 1;
+    if (/\d/.test(title)) s += 1;
+    const words = title.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+    if (words.some((w) => URGENCY_WORDS.has(w))) s += 1;
+    if (title.includes(': ')) s += 1;
+    return s;
+}
+
+function linkScore(content: string): number {
+    const count = (content.match(/<a[\s>]/gi) ?? []).length;
+    return count >= 3 ? 1 : 0;
+}
+
 export function contentEngagement(input: EngagementInput): number {
-    let score = 0;
     const content = input.content ?? '';
     const title = input.title ?? '';
-
-    // media richness
-    if (input.media) {
-        score += 2;
-    } else if (/<img[\s>]/i.test(content)) {
-        score += 2;
-    }
-
-    // substance: longer articles tend to be more significant
-    const words = stripTags(content).split(/\s+/).filter(Boolean).length;
-    if (words >= 1000) score += 3;
-    else if (words >= 250) score += 2;
-    else if (words >= 50) score += 1;
-
-    // title urgency / clickbait cues
-    if (title.includes('!')) score += 1;
-    if (title.includes('?')) score += 1;
-    if (/\b[A-Z]{3,}\b/.test(title)) score += 1;
-    if (/\d/.test(title)) score += 1;
-    const titleWords = title.toLowerCase().split(/[^a-z]+/).filter(Boolean);
-    if (titleWords.some((w) => URGENCY_WORDS.has(w))) score += 1;
-    if (title.includes(': ')) score += 1;
-
+    let score = 0;
+    score += mediaScore(input, content);
+    score += substanceScore(content);
+    score += titleScore(title);
     if (input.author) score += 1;
-
-    // link-rich posts (aggregators, research round-ups)
-    if ((content.match(/<a[\s>]/gi) ?? []).length >= 3) score += 1;
-
+    score += linkScore(content);
     return score;
 }
 

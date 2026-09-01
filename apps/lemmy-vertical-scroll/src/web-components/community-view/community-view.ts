@@ -31,44 +31,43 @@ export class CommunityView extends LitElement {
         void hydrateCommunityPosts(this.instance, this.communityId, this.sort, this.nsfwFilter, this.software, this.auth)
     }
 
+    private renderHeaderError(error: unknown): TemplateResult {
+        return html`<div class="community-header error"><p class="state-title">Community not found</p><p class="state-detail">${error instanceof Error ? error.message : String(error)}</p></div>`
+    }
+
+    private renderBanner(banner: string | null): TemplateResult {
+        return banner ? html`<img class="community-banner" src=${banner} alt="" referrerpolicy="no-referrer"/>` : html``
+    }
+
+    private renderIcon(icon: string | null, community: LemmyCommunity | undefined): TemplateResult {
+        if (icon) return html`<img src=${icon} alt="" referrerpolicy="no-referrer"/>`
+        return html`<span class="icon-fallback">${community ? community.name.charAt(0).toUpperCase() : '?'}</span>`
+    }
+
+    private renderStats(community: LemmyCommunity | undefined): TemplateResult {
+        if (!community) return html`<span class="community-stats"></span>`
+        return html`<span class="community-stats"><span class="stat">${compactNumber(community.subscribers)} subscribers</span><span class="stat">${compactNumber(community.posts)} posts</span><span class="stat">${compactNumber(community.comments)} comments</span><span class="stat">${timeAgo(community.published)}</span></span>`
+    }
+
+    private renderExternalLink(actorId: string | null | undefined): TemplateResult {
+        const instanceLink = safeUrl(actorId ?? null)
+        return instanceLink ? html`<a class="external-link" href=${instanceLink} target="_blank" rel="noopener noreferrer">Open on instance</a>` : html``
+    }
+
+    private renderDescription(community: LemmyCommunity | undefined): TemplateResult {
+        return community?.description ? html`<p class="community-description">${community.description}</p>` : html``
+    }
+
+    private communityLabel(community: LemmyCommunity | undefined): string {
+        if (!community) return ''
+        return `!${community.name}${community.local ? ' · local' : ''}`
+    }
+
     private renderHeader(): TemplateResult {
         const {status, data, error} = this.communityController.value
-        if (status === 'error') {
-            return html`<div class="community-header error">
-                <p class="state-title">Community not found</p>
-                <p class="state-detail">${error instanceof Error ? error.message : String(error)}</p>
-            </div>`
-        }
+        if (status === 'error') return this.renderHeaderError(error)
         const community = data
-        const banner = safeUrl(community?.banner ?? null)
-        const icon = safeUrl(community?.icon ?? null)
-        const instanceLink = safeUrl(community?.actorId ?? null)
-        return html`<div class="community-header">
-            ${banner
-                ? html`<img class="community-banner" src=${banner} alt="" referrerpolicy="no-referrer"/>`
-                : nothing}
-            <div class="community-meta">
-                <div class="community-icon" aria-hidden="true">
-                    ${icon
-                        ? html`<img src=${icon} alt="" referrerpolicy="no-referrer"/>`
-                        : html`<span class="icon-fallback">${community ? community.name.charAt(0).toUpperCase() : '?'}</span>`}
-                </div>
-                <div class="community-info">
-                    <span class="community-title">${community?.title ?? 'Loading…'}</span>
-                    <span class="community-name">${community ? `!${community.name}${community.local ? ' · local' : ''}` : ''}</span>
-                    <span class="community-stats">
-                        <span class="stat">${community ? compactNumber(community.subscribers) : ''} subscribers</span>
-                        <span class="stat">${community ? compactNumber(community.posts) : ''} posts</span>
-                        <span class="stat">${community ? compactNumber(community.comments) : ''} comments</span>
-                        ${community ? html`<span class="stat">${timeAgo(community.published)}</span>` : nothing}
-                    </span>
-                </div>
-                ${instanceLink
-                    ? html`<a class="external-link" href=${instanceLink} target="_blank" rel="noopener noreferrer">Open on instance</a>`
-                    : nothing}
-            </div>
-            ${community?.description ? html`<p class="community-description">${community.description}</p>` : nothing}
-        </div>`
+        return html`<div class="community-header">${this.renderBanner(safeUrl(community?.banner ?? null))}<div class="community-meta"><div class="community-icon" aria-hidden="true">${this.renderIcon(safeUrl(community?.icon ?? null), community)}</div><div class="community-info"><span class="community-title">${community?.title ?? 'Loading…'}</span><span class="community-name">${this.communityLabel(community)}</span>${this.renderStats(community)}</div>${this.renderExternalLink(community?.actorId)}</div>${this.renderDescription(community)}</div>`
     }
 
     override render(): TemplateResult {

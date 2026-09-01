@@ -64,16 +64,34 @@ export async function requestDeviceCode(
     return parsed;
 }
 
-export async function pollDeviceToken({
-    fetch: fetchImpl,
-    baseUrl,
-    clientId,
-    clientSecret,
-    deviceCode,
-    intervalMs,
-    expiresAt,
-    signal,
-}: {
+async function pollOnce(
+    fetchImpl: typeof fetch,
+    url: string,
+    headers: Record<string, string>,
+    deviceCode: string,
+    clientId: string,
+    clientSecret: string,
+): Promise<ReturnType<typeof parseDevicePollResponse>> {
+    const {status, json} = await postJson(fetchImpl, url, headers, {
+        code: deviceCode,
+        client_id: clientId,
+        client_secret: clientSecret,
+    });
+    return parseDevicePollResponse(status, json);
+}
+
+function handlePollStatus(
+    result: ReturnType<typeof parseDevicePollResponse>,
+    wait: number,
+): {nextWait: number; token?: TraktToken} {
+    if (result.status === 'token') return {nextWait: wait, token: result.token};
+    if (result.status === 'slow_down') return {nextWait: wait + 1_000};
+    if (result.status === 'denied') throw new Error('Trakt access denied');
+    if (result.status === 'expired') throw new Error('Trakt device code expired');
+    return {nextWait: wait};
+}
+
+type PollOpts = {
     fetch: typeof fetch;
     baseUrl: string;
     clientId: string;
@@ -82,25 +100,19 @@ export async function pollDeviceToken({
     intervalMs: number;
     expiresAt: number;
     signal?: AbortSignal;
-}): Promise<TraktToken> {
+};
+
+export async function pollDeviceToken(opts: PollOpts): Promise<TraktToken> {
+    const {fetch: fetchImpl, baseUrl, clientId, clientSecret, deviceCode, intervalMs, expiresAt, signal} = opts;
     let wait = Math.max(intervalMs, 1_000);
     const url = joinUrl(baseUrl, deviceTokenPath());
     const headers = traktHeaders(clientId);
     while (Date.now() < expiresAt) {
         await sleep(wait, signal);
-        const {status, json} = await postJson(fetchImpl, url, headers, {
-            code: deviceCode,
-            client_id: clientId,
-            client_secret: clientSecret,
-        });
-        const result = parseDevicePollResponse(status, json);
-        if (result.status === 'token') return result.token;
-        if (result.status === 'slow_down') {
-            wait += 1_000;
-            continue;
-        }
-        if (result.status === 'denied') throw new Error('Trakt access denied');
-        if (result.status === 'expired') throw new Error('Trakt device code expired');
+        const result = await pollOnce(fetchImpl, url, headers, deviceCode, clientId, clientSecret);
+        const handled = handlePollStatus(result, wait);
+        if (handled.token) return handled.token;
+        wait = handled.nextWait;
     }
     throw new Error('Trakt device code expired');
 }

@@ -92,59 +92,29 @@ export class CommunityList extends LitElement {
         }, SEARCH_DEBOUNCE_MS)
     }
 
+    private renderPaused(): TemplateResult {
+        return html`<div class="list-state"><p class="state-title">Waiting for network</p><p class="state-detail">The browser reports being offline — reconnecting and retrying.</p><button class="retry-button" @click=${() => this.query.refetch()}>Retry now</button></div>`
+    }
+
+    private renderPending(): TemplateResult {
+        return html`<div class="list-state">${Array.from({length: 5}, () => html`<div class="skeleton-row"></div>`)}</div>`
+    }
+
+    private renderError(error: unknown): TemplateResult {
+        return html`<div class="list-state error"><p class="state-title">Could not load communities</p><p class="state-detail">${error instanceof Error ? error.message : String(error)}</p><div class="state-actions"><button class="retry-button" @click=${() => this.query.refetch()}>Retry</button><button class="retry-button" @click=${() => navigate({kind: 'settings'})}>Change instance</button></div></div>`
+    }
+
+    private renderList(): TemplateResult {
+        return html`<div class="list-scroller" ${ref((el) => {this.listEl = el as HTMLElement | null})}><div class="list-spacer" style="height: ${this.virtualizer.totalSize}px">${this.virtualizer.virtualItems.map((item) => {const community = this.communities[item.index]; return html`<div class="list-item" data-index=${item.index} style="transform: translateY(${item.start}px)" ${ref((el) => this.virtualizer.measureElement(el as HTMLElement | null))}><lvs-community-card .community=${community}></lvs-community-card></div>`})}</div><div class="list-more">${this.query.isFetchingNextPage ? html`<span class="spinner" aria-label="Loading more"></span>` : html`<span class="more-hint"></span>`}</div></div>`
+    }
+
     private renderState(): TemplateResult {
         const {status, error, fetchStatus} = this.query.value
-        if (status === 'pending' && fetchStatus === 'paused') {
-            return html`<div class="list-state">
-                <p class="state-title">Waiting for network</p>
-                <p class="state-detail">The browser reports being offline — reconnecting and retrying.</p>
-                <button class="retry-button" @click=${() => this.query.refetch()}>Retry now</button>
-            </div>`
-        }
-        if (status === 'pending') {
-            return html`<div class="list-state">
-                ${Array.from({length: 5}, () => html`<div class="skeleton-row"></div>`)}
-            </div>`
-        }
-        if (status === 'error') {
-            return html`<div class="list-state error">
-                <p class="state-title">Could not load communities</p>
-                <p class="state-detail">${error instanceof Error ? error.message : String(error)}</p>
-                <div class="state-actions">
-                    <button class="retry-button" @click=${() => this.query.refetch()}>Retry</button>
-                    <button class="retry-button" @click=${() => navigate({kind: 'settings'})}>Change instance</button>
-                </div>
-            </div>`
-        }
-        if (this.communities.length === 0) {
-            return html`<div class="list-state">
-                <p class="state-title">No communities found</p>
-            </div>`
-        }
-        return html`
-            <div class="list-scroller" ${ref((el) => {
-                this.listEl = el as HTMLElement | null
-            })}>
-                <div class="list-spacer" style="height: ${this.virtualizer.totalSize}px">
-                    ${this.virtualizer.virtualItems.map((item) => {
-                        const community = this.communities[item.index]
-                        return html`<div
-                            class="list-item"
-                            data-index=${item.index}
-                            style="transform: translateY(${item.start}px)"
-                            ${ref((el) => this.virtualizer.measureElement(el as HTMLElement | null))}
-                        >
-                            <lvs-community-card .community=${community}></lvs-community-card>
-                        </div>`
-                    })}
-                </div>
-                <div class="list-more">
-                    ${this.query.isFetchingNextPage
-                        ? html`<span class="spinner" aria-label="Loading more"></span>`
-                        : html`<span class="more-hint"></span>`}
-                </div>
-            </div>
-        `
+        if (status === 'pending' && fetchStatus === 'paused') return this.renderPaused()
+        if (status === 'pending') return this.renderPending()
+        if (status === 'error') return this.renderError(error)
+        if (this.communities.length === 0) return html`<div class="list-state"><p class="state-title">No communities found</p></div>`
+        return this.renderList()
     }
 
     override render(): TemplateResult {

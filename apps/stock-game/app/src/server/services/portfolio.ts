@@ -9,89 +9,127 @@ export interface PortfolioService {
   getSeries(config: GameConfig, trades: Trade[]): Promise<PortfolioSeries>
 }
 
-export function createPortfolio(provider: PriceProvider): PortfolioService {
-  return {
-    async getSeries(config, trades): Promise<PortfolioSeries> {
-      const now = Date.now()
-      const startDate = Math.min(config.startDate, now)
-      const orderedTrades = [...trades].sort((a, b) => a.executedAt - b.executedAt)
-
-      const symbols = [...new Set(orderedTrades.map((trade) => trade.symbol))]
-      const barsBySymbol = new Map<string, Array<{ time: number; close: number }>>()
-      for (const symbol of symbols) {
-        const from = startDate - DAY_MS
-        const to = now + DAY_MS
-        const bars = await provider.getBars(symbol, '1d', from, to)
-        barsBySymbol.set(
-          symbol,
-          bars.map((bar) => ({ time: bar.time, close: bar.close })),
-        )
-      }
-
-      const daySet = new Set<number>([dayOf(startDate), dayOf(now)])
-      for (const trade of orderedTrades) daySet.add(dayOf(trade.executedAt))
-      for (const bars of barsBySymbol.values()) {
-        for (const bar of bars) daySet.add(dayOf(bar.time))
-      }
-      const days = [...daySet].sort((a, b) => a - b)
-
-      const points: PortfolioSeries['points'] = []
-      const positions = new Map<
-        string,
-        { qty: number; barIndex: number; lastClose: number }
-      >()
-      let cash = config.startingCashCents
-      let tradeIndex = 0
-
-      for (const day of days) {
-        const endOfDay = day + DAY_MS - 1
-        while (tradeIndex < orderedTrades.length) {
-          const trade = orderedTrades[tradeIndex]
-          if (trade === undefined || trade.executedAt > endOfDay) break
-          cash += trade.cashDeltaCents
-          const position = positions.get(trade.symbol) ?? { qty: 0, barIndex: 0, lastClose: 0 }
-          position.qty += trade.side === 'buy' ? trade.qty : -trade.qty
-          positions.set(trade.symbol, position)
-          tradeIndex++
-        }
-
-        let holdingsCents = 0
-        for (const [symbol, position] of positions) {
-          if (position.qty <= 0) continue
-          const bars = barsBySymbol.get(symbol)
-          if (!bars) continue
-          while (position.barIndex < bars.length) {
-            const bar = bars[position.barIndex]
-            if (bar === undefined || bar.time > endOfDay) break
-            position.lastClose = bar.close
-            position.barIndex++
-          }
-          holdingsCents += Math.round(position.qty * position.lastClose * 100)
-        }
-
-        points.push({
-          time: day,
-          cashCents: cash,
-          holdingsCents,
-          totalCents: cash + holdingsCents,
-        })
-      }
-
-      const last = points.at(-1)
-      const totalReturnPct =
-        last !== undefined && config.startingCashCents > 0
-          ? ((last.totalCents - config.startingCashCents) / config.startingCashCents) * 100
-          : 0
-
-      return {
-        startingCashCents: config.startingCashCents,
-        startDate: days[0] ?? startDate,
-        endDate: last?.time ?? now,
-        totalReturnPct: round2(totalReturnPct),
-        points,
-      }
-    },
+async function loadBarsBySymbol(
+  provider: PriceProvider,
+  symbols: string[],
+  startDate: number,
+  now: number,
+): Promise<Map<string, Array<{ time: number; close: number }>>> {
+  const barsBySymbol = new Map<string, Array<{ time: number; close: number }>>()
+  for (const symbol of symbols) {
+    const from = startDate - DAY_MS
+    const to = now + DAY_MS
+    const bars = await provider.getBars(symbol, '1d', from, to)
+    barsBySymbol.set(
+      symbol,
+      bars.map((bar) => ({ time: bar.time, close: bar.close })),
+    )
   }
+  return barsBySymbol
+}
+
+function collectDays(
+  startDate: number,
+  now: number,
+  orderedTrades: Trade[],
+  barsBySymbol: Map<string, Array<{ time: number; close: number }>>,
+): number[] {
+  const daySet = new Set<number>([dayOf(startDate), dayOf(now)])
+  for (const trade of orderedTrades) daySet.add(dayOf(trade.executedAt))
+  for (const bars of barsBySymbol.values()) for (const bar of bars) daySet.add(dayOf(bar.time))
+  return [...daySet].sort((a, b) => a - b)
+}
+
+function advanceTrades(
+  orderedTrades: Trade[],
+  tradeIndex: { value: number },
+  endOfDay: number,
+  positions: Map<string, { qty: number; barIndex: number; lastClose: number }>,
+  cashRef: { value: number },
+): void {
+  while (tradeIndex.value < orderedTrades.length) {
+    const trade = orderedTrades[tradeIndex.value]
+    if (trade === undefined || trade.executedAt > endOfDay) break
+    cashRef.value += trade.cashDeltaCents
+    const position = positions.get(trade.symbol) ?? { qty: 0, barIndex: 0, lastClose: 0 }
+    position.qty += trade.side === 'buy' ? trade.qty : -trade.qty
+    positions.set(trade.symbol, position)
+    tradeIndex.value++
+  }
+}
+
+function holdingsForDay(
+  positions: Map<string, { qty: number; barIndex: number; lastClose: number }>,
+  barsBySymbol: Map<string, Array<{ time: number; close: number }>>,
+  endOfDay: number,
+): number {
+  let holdingsCents = 0
+  for (const [symbol, position] of positions) {
+    if (position.qty <= 0) continue
+    const bars = barsBySymbol.get(symbol)
+    if (!bars) continue
+    while (position.barIndex < bars.length) {
+      const bar = bars[position.barIndex]
+      if (bar === undefined || bar.time > endOfDay) break
+      position.lastClose = bar.close
+      position.barIndex++
+    }
+    holdingsCents += Math.round(position.qty * position.lastClose * 100)
+  }
+  return holdingsCents
+}
+
+function buildPoints(
+  days: number[],
+  orderedTrades: Trade[],
+  barsBySymbol: Map<string, Array<{ time: number; close: number }>>,
+  startingCash: number,
+): PortfolioSeries['points'] {
+  const points: PortfolioSeries['points'] = []
+  const positions = new Map<string, { qty: number; barIndex: number; lastClose: number }>()
+  let cash = startingCash
+  const tradeIndex = { value: 0 }
+  const cashRef = { value: cash }
+  for (const day of days) {
+    const endOfDay = day + DAY_MS - 1
+    advanceTrades(orderedTrades, tradeIndex, endOfDay, positions, cashRef)
+    cash = cashRef.value
+    const holdingsCents = holdingsForDay(positions, barsBySymbol, endOfDay)
+    points.push({ time: day, cashCents: cash, holdingsCents, totalCents: cash + holdingsCents })
+  }
+  return points
+}
+
+async function buildSeries(
+  provider: PriceProvider,
+  config: GameConfig,
+  trades: Trade[],
+): Promise<PortfolioSeries> {
+  const now = Date.now()
+  const startDate = Math.min(config.startDate, now)
+  const orderedTrades = [...trades].sort((a, b) => a.executedAt - b.executedAt)
+  const symbols = [...new Set(orderedTrades.map((trade) => trade.symbol))]
+  const barsBySymbol = await loadBarsBySymbol(provider, symbols, startDate, now)
+  const days = collectDays(startDate, now, orderedTrades, barsBySymbol)
+  const points = buildPoints(days, orderedTrades, barsBySymbol, config.startingCashCents)
+  const last = points.at(-1)
+  const totalReturnPct = computeReturn(last, config.startingCashCents)
+  return {
+    startingCashCents: config.startingCashCents,
+    startDate: days[0] ?? startDate,
+    endDate: last?.time ?? now,
+    totalReturnPct: round2(totalReturnPct),
+    points,
+  }
+}
+
+function computeReturn(last: PortfolioSeries['points'][number] | undefined, startingCash: number): number {
+  if (last === undefined || startingCash <= 0) return 0
+  return ((last.totalCents - startingCash) / startingCash) * 100
+}
+
+export function createPortfolio(provider: PriceProvider): PortfolioService {
+  return { getSeries: (config, trades) => buildSeries(provider, config, trades) }
 }
 
 let portfolio: PortfolioService | undefined

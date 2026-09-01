@@ -111,6 +111,32 @@ export class ScrollViewport extends LitElement {
      * motion is driven by rAF on scrollTop with a custom ease. A timer
      * guarantees arrival even when the tab throttles rAF.
      */
+    private makeFinish(viewport: HTMLElement, to: number): () => void {
+        return () => {
+            viewport.scrollTop = to
+            this.onScroll()
+            viewport.classList.remove('no-snap')
+            this.scrollRaf = null
+            this.scrollTimer = null
+        }
+    }
+
+    private animateScroll(viewport: HTMLElement, from: number, to: number, finish: () => void): void {
+        viewport.classList.add('no-snap')
+        const start = performance.now()
+        const duration = 420
+        const ease = (t: number): number => 1 - Math.pow(1 - t, 3)
+        const step = (now: number): void => {
+            const t = Math.min(1, (now - start) / duration)
+            viewport.scrollTop = from + (to - from) * ease(t)
+            this.onScroll()
+            if (t < 1) this.scrollRaf = requestAnimationFrame(step)
+            else finish()
+        }
+        this.scrollRaf = requestAnimationFrame(step)
+        this.scrollTimer = setTimeout(finish, duration + 150)
+    }
+
     private scrollToSlide(index: number): void {
         const viewport = this.viewport
         if (!viewport) return
@@ -120,33 +146,12 @@ export class ScrollViewport extends LitElement {
         if (from === to) return
         this.activeIndex = target
         this.cancelScroll()
-        const finish = (): void => {
-            viewport.scrollTop = to
-            this.onScroll()
-            viewport.classList.remove('no-snap')
-            this.scrollRaf = null
-            this.scrollTimer = null
-        }
+        const finish = this.makeFinish(viewport, to)
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             finish()
             return
         }
-        viewport.classList.add('no-snap')
-        const start = performance.now()
-        const duration = 420
-        const ease = (t: number): number => 1 - Math.pow(1 - t, 3)
-        const step = (now: number): void => {
-            const t = Math.min(1, (now - start) / duration)
-            viewport.scrollTop = from + (to - from) * ease(t)
-            this.onScroll()
-            if (t < 1) {
-                this.scrollRaf = requestAnimationFrame(step)
-            } else {
-                finish()
-            }
-        }
-        this.scrollRaf = requestAnimationFrame(step)
-        this.scrollTimer = setTimeout(finish, duration + 150)
+        this.animateScroll(viewport, from, to, finish)
     }
 
     private cancelScroll(): void {
@@ -181,38 +186,31 @@ export class ScrollViewport extends LitElement {
         this.lastWheelMove = now
     }
 
+    private isEditableTarget(target: HTMLElement | null): boolean {
+        return !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.tagName === 'BUTTON' || target.tagName === 'A' || target.isContentEditable)
+    }
+
+    private handleKey(key: string): boolean {
+        if (key === 'ArrowDown' || key === 'PageDown') {
+            this.nextSlide()
+            return true
+        }
+        if (key === ' ') {
+            if (this.activeCanPlayPause()) this.toggleActivePlay()
+            else this.nextSlide()
+            return true
+        }
+        if (key === 'ArrowUp' || key === 'PageUp') {
+            this.prevSlide()
+            return true
+        }
+        return false
+    }
+
     private onWindowKeydown = (event: KeyboardEvent): void => {
         if (!this.isConnected) return
-        const target = event.target as HTMLElement | null
-        // never hijack keys from form controls or links
-        if (
-            target &&
-            (target.tagName === 'INPUT' ||
-                target.tagName === 'TEXTAREA' ||
-                target.tagName === 'SELECT' ||
-                target.tagName === 'BUTTON' ||
-                target.tagName === 'A' ||
-                target.isContentEditable)
-        ) {
-            return
-        }
-        switch (event.key) {
-            case 'ArrowDown':
-            case 'PageDown':
-                event.preventDefault()
-                this.nextSlide()
-                break
-            case ' ':
-                event.preventDefault()
-                if (this.activeCanPlayPause()) this.toggleActivePlay()
-                else this.nextSlide()
-                break
-            case 'ArrowUp':
-            case 'PageUp':
-                event.preventDefault()
-                this.prevSlide()
-                break
-        }
+        if (this.isEditableTarget(event.target as HTMLElement | null)) return
+        if (this.handleKey(event.key)) event.preventDefault()
     }
 
     private onScroll(): void {
@@ -309,42 +307,24 @@ export class ScrollViewport extends LitElement {
         return null
     }
 
+    private renderSlideItem(item: ScrollItem, index: number, from: number, to: number, count: number): TemplateResult {
+        const visible = index >= from && index <= to
+        return html`<section class="slide" style="transform: translateY(${index * 100}%); height: ${100 / count}%">
+            <div class="slide-inner${index === this.activeIndex ? ' active' : ''}">${visible ? html`<vsc-scroll-slide .item=${item} .active=${index === this.activeIndex}></vsc-scroll-slide>` : html`<div class="slide-placeholder"></div>`}</div>
+        </section>`
+    }
+
+    private renderChrome(): TemplateResult {
+        return html`<div class="feed-chrome"><button class="nav-arrow prev" aria-label="Previous post" @click=${this.prevSlide}>↑</button>${this.activeCanPlayPause() ? html`<button class="nav-arrow play" aria-label=${this.playing ? 'Pause video' : 'Play video'} @click=${this.toggleActivePlay}>${this.playing ? VIEWPORT_PAUSE_ICON : VIEWPORT_PLAY_ICON}</button>` : nothing}<button class="nav-arrow next" aria-label="Next post" @click=${this.nextSlide}>↓</button></div>`
+    }
+
     private renderSlides(): TemplateResult {
         const count = this.items.length
         const from = Math.max(0, this.activeIndex - SLIDE_WINDOW)
         const to = Math.min(count - 1, this.activeIndex + SLIDE_WINDOW)
-        return html`
-            <div
-                class="scroll-viewport${this.dragging ? ' dragging' : ''}"
-                ${ref(this.onViewportRef)}
-                @scroll=${this.onScroll}
-                @pointerdown=${this.onPointerDown}
-                @playback-change=${this.onPlaybackChange}
-            >
-                <!-- the track is count viewports tall; every slide is exactly one
-                     viewport, positioned by index. Non-window slides stay as cheap
-                     placeholders so scroll-snap anchors and geometry stay correct. -->
-                <div class="slides" style="height: ${count * 100}%">
-                    ${this.items.map((item, index) => {
-                        const visible = index >= from && index <= to
-                        return html`<section class="slide" style="transform: translateY(${index * 100}%); height: ${100 / count}%">
-                            <div class="slide-inner${index === this.activeIndex ? ' active' : ''}">
-                                ${visible
-                                    ? html`<vsc-scroll-slide .item=${item} .active=${index === this.activeIndex}></vsc-scroll-slide>`
-                                    : html`<div class="slide-placeholder"></div>`}
-                            </div>
-                        </section>`
-                    })}
-                </div>
-            </div>
-            <div class="feed-chrome">
-                <button class="nav-arrow prev" aria-label="Previous post" @click=${this.prevSlide}>↑</button>
-                ${this.activeCanPlayPause()
-                    ? html`<button class="nav-arrow play" aria-label=${this.playing ? 'Pause video' : 'Play video'} @click=${this.toggleActivePlay}>${this.playing ? VIEWPORT_PAUSE_ICON : VIEWPORT_PLAY_ICON}</button>`
-                    : nothing}
-                <button class="nav-arrow next" aria-label="Next post" @click=${this.nextSlide}>↓</button>
-            </div>
-        `
+        return html`<div class="scroll-viewport${this.dragging ? ' dragging' : ''}" ${ref(this.onViewportRef)} @scroll=${this.onScroll} @pointerdown=${this.onPointerDown} @playback-change=${this.onPlaybackChange}>
+                <div class="slides" style="height: ${count * 100}%">${this.items.map((item, index) => this.renderSlideItem(item, index, from, to, count))}</div>
+            </div>${this.renderChrome()}`
     }
 
     override render(): TemplateResult {

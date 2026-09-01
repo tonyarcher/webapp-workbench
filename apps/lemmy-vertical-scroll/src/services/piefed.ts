@@ -89,48 +89,22 @@ interface RawPiefedSite {
 
 // ---- mapping ----
 
-function mapPostView(view: RawPiefedPostView): LemmyPost {
+function postTypeOf(raw: string): LemmyPost['postType'] {
+    return raw === 'Image' || raw === 'Video' || raw === 'Link' ? raw : null
+}
+
+function basePiefedPost(view: RawPiefedPostView): LemmyPost {
     const {post, community, creator, counts} = view
-    const mappedType = post.post_type === 'Image' || post.post_type === 'Video' || post.post_type === 'Link'
-        ? post.post_type
-        : null
-    const base: LemmyPost = {
-        id: post.id,
-        name: post.title,
-        url: post.url,
-        body: post.body,
-        thumbnailUrl: post.thumbnail_url ?? post.small_thumbnail_url,
-        nsfw: post.nsfw,
-        pinnedLocal: post.instance_sticky,
-        pinnedCommunity: post.sticky,
-        published: post.published,
-        communityId: community.id,
-        communityName: community.name,
-        communityActorId: community.actor_id,
-        communityTitle: community.title,
-        communityIcon: community.icon,
-        creatorActorId: creator.actor_id,
-        creatorName: creator.user_name,
-        creatorDisplayName: creator.title,
-        creatorAvatar: creator.avatar,
-        score: counts.score,
-        upvotes: counts.upvotes,
-        downvotes: counts.downvotes,
-        comments: counts.comments,
-        myVote: view.my_vote ?? null,
-        postUrl: post.ap_id,
-        postType: mappedType,
-        imageUrls: [],
-        videoUrl: null,
-        linkUrl: null,
-    }
+    return {id: post.id, name: post.title, url: post.url, body: post.body, thumbnailUrl: post.thumbnail_url ?? post.small_thumbnail_url, nsfw: post.nsfw, pinnedLocal: post.instance_sticky, pinnedCommunity: post.sticky, published: post.published, communityId: community.id, communityName: community.name, communityActorId: community.actor_id, communityTitle: community.title, communityIcon: community.icon, creatorActorId: creator.actor_id, creatorName: creator.user_name, creatorDisplayName: creator.title, creatorAvatar: creator.avatar, score: counts.score, upvotes: counts.upvotes, downvotes: counts.downvotes, comments: counts.comments, myVote: view.my_vote ?? null, postUrl: post.ap_id, postType: postTypeOf(post.post_type), imageUrls: [], videoUrl: null, linkUrl: null}
+}
+
+function enrichPiefedPost(base: LemmyPost): LemmyPost {
     const kind = classifyPost(base)
-    return {
-        ...base,
-        imageUrls: extractImageUrls(base),
-        videoUrl: kind === 'video' ? base.url : null,
-        linkUrl: kind === 'link' ? base.url : null,
-    }
+    return {...base, imageUrls: extractImageUrls(base), videoUrl: kind === 'video' ? base.url : null, linkUrl: kind === 'link' ? base.url : null}
+}
+
+function mapPostView(view: RawPiefedPostView): LemmyPost {
+    return enrichPiefedPost(basePiefedPost(view))
 }
 
 function mapCommunityView(view: RawPiefedCommunityView): LemmyCommunity {

@@ -52,24 +52,25 @@ const NSFW_HOSTS = new Set(['lemmynsfw.com', 'fedinsfw.app'])
  * The Instance cell is markdown like `[Name](https://host)`. Malformed lines
  * are skipped so a future format change degrades gracefully.
  */
+function parseRegistryRow(line: string): {host: string; name: string; users: number} | null {
+    if (!line.trim()) return null
+    const cells = line.split(',')
+    const match = /\[([^\]]*)\]\((https?:\/\/[^)]+)\)/.exec(cells[0] ?? '')
+    const host = match?.[2]?.replace(/^https?:\/\//, '').replace(/\/$/, '')
+    const name = match?.[1]?.trim()
+    const users = Number(cells[6])
+    if (!host || !name || !Number.isFinite(users)) return null
+    return {host, name, users}
+}
+
 export function parseRegistryCsv(text: string): PopularServer[] {
     const rows: Array<{host: string; name: string; users: number}> = []
     for (const line of text.split(/\r?\n/)) {
-        if (!line.trim()) continue
-        const cells = line.split(',')
-        const match = /\[([^\]]*)\]\((https?:\/\/[^)]+)\)/.exec(cells[0] ?? '')
-        const host = match?.[2]?.replace(/^https?:\/\//, '').replace(/\/$/, '')
-        const name = match?.[1]?.trim()
-        const users = Number(cells[6])
-        if (!host || !name || !Number.isFinite(users)) continue
-        rows.push({host, name, users})
+        const row = parseRegistryRow(line)
+        if (row) rows.push(row)
     }
     rows.sort((a, b) => b.users - a.users)
-    return rows.slice(0, REGISTRY_LIMIT).map((row) => ({
-        host: row.host,
-        name: row.name,
-        nsfw: NSFW_HOSTS.has(row.host),
-    }))
+    return rows.slice(0, REGISTRY_LIMIT).map((row) => ({host: row.host, name: row.name, nsfw: NSFW_HOSTS.has(row.host)}))
 }
 
 /** Fetches the current registry; resolves to [] on any failure so callers can fall back to bundled. */

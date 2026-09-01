@@ -61,35 +61,49 @@ export class BaseballScoringControls extends LitElement {
         return html`
             <div class="active-controls">
                 <h2>Plate Matchup</h2>
-                <div class="live-situation" aria-live="polite">
-                    <span class="live-situation-inning">${this.liveInningText || 'Live'}</span>
-                    <span class="live-situation-count">${this.balls} balls · ${this.strikes} strikes · ${this.outs} outs</span>
-                    <span class="live-situation-score">
-                        <span class="team-score">${this.awayName || 'AWY'} ${this.awayScore}</span>
-                        <span class="team-score">${this.homeName || 'HOM'} ${this.homeScore}</span>
-                    </span>
-                </div>
+                ${this.renderLiveSituation()}
                 <baseball-matchup-card
                     batter-name="${this.batterName}"
                     batter-stats="${this.batterStats}"
                     pitcher-name="${this.pitcherName}"
                     pitcher-stats="${this.pitcherStats}"
                 ></baseball-matchup-card>
-
-                ${this.panelMode === 'step2'
-            ? html`
-                        <baseball-step2-panel
-                            base-label=${this.step2Label}
-                            ?is-hit=${this.step2IsHit}
-                            ?double-play-available=${this.step2DoublePlayAvailable}
-                        ></baseball-step2-panel>
-                    `
-            : html`
-                        <baseball-action-grid
-                            current-pitch-type=${this.currentPitchType}
-                        ></baseball-action-grid>
-                    `}
+                ${this.renderPanel()}
             </div>
+        `;
+    }
+
+    private renderLiveSituation() {
+        return html`
+          <div class="live-situation" aria-live="polite">
+            <span class="live-situation-inning">${this.liveInningText || 'Live'}</span>
+            <span class="live-situation-count">${this.balls} balls · ${this.strikes} strikes · ${this.outs} outs</span>
+            <span class="live-situation-score">
+              <span class="team-score">${this.awayName || 'AWY'} ${this.awayScore}</span>
+              <span class="team-score">${this.homeName || 'HOM'} ${this.homeScore}</span>
+            </span>
+          </div>
+        `;
+    }
+
+    private renderPanel() {
+        if (this.panelMode === 'step2') return this.renderStep2Panel();
+        return this.renderActionGrid();
+    }
+
+    private renderStep2Panel() {
+        return html`
+          <baseball-step2-panel
+              base-label=${this.step2Label}
+              ?is-hit=${this.step2IsHit}
+              ?double-play-available=${this.step2DoublePlayAvailable}
+          ></baseball-step2-panel>
+        `;
+    }
+
+    private renderActionGrid() {
+        return html`
+          <baseball-action-grid current-pitch-type=${this.currentPitchType}></baseball-action-grid>
         `;
     }
 

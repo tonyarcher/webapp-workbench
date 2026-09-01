@@ -31,16 +31,21 @@ export class FeedListMenu extends LitElement {
     }
 
     override updated(changed: Map<string, unknown>) {
-        if (changed.has('open') || changed.has('anchor')) {
-            if (this.open && this.menuEl) {
-                this.menuEl.style.left = `${this.anchor?.x ?? 0}px`;
-                this.menuEl.style.top = `${this.anchor?.y ?? 0}px`;
-                if (!this.menuEl.matches(':popover-open')) this.menuEl.showPopover();
-                this.clampPosition();
-            } else if (this.menuEl?.matches(':popover-open')) {
-                this.menuEl.hidePopover();
-            }
-        }
+        this.syncPopover(changed);
+    }
+
+    private syncPopover(changed: Map<string, unknown>) {
+        if (!changed.has('open') && !changed.has('anchor')) return;
+        if (this.open && this.menuEl) this.openPopover();
+        else if (this.menuEl?.matches(':popover-open')) this.menuEl.hidePopover();
+    }
+
+    private openPopover() {
+        if (!this.menuEl) return;
+        this.menuEl.style.left = `${this.anchor?.x ?? 0}px`;
+        this.menuEl.style.top = `${this.anchor?.y ?? 0}px`;
+        if (!this.menuEl.matches(':popover-open')) this.menuEl.showPopover();
+        this.clampPosition();
     }
 
     override render() {
@@ -49,7 +54,7 @@ export class FeedListMenu extends LitElement {
         <div class="section">
           <h3>Sort</h3>
           <div class="segments">
-            ${this.segment(this.feedSort === 'alpha', () => this.setSort('alpha'), 'Name A–Z')}
+            ${this.segment(this.feedSort === 'alpha', () => this.setSort('alpha'), 'Name Aâ€“Z')}
             ${this.segment(this.feedSort === 'unread', () => this.setSort('unread'), 'Unread first')}
           </div>
         </div>
@@ -57,7 +62,7 @@ export class FeedListMenu extends LitElement {
         <div class="section">
           <h3>Folders</h3>
           <button class="folder-action" @click=${this.emitSortFolders}>
-            Sort folders A–Z
+            Sort folders Aâ€“Z
           </button>
           <button class="folder-action" @click=${this.emitRefreshAll}>
             Refresh all feeds
