@@ -2,6 +2,18 @@
     display: none;
 }
 
+:host([variant='embedded']) {
+    display: block;
+    position: static;
+    width: 100%;
+    height: auto;
+    background: transparent;
+    backdrop-filter: none;
+    z-index: auto;
+    font-family: 'Outfit', sans-serif;
+    box-sizing: border-box;
+}
+
 :host([is-open]) {
     display: block;
     position: fixed;
@@ -93,6 +105,35 @@ h2 {
     padding: 0.75rem;
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.05);
+    align-items: center;
+}
+
+.pitcher-section label {
+    min-width: 4.5rem;
+    font-weight: 600;
+    color: var(--text-secondary, #8e9cae);
+}
+
+.hint {
+    margin: 1rem 0 0;
+    color: var(--text-secondary, #8e9cae);
+    font-size: 0.9rem;
+}
+
+.embedded-editor {
+    width: 100%;
+}
+
+.embedded-editor h2 {
+    margin: 0 0 1rem;
+    font-size: 1.2rem;
+}
+
+.overlay-catch {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .form-control {

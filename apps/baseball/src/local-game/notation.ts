@@ -18,6 +18,12 @@ export function runnerAdvancementsForSacrifice(runners: RunnersOnBase): Advancem
   return runners[2] ? [{ from: 3, to: 4, scored: true }] : [];
 }
 
+export function runnerAdvancementsForSteal(from: number, to: number): Advancement[] {
+  if (from < 1 || from > 3) return [];
+  const destination = to > 3 ? 4 : to;
+  return [{ from, to: destination, scored: destination === 4 }];
+}
+
 function advanceOccupiedRunners(runners: RunnersOnBase, bases: number): Advancement[] {
   const advancements: Advancement[] = [];
   for (const base of occupiedBases(runners)) {
@@ -83,6 +89,8 @@ export function inPlayOutNotation(eventType: ScoringEventType, fieldPos?: number
       return fieldPos ? `P${fieldPos}` : 'PO';
     case 'SACRIFICE_FLY':
       return fieldPos ? `SF${fieldPos}` : 'SF';
+    case 'SACRIFICE_BUNT':
+      return fieldPos ? `SH${fieldPos}` : 'SH';
     default:
       return '';
   }

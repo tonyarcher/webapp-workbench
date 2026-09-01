@@ -4,7 +4,14 @@ import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
 import { createGame, reduceGame } from './rule-engine';
 import type { EngineGameState, EngineInitOptions, ScoringEvent, ScoringEventType } from './rule-engine';
 import { clearGameState, loadGameState, saveGameState } from './save-state';
-import { DEFAULT_AWAY_LINEUP, DEFAULT_HOME_LINEUP } from './default-lineups';
+import {
+  DEFAULT_AWAY_LINEUP,
+  DEFAULT_AWAY_PITCHER,
+  DEFAULT_HOME_LINEUP,
+  DEFAULT_HOME_PITCHER,
+  lineupPlayersFromUnknown,
+  toLineupPlayers,
+} from './default-lineups';
 
 export const GAME_QUERY_KEY = ['game'] as const;
 
@@ -26,8 +33,15 @@ const ALL_ENGINE_EVENT_TYPES: ScoringEventType[] = [
   'LINE_OUT',
   'POP_OUT',
   'SACRIFICE_FLY',
+  'SACRIFICE_BUNT',
   'ERROR',
   'FIELDER_CHOICE',
+  'STOLEN_BASE',
+  'CAUGHT_STEALING',
+  'WILD_PITCH',
+  'PASSED_BALL',
+  'BALK',
+  'SET_LINEUP',
 ];
 
 export class GameStore {
@@ -118,12 +132,16 @@ export class GameStore {
 }
 
 function buildEngineOptions(setup: LocalGameSetup): EngineInitOptions {
+  const homeLineup = setup.homeLineup?.length ? setup.homeLineup : toLineupPlayers(DEFAULT_HOME_LINEUP);
+  const awayLineup = setup.awayLineup?.length ? setup.awayLineup : toLineupPlayers(DEFAULT_AWAY_LINEUP);
   return {
     homeName: setup.homeTeamName,
     awayName: setup.awayTeamName,
-    homeLineup: DEFAULT_HOME_LINEUP.map((player) => ({ batterName: player.batterName, position: player.position })),
-    awayLineup: DEFAULT_AWAY_LINEUP.map((player) => ({ batterName: player.batterName, position: player.position })),
+    homeLineup,
+    awayLineup,
     totalInnings: setup.innings,
+    homePitcherName: setup.homePitcherName ?? DEFAULT_HOME_PITCHER,
+    awayPitcherName: setup.awayPitcherName ?? DEFAULT_AWAY_PITCHER,
   };
 }
 
@@ -141,8 +159,26 @@ function toScoringEvent(record: LocalGameEventRecord): ScoringEvent | null {
   if (Number.isFinite(fieldPos) && fieldPos >= 1 && fieldPos <= 9) {
     event.fieldPos = fieldPos;
   }
+  const base = Number(record.detail?.base);
+  if (Number.isFinite(base) && base >= 1 && base <= 4) {
+    event.base = base;
+  }
   if (record.detail?.doublePlay === true) {
     event.doublePlay = true;
   }
+  if (eventType === 'SET_LINEUP') {
+    event.homeLineup = lineupPlayersFromUnknown(record.detail?.homeLineup);
+    event.awayLineup = lineupPlayersFromUnknown(record.detail?.awayLineup);
+    event.homePitcherName = optionalString(record.detail?.homePitcherName);
+    event.awayPitcherName = optionalString(record.detail?.awayPitcherName);
+  }
   return event;
 }
+
+function optionalString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+

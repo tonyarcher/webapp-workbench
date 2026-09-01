@@ -1,11 +1,69 @@
 import { LitElement, html } from 'lit';
 import { DEFAULT_GAME_SETUP } from './game-types';
-import type { LocalGameSetup } from './game-types';
+import type { LineupPlayer, LocalGameSetup } from './game-types';
+import {
+  DEFAULT_AWAY_LINEUP,
+  DEFAULT_AWAY_PITCHER,
+  DEFAULT_HOME_LINEUP,
+  DEFAULT_HOME_PITCHER,
+  toLineupPlayers,
+} from './default-lineups';
+
+interface EditorPlayer {
+  name?: string;
+  batterName?: string;
+  position?: string;
+  jerseyNumber?: number;
+}
+
+interface LineupDraftDetail {
+  homeLineup?: EditorPlayer[];
+  awayLineup?: EditorPlayer[];
+  homePitcherName?: string;
+  awayPitcherName?: string;
+}
+
+function toEditorJson(players: LineupPlayer[]): string {
+  return JSON.stringify(
+    players.map((player, index) => ({
+      id: index + 1,
+      name: player.batterName,
+      jerseyNumber: player.jerseyNumber ?? 0,
+      position: player.position,
+    }))
+  );
+}
+
+function fromEditorPlayers(players: EditorPlayer[] | undefined, fallback: LineupPlayer[]): LineupPlayer[] {
+  if (!players || players.length === 0) return fallback;
+  return players.slice(0, 9).map((player, index) => ({
+    batterName: String(player.batterName ?? player.name ?? '').trim() || fallback[index]?.batterName || `Batter ${index + 1}`,
+    position: String(player.position ?? fallback[index]?.position ?? 'DH').trim() || 'DH',
+    jerseyNumber: Number(player.jerseyNumber ?? fallback[index]?.jerseyNumber ?? 0),
+  }));
+}
 
 export class BaseballSetupScreen extends LitElement {
   createRenderRoot() {
     return this;
   }
+
+  private pendingHomeLineup = toLineupPlayers(DEFAULT_HOME_LINEUP);
+  private pendingAwayLineup = toLineupPlayers(DEFAULT_AWAY_LINEUP);
+  private pendingHomePitcher = DEFAULT_HOME_PITCHER;
+  private pendingAwayPitcher = DEFAULT_AWAY_PITCHER;
+
+  private handleLineupChange = (event: Event) => {
+    const detail = ((event as CustomEvent).detail ?? {}) as LineupDraftDetail;
+    this.pendingHomeLineup = fromEditorPlayers(detail.homeLineup, this.pendingHomeLineup);
+    this.pendingAwayLineup = fromEditorPlayers(detail.awayLineup, this.pendingAwayLineup);
+    if (typeof detail.homePitcherName === 'string' && detail.homePitcherName.trim()) {
+      this.pendingHomePitcher = detail.homePitcherName.trim();
+    }
+    if (typeof detail.awayPitcherName === 'string' && detail.awayPitcherName.trim()) {
+      this.pendingAwayPitcher = detail.awayPitcherName.trim();
+    }
+  };
 
   private handleSubmit = (event: Event) => {
     event.preventDefault();
@@ -18,6 +76,10 @@ export class BaseballSetupScreen extends LitElement {
       homeTeamName: home.trim() || DEFAULT_GAME_SETUP.homeTeamName,
       awayTeamName: away.trim() || DEFAULT_GAME_SETUP.awayTeamName,
       innings: Math.min(9, Math.max(1, innings || DEFAULT_GAME_SETUP.innings)),
+      homeLineup: this.pendingHomeLineup,
+      awayLineup: this.pendingAwayLineup,
+      homePitcherName: this.pendingHomePitcher,
+      awayPitcherName: this.pendingAwayPitcher,
     };
     this.dispatchEvent(
       new CustomEvent<LocalGameSetup>('start-game', { detail: setup, bubbles: true, composed: true })
@@ -30,7 +92,8 @@ export class BaseballSetupScreen extends LitElement {
         <div class="card">
           <h1>⚾ Grand Slam Baseball — Local Game Setup</h1>
           <p class="text-muted">
-            Everything runs entirely in your browser. No server or API required.
+            Everything runs entirely in your browser. Set the batting orders before first pitch — names, numbers, and
+            positions actually stick.
           </p>
           <form class="local-setup-form" @submit=${this.handleSubmit}>
             <label for="home-team-input">Home Team</label>
@@ -47,6 +110,16 @@ export class BaseballSetupScreen extends LitElement {
               max="9"
               value="${DEFAULT_GAME_SETUP.innings}"
             />
+            <baseball-lineup-setup
+              variant="embedded"
+              home-team-name=${DEFAULT_GAME_SETUP.homeTeamName}
+              away-team-name=${DEFAULT_GAME_SETUP.awayTeamName}
+              home-pitcher-name=${DEFAULT_HOME_PITCHER}
+              away-pitcher-name=${DEFAULT_AWAY_PITCHER}
+              home-lineup-json=${toEditorJson(toLineupPlayers(DEFAULT_HOME_LINEUP))}
+              away-lineup-json=${toEditorJson(toLineupPlayers(DEFAULT_AWAY_LINEUP))}
+              @lineup-change=${this.handleLineupChange}
+            ></baseball-lineup-setup>
             <button type="submit" class="btn btn-primary" data-testid="start-game-button">
               Start Local Game
             </button>

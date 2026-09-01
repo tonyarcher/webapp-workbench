@@ -7,7 +7,7 @@ import type { LiveLocalGameState } from './game-state';
 import type { GameStore } from './game-store';
 import type { LocalGameEventRecord } from './game-types';
 import type { EngineGameState, EngineScorebookRow } from './rule-engine';
-import { DEFAULT_AWAY_LINEUP, DEFAULT_HOME_LINEUP } from './default-lineups';
+import type { LineupPlayer } from './game-types';
 import { buildBoxScore } from './box-score';
 import type { BoxScoreTeam } from './box-score';
 
@@ -29,8 +29,15 @@ const SCORING_EVENT_TYPES = new Set([
   'LINE_OUT',
   'POP_OUT',
   'SACRIFICE_FLY',
+  'SACRIFICE_BUNT',
   'ERROR',
   'FIELDER_CHOICE',
+  'STOLEN_BASE',
+  'CAUGHT_STEALING',
+  'WILD_PITCH',
+  'PASSED_BALL',
+  'BALK',
+  'SET_LINEUP',
 ]);
 
 let eventSequence = 0;
@@ -68,6 +75,7 @@ export class BaseballGameShell extends LitElement {
   private pendingEventType = '';
   private pendingBaseLabel = '';
   private lastEventKey = '';
+  private currentPitchType = '';
 
   private containerRef = createRef<HTMLDivElement>();
   private scrollRef = createRef<HTMLDivElement>();
@@ -87,6 +95,7 @@ export class BaseballGameShell extends LitElement {
       root.addEventListener('close-lineup-setup', this.handleCloseLineupSetup);
       root.addEventListener('save-lineup-setup', this.handleSaveLineupSetup);
       root.addEventListener('view-boxscore', this.handleViewBoxScore);
+      root.addEventListener('pitch-type-selected', this.handlePitchTypeSelected);
     }
     this.ensureVirtualizer();
   }
@@ -102,6 +111,7 @@ export class BaseballGameShell extends LitElement {
       root.removeEventListener('close-lineup-setup', this.handleCloseLineupSetup);
       root.removeEventListener('save-lineup-setup', this.handleSaveLineupSetup);
       root.removeEventListener('view-boxscore', this.handleViewBoxScore);
+      root.removeEventListener('pitch-type-selected', this.handlePitchTypeSelected);
     }
     this.virtualizerCleanup?.();
     this.virtualizerCleanup = null;
@@ -201,8 +211,21 @@ export class BaseballGameShell extends LitElement {
     this.requestUpdate();
   };
 
-  private handleSaveLineupSetup = () => {
+  private handleSaveLineupSetup = (event: Event) => {
+    const detail = ((event as CustomEvent).detail ?? {}) as Record<string, unknown>;
     this.lineupOpen = false;
+    this.record('SET_LINEUP', {
+      homeLineup: editorPlayersToLineup(detail.homeLineup),
+      awayLineup: editorPlayersToLineup(detail.awayLineup),
+      homePitcherName: String(detail.homePitcherName ?? ''),
+      awayPitcherName: String(detail.awayPitcherName ?? ''),
+    });
+    this.requestUpdate();
+  };
+
+  private handlePitchTypeSelected = (event: Event) => {
+    const detail = ((event as CustomEvent).detail ?? {}) as Record<string, unknown>;
+    this.currentPitchType = String(detail.pitchType ?? '');
     this.requestUpdate();
   };
 
@@ -229,11 +252,13 @@ export class BaseballGameShell extends LitElement {
   }
 
   private record(eventType: string, detail: Record<string, unknown>) {
+    const withPitch = this.currentPitchType ? { ...detail, pitchType: this.currentPitchType } : detail;
+    this.currentPitchType = '';
     this.store?.recordEvent({
       id: nextEventId(),
       eventType,
       occurredAt: new Date().toISOString(),
-      detail,
+      detail: withPitch,
     });
   }
 
@@ -261,7 +286,7 @@ export class BaseballGameShell extends LitElement {
     const canUndo = game.historyIndex > 0;
     const canRedo = game.historyIndex < game.events.length;
     const currentBatter = battingBatterName(engine);
-    const currentPitcher = pitchingTeam(engine).name;
+    const currentPitcher = pitchingPitcherName(engine);
 
     const gameJson = {
       id: 1,
@@ -319,6 +344,7 @@ export class BaseballGameShell extends LitElement {
                 batter-name=${currentBatter}
                 pitcher-name=${currentPitcher}
                 panel-mode=${this.panelMode}
+                current-pitch-type=${this.currentPitchType}
                 step2-label=${this.step2Label}
                 ?step2-is-hit=${this.step2IsHit}
                 ?step2-double-play-available=${this.step2DoublePlayAvailable}
@@ -342,8 +368,10 @@ export class BaseballGameShell extends LitElement {
             ?is-open=${this.lineupOpen}
             home-team-name=${setup.homeTeamName}
             away-team-name=${setup.awayTeamName}
-            home-lineup-json=${JSON.stringify(DEFAULT_HOME_LINEUP)}
-            away-lineup-json=${JSON.stringify(DEFAULT_AWAY_LINEUP)}
+            home-pitcher-name=${engine.homeLineup.pitcherName ?? ''}
+            away-pitcher-name=${engine.awayLineup.pitcherName ?? ''}
+            home-lineup-json=${JSON.stringify(rowsToEditorPlayers(engine.homeLineup.rows))}
+            away-lineup-json=${JSON.stringify(rowsToEditorPlayers(engine.awayLineup.rows))}
           ></baseball-lineup-setup>
         </div>
 
@@ -528,8 +556,31 @@ function lastPlayLabel(events: LocalGameEventRecord[]): string {
   return parts.join(' · ');
 }
 
-function pitchingTeam(engine: EngineGameState): { name: string } {
-  return engine.half === 'TOP' ? engine.homeLineup : engine.awayLineup;
+function pitchingPitcherName(engine: EngineGameState): string {
+  const lineup = engine.half === 'TOP' ? engine.homeLineup : engine.awayLineup;
+  if (lineup.pitcherName) return lineup.pitcherName;
+  return lineup.rows.find((row) => row.position === 'P')?.batterName ?? `${lineup.name} pitcher`;
+}
+
+function rowsToEditorPlayers(rows: EngineScorebookRow[]): Array<Record<string, unknown>> {
+  return rows.map((row) => ({
+    id: row.slotIdx,
+    name: row.batterName,
+    jerseyNumber: row.jerseyNumber ?? 0,
+    position: row.position,
+  }));
+}
+
+function editorPlayersToLineup(value: unknown): LineupPlayer[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => {
+    const record = entry as Record<string, unknown>;
+    return {
+      batterName: String(record.batterName ?? record.name ?? '').trim(),
+      position: String(record.position ?? 'DH').trim() || 'DH',
+      jerseyNumber: Number(record.jerseyNumber ?? 0),
+    };
+  });
 }
 
 function scorebookSlots(rows: EngineScorebookRow[]): Array<Record<string, unknown>> {
@@ -537,6 +588,7 @@ function scorebookSlots(rows: EngineScorebookRow[]): Array<Record<string, unknow
     slotIdx: row.slotIdx,
     batterName: row.batterName,
     position: row.position,
+    jerseyNumber: row.jerseyNumber,
     atBats: row.atBats,
     runs: row.runs,
     hits: row.hits,
