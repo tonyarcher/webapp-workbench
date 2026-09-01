@@ -9,7 +9,7 @@ import { getQuoteFn, searchSymbolsFn } from '../server/fns/marketData'
 import { listTradesFn, placeTradeFn } from '../server/fns/trades'
 import { placeOrderFn } from '../server/fns/orders'
 import { getConfigFn } from '../server/fns/config'
-import { getHoldingsFn } from '../server/fns/portfolio'
+import { getCashFn, getHoldingsFn } from '../server/fns/portfolio'
 import '../components/sg-trade-form'
 import '../components/sg-trades-table'
 
@@ -23,14 +23,15 @@ function useTradeQueries(query: string, symbol: string | undefined) {
   const tradesQ = useQuery({ queryKey: ['trades'], queryFn: () => listTradesFn() })
   const searchQ = useQuery({ queryKey: ['search', query], queryFn: () => searchSymbolsFn({ data: query }), enabled: query.trim().length > 0 })
   const quoteQ = useQuery({ queryKey: ['quote', symbol], queryFn: () => { if (symbol === undefined) throw new Error('No symbol selected'); return getQuoteFn({ data: symbol }) }, enabled: symbol !== undefined })
-  return { configQ, holdingsQ, tradesQ, searchQ, quoteQ }
+  const cashQ = useQuery({ queryKey: ['cash'], queryFn: () => getCashFn() })
+  return { configQ, holdingsQ, tradesQ, searchQ, quoteQ, cashQ }
 }
 
 function useTradeMutation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (detail: SubmitDetail): Promise<unknown> => { if (detail.mode === 'backdated') return placeTradeFn({ data: detail.data }); return placeOrderFn({ data: detail.data }) },
-    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['trades'] }); void queryClient.invalidateQueries({ queryKey: ['orders'] }); void queryClient.invalidateQueries({ queryKey: ['holdings'] }); void queryClient.invalidateQueries({ queryKey: ['portfolio'] }) },
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['trades'] }); void queryClient.invalidateQueries({ queryKey: ['orders'] }); void queryClient.invalidateQueries({ queryKey: ['holdings'] }); void queryClient.invalidateQueries({ queryKey: ['portfolio'] }); void queryClient.invalidateQueries({ queryKey: ['cash'] }) },
   })
 }
 
@@ -40,8 +41,8 @@ function MutationStatus({ mutation }: { mutation: ReturnType<typeof useTradeMuta
   return <></>
 }
 
-function configCash(configQ: ReturnType<typeof useTradeQueries>['configQ']): number {
-  return configQ.data?.startingCashCents ?? 0
+function availableCash(cashQ: ReturnType<typeof useTradeQueries>['cashQ'], configQ: ReturnType<typeof useTradeQueries>['configQ']): number {
+  return cashQ.data ?? configQ.data?.startingCashCents ?? 0
 }
 
 function configCommission(configQ: ReturnType<typeof useTradeQueries>['configQ']): number {
@@ -60,8 +61,8 @@ function quoteErrorText(quoteQ: ReturnType<typeof useTradeQueries>['quoteQ']): s
   return quoteQ.isError ? String(quoteQ.error) : null
 }
 
-function TradeFormCard({ refCb, symbol, query, searchQ, quoteQ, configQ, holdingsQ, mutation }: { refCb: ReturnType<typeof useCustomEvents>; symbol: string | undefined; query: string; searchQ: ReturnType<typeof useTradeQueries>['searchQ']; quoteQ: ReturnType<typeof useTradeQueries>['quoteQ']; configQ: ReturnType<typeof useTradeQueries>['configQ']; holdingsQ: ReturnType<typeof useTradeQueries>['holdingsQ']; mutation: ReturnType<typeof useTradeMutation> }): React.JSX.Element {
-  return <div className="card"><sg-trade-form ref={refCb} symbol={symbol ?? ''} results={searchQ.data ?? []} query={query} searching={searchQ.isFetching} searchError={searchErrorText(searchQ)} quote={quoteQ.data ?? null} quoteLoading={quoteQ.isFetching} quoteError={quoteErrorText(quoteQ)} cashCents={configCash(configQ)} holdings={holdingsQ.data ?? []} busy={mutation.isPending} commissionCents={configCommission(configQ)} quoteDelayMinutes={configDelay(configQ)} /><MutationStatus mutation={mutation} /></div>
+function TradeFormCard({ refCb, symbol, query, searchQ, quoteQ, configQ, holdingsQ, cashQ, mutation }: { refCb: ReturnType<typeof useCustomEvents>; symbol: string | undefined; query: string; searchQ: ReturnType<typeof useTradeQueries>['searchQ']; quoteQ: ReturnType<typeof useTradeQueries>['quoteQ']; configQ: ReturnType<typeof useTradeQueries>['configQ']; holdingsQ: ReturnType<typeof useTradeQueries>['holdingsQ']; cashQ: ReturnType<typeof useTradeQueries>['cashQ']; mutation: ReturnType<typeof useTradeMutation> }): React.JSX.Element {
+  return <div className="card"><sg-trade-form ref={refCb} symbol={symbol ?? ''} results={searchQ.data ?? []} query={query} searching={searchQ.isFetching} searchError={searchErrorText(searchQ)} quote={quoteQ.data ?? null} quoteLoading={quoteQ.isFetching} quoteError={quoteErrorText(quoteQ)} cashCents={availableCash(cashQ, configQ)} holdings={holdingsQ.data ?? []} busy={mutation.isPending} commissionCents={configCommission(configQ)} quoteDelayMinutes={configDelay(configQ)} /><MutationStatus mutation={mutation} /></div>
 }
 
 function TradesCard({ tradesQ }: { tradesQ: ReturnType<typeof useTradeQueries>['tradesQ'] }): React.JSX.Element {
@@ -76,5 +77,5 @@ function Trade(): React.JSX.Element {
   const qs = useTradeQueries(query, symbol)
   const mutation = useTradeMutation()
   const ref = useCustomEvents({ 'sg-symbol-search-input': (detail) => setQuery((detail as { query: string }).query), 'sg-symbol-select': (detail) => { const r = detail as SymbolSearchResult; setSymbol(r.symbol); void navigate({ to: '/trade', search: { symbol: r.symbol } }) }, 'sg-trade-submit': (detail) => mutation.mutate(detail as SubmitDetail) })
-  return <><h1>Trade</h1><TradeFormCard refCb={ref} symbol={search.symbol} query={query} searchQ={qs.searchQ} quoteQ={qs.quoteQ} configQ={qs.configQ} holdingsQ={qs.holdingsQ} mutation={mutation} /><TradesCard tradesQ={qs.tradesQ} /></>
+  return <><h1>Trade</h1><TradeFormCard refCb={ref} symbol={search.symbol} query={query} searchQ={qs.searchQ} quoteQ={qs.quoteQ} configQ={qs.configQ} holdingsQ={qs.holdingsQ} cashQ={qs.cashQ} mutation={mutation} /><TradesCard tradesQ={qs.tradesQ} /></>
 }

@@ -104,4 +104,32 @@ export const tradeFormStyles = css`
     opacity: 0.5;
     cursor: default;
   }
+
+  .shares-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .shares-row input {
+    width: 0;
+    flex: 1;
+    min-width: 0;
+  }
+
+  button.max {
+    font: inherit;
+    color: var(--text, #e6edf3);
+    background: var(--bg, #0d1117);
+    border: 1px solid var(--border, #2a313c);
+    border-radius: 8px;
+    padding: 9px 14px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  button.max:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 `

@@ -16,6 +16,7 @@ import {
   type TradeMode,
 } from '@stock-game/shared'
 import { fmtMoney, fmtPrice } from '../lib/format'
+import { maxQtyForSide } from '../lib/max-qty'
 import { quoteFillPriceClient } from '../lib/quote-fill'
 import { SgSymbolSearch } from './sg-symbol-search'
 import { defineElement } from './define'
@@ -215,6 +216,48 @@ export class SgTradeForm extends LitElement {
     return this.holdings.find((holding) => holding.symbol === symbol)?.qty ?? 0
   }
 
+  private sizingPrice(): number | undefined {
+    if ((this.orderType === 'limit' || this.orderType === 'stopLimit') && this.limitPrice !== undefined && this.limitPrice > 0) return this.limitPrice
+    if (this.quote === null) return undefined
+    if (this.mode === 'scheduled') return quoteFillPriceClient(this.quote, this.fillPriceSource)
+    return this.quote.price
+  }
+
+  private applySellMax(): void {
+    const qty = maxQtyForSide('sell', 0, 0, 0, this.heldQty)
+    if (qty < 1) {
+      this.error = 'No shares held'
+      this.requestUpdate()
+      return
+    }
+    this.qty = qty
+    this.error = undefined
+    this.requestUpdate()
+  }
+
+  private applyCashMax(): void {
+    const price = this.sizingPrice()
+    if (price === undefined) {
+      this.error = 'Select a symbol to size a max buy'
+      this.requestUpdate()
+      return
+    }
+    const qty = maxQtyForSide(this.side, this.cashCents, price, this.commissionCents, this.heldQty)
+    if (qty < 1) {
+      this.error = this.side === 'cover' && this.heldQty >= 0 ? 'No shares held' : 'Not enough cash'
+      this.requestUpdate()
+      return
+    }
+    this.qty = qty
+    this.error = undefined
+    this.requestUpdate()
+  }
+
+  private onMaxQty(): void {
+    if (this.side === 'sell') this.applySellMax()
+    else this.applyCashMax()
+  }
+
   private get estimatedCostCents(): number | undefined {
     if (!this.quote) return undefined
     const price = this.mode === 'scheduled' ? quoteFillPriceClient(this.quote, this.fillPriceSource) : this.quote.price
@@ -318,7 +361,10 @@ export class SgTradeForm extends LitElement {
   private renderSharesField(): TemplateResult {
     return html`<div class="field">
       <label>Shares</label>
-      <input type="number" min="1" step="1" .value=${String(this.qty)} @input=${(event: Event) => { this.qty = Number((event.target as HTMLInputElement).value) }} />
+      <div class="shares-row">
+        <input type="number" min="1" step="1" .value=${String(this.qty)} @input=${(event: Event) => { this.qty = Number((event.target as HTMLInputElement).value) }} />
+        <button type="button" class="max" ?disabled=${this.busy} @click=${() => this.onMaxQty()}>Max</button>
+      </div>
     </div>`
   }
 
