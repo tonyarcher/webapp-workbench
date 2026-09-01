@@ -10,10 +10,13 @@ import type {
 } from '@stock-game/shared'
 import type { Repo } from '../db'
 import type { PriceProvider } from '../providers/types'
+import { defaultFillPriceSource } from '@stock-game/shared'
 import { getEnv } from '../env'
 import { getProvider, getRepo } from './marketData'
+import { applyCommission } from './trading-cost'
+import { asapExecuteAt } from './trading-delay'
 import { expiresAtForOrder, isNyseOpen } from './trading-hours'
-import { fillPriceForBar, shouldFillQuote } from './trading-fills'
+import { fillPriceForBar, quoteFillPrice, shouldFillQuote } from './trading-fills'
 
 export class TradingError extends Error {
   constructor(message: string) {
@@ -46,6 +49,8 @@ function getConfigImpl(repo: Repo): GameConfig {
     startingCashCents: DEFAULT_STARTING_CASH_CENTS,
     startDate: Date.now(),
     provider: getEnv().provider,
+    quoteDelayMinutes: 15,
+    commissionCentsPerTrade: 0,
   }
   repo.saveConfig(config)
   return config
@@ -56,6 +61,8 @@ function updateConfigImpl(repo: Repo, current: GameConfig, input: UpdateConfigRe
     startingCashCents: input.startingCashCents,
     startDate: input.startDate,
     provider: input.provider ?? current.provider,
+    quoteDelayMinutes: input.quoteDelayMinutes ?? current.quoteDelayMinutes,
+    commissionCentsPerTrade: input.commissionCentsPerTrade ?? current.commissionCentsPerTrade,
   }
   repo.saveConfig(config)
   return config
@@ -103,12 +110,13 @@ async function placeBackdatedImpl(repo: Repo, provider: PriceProvider, input: Pl
   if (maybePrice === null) throw new TradingError('Order did not fill')
   const price = round2(maybePrice)
   validateAvailable(config, repo.listTrades(), input.symbol, input.side, input.qty, price, bar.time)
+  const delta = applyCommission(cashDelta(input.side, input.qty, price), config.commissionCentsPerTrade)
   return repo.insertTrade({
     symbol: input.symbol,
     side: input.side,
     qty: input.qty,
     price,
-    cashDeltaCents: cashDelta(input.side, input.qty, price),
+    cashDeltaCents: delta,
     mode: 'backdated',
     executedAt: bar.time,
     createdAt: Date.now(),
@@ -116,22 +124,31 @@ async function placeBackdatedImpl(repo: Repo, provider: PriceProvider, input: Pl
 }
 
 function placeOrderImpl(repo: Repo, input: PlaceOrderRequest): Order {
-  if (input.executeAt <= Date.now()) throw new TradingError('Scheduled execution time must be in the future')
+  const config = getConfigImpl(repo)
+  const executeAt = resolveExecuteAt(input.executeAt, config.quoteDelayMinutes)
   const orderType = input.orderType ?? 'market'
   const tif = input.tif ?? 'GTC'
-  const expiresAt = tif === 'DAY' ? expiresAtForOrder(input.executeAt) : null
+  const fillPriceSource = input.fillPriceSource ?? defaultFillPriceSource(input.side)
+  const expiresAt = tif === 'DAY' ? expiresAtForOrder(executeAt) : null
   return repo.insertOrder({
     symbol: input.symbol,
     side: input.side,
     qty: input.qty,
-    executeAt: input.executeAt,
+    executeAt,
     createdAt: Date.now(),
     orderType,
     tif,
     limitPrice: input.limitPrice ?? null,
     stopPrice: input.stopPrice ?? null,
     expiresAt,
+    fillPriceSource,
   })
+}
+
+function resolveExecuteAt(inputAt: number | undefined, delayMinutes: number): number {
+  if (inputAt === undefined) return asapExecuteAt(Date.now(), delayMinutes)
+  if (inputAt <= Date.now()) throw new TradingError('Scheduled execution time must be in the future')
+  return inputAt
 }
 
 function canBuyCash(repo: Repo, delta: number): boolean {
@@ -153,30 +170,38 @@ function canCover(repo: Repo, symbol: string, qty: number, delta: number): boole
 async function processDueOrder(repo: Repo, provider: PriceProvider, order: Order, now: number): Promise<boolean> {
   try {
     const quote = await provider.getQuote(order.symbol)
-    const should = shouldFillQuote(quote.price, order.side, order.orderType, order.limitPrice, order.stopPrice)
+    const px = quoteFillPrice(quote, order.fillPriceSource)
+    const should = shouldFillQuote(px, order.side, order.orderType, order.limitPrice, order.stopPrice)
     if (!should) return false
-    return await tryFillDue(repo, order, quote.price, now)
+    return await tryFillDue(repo, order, px, now)
   } catch {
     return false
   }
 }
 
-async function tryFillDue(repo: Repo, order: Order, quotePrice: number, now: number): Promise<boolean> {
-  const price = round2(quotePrice)
-  const delta = cashDelta(order.side, order.qty, price)
-  if (order.side === 'buy') {
-    if (!canBuyCash(repo, delta)) return false
-  } else if (order.side === 'sell') {
+function isFillPossible(repo: Repo, order: Order, delta: number): boolean {
+  if (order.side === 'buy') return canBuyCash(repo, delta)
+  if (order.side === 'sell') {
     if (!canSellShares(repo, order.symbol, order.qty)) { repo.cancelOrder(order.id); return false }
-  } else if (order.side === 'cover') {
+    return true
+  }
+  if (order.side === 'cover') {
     if (!canCover(repo, order.symbol, order.qty, delta)) {
       const held = heldQtyImpl(repo, order.symbol)
       if (Math.max(0, -held) < order.qty) repo.cancelOrder(order.id)
       return false
     }
-  } else {
-    void 0
+    return true
   }
+  return true
+}
+
+async function tryFillDue(repo: Repo, order: Order, quotePrice: number, now: number): Promise<boolean> {
+  const price = round2(quotePrice)
+  const rawDelta = cashDelta(order.side, order.qty, price)
+  const config = getConfigImpl(repo)
+  const delta = applyCommission(rawDelta, config.commissionCentsPerTrade)
+  if (!isFillPossible(repo, order, delta)) return false
   const trade = repo.fillOrderWithTrade(order.id, {
     symbol: order.symbol,
     side: order.side,
@@ -397,7 +422,8 @@ function validateAvailable(
 }
 
 function validateBuy(config: GameConfig, trades: Trade[], at: number, qty: number, price: number): void {
-  const delta = cashDelta('buy', qty, price)
+  const raw = cashDelta('buy', qty, price)
+  const delta = applyCommission(raw, config.commissionCentsPerTrade)
   if (cashUpTo(config, trades, at) + delta < 0) throw new TradingError('Insufficient cash for this buy based on cash as of that date')
 }
 
@@ -411,7 +437,8 @@ function validateCover(config: GameConfig, trades: Trade[], symbol: string, at: 
   const held = heldQtyUpTo(trades, symbol, at)
   const shortQty = Math.max(0, -held)
   if (shortQty < qty) throw new TradingError(`Only ${shortQty} share(s) short of ${symbol} held as of that date`)
-  const delta = cashDelta('cover', qty, price)
+  const raw = cashDelta('cover', qty, price)
+  const delta = applyCommission(raw, config.commissionCentsPerTrade)
   if (cashUpTo(config, trades, at) + delta < 0) throw new TradingError('Insufficient cash to cover this short')
 }
 

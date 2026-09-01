@@ -1,8 +1,10 @@
-import { LitElement, css, html } from 'lit'
+import { LitElement, html } from 'lit'
 import type { PropertyValues, TemplateResult } from 'lit'
 import {
+  defaultFillPriceSource,
   placeOrderRequestSchema,
   placeTradeRequestSchema,
+  type FillPriceSource,
   type HoldingsEntry,
   type OrderType,
   type PlaceOrderRequest,
@@ -14,119 +16,17 @@ import {
   type TradeMode,
 } from '@stock-game/shared'
 import { fmtMoney, fmtPrice } from '../lib/format'
+import { quoteFillPriceClient } from '../lib/quote-fill'
 import { SgSymbolSearch } from './sg-symbol-search'
 import { defineElement } from './define'
+import { tradeFormStyles } from './sg-trade-form-styles'
 
 type SubmitDetail =
   | { mode: 'backdated'; data: PlaceTradeRequest }
   | { mode: 'scheduled'; data: PlaceOrderRequest }
 
 export class SgTradeForm extends LitElement {
-  static override styles = css`
-    :host {
-      display: block;
-    }
-
-    .field {
-      margin-bottom: 14px;
-    }
-
-    label {
-      display: block;
-      color: var(--text-muted, #9aa4b2);
-      font-size: 13px;
-      margin-bottom: 6px;
-    }
-
-    input[type='number'],
-    input[type='datetime-local'],
-    select {
-      width: 100%;
-      font: inherit;
-      color: var(--text, #e6edf3);
-      background: var(--bg, #0d1117);
-      border: 1px solid var(--border, #2a313c);
-      border-radius: 8px;
-      padding: 9px 12px;
-    }
-
-    input:focus,
-    select:focus {
-      outline: none;
-      border-color: var(--accent, #4f9cf9);
-    }
-
-    .segmented {
-      display: inline-flex;
-      gap: 4px;
-      background: var(--bg, #0d1117);
-      border: 1px solid var(--border, #2a313c);
-      border-radius: 8px;
-      padding: 3px;
-    }
-
-    .segmented button {
-      border: none;
-      background: transparent;
-      color: var(--text-muted, #9aa4b2);
-      padding: 6px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 500;
-    }
-
-    .segmented button.active-buy {
-      background: var(--positive, #3fb950);
-      color: #0d1117;
-    }
-
-    .segmented button.active-sell {
-      background: var(--negative, #f85149);
-      color: #fff;
-    }
-
-    .segmented button.active-mode {
-      background: var(--accent, #4f9cf9);
-      color: #fff;
-    }
-
-    .info {
-      margin: 12px 0;
-      font-size: 14px;
-    }
-
-    .warning {
-      color: var(--negative, #f85149);
-      font-size: 13px;
-      margin: 8px 0;
-    }
-
-    .error {
-      color: var(--negative, #f85149);
-      font-size: 13px;
-      margin: 8px 0;
-    }
-
-    .muted {
-      color: var(--text-muted, #9aa4b2);
-    }
-
-    button.submit {
-      font: inherit;
-      color: #fff;
-      background: var(--accent, #4f9cf9);
-      border: 1px solid var(--accent, #4f9cf9);
-      border-radius: 8px;
-      padding: 9px 22px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    button.submit:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-  `
+  static override styles = tradeFormStyles
 
   static override properties = {
     results: { attribute: false },
@@ -140,6 +40,8 @@ export class SgTradeForm extends LitElement {
     searchError: { attribute: false },
     quoteLoading: { type: Boolean },
     quoteError: { attribute: false },
+    commissionCents: { type: Number },
+    quoteDelayMinutes: { type: Number },
   }
 
   results: SymbolSearchResult[] = []
@@ -153,6 +55,8 @@ export class SgTradeForm extends LitElement {
   searchError: string | null = null
   quoteLoading = false
   quoteError: string | null = null
+  commissionCents = 0
+  quoteDelayMinutes = 15
 
   private typedSymbol = ''
   private side: Side = 'buy'
@@ -163,6 +67,7 @@ export class SgTradeForm extends LitElement {
   private tif: Tif = 'GTC'
   private limitPrice: number | undefined
   private stopPrice: number | undefined
+  private fillPriceSource: FillPriceSource = 'ask'
   private error: string | undefined
 
   override firstUpdated(): void {
@@ -186,6 +91,22 @@ export class SgTradeForm extends LitElement {
 
   private onSymbolSelected(event: CustomEvent<SymbolSearchResult>): void {
     this.typedSymbol = event.detail.symbol
+  }
+
+  private selectSide(side: Side): void {
+    this.side = side
+    this.fillPriceSource = defaultFillPriceSource(side)
+    this.requestUpdate()
+  }
+
+  private selectMode(mode: TradeMode): void {
+    this.mode = mode
+    this.requestUpdate()
+  }
+
+  private selectFillSource(source: FillPriceSource): void {
+    this.fillPriceSource = source
+    this.requestUpdate()
   }
 
   private getSymbol(): string | undefined {
@@ -230,22 +151,23 @@ export class SgTradeForm extends LitElement {
     this.emit({ mode: 'backdated', data: parsed.data })
   }
 
-  private buildScheduledPayload(symbol: string, qty: number, ms: number): Record<string, unknown> {
+  private buildScheduledPayload(symbol: string, qty: number, ms: number | undefined): Record<string, unknown> {
     const payload: Record<string, unknown> = {
       symbol,
       side: this.side,
       qty,
-      executeAt: ms,
       orderType: this.orderType,
       tif: this.tif,
+      fillPriceSource: this.fillPriceSource,
     }
+    if (ms !== undefined) payload['executeAt'] = ms
     if (this.limitPrice !== undefined) payload['limitPrice'] = this.limitPrice
     if (this.stopPrice !== undefined) payload['stopPrice'] = this.stopPrice
     return payload
   }
 
-  private submitScheduled(symbol: string, qty: number, ms: number): void {
-    if (ms <= Date.now()) {
+  private submitScheduled(symbol: string, qty: number, ms: number | undefined): void {
+    if (ms !== undefined && ms <= Date.now()) {
       this.error = 'Scheduled execution time must be in the future'
       return
     }
@@ -263,16 +185,28 @@ export class SgTradeForm extends LitElement {
     if (symbol === undefined) return
     const qty = this.getValidatedQty()
     if (qty === undefined) return
+    if (this.mode === 'backdated') this.handleBackdatedSubmit(symbol, qty)
+    else this.handleScheduledSubmit(symbol, qty)
+  }
+
+  private handleBackdatedSubmit(symbol: string, qty: number): void {
     const ms = this.getValidatedTime()
     if (ms === undefined) return
-    if (this.mode === 'backdated') this.submitBackdated(symbol, qty, ms)
-    else this.submitScheduled(symbol, qty, ms)
+    this.submitBackdated(symbol, qty, ms)
+  }
+
+  private handleScheduledSubmit(symbol: string, qty: number): void {
+    if (this.when.trim() === '') {
+      this.submitScheduled(symbol, qty, undefined)
+      return
+    }
+    const ms = this.getValidatedTime()
+    if (ms === undefined) return
+    this.submitScheduled(symbol, qty, ms)
   }
 
   private emit(detail: SubmitDetail): void {
-    this.dispatchEvent(
-      new CustomEvent('sg-trade-submit', { detail, bubbles: true, composed: true }),
-    )
+    this.dispatchEvent(new CustomEvent('sg-trade-submit', { detail, bubbles: true, composed: true }))
   }
 
   private get heldQty(): number {
@@ -283,7 +217,10 @@ export class SgTradeForm extends LitElement {
 
   private get estimatedCostCents(): number | undefined {
     if (!this.quote) return undefined
-    return Math.round(this.qty * this.quote.price * 100)
+    const price = this.mode === 'scheduled' ? quoteFillPriceClient(this.quote, this.fillPriceSource) : this.quote.price
+    const base = Math.round(this.qty * price * 100)
+    if (this.side === 'buy' || this.side === 'cover') return base + this.commissionCents
+    return base
   }
 
   private renderSymbolField(): TemplateResult {
@@ -295,8 +232,7 @@ export class SgTradeForm extends LitElement {
         .searching=${this.searching}
         .error=${this.searchError}
         @sg-symbol-input=${(event: CustomEvent<{ value: string }>) => this.onSymbolTyped(event)}
-        @sg-symbol-select=${(event: CustomEvent<SymbolSearchResult>) =>
-          this.onSymbolSelected(event)}
+        @sg-symbol-select=${(event: CustomEvent<SymbolSearchResult>) => this.onSymbolSelected(event)}
       ></sg-symbol-search>
     </div>`
   }
@@ -310,10 +246,10 @@ export class SgTradeForm extends LitElement {
     return html`<div class="field">
       <label>Side</label>
       <div class="segmented">
-        <button type="button" class=${this.side === 'buy' ? this.sideClass('buy') : ''} @click=${() => { this.side = 'buy' }}>Buy</button>
-        <button type="button" class=${this.side === 'sell' ? this.sideClass('sell') : ''} @click=${() => { this.side = 'sell' }}>Sell</button>
-        <button type="button" class=${this.side === 'short' ? this.sideClass('short') : ''} @click=${() => { this.side = 'short' }}>Short</button>
-        <button type="button" class=${this.side === 'cover' ? this.sideClass('cover') : ''} @click=${() => { this.side = 'cover' }}>Cover</button>
+        <button type="button" class=${this.side === 'buy' ? this.sideClass('buy') : ''} @click=${() => this.selectSide('buy')}>Buy</button>
+        <button type="button" class=${this.side === 'sell' ? this.sideClass('sell') : ''} @click=${() => this.selectSide('sell')}>Sell</button>
+        <button type="button" class=${this.side === 'short' ? this.sideClass('short') : ''} @click=${() => this.selectSide('short')}>Short</button>
+        <button type="button" class=${this.side === 'cover' ? this.sideClass('cover') : ''} @click=${() => this.selectSide('cover')}>Cover</button>
       </div>
     </div>`
   }
@@ -321,7 +257,7 @@ export class SgTradeForm extends LitElement {
   private renderOrderTypeField(): TemplateResult {
     return html`<div class="field">
       <label>Order type</label>
-      <select .value=${this.orderType} @change=${(e: Event) => { this.orderType = (e.target as HTMLSelectElement).value as OrderType }}>
+      <select .value=${this.orderType} @change=${(e: Event) => { this.orderType = (e.target as HTMLSelectElement).value as OrderType; this.requestUpdate() }}>
         <option value="market">Market</option>
         <option value="limit">Limit</option>
         <option value="stop">Stop</option>
@@ -335,8 +271,21 @@ export class SgTradeForm extends LitElement {
     return html`<div class="field">
       <label>Time in force</label>
       <div class="segmented">
-        <button type="button" class=${this.tif === 'DAY' ? 'active-mode' : ''} @click=${() => { this.tif = 'DAY' }}>Day</button>
-        <button type="button" class=${this.tif === 'GTC' ? 'active-mode' : ''} @click=${() => { this.tif = 'GTC' }}>GTC</button>
+        <button type="button" class=${this.tif === 'DAY' ? 'active-mode' : ''} @click=${() => { this.tif = 'DAY'; this.requestUpdate() }}>Day</button>
+        <button type="button" class=${this.tif === 'GTC' ? 'active-mode' : ''} @click=${() => { this.tif = 'GTC'; this.requestUpdate() }}>GTC</button>
+      </div>
+    </div>`
+  }
+
+  private renderFillSourceField(): TemplateResult {
+    if (this.mode !== 'scheduled') return html``
+    return html`<div class="field">
+      <label>Fill price</label>
+      <div class="segmented">
+        <button type="button" class=${this.fillPriceSource === 'last' ? 'active-mode' : ''} @click=${() => this.selectFillSource('last')}>Last</button>
+        <button type="button" class=${this.fillPriceSource === 'bid' ? 'active-mode' : ''} @click=${() => this.selectFillSource('bid')}>Bid</button>
+        <button type="button" class=${this.fillPriceSource === 'ask' ? 'active-mode' : ''} @click=${() => this.selectFillSource('ask')}>Ask</button>
+        <button type="button" class=${this.fillPriceSource === 'mid' ? 'active-mode' : ''} @click=${() => this.selectFillSource('mid')}>Mid</button>
       </div>
     </div>`
   }
@@ -355,13 +304,13 @@ export class SgTradeForm extends LitElement {
     return html`<div class="field">
       <label>Mode</label>
       <div class="segmented">
-        <button type="button" class=${this.mode === 'backdated' ? 'active-mode' : ''} @click=${() => { this.mode = 'backdated' }}>Backdated</button>
-        <button type="button" class=${this.mode === 'scheduled' ? 'active-mode' : ''} @click=${() => { this.mode = 'scheduled' }}>Scheduled</button>
+        <button type="button" class=${this.mode === 'backdated' ? 'active-mode' : ''} @click=${() => this.selectMode('backdated')}>Backdated</button>
+        <button type="button" class=${this.mode === 'scheduled' ? 'active-mode' : ''} @click=${() => this.selectMode('scheduled')}>Scheduled</button>
       </div>
       <p class="muted" style="font-size:12px;margin:6px 0 0;color:var(--text-muted,#9aa4b2)">
         ${this.mode === 'backdated'
           ? 'Fills at the close of the trading day on/after the chosen date.'
-          : 'Fills when the market quote updates at the chosen future time.'}
+          : `Fills at the next NYSE open after a ${this.quoteDelayMinutes} minute delay (or at the chosen time if later). Optional later datetime.`}
       </p>
     </div>`
   }
@@ -374,22 +323,37 @@ export class SgTradeForm extends LitElement {
   }
 
   private renderWhenField(): TemplateResult {
+    const label = this.mode === 'backdated' ? 'Trade date/time' : 'Execute at (optional — ASAP)'
     return html`<div class="field">
-      <label>${this.mode === 'backdated' ? 'Trade date/time' : 'Execute at'}</label>
+      <label>${label}</label>
       <input type="datetime-local" .value=${this.when} @input=${(event: Event) => { this.when = (event.target as HTMLInputElement).value }} />
     </div>`
   }
 
   private renderQuoteContent(cost: number | undefined): TemplateResult {
-    if (this.quote) {
-      return html`<div>
-        ${this.quote.name} — ${fmtPrice(this.quote.price)}
-        ${cost !== undefined ? html` · Est. ${fmtMoney(cost)}` : ''}
-      </div>`
-    }
+    if (this.quote) return this.renderQuoteDetails(cost)
     if (this.quoteError !== null) return html`<span class="error">${this.quoteError}</span>`
     if (this.quoteLoading) return html`<span class="muted">Loading quote…</span>`
     return html`<span class="muted">Select a symbol to see the current price.</span>`
+  }
+
+  private renderQuoteDetails(cost: number | undefined): TemplateResult {
+    const q = this.quote
+    if (q === null) return html`<span class="muted">Select a symbol to see the current price.</span>`
+    const hasBidAsk = q.bid !== undefined || q.ask !== undefined
+    const priceLine = hasBidAsk ? this.renderBidAskLine(q) : html`${fmtPrice(q.price)}`
+    return html`<div>
+      ${q.name} — ${priceLine}
+      ${cost !== undefined ? html` · Est. ${fmtMoney(cost)}` : ''}
+    </div>`
+  }
+
+  private renderBidAskLine(q: Quote): TemplateResult {
+    const parts: string[] = []
+    parts.push(`Last ${fmtPrice(q.price)}`)
+    if (q.bid !== undefined) parts.push(`Bid ${fmtPrice(q.bid)}`)
+    if (q.ask !== undefined) parts.push(`Ask ${fmtPrice(q.ask)}`)
+    return html`${parts.join(' · ')}`
   }
 
   private renderInfo(cost: number | undefined): TemplateResult {
@@ -415,7 +379,7 @@ export class SgTradeForm extends LitElement {
     const cost = this.estimatedCostCents
     const warn = this.getWarning(cost)
     return html`
-      ${this.renderSymbolField()} ${this.renderSideField()} ${this.renderOrderTypeField()} ${this.renderTifField()} ${this.renderPriceFields()} ${this.renderModeField()}
+      ${this.renderSymbolField()} ${this.renderSideField()} ${this.renderOrderTypeField()} ${this.renderTifField()} ${this.renderFillSourceField()} ${this.renderPriceFields()} ${this.renderModeField()}
       ${this.renderSharesField()} ${this.renderWhenField()} ${this.renderInfo(cost)}
       ${warn ? html`<div class="warning">${warn}</div>` : ''}
       ${this.error ? html`<div class="error">${this.error}</div>` : ''}

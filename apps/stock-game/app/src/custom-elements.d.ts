@@ -50,6 +50,8 @@ declare module 'react' {
         searchError?: string | null
         quoteLoading?: boolean
         quoteError?: string | null
+        commissionCents?: number
+        quoteDelayMinutes?: number
       }
       'sg-settings-form': ElementProps & {
         config?: GameConfig | null

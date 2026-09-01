@@ -1,4 +1,4 @@
-import type { Bar, OrderType, Side } from '@stock-game/shared'
+import type { Bar, FillPriceSource, OrderType, Quote, Side } from '@stock-game/shared'
 
 export function fillPriceForBar(
   bar: Bar,
@@ -88,4 +88,30 @@ function shouldStopLimit(
   if (limit === undefined || limit === null || stop === undefined || stop === null) return false
   if (side === 'sell' || side === 'short') return quote <= stop && quote >= limit
   return quote >= stop && quote <= limit
+}
+
+export function quoteFillPrice(quote: Quote, source: FillPriceSource): number {
+  if (source === 'last') return quote.price
+  if (source === 'bid') return resolveBid(quote)
+  if (source === 'ask') return resolveAsk(quote)
+  return resolveMid(quote)
+}
+
+function isValidPrice(value: number | undefined): boolean {
+  return value !== undefined && Number.isFinite(value) && value > 0
+}
+
+function resolveBid(quote: Quote): number {
+  if (isValidPrice(quote.bid)) return quote.bid as number
+  return quote.price
+}
+
+function resolveAsk(quote: Quote): number {
+  if (isValidPrice(quote.ask)) return quote.ask as number
+  return quote.price
+}
+
+function resolveMid(quote: Quote): number {
+  if (isValidPrice(quote.bid) && isValidPrice(quote.ask)) return ((quote.bid as number) + (quote.ask as number)) / 2
+  return quote.price
 }

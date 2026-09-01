@@ -89,6 +89,7 @@ const ORDER: Order = {
   limitPrice: null,
   stopPrice: null,
   expiresAt: null,
+  fillPriceSource: 'ask',
 }
 
 function mount<T extends HTMLElement>(tag: string, props: Partial<T> = {}): T {
@@ -246,17 +247,23 @@ describe('custom elements render and react to properties', () => {
         startingCashCents: 123_400,
         startDate: Date.parse('2024-01-01'),
         provider: 'yahoo',
+        quoteDelayMinutes: 15,
+        commissionCentsPerTrade: 0,
       },
     })
     await tick()
     const cash = el.shadowRoot?.querySelector<HTMLInputElement>('#cash')
     expect(cash?.value).toBe('1234')
+    expect(el.shadowRoot?.querySelector<HTMLInputElement>('#quoteDelay')?.value).toBe('15')
+    expect(el.shadowRoot?.querySelector<HTMLInputElement>('#commission')?.value).toBe('0')
     expect(el.shadowRoot?.textContent).toContain('Starting cash')
 
     el.config = {
       startingCashCents: 999_00,
       startDate: Date.parse('2024-01-01'),
       provider: 'yahoo',
+      quoteDelayMinutes: 15,
+      commissionCentsPerTrade: 0,
     }
     await tick()
     const updated = el.shadowRoot?.querySelector<HTMLInputElement>('#cash')

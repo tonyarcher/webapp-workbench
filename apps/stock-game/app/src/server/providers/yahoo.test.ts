@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar } from '@stock-game/shared'
-import { parseBars, parseChartBlock } from './yahoo'
+import { parseBars, parseChartBlock, parseQuoteBook } from './yahoo'
 
 const fixture = {
   chart: {
@@ -68,5 +68,18 @@ describe('yahoo parseBars', () => {
 
   it('throws on an empty result set', () => {
     expect(() => parseChartBlock({ chart: { result: [] } })).toThrow()
+  })
+})
+
+describe('yahoo parseQuoteBook', () => {
+  it('parses bid and ask from quoteResponse', () => {
+    const json = { quoteResponse: { result: [{ bid: 99, ask: 101 }] } }
+    expect(parseQuoteBook(json)).toEqual({ bid: 99, ask: 101 })
+  })
+
+  it('returns null when bid and ask missing or invalid', () => {
+    expect(parseQuoteBook({ quoteResponse: { result: [{ bid: 0, ask: -1 }] } })).toBeNull()
+    expect(parseQuoteBook({ quoteResponse: { result: [] } })).toBeNull()
+    expect(parseQuoteBook({})).toBeNull()
   })
 })

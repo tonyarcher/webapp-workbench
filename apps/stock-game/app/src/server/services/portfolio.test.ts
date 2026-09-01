@@ -7,6 +7,8 @@ const config: GameConfig = {
   startingCashCents: 100_000,
   startDate: Date.parse('2024-01-01'),
   provider: 'fake',
+  quoteDelayMinutes: 15,
+  commissionCentsPerTrade: 0,
 }
 
 function trade(
