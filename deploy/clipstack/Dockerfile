@@ -13,13 +13,18 @@ COPY . .
 # The committed lockfile is generated on Windows, so npm ci/install on linux
 # cannot fetch platform-specific optional binaries — an npm limitation
 # (issue #4828). Resolve fresh from manifests.
-RUN rm -f package-lock.json && npm install --no-audit --no-fund
+# --ignore-scripts: workspace prepare scripts run tsc/vite before the linux
+# TypeScript 7 native compiler is present, and that install never finishes.
+# Build explicitly after the compiler is installed.
+RUN rm -f package-lock.json && npm install --ignore-scripts --no-audit --no-fund
 # npm skips optional platform binaries of nested packages: typescript 7's
 # native compiler (@typescript/typescript-linux-x64) is an optional dep of the
 # nested typescript@7 in apps/clipstack and is not installed.
 # Install it explicitly (tsc finds it via import.meta.resolve from the root).
 # Bump the version together with clipstack's typescript dependency.
-RUN npm install --no-save --no-audit --no-fund @typescript/typescript-linux-x64@7.0.2
+# --ignore-scripts: a second npm install would otherwise re-run every
+# workspace prepare (another hang).
+RUN npm install --no-save --ignore-scripts --no-audit --no-fund @typescript/typescript-linux-x64@7.0.2
 RUN npm run build --prefix packages/vertical-scroll-core
 RUN npm run build -w clipstack
 
