@@ -29,35 +29,22 @@ export class SgPortfolioChart extends LitElement {
 
   static override properties = {
     points: { attribute: false },
+    gainPoints: { attribute: false },
   }
 
   points: PortfolioChartPoint[] = []
+  gainPoints: PortfolioChartPoint[] = []
 
   private chart: IChartApi | undefined
   private series: ISeriesApi<'Line'> | undefined
+  private gainSeries: ISeriesApi<'Line'> | undefined
 
   override firstUpdated(): void {
     const el = this.renderRoot.querySelector('.chart')
     if (!(el instanceof HTMLElement)) return
-    this.chart = createChart(el, {
-      autoSize: true,
-      layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#9aa4b2',
-        attributionLogo: false,
-      },
-      grid: {
-        vertLines: { color: '#1f2430' },
-        horzLines: { color: '#1f2430' },
-      },
-      rightPriceScale: { borderVisible: false },
-      timeScale: { borderVisible: false },
-    })
-    this.series = this.chart.addSeries(LineSeries, {
-      color: '#4f9cf9',
-      lineWidth: 2,
-      priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
-    })
+    this.chart = createChart(el, chartOptions())
+    this.series = this.chart.addSeries(LineSeries, lineOptions('#4f9cf9'))
+    this.gainSeries = this.chart.addSeries(LineSeries, { ...lineOptions('#3fb950'), priceScaleId: 'left' })
     this.updateSeries()
   }
 
@@ -70,6 +57,13 @@ export class SgPortfolioChart extends LitElement {
     this.chart?.remove()
     this.chart = undefined
     this.series = undefined
+    this.gainSeries = undefined
+  }
+
+  private gainColor(): string {
+    const last = this.gainPoints.at(-1)
+    if (last === undefined) return '#3fb950'
+    return last.value >= 0 ? '#3fb950' : '#f85149'
   }
 
   private updateSeries(): void {
@@ -80,11 +74,38 @@ export class SgPortfolioChart extends LitElement {
         value: point.value,
       })),
     )
+    if (!this.gainSeries) return
+    this.gainSeries.applyOptions({ color: this.gainColor() })
+    this.gainSeries.setData(
+      this.gainPoints.map((point) => ({
+        time: Math.floor(point.time / 1000) as UTCTimestamp,
+        value: point.value,
+      })),
+    )
   }
 
   override render() {
     return html`<div class="chart"></div>`
   }
+}
+
+function chartOptions() {
+  return {
+    autoSize: true,
+    layout: {
+      background: { type: ColorType.Solid, color: 'transparent' },
+      textColor: '#9aa4b2',
+      attributionLogo: false,
+    },
+    grid: { vertLines: { color: '#1f2430' }, horzLines: { color: '#1f2430' } },
+    rightPriceScale: { borderVisible: false },
+    leftPriceScale: { visible: true, borderVisible: false },
+    timeScale: { borderVisible: false },
+  }
+}
+
+function lineOptions(color: string) {
+  return { color, lineWidth: 2 as const, priceFormat: { type: 'price' as const, precision: 2, minMove: 0.01 } }
 }
 
 defineElement('sg-portfolio-chart', SgPortfolioChart)

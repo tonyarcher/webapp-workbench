@@ -4,11 +4,13 @@ import {
   placeOrderRequestSchema,
   placeTradeRequestSchema,
   type HoldingsEntry,
+  type OrderType,
   type PlaceOrderRequest,
   type PlaceTradeRequest,
   type Quote,
   type Side,
   type SymbolSearchResult,
+  type Tif,
   type TradeMode,
 } from '@stock-game/shared'
 import { fmtMoney, fmtPrice } from '../lib/format'
@@ -37,7 +39,8 @@ export class SgTradeForm extends LitElement {
     }
 
     input[type='number'],
-    input[type='datetime-local'] {
+    input[type='datetime-local'],
+    select {
       width: 100%;
       font: inherit;
       color: var(--text, #e6edf3);
@@ -47,7 +50,8 @@ export class SgTradeForm extends LitElement {
       padding: 9px 12px;
     }
 
-    input:focus {
+    input:focus,
+    select:focus {
       outline: none;
       border-color: var(--accent, #4f9cf9);
     }
@@ -155,6 +159,10 @@ export class SgTradeForm extends LitElement {
   private qty = 1
   private mode: TradeMode = 'backdated'
   private when = ''
+  private orderType: OrderType = 'market'
+  private tif: Tif = 'GTC'
+  private limitPrice: number | undefined
+  private stopPrice: number | undefined
   private error: string | undefined
 
   override firstUpdated(): void {
@@ -206,8 +214,15 @@ export class SgTradeForm extends LitElement {
     return ms
   }
 
+  private buildBackdatedPayload(symbol: string, qty: number, ms: number): Record<string, unknown> {
+    const payload: Record<string, unknown> = { symbol, side: this.side, qty, at: ms, orderType: this.orderType }
+    if (this.limitPrice !== undefined) payload['limitPrice'] = this.limitPrice
+    if (this.stopPrice !== undefined) payload['stopPrice'] = this.stopPrice
+    return payload
+  }
+
   private submitBackdated(symbol: string, qty: number, ms: number): void {
-    const parsed = placeTradeRequestSchema.safeParse({ symbol, side: this.side, qty, at: ms })
+    const parsed = placeTradeRequestSchema.safeParse(this.buildBackdatedPayload(symbol, qty, ms))
     if (!parsed.success) {
       this.error = 'Invalid trade details'
       return
@@ -215,17 +230,26 @@ export class SgTradeForm extends LitElement {
     this.emit({ mode: 'backdated', data: parsed.data })
   }
 
+  private buildScheduledPayload(symbol: string, qty: number, ms: number): Record<string, unknown> {
+    const payload: Record<string, unknown> = {
+      symbol,
+      side: this.side,
+      qty,
+      executeAt: ms,
+      orderType: this.orderType,
+      tif: this.tif,
+    }
+    if (this.limitPrice !== undefined) payload['limitPrice'] = this.limitPrice
+    if (this.stopPrice !== undefined) payload['stopPrice'] = this.stopPrice
+    return payload
+  }
+
   private submitScheduled(symbol: string, qty: number, ms: number): void {
     if (ms <= Date.now()) {
       this.error = 'Scheduled execution time must be in the future'
       return
     }
-    const parsed = placeOrderRequestSchema.safeParse({
-      symbol,
-      side: this.side,
-      qty,
-      executeAt: ms,
-    })
+    const parsed = placeOrderRequestSchema.safeParse(this.buildScheduledPayload(symbol, qty, ms))
     if (!parsed.success) {
       this.error = 'Invalid order details'
       return
@@ -277,54 +301,62 @@ export class SgTradeForm extends LitElement {
     </div>`
   }
 
+  private sideClass(side: Side): string {
+    if (side === 'buy' || side === 'cover') return 'active-buy'
+    return 'active-sell'
+  }
+
   private renderSideField(): TemplateResult {
     return html`<div class="field">
       <label>Side</label>
       <div class="segmented">
-        <button
-          type="button"
-          class=${this.side === 'buy' ? 'active-buy' : ''}
-          @click=${() => {
-            this.side = 'buy'
-          }}
-        >
-          Buy
-        </button>
-        <button
-          type="button"
-          class=${this.side === 'sell' ? 'active-sell' : ''}
-          @click=${() => {
-            this.side = 'sell'
-          }}
-        >
-          Sell
-        </button>
+        <button type="button" class=${this.side === 'buy' ? this.sideClass('buy') : ''} @click=${() => { this.side = 'buy' }}>Buy</button>
+        <button type="button" class=${this.side === 'sell' ? this.sideClass('sell') : ''} @click=${() => { this.side = 'sell' }}>Sell</button>
+        <button type="button" class=${this.side === 'short' ? this.sideClass('short') : ''} @click=${() => { this.side = 'short' }}>Short</button>
+        <button type="button" class=${this.side === 'cover' ? this.sideClass('cover') : ''} @click=${() => { this.side = 'cover' }}>Cover</button>
       </div>
     </div>`
+  }
+
+  private renderOrderTypeField(): TemplateResult {
+    return html`<div class="field">
+      <label>Order type</label>
+      <select .value=${this.orderType} @change=${(e: Event) => { this.orderType = (e.target as HTMLSelectElement).value as OrderType }}>
+        <option value="market">Market</option>
+        <option value="limit">Limit</option>
+        <option value="stop">Stop</option>
+        <option value="stopLimit">Stop-limit</option>
+      </select>
+    </div>`
+  }
+
+  private renderTifField(): TemplateResult {
+    if (this.mode !== 'scheduled') return html``
+    return html`<div class="field">
+      <label>Time in force</label>
+      <div class="segmented">
+        <button type="button" class=${this.tif === 'DAY' ? 'active-mode' : ''} @click=${() => { this.tif = 'DAY' }}>Day</button>
+        <button type="button" class=${this.tif === 'GTC' ? 'active-mode' : ''} @click=${() => { this.tif = 'GTC' }}>GTC</button>
+      </div>
+    </div>`
+  }
+
+  private renderPriceFields(): TemplateResult {
+    const showLimit = this.orderType === 'limit' || this.orderType === 'stopLimit'
+    const showStop = this.orderType === 'stop' || this.orderType === 'stopLimit'
+    return html`${showLimit
+      ? html`<div class="field"><label>Limit price</label><input type="number" min="0" step="0.01" .value=${this.limitPrice !== undefined ? String(this.limitPrice) : ''} @input=${(e: Event) => { const v = (e.target as HTMLInputElement).value; this.limitPrice = v ? Number(v) : undefined }} /></div>`
+      : ''}${showStop
+      ? html`<div class="field"><label>Stop price</label><input type="number" min="0" step="0.01" .value=${this.stopPrice !== undefined ? String(this.stopPrice) : ''} @input=${(e: Event) => { const v = (e.target as HTMLInputElement).value; this.stopPrice = v ? Number(v) : undefined }} /></div>`
+      : ''}`
   }
 
   private renderModeField(): TemplateResult {
     return html`<div class="field">
       <label>Mode</label>
       <div class="segmented">
-        <button
-          type="button"
-          class=${this.mode === 'backdated' ? 'active-mode' : ''}
-          @click=${() => {
-            this.mode = 'backdated'
-          }}
-        >
-          Backdated
-        </button>
-        <button
-          type="button"
-          class=${this.mode === 'scheduled' ? 'active-mode' : ''}
-          @click=${() => {
-            this.mode = 'scheduled'
-          }}
-        >
-          Scheduled
-        </button>
+        <button type="button" class=${this.mode === 'backdated' ? 'active-mode' : ''} @click=${() => { this.mode = 'backdated' }}>Backdated</button>
+        <button type="button" class=${this.mode === 'scheduled' ? 'active-mode' : ''} @click=${() => { this.mode = 'scheduled' }}>Scheduled</button>
       </div>
       <p class="muted" style="font-size:12px;margin:6px 0 0;color:var(--text-muted,#9aa4b2)">
         ${this.mode === 'backdated'
@@ -337,28 +369,14 @@ export class SgTradeForm extends LitElement {
   private renderSharesField(): TemplateResult {
     return html`<div class="field">
       <label>Shares</label>
-      <input
-        type="number"
-        min="1"
-        step="1"
-        .value=${String(this.qty)}
-        @input=${(event: Event) => {
-          this.qty = Number((event.target as HTMLInputElement).value)
-        }}
-      />
+      <input type="number" min="1" step="1" .value=${String(this.qty)} @input=${(event: Event) => { this.qty = Number((event.target as HTMLInputElement).value) }} />
     </div>`
   }
 
   private renderWhenField(): TemplateResult {
     return html`<div class="field">
       <label>${this.mode === 'backdated' ? 'Trade date/time' : 'Execute at'}</label>
-      <input
-        type="datetime-local"
-        .value=${this.when}
-        @input=${(event: Event) => {
-          this.when = (event.target as HTMLInputElement).value
-        }}
-      />
+      <input type="datetime-local" .value=${this.when} @input=${(event: Event) => { this.when = (event.target as HTMLInputElement).value }} />
     </div>`
   }
 
@@ -383,13 +401,13 @@ export class SgTradeForm extends LitElement {
 
   private getWarning(cost: number | undefined): string | undefined {
     if (cost === undefined) return undefined
-    const buying = this.side === 'buy'
-    if (buying) {
-      const affordable = cost <= this.cashCents
-      if (!affordable) return 'Not enough cash for this order'
+    if (this.side === 'buy' || this.side === 'cover') {
+      if (cost > this.cashCents) return 'Not enough cash for this order'
       return undefined
     }
-    if (this.heldQty < this.qty) return `Only ${this.heldQty} share(s) held`
+    if (this.side !== 'sell') return undefined
+    const held = Math.max(0, this.heldQty)
+    if (held < this.qty) return `Only ${held} share(s) held`
     return undefined
   }
 
@@ -397,7 +415,7 @@ export class SgTradeForm extends LitElement {
     const cost = this.estimatedCostCents
     const warn = this.getWarning(cost)
     return html`
-      ${this.renderSymbolField()} ${this.renderSideField()} ${this.renderModeField()}
+      ${this.renderSymbolField()} ${this.renderSideField()} ${this.renderOrderTypeField()} ${this.renderTifField()} ${this.renderPriceFields()} ${this.renderModeField()}
       ${this.renderSharesField()} ${this.renderWhenField()} ${this.renderInfo(cost)}
       ${warn ? html`<div class="warning">${warn}</div>` : ''}
       ${this.error ? html`<div class="error">${this.error}</div>` : ''}

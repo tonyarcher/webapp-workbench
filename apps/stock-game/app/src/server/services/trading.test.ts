@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { openRepo } from '../db'
 import { TradingError, createTrading } from './trading'
 import { dayBar, fakeProvider } from '../testing/fakeProvider'
@@ -85,6 +85,8 @@ describe('createTrading.placeBackdatedTrade', () => {
 
 describe('createTrading orders', () => {
   it('executes due orders and links the trade', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.parse('2024-01-03T15:00:00Z'))
     const repo = openRepo(':memory:')
     const trading = createTrading(
       repo,
@@ -113,9 +115,12 @@ describe('createTrading orders', () => {
     expect(orders[0]!.status).toBe('filled')
     expect(orders[0]!.tradeId).not.toBeNull()
     expect(trading.heldQty('AAPL')).toBe(2)
+    vi.useRealTimers()
   })
 
   it('does not double-fill an order under concurrent execution', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.parse('2024-01-03T15:00:00Z'))
     const repo = openRepo(':memory:')
     const trading = createTrading(
       repo,
@@ -138,9 +143,12 @@ describe('createTrading orders', () => {
     expect(filledFirst + filledSecond).toBe(1)
     expect(trading.listTrades()).toHaveLength(1)
     expect(trading.listOrders().filter((order) => order.status === 'filled')).toHaveLength(1)
+    vi.useRealTimers()
   })
 
   it('leaves a buy pending when cash is insufficient at fill time', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.parse('2024-01-03T15:00:00Z'))
     const repo = openRepo(':memory:')
     const trading = createTrading(
       repo,
@@ -161,6 +169,7 @@ describe('createTrading orders', () => {
     const filled = await trading.executeDueOrders(Date.now() + 10_000)
     expect(filled).toBe(0)
     expect(trading.listOrders()[0]!.status).toBe('pending')
+    vi.useRealTimers()
   })
 
   it('rejects an order with a past execution time', () => {
@@ -200,5 +209,139 @@ describe('createTrading.getHoldings', () => {
     expect(holdings[0]!.qty).toBe(15)
     expect(holdings[0]!.avgCostCents).toBe(10250)
     expect(holdings[0]!.unrealizedPnlCents).toBe(15 * 12000 - 15 * 10250)
+  })
+})
+
+describe('play the game', () => {
+  it('long winner: buy 10 @100 Jan2, sell 10 @110 Jan4', async () => {
+    const bars = [dayBar('2024-01-02', 100), dayBar('2024-01-04', 110)]
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ bars }))
+    configureForBackdated(trading)
+    await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'buy', qty: 10, at: Date.parse('2024-01-02') })
+    await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'sell', qty: 10, at: Date.parse('2024-01-04') })
+    expect(trading.cashNowCents()).toBe(10_000_000 + 10000)
+    expect(trading.heldQty('AAPL')).toBe(0)
+  })
+
+  it('long loser: buy 10 @120 Jan8 sell 10 @90 Jan9', async () => {
+    const bars = [dayBar('2024-01-08', 120), dayBar('2024-01-09', 90)]
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ bars }))
+    configureForBackdated(trading)
+    await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'buy', qty: 10, at: Date.parse('2024-01-08') })
+    await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'sell', qty: 10, at: Date.parse('2024-01-09') })
+    expect(trading.cashNowCents()).toBe(10_000_000 - 30000)
+  })
+
+  it('short winner: short 10 @110 Jan4 cover 10 @90 Jan9', async () => {
+    const bars = [dayBar('2024-01-04', 110), dayBar('2024-01-09', 90)]
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ bars }))
+    configureForBackdated(trading)
+    await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'short', qty: 10, at: Date.parse('2024-01-04') })
+    await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'cover', qty: 10, at: Date.parse('2024-01-09') })
+    expect(trading.cashNowCents()).toBe(10_000_000 + 20000)
+    expect(trading.heldQty('AAPL')).toBe(0)
+  })
+
+  it('cannot sell more than long; cannot cover more than short', async () => {
+    const bars = [dayBar('2024-01-02', 100), dayBar('2024-01-03', 100)]
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ bars }))
+    configureForBackdated(trading)
+    await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'buy', qty: 5, at: Date.parse('2024-01-02') })
+    await expect(trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'sell', qty: 10, at: Date.parse('2024-01-03') })).rejects.toThrow(/Only/)
+    await expect(trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'cover', qty: 1, at: Date.parse('2024-01-03') })).rejects.toThrow(/Only/)
+  })
+
+  it('limit buy at 100 does not fill on bar low=105', async () => {
+    const bars = [dayBar('2024-01-02', 110, { low: 105, high: 115 })]
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ bars }))
+    configureForBackdated(trading)
+    await expect(
+      trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'buy', qty: 1, at: Date.parse('2024-01-02'), orderType: 'limit', limitPrice: 100 }),
+    ).rejects.toThrow(/did not fill/)
+  })
+
+  it('limit buy at 100 fills when low=99 close=101', async () => {
+    const bars = [dayBar('2024-01-02', 101, { low: 99, high: 110 })]
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ bars }))
+    configureForBackdated(trading)
+    const trade = await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'buy', qty: 10, at: Date.parse('2024-01-02'), orderType: 'limit', limitPrice: 100 })
+    expect(trade.price).toBe(100)
+  })
+
+  it('stop sell fills when bar low triggers stop', async () => {
+    const bars = [dayBar('2024-01-02', 105, { low: 100, high: 115 }), dayBar('2024-01-03', 102, { low: 100, high: 110 })]
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ bars }))
+    configureForBackdated(trading)
+    await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'buy', qty: 10, at: Date.parse('2024-01-02') })
+    const trade = await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'sell', qty: 10, at: Date.parse('2024-01-03'), orderType: 'stop', stopPrice: 102 })
+    expect(trade.price).toBe(102)
+  })
+
+  it('scheduled market: past rejected, future fills', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.parse('2024-01-03T15:00:00Z'))
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ quote: { symbol: 'AAPL', name: 'AAPL', price: 50, currency: 'USD', exchange: 'T', time: 0, delayMinutes: 0 } }))
+    expect(() => trading.placeOrder({ symbol: 'AAPL', side: 'buy', qty: 1, executeAt: Date.now() - 1000 })).toThrow(/future/)
+    trading.placeOrder({ symbol: 'AAPL', side: 'buy', qty: 2, executeAt: Date.now() + 5000 })
+    const filled = await trading.executeDueOrders(Date.now() + 10000)
+    expect(filled).toBe(1)
+    vi.useRealTimers()
+  })
+
+  it('DAY expiry cancels without fill', async () => {
+    vi.useFakeTimers()
+    const executeAt = Date.parse('2024-01-03T14:00:00Z')
+    vi.setSystemTime(Date.parse('2024-01-03T12:00:00Z'))
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ quote: { symbol: 'AAPL', name: 'AAPL', price: 50, currency: 'USD', exchange: 'T', time: 0, delayMinutes: 0 } }))
+    trading.placeOrder({ symbol: 'AAPL', side: 'buy', qty: 1, executeAt, orderType: 'market', tif: 'DAY' })
+    const afterClose = Date.parse('2024-01-03T21:30:00Z')
+    const filled = await trading.executeDueOrders(afterClose)
+    expect(filled).toBe(0)
+    expect(trading.listOrders()[0]!.status).toBe('cancelled')
+    vi.useRealTimers()
+  })
+
+  it('GTC limit buy stays pending if quote above limit', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.parse('2024-01-03T15:00:00Z'))
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ quote: { symbol: 'AAPL', name: 'AAPL', price: 150, currency: 'USD', exchange: 'T', time: 0, delayMinutes: 0 } }))
+    trading.placeOrder({ symbol: 'AAPL', side: 'buy', qty: 1, executeAt: Date.now() + 5000, orderType: 'limit', limitPrice: 100, tif: 'GTC' })
+    const filled = await trading.executeDueOrders(Date.now() + 10000)
+    expect(filled).toBe(0)
+    expect(trading.listOrders()[0]!.status).toBe('pending')
+    vi.useRealTimers()
+  })
+
+  it('short then cover updates heldQty to 0', async () => {
+    const bars = [dayBar('2024-01-02', 100), dayBar('2024-01-03', 90)]
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ bars }))
+    configureForBackdated(trading)
+    await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'short', qty: 5, at: Date.parse('2024-01-02') })
+    expect(trading.heldQty('AAPL')).toBe(-5)
+    await trading.placeBackdatedTrade({ symbol: 'AAPL', side: 'cover', qty: 5, at: Date.parse('2024-01-03') })
+    expect(trading.heldQty('AAPL')).toBe(0)
+  })
+
+  it('does not fill GTC limits while the NYSE is closed', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.parse('2024-01-06T18:00:00Z'))
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ quote: { symbol: 'AAPL', name: 'AAPL', price: 50, currency: 'USD', exchange: 'T', time: 0, delayMinutes: 0 } }))
+    trading.placeOrder({ symbol: 'AAPL', side: 'buy', qty: 1, executeAt: Date.now() + 1000, orderType: 'limit', limitPrice: 100, tif: 'GTC' })
+    const filled = await trading.executeDueOrders(Date.now() + 5000)
+    expect(filled).toBe(0)
+    expect(trading.listOrders()[0]!.status).toBe('pending')
+    vi.useRealTimers()
   })
 })

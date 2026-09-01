@@ -17,13 +17,14 @@ function trade(
   executedAt: number,
 ): Trade {
   const amount = Math.round(qty * price * 100)
+  const delta = side === 'buy' || side === 'cover' ? -amount : amount
   return {
     id: 1,
     symbol,
     side,
     qty,
     price,
-    cashDeltaCents: side === 'buy' ? -amount : amount,
+    cashDeltaCents: delta,
     mode: 'backdated',
     executedAt,
     createdAt: executedAt,
@@ -75,5 +76,17 @@ describe('portfolio series', () => {
       expect(point.totalCents).toBe(config.startingCashCents)
     }
     expect(series.totalReturnPct).toBe(0)
+  })
+})
+
+describe('portfolio play', () => {
+  it('last point gainCents matches cash+holdings-start', async () => {
+    const provider = fakeProvider({ bars: [dayBar('2024-01-02', 100), dayBar('2024-01-03', 110)] })
+    const portfolio = createPortfolio(provider)
+    const trades = [trade('AAPL', 'buy', 10, 100, Date.parse('2024-01-02T14:30:00')), trade('AAPL', 'sell', 10, 110, Date.parse('2024-01-03T14:30:00'))]
+    const series = await portfolio.getSeries(config, trades)
+    const last = series.points.at(-1)!
+    expect(last.gainCents).toBe(last.totalCents - config.startingCashCents)
+    expect(series.totalGainCents).toBe(last.gainCents)
   })
 })

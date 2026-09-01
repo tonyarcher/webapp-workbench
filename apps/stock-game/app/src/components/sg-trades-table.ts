@@ -18,11 +18,16 @@ export class SgTradesTable extends LitElement {
     return html`<p class="muted">No trades yet. Place one from the Trade page.</p>`
   }
 
+  private sideClass(side: string): string {
+    if (side === 'buy' || side === 'cover') return 'positive'
+    return 'negative'
+  }
+
   private renderTradeRow(trade: Trade): TemplateResult {
     return html`<tr>
       <td>${fmtDate(trade.executedAt)}</td>
       <td>${trade.symbol}</td>
-      <td class=${trade.side === 'buy' ? 'positive' : 'negative'}>${trade.side}</td>
+      <td class=${this.sideClass(trade.side)}>${trade.side}</td>
       <td class="num">${fmtNumber(trade.qty)}</td>
       <td class="num">${fmtPrice(trade.price)}</td>
       <td class="num">${fmtMoney(Math.abs(trade.cashDeltaCents))}</td>

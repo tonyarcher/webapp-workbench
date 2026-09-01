@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
-export const SIDES = ['buy', 'sell'] as const;
+export const SIDES = ['buy', 'sell', 'short', 'cover'] as const;
 export const TRADE_MODES = ['backdated', 'scheduled'] as const;
 export const ORDER_STATUSES = ['pending', 'filled', 'cancelled'] as const;
 export const INTERVALS = ['1m', '5m', '15m', '30m', '60m', '1d', '1wk', '1mo'] as const;
+export const ORDER_TYPES = ['market', 'limit', 'stop', 'stopLimit'] as const;
+export const TIFS = ['DAY', 'GTC'] as const;
 
 export const sideSchema = z.enum(SIDES);
 export type Side = z.infer<typeof sideSchema>;
@@ -16,6 +18,12 @@ export type OrderStatus = z.infer<typeof orderStatusSchema>;
 
 export const intervalSchema = z.enum(INTERVALS);
 export type Interval = z.infer<typeof intervalSchema>;
+
+export const orderTypeSchema = z.enum(ORDER_TYPES);
+export type OrderType = z.infer<typeof orderTypeSchema>;
+
+export const tifSchema = z.enum(TIFS);
+export type Tif = z.infer<typeof tifSchema>;
 
 export const symbolSchema = z.string().trim().toUpperCase().min(1).max(16);
 export const qtySchema = z.number().int().positive();
@@ -85,6 +93,11 @@ export const orderSchema = z.object({
   status: orderStatusSchema,
   createdAt: z.number().int(),
   tradeId: z.number().int().nullable(),
+  orderType: orderTypeSchema,
+  tif: tifSchema,
+  limitPrice: z.number().nullable(),
+  stopPrice: z.number().nullable(),
+  expiresAt: z.number().int().nullable(),
 });
 export type Order = z.infer<typeof orderSchema>;
 
@@ -106,6 +119,7 @@ export const portfolioPointSchema = z.object({
   cashCents: z.number().int(),
   holdingsCents: z.number().int(),
   totalCents: z.number().int(),
+  gainCents: z.number().int(),
 });
 export type PortfolioPoint = z.infer<typeof portfolioPointSchema>;
 
@@ -115,21 +129,64 @@ export const portfolioSeriesSchema = z.object({
   endDate: z.number().int(),
   totalReturnPct: z.number(),
   points: z.array(portfolioPointSchema),
+  totalGainCents: z.number().int(),
 });
 export type PortfolioSeries = z.infer<typeof portfolioSeriesSchema>;
 
-export const placeTradeRequestSchema = z.object({
-  symbol: symbolSchema,
-  side: sideSchema,
-  qty: qtySchema,
-  at: z.number().int(),
-});
-export type PlaceTradeRequest = z.infer<typeof placeTradeRequestSchema>;
+function needsLimit(orderType: OrderType): boolean {
+  return orderType === 'limit' || orderType === 'stopLimit'
+}
 
-export const placeOrderRequestSchema = z.object({
-  symbol: symbolSchema,
-  side: sideSchema,
-  qty: qtySchema,
-  executeAt: z.number().int(),
-});
-export type PlaceOrderRequest = z.infer<typeof placeOrderRequestSchema>;
+function needsStop(orderType: OrderType): boolean {
+  return orderType === 'stop' || orderType === 'stopLimit'
+}
+
+function hasValidPrice(value: number | null | undefined): boolean {
+  return value !== undefined && value !== null && value > 0
+}
+
+function assertOrderPrices(data: {
+  orderType: OrderType;
+  limitPrice?: number | null | undefined;
+  stopPrice?: number | null | undefined;
+}): boolean {
+  if (needsLimit(data.orderType) && !hasValidPrice(data.limitPrice)) return false
+  if (needsStop(data.orderType) && !hasValidPrice(data.stopPrice)) return false
+  return true
+}
+
+function orderPriceIssue(ctx: z.RefinementCtx, orderType: OrderType): void {
+  if (orderType === 'limit' || orderType === 'stopLimit') ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'limitPrice required for limit orders' });
+  else ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'stopPrice required for stop orders' });
+}
+
+function refineOrderPrices(data: { orderType: OrderType; limitPrice?: number | null | undefined; stopPrice?: number | null | undefined }, ctx: z.RefinementCtx): void {
+  if (!assertOrderPrices(data)) orderPriceIssue(ctx, data.orderType);
+}
+
+export const placeTradeRequestSchema = z
+  .object({
+    symbol: symbolSchema,
+    side: sideSchema,
+    qty: qtySchema,
+    at: z.number().int(),
+    orderType: orderTypeSchema.default('market'),
+    limitPrice: z.number().positive().optional(),
+    stopPrice: z.number().positive().optional(),
+  })
+  .superRefine((data, ctx) => refineOrderPrices(data, ctx));
+export type PlaceTradeRequest = z.input<typeof placeTradeRequestSchema>;
+
+export const placeOrderRequestSchema = z
+  .object({
+    symbol: symbolSchema,
+    side: sideSchema,
+    qty: qtySchema,
+    executeAt: z.number().int(),
+    orderType: orderTypeSchema.default('market'),
+    tif: tifSchema.default('GTC'),
+    limitPrice: z.number().positive().optional(),
+    stopPrice: z.number().positive().optional(),
+  })
+  .superRefine((data, ctx) => refineOrderPrices(data, ctx));
+export type PlaceOrderRequest = z.input<typeof placeOrderRequestSchema>;

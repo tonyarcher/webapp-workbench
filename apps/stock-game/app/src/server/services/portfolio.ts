@@ -40,6 +40,11 @@ function collectDays(
   return [...daySet].sort((a, b) => a - b)
 }
 
+function signedQtyForPortfolio(side: string, qty: number): number {
+  if (side === 'buy' || side === 'cover') return qty
+  return -qty
+}
+
 function advanceTrades(
   orderedTrades: Trade[],
   tradeIndex: { value: number },
@@ -52,7 +57,7 @@ function advanceTrades(
     if (trade === undefined || trade.executedAt > endOfDay) break
     cashRef.value += trade.cashDeltaCents
     const position = positions.get(trade.symbol) ?? { qty: 0, barIndex: 0, lastClose: 0 }
-    position.qty += trade.side === 'buy' ? trade.qty : -trade.qty
+    position.qty += signedQtyForPortfolio(trade.side, trade.qty)
     positions.set(trade.symbol, position)
     tradeIndex.value++
   }
@@ -65,7 +70,7 @@ function holdingsForDay(
 ): number {
   let holdingsCents = 0
   for (const [symbol, position] of positions) {
-    if (position.qty <= 0) continue
+    if (position.qty === 0) continue
     const bars = barsBySymbol.get(symbol)
     if (!bars) continue
     while (position.barIndex < bars.length) {
@@ -95,7 +100,9 @@ function buildPoints(
     advanceTrades(orderedTrades, tradeIndex, endOfDay, positions, cashRef)
     cash = cashRef.value
     const holdingsCents = holdingsForDay(positions, barsBySymbol, endOfDay)
-    points.push({ time: day, cashCents: cash, holdingsCents, totalCents: cash + holdingsCents })
+    const totalCents = cash + holdingsCents
+    const gainCents = totalCents - startingCash
+    points.push({ time: day, cashCents: cash, holdingsCents, totalCents, gainCents })
   }
   return points
 }
@@ -120,6 +127,7 @@ async function buildSeries(
     endDate: last?.time ?? now,
     totalReturnPct: round2(totalReturnPct),
     points,
+    totalGainCents: last?.gainCents ?? 0,
   }
 }
 

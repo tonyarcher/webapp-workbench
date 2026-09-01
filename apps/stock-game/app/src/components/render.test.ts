@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
 
-const { setDataSpy } = vi.hoisted(() => ({ setDataSpy: vi.fn() }))
+const { setDataSpy, applyOptionsSpy } = vi.hoisted(() => ({ setDataSpy: vi.fn(), applyOptionsSpy: vi.fn() }))
 
 vi.mock('lightweight-charts', () => ({
   ColorType: { Solid: 0 },
   LineSeries: {},
   createChart: () => ({
-    addSeries: () => ({ setData: setDataSpy }),
+    addSeries: () => ({ setData: setDataSpy, applyOptions: applyOptionsSpy }),
     remove: () => {},
   }),
 }))
@@ -84,6 +84,11 @@ const ORDER: Order = {
   status: 'pending',
   createdAt: Date.now(),
   tradeId: null,
+  orderType: 'market',
+  tif: 'GTC',
+  limitPrice: null,
+  stopPrice: null,
+  expiresAt: null,
 }
 
 function mount<T extends HTMLElement>(tag: string, props: Partial<T> = {}): T {
@@ -273,9 +278,10 @@ describe('custom elements render and react to properties', () => {
       { time: Date.parse('2024-01-02'), value: 200 },
     ]
     await tick()
-    const lastCall = setDataSpy.mock.calls.at(-1)?.[0] as Array<{ value: number }>
-    expect(lastCall).toHaveLength(2)
-    expect(lastCall[1]?.value).toBe(200)
+    const calls = setDataSpy.mock.calls.map((c) => c[0] as Array<{ value: number }>)
+    const pointsCall = calls.find((c) => c.length === 2)
+    expect(pointsCall).toBeDefined()
+    expect(pointsCall?.[1]?.value).toBe(200)
     el.remove()
   })
 })
