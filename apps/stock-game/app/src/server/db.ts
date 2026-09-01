@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import type {
   Bar,
+  FillPriceSource,
   GameConfig,
   Order,
   OrderStatus,
@@ -45,6 +46,7 @@ export interface Repo {
     limitPrice?: number | null
     stopPrice?: number | null
     expiresAt?: number | null
+    fillPriceSource?: FillPriceSource
   }): Order
   getPendingOrders(now: number): Order[]
   fillOrderWithTrade(
@@ -94,6 +96,7 @@ interface OrderRow {
   limit_price: number | null
   stop_price: number | null
   expires_at: number | null
+  fill_price_source?: FillPriceSource | null
 }
 
 interface BarRow {
@@ -138,6 +141,7 @@ function toOrder(row: OrderRow): Order {
     limitPrice: row.limit_price,
     stopPrice: row.stop_price,
     expiresAt: row.expires_at,
+    fillPriceSource: row.fill_price_source ?? 'last',
   }
 }
 
@@ -169,7 +173,7 @@ function prepareStatements(db: Db): Statements {
       `INSERT INTO trades (symbol, side, qty, price, cash_delta_cents, mode, executed_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
     insertOrderStmt: db.prepare(
-      `INSERT INTO orders (symbol, side, qty, execute_at, status, created_at, order_type, tif, limit_price, stop_price, expires_at) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO orders (symbol, side, qty, execute_at, status, created_at, order_type, tif, limit_price, stop_price, expires_at, fill_price_source) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
     ),
     upsertBarStmt: db.prepare(
       `INSERT OR REPLACE INTO price_cache (symbol, interval, date, open, high, low, close, volume) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -301,6 +305,7 @@ function resolveOrderDefaults(order: Parameters<Repo['insertOrder']>[0]): { orde
 
 function repoInsertOrder(_db: Db, stmts: Statements, order: Parameters<Repo['insertOrder']>[0]): Order {
   const { orderType, tif } = resolveOrderDefaults(order)
+  const fillPriceSource = order.fillPriceSource ?? 'last'
   const result = stmts.insertOrderStmt.run(
     order.symbol,
     order.side,
@@ -312,9 +317,10 @@ function repoInsertOrder(_db: Db, stmts: Statements, order: Parameters<Repo['ins
     order.limitPrice ?? null,
     order.stopPrice ?? null,
     order.expiresAt ?? null,
+    fillPriceSource,
   )
   const id = Number(result.lastInsertRowid)
-  return orderFromInsert(id, order, orderType, tif)
+  return orderFromInsert(id, order, orderType, tif, fillPriceSource)
 }
 
 function orderFromInsert(
@@ -322,6 +328,7 @@ function orderFromInsert(
   order: Parameters<Repo['insertOrder']>[0],
   orderType: string,
   tif: string,
+  fillPriceSource: FillPriceSource,
 ): Order {
   return toOrder({
     id,
@@ -337,6 +344,7 @@ function orderFromInsert(
     limit_price: order.limitPrice ?? null,
     stop_price: order.stopPrice ?? null,
     expires_at: order.expiresAt ?? null,
+    fill_price_source: fillPriceSource,
   })
 }
 
@@ -374,7 +382,7 @@ const MIGRATION_SQL = `
     CREATE TABLE IF NOT EXISTS game_config (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS price_cache (symbol TEXT NOT NULL, interval TEXT NOT NULL, date INTEGER NOT NULL, open REAL NOT NULL, high REAL NOT NULL, low REAL NOT NULL, close REAL NOT NULL, volume INTEGER NOT NULL, PRIMARY KEY (symbol, interval, date));
     CREATE TABLE IF NOT EXISTS trades (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, side TEXT NOT NULL CHECK (side IN ('buy', 'sell', 'short', 'cover')), qty INTEGER NOT NULL CHECK (qty > 0), price REAL NOT NULL, cash_delta_cents INTEGER NOT NULL, mode TEXT NOT NULL CHECK (mode IN ('backdated', 'scheduled')), executed_at INTEGER NOT NULL, created_at INTEGER NOT NULL);
-    CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, side TEXT NOT NULL CHECK (side IN ('buy', 'sell', 'short', 'cover')), qty INTEGER NOT NULL CHECK (qty > 0), execute_at INTEGER NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'filled', 'cancelled')), created_at INTEGER NOT NULL, trade_id INTEGER UNIQUE REFERENCES trades(id), order_type TEXT NOT NULL DEFAULT 'market' CHECK (order_type IN ('market', 'limit', 'stop', 'stopLimit')), tif TEXT NOT NULL DEFAULT 'GTC' CHECK (tif IN ('DAY', 'GTC')), limit_price REAL, stop_price REAL, expires_at INTEGER);
+    CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, side TEXT NOT NULL CHECK (side IN ('buy', 'sell', 'short', 'cover')), qty INTEGER NOT NULL CHECK (qty > 0), execute_at INTEGER NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'filled', 'cancelled')), created_at INTEGER NOT NULL, trade_id INTEGER UNIQUE REFERENCES trades(id), order_type TEXT NOT NULL DEFAULT 'market' CHECK (order_type IN ('market', 'limit', 'stop', 'stopLimit')), tif TEXT NOT NULL DEFAULT 'GTC' CHECK (tif IN ('DAY', 'GTC')), limit_price REAL, stop_price REAL, expires_at INTEGER, fill_price_source TEXT NOT NULL DEFAULT 'last');
     CREATE INDEX IF NOT EXISTS idx_price_cache_lookup ON price_cache (symbol, interval);
     CREATE INDEX IF NOT EXISTS idx_trades_executed ON trades (executed_at);
     CREATE INDEX IF NOT EXISTS idx_orders_pending ON orders (status, execute_at);
@@ -400,11 +408,17 @@ function migrateOrdersTable(db: Db): void {
   const hasOrderType = cols.some((c) => c.name === 'order_type')
   if (hasOrderType) return
   db.exec(`
-    CREATE TABLE orders_new (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, side TEXT NOT NULL CHECK (side IN ('buy', 'sell', 'short', 'cover')), qty INTEGER NOT NULL CHECK (qty > 0), execute_at INTEGER NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'filled', 'cancelled')), created_at INTEGER NOT NULL, trade_id INTEGER UNIQUE REFERENCES trades(id), order_type TEXT NOT NULL DEFAULT 'market' CHECK (order_type IN ('market', 'limit', 'stop', 'stopLimit')), tif TEXT NOT NULL DEFAULT 'GTC' CHECK (tif IN ('DAY', 'GTC')), limit_price REAL, stop_price REAL, expires_at INTEGER);
-    INSERT INTO orders_new (id, symbol, side, qty, execute_at, status, created_at, trade_id, order_type, tif, limit_price, stop_price, expires_at) SELECT id, symbol, side, qty, execute_at, status, created_at, trade_id, 'market', 'GTC', NULL, NULL, NULL FROM orders;
+    CREATE TABLE orders_new (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, side TEXT NOT NULL CHECK (side IN ('buy', 'sell', 'short', 'cover')), qty INTEGER NOT NULL CHECK (qty > 0), execute_at INTEGER NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'filled', 'cancelled')), created_at INTEGER NOT NULL, trade_id INTEGER UNIQUE REFERENCES trades(id), order_type TEXT NOT NULL DEFAULT 'market' CHECK (order_type IN ('market', 'limit', 'stop', 'stopLimit')), tif TEXT NOT NULL DEFAULT 'GTC' CHECK (tif IN ('DAY', 'GTC')), limit_price REAL, stop_price REAL, expires_at INTEGER, fill_price_source TEXT NOT NULL DEFAULT 'last');
+    INSERT INTO orders_new (id, symbol, side, qty, execute_at, status, created_at, trade_id, order_type, tif, limit_price, stop_price, expires_at, fill_price_source) SELECT id, symbol, side, qty, execute_at, status, created_at, trade_id, 'market', 'GTC', NULL, NULL, NULL, 'last' FROM orders;
     DROP TABLE orders;
     ALTER TABLE orders_new RENAME TO orders;
   `)
+}
+
+function migrateFillPriceSource(db: Db): void {
+  const cols = db.prepare(`PRAGMA table_info(orders)`).all() as Array<{ name: string }>
+  if (cols.some((c) => c.name === 'fill_price_source')) return
+  db.exec(`ALTER TABLE orders ADD COLUMN fill_price_source TEXT NOT NULL DEFAULT 'last'`)
 }
 
 function runMigrations(db: Db): void {
@@ -413,6 +427,7 @@ function runMigrations(db: Db): void {
   try {
     if (needsMigration(db)) migrateTradesTable(db)
     migrateOrdersTable(db)
+    migrateFillPriceSource(db)
     db.exec('COMMIT')
   } catch (error) {
     db.exec('ROLLBACK')

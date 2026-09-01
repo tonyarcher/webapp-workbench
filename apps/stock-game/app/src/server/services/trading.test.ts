@@ -344,4 +344,87 @@ describe('play the game', () => {
     expect(trading.listOrders()[0]!.status).toBe('pending')
     vi.useRealTimers()
   })
+
+  it('ASAP waits the configured quote delay during NYSE hours', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.parse('2024-01-03T15:00:00Z'))
+    const repo = openRepo(':memory:')
+    const trading = createTrading(
+      repo,
+      fakeProvider({
+        quote: { symbol: 'AAPL', name: 'AAPL', price: 50, currency: 'USD', exchange: 'T', time: 0, delayMinutes: 0 },
+      }),
+    )
+    const order = trading.placeOrder({ symbol: 'AAPL', side: 'buy', qty: 1 })
+    expect(order.executeAt).toBe(Date.now() + 15 * 60_000)
+    expect(await trading.executeDueOrders(Date.now())).toBe(0)
+    expect(await trading.executeDueOrders(Date.now() + 15 * 60_000)).toBe(1)
+    vi.useRealTimers()
+  })
+
+  it('backdated fill subtracts commission from cash', async () => {
+    const bars = [dayBar('2024-01-02', 100)]
+    const repo = openRepo(':memory:')
+    const trading = createTrading(repo, fakeProvider({ bars }))
+    trading.updateConfig({
+      startingCashCents: 10_000_000,
+      startDate: EARLY_START,
+      provider: 'fake',
+      commissionCentsPerTrade: 100,
+    })
+    const trade = await trading.placeBackdatedTrade({
+      symbol: 'AAPL',
+      side: 'buy',
+      qty: 10,
+      at: Date.parse('2024-01-02'),
+    })
+    expect(trade.cashDeltaCents).toBe(-100_100)
+    expect(trading.cashNowCents()).toBe(10_000_000 - 100_100)
+  })
+
+  it('scheduled fill subtracts commission from cash', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.parse('2024-01-03T15:00:00Z'))
+    const repo = openRepo(':memory:')
+    const trading = createTrading(
+      repo,
+      fakeProvider({
+        quote: { symbol: 'AAPL', name: 'AAPL', price: 50, currency: 'USD', exchange: 'T', time: 0, delayMinutes: 0 },
+      }),
+    )
+    trading.updateConfig({
+      startingCashCents: 10_000_000,
+      startDate: Date.now(),
+      provider: 'fake',
+      quoteDelayMinutes: 0,
+      commissionCentsPerTrade: 100,
+    })
+    trading.placeOrder({ symbol: 'AAPL', side: 'buy', qty: 2, executeAt: Date.now() + 5_000 })
+    expect(await trading.executeDueOrders(Date.now() + 10_000)).toBe(1)
+    expect(trading.listTrades()[0]!.cashDeltaCents).toBe(-10_100)
+    vi.useRealTimers()
+  })
+
+  it('buy that covers price but not commission stays pending', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.parse('2024-01-03T15:00:00Z'))
+    const repo = openRepo(':memory:')
+    const trading = createTrading(
+      repo,
+      fakeProvider({
+        quote: { symbol: 'AAPL', name: 'AAPL', price: 100, currency: 'USD', exchange: 'T', time: 0, delayMinutes: 0 },
+      }),
+    )
+    trading.updateConfig({
+      startingCashCents: 10_000,
+      startDate: Date.now(),
+      provider: 'fake',
+      quoteDelayMinutes: 0,
+      commissionCentsPerTrade: 100,
+    })
+    trading.placeOrder({ symbol: 'AAPL', side: 'buy', qty: 1, executeAt: Date.now() + 5_000 })
+    expect(await trading.executeDueOrders(Date.now() + 10_000)).toBe(0)
+    expect(trading.listOrders()[0]!.status).toBe('pending')
+    vi.useRealTimers()
+  })
 })

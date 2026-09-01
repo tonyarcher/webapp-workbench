@@ -8,6 +8,8 @@ export interface SettingsSubmitDetail {
   startingCashCents: number
   startDate: number
   provider: string
+  quoteDelayMinutes: number
+  commissionCentsPerTrade: number
 }
 
 const PROVIDERS = ['yahoo', 'twelvedata', 'alphaVantage'] as const
@@ -16,6 +18,8 @@ const formSchema = z.object({
   startingCashCents: z.number().int().min(1),
   startDate: z.number().int(),
   provider: symbolSchema.or(z.enum(PROVIDERS)),
+  quoteDelayMinutes: z.number().int().min(0).max(120),
+  commissionCentsPerTrade: z.number().int().min(0),
 })
 
 export class SgSettingsForm extends LitElement {
@@ -97,6 +101,14 @@ export class SgSettingsForm extends LitElement {
     return this.config !== null ? (this.config.startingCashCents / 100).toString() : ''
   }
 
+  private get commissionDraft(): string {
+    return this.config !== null ? (this.config.commissionCentsPerTrade / 100).toString() : ''
+  }
+
+  private get quoteDelayDraft(): string {
+    return this.config !== null ? String(this.config.quoteDelayMinutes) : ''
+  }
+
   private onDateInput(event: Event): void {
     this.startDateDraft = (event.target as HTMLInputElement).value
   }
@@ -105,24 +117,30 @@ export class SgSettingsForm extends LitElement {
     cashInput: string | undefined
     provider: string | undefined
     dateMs: number
+    quoteDelayInput: string | undefined
+    commissionInput: string | undefined
   } {
     const cashInput = this.renderRoot.querySelector<HTMLInputElement>('#cash')?.value
     const provider = this.renderRoot.querySelector<HTMLSelectElement>('#provider')?.value
-    const dateMs = this.startDateDraft
-      ? Date.parse(`${this.startDateDraft}T00:00:00`)
-      : (this.config?.startDate ?? 0)
-    return { cashInput, provider, dateMs }
+    const quoteDelayInput = this.renderRoot.querySelector<HTMLInputElement>('#quoteDelay')?.value
+    const commissionInput = this.renderRoot.querySelector<HTMLInputElement>('#commission')?.value
+    const dateMs = this.startDateDraft ? Date.parse(`${this.startDateDraft}T00:00:00`) : (this.config?.startDate ?? 0)
+    return { cashInput, provider, dateMs, quoteDelayInput, commissionInput }
   }
 
   private validateAndEmit(
     cashCents: number,
     dateMs: number,
     provider: string | undefined,
+    quoteDelayMinutes: number,
+    commissionCentsPerTrade: number,
   ): boolean {
     const parsed = formSchema.safeParse({
       startingCashCents: cashCents,
       startDate: dateMs,
       provider,
+      quoteDelayMinutes,
+      commissionCentsPerTrade,
     })
     if (!parsed.success || Number.isNaN(dateMs)) {
       this.error = 'Check the starting cash and start date values'
@@ -141,9 +159,11 @@ export class SgSettingsForm extends LitElement {
   private onSubmit(): void {
     this.error = undefined
     if (!this.config) return
-    const { cashInput, provider, dateMs } = this.collectFormValues()
+    const { cashInput, provider, dateMs, quoteDelayInput, commissionInput } = this.collectFormValues()
     const cashCents = Math.round(Number(cashInput) * 100)
-    this.validateAndEmit(cashCents, dateMs, provider)
+    const quoteDelayMinutes = Math.round(Number(quoteDelayInput))
+    const commissionCentsPerTrade = Math.round(Number(commissionInput) * 100)
+    this.validateAndEmit(cashCents, dateMs, provider, quoteDelayMinutes, commissionCentsPerTrade)
   }
 
   private renderCashField(): TemplateResult {
@@ -187,10 +207,26 @@ export class SgSettingsForm extends LitElement {
     </div>`
   }
 
+  private renderQuoteDelayField(): TemplateResult {
+    return html`<div class="field">
+      <label for="quoteDelay">Quote delay (minutes)</label>
+      <input id="quoteDelay" type="number" min="0" max="120" step="1" .value=${this.quoteDelayDraft} />
+      <p class="hint">Delayed quotes like Yahoo; ASAP orders wait this long then until the next NYSE open if needed. 0 = next open with no extra wait.</p>
+    </div>`
+  }
+
+  private renderCommissionField(): TemplateResult {
+    return html`<div class="field">
+      <label for="commission">Commission per trade (USD)</label>
+      <input id="commission" type="number" min="0" step="0.01" .value=${this.commissionDraft} />
+      <p class="hint">Flat fee taken from cash on every fill (backdated and scheduled).</p>
+    </div>`
+  }
+
   private renderForm(defaultDate: string): TemplateResult {
     return html`
-      ${this.renderCashField()} ${this.renderDateField(defaultDate)}
-      ${this.renderProviderField()}
+      ${this.renderCashField()} ${this.renderDateField(defaultDate)} ${this.renderProviderField()}
+      ${this.renderQuoteDelayField()} ${this.renderCommissionField()}
       ${this.error ? html`<div class="error">${this.error}</div>` : ''}
       <button class="submit" type="button" ?disabled=${this.busy} @click=${() => this.onSubmit()}>
         Save configuration

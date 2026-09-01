@@ -5,6 +5,11 @@ export function isNyseOpen(now: number): boolean {
   return minutes >= 570 && minutes < 960
 }
 
+export function nextNyseOpen(now: number): number {
+  if (isNyseOpen(now)) return now
+  return findNextWeekdayOpen(now)
+}
+
 export function expiresAtForOrder(executeAt: number): number {
   const ymd = getNyDateParts(executeAt)
   return nyWallToUtc(ymd.year, ymd.month, ymd.day, 16, 0)
@@ -82,4 +87,26 @@ function getNyWallForUtc(ms: number): { year: number; month: number; day: number
     hour: Number(getPart(parts, 'hour') ?? '0'),
     minute: Number(getPart(parts, 'minute') ?? '0'),
   }
+}
+
+function findNextWeekdayOpen(now: number): number {
+  const base = getNyDateParts(now)
+  for (let offset = 0; offset < 8; offset++) {
+    const ymd = addDays(base, offset)
+    const candidate = nyWallToUtc(ymd.year, ymd.month, ymd.day, 9, 30)
+    if (candidate <= now) continue
+    if (isWeekdayOpen(candidate)) return candidate
+  }
+  return nyWallToUtc(base.year, base.month, base.day, 9, 30)
+}
+
+function isWeekdayOpen(candidate: number): boolean {
+  const wall = getNyWall(candidate)
+  return wall.weekday !== 0 && wall.weekday !== 6
+}
+
+function addDays(base: { year: number; month: number; day: number }, offset: number): { year: number; month: number; day: number } {
+  const d = new Date(Date.UTC(base.year, base.month - 1, base.day))
+  d.setUTCDate(d.getUTCDate() + offset)
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() }
 }

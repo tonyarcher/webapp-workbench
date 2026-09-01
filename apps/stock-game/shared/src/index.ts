@@ -36,6 +36,15 @@ export const symbolSearchResultSchema = z.object({
 });
 export type SymbolSearchResult = z.infer<typeof symbolSearchResultSchema>;
 
+export const FILL_PRICE_SOURCES = ['last', 'bid', 'ask', 'mid'] as const
+export const fillPriceSourceSchema = z.enum(FILL_PRICE_SOURCES)
+export type FillPriceSource = z.infer<typeof fillPriceSourceSchema>
+
+export function defaultFillPriceSource(side: Side): FillPriceSource {
+  if (side === 'buy' || side === 'cover') return 'ask'
+  return 'bid'
+}
+
 export const quoteSchema = z.object({
   symbol: symbolSchema,
   name: z.string(),
@@ -44,6 +53,8 @@ export const quoteSchema = z.object({
   exchange: z.string(),
   time: z.number().int(),
   delayMinutes: z.number().int().default(0),
+  bid: z.number().positive().optional(),
+  ask: z.number().positive().optional(),
 });
 export type Quote = z.infer<typeof quoteSchema>;
 
@@ -61,6 +72,8 @@ export const gameConfigSchema = z.object({
   startingCashCents: z.number().int().nonnegative(),
   startDate: z.number().int(),
   provider: z.string(),
+  quoteDelayMinutes: z.number().int().min(0).max(120).default(15),
+  commissionCentsPerTrade: z.number().int().min(0).default(0),
 });
 export type GameConfig = z.infer<typeof gameConfigSchema>;
 
@@ -68,6 +81,8 @@ export const updateConfigRequestSchema = z.object({
   startingCashCents: z.number().int().nonnegative(),
   startDate: z.number().int(),
   provider: z.string().optional(),
+  quoteDelayMinutes: z.number().int().min(0).max(120).optional(),
+  commissionCentsPerTrade: z.number().int().min(0).optional(),
 });
 export type UpdateConfigRequest = z.infer<typeof updateConfigRequestSchema>;
 
@@ -98,6 +113,7 @@ export const orderSchema = z.object({
   limitPrice: z.number().nullable(),
   stopPrice: z.number().nullable(),
   expiresAt: z.number().int().nullable(),
+  fillPriceSource: fillPriceSourceSchema,
 });
 export type Order = z.infer<typeof orderSchema>;
 
@@ -182,11 +198,12 @@ export const placeOrderRequestSchema = z
     symbol: symbolSchema,
     side: sideSchema,
     qty: qtySchema,
-    executeAt: z.number().int(),
+    executeAt: z.number().int().optional(),
     orderType: orderTypeSchema.default('market'),
     tif: tifSchema.default('GTC'),
     limitPrice: z.number().positive().optional(),
     stopPrice: z.number().positive().optional(),
+    fillPriceSource: fillPriceSourceSchema.optional(),
   })
   .superRefine((data, ctx) => refineOrderPrices(data, ctx));
 export type PlaceOrderRequest = z.input<typeof placeOrderRequestSchema>;

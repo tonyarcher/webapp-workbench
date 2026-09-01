@@ -40,8 +40,28 @@ function MutationStatus({ mutation }: { mutation: ReturnType<typeof useTradeMuta
   return <></>
 }
 
+function configCash(configQ: ReturnType<typeof useTradeQueries>['configQ']): number {
+  return configQ.data?.startingCashCents ?? 0
+}
+
+function configCommission(configQ: ReturnType<typeof useTradeQueries>['configQ']): number {
+  return configQ.data?.commissionCentsPerTrade ?? 0
+}
+
+function configDelay(configQ: ReturnType<typeof useTradeQueries>['configQ']): number {
+  return configQ.data?.quoteDelayMinutes ?? 15
+}
+
+function searchErrorText(searchQ: ReturnType<typeof useTradeQueries>['searchQ']): string | null {
+  return searchQ.isError ? String(searchQ.error) : null
+}
+
+function quoteErrorText(quoteQ: ReturnType<typeof useTradeQueries>['quoteQ']): string | null {
+  return quoteQ.isError ? String(quoteQ.error) : null
+}
+
 function TradeFormCard({ refCb, symbol, query, searchQ, quoteQ, configQ, holdingsQ, mutation }: { refCb: ReturnType<typeof useCustomEvents>; symbol: string | undefined; query: string; searchQ: ReturnType<typeof useTradeQueries>['searchQ']; quoteQ: ReturnType<typeof useTradeQueries>['quoteQ']; configQ: ReturnType<typeof useTradeQueries>['configQ']; holdingsQ: ReturnType<typeof useTradeQueries>['holdingsQ']; mutation: ReturnType<typeof useTradeMutation> }): React.JSX.Element {
-  return <div className="card"><sg-trade-form ref={refCb} symbol={symbol ?? ''} results={searchQ.data ?? []} query={query} searching={searchQ.isFetching} searchError={searchQ.isError ? String(searchQ.error) : null} quote={quoteQ.data ?? null} quoteLoading={quoteQ.isFetching} quoteError={quoteQ.isError ? String(quoteQ.error) : null} cashCents={configQ.data?.startingCashCents ?? 0} holdings={holdingsQ.data ?? []} busy={mutation.isPending} /><MutationStatus mutation={mutation} /></div>
+  return <div className="card"><sg-trade-form ref={refCb} symbol={symbol ?? ''} results={searchQ.data ?? []} query={query} searching={searchQ.isFetching} searchError={searchErrorText(searchQ)} quote={quoteQ.data ?? null} quoteLoading={quoteQ.isFetching} quoteError={quoteErrorText(quoteQ)} cashCents={configCash(configQ)} holdings={holdingsQ.data ?? []} busy={mutation.isPending} commissionCents={configCommission(configQ)} quoteDelayMinutes={configDelay(configQ)} /><MutationStatus mutation={mutation} /></div>
 }
 
 function TradesCard({ tradesQ }: { tradesQ: ReturnType<typeof useTradeQueries>['tradesQ'] }): React.JSX.Element {

@@ -62,6 +62,7 @@ export class SgOrdersTable extends LitElement {
       <td>${order.tif}</td>
       <td class="num">${this.formatLimit(order)}</td>
       <td class="num">${this.formatStop(order)}</td>
+      <td>${order.fillPriceSource}</td>
       <td>${order.status}</td>
       <td>${this.renderCancel(order)}</td>
     </tr>`
@@ -79,6 +80,7 @@ export class SgOrdersTable extends LitElement {
           <th>TIF</th>
           <th class="num">Limit</th>
           <th class="num">Stop</th>
+          <th>Fill</th>
           <th>Status</th>
           <th></th>
         </tr>

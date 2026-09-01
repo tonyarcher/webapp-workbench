@@ -124,7 +124,24 @@ export class YahooProvider implements PriceProvider {
     const json = await this.fetchJson(url)
     const block = parseChartBlock(json)
     const bars = parseBars(block)
-    return buildQuote(symbol, block.meta, bars)
+    const base = buildQuote(symbol, block.meta, bars)
+    return this.enrichWithBidAsk(base, symbol)
+  }
+
+  private async enrichWithBidAsk(base: Quote, symbol: string): Promise<Quote> {
+    const book = await this.fetchBidAsk(symbol)
+    if (!book) return base
+    return mergeQuoteBook(base, book)
+  }
+
+  private async fetchBidAsk(symbol: string): Promise<{ bid?: number; ask?: number } | null> {
+    try {
+      const url = `${YAHOO_BASE}/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`
+      const json = await this.fetchJson(url)
+      return parseQuoteBook(json)
+    } catch {
+      return null
+    }
   }
 
   async getBars(symbol: string, interval: Interval, from: number, to: number): Promise<Bar[]> {
@@ -232,6 +249,42 @@ export function parseBars(block: ChartBlock): Bar[] {
   const quote = block.indicators?.quote?.[0]
   if (!timestamps || !quote) return []
   return collectBars(timestamps, quote.open ?? [], quote.high ?? [], quote.low ?? [], quote.close ?? [], quote.volume ?? [])
+}
+
+export function parseQuoteBook(json: unknown): { bid?: number; ask?: number } | null {
+  const parsed = parseQuoteBookRaw(json)
+  if (!parsed) return null
+  return parsed
+}
+
+function parseQuoteBookRaw(json: unknown): { bid?: number; ask?: number } | null {
+  const schema = z.object({
+    quoteResponse: z.object({ result: z.array(z.object({ bid: z.number().optional(), ask: z.number().optional() })).optional() }).optional(),
+  })
+  const res = schema.safeParse(json)
+  if (!res.success) return null
+  const first = res.data.quoteResponse?.result?.[0]
+  if (!first) return null
+  return filterBidAsk(first.bid, first.ask)
+}
+
+function filterBidAsk(bid: number | undefined, ask: number | undefined): { bid?: number; ask?: number } | null {
+  const out: { bid?: number; ask?: number } = {}
+  if (isValidBidAsk(bid)) out.bid = bid as number
+  if (isValidBidAsk(ask)) out.ask = ask as number
+  if (out.bid === undefined && out.ask === undefined) return null
+  return out
+}
+
+function isValidBidAsk(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+}
+
+function mergeQuoteBook(base: Quote, book: { bid?: number; ask?: number }): Quote {
+  const merged: Quote = { ...base }
+  if (book.bid !== undefined) merged.bid = book.bid
+  if (book.ask !== undefined) merged.ask = book.ask
+  return merged
 }
 
 function round2(value: number): number {
