@@ -1,0 +1,35 @@
+:root {
+    --bg: #0c0d12;
+    --surface: #16181f;
+    --surface-hover: #1d2029;
+    --border: #2a2e3a;
+    --row-border: #1c2028;
+    --text: #e8e6df;
+    --text-soft: #c3bfb4;
+    --text-dim: #8a867c;
+    --accent: #f5c16c;
+    --accent-soft: rgba(245, 193, 108, 0.16);
+    --on-accent: #1a1408;
+    --on-air: #ff4d4d;
+    --danger: #ff8a80;
+    --danger-soft: rgba(255, 77, 77, 0.12);
+    color-scheme: dark;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    background: var(--bg);
+    color: var(--text);
+}
+
+#app {
+    height: 100%;
+}

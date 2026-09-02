@@ -13,6 +13,9 @@
 #   clipstack - nginx static, serves Clipstack under /clipstack/.
 #   calendar-sync - nginx static + Trakt API proxy, serves Calendar Sync
 #                   under /calendar-sync/.
+#   radio-station - nginx static, serves Radio Station under /radio-station/.
+#   radio-api    - node server, JSON API for Radio Station under
+#                  /radio-station/api/ (prefix stripped by the gateway).
 # Each app listens on port 3000 internally; the gateway strips the prefix for
 # the static apps and passes /stock-game/ through unchanged.
 
@@ -31,6 +34,8 @@ services:
       - lemmy-vertical-scroll
       - clipstack
       - calendar-sync
+      - radio-station
+      - radio-api
     restart: unless-stopped
     networks:
       - baseball
@@ -112,6 +117,28 @@ services:
     build:
       context: ..
       dockerfile: deploy/calendar-sync/Dockerfile
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  radio-api:
+    build:
+      context: ..
+      dockerfile: deploy/radio-api/Dockerfile
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://rss:rss@postgres:5432/radio
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  radio-station:
+    build:
+      context: ..
+      dockerfile: deploy/radio-station/Dockerfile
     restart: unless-stopped
     networks:
       - baseball

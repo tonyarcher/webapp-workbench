@@ -14,6 +14,7 @@ same reverse-proxy gateway.
 | `apps/lemmy-vertical-scroll/` | Lemmy scroller | Vite + Lit + TanStack core | Vertical feed scrolling |
 | `apps/clipstack/` | Clipstack | Vite + Lit + vertical-scroll-core | Import a short-video link list and scroll it |
 | `apps/calendar-sync/` | Calendar Sync | Vite + Lit + calendar-core | Trakt + Netflix → ICS / Google Calendar |
+| `apps/radio-station/` | Radio Station | Vite + Lit + Postgres API | 7-day Top 40 log generator |
 
 ## Packages
 
@@ -40,6 +41,8 @@ npm run dev:stock-game
 npm run dev:lemmy
 npm run dev:clipstack
 npm run dev:calendar-sync
+npm run dev:radio-station
+npm run dev:radio-api
 ```
 
 Each app directory carries its own `AGENTS.md` with detailed conventions.
@@ -48,7 +51,7 @@ Each app directory carries its own `AGENTS.md` with detailed conventions.
 
 `deploy/` holds the nginx reverse-proxy gateway stack: hello world at `/` and
 each app under its own path (`/baseball/`, `/rss-reader/`, `/stock-game/`,
-`/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`). From the repo root, `./build.sh` / `.\build.ps1`
+`/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`). From the repo root, `./build.sh` / `.\build.ps1`
 builds workspaces locally and `./deploy.sh` / `.\deploy.ps1` brings the
 compose stack up (auto-selects a local Docker engine or an SSH-tunneled
 remote daemon). Pass an app name to do one service: `./deploy.sh rss`.
