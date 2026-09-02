@@ -1,0 +1,87 @@
+:host {
+    display: block;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 16px;
+}
+
+.on-air {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--on-air);
+    box-shadow: 0 0 8px var(--on-air);
+}
+
+.copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.kicker,
+.time {
+    margin: 0;
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.title {
+    margin: 2px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meter {
+    flex: 1;
+    max-width: 280px;
+    height: 6px;
+    border-radius: 99px;
+    background: var(--border);
+    overflow: hidden;
+}
+
+.meter-fill {
+    height: 100%;
+    background: var(--accent);
+}
+
+.jump {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.jump:hover {
+    border-color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .on-air {
+        box-shadow: none;
+    }
+
+    .meter-fill {
+        transition: none;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .meter-fill {
+        transition: width 0.4s linear;
+    }
+}

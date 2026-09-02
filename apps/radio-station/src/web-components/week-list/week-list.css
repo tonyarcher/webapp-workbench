@@ -1,0 +1,74 @@
+:host {
+    display: block;
+    height: 100%;
+    min-height: 0;
+}
+
+.scroller {
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.spacer {
+    position: relative;
+    width: 100%;
+}
+
+.row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+.day {
+    padding: 10px 16px 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--bg);
+}
+
+.hour {
+    padding: 4px 16px;
+    font-size: 11px;
+    color: var(--text-dim);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+}
+
+.track {
+    display: grid;
+    grid-template-columns: 64px minmax(120px, 1fr) minmax(140px, 2fr);
+    gap: 12px;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--row-border);
+    font-size: 13px;
+}
+
+.track.now {
+    background: var(--accent-soft);
+}
+
+.when {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+}
+
+.who {
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.song {
+    color: var(--text-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

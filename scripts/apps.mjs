@@ -51,6 +51,20 @@ export const APPS = [
     summary: "Calendar sync (also builds calendar-core)",
   },
   {
+    id: "radio-station",
+    service: "radio-station",
+    workspaces: ["radio-station"],
+    aliases: ["radio-station", "radio", "apps/radio-station"],
+    summary: "Radio station simulator (static SPA)",
+  },
+  {
+    id: "radio-api",
+    service: "radio-api",
+    workspaces: ["radio-station"],
+    aliases: ["radio-api", "apps/radio-station/server"],
+    summary: "Radio station API + playlist generator",
+  },
+  {
     id: "gateway",
     service: "gateway",
     workspaces: [],

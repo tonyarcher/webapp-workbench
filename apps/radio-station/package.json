@@ -1,0 +1,28 @@
+{
+    "name": "radio-station",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "dev:server": "tsx watch server/index.ts",
+        "build": "tsc --noEmit && vite build && node scripts/stamp-sw.mjs",
+        "build:server": "tsc -p server/tsconfig.json",
+        "start:server": "node dist-server/index.js",
+        "test": "tsx scripts/smoke.ts && tsx scripts/integration.ts",
+        "verify": "npm run build && npm run test"
+    },
+    "dependencies": {
+        "@tanstack/virtual-core": "^3.13.0",
+        "lit": "^3.3.3",
+        "pg": "^8.12.0"
+    },
+    "devDependencies": {
+        "@types/node": "^26.1.2",
+        "@types/pg": "^8.11.0",
+        "embedded-postgres": "17.10.0-beta.17",
+        "tsx": "^4.23.1",
+        "typescript": "7.0.2",
+        "vite": "^8.2.0"
+    }
+}

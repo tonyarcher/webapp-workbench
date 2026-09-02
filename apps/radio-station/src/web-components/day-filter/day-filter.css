@@ -1,0 +1,34 @@
+:host {
+    display: block;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px 16px;
+}
+
+.chip {
+    flex: none;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-soft);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.chip.on {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--text);
+}
+
+.chip:hover {
+    border-color: var(--accent);
+}
