@@ -89,6 +89,25 @@ export const tradeFormStyles = css`
     color: var(--text-muted, #9aa4b2);
   }
 
+  .hint {
+    font-size: 12px;
+    margin: 6px 0 0;
+  }
+
+  .when-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0;
+    cursor: pointer;
+  }
+
+  .when-toggle input[type='checkbox'] {
+    width: auto;
+    padding: 0;
+    accent-color: var(--accent, #4f9cf9);
+  }
+
   button.submit {
     font: inherit;
     color: #fff;

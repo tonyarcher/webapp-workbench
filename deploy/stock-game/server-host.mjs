@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { readFile, stat } from 'node:fs/promises'
+import { readdir, readFile, stat } from 'node:fs/promises'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
 import { pathToFileURL } from 'node:url'
@@ -12,6 +12,7 @@ const { default: handler } = await import(
 )
 
 const port = Number(process.env.PORT ?? 3000)
+const MAX_BODY_BYTES = 2 * 1024 * 1024 // 2MB limit to prevent memory exhaustion DoS
 const clientDir = path.join(process.cwd(), 'dist/client')
 // The app is served under a base path (e.g. /stock-game/): the fetch handler
 // is basepath-aware, and static client files are requested with the base
@@ -85,7 +86,18 @@ const server = createServer(async (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       body = await new Promise((resolve, reject) => {
         const chunks = []
-        req.on('data', (chunk) => chunks.push(chunk))
+        let size = 0
+        req.on('data', (chunk) => {
+          size += chunk.length
+          if (size > MAX_BODY_BYTES) {
+            req.pause()
+            const err = new Error('Payload Too Large')
+            err.statusCode = 413
+            reject(err)
+            return
+          }
+          chunks.push(chunk)
+        })
         req.on('end', () => resolve(Buffer.concat(chunks)))
         req.on('error', reject)
       })
@@ -106,12 +118,41 @@ const server = createServer(async (req, res) => {
     if (res.headersSent) {
       res.destroy()
     } else {
-      res.writeHead(500)
-      res.end('Internal Server Error')
+      const status = err.statusCode ?? 500
+      res.writeHead(status, status === 413 ? { Connection: 'close' } : undefined)
+      res.end(status === 413 ? 'Payload Too Large' : 'Internal Server Error')
     }
+    req.resume()
   }
 })
 
+async function findSchedulerChunk(assetsDir) {
+  const names = await readdir(assetsDir)
+  for (const name of names) {
+    if (!name.endsWith('.js')) continue
+    const file = path.join(assetsDir, name)
+    const text = await readFile(file, 'utf8')
+    if (text.includes('ensureSchedulerStarted') && text.includes('setInterval')) return file
+  }
+  return undefined
+}
+
+async function bootScheduler() {
+  try {
+    const assetsDir = path.join(process.cwd(), 'dist/server/assets')
+    const file = await findSchedulerChunk(assetsDir)
+    if (!file) {
+      console.warn('stock-game: scheduler chunk not found; fills wait for the first RPC')
+      return
+    }
+    const mod = await import(pathToFileURL(file).href)
+    if (typeof mod.ensureSchedulerStarted === 'function') mod.ensureSchedulerStarted()
+  } catch (error) {
+    console.error('stock-game: scheduler boot failed', error)
+  }
+}
+
 server.listen(port, () => {
   console.log(`stock-game server listening on http://0.0.0.0:${port}`)
+  void bootScheduler()
 })

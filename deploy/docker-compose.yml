@@ -43,15 +43,15 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: rss
-      POSTGRES_PASSWORD: rss
-      POSTGRES_DB: rss
+      POSTGRES_USER: ${POSTGRES_USER:-rss}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rss}
+      POSTGRES_DB: ${POSTGRES_DB:-rss}
       # Subpath under the data dir so the mount root stays owned by root.
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U rss -d rss"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rss} -d ${POSTGRES_DB:-rss}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -65,7 +65,7 @@ services:
       dockerfile: deploy/rss-api/Dockerfile
     environment:
       PORT: 3000
-      DATABASE_URL: postgres://rss:rss@postgres:5432/rss
+      DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/${POSTGRES_DB:-rss}
     depends_on:
       postgres:
         condition: service_healthy
@@ -127,7 +127,7 @@ services:
       dockerfile: deploy/radio-api/Dockerfile
     environment:
       PORT: 3000
-      DATABASE_URL: postgres://rss:rss@postgres:5432/radio
+      DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/radio
     depends_on:
       postgres:
         condition: service_healthy

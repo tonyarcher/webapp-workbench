@@ -27,5 +27,6 @@ COPY --from=build /app/package.json /app/package.json
 COPY --from=build /app/apps/rss-reader/package.json /app/apps/rss-reader/package.json
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/apps/rss-reader/dist-server /app/apps/rss-reader/dist-server
+USER node
 EXPOSE 3000
 CMD ["node", "apps/rss-reader/dist-server/index.js"]

@@ -1,6 +1,6 @@
 import type {IncomingMessage, ServerResponse} from 'node:http';
 import {getPool} from './db.js';
-import {parseCookies, setCookie, COOKIE_OPTS} from './http.js';
+import {parseCookies, setCookie, cookieOpts} from './http.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -26,6 +26,6 @@ export async function ensureUser(req: IncomingMessage, res: ServerResponse): Pro
         'INSERT INTO users (label) VALUES ($1) RETURNING id, label',
         ['local'],
     );
-    setCookie(res, 'rss_uid', rows[0].id, COOKIE_OPTS);
+    setCookie(res, 'rss_uid', rows[0].id, cookieOpts(req));
     return rows[0];
 }
