@@ -198,6 +198,38 @@ function isUniqueViolation(err: unknown): boolean {
     return typeof err === 'object' && err !== null && 'code' in err && (err as {code: string}).code === '23505';
 }
 
+function toEntryRows(scheduled: ReturnType<typeof generateWeek>): PlaylistEntryRow[] {
+    return scheduled.map((entry, idx) => ({
+        idx,
+        trackId: entry.trackId,
+        artist: entry.artist,
+        title: entry.title,
+        startsAt: entry.startsAtMs,
+        durationMs: entry.durationMs,
+        rotation: entry.rotation,
+        era: entry.era,
+    }));
+}
+
+async function persistGenerated(
+    pool: ReturnType<typeof getPool>,
+    stationId: string,
+    seed: string,
+    startsAt: Date,
+    weights: Weights,
+    entries: PlaylistEntryRow[],
+): Promise<{playlist: PlaylistRow; entries: PlaylistEntryRow[]}> {
+    try {
+        const playlist = await persistWeek(pool, stationId, seed, startsAt, weights, entries);
+        return {playlist, entries};
+    } catch (err) {
+        if (!isUniqueViolation(err)) throw err;
+        const raced = await findPlaylist(pool, stationId, seed, startsAt, weights);
+        if (!raced) throw err;
+        return {playlist: raced, entries: await getEntries(raced.id)};
+    }
+}
+
 export async function generatePlaylist(body: {
     stationId?: string;
     seed?: string;
@@ -213,28 +245,8 @@ export async function generatePlaylist(body: {
     const startsAt = new Date(startsAtMs);
     const pool = getPool();
     const existing = await findPlaylist(pool, stationId, seed, startsAt, weights);
-    if (existing) {
-        return {playlist: existing, entries: await getEntries(existing.id)};
-    }
+    if (existing) return {playlist: existing, entries: await getEntries(existing.id)};
     const tracks = await loadTracks();
-    const scheduled = generateWeek({tracks, seed, startsAtMs, weights});
-    const entries: PlaylistEntryRow[] = scheduled.map((entry, idx) => ({
-        idx,
-        trackId: entry.trackId,
-        artist: entry.artist,
-        title: entry.title,
-        startsAt: entry.startsAtMs,
-        durationMs: entry.durationMs,
-        rotation: entry.rotation,
-        era: entry.era,
-    }));
-    try {
-        const playlist = await persistWeek(pool, stationId, seed, startsAt, weights, entries);
-        return {playlist, entries};
-    } catch (err) {
-        if (!isUniqueViolation(err)) throw err;
-        const raced = await findPlaylist(pool, stationId, seed, startsAt, weights);
-        if (!raced) throw err;
-        return {playlist: raced, entries: await getEntries(raced.id)};
-    }
+    const entries = toEntryRows(generateWeek({tracks, seed, startsAtMs, weights}));
+    return persistGenerated(pool, stationId, seed, startsAt, weights, entries);
 }

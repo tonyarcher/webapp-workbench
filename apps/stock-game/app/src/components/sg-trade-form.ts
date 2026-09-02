@@ -62,7 +62,8 @@ export class SgTradeForm extends LitElement {
   private typedSymbol = ''
   private side: Side = 'buy'
   private qty = 1
-  private mode: TradeMode = 'backdated'
+  private mode: TradeMode = 'scheduled'
+  private useCalendar = false
   private when = ''
   private orderType: OrderType = 'market'
   private tif: Tif = 'GTC'
@@ -102,6 +103,16 @@ export class SgTradeForm extends LitElement {
 
   private selectMode(mode: TradeMode): void {
     this.mode = mode
+    if (mode === 'backdated') this.useCalendar = true
+    this.requestUpdate()
+  }
+
+  private setUseCalendar(on: boolean): void {
+    this.useCalendar = on
+    if (!on) {
+      this.mode = 'scheduled'
+      this.when = ''
+    }
     this.requestUpdate()
   }
 
@@ -186,8 +197,8 @@ export class SgTradeForm extends LitElement {
     if (symbol === undefined) return
     const qty = this.getValidatedQty()
     if (qty === undefined) return
-    if (this.mode === 'backdated') this.handleBackdatedSubmit(symbol, qty)
-    else this.handleScheduledSubmit(symbol, qty)
+    if (!this.useCalendar || this.mode !== 'backdated') this.handleScheduledSubmit(symbol, qty)
+    else this.handleBackdatedSubmit(symbol, qty)
   }
 
   private handleBackdatedSubmit(symbol: string, qty: number): void {
@@ -197,7 +208,7 @@ export class SgTradeForm extends LitElement {
   }
 
   private handleScheduledSubmit(symbol: string, qty: number): void {
-    if (this.when.trim() === '') {
+    if (!this.useCalendar || this.when.trim() === '') {
       this.submitScheduled(symbol, qty, undefined)
       return
     }
@@ -353,7 +364,7 @@ export class SgTradeForm extends LitElement {
       <p class="muted" style="font-size:12px;margin:6px 0 0;color:var(--text-muted,#9aa4b2)">
         ${this.mode === 'backdated'
           ? 'Fills at the close of the trading day on/after the chosen date.'
-          : `Fills at the next NYSE open after a ${this.quoteDelayMinutes} minute delay (or at the chosen time if later). Optional later datetime.`}
+          : `Fills now (next NYSE open after a ${this.quoteDelayMinutes} minute delay). Check Choose date/time only to pick another moment.`}
       </p>
     </div>`
   }
@@ -369,11 +380,21 @@ export class SgTradeForm extends LitElement {
   }
 
   private renderWhenField(): TemplateResult {
-    const label = this.mode === 'backdated' ? 'Trade date/time' : 'Execute at (optional — ASAP)'
     return html`<div class="field">
+      <label class="when-toggle">
+        <input type="checkbox" .checked=${this.useCalendar} @change=${(event: Event) => this.setUseCalendar((event.target as HTMLInputElement).checked)} />
+        Choose date/time
+      </label>
+      ${this.useCalendar ? this.renderWhenInput() : html`<p class="muted hint">Uses right now.</p>`}
+    </div>`
+  }
+
+  private renderWhenInput(): TemplateResult {
+    const label = this.mode === 'backdated' ? 'Trade date/time' : 'Execute at'
+    return html`
       <label>${label}</label>
       <input type="datetime-local" .value=${this.when} @input=${(event: Event) => { this.when = (event.target as HTMLInputElement).value }} />
-    </div>`
+    `
   }
 
   private renderQuoteContent(cost: number | undefined): TemplateResult {
@@ -421,6 +442,12 @@ export class SgTradeForm extends LitElement {
     return undefined
   }
 
+  private get submitLabel(): string {
+    if (!this.useCalendar) return 'Place order'
+    if (this.mode === 'backdated') return 'Place trade'
+    return 'Schedule order'
+  }
+
   override render(): TemplateResult {
     const cost = this.estimatedCostCents
     const warn = this.getWarning(cost)
@@ -430,7 +457,7 @@ export class SgTradeForm extends LitElement {
       ${warn ? html`<div class="warning">${warn}</div>` : ''}
       ${this.error ? html`<div class="error">${this.error}</div>` : ''}
       <button class="submit" type="button" ?disabled=${this.busy} @click=${() => this.onSubmit()}>
-        ${this.mode === 'backdated' ? 'Place trade' : 'Schedule order'}
+        ${this.submitLabel}
       </button>
     `
   }

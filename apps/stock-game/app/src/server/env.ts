@@ -30,14 +30,20 @@ export interface ServerEnv {
   quoteTtlMs: number
 }
 
+function envNumber(name: string, fallback: number): number {
+  const raw = process.env[name]
+  if (raw === undefined || raw.trim() === '') return fallback
+  const n = Number(raw)
+  return Number.isFinite(n) && n >= 0 ? n : fallback
+}
+
 export function getEnv(): ServerEnv {
-  const dbPath =
-    process.env.STOCK_GAME_DB ?? resolve(process.cwd(), 'data', 'stock-game.db')
+  const dbPath = resolve(process.env.STOCK_GAME_DB ?? join(process.cwd(), 'data', 'stock-game.db'))
   return {
     dbPath,
     provider: process.env.PRICE_PROVIDER ?? 'yahoo',
     twelveDataApiKey: process.env.TWELVEDATA_API_KEY,
     alphaVantageApiKey: process.env.ALPHAVANTAGE_API_KEY,
-    quoteTtlMs: Number(process.env.QUOTE_TTL_MS ?? 15 * 60 * 1000),
+    quoteTtlMs: envNumber('QUOTE_TTL_MS', 15 * 60 * 1000),
   }
 }

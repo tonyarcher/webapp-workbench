@@ -1,5 +1,6 @@
 import {lookup} from 'node:dns/promises';
 import {isIP} from 'node:net';
+import {Agent, type Dispatcher} from 'undici';
 import {FETCH_TIMEOUT_MS, MAX_FEED_BYTES} from '../env.js';
 
 // ---- SSRF guard ----
@@ -55,7 +56,7 @@ export function isPrivateIp(ip: string): boolean {
  * Resolves the hostname and rejects private/loopback/link-local targets.
  * The API is anonymous, so without this it is an open SSRF proxy into the
  * Docker network (postgres, metadata endpoints, etc.). Re-run on every
- * redirect hop â€” a public URL can 302 into the intranet.
+ * redirect hop — a public URL can 302 into the intranet.
  */
 function assertProtocol(url: URL): void {
     if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('Only http/https URLs are allowed');
@@ -111,10 +112,40 @@ function buildHeaders(cond: FetchCondition): Record<string, string> {
     return h;
 }
 
+let ssrfDispatcher: Dispatcher | null = null;
+
+function getSsrfDispatcher(): Dispatcher {
+    if (ssrfDispatcher) return ssrfDispatcher;
+    ssrfDispatcher = new Agent({
+        connect: {
+            lookup(hostname, options, cb) {
+                lookup(hostname, {...options, all: true})
+                    .then((records) => {
+                        const list = Array.isArray(records) ? records : [records];
+                        if (list.length === 0) {
+                            return cb(new Error(`Could not resolve feed host: ${hostname}`), '', 4);
+                        }
+                        if (process.env.RSS_ALLOW_LOCAL_FETCH !== '1' && list.some((r) => isPrivateIp(r.address))) {
+                            return cb(new Error('Refusing to fetch a private address'), '', 4);
+                        }
+                        cb(null, list);
+                    })
+                    .catch((err: NodeJS.ErrnoException) => cb(err, '', 4));
+            },
+        },
+    });
+    return ssrfDispatcher;
+}
+
 async function fetchWithRedirects(start: URL, headers: Record<string, string>, signal: AbortSignal): Promise<Response> {
     let current = start;
     for (let hop = 0; ; hop++) {
-        const resp = await fetch(current, {signal, headers, redirect: 'manual'});
+        const resp = await fetch(current, {
+            signal,
+            headers,
+            redirect: 'manual',
+            dispatcher: getSsrfDispatcher(),
+        } as RequestInit);
         const location = resp.headers.get('location');
         if (resp.status >= 300 && resp.status < 400 && location) {
             if (hop >= MAX_REDIRECTS) throw new Error('Too many redirects');

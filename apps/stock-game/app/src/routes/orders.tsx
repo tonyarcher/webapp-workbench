@@ -33,10 +33,17 @@ function Orders() {
       <h1>Scheduled orders</h1>
       <div className="card">
         <sg-orders-table ref={ref} orders={ordersQ.data ?? []} busy={cancel.isPending} />
-        <p className="muted">
-          Due orders fill automatically at the then-current quote. Place them from the Trade page.
-        </p>
+        <OrdersHint />
       </div>
     </>
+  )
+}
+
+function OrdersHint() {
+  return (
+    <p className="muted">
+      Due orders fill during NYSE hours (9:30–16:00 ET) at the then-current quote. GTC stays
+      pending overnight if the session is closed. Place them from the Trade page.
+    </p>
   )
 }

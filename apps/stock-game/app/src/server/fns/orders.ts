@@ -16,6 +16,7 @@ const cancelOrderRequestSchema = z.object({
 export const placeOrderFn = createServerFn({ method: 'POST' })
   .validator((data: unknown) => placeOrderRequestSchema.parse(data))
   .handler(async ({ data }): Promise<Order> => {
+    ensureSchedulerStarted()
     return placeOrder(data)
   })
 

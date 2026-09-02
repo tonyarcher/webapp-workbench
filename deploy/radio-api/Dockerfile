@@ -16,5 +16,6 @@ COPY --from=build /app/package.json /app/package.json
 COPY --from=build /app/apps/radio-station/package.json /app/apps/radio-station/package.json
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/apps/radio-station/dist-server /app/apps/radio-station/dist-server
+USER node
 EXPOSE 3000
 CMD ["node", "apps/radio-station/dist-server/index.js"]

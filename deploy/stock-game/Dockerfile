@@ -25,5 +25,7 @@ WORKDIR /app/apps/stock-game/app
 COPY --from=build /app /app
 ENV PORT=3000 STOCK_GAME_DB=/app/data/stock-game.db APP_BASE_PATH=/stock-game/
 COPY deploy/stock-game/server-host.mjs ./server-host.mjs
+RUN mkdir -p /app/data && chown -R node:node /app
+USER node
 EXPOSE 3000
 CMD ["node", "server-host.mjs"]

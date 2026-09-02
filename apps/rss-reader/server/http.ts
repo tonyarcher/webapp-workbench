@@ -31,14 +31,19 @@ export interface RouteCtx {
 
 export type RouteHandler = (ctx: RouteCtx) => Promise<unknown>;
 
+export interface RouteOptions {
+    public?: boolean;
+}
+
 export interface Route {
     method: string;
     pattern: string;
     handler: RouteHandler;
+    public?: boolean;
 }
 
-export function route(method: string, pattern: string, handler: RouteHandler): Route {
-    return {method, pattern, handler};
+export function route(method: string, pattern: string, handler: RouteHandler, options?: RouteOptions): Route {
+    return {method, pattern, handler, public: options?.public};
 }
 
 // ---- pattern matching ----
@@ -139,7 +144,10 @@ export function setCookie(res: ServerResponse, name: string, value: string, opts
 
 // ---- dispatcher ----
 
-const COOKIE_OPTS = 'Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000';
+export function cookieOpts(req?: IncomingMessage): string {
+    const isHttps = req?.headers['x-forwarded-proto'] === 'https';
+    return `Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${isHttps ? '; Secure' : ''}`;
+}
 
 function findMatched(routes: Route[], method: string, pathname: string): {route: Route | undefined; params: Record<string, string>} {
     for (const r of routes) {
@@ -161,12 +169,22 @@ function errorMessage(err: unknown, status: number): string {
     return String(err);
 }
 
+async function userForRoute(
+    route: Route,
+    req: IncomingMessage,
+    res: ServerResponse,
+    ensureUser: (req: IncomingMessage, res: ServerResponse) => Promise<{id: string; label: string}>,
+): Promise<{id: string; label: string}> {
+    if (route.public) return { id: '', label: 'anonymous' };
+    return ensureUser(req, res);
+}
+
 async function handleDispatch(req: IncomingMessage, res: ServerResponse, routes: Route[], ensureUser: (req: IncomingMessage, res: ServerResponse) => Promise<{id: string; label: string}>): Promise<void> {
     try {
         const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
         const {route, params} = findMatched(routes, req.method ?? 'GET', url.pathname);
         if (!route) { sendJson(res, 404, {error: 'not found'}); return; }
-        const user = await ensureUser(req, res);
+        const user = await userForRoute(route, req, res, ensureUser);
         const result = await route.handler({req, res, params, query: url.searchParams, user});
         if (!res.headersSent && result !== undefined) sendJson(res, 200, result);
     } catch (err) {
@@ -183,5 +201,3 @@ export function createDispatcher(
 ): (req: IncomingMessage, res: ServerResponse) => void {
     return (req, res) => { void handleDispatch(req, res, routes, ensureUser); };
 }
-
-export {COOKIE_OPTS};

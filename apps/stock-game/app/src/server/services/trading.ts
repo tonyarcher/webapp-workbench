@@ -377,10 +377,11 @@ export function cancelOrder(orderId: number): void {
 }
 
 export function executeDueOrders(now = Date.now()): Promise<number> {
+  const at = Number.isFinite(now) ? now : Date.now()
   if (executionInFlight) return Promise.resolve(0)
   executionInFlight = true
   try {
-    return getTrading().executeDueOrders(now).finally(() => {
+    return getTrading().executeDueOrders(at).finally(() => {
       executionInFlight = false
     })
   } catch (error) {

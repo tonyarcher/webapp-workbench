@@ -22,7 +22,7 @@ import {exportOpmlHandler, importOpmlHandler} from './routes/opml.js';
 import {migrateLibraryHandler} from './routes/migrate.js';
 
 const routes = [
-    route('GET', '/healthz', healthHandler),
+    route('GET', '/healthz', healthHandler, {public: true}),
     route('GET', '/library', getLibraryHandler),
     route('POST', '/folders', createFolderHandler),
     route('DELETE', '/folders/:id', deleteFolderHandler),

@@ -326,9 +326,15 @@ try {
     {
         const h = await api(sessionA, 'GET', '/healthz');
         assert(h.status === 200, 'healthz returns 200');
+        assert(!sessionA.cookie, 'healthz does not set rss_uid');
 
-        const h2 = await api(sessionB, 'GET', '/healthz');
-        assert(h2.status === 200, 'session B healthz returns 200');
+        const {rows: beforeUsers} = await getPool().query<{n: string}>('SELECT COUNT(*)::text AS n FROM users');
+        assert(Number(beforeUsers[0]?.n ?? 1) === 0, 'healthz does not create users');
+
+        const libA = await api(sessionA, 'GET', '/library');
+        assert(libA.status === 200, 'session A library creates a user');
+        const libB = await api(sessionB, 'GET', '/library');
+        assert(libB.status === 200, 'session B library creates a user');
 
         const uidA = uid(sessionA);
         const uidB = uid(sessionB);

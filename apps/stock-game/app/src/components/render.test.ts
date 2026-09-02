@@ -176,6 +176,9 @@ describe('custom elements render and react to properties', () => {
     expect(root?.textContent).toContain('Apple Inc.')
     expect(root?.textContent).toContain('Cash available')
     expect(root?.textContent).toContain('$234.56')
+    expect(root?.textContent).toContain('Choose date/time')
+    expect(root?.textContent).toContain('Uses right now')
+    expect(root?.querySelector('input[type="datetime-local"]')).toBeNull()
 
     el.quote = { ...QUOTE, price: 999 }
     await tick()
@@ -289,6 +292,19 @@ describe('custom elements render and react to properties', () => {
     const pointsCall = calls.find((c) => c.length === 2)
     expect(pointsCall).toBeDefined()
     expect(pointsCall?.[1]?.value).toBe(200)
+    el.remove()
+  })
+
+  it('sg-trade-form shows the calendar only after Choose date/time is checked', async () => {
+    const el = mount<SgTradeForm>('sg-trade-form', { cashCents: 100_000, quote: QUOTE })
+    await tick()
+    const box = el.shadowRoot?.querySelector('input[type="checkbox"]') as HTMLInputElement | null
+    expect(box).not.toBeNull()
+    expect(box!.checked).toBe(false)
+    box!.checked = true
+    box!.dispatchEvent(new Event('change', { bubbles: true }))
+    await tick()
+    expect(el.shadowRoot?.querySelector('input[type="datetime-local"]')).not.toBeNull()
     el.remove()
   })
 

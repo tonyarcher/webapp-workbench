@@ -162,14 +162,28 @@ export class AppShell extends LitElement {
         this.syncList();
     }
 
+    private renderWeek(): TemplateResult {
+        return html`
+            <rs-day-filter
+                .days=${this.days}
+                .selected=${this.day}
+                @day-change=${this.onDayChange}
+            ></rs-day-filter>
+            <rs-week-list
+                .items=${this.listItems}
+                .currentIdx=${this.currentIdx}
+                .jumpToken=${this.jumpToken}
+            ></rs-week-list>
+        `;
+    }
+
     override render(): TemplateResult {
-        const result = this.result;
         return html`
             <rs-toolbar
                 .seed=${this.seed}
                 .weights=${this.weights}
                 .busy=${this.busy}
-                .canExport=${!!result}
+                .canExport=${!!this.result}
                 @clock-change=${this.onClockChange}
                 @generate=${this.onGenerate}
                 @export=${this.onExport}
@@ -180,23 +194,10 @@ export class AppShell extends LitElement {
                 @jump-now=${this.onJumpNow}
             ></rs-now-playing>
             ${this.error ? html`<p class="error">${this.error}</p>` : ''}
-            ${result
-                ? html`
-                    <rs-day-filter
-                        .days=${this.days}
-                        .selected=${this.day}
-                        @day-change=${this.onDayChange}
-                    ></rs-day-filter>
-                    <rs-week-list
-                        .items=${this.listItems}
-                        .currentIdx=${this.currentIdx}
-                        .jumpToken=${this.jumpToken}
-                    ></rs-week-list>
-                `
-                : html`<div class="empty">
-                    <p class="empty-title">Generate a week of Pulse 101</p>
-                    <p class="empty-copy">Seven days of Top 40, no commercials. Tweak the gravity knobs, then export a log.</p>
-                </div>`}
+            ${this.result ? this.renderWeek() : html`<div class="empty">
+                <p class="empty-title">Generate a week of Pulse 101</p>
+                <p class="empty-copy">Seven days of Top 40, no commercials. Tweak the gravity knobs, then export a log.</p>
+            </div>`}
         `;
     }
 }

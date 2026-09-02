@@ -34,6 +34,7 @@ import {
 } from '../server/services/ranking.js';
 import {encodeCursor, decodeCursor} from '../server/cursor.js';
 import {isPrivateIp} from '../server/services/fetcher.js';
+import {cookieOpts} from '../server/http.js';
 
 function assert(cond: boolean, msg: string): asserts cond {
     if (!cond) {
@@ -66,6 +67,11 @@ assert(!isPrivateIp('8.8.8.8'), '8.8.8.8 is public');
 assert(!isPrivateIp('1.1.1.1'), '1.1.1.1 is public');
 assert(!isPrivateIp('172.32.0.1'), '172.32 is public (outside 172.16/12)');
 assert(!isPrivateIp('100.63.255.255'), '100.63 is public (outside CGNAT)');
+
+const httpCookie = cookieOpts();
+assert(!httpCookie.includes('Secure'), 'cookieOpts omits Secure on HTTP');
+const httpsCookie = cookieOpts({headers: {'x-forwarded-proto': 'https'}} as import('node:http').IncomingMessage);
+assert(httpsCookie.includes('Secure'), 'cookieOpts sets Secure on HTTPS');
 
 // ====================================================================
 // parser parity
