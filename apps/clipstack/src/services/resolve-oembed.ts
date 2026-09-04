@@ -55,6 +55,15 @@ function buildInfo(id: string, data: Record<string, unknown>): OEmbedInfo | null
     return info
 }
 
+/**
+ * Only the clip being watched may be probed. A lookahead window used to
+ * prefetch neighbors and hammered TikTok when the rail jumped or paged.
+ */
+export function watchedOEmbedIndex(activeIndex: number, length: number): number | null {
+    if (activeIndex < 0 || activeIndex >= length) return null
+    return activeIndex
+}
+
 export async function resolveTiktokOEmbed(id: string, signal?: AbortSignal): Promise<OEmbedInfo | null> {
     const probe = `https://www.tiktok.com/oembed?url=${encodeURIComponent(`https://www.tiktok.com/@x/video/${id}`)}`
     const response = await fetch(probe, {signal: combinedSignal(signal)})

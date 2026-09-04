@@ -3,7 +3,7 @@ import type {TemplateResult} from 'lit'
 import {customElement, property, state} from 'lit/decorators.js'
 import {ref} from 'lit/directives/ref.js'
 import {toScrollItem} from '../../services/to-scroll-item'
-import {resolveTiktokOEmbed} from '../../services/resolve-oembed'
+import {resolveTiktokOEmbed, watchedOEmbedIndex} from '../../services/resolve-oembed'
 import type {ClipLink} from '../../types'
 import type {ScrollItem, ScrollViewport} from 'vertical-scroll-core'
 import 'vertical-scroll-core'
@@ -42,8 +42,6 @@ export class WatchView extends LitElement {
             const items = this.items
             if (items !== this.prevItems) {
                 this.prevItems = items
-                this.resolveAbort?.abort()
-                this.resolveAbort = new AbortController()
                 this.links = items.map((link) => ({...link}))
                 this.scrollItems = this.links.map((link, index) => toScrollItem(link, index, this.links.length))
                 this.listGen += 1
@@ -52,7 +50,7 @@ export class WatchView extends LitElement {
                 this.maxSeen = Math.max(this.startMaxSeen, this.startIndex)
                 this.resolving.clear()
                 this.resolveAttempts.clear()
-                this.resolveAround(this.activeIndex)
+                this.resolveWatched(this.activeIndex)
             }
         }
     }
@@ -95,14 +93,15 @@ export class WatchView extends LitElement {
             })
     }
 
-    private resolveAround(index: number): void {
-        const signal = this.resolveAbort?.signal
-        const to = Math.min(this.links.length, index + 4)
-        for (let i = index; i < to; i++) {
-            const link = this.links[i]
-            if (!this.shouldResolve(link)) continue
-            this.resolveOne(link!, signal)
-        }
+    /** Abort in-flight probes and fetch only the clip on screen. */
+    private resolveWatched(index: number): void {
+        this.resolveAbort?.abort()
+        this.resolveAbort = new AbortController()
+        const target = watchedOEmbedIndex(index, this.links.length)
+        if (target === null) return
+        const link = this.links[target]
+        if (!this.shouldResolve(link)) return
+        this.resolveOne(link, this.resolveAbort.signal)
     }
 
     /** Stable identity so the ref directive only fires on attach/detach. */
@@ -113,7 +112,7 @@ export class WatchView extends LitElement {
     private onActive(event: CustomEvent<{index: number}>): void {
         this.activeIndex = event.detail.index
         this.maxSeen = Math.max(this.maxSeen, event.detail.index)
-        this.resolveAround(event.detail.index)
+        this.resolveWatched(event.detail.index)
         this.scheduleProgress()
     }
 
