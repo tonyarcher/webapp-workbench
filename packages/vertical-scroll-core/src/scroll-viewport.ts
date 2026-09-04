@@ -41,6 +41,9 @@ export class ScrollViewport extends LitElement {
     private scrollTimer: ReturnType<typeof setTimeout> | null = null
     private prevResetKey = ''
     private startApplied = false
+    /** Next/prev count from here so rapid keys can queue past an in-flight animation
+     *  without pre-assigning `activeIndex` (that skipped `active-index-change`). */
+    private navIndex = 0
 
     override connectedCallback(): void {
         super.connectedCallback()
@@ -92,16 +95,27 @@ export class ScrollViewport extends LitElement {
         const target = Math.max(0, Math.min(this.startIndex, this.items.length - 1))
         viewport.scrollTop = target * viewport.clientHeight
         this.activeIndex = target
+        this.navIndex = target
         this.startApplied = true
         this.onScroll()
     }
 
     /**
      * Jump to a slide. Used by app chrome (progress rail). Clamps to
-     * `[0, items.length)`.
+     * `[0, items.length)`. Instant — animating through the range would
+     * mount every intermediate embed (TikTok/Instagram iframes) on the way.
      */
     goToIndex(index: number): void {
-        this.scrollToSlide(index)
+        const viewport = this.viewport
+        if (!viewport) return
+        const target = Math.max(0, Math.min(index, this.items.length - 1))
+        const to = target * viewport.clientHeight
+        this.navIndex = target
+        this.cancelScroll()
+        viewport.classList.remove('no-snap')
+        if (viewport.scrollTop === to && this.activeIndex === target) return
+        viewport.scrollTop = to
+        this.onScroll()
     }
 
     /**
@@ -143,11 +157,15 @@ export class ScrollViewport extends LitElement {
         const target = Math.max(0, Math.min(index, this.items.length - 1))
         const from = viewport.scrollTop
         const to = target * viewport.clientHeight
-        if (from === to) return
-        this.activeIndex = target
+        this.navIndex = target
+        if (from === to) {
+            this.onScroll()
+            return
+        }
         this.cancelScroll()
         const finish = this.makeFinish(viewport, to)
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const distant = Math.abs(target - this.activeIndex) > 1
+        if (distant || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             finish()
             return
         }
@@ -166,12 +184,12 @@ export class ScrollViewport extends LitElement {
     }
 
     private nextSlide(): void {
-        if (this.activeIndex < this.items.length - 1) this.scrollToSlide(this.activeIndex + 1)
+        if (this.navIndex < this.items.length - 1) this.scrollToSlide(this.navIndex + 1)
         else this.onNearEnd()
     }
 
     private prevSlide(): void {
-        if (this.activeIndex > 0) this.scrollToSlide(this.activeIndex - 1)
+        if (this.navIndex > 0) this.scrollToSlide(this.navIndex - 1)
     }
 
     private onWheel(event: WheelEvent): void {
@@ -219,6 +237,7 @@ export class ScrollViewport extends LitElement {
         const index = Math.round(viewport.scrollTop / viewport.clientHeight)
         if (index !== this.activeIndex) {
             this.activeIndex = index
+            if (this.scrollRaf === null && this.scrollTimer === null) this.navIndex = index
             if (!this.activeCanPlayPause()) this.playing = false
             this.dispatchEvent(new CustomEvent('active-index-change', {
                 detail: {index},

@@ -15,6 +15,7 @@ const {classifyScrollItem} = await import('vertical-scroll-core')
 const {parseLinkList} = await import('../src/services/parse-list')
 const {toScrollItem} = await import('../src/services/to-scroll-item')
 const {parseSession, serializeSession} = await import('../src/services/session-store')
+const {watchedOEmbedIndex} = await import('../src/services/resolve-oembed')
 
 function assert(cond: unknown, msg: string): void {
     if (!cond) throw new Error(`FAIL: ${msg}`)
@@ -285,6 +286,16 @@ function assert(cond: unknown, msg: string): void {
     )
     assert(item.title === 'a funny clip', 'oembed caption is title')
     assert(item.author === 'u', 'author field set')
+}
+
+// oEmbed only the watched clip — no lookahead window
+{
+    assert(watchedOEmbedIndex(0, 10) === 0, 'first watched')
+    assert(watchedOEmbedIndex(4, 10) === 4, 'mid watched only, not 5..7')
+    assert(watchedOEmbedIndex(9, 10) === 9, 'last watched')
+    assert(watchedOEmbedIndex(10, 10) === null, 'past end')
+    assert(watchedOEmbedIndex(-1, 10) === null, 'negative')
+    assert(watchedOEmbedIndex(0, 0) === null, 'empty list')
 }
 
 // session persist / restore
