@@ -1,7 +1,7 @@
 import {getPool} from '../db.js';
 import type {FeedRow} from '../types.js';
 import {MAX_ARTICLES_PER_FEED, MAX_CONTENT_BYTES} from '../env.js';
-import {parseFeedXml} from './feed-parser.js';
+import {firstImageUrl, parseFeedXml} from './feed-parser.js';
 import {sanitizeHtml} from './sanitize.js';
 import {normalizeLink, contentEngagement} from './ranking.js';
 import {domainOf} from '../util.js';
@@ -51,8 +51,19 @@ async function insertItems(feedRow: FeedRow, items: ReturnType<typeof parseFeedX
 }
 
 function truncatedFor(item: ReturnType<typeof parseFeedXml>['items'][number]): string {
-    const html = sanitizeHtml(item.content ?? item.summary);
-    return html.length > MAX_CONTENT_BYTES ? html.slice(0, MAX_CONTENT_BYTES) : html;
+    const raw = item.content ?? item.summary ?? '';
+    const html = sanitizeHtml(raw);
+    const truncated = html.length > MAX_CONTENT_BYTES ? html.slice(0, MAX_CONTENT_BYTES) : html;
+    // Preserve the enclosure/media thumbnail without a dedicated image column:
+    // keep the previous `media wins` priority (image = media ?? firstImageUrl)
+    // by ensuring the media image is the first <img> when present.
+    if (item.media && firstImageUrl(truncated) !== item.media) {
+        const safe = sanitizeHtml(`<img src="${item.media}" alt="">`);
+        // sanitizeHtml will keep the img; prepend it outside the truncated
+        // slice so the thumbnail is never clipped by the byte cap.
+        return safe + truncated;
+    }
+    return truncated;
 }
 
 function linkInfoFor(link: string | null): {norm: string | null; domain: string | null} {
@@ -72,11 +83,11 @@ async function insertOne(client: import('pg').PoolClient, feedRow: FeedRow, item
     const engagement = engagementForItem(item, truncated);
     const articleId = makeArticleId(feedRow.id, item.guid);
     const {rows} = await client.query<{was_inserted: boolean}>(
-        `INSERT INTO articles (id, feed_id, guid, title, link, norm_link, domain, author, summary, content_html, image, comments, engagement, published_at, fetched_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-         ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, content_html=EXCLUDED.content_html, summary=EXCLUDED.summary, image=EXCLUDED.image, comments=EXCLUDED.comments, engagement=EXCLUDED.engagement, fetched_at=now()
+        `INSERT INTO articles (id, feed_id, guid, title, link, norm_link, domain, author, summary, content_html, comments, engagement, published_at, fetched_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+         ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, content_html=EXCLUDED.content_html, summary=EXCLUDED.summary, comments=EXCLUDED.comments, engagement=EXCLUDED.engagement, fetched_at=now()
          RETURNING (xmax=0) AS was_inserted`,
-        [articleId, feedRow.id, item.guid, item.title || '(untitled)', link, norm, domain, item.author ?? null, item.summary ?? '', truncated || null, item.media ?? null, item.comments ?? null, engagement, new Date(item.published), now],
+        [articleId, feedRow.id, item.guid, item.title || '(untitled)', link, norm, domain, item.author ?? null, item.summary ?? '', truncated || null, item.comments ?? null, engagement, new Date(item.published), now],
     );
     return Boolean(rows[0]?.was_inserted);
 }

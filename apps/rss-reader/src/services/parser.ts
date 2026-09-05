@@ -241,6 +241,13 @@ export function firstImageUrl(html: string | undefined): string | undefined {
     return undefined;
 }
 
+/** Thumbnail for an article card, derived at render time from content. */
+export function articleImage(article: { content?: string } & { image?: string }): string | undefined {
+    const fromContent = firstImageUrl(article.content);
+    if (fromContent) return fromContent;
+    return safeHttpUrl((article as { image?: string }).image);
+}
+
 const SAFE_TAGS = new Set([
     'p',
     'div',

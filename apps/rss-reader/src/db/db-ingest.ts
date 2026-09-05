@@ -1,5 +1,4 @@
 import {contentEngagement, hotScore} from '../services/ranking';
-import {firstImageUrl} from '../services/parser';
 import type {Article, Feed} from '../types';
 import {getDb, type ReaderDB} from './db-base';
 import type {IDBPObjectStore} from 'idb';
@@ -24,7 +23,9 @@ async function storeArticles(
     for (const article of items) {
         const existing = await store.get(article.id);
         if (existing) {
-            await store.put({...existing, ...article, read: existing.read, starred: existing.starred});
+            const merged = {...existing, ...article, read: existing.read, starred: existing.starred} as Article & { image?: string };
+            if ('image' in merged) delete merged.image;
+            await store.put(merged as Article);
         } else {
             await store.put(article);
             inserted++;
@@ -45,13 +46,14 @@ async function applyBumps(
         for (const spec of specs.values()) {
             const current = await store.get(spec.id);
             if (!current) continue;
-            await store.put({
+            const bumped = {
                 ...current,
                 popularity: current.popularity + 3,
                 engagement: contentEngagement(current) + spec.affinityBoost + spec.velocity,
                 hot: hotScore(current.popularity + 3, contentEngagement(current) + spec.affinityBoost + spec.velocity, current.published),
-                image: current.image ?? firstImageUrl(current.content),
-            });
+            } as Article & { image?: string };
+            if ('image' in bumped) delete bumped.image;
+            await store.put(bumped as Article);
         }
     }
 }
@@ -106,7 +108,9 @@ export async function upsertArticles(articles: Article[]): Promise<number> {
     for (const article of articles) {
         const existing = await tx.store.get(article.id);
         if (existing) {
-            await tx.store.put({...existing, ...article, read: existing.read, starred: existing.starred});
+            const merged = {...existing, ...article, read: existing.read, starred: existing.starred} as Article & { image?: string };
+            if ('image' in merged) delete merged.image;
+            await tx.store.put(merged as Article);
         } else {
             await tx.store.put(article);
             inserted++;

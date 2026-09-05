@@ -67,7 +67,6 @@ export interface ArticleRow {
     author: string | null;
     summary: string | null;
     content_html: string | null;
-    image: string | null;
     comments: number | null;
     published_at: Date;
     fetched_at: Date;

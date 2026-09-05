@@ -1,5 +1,5 @@
 import {html} from 'lit';
-import {safeHttpUrl} from '../../services/parser';
+import {articleImage, safeHttpUrl} from '../../services/parser';
 import {domainOf, formatDate} from '../../util';
 import type {Article} from '../../types';
 
@@ -11,7 +11,7 @@ export function detailRowTemplate(
 ) {
     const popular = article.popularity >= 4;
     const link = safeHttpUrl(article.link);
-    const image = safeHttpUrl(article.image);
+    const image = articleImage(article);
     return html`
       <div class="detail-body">
         ${image ? html`<img class="detail-img" src=${image} alt="" loading="lazy" />` : ''}
@@ -64,9 +64,10 @@ export function cardRowTemplate(
     onKey: (e: KeyboardEvent, article: Article) => void,
 ) {
     const link = safeHttpUrl(article.link);
+    const image = articleImage(article);
     return html`
       <div class="grid-card ${article.read ? 'read' : ''} ${selected ? 'selected' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}" @click=${() => onOpen(article)} @keydown=${(e: KeyboardEvent) => onKey(e, article)}>
-        ${article.image ? html`<lazy-img class="grid-card-img" .src=${article.image}></lazy-img>` : html`<div class="grid-card-img grid-card-img-empty"></div>`}
+        ${image ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>` : html`<div class="grid-card-img grid-card-img-empty"></div>`}
         <div class="grid-card-body">
           <div class="grid-card-title-row">
             ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
