@@ -691,4 +691,13 @@ assert(payload.states[1].read === false, 'migrate payload read=0 maps to false')
 assert(payload.affinity.length === 2, 'migrate payload filters aff: keys only');
 assert(payload.affinity.every((a) => a.key.startsWith('aff:')), 'migrate payload affinity keys start with aff:');
 
+// ---- image derivation (thumbnail without a dedicated column) ----
+assert(firstImageUrl('<p>hi</p><img src="https://img.example/a.jpg">') === 'https://img.example/a.jpg', 'firstImageUrl finds image in article content for card thumbnail');
+assert(firstImageUrl('<p>no img</p>') === undefined, 'firstImageUrl returns undefined when content has no image');
+assert(firstImageUrl(undefined) === undefined, 'firstImageUrl handles undefined content');
+// Browser cards derive the thumbnail from content at render time, not
+// from a persisted Article.image column.
+const contentWithEnclosure = '<img src="https://media.example/thumb.jpg" alt="">' + '<p>Body</p>';
+assert(firstImageUrl(contentWithEnclosure) === 'https://media.example/thumb.jpg', 'firstImageUrl finds prepended enclosure image');
+
 console.log('\nAll parser smoke tests passed.');

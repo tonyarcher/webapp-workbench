@@ -12,6 +12,11 @@ import {
 import {domainOf} from '../util';
 import type {Article, Feed, ParsedFeed, ParsedItem} from '../types';
 
+function withMedia(content: string | undefined, media: string | undefined): string | undefined {
+    if (media && firstImageUrl(content) !== media) return `<img src="${media}" alt="">` + (content ?? '');
+    return content;
+}
+
 function buildArticle(
     feedId: string,
     item: ParsedItem,
@@ -19,6 +24,7 @@ function buildArticle(
     engagement: number,
 ): Article {
     const normLink = item.link ? normalizeLink(item.link) : undefined;
+    const content = withMedia(item.content, item.media);
     return {
         id: `${feedId}:${item.guid}`,
         feedId,
@@ -27,7 +33,7 @@ function buildArticle(
         link: item.link,
         author: item.author,
         summary: item.summary,
-        content: item.content,
+        content,
         comments: item.comments,
         published: item.published,
         fetchedAt: Date.now(),
@@ -37,7 +43,6 @@ function buildArticle(
         popularity,
         engagement,
         hot: hotScore(popularity, engagement, item.published),
-        image: item.media ?? firstImageUrl(item.content),
     };
 }
 

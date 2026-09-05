@@ -32,11 +32,10 @@ export interface Article {
     read: 0 | 1;
     starred: boolean;
     normLink?: string;
-  comments?: number;
-  popularity: number;
-  engagement?: number;
-  hot: number;
-  image?: string;
+    comments?: number;
+    popularity: number;
+    engagement?: number;
+    hot: number;
 }
 
 export type ArticleSort = 'hot' | 'newest' | 'oldest';

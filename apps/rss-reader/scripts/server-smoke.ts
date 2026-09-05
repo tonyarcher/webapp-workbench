@@ -264,6 +264,35 @@ assert(cVelocityBonus(3, 3_600_000) === sVelocityBonus(3, 3_600_000), 'velocityB
 assert(sVelocityBonus(3, 3_600_000) > 0, 'velocityBonus rewards fresh spread');
 assert(sVelocityBonus(3, 30 * 3_600_000) === 0, 'velocityBonus decays after a day');
 
+// ---- server image derivation (no persisted image column) ----
+const {mapArticle: serverMapArticle} = await import('../server/db.js');
+const rowWithImg = {
+    id: 'id1',
+    feed_id: 'fid',
+    guid: 'g1',
+    title: 't',
+    link: null,
+    norm_link: null,
+    domain: null,
+    author: null,
+    summary: null,
+    content_html: '<p>hi</p><img src="https://img.example/a.jpg" alt="">',
+    comments: null,
+    published_at: new Date(),
+    fetched_at: new Date(),
+    popularity: 1,
+    engagement: 0,
+    hot: 0,
+} as unknown as Parameters<typeof serverMapArticle>[0];
+const mappedWithImg = serverMapArticle(rowWithImg);
+assert(mappedWithImg.image === 'https://img.example/a.jpg', 'server mapArticle derives image from content_html');
+const rowNoImg = {...rowWithImg, content_html: '<p>no image</p>'} as unknown as Parameters<typeof serverMapArticle>[0];
+assert(serverMapArticle(rowNoImg).image === undefined, 'server mapArticle yields no image when content has none');
+// Enclosure fallback: ingest prepends media img so firstImageUrl finds it;
+// mapArticle should then derive it from the prepended content_html.
+const rowEnclosure = {...rowWithImg, content_html: '<img src="https://media.example/enclosure.jpg"><p>body</p>'} as unknown as Parameters<typeof serverMapArticle>[0];
+assert(serverMapArticle(rowEnclosure).image === 'https://media.example/enclosure.jpg', 'server mapArticle finds prepended enclosure image');
+
 // ====================================================================
 // cursor roundtrip
 // ====================================================================

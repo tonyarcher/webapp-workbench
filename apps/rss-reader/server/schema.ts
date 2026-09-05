@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS articles (
   author text,
   summary text,
   content_html text,
-  image text,
   comments integer,
   published_at timestamptz NOT NULL,
   fetched_at timestamptz NOT NULL DEFAULT now(),

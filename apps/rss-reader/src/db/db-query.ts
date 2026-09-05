@@ -1,6 +1,5 @@
 import type {IDBPCursorWithValue} from 'idb';
 import {contentEngagement, hotScore} from '../services/ranking';
-import {firstImageUrl} from '../services/parser';
 import type {Article} from '../types';
 import {getDb} from './db-base';
 import type {ReaderDB} from './db-base';
@@ -124,7 +123,7 @@ export async function queryTodayArticles(since: number, maxScan = 10_000): Promi
     return out;
 }
 
-export const HOT_VERSION = 4;
+export const HOT_VERSION = 5;
 
 export async function recomputeHotIfNeeded(): Promise<void> {
     const db = await getDb();
@@ -138,12 +137,12 @@ async function recomputeAllHot(db: Awaited<ReturnType<typeof getDb>>) {
     const articleStore = tx.objectStore('articles');
     let cursor = await articleStore.openCursor();
     while (cursor) {
-        const article = cursor.value;
+        const article = cursor.value as Article & { image?: string };
         const engagement = article.engagement ?? contentEngagement(article);
         article.engagement = engagement;
         article.hot = hotScore(article.popularity, engagement, article.published);
-        article.image ??= firstImageUrl(article.content);
-        await cursor.update(article);
+        if ('image' in article) delete (article as { image?: string }).image;
+        await cursor.update(article as Article);
         cursor = await cursor.continue();
     }
     await tx.objectStore('meta').put({key: 'hot-version', value: HOT_VERSION});

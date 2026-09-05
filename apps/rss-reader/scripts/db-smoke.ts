@@ -595,6 +595,50 @@ async function main() {
     const none = await queryTodayArticles(tNow + 86_400_000);
     assert(none.length === 0, 'queryTodayArticles returns nothing for a future cutoff');
 
+    // ---- image is derived from content, not a persisted column ----
+    await resetDb();
+    const feedImg: Feed = {...feedA, id: 'feed-img', title: 'Feed Img'};
+    await putFeed(feedImg);
+    const parsedImg: ParsedFeed = {
+        title: 'Feed Img',
+        items: [
+            {
+                guid: 'img-1',
+                title: 'With image',
+                link: 'https://example.com/img-1',
+                content: '<p>Hello</p><img src="https://img.example/thumb.jpg" alt="">',
+                published: Date.now(),
+            },
+            {
+                guid: 'img-2',
+                title: 'Enclosure only',
+                link: 'https://example.com/img-2',
+                content: '<p>No image in body</p>',
+                media: 'https://media.example/enclosure.jpg',
+                published: Date.now() - 1000,
+            },
+        ],
+    };
+    const rImg = await ingestFeed(feedImg, parsedImg, feedImg, false);
+    assert(rImg.inserted === 2, 'image derivation ingest inserts both items');
+    const storedWithImg = await (await getDb()).get('articles', 'feed-img:img-1');
+    assert(!('image' in (storedWithImg as unknown as Record<string, unknown>)) || (storedWithImg as unknown as {image?: string}).image === undefined, 'stored article has no persisted image column (derived at render)');
+    const {firstImageUrl: cFirst} = await import('../src/services/parser.js');
+    assert(cFirst(storedWithImg!.content) === 'https://img.example/thumb.jpg', 'thumbnail derived from content via firstImageUrl');
+    const storedEnclosure = await (await getDb()).get('articles', 'feed-img:img-2');
+    assert(cFirst(storedEnclosure!.content)?.includes('enclosure.jpg') ?? false, 'enclosure media prepended to content so firstImageUrl finds it');
+    assert(!('image' in (storedEnclosure as unknown as Record<string, unknown>)) || (storedEnclosure as unknown as {image?: string}).image === undefined, 'enclosure article also has no persisted image column');
+
+    // recomputeHotIfNeeded must clean legacy image fields and bump HOT_VERSION
+    await (await getDb()).put('articles', {...storedWithImg!, image: 'https://legacy.example/old.jpg'} as unknown as Article);
+    await (await getDb()).put('meta', {key: 'hot-version', value: 4});
+    const {recomputeHotIfNeeded} = await import('../src/db/db-query.js');
+    await recomputeHotIfNeeded();
+    const cleaned = await (await getDb()).get('articles', 'feed-img:img-1');
+    assert(!('image' in (cleaned as unknown as Record<string, unknown>)), 'recomputeHotIfNeeded removes legacy image field');
+    const hv = await (await getDb()).get('meta', 'hot-version');
+    assert((hv?.value as number) === 5, 'HOT_VERSION bumped to 5 after image column removal');
+
     await resetDb();
     console.log('\nAll db smoke tests passed.');
 }
