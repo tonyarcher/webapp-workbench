@@ -18,6 +18,8 @@ import {
   runnerOnBaseName,
   scorebookSlots,
 } from './game-shell-helpers';
+import { WatchRunner } from './watch-runner';
+import { renderWatchTransport } from './watch-transport';
 
 const HIT_EVENT_TYPES = new Set(['SINGLE', 'DOUBLE', 'TRIPLE', 'HOME_RUN']);
 const DOUBLE_PLAY_EVENT_TYPES = new Set(['GROUNDOUT', 'LINE_OUT']);
@@ -58,6 +60,14 @@ export class BaseballGameShell extends LitElement {
   private pendingBaseLabel = '';
   private lastEventKey = '';
   private currentPitchType = '';
+  private readonly watch = new WatchRunner({
+    getGame: () => this.store?.current() ?? this.game,
+    record: (type, detail) => this.record(type, detail),
+    flush: () => {
+      void this.store?.flushPersist();
+    },
+    onChange: () => this.requestUpdate(),
+  });
 
   private containerRef = createRef<HTMLDivElement>();
   private scrollRef = createRef<HTMLDivElement>();
@@ -80,9 +90,11 @@ export class BaseballGameShell extends LitElement {
       root.addEventListener('pitch-type-selected', this.handlePitchTypeSelected);
     }
     this.ensureVirtualizer();
+    this.watch.maybeAutoStart(this.isWatch());
   }
 
   disconnectedCallback() {
+    this.watch.reset();
     const root = this.containerRef.value;
     if (root) this.removeAllListeners(root);
     this.virtualizerCleanup?.();
@@ -105,6 +117,7 @@ export class BaseballGameShell extends LitElement {
   }
 
   updated() {
+    this.watch.maybeAutoStart(this.isWatch());
     this.ensureVirtualizer();
     this.virtualizer?._willUpdate();
     const count = this.visibleEvents().length;
@@ -152,12 +165,35 @@ export class BaseballGameShell extends LitElement {
     this.virtualizerCleanup = this.virtualizer._didMount();
   }
 
+  private isWatch(): boolean {
+    return this.game?.setup.mode === 'watch';
+  }
+
+  private onSimPlay = () => {
+    void this.watch.play(this.isWatch());
+  };
+
+  private onSimPause = () => {
+    this.watch.pause();
+  };
+
+  private onSimSpeed = (event: Event) => {
+    this.watch.speed = Number((event.target as HTMLSelectElement).value);
+  };
+
+  private onSimAnimations = (event: Event) => {
+    this.watch.animations = (event.target as HTMLInputElement).checked;
+    this.requestUpdate();
+  };
+
   private handleTriggerScoringEvent = (event: Event) => {
+    if (this.isWatch()) return;
     const detail = ((event as CustomEvent).detail ?? {}) as Record<string, unknown>;
     this.recordOnce(event, String(detail.eventType ?? 'trigger-scoring-event'), detail);
   };
 
   private handleRenderStep2 = (event: Event) => {
+    if (this.isWatch()) return;
     const detail = ((event as CustomEvent).detail ?? {}) as Record<string, unknown>;
     const eventType = String(detail.eventType ?? '');
     this.pendingEventType = eventType;
@@ -170,6 +206,7 @@ export class BaseballGameShell extends LitElement {
   };
 
   private handleLocationSelected = (event: Event) => {
+    if (this.isWatch()) return;
     const detail = ((event as CustomEvent).detail ?? {}) as Record<string, unknown>;
     const eventType = this.pendingEventType;
     const baseLabel = this.pendingBaseLabel;
@@ -188,6 +225,7 @@ export class BaseballGameShell extends LitElement {
   };
 
   private handleOpenLineupSetup = () => {
+    if (this.isWatch()) return;
     this.lineupOpen = true;
     this.requestUpdate();
   };
@@ -198,8 +236,12 @@ export class BaseballGameShell extends LitElement {
   };
 
   private handleSaveLineupSetup = (event: Event) => {
-    const detail = ((event as CustomEvent).detail ?? {}) as Record<string, unknown>;
     this.lineupOpen = false;
+    if (this.isWatch()) {
+      this.requestUpdate();
+      return;
+    }
+    const detail = ((event as CustomEvent).detail ?? {}) as Record<string, unknown>;
     this.record('SET_LINEUP', {
       homeLineup: editorPlayersToLineup(detail.homeLineup),
       awayLineup: editorPlayersToLineup(detail.awayLineup),
@@ -253,21 +295,42 @@ export class BaseballGameShell extends LitElement {
   };
 
   private onUndo = () => {
+    if (this.watch.playing) return;
     this.store?.undo();
   };
 
   private onRedo = () => {
+    if (this.watch.playing) return;
     this.store?.redo();
   };
 
   private onNewGame = () => {
+    this.watch.reset();
     this.store?.newGame();
   };
 
   render() {
     const game = this.game;
     if (!game) return nothing;
-    return html` <main class="local-shell">${this.renderContainer(game)} ${this.renderEventLog(game)}</main> `;
+    return html` <main class="local-shell">${this.renderSimTransport()} ${this.renderContainer(game)} ${this.renderEventLog(game)}</main> `;
+  }
+
+  private renderSimTransport() {
+    const setup = this.game?.setup;
+    return renderWatchTransport({
+      enabled: this.isWatch(),
+      over: Boolean(this.game?.engine.over),
+      playing: this.watch.playing,
+      awayName: setup?.awayTeamName ?? '',
+      homeName: setup?.homeTeamName ?? '',
+      activePlayJson: this.watch.activePlayJson,
+      speed: this.watch.speed,
+      animations: this.watch.animations,
+      onPlay: this.onSimPlay,
+      onPause: this.onSimPause,
+      onSpeed: this.onSimSpeed,
+      onAnimations: this.onSimAnimations,
+    });
   }
 
   private renderContainer(game: LiveLocalGameState) {
@@ -276,7 +339,11 @@ export class BaseballGameShell extends LitElement {
     const currentPitcher = pitchingPitcherName(engine);
     return html`
       <div ${ref(this.containerRef)}>
-        <baseball-scorer-tab away-name=${setup.awayTeamName} home-name=${setup.homeTeamName}>
+        <baseball-scorer-tab
+          ?watch=${this.isWatch()}
+          away-name=${setup.awayTeamName}
+          home-name=${setup.homeTeamName}
+        >
           <div slot="scoreboard">${this.renderScoreboardSlot(game, currentBatter, currentPitcher)}</div>
           <div slot="controls">${this.renderControlsSlot(engine, currentBatter, currentPitcher)}</div>
           <div slot="scorebook">${this.renderScorebookSlot(engine, setup)}</div>
@@ -289,7 +356,12 @@ export class BaseballGameShell extends LitElement {
   private renderScoreboardSlot(game: LiveLocalGameState, currentBatter: string, currentPitcher: string) {
     const gameJson = this.buildGameJson(game, currentBatter, currentPitcher);
     const boxScoreJson = this.buildBoxScoreJson(game);
-    return html`<baseball-scoreboard game-json=${JSON.stringify(gameJson)} box-score-json=${JSON.stringify(boxScoreJson)} />`;
+    return html`<baseball-scoreboard
+      game-json=${JSON.stringify(gameJson)}
+      box-score-json=${JSON.stringify(boxScoreJson)}
+      sim-playing=${this.watch.playing ? 'true' : 'false'}
+      animations=${this.watch.animations ? 'true' : 'false'}
+    />`;
   }
 
   private buildGameJson(game: LiveLocalGameState, currentBatter: string, currentPitcher: string) {
@@ -353,6 +425,9 @@ export class BaseballGameShell extends LitElement {
         step2-label=${this.step2Label}
         ?step2-is-hit=${this.step2IsHit}
         ?step2-double-play-available=${this.step2DoublePlayAvailable}
+        interactive=${this.isWatch() ? 'false' : 'true'}
+        animations=${this.watch.animations ? 'true' : 'false'}
+        active-play-json=${this.watch.activePlayJson}
       ></baseball-scoring-controls>
     `;
   }
@@ -404,8 +479,8 @@ export class BaseballGameShell extends LitElement {
     return html`
       <div class="event-log-header">
         <h2>Play-by-Play <span class="engine-badge" data-testid="engine-state-badge">${engineBadge(engine)}</span></h2>
-        <button class="btn btn-secondary" ?disabled=${!canUndo} @click=${this.onUndo} data-testid="undo-button">Undo</button>
-        <button class="btn btn-secondary" ?disabled=${!canRedo} @click=${this.onRedo} data-testid="redo-button">Redo</button>
+        <button class="btn btn-secondary" ?disabled=${!canUndo || this.watch.playing} @click=${this.onUndo} data-testid="undo-button">Undo</button>
+        <button class="btn btn-secondary" ?disabled=${!canRedo || this.watch.playing} @click=${this.onRedo} data-testid="redo-button">Redo</button>
         <button class="btn btn-secondary" @click=${this.onExportScorebook} data-testid="export-scorebook-button">Export Scorebook (PDF)</button>
         <button class="btn btn-secondary" @click=${this.onBoxScore} data-testid="box-score-button">Box Score</button>
         <button class="btn btn-secondary" @click=${this.onNewGame} data-testid="new-game-button">New Game</button>

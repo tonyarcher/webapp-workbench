@@ -94,3 +94,32 @@
     background: rgba(255, 42, 59, 0.15);
     border-color: var(--accent-red, #ff2a3b);
 }
+
+.btn.sim-press {
+    background: rgba(255, 204, 0, 0.22);
+    border-color: var(--accent-yellow, #ffcc00);
+    box-shadow: 0 0 16px rgba(255, 204, 0, 0.35);
+    transform: translateY(1px) scale(0.98);
+    color: var(--text-primary, #f5f7fa);
+}
+
+:host([interactive='false']) .btn {
+    cursor: default;
+}
+
+:host([interactive='false']) .btn:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+:host([animations='false']) .btn.sim-press {
+    transform: none;
+    transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn.sim-press {
+        transform: none;
+        transition: none;
+    }
+}

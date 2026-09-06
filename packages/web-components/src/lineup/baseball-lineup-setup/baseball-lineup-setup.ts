@@ -112,6 +112,7 @@ export class BaseballLineupSetup extends LitElement {
     @property({type: String, attribute: 'variant'}) variant: 'modal' | 'embedded' = 'modal';
     @property({type: String, attribute: 'home-pitcher-name'}) homePitcherName = '';
     @property({type: String, attribute: 'away-pitcher-name'}) awayPitcherName = '';
+    @property({type: Number, attribute: 'sync-token'}) syncToken = 0;
 
     @property({
         type: Array,
@@ -157,23 +158,24 @@ export class BaseballLineupSetup extends LitElement {
     }
 
     protected willUpdate(changed: PropertyValues<this>) {
-        if (!this.hasUpdated) {
-            this.syncDraftFromProps();
-            return;
-        }
-        if (this.variant === 'modal' && changed.has('isOpen') && this.isOpen) {
-            this.syncDraftFromProps();
-            this.errors = [];
-            return;
-        }
-        const lineupChanged =
+        if (!this.shouldSyncDraft(changed)) return;
+        this.syncDraftFromProps();
+        if (this.hasUpdated) this.errors = [];
+    }
+
+    private shouldSyncDraft(changed: PropertyValues<this>): boolean {
+        if (!this.hasUpdated || changed.has('syncToken')) return true;
+        if (this.variant === 'modal' && changed.has('isOpen') && this.isOpen) return true;
+        return this.lineupPropsChanged(changed) && !this.hasDraftEdits();
+    }
+
+    private lineupPropsChanged(changed: PropertyValues<this>): boolean {
+        return (
             changed.has('homeLineup') ||
             changed.has('awayLineup') ||
             changed.has('homePitcherName') ||
-            changed.has('awayPitcherName');
-        if (lineupChanged && !this.hasDraftEdits()) {
-            this.syncDraftFromProps();
-        }
+            changed.has('awayPitcherName')
+        );
     }
 
     protected firstUpdated() {

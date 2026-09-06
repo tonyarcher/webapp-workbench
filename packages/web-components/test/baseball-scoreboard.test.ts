@@ -109,4 +109,11 @@ describe('BaseballScoreboard', () => {
 
     expect(element.shadowRoot!.textContent).to.include('GROUNDOUT · DOUBLE PLAY');
   });
+
+  it('marks last play as live when sim-playing is true', async () => {
+    element.setAttribute('sim-playing', 'true');
+    await element.updateComplete;
+    const lastPlay = element.shadowRoot!.querySelector('[data-testid="last-play"]') as HTMLElement;
+    expect(lastPlay.classList.contains('sim-live')).to.equal(true);
+  });
 });

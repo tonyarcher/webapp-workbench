@@ -60,6 +60,28 @@ describe('Scoring Components', () => {
       expect(eventType).to.equal('BALL');
     });
 
+    it('highlights the matching action from active-play-json without emitting', async () => {
+      element.setAttribute('active-play-json', JSON.stringify({eventType: 'BALL', pitchType: 'Slider'}));
+      await element.updateComplete;
+      const shadow = element.shadowRoot!;
+      const ball = shadow.querySelector('[data-action="BALL"]') as HTMLElement;
+      const slider = shadow.querySelector('[data-pitch-type="Slider"]') as HTMLElement;
+      expect(ball.classList.contains('sim-press')).to.equal(true);
+      expect(slider.classList.contains('sim-press')).to.equal(true);
+    });
+
+    it('does not emit scoring events when interactive is false', async () => {
+      element.setAttribute('interactive', 'false');
+      await element.updateComplete;
+      let eventType = '';
+      element.addEventListener('trigger-scoring-event', (e: any) => {
+        eventType = e.detail?.eventType || '';
+      });
+      const ballBtn = element.shadowRoot!.querySelector('.btn-ball') as HTMLElement;
+      ballBtn.click();
+      expect(eventType).to.equal('');
+    });
+
     it('emits render-step2 when hit button is clicked', async () => {
       let step2Event = '';
       let step2Label = '';
@@ -251,6 +273,15 @@ describe('Scoring Components', () => {
 
       const shadow = element.shadowRoot!;
       expect(shadow.textContent).to.include('Live Scoring: Cubs @ Sox');
+    });
+
+    it('renders watching header when watch is set', async () => {
+      element.setAttribute('away-name', 'Cubs');
+      element.setAttribute('home-name', 'Sox');
+      element.setAttribute('watch', '');
+      await element.updateComplete;
+      expect(element.shadowRoot!.textContent).to.include('Watching: Cubs @ Sox');
+      expect(element.shadowRoot!.textContent).to.not.include('Setup Lineups');
     });
 
     it('displays empty state when no-game attribute is set', async () => {

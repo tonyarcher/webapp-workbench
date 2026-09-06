@@ -12,6 +12,7 @@ export class BaseballScorerTab extends LitElement {
     @property({type: String, attribute: 'away-name'}) awayName = '';
     @property({type: String, attribute: 'home-name'}) homeName = '';
     @property({type: Boolean, attribute: 'no-game'}) noGame = false;
+    @property({type: Boolean, attribute: 'watch'}) watch = false;
 
     render() {
         if (this.noGame) {
@@ -25,8 +26,8 @@ export class BaseballScorerTab extends LitElement {
 
         return html`
             <div class="header-row">
-                <h1>Live Scoring: ${this.awayName} @ ${this.homeName}</h1>
-                <button class="btn btn-secondary" @click=${this.onOpenLineupSetup}>Setup Lineups</button>
+                <h1 data-testid="scorer-heading">${this.watch ? 'Watching' : 'Live Scoring'}: ${this.awayName} @ ${this.homeName}</h1>
+                ${this.watch ? '' : html`<button class="btn btn-secondary" @click=${this.onOpenLineupSetup}>Setup Lineups</button>`}
             </div>
             <div class="scorer-top-grid">
                 <slot name="scoreboard"></slot>

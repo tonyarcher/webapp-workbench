@@ -102,6 +102,17 @@ describe('BaseballLineupSetup', () => {
     expect(getComputedStyle(element).display).to.equal('none');
   });
 
+  it('resyncs drafts when sync-token changes', async () => {
+    element.setAttribute('variant', 'embedded');
+    element.setAttribute('away-lineup-json', JSON.stringify([{ id: 1, name: 'Old Name', jerseyNumber: 1, position: 'CF' }]));
+    await element.updateComplete;
+    element.setAttribute('away-lineup-json', JSON.stringify([{ id: 1, name: 'New Name', jerseyNumber: 8, position: 'CF' }]));
+    element.setAttribute('sync-token', '2');
+    await element.updateComplete;
+    const awayName = element.shadowRoot!.querySelector('[data-testid="away-slot-1-name"]') as HTMLInputElement;
+    expect(awayName.value).to.equal('New Name');
+  });
+
   it('becomes a full-screen overlay only when open', async () => {
     element.setAttribute('is-open', '');
     await element.updateComplete;
