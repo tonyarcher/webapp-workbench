@@ -1,8 +1,12 @@
+import type { SimRoster } from '../sim/types';
+
 export interface LineupPlayer {
   batterName: string;
   position: string;
   jerseyNumber?: number;
 }
+
+export type LocalGameMode = 'score' | 'watch';
 
 export interface LocalGameSetup {
   homeTeamName: string;
@@ -12,6 +16,10 @@ export interface LocalGameSetup {
   awayLineup?: LineupPlayer[];
   homePitcherName?: string;
   awayPitcherName?: string;
+  mode?: LocalGameMode;
+  simSeed?: number;
+  homeRoster?: SimRoster;
+  awayRoster?: SimRoster;
 }
 
 export interface LocalGameEventRecord {

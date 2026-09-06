@@ -8,6 +8,9 @@ import {
   DEFAULT_HOME_PITCHER,
   toLineupPlayers,
 } from './default-lineups';
+import { generateMatchup, lineupFromRoster, rosterFromLineup } from '../sim/generate-roster';
+import { mulberry32 } from '../sim/rng';
+import type { SimRoster } from '../sim/types';
 
 interface EditorPlayer {
   name?: string;
@@ -63,15 +66,26 @@ function resolveJersey(player: EditorPlayer, fallback: LineupPlayer | undefined)
   return Number(player.jerseyNumber ?? fallback?.jerseyNumber ?? 0);
 }
 
+function nextSeed(): number {
+  return Math.floor(Math.random() * 1_000_000_000);
+}
+
 export class BaseballSetupScreen extends LitElement {
   createRenderRoot() {
     return this;
   }
 
+  private homeTeam = DEFAULT_GAME_SETUP.homeTeamName;
+  private awayTeam = DEFAULT_GAME_SETUP.awayTeamName;
+  private innings = DEFAULT_GAME_SETUP.innings;
   private pendingHomeLineup = toLineupPlayers(DEFAULT_HOME_LINEUP);
   private pendingAwayLineup = toLineupPlayers(DEFAULT_AWAY_LINEUP);
   private pendingHomePitcher = DEFAULT_HOME_PITCHER;
   private pendingAwayPitcher = DEFAULT_AWAY_PITCHER;
+  private homeRoster: SimRoster | undefined;
+  private awayRoster: SimRoster | undefined;
+  private simSeed = nextSeed();
+  private lineupSyncToken = 0;
 
   private handleLineupChange = (event: Event) => {
     const detail = ((event as CustomEvent).detail ?? {}) as LineupDraftDetail;
@@ -85,26 +99,67 @@ export class BaseballSetupScreen extends LitElement {
     }
   };
 
+  private handleGenerate = () => {
+    this.simSeed = nextSeed();
+    const matchup = generateMatchup(mulberry32(this.simSeed));
+    this.awayTeam = matchup.away.teamName;
+    this.homeTeam = matchup.home.teamName;
+    this.awayRoster = matchup.away;
+    this.homeRoster = matchup.home;
+    this.pendingAwayLineup = lineupFromRoster(matchup.away);
+    this.pendingHomeLineup = lineupFromRoster(matchup.home);
+    this.pendingAwayPitcher = matchup.away.pitcher.name;
+    this.pendingHomePitcher = matchup.home.pitcher.name;
+    this.lineupSyncToken += 1;
+    this.requestUpdate();
+  };
+
   private handleSubmit = (event: Event) => {
     event.preventDefault();
-    const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
-    const home = String(formData.get('home-team') ?? '');
-    const away = String(formData.get('away-team') ?? '');
-    const innings = Number(formData.get('innings') ?? DEFAULT_GAME_SETUP.innings);
+    this.emitStart('score');
+  };
+
+  private handleWatch = () => {
+    this.emitStart('watch');
+  };
+
+  private emitStart(mode: LocalGameSetup['mode']) {
+    const setup = this.buildSetup(mode);
+    this.dispatchEvent(new CustomEvent<LocalGameSetup>('start-game', { detail: setup, bubbles: true, composed: true }));
+  }
+
+  private buildSetup(mode: LocalGameSetup['mode']): LocalGameSetup {
     const setup: LocalGameSetup = {
-      homeTeamName: home.trim() || DEFAULT_GAME_SETUP.homeTeamName,
-      awayTeamName: away.trim() || DEFAULT_GAME_SETUP.awayTeamName,
-      innings: Math.min(9, Math.max(1, innings || DEFAULT_GAME_SETUP.innings)),
+      homeTeamName: this.homeTeam.trim() || DEFAULT_GAME_SETUP.homeTeamName,
+      awayTeamName: this.awayTeam.trim() || DEFAULT_GAME_SETUP.awayTeamName,
+      innings: Math.min(9, Math.max(1, this.innings || DEFAULT_GAME_SETUP.innings)),
       homeLineup: this.pendingHomeLineup,
       awayLineup: this.pendingAwayLineup,
       homePitcherName: this.pendingHomePitcher,
       awayPitcherName: this.pendingAwayPitcher,
+      mode,
     };
-    this.dispatchEvent(
-      new CustomEvent<LocalGameSetup>('start-game', { detail: setup, bubbles: true, composed: true })
-    );
-  };
+    if (mode === 'watch') this.attachWatchRosters(setup);
+    return setup;
+  }
+
+  private attachWatchRosters(setup: LocalGameSetup) {
+    const rosters = this.rostersForStart();
+    setup.simSeed = this.simSeed;
+    setup.homeRoster = rosters.home;
+    setup.awayRoster = rosters.away;
+  }
+
+  private rostersForStart(): { home: SimRoster; away: SimRoster } {
+    if (this.homeRoster && this.awayRoster) {
+      return { home: this.homeRoster, away: this.awayRoster };
+    }
+    const random = mulberry32(this.simSeed);
+    return {
+      away: rosterFromLineup(random, this.awayTeam, this.pendingAwayLineup, this.pendingAwayPitcher),
+      home: rosterFromLineup(random, this.homeTeam, this.pendingHomeLineup, this.pendingHomePitcher),
+    };
+  }
 
   render() {
     return html`
@@ -112,8 +167,7 @@ export class BaseballSetupScreen extends LitElement {
         <div class="card">
           <h1>⚾ Grand Slam Baseball — Local Game Setup</h1>
           <p class="text-muted">
-            Everything runs entirely in your browser. Set the batting orders before first pitch — names, numbers, and
-            positions actually stick.
+            Score a game yourself, or generate teams and watch a simulated match. Everything runs in your browser.
           </p>
           ${this.renderForm()}
         </div>
@@ -125,19 +179,59 @@ export class BaseballSetupScreen extends LitElement {
     return html`
       <form class="local-setup-form" @submit=${this.handleSubmit}>
         ${this.renderTeamInputs()} ${this.renderLineupEditor()}
-        <button type="submit" class="btn btn-primary" data-testid="start-game-button">Start Local Game</button>
+        <div class="setup-actions">
+          <button type="button" class="btn btn-secondary" data-testid="generate-teams-button" @click=${this.handleGenerate}>
+            Generate Teams
+          </button>
+          <button type="submit" class="btn btn-primary" data-testid="start-game-button">Start Local Game</button>
+          <button type="button" class="btn btn-primary" data-testid="watch-game-button" @click=${this.handleWatch}>
+            Watch Simulated Game
+          </button>
+        </div>
       </form>
     `;
   }
 
   private renderTeamInputs() {
     return html`
-      <label for="home-team-input">Home Team</label>
-      <input id="home-team-input" data-testid="home-team-input" name="home-team" value="${DEFAULT_GAME_SETUP.homeTeamName}" />
-      <label for="away-team-input">Away Team</label>
-      <input id="away-team-input" data-testid="away-team-input" name="away-team" value="${DEFAULT_GAME_SETUP.awayTeamName}" />
+      ${this.renderTextField('home-team', 'Home Team', this.homeTeam, (value) => {
+        this.homeTeam = value;
+      })}
+      ${this.renderTextField('away-team', 'Away Team', this.awayTeam, (value) => {
+        this.awayTeam = value;
+      })}
+      ${this.renderInningsField()}
+    `;
+  }
+
+  private renderTextField(name: string, label: string, value: string, onChange: (value: string) => void) {
+    return html`
+      <label for="${name}-input">${label}</label>
+      <input
+        id="${name}-input"
+        data-testid="${name}-input"
+        name=${name}
+        .value=${value}
+        @input=${(event: Event) => onChange((event.target as HTMLInputElement).value)}
+      />
+    `;
+  }
+
+  private renderInningsField() {
+    return html`
       <label for="innings-input">Innings</label>
-      <input id="innings-input" data-testid="innings-input" name="innings" type="number" min="1" max="9" value="${DEFAULT_GAME_SETUP.innings}" />
+      <input
+        id="innings-input"
+        data-testid="innings-input"
+        name="innings"
+        type="number"
+        min="1"
+        max="9"
+        .value=${String(this.innings)}
+        @input=${(event: Event) => {
+          this.innings = Number((event.target as HTMLInputElement).value);
+        }}
+      />
     `;
   }
 
@@ -145,12 +239,13 @@ export class BaseballSetupScreen extends LitElement {
     return html`
       <baseball-lineup-setup
         variant="embedded"
-        home-team-name=${DEFAULT_GAME_SETUP.homeTeamName}
-        away-team-name=${DEFAULT_GAME_SETUP.awayTeamName}
-        home-pitcher-name=${DEFAULT_HOME_PITCHER}
-        away-pitcher-name=${DEFAULT_AWAY_PITCHER}
-        home-lineup-json=${toEditorJson(toLineupPlayers(DEFAULT_HOME_LINEUP))}
-        away-lineup-json=${toEditorJson(toLineupPlayers(DEFAULT_AWAY_LINEUP))}
+        sync-token=${String(this.lineupSyncToken)}
+        home-team-name=${this.homeTeam}
+        away-team-name=${this.awayTeam}
+        home-pitcher-name=${this.pendingHomePitcher}
+        away-pitcher-name=${this.pendingAwayPitcher}
+        home-lineup-json=${toEditorJson(this.pendingHomeLineup)}
+        away-lineup-json=${toEditorJson(this.pendingAwayLineup)}
         @lineup-change=${this.handleLineupChange}
       ></baseball-lineup-setup>
     `;

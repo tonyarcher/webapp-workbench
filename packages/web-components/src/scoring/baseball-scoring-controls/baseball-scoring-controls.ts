@@ -36,6 +36,23 @@ export class BaseballScoringControls extends LitElement {
     @property({type: String, attribute: 'step2-label'}) step2Label = '';
     @property({type: Boolean, attribute: 'step2-is-hit'}) step2IsHit = false;
     @property({type: Boolean, attribute: 'step2-double-play-available'}) step2DoublePlayAvailable = false;
+    @property({type: String, attribute: 'active-play-json'}) activePlayJson = '';
+    @property({
+        attribute: 'interactive',
+        converter: {
+            fromAttribute: (value: string | null) => value !== 'false',
+            toAttribute: (value: boolean) => (value ? 'true' : 'false'),
+        },
+    })
+    interactive = true;
+    @property({
+        attribute: 'animations',
+        converter: {
+            fromAttribute: (value: string | null) => value !== 'false',
+            toAttribute: (value: boolean) => (value ? 'true' : 'false'),
+        },
+    })
+    animations = true;
 
     render() {
         return this.gameStatus === 'completed'
@@ -103,7 +120,12 @@ export class BaseballScoringControls extends LitElement {
 
     private renderActionGrid() {
         return html`
-          <baseball-action-grid current-pitch-type=${this.currentPitchType}></baseball-action-grid>
+          <baseball-action-grid
+              current-pitch-type=${this.currentPitchType}
+              active-play-json=${this.activePlayJson}
+              interactive=${this.interactive ? 'true' : 'false'}
+              animations=${this.animations ? 'true' : 'false'}
+          ></baseball-action-grid>
         `;
     }
 

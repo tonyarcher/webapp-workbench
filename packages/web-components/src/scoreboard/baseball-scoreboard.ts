@@ -33,6 +33,24 @@ export class BaseballScoreboard extends LitElement {
     @property({type: String, attribute: 'runner-third-name'}) runnerThirdName = '';
 
     @property({type: String, attribute: 'last-play'}) lastPlay = '';
+    @property({
+        attribute: 'sim-playing',
+        converter: {
+            fromAttribute: (value: string | null) => value === 'true' || value === '',
+            toAttribute: (value: boolean) => (value ? 'true' : 'false'),
+        },
+        reflect: true,
+    })
+    simPlaying = false;
+    @property({
+        attribute: 'animations',
+        converter: {
+            fromAttribute: (value: string | null) => value !== 'false',
+            toAttribute: (value: boolean) => (value ? 'true' : 'false'),
+        },
+        reflect: true,
+    })
+    animations = true;
 
     @property({
         type: String,
@@ -59,7 +77,7 @@ export class BaseballScoreboard extends LitElement {
         return html`
             <div class="scoreboard-led">
                 ${this.renderHeader(vm)} ${this.renderTeamRows(vm)} ${this.renderCountRow(vm)}
-                <div class="last-play-display" data-testid="last-play">${vm.lastPlay}</div>
+                <div class="last-play-display ${this.simPlaying ? 'sim-live' : ''}" data-testid="last-play">${vm.lastPlay}</div>
                 ${this.renderDiamond(vm)} ${this.renderRunnerNames(vm)}
             </div>
         `;

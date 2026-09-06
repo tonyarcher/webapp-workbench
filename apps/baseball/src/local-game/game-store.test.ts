@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import 'fake-indexeddb/auto';
 import { GameStore } from './game-store';
 import { DEFAULT_AWAY_PITCHER, DEFAULT_HOME_PITCHER } from './default-lineups';
+import { loadGameState } from './save-state';
 
 describe('GameStore lineups', () => {
   it('starts a game with the custom batting orders from setup', () => {
@@ -73,5 +74,32 @@ describe('GameStore lineups', () => {
     const rows = store.current()?.engine.awayLineup.rows ?? [];
     expect(rows[0]?.batterName).toBe('Brendan Donovan');
     expect(rows[1]?.batterName).toBe('Steve Finley');
+  });
+});
+
+describe('GameStore watch-mode persist', () => {
+  it('debounces IndexedDB writes until flushPersist', async () => {
+    const store = new GameStore();
+    store.startGame({ homeTeamName: 'Cubs', awayTeamName: 'Padres', innings: 9, mode: 'watch' });
+    store.recordEvent({ id: 1, eventType: 'BALL', occurredAt: '2026-09-06T00:00:00.000Z', detail: {} });
+    expect(store.hasPendingPersist).toBe(true);
+    expect(store.current()?.events).toHaveLength(1);
+    await store.flushPersist();
+    expect(store.hasPendingPersist).toBe(false);
+    const saved = await loadGameState();
+    expect(saved?.events).toHaveLength(1);
+    expect(saved?.setup.mode).toBe('watch');
+  });
+
+  it('persists score-mode events immediately', async () => {
+    const store = new GameStore();
+    store.startGame({ homeTeamName: 'Cubs', awayTeamName: 'Padres', innings: 9 });
+    store.recordEvent({ id: 1, eventType: 'BALL', occurredAt: '2026-09-06T00:00:00.000Z', detail: {} });
+    expect(store.hasPendingPersist).toBe(false);
+    await store.flushPersist();
+    const saved = await loadGameState();
+    expect(saved?.events).toHaveLength(1);
+    expect(saved?.setup.mode).toBeUndefined();
+    expect(saved?.setup.homeRoster).toBeUndefined();
   });
 });

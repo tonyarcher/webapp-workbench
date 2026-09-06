@@ -44,6 +44,65 @@
   font-size: 1rem;
 }
 
+.setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.sim-transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  position: relative;
+}
+
+.sim-last-play {
+  font-weight: 700;
+  color: var(--accent-green, #00b050);
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.sim-active-play {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.sim-badge {
+  font-family: 'Share Tech Mono', monospace;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--accent-yellow, #ffcc00);
+  background: rgba(255, 204, 0, 0.12);
+  border: 1px solid rgba(255, 204, 0, 0.35);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+}
+
+.sim-speed-label,
+.sim-anim-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.sim-speed-label select {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  font-family: inherit;
+}
+
 .local-shell {
   display: flex;
   flex-direction: column;

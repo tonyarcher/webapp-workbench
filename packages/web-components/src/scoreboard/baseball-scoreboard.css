@@ -58,6 +58,28 @@
     letter-spacing: 0.5px;
 }
 
+.last-play-display.sim-live {
+    box-shadow: 0 0 12px rgba(255, 204, 0, 0.25);
+}
+
+:host([sim-playing='true']) .base.occupied {
+    box-shadow: 0 0 16px var(--accent-yellow, #ffcc00);
+}
+
+:host([animations='false']) .base,
+:host([animations='false']) .last-play-display {
+    transition: none;
+    animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .base,
+    .last-play-display {
+        transition: none;
+        animation: none;
+    }
+}
+
 .team-led-name {
     font-size: 1.25rem;
     font-weight: 800;

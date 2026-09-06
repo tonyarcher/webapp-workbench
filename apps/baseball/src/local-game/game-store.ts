@@ -47,12 +47,17 @@ const ALL_ENGINE_EVENT_TYPES: ScoringEventType[] = [
 export class GameStore {
   readonly queryClient: QueryClient;
   private observer: QueryObserver<GameQueryResult, Error>;
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(queryClient = new QueryClient()) {
     this.queryClient = queryClient;
     this.observer = new QueryObserver<GameQueryResult, Error>(this.queryClient, {
       queryKey: GAME_QUERY_KEY,
     });
+  }
+
+  get hasPendingPersist(): boolean {
+    return this.persistTimer != null;
   }
 
   subscribe(callback: (game: GameQueryResult) => void): () => void {
@@ -92,12 +97,14 @@ export class GameStore {
     const previous = this.current();
     if (!previous) return;
     const nextEngine = reduceEngineState(previous.engine, record);
-    this.commit({
+    const next = {
       ...previous,
       engine: nextEngine,
       historyIndex: previous.historyIndex + 1,
       events: [...previous.events.slice(0, previous.historyIndex), record],
-    });
+    };
+    const debounce = previous.setup.mode === 'watch' && !nextEngine.over;
+    this.commit(next, debounce ? 'later' : 'now');
   }
 
   undo(): void {
@@ -109,8 +116,16 @@ export class GameStore {
   }
 
   newGame(): void {
+    this.clearPersistTimer();
     this.queryClient.setQueryData(GAME_QUERY_KEY, null);
     void clearGameState();
+  }
+
+  flushPersist(): Promise<void> {
+    this.clearPersistTimer();
+    const current = this.current();
+    if (!current) return Promise.resolve();
+    return saveGameState(current);
   }
 
   private applyHistory(historyIndex: number): void {
@@ -125,9 +140,29 @@ export class GameStore {
     this.commit({ ...state, engine, historyIndex });
   }
 
-  private commit(state: LiveLocalGameState): void {
+  private commit(state: LiveLocalGameState, persist: 'now' | 'later' = 'now'): void {
     this.queryClient.setQueryData(GAME_QUERY_KEY, state);
+    if (persist === 'later') {
+      this.schedulePersist();
+      return;
+    }
+    this.clearPersistTimer();
     void saveGameState(state);
+  }
+
+  private schedulePersist(): void {
+    if (this.persistTimer != null) return;
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      const current = this.current();
+      if (current) void saveGameState(current);
+    }, 400);
+  }
+
+  private clearPersistTimer(): void {
+    if (this.persistTimer == null) return;
+    clearTimeout(this.persistTimer);
+    this.persistTimer = null;
   }
 }
 
