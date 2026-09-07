@@ -147,6 +147,43 @@ try {
     const unfinished = await getPool().query<{n: string}>('SELECT COUNT(*) FILTER (WHERE finished_at IS NULL)::text AS n FROM imports');
     assert(Number(unfinished.rows[0]?.n) === 0, 'no unfinished import rows');
 
+    const waist = {
+        metric: 'waist',
+        t: Date.parse('2026-02-01T08:00:00Z'),
+        valueSi: 0.9,
+        source: 'manual',
+        originId: 'manual:waist:1',
+    };
+    await fetch(`${base}/imports`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({samples: [waist, {...waist, t: Date.parse('2026-02-08T08:00:00Z'), originId: 'manual:waist:2', valueSi: 0.88}], source: 'manual'}),
+    });
+    const series = await fetch(`${base}/series?metric=waist`).then((r) => r.json()) as {points: {v: number}[]; n: number};
+    assert(series.n === 2 && series.points.length === 2, 'series has waist points');
+    const hide = await fetch(`${base}/samples`, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({metric: 'waist', originId: 'manual:waist:2', hidden: true}),
+    });
+    assert(hide.status === 200, 'PATCH hide 200');
+    const afterHide = await fetch(`${base}/series?metric=waist`).then((r) => r.json()) as {n: number};
+    assert(afterHide.n === 1, 'hidden point excluded from series');
+    const latestWaist = await fetch(`${base}/samples/latest`).then((r) => r.json()) as {latest: {metric: string; valueSi: number}[]};
+    const waistLatest = latestWaist.latest.find((s) => s.metric === 'waist');
+    assert(waistLatest?.valueSi === 0.9, 'latest waist is visible row');
+    const rolls = await fetch(`${base}/rollups`).then((r) => r.json()) as {rollups: {metric: string; day: string}[]};
+    const waistDays = rolls.rollups.filter((r) => r.metric === 'waist');
+    assert(waistDays.length === 1, 'hidden day dropped from rollups');
+    const over = await fetch(`${base}/samples`, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({metric: 'waist', originId: 'manual:waist:1', valueSi: 0.85}),
+    });
+    assert(over.status === 200, 'PATCH override 200');
+    const latestOver = await fetch(`${base}/samples/latest`).then((r) => r.json()) as {latest: {metric: string; valueSi: number}[]};
+    assert(latestOver.latest.find((s) => s.metric === 'waist')?.valueSi === 0.85, 'override becomes latest');
+
     console.log('\nAll fitness integration tests passed.');
 } finally {
     if (closeSrv) {

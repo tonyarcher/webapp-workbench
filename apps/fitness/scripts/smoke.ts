@@ -1,5 +1,6 @@
 import {parseImportText, parseHealthConnectSqliteTables, planLift, lbToKg} from 'fitness-core';
 import {rowObject, rowsFromExec} from '../src/services/sqlite-rows';
+import {displaySeries, rollupPoints} from '../src/services/chart-data';
 
 function assert(cond: boolean, msg: string): asserts cond {
     if (!cond) throw new Error(`FAIL: ${msg}`);
@@ -38,6 +39,17 @@ assert(sets.filter((s) => s.slot === 'fsl').length === 5, 'FSL 5 sets');
     assert(empty.length === 0, 'missing table yields no rows');
     const mapped = parseHealthConnectSqliteTables({});
     assert(mapped.skipped.some((s) => s.reason === 'no mapped records'), 'empty db is explained');
+}
+
+{
+    const rows = [
+        {metric: 'waist', day: '2026-01-01', minSi: 0.8, maxSi: 0.8, avgSi: 0.8, sumSi: 0.8, n: 1},
+        {metric: 'waist', day: '2026-01-02', minSi: 0.79, maxSi: 0.79, avgSi: 0.79, sumSi: 0.79, n: 1},
+    ];
+    const pts = rollupPoints(rows, 'waist', 'avg');
+    assert(pts.length === 2 && pts[0]!.v === 0.8, 'rollup points');
+    const shown = displaySeries('waist', pts, 'kg');
+    assert(shown.ys.length === 2 && shown.fmt === 'cm', 'display series cm');
 }
 
 console.log('\nAll fitness smoke tests passed.');

@@ -52,6 +52,11 @@ export {
     waistToHip,
 } from './formulas';
 
+export {CHARTS, MEASURE_METRICS, METRIC_LABELS, SUM_METRICS, metricLabel, rollupKind} from './catalog';
+export type {ChartDef, RollupKind} from './catalog';
+export {linearSlope, pctChange, trendAdvice} from './trends';
+export {bmiSeries, navyBfSeries, whrSeries, whtrSeries} from './calc-series';
+
 export {downsampleLttb} from './downsample';
 export {evaluateThreshold, phaseOverlapsRange} from './thresholds';
 export {looksLikeCsv, parseCsv, parseSampleCsv} from './csv';

@@ -1,4 +1,4 @@
-export type View = 'dashboard' | 'import' | 'lifts' | 'measure';
+export type View = 'dashboard' | 'import' | 'lifts' | 'measure' | 'chart';
 
 export interface MetricStat {
     metric: string;
@@ -24,4 +24,33 @@ export interface Profile {
         deadlift: number | null;
         press: number | null;
     };
+}
+
+export interface RollupRow {
+    metric: string;
+    day: string;
+    minSi: number;
+    maxSi: number;
+    avgSi: number;
+    sumSi: number;
+    n: number;
+}
+
+export interface SeriesPoint {
+    t: number;
+    v: number;
+}
+
+export interface SeriesOrigin {
+    t: number;
+    valueSi: number;
+    originId: string;
+    source: string;
+}
+
+export interface SeriesResult {
+    metric: string;
+    points: SeriesPoint[];
+    n: number;
+    origins: SeriesOrigin[];
 }

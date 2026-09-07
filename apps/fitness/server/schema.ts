@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS samples (
   value_si double precision NOT NULL,
   source text NOT NULL,
   origin_id text NOT NULL,
+  hidden boolean NOT NULL DEFAULT false,
+  note text,
   UNIQUE (user_id, metric, t, source, origin_id)
 );
 
@@ -133,4 +135,17 @@ CREATE TABLE IF NOT EXISTS outbox_acks (
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   applied_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE samples ADD COLUMN IF NOT EXISTS hidden boolean NOT NULL DEFAULT false;
+ALTER TABLE samples ADD COLUMN IF NOT EXISTS note text;
+UPDATE samples SET metric = 'energy_total' WHERE metric = 'energy';
+UPDATE daily_rollups SET metric = 'energy_total'
+  WHERE metric = 'energy'
+  AND NOT EXISTS (
+    SELECT 1 FROM daily_rollups other
+    WHERE other.user_id = daily_rollups.user_id
+      AND other.metric = 'energy_total'
+      AND other.day = daily_rollups.day
+  );
+DELETE FROM daily_rollups WHERE metric = 'energy';
 `;

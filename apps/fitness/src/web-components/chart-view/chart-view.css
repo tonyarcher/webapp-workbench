@@ -1,0 +1,77 @@
+:host {
+    display: block;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+
+.back {
+    color: var(--accent);
+    font-size: 13px;
+}
+
+.title {
+    margin: 8px 0;
+    font-size: 22px;
+}
+
+.help,
+.advice {
+    color: var(--text-soft);
+    font-size: 13px;
+}
+
+.error {
+    color: var(--danger);
+}
+
+.row {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+input {
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+}
+
+.btn {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.btn.primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 12px;
+}
+
+.table th,
+.table td {
+    padding: 6px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}

@@ -1,4 +1,4 @@
-import type {LatestSample, MetricStat, Profile} from '../types';
+import type {LatestSample, MetricStat, Profile, RollupRow, SeriesResult} from '../types';
 import type {Sample} from 'fitness-core';
 
 function apiUrl(path: string): string {
@@ -51,4 +51,20 @@ export function postImport(samples: Sample[], source: string): Promise<{stored: 
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({samples, source}),
     }).then((res) => json<{stored: number; skipped: number; errors: string[]}>(res));
+}
+
+export function fetchRollups(): Promise<{rollups: RollupRow[]}> {
+    return fetch(apiUrl('/rollups')).then((res) => json<{rollups: RollupRow[]}>(res));
+}
+
+export function fetchSeries(metric: string): Promise<SeriesResult> {
+    return fetch(apiUrl(`/series?metric=${encodeURIComponent(metric)}`)).then((res) => json<SeriesResult>(res));
+}
+
+export function patchSample(body: {metric: string; originId: string; hidden?: boolean; valueSi?: number; note?: string}): Promise<{ok: boolean}> {
+    return fetch(apiUrl('/samples'), {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body),
+    }).then((res) => json<{ok: boolean}>(res));
 }
