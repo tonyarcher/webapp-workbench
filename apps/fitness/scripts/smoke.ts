@@ -1,4 +1,5 @@
-import {parseImportText, planLift, lbToKg} from 'fitness-core';
+import {parseImportText, parseHealthConnectSqliteTables, planLift, lbToKg} from 'fitness-core';
+import {rowObject, rowsFromExec} from '../src/services/sqlite-rows';
 
 function assert(cond: boolean, msg: string): asserts cond {
     if (!cond) throw new Error(`FAIL: ${msg}`);
@@ -25,5 +26,18 @@ assert(wrapped.samples.length === 1 && wrapped.samples[0]!.originId === 'w-smoke
 const sets = planLift({lift: 'press', tmKg: lbToKg(100), week: '531', template: 'fsl', display: 'lb', includeWarmup: true});
 assert(sets.some((s) => s.slot === 'warmup'), 'warmup present');
 assert(sets.filter((s) => s.slot === 'fsl').length === 5, 'FSL 5 sets');
+
+{
+    const row = rowObject(['uuid', 'time', 'weight'], [new Uint8Array([1, 2]), 1_000, 80_000]);
+    assert(row.time === 1_000 && row.weight === 80_000, 'sqlite rowObject');
+    const rows = rowsFromExec(() => [{columns: ['count'], values: [[12]]}], 'steps_record_table');
+    assert(rows.length === 1 && rows[0]!.count === 12, 'sqlite rowsFromExec');
+    const empty = rowsFromExec(() => {
+        throw new Error('no such table');
+    }, 'missing');
+    assert(empty.length === 0, 'missing table yields no rows');
+    const mapped = parseHealthConnectSqliteTables({});
+    assert(mapped.skipped.some((s) => s.reason === 'no mapped records'), 'empty db is explained');
+}
 
 console.log('\nAll fitness smoke tests passed.');

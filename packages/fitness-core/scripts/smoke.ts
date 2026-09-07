@@ -6,9 +6,12 @@ import {
     dueMeasurements,
     epley1rm,
     evaluateThreshold,
+    KCAL_TO_J,
     kgToLb,
     lbToKg,
+    looksLikeSqlite,
     navyBodyFat,
+    parseHealthConnectSqliteTables,
     parseImportText,
     parseSampleCsv,
     phaseOverlapsRange,
@@ -126,6 +129,39 @@ assert(!phaseOverlapsRange('2026-03-01', null, Date.parse('2026-01-01T00:00:00Z'
     assert(due.some((d) => d.metric === 'neck' && d.stale), 'neck due when missing');
     const hip = due.find((d) => d.metric === 'hip');
     assert(hip != null && !hip.formulaIds.includes('navy-bf'), 'male navy skips hip; WHR still wants it');
+}
+
+{
+    const magic = new TextEncoder().encode('SQLite format 3\0');
+    assert(looksLikeSqlite(magic), 'sqlite magic');
+    assert(!looksLikeSqlite(new TextEncoder().encode('{"a":1}')), 'json is not sqlite');
+    const uuid = new Uint8Array([0x02, 0xae, 0xb4, 0xaf]);
+    const mapped = parseHealthConnectSqliteTables({
+        weight_record_table: [{uuid, time: 1_779_756_532_953, weight: 86_182.47985839844}],
+        steps_record_table: [{uuid: 'step-1', start_time: 1_000, count: 12}],
+        sleep_session_record_table: [{uuid: 'sleep-1', start_time: 0, end_time: 3_600_000}],
+        total_calories_burned_record_table: [{uuid: 'kcal-1', start_time: 2_000, energy: 1_000}],
+        heart_rate_record_series_table: [
+            {epoch_millis: 60_000, beats_per_minute: 80},
+            {epoch_millis: 60_500, beats_per_minute: 100},
+            {epoch_millis: 120_000, beats_per_minute: 90},
+        ],
+    });
+    assert(mapped.format === 'health-connect-db', 'sqlite format tag');
+    const weight = mapped.samples.find((s) => s.metric === 'body_mass');
+    assert(weight != null && Math.abs(weight.valueSi - 86.18247985839844) < 1e-9, 'weight grams → kg');
+    assert(weight!.originId === '02aeb4af', 'uuid origin is hex');
+    const again = parseHealthConnectSqliteTables({
+        weight_record_table: [{uuid, time: 1_779_756_532_953, weight: 86_500}],
+    });
+    assert(again.samples[0]!.originId === weight!.originId, 're-export keeps origin for upsert');
+    assert(mapped.samples.find((s) => s.metric === 'steps')?.valueSi === 12, 'steps');
+    assert(mapped.samples.find((s) => s.metric === 'sleep')?.valueSi === 3_600, 'sleep seconds');
+    const energy = mapped.samples.find((s) => s.metric === 'energy');
+    assert(energy != null && Math.abs(energy.valueSi - KCAL_TO_J) < 1e-6, '1000 cal → 1 kcal SI');
+    const hr = mapped.samples.filter((s) => s.metric === 'heart_rate').sort((a, b) => a.t - b.t);
+    assert(hr.length === 2, 'HR downsampled to minutes');
+    assert(hr[0]!.valueSi === 90 && hr[0]!.originId === 'hr-minute:60000', 'HR minute average + stable key');
 }
 
 console.log('\nAll fitness-core smoke tests passed.');

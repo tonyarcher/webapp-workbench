@@ -15,7 +15,8 @@
     "dependencies": {
         "fitness-core": "*",
         "lit": "^3.3.3",
-        "pg": "^8.12.0"
+        "pg": "^8.12.0",
+        "sql.js": "^1.14.2"
     },
     "devDependencies": {
         "@types/node": "^26.1.2",

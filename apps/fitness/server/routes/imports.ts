@@ -15,7 +15,7 @@ interface IncomingSample {
 const MAX_ROWS = 2_000;
 
 function sampleSource(raw: unknown): string {
-    if (raw === 'health-connect' || raw === 'manual' || raw === 'five31' || raw === 'csv') return raw;
+    if (raw === 'health-connect' || raw === 'health-connect-db' || raw === 'manual' || raw === 'five31' || raw === 'csv') return raw;
     return 'csv';
 }
 

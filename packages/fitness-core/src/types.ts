@@ -42,6 +42,7 @@ export type MetricId =
     | 'resting_heart_rate'
     | 'hrv_rmssd'
     | 'steps'
+    | 'distance'
     | 'sleep'
     | 'energy'
     | 'body_fat'
@@ -72,7 +73,7 @@ export interface ParseSkip {
 export interface ParseResult {
     samples: Sample[];
     skipped: ParseSkip[];
-    format: 'health-connect' | 'csv' | 'unknown';
+    format: 'health-connect' | 'health-connect-db' | 'csv' | 'unknown';
 }
 
 export interface MainSetSpec {
