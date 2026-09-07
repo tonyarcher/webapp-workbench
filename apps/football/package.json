@@ -1,0 +1,24 @@
+{
+    "name": "football",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc --noEmit && vite build",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "football-core": "*",
+        "idb": "^8.0.0",
+        "lit": "^3.3.3"
+    },
+    "devDependencies": {
+        "@types/node": "^26.1.2",
+        "fake-indexeddb": "^6.2.5",
+        "typescript": "7.0.2",
+        "vite": "^8.2.0",
+        "vitest": "^4.1.10"
+    }
+}

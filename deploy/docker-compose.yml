@@ -16,6 +16,7 @@
 #   radio-station - nginx static, serves Radio Station under /radio-station/.
 #   radio-api    - node server, JSON API for Radio Station under
 #                  /radio-station/api/ (prefix stripped by the gateway).
+#   football     - nginx static, serves Football under /football/.
 # Each app listens on port 3000 internally; the gateway strips the prefix for
 # the static apps and passes /stock-game/ through unchanged.
 
@@ -36,6 +37,7 @@ services:
       - calendar-sync
       - radio-station
       - radio-api
+      - football
     restart: unless-stopped
     networks:
       - baseball
@@ -139,6 +141,14 @@ services:
     build:
       context: ..
       dockerfile: deploy/radio-station/Dockerfile
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  football:
+    build:
+      context: ..
+      dockerfile: deploy/football/Dockerfile
     restart: unless-stopped
     networks:
       - baseball

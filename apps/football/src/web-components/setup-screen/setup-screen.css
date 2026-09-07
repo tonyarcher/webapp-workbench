@@ -1,0 +1,48 @@
+:host {
+    display: block;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
+h1 {
+    margin: 0 0 8px;
+    font-size: 22px;
+}
+
+.lead {
+    margin: 0 0 20px;
+    color: var(--text-soft);
+}
+
+form {
+    display: grid;
+    gap: 12px;
+}
+
+label {
+    display: grid;
+    gap: 4px;
+    color: var(--text-soft);
+    font-size: 13px;
+}
+
+input,
+select {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+}
+
+button {
+    margin-top: 8px;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 600;
+    cursor: pointer;
+}

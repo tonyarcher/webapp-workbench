@@ -1,0 +1,150 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.bug {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.team {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.team.home {
+    text-align: right;
+}
+
+.name {
+    color: var(--text-soft);
+    font-size: 12px;
+}
+
+.score {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.mid {
+    text-align: center;
+}
+
+.clock {
+    font-variant-numeric: tabular-nums;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.sit {
+    color: var(--text-soft);
+    font-size: 12px;
+}
+
+.flags {
+    color: var(--accent);
+    font-size: 11px;
+}
+
+.personnel {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+}
+
+.pad {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 12px;
+}
+
+.pad button {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.pad button:hover {
+    background: var(--surface-hover);
+}
+
+.pad button.primary {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 12px 10px;
+}
+
+.fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: var(--text-dim);
+    font-size: 11px;
+}
+
+.fields input {
+    width: 88px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 0 12px 10px;
+}
+
+.toolbar button {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-soft);
+    cursor: pointer;
+}
+
+.toolbar button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.log {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    margin: 0;
+    padding: 8px 12px 16px;
+    border-top: 1px solid var(--border);
+    list-style: none;
+}
+
+.log li {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-soft);
+    font-size: 13px;
+}

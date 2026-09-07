@@ -65,6 +65,13 @@ export const APPS = [
     summary: "Radio station API + playlist generator",
   },
   {
+    id: "football",
+    service: "football",
+    workspaces: ["football-core", "football"],
+    aliases: ["football", "apps/football"],
+    summary: "Football tracker (also builds football-core)",
+  },
+  {
     id: "gateway",
     service: "gateway",
     workspaces: [],
