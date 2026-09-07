@@ -72,6 +72,20 @@ export const APPS = [
     summary: "Football tracker (also builds football-core)",
   },
   {
+    id: "fitness",
+    service: "fitness",
+    workspaces: ["fitness-core", "fitness"],
+    aliases: ["fitness", "apps/fitness"],
+    summary: "Fitness tracker (also builds fitness-core)",
+  },
+  {
+    id: "fitness-api",
+    service: "fitness-api",
+    workspaces: ["fitness-core", "fitness"],
+    aliases: ["fitness-api", "apps/fitness/server"],
+    summary: "Fitness API + ingest",
+  },
+  {
     id: "gateway",
     service: "gateway",
     workspaces: [],
