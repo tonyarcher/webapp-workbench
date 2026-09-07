@@ -1,6 +1,8 @@
 import type { EngineGameState, EngineScorebookRow } from './rule-engine';
+import type { LiveLocalGameState } from './game-state';
 import type { LineupPlayer } from './game-types';
 import type { LocalGameEventRecord } from './game-types';
+import { matchupFromGame } from '../sim/matchup';
 
 const SCORING_EVENT_TYPES = new Set([
   'BALL','STRIKE','FOUL','STRIKEOUT','WALK','HIT_BY_PITCH','SINGLE','DOUBLE','TRIPLE','HOME_RUN',
@@ -40,6 +42,38 @@ export function pitchingPitcherName(engine: EngineGameState): string {
   const lineup = engine.half === 'TOP' ? engine.homeLineup : engine.awayLineup;
   if (lineup.pitcherName) return lineup.pitcherName;
   return lineup.rows.find((row) => row.position === 'P')?.batterName ?? `${lineup.name} pitcher`;
+}
+
+const FIELDER_POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'] as const;
+
+export function defenseFielders(
+  engine: EngineGameState
+): Array<{ posName: string; playerName: string; jerseyNumber: number }> {
+  const lineup = engine.half === 'TOP' ? engine.homeLineup : engine.awayLineup;
+  const byPos = new Map(lineup.rows.map((row) => [row.position, row]));
+  return FIELDER_POSITIONS.map((pos) => {
+    if (pos === 'P') {
+      return { posName: 'P', playerName: lineup.pitcherName || pitchingPitcherName(engine), jerseyNumber: 0 };
+    }
+    const row = byPos.get(pos);
+    return {
+      posName: pos,
+      playerName: row?.batterName || pos,
+      jerseyNumber: row?.jerseyNumber ?? 0,
+    };
+  });
+}
+
+export function defendingTeamName(engine: EngineGameState): string {
+  return engine.half === 'TOP' ? engine.homeLineup.name : engine.awayLineup.name;
+}
+
+export function matchupHands(game: LiveLocalGameState): { batterBats: string; pitcherThrows: string } {
+  if (!game.setup.homeRoster || !game.setup.awayRoster) {
+    return { batterBats: 'R', pitcherThrows: 'R' };
+  }
+  const matchup = matchupFromGame(game.engine, game.setup.homeRoster, game.setup.awayRoster);
+  return { batterBats: matchup.batter.bats, pitcherThrows: matchup.pitcher.throws };
 }
 
 export function rowsToEditorPlayers(rows: EngineScorebookRow[]): Array<Record<string, unknown>> {

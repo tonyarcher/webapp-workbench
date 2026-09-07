@@ -12,6 +12,8 @@ export class WatchRunner {
   speed = 1;
   animations = true;
   activePlayJson = '';
+  playSeq = 0;
+  playDurationMs = 4000;
   private autoStarted = false;
 
   constructor(
@@ -53,6 +55,8 @@ export class WatchRunner {
   reset(): void {
     this.autoStarted = false;
     this.activePlayJson = '';
+    this.playSeq = 0;
+    this.playDurationMs = 4000;
     this.pause();
   }
 
@@ -65,9 +69,11 @@ export class WatchRunner {
       matchupFromGame(game.engine, rosters.home, rosters.away),
       rngForEngine(game.setup.simSeed ?? 1, game.engine, game.historyIndex)
     );
-    this.activePlayJson = JSON.stringify({ eventType: play.type, ...play.detail });
+    this.playSeq += 1;
+    this.playDurationMs = delayForPlay(play.type, this.speed, this.animations);
+    this.activePlayJson = JSON.stringify({ eventType: play.type, seq: this.playSeq, ...play.detail });
     this.deps.record(play.type, play.detail);
-    await yieldDelay(delayForPlay(play.type, this.speed, this.animations));
+    await yieldDelay(this.playDurationMs);
     return !this.deps.getGame()?.engine.over;
   }
 }

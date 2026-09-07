@@ -18,7 +18,7 @@ test('custom lineup names appear in the scorebook after first pitch', async ({ p
   await page.getByRole('button', { name: 'Right Field' }).click();
 
   await expect(page.locator('baseball-scoreboard').first()).toContainText('1B: Tony Gwynn');
-  await expect(page.getByText(/Trevor Hoffman/)).toBeVisible();
+  await expect(page.locator('baseball-matchup-card')).toContainText('Trevor Hoffman');
 });
 
 test('setup lineups modal saves a substitution onto the live game', async ({ page }) => {
