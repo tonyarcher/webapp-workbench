@@ -22,14 +22,18 @@ directory carries its own `AGENTS.md` with its conventions — read it before to
   Depends on `calendar-core` from `packages/calendar-core`.
 - `apps/radio-station/` — Vite + Lit radio-station simulator (`radio-station`). Postgres
   catalog + node API; generate a 7-day Top 40 log.
+- `apps/football/` — Vite + Lit football live scorekeeping (`football`). Pluggable
+  NFL/NCAA/MN/CO rulebooks; client-side IndexedDB. Depends on `football-core`.
 - `packages/web-components/` — `@baseball/web-components` Lit component library.
 - `packages/vertical-scroll-core/` — `vertical-scroll-core` Lit library; `prepare` builds `dist/`
   on install, so consumers must reinstall (or run its `build`) after changes.
 - `packages/calendar-core/` — `calendar-core` ICS/Trakt/Netflix/Google Calendar helpers;
   `prepare` builds `dist/` on install.
+- `packages/football-core/` — `football-core` rulebooks, play-by-play reducer, clock, and notation;
+  `prepare` builds `dist/` on install.
 - `deploy/` — Docker Compose reverse-proxy gateway stack (hello world at `/`, apps under
   `/baseball/`, `/rss-reader/`, `/stock-game/`, `/lemmy-vertical-scroll/`,
-  `/clipstack/`, `/calendar-sync/`, `/radio-station/`).
+  `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`).
 
 ## Commands (run from the repo root)
 
@@ -40,7 +44,7 @@ directory carries its own `AGENTS.md` with its conventions — read it before to
 | Test all | `npm test` |
 | Typecheck all | `npm run typecheck` |
 | Lint all | `npm run lint` |
-| Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` |
+| Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` |
 | Build (OS script) | `./build.sh` or `.\build.ps1` (`./build.sh rss` for one app) |
 | Deploy compose stack | `./deploy.sh` or `.\deploy.ps1` (auto local Docker vs SSH tunnel; `./deploy.sh rss` rebuilds one app) |
 

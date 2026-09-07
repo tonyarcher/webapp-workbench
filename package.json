@@ -2,7 +2,7 @@
   "name": "webapp-workbench",
   "private": true,
   "version": "0.1.0",
-  "description": "Sandbox of small web apps: baseball tracker, rss-reader, stock-game, lemmy-vertical-scroll, clipstack, calendar-sync, radio-station.",
+  "description": "Sandbox of small web apps: baseball tracker, rss-reader, stock-game, lemmy-vertical-scroll, clipstack, calendar-sync, radio-station, football.",
   "workspaces": [
     "apps/*",
     "apps/stock-game/*",
@@ -21,6 +21,7 @@
     "dev:calendar-sync": "npm run dev -w calendar-sync",
     "dev:radio-station": "npm run dev -w radio-station",
     "dev:radio-api": "npm run dev:server -w radio-station",
+    "dev:football": "npm run dev -w football",
     "deploy": "node scripts/deploy.mjs"
   },
   "devDependencies": {

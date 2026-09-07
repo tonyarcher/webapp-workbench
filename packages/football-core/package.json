@@ -1,0 +1,31 @@
+{
+    "name": "football-core",
+    "version": "0.1.0",
+    "type": "module",
+    "description": "Football types, pluggable rulebooks, play-by-play reducer, clock, and notation.",
+    "license": "MIT",
+    "files": [
+        "dist"
+    ],
+    "main": "./dist/football-core.js",
+    "module": "./dist/football-core.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/football-core.js"
+        }
+    },
+    "scripts": {
+        "build": "vite build",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit",
+        "prepare": "npm run build"
+    },
+    "devDependencies": {
+        "typescript": "7.0.2",
+        "vite": "^8.2.0",
+        "vite-plugin-dts": "^5.0.3",
+        "vitest": "^4.1.10"
+    }
+}
