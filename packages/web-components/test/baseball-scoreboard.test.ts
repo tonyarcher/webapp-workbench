@@ -130,6 +130,8 @@ describe('BaseballScoreboard', () => {
     expect(scene.getAttribute('data-throws')).to.equal('L');
     expect(element.shadowRoot!.querySelector('[data-testid="plate-pitcher"]')!.classList.contains('throws-L')).to.equal(true);
     expect(element.shadowRoot!.querySelector('[data-testid="plate-batter"]')!.classList.contains('bats-L')).to.equal(true);
+    expect(element.shadowRoot!.querySelector('.mound')).to.not.equal(null);
+    expect(element.shadowRoot!.querySelector('.box-left')).to.not.equal(null);
     expect(element.shadowRoot!.querySelector('[data-testid="plate-result"]')!.textContent).to.equal('STRIKE');
     expect(scene.textContent).to.include('LHP Grove');
     expect(scene.textContent).to.include('LHB Ruth');

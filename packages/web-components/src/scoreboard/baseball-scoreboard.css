@@ -68,32 +68,24 @@
 
 :host([animations='false']) .base,
 :host([animations='false']) .last-play-display,
-:host([animations='false']) .pitch-ball,
-:host([animations='false']) .zone-result,
-:host([animations='false']) .fig-arm.throw,
-:host([animations='false']) .bat {
+:host([animations='false']) .zone-result {
     transition: none;
     animation: none;
 }
 
-:host([animations='false']) .zone-result,
-:host([animations='false']) .has-pitch .pitch-ball {
+:host([animations='false']) .zone-result {
     opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
     .base,
     .last-play-display,
-    .pitch-ball,
-    .zone-result,
-    .fig-arm.throw,
-    .bat {
+    .zone-result {
         transition: none;
         animation: none;
     }
 
-    .zone-result,
-    .has-pitch .pitch-ball {
+    .zone-result {
         opacity: 1;
     }
 }
@@ -203,26 +195,72 @@
 
 .plate-scene {
     position: relative;
-    height: 176px;
+    height: 210px;
     margin: 0.75rem 0 0.25rem;
     border-radius: 10px;
     overflow: hidden;
     background:
-        radial-gradient(ellipse at 50% 88%, rgba(194, 154, 108, 0.55) 0%, rgba(194, 154, 108, 0.15) 32%, transparent 46%),
-        linear-gradient(180deg, #1a3d24 0%, #245c32 38%, #3a6b3a 70%, #c29a6c 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+        radial-gradient(ellipse at 50% 12%, rgba(194, 154, 108, 0.22) 0%, transparent 28%),
+        linear-gradient(180deg, #122016 0%, #1a2e1e 42%, #243a26 72%, #3d4a32 100%);
+    border: 1px solid rgba(255, 204, 0, 0.18);
+}
+
+.mound {
+    position: absolute;
+    left: 50%;
+    top: 44px;
+    width: 78px;
+    height: 18px;
+    margin-left: -39px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 204, 0, 0.4);
+    background: rgba(150, 110, 60, 0.28);
+    box-shadow: 0 0 10px rgba(255, 204, 0, 0.12);
+    z-index: 1;
+}
+
+.home-plate {
+    position: absolute;
+    left: 50%;
+    top: 176px;
+    width: 22px;
+    height: 18px;
+    margin-left: -11px;
+    background: rgba(245, 245, 245, 0.88);
+    clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%);
+    z-index: 2;
+}
+
+.batters-box {
+    position: absolute;
+    top: 132px;
+    width: 40px;
+    height: 58px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(0, 0, 0, 0.12);
+    z-index: 1;
+}
+
+.box-left {
+    right: 50%;
+    margin-right: 30px;
+}
+
+.box-right {
+    left: 50%;
+    margin-left: 30px;
 }
 
 .zone {
     position: absolute;
     left: 50%;
-    top: 18px;
+    top: 78px;
     width: 54px;
     height: 80px;
     transform: translateX(-50%);
     border: 2px solid rgba(255, 255, 255, 0.78);
-    background: rgba(0, 0, 0, 0.18);
-    z-index: 3;
+    background: rgba(0, 0, 0, 0.28);
+    z-index: 5;
 }
 
 .zone-grid {
@@ -232,7 +270,6 @@
         linear-gradient(rgba(255, 255, 255, 0.28) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.28) 1px, transparent 1px);
     background-size: 100% 33.33%, 33.33% 100%;
-    background-position: 0 0, 0 0;
     pointer-events: none;
 }
 
@@ -251,7 +288,7 @@
     color: var(--accent-yellow, #ffcc00);
     text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
     opacity: 0;
-    z-index: 4;
+    z-index: 6;
 }
 
 .plate-scene.has-pitch.animated .zone-result {
@@ -262,150 +299,60 @@
     opacity: 1;
 }
 
-.figure {
+.sign {
     position: absolute;
-    width: 28px;
-    height: 48px;
-    z-index: 2;
+    color: var(--accent-yellow, #ffcc00);
+    z-index: 4;
 }
 
-.fig-head {
-    position: absolute;
-    left: 7px;
-    top: 0;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #f0d5b5;
-}
-
-.fig-body {
-    position: absolute;
-    left: 8px;
-    top: 14px;
-    width: 12px;
-    height: 18px;
-    border-radius: 3px;
-    background: #d32f2f;
-}
-
-.fig-arm {
-    position: absolute;
-    top: 16px;
-    width: 12px;
-    height: 3px;
-    background: #f0d5b5;
-    border-radius: 2px;
-}
-
-.fig-arm.glove {
-    left: -2px;
-    transform: rotate(25deg);
-}
-
-.fig-arm.throw {
-    right: -4px;
-    transform: rotate(-30deg);
-}
-
-.fig-leg {
-    position: absolute;
-    top: 30px;
-    width: 3px;
-    height: 16px;
-    background: #1e3a5f;
-    border-radius: 1px;
-}
-
-.fig-leg.l {
-    left: 9px;
-}
-
-.fig-leg.r {
-    right: 9px;
+.wire-sign {
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.35;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 3px rgba(255, 204, 0, 0.55));
 }
 
 .pitcher {
     left: 50%;
-    bottom: 10px;
-    margin-left: -14px;
+    top: 6px;
+    width: 34px;
+    height: 52px;
+    margin-left: -17px;
+    z-index: 3;
 }
 
-.pitcher .fig-body {
-    background: #1565c0;
+.pitcher .arm-throw-L,
+.pitcher .arm-glove-L {
+    display: none;
 }
 
-.pitcher.throws-L {
-    transform: scaleX(-1);
+.pitcher.throws-L .arm-throw-L,
+.pitcher.throws-L .arm-glove-L {
+    display: unset;
+}
+
+.pitcher.throws-L .arm-throw-R,
+.pitcher.throws-L .arm-glove-R {
+    display: none;
 }
 
 .batter {
-    top: 28px;
+    top: 68px;
+    width: 46px;
+    height: 118px;
 }
 
 .batter.bats-R {
-    left: 28%;
+    left: calc(50% - 78px);
 }
 
 .batter.bats-L {
-    right: 28%;
+    left: calc(50% + 32px);
     transform: scaleX(-1);
-}
-
-.batter .fig-body {
-    background: #c62828;
-}
-
-.bat {
-    position: absolute;
-    left: 18px;
-    top: 8px;
-    width: 22px;
-    height: 3px;
-    background: #d7ccc8;
-    border-radius: 1px;
-    transform: rotate(-40deg);
-    transform-origin: 0 50%;
-}
-
-.pitch-ball {
-    position: absolute;
-    left: 50%;
-    bottom: 46px;
-    width: 10px;
-    height: 10px;
-    margin-left: -5px;
-    border-radius: 50%;
-    background: #f5f5f5;
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.7);
-    opacity: 0;
-    z-index: 5;
-}
-
-.plate-scene.has-pitch.animated .pitch-ball {
-    animation: pitch-in var(--pitch-duration, 4s) both;
-}
-
-.plate-scene.result-BALL.has-pitch.animated .pitch-ball {
-    animation-name: pitch-out;
-}
-
-.plate-scene.has-pitch.instant .pitch-ball {
-    opacity: 1;
-    transform: translateY(-58px);
-}
-
-.plate-scene.result-BALL.has-pitch.instant .pitch-ball {
-    transform: translate(40px, -108px);
-}
-
-.plate-scene.has-pitch.animated.swinging .bat {
-    animation: swing-bat var(--pitch-duration, 4s) both;
-}
-
-.plate-scene.has-pitch.animated .fig-arm.throw {
-    animation: throw-arm var(--pitch-duration, 4s) both;
-    transform-origin: 0 50%;
 }
 
 .hand-tag {
@@ -432,45 +379,6 @@
     text-align: right;
 }
 
-@keyframes pitch-in {
-    0%,
-    18% {
-        transform: translateY(0) scale(0.5);
-        opacity: 0;
-    }
-    24% {
-        opacity: 1;
-        transform: translateY(-8px) scale(0.75);
-    }
-    52% {
-        transform: translateY(-58px) scale(1);
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(-58px) scale(1);
-        opacity: 1;
-    }
-}
-
-@keyframes pitch-out {
-    0%,
-    18% {
-        transform: translate(0, 0) scale(0.5);
-        opacity: 0;
-    }
-    24% {
-        opacity: 1;
-    }
-    52% {
-        transform: translate(40px, -108px) scale(1);
-        opacity: 1;
-    }
-    100% {
-        transform: translate(40px, -108px) scale(1);
-        opacity: 1;
-    }
-}
-
 @keyframes show-result {
     0%,
     54% {
@@ -479,35 +387,5 @@
     64%,
     100% {
         opacity: 1;
-    }
-}
-
-@keyframes swing-bat {
-    0%,
-    40% {
-        transform: rotate(-40deg);
-    }
-    52% {
-        transform: rotate(55deg);
-    }
-    70%,
-    100% {
-        transform: rotate(12deg);
-    }
-}
-
-@keyframes throw-arm {
-    0% {
-        transform: rotate(-30deg);
-    }
-    16% {
-        transform: rotate(-110deg);
-    }
-    28% {
-        transform: rotate(20deg);
-    }
-    42%,
-    100% {
-        transform: rotate(-10deg);
     }
 }
