@@ -4,7 +4,14 @@ import {bootDb, closePool} from './db.js';
 import {route, createDispatcher} from './http.js';
 import {healthHandler} from './routes/health.js';
 import {importHandler} from './routes/imports.js';
-import {latestHandler, samplesHandler, statsHandler} from './routes/samples.js';
+import {
+    latestHandler,
+    patchSampleHandler,
+    rollupsHandler,
+    samplesHandler,
+    seriesHandler,
+    statsHandler,
+} from './routes/samples.js';
 import {getProfileHandler, putProfileHandler} from './routes/profile.js';
 
 const routes = [
@@ -12,7 +19,10 @@ const routes = [
     route('POST', '/imports', importHandler),
     route('GET', '/stats', statsHandler),
     route('GET', '/samples/latest', latestHandler),
+    route('GET', '/rollups', rollupsHandler),
+    route('GET', '/series', seriesHandler),
     route('GET', '/samples', samplesHandler),
+    route('PATCH', '/samples', patchSampleHandler),
     route('GET', '/profile', getProfileHandler),
     route('PUT', '/profile', putProfileHandler),
 ];

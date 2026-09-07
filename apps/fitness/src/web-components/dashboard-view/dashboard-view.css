@@ -6,7 +6,7 @@
 }
 
 .page {
-    max-width: 720px;
+    max-width: 1100px;
     margin: 0 auto;
     padding: 24px 16px 48px;
 }
@@ -46,24 +46,52 @@
     color: var(--danger);
 }
 
+.help,
 .empty {
     color: var(--text-soft);
-}
-
-.table {
-    width: 100%;
-    border-collapse: collapse;
     font-size: 13px;
 }
 
-.table th,
-.table td {
-    padding: 8px 6px;
-    border-bottom: 1px solid var(--border);
-    text-align: left;
+.latest {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin: 0 0 16px;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
 }
 
-.table th {
+.link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+}
+
+.tile {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+
+.advice {
+    margin: 4px 8px 8px;
+    font-size: 12px;
     color: var(--text-dim);
-    font-weight: 600;
 }

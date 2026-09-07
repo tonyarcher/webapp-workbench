@@ -2,8 +2,9 @@ import {LitElement, html, unsafeCSS} from 'lit';
 import type {TemplateResult} from 'lit';
 import {customElement, state} from 'lit/decorators.js';
 import {
-    FORMULAS,
-    dueMeasurements,
+    MEASURE_METRICS,
+    formatSi,
+    metricLabel,
     parseMetricId,
     toSi,
     type DisplayUnit,
@@ -21,7 +22,7 @@ export class MeasureView extends LitElement {
 
     @state() private profile: Profile | null = null;
     @state() private latest: LatestSample[] = [];
-    @state() private metric: MetricId = 'neck';
+    @state() private metric: MetricId = 'waist';
     @state() private value = '';
     @state() private unit = 'cm';
     @state() private error = '';
@@ -30,6 +31,10 @@ export class MeasureView extends LitElement {
     override connectedCallback(): void {
         super.connectedCallback();
         void this.reload();
+    }
+
+    private display(): DisplayUnit {
+        return this.profile?.displayUnit === 'lb' ? 'lb' : 'kg';
     }
 
     private async reload(): Promise<void> {
@@ -43,13 +48,30 @@ export class MeasureView extends LitElement {
         }
     }
 
-    private display(): DisplayUnit {
-        return this.profile?.displayUnit === 'lb' ? 'lb' : 'kg';
+    private latestOf(metric: MetricId): LatestSample | undefined {
+        return this.latest.find((s) => s.metric === metric);
+    }
+
+    private shown(metric: MetricId): string {
+        const row = this.latestOf(metric);
+        if (metric === 'height' && !row && this.profile?.heightM != null) {
+            const s = formatSi('height', this.profile.heightM, this.display());
+            return `${s.value.toFixed(1)} ${s.unit}`;
+        }
+        if (!row) return '—';
+        const s = formatSi(metric, row.valueSi, this.display());
+        return `${s.value.toFixed(2)} ${s.unit}`;
     }
 
     private async saveSex(event: Event): Promise<void> {
         const sex = (event.target as HTMLSelectElement).value as Sex | '';
-        const profile = this.profile ?? {sex: null, birthYear: null, heightM: null, displayUnit: 'kg', tm: {squat: null, bench: null, deadlift: null, press: null}};
+        const profile = this.profile ?? {
+            sex: null,
+            birthYear: null,
+            heightM: null,
+            displayUnit: 'kg',
+            tm: {squat: null, bench: null, deadlift: null, press: null},
+        };
         try {
             this.profile = await saveProfile({...profile, sex: sex === 'male' || sex === 'female' ? sex : null});
         } catch (err) {
@@ -57,9 +79,19 @@ export class MeasureView extends LitElement {
         }
     }
 
+    private heightSample(heightM: number): Sample {
+        return {
+            metric: 'height',
+            t: Date.now(),
+            valueSi: heightM,
+            source: 'manual',
+            originId: `manual:height:${Date.now()}`,
+        };
+    }
+
     private async saveHeight(): Promise<void> {
         const n = Number(this.value);
-        if (!this.profile || !Number.isFinite(n)) return;
+        if (!this.profile || !this.value.trim() || !Number.isFinite(n) || n <= 0) return;
         const heightM = toSi('height', n, this.unit);
         if (heightM == null) {
             this.error = 'bad height unit';
@@ -67,7 +99,9 @@ export class MeasureView extends LitElement {
         }
         try {
             this.profile = await saveProfile({...this.profile, heightM});
+            await postImport([this.heightSample(heightM)], 'manual');
             this.saved = true;
+            await this.reload();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         }
@@ -76,7 +110,7 @@ export class MeasureView extends LitElement {
     private async saveSample(): Promise<void> {
         const n = Number(this.value);
         const metric = parseMetricId(this.metric);
-        if (!metric || !Number.isFinite(n)) {
+        if (!metric || !this.value.trim() || !Number.isFinite(n)) {
             this.error = 'need metric and value';
             return;
         }
@@ -103,10 +137,6 @@ export class MeasureView extends LitElement {
         }
     }
 
-    private onUnit = (event: Event): void => {
-        this.unit = (event.target as HTMLSelectElement).value;
-    };
-
     private onMetric = (event: Event): void => {
         this.metric = (event.target as HTMLSelectElement).value as MetricId;
     };
@@ -123,24 +153,26 @@ export class MeasureView extends LitElement {
         void (this.metric === 'height' ? this.saveHeight() : this.saveSample());
     };
 
-    private metricOptions(): MetricId[] {
-        const ids = FORMULAS.flatMap((f) => f.inputs);
-        return [...new Set([...ids, 'height' as MetricId, 'body_mass' as MetricId])];
-    }
+    private openChart = (metric: MetricId): void => {
+        location.hash = `#/charts/${metric}`;
+    };
 
-    private renderDue(): TemplateResult {
-        const latestMap = Object.fromEntries(this.latest.map((s) => [s.metric, {t: s.t}])) as Partial<Record<MetricId, {t: number}>>;
-        const due = dueMeasurements(latestMap, Date.now(), this.profile?.sex ?? null);
-        return html`<ul class="due">
-            ${due.map((d) => html`<li class="${d.stale ? 'stale' : ''}">${d.metric}${d.stale ? ' — take this' : ''}</li>`)}
-        </ul>`;
+    private renderCard(metric: MetricId): TemplateResult {
+        const row = this.latestOf(metric);
+        const has = row != null || (metric === 'height' && this.profile?.heightM != null);
+        const when = row ? new Date(row.t).toISOString().slice(0, 10) : '';
+        return html`<button class="card ${has ? '' : 'empty'}" @click=${() => this.openChart(metric)}>
+            <span class="card-label">${metricLabel(metric)}</span>
+            <span class="card-value">${this.shown(metric)}</span>
+            <span class="card-date">${when || (has ? 'saved' : 'not logged')}</span>
+        </button>`;
     }
 
     private renderEntry(): TemplateResult {
         return html`<div class="row">
             <label>Metric
                 <select @change=${this.onMetric}>
-                    ${this.metricOptions().map((m) => html`<option value=${m} ?selected=${m === this.metric}>${m}</option>`)}
+                    ${MEASURE_METRICS.map((m) => html`<option value=${m} ?selected=${m === this.metric}>${metricLabel(m)}</option>`)}
                 </select>
             </label>
             <label>Value
@@ -157,7 +189,7 @@ export class MeasureView extends LitElement {
         return html`
             <div class="page">
                 <h1 class="title">Measurements</h1>
-                <p class="help">Formulas from Navy/Hodgdon, ACSM sit-and-reach, and common ROM screens. Not medical advice.</p>
+                <p class="help">Latest values. Click a card for the chart and to edit history. Not medical advice.</p>
                 <div class="row">
                     <label>Sex
                         <select @change=${(e: Event) => void this.saveSex(e)}>
@@ -166,15 +198,10 @@ export class MeasureView extends LitElement {
                             <option value="female" ?selected=${this.profile?.sex === 'female'}>female</option>
                         </select>
                     </label>
-                    <label>Height unit
-                        <select @change=${this.onUnit}>
-                            <option value="cm" ?selected=${this.display() === 'kg'}>cm</option>
-                            <option value="in" ?selected=${this.display() === 'lb'}>in</option>
-                        </select>
-                    </label>
                 </div>
-                <h2 class="sub">Due</h2>
-                ${this.renderDue()}
+                <div class="cards">
+                    ${MEASURE_METRICS.map((m) => this.renderCard(m))}
+                </div>
                 ${this.renderEntry()}
                 ${this.error ? html`<p class="error">${this.error}</p>` : html``}
                 ${this.saved ? html`<p class="ok">Saved.</p>` : html``}

@@ -3,6 +3,7 @@ import {parseMetricId} from 'fitness-core';
 import {getPool} from '../db.js';
 import {LOCAL_USER_ID} from '../env.js';
 import {HttpError, readJsonBody, type RouteHandler} from '../http.js';
+import {rebuildRollups} from '../rollups.js';
 
 interface IncomingSample {
     metric: string;
@@ -15,7 +16,7 @@ interface IncomingSample {
 const MAX_ROWS = 2_000;
 
 function sampleSource(raw: unknown): string {
-    if (raw === 'health-connect' || raw === 'health-connect-db' || raw === 'manual' || raw === 'five31' || raw === 'csv') return raw;
+    if (raw === 'health-connect' || raw === 'health-connect-db' || raw === 'manual' || raw === 'five31' || raw === 'csv' || raw === 'override') return raw;
     return 'csv';
 }
 
@@ -50,25 +51,6 @@ function collectSamples(raw: unknown[]): {samples: IncomingSample[]; errorCount:
     return {samples: [...byKey.values()], errorCount, errors};
 }
 
-async function rebuildRollups(client: PoolClient, metrics: string[]): Promise<void> {
-    if (!metrics.length) return;
-    await client.query(
-        `INSERT INTO daily_rollups (user_id, metric, day, min_si, max_si, avg_si, sum_si, n)
-         SELECT user_id, metric, (t AT TIME ZONE 'UTC')::date AS day,
-                MIN(value_si), MAX(value_si), AVG(value_si), SUM(value_si), COUNT(*)::int
-         FROM samples
-         WHERE user_id = $1 AND metric = ANY($2::text[])
-         GROUP BY user_id, metric, (t AT TIME ZONE 'UTC')::date
-         ON CONFLICT (user_id, metric, day) DO UPDATE SET
-            min_si = EXCLUDED.min_si,
-            max_si = EXCLUDED.max_si,
-            avg_si = EXCLUDED.avg_si,
-            sum_si = EXCLUDED.sum_si,
-            n = EXCLUDED.n`,
-        [LOCAL_USER_ID, metrics],
-    );
-}
-
 async function insertSamples(client: PoolClient, samples: IncomingSample[]): Promise<void> {
     const values: unknown[] = [];
     const placeholders: string[] = [];
@@ -83,7 +65,7 @@ async function insertSamples(client: PoolClient, samples: IncomingSample[]): Pro
          ON CONFLICT (user_id, metric, t, source, origin_id) DO UPDATE SET value_si = EXCLUDED.value_si`,
         values,
     );
-    await rebuildRollups(client, [...new Set(samples.map((s) => s.metric))]);
+    await rebuildRollups(client, LOCAL_USER_ID, [...new Set(samples.map((s) => s.metric))]);
 }
 
 async function commitImport(

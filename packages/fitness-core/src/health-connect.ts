@@ -117,7 +117,7 @@ const EXTRACTORS: Array<{match: RegExp; ext: Extractor}> = [
     {
         match: /calor/i,
         ext: {
-            metric: 'energy',
+            metric: 'energy_total',
             unit: 'kcal',
             pick: (rec) => nestedNumber(rec, ['energy', 'calories', 'value'], ['inKilocalories', 'kcal', 'value']),
         },

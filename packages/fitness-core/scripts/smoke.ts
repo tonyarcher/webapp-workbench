@@ -1,5 +1,6 @@
 import {
     bmi,
+    bmiSeries,
     bumpTmKg,
     dotsScore,
     downsampleLttb,
@@ -9,10 +10,13 @@ import {
     KCAL_TO_J,
     kgToLb,
     lbToKg,
+    linearSlope,
     looksLikeSqlite,
     navyBodyFat,
     parseHealthConnectSqliteTables,
     parseImportText,
+    parseMetricId,
+    pctChange,
     parseSampleCsv,
     phaseOverlapsRange,
     planLift,
@@ -157,11 +161,26 @@ assert(!phaseOverlapsRange('2026-03-01', null, Date.parse('2026-01-01T00:00:00Z'
     assert(again.samples[0]!.originId === weight!.originId, 're-export keeps origin for upsert');
     assert(mapped.samples.find((s) => s.metric === 'steps')?.valueSi === 12, 'steps');
     assert(mapped.samples.find((s) => s.metric === 'sleep')?.valueSi === 3_600, 'sleep seconds');
-    const energy = mapped.samples.find((s) => s.metric === 'energy');
+    const energy = mapped.samples.find((s) => s.metric === 'energy_total');
     assert(energy != null && Math.abs(energy.valueSi - KCAL_TO_J) < 1e-6, '1000 cal → 1 kcal SI');
     const hr = mapped.samples.filter((s) => s.metric === 'heart_rate').sort((a, b) => a.t - b.t);
     assert(hr.length === 2, 'HR downsampled to minutes');
     assert(hr[0]!.valueSi === 90 && hr[0]!.originId === 'hr-minute:60000', 'HR minute average + stable key');
+}
+
+assert(toSi('speed', 36, 'km/h') != null && Math.abs((toSi('speed', 36, 'km/h') ?? 0) - 10) < 1e-9, 'km/h to m/s');
+assert(parseMetricId('energy') === 'energy_total', 'energy alias is total');
+assert(parseMetricId('kcal') === 'energy_total', 'kcal alias is total');
+
+{
+    const pts = [{t: 0, v: 10}, {t: 10, v: 20}];
+    assert((linearSlope(pts) ?? 0) > 0, 'positive slope');
+    assert(Math.abs((pctChange(pts) ?? 0) - 1) < 1e-9, 'pct change +100%');
+    const bmiPts = bmiSeries(
+        [{t: Date.parse('2026-01-01T00:00:00Z'), v: 81}],
+        [{t: Date.parse('2026-01-01T12:00:00Z'), v: 1.8}],
+    );
+    assert(bmiPts.length === 1 && Math.abs(bmiPts[0]!.v - 25) < 0.01, 'bmi series join by day');
 }
 
 console.log('\nAll fitness-core smoke tests passed.');

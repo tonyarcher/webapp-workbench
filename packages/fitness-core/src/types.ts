@@ -25,7 +25,7 @@ export type ThresholdBand = 'target' | 'warn' | 'alert';
 
 export type ThresholdComparator = 'lt' | 'lte' | 'gt' | 'gte';
 
-export type SampleSource = 'health-connect' | 'csv' | 'manual' | 'five31';
+export type SampleSource = 'health-connect' | 'csv' | 'manual' | 'five31' | 'override';
 
 /** Canonical sample metrics. Values are SI except heart_rate (bpm) and vo2max (mL/kg/min). */
 export type MetricId =
@@ -44,7 +44,13 @@ export type MetricId =
     | 'steps'
     | 'distance'
     | 'sleep'
-    | 'energy'
+    | 'energy_total'
+    | 'energy_active'
+    | 'oxygen_sat'
+    | 'bmr'
+    | 'speed'
+    | 'floors'
+    | 'exercise'
     | 'body_fat'
     | 'lean_mass'
     | 'vo2max'

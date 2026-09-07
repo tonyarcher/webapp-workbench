@@ -16,7 +16,8 @@
         "fitness-core": "*",
         "lit": "^3.3.3",
         "pg": "^8.12.0",
-        "sql.js": "^1.14.2"
+        "sql.js": "^1.14.2",
+        "uplot": "^1.6.32"
     },
     "devDependencies": {
         "@types/node": "^26.1.2",
