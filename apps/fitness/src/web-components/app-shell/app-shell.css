@@ -1,0 +1,43 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: var(--bg);
+}
+
+.nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.brand {
+    margin-right: 8px;
+    color: var(--accent);
+    font-size: 15px;
+}
+
+.nav-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-soft);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.nav-btn:hover {
+    background: var(--surface-hover);
+}
+
+.nav-btn.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+}

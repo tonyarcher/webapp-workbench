@@ -1,0 +1,30 @@
+{
+    "name": "fitness-core",
+    "version": "0.1.0",
+    "type": "module",
+    "description": "Fitness types, SI conversion, 5/3/1 programming, body formulas, and Health Connect/CSV importers.",
+    "license": "MIT",
+    "files": [
+        "dist"
+    ],
+    "main": "./dist/fitness-core.js",
+    "module": "./dist/fitness-core.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/fitness-core.js"
+        }
+    },
+    "scripts": {
+        "build": "vite build",
+        "test": "tsx scripts/smoke.ts",
+        "prepare": "npm run build"
+    },
+    "devDependencies": {
+        "tsx": "^4.23.1",
+        "typescript": "7.0.2",
+        "vite": "^8.2.0",
+        "vite-plugin-dts": "^5.0.3"
+    }
+}

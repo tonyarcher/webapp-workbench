@@ -17,6 +17,9 @@
 #   radio-api    - node server, JSON API for Radio Station under
 #                  /radio-station/api/ (prefix stripped by the gateway).
 #   football     - nginx static, serves Football under /football/.
+#   fitness      - nginx static, serves Fitness under /fitness/.
+#   fitness-api  - node server, JSON API for Fitness under /fitness/api/
+#                  (prefix stripped by the gateway).
 # Each app listens on port 3000 internally; the gateway strips the prefix for
 # the static apps and passes /stock-game/ through unchanged.
 
@@ -38,6 +41,8 @@ services:
       - radio-station
       - radio-api
       - football
+      - fitness
+      - fitness-api
     restart: unless-stopped
     networks:
       - baseball
@@ -149,6 +154,28 @@ services:
     build:
       context: ..
       dockerfile: deploy/football/Dockerfile
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  fitness-api:
+    build:
+      context: ..
+      dockerfile: deploy/fitness-api/Dockerfile
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/fitness
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  fitness:
+    build:
+      context: ..
+      dockerfile: deploy/fitness/Dockerfile
     restart: unless-stopped
     networks:
       - baseball

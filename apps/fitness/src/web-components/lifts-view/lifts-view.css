@@ -1,0 +1,86 @@
+:host {
+    display: block;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+
+.title {
+    margin: 0 0 8px;
+    font-size: 22px;
+}
+
+.help {
+    margin: 0 0 16px;
+    color: var(--text-soft);
+    font-size: 13px;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 16px;
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+select,
+input {
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+}
+
+.btn {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.btn.primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.table th,
+.table td {
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+.error {
+    color: var(--danger);
+}
+
+.ok {
+    color: var(--accent);
+}
