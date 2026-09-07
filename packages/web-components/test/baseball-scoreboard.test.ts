@@ -116,4 +116,28 @@ describe('BaseballScoreboard', () => {
     const lastPlay = element.shadowRoot!.querySelector('[data-testid="last-play"]') as HTMLElement;
     expect(lastPlay.classList.contains('sim-live')).to.equal(true);
   });
+
+  it('renders left-handed pitcher and batter with the result in the zone', async () => {
+    element.setAttribute('game-json', JSON.stringify({
+      gameState: { currentBatterName: 'Ruth', currentPitcherName: 'Grove', batterBats: 'L', pitcherThrows: 'L' },
+    }));
+    element.setAttribute('active-play-json', JSON.stringify({ eventType: 'STRIKE', bats: 'L', throws: 'L' }));
+    element.setAttribute('play-seq', '1');
+    await element.updateComplete;
+
+    const scene = element.shadowRoot!.querySelector('[data-testid="plate-view"]') as HTMLElement;
+    expect(scene.getAttribute('data-bats')).to.equal('L');
+    expect(scene.getAttribute('data-throws')).to.equal('L');
+    expect(element.shadowRoot!.querySelector('[data-testid="plate-pitcher"]')!.classList.contains('throws-L')).to.equal(true);
+    expect(element.shadowRoot!.querySelector('[data-testid="plate-batter"]')!.classList.contains('bats-L')).to.equal(true);
+    expect(element.shadowRoot!.querySelector('[data-testid="plate-result"]')!.textContent).to.equal('STRIKE');
+    expect(scene.textContent).to.include('LHP Grove');
+    expect(scene.textContent).to.include('LHB Ruth');
+  });
+
+  it('writes in play in the zone for a hit', async () => {
+    element.setAttribute('active-play-json', JSON.stringify({ eventType: 'DOUBLE', bats: 'R', throws: 'R' }));
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[data-testid="plate-result"]')!.textContent).to.equal('IN PLAY');
+  });
 });

@@ -13,9 +13,12 @@ test('generates teams and watches a simulated game', async ({ page }) => {
   await expect(page.getByTestId('sim-transport')).toBeVisible();
   await expect(page.getByTestId('sim-badge')).toHaveText('SIMULATING');
   await expect(page.getByTestId('watch-title')).toHaveText(/Watching:/);
+  await expect(page.getByTestId('plate-view')).toBeVisible();
+  await expect(page.getByTestId('defense-diagram')).toBeVisible();
 
   await expect(page.getByTestId('event-log-list').locator('li').first()).toBeVisible({ timeout: 10000 });
   await expect(page.getByTestId('active-play')).toContainText('eventType');
+  await expect(page.getByTestId('plate-result')).toHaveText(/BALL|STRIKE|FOUL|IN PLAY|OUT/, { timeout: 15000 });
 
   await page.getByTestId('sim-pause-button').click();
   await expect(page.getByTestId('sim-badge')).toHaveText('PAUSED');

@@ -3,9 +3,9 @@ import { delayForPlay, PlaybackClock, SPEED_OPTIONS } from './playback';
 
 describe('playback', () => {
   it('scales delay with speed and collapses it when animations are off', () => {
-    expect(delayForPlay('BALL', 1, true)).toBe(1200);
-    expect(delayForPlay('BALL', 2, true)).toBe(600);
-    expect(delayForPlay('SINGLE', 1, true)).toBe(2200);
+    expect(delayForPlay('BALL', 1, true)).toBe(4000);
+    expect(delayForPlay('BALL', 2, true)).toBe(2000);
+    expect(delayForPlay('SINGLE', 1, true)).toBe(5500);
     expect(delayForPlay('BALL', 0, true)).toBe(0);
     expect(delayForPlay('HOME_RUN', 1, false)).toBe(40);
   });

@@ -13,12 +13,14 @@ import {
   editorPlayersToLineup,
   engineBadge,
   lastPlayLabel,
+  matchupHands,
   pitchingPitcherName,
   rowsToEditorPlayers,
   runnerOnBaseName,
   scorebookSlots,
 } from './game-shell-helpers';
 import { WatchRunner } from './watch-runner';
+import { renderScoreboardSlot } from './scoreboard-slot';
 import { renderWatchTransport } from './watch-transport';
 
 const HIT_EVENT_TYPES = new Set(['SINGLE', 'DOUBLE', 'TRIPLE', 'HOME_RUN']);
@@ -354,14 +356,16 @@ export class BaseballGameShell extends LitElement {
   }
 
   private renderScoreboardSlot(game: LiveLocalGameState, currentBatter: string, currentPitcher: string) {
-    const gameJson = this.buildGameJson(game, currentBatter, currentPitcher);
-    const boxScoreJson = this.buildBoxScoreJson(game);
-    return html`<baseball-scoreboard
-      game-json=${JSON.stringify(gameJson)}
-      box-score-json=${JSON.stringify(boxScoreJson)}
-      sim-playing=${this.watch.playing ? 'true' : 'false'}
-      animations=${this.watch.animations ? 'true' : 'false'}
-    />`;
+    return renderScoreboardSlot({
+      game,
+      gameJson: this.buildGameJson(game, currentBatter, currentPitcher),
+      boxScoreJson: this.buildBoxScoreJson(game),
+      playing: this.watch.playing,
+      animations: this.watch.animations,
+      activePlayJson: this.watch.activePlayJson,
+      playSeq: this.watch.playSeq,
+      playDurationMs: this.watch.playDurationMs,
+    });
   }
 
   private buildGameJson(game: LiveLocalGameState, currentBatter: string, currentPitcher: string) {
@@ -389,6 +393,7 @@ export class BaseballGameShell extends LitElement {
         currentBatterName: currentBatter,
         currentPitcherName: currentPitcher,
         lastPlay: lastPlayLabel(events),
+        ...matchupHands(game),
       },
     };
   }

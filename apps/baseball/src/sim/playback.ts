@@ -24,10 +24,10 @@ export const SPEED_OPTIONS = [
 
 export function delayForPlay(type: string, speed: number, animations: boolean): number {
   if (speed <= 0) return 0;
-  let base = 1200;
-  if (type === 'HOME_RUN') base = 2800;
-  else if (IN_PLAY.has(type)) base = 2200;
-  else if (type === 'STOLEN_BASE' || type === 'CAUGHT_STEALING') base = 1500;
+  let base = 4000;
+  if (type === 'HOME_RUN') base = 7000;
+  else if (IN_PLAY.has(type)) base = 5500;
+  else if (type === 'STOLEN_BASE' || type === 'CAUGHT_STEALING') base = 3000;
   const ms = base / speed;
   if (!animations) return Math.min(ms, 40);
   return ms;

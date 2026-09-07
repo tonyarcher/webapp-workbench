@@ -1,5 +1,7 @@
 import {html, LitElement} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
+import {asHand, parsePlatePlay} from './plate-play';
+import {renderPlateScene} from './plate-scene';
 import scoreboardCssText from './baseball-scoreboard.css?inline';
 
 const scoreboardStyleSheet = new CSSStyleSheet();
@@ -51,6 +53,9 @@ export class BaseballScoreboard extends LitElement {
         reflect: true,
     })
     animations = true;
+    @property({type: String, attribute: 'active-play-json'}) activePlayJson = '';
+    @property({type: Number, attribute: 'play-seq'}) playSeq = 0;
+    @property({type: Number, attribute: 'play-duration-ms'}) playDurationMs = 4000;
 
     @property({
         type: String,
@@ -78,6 +83,7 @@ export class BaseballScoreboard extends LitElement {
             <div class="scoreboard-led">
                 ${this.renderHeader(vm)} ${this.renderTeamRows(vm)} ${this.renderCountRow(vm)}
                 <div class="last-play-display ${this.simPlaying ? 'sim-live' : ''}" data-testid="last-play">${vm.lastPlay}</div>
+                ${this.renderPlateView(vm)}
                 ${this.renderDiamond(vm)} ${this.renderRunnerNames(vm)}
             </div>
         `;
@@ -102,6 +108,10 @@ export class BaseballScoreboard extends LitElement {
             strikes: this.resolveStrikes(g),
             outs: this.resolveOuts(g),
             lastPlay: this.resolveLastPlay(g),
+            batterName: this.resolveBatterName(g),
+            pitcherName: this.resolvePitcherName(g),
+            batterBats: asHand(g?.gameState?.batterBats),
+            pitcherThrows: asHand(g?.gameState?.pitcherThrows),
             ...runners,
             inningSymbol: this.resolveInningSymbol(g),
             outsStr: this.formatOuts(this.resolveOuts(g)),
@@ -140,6 +150,8 @@ export class BaseballScoreboard extends LitElement {
     private resolveStrikes(g: any) { return g?.gameState?.strikes ?? this.strikes; }
     private resolveOuts(g: any) { return g?.gameState?.outs ?? this.outs; }
     private resolveLastPlay(g: any) { return g?.gameState?.lastPlay ?? this.lastPlay; }
+    private resolveBatterName(g: any) { return g?.gameState?.currentBatterName ?? ''; }
+    private resolvePitcherName(g: any) { return g?.gameState?.currentPitcherName ?? ''; }
     private resolveInningSymbol(g: any) { return (g?.gameState?.half ?? this.half) === 'TOP' ? '▲' : '▼'; }
 
     private resolveRunnerName(gameName: string | undefined, propName: string, hasRunner: boolean, fallback: string): string {
@@ -178,6 +190,20 @@ export class BaseballScoreboard extends LitElement {
             <span class="text-muted font-small">R-H-E: ${vm.awayScore}-${vm.awayHits}-${vm.awayErrors} vs ${vm.homeScore}-${vm.homeHits}-${vm.homeErrors}</span>
           </div>
         `;
+    }
+
+    private renderPlateView(vm: ReturnType<BaseballScoreboard['buildViewModel']>) {
+        const play = parsePlatePlay(this.activePlayJson, vm.batterBats, vm.pitcherThrows);
+        return renderPlateScene({
+            play,
+            bats: play?.bats ?? vm.batterBats,
+            throws: play?.throws ?? vm.pitcherThrows,
+            batterName: vm.batterName,
+            pitcherName: vm.pitcherName,
+            playSeq: this.playSeq,
+            playDurationMs: this.playDurationMs,
+            animations: this.animations,
+        });
     }
 
     private renderDiamond(vm: ReturnType<BaseballScoreboard['buildViewModel']>) {

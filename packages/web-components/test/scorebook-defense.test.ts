@@ -21,6 +21,41 @@ describe('Scorebook Components', () => {
     it('renders field position labels', () => {
       const shadow = element.shadowRoot!;
       expect(shadow.textContent).to.include('Defensive Alignment');
+      expect(shadow.querySelector('[data-pos="P"]')).to.not.equal(null);
+      expect(shadow.querySelector('[data-pos="CF"]')).to.not.equal(null);
+    });
+
+    it('shows fielder names from fielders-json', async () => {
+      element.setAttribute('defending-team', 'Cubs');
+      element.setAttribute('fielders-json', JSON.stringify([
+        { posName: 'P', playerName: 'Shota Imanaga', jerseyNumber: 18 },
+        { posName: 'SS', playerName: 'Dansby Swanson', jerseyNumber: 7 },
+      ]));
+      await element.updateComplete;
+      expect(element.shadowRoot!.textContent).to.include('Shota Imanaga');
+      expect(element.shadowRoot!.textContent).to.include('Dansby Swanson');
+    });
+
+    it('draws a temporary hit line for a batted ball', async () => {
+      element.setAttribute('active-play-json', JSON.stringify({ eventType: 'SINGLE', fieldPos: 9 }));
+      element.setAttribute('play-seq', '2');
+      await element.updateComplete;
+      const line = element.shadowRoot!.querySelector('[data-testid="hit-line"]') as SVGLineElement;
+      expect(line).to.not.equal(null);
+      expect(line.getAttribute('x2')).to.equal('80');
+      expect(line.getAttribute('y2')).to.equal('22');
+    });
+
+    it('does not draw a hit line for a taken pitch', async () => {
+      element.setAttribute('active-play-json', JSON.stringify({ eventType: 'BALL', fieldPos: 8 }));
+      await element.updateComplete;
+      expect(element.shadowRoot!.querySelector('[data-testid="hit-line"]')).to.equal(null);
+    });
+
+    it('ignores invalid fielders-json', async () => {
+      element.setAttribute('fielders-json', '{');
+      await element.updateComplete;
+      expect(element.shadowRoot!.querySelector('[data-pos="P"]')).to.not.equal(null);
     });
   });
 
