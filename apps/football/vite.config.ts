@@ -1,4 +1,4 @@
-import {defineConfig} from 'vitest/config';
+import {defineConfig} from 'vite';
 import {readFileSync} from 'node:fs';
 
 const {version} = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
@@ -14,8 +14,5 @@ export default defineConfig({
     build: {
         target: 'es2022',
         sourcemap: true,
-    },
-    test: {
-        include: ['src/**/*.test.ts'],
     },
 });

@@ -1,4 +1,4 @@
-import {defineConfig} from 'vitest/config';
+import {defineConfig} from 'vite';
 import dts from 'vite-plugin-dts';
 
 export default defineConfig({
@@ -16,8 +16,5 @@ export default defineConfig({
             fileName: 'football-core',
         },
         minify: false,
-    },
-    test: {
-        include: ['src/**/*.test.ts'],
     },
 });
