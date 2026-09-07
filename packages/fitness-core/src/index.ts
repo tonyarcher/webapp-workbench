@@ -21,7 +21,7 @@ export type {
 export type {DueMeasurement} from './formulas';
 export type {TemplateInfo} from './five31';
 
-export {DAY_MS, LB_TO_KG, IN_TO_M, cmToM, formatSi, inToM, kgToLb, lbToKg, mToCm, mToIn, metricKind, parseMetricId, roundLoadKg, roundTo, toSi} from './units';
+export {DAY_MS, KCAL_TO_J, LB_TO_KG, IN_TO_M, cmToM, formatSi, inToM, kgToLb, lbToKg, mToCm, mToIn, metricKind, parseMetricId, roundLoadKg, roundTo, toSi} from './units';
 
 export {
     LIFTS,
@@ -56,4 +56,10 @@ export {downsampleLttb} from './downsample';
 export {evaluateThreshold, phaseOverlapsRange} from './thresholds';
 export {looksLikeCsv, parseCsv, parseSampleCsv} from './csv';
 export {looksLikeHealthConnect, parseHealthConnectJson} from './health-connect';
+export {
+    HEALTH_CONNECT_SQLITE_TABLES,
+    blobToHex,
+    looksLikeSqlite,
+    parseHealthConnectSqliteTables,
+} from './health-connect-sqlite';
 export {parseImportText} from './parse';

@@ -97,6 +97,7 @@ const OTHER_UNITS: Partial<Record<MetricId, Record<string, number>>> = {
     heart_rate: {bpm: 1, beats: 1, '': 1},
     resting_heart_rate: {bpm: 1, beats: 1, '': 1},
     steps: {'': 1, count: 1, steps: 1, step: 1},
+    distance: {m: 1, meter: 1, meters: 1, km: 1_000, mi: 1_609.344, mile: 1_609.344, miles: 1_609.344, '': 1},
     hrv_rmssd: {ms: 0.001, '': 0.001},
     vo2max: {'': 1, 'ml/kg/min': 1},
     active_knee_extension: {deg: 1, degree: 1, degrees: 1, '°': 1, '': 1},
@@ -128,6 +129,7 @@ const FORMAT_EXTRA: Partial<Record<MetricId, {scale: number; unit: string}>> = {
     heart_rate: {scale: 1, unit: 'bpm'},
     resting_heart_rate: {scale: 1, unit: 'bpm'},
     steps: {scale: 1, unit: 'steps'},
+    distance: {scale: 0.001, unit: 'km'},
 };
 
 export function formatSi(metric: MetricId, valueSi: number, display: DisplayUnit): {value: number; unit: string} {
@@ -161,6 +163,8 @@ const METRIC_ALIASES: Record<string, MetricId> = {
     hrv_rmssd: 'hrv_rmssd',
     hrv: 'hrv_rmssd',
     steps: 'steps',
+    distance: 'distance',
+    dist: 'distance',
     sleep: 'sleep',
     energy: 'energy',
     calories: 'energy',

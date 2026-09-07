@@ -1,8 +1,9 @@
 import {LitElement, html, unsafeCSS} from 'lit';
 import type {TemplateResult} from 'lit';
 import {customElement, state} from 'lit/decorators.js';
-import {parseImportText, type ParseResult} from 'fitness-core';
+import {looksLikeSqlite, parseImportText, type ParseResult} from 'fitness-core';
 import {postImport} from '../../services/api';
+import {parseHealthConnectSqliteFile} from '../../services/health-connect-db';
 import styles from './import-view.css?inline';
 
 const CHUNK = 500;
@@ -28,17 +29,28 @@ export class ImportView extends LitElement {
         const input = event.target as HTMLInputElement;
         const file = input.files?.[0];
         if (!file) return;
-        void file
-            .text()
-            .then((text) => {
-                this.text = text;
-                this.result = null;
-                this.stored = 0;
-                this.parse();
-            })
-            .catch(() => {
-                this.error = 'could not read file';
-            });
+        void this.loadFile(file);
+    }
+
+    private async loadFile(file: File): Promise<void> {
+        this.error = '';
+        this.stored = 0;
+        this.result = null;
+        try {
+            const bytes = new Uint8Array(await file.arrayBuffer());
+            if (looksLikeSqlite(bytes)) {
+                this.text = '';
+                this.busy = true;
+                this.result = await parseHealthConnectSqliteFile(bytes);
+                return;
+            }
+            this.text = new TextDecoder().decode(bytes);
+            this.parse();
+        } catch (err) {
+            this.error = err instanceof Error ? err.message : 'could not read file';
+        } finally {
+            this.busy = false;
+        }
     }
 
     private parse(): void {
@@ -82,8 +94,8 @@ export class ImportView extends LitElement {
         return html`
             <div class="page">
                 <h1 class="title">Import</h1>
-                <p class="help">Health Connect JSON or a CSV with columns metric, timestamp, value, unit.</p>
-                <input class="file-input" type="file" accept=".json,.csv,.txt,application/json,text/csv,text/plain" @change=${this.onFileChange}>
+                <p class="help">Health Connect SQLite export (.db), JSON, or CSV (metric, timestamp, value, unit). Re-import upserts by record id.</p>
+                <input class="file-input" type="file" accept=".db,.sqlite,.json,.csv,.txt,application/json,text/csv,text/plain,application/vnd.sqlite3,application/octet-stream" @change=${this.onFileChange}>
                 <textarea class="paste" placeholder="metric,timestamp,value,unit" .value=${this.text} @input=${this.onTextInput}></textarea>
                 <div class="actions">
                     <button class="btn" @click=${this.parse}>Preview</button>
