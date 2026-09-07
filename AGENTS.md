@@ -56,7 +56,7 @@ Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm tes
 
 Note: root `npm test` also runs `packages/web-components` component tests via
 @web/test-runner in real Chromium — on a fresh machine run `npx playwright install`
-first (see `packages/web-components/package.json`).
+first (see `packages/web-components/package.json`). This host (Ubuntu 26.04, headless, no DISPLAY/Xvfb needed) is ready: `npx playwright install` done for `@playwright/test@1.62.1` — browsers at `~/.cache/ms-playwright` (`chromium-1234`/`chromium_headless_shell-1234` verified headless, `firefox-1538`, `webkit-2336`). `apps/baseball` e2e (14 tests, `headless:true` on `:5199`) and `packages/web-components` wtr (5 files, 50 tests) pass headless.
 
 ## Git
 
