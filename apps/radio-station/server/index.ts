@@ -1,10 +1,11 @@
 import {startServer} from './app.js';
+import {formatErr, log} from './log.js';
 
 process.title = 'radio-api';
 
 startServer()
     .then((srv) => {
-        console.log(`radio-api listening on :${srv.port}`);
+        log('radio-api', {level: 'info', msg: 'listening', port: srv.port});
         const shutdown = () => {
             void srv.close().then(() => process.exit(0));
         };
@@ -12,6 +13,6 @@ startServer()
         process.on('SIGINT', shutdown);
     })
     .catch((err) => {
-        console.error('radio-api failed to start:', err);
+        log('radio-api', {level: 'error', msg: 'startup failed', err: formatErr(err)});
         process.exit(1);
     });

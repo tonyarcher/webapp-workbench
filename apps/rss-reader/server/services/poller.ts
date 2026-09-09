@@ -3,6 +3,7 @@ import {POLL_TICK_MS, POLL_MAX_AGE_MS, POLL_BATCH} from '../env.js';
 import {fetchFeedText} from './fetcher.js';
 import {ingestFeed} from './ingest.js';
 import type {FeedRow} from '../types.js';
+import {formatErr, log} from '../log.js';
 
 // ---- poller singleton ----
 
@@ -17,7 +18,7 @@ export function startPoller(): void {
     if (timer) return;
     timer = setInterval(() => {
         void tick().catch((err) => {
-            console.error('poller tick error:', err);
+            log('rss-api', {level: 'error', msg: 'poller tick', err: formatErr(err)});
         });
     }, POLL_TICK_MS);
 }
@@ -46,7 +47,7 @@ export async function drainPoller(): Promise<void> {
 export function tickNow(): void {
     if (stopped) return;
     void tick().catch((err) => {
-        console.error('poller tickNow error:', err);
+        log('rss-api', {level: 'error', msg: 'poller tickNow', err: formatErr(err)});
     });
 }
 
@@ -99,7 +100,7 @@ async function pollBatch(ids: string[]): Promise<void> {
         try {
             await pollFeed(feedId);
         } catch (err) {
-            console.error('poller: feed ' + feedId + ' failed:', err);
+            log('rss-api', {level: 'error', msg: 'poller feed', feed_id: feedId, err: formatErr(err)});
         }
     }
 }

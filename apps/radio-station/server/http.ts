@@ -1,4 +1,5 @@
 import type {IncomingMessage, ServerResponse} from 'node:http';
+import {attachRequestLog, formatErr, log} from './log.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -139,7 +140,14 @@ async function handleDispatch(req: IncomingMessage, res: ServerResponse, routes:
         if (!res.headersSent && result !== undefined) sendJson(res, 200, result);
     } catch (err) {
         const status = errorStatus(err);
-        if (status >= 500) console.error(err);
+        if (status >= 500) {
+            log('radio-api', {
+                level: 'error',
+                msg: 'request failed',
+                err: formatErr(err),
+                request_id: res.getHeader('X-Request-ID'),
+            });
+        }
         if (!res.headersSent) sendJson(res, status, {error: errorMessage(err, status)});
         else res.destroy();
     }
@@ -147,6 +155,7 @@ async function handleDispatch(req: IncomingMessage, res: ServerResponse, routes:
 
 export function createDispatcher(routes: Route[]): (req: IncomingMessage, res: ServerResponse) => void {
     return (req, res) => {
+        attachRequestLog('radio-api', req, res);
         void handleDispatch(req, res, routes);
     };
 }

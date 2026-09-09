@@ -1,4 +1,5 @@
 import { executeDueOrders } from './trading'
+import { formatErr, log } from '../log'
 
 let started = false
 
@@ -7,7 +8,7 @@ export function ensureSchedulerStarted(): void {
   started = true
   const tick = (): void => {
     executeDueOrders().catch((err: unknown) => {
-      console.error('stock-game scheduler tick failed', err)
+      log('stock-game', { level: 'error', msg: 'scheduler tick', err: formatErr(err) })
     })
   }
   setTimeout(tick, 5_000)

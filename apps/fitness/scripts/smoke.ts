@@ -1,4 +1,5 @@
 import {parseImportText, parseHealthConnectSqliteTables, planLift, lbToKg} from 'fitness-core';
+import {formatLog} from '../server/log.ts';
 import {rowObject, rowsFromExec} from '../src/services/sqlite-rows';
 import {displaySeries, rollupPoints} from '../src/services/chart-data';
 
@@ -50,6 +51,17 @@ assert(sets.filter((s) => s.slot === 'fsl').length === 5, 'FSL 5 sets');
     assert(pts.length === 2 && pts[0]!.v === 0.8, 'rollup points');
     const shown = displaySeries('waist', pts, 'kg');
     assert(shown.ys.length === 2 && shown.fmt === 'cm', 'display series cm');
+}
+
+{
+    const prev = process.env.LOG_LEVEL;
+    process.env.LOG_LEVEL = 'info';
+    const line = formatLog('fitness-api', {level: 'info', msg: 'listening', port: 3003});
+    assert(!!line && JSON.parse(line).service === 'fitness-api', 'formatLog json');
+    process.env.LOG_LEVEL = 'error';
+    assert(formatLog('fitness-api', {level: 'debug', msg: 'x'}) === null, 'formatLog level filter');
+    if (prev === undefined) delete process.env.LOG_LEVEL;
+    else process.env.LOG_LEVEL = prev;
 }
 
 console.log('\nAll fitness smoke tests passed.');

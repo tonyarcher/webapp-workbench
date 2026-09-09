@@ -35,6 +35,8 @@ import {
 import {encodeCursor, decodeCursor} from '../server/cursor.js';
 import {isPrivateIp} from '../server/services/fetcher.js';
 import {cookieOpts} from '../server/http.js';
+import {formatErr, formatLog, parseTraceparent, requestIdFrom} from '../server/log.js';
+import type {IncomingMessage} from 'node:http';
 
 function assert(cond: boolean, msg: string): asserts cond {
     if (!cond) {
@@ -307,6 +309,29 @@ assert(d2 !== null && d2.k === 'abc' && d2.id === 'xyz', 'cursor roundtrip strin
 
 assert(decodeCursor('!!!invalid!!!') === null, 'cursor tamper resistance');
 assert(decodeCursor('') === null, 'cursor empty string');
+
+// ====================================================================
+// JSON logs
+// ====================================================================
+
+const prevLevel = process.env.LOG_LEVEL;
+process.env.LOG_LEVEL = 'info';
+const infoLine = formatLog('rss-api', {level: 'info', msg: 'listening', port: 3001});
+assert(!!infoLine, 'formatLog emits at info');
+const infoJson = JSON.parse(infoLine!) as {level: string; msg: string; service: string; ts: string; port: number};
+assert(infoJson.level === 'info' && infoJson.msg === 'listening' && infoJson.service === 'rss-api', 'formatLog shape');
+assert(typeof infoJson.ts === 'string' && infoJson.port === 3001, 'formatLog ts and extra keys');
+process.env.LOG_LEVEL = 'error';
+assert(formatLog('rss-api', {level: 'debug', msg: 'quiet'}) === null, 'formatLog respects LOG_LEVEL');
+if (prevLevel === undefined) delete process.env.LOG_LEVEL;
+else process.env.LOG_LEVEL = prevLevel;
+const errJson = formatErr(new TypeError('boom'));
+assert(errJson.type === 'TypeError' && errJson.message === 'boom', 'formatErr uses Error name');
+const tp = parseTraceparent('00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01');
+assert(tp?.trace_id === 'a'.repeat(32) && tp.span_id === 'b'.repeat(16), 'parseTraceparent');
+assert(parseTraceparent('nope') === undefined, 'parseTraceparent rejects junk');
+const ids = requestIdFrom({headers: {'x-request-id': 'req-1'}} as IncomingMessage);
+assert(ids.request_id === 'req-1', 'requestIdFrom honors X-Request-ID');
 
 // ====================================================================
 // DB-gated tests

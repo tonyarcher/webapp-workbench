@@ -2,6 +2,7 @@ import {createServer, type Server} from 'node:http';
 import {PORT} from './env.js';
 import {bootDb, closePool} from './db.js';
 import {route, createDispatcher} from './http.js';
+import {formatErr, log} from './log.js';
 import {healthHandler} from './routes/health.js';
 import {importHandler} from './routes/imports.js';
 import {
@@ -55,7 +56,7 @@ export async function startServer(
         let resolved = false;
         srv.on('error', (err) => {
             if (!resolved) reject(err);
-            else console.error('fitness-api server error:', err);
+            else log('fitness-api', {level: 'error', msg: 'server error', err: formatErr(err)});
         });
         srv.listen(port, host, () => {
             resolved = true;

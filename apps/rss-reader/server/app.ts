@@ -4,6 +4,7 @@ import {migrate, closePool} from './db.js';
 import {route, createDispatcher} from './http.js';
 import {ensureUser} from './users.js';
 import {startPoller, drainPoller} from './services/poller.js';
+import {formatErr, log} from './log.js';
 
 // ---- routes ----
 
@@ -70,7 +71,7 @@ export async function startServer(
         let resolved = false;
         srv.on('error', (err) => {
             if (!resolved) reject(err);
-            else console.error('rss-api server error:', err);
+            else log('rss-api', {level: 'error', msg: 'server error', err: formatErr(err)});
         });
         srv.listen(port, host, () => {
             resolved = true;
