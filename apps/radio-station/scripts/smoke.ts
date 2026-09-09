@@ -2,6 +2,7 @@ import {formatPlaylistTxt} from '../src/services/export-txt';
 import {findNowPlaying} from '../src/services/now-playing';
 import {filterEntries, toListItems, weekDays} from '../src/services/list-items';
 import {WEEK_MS} from '../server/env.ts';
+import {formatLog} from '../server/log.ts';
 import {canonicalizeWeights, DEFAULT_WEIGHTS} from '../server/services/weights.ts';
 import {generateWeek} from '../server/services/scheduler.ts';
 import {PLACEHOLDER_TRACKS} from '../server/seed-data.ts';
@@ -166,5 +167,16 @@ for (let i = 1; i < plays.length; i++) {
     if (gap + 1 < minGap) tight += 1;
 }
 assert(tight === 0, '#1 gaps respect 0.7x orbit');
+
+{
+    const prev = process.env.LOG_LEVEL;
+    process.env.LOG_LEVEL = 'info';
+    const line = formatLog('radio-api', {level: 'info', msg: 'listening', port: 3002});
+    assert(!!line && JSON.parse(line).service === 'radio-api', 'formatLog json');
+    process.env.LOG_LEVEL = 'error';
+    assert(formatLog('radio-api', {level: 'debug', msg: 'x'}) === null, 'formatLog level filter');
+    if (prev === undefined) delete process.env.LOG_LEVEL;
+    else process.env.LOG_LEVEL = prev;
+}
 
 console.log('\nAll smoke tests passed.');

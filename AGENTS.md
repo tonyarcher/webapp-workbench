@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Instructions for AI agents working in this monorepo. Keep responses concise and direct.
+Instructions for AI agents working in this monorepo.
 Read the workspace `AGENTS.md` before touching that app or package.
 
 ## Project
@@ -165,6 +165,23 @@ comments, and workflow only — not Lit/CSS/PWA.
 - Floating promises: `void` plus `.catch(...)`. IndexedDB writes await `tx.done`. Multi-store writes use one transaction.
 - Untrusted URLs (`href` / `src`) pass through `safeUrl()` (app or `vertical-scroll-core`).
 - Do not log tokens, secrets, or raw sample/PII payloads.
+
+### Logging
+
+User-wide JSON-stdout rules apply to **Node APIs** (`rss-api`, `radio-api`, `fitness-api`,
+stock-game server). One line per event; `service` is the compose/process name.
+
+- Honor inbound `X-Request-ID` (or `traceparent`); generate a UUID if missing; echo it
+  on the response. Pass that id through poller/scheduler work derived from the request.
+- HTTP: one `info` line per request (`method`, `path` without raw query, `status`,
+  `duration_ms`). `error` with `err` on 5xx. Startup/listen is `info`.
+- `LOG_LEVEL` from the environment. Do not log article bodies, feed XML, Health
+  Connect samples, or Authorization cookies.
+- Lit apps stay on `console` in the browser. Do not add a telemetry pipeline from the client.
+
+When adding or changing API error paths, emit JSON lines as above instead of
+bare `console.error(err)`. A local 20-line helper is enough; do not add pino
+or a `packages/log` workspace until a second language needs the same code.
 
 ### PWA
 
