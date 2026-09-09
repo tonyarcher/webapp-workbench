@@ -1,15 +1,16 @@
 # AGENTS.md
 
-Instructions for AI agents working in this repository. Keep responses concise and direct.
+Baseball scorekeeping (`baseball-tracker`). Shared TypeScript / Lit / CSS / workflow:
+repo-root `AGENTS.md`.
 
-## Project
+## Stack
 
-Vite + TypeScript + Lit baseball scorekeeping app. Entirely client-side; no backend.
-
-- `src/` — app code (Lit components, `local-game` rule engine/state, box score)
-- `packages/web-components/` (repo root) — standalone Lit component library `@baseball/web-components` (see `packages/web-components/.agents/AGENTS.md`)
-- `e2e/` — Playwright end-to-end tests
-- `styles/styles.css` — global design tokens (`:root` CSS variables)
+- Vite + TypeScript + Lit. Entirely client-side; no backend.
+- `@baseball/web-components` for reusable scorebook/scoreboard widgets only.
+  App shells (`app-shell`, `game-shell`, setup) stay in `src/local-game/` — they are not package material.
+- `@tanstack/query-core`, `@tanstack/virtual-core`, `@tanstack/history`, `idb`.
+- Unit tests: vitest (`src/**/*.test.ts`). Components: @web/test-runner in Chromium.
+- E2E: Playwright against `http://localhost:5199`.
 
 ## Commands
 
@@ -18,28 +19,27 @@ Vite + TypeScript + Lit baseball scorekeeping app. Entirely client-side; no back
 | Dev server | `npm run dev` |
 | Build + type check | `npm run build` (`tsc --noEmit && vite build`) |
 | Lint | `npm run lint` (oxlint) |
-| Unit tests (`src/`) | `npm test` (vitest) |
-| Component tests | `npm --prefix ../../packages/web-components run test` (@web/test-runner, real Chromium) |
+| Unit tests | `npm test` (vitest) |
+| Component tests | `npm --prefix ../../packages/web-components run test` |
 | Component build | `npm run build:components` |
-| E2E tests | `npm run test:e2e` (builds components, then Playwright) |
+| E2E | `npm run test:e2e` (builds components, then Playwright) |
 
-## Architecture notes
+After editing `packages/web-components`, rebuild it before the app.
 
-- `src/local-game/rule-engine.ts` is a pure reducer; the top-level `BaseballApp` lives in `app-shell.ts`, the in-game UI shell in `game-shell.ts`; persistence via `game-store.ts`/`save-state.ts`.
-- Notation strings: `src/local-game/notation.ts`. SVG base-point coordinates in `src/local-game/scorebook-path.ts` MUST stay in sync with `basePointX`/`basePointY` in `packages/web-components/src/scorebook/baseball-scorebook-grid.ts`.
-- Web components receive data as JSON attributes (`slots-json`, `game-json`, ...) parsed with Lit `converter`s; events are standard `CustomEvent`s.
-- Component CSS is co-located `*.css` imported via Vite `?inline` and installed with `CSSStyleSheet.replaceSync` (see `packages/web-components/src/scorebook/baseball-scorebook-grid.ts`).
+## Architecture
+
+- `src/local-game/rule-engine.ts` — pure reducer. `app-shell.ts` is the top-level app; `game-shell.ts` is in-game UI; persistence via `game-store.ts` / `save-state.ts`.
+- Notation: `src/local-game/notation.ts`. SVG base-point coordinates in `src/local-game/scorebook-path.ts` **must** stay in sync with `basePointX` / `basePointY` in `packages/web-components/src/scorebook/baseball-scorebook-grid.ts`.
+- App shells register with `customElements.define('baseball-*', …)` (not `@customElement`). Library components use Lit converters on JSON attributes (`slots-json`, `game-json`, …) and `CSSStyleSheet.replaceSync` for co-located CSS.
+- Global tokens: `styles/styles.css` (`:root` variables).
 
 ## Testing
 
-- `src/`: co-located `*.test.ts`, run with vitest.
-- `packages/web-components/`: tests in `packages/web-components/test/` with `@esm-bundle/chai`, run in Chromium via @web/test-runner.
-- `e2e/`: Playwright against `http://localhost:5199`. The Playwright config starts its own Vite server on port 5199 with `--strictPort`; a stale dev server on that port can hang the run — kill it first.
-- Known lint state: `no-unused-expressions` warnings in web-component tests are expected chai patterns; do not "fix" them.
+- `src/`: co-located `*.test.ts`, vitest.
+- `packages/web-components/test/`: `@esm-bundle/chai` in real Chromium. `no-unused-expressions` warnings in those tests are chai patterns — do not “fix” them.
+- `e2e/`: Playwright config starts Vite on 5199 with `--strictPort`. A stale server on that port hangs the run.
 
-## Workflow (mandatory)
+## Blocking
 
-1. Make focused changes; for bug fixes, write a failing regression test before/with the fix.
-2. Run the full suite: lint, unit tests, component tests, e2e tests, and `npm run build`.
-3. Always run the review agent (the built-in `review` subagent) on the changes and address its findings.
-4. Once review passes, ask the user for approval to commit and push before doing so. When approved, use a conventional commit message (`feat:`, `fix:`, `refactor:`, `chore:`, `test:`, `docs:`) and push to `main`.
+- Scorebook path coordinates drifting from the grid component.
+- App logic leaking into `@baseball/web-components`.
