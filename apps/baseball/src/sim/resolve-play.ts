@@ -72,12 +72,26 @@ function inPlayChance(matchup: SimMatchup): number {
 
 function resolveTakenPitch(matchup: SimMatchup, context: PlayContext, random: () => number): ResolvedPlay {
   const ballP = clamp01(0.36 + (matchup.batter.ratings.discipline - matchup.pitcher.ratings.control) * 0.0013);
-  if (chance(random, ballP)) return pitchPlay('BALL', context);
+  if (chance(random, ballP)) return pitchPlay('BALL', outsideContext(context));
   return resolveSwingOrLook(matchup, context, random);
 }
 
+/** A called ball is never painted inside the strike zone. */
+function outsideContext(context: PlayContext): PlayContext {
+  if (context.location.zone > 9) return context;
+  return { ...context, location: { zone: outsideZone(context.location.zone) } };
+}
+
+function outsideZone(zone: number): number {
+  const row = Math.floor((zone - 1) / 3);
+  const col = (zone - 1) % 3;
+  if (row === 0) return 10;
+  if (row === 2) return 11;
+  return col === 2 ? 13 : 12;
+}
+
 function resolveSwingOrLook(matchup: SimMatchup, context: PlayContext, random: () => number): ResolvedPlay {
-  const inZone = context.location.zone >= 4 && context.location.zone <= 6;
+  const inZone = context.location.zone >= 1 && context.location.zone <= 9;
   const chase = !inZone && chance(random, 0.55 - matchup.batter.ratings.discipline * 0.003);
   if (inZone && chance(random, 0.42)) return pitchPlay('FOUL', context, { strikeKind: 'swinging' });
   if (chase) return pitchPlay(chance(random, 0.45) ? 'FOUL' : 'STRIKE', context, { strikeKind: 'swinging' });
@@ -94,10 +108,9 @@ function choosePitch(pitcher: SimMatchup['pitcher'], random: () => number): Pitc
 }
 
 function chooseZone(pitcher: SimMatchup['pitcher'], random: () => number): PitchLocation {
-  if (chance(random, 0.35 + pitcher.ratings.control * 0.003)) {
-    return { zone: 4 + pickIndexSafe(random, 3) };
-  }
-  return { zone: 1 + pickIndexSafe(random, 9) };
+  const strikeChance = Math.min(0.7, 0.3 + pitcher.ratings.control * 0.004);
+  if (chance(random, strikeChance)) return { zone: 1 + pickIndexSafe(random, 9) };
+  return { zone: 10 + pickIndexSafe(random, 8) };
 }
 
 function pickIndexSafe(random: () => number, length: number): number {

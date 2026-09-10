@@ -11,7 +11,16 @@ export function renderScoreboardSlot(model: {
   activePlayJson: string;
   playSeq: number;
   playDurationMs: number;
+  interactive: boolean;
+  armedLocation: number;
 }) {
+  return html`
+    ${renderScoreboard(model)}
+    ${renderDefense(model)}
+  `;
+}
+
+function renderScoreboard(model: Parameters<typeof renderScoreboardSlot>[0]) {
   return html`
     <baseball-scoreboard
       game-json=${JSON.stringify(model.gameJson)}
@@ -21,7 +30,14 @@ export function renderScoreboardSlot(model: {
       active-play-json=${model.activePlayJson}
       play-seq=${model.playSeq}
       play-duration-ms=${model.playDurationMs}
+      ?interactive=${model.interactive}
+      armed-location=${model.armedLocation}
     ></baseball-scoreboard>
+  `;
+}
+
+function renderDefense(model: Parameters<typeof renderScoreboardSlot>[0]) {
+  return html`
     <baseball-defense-diagram
       defending-team=${defendingTeamName(model.game.engine)}
       fielders-json=${JSON.stringify(defenseFielders(model.game.engine))}

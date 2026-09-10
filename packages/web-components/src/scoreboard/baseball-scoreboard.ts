@@ -53,6 +53,17 @@ export class BaseballScoreboard extends LitElement {
         reflect: true,
     })
     animations = true;
+    @property({type: String, attribute: 'away-color'}) awayColor = '';
+    @property({type: String, attribute: 'home-color'}) homeColor = '';
+    @property({
+        attribute: 'interactive',
+        converter: {
+            fromAttribute: (value: string | null) => value === 'true' || value === '',
+            toAttribute: (value: boolean) => (value ? 'true' : 'false'),
+        },
+    })
+    interactive = false;
+    @property({type: Number, attribute: 'armed-location'}) armedLocation = 0;
     @property({type: String, attribute: 'active-play-json'}) activePlayJson = '';
     @property({type: Number, attribute: 'play-seq'}) playSeq = 0;
     @property({type: Number, attribute: 'play-duration-ms'}) playDurationMs = 4000;
@@ -112,6 +123,8 @@ export class BaseballScoreboard extends LitElement {
             pitcherName: this.resolvePitcherName(g),
             batterBats: asHand(g?.gameState?.batterBats),
             pitcherThrows: asHand(g?.gameState?.pitcherThrows),
+            ...this.resolveColors(g),
+            battingHome: (g?.gameState?.half ?? this.half) !== 'TOP',
             ...runners,
             inningSymbol: this.resolveInningSymbol(g),
             outsStr: this.formatOuts(this.resolveOuts(g)),
@@ -138,6 +151,12 @@ export class BaseballScoreboard extends LitElement {
 
     private resolveAwayName(g: any) { return g?.awayTeam?.name ?? this.awayName; }
     private resolveHomeName(g: any) { return g?.homeTeam?.name ?? this.homeName; }
+    private resolveColors(g: any) {
+        return {
+            awayColor: g?.awayTeam?.primaryColor ?? this.awayColor,
+            homeColor: g?.homeTeam?.primaryColor ?? this.homeColor,
+        };
+    }
     private resolveAwayScore(g: any) { return g?.awayScore ?? this.awayScore; }
     private resolveHomeScore(g: any) { return g?.homeScore ?? this.homeScore; }
     private resolveAwayHits(bs: any) { return bs?.lineScore?.awayHits ?? this.awayHits; }
@@ -200,11 +219,24 @@ export class BaseballScoreboard extends LitElement {
             throws: play?.throws ?? vm.pitcherThrows,
             batterName: vm.batterName,
             pitcherName: vm.pitcherName,
+            batterColor: vm.battingHome ? vm.homeColor : vm.awayColor,
+            pitcherColor: vm.battingHome ? vm.awayColor : vm.homeColor,
             playSeq: this.playSeq,
             playDurationMs: this.playDurationMs,
             animations: this.animations,
+            interactive: this.interactive,
+            armedZone: this.armedLocation,
+            onZonePick: this.onZonePick,
         });
     }
+
+    private readonly onZonePick = (zone: number | null): void => {
+        this.dispatchEvent(new CustomEvent('pitch-location-selected', {
+            detail: {zone},
+            bubbles: true,
+            composed: true,
+        }));
+    };
 
     private renderDiamond(vm: ReturnType<BaseballScoreboard['buildViewModel']>) {
         return html`

@@ -68,7 +68,10 @@
 
 :host([animations='false']) .base,
 :host([animations='false']) .last-play-display,
-:host([animations='false']) .zone-result {
+:host([animations='false']) .zone-result,
+:host([animations='false']) .sign,
+:host([animations='false']) .pitch-swing,
+:host([animations='false']) .swing-group {
     transition: none;
     animation: none;
 }
@@ -77,17 +80,8 @@
     opacity: 1;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .base,
-    .last-play-display,
-    .zone-result {
-        transition: none;
-        animation: none;
-    }
-
-    .zone-result {
-        opacity: 1;
-    }
+:host([animations='false']) .pitch-ball {
+    display: none;
 }
 
 .team-led-name {
@@ -219,16 +213,39 @@
     z-index: 1;
 }
 
+.ground {
+    position: absolute;
+    inset: 0;
+    perspective: 340px;
+    perspective-origin: 50% 8%;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.plate-dirt {
+    position: absolute;
+    left: 50%;
+    top: 118px;
+    width: 168px;
+    height: 90px;
+    margin-left: -84px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 78%, rgba(176, 122, 62, 0.5) 0%, rgba(110, 78, 40, 0.22) 58%, transparent 74%);
+    transform: rotateX(64deg);
+    transform-origin: 50% 100%;
+}
+
 .home-plate {
     position: absolute;
     left: 50%;
-    top: 176px;
+    top: 172px;
     width: 22px;
     height: 18px;
     margin-left: -11px;
     background: rgba(245, 245, 245, 0.88);
     clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%);
-    z-index: 2;
+    transform: rotateX(64deg);
+    transform-origin: 50% 100%;
 }
 
 .batters-box {
@@ -236,9 +253,10 @@
     top: 132px;
     width: 40px;
     height: 58px;
-    border: 1px solid rgba(255, 255, 255, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.42);
     background: rgba(0, 0, 0, 0.12);
-    z-index: 1;
+    transform: rotateX(64deg);
+    transform-origin: 50% 100%;
 }
 
 .box-left {
@@ -253,10 +271,11 @@
 
 .zone {
     position: absolute;
+    box-sizing: content-box;
     left: 50%;
-    top: 78px;
-    width: 54px;
-    height: 80px;
+    top: 112px;
+    width: 34px;
+    height: 52px;
     transform: translateX(-50%);
     border: 2px solid rgba(255, 255, 255, 0.78);
     background: rgba(0, 0, 0, 0.28);
@@ -280,14 +299,16 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 0.15rem;
+    padding: 0.1rem;
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.72rem;
+    font-size: 0.55rem;
+    line-height: 1.05;
     font-weight: 800;
     letter-spacing: 0.4px;
     color: var(--accent-yellow, #ffcc00);
     text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
     opacity: 0;
+    pointer-events: none;
     z-index: 6;
 }
 
@@ -299,60 +320,439 @@
     opacity: 1;
 }
 
+.plate-scene {
+    --fig-line: #ffd95a;
+    --fig-core: #fff3cc;
+    --fig-tube: rgba(255, 205, 60, 0.3);
+    --fig-fill: rgba(9, 13, 17, 0.78);
+    --fig-detail: rgba(255, 230, 150, 0.5);
+    --fig-wood: #d89a55;
+    --fig-tape: rgba(20, 14, 8, 0.75);
+    --fig-leather: #a86f36;
+    --fig-ball: #f6f5ef;
+    --fig-stitch: #ff4d5e;
+}
+
 .sign {
     position: absolute;
-    color: var(--accent-yellow, #ffcc00);
+    --fig-line: color-mix(in srgb, var(--team, #ffd95a) 62%, #ffffff);
+    --fig-core: color-mix(in srgb, var(--team, #ffd95a) 32%, #ffffff);
+    --fig-tube: color-mix(in srgb, var(--team, #ffd95a) 34%, transparent);
+    --fig-detail: color-mix(in srgb, var(--team, #ffd95a) 45%, #ffffff 55%);
+    --fig-glow: color-mix(in srgb, var(--team, #ffd95a) 60%, transparent);
+    --fig-fill: color-mix(in srgb, var(--team, #ffd95a) 20%, #0a0e12);
+    color: var(--fig-line);
     z-index: 4;
+    transform-origin: 50% 100%;
+}
+
+.sign::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -2px;
+    width: 72%;
+    height: 9px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 70%);
+    pointer-events: none;
+    z-index: -1;
 }
 
 .wire-sign {
+    display: block;
     width: 100%;
     height: 100%;
+    overflow: visible;
     fill: none;
-    stroke: currentColor;
-    stroke-width: 1.35;
+    stroke: var(--fig-line);
+    stroke-width: 1.15;
     stroke-linecap: round;
     stroke-linejoin: round;
-    filter: drop-shadow(0 0 3px rgba(255, 204, 0, 0.55));
+    filter: drop-shadow(0 0 4px var(--fig-glow, rgba(255, 210, 70, 0.55)));
+}
+
+.wire-sign .tube {
+    fill: none;
+    stroke: var(--fig-tube);
+    stroke-width: 6.5;
+}
+
+.batter .wire-sign .tube {
+    stroke-width: 5;
+}
+
+.wire-sign .core {
+    fill: none;
+    stroke: var(--fig-core);
+    stroke-width: 1.5;
+}
+
+.wire-sign .solid,
+.wire-sign .cap {
+    fill: var(--fig-fill);
+    stroke: var(--fig-line);
+}
+
+.wire-sign .detail {
+    fill: none;
+    stroke: var(--fig-detail);
+    stroke-width: 0.9;
+}
+
+.wire-sign .wood {
+    fill: var(--fig-wood);
+    stroke: var(--fig-line);
+}
+
+.wire-sign .tape {
+    fill: var(--fig-tape);
+    stroke: none;
+}
+
+.wire-sign .leather {
+    fill: var(--fig-leather);
+    stroke: var(--fig-line);
+}
+
+.wire-sign .ball {
+    fill: var(--fig-ball);
+    stroke: var(--fig-line);
+    stroke-width: 0.9;
+}
+
+.wire-sign .stitch {
+    fill: none;
+    stroke: var(--fig-stitch);
+    stroke-width: 0.9;
+}
+
+.wire-sign .jersey-num {
+    fill: var(--fig-core);
+    stroke: none;
+    font-family: 'Outfit', sans-serif;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.wire-sign .swing-arc {
+    fill: none;
+    stroke: var(--fig-line);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-dasharray: 150;
+    stroke-dashoffset: 150;
+    opacity: 0;
 }
 
 .pitcher {
     left: 50%;
-    top: 6px;
-    width: 34px;
-    height: 52px;
-    margin-left: -17px;
+    top: 0;
+    width: 44px;
+    height: 64px;
+    margin-left: -22px;
     z-index: 3;
 }
 
-.pitcher .arm-throw-L,
-.pitcher .arm-glove-L {
+.pitcher .side-left,
+.pitcher .side-right {
     display: none;
 }
 
-.pitcher.throws-L .arm-throw-L,
-.pitcher.throws-L .arm-glove-L {
-    display: unset;
+.pitcher.throws-R .glove-arm.side-right,
+.pitcher.throws-R .pitch-arm.side-left {
+    display: block;
 }
 
-.pitcher.throws-L .arm-throw-R,
-.pitcher.throws-L .arm-glove-R {
-    display: none;
+.pitcher.throws-L .glove-arm.side-left,
+.pitcher.throws-L .pitch-arm.side-right {
+    display: block;
 }
 
 .batter {
-    top: 68px;
-    width: 46px;
-    height: 118px;
+    top: 65px;
+    width: 68px;
+    height: 125px;
 }
 
 .batter.bats-R {
-    left: calc(50% - 78px);
+    left: calc(50% - 80px);
 }
 
 .batter.bats-L {
-    left: calc(50% + 32px);
+    left: calc(50% + 12px);
+}
+
+.batter.bats-L .wire-sign {
     transform: scaleX(-1);
+}
+
+.batter.bats-L .jersey-num {
+    transform: scaleX(-1);
+    transform-origin: 46px 72px;
+}
+
+.plate-scene.animated .sign {
+    animation: fig-breathe 3.6s ease-in-out infinite;
+}
+
+.plate-scene.animated.has-pitch .pitch-swing {
+    transform-origin: 20.4px 24px;
+    animation: pitch-deliver var(--pitch-duration, 4s) both;
+}
+
+.plate-scene.animated.swinging .swing-group {
+    transform-origin: 53px 49px;
+    animation: bat-swing var(--pitch-duration, 4s) both;
+}
+
+.plate-scene.animated.swinging .swing-upper {
+    transform-origin: 44px 88px;
+    animation: torso-swing var(--pitch-duration, 4s) both;
+}
+
+.plate-scene.animated.swinging .swing-arc {
+    animation: swing-trail var(--pitch-duration, 4s) both;
+}
+
+.plate-scene.animated.swinging.result-IN-PLAY .swing-group {
+    animation-name: bat-swing-hit;
+}
+
+.plate-scene.animated.swinging.result-IN-PLAY .swing-upper {
+    animation-name: torso-swing-hit;
+}
+
+.plate-scene.has-pitch .hand-ball {
+    opacity: 0;
+}
+
+.pitch-ball {
+    position: absolute;
+    left: calc(50% + var(--pitch-release, 0px));
+    top: 9px;
+    width: 7px;
+    height: 7px;
+    margin-left: -3.5px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffffff 0%, #d9d9cf 70%);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.75);
+    opacity: 0;
+    z-index: 6;
+    pointer-events: none;
+}
+
+.pitch-ball::after {
+    content: '';
+    position: absolute;
+    inset: 1px 1.5px;
+    border-left: 1px solid var(--fig-stitch);
+    border-right: 1px solid var(--fig-stitch);
+    border-radius: 50%;
+}
+
+.plate-scene.zone-interactive .zone {
+    cursor: pointer;
+}
+
+.zone-pick {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffffff 0%, #d9d9cf 70%);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.8), 0 0 0 1px rgba(255, 77, 94, 0.8);
+    pointer-events: none;
+    z-index: 3;
+}
+
+.plate-scene.has-pitch.has-location.animated .pitch-ball {
+    animation: pitch-flight var(--pitch-duration, 4s) both;
+}
+
+@keyframes fig-breathe {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-1px);
+    }
+}
+
+@keyframes pitch-deliver {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    30% {
+        transform: rotate(-14deg);
+    }
+
+    46% {
+        transform: rotate(152deg);
+    }
+
+    56%,
+    100% {
+        transform: rotate(140deg);
+    }
+}
+
+@keyframes bat-swing {
+    0%,
+    20% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+
+    30% {
+        transform: translate(0, 14px) rotate(92deg);
+    }
+
+    42% {
+        transform: translate(5px, 22px) rotate(148deg);
+    }
+
+    50% {
+        transform: translate(8px, 24px) rotate(156deg);
+    }
+
+    62% {
+        transform: translate(13px, 28px) rotate(166deg);
+    }
+
+    100% {
+        transform: translate(13px, 28px) rotate(162deg);
+    }
+}
+
+@keyframes bat-swing-hit {
+    0%,
+    12% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+
+    22% {
+        transform: translate(0, 14px) rotate(92deg);
+    }
+
+    36% {
+        transform: translate(5px, 22px) rotate(148deg);
+    }
+
+    46% {
+        transform: translate(8px, 24px) rotate(156deg);
+    }
+
+    58% {
+        transform: translate(13px, 28px) rotate(166deg);
+    }
+
+    100% {
+        transform: translate(13px, 28px) rotate(162deg);
+    }
+}
+
+@keyframes torso-swing {
+    0%,
+    22% {
+        transform: translateX(0) rotate(0deg);
+    }
+
+    36% {
+        transform: translateX(2px) rotate(-6deg);
+    }
+
+    50%,
+    100% {
+        transform: translateX(4px) rotate(-10deg);
+    }
+}
+
+@keyframes torso-swing-hit {
+    0%,
+    14% {
+        transform: translateX(0) rotate(0deg);
+    }
+
+    28% {
+        transform: translateX(2px) rotate(-6deg);
+    }
+
+    44%,
+    100% {
+        transform: translateX(4px) rotate(-10deg);
+    }
+}
+
+@keyframes swing-trail {
+    0%,
+    28% {
+        opacity: 0;
+        stroke-dashoffset: 150;
+    }
+
+    40% {
+        opacity: 0.55;
+    }
+
+    52% {
+        opacity: 0.5;
+        stroke-dashoffset: 0;
+    }
+
+    68%,
+    100% {
+        opacity: 0;
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes pitch-flight {
+    0% {
+        transform: translate(0, 0) scale(0.7);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    50% {
+        transform: translate(var(--pitch-dx, 0px), var(--pitch-dy, 80px)) scale(1);
+        opacity: 1;
+    }
+
+    58%,
+    100% {
+        transform: translate(var(--pitch-dx, 0px), var(--pitch-dy, 80px)) scale(1.5);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .base,
+    .last-play-display,
+    .plate-scene.animated .sign,
+    .plate-scene.animated.has-pitch .pitch-swing,
+    .plate-scene.animated.swinging .swing-group,
+    .plate-scene.animated.swinging .swing-upper,
+    .plate-scene.animated.swinging .swing-arc,
+    .plate-scene.has-pitch.animated .zone-result {
+        transition: none;
+        animation: none;
+    }
+
+    .plate-scene.has-pitch.animated .zone-result {
+        opacity: 1;
+    }
+
+    .plate-scene .pitch-ball {
+        display: none;
+    }
 }
 
 .hand-tag {

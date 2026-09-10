@@ -59,6 +59,22 @@ export function asHand(value: unknown, fallback: Handedness = 'R'): Handedness {
     return value === 'L' || value === 'R' ? value : fallback;
 }
 
+const DEFAULT_TEAM_COLOR = '#ffd95a';
+const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const COLOR_FN = /^(?:rgb|hsl)a?\(([^()]*)\)$/i;
+const COLOR_TOKEN = /^[-\d.]+%?$/;
+
+/** Only well-formed hex and 3/4-value rgb/hsl colors reach inline styles. */
+export function safeColor(value: unknown): string {
+    if (typeof value !== 'string' || !value) return DEFAULT_TEAM_COLOR;
+    if (HEX_COLOR.test(value)) return value;
+    const fn = COLOR_FN.exec(value);
+    if (!fn) return DEFAULT_TEAM_COLOR;
+    const parts = fn[1].trim().split(/[\s,/]+/).filter(Boolean);
+    if (parts.length !== 3 && parts.length !== 4) return DEFAULT_TEAM_COLOR;
+    return parts.every((part) => COLOR_TOKEN.test(part)) ? value : DEFAULT_TEAM_COLOR;
+}
+
 export function parsePlatePlay(
     json: string,
     fallbackBats: Handedness = 'R',
@@ -89,7 +105,7 @@ function playFromRecord(
         result: plateResultLabel(eventType),
         swinging,
         fieldPos: boundedInt(record.fieldPos, 1, 9),
-        zone: boundedInt(zoneValue(record.pitchLocation), 1, 9),
+        zone: boundedInt(zoneValue(record.pitchLocation), 1, 17),
     };
 }
 

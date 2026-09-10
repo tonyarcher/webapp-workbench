@@ -8,15 +8,14 @@ import type { GameStore } from './game-store';
 import type { LocalGameEventRecord } from './game-types';
 import { buildBoxScore } from './box-score';
 import { boxScoreOverlay } from './box-score-view';
+import { ManualPlayTracker } from './manual-play';
 import {
   battingBatterName,
+  buildScoreboardGameJson,
   editorPlayersToLineup,
   engineBadge,
-  lastPlayLabel,
-  matchupHands,
   pitchingPitcherName,
   rowsToEditorPlayers,
-  runnerOnBaseName,
   scorebookSlots,
 } from './game-shell-helpers';
 import { WatchRunner } from './watch-runner';
@@ -62,6 +61,7 @@ export class BaseballGameShell extends LitElement {
   private pendingBaseLabel = '';
   private lastEventKey = '';
   private currentPitchType = '';
+  private readonly manualPlay = new ManualPlayTracker();
   private readonly watch = new WatchRunner({
     getGame: () => this.store?.current() ?? this.game,
     record: (type, detail) => this.record(type, detail),
@@ -90,6 +90,7 @@ export class BaseballGameShell extends LitElement {
       root.addEventListener('save-lineup-setup', this.handleSaveLineupSetup);
       root.addEventListener('view-boxscore', this.handleViewBoxScore);
       root.addEventListener('pitch-type-selected', this.handlePitchTypeSelected);
+      root.addEventListener('pitch-location-selected', this.handlePitchLocationSelected);
     }
     this.ensureVirtualizer();
     this.watch.maybeAutoStart(this.isWatch());
@@ -116,6 +117,7 @@ export class BaseballGameShell extends LitElement {
     root.removeEventListener('save-lineup-setup', this.handleSaveLineupSetup);
     root.removeEventListener('view-boxscore', this.handleViewBoxScore);
     root.removeEventListener('pitch-type-selected', this.handlePitchTypeSelected);
+    root.removeEventListener('pitch-location-selected', this.handlePitchLocationSelected);
   }
 
   updated() {
@@ -259,6 +261,14 @@ export class BaseballGameShell extends LitElement {
     this.requestUpdate();
   };
 
+  /** Optional click-to-arm location for the next manual pitch. */
+  private handlePitchLocationSelected = (event: Event) => {
+    if (this.isWatch()) return;
+    const detail = ((event as CustomEvent).detail ?? {}) as { zone?: unknown };
+    this.manualPlay.arm(detail.zone);
+    this.requestUpdate();
+  };
+
   private handleViewBoxScore = () => {
     this.boxScoreOpen = true;
     this.requestUpdate();
@@ -284,12 +294,14 @@ export class BaseballGameShell extends LitElement {
   private record(eventType: string, detail: Record<string, unknown>) {
     const withPitch = this.currentPitchType ? { ...detail, pitchType: this.currentPitchType } : detail;
     this.currentPitchType = '';
+    const pitched = this.manualPlay.apply(withPitch);
     this.store?.recordEvent({
       id: nextEventId(),
       eventType,
       occurredAt: new Date().toISOString(),
-      detail: withPitch,
+      detail: pitched,
     });
+    if (!this.isWatch()) this.manualPlay.remember(eventType, pitched, this.store?.current() ?? this.game);
   }
 
   private onExportScorebook = () => {
@@ -299,15 +311,18 @@ export class BaseballGameShell extends LitElement {
   private onUndo = () => {
     if (this.watch.playing) return;
     this.store?.undo();
+    this.manualPlay.syncTo(this.store?.current() ?? this.game);
   };
 
   private onRedo = () => {
     if (this.watch.playing) return;
     this.store?.redo();
+    this.manualPlay.syncTo(this.store?.current() ?? this.game);
   };
 
   private onNewGame = () => {
     this.watch.reset();
+    this.manualPlay.reset();
     this.store?.newGame();
   };
 
@@ -356,46 +371,19 @@ export class BaseballGameShell extends LitElement {
   }
 
   private renderScoreboardSlot(game: LiveLocalGameState, currentBatter: string, currentPitcher: string) {
+    const watch = this.isWatch();
     return renderScoreboardSlot({
       game,
-      gameJson: this.buildGameJson(game, currentBatter, currentPitcher),
+      gameJson: buildScoreboardGameJson(game, this.visibleEvents(), currentBatter, currentPitcher),
       boxScoreJson: this.buildBoxScoreJson(game),
       playing: this.watch.playing,
       animations: this.watch.animations,
-      activePlayJson: this.watch.activePlayJson,
-      playSeq: this.watch.playSeq,
-      playDurationMs: this.watch.playDurationMs,
+      activePlayJson: watch ? this.watch.activePlayJson : this.manualPlay.playJson,
+      playSeq: watch ? this.watch.playSeq : this.manualPlay.playSeq,
+      playDurationMs: watch ? this.watch.playDurationMs : 1200,
+      interactive: !watch,
+      armedLocation: this.manualPlay.zone,
     });
-  }
-
-  private buildGameJson(game: LiveLocalGameState, currentBatter: string, currentPitcher: string) {
-    const { setup, engine } = game;
-    const events = this.visibleEvents();
-    return {
-      id: 1,
-      awayTeam: { id: 2, name: setup.awayTeamName },
-      homeTeam: { id: 1, name: setup.homeTeamName },
-      awayScore: engine.awayScore,
-      homeScore: engine.homeScore,
-      status: engine.over ? 'FINAL' : 'IN_PROGRESS',
-      gameState: {
-        inning: engine.inning,
-        half: engine.half,
-        balls: engine.balls,
-        strikes: engine.strikes,
-        outs: engine.outs,
-        runnerFirstId: engine.runners[0] ? 1 : 0,
-        runnerSecondId: engine.runners[1] ? 1 : 0,
-        runnerThirdId: engine.runners[2] ? 1 : 0,
-        runnerFirstName: runnerOnBaseName(engine, 0),
-        runnerSecondName: runnerOnBaseName(engine, 1),
-        runnerThirdName: runnerOnBaseName(engine, 2),
-        currentBatterName: currentBatter,
-        currentPitcherName: currentPitcher,
-        lastPlay: lastPlayLabel(events),
-        ...matchupHands(game),
-      },
-    };
   }
 
   private buildBoxScoreJson(game: LiveLocalGameState) {
