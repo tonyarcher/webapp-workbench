@@ -1,6 +1,8 @@
 import {html} from 'lit';
 import {repeat} from 'lit/directives/repeat.js';
+import {safeColor} from './plate-play';
 import type {Handedness, ParsedPlatePlay, PlateResult} from './plate-play';
+import {batterFigure, pitcherFigure} from './plate-figures';
 
 export interface PlateSceneInput {
     play: ParsedPlatePlay | null;
@@ -8,104 +10,176 @@ export interface PlateSceneInput {
     throws: Handedness;
     batterName: string;
     pitcherName: string;
+    batterColor: string;
+    pitcherColor: string;
     playSeq: number;
     playDurationMs: number;
     animations: boolean;
+    interactive: boolean;
+    armedZone: number;
+    onZonePick: (zone: number | null) => void;
 }
 
-export function plateSceneClass(result: PlateResult | '', swinging: boolean, animated: boolean): string {
+export function plateSceneClass(
+    result: PlateResult | '',
+    swinging: boolean,
+    animated: boolean,
+    locationKnown = true,
+    interactive = false
+): string {
     const parts = ['plate-scene'];
     if (result) parts.push(`result-${result.replace(' ', '-')}`, 'has-pitch');
     if (swinging) parts.push('swinging');
+    parts.push(locationKnown ? 'has-location' : 'no-location');
+    if (interactive) parts.push('zone-interactive');
     parts.push(animated ? 'animated' : 'instant');
     return parts.join(' ');
+}
+
+/** Chest-to-knees strike zone: 34 x 52 px at top 112. Zones 1-9 are cells; 10-17 are outside. */
+const ZONE_TOP = 112;
+const ZONE_W = 34;
+const ZONE_H = 52;
+const OUTSIDE_OFFSETS: Record<number, {dx: number; dy: number}> = {
+    10: {dx: 0, dy: 89},
+    11: {dx: 0, dy: 163},
+    12: {dx: -31, dy: 129},
+    13: {dx: 31, dy: 129},
+    14: {dx: -24, dy: 89},
+    15: {dx: 24, dy: 89},
+    16: {dx: -24, dy: 163},
+    17: {dx: 24, dy: 163},
+};
+
+/** Ball flight offset from the release point to the target zone cell. */
+export function zoneOffsets(zone: number | null): {dx: number; dy: number} {
+    const z = Math.min(17, Math.max(1, Math.round(zone ?? 5)));
+    const outside = OUTSIDE_OFFSETS[z];
+    if (outside) return outside;
+    const col = (z - 1) % 3;
+    const row = Math.floor((z - 1) / 3);
+    return {
+        dx: Math.round(((col - 1) * ZONE_W) / 3),
+        dy: Math.round(ZONE_TOP + ((row + 0.5) * ZONE_H) / 3 - 9),
+    };
+}
+
+/** Zone cell (1-9) under a point inside the zone box. */
+export function zoneFromPoint(x: number, y: number, width: number, height: number): number {
+    const col = Math.min(2, Math.max(0, Math.floor((x / width) * 3)));
+    const row = Math.min(2, Math.max(0, Math.floor((y / height) * 3)));
+    return row * 3 + col + 1;
+}
+
+/** Map a click onto the zone padding box, ignoring the 2px border. */
+export function zoneFromClick(
+    clientX: number,
+    clientY: number,
+    box: {left: number; top: number},
+    borderLeft: number,
+    borderTop: number,
+    width: number,
+    height: number,
+): number {
+    return zoneFromPoint(
+        clientX - box.left - borderLeft,
+        clientY - box.top - borderTop,
+        width,
+        height,
+    );
 }
 
 export function renderPlateScene(input: PlateSceneInput) {
     const result = input.play?.result ?? '';
     const swinging = Boolean(input.play?.swinging);
     const animated = input.animations && input.playDurationMs > 40 && Boolean(result);
-    return html`${repeat([input.playSeq], (seq) => seq, () => plateSceneMarkup(input, result, swinging, animated))}`;
+    const locationKnown = input.play !== null && input.play.zone !== null;
+    return html`${repeat([input.playSeq], (seq) => seq, () => plateSceneMarkup(input, result, swinging, animated, locationKnown))}`;
 }
 
 function plateSceneMarkup(
     input: PlateSceneInput,
     result: PlateResult | '',
     swinging: boolean,
-    animated: boolean
+    animated: boolean,
+    locationKnown: boolean
 ) {
+    const {dx, dy} = zoneOffsets(input.play?.zone ?? null);
+    const releaseX = input.throws === 'L' ? 16 : -16;
     return html`
       <div
-          class=${plateSceneClass(result, swinging, animated)}
+          class=${plateSceneClass(result, swinging, animated, locationKnown, input.interactive)}
           data-testid="plate-view"
           data-bats=${input.bats}
           data-throws=${input.throws}
-          style="--pitch-duration: ${input.playDurationMs}ms"
+          style="--pitch-duration: ${input.playDurationMs}ms; --pitch-release: ${releaseX}px; --pitch-dx: ${dx - releaseX}px; --pitch-dy: ${dy}px"
       >
         <div class="mound"></div>
-        ${platePitcher(input.throws)}
-        <div class="batters-box box-left"></div>
-        <div class="batters-box box-right"></div>
-        <div class="home-plate"></div>
-        ${plateZone(result)} ${plateBatter(input.bats)}
+        ${platePitcher(input.throws, input.pitcherColor)}
+        <div class="ground">
+          <div class="plate-dirt"></div>
+          <div class="batters-box box-left"></div>
+          <div class="batters-box box-right"></div>
+          <div class="home-plate"></div>
+        </div>
+        ${plateZone(result, input)}
+        <div class="pitch-ball" data-testid="pitch-ball"></div>
+        ${plateBatter(input.bats, input.batterColor)}
         <div class="hand-tag pitcher-tag">${input.throws}HP${input.pitcherName ? ` ${input.pitcherName}` : ''}</div>
         <div class="hand-tag batter-tag">${input.bats}HB${input.batterName ? ` ${input.batterName}` : ''}</div>
       </div>
     `;
 }
 
-function plateZone(result: PlateResult | '') {
+function plateZone(result: PlateResult | '', input: PlateSceneInput) {
+    const armed = input.armedZone;
+    const col = armed >= 1 && armed <= 9 ? (armed - 1) % 3 : -1;
+    const row = armed >= 1 && armed <= 9 ? Math.floor((armed - 1) / 3) : -1;
     return html`
-      <div class="zone">
+      <div class="zone" @click=${(event: MouseEvent) => onZoneClick(event, input)}>
         <div class="zone-grid"></div>
         <div class="zone-result" data-testid="plate-result" aria-live="polite">${result}</div>
+        ${col >= 0
+            ? html`<div class="zone-pick" data-testid="zone-pick" style="left: ${((col + 0.5) * 100) / 3}%; top: ${((row + 0.5) * 100) / 3}%"></div>`
+            : ''}
       </div>
     `;
 }
 
-function platePitcher(throws: Handedness) {
+function onZoneClick(event: MouseEvent, input: PlateSceneInput): void {
+    if (!input.interactive) return;
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLElement)) return;
+    const rect = target.getBoundingClientRect();
+    const style = getComputedStyle(target);
+    const zone = zoneFromClick(
+        event.clientX,
+        event.clientY,
+        rect,
+        parseFloat(style.borderLeftWidth),
+        parseFloat(style.borderTopWidth),
+        target.clientWidth,
+        target.clientHeight,
+    );
+    input.onZonePick(zone === input.armedZone ? null : zone);
+}
+
+function platePitcher(throws: Handedness, color: string) {
     return html`
-      <div class="sign pitcher throws-${throws}" data-testid="plate-pitcher">${pitcherSvg()}</div>
+      <div class="sign pitcher throws-${throws}" data-testid="plate-pitcher" style="--team: ${safeColor(color)}">${pitcherSvg()}</div>
     `;
 }
 
-function plateBatter(bats: Handedness) {
+function plateBatter(bats: Handedness, color: string) {
     return html`
-      <div class="sign batter bats-${bats}" data-testid="plate-batter">${batterSvg()}</div>
+      <div class="sign batter bats-${bats}" data-testid="plate-batter" style="--team: ${safeColor(color)}">${batterSvg()}</div>
     `;
 }
 
 function pitcherSvg() {
-    return html`
-      <svg class="wire-sign" viewBox="0 0 40 72" aria-hidden="true">
-        <path d="M14 8 Q20 4 26 8 L27 12 H13 Z"/>
-        <ellipse cx="20" cy="16" rx="4" ry="5"/>
-        <path d="M20 21 V24 M14 25 H26 L24 42 H16 Z"/>
-        <path d="M17 42 L15 56 L13 70 M23 42 L26 54 L25 70"/>
-        ${pitcherArms()}
-      </svg>
-    `;
-}
-
-function pitcherArms() {
-    return html`
-      <path class="arm-glove-R" d="M26 27 L33 35"/>
-      <ellipse class="arm-glove-R" cx="35" cy="37" rx="3" ry="2.2"/>
-      <path class="arm-glove-L" d="M14 27 L7 35"/>
-      <ellipse class="arm-glove-L" cx="5" cy="37" rx="3" ry="2.2"/>
-      <path class="arm-throw-R" d="M14 27 L6 20 L5 12"/>
-      <path class="arm-throw-L" d="M26 27 L34 20 L35 12"/>
-    `;
+    return html`<svg class="wire-sign" viewBox="0 0 60 84" aria-hidden="true">${pitcherFigure()}</svg>`;
 }
 
 function batterSvg() {
-    return html`
-      <svg class="wire-sign" viewBox="0 0 52 84" aria-hidden="true">
-        <path d="M30 9 H40 L39 6 H31 Z"/>
-        <ellipse cx="35" cy="14" rx="5" ry="6"/>
-        <path d="M27 23 L39 25 L36 46 H25 Z"/>
-        <path d="M29 46 L38 62 L37 82 M24 46 L17 64 L16 82"/>
-        <path d="M31 27 L22 34 L18 32 M23 25 L7 8"/>
-      </svg>
-    `;
+    return html`<svg class="wire-sign" viewBox="14 0 72 132" aria-hidden="true">${batterFigure()}</svg>`;
 }

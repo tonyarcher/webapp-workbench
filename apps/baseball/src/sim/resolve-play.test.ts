@@ -57,13 +57,37 @@ describe('nextPlay', () => {
       const zone = (play.detail.pitchLocation as { zone?: number } | undefined)?.zone;
       if (typeof zone === 'number') {
         expect(zone).toBeGreaterThanOrEqual(1);
-        expect(zone).toBeLessThanOrEqual(9);
+        expect(zone).toBeLessThanOrEqual(17);
       }
       if (play.type === 'STOLEN_BASE' || play.type === 'CAUGHT_STEALING') {
         expect(engine.runners[(Number(play.detail.base) || 2) - 2]).toBe(true);
       }
       engine = reduceGame(engine, toScoringEvent(play));
     }
+  });
+
+  it('paints called balls outside the strike zone', () => {
+    const home = generateRoster(mulberry32(5), 'Home');
+    const away = generateRoster(mulberry32(6), 'Away');
+    let engine = createGame({
+      homeName: home.teamName,
+      awayName: away.teamName,
+      homeLineup: home.lineup,
+      awayLineup: away.lineup,
+      totalInnings: 9,
+      homePitcherName: home.pitcher.name,
+      awayPitcherName: away.pitcher.name,
+    });
+    let balls = 0;
+    for (let i = 0; i < 200 && !engine.over; i++) {
+      const play = nextPlay(engine, matchupFromGame(engine, home, away), mulberry32(2000 + i));
+      if (play.type === 'BALL') {
+        balls += 1;
+        expect((play.detail.pitchLocation as { zone: number }).zone).toBeGreaterThanOrEqual(10);
+      }
+      engine = reduceGame(engine, toScoringEvent(play));
+    }
+    expect(balls).toBeGreaterThan(0);
   });
 
   it('picks a pitch from the pitcher arsenal', () => {

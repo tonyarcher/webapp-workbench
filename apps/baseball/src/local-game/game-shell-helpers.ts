@@ -3,6 +3,7 @@ import type { LiveLocalGameState } from './game-state';
 import type { LineupPlayer } from './game-types';
 import type { LocalGameEventRecord } from './game-types';
 import { matchupFromGame } from '../sim/matchup';
+import { teamPrimaryColor } from './team-colors';
 
 const SCORING_EVENT_TYPES = new Set([
   'BALL','STRIKE','FOUL','STRIKEOUT','WALK','HIT_BY_PITCH','SINGLE','DOUBLE','TRIPLE','HOME_RUN',
@@ -74,6 +75,51 @@ export function matchupHands(game: LiveLocalGameState): { batterBats: string; pi
   }
   const matchup = matchupFromGame(game.engine, game.setup.homeRoster, game.setup.awayRoster);
   return { batterBats: matchup.batter.bats, pitcherThrows: matchup.pitcher.throws };
+}
+
+/** The game-json contract consumed by baseball-scoreboard and the plate scene. */
+export function buildScoreboardGameJson(
+  game: LiveLocalGameState,
+  events: LocalGameEventRecord[],
+  currentBatter: string,
+  currentPitcher: string
+): Record<string, unknown> {
+  const { setup, engine } = game;
+  return {
+    id: 1,
+    awayTeam: { id: 2, name: setup.awayTeamName, primaryColor: teamPrimaryColor(setup.awayTeamName) },
+    homeTeam: { id: 1, name: setup.homeTeamName, primaryColor: teamPrimaryColor(setup.homeTeamName) },
+    awayScore: engine.awayScore,
+    homeScore: engine.homeScore,
+    status: engine.over ? 'FINAL' : 'IN_PROGRESS',
+    gameState: gameStateJson(game, events, currentBatter, currentPitcher),
+  };
+}
+
+function gameStateJson(
+  game: LiveLocalGameState,
+  events: LocalGameEventRecord[],
+  currentBatter: string,
+  currentPitcher: string
+): Record<string, unknown> {
+  const { engine } = game;
+  return {
+    inning: engine.inning,
+    half: engine.half,
+    balls: engine.balls,
+    strikes: engine.strikes,
+    outs: engine.outs,
+    runnerFirstId: engine.runners[0] ? 1 : 0,
+    runnerSecondId: engine.runners[1] ? 1 : 0,
+    runnerThirdId: engine.runners[2] ? 1 : 0,
+    runnerFirstName: runnerOnBaseName(engine, 0),
+    runnerSecondName: runnerOnBaseName(engine, 1),
+    runnerThirdName: runnerOnBaseName(engine, 2),
+    currentBatterName: currentBatter,
+    currentPitcherName: currentPitcher,
+    lastPlay: lastPlayLabel(events),
+    ...matchupHands(game),
+  };
 }
 
 export function rowsToEditorPlayers(rows: EngineScorebookRow[]): Array<Record<string, unknown>> {
