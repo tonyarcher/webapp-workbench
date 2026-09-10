@@ -116,17 +116,23 @@ function plateSceneMarkup(
       >
         <div class="mound"></div>
         ${platePitcher(input.throws, input.pitcherColor)}
-        <div class="ground">
-          <div class="plate-dirt"></div>
-          <div class="batters-box box-left"></div>
-          <div class="batters-box box-right"></div>
-          <div class="home-plate"></div>
-        </div>
+        ${plateGround()}
         ${plateZone(result, input)}
         <div class="pitch-ball" data-testid="pitch-ball"></div>
         ${plateBatter(input.bats, input.batterColor)}
         <div class="hand-tag pitcher-tag">${input.throws}HP${input.pitcherName ? ` ${input.pitcherName}` : ''}</div>
         <div class="hand-tag batter-tag">${input.bats}HB${input.batterName ? ` ${input.batterName}` : ''}</div>
+      </div>
+    `;
+}
+
+function plateGround() {
+    return html`
+      <div class="ground">
+        <div class="plate-dirt"></div>
+        <div class="batters-box box-left"></div>
+        <div class="batters-box box-right"></div>
+        <div class="home-plate"></div>
       </div>
     `;
 }

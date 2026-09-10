@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Deploy the compose stack (Linux / macOS / Git Bash).
 # Auto-selects the SSH-tunneled remote Docker daemon or local Docker.
+# Tab completion: source scripts/complete-deploy.bash
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

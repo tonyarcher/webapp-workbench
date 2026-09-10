@@ -1,3 +1,4 @@
+import { buildBoxScore } from './box-score';
 import type { EngineGameState, EngineScorebookRow } from './rule-engine';
 import type { LiveLocalGameState } from './game-state';
 import type { LineupPlayer } from './game-types';
@@ -156,4 +157,16 @@ export function engineBadge(engine: EngineGameState): string {
 
 function formatFinalBadge(engine: EngineGameState): string {
   return `${engine.inning} inn · FINAL · Away ${engine.awayScore} · Home ${engine.homeScore}`;
+}
+
+export function buildBoxScoreJson(game: LiveLocalGameState): Record<string, unknown> {
+  const boxScore = buildBoxScore(game.engine);
+  return {
+    lineScore: {
+      awayHits: boxScore.away.hits,
+      homeHits: boxScore.home.hits,
+      awayErrors: boxScore.away.errors,
+      homeErrors: boxScore.home.errors,
+    },
+  };
 }

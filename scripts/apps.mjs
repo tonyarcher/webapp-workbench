@@ -1,4 +1,6 @@
 /** Compose services and the npm workspaces that produce them. */
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 export const APPS = [
   {
@@ -149,4 +151,29 @@ export function workspacesFor(apps) {
     }
   }
   return workspaces;
+}
+
+export function completionWords() {
+  const words = new Set();
+  for (const app of APPS) {
+    words.add(app.id);
+    for (const alias of app.aliases) {
+      if (!alias.includes("/")) words.add(alias);
+    }
+  }
+  return [...words].sort();
+}
+
+function isExecutedDirectly() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return import.meta.url === pathToFileURL(resolve(entry)).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isExecutedDirectly() && process.argv.includes("--complete")) {
+  process.stdout.write(`${completionWords().join("\n")}\n`);
 }

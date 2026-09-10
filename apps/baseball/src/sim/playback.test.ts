@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { delayForPlay, PlaybackClock, SPEED_OPTIONS } from './playback';
+import { delayForPlay, PlaybackClock, SPEED_OPTIONS, yieldDelay } from './playback';
 
 describe('playback', () => {
   it('scales delay with speed and collapses it when animations are off', () => {
@@ -45,6 +45,23 @@ describe('playback', () => {
     await Promise.all([firstRun, secondRun]);
     expect(second).toBe(1);
     expect(first).toBeLessThanOrEqual(2);
+    vi.useRealTimers();
+  });
+
+  it('aborts an in-flight delay on pause', async () => {
+    vi.useFakeTimers();
+    const clock = new PlaybackClock();
+    let continued = false;
+    const run = clock.play(async () => {
+      await yieldDelay(5000, clock.signal);
+      continued = true;
+      return false;
+    });
+    clock.pause();
+    await vi.advanceTimersByTimeAsync(20_000);
+    await run;
+    expect(continued).toBe(true);
+    expect(clock.playing).toBe(false);
     vi.useRealTimers();
   });
 });
