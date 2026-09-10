@@ -9,6 +9,7 @@ export class GameStore {
     private readonly listeners = new Set<(state: LiveLocalGameState | null) => void>();
     private nextEventId = 1;
     private persistChain: Promise<void> = Promise.resolve();
+    private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
     get canUndo(): boolean {
         return this.state != null && this.state.historyIndex > 0;
@@ -58,12 +59,14 @@ export class GameStore {
             event,
         };
         this.nextEventId += 1;
+        const engine = reduce(previous.engine, event);
+        const debounce = previous.setup.mode === 'watch' && !engine.over;
         this.setState({
             setup: previous.setup,
-            engine: reduce(previous.engine, event),
+            engine,
             historyIndex: previous.historyIndex + 1,
             events: [...previous.events.slice(0, previous.historyIndex), record],
-        });
+        }, true, debounce);
     }
 
     undo(): void {
@@ -75,10 +78,20 @@ export class GameStore {
     }
 
     newGame(): void {
+        if (this.persistTimer != null) {
+            clearTimeout(this.persistTimer);
+            this.persistTimer = null;
+        }
         this.setState(null);
     }
 
     flushPersist(): Promise<void> {
+        if (this.persistTimer != null) {
+            clearTimeout(this.persistTimer);
+            this.persistTimer = null;
+            const state = this.state;
+            this.persistChain = state ? saveGameState(state) : clearGameState();
+        }
         return this.persistChain;
     }
 
@@ -93,10 +106,19 @@ export class GameStore {
         this.setState({...state, engine, historyIndex});
     }
 
-    private setState(state: LiveLocalGameState | null, persist = true): void {
+    private setState(state: LiveLocalGameState | null, persist = true, debounce = false): void {
         this.state = state;
         for (const listener of this.listeners) listener(state);
         if (!persist) return;
+        if (debounce) {
+            if (this.persistTimer != null) clearTimeout(this.persistTimer);
+            this.persistTimer = setTimeout(() => {
+                this.persistTimer = null;
+                const current = this.state;
+                this.persistChain = current ? saveGameState(current) : clearGameState();
+            }, 400);
+            return;
+        }
         this.persistChain = state ? saveGameState(state) : clearGameState();
     }
 }

@@ -46,3 +46,9 @@ button {
     font-weight: 600;
     cursor: pointer;
 }
+
+button.secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
