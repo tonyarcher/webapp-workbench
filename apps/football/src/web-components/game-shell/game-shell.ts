@@ -11,6 +11,9 @@ import {
 import type {PlayFamily, PlayInput, ScoringEvent, Tackler} from 'football-core';
 import type {GameStore} from '../../local-game/game-store';
 import type {LiveLocalGameState} from '../../local-game/game-state';
+import {SPEED_OPTIONS} from '../../sim/playback';
+import {highlightLabel, WatchRunner, watchBadge} from '../../sim/watch-runner';
+import '../field/field';
 import styles from './game-shell.css?inline';
 
 type PadButton = {label: string; family: PlayFamily; extra?: Partial<PlayInput>; primary?: boolean};
@@ -51,12 +54,31 @@ export class GameShell extends LitElement {
     @state() private deadText = '';
     @state() private tacklerJersey = '';
 
+    private readonly watch = new WatchRunner({
+        getGame: () => this.store.current(),
+        record: (event) => this.store.recordEvent(event),
+        flush: () => {
+            void this.store.flushPersist();
+        },
+        onChange: () => this.requestUpdate(),
+    });
+
     override willUpdate(changed: Map<PropertyKey, unknown>): void {
         if (changed.has('game') && this.game) {
             const clock = formatClock(this.game.engine.clock.gameClockSeconds);
             if (!this.snapText) this.snapText = clock;
             this.deadText = clock;
+            this.watch.maybeAutoStart(this.isWatch());
         }
+    }
+
+    override disconnectedCallback(): void {
+        super.disconnectedCallback();
+        this.watch.reset();
+    }
+
+    private isWatch(): boolean {
+        return this.game?.setup.mode === 'watch';
     }
 
     private clockSeconds(text: string, fallback: number): number {
@@ -86,6 +108,7 @@ export class GameShell extends LitElement {
     }
 
     private record(event: ScoringEvent): void {
+        if (this.isWatch()) return;
         this.store.recordEvent(event);
         this.snapText = this.deadText;
     }
@@ -166,26 +189,33 @@ export class GameShell extends LitElement {
         `;
     }
 
+    private padClass(label: string, primary?: boolean): string {
+        const pressed = this.isWatch() && highlightLabel(this.watch.activeEvent) === label;
+        return [primary ? 'primary' : '', pressed ? 'sim-press' : ''].filter(Boolean).join(' ');
+    }
+
     private renderPad(): TemplateResult {
         const possession = this.game.engine.situation.possession;
+        const watch = this.isWatch();
         return html`
             <div class="pad">
                 ${this.padButtons().map(
                     (btn) => html`<button
-                        class=${btn.primary ? 'primary' : ''}
+                        class=${this.padClass(btn.label, btn.primary)}
+                        ?disabled=${watch}
                         @click=${() => this.recordPlay({family: btn.family, ...btn.extra})}
                     >${btn.label}</button>`,
                 )}
-                <button @click=${() => this.record({type: 'timeout', team: 'away'})}>Timeout away</button>
-                <button @click=${() => this.record({type: 'timeout', team: 'home'})}>Timeout home</button>
-                <button @click=${() => this.record({
+                <button class=${this.padClass('Timeout away')} ?disabled=${watch} @click=${() => this.record({type: 'timeout', team: 'away'})}>Timeout away</button>
+                <button class=${this.padClass('Timeout home')} ?disabled=${watch} @click=${() => this.record({type: 'timeout', team: 'home'})}>Timeout home</button>
+                <button ?disabled=${watch} @click=${() => this.record({
                     type: 'penalty',
                     team: possession,
                     yards: Math.abs(this.yards) || 5,
                     accepted: true,
                     foul: 'generic',
                 })}>Penalty vs offense</button>
-                <button @click=${() => this.record({type: 'period_end'})}>Period end</button>
+                <button class=${this.padClass('Period end')} ?disabled=${watch} @click=${() => this.record({type: 'period_end'})}>Period end</button>
             </div>
         `;
     }
@@ -209,16 +239,64 @@ export class GameShell extends LitElement {
         `;
     }
 
+    private readonly onSpeedChange = (event: Event): void => {
+        const target = event.currentTarget;
+        if (!(target instanceof HTMLSelectElement)) return;
+        this.watch.speed = Number(target.value);
+        this.requestUpdate();
+    };
+
+    private readonly onAnimationsChange = (event: Event): void => {
+        const target = event.currentTarget;
+        if (!(target instanceof HTMLInputElement)) return;
+        this.watch.animations = target.checked;
+        this.requestUpdate();
+    };
+
+    private renderWatch(): TemplateResult | '' {
+        if (!this.isWatch()) return '';
+        const {setup, engine} = this.game;
+        return html`
+            <section class="sim-transport">
+                <span class="sim-badge">${watchBadge(engine.over, this.watch.playing)}</span>
+                <span>Watching: ${setup.awayName} @ ${setup.homeName}</span>
+                <span class="sim-last">${this.watch.lastLabel}</span>
+                <button ?disabled=${this.watch.playing || engine.over} @click=${() => void this.watch.play(true)}>Play</button>
+                <button ?disabled=${!this.watch.playing} @click=${() => this.watch.pause()}>Pause</button>
+                <label>Speed
+                    <select @change=${this.onSpeedChange}>
+                        ${SPEED_OPTIONS.map(
+                            (option) => html`<option value=${String(option.value)} ?selected=${this.watch.speed === option.value}>${option.label}</option>`,
+                        )}
+                    </select>
+                </label>
+                <label>
+                    <input type="checkbox" .checked=${this.watch.animations} @change=${this.onAnimationsChange}/>
+                    Animations
+                </label>
+            </section>
+        `;
+    }
+
     override render(): TemplateResult {
         const {engine, setup} = this.game;
+        const watch = this.isWatch();
         return html`
             ${this.renderBug()}
+            ${this.renderWatch()}
+            <fb-field
+                .situation=${engine.situation}
+                .lastPlay=${engine.plays.at(-1) ?? null}
+                .homeName=${setup.homeName}
+                .awayName=${setup.awayName}
+                .animations=${this.watch.animations}
+            ></fb-field>
             <div class="personnel">On field (offense): ${this.offenseJerseys() || '—'}</div>
-            ${this.renderFields()}
+            ${watch ? '' : this.renderFields()}
             ${this.renderPad()}
             <div class="toolbar">
-                <button ?disabled=${!this.store.canUndo} @click=${() => this.store.undo()}>Undo</button>
-                <button ?disabled=${!this.store.canRedo} @click=${() => this.store.redo()}>Redo</button>
+                <button ?disabled=${!this.store.canUndo || watch} @click=${() => this.store.undo()}>Undo</button>
+                <button ?disabled=${!this.store.canRedo || watch} @click=${() => this.store.redo()}>Redo</button>
                 <button @click=${() => this.store.newGame()}>New game</button>
             </div>
             <ol class="log">

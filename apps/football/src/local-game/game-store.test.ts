@@ -59,4 +59,33 @@ describe('GameStore', () => {
         expect(restored.current()?.setup.homeName).toBe('Eagles');
         expect(restored.current()?.engine.plays).toHaveLength(1);
     });
+
+    it('defers watch-mode persist until flushPersist', async () => {
+        const store = new GameStore();
+        store.startGame({...DEFAULT_GAME_SETUP, mode: 'watch', simSeed: 1, homeName: 'Watch'});
+        await store.flushPersist();
+        store.recordEvent({
+            type: 'play',
+            input: {family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720},
+        });
+        await expect(loadGameState()).resolves.toMatchObject({historyIndex: 0});
+        await store.flushPersist();
+        await expect(loadGameState()).resolves.toMatchObject({
+            setup: {homeName: 'Watch', mode: 'watch'},
+            historyIndex: 1,
+        });
+    });
+
+    it('newGame drops a pending watch persist', async () => {
+        const store = new GameStore();
+        store.startGame({...DEFAULT_GAME_SETUP, mode: 'watch', simSeed: 1});
+        await store.flushPersist();
+        store.recordEvent({
+            type: 'play',
+            input: {family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720},
+        });
+        store.newGame();
+        await store.flushPersist();
+        await expect(loadGameState()).resolves.toBeNull();
+    });
 });
