@@ -43,3 +43,4 @@ After editing `packages/web-components`, rebuild it before the app.
 
 - Scorebook path coordinates drifting from the grid component.
 - App logic leaking into `@baseball/web-components`.
+- Watch playback looping outside `baseball-game-shell` or writing into a score-mode game.

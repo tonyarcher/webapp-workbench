@@ -41,7 +41,7 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 | Lint all | `npm run lint` |
 | Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` / `dev:fitness` / `dev:fitness-api` |
 | Build (OS script) | `./build.sh` or `.\build.ps1` (`./build.sh rss` for one app) |
-| Deploy compose stack | `./deploy.sh` or `.\deploy.ps1` (auto local Docker vs SSH tunnel; `./deploy.sh rss` rebuilds one app) |
+| Deploy compose stack | `./deploy.sh` or `.\deploy.ps1` (auto local Docker vs SSH tunnel; `./deploy.sh rss` rebuilds one app). PowerShell tab-completes app names on `.\deploy.ps1`; bash: `source scripts/complete-deploy.bash`. |
 
 Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm test`).
 RSS API: `npm run dev:server -w rss-reader` (not a root `dev:*` alias).
@@ -139,7 +139,7 @@ comments, and workflow only — not Lit/CSS/PWA.
 - `@customElement('prefix-name')`, `@property()` for public API, `@property({attribute: false})` for object/boolean props, `@state() private` for internal state. A plain field is not reactive — anything the template reads must be `@state()` or a property.
 - `static override styles = unsafeCSS(styles)` with `import styles from './x.css?inline'`.
 - Private fields after decorators, typed explicitly.
-- Lifecycle: `willUpdate` for prop changes, `updated` for DOM side effects, `connectedCallback` / `disconnectedCallback` for listeners (always remove on disconnect).
+- Lifecycle: `willUpdate` for prop changes, `updated` for DOM side effects, `connectedCallback` / `disconnectedCallback` for listeners (always remove on disconnect). Abort in-flight timers and loops on disconnect. Do not close over the app store from a helper that can outlive the element.
 - `ref` callbacks must have stable identity (arrow-function fields). Inline arrows re-fire every render and can reset scroll.
 - `declare global { interface HTMLElementTagNameMap { 'prefix-name': Name; } }` at the bottom of every component file.
 - Events: `new CustomEvent('name', {detail, bubbles: true, composed: true})`.
@@ -163,6 +163,7 @@ comments, and workflow only — not Lit/CSS/PWA.
   **Shared package vs app module** (second consumer, or headless domain — not the first screen).
 - Persistence goes through `src/db/` (or the app’s store module), never raw IndexedDB in components.
 - Floating promises: `void` plus `.catch(...)`. IndexedDB writes await `tx.done`. Multi-store writes use one transaction.
+- Async work is owned by the UI object that started it (`AbortSignal` + `isConnected`). Headless helpers must not run a loop against the shared game/store. After every `await`, recheck mode and that the element is still connected.
 - Untrusted URLs (`href` / `src`) pass through `safeUrl()` (app or `vertical-scroll-core`).
 - Do not log tokens, secrets, or raw sample/PII payloads.
 

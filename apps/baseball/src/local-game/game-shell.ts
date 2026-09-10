@@ -11,6 +11,7 @@ import { boxScoreOverlay } from './box-score-view';
 import { ManualPlayTracker } from './manual-play';
 import {
   battingBatterName,
+  buildBoxScoreJson,
   buildScoreboardGameJson,
   editorPlayersToLineup,
   engineBadge,
@@ -18,7 +19,8 @@ import {
   rowsToEditorPlayers,
   scorebookSlots,
 } from './game-shell-helpers';
-import { WatchRunner } from './watch-runner';
+import { WatchRunner, watchLoopAlive } from './watch-runner';
+import { yieldDelay } from '../sim/playback';
 import { renderScoreboardSlot } from './scoreboard-slot';
 import { renderWatchTransport } from './watch-transport';
 
@@ -62,14 +64,8 @@ export class BaseballGameShell extends LitElement {
   private lastEventKey = '';
   private currentPitchType = '';
   private readonly manualPlay = new ManualPlayTracker();
-  private readonly watch = new WatchRunner({
-    getGame: () => this.store?.current() ?? this.game,
-    record: (type, detail) => this.record(type, detail),
-    flush: () => {
-      void this.store?.flushPersist();
-    },
-    onChange: () => this.requestUpdate(),
-  });
+  private readonly watch = new WatchRunner();
+  private watchAutoStarted = false;
 
   private containerRef = createRef<HTMLDivElement>();
   private scrollRef = createRef<HTMLDivElement>();
@@ -93,11 +89,11 @@ export class BaseballGameShell extends LitElement {
       root.addEventListener('pitch-location-selected', this.handlePitchLocationSelected);
     }
     this.ensureVirtualizer();
-    this.watch.maybeAutoStart(this.isWatch());
+    this.maybeStartWatchLoop();
   }
 
   disconnectedCallback() {
-    this.watch.reset();
+    this.stopWatchLoop();
     const root = this.containerRef.value;
     if (root) this.removeAllListeners(root);
     this.virtualizerCleanup?.();
@@ -121,7 +117,8 @@ export class BaseballGameShell extends LitElement {
   }
 
   updated() {
-    this.watch.maybeAutoStart(this.isWatch());
+    if (this.isWatch()) this.maybeStartWatchLoop();
+    else if (this.watchAutoStarted || this.watch.playing) this.stopWatchLoop();
     this.ensureVirtualizer();
     this.virtualizer?._willUpdate();
     const count = this.visibleEvents().length;
@@ -169,16 +166,51 @@ export class BaseballGameShell extends LitElement {
     this.virtualizerCleanup = this.virtualizer._didMount();
   }
 
+  private maybeStartWatchLoop() {
+    const game = this.game;
+    if (!this.isWatch() || this.watchAutoStarted || !game || game.engine.over || game.historyIndex > 0) return;
+    this.watchAutoStarted = true;
+    queueMicrotask(() => {
+      void this.runWatchLoop();
+    });
+  }
+
+  private stopWatchLoop() {
+    this.watchAutoStarted = false;
+    this.watch.reset();
+  }
+
+  private async runWatchLoop() {
+    if (!watchLoopAlive(this.isConnected, this.isWatch(), Boolean(this.game?.engine.over)) || this.watch.playing) return;
+    await this.watch.clock.play(async () => this.stepWatch());
+    if (this.isConnected) {
+      void this.store?.flushPersist();
+      this.requestUpdate();
+    }
+  }
+
+  private async stepWatch(): Promise<boolean> {
+    const game = this.game;
+    if (!game || !watchLoopAlive(this.isConnected, this.isWatch(), Boolean(game.engine.over))) return false;
+    const play = this.watch.takePlay(game);
+    if (!play) return false;
+    this.record(play.type, play.detail);
+    await yieldDelay(this.watch.playDurationMs, this.watch.clock.signal);
+    return watchLoopAlive(this.isConnected, this.isWatch(), Boolean(this.game?.engine.over));
+  }
+
   private isWatch(): boolean {
     return this.game?.setup.mode === 'watch';
   }
 
   private onSimPlay = () => {
-    void this.watch.play(this.isWatch());
+    void this.runWatchLoop();
   };
 
   private onSimPause = () => {
     this.watch.pause();
+    void this.store?.flushPersist();
+    this.requestUpdate();
   };
 
   private onSimSpeed = (event: Event) => {
@@ -321,7 +353,7 @@ export class BaseballGameShell extends LitElement {
   };
 
   private onNewGame = () => {
-    this.watch.reset();
+    this.stopWatchLoop();
     this.manualPlay.reset();
     this.store?.newGame();
   };
@@ -375,7 +407,7 @@ export class BaseballGameShell extends LitElement {
     return renderScoreboardSlot({
       game,
       gameJson: buildScoreboardGameJson(game, this.visibleEvents(), currentBatter, currentPitcher),
-      boxScoreJson: this.buildBoxScoreJson(game),
+      boxScoreJson: buildBoxScoreJson(game),
       playing: this.watch.playing,
       animations: this.watch.animations,
       activePlayJson: watch ? this.watch.activePlayJson : this.manualPlay.playJson,
@@ -384,18 +416,6 @@ export class BaseballGameShell extends LitElement {
       interactive: !watch,
       armedLocation: this.manualPlay.zone,
     });
-  }
-
-  private buildBoxScoreJson(game: LiveLocalGameState) {
-    const boxScore = buildBoxScore(game.engine);
-    return {
-      lineScore: {
-        awayHits: boxScore.away.hits,
-        homeHits: boxScore.home.hits,
-        awayErrors: boxScore.away.errors,
-        homeErrors: boxScore.home.errors,
-      },
-    };
   }
 
   private renderControlsSlot(engine: LiveLocalGameState['engine'], currentBatter: string, currentPitcher: string) {
