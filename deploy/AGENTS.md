@@ -6,7 +6,7 @@ Docker Compose reverse-proxy stack. Workflow and monorepo rules: repo-root `AGEN
 
 - `docker-compose.yml` — gateway + app services.
 - `nginx/default.conf` — gateway routes. Prefix stripped for static apps; `/stock-game/` is not.
-- `hello/index.html` — page at `/`. Link **text** is the project name (Baseball, RSS Reader, …); `href` stays the subpath.
+- `hello/index.html` — page at `/`. Link **text** is the project name (Baseball, RSS Reader, …); `href` stays the subpath (`/auth/` for Accounts).
 - Per-app Dockerfiles under `deploy/<app>/`. Build context is the **repo root**.
 
 ## Commands

@@ -5,9 +5,10 @@ Read the workspace `AGENTS.md` before touching that app or package.
 
 ## Project
 
-npm-workspaces monorepo of small TypeScript web apps. Most apps are Vite + Lit custom
-elements (no UI framework). Stock-game is the exception: TanStack Start (SPA) with React
-route shells and decorator-free Lit. Shared libraries live in `packages/*`.
+npm-workspaces monorepo of small TypeScript web apps plus a Kotlin identity API.
+Most apps are Vite + Lit custom elements (no UI framework). Stock-game is the
+exception: TanStack Start (SPA) with React route shells and decorator-free Lit.
+Shared libraries live in `packages/*`. `user-api` is Gradle / Ktor, not Node.
 
 ## Layout
 
@@ -20,12 +21,14 @@ route shells and decorator-free Lit. Shared libraries live in `packages/*`.
 - `apps/radio-station/` — radio-station simulator. Postgres catalog + node API.
 - `apps/football/` — football live scorekeeping. Pluggable NFL/NCAA/MN/CO rulebooks; IndexedDB. Depends on `football-core`.
 - `apps/fitness/` — fitness tracker. Health Connect/CSV import, 5/3/1; Postgres API. Depends on `fitness-core`.
+- `apps/user-web/` — accounts landing page (`/auth/`). Lit shell; talks to `user-api`.
+- `apps/user-api/` — shared identity API (Kotlin 2.2 / JVM 21 / Ktor). Postgres database `users`.
 - `packages/web-components/` — `@baseball/web-components` Lit library.
 - `packages/vertical-scroll-core/` — Lit scroller + embed players.
 - `packages/calendar-core/` — ICS / Trakt / Netflix / Google Calendar helpers.
 - `packages/football-core/` — rulebooks, play-by-play reducer, clock, notation.
 - `packages/fitness-core/` — units, 5/3/1, body formulas, importers.
-- `deploy/` — Docker Compose reverse-proxy gateway (`/` hello page; apps under `/baseball/`, `/rss-reader/`, `/stock-game/`, `/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/fitness/`).
+- `deploy/` — Docker Compose reverse-proxy gateway (`/` hello page; apps under `/baseball/`, `/rss-reader/`, `/stock-game/`, `/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/fitness/`, `/auth/`, `/user-api/`).
 
 Library `prepare` scripts build `dist/` on install. After changing a package, rebuild it
 (`npm run build -w <name>`) or reinstall before consumers pick up the change.
@@ -39,7 +42,7 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 | Test all | `npm test` |
 | Typecheck all | `npm run typecheck` |
 | Lint all | `npm run lint` |
-| Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` / `dev:fitness` / `dev:fitness-api` |
+| Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` / `dev:fitness` / `dev:fitness-api` / `dev:user-web` / `dev:user-api` |
 | Build (OS script) | `./build.sh` or `.\build.ps1` (`./build.sh rss` for one app) |
 | Deploy compose stack | `./deploy.sh` or `.\deploy.ps1` (auto local Docker vs SSH tunnel; `./deploy.sh rss` rebuilds one app). PowerShell tab-completes app names on `.\deploy.ps1`; bash: `source scripts/complete-deploy.bash`. |
 
@@ -169,8 +172,8 @@ comments, and workflow only — not Lit/CSS/PWA.
 
 ### Logging
 
-User-wide JSON-stdout rules apply to **Node APIs** (`rss-api`, `radio-api`, `fitness-api`,
-stock-game server). One line per event; `service` is the compose/process name.
+User-wide JSON-stdout rules apply to **APIs** (`rss-api`, `radio-api`, `fitness-api`,
+`user-api`, stock-game server). One line per event; `service` is the compose/process name.
 
 - Honor inbound `X-Request-ID` (or `traceparent`); generate a UUID if missing; echo it
   on the response. Pass that id through poller/scheduler work derived from the request.

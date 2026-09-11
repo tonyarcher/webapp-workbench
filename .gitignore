@@ -22,3 +22,8 @@ playwright-report/
 
 # Logs
 *.log
+
+# Gradle / Kotlin
+.gradle/
+apps/user-api/build/
+apps/user-api/.kotlin/

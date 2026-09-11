@@ -1,0 +1,12 @@
+{
+    "name": "user-api",
+    "private": true,
+    "version": "0.1.0",
+    "description": "Shared identity API (Kotlin / Ktor). Phase 0 skeleton.",
+    "scripts": {
+        "dev": "node scripts/gradlew.mjs run",
+        "build": "node scripts/gradlew.mjs installDist",
+        "test": "node scripts/gradlew.mjs check",
+        "lint": "node scripts/gradlew.mjs detekt"
+    }
+}
