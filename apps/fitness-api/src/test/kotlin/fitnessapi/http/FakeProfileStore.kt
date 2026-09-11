@@ -15,4 +15,8 @@ class FakeProfileStore : ProfileStore {
         rows[userId] = profile
         return profile
     }
+
+    fun clear() {
+        rows.clear()
+    }
 }

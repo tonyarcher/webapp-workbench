@@ -16,9 +16,10 @@ class MigrationResourceTest {
     }
 
     @Test
-    fun migrateBaselinesExistingSchema() {
-        val src = java.io.File("src/main/kotlin/fitnessapi/db/Migrate.kt").readText()
-        assertTrue(src.contains(".baselineOnMigrate(true)"))
+    fun flywayBaselinesExistingSchema() {
+        val url = Thread.currentThread().contextClassLoader.getResource("application.properties")
+        assertNotNull(url)
+        assertTrue(url.readText().contains("spring.flyway.baseline-on-migrate=true"))
     }
 
     @Test

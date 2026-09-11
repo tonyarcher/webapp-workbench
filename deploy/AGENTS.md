@@ -8,8 +8,8 @@ Docker Compose reverse-proxy stack. Workflow and monorepo rules: repo-root `AGEN
 - `nginx/default.conf` — gateway routes. Prefix stripped for static apps; `/stock-game/` is not.
 - `hello/index.html` — page at `/`. Link **text** is the project name (Baseball, RSS Reader, …); `href` stays the subpath (`/auth/` for Accounts).
 - Per-app Dockerfiles under `deploy/<app>/`. Build context is the **repo root**.
-- Node/static images compile inside Linux. **user-api** and **fitness-api**
-  compile on the host JDK (`gradlew installDist`); **rss-api** uses `bootJar`.
+- Node/static images compile inside Linux. **user-api** compiles on the host
+  JDK (`gradlew installDist`); **fitness-api** and **rss-api** use `bootJar`.
   Each image is **JRE only**. Do not run Gradle or install a JDK in those images.
 
 ## Commands

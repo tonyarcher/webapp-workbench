@@ -85,7 +85,7 @@ export const APPS = [
     service: "fitness-api",
     workspaces: ["fitness-api"],
     aliases: ["fitness-api", "apps/fitness-api", "apps/fitness/server"],
-    summary: "Fitness API (Kotlin / Postgres)",
+    summary: "Fitness API (Kotlin / Spring Data JPA)",
   },
   {
     id: "user-web",
