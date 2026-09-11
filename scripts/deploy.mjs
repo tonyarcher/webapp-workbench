@@ -20,8 +20,8 @@ const HELP = `
 Deploy the gateway stack with docker compose.
 
 Pass one or more app names to rebuild and roll out only those services.
-Dockerfiles compile the app inside the image, so a local ./build.sh is
-optional (useful to catch errors before sending context over the tunnel).
+Node app Dockerfiles compile inside the image. user-api is compiled on
+the host (Gradle installDist) and the image only copies jars.
 
 The script picks a Docker engine automatically:
   1. --local / --remote / DEPLOY_TARGET
@@ -351,6 +351,25 @@ function printHelp() {
   console.log(HELP);
 }
 
+const USER_API_LIB = join("apps", "user-api", "build", "install", "user-api", "lib");
+
+async function prepareJvmHostBuild(services, flags) {
+  if (flags.down || flags.status || flags.noBuild) return;
+  if (services.length > 0 && !services.includes("user-api")) return;
+  console.log("==> gradle installDist (host JVM → user-api jars)");
+  const result = await spawnCommand(
+    "node",
+    [join("apps", "user-api", "scripts", "gradlew.mjs"), "installDist"],
+    { inherit: true },
+  );
+  if (result.code !== 0) {
+    throw new Error("user-api host build failed (gradle installDist).");
+  }
+  if (!existsSync(join(ROOT, USER_API_LIB))) {
+    throw new Error(`Missing ${USER_API_LIB} after installDist.`);
+  }
+}
+
 async function main() {
   const flags = parseArgs(process.argv.slice(2));
   if (flags.help) {
@@ -374,6 +393,7 @@ async function main() {
 
   const { services, composeExtras } = splitExtra(flags.extra);
   const target = await resolveTarget(requestedTarget(flags));
+  await prepareJvmHostBuild(services, flags);
   const compose = await composeInvocation();
   const args = [...compose.prefix, ...composeArgs(flags, services, composeExtras)];
   const printed = [compose.command, ...args].join(" ");

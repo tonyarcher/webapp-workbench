@@ -22,7 +22,7 @@ Shared libraries live in `packages/*`. `user-api` is Gradle / Ktor, not Node.
 - `apps/football/` — football live scorekeeping. Pluggable NFL/NCAA/MN/CO rulebooks; IndexedDB. Depends on `football-core`.
 - `apps/fitness/` — fitness tracker. Health Connect/CSV import, 5/3/1; Postgres API. Depends on `fitness-core`.
 - `apps/user-web/` — accounts landing page (`/auth/`). Lit shell; talks to `user-api`.
-- `apps/user-api/` — shared identity API (Kotlin 2.2 / JVM 21 / Ktor). Postgres database `users`.
+- `apps/user-api/` — shared identity API (Kotlin 2.2 / JVM 21 / Ktor). Postgres database `users`. Compile on the host JDK (`gradlew installDist`); the compose image is JRE-only and copies `build/install/user-api/lib`. Do not run Gradle inside Docker.
 - `packages/web-components/` — `@baseball/web-components` Lit library.
 - `packages/vertical-scroll-core/` — Lit scroller + embed players.
 - `packages/calendar-core/` — ICS / Trakt / Netflix / Google Calendar helpers.

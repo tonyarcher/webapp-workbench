@@ -13,4 +13,14 @@ class MigrationResourceTest {
         val sql = url.readText()
         assertTrue(sql.contains("CREATE EXTENSION IF NOT EXISTS pgcrypto"))
     }
+
+    @Test
+    fun accountsMigrationIsOnClasspath() {
+        val url = Thread.currentThread().contextClassLoader
+            .getResource("db/migration/V2__accounts.sql")
+        assertNotNull(url)
+        val sql = url.readText()
+        assertTrue(sql.contains("CREATE TABLE users"))
+        assertTrue(sql.contains("CREATE TABLE sessions"))
+    }
 }

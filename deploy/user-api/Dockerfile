@@ -1,14 +1,11 @@
-# user-api: Kotlin / Ktor identity service. Listens on 3000.
+# user-api runtime. JVM bytecode is portable: compile on the host
+# (`npm run build -w user-api` / gradle installDist), then copy jars.
+# deploy.mjs runs that host build before compose unless --no-build.
 
-FROM eclipse-temurin:21-jdk-jammy AS build
-WORKDIR /src
-COPY apps/user-api /src
-RUN chmod +x gradlew && ./gradlew --no-daemon installDist
-
-FROM eclipse-temurin:21-jre-jammy AS runtime
+FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 ENV PORT=3000
-COPY --from=build /src/build/install/user-api /app
+COPY apps/user-api/build/install/user-api/lib /app/lib
 USER nobody
 EXPOSE 3000
-CMD ["bin/user-api"]
+CMD ["java", "-cp", "/app/lib/*", "userapi.MainKt"]

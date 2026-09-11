@@ -11,6 +11,7 @@ class SettingsTest {
         assertEquals("", s.databaseUrl)
         assertEquals("info", s.logLevel)
         assertEquals("user-api", s.service)
+        assertEquals(false, s.cookieSecure)
     }
 
     @Test
@@ -26,6 +27,12 @@ class SettingsTest {
         assertEquals(3004, s.port)
         assertEquals("postgres://u:p@localhost:5432/users", s.databaseUrl)
         assertEquals("debug", s.logLevel)
+        assertEquals(false, s.cookieSecure)
+    }
+
+    @Test
+    fun cookieSecureFromEnv() {
+        assertEquals(true, settingsFromEnv(mapOf("COOKIE_SECURE" to "true")).cookieSecure)
     }
 
     @Test
