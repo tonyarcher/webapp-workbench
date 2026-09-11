@@ -18,8 +18,8 @@
 #                  /radio-station/api/ (prefix stripped by the gateway).
 #   football     - nginx static, serves Football under /football/.
 #   fitness      - nginx static, serves Fitness under /fitness/.
-#   fitness-api  - node server, JSON API for Fitness under /fitness/api/
-#                  (prefix stripped by the gateway).
+#   fitness-api  - Kotlin/Ktor JSON API for Fitness under /fitness/api/
+#                  (prefix stripped by the gateway). Postgres database `fitness`.
 #   user-web     - nginx static, accounts landing page under /auth/.
 #   user-api     - Kotlin/Ktor identity API under /user-api/
 #                  (prefix stripped by the gateway). Postgres database `users`.

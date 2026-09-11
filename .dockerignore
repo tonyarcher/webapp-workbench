@@ -21,3 +21,6 @@
 !apps/user-api/build
 !apps/user-api/build/install
 !apps/user-api/build/install/**
+!apps/fitness-api/build
+!apps/fitness-api/build/install
+!apps/fitness-api/build/install/**
