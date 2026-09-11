@@ -6,7 +6,6 @@ import userapi.Settings
 import userapi.crypto.Argon2Hasher
 import userapi.crypto.JwtSigner
 import userapi.crypto.Rfc6238Totp
-import userapi.domain.defaultOAuthClients
 import userapi.domain.PasswordHasher
 import userapi.domain.TotpEngine
 import userapi.http.RateLimiter
@@ -53,6 +52,5 @@ private fun productionOauth(
     clock: Clock,
 ): OAuthService? {
     val store = dataSource?.let { JdbcOAuthStore(it) } ?: return null
-    val clients = defaultOAuthClients(settings.origins)
-    return OAuthService(store, clients, JwtSigner(store, settings.issuer), clock)
+    return OAuthService(store, JwtSigner(store, settings.issuer), clock)
 }

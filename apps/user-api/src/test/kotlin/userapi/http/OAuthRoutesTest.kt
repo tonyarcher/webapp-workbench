@@ -83,9 +83,9 @@ class OAuthRoutesTest {
 
     private fun services(): AccountServices {
         val oauthStore = FakeOAuthStore()
+        oauthStore.putClient(OAuthClient("fitness", setOf(redirect)))
         val oauth = OAuthService(
             store = oauthStore,
-            clients = listOf(OAuthClient("fitness", setOf(redirect))),
             signer = JwtSigner(oauthStore, "http://localhost/user-api"),
             clock = clock,
         )

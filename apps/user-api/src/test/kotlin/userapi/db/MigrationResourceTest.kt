@@ -51,4 +51,14 @@ class MigrationResourceTest {
         val sql = url.readText()
         assertTrue(sql.contains("oauth_auth_codes"))
     }
+
+    @Test
+    fun oauthClientsMigrationIsOnClasspath() {
+        val url = Thread.currentThread().contextClassLoader
+            .getResource("db/migration/V6__oauth_clients.sql")
+        assertNotNull(url)
+        val sql = url.readText()
+        assertTrue(sql.contains("oauth_clients"))
+        assertTrue(sql.contains("oauth_redirect_uris"))
+    }
 }

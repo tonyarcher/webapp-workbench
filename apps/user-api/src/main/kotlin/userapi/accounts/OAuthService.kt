@@ -7,7 +7,6 @@ import userapi.crypto.AUTH_CODE_TTL_SEC
 import userapi.crypto.JwtSigner
 import userapi.crypto.REFRESH_TTL_SEC
 import userapi.domain.OAuthClient
-import userapi.domain.clientById
 import userapi.domain.newToken
 import userapi.domain.pkceMatches
 import userapi.domain.redirectAllowed
@@ -17,11 +16,10 @@ data class TokenPair(val accessToken: String, val refreshToken: String, val expi
 
 class OAuthService(
     val store: OAuthStore,
-    val clients: List<OAuthClient>,
     val signer: JwtSigner,
     val clock: Clock,
 ) {
-    fun client(id: String): OAuthClient? = clientById(clients, id)
+    fun client(id: String): OAuthClient? = store.findClient(id)
 
     fun allowedRedirect(clientId: String, redirectUri: String): Boolean {
         val found = client(clientId) ?: return false

@@ -6,6 +6,20 @@ import java.util.UUID
 import javax.sql.DataSource
 
 class JdbcOAuthStore(private val dataSource: DataSource) : OAuthStore {
+    override fun findClient(clientId: String): userapi.domain.OAuthClient? {
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(LOAD_REDIRECTS).use { ps ->
+                ps.setString(1, clientId)
+                ps.executeQuery().use { rs ->
+                    val uris = mutableSetOf<String>()
+                    while (rs.next()) uris.add(rs.getString(1))
+                    if (uris.isEmpty()) return null
+                    return userapi.domain.OAuthClient(clientId, uris)
+                }
+            }
+        }
+    }
+
     override fun loadSigningJwk(): String? {
         dataSource.connection.use { conn ->
             conn.prepareStatement(LOAD_JWK).use { ps ->
@@ -140,6 +154,8 @@ private fun peekReusedRefresh(
     }
 }
 
+private const val LOAD_REDIRECTS =
+    "SELECT redirect_uri FROM oauth_redirect_uris WHERE client_id = ?"
 private const val LOAD_JWK = "SELECT jwk FROM oauth_signing_keys ORDER BY created_at DESC LIMIT 1"
 private const val SAVE_JWK = "INSERT INTO oauth_signing_keys (kid, jwk) VALUES (?, ?) ON CONFLICT (kid) DO NOTHING"
 private const val INSERT_CODE = """
