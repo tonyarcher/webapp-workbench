@@ -7,9 +7,12 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import javax.sql.DataSource
+import userapi.accounts.AccountServices
+import userapi.accounts.productionAccounts
 import userapi.db.dataSource
 import userapi.db.ensureDatabase
 import userapi.db.migrate
+import userapi.http.accountRoutes
 import userapi.http.healthRoutes
 import userapi.http.installCallLog
 import userapi.http.installStatusPages
@@ -50,9 +53,14 @@ fun bootDataSource(settings: Settings): DataSource? {
     return ds
 }
 
-fun Application.module(settings: Settings, dataSource: DataSource?) {
+fun Application.module(
+    settings: Settings,
+    dataSource: DataSource?,
+    accounts: AccountServices = productionAccounts(dataSource),
+) {
     install(ContentNegotiation) { json() }
     installStatusPages(settings)
     installCallLog(settings)
     healthRoutes(dataSource)
+    accountRoutes(settings, accounts)
 }

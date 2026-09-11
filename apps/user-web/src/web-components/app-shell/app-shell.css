@@ -7,6 +7,10 @@
 }
 
 .bar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
     padding: 16px 20px;
     border-bottom: 1px solid var(--border);
 }
@@ -26,4 +30,14 @@
 .status {
     margin: 0 0 8px;
     color: var(--text-soft);
+}
+
+.logout {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
 }

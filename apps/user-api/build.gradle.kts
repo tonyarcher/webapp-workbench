@@ -29,9 +29,11 @@ dependencies {
     implementation("org.flywaydb:flyway-core:11.8.2")
     implementation("org.flywaydb:flyway-database-postgresql:11.8.2")
     implementation("org.slf4j:slf4j-nop:2.0.17")
+    implementation("com.password4j:password4j:1.8.4")
 
     testImplementation("io.ktor:ktor-server-test-host:$ktor")
     testImplementation("io.ktor:ktor-client-content-negotiation:$ktor")
+    testImplementation("io.ktor:ktor-client-core:$ktor")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
 }

@@ -16,5 +16,8 @@
 **/playwright-report
 **/*.tsbuildinfo
 **/.gradle
-**/build
 **/.kotlin
+**/build
+!apps/user-api/build
+!apps/user-api/build/install
+!apps/user-api/build/install/**
