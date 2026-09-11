@@ -231,6 +231,9 @@ assert(sClean.includes('keep me'), 'server sanitize unwraps unknown tags');
 // Cross-check with client
 assert(!cClean.includes('javascript:'), 'client sanitize strips javascript:');
 assert(cClean.includes('keep me'), 'client sanitize unwraps unknown tags');
+const migrated = serverSanitizeHtml('<img src="javascript:alert(1)" alt="">' + '<p>body</p>');
+assert(!migrated.includes('javascript:'), 'legacy image backfill cannot inject javascript: src');
+assert(migrated.includes('body'), 'legacy image backfill keeps existing html');
 
 // ====================================================================
 // ranking parity

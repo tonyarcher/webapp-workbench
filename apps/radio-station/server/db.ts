@@ -29,7 +29,7 @@ export async function ensureDatabase(): Promise<void> {
     try {
         const {rows} = await client.query<{exists: number}>('SELECT 1 AS exists FROM pg_database WHERE datname = $1', [dbName]);
         if (rows.length) return;
-        await client.query(`CREATE DATABASE ${dbName}`);
+        await client.query(`CREATE DATABASE "${dbName}"`);
     } finally {
         await client.end();
     }

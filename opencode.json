@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "lsp": true,
+  "mcp": {
+    "servers": {
+      "ttsc-graph": {
+        "type": "local",
+        "command": [
+          "npx",
+          "@ttsc/graph",
+          "--tsconfig",
+          "tsconfig.graph.json"
+        ]
+      }
+    }
+  }
+}

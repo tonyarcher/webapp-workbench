@@ -319,6 +319,11 @@ function assert(cond: unknown, msg: string): void {
     assert(parseSession('{"version":1,"items":[]}') === null, 'empty items rejected')
 }
 
+{
+    const r = parseLinkList('javascript:alert(1)\nhttps://example.com/x')
+    assert(r.items.length === 0, 'javascript and non-tiktok not playable')
+}
+
 console.log('smoke.ts: all assertions passed')
 
 export {}
