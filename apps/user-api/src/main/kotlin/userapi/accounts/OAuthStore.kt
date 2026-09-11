@@ -11,6 +11,7 @@ data class StoredAuthCode(
 )
 
 interface OAuthStore {
+    fun findClient(clientId: String): userapi.domain.OAuthClient?
     fun loadSigningJwk(): String?
     fun saveSigningJwk(kid: String, jwk: String)
     fun insertAuthCode(

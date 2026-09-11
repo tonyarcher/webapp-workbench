@@ -6,12 +6,20 @@ import java.util.concurrent.ConcurrentHashMap
 import userapi.accounts.OAuthStore
 import userapi.accounts.StoredAuthCode
 import userapi.accounts.StoredRefresh
+import userapi.domain.OAuthClient
 
 class FakeOAuthStore : OAuthStore {
     var jwk: String? = null
+    private val clients = ConcurrentHashMap<String, OAuthClient>()
     private val codes = ConcurrentHashMap<String, Pair<StoredAuthCode, Instant>>()
     private val refresh = ConcurrentHashMap<String, StoredRefresh>()
     private val refreshExp = ConcurrentHashMap<String, Instant>()
+
+    fun putClient(client: OAuthClient) {
+        clients[client.id] = client
+    }
+
+    override fun findClient(clientId: String): OAuthClient? = clients[clientId]
 
     override fun loadSigningJwk(): String? = jwk
 

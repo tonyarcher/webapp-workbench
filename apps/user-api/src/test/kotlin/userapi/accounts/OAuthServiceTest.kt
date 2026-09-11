@@ -22,9 +22,9 @@ class OAuthServiceTest {
     @Test
     fun refreshRotatesAndReuseKillsFamily() {
         val store = FakeOAuthStore()
+        store.putClient(OAuthClient("fitness", setOf(redirect)))
         val oauth = OAuthService(
             store = store,
-            clients = listOf(OAuthClient("fitness", setOf(redirect))),
             signer = JwtSigner(store, "http://localhost/user-api"),
             clock = clock,
         )

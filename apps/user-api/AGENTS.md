@@ -1,7 +1,12 @@
 # AGENTS.md
 
-Shared identity API. Phase 4: OAuth2 Authorization Code + PKCE, JWKS, JWT.
-Do not invent OAuth. Passkeys/TOTP/password already exist.
+Standalone identity provider (IdP). OAuth2 Authorization Code + PKCE, JWKS,
+JWT, passkeys, TOTP, passwords. Do not invent OAuth.
+
+This service must stay cloneable to another repo. It stores accounts and
+auth only. No fitness, RSS, or radio tables. Other apps are HTTP clients.
+Register those apps as OAuth clients in `oauth_clients` /
+`oauth_redirect_uris` (and later scopes), not in Kotlin.
 
 ## Stack
 
