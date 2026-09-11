@@ -34,3 +34,4 @@ After editing `packages/football-core`, rebuild it before the app.
 
 - Engine/rulebook changes need tests in `packages/football-core/src/*.test.ts`.
 - Store/persist changes need tests in `src/local-game/*.test.ts`.
+- Watch playback looping outside `fb-game-shell` or writing into a score-mode game.

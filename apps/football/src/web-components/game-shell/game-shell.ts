@@ -12,7 +12,8 @@ import type {PlayFamily, PlayInput, ScoringEvent, Tackler} from 'football-core';
 import type {GameStore} from '../../local-game/game-store';
 import type {LiveLocalGameState} from '../../local-game/game-state';
 import {SPEED_OPTIONS} from '../../sim/playback';
-import {highlightLabel, WatchRunner, watchBadge} from '../../sim/watch-runner';
+import {highlightLabel, WatchRunner, watchBadge, watchLoopAlive} from '../../sim/watch-runner';
+import {yieldDelay} from '../../sim/playback';
 import '../field/field';
 import styles from './game-shell.css?inline';
 
@@ -54,27 +55,61 @@ export class GameShell extends LitElement {
     @state() private deadText = '';
     @state() private tacklerJersey = '';
 
-    private readonly watch = new WatchRunner({
-        getGame: () => this.store.current(),
-        record: (event) => this.store.recordEvent(event),
-        flush: () => {
-            void this.store.flushPersist();
-        },
-        onChange: () => this.requestUpdate(),
-    });
+    private readonly watch = new WatchRunner();
+    private watchAutoStarted = false;
 
     override willUpdate(changed: Map<PropertyKey, unknown>): void {
         if (changed.has('game') && this.game) {
             const clock = formatClock(this.game.engine.clock.gameClockSeconds);
             if (!this.snapText) this.snapText = clock;
             this.deadText = clock;
-            this.watch.maybeAutoStart(this.isWatch());
+            if (this.isWatch()) this.maybeStartWatchLoop();
+            else if (this.watchAutoStarted || this.watch.playing) this.stopWatchLoop();
         }
     }
 
     override disconnectedCallback(): void {
+        this.stopWatchLoop();
         super.disconnectedCallback();
+    }
+
+    private maybeStartWatchLoop(): void {
+        const game = this.game;
+        if (!this.isWatch() || this.watchAutoStarted || !game || game.engine.over || game.historyIndex > 0) return;
+        this.watchAutoStarted = true;
+        queueMicrotask(() => {
+            void this.runWatchLoop();
+        });
+    }
+
+    private stopWatchLoop(): void {
+        this.watchAutoStarted = false;
         this.watch.reset();
+    }
+
+    private readonly onSimPause = (): void => {
+        this.watch.pause();
+        void this.store.flushPersist();
+        this.requestUpdate();
+    };
+
+    private async runWatchLoop(): Promise<void> {
+        if (!watchLoopAlive(this.isConnected, this.isWatch(), Boolean(this.game?.engine.over)) || this.watch.playing) return;
+        await this.watch.clock.play(async () => this.stepWatch());
+        if (this.isConnected) {
+            void this.store.flushPersist();
+            this.requestUpdate();
+        }
+    }
+
+    private async stepWatch(): Promise<boolean> {
+        const game = this.game;
+        if (!game || !watchLoopAlive(this.isConnected, this.isWatch(), Boolean(game.engine.over))) return false;
+        const event = this.watch.takeEvent(game);
+        if (!event) return false;
+        this.store.recordEvent(event);
+        await yieldDelay(this.watch.delayMs(event), this.watch.clock.signal);
+        return watchLoopAlive(this.isConnected, this.isWatch(), Boolean(this.game?.engine.over));
     }
 
     private isWatch(): boolean {
@@ -261,8 +296,8 @@ export class GameShell extends LitElement {
                 <span class="sim-badge">${watchBadge(engine.over, this.watch.playing)}</span>
                 <span>Watching: ${setup.awayName} @ ${setup.homeName}</span>
                 <span class="sim-last">${this.watch.lastLabel}</span>
-                <button ?disabled=${this.watch.playing || engine.over} @click=${() => void this.watch.play(true)}>Play</button>
-                <button ?disabled=${!this.watch.playing} @click=${() => this.watch.pause()}>Pause</button>
+                <button ?disabled=${this.watch.playing || engine.over} @click=${() => void this.runWatchLoop()}>Play</button>
+                <button ?disabled=${!this.watch.playing} @click=${this.onSimPause}>Pause</button>
                 <label>Speed
                     <select @change=${this.onSpeedChange}>
                         ${SPEED_OPTIONS.map(

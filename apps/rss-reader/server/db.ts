@@ -2,6 +2,7 @@ import pg from 'pg';
 import {DATABASE_URL} from './env.js';
 import {SCHEMA} from './schema.js';
 import {firstImageUrl} from './services/feed-parser.js';
+import {sanitizeHtml} from './services/sanitize.js';
 import type {
     FeedRow,
     FolderRow,
@@ -44,7 +45,7 @@ export async function migrate(): Promise<void> {
             for (const r of rows) {
                 if (!firstImageUrl(r.content_html ?? undefined)) {
                     await p.query(`UPDATE articles SET content_html = $1 WHERE id = $2`, [
-                        `<img src="${r.image}" alt="">` + (r.content_html ?? ''),
+                        sanitizeHtml(`<img src="${r.image}" alt="">`) + (r.content_html ?? ''),
                         r.id,
                     ]);
                 }

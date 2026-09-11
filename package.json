@@ -27,6 +27,9 @@
     "deploy": "node scripts/deploy.mjs"
   },
   "devDependencies": {
-    "oxlint": "^1.75.0"
+    "@ttsc/graph": "^0.30.0",
+    "oxlint": "^1.75.0",
+    "ttsc": "^0.30.0",
+    "typescript": "~6.0.2"
   }
 }

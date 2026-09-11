@@ -1,85 +1,58 @@
 import type {PlayFamily, PlayInput, ScoringEvent} from 'football-core';
 import type {LiveLocalGameState} from '../local-game/game-state';
-import {delayForPlay, PlaybackClock, yieldDelay} from './playback';
+import {delayForPlay, PlaybackClock} from './playback';
 import {nextEvent, rngForEngine} from './resolve-play';
 
 /** Matches simulateGame: a long game can need more than 400 events to finish. */
 const MAX_EVENTS = 450;
 const MAX_WIND_DOWN = 12;
 
+/** Session state for watch mode. The game shell owns the async loop. */
 export class WatchRunner {
     readonly clock = new PlaybackClock();
     speed = 1;
     animations = true;
     lastLabel = '';
     activeEvent: ScoringEvent | null = null;
-    private autoStarted = false;
-
-    constructor(
-        private readonly deps: {
-            getGame: () => LiveLocalGameState | null;
-            record: (event: ScoringEvent) => void;
-            flush: () => void;
-            onChange: () => void;
-            /** Injectable so tests can drain long games without real timers. */
-            wait?: (ms: number) => Promise<void>;
-        },
-    ) {}
 
     get playing(): boolean {
         return this.clock.playing;
     }
 
-    maybeAutoStart(isWatch: boolean): void {
-        const game = this.deps.getGame();
-        if (this.autoStarted || !isWatch || !game) return;
-        if (game.engine.over || game.historyIndex > 0) return;
-        this.autoStarted = true;
-        queueMicrotask(() => {
-            void this.play(isWatch);
-        });
-    }
-
-    async play(isWatch: boolean): Promise<void> {
-        if (!isWatch || this.clock.playing) return;
-        await this.clock.play(async () => this.step());
-        this.deps.flush();
-        this.deps.onChange();
-    }
-
     pause(): void {
         this.clock.pause();
-        this.deps.flush();
-        this.deps.onChange();
     }
 
     reset(): void {
-        this.autoStarted = false;
         this.lastLabel = '';
         this.activeEvent = null;
         this.pause();
     }
 
-    private async step(): Promise<boolean> {
-        const game = this.deps.getGame();
-        if (!game || game.engine.over) return false;
+    takeEvent(game: LiveLocalGameState): ScoringEvent | null {
+        if (game.setup.mode !== 'watch' || game.engine.over) return null;
         const event = this.pickEvent(game);
-        if (!event) return false;
+        if (!event) return null;
         this.lastLabel = labelFor(event);
         this.activeEvent = event;
-        this.deps.record(event);
-        const family = event.type === 'play' ? event.input.family : event.type;
-        await (this.deps.wait ?? yieldDelay)(delayForPlay(family, this.speed, this.animations));
-        return !this.deps.getGame()?.engine.over;
+        return event;
     }
 
-    /** Normal events up to the cap, then forced period ends like simulateGame. */
+    delayMs(event: ScoringEvent): number {
+        const family = event.type === 'play' ? event.input.family : event.type;
+        return delayForPlay(family, this.speed, this.animations);
+    }
+
     private pickEvent(game: LiveLocalGameState): ScoringEvent | null {
         if (game.historyIndex < MAX_EVENTS) {
             return nextEvent(game.engine, rngForEngine(game.setup.simSeed ?? 1, game.engine, game.historyIndex));
         }
         return game.historyIndex < MAX_EVENTS + MAX_WIND_DOWN ? {type: 'period_end'} : null;
     }
+}
+
+export function watchLoopAlive(connected: boolean, isWatch: boolean, over: boolean): boolean {
+    return connected && isWatch && !over;
 }
 
 export function watchBadge(over: boolean, playing: boolean): string {

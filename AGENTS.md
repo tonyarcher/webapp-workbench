@@ -195,6 +195,10 @@ or a `packages/log` workspace until a second language needs the same code.
 - Smoke tests (`scripts/smoke.ts`, `db-smoke.ts`, …) cover pure logic — extend them when touching those modules.
 - API/schema changes that boot Postgres need assertions in `scripts/integration.ts`.
 - Library changes need tests in that package (`scripts/smoke.ts` or co-located `*.test.ts`).
+- Architecture: use the `ttsc-graph` MCP (`opencode.json`) for callers, callees, and hotspots. Do not grep the graph.
+- Secrets: `gitleaks detect` when touching auth, env, or API code.
+- Dependencies: `osv-scanner -r .` or `npm audit` on lockfile changes.
+- Structural hunt: `ast-grep` (`sg`) for `unsafeHTML`, concatenated SQL, and `eval`.
 
 ## Secrets and environment
 
