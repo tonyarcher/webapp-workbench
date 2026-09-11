@@ -12,6 +12,7 @@ class SettingsTest {
         assertEquals("info", s.logLevel)
         assertEquals("user-api", s.service)
         assertEquals(false, s.cookieSecure)
+        assertEquals("localhost", s.rpId)
     }
 
     @Test

@@ -1,7 +1,7 @@
 # AGENTS.md
 
-Shared identity API. Phase 2: TOTP (RFC 6238) and hashed backup codes.
-Passkeys and OAuth come later. Do not add them here.
+Shared identity API. Phase 4: OAuth2 Authorization Code + PKCE, JWKS, JWT.
+Do not invent OAuth. Passkeys/TOTP/password already exist.
 
 ## Stack
 

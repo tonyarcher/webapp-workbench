@@ -12,7 +12,12 @@ import {
     readBackupCodes,
     readCsrf,
     readErr,
+    passkeyLoginBeginUrl,
+    passkeyLoginFinishUrl,
+    passkeyRegisterBeginUrl,
+    passkeyRegisterFinishUrl,
     readMe,
+    readPasskeyBegin,
     readTotpBegin,
     registerUrl,
     totpBeginUrl,
@@ -20,6 +25,7 @@ import {
     totpRequired,
 } from '../../services/api';
 import {returnPathFromSearch} from '../../services/return-path';
+import {credentialToJson, decodeCreateOptions, decodeRequestOptions} from '../../services/webauthn';
 import '../login-form/login-form';
 import '../totp-form/totp-form';
 import styles from './app-shell.css?inline';
@@ -37,6 +43,7 @@ export class AppShell extends LitElement {
     @state() private busy = false;
     @state() private username = '';
     @state() private totpOn = false;
+    @state() private passkeyCount = 0;
     @state() private enrollSecret = '';
     @state() private enrollOtpauth = '';
     @state() private backupCodes: string[] = [];
@@ -67,7 +74,7 @@ export class AppShell extends LitElement {
             const me = await this.loadMe(signal);
             if (!this.isConnected) return;
             if (me) {
-                this.signedIn(me.username, me.totpEnabled);
+                this.signedIn(me.username, me.totpEnabled, me.passkeyCount);
                 return;
             }
             this.view = 'form';
@@ -77,9 +84,10 @@ export class AppShell extends LitElement {
         }
     }
 
-    private signedIn(username: string, totpEnabled: boolean): void {
+    private signedIn(username: string, totpEnabled: boolean, passkeyCount = 0): void {
         this.username = username;
         this.totpOn = totpEnabled;
+        this.passkeyCount = passkeyCount;
         this.view = 'home';
     }
 
@@ -101,7 +109,7 @@ export class AppShell extends LitElement {
         return readCsrf(body);
     }
 
-    private async loadMe(signal: AbortSignal): Promise<{id: string; username: string; totpEnabled: boolean} | null> {
+    private async loadMe(signal: AbortSignal): Promise<{id: string; username: string; totpEnabled: boolean; passkeyCount: number} | null> {
         const response = await fetch(meUrl(), {signal, credentials: 'include'});
         if (response.status === 401) return null;
         const body: unknown = await response.json();
@@ -157,7 +165,7 @@ export class AppShell extends LitElement {
             return;
         }
         const me = readMe(result.body);
-        this.signedIn(me?.username ?? username, me?.totpEnabled ?? false);
+        this.signedIn(me?.username ?? username, me?.totpEnabled ?? false, me?.passkeyCount ?? 0);
     }
 
     private onTotpLogin = (event: CustomEvent<{code: string}>): void => {
@@ -252,8 +260,105 @@ export class AppShell extends LitElement {
         }
         this.username = '';
         this.totpOn = false;
+        this.passkeyCount = 0;
         this.view = 'form';
         this.csrf = (await this.loadCsrf(signal)) ?? this.csrf;
+    }
+
+    private onAddPasskey = (): void => {
+        const signal = this.abort?.signal;
+        if (!signal) return;
+        void this.addPasskey(signal).catch(() => {});
+    };
+
+    private onPasskeyLogin = (): void => {
+        const signal = this.abort?.signal;
+        if (!signal) return;
+        void this.passkeyLogin(signal).catch(() => {});
+    };
+
+    private async addPasskey(signal: AbortSignal): Promise<void> {
+        this.error = '';
+        this.busy = true;
+        try {
+            const begin = await this.postJson(passkeyRegisterBeginUrl(), {}, signal);
+            if (!this.isConnected) return;
+            if (!begin.ok) {
+                this.busy = false;
+                this.error = readErr(begin.body);
+                return;
+            }
+            await this.finishPasskeyCreate(begin.body, signal);
+        } catch {
+            this.failNetwork();
+        }
+    }
+
+    private async finishPasskeyCreate(body: unknown, signal: AbortSignal): Promise<void> {
+        const parsed = readPasskeyBegin(body);
+        if (!parsed || !navigator.credentials) {
+            this.busy = false;
+            this.error = 'passkeys are not available';
+            return;
+        }
+        const cred = await navigator.credentials.create(decodeCreateOptions(parsed.options));
+        if (!(cred instanceof PublicKeyCredential)) {
+            this.busy = false;
+            this.error = 'passkey not created';
+            return;
+        }
+        const finish = await this.postJson(
+            passkeyRegisterFinishUrl(),
+            {requestId: parsed.requestId, credential: credentialToJson(cred)},
+            signal,
+        );
+        if (!this.isConnected) return;
+        this.busy = false;
+        if (!finish.ok) {
+            this.error = readErr(finish.body);
+            return;
+        }
+        this.passkeyCount += 1;
+    }
+
+    private async passkeyLogin(signal: AbortSignal): Promise<void> {
+        this.error = '';
+        this.busy = true;
+        try {
+            const begin = await this.postJson(passkeyLoginBeginUrl(), {}, signal);
+            if (!this.isConnected) return;
+            if (!begin.ok) {
+                this.busy = false;
+                this.error = readErr(begin.body);
+                return;
+            }
+            await this.finishPasskeyGet(begin.body, signal);
+        } catch {
+            this.failNetwork();
+        }
+    }
+
+    private async finishPasskeyGet(body: unknown, signal: AbortSignal): Promise<void> {
+        const parsed = readPasskeyBegin(body);
+        if (!parsed || !navigator.credentials) {
+            this.busy = false;
+            this.error = 'passkeys are not available';
+            return;
+        }
+        const cred = await navigator.credentials.get(decodeRequestOptions(parsed.options));
+        if (!(cred instanceof PublicKeyCredential)) {
+            this.busy = false;
+            this.error = 'passkey not used';
+            return;
+        }
+        const finish = await this.postJson(
+            passkeyLoginFinishUrl(),
+            {requestId: parsed.requestId, credential: credentialToJson(cred)},
+            signal,
+        );
+        if (!this.isConnected) return;
+        this.busy = false;
+        this.applyAuthResult(this.username, finish);
     }
 
     private async postJson(url: string, payload: unknown, signal: AbortSignal): Promise<{ok: boolean; body: unknown}> {
@@ -299,14 +404,20 @@ export class AppShell extends LitElement {
                 @account-submit=${this.onSubmit}
                 @account-mode=${this.onMode}
             ></uw-login-form>
+            <p class="switch">
+                <button class="logout" type="button" ?disabled=${this.busy} @click=${this.onPasskeyLogin}>
+                    Sign in with passkey
+                </button>
+            </p>
         `;
     }
 
     private homeBody(): TemplateResult {
         return html`
             <p class="lead">Signed in as ${this.username}</p>
-            <p class="status">Authenticator: ${this.totpOn ? 'on' : 'off'}</p>
+            <p class="status">Authenticator: ${this.totpOn ? 'on' : 'off'} · Passkeys: ${this.passkeyCount}</p>
             ${this.totpOn ? '' : html`<button class="logout" type="button" @click=${this.onEnroll}>Add authenticator</button>`}
+            <button class="logout" type="button" ?disabled=${this.busy} @click=${this.onAddPasskey}>Add passkey</button>
             <button class="logout" type="button" @click=${this.onLogout}>Sign out</button>
             ${this.error ? html`<p class="lead">${this.error}</p>` : ''}
         `;

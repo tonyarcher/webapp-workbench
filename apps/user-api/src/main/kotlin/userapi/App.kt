@@ -56,7 +56,7 @@ fun bootDataSource(settings: Settings): DataSource? {
 fun Application.module(
     settings: Settings,
     dataSource: DataSource?,
-    accounts: AccountServices = productionAccounts(dataSource),
+    accounts: AccountServices = productionAccounts(dataSource, settings),
 ) {
     install(ContentNegotiation) { json() }
     installStatusPages(settings)

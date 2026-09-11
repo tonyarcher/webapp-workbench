@@ -21,6 +21,13 @@ fun Application.accountRoutes(settings: Settings, accounts: AccountServices) {
         post("/v1/logout") { logoutUser(call, settings, accounts) }
         post("/v1/totp/begin") { totpBegin(call, accounts) }
         post("/v1/totp/confirm") { totpConfirm(call, accounts) }
+        post("/v1/passkey/register/begin") { passkeyRegisterBegin(call, accounts) }
+        post("/v1/passkey/register/finish") { passkeyRegisterFinish(call, accounts) }
+        post("/v1/passkey/login/begin") { passkeyLoginBegin(call, accounts) }
+        post("/v1/passkey/login/finish") { passkeyLoginFinish(call, settings, accounts) }
+        get("/oauth/authorize") { oauthAuthorize(call, settings, accounts) }
+        post("/oauth/token") { oauthToken(call, accounts) }
+        get("/oauth/jwks") { oauthJwks(call, accounts) }
     }
 }
 

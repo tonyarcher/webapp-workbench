@@ -33,4 +33,22 @@ class MigrationResourceTest {
         assertTrue(sql.contains("totp_secret"))
         assertTrue(sql.contains("backup_codes"))
     }
+
+    @Test
+    fun passkeyMigrationIsOnClasspath() {
+        val url = Thread.currentThread().contextClassLoader
+            .getResource("db/migration/V4__passkeys.sql")
+        assertNotNull(url)
+        val sql = url.readText()
+        assertTrue(sql.contains("CREATE TABLE passkeys"))
+    }
+
+    @Test
+    fun oauthMigrationIsOnClasspath() {
+        val url = Thread.currentThread().contextClassLoader
+            .getResource("db/migration/V5__oauth.sql")
+        assertNotNull(url)
+        val sql = url.readText()
+        assertTrue(sql.contains("oauth_auth_codes"))
+    }
 }
