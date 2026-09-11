@@ -14,7 +14,7 @@ Docker-compatible container runtime) already installed.
 - `gateway/` — Dockerfile that builds the `gateway` image from the `deploy/` context.
 - `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `clipstack/`, `calendar-sync/`, `radio-station/`, `football/`, `fitness/` — Dockerfiles + nginx configs for the static apps. Calendar Sync also proxies `/api/trakt/` to api.trakt.tv.
 - `radio-api/` — Dockerfile for the Radio Station node API. On startup it creates the `radio` Postgres database if the volume predates this service.
-- `fitness-api/` — Dockerfile for the Fitness node API. On startup it creates the `fitness` Postgres database if the volume predates this service.
+- `fitness-api/` — JRE image for the Fitness Kotlin API. Compile on the host JDK (`gradlew installDist`); the image copies jars. Creates the `fitness` Postgres database on startup.
 - `stock-game/` — Dockerfile + `server-host.mjs`, a tiny dependency-free Node HTTP host that runs the built TanStack Start fetch handler.
 
 All app Dockerfiles use the repo root as the build context (`context: ..` in
@@ -40,7 +40,7 @@ through unchanged. The `gateway` image is built from the `deploy/` context.
 | `/radio-station/api/` | Radio Station API (node, prefix stripped). Creates Postgres database `radio` on startup. |
 | `/football/` | Football tracker (nginx static, prefix stripped) |
 | `/fitness/` | Fitness (nginx static, prefix stripped) |
-| `/fitness/api/` | Fitness API (node, prefix stripped). Creates Postgres database `fitness` on startup. |
+| `/fitness/api/` | Fitness API (Kotlin, prefix stripped). Creates Postgres database `fitness` on startup. |
 
 The bare paths (e.g. `/stock-game`) redirect to their trailing-slash forms.
 Each app is served under its own subpath with the base baked in at build time

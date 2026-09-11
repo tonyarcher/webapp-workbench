@@ -27,3 +27,5 @@ playwright-report/
 .gradle/
 apps/user-api/build/
 apps/user-api/.kotlin/
+apps/fitness-api/build/
+apps/fitness-api/.kotlin/

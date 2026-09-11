@@ -8,13 +8,23 @@ Docker Compose reverse-proxy stack. Workflow and monorepo rules: repo-root `AGEN
 - `nginx/default.conf` — gateway routes. Prefix stripped for static apps; `/stock-game/` is not.
 - `hello/index.html` — page at `/`. Link **text** is the project name (Baseball, RSS Reader, …); `href` stays the subpath (`/auth/` for Accounts).
 - Per-app Dockerfiles under `deploy/<app>/`. Build context is the **repo root**.
-- Node/static images compile inside Linux. **user-api** compiles on the host JDK
-  (`gradlew installDist`); the image is **JRE only** and copies
-  `build/install/user-api/lib`. Do not run Gradle or install a JDK in that image.
+- Node/static images compile inside Linux. **user-api** and **fitness-api**
+  compile on the host JDK (`gradlew installDist`); each image is **JRE only**
+  and copies `build/install/<service>/lib`. Do not run Gradle or install a JDK
+  in those images.
 
 ## Commands
 
 From repo root: `./deploy.sh` or `.\deploy.ps1` (optional app name to rebuild one service).
+
+## Services
+
+Identity is `user-api`. Each product API is its own compose service and
+database (`fitness-api` / `fitness`, `rss-api` / `rss`, …). Gateway: one
+prefix per UI and per API. Do not route product data through `user-api`.
+OAuth redirect URIs live in `oauth_redirect_uris`. If `WEBAUTHN_ORIGINS`
+is not localhost/127.0.0.1, add matching redirect rows for that origin;
+do not expect Kotlin to derive them from the env.
 
 ## Rules
 

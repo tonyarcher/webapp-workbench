@@ -5,10 +5,17 @@ Read the workspace `AGENTS.md` before touching that app or package.
 
 ## Project
 
-npm-workspaces monorepo of small TypeScript web apps plus a Kotlin identity API.
+npm-workspaces monorepo of small TypeScript web apps plus Kotlin APIs.
 Most apps are Vite + Lit custom elements (no UI framework). Stock-game is the
 exception: TanStack Start (SPA) with React route shells and decorator-free Lit.
 Shared libraries live in `packages/*`. `user-api` is Gradle / Ktor, not Node.
+
+**Services:** `user-api` is a standalone identity provider (OAuth/OIDC, JWKS).
+Other apps are clients. Each webapp that needs Postgres has **its own API**
+and **its own database** so that API can be cloned into another repo later.
+Do not put fitness/rss/radio tables in `user-api`. Do not share Postgres
+across APIs. New server data is Kotlin, not Node `pg`. OAuth client ACL
+(`client_id`, redirect URIs) is database rows, not a hardcoded app list.
 
 ## Layout
 
@@ -20,7 +27,8 @@ Shared libraries live in `packages/*`. `user-api` is Gradle / Ktor, not Node.
 - `apps/calendar-sync/` — Trakt + Netflix → ICS / Google Calendar. Depends on `calendar-core`.
 - `apps/radio-station/` — radio-station simulator. Postgres catalog + node API.
 - `apps/football/` — football live scorekeeping. Pluggable NFL/NCAA/MN/CO rulebooks; IndexedDB. Depends on `football-core`.
-- `apps/fitness/` — fitness tracker. Health Connect/CSV import, 5/3/1; Postgres API. Depends on `fitness-core`.
+- `apps/fitness/` — fitness tracker UI. Health Connect/CSV import, 5/3/1. Depends on `fitness-core`.
+- `apps/fitness-api/` — fitness JSON API (Kotlin 2.2 / JVM 21 / Ktor). Postgres database `fitness`. Host JDK `installDist`; JRE image copies `lib/`. Uses the legacy local user id until the UI sends a `user-api` JWT.
 - `apps/user-web/` — accounts landing page (`/auth/`). Lit shell; talks to `user-api`.
 - `apps/user-api/` — shared identity API (Kotlin 2.2 / JVM 21 / Ktor). Postgres database `users`. Compile on the host JDK (`gradlew installDist`); the compose image is JRE-only and copies `build/install/user-api/lib`. Do not run Gradle inside Docker.
 - `packages/web-components/` — `@baseball/web-components` Lit library.
@@ -166,11 +174,10 @@ comments, and workflow only — not Lit/CSS/PWA.
   lives in a `*-core` package stays there — do not copy it into the app. New packages follow
   **Shared package vs app module** (second consumer, or headless domain — not the first screen).
 - Persistence goes through `src/db/` (or the app’s store module), never raw IndexedDB in components.
-- **Postgres is Kotlin (or Python), not TypeScript.** `user-api` is the JVM
-  database service. Do not add tables or queries to `rss-api` / `fitness-api` /
-  `radio-api`. When an app needs server data + identity, move that Postgres
-  access into Kotlin and leave the Lit app as a client. IndexedDB in the
-  browser is fine.
+- **Postgres is Kotlin (or Python), not TypeScript.** Database per service:
+  `user-api` → `users`, fitness API → `fitness`, and so on. Do not grow Node
+  `pg`. Do not merge product schemas into `user-api`. IndexedDB in the browser
+  is fine.
 - Floating promises: `void` plus `.catch(...)`. IndexedDB writes await `tx.done`. Multi-store writes use one transaction.
 - Async work is owned by the UI object that started it (`AbortSignal` + `isConnected`). Headless helpers must not run a loop against the shared game/store. After every `await`, recheck mode and that the element is still connected.
 - Untrusted URLs (`href` / `src`) pass through `safeUrl()` (app or `vertical-scroll-core`).
@@ -203,8 +210,8 @@ or a `packages/log` workspace until a second language needs the same code.
 - Workspace `npm test` then `npm run build` must pass before finishing.
 - Smoke tests (`scripts/smoke.ts`, `db-smoke.ts`, …) cover pure logic — extend them when touching those modules.
 - API/schema changes that boot Postgres need assertions in that service’s tests
-  (`user-api` JUnit / Flyway; do not grow Node `scripts/integration.ts` for new
-  Postgres). Legacy rss/fitness/radio integration tests stay until those APIs
+  (`user-api` / `fitness-api` JUnit / Flyway; do not grow Node `scripts/integration.ts`
+  for new Postgres). Legacy rss/radio integration tests stay until those APIs
   migrate.
 - Library changes need tests in that package (`scripts/smoke.ts` or co-located `*.test.ts`).
 - Architecture: use the `ttsc-graph` MCP (`opencode.json`) for callers, callees, and hotspots. Do not grep the graph.
