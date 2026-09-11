@@ -28,6 +28,7 @@ Shared libraries live in `packages/*`. `user-api` is Gradle / Ktor, not Node.
 - `packages/calendar-core/` — ICS / Trakt / Netflix / Google Calendar helpers.
 - `packages/football-core/` — rulebooks, play-by-play reducer, clock, notation.
 - `packages/fitness-core/` — units, 5/3/1, body formulas, importers.
+- `packages/user-client/` — headless PKCE + JWT payload parse for identity.
 - `deploy/` — Docker Compose reverse-proxy gateway (`/` hello page; apps under `/baseball/`, `/rss-reader/`, `/stock-game/`, `/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/fitness/`, `/auth/`, `/user-api/`).
 
 Library `prepare` scripts build `dist/` on install. After changing a package, rebuild it
@@ -165,6 +166,11 @@ comments, and workflow only — not Lit/CSS/PWA.
   lives in a `*-core` package stays there — do not copy it into the app. New packages follow
   **Shared package vs app module** (second consumer, or headless domain — not the first screen).
 - Persistence goes through `src/db/` (or the app’s store module), never raw IndexedDB in components.
+- **Postgres is Kotlin (or Python), not TypeScript.** `user-api` is the JVM
+  database service. Do not add tables or queries to `rss-api` / `fitness-api` /
+  `radio-api`. When an app needs server data + identity, move that Postgres
+  access into Kotlin and leave the Lit app as a client. IndexedDB in the
+  browser is fine.
 - Floating promises: `void` plus `.catch(...)`. IndexedDB writes await `tx.done`. Multi-store writes use one transaction.
 - Async work is owned by the UI object that started it (`AbortSignal` + `isConnected`). Headless helpers must not run a loop against the shared game/store. After every `await`, recheck mode and that the element is still connected.
 - Untrusted URLs (`href` / `src`) pass through `safeUrl()` (app or `vertical-scroll-core`).
@@ -196,7 +202,10 @@ or a `packages/log` workspace until a second language needs the same code.
 
 - Workspace `npm test` then `npm run build` must pass before finishing.
 - Smoke tests (`scripts/smoke.ts`, `db-smoke.ts`, …) cover pure logic — extend them when touching those modules.
-- API/schema changes that boot Postgres need assertions in `scripts/integration.ts`.
+- API/schema changes that boot Postgres need assertions in that service’s tests
+  (`user-api` JUnit / Flyway; do not grow Node `scripts/integration.ts` for new
+  Postgres). Legacy rss/fitness/radio integration tests stay until those APIs
+  migrate.
 - Library changes need tests in that package (`scripts/smoke.ts` or co-located `*.test.ts`).
 - Architecture: use the `ttsc-graph` MCP (`opencode.json`) for callers, callees, and hotspots. Do not grep the graph.
 - Secrets: `gitleaks detect` when touching auth, env, or API code.

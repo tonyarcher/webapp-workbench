@@ -1,8 +1,10 @@
 import {
-    csrfUrl, healthzUrl, isHealthOk, loginTotpUrl, loginUrl, meUrl, readBackupCodes, readCsrf, readErr, readMe,
-    readTotpBegin, totpBeginUrl, totpRequired, USER_API_PREFIX,
+    csrfUrl, healthzUrl, isHealthOk, loginTotpUrl, loginUrl, meUrl, passkeyLoginBeginUrl, passkeyRegisterBeginUrl,
+    readBackupCodes, readCsrf, readErr, readMe, readPasskeyBegin, readTotpBegin, totpBeginUrl, totpRequired,
+    USER_API_PREFIX,
 } from '../src/services/api.ts';
 import {returnPathFromSearch, safeReturnPath} from '../src/services/return-path.ts';
+import {b64urlRoundTrip} from '../src/services/webauthn.ts';
 
 function assert(cond: boolean, msg: string): asserts cond {
     if (!cond) throw new Error(`FAIL: ${msg}`);
@@ -26,6 +28,10 @@ assert(loginTotpUrl() === '/user-api/v1/login/totp', 'login totp url');
 assert(totpBeginUrl() === '/user-api/v1/totp/begin', 'totp begin url');
 assert(readTotpBegin({secret: 'ABC', otpauth: 'otpauth://x'})?.secret === 'ABC', 'totp begin');
 assert(readBackupCodes({backupCodes: ['AAAA']})?.[0] === 'AAAA', 'backup codes');
+assert(passkeyRegisterBeginUrl() === '/user-api/v1/passkey/register/begin', 'passkey register begin');
+assert(passkeyLoginBeginUrl() === '/user-api/v1/passkey/login/begin', 'passkey login begin');
+assert(readPasskeyBegin({requestId: 'r', options: {publicKey: {}}})?.requestId === 'r', 'passkey begin');
+assert(b64urlRoundTrip('YQ') === 'YQ', 'b64url roundtrip');
 assert(readErr({err: {type: 'unauthorized', message: 'invalid credentials'}}) === 'invalid credentials', 'err message');
 assert(safeReturnPath('/fitness/') === '/fitness/', 'return path ok');
 assert(safeReturnPath('//evil.example') === null, 'return path protocol-relative');

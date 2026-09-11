@@ -12,13 +12,24 @@ import userapi.domain.sha256Hex
 internal suspend fun respondMe(call: ApplicationCall, accounts: AccountServices) {
     val store = requireStore(call, accounts) ?: return
     val session = currentSession(call, accounts, store) ?: return
+    val passkeyCount = accounts.passkeys?.store?.countForUser(session.userId) ?: 0
     call.respond(
         MeBody(
             id = session.userId.toString(),
             username = session.username,
             totpEnabled = session.totpEnabled,
+            passkeyCount = passkeyCount,
         ),
     )
+}
+
+internal fun peekSession(
+    call: ApplicationCall,
+    accounts: AccountServices,
+    store: AccountStore,
+): StoredSession? {
+    val raw = call.sessionToken() ?: return null
+    return store.findSession(sha256Hex(raw), accounts.clock.instant())
 }
 
 internal suspend fun currentSession(

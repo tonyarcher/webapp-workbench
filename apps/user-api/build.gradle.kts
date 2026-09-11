@@ -32,6 +32,8 @@ dependencies {
     implementation("com.password4j:password4j:1.8.4")
     implementation("com.eatthepath:java-otp:0.4.0")
     implementation("commons-codec:commons-codec:1.17.2")
+    implementation("com.yubico:webauthn-server-core:2.5.4")
+    implementation("com.nimbusds:nimbus-jose-jwt:9.47")
 
     testImplementation("io.ktor:ktor-server-test-host:$ktor")
     testImplementation("io.ktor:ktor-client-content-negotiation:$ktor")

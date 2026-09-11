@@ -193,6 +193,8 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/users
       SERVICE: user-api
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
+      WEBAUTHN_ORIGINS: ${WEBAUTHN_ORIGINS:-http://localhost,http://127.0.0.1}
     depends_on:
       postgres:
         condition: service_healthy
