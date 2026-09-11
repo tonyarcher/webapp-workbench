@@ -370,6 +370,12 @@ const JVM_APIS = [
     task: "bootJar",
     artifact: join("apps", "rss-api", "build", "libs", "rss-api-0.1.0.jar"),
   },
+  {
+    service: "stock-game-api",
+    script: join("apps", "stock-game-api", "scripts", "gradlew.mjs"),
+    task: "bootJar",
+    artifact: join("apps", "stock-game-api", "build", "libs", "stock-game-api-0.1.0.jar"),
+  },
 ];
 
 async function prepareJvmHostBuild(services, flags) {

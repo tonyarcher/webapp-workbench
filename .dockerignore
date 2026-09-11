@@ -27,3 +27,6 @@
 !apps/rss-api/build
 !apps/rss-api/build/libs
 !apps/rss-api/build/libs/**
+!apps/stock-game-api/build
+!apps/stock-game-api/build/libs
+!apps/stock-game-api/build/libs/**

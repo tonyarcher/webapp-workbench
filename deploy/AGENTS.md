@@ -9,8 +9,9 @@ Docker Compose reverse-proxy stack. Workflow and monorepo rules: repo-root `AGEN
 - `hello/index.html` — page at `/`. Link **text** is the project name (Baseball, RSS Reader, …); `href` stays the subpath (`/auth/` for Accounts).
 - Per-app Dockerfiles under `deploy/<app>/`. Build context is the **repo root**.
 - Node/static images compile inside Linux. **user-api** compiles on the host
-  JDK (`gradlew installDist`); **fitness-api** and **rss-api** use `bootJar`.
-  Each image is **JRE only**. Do not run Gradle or install a JDK in those images.
+  JDK (`gradlew installDist`); **fitness-api**, **rss-api**, and **stock-game-api**
+  use `bootJar`. Each image is **JRE only**. Do not run Gradle or install a JDK
+  in those images.
 
 ## Commands
 
@@ -19,7 +20,7 @@ From repo root: `./deploy.sh` or `.\deploy.ps1` (optional app name to rebuild on
 ## Services
 
 Identity is `user-api`. Each product API is its own compose service and
-database (`fitness-api` / `fitness`, `rss-api` / `rss`, …). Gateway: one
+database (`fitness-api` / `fitness`, `rss-api` / `rss`, `stock-game-api` / `stock`, …). Gateway: one
 prefix per UI and per API. Do not route product data through `user-api`.
 OAuth redirect URIs live in `oauth_redirect_uris`. If `WEBAUTHN_ORIGINS`
 is not localhost/127.0.0.1, add matching redirect rows for that origin;
