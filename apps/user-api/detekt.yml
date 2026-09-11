@@ -1,0 +1,32 @@
+complexity:
+  LongMethod:
+    active: true
+    allowedLines: 30
+  TooManyFunctions:
+    active: true
+    allowedFunctionsPerFile: 10
+    allowedFunctionsPerClass: 10
+    allowedFunctionsPerInterface: 10
+    allowedFunctionsPerObject: 10
+    allowedFunctionsPerEnum: 10
+    ignoreDeprecated: false
+    ignorePrivate: false
+    ignoreOverridden: false
+  CyclomaticComplexMethod:
+    active: true
+    allowedComplexity: 15
+  NestedBlockDepth:
+    active: true
+    allowedDepth: 4
+  ComplexCondition:
+    active: true
+    allowedConditions: 4
+
+style:
+  MaxLineLength:
+    maxLineLength: 120
+    excludeCommentStatements: true
+  MagicNumber:
+    active: false
+  ReturnCount:
+    max: 4

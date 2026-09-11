@@ -88,6 +88,20 @@ export const APPS = [
     summary: "Fitness API + ingest",
   },
   {
+    id: "user-web",
+    service: "user-web",
+    workspaces: ["user-web"],
+    aliases: ["user-web", "auth", "accounts", "apps/user-web"],
+    summary: "Accounts landing page (static SPA)",
+  },
+  {
+    id: "user-api",
+    service: "user-api",
+    workspaces: ["user-api"],
+    aliases: ["user-api", "apps/user-api"],
+    summary: "Identity API (Kotlin / Ktor)",
+  },
+  {
     id: "gateway",
     service: "gateway",
     workspaces: [],

@@ -20,6 +20,9 @@
 #   fitness      - nginx static, serves Fitness under /fitness/.
 #   fitness-api  - node server, JSON API for Fitness under /fitness/api/
 #                  (prefix stripped by the gateway).
+#   user-web     - nginx static, accounts landing page under /auth/.
+#   user-api     - Kotlin/Ktor identity API under /user-api/
+#                  (prefix stripped by the gateway). Postgres database `users`.
 # Each app listens on port 3000 internally; the gateway strips the prefix for
 # the static apps and passes /stock-game/ through unchanged.
 
@@ -43,6 +46,8 @@ services:
       - football
       - fitness
       - fitness-api
+      - user-web
+      - user-api
     restart: unless-stopped
     networks:
       - baseball
@@ -176,6 +181,29 @@ services:
     build:
       context: ..
       dockerfile: deploy/fitness/Dockerfile
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  user-api:
+    build:
+      context: ..
+      dockerfile: deploy/user-api/Dockerfile
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/users
+      SERVICE: user-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  user-web:
+    build:
+      context: ..
+      dockerfile: deploy/user-web/Dockerfile
     restart: unless-stopped
     networks:
       - baseball
