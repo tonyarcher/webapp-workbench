@@ -2,7 +2,7 @@
 #   gateway  - nginx Alpine, port 80; serves `/` (hello) and routes subpaths.
 #   baseball - nginx static, serves the Baseball Vite app under /baseball/.
 #   rss-reader - nginx static, serves the RSS reader under /rss-reader/.
-#   rss-api    - node server, JSON API + feed poller for the RSS reader under
+#   rss-api    - Kotlin JSON API + feed poller for the RSS reader under
 #                /rss-reader/api/ (prefix stripped by the gateway).
 #   postgres   - shared Postgres instance; each app gets its own database.
 #                Data persists in the `pgdata` named volume across rebuilds.

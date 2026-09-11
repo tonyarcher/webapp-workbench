@@ -7,10 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/write-sw.mjs",
     "preview": "vite preview",
-    "test": "tsc -p scripts/tsconfig.json && tsx scripts/smoke.ts && tsx scripts/db-smoke.ts && tsx scripts/server-smoke.ts && tsx scripts/integration.ts",
-    "dev:server": "tsx watch server/index.ts",
-    "build:server": "tsc -p server/tsconfig.json",
-    "start:server": "node dist-server/index.js"
+    "test": "tsx scripts/smoke.ts && tsx scripts/db-smoke.ts"
   },
   "dependencies": {
     "@tanstack/history": "^1.103.4",
@@ -18,15 +15,11 @@
     "@tanstack/virtual-core": "^3.13.0",
     "idb": "^8.0.0",
     "linkedom": "^0.18.0",
-    "lit": "^3.2.0",
-    "pg": "^8.12.0",
-    "undici": "^7.29.0"
+    "lit": "^3.2.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
-    "@types/pg": "^8.11.0",
     "@xmldom/xmldom": "^0.9.12",
-    "embedded-postgres": "17.10.0-beta.17",
     "fake-indexeddb": "^6.2.5",
     "tsx": "^4.23.1",
     "typescript": "^5.6.0",

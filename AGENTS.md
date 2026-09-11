@@ -8,19 +8,21 @@ Read the workspace `AGENTS.md` before touching that app or package.
 npm-workspaces monorepo of small TypeScript web apps plus Kotlin APIs.
 Most apps are Vite + Lit custom elements (no UI framework). Stock-game is the
 exception: TanStack Start (SPA) with React route shells and decorator-free Lit.
-Shared libraries live in `packages/*`. `user-api` is Gradle / Ktor, not Node.
+Shared libraries live in `packages/*`. JVM APIs are Gradle / Kotlin, not Node.
 
 **Services:** `user-api` is a standalone identity provider (OAuth/OIDC, JWKS).
 Other apps are clients. Each webapp that needs Postgres has **its own API**
 and **its own database** so that API can be cloned into another repo later.
 Do not put fitness/rss/radio tables in `user-api`. Do not share Postgres
-across APIs. New server data is Kotlin, not Node `pg`. OAuth client ACL
-(`client_id`, redirect URIs) is database rows, not a hardcoded app list.
+across APIs. New server data is Spring Data JPA + Flyway, not Node `pg`
+and not hand-rolled JDBC. OAuth client ACL (`client_id`, redirect URIs) is
+database rows, not a hardcoded app list.
 
 ## Layout
 
 - `apps/baseball/` — baseball scorekeeping (`baseball-tracker`), client-side only. Depends on `@baseball/web-components`.
-- `apps/rss-reader/` — RSS reader (TanStack core, hash router, PWA, Postgres API).
+- `apps/rss-reader/` — RSS reader UI (TanStack core, hash router, PWA).
+- `apps/rss-api/` — RSS JSON API + poller (Kotlin, Spring Data JPA). Postgres database `rss`. Host JDK; JRE image copies the boot jar. Cookie `rss_uid` per browser.
 - `apps/stock-game/` — paper-trading simulator; nested workspaces `app/` (`@stock-game/app`) and `shared/` (`@stock-game/shared`); SQLite server layer.
 - `apps/lemmy-vertical-scroll/` — vertical feed scroller. Depends on `vertical-scroll-core`.
 - `apps/clipstack/` — short-video list scroller. Depends on `vertical-scroll-core`.
@@ -51,12 +53,11 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 | Test all | `npm test` |
 | Typecheck all | `npm run typecheck` |
 | Lint all | `npm run lint` |
-| Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` / `dev:fitness` / `dev:fitness-api` / `dev:user-web` / `dev:user-api` |
+| Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:rss-api` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` / `dev:fitness` / `dev:fitness-api` / `dev:user-web` / `dev:user-api` |
 | Build (OS script) | `./build.sh` or `.\build.ps1` (`./build.sh rss` for one app) |
 | Deploy compose stack | `./deploy.sh` or `.\deploy.ps1` (auto local Docker vs SSH tunnel; `./deploy.sh rss` rebuilds one app). PowerShell tab-completes app names on `.\deploy.ps1`; bash: `source scripts/complete-deploy.bash`. |
 
 Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm test`).
-RSS API: `npm run dev:server -w rss-reader` (not a root `dev:*` alias).
 
 `packages/web-components` tests use @web/test-runner in real Chromium; `apps/baseball` e2e
 uses Playwright on `:5199` (`headless: true`). Fresh machine: `npx playwright install`.
@@ -174,10 +175,10 @@ comments, and workflow only — not Lit/CSS/PWA.
   lives in a `*-core` package stays there — do not copy it into the app. New packages follow
   **Shared package vs app module** (second consumer, or headless domain — not the first screen).
 - Persistence goes through `src/db/` (or the app’s store module), never raw IndexedDB in components.
-- **Postgres is Kotlin (or Python), not TypeScript.** Database per service:
-  `user-api` → `users`, fitness API → `fitness`, and so on. Do not grow Node
-  `pg`. Do not merge product schemas into `user-api`. IndexedDB in the browser
-  is fine.
+- **Postgres is Kotlin JPA (or Python), not TypeScript.** Database per service:
+  `user-api` → `users`, fitness API → `fitness`, rss-api → `rss`. New tables
+  are Spring Data `JpaRepository` + Flyway. Do not grow Node `pg`. Do not
+  merge product schemas into `user-api`. IndexedDB in the browser is fine.
 - Floating promises: `void` plus `.catch(...)`. IndexedDB writes await `tx.done`. Multi-store writes use one transaction.
 - Async work is owned by the UI object that started it (`AbortSignal` + `isConnected`). Headless helpers must not run a loop against the shared game/store. After every `await`, recheck mode and that the element is still connected.
 - Untrusted URLs (`href` / `src`) pass through `safeUrl()` (app or `vertical-scroll-core`).
@@ -210,9 +211,9 @@ or a `packages/log` workspace until a second language needs the same code.
 - Workspace `npm test` then `npm run build` must pass before finishing.
 - Smoke tests (`scripts/smoke.ts`, `db-smoke.ts`, …) cover pure logic — extend them when touching those modules.
 - API/schema changes that boot Postgres need assertions in that service’s tests
-  (`user-api` / `fitness-api` JUnit / Flyway; do not grow Node `scripts/integration.ts`
-  for new Postgres). Legacy rss/radio integration tests stay until those APIs
-  migrate.
+  (`user-api` / `fitness-api` / `rss-api` JUnit / Flyway; do not grow Node
+  `scripts/integration.ts` for new Postgres). Legacy radio integration tests
+  stay until that API migrates.
 - Library changes need tests in that package (`scripts/smoke.ts` or co-located `*.test.ts`).
 - Architecture: use the `ttsc-graph` MCP (`opencode.json`) for callers, callees, and hotspots. Do not grep the graph.
 - Secrets: `gitleaks detect` when touching auth, env, or API code.

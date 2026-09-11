@@ -20,9 +20,8 @@ const HELP = `
 Deploy the gateway stack with docker compose.
 
 Pass one or more app names to rebuild and roll out only those services.
-Node app Dockerfiles compile inside the image. Kotlin APIs (user-api,
-fitness-api) compile on the host (Gradle installDist); the image only
-copies jars.
+Node app Dockerfiles compile inside the image. Kotlin APIs compile on
+the host (Gradle installDist or bootJar); the image only copies jars.
 
 The script picks a Docker engine automatically:
   1. --local / --remote / DEPLOY_TARGET
@@ -356,12 +355,20 @@ const JVM_APIS = [
   {
     service: "user-api",
     script: join("apps", "user-api", "scripts", "gradlew.mjs"),
-    lib: join("apps", "user-api", "build", "install", "user-api", "lib"),
+    task: "installDist",
+    artifact: join("apps", "user-api", "build", "install", "user-api", "lib"),
   },
   {
     service: "fitness-api",
     script: join("apps", "fitness-api", "scripts", "gradlew.mjs"),
-    lib: join("apps", "fitness-api", "build", "install", "fitness-api", "lib"),
+    task: "installDist",
+    artifact: join("apps", "fitness-api", "build", "install", "fitness-api", "lib"),
+  },
+  {
+    service: "rss-api",
+    script: join("apps", "rss-api", "scripts", "gradlew.mjs"),
+    task: "bootJar",
+    artifact: join("apps", "rss-api", "build", "libs", "rss-api-0.1.0.jar"),
   },
 ];
 
@@ -369,13 +376,13 @@ async function prepareJvmHostBuild(services, flags) {
   if (flags.down || flags.status || flags.noBuild) return;
   for (const api of JVM_APIS) {
     if (services.length > 0 && !services.includes(api.service)) continue;
-    console.log(`==> gradle installDist (host JVM → ${api.service} jars)`);
-    const result = await spawnCommand("node", [api.script, "installDist"], { inherit: true });
+    console.log(`==> gradle ${api.task} (host JVM → ${api.service})`);
+    const result = await spawnCommand("node", [api.script, api.task], { inherit: true });
     if (result.code !== 0) {
-      throw new Error(`${api.service} host build failed (gradle installDist).`);
+      throw new Error(`${api.service} host build failed (gradle ${api.task}).`);
     }
-    if (!existsSync(join(ROOT, api.lib))) {
-      throw new Error(`Missing ${api.lib} after installDist.`);
+    if (!existsSync(join(ROOT, api.artifact))) {
+      throw new Error(`Missing ${api.artifact} after ${api.task}.`);
     }
   }
 }

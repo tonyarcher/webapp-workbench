@@ -1,0 +1,12 @@
+{
+    "name": "rss-api",
+    "private": true,
+    "version": "0.1.0",
+    "description": "RSS reader microservice (Kotlin / Spring Data JPA).",
+    "scripts": {
+        "dev": "node scripts/gradlew.mjs bootRun",
+        "build": "node scripts/gradlew.mjs bootJar",
+        "test": "node scripts/gradlew.mjs check",
+        "lint": "node scripts/gradlew.mjs detekt"
+    }
+}

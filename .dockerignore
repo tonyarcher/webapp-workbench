@@ -24,3 +24,6 @@
 !apps/fitness-api/build
 !apps/fitness-api/build/install
 !apps/fitness-api/build/install/**
+!apps/rss-api/build
+!apps/rss-api/build/libs
+!apps/rss-api/build/libs/**
