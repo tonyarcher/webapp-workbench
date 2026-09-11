@@ -21,7 +21,8 @@ stock charts are out of scope — link out to Yahoo Finance (TradingView embeds 
 - **Lit** UI (forms, tables, chart, search). React is thin route shells only: owns Router/Query
   state, binds Lit via `.prop`, listens for `sg-*` events (`lib/useCustomEvents.ts`).
 - **Persistence**: `node:sqlite` (`DatabaseSync`) — no native deps. Server owns price access
-  (CORS proxy, cache, rate limits).
+  (CORS proxy, cache, rate limits). `apps/stock-game-api` (Kotlin, Postgres `stock`)
+  mirrors this server for a future cutover; the UI still calls server functions.
 - **Charting**: TradingView `lightweight-charts` in `sg-portfolio-chart`.
 - **Lint**: ESLint (flat, strict-type-checked), not oxlint-only.
 

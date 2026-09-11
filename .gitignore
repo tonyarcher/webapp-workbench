@@ -31,3 +31,5 @@ apps/fitness-api/build/
 apps/fitness-api/.kotlin/
 apps/rss-api/build/
 apps/rss-api/.kotlin/
+apps/stock-game-api/build/
+apps/stock-game-api/.kotlin/

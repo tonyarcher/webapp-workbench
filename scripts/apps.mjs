@@ -32,6 +32,13 @@ export const APPS = [
     summary: "Stock game",
   },
   {
+    id: "stock-game-api",
+    service: "stock-game-api",
+    workspaces: ["stock-game-api"],
+    aliases: ["stock-game-api", "apps/stock-game-api"],
+    summary: "Stock game API (Kotlin / Spring Data JPA)",
+  },
+  {
     id: "lemmy-vertical-scroll",
     service: "lemmy-vertical-scroll",
     workspaces: ["vertical-scroll-core", "lemmy-vertical-scroll"],

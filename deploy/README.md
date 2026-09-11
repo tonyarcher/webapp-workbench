@@ -15,6 +15,7 @@ Docker-compatible container runtime) already installed.
 - `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `clipstack/`, `calendar-sync/`, `radio-station/`, `football/`, `fitness/` — Dockerfiles + nginx configs for the static apps. Calendar Sync also proxies `/api/trakt/` to api.trakt.tv.
 - `radio-api/` — Dockerfile for the Radio Station node API. On startup it creates the `radio` Postgres database if the volume predates this service.
 - `fitness-api/` — JRE image for the Fitness Kotlin API. Compile on the host JDK (`gradle bootJar`); the image copies the jar. Creates the `fitness` Postgres database on startup.
+- `stock-game-api/` — JRE image for the Stock Game Kotlin API. Compile on the host JDK (`gradle bootJar`); the image copies the jar. Creates the `stock` Postgres database on startup.
 - `stock-game/` — Dockerfile + `server-host.mjs`, a tiny dependency-free Node HTTP host that runs the built TanStack Start fetch handler.
 
 All app Dockerfiles use the repo root as the build context (`context: ..` in

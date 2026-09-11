@@ -31,6 +31,7 @@ database rows, not a hardcoded app list.
 - `apps/football/` — football live scorekeeping. Pluggable NFL/NCAA/MN/CO rulebooks; IndexedDB. Depends on `football-core`.
 - `apps/fitness/` — fitness tracker UI. Health Connect/CSV import, 5/3/1. Depends on `fitness-core`.
 - `apps/fitness-api/` — fitness JSON API (Kotlin 2.2 / JVM 21 / Spring Data JPA). Postgres database `fitness`. Host JDK `bootJar`; JRE image copies the jar. Uses the legacy local user id until the UI sends a `user-api` JWT.
+- `apps/stock-game-api/` — stock game JSON API (Kotlin 2.2 / JVM 21 / Spring Data JPA). Postgres database `stock`. Host JDK `bootJar`; JRE image copies the jar.
 - `apps/user-web/` — accounts landing page (`/auth/`). Lit shell; talks to `user-api`.
 - `apps/user-api/` — shared identity API (Kotlin 2.2 / JVM 21 / Ktor). Postgres database `users`. Compile on the host JDK (`gradlew installDist`); the compose image is JRE-only and copies `build/install/user-api/lib`. Do not run Gradle inside Docker.
 - `packages/web-components/` — `@baseball/web-components` Lit library.

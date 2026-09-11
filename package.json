@@ -25,6 +25,7 @@
     "dev:football": "npm run dev -w football",
     "dev:fitness": "npm run dev -w fitness",
     "dev:fitness-api": "npm run dev -w fitness-api",
+    "dev:stock-game-api": "npm run dev -w stock-game-api",
     "dev:user-web": "npm run dev -w user-web",
     "dev:user-api": "npm run dev -w user-api",
     "deploy": "node scripts/deploy.mjs"
