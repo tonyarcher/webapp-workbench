@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Accounts landing page (`/auth/`). Shared TypeScript / Lit / CSS / workflow:
-repo-root `AGENTS.md`. Phase 1: register, login, logout against `user-api`.
+repo-root `AGENTS.md`. Phase 2: register, login, TOTP, backup codes.
 
 ## Stack
 

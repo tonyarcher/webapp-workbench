@@ -30,6 +30,8 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:11.8.2")
     implementation("org.slf4j:slf4j-nop:2.0.17")
     implementation("com.password4j:password4j:1.8.4")
+    implementation("com.eatthepath:java-otp:0.4.0")
+    implementation("commons-codec:commons-codec:1.17.2")
 
     testImplementation("io.ktor:ktor-server-test-host:$ktor")
     testImplementation("io.ktor:ktor-client-content-negotiation:$ktor")

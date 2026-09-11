@@ -10,12 +10,14 @@ data class StoredUser(
     val passwordHash: String,
     val failedLogins: Int,
     val lockedUntil: Instant?,
+    val totpEnabled: Boolean = false,
 )
 
 data class StoredSession(
     val userId: UUID,
     val username: String,
     val expiresAt: Instant,
+    val totpEnabled: Boolean = false,
 )
 
 interface AccountStore {

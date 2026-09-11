@@ -5,28 +5,41 @@ import {
     csrfUrl,
     isHealthOk,
     healthzUrl,
+    loginTotpUrl,
     loginUrl,
     logoutUrl,
     meUrl,
+    readBackupCodes,
     readCsrf,
     readErr,
     readMe,
+    readTotpBegin,
     registerUrl,
+    totpBeginUrl,
+    totpConfirmUrl,
+    totpRequired,
 } from '../../services/api';
 import {returnPathFromSearch} from '../../services/return-path';
 import '../login-form/login-form';
+import '../totp-form/totp-form';
 import styles from './app-shell.css?inline';
+
+type View = 'loading' | 'form' | 'totp' | 'home' | 'enroll' | 'backups';
 
 @customElement('uw-app-shell')
 export class AppShell extends LitElement {
     static override styles = unsafeCSS(styles);
 
     @state() private apiStatus: 'unknown' | 'ok' | 'down' = 'unknown';
-    @state() private view: 'loading' | 'form' | 'home' = 'loading';
+    @state() private view: View = 'loading';
     @state() private mode: 'login' | 'register' = 'login';
     @state() private error = '';
     @state() private busy = false;
     @state() private username = '';
+    @state() private totpOn = false;
+    @state() private enrollSecret = '';
+    @state() private enrollOtpauth = '';
+    @state() private backupCodes: string[] = [];
 
     private abort: AbortController | null = null;
     private csrf = '';
@@ -54,8 +67,7 @@ export class AppShell extends LitElement {
             const me = await this.loadMe(signal);
             if (!this.isConnected) return;
             if (me) {
-                this.username = me.username;
-                this.view = 'home';
+                this.signedIn(me.username, me.totpEnabled);
                 return;
             }
             this.view = 'form';
@@ -63,6 +75,12 @@ export class AppShell extends LitElement {
             if (!this.isConnected) return;
             this.view = 'form';
         }
+    }
+
+    private signedIn(username: string, totpEnabled: boolean): void {
+        this.username = username;
+        this.totpOn = totpEnabled;
+        this.view = 'home';
     }
 
     private async ping(signal: AbortSignal): Promise<void> {
@@ -83,7 +101,7 @@ export class AppShell extends LitElement {
         return readCsrf(body);
     }
 
-    private async loadMe(signal: AbortSignal): Promise<{id: string; username: string} | null> {
+    private async loadMe(signal: AbortSignal): Promise<{id: string; username: string; totpEnabled: boolean} | null> {
         const response = await fetch(meUrl(), {signal, credentials: 'include'});
         if (response.status === 401) return null;
         const body: unknown = await response.json();
@@ -98,43 +116,30 @@ export class AppShell extends LitElement {
     private onSubmit = (event: CustomEvent<{mode: 'login' | 'register'; username: string; password: string}>): void => {
         const signal = this.abort?.signal;
         if (!signal) return;
-        void this.submit(event.detail, signal).catch(() => {});
+        void this.submitPassword(event.detail, signal).catch(() => {});
     };
 
-    private async submit(
+    private failNetwork(): void {
+        if (!this.isConnected) return;
+        this.busy = false;
+        this.error = 'network error';
+    }
+
+    private async submitPassword(
         detail: {mode: 'login' | 'register'; username: string; password: string},
         signal: AbortSignal,
     ): Promise<void> {
         this.busy = true;
         this.error = '';
         try {
-            const body = await this.postAccount(detail, signal);
+            const url = detail.mode === 'register' ? registerUrl() : loginUrl();
+            const result = await this.postJson(url, {username: detail.username, password: detail.password}, signal);
             if (!this.isConnected) return;
             this.busy = false;
-            this.applyAuthResult(detail.username, body);
+            this.applyAuthResult(detail.username, result);
         } catch {
-            if (!this.isConnected) return;
-            this.busy = false;
-            this.error = 'network error';
+            this.failNetwork();
         }
-    }
-
-    private async postAccount(
-        detail: {mode: 'login' | 'register'; username: string; password: string},
-        signal: AbortSignal,
-    ): Promise<{ok: boolean; body: unknown}> {
-        const url = detail.mode === 'register' ? registerUrl() : loginUrl();
-        const response = await fetch(url, {
-            method: 'POST',
-            signal,
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': this.csrf,
-            },
-            body: JSON.stringify({username: detail.username, password: detail.password}),
-        });
-        return {ok: response.ok, body: await response.json()};
     }
 
     private applyAuthResult(username: string, result: {ok: boolean; body: unknown}): void {
@@ -142,12 +147,89 @@ export class AppShell extends LitElement {
             this.error = readErr(result.body);
             return;
         }
+        if (totpRequired(result.body)) {
+            this.view = 'totp';
+            this.error = '';
+            return;
+        }
         if (this.returnTo) {
             location.assign(this.returnTo);
             return;
         }
-        this.username = readMe(result.body)?.username ?? username;
-        this.view = 'home';
+        const me = readMe(result.body);
+        this.signedIn(me?.username ?? username, me?.totpEnabled ?? false);
+    }
+
+    private onTotpLogin = (event: CustomEvent<{code: string}>): void => {
+        const signal = this.abort?.signal;
+        if (!signal) return;
+        void this.submitTotpLogin(event.detail.code, signal).catch(() => {});
+    };
+
+    private async submitTotpLogin(code: string, signal: AbortSignal): Promise<void> {
+        this.busy = true;
+        this.error = '';
+        try {
+            const result = await this.postJson(loginTotpUrl(), {code}, signal);
+            if (!this.isConnected) return;
+            this.busy = false;
+            this.applyAuthResult(this.username, result);
+        } catch {
+            this.failNetwork();
+        }
+    }
+
+    private onEnroll = (): void => {
+        const signal = this.abort?.signal;
+        if (!signal) return;
+        void this.beginEnroll(signal).catch(() => {});
+    };
+
+    private async beginEnroll(signal: AbortSignal): Promise<void> {
+        this.error = '';
+        try {
+            const result = await this.postJson(totpBeginUrl(), {}, signal);
+            if (!this.isConnected) return;
+            if (!result.ok) {
+                this.error = readErr(result.body);
+                return;
+            }
+            const begin = readTotpBegin(result.body);
+            if (!begin) {
+                this.error = 'could not start authenticator setup';
+                return;
+            }
+            this.enrollSecret = begin.secret;
+            this.enrollOtpauth = begin.otpauth;
+            this.view = 'enroll';
+        } catch {
+            this.failNetwork();
+        }
+    }
+
+    private onTotpConfirm = (event: CustomEvent<{code: string}>): void => {
+        const signal = this.abort?.signal;
+        if (!signal) return;
+        void this.confirmEnroll(event.detail.code, signal).catch(() => {});
+    };
+
+    private async confirmEnroll(code: string, signal: AbortSignal): Promise<void> {
+        this.busy = true;
+        this.error = '';
+        try {
+            const result = await this.postJson(totpConfirmUrl(), {code}, signal);
+            if (!this.isConnected) return;
+            this.busy = false;
+            if (!result.ok) {
+                this.error = readErr(result.body);
+                return;
+            }
+            this.backupCodes = readBackupCodes(result.body) ?? [];
+            this.totpOn = true;
+            this.view = 'backups';
+        } catch {
+            this.failNetwork();
+        }
     }
 
     private onLogout = (): void => {
@@ -157,16 +239,35 @@ export class AppShell extends LitElement {
     };
 
     private async logout(signal: AbortSignal): Promise<void> {
-        await fetch(logoutUrl(), {
+        const result = await fetch(logoutUrl(), {
             method: 'POST',
             signal,
             credentials: 'include',
             headers: {'X-CSRF-Token': this.csrf},
         });
         if (!this.isConnected) return;
+        if (!result.ok) {
+            this.error = 'sign out failed';
+            return;
+        }
         this.username = '';
+        this.totpOn = false;
         this.view = 'form';
         this.csrf = (await this.loadCsrf(signal)) ?? this.csrf;
+    }
+
+    private async postJson(url: string, payload: unknown, signal: AbortSignal): Promise<{ok: boolean; body: unknown}> {
+        const response = await fetch(url, {
+            method: 'POST',
+            signal,
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': this.csrf,
+            },
+            body: JSON.stringify(payload),
+        });
+        return {ok: response.ok, body: await response.json()};
     }
 
     override render(): TemplateResult {
@@ -181,12 +282,15 @@ export class AppShell extends LitElement {
 
     private body(): TemplateResult {
         if (this.view === 'loading') return html`<p class="lead">Loading…</p>`;
-        if (this.view === 'home') {
+        if (this.view === 'totp') {
             return html`
-                <p class="lead">Signed in as ${this.username}</p>
-                <button class="logout" type="button" @click=${this.onLogout}>Sign out</button>
+                <p class="lead">Enter your authenticator or backup code.</p>
+                <uw-totp-form error=${this.error} .busy=${this.busy} @totp-submit=${this.onTotpLogin}></uw-totp-form>
             `;
         }
+        if (this.view === 'enroll') return this.enrollBody();
+        if (this.view === 'backups') return this.backupsBody();
+        if (this.view === 'home') return this.homeBody();
         return html`
             <uw-login-form
                 mode=${this.mode}
@@ -195,6 +299,38 @@ export class AppShell extends LitElement {
                 @account-submit=${this.onSubmit}
                 @account-mode=${this.onMode}
             ></uw-login-form>
+        `;
+    }
+
+    private homeBody(): TemplateResult {
+        return html`
+            <p class="lead">Signed in as ${this.username}</p>
+            <p class="status">Authenticator: ${this.totpOn ? 'on' : 'off'}</p>
+            ${this.totpOn ? '' : html`<button class="logout" type="button" @click=${this.onEnroll}>Add authenticator</button>`}
+            <button class="logout" type="button" @click=${this.onLogout}>Sign out</button>
+            ${this.error ? html`<p class="lead">${this.error}</p>` : ''}
+        `;
+    }
+
+    private enrollBody(): TemplateResult {
+        return html`
+            <p class="lead">Scan or enter this secret in your authenticator app.</p>
+            <p class="secret">${this.enrollSecret}</p>
+            <p class="status">${this.enrollOtpauth}</p>
+            <uw-totp-form
+                submitLabel="Confirm"
+                error=${this.error}
+                .busy=${this.busy}
+                @totp-submit=${this.onTotpConfirm}
+            ></uw-totp-form>
+        `;
+    }
+
+    private backupsBody(): TemplateResult {
+        return html`
+            <p class="lead">Save these backup codes. They will not be shown again.</p>
+            <ul class="codes">${this.backupCodes.map((c) => html`<li>${c}</li>`)}</ul>
+            <button class="logout" type="button" @click=${() => { this.view = 'home'; }}>Done</button>
         `;
     }
 

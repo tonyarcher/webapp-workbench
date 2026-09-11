@@ -44,9 +44,19 @@ private suspend fun completeLogin(
         call.rejectAuth()
         return
     }
+    if (totpRequired(accounts, user)) {
+        startTotpChallenge(call, settings, accounts, user.id)
+        call.respond(TotpRequiredBody())
+        return
+    }
     store.writeLockout(user.id, clearFailures())
     issueSession(call, settings, store, accounts, user.id)
-    call.respond(MeBody(id = user.id.toString(), username = user.username))
+    call.respond(MeBody(id = user.id.toString(), username = user.username, totpEnabled = false))
+}
+
+internal fun totpRequired(accounts: AccountServices, user: StoredUser): Boolean {
+    if (user.totpEnabled) return true
+    return accounts.totpStore?.enabledSecret(user.id) != null
 }
 
 internal fun credentialsOk(
