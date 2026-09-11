@@ -361,8 +361,8 @@ const JVM_APIS = [
   {
     service: "fitness-api",
     script: join("apps", "fitness-api", "scripts", "gradlew.mjs"),
-    task: "installDist",
-    artifact: join("apps", "fitness-api", "build", "install", "fitness-api", "lib"),
+    task: "bootJar",
+    artifact: join("apps", "fitness-api", "build", "libs", "fitness-api-0.1.0.jar"),
   },
   {
     service: "rss-api",

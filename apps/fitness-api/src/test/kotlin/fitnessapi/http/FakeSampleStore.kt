@@ -73,6 +73,11 @@ class FakeSampleStore : SampleStore {
         return ImportResult(UUID.randomUUID().toString(), samples.size, errorCount, errors)
     }
 
+    fun clear() {
+        rows.clear()
+        rollupRows.clear()
+    }
+
     private fun put(row: StoredSample) {
         rows[sampleMapKey(row.userId, row.metric, row.t, row.source, row.originId)] = row
     }
