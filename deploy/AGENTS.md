@@ -9,9 +9,8 @@ Docker Compose reverse-proxy stack. Workflow and monorepo rules: repo-root `AGEN
 - `hello/index.html` — page at `/`. Link **text** is the project name (Baseball, RSS Reader, …); `href` stays the subpath (`/auth/` for Accounts).
 - Per-app Dockerfiles under `deploy/<app>/`. Build context is the **repo root**.
 - Node/static images compile inside Linux. **user-api** and **fitness-api**
-  compile on the host JDK (`gradlew installDist`); each image is **JRE only**
-  and copies `build/install/<service>/lib`. Do not run Gradle or install a JDK
-  in those images.
+  compile on the host JDK (`gradlew installDist`); **rss-api** uses `bootJar`.
+  Each image is **JRE only**. Do not run Gradle or install a JDK in those images.
 
 ## Commands
 

@@ -15,6 +15,7 @@
     "lint": "oxlint apps packages --disable-nested-config && npm run lint --workspaces --if-present",
     "dev:baseball": "npm run dev -w baseball-tracker",
     "dev:rss-reader": "npm run dev -w rss-reader",
+    "dev:rss-api": "npm run dev -w rss-api",
     "dev:stock-game": "npm run dev -w stock-game",
     "dev:lemmy": "npm run dev -w lemmy-vertical-scroll",
     "dev:clipstack": "npm run dev -w clipstack",

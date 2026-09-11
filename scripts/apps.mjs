@@ -20,9 +20,9 @@ export const APPS = [
   {
     id: "rss-api",
     service: "rss-api",
-    workspaces: ["rss-reader"],
-    aliases: ["rss-api", "api", "apps/rss-reader/server"],
-    summary: "RSS reader API + feed poller",
+    workspaces: ["rss-api"],
+    aliases: ["rss-api", "api", "apps/rss-api", "apps/rss-reader/server"],
+    summary: "RSS API (Kotlin / Spring Data JPA)",
   },
   {
     id: "stock-game",

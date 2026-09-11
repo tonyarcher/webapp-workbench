@@ -29,3 +29,5 @@ apps/user-api/build/
 apps/user-api/.kotlin/
 apps/fitness-api/build/
 apps/fitness-api/.kotlin/
+apps/rss-api/build/
+apps/rss-api/.kotlin/
