@@ -23,4 +23,14 @@ class MigrationResourceTest {
         assertTrue(sql.contains("CREATE TABLE users"))
         assertTrue(sql.contains("CREATE TABLE sessions"))
     }
+
+    @Test
+    fun totpMigrationIsOnClasspath() {
+        val url = Thread.currentThread().contextClassLoader
+            .getResource("db/migration/V3__totp.sql")
+        assertNotNull(url)
+        val sql = url.readText()
+        assertTrue(sql.contains("totp_secret"))
+        assertTrue(sql.contains("backup_codes"))
+    }
 }

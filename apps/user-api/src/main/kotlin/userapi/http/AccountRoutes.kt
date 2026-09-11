@@ -17,7 +17,10 @@ fun Application.accountRoutes(settings: Settings, accounts: AccountServices) {
         get("/v1/me") { respondMe(call, accounts) }
         post("/v1/register") { registerUser(call, settings, accounts) }
         post("/v1/login") { loginUser(call, settings, accounts) }
+        post("/v1/login/totp") { loginTotp(call, settings, accounts) }
         post("/v1/logout") { logoutUser(call, settings, accounts) }
+        post("/v1/totp/begin") { totpBegin(call, accounts) }
+        post("/v1/totp/confirm") { totpConfirm(call, accounts) }
     }
 }
 

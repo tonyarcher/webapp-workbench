@@ -48,10 +48,15 @@ class FakeAccountStore : AccountStore {
         val pair = sessions[tokenHash] ?: return null
         if (!pair.second.isAfter(now)) return null
         val user = users[pair.first] ?: return null
-        return StoredSession(user.id, user.username, pair.second)
+        return StoredSession(user.id, user.username, pair.second, user.totpEnabled)
     }
 
     override fun deleteSession(tokenHash: String) {
         sessions.remove(tokenHash)
+    }
+
+    fun setTotpEnabled(id: UUID, enabled: Boolean) {
+        val user = users[id] ?: return
+        users[id] = user.copy(totpEnabled = enabled)
     }
 }

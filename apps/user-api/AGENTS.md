@@ -1,7 +1,7 @@
 # AGENTS.md
 
-Shared identity API. Phase 1: password accounts, Argon2id, session cookie, CSRF,
-lockout. TOTP, passkeys, and OAuth come later. Do not add them here.
+Shared identity API. Phase 2: TOTP (RFC 6238) and hashed backup codes.
+Passkeys and OAuth come later. Do not add them here.
 
 ## Stack
 

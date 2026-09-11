@@ -5,21 +5,38 @@ import io.ktor.server.application.ApplicationCall
 import io.ktor.server.response.respond
 import userapi.Settings
 import userapi.accounts.AccountServices
+import userapi.accounts.AccountStore
+import userapi.accounts.StoredSession
 import userapi.domain.sha256Hex
 
 internal suspend fun respondMe(call: ApplicationCall, accounts: AccountServices) {
     val store = requireStore(call, accounts) ?: return
+    val session = currentSession(call, accounts, store) ?: return
+    call.respond(
+        MeBody(
+            id = session.userId.toString(),
+            username = session.username,
+            totpEnabled = session.totpEnabled,
+        ),
+    )
+}
+
+internal suspend fun currentSession(
+    call: ApplicationCall,
+    accounts: AccountServices,
+    store: AccountStore,
+): StoredSession? {
     val raw = call.sessionToken()
     if (raw == null) {
         call.respond(HttpStatusCode.Unauthorized, ErrBody(ErrDetail("unauthorized", "not signed in")))
-        return
+        return null
     }
     val session = store.findSession(sha256Hex(raw), accounts.clock.instant())
     if (session == null) {
         call.respond(HttpStatusCode.Unauthorized, ErrBody(ErrDetail("unauthorized", "not signed in")))
-        return
+        return null
     }
-    call.respond(MeBody(id = session.userId.toString(), username = session.username))
+    return session
 }
 
 internal suspend fun logoutUser(call: ApplicationCall, settings: Settings, accounts: AccountServices) {
@@ -28,5 +45,6 @@ internal suspend fun logoutUser(call: ApplicationCall, settings: Settings, accou
     val raw = call.sessionToken()
     if (raw != null) store.deleteSession(sha256Hex(raw))
     call.clearSessionCookie(settings)
+    call.clearPendingCookie(settings)
     call.respond(OkBody(ok = true))
 }

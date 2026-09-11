@@ -63,6 +63,7 @@ class JdbcAccountStore(private val dataSource: DataSource) : AccountStore {
                     userId = rs.getObject("user_id", UUID::class.java),
                     username = rs.getString("username"),
                     expiresAt = rs.getTimestamp("expires_at").toInstant(),
+                    totpEnabled = rs.getBoolean("totp_enabled"),
                 )
             }
         }
@@ -97,20 +98,21 @@ private fun readUser(rs: java.sql.ResultSet): StoredUser = StoredUser(
     passwordHash = rs.getString("password_hash"),
     failedLogins = rs.getInt("failed_logins"),
     lockedUntil = rs.getTimestamp("locked_until")?.toInstant(),
+    totpEnabled = rs.getBoolean("totp_enabled"),
 )
 
 private const val INSERT_USER =
     "INSERT INTO users (username, password_hash) VALUES (?, ?) RETURNING id"
-private const val FIND_BY_USERNAME =
-    "SELECT id, username, password_hash, failed_logins, locked_until FROM users WHERE username = ?"
-private const val FIND_BY_ID =
-    "SELECT id, username, password_hash, failed_logins, locked_until FROM users WHERE id = ?"
+private const val USER_COLS =
+    "id, username, password_hash, failed_logins, locked_until, totp_secret IS NOT NULL AS totp_enabled"
+private const val FIND_BY_USERNAME = "SELECT $USER_COLS FROM users WHERE username = ?"
+private const val FIND_BY_ID = "SELECT $USER_COLS FROM users WHERE id = ?"
 private const val WRITE_LOCKOUT =
     "UPDATE users SET failed_logins = ?, locked_until = ? WHERE id = ?"
 private const val INSERT_SESSION =
     "INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, ?, ?)"
 private const val FIND_SESSION = """
-SELECT s.user_id, u.username, s.expires_at
+SELECT s.user_id, u.username, s.expires_at, u.totp_secret IS NOT NULL AS totp_enabled
 FROM sessions s JOIN users u ON u.id = s.user_id
 WHERE s.token_hash = ? AND s.expires_at > ?
 """

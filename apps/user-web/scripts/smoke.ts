@@ -1,4 +1,7 @@
-import {csrfUrl, healthzUrl, isHealthOk, loginUrl, meUrl, readCsrf, readErr, readMe, USER_API_PREFIX} from '../src/services/api.ts';
+import {
+    csrfUrl, healthzUrl, isHealthOk, loginTotpUrl, loginUrl, meUrl, readBackupCodes, readCsrf, readErr, readMe,
+    readTotpBegin, totpBeginUrl, totpRequired, USER_API_PREFIX,
+} from '../src/services/api.ts';
 import {returnPathFromSearch, safeReturnPath} from '../src/services/return-path.ts';
 
 function assert(cond: boolean, msg: string): asserts cond {
@@ -16,7 +19,13 @@ assert(!isHealthOk({ok: false}), 'health body not ok');
 assert(readCsrf({csrf: 'tok'}) === 'tok', 'csrf token');
 assert(readCsrf({csrf: ''}) === null, 'empty csrf');
 assert(readMe({id: '1', username: 'alice'})?.username === 'alice', 'me body');
+assert(readMe({id: '1', username: 'alice', totpEnabled: true})?.totpEnabled === true, 'me totp');
 assert(readMe({ok: true}) === null, 'me rejects health');
+assert(totpRequired({totpRequired: true}), 'totp required flag');
+assert(loginTotpUrl() === '/user-api/v1/login/totp', 'login totp url');
+assert(totpBeginUrl() === '/user-api/v1/totp/begin', 'totp begin url');
+assert(readTotpBegin({secret: 'ABC', otpauth: 'otpauth://x'})?.secret === 'ABC', 'totp begin');
+assert(readBackupCodes({backupCodes: ['AAAA']})?.[0] === 'AAAA', 'backup codes');
 assert(readErr({err: {type: 'unauthorized', message: 'invalid credentials'}}) === 'invalid credentials', 'err message');
 assert(safeReturnPath('/fitness/') === '/fitness/', 'return path ok');
 assert(safeReturnPath('//evil.example') === null, 'return path protocol-relative');
