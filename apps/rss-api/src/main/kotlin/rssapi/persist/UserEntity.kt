@@ -18,4 +18,6 @@ class UserEntity(
     var label: String = "local",
     @Column(name = "created_at")
     var createdAt: Instant = Instant.now(),
+    var subject: String = "",
+    var username: String? = null,
 )

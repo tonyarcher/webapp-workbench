@@ -8,8 +8,8 @@ import rssapi.domain.ArticleSort
 import rssapi.domain.CursorPayload
 import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleStateEntity
-import rssapi.persist.FeedEntity
 import rssapi.persist.FolderFeedEntity
+import rssapi.persist.SubscriptionEntity
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Root
@@ -55,9 +55,9 @@ private fun userFeedSub(
     cb: CriteriaBuilder,
 ): Subquery<UUID> {
     val sub = query.subquery(UUID::class.java)
-    val feed = sub.from(FeedEntity::class.java)
-    sub.select(feed.get("id"))
-    sub.where(cb.equal(feed.get<UUID>("userId"), userId))
+    val subscription = sub.from(SubscriptionEntity::class.java)
+    sub.select(subscription.get("feedId"))
+    sub.where(cb.equal(subscription.get<UUID>("userId"), userId))
     return sub
 }
 

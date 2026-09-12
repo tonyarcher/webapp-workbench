@@ -18,6 +18,8 @@ import rssapi.persist.FolderEntity
 import rssapi.persist.FolderFeedEntity
 import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
+import rssapi.persist.SubscriptionEntity
+import rssapi.persist.SubscriptionRepo
 
 data class OpmlImportBody(val xml: String?)
 
@@ -25,11 +27,13 @@ data class OpmlImportResult(val addedFeeds: Int, val addedFolders: Int)
 
 @RestController
 class OpmlController(
-    private val user: CookieUser,
+    private val user: IdentityUser,
     private val folders: FolderRepo,
     private val feeds: FeedRepo,
     private val memberships: FolderFeedRepo,
     private val sync: IngestSync,
+    private val subs: SubscriptionRepo,
+    private val membershipService: MembershipService,
 ) {
     @GetMapping("/opml", produces = [MediaType.TEXT_XML_VALUE])
     fun export(): ResponseEntity<String> {
@@ -43,7 +47,7 @@ class OpmlController(
         val nodes = parseOpml(xml)
         val counters = intArrayOf(0, 0)
         walk(nodes, null, counters)
-        feeds.findByUserIdOrderByAddedAtAsc(user.id).forEach { sync.ensureRow(it.id!!) }
+        subs.findFeedIdsByUserId(user.id).forEach { sync.ensureRow(it) }
         return OpmlImportResult(addedFeeds = counters[0], addedFolders = counters[1])
     }
 
@@ -61,18 +65,19 @@ class OpmlController(
     }
 
     private fun addSource(node: OpmlSource, parentId: java.util.UUID?, counters: IntArray) {
-        val existing = feeds.findByUserIdAndXmlUrl(user.id, node.xmlUrl)
-        if (existing != null) return
-        val feed = feeds.save(
-            FeedEntity(userId = user.id, xmlUrl = node.xmlUrl, title = node.title, siteUrl = node.htmlUrl),
-        )
-        counters[0] += 1
-        if (parentId != null) memberships.save(FolderFeedEntity(folderId = parentId, feedId = feed.id!!))
+        val feed = feeds.findByXmlUrl(node.xmlUrl)
+            ?: feeds.save(
+                FeedEntity(xmlUrl = node.xmlUrl, title = node.title, siteUrl = node.htmlUrl),
+            ).also { counters[0] += 1 }
+        if (!subs.existsByUserIdAndFeedId(user.id, feed.id!!)) {
+            subs.save(SubscriptionEntity(userId = user.id, feedId = feed.id!!))
+        }
+        if (parentId != null) membershipService.addMembership(parentId, feed.id!!)
     }
 
     private fun buildOpml(): String {
         val folderRows = folders.findByUserIdOrderBySortOrderAscCreatedAtAsc(user.id)
-        val feedRows = feeds.findByUserIdOrderByAddedAtAsc(user.id)
+        val feedRows = feeds.findAllById(subs.findFeedIdsByUserId(user.id)).sortedBy { it.addedAt }
         val lines = mutableListOf(
             """<?xml version="1.0" encoding="UTF-8"?>""",
             """<opml version="2.0">""",
@@ -80,7 +85,7 @@ class OpmlController(
             "<body>",
         )
         for (f in feedRows) {
-            if (memberships.findByFeedId(f.id!!).isNotEmpty()) continue
+            if (membershipService.ownedFolderIds(user.id, f.id!!).isNotEmpty()) continue
             lines.add(outline(f, "  "))
         }
         for (folder in folderRows) {

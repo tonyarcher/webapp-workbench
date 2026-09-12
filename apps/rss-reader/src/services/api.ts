@@ -1,6 +1,18 @@
 import type {Article, Feed, Folder} from '../types';
+import {getAccessToken, refreshTokens} from './auth';
 
 // ---- base fetch ----
+
+export class AuthError extends Error {
+    constructor() {
+        super('Sign in required');
+        this.name = 'AuthError';
+    }
+}
+
+function emitAuthRequired(): void {
+    window.dispatchEvent(new CustomEvent('rss-auth-required'));
+}
 
 function apiBase(): string {
     try {
@@ -14,14 +26,30 @@ export function apiUrl(path: string): string {
     return `${apiBase()}${path}`;
 }
 
-async function apiFetch(path: string, init?: RequestInit): Promise<unknown> {
+async function apiFetch(path: string, init?: RequestInit, retried = false): Promise<unknown> {
+    const token = await getAccessToken();
+    if (!token) {
+        emitAuthRequired();
+        throw new AuthError();
+    }
     const url = apiUrl(path);
     const headers: Record<string, string> = {...(init?.headers as Record<string, string> ?? {})};
+    headers['Authorization'] = `Bearer ${token}`;
     if (init?.body && typeof init.body === 'string') {
         headers['Content-Type'] = 'application/json';
     }
     const res = await fetch(url, {...init, headers});
+    if (res.status === 401 && !retried) {
+        const next = await refreshTokens();
+        if (next) return apiFetch(path, init, true);
+        emitAuthRequired();
+        throw new AuthError();
+    }
     if (!res.ok) {
+        if (res.status === 401) {
+            emitAuthRequired();
+            throw new AuthError();
+        }
         let message = res.statusText;
         try {
             const body = await res.json() as { error?: string };

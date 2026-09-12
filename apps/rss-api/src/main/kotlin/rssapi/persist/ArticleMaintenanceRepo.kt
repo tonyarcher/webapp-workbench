@@ -17,15 +17,14 @@ interface ArticleMaintenanceRepo : JpaRepository<ArticleEntity, String> {
                 +(EXTRACT(EPOCH FROM a.published_at)-1134028003)/90000
         FROM (
           SELECT norm_link, COUNT(DISTINCT feed_id) AS cnt FROM articles
-          WHERE norm_link = ANY(:links) AND feed_id IN (SELECT id FROM feeds WHERE user_id = :userId)
+          WHERE norm_link = ANY(:links)
           GROUP BY norm_link
         ) sub
         WHERE a.norm_link = sub.norm_link
-          AND a.feed_id IN (SELECT id FROM feeds WHERE user_id = :userId)
         """,
         nativeQuery = true,
     )
-    fun updatePopularity(@Param("userId") userId: UUID, @Param("links") links: Array<String>)
+    fun updatePopularity(@Param("links") links: Array<String>)
 
     @Modifying
     @Query(

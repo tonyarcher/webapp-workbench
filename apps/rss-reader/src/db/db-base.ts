@@ -96,6 +96,16 @@ export async function closeDb(): Promise<void> {
     if (pending) (await pending).close();
 }
 
+export async function clearClientDb(): Promise<void> {
+    await closeDb();
+    await new Promise<void>((resolve, reject) => {
+        const req = indexedDB.deleteDatabase('rss-reader');
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error ?? new Error('clear failed'));
+        req.onblocked = () => resolve();
+    });
+}
+
 export const uid = () =>
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()

@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 class MigrateController(
-    private val user: CookieUser,
+    private val user: IdentityUser,
     private val migrate: MigrateService,
 ) {
     @PostMapping("/migrate/library")
