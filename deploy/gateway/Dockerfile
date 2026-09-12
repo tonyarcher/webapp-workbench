@@ -5,5 +5,6 @@
 
 FROM nginx:alpine
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY gateway/certs/ /etc/nginx/certs/
 COPY hello/ /usr/share/nginx/hello/
-EXPOSE 80
+EXPOSE 80 443

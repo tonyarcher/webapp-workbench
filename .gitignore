@@ -23,6 +23,12 @@ playwright-report/
 # Logs
 *.log
 
+# Gateway TLS: generated per-host certs. Never commit keys.
+deploy/gateway/certs/*
+!deploy/gateway/certs/.gitkeep
+# Gateway nginx: rendered from default.conf.template on every deploy.
+deploy/nginx/default.conf
+
 # Gradle / Kotlin
 .gradle/
 apps/user-api/build/

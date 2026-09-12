@@ -6,8 +6,8 @@
 #                /rss-reader/api/ (prefix stripped by the gateway).
 #   postgres   - shared Postgres instance; each app gets its own database.
 #                Data persists in the `pgdata` named volume across rebuilds.
-#   stock-game - node server, serves the TanStack Start app under /stock-game/
-#                (basepath-aware; the gateway does NOT strip its prefix).
+#   stock-game - nginx static, serves the Stock Game Vite SPA under /stock-game/
+#                (prefix stripped by the gateway; hash routes).
 #   stock-game-api - Kotlin JSON API (Spring Data JPA) for Stock Game under
 #                /stock-game/api/ (prefix stripped by the gateway). Postgres database `stock`.
 #   lemmy-vertical-scroll - nginx static, serves the Lemmy feed under
@@ -26,7 +26,7 @@
 #   user-api     - Kotlin/Ktor identity API under /user-api/
 #                  (prefix stripped by the gateway). Postgres database `users`.
 # Each app listens on port 3000 internally; the gateway strips the prefix for
-# the static apps and passes /stock-game/ through unchanged.
+# the static apps.
 
 services:
   gateway:
@@ -35,6 +35,7 @@ services:
       dockerfile: gateway/Dockerfile
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - baseball
       - rss-reader

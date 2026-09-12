@@ -28,7 +28,8 @@
     "dev:stock-game-api": "npm run dev -w stock-game-api",
     "dev:user-web": "npm run dev -w user-web",
     "dev:user-api": "npm run dev -w user-api",
-    "deploy": "node scripts/deploy.mjs"
+    "deploy": "node scripts/deploy.mjs",
+    "test:scripts": "node --test \"scripts/**/*.test.mjs\""
   },
   "devDependencies": {
     "@ttsc/graph": "^0.30.0",

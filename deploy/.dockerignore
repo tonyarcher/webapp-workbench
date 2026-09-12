@@ -1,0 +1,6 @@
+# Gateway build context (deploy/). The leaf cert/key are baked into the image;
+# the CA key, CA cert, serial, and deploy secrets must never enter any layer.
+.env
+gateway/certs/ca.key
+gateway/certs/ca.crt
+gateway/certs/ca.srl
