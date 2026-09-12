@@ -1,9 +1,13 @@
 package stockgame.web
 
 import java.time.Clock
+import java.util.UUID
+import org.mockito.kotlin.whenever
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
+import stockgame.persist.UserEntity
+import stockgame.persist.UserRepo
 import stockgame.provider.PriceProvider
 import stockgame.store.GameStore
 import stockgame.trading.AccountService
@@ -34,4 +38,8 @@ class TestApiConfig {
     @Primary
     fun accountService(store: GameStore, provider: PriceProvider, clock: Clock): AccountService =
         AccountService(store, provider, clock, "fake")
+}
+
+fun stubUser(users: UserRepo, subject: String, id: UUID, username: String = subject) {
+    whenever(users.findBySubject(subject)).thenReturn(UserEntity(id = id, subject = subject, username = username))
 }

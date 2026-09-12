@@ -39,6 +39,7 @@ fun OrderEntity.toOrder(): Order = Order(
 fun PriceCacheEntity.toBar(): Bar = Bar(date, open, high, low, close, volume)
 
 fun NewTrade.toEntity(): TradeEntity = TradeEntity(
+    userId = userId,
     symbol = symbol,
     side = side,
     qty = qty,
@@ -50,6 +51,7 @@ fun NewTrade.toEntity(): TradeEntity = TradeEntity(
 )
 
 fun NewOrder.toEntity(): OrderEntity = OrderEntity(
+    userId = userId,
     symbol = symbol,
     side = side,
     qty = qty,

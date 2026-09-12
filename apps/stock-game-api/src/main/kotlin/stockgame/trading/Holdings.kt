@@ -1,5 +1,6 @@
 package stockgame.trading
 
+import java.util.UUID
 import stockgame.domain.HoldingsEntry
 import stockgame.domain.Position
 import stockgame.domain.accumulatePositions
@@ -7,8 +8,8 @@ import stockgame.domain.round2
 import stockgame.provider.PriceProvider
 import stockgame.store.GameStore
 
-fun holdings(store: GameStore, provider: PriceProvider): List<HoldingsEntry> {
-    val state = accumulatePositions(store.listTrades())
+fun holdings(store: GameStore, provider: PriceProvider, userId: UUID): List<HoldingsEntry> {
+    val state = accumulatePositions(store.listTrades(userId))
     val entries = state.mapNotNull { (symbol, pos) ->
         if (pos.qty == 0) null else oneHolding(provider, symbol, pos)
     }

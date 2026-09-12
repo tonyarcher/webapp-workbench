@@ -61,4 +61,14 @@ class MigrationResourceTest {
         assertTrue(sql.contains("oauth_clients"))
         assertTrue(sql.contains("oauth_redirect_uris"))
     }
+
+    @Test
+    fun stockGameClientMigrationIsOnClasspath() {
+        val url = Thread.currentThread().contextClassLoader
+            .getResource("db/migration/V7__stock_game_client.sql")
+        assertNotNull(url)
+        val sql = url.readText()
+        assertTrue(sql.contains("stock-game"))
+        assertTrue(sql.contains("http://localhost/stock-game/"))
+    }
 }

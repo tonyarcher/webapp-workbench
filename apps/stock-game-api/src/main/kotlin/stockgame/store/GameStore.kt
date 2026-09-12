@@ -1,10 +1,12 @@
 package stockgame.store
 
+import java.util.UUID
 import stockgame.domain.GameConfig
 import stockgame.domain.Order
 import stockgame.domain.Trade
 
 data class NewTrade(
+    val userId: UUID,
     val symbol: String,
     val side: String,
     val qty: Int,
@@ -16,6 +18,7 @@ data class NewTrade(
 )
 
 data class NewOrder(
+    val userId: UUID,
     val symbol: String,
     val side: String,
     val qty: Int,
@@ -30,13 +33,14 @@ data class NewOrder(
 )
 
 interface GameStore {
-    fun getConfig(): GameConfig?
-    fun saveConfig(config: GameConfig)
-    fun listTrades(): List<Trade>
+    fun getConfig(userId: UUID): GameConfig?
+    fun saveConfig(userId: UUID, config: GameConfig)
+    fun listTrades(userId: UUID): List<Trade>
     fun insertTrade(trade: NewTrade): Trade
-    fun listOrders(): List<Order>
+    fun listOrders(userId: UUID): List<Order>
     fun insertOrder(order: NewOrder): Order
-    fun pendingOrders(now: Long): List<Order>
-    fun fillOrderWithTrade(orderId: Long, trade: NewTrade): Trade?
-    fun cancelOrder(orderId: Long)
+    fun pendingOrders(userId: UUID, now: Long): List<Order>
+    fun fillOrderWithTrade(userId: UUID, orderId: Long, trade: NewTrade): Trade?
+    fun cancelOrder(userId: UUID, orderId: Long)
+    fun userIdsWithPendingOrders(): List<UUID>
 }

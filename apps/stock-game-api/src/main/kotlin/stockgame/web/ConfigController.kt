@@ -17,13 +17,17 @@ data class UpdateConfigBody(
 )
 
 @RestController
-class ConfigController(private val trading: ObjectProvider<TradingService>) {
+class ConfigController(
+    private val user: IdentityUser,
+    private val trading: ObjectProvider<TradingService>,
+) {
     @GetMapping("/config")
-    fun get(): GameConfig = trading.orOffline().getConfig()
+    fun get(): GameConfig = trading.orOffline().getConfig(user.id)
 
     @PutMapping("/config")
     fun put(@RequestBody body: UpdateConfigBody): GameConfig =
         trading.orOffline().updateConfig(
+            user.id,
             body.startingCashCents,
             body.startDate,
             body.provider,

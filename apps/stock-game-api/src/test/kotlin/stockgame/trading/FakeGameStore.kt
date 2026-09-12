@@ -1,5 +1,6 @@
 package stockgame.trading
 
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import stockgame.domain.GameConfig
@@ -12,51 +13,66 @@ import stockgame.store.NewTrade
 class FakeGameStore : GameStore {
     private val tradeSeq = AtomicLong(1)
     private val orderSeq = AtomicLong(1)
-    private var config: GameConfig? = null
-    private val trades = ConcurrentHashMap<Long, Trade>()
-    private val orders = ConcurrentHashMap<Long, Order>()
+    private val configs = ConcurrentHashMap<UUID, GameConfig>()
+    private val trades = ConcurrentHashMap<UUID, ConcurrentHashMap<Long, Trade>>()
+    private val orders = ConcurrentHashMap<UUID, ConcurrentHashMap<Long, Order>>()
 
-    override fun getConfig(): GameConfig? = config
+    private fun tradesOf(userId: UUID): ConcurrentHashMap<Long, Trade> =
+        trades.computeIfAbsent(userId) { ConcurrentHashMap() }
 
-    override fun saveConfig(config: GameConfig) {
-        this.config = config
+    private fun ordersOf(userId: UUID): ConcurrentHashMap<Long, Order> =
+        orders.computeIfAbsent(userId) { ConcurrentHashMap() }
+
+    override fun getConfig(userId: UUID): GameConfig? = configs[userId]
+
+    override fun saveConfig(userId: UUID, config: GameConfig) {
+        configs[userId] = config
     }
 
-    override fun listTrades(): List<Trade> = trades.values.sortedWith(compareBy({ it.executedAt }, { it.id }))
+    override fun listTrades(userId: UUID): List<Trade> =
+        (trades[userId] ?: emptyMap()).values.sortedWith(compareBy({ it.executedAt }, { it.id }))
 
     override fun insertTrade(trade: NewTrade): Trade {
         val id = tradeSeq.getAndIncrement()
         val row = toTrade(id, trade)
-        trades[id] = row
+        tradesOf(trade.userId)[id] = row
         return row
     }
 
-    override fun listOrders(): List<Order> = orders.values.sortedWith(compareBy({ it.executeAt }, { it.id }))
+    override fun listOrders(userId: UUID): List<Order> =
+        (orders[userId] ?: emptyMap()).values.sortedWith(compareBy({ it.executeAt }, { it.id }))
 
     override fun insertOrder(order: NewOrder): Order {
         val id = orderSeq.getAndIncrement()
         val row = toOrder(id, order)
-        orders[id] = row
+        ordersOf(order.userId)[id] = row
         return row
     }
 
-    override fun pendingOrders(now: Long): List<Order> =
-        listOrders().filter { it.status == "pending" && it.executeAt <= now }
+    override fun pendingOrders(userId: UUID, now: Long): List<Order> =
+        listOrders(userId).filter { it.status == "pending" && it.executeAt <= now }
 
     @Synchronized
-    override fun fillOrderWithTrade(orderId: Long, trade: NewTrade): Trade? {
-        val order = orders[orderId] ?: return null
+    override fun fillOrderWithTrade(userId: UUID, orderId: Long, trade: NewTrade): Trade? {
+        val rows = ordersOf(userId)
+        val order = rows[orderId] ?: return null
         if (order.status != "pending") return null
-        val saved = insertTrade(trade)
-        orders[orderId] = order.copy(status = "filled", tradeId = saved.id)
+        val saved = insertTrade(trade.copy(userId = userId))
+        rows[orderId] = order.copy(status = "filled", tradeId = saved.id)
         return saved
     }
 
-    override fun cancelOrder(orderId: Long) {
-        val order = orders[orderId] ?: return
+    override fun cancelOrder(userId: UUID, orderId: Long) {
+        val rows = ordersOf(userId)
+        val order = rows[orderId] ?: return
         if (order.status != "pending") return
-        orders[orderId] = order.copy(status = "cancelled")
+        rows[orderId] = order.copy(status = "cancelled")
     }
+
+    override fun userIdsWithPendingOrders(): List<UUID> =
+        orders.entries
+            .filter { (_, rows) -> rows.values.any { it.status == "pending" } }
+            .map { (userId, _) -> userId }
 }
 
 private fun toTrade(id: Long, trade: NewTrade): Trade = Trade(

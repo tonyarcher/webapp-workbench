@@ -1,6 +1,7 @@
 package stockgame.trading
 
 import java.time.Clock
+import java.util.UUID
 import stockgame.domain.HoldingsEntry
 import stockgame.provider.PriceProvider
 import stockgame.store.GameStore
@@ -11,9 +12,10 @@ class AccountService(
     private val clock: Clock,
     private val defaultProvider: String,
 ) {
-    fun cashNowCents(): Long = cashUpTo(loadConfig(store, defaultProvider), store.listTrades(), clock.millis())
+    fun cashNowCents(userId: UUID): Long =
+        cashUpTo(loadConfig(store, userId, defaultProvider), store.listTrades(userId), clock.millis())
 
-    fun getHoldings(): List<HoldingsEntry> = holdings(store, provider)
+    fun getHoldings(userId: UUID): List<HoldingsEntry> = holdings(store, provider, userId)
 
-    fun heldQty(symbol: String): Int = heldQty(store.listTrades(), symbol)
+    fun heldQty(userId: UUID, symbol: String): Int = heldQty(store.listTrades(userId), symbol)
 }

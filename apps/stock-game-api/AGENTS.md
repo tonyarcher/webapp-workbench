@@ -27,6 +27,10 @@ Host JDK + Gradle on PATH. `scripts/gradlew.mjs` runs `gradle`. Do not commit
 
 JSON routes: `/healthz`, `/config`, `/trades`, `/orders`, `/holdings`, `/cash`,
 `/portfolio`, `/quote`, `/bars`, `/search`. Error envelope `{error:string}`.
+Portfolios are per user: `Authorization: Bearer <user-api JWT>` is required
+except `/healthz` and `/readyz`; without it the API answers
+`401 {"error":"unauthorized"}`. Env: `OAUTH_JWKS_URI`, `OAUTH_ISSUER`,
+`STOCK_CLIENT_ID` (defaults suit local dev against user-api on `:3004`).
 
 ## Blocking
 
