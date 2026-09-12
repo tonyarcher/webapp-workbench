@@ -8,23 +8,30 @@ Docker-compatible container runtime) already installed.
 
 ## Layout
 
-- `docker-compose.yml` — the stack definition.
-- `nginx/default.conf` — gateway config copied into the `gateway` image.
+- `docker-compose.yml` — the stack definition. The gateway always publishes
+  host ports `80` and `443`; with TLS off nothing listens on 443, but Docker
+  still binds the host port — if yours is taken, comment out the `443:443`
+  mapping (or stop the other listener) before `up`.
+- `nginx/default.conf.template` — gateway config template. Rendered to
+  `nginx/default.conf` (gitignored, never edit it) on every deploy run;
+  direct `docker compose` on a fresh clone needs `node scripts/render-gateway.mjs` first.
 - `hello/index.html` — static hello-world page copied into the `gateway` image and served at the root `/`.
 - `gateway/` — Dockerfile that builds the `gateway` image from the `deploy/` context.
 - `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `clipstack/`, `calendar-sync/`, `radio-station/`, `football/`, `fitness/` — Dockerfiles + nginx configs for the static apps. Calendar Sync also proxies `/api/trakt/` to api.trakt.tv.
 - `radio-api/` — Dockerfile for the Radio Station node API. On startup it creates the `radio` Postgres database if the volume predates this service.
 - `fitness-api/` — JRE image for the Fitness Kotlin API. Compile on the host JDK (`gradle bootJar`); the image copies the jar. Creates the `fitness` Postgres database on startup.
 - `stock-game-api/` — JRE image for the Stock Game Kotlin API. Compile on the host JDK (`gradle bootJar`); the image copies the jar. Creates the `stock` Postgres database on startup.
-- `stock-game/` — Dockerfile + `server-host.mjs`, a tiny dependency-free Node HTTP host that runs the built TanStack Start fetch handler.
+- `stock-game/` — Dockerfile + `nginx.conf`, a static Vite SPA build served
+  under `/stock-game/` (prefix stripped by the gateway). The JSON API is
+  `stock-game-api` (Kotlin, Postgres `stock`).
 
 All app Dockerfiles use the repo root as the build context (`context: ..` in
 compose). Inside the containers the Windows-generated lockfile is discarded
 and dependencies are resolved fresh (npm records only the generating
 platform's native binaries — issue npm/cli#4828), so the images install the
 correct Linux binaries. Each app container listens on port `3000` internally;
-the gateway strips the prefix for the static apps and passes `/stock-game/`
-through unchanged. The `gateway` image is built from the `deploy/` context.
+the gateway strips the prefix for the static apps. The `gateway` image is
+built from the `deploy/` context.
 
 ## Routes
 
@@ -33,7 +40,7 @@ through unchanged. The `gateway` image is built from the `deploy/` context.
 | `/` | hello-world page |
 | `/baseball/` | Baseball app (nginx static, prefix stripped) |
 | `/rss-reader/` | RSS Reader (nginx static, prefix stripped) |
-| `/stock-game/` | Stock Game (node server, basepath-aware, prefix NOT stripped) |
+| `/stock-game/` | Stock Game (nginx static, prefix stripped; hash routes) |
 | `/lemmy-vertical-scroll/` | Lemmy Vertical Scroll (nginx static, prefix stripped) |
 | `/clipstack/` | Clipstack (nginx static, prefix stripped) |
 | `/calendar-sync/` | Calendar Sync (nginx static + Trakt proxy, prefix stripped) |
@@ -50,18 +57,12 @@ correctly behind the gateway.
 
 ## How each app is served
 
-- **Baseball, RSS Reader, Lemmy Vertical Scroll, Clipstack, Calendar Sync, Radio Station, Football, Fitness** are static Vite builds served
+- **Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll, Clipstack, Calendar Sync, Radio Station, Football, Fitness** are static Vite builds served
   by an nginx container. The gateway strips the app's prefix and nginx serves
   the built `dist/` at the root, with gzip, an SPA fallback to `index.html`,
   no-cache for the shell/service worker, and long-lived immutable caching for
   hashed `/assets/`. Calendar Sync's nginx also reverse-proxies `/api/trakt/`
   to `https://api.trakt.tv` (Trakt has no CORS).
-- **Stock Game** runs a TanStack Start app (SPA mode with server functions).
-  Its build is served by the built-in fetch handler, hosted by
-  `server-host.mjs` (a plain Node HTTP server with no dependencies). It reads
-  `PORT` (default `3000`), `STOCK_GAME_DB` for its SQLite database, and
-  `APP_BASE_PATH` (`/stock-game/`) so static client files are served under the
-  base path.
 
 ## Build and run
 
@@ -108,9 +109,66 @@ build` inside Docker (needed for Linux native binaries). Use the local
 build when you want a faster typecheck/compile before sending context
 through the tunnel.
 
-The gateway listens on port `80`. Visit `http://<host>/` for the hello page and
+The gateway listens on port `80` (plus `443` when `TLS_HOSTS` is set — see
+HTTPS below). Visit `http://<host>/` for the hello page and
 `http://<host>/baseball/` (plus `/rss-reader/`, `/stock-game/`,
 `/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/fitness/`) for the apps.
+
+## HTTPS: LAN deploy vs cloud deploy
+
+The gateway serves plain HTTP unless `TLS_HOSTS` is set (comma/space-separated
+hostnames) in `deploy/.env`. Every deploy renders
+`deploy/nginx/default.conf` from `default.conf.template` — never edit the
+rendered file — and mints or installs certificates before building the gateway
+image, so remote daemons work too. Use a **hostname**, never a bare IP:
+browsers only do passkeys on a registrable hostname. Passkeys additionally need
+`https://` (or `localhost`); plain HTTP on a LAN IP gets passwords only.
+
+### LAN deploy (local CA)
+
+Pick a hosts-file name, e.g. `workbench.lan`:
+
+1. Point it at the host. On each device, as admin:
+   - Windows: `Add-Content "$env:SystemRoot\System32\drivers\etc\hosts" "`n10.0.0.63`tworkbench.lan"`
+   - Linux/macOS: `echo '10.0.0.63 workbench.lan' | sudo tee -a /etc/hosts`
+2. In `deploy/.env`:
+   ```
+   TLS_HOSTS=workbench.lan
+   WEBAUTHN_RP_ID=workbench.lan
+   WEBAUTHN_ORIGINS=https://workbench.lan
+   ```
+3. Deploy. The script mints a local CA and a leaf cert into
+   `deploy/gateway/certs/` (gitignored) and bakes the leaf into the image.
+4. Trust the CA once per device:
+   - Windows (admin): `certutil -addstore Root deploy\gateway\certs\ca.crt`
+   - Linux: copy `ca.crt` to `/usr/local/share/ca-certificates/` then `sudo update-ca-certificates`
+   - macOS: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain deploy/gateway/certs/ca.crt`
+5. Register the origin with identity (DB rows, not code):
+   ```sql
+   INSERT INTO oauth_redirect_uris (client_id, redirect_uri)
+     VALUES ('rss-reader', 'https://workbench.lan/rss-reader/') ON CONFLICT DO NOTHING;
+   ```
+   (Repeat per app origin; run with `docker compose exec postgres psql -U rss -d users`.)
+6. Browse `https://workbench.lan/`. Set `TLS_REDIRECT=1` to send port-80 stragglers to https.
+
+Delete the leaf (or set `TLS_FORCE=1`) to rotate; the CA persists so devices
+keep trusting it.
+
+### Cloud deploy (provided certs)
+
+Point real DNS at the host, terminate issuance wherever you like (e.g.
+certbot), and hand the PEM files to the deploy:
+
+```
+TLS_HOSTS=app.example.com
+TLS_CERT_FILE=/path/to/fullchain.pem
+TLS_KEY_FILE=/path/to/privkey.pem
+WEBAUTHN_RP_ID=app.example.com
+WEBAUTHN_ORIGINS=https://app.example.com
+```
+
+Same redirect-row step as LAN, with the `https://` origin. The local CA is
+skipped entirely in this mode.
 
 ## Remote Docker daemon (SSH tunnel)
 
@@ -137,6 +195,5 @@ build context so tunnel uploads stay small.
 
 ## Data
 
-Stock Game stores its SQLite database at `/app/data/stock-game.db` inside its
-container (ephemeral unless a volume is mounted there). The nginx-served apps
-are stateless.
+Stock Game state lives in the `stock` Postgres database owned by
+`stock-game-api`. The nginx-served apps are stateless.

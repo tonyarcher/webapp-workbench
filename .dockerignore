@@ -15,6 +15,12 @@
 **/test-results
 **/playwright-report
 **/*.tsbuildinfo
+
+# Gateway TLS: generated certs must not leak into app images built from the
+# repo root (the gateway context has its own deploy/.dockerignore).
+deploy/gateway/certs/
+# Gateway nginx: rendered from default.conf.template on every deploy.
+deploy/nginx/default.conf
 **/.gradle
 **/.kotlin
 **/build

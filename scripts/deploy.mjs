@@ -9,6 +9,8 @@ import net from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatAppList, resolveApps } from "./apps.mjs";
+import { renderGateway } from "./render-gateway.mjs";
+import { ensureGatewayCerts } from "./gen-certs.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const COMPOSE_FILE = join("deploy", "docker-compose.yml");
@@ -22,6 +24,9 @@ Deploy the gateway stack with docker compose.
 Pass one or more app names to rebuild and roll out only those services.
 Node app Dockerfiles compile inside the image. Kotlin APIs compile on
 the host (Gradle installDist or bootJar); the image only copies jars.
+The gateway nginx config renders from deploy/nginx/default.conf.template
+on every run (TLS block when TLS_HOSTS is set); certificates come from a
+local CA or TLS_CERT_FILE/TLS_KEY_FILE (see deploy/README.md).
 
 The script picks a Docker engine automatically:
   1. --local / --remote / DEPLOY_TARGET
@@ -378,6 +383,26 @@ const JVM_APIS = [
   },
 ];
 
+function tlsHosts(env) {
+  return (env.TLS_HOSTS ?? "").split(/[\s,]+/).filter(Boolean);
+}
+
+function prepareGateway(flags, services) {
+  if (flags.help) return;
+  const env = renderGateway();
+  const hosts = tlsHosts(env);
+  if (!hosts.length || flags.down || flags.status) return;
+  const { changed } = ensureGatewayCerts();
+  const gatewayStale = flags.noBuild || (services.length > 0 && !services.includes("gateway"));
+  if (changed && gatewayStale) {
+    console.log("==> certs changed: rebuild the gateway (include it in this deploy) to pick them up");
+  }
+  console.log(
+    "==> TLS reminder: browse https, trust deploy/gateway/certs/ca.crt per device, " +
+      "and add oauth_redirect_uris + WEBAUTHN rows for your origin (see deploy/README.md)",
+  );
+}
+
 async function prepareJvmHostBuild(services, flags) {
   if (flags.down || flags.status || flags.noBuild) return;
   for (const api of JVM_APIS) {
@@ -416,6 +441,7 @@ async function main() {
 
   const { services, composeExtras } = splitExtra(flags.extra);
   const target = await resolveTarget(requestedTarget(flags));
+  prepareGateway(flags, services);
   await prepareJvmHostBuild(services, flags);
   const compose = await composeInvocation();
   const args = [...compose.prefix, ...composeArgs(flags, services, composeExtras)];
