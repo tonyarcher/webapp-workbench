@@ -7,7 +7,7 @@ Read the workspace `AGENTS.md` before touching that app or package.
 
 npm-workspaces monorepo of small TypeScript web apps plus Kotlin APIs.
 Most apps are Vite + Lit custom elements (no UI framework). Stock-game is the
-exception: TanStack Start (SPA) with React route shells and decorator-free Lit.
+exception: plain Vite static SPA with React route shells and decorator-free Lit.
 Shared libraries live in `packages/*`. JVM APIs are Gradle / Kotlin, not Node.
 
 **Services:** `user-api` is a standalone identity provider (OAuth/OIDC, JWKS).
@@ -23,7 +23,7 @@ database rows, not a hardcoded app list.
 - `apps/baseball/` — baseball scorekeeping (`baseball-tracker`), client-side only. Depends on `@baseball/web-components`.
 - `apps/rss-reader/` — RSS reader UI (TanStack core, hash router, PWA).
 - `apps/rss-api/` — RSS JSON API + poller (Kotlin, Spring Data JPA). Postgres database `rss`. Host JDK; JRE image copies the boot jar. Cookie `rss_uid` per browser.
-- `apps/stock-game/` — paper-trading simulator; nested workspaces `app/` (`@stock-game/app`) and `shared/` (`@stock-game/shared`); SQLite server layer.
+- `apps/stock-game/` — paper-trading simulator; nested workspaces `app/` (`@stock-game/app`, static Vite SPA) and `shared/` (`@stock-game/shared` contract); JSON API is `stock-game-api`.
 - `apps/lemmy-vertical-scroll/` — vertical feed scroller. Depends on `vertical-scroll-core`.
 - `apps/clipstack/` — short-video list scroller. Depends on `vertical-scroll-core`.
 - `apps/calendar-sync/` — Trakt + Netflix → ICS / Google Calendar. Depends on `calendar-core`.
@@ -227,7 +227,7 @@ User-wide rules apply (never commit/push `.env`; examples only in git). This rep
 
 - Root `.gitignore` already drops `.env` and `.env.*` and keeps `!.env.example`. Do not weaken that.
 - **Deploy secrets:** `deploy/.env` copied from `deploy/.env.example` (Postgres). Compose reads it at run; it must never land in an image layer.
-- **Stock-game keys:** `apps/stock-game/.env` (or `apps/stock-game/app/.env`) from `apps/stock-game/.env.example`. Not in `shared/`.
+- **Stock-game app** needs no env file; provider config lives on `stock-game-api`.
 - **Calendar OAuth** stays in the browser (localStorage), not in `.env`.
 - `APP_BASE_PATH` is public and baked at image build — not a secret, not a reason to commit `.env`.
 - Do not log tokens, secrets, or raw sample/PII payloads.

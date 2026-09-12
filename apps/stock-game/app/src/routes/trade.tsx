@@ -5,11 +5,7 @@ import { z } from 'zod'
 import { symbolSchema } from '@stock-game/shared'
 import type { PlaceOrderRequest, PlaceTradeRequest, SymbolSearchResult } from '@stock-game/shared'
 import { useCustomEvents } from '../lib/useCustomEvents'
-import { getQuoteFn, searchSymbolsFn } from '../server/fns/marketData'
-import { listTradesFn, placeTradeFn } from '../server/fns/trades'
-import { placeOrderFn } from '../server/fns/orders'
-import { getConfigFn } from '../server/fns/config'
-import { getCashFn, getHoldingsFn } from '../server/fns/portfolio'
+import { fetchCash, fetchConfig, fetchHoldings, fetchQuote, listTrades, placeOrder, placeTrade, searchSymbols } from '../lib/api'
 import '../components/sg-trade-form'
 import '../components/sg-trades-table'
 
@@ -18,19 +14,19 @@ export const Route = createFileRoute('/trade')({ validateSearch: tradeSearchSche
 type SubmitDetail = { mode: 'backdated'; data: PlaceTradeRequest } | { mode: 'scheduled'; data: PlaceOrderRequest }
 
 function useTradeQueries(query: string, symbol: string | undefined) {
-  const configQ = useQuery({ queryKey: ['config'], queryFn: () => getConfigFn() })
-  const holdingsQ = useQuery({ queryKey: ['holdings'], queryFn: () => getHoldingsFn() })
-  const tradesQ = useQuery({ queryKey: ['trades'], queryFn: () => listTradesFn() })
-  const searchQ = useQuery({ queryKey: ['search', query], queryFn: () => searchSymbolsFn({ data: query }), enabled: query.trim().length > 0 })
-  const quoteQ = useQuery({ queryKey: ['quote', symbol], queryFn: () => { if (symbol === undefined) throw new Error('No symbol selected'); return getQuoteFn({ data: symbol }) }, enabled: symbol !== undefined })
-  const cashQ = useQuery({ queryKey: ['cash'], queryFn: () => getCashFn() })
+  const configQ = useQuery({ queryKey: ['config'], queryFn: () => fetchConfig() })
+  const holdingsQ = useQuery({ queryKey: ['holdings'], queryFn: () => fetchHoldings() })
+  const tradesQ = useQuery({ queryKey: ['trades'], queryFn: () => listTrades() })
+  const searchQ = useQuery({ queryKey: ['search', query], queryFn: () => searchSymbols(query), enabled: query.trim().length > 0 })
+  const quoteQ = useQuery({ queryKey: ['quote', symbol], queryFn: () => { if (symbol === undefined) throw new Error('No symbol selected'); return fetchQuote(symbol) }, enabled: symbol !== undefined })
+  const cashQ = useQuery({ queryKey: ['cash'], queryFn: () => fetchCash() })
   return { configQ, holdingsQ, tradesQ, searchQ, quoteQ, cashQ }
 }
 
 function useTradeMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (detail: SubmitDetail): Promise<unknown> => { if (detail.mode === 'backdated') return placeTradeFn({ data: detail.data }); return placeOrderFn({ data: detail.data }) },
+    mutationFn: async (detail: SubmitDetail): Promise<unknown> => { if (detail.mode === 'backdated') return placeTrade(detail.data); return placeOrder(detail.data) },
     onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['trades'] }); void queryClient.invalidateQueries({ queryKey: ['orders'] }); void queryClient.invalidateQueries({ queryKey: ['holdings'] }); void queryClient.invalidateQueries({ queryKey: ['portfolio'] }); void queryClient.invalidateQueries({ queryKey: ['cash'] }) },
   })
 }
