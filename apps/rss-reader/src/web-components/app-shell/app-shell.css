@@ -102,6 +102,12 @@ header .sub {
     font-weight: 600;
 }
 
+.signin-card .error {
+    color: var(--danger);
+    font-size: 13px;
+    margin: 12px 0 0;
+}
+
 .gear {
     border: none;
     background: none;
