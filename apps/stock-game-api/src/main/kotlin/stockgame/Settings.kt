@@ -12,7 +12,7 @@ data class Settings(
 )
 
 fun settingsFromEnv(env: Map<String, String>): Settings {
-    val port = env["PORT"]?.toIntOrNull() ?: 3004
+    val port = env["PORT"]?.toIntOrNull() ?: 3005
     val databaseUrl = env["DATABASE_URL"].orEmpty()
     val logLevel = parseLogLevel(env["LOG_LEVEL"] ?: "info")
     val service = env["SERVICE"]?.ifBlank { null } ?: "stock-game-api"

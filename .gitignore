@@ -23,6 +23,9 @@ playwright-report/
 # Logs
 *.log
 
+# Editor backups
+*~
+
 # Gateway TLS: generated per-host certs. Never commit keys.
 deploy/gateway/certs/*
 !deploy/gateway/certs/.gitkeep

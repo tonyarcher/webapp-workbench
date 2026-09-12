@@ -11,7 +11,6 @@ export default tseslint.config(
       '**/dist/**',
       '**/coverage/**',
       '**/data/**',
-      'app/src/routeTree.gen.ts',
       'package-lock.json',
     ],
   },
@@ -61,7 +60,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['shared/**/*.ts', 'app/src/server/**/*.ts'],
+    files: ['shared/**/*.ts'],
     languageOptions: {
       globals: {
         ...globals.node,

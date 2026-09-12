@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useCustomEvents } from '../lib/useCustomEvents'
-import { getHoldingsFn } from '../server/fns/portfolio'
-import { listTradesFn } from '../server/fns/trades'
+import { fetchHoldings } from '../lib/api'
+import { listTrades } from '../lib/api'
 import '../components/sg-holdings-table'
 import '../components/sg-trades-table'
 
@@ -12,8 +12,8 @@ export const Route = createFileRoute('/portfolio')({
 
 function Portfolio() {
   const navigate = useNavigate()
-  const holdingsQ = useQuery({ queryKey: ['holdings'], queryFn: () => getHoldingsFn() })
-  const tradesQ = useQuery({ queryKey: ['trades'], queryFn: () => listTradesFn() })
+  const holdingsQ = useQuery({ queryKey: ['holdings'], queryFn: () => fetchHoldings() })
+  const tradesQ = useQuery({ queryKey: ['trades'], queryFn: () => listTrades() })
 
   const ref = useCustomEvents({
     'sg-trade-symbol': (detail) => {

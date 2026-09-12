@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCustomEvents } from '../lib/useCustomEvents'
-import { cancelOrderFn, listOrdersFn } from '../server/fns/orders'
+import { cancelOrder, listOrders } from '../lib/api'
 import '../components/sg-orders-table'
 
 export const Route = createFileRoute('/orders')({
@@ -12,11 +12,11 @@ function Orders() {
   const queryClient = useQueryClient()
   const ordersQ = useQuery({
     queryKey: ['orders'],
-    queryFn: () => listOrdersFn(),
+    queryFn: () => listOrders(),
     refetchInterval: 30_000,
   })
   const cancel = useMutation({
-    mutationFn: (id: number) => cancelOrderFn({ data: { id } }),
+    mutationFn: (id: number) => cancelOrder(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['orders'] })
     },

@@ -14,7 +14,7 @@ Stock game **API microservice**. Own process, own image, own Postgres database
 
 ```bash
 npm test -w stock-game-api
-npm run dev -w stock-game-api   # :3004
+npm run dev -w stock-game-api   # :3005 (`:3004` is user-api)
 ```
 
 `DATABASE_URL` is required for data routes. Example:

@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { UpdateConfigRequest } from '@stock-game/shared'
 import { useCustomEvents } from '../lib/useCustomEvents'
-import { getConfigFn, updateConfigFn } from '../server/fns/config'
+import { fetchConfig, saveConfig } from '../lib/api'
 import '../components/sg-settings-form'
 
 export const Route = createFileRoute('/settings')({
@@ -11,9 +11,9 @@ export const Route = createFileRoute('/settings')({
 
 function Settings() {
   const queryClient = useQueryClient()
-  const configQ = useQuery({ queryKey: ['config'], queryFn: () => getConfigFn() })
+  const configQ = useQuery({ queryKey: ['config'], queryFn: () => fetchConfig() })
   const update = useMutation({
-    mutationFn: (data: UpdateConfigRequest) => updateConfigFn({ data }),
+    mutationFn: (data: UpdateConfigRequest) => saveConfig(data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['config'] })
       void queryClient.invalidateQueries({ queryKey: ['portfolio'] })

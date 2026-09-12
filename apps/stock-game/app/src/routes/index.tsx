@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { getConfigFn } from '../server/fns/config'
-import { getHoldingsFn, getPortfolioSeriesFn } from '../server/fns/portfolio'
+import { fetchConfig } from '../lib/api'
+import { fetchHoldings, fetchPortfolioSeries } from '../lib/api'
 import { fmtMoney, fmtPct } from '../lib/format'
 import '../components/sg-portfolio-chart'
 import '../components/sg-holdings-table'
@@ -55,9 +55,9 @@ function isLoading(a: { isPending: boolean }, b: { isPending: boolean }, cfg: un
 }
 
 function Dashboard(): React.JSX.Element {
-  const configQ = useQuery({ queryKey: ['config'], queryFn: () => getConfigFn() })
-  const seriesQ = useQuery({ queryKey: ['portfolio', 'series'], queryFn: () => getPortfolioSeriesFn() })
-  const holdingsQ = useQuery({ queryKey: ['holdings'], queryFn: () => getHoldingsFn() })
+  const configQ = useQuery({ queryKey: ['config'], queryFn: () => fetchConfig() })
+  const seriesQ = useQuery({ queryKey: ['portfolio', 'series'], queryFn: () => fetchPortfolioSeries() })
+  const holdingsQ = useQuery({ queryKey: ['holdings'], queryFn: () => fetchHoldings() })
   if (hasError(seriesQ, configQ, holdingsQ)) return <DashboardError error={seriesQ.error ?? configQ.error ?? holdingsQ.error} />
   if (isLoading(seriesQ, configQ, configQ.data, seriesQ.data)) return <DashboardLoading />
   return <DashboardContent config={configQ.data as GameConfig} series={seriesQ.data as PortfolioSeries} holdings={holdingsQ.data ?? []} />

@@ -107,12 +107,12 @@ export const orderSchema = z.object({
   executeAt: z.number().int(),
   status: orderStatusSchema,
   createdAt: z.number().int(),
-  tradeId: z.number().int().nullable(),
+  tradeId: z.number().int().nullish(),
   orderType: orderTypeSchema,
   tif: tifSchema,
-  limitPrice: z.number().nullable(),
-  stopPrice: z.number().nullable(),
-  expiresAt: z.number().int().nullable(),
+  limitPrice: z.number().nullish(),
+  stopPrice: z.number().nullish(),
+  expiresAt: z.number().int().nullish(),
   fillPriceSource: fillPriceSourceSchema,
 });
 export type Order = z.infer<typeof orderSchema>;

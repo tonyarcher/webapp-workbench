@@ -142,6 +142,16 @@ class ApiRoutesTest {
     }
 
     @Test
+    fun quoteOmitsNullBidAsk() {
+        asUser(ALICE_SUB, ALICE_ID)
+        val res = authedGet("/quote?symbol=AAPL", "alice-token")
+        assertEquals(200, res.response.status)
+        assertTrue(!res.response.contentAsString.contains("\"bid\""))
+        assertTrue(!res.response.contentAsString.contains("\"ask\""))
+        assertTrue(res.response.contentAsString.contains("\"price\":50.0"))
+    }
+
+    @Test
     fun quoteRequiresSymbol() {
         asUser(ALICE_SUB, ALICE_ID)
         val res = authedGet("/quote?symbol=", "alice-token")
