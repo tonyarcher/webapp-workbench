@@ -10,7 +10,14 @@ import './web-components/feed-menu/feed-menu';
 import './web-components/folder-menu/folder-menu';
 import './styles/global.css';
 import {initTheme} from './theme';
+import {finishLoginFromCallback} from './services/auth';
 import {recomputeHotIfNeeded} from './db/db-query';
+
+// An OAuth callback (?code&state) must become tokens before anything reads
+// auth state, so the exchange runs before the shell boots. The shell already
+// upgraded during imports, so a success nudges it to re-read the session.
+const loggedIn = await finishLoginFromCallback().catch(() => false);
+if (loggedIn) window.dispatchEvent(new CustomEvent('rss-auth-changed'));
 
 initTheme();
 void recomputeHotIfNeeded();

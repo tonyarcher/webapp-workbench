@@ -3,7 +3,8 @@
 RSS reader UI. Shared TypeScript / Lit / CSS / workflow: repo-root `AGENTS.md`.
 
 The JSON API is `apps/rss-api` (Kotlin, Spring Data JPA, Postgres `rss`).
-Do not add Node `pg` here.
+Every reader signs in through `user-api` (OAuth2 Code + PKCE, `user-client`
+helpers). API calls carry `Authorization: Bearer`. Do not add Node `pg` here.
 
 ## Stack
 
@@ -14,13 +15,25 @@ Do not add Node `pg` here.
 ## Commands
 
 ```bash
-npm run dev          # Vite (proxies /api → :3001)
+npm run dev          # Vite (proxies /api → :3001, /user-api → :3004)
 npm run build        # tsc --noEmit && vite build && node scripts/write-sw.mjs
 npm run preview      # production build (PWA / install checks)
 npm run test         # smoke + db-smoke
 ```
 
 API: `npm run dev -w rss-api` (or root `npm run dev:rss-api`).
+Identity: `npm run dev -w user-api` (`:3004`, same port the Vite proxy uses).
+
+## Auth
+
+- `src/services/auth.ts` — PKCE login, token storage (localStorage), refresh.
+  `app-shell` gates on a session and clears IndexedDB + query cache on sign-out
+  or session death so cached articles never leak across accounts on one browser.
+  Ingest skips IDB writes when the auth epoch changed mid-sync.
+- The OAuth `redirect_uri` is the app root (`/rss-reader/` behind the gateway).
+  It must match a row in `oauth_redirect_uris` for client `rss-reader`
+  (production adds rows, not code). `npm run dev` on another origin needs its
+  own row in the local `users` database.
 
 ## Architecture
 

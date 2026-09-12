@@ -2,6 +2,7 @@ package rssapi.web
 
 import java.net.URI
 import java.util.UUID
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -16,20 +17,21 @@ import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
 import rssapi.persist.FeedSyncRepo
-import rssapi.persist.FolderFeedEntity
-import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
+import rssapi.persist.SubscriptionEntity
+import rssapi.persist.SubscriptionRepo
 
 @RestController
 class FeedController(
-    private val user: CookieUser,
+    private val user: IdentityUser,
     private val feeds: FeedRepo,
     private val folders: FolderRepo,
-    private val memberships: FolderFeedRepo,
     private val ingest: IngestService,
     private val sync: IngestSync,
     private val articleRepo: ArticleRepo,
     private val syncRows: FeedSyncRepo,
+    private val subs: SubscriptionRepo,
+    private val membershipService: MembershipService,
 ) {
     @PostMapping("/feeds")
     fun create(@RequestBody body: CreateFeedBody): FeedJson {
@@ -39,64 +41,73 @@ class FeedController(
         requireOwnedFolders(folderIds)
         val title = URI(validated).toURL().host
         val feed = upsertFeed(validated, title)
-        folderIds.forEach { memberships.save(FolderFeedEntity(folderId = it, feedId = feed.id!!)) }
+        ensureSubscribed(feed.id!!)
+        folderIds.forEach { membershipService.addMembership(it, feed.id!!) }
         sync.ensureRow(feed.id!!)
-        ingest.fetchAndIngest(user.id, feed.id!!)
+        ingest.fetchAndIngest(feed.id!!)
         return loadedFeed(feed.id!!)
     }
 
     @DeleteMapping("/feeds/{id}")
+    @Transactional
     fun delete(@PathVariable id: String): OkBody {
         if (!isUuid(id)) throw ApiException(400, "invalid feed id")
-        val feed = feeds.findByUserIdAndId(user.id, UUID.fromString(id))
-            ?: throw ApiException(404, "Feed not found")
-        feeds.delete(feed)
+        val feedId = UUID.fromString(id)
+        requireSubscribed(feedId)
+        subs.deleteByUserIdAndFeedId(user.id, feedId)
+        membershipService.removeOwnMemberships(user.id, feedId)
+        if (subs.countByFeedId(feedId) == 0L) {
+            feeds.findById(feedId).ifPresent { feeds.delete(it) }
+        }
         return OkBody()
     }
 
     @PutMapping("/feeds/{id}/folders")
+    @Transactional
     fun setFolders(@PathVariable id: String, @RequestBody body: FolderIdsBody): OkBody {
         if (!isUuid(id)) throw ApiException(400, "invalid feed id")
         val folderIds = body.folderIds ?: throw ApiException(400, "folderIds array is required")
         val feedId = UUID.fromString(id)
-        requireFeed(feedId)
+        requireSubscribed(feedId)
         val uuids = parseFolderIds(folderIds)
         requireOwnedFolders(uuids)
-        replaceFolders(feedId, uuids)
+        membershipService.removeOwnMemberships(user.id, feedId)
+        uuids.forEach { membershipService.addMembership(it, feedId) }
         return OkBody()
     }
 
     private fun loadedFeed(feedId: UUID): FeedJson {
-        val fresh = feeds.findByUserIdAndId(user.id, feedId) ?: error("missing feed")
-        val fids = memberships.findByFeedId(feedId).map { it.folderId.toString() }
+        requireSubscribed(feedId)
+        val fresh = feeds.findById(feedId).orElseThrow { ApiException(404, "Feed not found") }
         val st = syncRows.findById(feedId).orElse(null)
         return fresh.toJson(
-            fids,
+            membershipService.ownedFolderIds(user.id, feedId),
             articleRepo.countUnread(feedId, user.id).toInt(),
             st?.lastFetchedAt?.toEpochMilli(),
             st?.lastError,
         )
     }
 
-    private fun requireFeed(feedId: UUID) {
-        if (feeds.findByUserIdAndId(user.id, feedId) == null) throw ApiException(404, "Feed not found")
+    private fun requireSubscribed(feedId: UUID) {
+        if (!subs.existsByUserIdAndFeedId(user.id, feedId)) throw ApiException(404, "Feed not found")
+    }
+
+    private fun ensureSubscribed(feedId: UUID) {
+        if (!subs.existsByUserIdAndFeedId(user.id, feedId)) {
+            subs.save(SubscriptionEntity(userId = user.id, feedId = feedId))
+        }
     }
 
     private fun upsertFeed(url: String, title: String): FeedEntity {
-        val existing = feeds.findByUserIdAndXmlUrl(user.id, url)
+        val existing = feeds.findByXmlUrl(url)
         if (existing != null) return existing
-        return feeds.save(FeedEntity(userId = user.id, xmlUrl = url, title = title))
+        return feeds.save(FeedEntity(xmlUrl = url, title = title))
     }
 
     private fun requireOwnedFolders(ids: List<UUID>) {
         if (ids.isEmpty()) return
         val owned = folders.findByUserIdAndIdIn(user.id, ids)
         if (owned.size != ids.size) throw ApiException(400, "Unknown folder in folderIds")
-    }
-
-    private fun replaceFolders(feedId: UUID, folderIds: List<UUID>) {
-        memberships.deleteByFeedId(feedId)
-        folderIds.forEach { memberships.save(FolderFeedEntity(folderId = it, feedId = feedId)) }
     }
 
     private fun parseFolderIds(raw: List<String>): List<UUID> {

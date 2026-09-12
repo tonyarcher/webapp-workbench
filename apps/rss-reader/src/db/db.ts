@@ -1,7 +1,7 @@
 import type {Feed, Folder} from '../types';
 import {getDb} from './db-base';
 
-export {closeDb, getDb, uid} from './db-base';
+export {clearClientDb, closeDb, getDb, uid} from './db-base';
 export type {ReaderDB} from './db-base';
 export * from './db-ingest';
 export * from './db-mutations';

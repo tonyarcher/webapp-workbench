@@ -15,8 +15,6 @@ class FeedEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     var id: UUID? = null,
-    @Column(name = "user_id", nullable = false)
-    var userId: UUID = UUID(0, 0),
     @Column(name = "xml_url", nullable = false)
     var xmlUrl: String = "",
     @Column(name = "site_url")

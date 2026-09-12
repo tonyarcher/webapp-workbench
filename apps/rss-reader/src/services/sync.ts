@@ -1,4 +1,5 @@
 import {type BumpSpec, getFeed, getMetaMany, ingestArticlesTx, queryArticlesByLink, uid, updateFeedErrorIfExists} from '../db/db';
+import {authEpoch, hasSession} from './auth';
 import {firstImageUrl, parseFeedXml} from './parser';
 import {fetchFeedText} from './proxy';
 import {
@@ -157,6 +158,7 @@ export async function ingestFeed(
     parsed: ParsedFeed,
     feedPatch: Feed,
     createIfMissing: boolean,
+    epoch: number = authEpoch(),
 ): Promise<{inserted: number; unread: number}> {
     const {hosts, authors} = collectHostsAuthors(parsed.items);
     const links = collectLinks(parsed.items);
@@ -164,7 +166,17 @@ export async function ingestFeed(
     const affMap = await getMetaMany(buildMetaKeys(feed, hosts, authors, linkInfo));
     const feedAffinity = affMap.get(`aff:feed:${feed.id}`) ?? 0;
     const {items, bumpsByLink} = buildItemsAndBumps(parsed, feed, linkInfo, affMap, feedAffinity, Date.now());
+    // A sign-out (or account switch) mid-sync must not write another
+    // session's rows into the fresh database.
+    if (sessionEnded(epoch)) return {inserted: 0, unread: 0};
     return ingestArticlesTx(items, bumpsByLink, feedPatch, createIfMissing);
+}
+
+/** True when a browser session ended after the given epoch started. */
+function sessionEnded(startEpoch: number): boolean {
+    // No browser storage (node smoke tests): there are no sessions to guard.
+    if (typeof localStorage === 'undefined') return false;
+    return startEpoch !== authEpoch() || !hasSession();
 }
 
 export interface SyncResult {
@@ -174,6 +186,7 @@ export interface SyncResult {
 }
 
 export async function syncFeed(feedId: string): Promise<SyncResult> {
+    const epoch = authEpoch();
     const feed = await getFeed(feedId);
     if (!feed) throw new Error('Feed not found');
 
@@ -191,7 +204,7 @@ export async function syncFeed(feedId: string): Promise<SyncResult> {
         // The patch is persisted inside the ingest transaction with the
         // freshly computed unread counter (read in-transaction, not from
         // the caller's snapshot).
-        const {inserted} = await ingestFeed(feed, parsed, patch, false);
+        const {inserted} = await ingestFeed(feed, parsed, patch, false, epoch);
 
         return {inserted, total: parsed.items.length, title: parsed.title};
     } catch (err) {
@@ -202,6 +215,7 @@ export async function syncFeed(feedId: string): Promise<SyncResult> {
 }
 
 export async function addFeedFromUrl(url: string): Promise<Feed> {
+    const epoch = authEpoch();
     const xml = await fetchFeedText(url);
     const parsed = parseFeedXml(xml, Date.now());
 
@@ -216,7 +230,7 @@ export async function addFeedFromUrl(url: string): Promise<Feed> {
         lastFetchedAt: Date.now(),
     };
 
-    const {unread} = await ingestFeed(feed, parsed, feed, true);
+    const {unread} = await ingestFeed(feed, parsed, feed, true, epoch);
     feed.unread = unread;
 
     return feed;

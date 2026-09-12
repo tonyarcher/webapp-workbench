@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import rssapi.ingest.IngestSync
-import rssapi.persist.FeedRepo
+import rssapi.persist.SubscriptionRepo
 import rssapi.poller.FeedPoller
 
 data class SyncBody(val scope: Any? = null)
@@ -14,8 +14,8 @@ data class QueuedBody(val queued: Int)
 
 @RestController
 class SyncController(
-    private val user: CookieUser,
-    private val feeds: FeedRepo,
+    private val user: IdentityUser,
+    private val subs: SubscriptionRepo,
     private val sync: IngestSync,
     private val poller: FeedPoller,
 ) {
@@ -28,7 +28,7 @@ class SyncController(
     }
 
     private fun resolveIds(scope: Any?): List<UUID> {
-        val all = feeds.findByUserIdOrderByAddedAtAsc(user.id).mapNotNull { it.id }
+        val all = subs.findFeedIdsByUserId(user.id)
         if (scope == null || scope == "all") return all
         if (scope is Map<*, *>) {
             val raw = scope["feedIds"] as? List<*> ?: return emptyList()

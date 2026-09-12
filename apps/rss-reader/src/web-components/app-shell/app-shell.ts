@@ -2,6 +2,9 @@ import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, state} from 'lit/decorators.js';
 import {history, parsePath} from '../../router';
 import {markArticleRead} from '../../mutations';
+import {queryClient} from '../../query';
+import {clearClientDb} from '../../db/db';
+import {currentUsername, hasSession, logout, startLogin} from '../../services/auth';
 import type {Article, View} from '../../types';
 import styles from './app-shell.css?inline';
 
@@ -13,6 +16,8 @@ export class AppShell extends LitElement {
     @state() private article: Article | null = null;
     @state() private settingsOpen = false;
     @state() private resume: { view: string; id: string } | null = null;
+    @state() private authed = hasSession();
+    @state() private username: string | null = currentUsername();
 
     private readContext: { items: Article[]; index: number } | null = null;
     private unsubscribe?: () => void;
@@ -26,16 +31,63 @@ export class AppShell extends LitElement {
             this.resume = null;
         });
         window.addEventListener('keydown', this.onKeyDown);
+        window.addEventListener('rss-auth-required', this.onAuthRequired);
+        window.addEventListener('rss-auth-changed', this.onAuthChanged);
     }
 
     override disconnectedCallback() {
         super.disconnectedCallback();
         window.removeEventListener('keydown', this.onKeyDown);
+        window.removeEventListener('rss-auth-required', this.onAuthRequired);
+        window.removeEventListener('rss-auth-changed', this.onAuthChanged);
         this.unsubscribe?.();
     }
 
+    private onAuthChanged = () => {
+        this.authed = hasSession();
+        this.username = currentUsername();
+    };
+
+    private onAuthRequired = () => {
+        this.resetAccount();
+    };
+
+    private onSignIn = () => {
+        void startLogin();
+    };
+
+    private onSignOut = () => {
+        this.resetAccount();
+    };
+
+    /** Drop the session and every trace of the account on this browser. */
+    private resetAccount = () => {
+        logout();
+        queryClient.clear();
+        void clearClientDb().finally(() => {
+            this.authed = false;
+            this.username = null;
+        });
+    };
+
     override render() {
+        if (!this.authed) return this.renderSignIn();
         return html`${this.renderHeader()}<div class="layout"><source-list .view=${this.route}></source-list><main>${this.renderMain()}</main>${this.renderOverlay()}</div>${this.renderSettings()}`;
+    }
+
+    private renderSignIn() {
+        return html`
+            <header>
+                <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2" fill="currentColor"/><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                <h1>RSS Reader</h1><span class="sub">your feeds, in one place</span>
+            </header>
+            <div class="signin">
+                <div class="signin-card">
+                    <h2>Sign in to read</h2>
+                    <p class="muted">Your feeds live in your account. Sign in with the workbench identity service to continue.</p>
+                    <button class="primary" @click=${this.onSignIn}>Sign in</button>
+                </div>
+            </div>`;
     }
 
     private renderHeader() {
@@ -43,6 +95,7 @@ export class AppShell extends LitElement {
             <header>
                 <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2" fill="currentColor"/><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
                 <h1>RSS Reader</h1><span class="sub">your feeds, in one place</span><div class="spacer"></div>
+                ${this.username ? html`<span class="who">${this.username}</span><button class="signout" @click=${this.onSignOut}>Sign out</button>` : ''}
                 <button class="gear" title="Settings" @click=${() => (this.settingsOpen = true)}>${this.renderGearIcon()}</button>
             </header>`;
     }

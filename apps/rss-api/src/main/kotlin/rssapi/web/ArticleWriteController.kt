@@ -10,14 +10,14 @@ import rssapi.persist.ArticleRepo
 import rssapi.persist.ArticleStateEntity
 import rssapi.persist.ArticleStateId
 import rssapi.persist.ArticleStateRepo
-import rssapi.persist.FeedRepo
+import rssapi.persist.SubscriptionRepo
 
 @RestController
 class ArticleWriteController(
-    private val user: CookieUser,
+    private val user: IdentityUser,
     private val articles: ArticleRepo,
     private val states: ArticleStateRepo,
-    private val feeds: FeedRepo,
+    private val subs: SubscriptionRepo,
 ) {
     @PostMapping("/articles/state")
     fun updateState(@RequestBody body: StateListBody): StateResult {
@@ -56,7 +56,7 @@ class ArticleWriteController(
 
     private fun ownedArticleIds(ids: List<String>): Set<String> {
         if (ids.isEmpty()) return emptySet()
-        val userFeeds = feeds.findByUserIdOrderByAddedAtAsc(user.id).map { it.id }.toSet()
+        val userFeeds = subs.findFeedIdsByUserId(user.id).toSet()
         return articles.findAllById(ids).filter { it.feedId in userFeeds }.map { it.id }.toSet()
     }
 
@@ -72,7 +72,7 @@ class ArticleWriteController(
     }
 
     private fun markRead(cutoffMs: Long?, feedIds: List<UUID>?, all: Boolean) {
-        val userFeeds = feeds.findByUserIdOrderByAddedAtAsc(user.id).mapNotNull { it.id }
+        val userFeeds = subs.findFeedIdsByUserId(user.id)
         val allowed = if (feedIds.isNullOrEmpty()) userFeeds else feedIds.filter { it in userFeeds }
         if (allowed.isEmpty()) return
         articles.findByFeedIdIn(allowed).forEach { article ->

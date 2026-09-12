@@ -16,7 +16,7 @@ import rssapi.persist.ArticleStateRepo
 
 @RestController
 class ArticleListController(
-    private val user: CookieUser,
+    private val user: IdentityUser,
     private val articles: ArticleRepo,
     private val states: ArticleStateRepo,
 ) {

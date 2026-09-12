@@ -32,12 +32,12 @@ class IngestService(
     private val fetcher: FeedFetcher,
 ) {
     @Transactional
-    fun fetchAndIngest(userId: UUID, feedId: UUID) {
-        val feed = feeds.findByUserIdAndId(userId, feedId) ?: return
+    fun fetchAndIngest(feedId: UUID) {
+        val feed = feeds.findById(feedId).orElse(null) ?: return
         val meta = sync.meta(feedId)
         try {
             val result = fetcher.fetch(feed.xmlUrl, meta.first, meta.second)
-            applyResult(userId, feed, result.status, result.text, result.etag, result.lastModified)
+            applyResult(feed, result.status, result.text, result.etag, result.lastModified)
         } catch (err: IllegalStateException) {
             sync.saveError(feedId, err.message ?: "error")
         } catch (err: IllegalArgumentException) {
@@ -47,23 +47,21 @@ class IngestService(
 
     @Transactional
     fun pollFeed(feedId: UUID) {
-        val feed = feeds.findById(feedId).orElse(null) ?: return
-        fetchAndIngest(feed.userId, feedId)
+        fetchAndIngest(feedId)
     }
 
     @Transactional
-    fun ingestXml(userId: UUID, feed: FeedEntity, xml: String) {
+    fun ingestXml(feed: FeedEntity, xml: String) {
         val parsed = parseFeedXml(xml, System.currentTimeMillis())
         sync.maybeRename(feed, parsed.title)
         val links = parsed.items.mapNotNull { saveItem(feed, it) }
-        if (links.isNotEmpty()) maintenance.updatePopularity(userId, links.toTypedArray())
+        if (links.isNotEmpty()) maintenance.updatePopularity(links.toTypedArray())
         maintenance.updateLonelyHot(feed.id!!)
         maintenance.pruneFeed(feed.id!!, MAX_ARTICLES_PER_FEED)
         pending.applyForFeed(feed.id!!)
     }
 
     private fun applyResult(
-        userId: UUID,
         feed: FeedEntity,
         status: Int,
         text: String?,
@@ -75,7 +73,7 @@ class IngestService(
             return
         }
         if (text == null) return
-        ingestXml(userId, feed, text)
+        ingestXml(feed, text)
         sync.saveOk(feed.id!!, etag, lastModified)
     }
 

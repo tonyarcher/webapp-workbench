@@ -12,27 +12,28 @@ import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedRepo
 import rssapi.persist.FeedSyncRepo
 import rssapi.persist.FolderEntity
-import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
+import rssapi.persist.SubscriptionRepo
 
 @RestController
 class LibraryController(
-    private val user: CookieUser,
+    private val user: IdentityUser,
     private val folders: FolderRepo,
     private val feeds: FeedRepo,
-    private val memberships: FolderFeedRepo,
     private val sync: FeedSyncRepo,
     private val articles: ArticleRepo,
+    private val subs: SubscriptionRepo,
+    private val membershipService: MembershipService,
 ) {
     @GetMapping("/library")
     fun library(): LibraryJson {
         val uid = user.id
         val folderRows = folders.findByUserIdOrderBySortOrderAscCreatedAtAsc(uid)
-        val feedRows = feeds.findByUserIdOrderByAddedAtAsc(uid)
+        val feedRows = feeds.findAllById(subs.findFeedIdsByUserId(uid)).sortedBy { it.addedAt }
         return LibraryJson(
             folders = folderRows.map { it.toJson() },
             feeds = feedRows.map { feed ->
-                val fids = memberships.findByFeedId(feed.id!!).map { it.folderId.toString() }
+                val fids = membershipService.ownedFolderIds(uid, feed.id!!)
                 val st = sync.findById(feed.id!!).orElse(null)
                 feed.toJson(
                     fids,

@@ -12,20 +12,21 @@ import rssapi.persist.AffinityRepo
 import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
 import rssapi.persist.FolderEntity
-import rssapi.persist.FolderFeedEntity
-import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
 import rssapi.persist.PendingStateEntity
 import rssapi.persist.PendingStateRepo
+import rssapi.persist.SubscriptionEntity
+import rssapi.persist.SubscriptionRepo
 
 @Service
 class MigrateService(
     private val folders: FolderRepo,
     private val feeds: FeedRepo,
-    private val memberships: FolderFeedRepo,
     private val pending: PendingStateRepo,
     private val affinity: AffinityRepo,
     private val sync: IngestSync,
+    private val subs: SubscriptionRepo,
+    private val membershipService: MembershipService,
 ) {
     @Transactional
     fun run(userId: UUID, body: MigrateBody): MigrateResult {
@@ -33,7 +34,7 @@ class MigrateService(
         val feedMap = insertFeeds(userId, body.feeds, folderMap)
         val queued = insertStates(userId, body.states, feedMap)
         insertAffinity(userId, body.affinity)
-        feeds.findByUserIdOrderByAddedAtAsc(userId).forEach { sync.ensureRow(it.id!!) }
+        feedMap.values.forEach { sync.ensureRow(it) }
         return MigrateResult(feedMap.size, folderMap.size, queued)
     }
 
@@ -55,12 +56,15 @@ class MigrateService(
         val map = mutableMapOf<String, UUID>()
         rows?.forEach { f ->
             val title = f.title ?: hostTitleFor(f.url)
-            val row = feeds.findByUserIdAndXmlUrl(userId, f.url)
-                ?: feeds.save(FeedEntity(userId = userId, xmlUrl = f.url, title = title, siteUrl = f.siteUrl))
+            val row = feeds.findByXmlUrl(f.url)
+                ?: feeds.save(FeedEntity(xmlUrl = f.url, title = title, siteUrl = f.siteUrl))
+            if (!subs.existsByUserIdAndFeedId(userId, row.id!!)) {
+                subs.save(SubscriptionEntity(userId = userId, feedId = row.id!!))
+            }
             map[f.url] = row.id!!
             f.folderTitles?.forEach { t ->
                 val fid = folderMap[t] ?: return@forEach
-                memberships.save(FolderFeedEntity(folderId = fid, feedId = row.id!!))
+                membershipService.addMembership(fid, row.id!!)
             }
         }
         return map

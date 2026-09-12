@@ -81,6 +81,8 @@ services:
     environment:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/${POSTGRES_DB:-rss}
+      OAUTH_JWKS_URI: http://user-api:3000/oauth/jwks
+      OAUTH_ISSUER: ${OAUTH_ISSUER:-http://localhost/user-api}
     depends_on:
       postgres:
         condition: service_healthy
@@ -120,6 +122,8 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/stock
       PRICE_PROVIDER: ${PRICE_PROVIDER:-yahoo}
+      OAUTH_JWKS_URI: http://user-api:3000/oauth/jwks
+      OAUTH_ISSUER: ${OAUTH_ISSUER:-http://localhost/user-api}
     depends_on:
       postgres:
         condition: service_healthy
@@ -211,6 +215,7 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/users
       SERVICE: user-api
+      OAUTH_ISSUER: ${OAUTH_ISSUER:-http://localhost/user-api}
       WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
       WEBAUTHN_ORIGINS: ${WEBAUTHN_ORIGINS:-http://localhost,http://127.0.0.1}
     depends_on:

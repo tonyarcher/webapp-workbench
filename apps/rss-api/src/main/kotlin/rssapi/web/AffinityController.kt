@@ -8,12 +8,14 @@ import rssapi.persist.AffinityEntity
 import rssapi.persist.AffinityId
 import rssapi.persist.AffinityRepo
 import rssapi.persist.ArticleRepo
+import rssapi.persist.SubscriptionRepo
 
 @RestController
 class AffinityController(
-    private val user: CookieUser,
+    private val user: IdentityUser,
     private val articles: ArticleRepo,
     private val affinity: AffinityRepo,
+    private val subs: SubscriptionRepo,
 ) {
     @PostMapping("/affinity")
     fun add(@RequestBody body: AffinityBody): OkBody {
@@ -21,6 +23,7 @@ class AffinityController(
         val amount = body.amount
         if (articleId == null || amount == null) throw ApiException(400, "articleId and amount are required")
         val article = articles.findById(articleId).orElseThrow { ApiException(404, "Article not found") }
+        if (!subs.existsByUserIdAndFeedId(user.id, article.feedId)) throw ApiException(404, "Article not found")
         bump("aff:feed:${article.feedId}", amount)
         article.domain?.let { bump("aff:domain:$it", amount) }
         article.author?.let { bump("aff:author:${it.lowercase()}", amount) }
