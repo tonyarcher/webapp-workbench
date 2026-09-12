@@ -15,8 +15,13 @@ import {recomputeHotIfNeeded} from './db/db-query';
 
 // An OAuth callback (?code&state) must become tokens before anything reads
 // auth state, so the exchange runs before the shell boots. The shell already
-// upgraded during imports, so a success nudges it to re-read the session.
-const loggedIn = await finishLoginFromCallback().catch(() => false);
+// upgraded during imports, so both outcomes are delivered as events it
+// listens for: success re-reads the session, failure shows the reason.
+const loggedIn = await finishLoginFromCallback().catch((err: unknown) => {
+    const message = err instanceof Error && err.message ? err.message : 'Sign-in failed';
+    window.dispatchEvent(new CustomEvent('rss-auth-error', {detail: message}));
+    return false;
+});
 if (loggedIn) window.dispatchEvent(new CustomEvent('rss-auth-changed'));
 
 initTheme();

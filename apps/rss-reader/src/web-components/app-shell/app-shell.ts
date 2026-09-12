@@ -18,6 +18,7 @@ export class AppShell extends LitElement {
     @state() private resume: { view: string; id: string } | null = null;
     @state() private authed = hasSession();
     @state() private username: string | null = currentUsername();
+    @state() private authError = '';
 
     private readContext: { items: Article[]; index: number } | null = null;
     private unsubscribe?: () => void;
@@ -33,6 +34,7 @@ export class AppShell extends LitElement {
         window.addEventListener('keydown', this.onKeyDown);
         window.addEventListener('rss-auth-required', this.onAuthRequired);
         window.addEventListener('rss-auth-changed', this.onAuthChanged);
+        window.addEventListener('rss-auth-error', this.onAuthError);
     }
 
     override disconnectedCallback() {
@@ -40,8 +42,14 @@ export class AppShell extends LitElement {
         window.removeEventListener('keydown', this.onKeyDown);
         window.removeEventListener('rss-auth-required', this.onAuthRequired);
         window.removeEventListener('rss-auth-changed', this.onAuthChanged);
+        window.removeEventListener('rss-auth-error', this.onAuthError);
         this.unsubscribe?.();
     }
+
+    private onAuthError = (e: Event) => {
+        const detail = (e as CustomEvent<unknown>).detail;
+        this.authError = typeof detail === 'string' && detail ? detail : 'Sign-in failed';
+    };
 
     private onAuthChanged = () => {
         this.authed = hasSession();
@@ -53,7 +61,10 @@ export class AppShell extends LitElement {
     };
 
     private onSignIn = () => {
-        void startLogin();
+        this.authError = '';
+        startLogin().catch((err: unknown) => {
+            this.authError = err instanceof Error ? err.message : 'Sign-in failed';
+        });
     };
 
     private onSignOut = () => {
@@ -86,6 +97,7 @@ export class AppShell extends LitElement {
                     <h2>Sign in to read</h2>
                     <p class="muted">Your feeds live in your account. Sign in with the workbench identity service to continue.</p>
                     <button class="primary" @click=${this.onSignIn}>Sign in</button>
+                    ${this.authError ? html`<p class="error">${this.authError}</p>` : ''}
                 </div>
             </div>`;
     }

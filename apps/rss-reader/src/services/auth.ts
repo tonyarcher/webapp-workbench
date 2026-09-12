@@ -116,7 +116,9 @@ export async function finishLoginFromCallback(): Promise<boolean> {
     const verifier = sessionStorage.getItem(VERIFIER_KEY);
     sessionStorage.removeItem(STATE_KEY);
     sessionStorage.removeItem(VERIFIER_KEY);
-    if (!expected || expected !== params.state || !verifier) return false;
+    if (!expected || expected !== params.state || !verifier) {
+        throw new Error('Sign-in reply did not match this browser session. Try signing in again.');
+    }
     const tokens = await postToken({
         grant_type: 'authorization_code',
         code: params.code,
@@ -124,7 +126,7 @@ export async function finishLoginFromCallback(): Promise<boolean> {
         redirect_uri: redirectUri(),
         code_verifier: verifier,
     });
-    if (!tokens) return false;
+    if (!tokens) throw new Error('Sign-in was refused. Try signing in again.');
     storeTokens(tokens);
     return true;
 }

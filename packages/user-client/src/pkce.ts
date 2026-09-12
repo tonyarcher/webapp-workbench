@@ -1,3 +1,5 @@
+import {sha256Bytes} from './sha256.ts';
+
 const UNRESERVED = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
 
 export function randomVerifier(length = 64): string {
@@ -9,8 +11,10 @@ export function randomVerifier(length = 64): string {
 
 export async function challengeS256(verifier: string): Promise<string> {
     const data = new TextEncoder().encode(verifier);
-    const hash = await crypto.subtle.digest('SHA-256', data);
-    return bytesToB64url(new Uint8Array(hash));
+    // Plain-HTTP origins (LAN hosts) have no WebCrypto; same S256 either way.
+    const subtle = globalThis.crypto?.subtle;
+    const hash = subtle ? new Uint8Array(await subtle.digest('SHA-256', data)) : sha256Bytes(data);
+    return bytesToB64url(hash);
 }
 
 export function authorizeUrl(params: {

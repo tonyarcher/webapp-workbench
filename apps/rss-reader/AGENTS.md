@@ -30,6 +30,10 @@ Identity: `npm run dev -w user-api` (`:3004`, same port the Vite proxy uses).
   `app-shell` gates on a session and clears IndexedDB + query cache on sign-out
   or session death so cached articles never leak across accounts on one browser.
   Ingest skips IDB writes when the auth epoch changed mid-sync.
+- Plain-HTTP LAN origins have no WebCrypto: `user-client` falls back to its
+  built-in SHA-256 for the S256 challenge (same proof, no new dependency).
+  Every origin still needs its own `oauth_redirect_uris` row for client
+  `rss-reader` (production adds rows, not code).
 - The OAuth `redirect_uri` is the app root (`/rss-reader/` behind the gateway).
   It must match a row in `oauth_redirect_uris` for client `rss-reader`
   (production adds rows, not code). `npm run dev` on another origin needs its
