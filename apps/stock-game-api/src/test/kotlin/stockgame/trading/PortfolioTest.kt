@@ -1,9 +1,12 @@
 package stockgame.trading
 
 import java.time.Clock
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+
+private val PORTFOLIO_USER = UUID.fromString("00000000-0000-4000-8000-000000000001")
 
 class PortfolioTest {
     @Test
@@ -13,11 +16,17 @@ class PortfolioTest {
         val provider = FakeProvider(bars)
         val clock = Clock.systemUTC()
         val trading = TradingService(store, provider, clock, "fake")
-        trading.updateConfig(10_000_000, 0, "fake", 15, 0)
+        trading.updateConfig(PORTFOLIO_USER, 10_000_000, 0, "fake", 15, 0)
         trading.placeBackdatedTrade(
+            PORTFOLIO_USER,
             BackdatedRequest("AAPL", "buy", 10, bars[0].time, "market", null, null),
         )
-        val series = portfolioSeries(provider, trading.getConfig(), trading.listTrades(), bars[1].time)
+        val series = portfolioSeries(
+            provider,
+            trading.getConfig(PORTFOLIO_USER),
+            trading.listTrades(PORTFOLIO_USER),
+            bars[1].time,
+        )
         assertEquals(10_000_000, series.startingCashCents)
         assertTrue(series.points.size >= 2)
         val last = series.points.last()

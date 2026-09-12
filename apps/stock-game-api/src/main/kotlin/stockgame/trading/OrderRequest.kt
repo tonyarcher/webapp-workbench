@@ -1,5 +1,6 @@
 package stockgame.trading
 
+import java.util.UUID
 import stockgame.domain.Order
 import stockgame.domain.TradingError
 import stockgame.domain.asapExecuteAt
@@ -20,8 +21,8 @@ data class OrderRequest(
     val fillPriceSource: String?,
 )
 
-fun placeScheduled(store: GameStore, defaultProvider: String, req: OrderRequest, now: Long): Order {
-    val config = loadConfig(store, defaultProvider)
+fun placeScheduled(store: GameStore, defaultProvider: String, userId: UUID, req: OrderRequest, now: Long): Order {
+    val config = loadConfig(store, userId, defaultProvider)
     val executeAt = resolveExecuteAt(req.executeAt, config.quoteDelayMinutes, now)
     val source = req.fillPriceSource ?: defaultFillPriceSource(req.side)
     val expires = if (req.tif == "DAY") expiresAtForOrder(executeAt) else null
@@ -38,6 +39,7 @@ fun placeScheduled(store: GameStore, defaultProvider: String, req: OrderRequest,
             stopPrice = req.stopPrice,
             expiresAt = expires,
             fillPriceSource = source,
+            userId = userId,
         ),
     )
 }

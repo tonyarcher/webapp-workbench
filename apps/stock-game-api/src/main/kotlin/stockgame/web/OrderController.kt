@@ -25,12 +25,15 @@ data class PlaceOrderBody(
 data class OkBody(val ok: Boolean = true)
 
 @RestController
-class OrderController(private val trading: ObjectProvider<TradingService>) {
+class OrderController(
+    private val user: IdentityUser,
+    private val trading: ObjectProvider<TradingService>,
+) {
     @GetMapping("/orders")
     fun list(): List<Order> {
         val svc = trading.orOffline()
-        svc.executeDueOrders()
-        return svc.listOrders()
+        svc.executeDueOrders(user.id)
+        return svc.listOrders(user.id)
     }
 
     @PostMapping("/orders")
@@ -42,6 +45,7 @@ class OrderController(private val trading: ObjectProvider<TradingService>) {
         if (body.fillPriceSource != null) requireFillSource(body.fillPriceSource)
         requirePrices(orderType, body.limitPrice, body.stopPrice)
         return trading.orOffline().placeOrder(
+            user.id,
             OrderRequest(
                 symbol = symbol,
                 side = requireSide(body.side),
@@ -58,7 +62,7 @@ class OrderController(private val trading: ObjectProvider<TradingService>) {
 
     @PostMapping("/orders/{id}/cancel")
     fun cancel(@PathVariable id: Long): OkBody {
-        trading.orOffline().cancelOrder(id)
+        trading.orOffline().cancelOrder(user.id, id)
         return OkBody()
     }
 }

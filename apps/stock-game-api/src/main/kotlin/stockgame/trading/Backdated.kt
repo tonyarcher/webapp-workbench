@@ -1,6 +1,7 @@
 package stockgame.trading
 
 import java.time.Instant
+import java.util.UUID
 import stockgame.domain.Bar
 import stockgame.domain.GameConfig
 import stockgame.domain.Trade
@@ -19,20 +20,21 @@ fun placeBackdated(
     store: GameStore,
     provider: PriceProvider,
     defaultProvider: String,
+    userId: UUID,
     req: BackdatedRequest,
     now: Long,
 ): Trade {
-    val config = loadConfig(store, defaultProvider)
+    val config = loadConfig(store, userId, defaultProvider)
     if (req.at < config.startDate) {
         val start = Instant.ofEpochMilli(config.startDate)
         throw TradingError("Backdated trades before the game start date ($start) are not allowed")
     }
     val bar = findBar(provider, req.symbol, req.at)
     val price = fillPrice(bar, req)
-    validateSide(config, store.listTrades(), req, price, bar.time)
+    validateSide(config, store.listTrades(userId), req, price, bar.time)
     val delta = applyCommission(cashDelta(req.side, req.qty, price), config.commissionCentsPerTrade)
     return store.insertTrade(
-        NewTrade(req.symbol, req.side, req.qty, price, delta, "backdated", bar.time, now),
+        NewTrade(userId, req.symbol, req.side, req.qty, price, delta, "backdated", bar.time, now),
     )
 }
 

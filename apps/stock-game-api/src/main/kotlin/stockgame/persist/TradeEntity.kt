@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import java.util.UUID
 
 @Entity
 @Table(name = "trades")
@@ -13,6 +14,8 @@ class TradeEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
+    @Column(name = "user_id", nullable = false)
+    var userId: UUID = UUID(0, 0),
     var symbol: String = "",
     var side: String = "",
     var qty: Int = 0,

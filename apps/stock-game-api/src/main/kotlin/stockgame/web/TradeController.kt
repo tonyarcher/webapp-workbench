@@ -20,9 +20,12 @@ data class PlaceTradeBody(
 )
 
 @RestController
-class TradeController(private val trading: ObjectProvider<TradingService>) {
+class TradeController(
+    private val user: IdentityUser,
+    private val trading: ObjectProvider<TradingService>,
+) {
     @GetMapping("/trades")
-    fun list(): List<Trade> = trading.orOffline().listTrades()
+    fun list(): List<Trade> = trading.orOffline().listTrades(user.id)
 
     @PostMapping("/trades")
     fun place(@RequestBody body: PlaceTradeBody): Trade {
@@ -31,6 +34,7 @@ class TradeController(private val trading: ObjectProvider<TradingService>) {
         val orderType = requireOrderType(body.orderType ?: "market")
         requirePrices(orderType, body.limitPrice, body.stopPrice)
         return trading.orOffline().placeBackdatedTrade(
+            user.id,
             BackdatedRequest(
                 symbol = symbol,
                 side = requireSide(body.side),

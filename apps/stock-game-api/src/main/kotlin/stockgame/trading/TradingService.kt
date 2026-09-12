@@ -1,6 +1,8 @@
 package stockgame.trading
 
 import java.time.Clock
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import stockgame.domain.GameConfig
 import stockgame.domain.Order
@@ -14,41 +16,44 @@ class TradingService(
     private val clock: Clock,
     private val defaultProvider: String,
 ) {
-    private val inFlight = AtomicBoolean(false)
+    private val inFlight = ConcurrentHashMap<UUID, AtomicBoolean>()
 
-    fun getConfig(): GameConfig = loadConfig(store, defaultProvider)
+    fun getConfig(userId: UUID): GameConfig = loadConfig(store, userId, defaultProvider)
 
     fun updateConfig(
+        userId: UUID,
         startingCashCents: Long,
         startDate: Long,
         provider: String?,
         delay: Int?,
         commission: Int?,
     ): GameConfig {
-        val next = mergeConfig(getConfig(), startingCashCents, startDate, provider, delay, commission)
-        store.saveConfig(next)
+        val next = mergeConfig(getConfig(userId), startingCashCents, startDate, provider, delay, commission)
+        store.saveConfig(userId, next)
         return next
     }
 
-    fun listTrades(): List<Trade> = store.listTrades()
+    fun listTrades(userId: UUID): List<Trade> = store.listTrades(userId)
 
-    fun placeBackdatedTrade(req: BackdatedRequest): Trade =
-        placeBackdated(store, provider, defaultProvider, req, clock.millis())
+    fun placeBackdatedTrade(userId: UUID, req: BackdatedRequest): Trade =
+        placeBackdated(store, provider, defaultProvider, userId, req, clock.millis())
 
-    fun placeOrder(req: OrderRequest): Order = placeScheduled(store, defaultProvider, req, clock.millis())
+    fun placeOrder(userId: UUID, req: OrderRequest): Order =
+        placeScheduled(store, defaultProvider, userId, req, clock.millis())
 
-    fun listOrders(): List<Order> = store.listOrders()
+    fun listOrders(userId: UUID): List<Order> = store.listOrders(userId)
 
-    fun cancelOrder(orderId: Long) {
-        store.cancelOrder(orderId)
+    fun cancelOrder(userId: UUID, orderId: Long) {
+        store.cancelOrder(userId, orderId)
     }
 
-    fun executeDueOrders(now: Long = clock.millis()): Int {
-        if (!inFlight.compareAndSet(false, true)) return 0
+    fun executeDueOrders(userId: UUID, now: Long = clock.millis()): Int {
+        val flag = inFlight.computeIfAbsent(userId) { AtomicBoolean(false) }
+        if (!flag.compareAndSet(false, true)) return 0
         return try {
-            executeDue(store, provider, defaultProvider, now)
+            executeDue(store, provider, defaultProvider, userId, now)
         } finally {
-            inFlight.set(false)
+            flag.set(false)
         }
     }
 }
