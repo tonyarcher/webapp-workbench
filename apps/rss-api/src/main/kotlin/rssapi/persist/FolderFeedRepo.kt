@@ -9,4 +9,6 @@ interface FolderFeedRepo : JpaRepository<FolderFeedEntity, FolderFeedId> {
     fun deleteByFeedIdAndFolderIdIn(feedId: UUID, folderIds: Collection<UUID>)
     fun existsByFolderIdAndFeedId(folderId: UUID, feedId: UUID): Boolean
     fun findByFolderId(folderId: UUID): List<FolderFeedEntity>
+    fun findByFolderIdIn(folderIds: Collection<UUID>): List<FolderFeedEntity>
+    fun findByFeedIdIn(feedIds: Collection<UUID>): List<FolderFeedEntity>
 }

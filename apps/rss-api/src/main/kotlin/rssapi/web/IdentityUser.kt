@@ -1,5 +1,7 @@
 package rssapi.web
 
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.core.context.SecurityContextHolder
@@ -33,17 +35,43 @@ class IdentityUser(private val users: UserRepo) {
     private fun resolve(subject: String, name: String?): UserEntity {
         val existing = users.findBySubject(subject)
         if (existing != null) {
-            if (name != null && existing.username != name) {
-                existing.username = name
-                users.save(existing)
-            }
+            touch(existing, name)
             return existing
         }
         return try {
-            users.save(UserEntity(label = "identity", subject = subject, username = name))
+            users.save(
+                UserEntity(
+                    label = "identity",
+                    subject = subject,
+                    username = name,
+                    lastSeenAt = Instant.now(),
+                ),
+            )
         } catch (_: DataIntegrityViolationException) {
             // A parallel first request provisioned the same subject.
-            users.findBySubject(subject) ?: throw ApiException(500, "internal error")
+            val raced = users.findBySubject(subject) ?: throw ApiException(500, "internal error")
+            touch(raced, name)
+            return raced
         }
+    }
+
+    private fun touch(existing: UserEntity, name: String?) {
+        var dirty = false
+        if (name != null && existing.username != name) {
+            existing.username = name
+            dirty = true
+        }
+        val now = Instant.now()
+        val last = existing.lastSeenAt
+        if (last == null || Duration.between(last, now).toMillis() >= LAST_SEEN_TOUCH_MS) {
+            existing.lastSeenAt = now
+            dirty = true
+        }
+        if (dirty) users.save(existing)
+    }
+
+    companion object {
+        /** Throttle last-seen writes so every API call does not become a DB write. */
+        const val LAST_SEEN_TOUCH_MS = 60 * 60 * 1_000L
     }
 }

@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface FeedRepo : JpaRepository<FeedEntity, UUID> {
     fun findByXmlUrl(xmlUrl: String): FeedEntity?
+    fun findByXmlUrlIn(xmlUrls: Collection<String>): List<FeedEntity>
 }

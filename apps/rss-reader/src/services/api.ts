@@ -68,6 +68,10 @@ export async function getLibrary(): Promise<{ folders: Folder[]; feeds: Feed[] }
     return apiFetch('/library') as Promise<{ folders: Folder[]; feeds: Feed[] }>;
 }
 
+export async function getLibraryCounts(): Promise<{ counts: Record<string, number> }> {
+    return apiFetch('/library/counts') as Promise<{ counts: Record<string, number> }>;
+}
+
 // ---- folders ----
 
 export async function addFolder(title: string): Promise<Folder> {
@@ -177,18 +181,47 @@ export async function requestSync(scope?: 'all' | { feedIds: string[] }): Promis
 
 // ---- OPML ----
 
-export async function exportOpml(): Promise<string> {
-    const url = apiUrl('/opml');
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(res.statusText);
+async function apiFetchText(path: string, retried = false): Promise<string> {
+    const token = await getAccessToken();
+    if (!token) {
+        emitAuthRequired();
+        throw new AuthError();
+    }
+    const res = await fetch(apiUrl(path), {headers: {Authorization: `Bearer ${token}`}});
+    if (res.status === 401 && !retried) {
+        const next = await refreshTokens();
+        if (next) return apiFetchText(path, true);
+        emitAuthRequired();
+        throw new AuthError();
+    }
+    if (!res.ok) {
+        if (res.status === 401) {
+            emitAuthRequired();
+            throw new AuthError();
+        }
+        throw new Error(res.statusText);
+    }
     return res.text();
 }
 
-export async function importOpmlXml(xml: string): Promise<{ addedFeeds: number; addedFolders: number }> {
+export async function exportOpml(): Promise<string> {
+    return apiFetchText('/opml');
+}
+
+export interface OpmlImportResult {
+    addedFeeds: number;
+    addedFolders: number;
+    subscribedFeeds: number;
+    skippedFeeds: number;
+    folders: Folder[];
+    feeds: Feed[];
+}
+
+export async function importOpmlXml(xml: string): Promise<OpmlImportResult> {
     return apiFetch('/opml', {
         method: 'POST',
         body: JSON.stringify({xml}),
-    }) as Promise<{ addedFeeds: number; addedFolders: number }>;
+    }) as Promise<OpmlImportResult>;
 }
 
 // ---- migration ----

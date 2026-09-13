@@ -12,18 +12,26 @@ import rssapi.POLL_BATCH
 import rssapi.ingest.IngestService
 import rssapi.ingest.IngestSync
 import rssapi.log.log
+import rssapi.persist.FeedSyncEntity
 import rssapi.persist.FeedSyncRepo
+import rssapi.persist.SubscriptionRepo
 
 @Component
 class FeedPoller(
     private val ingest: IngestService,
     private val syncRows: FeedSyncRepo,
     private val sync: IngestSync,
+    private val subs: SubscriptionRepo,
 ) : DisposableBean {
     private val extra = ConcurrentLinkedQueue<UUID>()
     private val inFlight = AtomicBoolean(false)
     private val worker = Executors.newSingleThreadExecutor()
     @Volatile private var stopped = false
+
+    companion object {
+        /** Over-fetch due rows so inactive-only feeds do not crowd out active ones. */
+        const val OVERFETCH = 20
+    }
 
     fun queue(ids: List<UUID>) {
         extra.addAll(ids)
@@ -74,10 +82,25 @@ class FeedPoller(
         val maxAge = System.getenv("POLL_MAX_AGE_MS")?.toLongOrNull() ?: (15 * 60_000L)
         val cutoff = Instant.now().minusMillis(maxAge)
         val need = POLL_BATCH - forced.size
-        val extraDue = if (need > 0) {
-            syncRows.findDue(cutoff, org.springframework.data.domain.PageRequest.of(0, need)).map { it.feedId }
-        } else emptyList()
+        if (need <= 0) return forced.distinct()
+        val candidates = syncRows.findDue(
+            cutoff,
+            org.springframework.data.domain.PageRequest.of(0, need + OVERFETCH),
+        )
+        val eligible = candidates.filter { isEligible(it, Instant.now(), maxAge) }
+        val extraDue = eligible.take(need).map { it.feedId }
         return (forced + extraDue).distinct()
+    }
+
+    private fun isEligible(row: FeedSyncEntity, now: Instant, baseMs: Long): Boolean {
+        val maxSeen = try {
+            subs.findMaxLastSeenByFeedId(row.feedId)
+        } catch (_: RuntimeException) {
+            return true
+        }
+        val interval = FeedRecency.intervalFor(maxSeen, now, baseMs) ?: return false
+        val fetched = row.lastFetchedAt ?: return true
+        return fetched.isBefore(now.minusMillis(interval))
     }
 
     private fun pollOne(id: UUID) {

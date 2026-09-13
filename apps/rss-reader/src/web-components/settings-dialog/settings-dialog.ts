@@ -174,8 +174,9 @@ export class SettingsDialog extends LitElement {
         this.statusError = false;
         try {
             const xml = await file.text();
-            await importOpmlFile(xml);
-            this.status = 'Syncing imported feeds…';
+            const result = await importOpmlFile(xml);
+            const skipped = result.skippedFeeds > 0 ? ` (${result.skippedFeeds} skipped)` : '';
+            this.status = `Imported ${result.subscribedFeeds} new subscriptions${skipped}. Syncing articles…`;
             await syncAllFeeds((done, total) => {
                 this.status = `Syncing ${done + 1}/${total}…`;
             });

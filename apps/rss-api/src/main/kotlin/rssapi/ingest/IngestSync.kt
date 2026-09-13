@@ -48,6 +48,13 @@ class IngestSync(
         if (!sync.existsById(feedId)) sync.save(FeedSyncEntity(feedId = feedId))
     }
 
+    fun ensureRows(feedIds: List<UUID>) {
+        if (feedIds.isEmpty()) return
+        val have = sync.findAllById(feedIds).mapNotNull { it.feedId }.toSet()
+        val missing = feedIds.filter { it !in have }.map { FeedSyncEntity(feedId = it) }
+        if (missing.isNotEmpty()) sync.saveAll(missing)
+    }
+
     fun meta(feedId: UUID): Pair<String?, String?> {
         val row = sync.findById(feedId).orElse(null) ?: return null to null
         return row.etag to row.lastModified

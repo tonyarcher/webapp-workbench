@@ -692,6 +692,140 @@ assert(payload.states[1].read === false, 'migrate payload read=0 maps to false')
 assert(payload.affinity.length === 2, 'migrate payload filters aff: keys only');
 assert(payload.affinity.every((a) => a.key.startsWith('aff:')), 'migrate payload affinity keys start with aff:');
 
+// ---- OPML import/export route through the server library ----
+{
+    const {exportOpml, importOpmlXml} = await import('../src/services/api');
+    const shims = globalThis as Record<string, unknown>;
+    const seen: Array<{url: string; auth: string | null; body: string | null}> = [];
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = {dispatchEvent: () => false};
+    const store = (shims['localStorage'] as {setItem: (k: string, v: string) => void} | undefined);
+    store?.setItem('rss.auth.tokens', JSON.stringify({access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900}));
+    shims['fetch'] = async (url: unknown, init?: {headers?: Record<string, string>; body?: unknown}) => {
+        seen.push({url: String(url), auth: init?.headers?.['Authorization'] ?? null, body: typeof init?.body === 'string' ? init.body : null});
+        if (String(url).endsWith('/api/opml') && (init as {method?: string} | undefined)?.method !== 'GET' && seen.length === 1) {
+            return new Response(
+                JSON.stringify({
+                    addedFeeds: 2,
+                    addedFolders: 1,
+                    subscribedFeeds: 2,
+                    skippedFeeds: 0,
+                    folders: [{id: 'f1', title: 'Tech', createdAt: 0, sortOrder: 0}],
+                    feeds: [
+                        {id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: ['f1'], unread: 0, addedAt: 0},
+                        {id: 'b', title: 'B', url: 'https://b.example/rss', folderIds: [], unread: 0, addedAt: 0},
+                    ],
+                }),
+                {status: 200, headers: {'Content-Type': 'application/json'}},
+            );
+        }
+        return new Response('<opml></opml>', {status: 200, headers: {'Content-Type': 'text/xml'}});
+    };
+    try {
+        const imported = await importOpmlXml('<opml></opml>');
+        assert(imported.addedFeeds === 2 && imported.addedFolders === 1, 'OPML import returns server counts');
+        assert(imported.feeds.length === 2 && imported.folders.length === 1, 'OPML import returns names for instant paint');
+        assert(imported.feeds[0].folderIds.join(',') === 'f1', 'OPML import returns folder membership');
+        assert(seen[0]?.auth === 'Bearer test-access', 'OPML import sends the Bearer token');
+        assert(seen[0]?.body?.includes('<opml>') ?? false, 'OPML import posts the xml body');
+        const exported = await exportOpml();
+        assert(exported.includes('<opml>'), 'OPML export returns server xml');
+        assert(seen[1]?.auth === 'Bearer test-access', 'OPML export sends the Bearer token');
+    } finally {
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
+// ---- library fetch paints names first, badges after ----
+{
+    const {queryClient, libraryKey, fetchLibrary} = await import('../src/query');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = {dispatchEvent: () => false};
+    const store = (shims['localStorage'] as {setItem: (k: string, v: string) => void} | undefined);
+    store?.setItem('rss.auth.tokens', JSON.stringify({access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900}));
+    const order: string[] = [];
+    shims['fetch'] = async (url: unknown) => {
+        if (String(url).endsWith('/api/library/counts')) {
+            order.push('counts');
+            return new Response(JSON.stringify({counts: {a: 7}}), {status: 200, headers: {'Content-Type': 'application/json'}});
+        }
+        order.push('library');
+        return new Response(
+            JSON.stringify({
+                folders: [{id: 'f1', title: 'Tech', createdAt: 0, sortOrder: 0}],
+                feeds: [{id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: ['f1'], unread: 0, addedAt: 0}],
+            }),
+            {status: 200, headers: {'Content-Type': 'application/json'}},
+        );
+    };
+    try {
+        const merged = await fetchLibrary();
+        assert(order.join(',') === 'library,counts', 'library names fetch before counts');
+        assert(merged.feeds[0].unread === 7, 'library merges counts into badges');
+        const cached = queryClient.getQueryData(libraryKey) as {feeds: Array<{unread: number}>};
+        assert(cached.feeds[0].unread === 7, 'merged library survives in cache');
+
+        shims['fetch'] = async (url: unknown) => {
+            if (String(url).endsWith('/api/library/counts')) {
+                return new Response('boom', {status: 500});
+            }
+            return new Response(
+                JSON.stringify({
+                    folders: [],
+                    feeds: [{id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: [], unread: 0, addedAt: 0}],
+                }),
+                {status: 200, headers: {'Content-Type': 'application/json'}},
+            );
+        };
+        const fallback = await fetchLibrary();
+        assert(fallback.feeds[0].unread === 7, 'counts failure keeps previously seen badges');
+    } finally {
+        queryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
+// ---- mark-before posts the cutoff and resets the view ----
+{
+    const {markBeforeAction} = await import('../src/web-components/article-list/article-list-actions');
+    const {queryClient: markQueryClient} = await import('../src/query');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = {dispatchEvent: () => false};
+    const store = (shims['localStorage'] as {setItem: (k: string, v: string) => void} | undefined);
+    store?.setItem('rss.auth.tokens', JSON.stringify({access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900}));
+    const seen: Array<{url: string; body: string | null}> = [];
+    shims['fetch'] = async (url: unknown, init?: {body?: unknown}) => {
+        seen.push({url: String(url), body: typeof init?.body === 'string' ? init.body : null});
+        return new Response(JSON.stringify({ok: true}), {status: 200, headers: {'Content-Type': 'application/json'}});
+    };
+    try {
+        let resets = 0;
+        const host = {
+            view: {kind: 'all'},
+            hideRead: false,
+            reset: async () => {
+                resets += 1;
+            },
+            folderFeeds: () => [],
+        };
+        await markBeforeAction(host as never, 1_700_000_000_000);
+        assert(seen.length === 1 && seen[0].url.endsWith('/api/articles/read-before'), 'mark-before posts read-before');
+        assert(seen[0].body?.includes('1700000000000') ?? false, 'mark-before posts the cutoff');
+        assert(host.hideRead === true && resets === 1, 'mark-before hides read and resets the view');
+    } finally {
+        markQueryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
 // ---- image derivation (thumbnail without a dedicated column) ----
 assert(firstImageUrl('<p>hi</p><img src="https://img.example/a.jpg">') === 'https://img.example/a.jpg', 'firstImageUrl finds image in article content for card thumbnail');
 assert(firstImageUrl('<p>no img</p>') === undefined, 'firstImageUrl returns undefined when content has no image');

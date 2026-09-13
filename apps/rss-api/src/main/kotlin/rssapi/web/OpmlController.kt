@@ -6,24 +6,23 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-import rssapi.domain.OpmlFolder
-import rssapi.domain.OpmlNode
-import rssapi.domain.OpmlSource
 import rssapi.domain.escXml
-import rssapi.domain.parseOpml
-import rssapi.ingest.IngestSync
 import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
-import rssapi.persist.FolderEntity
-import rssapi.persist.FolderFeedEntity
 import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
-import rssapi.persist.SubscriptionEntity
 import rssapi.persist.SubscriptionRepo
 
 data class OpmlImportBody(val xml: String?)
 
-data class OpmlImportResult(val addedFeeds: Int, val addedFolders: Int)
+data class OpmlImportResult(
+    val addedFeeds: Int,
+    val addedFolders: Int,
+    val subscribedFeeds: Int = 0,
+    val skippedFeeds: Int = 0,
+    val folders: List<FolderJson> = emptyList(),
+    val feeds: List<FeedJson> = emptyList(),
+)
 
 @RestController
 class OpmlController(
@@ -31,8 +30,8 @@ class OpmlController(
     private val folders: FolderRepo,
     private val feeds: FeedRepo,
     private val memberships: FolderFeedRepo,
-    private val sync: IngestSync,
     private val subs: SubscriptionRepo,
+    private val importer: OpmlImportService,
     private val membershipService: MembershipService,
 ) {
     @GetMapping("/opml", produces = [MediaType.TEXT_XML_VALUE])
@@ -44,35 +43,7 @@ class OpmlController(
     @PostMapping("/opml")
     fun importOpml(@RequestBody body: OpmlImportBody): OpmlImportResult {
         val xml = body.xml ?: throw ApiException(400, "xml string is required")
-        val nodes = parseOpml(xml)
-        val counters = intArrayOf(0, 0)
-        walk(nodes, null, counters)
-        subs.findFeedIdsByUserId(user.id).forEach { sync.ensureRow(it) }
-        return OpmlImportResult(addedFeeds = counters[0], addedFolders = counters[1])
-    }
-
-    private fun walk(nodes: List<OpmlNode>, parentId: java.util.UUID?, counters: IntArray) {
-        for (node in nodes) {
-            if (node is OpmlFolder) {
-                val folder = folders.findByUserIdAndTitle(user.id, node.title)
-                    ?: folders.save(FolderEntity(userId = user.id, title = node.title))
-                counters[1] += 1
-                walk(node.children, folder.id, counters)
-            } else if (node is OpmlSource && node.xmlUrl.isNotEmpty()) {
-                addSource(node, parentId, counters)
-            }
-        }
-    }
-
-    private fun addSource(node: OpmlSource, parentId: java.util.UUID?, counters: IntArray) {
-        val feed = feeds.findByXmlUrl(node.xmlUrl)
-            ?: feeds.save(
-                FeedEntity(xmlUrl = node.xmlUrl, title = node.title, siteUrl = node.htmlUrl),
-            ).also { counters[0] += 1 }
-        if (!subs.existsByUserIdAndFeedId(user.id, feed.id!!)) {
-            subs.save(SubscriptionEntity(userId = user.id, feedId = feed.id!!))
-        }
-        if (parentId != null) membershipService.addMembership(parentId, feed.id!!)
+        return importer.run(user.id, xml)
     }
 
     private fun buildOpml(): String {

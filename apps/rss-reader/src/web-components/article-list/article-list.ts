@@ -2,8 +2,7 @@ import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
 import {createRef, ref, type Ref} from 'lit/directives/ref.js';
 import {Virtualizer} from '@tanstack/virtual-core';
-import {libraryKey, queryClient, QueryController} from '../../query';
-import {getLibrary} from '../../services/api';
+import {libraryKey, queryClient, QueryController, fetchLibrary} from '../../query';
 import {markBeforeAction, markShownReadAction, openArticleAction, toggleStarAction} from './article-list-actions';
 import {refreshFeed, refreshFolder, syncAllFeeds} from '../../mutations';
 import type {Article, ArticleSort, Feed, Folder, ListViewType, View} from '../../types';
@@ -76,7 +75,7 @@ export class ArticleList extends LitElement {
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
-        queryFn: () => getLibrary(),
+        queryFn: () => fetchLibrary(),
         refetchInterval: 60_000,
     }));
 
@@ -496,7 +495,12 @@ export class ArticleList extends LitElement {
 
     private async onMarkBefore(e: Event) {
         const cutoff = (e as CustomEvent<number | null>).detail;
-        await markBeforeAction(this as never, cutoff);
+        this.advancedOpen = false;
+        try {
+            await markBeforeAction(this as never, cutoff);
+        } catch (err) {
+            console.error('mark-before failed', err);
+        }
     }
 
     private viewRefreshKey(): string { return viewRefreshKeyOf(this.view); }

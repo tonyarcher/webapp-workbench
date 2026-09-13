@@ -1,8 +1,7 @@
 import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
-import {libraryKey, queryClient, QueryController} from '../../query';
+import {libraryKey, queryClient, QueryController, fetchLibrary} from '../../query';
 import {deleteFeed, deleteFolder, refreshFeed, refreshFolder, reorderFolders, setFeedFolderMembership, syncAllFeeds} from '../../mutations';
-import {getLibrary} from '../../services/api';
 import {navigate} from '../../router';
 import {loadTodaySettings, pruneTodaySettings, saveTodaySettings, type TodaySettings} from '../../services/today-settings';
 import type {MenuAnchor} from '../feed-menu/feed-menu';
@@ -99,7 +98,7 @@ export class SourceList extends LitElement {
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
-        queryFn: () => getLibrary(),
+        queryFn: () => fetchLibrary(),
         refetchInterval: 60_000,
     }));
 

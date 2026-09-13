@@ -20,4 +20,6 @@ class UserEntity(
     var createdAt: Instant = Instant.now(),
     var subject: String = "",
     var username: String? = null,
+    @Column(name = "last_seen_at")
+    var lastSeenAt: Instant? = null,
 )
