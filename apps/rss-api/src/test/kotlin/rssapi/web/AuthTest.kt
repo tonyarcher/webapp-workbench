@@ -108,7 +108,13 @@ class AuthTest {
 
     @Test
     fun knownSubjectSkipsInsert() {
-        val existing = UserEntity(id = UUID.randomUUID(), label = "identity", subject = "idp-2", username = "bob")
+        val existing = UserEntity(
+            id = UUID.randomUUID(),
+            label = "identity",
+            subject = "idp-2",
+            username = "bob",
+            lastSeenAt = java.time.Instant.now(),
+        )
         whenever(decoder.decode(any())).thenReturn(jwt("idp-2", "bob"))
         whenever(users.findBySubject("idp-2")).thenReturn(existing)
         whenever(folders.findByUserIdOrderBySortOrderAscCreatedAtAsc(any())).thenReturn(emptyList())
@@ -120,6 +126,33 @@ class AuthTest {
         }.andReturn()
         assertEquals(200, result.response.status)
         verify(users, org.mockito.kotlin.never()).save(any())
+    }
+
+    @Test
+    fun staleLastSeenIsTouched() {
+        val existing = UserEntity(
+            id = UUID.randomUUID(),
+            label = "identity",
+            subject = "idp-3",
+            username = "carol",
+            lastSeenAt = java.time.Instant.now().minusSeconds(2 * 60 * 60),
+        )
+        whenever(decoder.decode(any())).thenReturn(jwt("idp-3", "carol"))
+        whenever(users.findBySubject("idp-3")).thenReturn(existing)
+        whenever(users.save(any())).thenAnswer { it.getArgument<UserEntity>(0) }
+        whenever(folders.findByUserIdOrderBySortOrderAscCreatedAtAsc(any())).thenReturn(emptyList())
+        whenever(subs.findFeedIdsByUserId(any())).thenReturn(emptyList())
+        whenever(membershipService.ownedFolderIds(any(), any())).thenReturn(emptyList())
+        val oldSeen = existing.lastSeenAt!!
+
+        val result = mvc.get("/library") {
+            header("Authorization", "Bearer good")
+        }.andReturn()
+        assertEquals(200, result.response.status)
+
+        val captor = argumentCaptor<UserEntity>()
+        verify(users).save(captor.capture())
+        assertTrue(captor.firstValue.lastSeenAt!!.isAfter(oldSeen))
     }
 }
 

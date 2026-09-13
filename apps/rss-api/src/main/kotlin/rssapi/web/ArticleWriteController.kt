@@ -2,6 +2,7 @@ package rssapi.web
 
 import java.time.Instant
 import java.util.UUID
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
@@ -36,21 +37,23 @@ class ArticleWriteController(
     }
 
     @PostMapping("/articles/read-before")
+    @Transactional
     fun readBefore(@RequestBody body: ReadBeforeBody): OkBody {
         val cutoff = body.cutoff ?: throw ApiException(400, "cutoff (epoch ms) is required")
         if (body.feedIds != null && body.feedIds.any { !isUuid(it) }) {
             throw ApiException(400, "invalid feed id")
         }
         val ids = body.feedIds?.map { UUID.fromString(it) }
-        markRead(cutoffMs = cutoff, feedIds = ids, all = false)
+        markRead(feedIds = ids, cutoff = Instant.ofEpochMilli(cutoff))
         return OkBody()
     }
 
     @PostMapping("/articles/read-all")
+    @Transactional
     fun readAll(@RequestBody body: ReadAllBody?): OkBody {
         val feedId = body?.feedId
         if (feedId != null && !isUuid(feedId)) throw ApiException(400, "invalid feed id")
-        markRead(cutoffMs = null, feedIds = feedId?.let { listOf(UUID.fromString(it)) }, all = true)
+        markRead(feedIds = feedId?.let { listOf(UUID.fromString(it)) }, cutoff = null)
         return OkBody()
     }
 
@@ -71,13 +74,11 @@ class ArticleWriteController(
         states.save(row)
     }
 
-    private fun markRead(cutoffMs: Long?, feedIds: List<UUID>?, all: Boolean) {
+    private fun markRead(feedIds: List<UUID>?, cutoff: Instant?) {
         val userFeeds = subs.findFeedIdsByUserId(user.id)
         val allowed = if (feedIds.isNullOrEmpty()) userFeeds else feedIds.filter { it in userFeeds }
         if (allowed.isEmpty()) return
-        articles.findByFeedIdIn(allowed).forEach { article ->
-            if (!all && cutoffMs != null && article.publishedAt.toEpochMilli() >= cutoffMs) return@forEach
-            upsertState(article.id, read = true, starred = null)
-        }
+        if (cutoff == null) states.markReadAll(user.id, allowed)
+        else states.markReadBefore(user.id, allowed, cutoff)
     }
 }

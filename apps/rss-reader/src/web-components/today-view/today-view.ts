@@ -1,7 +1,7 @@
 import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, state} from 'lit/decorators.js';
-import {libraryKey, queryClient, QueryController} from '../../query';
-import {getLibrary, fetchArticlesPage} from '../../services/api';
+import {libraryKey, queryClient, QueryController, fetchLibrary} from '../../query';
+import {fetchArticlesPage} from '../../services/api';
 import {markArticleRead, markShownRead, toggleStar} from '../../mutations';
 import {articleImage, safeHttpUrl} from '../../services/parser';
 import {
@@ -39,7 +39,7 @@ export class TodayView extends LitElement {
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
-        queryFn: () => getLibrary(),
+        queryFn: () => fetchLibrary(),
         refetchInterval: 60_000,
     }));
 

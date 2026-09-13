@@ -12,14 +12,26 @@ fun parseOpmlNode(outline: Element): OpmlNode {
     val xmlUrl = outline.getAttribute("xmlUrl")
     val kids = outline.childOutlines()
     val title = outline.getAttribute("title").ifEmpty { outline.getAttribute("text") }.ifEmpty { "Untitled" }
-    if (xmlUrl.isNotEmpty() || kids.isEmpty()) {
+    if (kids.isEmpty()) {
         return OpmlSource(
             title = title,
             xmlUrl = xmlUrl,
             htmlUrl = outline.getAttribute("htmlUrl").ifEmpty { null },
         )
     }
-    return OpmlFolder(title = title, children = kids.map { parseOpmlNode(it) })
+    // A folder outline can carry its own feed URL and children; keep both.
+    val children = kids.map { parseOpmlNode(it) }.toMutableList<OpmlNode>()
+    if (xmlUrl.isNotEmpty()) {
+        children.add(
+            0,
+            OpmlSource(
+                title = title,
+                xmlUrl = xmlUrl,
+                htmlUrl = outline.getAttribute("htmlUrl").ifEmpty { null },
+            ),
+        )
+    }
+    return OpmlFolder(title = title, children = children)
 }
 
 private fun Element.childOutlines(): List<Element> {

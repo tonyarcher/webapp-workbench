@@ -24,4 +24,25 @@ interface ArticleRepo : JpaRepository<ArticleEntity, String>, JpaSpecificationEx
         """,
     )
     fun countUnread(@Param("feedId") feedId: UUID, @Param("userId") userId: UUID): Long
+
+    interface UnreadCount {
+        val feedId: UUID
+        val cnt: Long
+    }
+
+    @Query(
+        """
+        select a.feedId as feedId, count(a) as cnt from ArticleEntity a
+        where a.feedId in :feedIds
+          and not exists (
+            select 1 from ArticleStateEntity s
+            where s.articleId = a.id and s.userId = :userId and s.read = true
+          )
+        group by a.feedId
+        """,
+    )
+    fun countUnreadByFeed(
+        @Param("userId") userId: UUID,
+        @Param("feedIds") feedIds: Collection<UUID>,
+    ): List<UnreadCount>
 }

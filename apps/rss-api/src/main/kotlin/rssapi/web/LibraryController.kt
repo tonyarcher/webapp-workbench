@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.RestController
 import rssapi.domain.isUuid
 import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedRepo
+import rssapi.persist.FeedSyncEntity
 import rssapi.persist.FeedSyncRepo
 import rssapi.persist.FolderEntity
+import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
 import rssapi.persist.SubscriptionRepo
 
@@ -23,21 +25,48 @@ class LibraryController(
     private val sync: FeedSyncRepo,
     private val articles: ArticleRepo,
     private val subs: SubscriptionRepo,
-    private val membershipService: MembershipService,
+    private val memberships: FolderFeedRepo,
 ) {
+    /** Names and structure in a fixed handful of queries; never touches the articles table. */
     @GetMapping("/library")
     fun library(): LibraryJson {
         val uid = user.id
         val folderRows = folders.findByUserIdOrderBySortOrderAscCreatedAtAsc(uid)
-        val feedRows = feeds.findAllById(subs.findFeedIdsByUserId(uid)).sortedBy { it.addedAt }
+        val feedIds = subs.findFeedIdsByUserId(uid)
+        if (feedIds.isEmpty()) return LibraryJson(folderRows.map { it.toJson() }, emptyList())
+        return buildLibrary(folderRows, feedIds)
+    }
+
+    /** Unread badges, decoupled so the feed list paints without waiting on the articles table. */
+    @GetMapping("/library/counts")
+    fun counts(): LibraryCountsJson {
+        val uid = user.id
+        val feedIds = subs.findFeedIdsByUserId(uid)
+        val counts = unreadMap(uid, feedIds).mapKeys { it.key.toString() }.filterValues { it > 0 }
+        return LibraryCountsJson(counts)
+    }
+
+    private fun buildLibrary(
+        folderRows: List<FolderEntity>,
+        feedIds: List<UUID>,
+    ): LibraryJson {
+        val owned = folderRows.mapNotNull { it.id }.toSet()
+        val folderMap = if (owned.isEmpty()) {
+            emptyMap()
+        } else {
+            memberships.findByFeedIdIn(feedIds)
+                .filter { it.folderId in owned }
+                .groupBy({ it.feedId }, { it.folderId.toString() })
+        }
+        val syncs = syncMap(feedIds)
+        val feedRows = feeds.findAllById(feedIds).sortedBy { it.addedAt }
         return LibraryJson(
             folders = folderRows.map { it.toJson() },
             feeds = feedRows.map { feed ->
-                val fids = membershipService.ownedFolderIds(uid, feed.id!!)
-                val st = sync.findById(feed.id!!).orElse(null)
+                val st = syncs[feed.id]
                 feed.toJson(
-                    fids,
-                    articles.countUnread(feed.id!!, uid).toInt(),
+                    folderMap[feed.id] ?: emptyList(),
+                    0,
                     st?.lastFetchedAt?.toEpochMilli(),
                     st?.lastError,
                 )
@@ -45,6 +74,13 @@ class LibraryController(
         )
     }
 
+    private fun syncMap(feedIds: List<UUID>): Map<UUID, FeedSyncEntity> =
+        sync.findAllById(feedIds).associateBy { it.feedId }
+
+    private fun unreadMap(uid: UUID, feedIds: List<UUID>): Map<UUID, Int> {
+        if (feedIds.isEmpty()) return emptyMap()
+        return articles.countUnreadByFeed(uid, feedIds).associate { it.feedId to it.cnt.toInt() }
+    }
     @PostMapping("/folders")
     fun createFolder(@RequestBody body: TitleBody): FolderJson {
         val title = body.title?.trim() ?: throw ApiException(400, "title is required")

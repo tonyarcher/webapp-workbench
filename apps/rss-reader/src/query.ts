@@ -1,5 +1,6 @@
 import {QueryClient, QueryObserver, type QueryObserverResult} from '@tanstack/query-core';
 import type {ReactiveController, ReactiveControllerHost} from 'lit';
+import {getLibrary, getLibraryCounts} from './services/api';
 import type {Article, Feed, Folder} from './types';
 
 export const queryClient = new QueryClient({
@@ -18,6 +19,34 @@ export const queryClient = new QueryClient({
 
 export const libraryKey = ['library'] as const;
 export type LibraryData = { folders: Folder[]; feeds: Feed[] };
+
+/**
+ * Library fetch in two stages so the feed list paints without waiting on
+ * the articles table: names first (keeping previously seen badge counts so
+ * the 60s refetch does not flash badges to zero), unread badges merged after.
+ * Counts failures resolve with names only; badges fill in on the next refetch.
+ */
+export async function fetchLibrary(): Promise<LibraryData> {
+    const lib = await getLibrary();
+    const prev = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
+    const prevUnread = new Map((prev?.feeds ?? []).map((f) => [f.id, f.unread] as const));
+    const painted: LibraryData = {
+        folders: lib.folders,
+        feeds: lib.feeds.map((f) => ({...f, unread: prevUnread.get(f.id) ?? 0})),
+    };
+    queryClient.setQueryData(libraryKey, painted);
+    try {
+        const {counts} = await getLibraryCounts();
+        const merged: LibraryData = {
+            folders: painted.folders,
+            feeds: painted.feeds.map((f) => ({...f, unread: counts[f.id] ?? 0})),
+        };
+        queryClient.setQueryData(libraryKey, merged);
+        return merged;
+    } catch {
+        return painted;
+    }
+}
 
 export function articlesKey(params: {
     feedId?: string;
