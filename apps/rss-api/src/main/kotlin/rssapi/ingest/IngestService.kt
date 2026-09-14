@@ -55,7 +55,7 @@ class IngestService(
         val parsed = parseFeedXml(xml, System.currentTimeMillis())
         sync.maybeRename(feed, parsed.title)
         val links = parsed.items.mapNotNull { saveItem(feed, it) }
-        if (links.isNotEmpty()) maintenance.updatePopularity(links.toTypedArray())
+        if (links.isNotEmpty()) maintenance.updatePopularity(feed.id!!, links.toTypedArray())
         maintenance.updateLonelyHot(feed.id!!)
         maintenance.pruneFeed(feed.id!!, MAX_ARTICLES_PER_FEED)
         pending.applyForFeed(feed.id!!)

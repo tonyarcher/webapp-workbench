@@ -14,7 +14,7 @@ import {
 } from './services/api';
 import {createCoalescer} from './services/coalesce';
 import {allSyncKey} from './services/sync-keys';
-import {invalidateArticles, invalidateLibrary, updateArticlesInCache, libraryKey, queryClient, type LibraryData} from './query';
+import {invalidateArticles, invalidateLibrary, updateArticlesInCache, libraryKey, queryClient, bustCounts, type LibraryData} from './query';
 import type {Feed} from './types';
 
 // Elevator-button coalescing for refreshes: mashing Refresh joins the
@@ -96,8 +96,19 @@ export async function deleteFolder(folderId: string) {
 }
 
 export async function moveFeed(feedId: string, folderId: string | null) {
-    await apiSetFeedFolders(feedId, folderId ? [folderId] : []);
-    await invalidateLibrary();
+    // Optimistic: the row moves in this frame; the server confirms after.
+    const prev = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
+    if (prev) {
+        queryClient.setQueryData(libraryKey, {
+            ...prev,
+            feeds: prev.feeds.map((f) => (f.id === feedId ? {...f, folderIds: folderId ? [folderId] : []} : f)),
+        });
+    }
+    try {
+        await apiSetFeedFolders(feedId, folderId ? [folderId] : []);
+    } finally {
+        await invalidateLibrary();
+    }
 }
 
 export async function setFeedFolderMembership(feedId: string, folderIds: string[]) {
@@ -106,11 +117,25 @@ export async function setFeedFolderMembership(feedId: string, folderIds: string[
 }
 
 export async function reorderFolders(folderIds: string[]) {
-    await apiReorderFolders(folderIds);
-    await invalidateLibrary();
+    // Optimistic: folders reorder in this frame; the server confirms after.
+    const prev = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
+    if (prev) {
+        const order = new Map(folderIds.map((id, i) => [id, i] as const));
+        queryClient.setQueryData(libraryKey, {
+            ...prev,
+            folders: [...prev.folders].sort(
+                (a, b) => (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+            ),
+        });
+    }
+    try {
+        await apiReorderFolders(folderIds);
+    } finally {
+        await invalidateLibrary();
+    }
 }
 
-export async function markArticleRead(articleId: string) {
+export async function markArticleRead(articleId: string): Promise<boolean> {
     updateArticlesInCache(articleId, {read: 1});
     void recordAffinity(articleId, 1).catch(() => {});
     // Awaited so a subsequent unread-only refetch can't race this write.
@@ -118,27 +143,39 @@ export async function markArticleRead(articleId: string) {
         await updateArticleState([{id: articleId, read: true}]);
     } catch (err) {
         console.error('markArticleRead failed', err);
+        // Revert the optimistic paint: refetch truth instead of leaving a
+        // read-looking row the server never recorded.
+        await invalidateArticles();
+        bustCounts();
+        await invalidateLibrary();
+        return false;
     }
+    bustCounts();
     await invalidateLibrary();
+    return true;
 }
 
 /** The caller supplies the toggled value — it always has the article in hand,
  *  and no shared cache holds article pages to read the prior state from.
  *  The write is awaited: today-view chains its refetch on this resolving,
  *  so a fire-and-forget would let the GET re-show the old star state. */
-export async function toggleStar(articleId: string, nowStarred: boolean) {
+export async function toggleStar(articleId: string, nowStarred: boolean): Promise<boolean> {
     updateArticlesInCache(articleId, {starred: nowStarred});
     try {
         await updateArticleState([{id: articleId, starred: nowStarred}]);
     } catch (err) {
         console.error('toggleStar failed', err);
+        await invalidateArticles();
+        return false;
     }
     if (nowStarred) void recordAffinity(articleId, 4).catch(() => {});
+    return true;
 }
 
 export async function markAllRead(feedId?: string) {
     await apiReadAll(feedId);
     await invalidateArticles();
+    bustCounts();
     await invalidateLibrary();
 }
 
@@ -150,12 +187,15 @@ export async function markShownRead(articleIds: string[]) {
         await updateArticleState(articleIds.map((id) => ({id, read: true})));
     } catch (err) {
         console.error('markShownRead failed', err);
+        await invalidateArticles();
     }
+    bustCounts();
     await invalidateLibrary();
 }
 
 export async function markReadBefore(feedIds: string[] | undefined, cutoff: number) {
     await apiReadBefore(feedIds, cutoff);
     await invalidateArticles();
+    bustCounts();
     await invalidateLibrary();
 }

@@ -62,10 +62,14 @@ async function apiFetch(path: string, init?: RequestInit, retried = false): Prom
     return res.json() as Promise<unknown>;
 }
 
-// ---- library ----
+// ---- library (progressive: folders, then names, then badges) ----
 
-export async function getLibrary(): Promise<{ folders: Folder[]; feeds: Feed[] }> {
-    return apiFetch('/library') as Promise<{ folders: Folder[]; feeds: Feed[] }>;
+export async function getLibraryFolders(): Promise<{ folders: Folder[] }> {
+    return apiFetch('/library/folders') as Promise<{ folders: Folder[] }>;
+}
+
+export async function getLibraryFeeds(): Promise<{ feeds: Feed[] }> {
+    return apiFetch('/library/feeds') as Promise<{ feeds: Feed[] }>;
 }
 
 export async function getLibraryCounts(): Promise<{ counts: Record<string, number> }> {
