@@ -79,9 +79,9 @@ async function main() {
   const workspaces = [...workspacesFor(apps), ...unknown];
 
   if (workspaces.length === 0) {
-    const onlyGateway = apps.length > 0 && apps.every((app) => app.workspaces.length === 0);
-    if (onlyGateway) {
-      console.log("==> gateway has no npm workspace; use ./deploy.sh --build-only gateway");
+    if (apps.length > 0 && apps.every((app) => app.workspaces.length === 0)) {
+      const services = apps.map((app) => app.service).join(' ');
+      console.log(`==> ${names.join(', ')} has no npm workspace; use ./deploy.sh --build-only ${services}`);
       return 0;
     }
     throw new Error(`Nothing to build for: ${names.join(", ")}`);

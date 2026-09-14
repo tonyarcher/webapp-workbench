@@ -109,6 +109,13 @@ export const APPS = [
     summary: "Identity API (Kotlin / Ktor)",
   },
   {
+    id: "gitea",
+    service: "gitea",
+    workspaces: [],
+    aliases: ["gitea", "git"],
+    summary: "Gitea git + wiki (Docker only)",
+  },
+  {
     id: "gateway",
     service: "gateway",
     workspaces: [],
