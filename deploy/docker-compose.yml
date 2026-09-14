@@ -25,6 +25,8 @@
 #   user-web     - nginx static, accounts landing page under /auth/.
 #   user-api     - Kotlin/Ktor identity API under /user-api/
 #                  (prefix stripped by the gateway). Postgres database `users`.
+#   gitea        - Go git server + wiki under /git/ (prefix stripped by the gateway).
+#                  Postgres database `gitea`. SSH on the mapped host port (VPN only).
 # Each app listens on port 3000 internally; the gateway strips the prefix for
 # the static apps.
 
@@ -52,12 +54,17 @@ services:
       - fitness-api
       - user-web
       - user-api
+      - gitea
     restart: unless-stopped
     networks:
       - baseball
 
   postgres:
-    image: postgres:17-alpine
+    # Built from deploy/ so the init scripts bake into the image. Remote
+    # daemons cannot use host bind mounts, so COPY (like the gateway).
+    build:
+      context: .
+      dockerfile: postgres/Dockerfile
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-rss}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rss}
@@ -245,9 +252,43 @@ services:
     networks:
       - baseball
 
+  gitea:
+    # Pinned upstream forge. 1.27.x is a supported line; do not float to :latest.
+    image: gitea/gitea:1.27.3
+    environment:
+      USER_UID: '1000'
+      USER_GID: '1000'
+      GITEA__server__HTTP_PORT: '3000'
+      GITEA__server__SSH_LISTEN_PORT: '22'
+      GITEA__server__ROOT_URL: ${GITEA_ROOT_URL:-http://localhost/git/}
+      GITEA__server__SSH_DOMAIN: ${GITEA_SSH_DOMAIN:-localhost}
+      GITEA__server__SSH_PORT: ${GITEA_SSH_PORT:-2222}
+      GITEA__database__DB_TYPE: postgres
+      GITEA__database__HOST: postgres:5432
+      GITEA__database__NAME: gitea
+      GITEA__database__USER: ${POSTGRES_USER:-rss}
+      GITEA__database__PASSWD: ${POSTGRES_PASSWORD:-rss}
+      GITEA__database__SSL_MODE: disable
+      # Headless install: env seeds app.ini, Gitea migrates on boot, and the
+      # first registered user becomes admin. No web-installer step needed.
+      GITEA__security__INSTALL_LOCK: 'true'
+    volumes:
+      - gitea-data:/data
+    # SSH bypasses the gateway. Bind defaults to localhost; set GITEA_SSH_BIND
+    # to the VPN address (e.g. 10.13.13.1) or 0.0.0.0 behind a firewall.
+    ports:
+      - '${GITEA_SSH_BIND:-127.0.0.1}:${GITEA_SSH_PORT:-2222}:22'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - baseball
+
 networks:
   baseball:
     driver: bridge
 
 volumes:
   pgdata:
+  gitea-data:

@@ -6,6 +6,7 @@
 #   `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/fitness/`,
 #   and `/auth/` proxy to the matching app services with the prefix stripped
 #   (static nginx apps). `/user-api/` is the identity API (prefix stripped).
+#   `/git/` is Gitea git + wiki (prefix stripped; ROOT_URL carries the public subpath).
 #   `/tiktok-scroll/` 301s to `/clipstack/`.
 # - `/stock-game/` proxies to the static Stock Game SPA with the prefix stripped,
 #   like the other static apps. `/stock-game/api/` is the stock-game-api
@@ -113,6 +114,10 @@ server {
 
     location = /auth {
         return 301 /auth/$is_args$args;
+    }
+
+    location = /git {
+        return 301 /git/$is_args$args;
     }
 
     # RSS reader API (prefix stripped): JSON + poller backend. Must match
@@ -293,5 +298,23 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Gitea git + wiki (prefix stripped, like the other apps). Per the Gitea
+    # sub-path docs the proxy passes /git/foo as /foo; ROOT_URL still carries
+    # the public /git/ subpath for links. SSH bypasses the gateway on the
+    # mapped host port (VPN only).
+    location /git/ {
+        set $upstream_gitea http://gitea:3000;
+        rewrite ^/git/(.*)$ /$1 break;
+        proxy_pass $upstream_gitea;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 512m;
     }
 }

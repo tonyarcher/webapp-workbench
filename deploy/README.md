@@ -49,6 +49,7 @@ built from the `deploy/` context.
 | `/football/` | Football tracker (nginx static, prefix stripped) |
 | `/fitness/` | Fitness (nginx static, prefix stripped) |
 | `/fitness/api/` | Fitness API (Kotlin, prefix stripped). Creates Postgres database `fitness` on startup. |
+| `/git/` | Gitea git + wiki (prefix stripped, `ROOT_URL` carries `/git/`). SSH on the mapped host port via VPN. |
 
 The bare paths (e.g. `/stock-game`) redirect to their trailing-slash forms.
 Each app is served under its own subpath with the base baked in at build time
@@ -101,7 +102,7 @@ one place.
 ./deploy.sh --build-only lemmy
 ```
 
-Short names: `baseball`, `rss`, `stock`, `lemmy`, `clipstack`, `calendar`, `gateway`.
+Short names: `baseball`, `rss`, `stock`, `lemmy`, `clipstack`, `calendar`, `gateway`, `git`, `gitea`.
 
 A local `./build.sh rss` compiles that workspace on this machine. It is
 optional before deploy: each image already runs `npm install` / `npm run
@@ -197,3 +198,36 @@ build context so tunnel uploads stay small.
 
 Stock Game state lives in the `stock` Postgres database owned by
 `stock-game-api`. The nginx-served apps are stateless.
+
+## Gitea git + wiki
+
+Gitea runs at `/git/` behind the gateway and renders `README.md` and
+`AGENTS.md` in the web UI. Each repo has its own wiki. Use it to mirror
+GitHub repos for fast browsing.
+
+1. Fresh `pgdata` volumes create the `gitea` database via the baked-in
+   `deploy/postgres/initdb/10-gitea.sql` (the postgres image builds from
+   `deploy/`, like the gateway, because remote daemons cannot use host bind
+   mounts). Existing volumes need one manual step after postgres is up:
+   ```sh
+   docker compose -f deploy/docker-compose.yml up -d postgres
+   docker compose -f deploy/docker-compose.yml exec postgres psql -U ${POSTGRES_USER:-rss} -d postgres -c "SELECT 'CREATE DATABASE gitea' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'gitea')\gexec"
+   ```
+2. Set in `deploy/.env`:
+   ```
+   GITEA_ROOT_URL=https://<host>/git/
+   GITEA_SSH_DOMAIN=<vpn-host>
+   GITEA_SSH_BIND=<vpn-address>
+   GITEA_SSH_PORT=2222
+   ```
+   `GITEA_SSH_BIND` defaults to `127.0.0.1`. Set it to the VPN address
+   (e.g. `10.13.13.1`) or `0.0.0.0` behind a firewall, or VPN clients
+   cannot reach SSH.
+3. Deploy: `./deploy.sh gitea gateway`. Gitea migrates its database on
+   first boot (`INSTALL_LOCK` is true for a headless install: env seeds
+   `app.ini`, so no web-installer step is needed).
+4. Open `https://<host>/git/`. Register the first user — it becomes admin.
+   Mirror a GitHub repo (`New Migration` or `New Mirror`). Clone over
+   `ssh://git@<vpn-host>:2222/<user>/<repo>.git` from the VPN.
+5. Back up both the `gitea-data` volume (repos, wiki, attachments) and a
+   `pg_dump` of the `gitea` database. One without the other cannot restore.
