@@ -74,14 +74,21 @@ export class ArticleView extends LitElement {
         return html`<p class="content">No content available for this article.</p>`;
     }
 
-    private onStar() {
-        if (!this.article) return;
-        const next = !this.article.starred;
-        this.article = {...this.article, starred: next};
-        void toggleStar(this.article.id, next);
-        window.dispatchEvent(
-            new CustomEvent('article-starred', {detail: {id: this.article.id, starred: next}}),
-        );
+    private async onStar() {
+        const started = this.article;
+        if (!started) return;
+        const next = !started.starred;
+        this.article = {...started, starred: next};
+        if (await toggleStar(started.id, next)) {
+            window.dispatchEvent(
+                new CustomEvent('article-starred', {detail: {id: started.id, starred: next}}),
+            );
+        } else if (this.article?.id === started.id) {
+            this.article = {...started, starred: started.starred};
+            window.dispatchEvent(
+                new CustomEvent('article-starred', {detail: {id: started.id, starred: started.starred}}),
+            );
+        }
     }
 
     private shouldSkipSummarize(a: Article | null): boolean {

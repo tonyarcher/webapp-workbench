@@ -21,6 +21,10 @@ data class FeedJson(
 
 data class LibraryJson(val folders: List<FolderJson>, val feeds: List<FeedJson>)
 
+data class LibraryFoldersJson(val folders: List<FolderJson>)
+
+data class LibraryFeedsJson(val feeds: List<FeedJson>)
+
 data class LibraryCountsJson(val counts: Map<String, Int>)
 
 data class TitleBody(val title: String?)

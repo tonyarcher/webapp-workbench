@@ -68,7 +68,7 @@ export class FolderMenu extends LitElement {
         return html`
                   <label class="opt">
                     <input type="checkbox" .checked=${this.unreadOnly} @change=${this.onUnreadChange} />
-                    <span class="label" title="Only show feeds with unread articles">Unread only</span>
+                    <span class="label" title="Hide feeds with no new articles">Hide empty feeds</span>
                   </label>`;
     }
 

@@ -12,7 +12,9 @@ interface OpenHost {
 export async function openArticleAction(host: OpenHost, article: Article) {
     if (article.read === 0) {
         host.items = host.items.map((a) => (a.id === article.id ? {...a, read: 1} : a));
-        await markArticleRead(article.id);
+        if (!(await markArticleRead(article.id))) {
+            host.items = host.items.map((a) => (a.id === article.id ? {...a, read: 0} : a));
+        }
         void queryClient.invalidateQueries({queryKey: libraryKey});
     }
     const index = host.items.findIndex((a) => a.id === article.id);
@@ -23,7 +25,9 @@ export async function openArticleAction(host: OpenHost, article: Article) {
 export async function toggleStarAction(host: { items: Article[] }, article: Article) {
     const starred = !article.starred;
     host.items = host.items.map((a) => (a.id === article.id ? {...a, starred} : a));
-    await toggleStar(article.id, starred);
+    if (!(await toggleStar(article.id, starred))) {
+        host.items = host.items.map((a) => (a.id === article.id ? {...a, starred: article.starred} : a));
+    }
 }
 
 export async function markShownReadAction(host: { items: Article[]; hideRead: boolean; reset(): Promise<void> }) {

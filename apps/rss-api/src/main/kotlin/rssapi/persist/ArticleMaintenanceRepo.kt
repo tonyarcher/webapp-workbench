@@ -7,6 +7,12 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface ArticleMaintenanceRepo : JpaRepository<ArticleEntity, String> {
+    /**
+     * Refresh popularity/hot for this feed's rows only. The syndication count
+     * still sees every feed, but sibling feeds' rows wait for their own poll:
+     * at this scale they are stale already, and nobody reads a feed whose
+     * owner went quiet (see FeedRecency). One feed's writes per ingest.
+     */
     @Modifying
     @Query(
         value = """
@@ -20,11 +26,11 @@ interface ArticleMaintenanceRepo : JpaRepository<ArticleEntity, String> {
           WHERE norm_link = ANY(:links)
           GROUP BY norm_link
         ) sub
-        WHERE a.norm_link = sub.norm_link
+        WHERE a.norm_link = sub.norm_link AND a.feed_id = :feedId
         """,
         nativeQuery = true,
     )
-    fun updatePopularity(@Param("links") links: Array<String>)
+    fun updatePopularity(@Param("feedId") feedId: UUID, @Param("links") links: Array<String>)
 
     @Modifying
     @Query(

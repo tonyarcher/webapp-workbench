@@ -547,7 +547,7 @@ assert(perFeedLimit(0, 3) === 0, 'perFeedLimit zero pageSize returns 0');
 
   const failing = createCoalescer<string, number>();
   const bad = async () => {
-    throw new Error('boom');
+    throw new Error('coalesced job failed');
   };
   let badThrew = false;
   try {
@@ -738,51 +738,416 @@ assert(payload.affinity.every((a) => a.key.startsWith('aff:')), 'migrate payload
     }
 }
 
-// ---- library fetch paints names first, badges after ----
+// ---- library fetch paints folders, then names, then badges ----
 {
-    const {queryClient, libraryKey, fetchLibrary} = await import('../src/query');
+    const {queryClient, libraryKey, fetchLibrary, bustCounts} = await import('../src/query');
     const shims = globalThis as Record<string, unknown>;
     const realFetch = shims['fetch'];
     const realWindow = shims['window'];
+    const realSet = queryClient.setQueryData.bind(queryClient) as (...a: never[]) => unknown;
     shims['window'] = {dispatchEvent: () => false};
     const store = (shims['localStorage'] as {setItem: (k: string, v: string) => void} | undefined);
     store?.setItem('rss.auth.tokens', JSON.stringify({access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900}));
     const order: string[] = [];
+    const paints: Array<{folders: number; unread: Array<[string, number]>}> = [];
+    queryClient.setQueryData(libraryKey, {
+        folders: [],
+        feeds: [
+            {id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: [], unread: 5, addedAt: 0},
+            {id: 'z', title: 'Z', url: 'https://z.example/rss', folderIds: [], unread: 9, addedAt: 0},
+        ],
+    });
+    (queryClient as {setQueryData: (...a: never[]) => unknown}).setQueryData = (...a: never[]) => {
+        const out = realSet(...a);
+        const cur = queryClient.getQueryData(libraryKey) as {folders: unknown[]; feeds: Array<{id: string; unread: number}>};
+        paints.push({folders: cur.folders.length, unread: cur.feeds.map((f) => [f.id, f.unread])});
+        return out;
+    };
     shims['fetch'] = async (url: unknown) => {
-        if (String(url).endsWith('/api/library/counts')) {
+        const path = String(url);
+        if (path.endsWith('/api/library/counts')) {
             order.push('counts');
             return new Response(JSON.stringify({counts: {a: 7}}), {status: 200, headers: {'Content-Type': 'application/json'}});
         }
-        order.push('library');
+        if (path.endsWith('/api/library/feeds')) {
+            order.push('feeds');
+            return new Response(
+                JSON.stringify({
+                    feeds: [
+                        {id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: ['f1'], unread: 0, addedAt: 0},
+                        {id: 'b', title: 'B', url: 'https://b.example/rss', folderIds: [], unread: 0, addedAt: 0},
+                    ],
+                }),
+                {status: 200, headers: {'Content-Type': 'application/json'}},
+            );
+        }
+        order.push('folders');
         return new Response(
-            JSON.stringify({
-                folders: [{id: 'f1', title: 'Tech', createdAt: 0, sortOrder: 0}],
-                feeds: [{id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: ['f1'], unread: 0, addedAt: 0}],
-            }),
+            JSON.stringify({folders: [{id: 'f1', title: 'Tech', createdAt: 0, sortOrder: 0}]}),
             {status: 200, headers: {'Content-Type': 'application/json'}},
         );
     };
     try {
         const merged = await fetchLibrary();
-        assert(order.join(',') === 'library,counts', 'library names fetch before counts');
+        assert(order.join(',') === 'folders,feeds,counts', 'library fetches folders before names before counts');
+        assert(paints.length === 3, 'library paints three stages');
+        assert(paints[0].folders === 1 && paints[0].unread.length === 2, 'folders paint before feed names');
+        assert(JSON.stringify(paints[1].unread) === JSON.stringify([['a', 5], ['b', 0]]), 'names keep seen badges without flashing to zero');
         assert(merged.feeds[0].unread === 7, 'library merges counts into badges');
         const cached = queryClient.getQueryData(libraryKey) as {feeds: Array<{unread: number}>};
         assert(cached.feeds[0].unread === 7, 'merged library survives in cache');
 
         shims['fetch'] = async (url: unknown) => {
             if (String(url).endsWith('/api/library/counts')) {
-                return new Response('boom', {status: 500});
+                return new Response(JSON.stringify({error: 'internal error'}), {status: 500, headers: {'Content-Type': 'application/json'}});
             }
+            if (String(url).endsWith('/api/library/feeds')) {
+                return new Response(
+                    JSON.stringify({
+                        feeds: [
+                            {id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: [], unread: 0, addedAt: 0},
+                            {id: 'b', title: 'B', url: 'https://b.example/rss', folderIds: [], unread: 0, addedAt: 0},
+                        ],
+                    }),
+                    {status: 200, headers: {'Content-Type': 'application/json'}},
+                );
+            }
+            return new Response(JSON.stringify({folders: []}), {status: 200, headers: {'Content-Type': 'application/json'}});
+        };
+        const fallback = await (async () => {
+            bustCounts();
+            return fetchLibrary();
+        })();
+        assert(fallback.feeds.length === 2 && fallback.feeds[0].unread === 7, 'counts failure keeps seen badges');
+
+        shims['fetch'] = async (url: unknown) => {
+            if (String(url).endsWith('/api/library/folders')) {
+                return new Response(JSON.stringify({folders: []}), {status: 200, headers: {'Content-Type': 'application/json'}});
+            }
+            return new Response(JSON.stringify({error: 'internal error'}), {status: 500, headers: {'Content-Type': 'application/json'}});
+        };
+        queryClient.clear();
+        const rejects: boolean[] = [];
+        for (let i = 0; i < 2; i++) {
+            try {
+                await fetchLibrary();
+                rejects.push(false);
+            } catch {
+                rejects.push(true);
+            }
+        }
+        assert(rejects.join(',') === 'true,true', 'cold feeds failure rejects on first try and retry so Retry shows');
+
+        queryClient.setQueryData(libraryKey, {
+            folders: [],
+            feeds: [{id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: [], unread: 4, addedAt: 0}],
+        });
+        const warm = await fetchLibrary();
+        assert(warm.feeds.length === 1 && warm.feeds[0].unread === 4, 'warm feeds failure keeps painted feeds');
+
+        shims['fetch'] = async () => new Response(JSON.stringify({error: 'internal error'}), {status: 500, headers: {'Content-Type': 'application/json'}});
+        const warmFolders = await fetchLibrary();
+        assert(warmFolders.feeds.length === 1 && warmFolders.feeds[0].unread === 4, 'warm folders failure keeps painted library');
+    } finally {
+        (queryClient as {setQueryData: (...a: never[]) => unknown}).setQueryData = realSet;
+        queryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
+// ---- folder reorder paints optimistically ----
+{
+    const {queryClient, libraryKey} = await import('../src/query');
+    const {moveFeed, reorderFolders} = await import('../src/mutations');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = {dispatchEvent: () => false};
+    const store = (shims['localStorage'] as {setItem: (k: string, v: string) => void} | undefined);
+    store?.setItem('rss.auth.tokens', JSON.stringify({access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900}));
+    const seen: Array<{url: string; body: string | null}> = [];
+    shims['fetch'] = async (url: unknown, init?: {body?: unknown}) => {
+        seen.push({url: String(url), body: typeof init?.body === 'string' ? init.body : null});
+        return new Response(JSON.stringify({ok: true}), {status: 200, headers: {'Content-Type': 'application/json'}});
+    };
+    try {
+        queryClient.setQueryData(libraryKey, {
+            folders: [
+                {id: 'f1', title: 'A', createdAt: 0, sortOrder: 0},
+                {id: 'f2', title: 'B', createdAt: 1, sortOrder: 1},
+            ],
+            feeds: [{id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: [], unread: 0, addedAt: 0}],
+        });
+        await reorderFolders(['f2', 'f1']);
+        const ordered = queryClient.getQueryData(libraryKey) as {folders: Array<{id: string}>};
+        assert(ordered.folders.map((f) => f.id).join(',') === 'f2,f1', 'reorder paints the new order immediately');
+        assert(seen[0]?.url.endsWith('/api/folders/reorder') ?? false, 'reorder posts the order');
+        assert(seen[0]?.body?.includes('"f2","f1"') ?? false, 'reorder posts ids in drop order');
+
+        await moveFeed('a', 'f2');
+        const moved = queryClient.getQueryData(libraryKey) as {feeds: Array<{folderIds: string[]}>};
+        assert(moved.feeds[0].folderIds.join(',') === 'f2', 'feed move paints the new folder immediately');
+        assert(seen[1]?.url.endsWith('/api/feeds/a/folders') ?? false, 'feed move posts membership');
+    } finally {
+        queryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
+// ---- badge counts throttle to one aggregate per window ----
+{
+    const {queryClient, fetchLibrary, bustCounts} = await import('../src/query');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = {dispatchEvent: () => false};
+    const store = (shims['localStorage'] as {setItem: (k: string, v: string) => void} | undefined);
+    store?.setItem('rss.auth.tokens', JSON.stringify({access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900}));
+    let countsCalls = 0;
+    shims['fetch'] = async (url: unknown) => {
+        if (String(url).endsWith('/api/library/counts')) {
+            countsCalls += 1;
+            return new Response(JSON.stringify({counts: {}}), {status: 200, headers: {'Content-Type': 'application/json'}});
+        }
+        if (String(url).endsWith('/api/library/feeds')) {
+            return new Response(JSON.stringify({feeds: []}), {status: 200, headers: {'Content-Type': 'application/json'}});
+        }
+        return new Response(JSON.stringify({folders: []}), {status: 200, headers: {'Content-Type': 'application/json'}});
+    };
+    try {
+        bustCounts();
+        await fetchLibrary();
+        await fetchLibrary();
+        assert(countsCalls === 1, 'background refetches reuse fresh counts');
+        bustCounts();
+        await fetchLibrary();
+        assert(countsCalls === 2, 'read mutations bust counts for exact badges');
+    } finally {
+        queryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
+// ---- superseded counts fetch cannot overwrite post-mark badges ----
+{
+    const {queryClient, fetchLibrary, bustCounts} = await import('../src/query');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = {dispatchEvent: () => false};
+    const store = (shims['localStorage'] as {setItem: (k: string, v: string) => void} | undefined);
+    store?.setItem('rss.auth.tokens', JSON.stringify({access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900}));
+    const libBody = JSON.stringify({
+        folders: [],
+        feeds: [{id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: [], unread: 0, addedAt: 0}],
+    });
+    let resolveStale!: (v: Response) => void;
+    let firstCounts = true;
+    let countsCalls = 0;
+    shims['fetch'] = async (url: unknown) => {
+        const path = String(url);
+        if (path.endsWith('/api/library/counts')) {
+            countsCalls += 1;
+            if (firstCounts) {
+                firstCounts = false;
+                return new Promise<Response>((resolve) => {
+                    resolveStale = resolve;
+                });
+            }
+            return new Response(JSON.stringify({counts: {a: 4}}), {status: 200, headers: {'Content-Type': 'application/json'}});
+        }
+        return new Response(path.endsWith('/api/library/feeds') ? libBody : JSON.stringify({folders: []}), {
+            status: 200,
+            headers: {'Content-Type': 'application/json'},
+        });
+    };
+    const json = (counts: Record<string, number>) =>
+        new Response(JSON.stringify({counts}), {status: 200, headers: {'Content-Type': 'application/json'}});
+    try {
+        bustCounts();
+        const pendingA = fetchLibrary();
+        for (let i = 0; i < 20 && countsCalls === 0; i++) await new Promise((r) => setTimeout(r, 0));
+        assert(countsCalls === 1, 'stale fetch reaches the counts gate');
+        bustCounts();
+        const mergedB = await fetchLibrary();
+        assert(mergedB.feeds[0].unread === 4, 'post-mark refetch paints exact badges');
+        resolveStale(json({a: 5}));
+        await pendingA;
+        const cached = queryClient.getQueryData(['library']) as {feeds: Array<{unread: number}>};
+        assert(cached.feeds[0].unread === 4, 'late superseded fetch cannot overwrite badges');
+        bustCounts();
+        await fetchLibrary();
+        assert(countsCalls === 3, 'dropped fetch does not re-arm the throttle');
+    } finally {
+        queryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
+// ---- superseded feeds fetch cannot overwrite post-mark badges ----
+{
+    const {queryClient, fetchLibrary, bustCounts} = await import('../src/query');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = {dispatchEvent: () => false};
+    const store = (shims['localStorage'] as {setItem: (k: string, v: string) => void} | undefined);
+    store?.setItem('rss.auth.tokens', JSON.stringify({access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900}));
+    const feedA = JSON.stringify({
+        feeds: [{id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: [], unread: 0, addedAt: 0}],
+    });
+    let resolveStaleFeeds!: (v: Response) => void;
+    let firstFeeds = true;
+    let feedsCalls = 0;
+    shims['fetch'] = async (url: unknown) => {
+        const path = String(url);
+        if (path.endsWith('/api/library/feeds')) {
+            feedsCalls += 1;
+            if (firstFeeds) {
+                firstFeeds = false;
+                return new Promise<Response>((resolve) => {
+                    resolveStaleFeeds = resolve;
+                });
+            }
+            return new Response(feedA, {status: 200, headers: {'Content-Type': 'application/json'}});
+        }
+        if (path.endsWith('/api/library/counts')) {
+            return new Response(JSON.stringify({counts: {a: 4}}), {status: 200, headers: {'Content-Type': 'application/json'}});
+        }
+        return new Response(JSON.stringify({folders: []}), {status: 200, headers: {'Content-Type': 'application/json'}});
+    };
+    try {
+        queryClient.setQueryData(['library'], {
+            folders: [],
+            feeds: [{id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: [], unread: 5, addedAt: 0}],
+        });
+        bustCounts();
+        const pendingA = fetchLibrary();
+        for (let i = 0; i < 20 && feedsCalls === 0; i++) await new Promise((r) => setTimeout(r, 0));
+        assert(feedsCalls === 1, 'stale fetch reaches the feeds gate');
+        bustCounts();
+        const mergedB = await fetchLibrary();
+        assert(mergedB.feeds[0].unread === 4, 'post-mark refetch paints exact badges');
+        resolveStaleFeeds(new Response(feedA, {status: 200, headers: {'Content-Type': 'application/json'}}));
+        await pendingA;
+        const cached = queryClient.getQueryData(['library']) as {feeds: Array<{unread: number}>};
+        assert(cached.feeds[0].unread === 4, 'late superseded feeds paint cannot overwrite badges');
+    } finally {
+        queryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
+// ---- busted cold fetch restarts instead of stranding ----
+{
+    const {queryClient, libraryKey, fetchLibrary, bustCounts, invalidateLibrary, QueryController} = await import('../src/query');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = {dispatchEvent: () => false};
+    const store = (shims['localStorage'] as {setItem: (k: string, v: string) => void} | undefined);
+    store?.setItem('rss.auth.tokens', JSON.stringify({access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900}));
+    let resolveParkedFolders!: (v: Response) => void;
+    let firstFolders = true;
+    let foldersCalls = 0;
+    const jsonHeaders = {status: 200, headers: {'Content-Type': 'application/json'}};
+    shims['fetch'] = async (url: unknown) => {
+        const path = String(url);
+        if (path.endsWith('/api/library/folders')) {
+            foldersCalls += 1;
+            if (firstFolders) {
+                firstFolders = false;
+                return new Promise<Response>((resolve) => {
+                    resolveParkedFolders = resolve;
+                });
+            }
+            return new Response(JSON.stringify({folders: [{id: 'f1', title: 'Tech', createdAt: 0, sortOrder: 0}]}), jsonHeaders);
+        }
+        if (path.endsWith('/api/library/feeds')) {
             return new Response(
                 JSON.stringify({
-                    folders: [],
-                    feeds: [{id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: [], unread: 0, addedAt: 0}],
+                    feeds: [{id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: ['f1'], unread: 0, addedAt: 0}],
                 }),
-                {status: 200, headers: {'Content-Type': 'application/json'}},
+                jsonHeaders,
             );
-        };
-        const fallback = await fetchLibrary();
-        assert(fallback.feeds[0].unread === 7, 'counts failure keeps previously seen badges');
+        }
+        return new Response(JSON.stringify({counts: {a: 9}}), jsonHeaders);
+    };
+    const host = {addController(_: unknown) {}, requestUpdate() {}};
+    const ctl = new QueryController(host as never, () => ({queryKey: libraryKey, queryFn: () => fetchLibrary()}));
+    const wired = ctl as unknown as {hostConnected(): void; hostDisconnected(): void};
+    try {
+        queryClient.clear();
+        bustCounts();
+        wired.hostConnected();
+        for (let i = 0; i < 50 && foldersCalls === 0; i++) await new Promise((r) => setTimeout(r, 0));
+        assert(foldersCalls === 1, 'observer starts the cold fetch');
+        bustCounts();
+        await invalidateLibrary();
+        resolveParkedFolders(new Response(JSON.stringify({folders: []}), jsonHeaders));
+        for (let i = 0; i < 200; i++) {
+            const cur = queryClient.getQueryData(libraryKey) as {feeds: Array<{unread: number}>} | undefined;
+            if (cur && cur.feeds.length === 1 && cur.feeds[0].unread === 9) break;
+            await new Promise((r) => setTimeout(r, 0));
+        }
+        const cached = queryClient.getQueryData(libraryKey) as {feeds: Array<{unread: number}>};
+        assert(cached.feeds.length === 1 && cached.feeds[0].unread === 9, 'busted cold fetch restarts and paints exact badges');
+    } finally {
+        wired.hostDisconnected();
+        queryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
+// ---- overlapping fetches resolve last-starter-wins ----
+{
+    const {queryClient, fetchLibrary, bustCounts} = await import('../src/query');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = {dispatchEvent: () => false};
+    const store = (shims['localStorage'] as {setItem: (k: string, v: string) => void} | undefined);
+    store?.setItem('rss.auth.tokens', JSON.stringify({access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900}));
+    const feedAs = (title: string) =>
+        JSON.stringify({
+            feeds: [{id: 'a', title, url: 'https://a.example/rss', folderIds: [], unread: 0, addedAt: 0}],
+        });
+    let resolveStaleFeeds!: (v: Response) => void;
+    let firstFeeds = true;
+    const jsonHeaders = {status: 200, headers: {'Content-Type': 'application/json'}};
+    shims['fetch'] = async (url: unknown) => {
+        const path = String(url);
+        if (path.endsWith('/api/library/feeds')) {
+            if (firstFeeds) {
+                firstFeeds = false;
+                return new Promise<Response>((resolve) => {
+                    resolveStaleFeeds = resolve;
+                });
+            }
+            return new Response(feedAs('B-new'), jsonHeaders);
+        }
+        if (path.endsWith('/api/library/counts')) {
+            return new Response(JSON.stringify({counts: {}}), jsonHeaders);
+        }
+        return new Response(JSON.stringify({folders: []}), jsonHeaders);
+    };
+    try {
+        queryClient.clear();
+        bustCounts();
+        const pendingA = fetchLibrary();
+        for (let i = 0; i < 20 && firstFeeds; i++) await new Promise((r) => setTimeout(r, 0));
+        const mergedB = await fetchLibrary();
+        assert(mergedB.feeds[0].title === 'B-new', 'newer fetch paints');
+        resolveStaleFeeds(new Response(feedAs('A-stale'), jsonHeaders));
+        await pendingA;
+        const cached = queryClient.getQueryData(['library']) as {feeds: Array<{title: string}>};
+        assert(cached.feeds[0].title === 'B-new', 'older overlapping fetch paints nothing');
     } finally {
         queryClient.clear();
         shims['fetch'] = realFetch;
@@ -821,6 +1186,60 @@ assert(payload.affinity.every((a) => a.key.startsWith('aff:')), 'migrate payload
         assert(host.hideRead === true && resets === 1, 'mark-before hides read and resets the view');
     } finally {
         markQueryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
+// ---- markArticleRead reports success so opens can revert ----
+{
+    const {markArticleRead} = await import('../src/mutations');
+    const {queryClient: readQueryClient} = await import('../src/query');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = {dispatchEvent: () => false};
+    const store = (shims['localStorage'] as {setItem: (k: string, v: string) => void} | undefined);
+    store?.setItem('rss.auth.tokens', JSON.stringify({access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900}));
+    let fail = false;
+    shims['fetch'] = async () => {
+        if (fail) {
+            return new Response(JSON.stringify({error: 'internal error'}), {status: 500, headers: {'Content-Type': 'application/json'}});
+        }
+        return new Response(JSON.stringify({ok: true, updated: 1}), {status: 200, headers: {'Content-Type': 'application/json'}});
+    };
+    try {
+        assert((await markArticleRead('a:1')) === true, 'markArticleRead resolves true on success');
+        fail = true;
+        assert((await markArticleRead('a:2')) === false, 'markArticleRead resolves false when the write fails');
+
+        const {openArticleAction, toggleStarAction} = await import('../src/web-components/article-list/article-list-actions');
+        const openHost = {
+            items: [{id: 'a:1', feedId: 'a', guid: '1', title: 'A', published: 0, fetchedAt: 0, read: 0 as const, starred: false, popularity: 1, hot: 0}],
+            cursor: -1,
+            dispatchEvent() {
+                return false;
+            },
+            library: {},
+        };
+        fail = false;
+        await openArticleAction(openHost as never, openHost.items[0]);
+        assert(openHost.items[0].read === 1, 'successful open leaves the row read');
+        fail = true;
+        openHost.items[0].read = 0;
+        await openArticleAction(openHost as never, openHost.items[0]);
+        assert(openHost.items[0].read === 0, 'failed open reverts the row to unread');
+
+        const starHost = {items: [{...openHost.items[0], read: 1 as const, starred: false}]};
+        fail = false;
+        await toggleStarAction(starHost as never, starHost.items[0]);
+        assert(starHost.items[0].starred === true, 'successful star leaves the star on');
+        fail = true;
+        starHost.items[0].starred = false;
+        await toggleStarAction(starHost as never, starHost.items[0]);
+        assert(starHost.items[0].starred === false, 'failed star reverts to unstarred');
+    } finally {
+        readQueryClient.clear();
         shims['fetch'] = realFetch;
         shims['window'] = realWindow;
     }

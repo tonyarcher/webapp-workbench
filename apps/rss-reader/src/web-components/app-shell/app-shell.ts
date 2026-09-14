@@ -2,7 +2,7 @@ import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, state} from 'lit/decorators.js';
 import {history, parsePath} from '../../router';
 import {markArticleRead} from '../../mutations';
-import {queryClient} from '../../query';
+import {bustCounts, queryClient} from '../../query';
 import {clearClientDb} from '../../db/db';
 import {currentUsername, hasSession, logout, startLogin} from '../../services/auth';
 import type {Article, View} from '../../types';
@@ -74,6 +74,7 @@ export class AppShell extends LitElement {
     /** Drop the session and every trace of the account on this browser. */
     private resetAccount = () => {
         logout();
+        bustCounts();
         queryClient.clear();
         void clearClientDb().finally(() => {
             this.authed = false;
@@ -171,12 +172,12 @@ export class AppShell extends LitElement {
 
     private handleNext(e: KeyboardEvent, items: Article[], index: number) {
         e.preventDefault();
-        if (index < items.length - 1) this.openAt(index + 1);
+        if (index < items.length - 1) void this.openAt(index + 1);
     }
 
     private handlePrev(e: KeyboardEvent, index: number) {
         e.preventDefault();
-        if (index > 0) this.openAt(index - 1);
+        if (index > 0) void this.openAt(index - 1);
     }
 
     private handleClose(e: KeyboardEvent) {
@@ -184,15 +185,16 @@ export class AppShell extends LitElement {
         this.closeArticle();
     }
 
-    private openAt(index: number) {
+    private async openAt(index: number) {
         if (!this.readContext) return;
         const article = this.readContext.items[index];
         if (!article) return;
         this.readContext = {...this.readContext, index};
         this.article = article;
         this.resume = {view: JSON.stringify(this.route), id: article.id};
-        void markArticleRead(article.id);
-        window.dispatchEvent(new CustomEvent('article-read', {detail: article.id}));
+        if (await markArticleRead(article.id)) {
+            window.dispatchEvent(new CustomEvent('article-read', {detail: article.id}));
+        }
     }
 
     private onOpenArticle(e: Event) {

@@ -1,6 +1,6 @@
 import {QueryClient, QueryObserver, type QueryObserverResult} from '@tanstack/query-core';
 import type {ReactiveController, ReactiveControllerHost} from 'lit';
-import {getLibrary, getLibraryCounts} from './services/api';
+import {getLibraryCounts, getLibraryFeeds, getLibraryFolders} from './services/api';
 import type {Article, Feed, Folder} from './types';
 
 export const queryClient = new QueryClient({
@@ -21,30 +21,77 @@ export const libraryKey = ['library'] as const;
 export type LibraryData = { folders: Folder[]; feeds: Feed[] };
 
 /**
- * Library fetch in two stages so the feed list paints without waiting on
- * the articles table: names first (keeping previously seen badge counts so
- * the 60s refetch does not flash badges to zero), unread badges merged after.
- * Counts failures resolve with names only; badges fill in on the next refetch.
+ * Badges tolerate staleness (the counts aggregate scans the articles table),
+ * so background refetches reuse counts younger than this. Mutations that
+ * change read state call bustCounts() first so the next refetch is exact.
+ * Refresh-triggered badge changes converge on this window too: each feed is
+ * re-ingested on its own backoff schedule, so exactness was never instant.
+ */
+export const COUNTS_STALE_MS = 5 * 60_000;
+let lastCountsAt = 0;
+let fetchSeq = 0;
+
+export function bustCounts(): void {
+    lastCountsAt = 0;
+    fetchSeq += 1;
+}
+
+const cachedLibrary = () => queryClient.getQueryData(libraryKey) as LibraryData | undefined;
+
+/**
+ * Library fetch in three stages so the sidebar paints progressively: folders
+ * first, feed names next (keeping previously seen badge counts so the 60s
+ * refetch does not flash badges to zero), unread badges merged after.
+ * Contract: a stage that fails resolves with whatever painted so far, except
+ * when no feeds have painted yet — then it rejects so the Retry banner
+ * appears. Once a non-empty feed list has painted, later failures resolve
+ * with it. Overlapping fetches resolve last-starter-wins: a superseded
+ * response paints nothing.
  */
 export async function fetchLibrary(): Promise<LibraryData> {
-    const lib = await getLibrary();
-    const prev = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
+    const prev = cachedLibrary();
     const prevUnread = new Map((prev?.feeds ?? []).map((f) => [f.id, f.unread] as const));
-    const painted: LibraryData = {
-        folders: lib.folders,
-        feeds: lib.feeds.map((f) => ({...f, unread: prevUnread.get(f.id) ?? 0})),
-    };
-    queryClient.setQueryData(libraryKey, painted);
+    // Last starter wins: a newer fetch or a mark (via bustCounts) supersedes
+    // this one, so a late response can neither overwrite fresher badges nor
+    // re-arm the counts throttle.
+    const mySeq = ++fetchSeq;
+    const superseded = () => mySeq !== fetchSeq;
+    let folders: Folder[];
     try {
-        const {counts} = await getLibraryCounts();
-        const merged: LibraryData = {
-            folders: painted.folders,
-            feeds: painted.feeds.map((f) => ({...f, unread: counts[f.id] ?? 0})),
+        ({folders} = await getLibraryFolders());
+    } catch (err) {
+        if (!prev) throw err;
+        return prev;
+    }
+    const paintedFolders: LibraryData = {folders, feeds: prev?.feeds ?? []};
+    if (superseded()) return cachedLibrary() ?? paintedFolders;
+    queryClient.setQueryData(libraryKey, paintedFolders);
+    const hadFeeds = (prev?.feeds.length ?? 0) > 0;
+    try {
+        const {feeds} = await getLibraryFeeds();
+        if (superseded()) return cachedLibrary() ?? paintedFolders;
+        const paintedFeeds: LibraryData = {
+            folders,
+            feeds: feeds.map((f) => ({...f, unread: prevUnread.get(f.id) ?? 0})),
         };
-        queryClient.setQueryData(libraryKey, merged);
-        return merged;
-    } catch {
-        return painted;
+        queryClient.setQueryData(libraryKey, paintedFeeds);
+        if (Date.now() - lastCountsAt < COUNTS_STALE_MS) return paintedFeeds;
+        try {
+            const {counts} = await getLibraryCounts();
+            if (superseded()) return cachedLibrary() ?? paintedFeeds;
+            lastCountsAt = Date.now();
+            const merged: LibraryData = {
+                folders,
+                feeds: paintedFeeds.feeds.map((f) => ({...f, unread: counts[f.id] ?? 0})),
+            };
+            queryClient.setQueryData(libraryKey, merged);
+            return merged;
+        } catch {
+            return paintedFeeds;
+        }
+    } catch (err) {
+        if (!hadFeeds) throw err;
+        return paintedFolders;
     }
 }
 
@@ -126,7 +173,14 @@ export function updateArticlesInCache(articleId: string, patch: Partial<Article>
 }
 
 export function invalidateLibrary() {
-    return queryClient.invalidateQueries({queryKey: libraryKey});
+    // Cancel first: on a cold cache TanStack joins an in-flight fetch instead
+    // of restarting it, which would strand a bust-superseded queryFn with no
+    // replacement. Canceled fetches fail their generation checks and paint
+    // nothing; the invalidate below always starts a fresh one.
+    return (async () => {
+        await queryClient.cancelQueries({queryKey: libraryKey});
+        return queryClient.invalidateQueries({queryKey: libraryKey});
+    })();
 }
 
 export function invalidateArticles() {
