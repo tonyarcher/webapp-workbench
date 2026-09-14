@@ -228,6 +228,25 @@ export async function importOpmlXml(xml: string): Promise<OpmlImportResult> {
     }) as Promise<OpmlImportResult>;
 }
 
+// ---- server AI (admin provider setting; hidden when unavailable) ----
+
+export interface ServerAiStatus {
+    available: boolean;
+    provider: string;
+    model: string;
+}
+
+export async function aiStatus(): Promise<ServerAiStatus> {
+    return apiFetch('/ai/status') as Promise<ServerAiStatus>;
+}
+
+export async function requestServerSummary(title: string | undefined, text: string): Promise<{ summary: string }> {
+    return apiFetch('/ai/summarize', {
+        method: 'POST',
+        body: JSON.stringify({title, text}),
+    }) as Promise<{ summary: string }>;
+}
+
 // ---- migration ----
 
 export interface MigratePayload {
