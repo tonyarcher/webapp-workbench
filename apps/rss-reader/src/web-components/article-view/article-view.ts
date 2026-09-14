@@ -2,7 +2,7 @@ import {html, LitElement, unsafeCSS} from 'lit';
 import {unsafeHTML} from 'lit/directives/unsafe-html.js';
 import {customElement, property, state} from 'lit/decorators.js';
 import {sanitizeHtml, safeHttpUrl, stripHtml} from '../../services/parser';
-import {aiAvailability, aiStatusMessage, summarizeArticle} from '../../ai';
+import {summarizeBest} from '../../ai';
 import {toggleStar} from '../../mutations';
 import type {Article} from '../../types';
 import {domainOf, formatDate} from '../../util';
@@ -104,13 +104,6 @@ export class ArticleView extends LitElement {
         return true;
     }
 
-    private async ensureAiReady(): Promise<boolean> {
-        const availability = await aiAvailability();
-        if (availability === 'readily') return true;
-        this.aiError = aiStatusMessage(availability);
-        return false;
-    }
-
     private getSummarizeText(a: Article): string | null {
         const text = stripHtml(a.content ?? '') || a.summary || '';
         if (text.trim()) return text;
@@ -126,10 +119,9 @@ export class ArticleView extends LitElement {
         this.summarizing = true;
         this.aiError = '';
         try {
-            if (!(await this.ensureAiReady())) return;
             const text = this.getSummarizeText(a);
             if (!text) return;
-            const summary = await summarizeArticle(a.title, text.slice(0, MAX_SUMMARY_CHARS));
+            const summary = await summarizeBest(a.title, text.slice(0, MAX_SUMMARY_CHARS));
             if (this.article?.id !== a.id) return;
             summaryCache.set(a.id, summary);
             this.aiSummary = summary;

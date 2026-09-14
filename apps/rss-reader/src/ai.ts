@@ -298,3 +298,50 @@ export async function summarizeArticle(title: string, body: string): Promise<str
     ].join('\n');
     return runAiPrompt(prompt, systemPrompt);
 }
+
+let cachedServerAvailable: boolean | undefined;
+let serverProbeAt = 0;
+const SERVER_PROBE_TTL_MS = 60_000;
+
+/** Clears the cached server-AI probe (used by tests). */
+export function resetServerAi() {
+    cachedServerAvailable = undefined;
+    serverProbeAt = 0;
+}
+
+/** True when the admin configured a model host and it answers. Cached briefly. */
+export async function serverSummaryAvailable(): Promise<boolean> {
+    if (cachedServerAvailable !== undefined && Date.now() - serverProbeAt < SERVER_PROBE_TTL_MS) {
+        return cachedServerAvailable;
+    }
+    try {
+        const {aiStatus} = await import('./services/api');
+        cachedServerAvailable = (await aiStatus()).available;
+    } catch {
+        cachedServerAvailable = false;
+    }
+    serverProbeAt = Date.now();
+    return cachedServerAvailable;
+}
+
+/** Summarizes through the configured server model host. Throws on failure. */
+export async function summarizeWithServer(title: string, body: string): Promise<string> {
+    const {requestServerSummary} = await import('./services/api');
+    return (await requestServerSummary(title, body)).summary;
+}
+
+/**
+ * Best available summary: the server model when the admin configured one,
+ * otherwise the on-device model. A server failure falls back to local so a
+ * down model host never blocks reading.
+ */
+export async function summarizeBest(title: string, body: string): Promise<string> {
+    if (await serverSummaryAvailable()) {
+        try {
+            return await summarizeWithServer(title, body);
+        } catch {
+            // fall through to local
+        }
+    }
+    return summarizeArticle(title, body);
+}
