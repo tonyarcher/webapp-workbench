@@ -51,21 +51,21 @@ function validId(raw: string): string | null {
  */
 function tiktokVideoId(path: string): string | null {
     const share = path.match(/\/share\/video\/(\d{6,32})/)
-    if (share) return share[1]
+    if (share) return share[1] ?? null
     const video = path.match(/(?:^|\/)video\/(\d{6,32})/)
-    if (video) return video[1]
+    if (video) return video[1] ?? null
     const v = path.match(/(?:^|\/)v\/(\d{6,32})(?:\.html)?/i)
-    if (v) return validId(v[1])
+    if (v) return validId(v[1] ?? '')
     const embed = path.match(/\/embed\/v2\/(\d{6,32})/)
-    if (embed) return embed[1]
+    if (embed) return embed[1] ?? null
     const player = path.match(/\/player\/v1\/(\d{6,32})/)
-    if (player) return player[1]
+    if (player) return player[1] ?? null
     return null
 }
 
 function authorFromPath(path: string): string | null {
     const match = path.match(/\/@([^/]+)\//)
-    return match ? match[1] : null
+    return match ? match[1] ?? null : null
 }
 
 const IG_CODE_RE = /^[A-Za-z0-9_-]{5,64}$/
@@ -73,16 +73,18 @@ const IG_CODE_RE = /^[A-Za-z0-9_-]{5,64}$/
 function instagramShortcode(path: string): string | null {
     const normalized = path.replace(/\/+$/, '') || '/'
     const direct = normalized.match(/^\/(reel|reels|p)\/([A-Za-z0-9_-]{5,64})(?:\/|$)/)
-    if (direct && IG_CODE_RE.test(direct[2])) return direct[2]
+    const directCode = direct?.[2] ?? ''
+    if (direct && IG_CODE_RE.test(directCode)) return directCode
     const nested = normalized.match(/^\/[^/]+\/(reel|reels|p)\/([A-Za-z0-9_-]{5,64})(?:\/|$)/)
-    if (nested && IG_CODE_RE.test(nested[2])) return nested[2]
+    const nestedCode = nested?.[2] ?? ''
+    if (nested && IG_CODE_RE.test(nestedCode)) return nestedCode
     return null
 }
 
 function instagramAuthor(path: string): string | null {
     const nested = path.match(/^\/([^/]+)\/(reel|reels|p)\//)
     if (!nested) return null
-    const user = nested[1]
+    const user = nested[1] ?? null
     if (user === 'reel' || user === 'reels' || user === 'p' || user === 'share') return null
     return user
 }
@@ -188,7 +190,8 @@ export function parseLinkList(input: string): ParseResult {
     for (const line of input.split(/\r?\n/)) {
         const dateMatch = line.match(DATE_LINE)
         if (dateMatch) {
-            pending.date = dateMatch[1].trim()
+            const raw = dateMatch[1]
+            if (raw) pending.date = raw.trim()
             continue
         }
         processLine(line, pending, items, skipped, seenIds, seenSkipped)

@@ -68,7 +68,13 @@ export class WatchView extends LitElement {
         const itemIndex = this.links.findIndex((item) => item.id === linkId)
         if (itemIndex < 0) return
         const current = this.links[itemIndex]
-        const next: ClipLink = {...current, author: info.author ?? current.author, authorName: info.authorName ?? current.authorName, title: info.title ?? current.title, pageUrl: info.pageUrl ?? current.pageUrl, thumbnailUrl: info.thumbnailUrl ?? current.thumbnailUrl}
+        if (current === undefined) return
+        const next: ClipLink = {...current}
+        if (info.author !== undefined) next.author = info.author
+        if (info.authorName !== undefined) next.authorName = info.authorName
+        if (info.title !== undefined) next.title = info.title
+        if (info.pageUrl !== undefined) next.pageUrl = info.pageUrl
+        if (info.thumbnailUrl !== undefined) next.thumbnailUrl = info.thumbnailUrl
         const links = this.links.slice()
         links[itemIndex] = next
         this.links = links
@@ -100,7 +106,7 @@ export class WatchView extends LitElement {
         const target = watchedOEmbedIndex(index, this.links.length)
         if (target === null) return
         const link = this.links[target]
-        if (!this.shouldResolve(link)) return
+        if (link === undefined || !this.shouldResolve(link)) return
         this.resolveOne(link, this.resolveAbort.signal)
     }
 

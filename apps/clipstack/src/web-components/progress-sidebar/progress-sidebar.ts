@@ -32,7 +32,7 @@ export class ProgressSidebar extends LitElement {
 
     private onJump(event: Event): void {
         const button = event.currentTarget as HTMLButtonElement
-        const index = Number(button.dataset.index)
+        const index = Number(button.dataset['index'])
         if (Number.isNaN(index)) return
         this.dispatchEvent(new CustomEvent('jump', {detail: {index}, bubbles: true, composed: true}))
     }

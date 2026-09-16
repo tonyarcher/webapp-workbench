@@ -25,65 +25,65 @@ function assert(cond: unknown, msg: string): void {
 {
     const r = parseLinkList('https://www.tiktok.com/@a/video/111111\nhttps://www.tiktok.com/@b/video/222222')
     assert(r.items.length === 2, 'two playable per line')
-    assert(r.items[0].id === '111111', 'first id')
-    assert(r.items[1].id === '222222', 'second id')
+    assert(r.items[0]!.id === '111111', 'first id')
+    assert(r.items[1]!.id === '222222', 'second id')
 }
 
 // URL buried in junk text
 {
     const r = parseLinkList('Check this out: https://www.tiktok.com/@a/video/333333 — so good!')
     assert(r.items.length === 1, 'buried url parsed')
-    assert(r.items[0].id === '333333', 'buried url id')
+    assert(r.items[0]!.id === '333333', 'buried url id')
 }
 
 // CSV with header url,title and a url column
 {
     const r = parseLinkList('url,title\nhttps://www.tiktok.com/@a/video/444444,My video')
     assert(r.items.length === 1, 'csv url column parsed')
-    assert(r.items[0].id === '444444', 'csv url column id')
+    assert(r.items[0]!.id === '444444', 'csv url column id')
 }
 
 // quoted CSV field
 {
     const r = parseLinkList('"https://www.tiktok.com/@a/video/555555",other"')
     assert(r.items.length === 1, 'quoted csv field parsed')
-    assert(r.items[0].id === '555555', 'quoted csv field id')
+    assert(r.items[0]!.id === '555555', 'quoted csv field id')
 }
 
 // @user/video/{id} extracts author + id
 {
     const r = parseLinkList('https://www.tiktok.com/@cooluser/video/666666')
     assert(r.items.length === 1, 'author video parsed')
-    assert(r.items[0].id === '666666', 'author video id')
-    assert(r.items[0].author === 'cooluser', 'author extracted')
+    assert(r.items[0]!.id === '666666', 'author video id')
+    assert(r.items[0]!.author === 'cooluser', 'author extracted')
 }
 
 // m.tiktok.com/v/{id}.html
 {
     const r = parseLinkList('https://m.tiktok.com/v/777777.html')
     assert(r.items.length === 1, 'mobile v parsed')
-    assert(r.items[0].id === '777777', 'mobile v id')
+    assert(r.items[0]!.id === '777777', 'mobile v id')
 }
 
 // tiktok.com/embed/v2/{id}
 {
     const r = parseLinkList('https://www.tiktok.com/embed/v2/888888')
     assert(r.items.length === 1, 'embed v2 parsed')
-    assert(r.items[0].id === '888888', 'embed v2 id')
+    assert(r.items[0]!.id === '888888', 'embed v2 id')
 }
 
 // tiktok.com/player/v1/{id}
 {
     const r = parseLinkList('https://www.tiktok.com/player/v1/999999')
     assert(r.items.length === 1, 'player v1 parsed')
-    assert(r.items[0].id === '999999', 'player v1 id')
+    assert(r.items[0]!.id === '999999', 'player v1 id')
 }
 
 // query-string junk on a video URL still extracts id
 {
     const r = parseLinkList('https://www.tiktok.com/@a/video/101010?lang=en&share_token=abc')
     assert(r.items.length === 1, 'query junk parsed')
-    assert(r.items[0].id === '101010', 'query junk id')
+    assert(r.items[0]!.id === '101010', 'query junk id')
 }
 
 // short links skipped
@@ -99,7 +99,7 @@ function assert(cond: unknown, msg: string): void {
     const r = parseLinkList('https://www.tiktok.com/@user/photo/123')
     assert(r.items.length === 0, 'photo not playable')
     assert(r.skipped.length === 1, 'photo skipped')
-    assert(r.skipped[0].reason === 'no-id', 'photo reason no-id')
+    assert(r.skipped[0]!.reason === 'no-id', 'photo reason no-id')
 }
 
 // non-tiktok skipped
@@ -107,14 +107,14 @@ function assert(cond: unknown, msg: string): void {
     const r = parseLinkList('https://example.com/x')
     assert(r.items.length === 0, 'non-tiktok not playable')
     assert(r.skipped.length === 1, 'non-tiktok skipped')
-    assert(r.skipped[0].reason === 'unsupported', 'unsupported host reason')
+    assert(r.skipped[0]!.reason === 'unsupported', 'unsupported host reason')
 }
 
 // duplicate video id kept once (first)
 {
     const r = parseLinkList('https://www.tiktok.com/@a/video/121212\nhttps://www.tiktok.com/@b/video/121212')
     assert(r.items.length === 1, 'duplicate id deduped')
-    assert(r.items[0].author === 'a', 'first author kept')
+    assert(r.items[0]!.author === 'a', 'first author kept')
 }
 
 // order preserved
@@ -136,7 +136,7 @@ function assert(cond: unknown, msg: string): void {
 {
     const r = parseLinkList('https://www.tiktok.com/@u/video/161616,')
     assert(r.items.length === 1, 'trailing comma parsed')
-    assert(r.items[0].id === '161616', 'trailing comma id')
+    assert(r.items[0]!.id === '161616', 'trailing comma id')
 }
 
 // official data-export Like List (tiktokv.com/share/video/{id} + Date: line)
@@ -146,11 +146,11 @@ function assert(cond: unknown, msg: string): void {
     )
     assert(r.items.length === 2, 'export two playable')
     assert(r.skipped.length === 0, 'export none skipped')
-    assert(r.items[0].id === '7450092027154566446', 'export first id')
-    assert(r.items[0].url === 'https://www.tiktokv.com/share/video/7450092027154566446/', 'export keeps share url')
-    assert(r.items[0].date === '2026-06-07 01:25:56 UTC', 'export date attached')
-    assert(r.items[1].id === '7454316961237978411', 'export second id')
-    assert(r.items[1].date === '2026-06-07 00:57:49 UTC', 'export second date')
+    assert(r.items[0]!.id === '7450092027154566446', 'export first id')
+    assert(r.items[0]!.url === 'https://www.tiktokv.com/share/video/7450092027154566446/', 'export keeps share url')
+    assert(r.items[0]!.date === '2026-06-07 01:25:56 UTC', 'export date attached')
+    assert(r.items[1]!.id === '7454316961237978411', 'export second id')
+    assert(r.items[1]!.date === '2026-06-07 00:57:49 UTC', 'export second date')
 }
 
 // Date: before a skipped short-link must not stamp the next playable item
@@ -159,15 +159,15 @@ function assert(cond: unknown, msg: string): void {
         'Date: 2026-01-01 00:00:00 UTC\nLink: https://vm.tiktok.com/ZMxxxx/\nLink: https://www.tiktok.com/@a/video/123456',
     )
     assert(r.items.length === 1, 'short-link then playable')
-    assert(r.skipped.length === 1 && r.skipped[0].reason === 'short-link', 'short-link skipped')
-    assert(r.items[0].date === undefined, 'date consumed by skipped link')
+    assert(r.skipped.length === 1 && r.skipped[0]!.reason === 'short-link', 'short-link skipped')
+    assert(r.items[0]!.date === undefined, 'date consumed by skipped link')
 }
 
 // bare tiktokv share url (no Date line) still kept
 {
     const r = parseLinkList('https://www.tiktokv.com/share/video/7648217925408607502/')
     assert(r.items.length === 1, 'bare share playable')
-    assert(r.items[0].url === 'https://www.tiktokv.com/share/video/7648217925408607502/', 'bare share kept')
+    assert(r.items[0]!.url === 'https://www.tiktokv.com/share/video/7648217925408607502/', 'bare share kept')
 }
 
 // Instagram reel + /p/ + nested user path
@@ -176,9 +176,9 @@ function assert(cond: unknown, msg: string): void {
         'https://www.instagram.com/reel/CxYz123AbCd/\nhttps://www.instagram.com/p/AbCdEfGhIjK/\nhttps://www.instagram.com/someone/reel/LmNoPqRsTuV/',
     )
     assert(r.items.length === 3, 'three instagram playable')
-    assert(r.items[0].provider === 'instagram' && r.items[0].id === 'CxYz123AbCd', 'reel id')
-    assert(r.items[1].provider === 'instagram' && r.items[1].id === 'AbCdEfGhIjK', 'p id')
-    assert(r.items[2].author === 'someone' && r.items[2].id === 'LmNoPqRsTuV', 'user/reel author')
+    assert(r.items[0]!.provider === 'instagram' && r.items[0]!.id === 'CxYz123AbCd', 'reel id')
+    assert(r.items[1]!.provider === 'instagram' && r.items[1]!.id === 'AbCdEfGhIjK', 'p id')
+    assert(r.items[2]!.author === 'someone' && r.items[2]!.id === 'LmNoPqRsTuV', 'user/reel author')
 }
 
 // mixed TikTok + Instagram list
@@ -187,7 +187,7 @@ function assert(cond: unknown, msg: string): void {
         'https://www.tiktok.com/@a/video/202020\nhttps://www.instagram.com/reel/MixEdClip01/',
     )
     assert(r.items.length === 2, 'mixed list length')
-    assert(r.items[0].provider === 'tiktok' && r.items[1].provider === 'instagram', 'mixed providers')
+    assert(r.items[0]!.provider === 'tiktok' && r.items[1]!.provider === 'instagram', 'mixed providers')
 }
 
 // Instagram short links skipped
@@ -201,7 +201,7 @@ function assert(cond: unknown, msg: string): void {
 {
     const r = parseLinkList('{"saved_saved_media":[{"string_list_data":[{"href":"https://www.instagram.com/reel/JsonCode01/"}]}]}')
     assert(r.items.length === 1, 'json href parsed')
-    assert(r.items[0].id === 'JsonCode01', 'json href id')
+    assert(r.items[0]!.id === 'JsonCode01', 'json href id')
 }
 
 // Date: still stamps the next Instagram URL
@@ -309,11 +309,11 @@ function assert(cond: unknown, msg: string): void {
     }
     const roundTrip = parseSession(serializeSession(session))
     assert(roundTrip !== null, 'session parses')
-    assert(roundTrip?.items[0].id === '1', 'session item id')
-    assert(roundTrip?.items[0].date === '2026-01-01', 'session date kept')
-    assert(roundTrip?.items[0].thumbnailUrl === 'https://example.com/t.jpg', 'thumbnail kept')
+    assert(roundTrip?.items[0]!.id === '1', 'session item id')
+    assert(roundTrip?.items[0]!.date === '2026-01-01', 'session date kept')
+    assert(roundTrip?.items[0]!.thumbnailUrl === 'https://example.com/t.jpg', 'thumbnail kept')
     assert(roundTrip?.activeIndex === 12, 'session index')
-    assert(roundTrip?.skipped[0].reason === 'short-link', 'session skipped')
+    assert(roundTrip?.skipped[0]!.reason === 'short-link', 'session skipped')
     assert(parseSession(null) === null, 'empty session')
     assert(parseSession('{') === null, 'corrupt session')
     assert(parseSession('{"version":1,"items":[]}') === null, 'empty items rejected')
