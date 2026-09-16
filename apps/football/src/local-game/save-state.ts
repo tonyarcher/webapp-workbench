@@ -43,48 +43,48 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isLocalGameSetup(value: unknown): value is LocalGameSetup {
     if (!isRecord(value)) return false;
     return (
-        typeof value.homeName === 'string' &&
-        typeof value.awayName === 'string' &&
-        (value.rulebookId === 'nfl' ||
-            value.rulebookId === 'ncaa' ||
-            value.rulebookId === 'nfhs-mn' ||
-            value.rulebookId === 'nfhs-co') &&
-        (value.receivingTeam === 'home' || value.receivingTeam === 'away')
+        typeof value['homeName'] === 'string' &&
+        typeof value['awayName'] === 'string' &&
+        (value['rulebookId'] === 'nfl' ||
+            value['rulebookId'] === 'ncaa' ||
+            value['rulebookId'] === 'nfhs-mn' ||
+            value['rulebookId'] === 'nfhs-co') &&
+        (value['receivingTeam'] === 'home' || value['receivingTeam'] === 'away')
     );
 }
 
 function isScoringEvent(value: unknown): value is ScoringEvent {
-    if (!isRecord(value) || typeof value.type !== 'string') return false;
-    return (SCORING_EVENT_TYPES as readonly string[]).includes(value.type);
+    if (!isRecord(value) || typeof value['type'] !== 'string') return false;
+    return (SCORING_EVENT_TYPES as readonly string[]).includes(value['type']);
 }
 
 function isLocalGameEventRecord(value: unknown): value is LocalGameEventRecord {
     if (!isRecord(value)) return false;
     return (
-        typeof value.id === 'number' &&
-        typeof value.occurredAt === 'string' &&
-        isScoringEvent(value.event)
+        typeof value['id'] === 'number' &&
+        typeof value['occurredAt'] === 'string' &&
+        isScoringEvent(value['event'])
     );
 }
 
 function isEngineGameState(value: unknown): value is GameState {
-    if (!isRecord(value) || !isRecord(value.clock) || !isRecord(value.score) || !isRecord(value.situation)) return false;
-    const flags = [value.over, value.kickoffPending, value.pendingTry].every((flag) => typeof flag === 'boolean');
-    const nested = [value.clock.period, value.clock.gameClockSeconds, value.score.home, value.score.away, value.situation.down]
+    if (!isRecord(value) || !isRecord(value['clock']) || !isRecord(value['score']) || !isRecord(value['situation'])) return false;
+    const flags = [value['over'], value['kickoffPending'], value['pendingTry']].every((flag) => typeof flag === 'boolean');
+    const nested = [value['clock']['period'], value['clock']['gameClockSeconds'], value['score']['home'], value['score']['away'], value['situation']['down']]
         .every((n) => typeof n === 'number');
-    return typeof value.rulebookId === 'string' && flags && nested && Array.isArray(value.plays) && Array.isArray(value.drives);
+    return typeof value['rulebookId'] === 'string' && flags && nested && Array.isArray(value['plays']) && Array.isArray(value['drives']);
 }
 
 function hasHistoryIndex(value: Record<string, unknown>, eventCount: number): boolean {
-    const index = value.historyIndex;
+    const index = value['historyIndex'];
     return typeof index === 'number' && Number.isInteger(index) && index >= 0 && index <= eventCount;
 }
 
 export function isValidPersistedGameState(value: unknown): value is PersistedGameState {
-    if (!isRecord(value) || value.version !== SAVE_STATE_VERSION || typeof value.savedAt !== 'string') return false;
-    if (!isLocalGameSetup(value.setup) || !isEngineGameState(value.engine)) return false;
-    if (!Array.isArray(value.events) || !value.events.every(isLocalGameEventRecord)) return false;
-    return hasHistoryIndex(value, value.events.length);
+    if (!isRecord(value) || value['version'] !== SAVE_STATE_VERSION || typeof value['savedAt'] !== 'string') return false;
+    if (!isLocalGameSetup(value['setup']) || !isEngineGameState(value['engine'])) return false;
+    if (!Array.isArray(value['events']) || !value['events'].every(isLocalGameEventRecord)) return false;
+    return hasHistoryIndex(value, value['events'].length);
 }
 
 export async function loadGameState(

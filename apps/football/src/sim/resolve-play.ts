@@ -43,7 +43,9 @@ function fillPlay(
 ): PlayInput {
     const burn = clockBurn(family, random);
     const dead = game.clock.untimed ? snap : Math.max(0, snap - burn);
-    const base: PlayInput = {family, concept, hash, snapClock: snap, deadClock: dead};
+    const base: PlayInput = {family, snapClock: snap, deadClock: dead};
+    if (concept !== undefined) base.concept = concept;
+    if (hash !== undefined) base.hash = hash;
     if (family === 'kickoff') return kickoffInput(base, random);
     if (family === 'extra_point') return {...base, extraPointMade: chance(random, 0.93)};
     if (family === 'two_point') return {...base, twoPointMade: chance(random, 0.48)};

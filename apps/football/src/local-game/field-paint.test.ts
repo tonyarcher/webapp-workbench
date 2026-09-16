@@ -26,6 +26,7 @@ function paint(extra: Partial<Parameters<typeof paintFieldSvg>[0]> = {}): string
 }
 
 function fgPlay(id: string, made: boolean): Play {
+    const scoring = made ? 'field_goal' : undefined;
     return {
         id,
         driveId: 'd1',
@@ -38,7 +39,7 @@ function fgPlay(id: string, made: boolean): Play {
         result: {
             yards: 0,
             firstDown: false,
-            scoring: made ? 'field_goal' : undefined,
+            ...(scoring === undefined ? {} : {scoring}),
             deadAtYardline100: 0,
             outOfBounds: false,
             incomplete: false,

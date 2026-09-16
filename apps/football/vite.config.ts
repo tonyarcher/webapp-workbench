@@ -6,7 +6,7 @@ const {version} = JSON.parse(readFileSync(new URL('./package.json', import.meta.
 };
 
 export default defineConfig({
-    base: process.env.APP_BASE_PATH ?? '/',
+    base: process.env['APP_BASE_PATH'] ?? '/',
     define: {
         __APP_VERSION__: JSON.stringify(version),
         __BUILD_TIME__: JSON.stringify(new Date().toISOString()),

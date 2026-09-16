@@ -10,7 +10,7 @@ export type LocalGameMode = 'score' | 'watch';
 
 export type LocalGameSetup = GameSetup & {
     mode?: LocalGameMode;
-    simSeed?: number;
+    simSeed?: number | undefined;
 };
 
 export const DEFAULT_GAME_SETUP: LocalGameSetup = {
