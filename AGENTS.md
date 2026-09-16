@@ -7,7 +7,7 @@ Read the workspace `AGENTS.md` before touching that app or package.
 
 npm-workspaces monorepo of small TypeScript web apps plus Kotlin APIs.
 Most apps are Vite + Lit custom elements (no UI framework). Stock-game is the
-exception: plain Vite static SPA with React route shells and decorator-free Lit.
+exception: plain Vite static SPA with decorator-free Lit.
 Shared libraries live in `packages/*`. JVM APIs are Gradle / Kotlin, not Node.
 
 **Services:** `user-api` is a standalone identity provider (OAuth/OIDC, JWKS).
@@ -119,7 +119,7 @@ an app runtime or a workspace dependency.
 ## Shared conventions (Vite + Lit)
 
 Applies to Vite + Lit apps and Lit packages (`web-components`, `vertical-scroll-core`).
-Stock-game documents its own exceptions (decorator-free Lit, React shells,
+Stock-game documents its own exceptions (decorator-free Lit,
 “no comments unless asked”). Pure `*-core` packages follow TypeScript, formatting,
 comments, and workflow only — not Lit/CSS/PWA.
 
