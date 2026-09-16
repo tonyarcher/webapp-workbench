@@ -1,6 +1,6 @@
 {
   "$schema": "../../node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "react"],
+  "plugins": ["eslint"],
   "categories": {
     "correctness": "off",
     "suspicious": "off",
@@ -20,8 +20,6 @@
     "**/*.gen.ts"
   ],
   "rules": {
-    "react/rules-of-hooks": "error",
-    "react/exhaustive-deps": "error",
     "max-lines": [
       "error",
       {

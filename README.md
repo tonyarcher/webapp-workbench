@@ -10,7 +10,7 @@ same reverse-proxy gateway.
 |---|---|---|---|
 | `apps/baseball/` | Baseball tracker | Vite + Lit + TanStack core | Scorekeeping, client-side only |
 | `apps/rss-reader/` | RSS reader | Vite + Lit + TanStack core | Feed reading, PWA, hash routing |
-| `apps/stock-game/` | Stock game | TanStack Start (SPA) + React + Lit | Paper trading, SQLite server layer |
+| `apps/stock-game/` | Stock game | Vite + Lit + TanStack core | Paper trading, hash routing |
 | `apps/lemmy-vertical-scroll/` | Lemmy scroller | Vite + Lit + TanStack core | Vertical feed scrolling |
 | `apps/clipstack/` | Clipstack | Vite + Lit + vertical-scroll-core | Import a short-video link list and scroll it |
 | `apps/calendar-sync/` | Calendar Sync | Vite + Lit + calendar-core | Trakt + Netflix → ICS / Google Calendar |

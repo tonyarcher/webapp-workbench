@@ -15,16 +15,16 @@ stock charts are out of scope — link out to Yahoo Finance (TradingView embeds 
 
 ## Stack
 
-- **Vite static SPA** (React shells + Lit UI). No server runtime: the JSON API is
+- **Vite static SPA** (Lit UI). No server runtime: the JSON API is
   `apps/stock-game-api` (Kotlin, Postgres `stock`). Do not add Node `pg` here.
-- **TanStack Router** (code-based routes, hash history, hand-validated search params),
-  **TanStack Query** v5. Tables are hand-rolled Lit.
-- **Lit** UI (forms, tables, chart, search). React is thin route shells only: owns Router/Query
-  state and binds Lit via `.prop`. Lit views bind `sg-*` events with `@event` bindings.
+- **Hash router** (`src/router.ts`: `View` union, `parsePath`/`viewToPath`) over
+  `@tanstack/history`. **QueryClient** from `@tanstack/query-core`, shared by all views.
+- **Lit** UI (views, forms, tables, chart, search). Views own their queries and bind
+  `sg-*` events with `@event`.
 - **Auth**: `user-api` OAuth2 Code+PKCE via `user-client` (`lib/auth.ts`). Every player
   signs in; API calls carry `Authorization: Bearer` with one 401 refresh retry.
 - **Charting**: TradingView `lightweight-charts` in `sg-portfolio-chart`.
-- **Lint**: oxlint with local `.oxlintrc.json` (size, complexity, React hooks rules).
+- **Lint**: oxlint with local `.oxlintrc.json` (size and complexity rules).
 
 ## Layout
 
@@ -32,9 +32,10 @@ stock charts are out of scope — link out to Yahoo Finance (TradingView embeds 
 shared/                  TS types plus hand validators (the API contract)
 app/                     Vite SPA (static build served by nginx)
   src/
-    routes/              React shells (thin, data-fed)
+    router.ts                hash router (View union, path parse/emit)
     components/          local Lit UI (sg-*); not a monorepo package
     lib/                 query client, API client, auth, formatters
+    main.ts              boot (auth callback, mounts `sg-app-shell`)
 ```
 
 ## Commands
@@ -61,10 +62,10 @@ Dev sign-in needs two local rows the gateway seed does not cover: an
   broke reactivity (blank elements). Requires `useDefineForClassFields: false` in
   `app/tsconfig.json` — do not remove it, and do not “fix” blank elements by adding decorators.
 - Register via `defineElement` (guarded, SSR-safe). Side-effect import every element from
-  `app/src/components/index.ts`, imported once in `main.tsx`. Type-only imports get tree-shaken
+  `app/src/components/index.ts`, imported once in `main.ts`. Type-only imports get tree-shaken
   and the element never registers.
-- Lit views bind `sg-*` events with `@event`; the remaining React shells attach none (root keeps its `sg-auth-*` window listeners).
-- Custom elements must render standalone — no React inside Lit.
+- Views bind `sg-*` events with `@event`; `sg-auth-*` window listeners live in `sg-app-shell`.
+- Custom elements must render standalone.
 - **Do not add code comments unless asked.**
 - TypeScript: root strict set via `tsconfig.base.json` (strictest flags plus
   `erasableSyntaxOnly`; TypeScript 7). No `any`. No `!`

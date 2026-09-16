@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient } from '@tanstack/query-core'
 
 let browserQueryClient: QueryClient | undefined
 
