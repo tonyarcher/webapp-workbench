@@ -1,7 +1,10 @@
 plugins {
     kotlin("jvm") version "2.2.21"
+    kotlin("plugin.spring") version "2.2.21"
     kotlin("plugin.serialization") version "2.2.21"
-    application
+    kotlin("plugin.jpa") version "2.2.21"
+    id("org.springframework.boot") version "3.4.5"
+    id("io.spring.dependency-management") version "1.1.7"
     id("dev.detekt") version "2.0.0-alpha.6"
 }
 
@@ -21,37 +24,27 @@ kotlin {
     }
 }
 
-val ktor = "3.2.3"
-
 dependencies {
-    implementation("io.ktor:ktor-server-netty:$ktor")
-    implementation("io.ktor:ktor-server-content-negotiation:$ktor")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor")
-    implementation("io.ktor:ktor-server-status-pages:$ktor")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+    implementation("org.postgresql:postgresql")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
-    implementation("org.postgresql:postgresql:42.7.7")
-    implementation("com.zaxxer:HikariCP:6.3.0")
-    implementation("org.flywaydb:flyway-core:11.8.2")
-    implementation("org.flywaydb:flyway-database-postgresql:11.8.2")
-    implementation("org.slf4j:slf4j-nop:2.0.17")
     implementation("com.password4j:password4j:1.8.4")
     implementation("com.eatthepath:java-otp:0.4.0")
     implementation("commons-codec:commons-codec:1.17.2")
     implementation("com.yubico:webauthn-server-core:2.5.4")
     implementation("com.nimbusds:nimbus-jose-jwt:9.47")
 
-    testImplementation("io.ktor:ktor-server-test-host:$ktor")
-    testImplementation("io.ktor:ktor-client-content-negotiation:$ktor")
-    testImplementation("io.ktor:ktor-client-core:$ktor")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
 }
 
-application {
-    mainClass.set("userapi.MainKt")
-}
-
-tasks.named<JavaExec>("run") {
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     if (System.getenv("PORT") == null) {
         environment("PORT", "3004")
     }
@@ -66,6 +59,14 @@ tasks.named("check") {
     dependsOn("detekt")
 }
 
-tasks.test {
+tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+configurations.matching { it.name == "detekt" }.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jetbrains.kotlin") {
+            useVersion("2.4.10")
+        }
+    }
 }

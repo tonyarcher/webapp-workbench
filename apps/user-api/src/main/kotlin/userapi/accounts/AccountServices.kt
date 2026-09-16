@@ -1,10 +1,7 @@
 package userapi.accounts
 
 import java.time.Clock
-import javax.sql.DataSource
-import userapi.Settings
 import userapi.crypto.Argon2Hasher
-import userapi.crypto.JwtSigner
 import userapi.crypto.Rfc6238Totp
 import userapi.domain.PasswordHasher
 import userapi.domain.TotpEngine
@@ -21,36 +18,4 @@ data class AccountServices(
     val oauth: OAuthService? = null,
 ) {
     val dummyHash: String by lazy { hasher.hash("not-a-real-password") }
-}
-
-fun productionAccounts(dataSource: DataSource?, settings: Settings): AccountServices {
-    val clock = Clock.systemUTC()
-    return AccountServices(
-        store = dataSource?.let { JdbcAccountStore(it) },
-        hasher = Argon2Hasher(),
-        limiter = RateLimiter(),
-        clock = clock,
-        totpStore = dataSource?.let { JdbcTotpStore(it) },
-        totp = Rfc6238Totp(),
-        passkeys = productionPasskeys(dataSource, settings, clock),
-        oauth = productionOauth(dataSource, settings, clock),
-    )
-}
-
-private fun productionPasskeys(
-    dataSource: DataSource?,
-    settings: Settings,
-    clock: Clock,
-): PasskeyService? {
-    val store = dataSource?.let { JdbcPasskeyStore(it) } ?: return null
-    return PasskeyService(buildRelyingParty(settings, store), store, JdbcChallengeStore(dataSource), clock)
-}
-
-private fun productionOauth(
-    dataSource: DataSource?,
-    settings: Settings,
-    clock: Clock,
-): OAuthService? {
-    val store = dataSource?.let { JdbcOAuthStore(it) } ?: return null
-    return OAuthService(store, JwtSigner(store, settings.issuer), clock)
 }
