@@ -49,10 +49,10 @@ export function credentialToJson(cred: PublicKeyCredential): Record<string, unkn
     const response: Record<string, unknown> = {
         clientDataJSON: bytesToB64url(cred.response.clientDataJSON),
     };
-    if (att.attestationObject) response.attestationObject = bytesToB64url(att.attestationObject);
-    if (assn.authenticatorData) response.authenticatorData = bytesToB64url(assn.authenticatorData);
-    if (assn.signature) response.signature = bytesToB64url(assn.signature);
-    if (assn.userHandle) response.userHandle = bytesToB64url(assn.userHandle);
+    if (att.attestationObject) response['attestationObject'] = bytesToB64url(att.attestationObject);
+    if (assn.authenticatorData) response['authenticatorData'] = bytesToB64url(assn.authenticatorData);
+    if (assn.signature) response['signature'] = bytesToB64url(assn.signature);
+    if (assn.userHandle) response['userHandle'] = bytesToB64url(assn.userHandle);
     return {
         type: cred.type,
         id: cred.id,
