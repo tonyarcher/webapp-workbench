@@ -106,7 +106,7 @@ export const APPS = [
     service: "user-api",
     workspaces: ["user-api"],
     aliases: ["user-api", "apps/user-api"],
-    summary: "Identity API (Kotlin / Ktor)",
+    summary: "Identity API (Kotlin / Spring Boot)",
   },
   {
     id: "gitea",

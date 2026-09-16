@@ -2,10 +2,10 @@
     "name": "user-api",
     "private": true,
     "version": "0.1.0",
-    "description": "Shared identity API (Kotlin / Ktor). Phase 0 skeleton.",
+    "description": "Shared identity API (Kotlin / Spring Boot).",
     "scripts": {
-        "dev": "node scripts/gradlew.mjs run",
-        "build": "node scripts/gradlew.mjs installDist",
+        "dev": "node scripts/gradlew.mjs bootRun",
+        "build": "node scripts/gradlew.mjs bootJar",
         "test": "node scripts/gradlew.mjs check",
         "lint": "node scripts/gradlew.mjs detekt"
     }

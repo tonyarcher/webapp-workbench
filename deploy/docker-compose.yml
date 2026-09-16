@@ -23,7 +23,7 @@
 #   fitness-api  - Kotlin JSON API (Spring Data JPA) for Fitness under /fitness/api/
 #                  (prefix stripped by the gateway). Postgres database `fitness`.
 #   user-web     - nginx static, accounts landing page under /auth/.
-#   user-api     - Kotlin/Ktor identity API under /user-api/
+#   user-api     - Kotlin/Spring Boot identity API under /user-api/
 #                  (prefix stripped by the gateway). Postgres database `users`.
 #   gitea        - Go git server + wiki under /git/ (prefix stripped by the gateway).
 #                  Postgres database `gitea`. SSH on the mapped host port (VPN only).
