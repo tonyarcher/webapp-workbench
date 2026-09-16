@@ -1,29 +1,23 @@
 // @vitest-environment jsdom
-import { StrictMode, act, createElement } from 'react'
 import { describe, expect, it } from 'vitest'
-import { createRoot } from 'react-dom/client'
-import { RouterProvider } from '@tanstack/react-router'
-import { getRouter } from './router'
+import './components/sg-app-shell'
 
 describe('app render smoke', () => {
   it('renders the shell without throwing', async () => {
-    const router = getRouter()
-    await router.load()
     const host = document.createElement('div')
     host.id = 'root'
     document.body.appendChild(host)
     let error: unknown = null
-    await act(async () => {
-      try {
-        createRoot(host).render(
-          createElement(StrictMode, null, createElement(RouterProvider, {router})),
-        )
-      } catch (err) {
-        error = err
-      }
-    })
+    let shell: Element | null = null
+    try {
+      shell = document.createElement('sg-app-shell')
+      host.appendChild(shell)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    } catch (err) {
+      error = err
+    }
     expect(error).toBeNull()
-    expect(host.innerHTML).toContain('Stock Game')
+    expect((shell as unknown as { shadowRoot: ShadowRoot | null })?.shadowRoot?.textContent).toContain('Stock Game')
     document.body.removeChild(host)
   })
 })

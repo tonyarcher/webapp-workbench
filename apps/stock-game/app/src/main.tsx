@@ -1,12 +1,6 @@
-import {StrictMode} from 'react'
-import {createRoot} from 'react-dom/client'
-import {RouterProvider} from '@tanstack/react-router'
-import {getRouter} from './router'
-import {finishLoginFromCallback} from './lib/auth'
+import { finishLoginFromCallback } from './lib/auth'
 import './components/index'
 import './styles.css'
-
-const router = getRouter()
 
 async function boot(): Promise<void> {
   const loggedIn = await finishLoginFromCallback().catch((err: unknown) => {
@@ -20,11 +14,7 @@ async function boot(): Promise<void> {
   if (loggedIn) window.dispatchEvent(new CustomEvent('sg-auth-changed'))
   const root = document.getElementById('root')
   if (!root) throw new Error('Missing #root element')
-  createRoot(root).render(
-    <StrictMode>
-      <RouterProvider router={router} />
-    </StrictMode>,
-  )
+  root.innerHTML = '<sg-app-shell></sg-app-shell>'
 }
 
 void boot()

@@ -20,7 +20,7 @@ stock charts are out of scope — link out to Yahoo Finance (TradingView embeds 
 - **TanStack Router** (code-based routes, hash history, zod-validated search params),
   **TanStack Query** v5. Tables are hand-rolled Lit.
 - **Lit** UI (forms, tables, chart, search). React is thin route shells only: owns Router/Query
-  state, binds Lit via `.prop`, listens for `sg-*` events (`lib/useCustomEvents.ts`).
+  state and binds Lit via `.prop`. Lit views bind `sg-*` events with `@event` bindings.
 - **Auth**: `user-api` OAuth2 Code+PKCE via `user-client` (`lib/auth.ts`). Every player
   signs in; API calls carry `Authorization: Bearer` with one 401 refresh retry.
 - **Charting**: TradingView `lightweight-charts` in `sg-portfolio-chart`.
@@ -34,7 +34,7 @@ app/                     Vite SPA (static build served by nginx)
   src/
     routes/              React shells (thin, data-fed)
     components/          local Lit UI (sg-*); not a monorepo package
-    lib/                 query client, API client, auth, formatters, useCustomEvents
+    lib/                 query client, API client, auth, formatters
 ```
 
 ## Commands
@@ -63,7 +63,7 @@ Dev sign-in needs two local rows the gateway seed does not cover: an
 - Register via `defineElement` (guarded, SSR-safe). Side-effect import every element from
   `app/src/components/index.ts`, imported once in `main.tsx`. Type-only imports get tree-shaken
   and the element never registers.
-- React shells attach listeners with the `useCustomEvents` callback-ref (not `useEffect`).
+- Lit views bind `sg-*` events with `@event`; the remaining React shells attach none (root keeps its `sg-auth-*` window listeners).
 - Custom elements must render standalone — no React inside Lit.
 - **Do not add code comments unless asked.**
 - TypeScript: root strict set via `tsconfig.base.json` (strictest flags plus
@@ -75,7 +75,7 @@ Dev sign-in needs two local rows the gateway seed does not cover: an
 
 - Phase 1 (done): tables are hand-rolled Lit; `@tanstack/table-core` removed.
 - Phase 2: Lit route shells behind the house hash router — settings (done), orders (done),
-  portfolio (done), trade, dashboard, root auth gate last.
+  portfolio (done), trade (done), dashboard (done), root (done).
 - Phase 3: hand validation replacing zod in components, then `shared/` and the API client.
 - Keeps: decorator-free Lit, lightweight-charts (no house equivalent for price
   series), money/time domain rules.
