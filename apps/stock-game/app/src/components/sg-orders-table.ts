@@ -41,13 +41,11 @@ export class SgOrdersTable extends LitElement {
   }
 
   private formatLimit(order: Order): string {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (order.limitPrice === null || order.limitPrice === undefined) return '-'
     return fmtPrice(order.limitPrice)
   }
 
   private formatStop(order: Order): string {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (order.stopPrice === null || order.stopPrice === undefined) return '-'
     return fmtPrice(order.stopPrice)
   }
