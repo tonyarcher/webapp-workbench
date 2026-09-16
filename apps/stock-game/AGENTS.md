@@ -24,7 +24,7 @@ stock charts are out of scope — link out to Yahoo Finance (TradingView embeds 
 - **Auth**: `user-api` OAuth2 Code+PKCE via `user-client` (`lib/auth.ts`). Every player
   signs in; API calls carry `Authorization: Bearer` with one 401 refresh retry.
 - **Charting**: TradingView `lightweight-charts` in `sg-portfolio-chart`.
-- **Lint**: oxlint with local `.oxlintrc.json` (size and complexity rules).
+- **Lint**: oxlint with local `.oxlintrc.json` (size, complexity, and type-aware rules).
 
 ## Layout
 

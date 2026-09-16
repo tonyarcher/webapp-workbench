@@ -38,7 +38,7 @@ async function settled(): Promise<void> {
 function rowSymbols(el: SgOrdersView): Array<string | null | undefined> {
   const table = el.shadowRoot?.querySelector('sg-orders-table')
   return [...(table?.shadowRoot?.querySelectorAll('tbody tr') ?? [])].map(
-    (row) => row.querySelector('td:nth-child(2)')?.textContent?.trim(),
+    (row) => row.querySelector('td:nth-child(2)')?.textContent.trim(),
   )
 }
 

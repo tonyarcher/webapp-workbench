@@ -169,19 +169,19 @@ export class ArticleList extends LitElement {
                 return;
             }
             this.pendingReset = false;
-            this.reset();
+            void this.reset();
             return;
         }
         if (this.pendingReset && this.library.data) {
             this.pendingReset = false;
-            this.reset();
+            void this.reset();
             return;
         }
         if (this.view.kind === 'folder') {
             const folderKey = this.folderFeeds().map((f) => f.id).join(',');
             if (folderKey !== this.lastFolderKey) {
                 this.lastFolderKey = folderKey;
-                this.reset();
+                void this.reset();
             }
         }
     }
@@ -555,15 +555,15 @@ export class ArticleList extends LitElement {
     }
 
     private renderRow(article: Article, showFeed: boolean) {
-        return detailRowTemplate(article, showFeed, this.feedTitle(article.feedId), (e, a) => this.onStar(e, a));
+        return detailRowTemplate(article, showFeed, this.feedTitle(article.feedId), (e, a) => { void this.onStar(e, a); });
     }
 
     private renderHeadlineRow(article: Article, showFeed: boolean) {
-        return headlineRowTemplate(article, showFeed, this.feedTitle(article.feedId), (e, a) => this.onStar(e, a));
+        return headlineRowTemplate(article, showFeed, this.feedTitle(article.feedId), (e, a) => { void this.onStar(e, a); });
     }
 
     private renderCardRow(article: Article, showFeed: boolean, index: number) {
-        return cardRowTemplate(article, showFeed, this.feedTitle(article.feedId), index === this.cursor, (e, a) => this.onStar(e, a), (a) => this.openArticle(a), (e, a) => this.onRowKey(e, a));
+        return cardRowTemplate(article, showFeed, this.feedTitle(article.feedId), index === this.cursor, (e, a) => { void this.onStar(e, a); }, (a) => { void this.openArticle(a); }, (e, a) => this.onRowKey(e, a));
     }
 }
 

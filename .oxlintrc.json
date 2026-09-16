@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint"],
+  "plugins": ["eslint", "typescript"],
+  "options": {
+    "typeAware": true
+  },
   "categories": {
     "correctness": "off",
     "suspicious": "off",
@@ -22,6 +25,9 @@
     "apps/stock-game/**"
   ],
   "rules": {
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
     "max-lines": [
       "error",
       {

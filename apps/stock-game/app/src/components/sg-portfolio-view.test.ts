@@ -56,7 +56,7 @@ function stubListings(): void {
 function holdingSymbols(el: SgPortfolioView): Array<string | null | undefined> {
   const table = el.shadowRoot?.querySelector('sg-holdings-table')
   return [...(table?.shadowRoot?.querySelectorAll('tbody tr') ?? [])].map(
-    (row) => row.querySelector('td:first-child')?.textContent?.trim(),
+    (row) => row.querySelector('td:first-child')?.textContent.trim(),
   )
 }
 

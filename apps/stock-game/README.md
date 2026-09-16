@@ -37,7 +37,7 @@ placing backdated trades.
 | `npm run dev`       | Vite dev server at http://localhost:3000           |
 | `npm run build`     | Static production build (`app/dist`)               |
 | `npm run typecheck` | Strict `tsc` across all workspaces                 |
-| `npm run lint`      | `oxlint` (size and complexity rules)               |
+| `npm run lint`      | `oxlint` (size, complexity, type-aware rules)      |
 | `npm test`          | Vitest component + lib unit tests (network-free)   |
 
 ## Configuration

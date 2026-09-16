@@ -17,7 +17,7 @@ describe('app render smoke', () => {
       error = err
     }
     expect(error).toBeNull()
-    expect((shell as unknown as { shadowRoot: ShadowRoot | null })?.shadowRoot?.textContent).toContain('Stock Game')
+    expect((shell as unknown as { shadowRoot: ShadowRoot | null }).shadowRoot?.textContent).toContain('Stock Game')
     document.body.removeChild(host)
   })
 })
