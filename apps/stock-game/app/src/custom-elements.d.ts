@@ -22,6 +22,8 @@ declare module 'react' {
       }
       'sg-holdings-table': ElementProps & {
         holdings?: HoldingsEntry[]
+        sortKey?: string | null
+        sortDir?: 'asc' | 'desc'
       }
       'sg-trades-table': ElementProps & {
         trades?: Trade[]
@@ -57,6 +59,7 @@ declare module 'react' {
         config?: GameConfig | null
         busy?: boolean
       }
+      'sg-settings-view': ElementProps
     }
   }
 }

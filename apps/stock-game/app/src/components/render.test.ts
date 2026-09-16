@@ -211,6 +211,53 @@ describe('custom elements render and react to properties', () => {
     el.remove()
   })
 
+  it('sg-holdings-table sorts ascending, descending, then unsorted on header clicks', async () => {
+    const msft = { ...HOLDING, symbol: 'MSFT', name: 'Microsoft Corp.', qty: 20 }
+    const el = mount<SgHoldingsTable>('sg-holdings-table', { holdings: [msft, HOLDING] })
+    await tick()
+    const headers = [...(el.shadowRoot?.querySelectorAll('th') ?? [])]
+    const firstSymbols = () =>
+      [...(el.shadowRoot?.querySelectorAll('tbody tr') ?? [])].map((row) =>
+        row.querySelector('td')?.textContent?.trim(),
+      )
+    expect(firstSymbols()).toEqual(['MSFT', 'AAPL'])
+
+    headers[0]!.click()
+    await tick()
+    expect(firstSymbols()).toEqual(['AAPL', 'MSFT'])
+    expect(headers[0]!.textContent).toContain('▲')
+
+    headers[1]!.click()
+    await tick()
+    expect(firstSymbols()).toEqual(['AAPL', 'MSFT'])
+
+    headers[1]!.click()
+    await tick()
+    expect(firstSymbols()).toEqual(['MSFT', 'AAPL'])
+    expect(headers[1]!.textContent).toContain('▼')
+
+    headers[1]!.click()
+    await tick()
+    expect(firstSymbols()).toEqual(['MSFT', 'AAPL'])
+    expect(headers[1]!.textContent).not.toContain('▼')
+    expect(headers[1]!.textContent).not.toContain('▲')
+    el.remove()
+  })
+
+  it('sg-holdings-table emits sg-trade-symbol on row click', async () => {
+    const el = mount<SgHoldingsTable>('sg-holdings-table', { holdings: [HOLDING] })
+    await tick()
+    let detail: unknown
+    el.addEventListener('sg-trade-symbol', (event) => {
+      detail = (event as CustomEvent).detail
+    })
+    const row = el.shadowRoot?.querySelector('tbody tr')
+    expect(row).not.toBeNull()
+    row?.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }))
+    expect(detail).toEqual({ symbol: 'AAPL' })
+    el.remove()
+  })
+
   it('sg-trades-table renders and reacts to trades', async () => {
     const el = mount<SgTradesTable>('sg-trades-table', { trades: [TRADE] })
     await tick()

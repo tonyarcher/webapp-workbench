@@ -1,40 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { UpdateConfigRequest } from '@stock-game/shared'
-import { useCustomEvents } from '../lib/useCustomEvents'
-import { fetchConfig, saveConfig } from '../lib/api'
-import '../components/sg-settings-form'
+import '../components/sg-settings-view'
 
 export const Route = createFileRoute('/settings')({
   component: Settings,
 })
 
 function Settings() {
-  const queryClient = useQueryClient()
-  const configQ = useQuery({ queryKey: ['config'], queryFn: () => fetchConfig() })
-  const update = useMutation({
-    mutationFn: (data: UpdateConfigRequest) => saveConfig(data),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['config'] })
-      void queryClient.invalidateQueries({ queryKey: ['portfolio'] })
-      void queryClient.invalidateQueries({ queryKey: ['holdings'] })
-    },
-  })
-
-  const ref = useCustomEvents({
-    'sg-config-submit': (detail) => {
-      update.mutate(detail as UpdateConfigRequest)
-    },
-  })
-
-  return (
-    <>
-      <h1>Settings</h1>
-      <div className="card">
-        <sg-settings-form ref={ref} config={configQ.data ?? null} busy={update.isPending} />
-        {update.isError ? <div className="error">{String(update.error)}</div> : ''}
-        {update.isSuccess ? <div className="positive">Configuration saved.</div> : ''}
-      </div>
-    </>
-  )
+  return <sg-settings-view />
 }
