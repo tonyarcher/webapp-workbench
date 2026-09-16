@@ -20,7 +20,7 @@ class ArticleListController(
     private val articles: ArticleRepo,
     private val states: ArticleStateRepo,
 ) {
-    @GetMapping("/articles")
+    @GetMapping("/articles", headers = ["X-Api-Version=1"])
     fun list(
         @RequestParam(required = false) scope: String?,
         @RequestParam(required = false) unreadOnly: String?,

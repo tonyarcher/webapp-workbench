@@ -53,12 +53,24 @@ class ApiRoutesTest {
     }
 
     private fun authedGet(path: String, token: String) = mvc.get(path) {
+        header("X-Api-Version", "1")
         header("Authorization", "Bearer $token")
     }.andReturn()
 
     @Test
+    fun missingVersionHeaderIsNotRouted() {
+        asUser(ALICE_SUB, ALICE_ID)
+        val res = mvc.get("/portfolio") {
+            header("Authorization", "Bearer good")
+        }.andReturn()
+        assertEquals(404, res.response.status)
+    }
+
+    @Test
     fun unauthorizedWithoutToken() {
-        val res = mvc.get("/config").andReturn()
+        val res = mvc.get("/config") {
+            header("X-Api-Version", "1")
+        }.andReturn()
         assertEquals(401, res.response.status)
         assertEquals("""{"error":"unauthorized"}""", res.response.contentAsString)
     }
@@ -90,6 +102,7 @@ class ApiRoutesTest {
     fun configRoundTrip() {
         asUser(ALICE_SUB, ALICE_ID)
         val put = mvc.put("/config") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer alice-token")
             contentType = MediaType.APPLICATION_JSON
             content = """{"startingCashCents":1000000,"startDate":1704067200000}"""
@@ -105,6 +118,7 @@ class ApiRoutesTest {
     fun usersGetSeparatePortfolios() {
         asUser(ALICE_SUB, ALICE_ID)
         mvc.put("/config") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer alice-token")
             contentType = MediaType.APPLICATION_JSON
             content = """{"startingCashCents":1000000,"startDate":1704067200000}"""
@@ -120,6 +134,7 @@ class ApiRoutesTest {
     fun tradesRejectInvalid() {
         asUser(ALICE_SUB, ALICE_ID)
         val res = mvc.post("/trades") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer alice-token")
             contentType = MediaType.APPLICATION_JSON
             content = """{"symbol":"","side":"buy","qty":0,"at":1704067200000}"""
@@ -131,6 +146,7 @@ class ApiRoutesTest {
     fun ordersListAndCancel() {
         asUser(ALICE_SUB, ALICE_ID)
         val placed = mvc.post("/orders") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer alice-token")
             contentType = MediaType.APPLICATION_JSON
             content = """{"symbol":"AAPL","side":"buy","qty":1,"executeAt":4102444800000}"""
@@ -177,6 +193,7 @@ class ApiRoutesTest {
     fun invalidSideIs400() {
         asUser(ALICE_SUB, ALICE_ID)
         val res = mvc.post("/trades") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer alice-token")
             contentType = MediaType.APPLICATION_JSON
             content = """{"symbol":"AAPL","side":"BUY","qty":1,"at":1704067200000}"""
@@ -188,6 +205,7 @@ class ApiRoutesTest {
     fun limitOrderNeedsPrice() {
         asUser(ALICE_SUB, ALICE_ID)
         val res = mvc.post("/orders") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer alice-token")
             contentType = MediaType.APPLICATION_JSON
             content = """{"symbol":"AAPL","side":"buy","qty":1,"executeAt":4102444800000,"orderType":"limit"}"""

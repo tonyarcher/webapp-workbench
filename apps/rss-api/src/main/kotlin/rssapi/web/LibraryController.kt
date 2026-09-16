@@ -18,21 +18,21 @@ class LibraryController(
     private val folders: FolderRepo,
     private val library: LibraryService,
 ) {
-    @GetMapping("/library")
+    @GetMapping("/library", headers = ["X-Api-Version=1"])
     fun library(): LibraryJson = library.library(user.id)
 
-    @GetMapping("/library/counts")
+    @GetMapping("/library/counts", headers = ["X-Api-Version=1"])
     fun counts(): LibraryCountsJson = LibraryCountsJson(library.counts(user.id))
 
     /** Folder list alone so the sidebar paints before feed names arrive. */
-    @GetMapping("/library/folders")
+    @GetMapping("/library/folders", headers = ["X-Api-Version=1"])
     fun folders(): LibraryFoldersJson = LibraryFoldersJson(library.folders(user.id))
 
     /** Feed names and structure without article counts. */
-    @GetMapping("/library/feeds")
+    @GetMapping("/library/feeds", headers = ["X-Api-Version=1"])
     fun feeds(): LibraryFeedsJson = LibraryFeedsJson(library.feeds(user.id))
 
-    @PostMapping("/folders")
+    @PostMapping("/folders", headers = ["X-Api-Version=1"])
     fun createFolder(@RequestBody body: TitleBody): FolderJson {
         val title = body.title?.trim() ?: throw ApiException(400, "title is required")
         if (title.isEmpty()) throw ApiException(400, "title is required")
@@ -41,14 +41,14 @@ class LibraryController(
         return row.toJson()
     }
 
-    @DeleteMapping("/folders/{id}")
+    @DeleteMapping("/folders/{id}", headers = ["X-Api-Version=1"])
     fun deleteFolder(@PathVariable id: String): OkBody {
         if (!isUuid(id)) throw ApiException(400, "invalid folder id")
         folders.findById(UUID.fromString(id)).filter { it.userId == user.id }.ifPresent { folders.delete(it) }
         return OkBody()
     }
 
-    @PostMapping("/folders/reorder")
+    @PostMapping("/folders/reorder", headers = ["X-Api-Version=1"])
     @Transactional
     fun reorder(@RequestBody body: IdsBody): OkBody {
         val ids = body.ids ?: throw ApiException(400, "ids array is required")

@@ -3,6 +3,9 @@ import {getAccessToken, refreshTokens} from './auth';
 
 // ---- base fetch ----
 
+export const API_VERSION_HEADER: string = 'X-Api-Version';
+export const API_VERSION: string = '1';
+
 export class AuthError extends Error {
     constructor() {
         super('Sign in required');
@@ -41,6 +44,7 @@ async function apiFetch(path: string, init?: RequestInit, retried = false): Prom
 function withAuthHeaders(init: RequestInit | undefined, token: string): RequestInit {
     const headers: Record<string, string> = {...(init?.headers as Record<string, string> ?? {})};
     headers['Authorization'] = `Bearer ${token}`;
+    headers[API_VERSION_HEADER] = API_VERSION;
     if (init?.body && typeof init.body === 'string') {
         headers['Content-Type'] = 'application/json';
     }
@@ -200,7 +204,7 @@ async function apiFetchText(path: string, retried = false): Promise<string> {
         emitAuthRequired();
         throw new AuthError();
     }
-    const res = await fetch(apiUrl(path), {headers: {Authorization: `Bearer ${token}`}});
+    const res = await fetch(apiUrl(path), {headers: {Authorization: `Bearer ${token}`, [API_VERSION_HEADER]: API_VERSION}});
     if (res.status === 401 && !retried) {
         const next = await refreshTokens();
         if (next) return apiFetchText(path, true);

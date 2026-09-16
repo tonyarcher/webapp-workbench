@@ -57,6 +57,16 @@ class LibraryControllerTest {
     private fun feedJson(id: UUID, url: String) = FeedJson(id.toString(), "T", url, emptyList(), 0, 0L)
 
     @Test
+    fun missingVersionHeaderIsNotRouted() {
+        stubAuth(UUID.randomUUID())
+        mvc.get("/library") {
+            header("Authorization", "Bearer good")
+        }.andExpect {
+            status { isNotFound() }
+        }
+    }
+
+    @Test
     fun libraryReturnsServiceSnapshot() {
         val uid = UUID.randomUUID()
         val feedA = UUID.randomUUID()
@@ -66,6 +76,7 @@ class LibraryControllerTest {
         )
 
         mvc.get("/library") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
         }.andExpect {
             status { isOk() }
@@ -80,6 +91,7 @@ class LibraryControllerTest {
         whenever(service.folders(uid)).thenReturn(listOf(folderJson(UUID.randomUUID())))
 
         mvc.get("/library/folders") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
         }.andExpect {
             status { isOk() }
@@ -94,6 +106,7 @@ class LibraryControllerTest {
         whenever(service.feeds(uid)).thenReturn(listOf(feedJson(UUID.randomUUID(), "https://a.example/rss")))
 
         mvc.get("/library/feeds") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
         }.andExpect {
             status { isOk() }
@@ -110,6 +123,7 @@ class LibraryControllerTest {
         whenever(service.counts(uid)).thenReturn(mapOf(feedA.toString() to 7))
 
         mvc.get("/library/counts") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
         }.andExpect {
             status { isOk() }
@@ -130,6 +144,7 @@ class LibraryControllerTest {
         whenever(folders.findAllById(any<List<UUID>>())).thenReturn(rows)
 
         mvc.post("/folders/reorder") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"ids":["$folderB","$folderA","not-a-uuid","${UUID.randomUUID()}"]}"""

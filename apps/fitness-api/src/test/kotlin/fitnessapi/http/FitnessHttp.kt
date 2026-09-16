@@ -32,18 +32,23 @@ internal val WAIST_TWO =
     ],"source":"manual"}"""
 
 internal fun MockMvc.postJson(path: String, body: String): MvcResult = post(path) {
+    header("X-Api-Version", "1")
     contentType = MediaType.APPLICATION_JSON
     content = body
 }.andReturn()
 
 internal fun MockMvc.putJson(path: String, body: String): MvcResult = put(path) {
+    header("X-Api-Version", "1")
     contentType = MediaType.APPLICATION_JSON
     content = body
 }.andReturn()
 
 internal fun MockMvc.patchJson(path: String, body: String): MvcResult = patch(path) {
+    header("X-Api-Version", "1")
     contentType = MediaType.APPLICATION_JSON
     content = body
 }.andReturn()
 
-internal fun MockMvc.getPath(path: String): MvcResult = get(path).andReturn()
+internal fun MockMvc.getPath(path: String): MvcResult = get(path) {
+    header("X-Api-Version", "1")
+}.andReturn()

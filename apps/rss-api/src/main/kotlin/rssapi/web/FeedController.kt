@@ -33,7 +33,7 @@ class FeedController(
     private val subs: SubscriptionRepo,
     private val membershipService: MembershipService,
 ) {
-    @PostMapping("/feeds")
+    @PostMapping("/feeds", headers = ["X-Api-Version=1"])
     fun create(@RequestBody body: CreateFeedBody): FeedJson {
         val url = body.url ?: throw ApiException(400, "url is required")
         val validated = safeHttpUrl(url) ?: throw ApiException(400, "Invalid feed URL (must be http/https)")
@@ -48,7 +48,7 @@ class FeedController(
         return loadedFeed(feed.id!!)
     }
 
-    @DeleteMapping("/feeds/{id}")
+    @DeleteMapping("/feeds/{id}", headers = ["X-Api-Version=1"])
     @Transactional
     fun delete(@PathVariable id: String): OkBody {
         if (!isUuid(id)) throw ApiException(400, "invalid feed id")
@@ -62,7 +62,7 @@ class FeedController(
         return OkBody()
     }
 
-    @PutMapping("/feeds/{id}/folders")
+    @PutMapping("/feeds/{id}/folders", headers = ["X-Api-Version=1"])
     @Transactional
     fun setFolders(@PathVariable id: String, @RequestBody body: FolderIdsBody): OkBody {
         if (!isUuid(id)) throw ApiException(400, "invalid feed id")

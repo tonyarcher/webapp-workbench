@@ -32,11 +32,11 @@ class AccountController(
     private val settings: Settings,
     private val mapper: ObjectMapper,
 ) {
-    @GetMapping("/v1/csrf")
+    @GetMapping("/csrf", headers = ["X-Api-Version=1"])
     fun csrf(request: HttpServletRequest, response: HttpServletResponse): CsrfBody =
         CsrfBody(csrf = issueCsrf(request, response, settings))
 
-    @GetMapping("/v1/me")
+    @GetMapping("/me", headers = ["X-Api-Version=1"])
     fun me(request: HttpServletRequest): MeBody {
         val store = requireStore(accounts)
         val session = requestSession(request)
@@ -49,7 +49,7 @@ class AccountController(
         )
     }
 
-    @PostMapping("/v1/register")
+    @PostMapping("/register", headers = ["X-Api-Version=1"])
     fun register(
         @RequestBody body: PasswordBody,
         request: HttpServletRequest,
@@ -67,7 +67,7 @@ class AccountController(
         return ResponseEntity.status(HttpStatus.CREATED).body(MeBody(id = id.toString(), username = username))
     }
 
-    @PostMapping("/v1/login")
+    @PostMapping("/login", headers = ["X-Api-Version=1"])
     fun login(
         @RequestBody body: PasswordBody,
         request: HttpServletRequest,
@@ -92,7 +92,7 @@ class AccountController(
         return MeBody(id = user.id.toString(), username = user.username, totpEnabled = false)
     }
 
-    @PostMapping("/v1/login/totp")
+    @PostMapping("/login/totp", headers = ["X-Api-Version=1"])
     fun loginTotp(
         @RequestBody body: TotpConfirmBody,
         request: HttpServletRequest,
@@ -107,7 +107,7 @@ class AccountController(
         return finishTotpLogin(response, store, totpStore, userId, pending, body.code)
     }
 
-    @PostMapping("/v1/logout")
+    @PostMapping("/logout", headers = ["X-Api-Version=1"])
     fun logout(request: HttpServletRequest, response: HttpServletResponse): OkBody {
         val store = requireStore(accounts)
         sessionToken(request)?.let { store.deleteSession(sha256Hex(it)) }

@@ -84,11 +84,11 @@ class AccountRoutesTest {
         val cookies = TestCookies()
         fetchCsrf(cookies)
         registerAlice(cookies)
-        val missing = mvc.postJson(cookies, "/v1/login", csrf = false, json = loginJson())
+        val missing = mvc.postJson(cookies, "/login", csrf = false, json = loginJson())
         assertEquals(403, missing.response.status)
         val wrong = mvc.postJson(
             cookies,
-            "/v1/login",
+            "/login",
             csrf = true,
             json = mapper.writeValueAsString(mapOf("username" to "alice", "password" to "wrong-password-long")),
         )
@@ -101,18 +101,18 @@ class AccountRoutesTest {
         val cookies = TestCookies()
         fetchCsrf(cookies)
         registerAlice(cookies)
-        val dup = mvc.postJson(cookies, "/v1/register", csrf = true, json = registerJson("otherpassword1"))
+        val dup = mvc.postJson(cookies, "/register", csrf = true, json = registerJson("otherpassword1"))
         assertEquals(409, dup.response.status)
     }
 
     private fun fetchCsrf(cookies: TestCookies): String {
-        val result = mvc.getWithCookies(cookies, "/v1/csrf")
+        val result = mvc.getWithCookies(cookies, "/csrf")
         result.expectStatus(200)
         return result.csrfToken(mapper)
     }
 
     private fun registerAlice(cookies: TestCookies) {
-        val created = mvc.postJson(cookies, "/v1/register", csrf = true, json = registerJson())
+        val created = mvc.postJson(cookies, "/register", csrf = true, json = registerJson())
         assertEquals(201, created.response.status)
     }
 
@@ -122,23 +122,23 @@ class AccountRoutesTest {
     private fun loginJson(): String = registerJson()
 
     private fun assertMeContainsAlice(cookies: TestCookies) {
-        val me = mvc.getWithCookies(cookies, "/v1/me")
+        val me = mvc.getWithCookies(cookies, "/me")
         assertEquals(200, me.response.status)
         assertTrue(me.bodyText().contains("alice"))
     }
 
     private fun logoutAndAssertUnauthorized(cookies: TestCookies) {
-        val loggedOut = mvc.postJson(cookies, "/v1/logout", csrf = true, json = null)
+        val loggedOut = mvc.postJson(cookies, "/logout", csrf = true, json = null)
         assertEquals(200, loggedOut.response.status)
-        assertEquals(401, mvc.getWithCookies(cookies, "/v1/me").response.status)
+        assertEquals(401, mvc.getWithCookies(cookies, "/me").response.status)
     }
 
     private fun loginAlice(cookies: TestCookies) {
-        val login = mvc.postJson(cookies, "/v1/login", csrf = true, json = loginJson())
+        val login = mvc.postJson(cookies, "/login", csrf = true, json = loginJson())
         assertEquals(200, login.response.status)
     }
 
     private fun assertMeOk(cookies: TestCookies) {
-        assertEquals(200, mvc.getWithCookies(cookies, "/v1/me").response.status)
+        assertEquals(200, mvc.getWithCookies(cookies, "/me").response.status)
     }
 }

@@ -55,6 +55,7 @@ class AiControllerTest {
         whenever(ai.status()).thenReturn(AiStatus("ollama", "qwen3:8b", true))
 
         mvc.get("/ai/status") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
         }.andExpect {
             status { isOk() }
@@ -69,6 +70,7 @@ class AiControllerTest {
         whenever(ai.summarize(any(), any(), any())).thenReturn("- a\n- b")
 
         mvc.post("/ai/summarize") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"title":"T","text":"body"}"""
@@ -84,6 +86,7 @@ class AiControllerTest {
         whenever(ai.summarize(any(), anyOrNull(), any())).thenThrow(ApiException(429, "hourly AI budget used"))
 
         mvc.post("/ai/summarize") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"text":"body"}"""
@@ -97,6 +100,7 @@ class AiControllerTest {
         stubAuth()
 
         mvc.post("/ai/summarize") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{}"""

@@ -80,13 +80,17 @@ try {
     const started = await withTimeout(startServer(0, '127.0.0.1'), 30_000, 'startServer');
     closeSrv = () => started.close();
     const base = `http://127.0.0.1:${started.port}`;
+    const versionHeaders = {'X-Api-Version': '1'};
 
     const health = await fetch(`${base}/healthz`);
     assert(health.status === 200, 'healthz 200');
     assert((await health.json() as {ok: boolean}).ok === true, 'healthz ok');
 
-    const stations = await fetch(`${base}/stations`).then((r) => r.json()) as {id: string}[];
+    const stations = await fetch(`${base}/stations`, {headers: versionHeaders}).then((r) => r.json()) as {id: string}[];
     assert(stations.some((s) => s.id === 'top40'), 'stations include top40');
+
+    const unversioned = await fetch(`${base}/stations`);
+    assert(unversioned.status === 404, 'missing version header is not routed');
 
     const {getPool} = await import('../server/db.ts');
     const {rows} = await getPool().query<{count: string}>('SELECT COUNT(*)::text AS count FROM tracks');
@@ -100,7 +104,7 @@ try {
     };
     const first = await fetch(`${base}/playlists`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {...versionHeaders, 'Content-Type': 'application/json'},
         body: JSON.stringify(body),
     });
     assert(first.status === 200, 'POST playlists 200');
@@ -110,13 +114,13 @@ try {
 
     const second = await fetch(`${base}/playlists`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {...versionHeaders, 'Content-Type': 'application/json'},
         body: JSON.stringify(body),
     });
     const replay = await second.json() as {playlist: {id: string}};
     assert(replay.playlist.id === created.playlist.id, 'same body returns same playlist id');
 
-    const txtRes = await fetch(`${base}/playlists/${created.playlist.id}.txt`);
+    const txtRes = await fetch(`${base}/playlists/${created.playlist.id}.txt`, {headers: versionHeaders});
     assert(txtRes.status === 200, 'GET playlist txt 200');
     const txt = await txtRes.text();
     assert(txt.startsWith('Pulse 101 — '), 'txt starts with station line');

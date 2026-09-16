@@ -12,6 +12,9 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import userapi.web.CSRF_COOKIE
 import userapi.web.CSRF_HEADER
 
+const val API_VERSION_HEADER: String = "X-Api-Version"
+const val API_VERSION: String = "1"
+
 class TestCookies {
     private val jar = mutableMapOf<String, String>()
 
@@ -32,6 +35,7 @@ class TestCookies {
 
 fun MockMvc.getWithCookies(cookies: TestCookies, path: String, vararg headers: Pair<String, String>): MvcResult {
     val builder = cookies.apply(get(path))
+    builder.header(API_VERSION_HEADER, API_VERSION)
     headers.forEach { (name, value) -> builder.header(name, value) }
     return perform(builder).andReturn().also { cookies.capture(it) }
 }
@@ -44,6 +48,7 @@ fun MockMvc.postJson(
     vararg headers: Pair<String, String>,
 ): MvcResult {
     val builder = cookies.apply(post(path))
+    builder.header(API_VERSION_HEADER, API_VERSION)
     if (csrf) builder.header(CSRF_HEADER, cookies.csrf())
     builder.contentType(MediaType.APPLICATION_JSON)
     headers.forEach { (name, value) -> builder.header(name, value) }
@@ -58,6 +63,7 @@ fun MockMvc.postForm(
     params: Map<String, String>,
 ): MvcResult {
     val builder = cookies.apply(post(path))
+    builder.header(API_VERSION_HEADER, API_VERSION)
     if (csrf) builder.header(CSRF_HEADER, cookies.csrf())
     builder.contentType(MediaType.APPLICATION_FORM_URLENCODED)
     params.forEach { (name, value) -> builder.param(name, value) }

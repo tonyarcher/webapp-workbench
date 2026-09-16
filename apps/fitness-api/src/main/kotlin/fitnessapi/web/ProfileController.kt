@@ -12,10 +12,10 @@ import fitnessapi.store.ProfileStore
 
 @RestController
 class ProfileController(private val profiles: ObjectProvider<ProfileStore>) {
-    @GetMapping("/profile")
+    @GetMapping("/profile", headers = ["X-Api-Version=1"])
     fun get(): ProfileJson = profiles.orOffline().getProfile(LOCAL_USER_ID).toJson()
 
-    @PutMapping("/profile")
+    @PutMapping("/profile", headers = ["X-Api-Version=1"])
     fun put(@RequestBody(required = false) body: JsonNode?): ProfileJson {
         if (body == null || body.isNull || body.isMissingNode) throw ApiException(400, "missing body")
         val tm = body.get("tm")

@@ -19,7 +19,7 @@ class SyncController(
     private val sync: IngestSync,
     private val poller: FeedPoller,
 ) {
-    @PostMapping("/sync")
+    @PostMapping("/sync", headers = ["X-Api-Version=1"])
     fun sync(@RequestBody(required = false) body: Map<String, Any?>?): QueuedBody {
         val ids = resolveIds(body?.get("scope"))
         ids.forEach { sync.clearFetched(it) }

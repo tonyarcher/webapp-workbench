@@ -97,6 +97,7 @@ class OpmlControllerTest {
         val payload = com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(mapOf("xml" to opmlXml()))
 
         mvc.post("/opml") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = payload
@@ -127,6 +128,7 @@ class OpmlControllerTest {
         val payload = com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(mapOf("xml" to dup))
 
         mvc.post("/opml") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = payload

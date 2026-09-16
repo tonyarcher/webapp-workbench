@@ -2,6 +2,7 @@ import {LitElement, html, unsafeCSS} from 'lit';
 import type {TemplateResult} from 'lit';
 import {customElement, state} from 'lit/decorators.js';
 import {
+    API_VERSION_HEADERS,
     csrfUrl,
     isHealthOk,
     healthzUrl,
@@ -93,7 +94,7 @@ export class AppShell extends LitElement {
 
     private async ping(signal: AbortSignal): Promise<void> {
         try {
-            const response = await fetch(healthzUrl(), {signal});
+            const response = await fetch(healthzUrl(), {signal, headers: {...API_VERSION_HEADERS}});
             const body: unknown = await response.json();
             if (!this.isConnected) return;
             this.apiStatus = response.ok && isHealthOk(body) ? 'ok' : 'down';
@@ -104,13 +105,13 @@ export class AppShell extends LitElement {
     }
 
     private async loadCsrf(signal: AbortSignal): Promise<string | null> {
-        const response = await fetch(csrfUrl(), {signal, credentials: 'include'});
+        const response = await fetch(csrfUrl(), {signal, credentials: 'include', headers: {...API_VERSION_HEADERS}});
         const body: unknown = await response.json();
         return readCsrf(body);
     }
 
     private async loadMe(signal: AbortSignal): Promise<{id: string; username: string; totpEnabled: boolean; passkeyCount: number} | null> {
-        const response = await fetch(meUrl(), {signal, credentials: 'include'});
+        const response = await fetch(meUrl(), {signal, credentials: 'include', headers: {...API_VERSION_HEADERS}});
         if (response.status === 401) return null;
         const body: unknown = await response.json();
         return readMe(body);
@@ -251,7 +252,7 @@ export class AppShell extends LitElement {
             method: 'POST',
             signal,
             credentials: 'include',
-            headers: {'X-CSRF-Token': this.csrf},
+            headers: {...API_VERSION_HEADERS, 'X-CSRF-Token': this.csrf},
         });
         if (!this.isConnected) return;
         if (!result.ok) {
@@ -377,6 +378,7 @@ export class AppShell extends LitElement {
             signal,
             credentials: 'include',
             headers: {
+                ...API_VERSION_HEADERS,
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': this.csrf,
             },

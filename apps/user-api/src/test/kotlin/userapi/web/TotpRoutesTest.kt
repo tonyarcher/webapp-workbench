@@ -71,31 +71,31 @@ class TotpRoutesTest {
     @Test
     fun enrollThenLoginRequiresCode() {
         val cookies = TestCookies()
-        mvc.getWithCookies(cookies, "/v1/csrf").expectStatus(200)
+        mvc.getWithCookies(cookies, "/csrf").expectStatus(200)
         enrollAlice(cookies)
         passwordLoginNeedsTotp(cookies)
         finishTotp(cookies)
     }
 
     private fun enrollAlice(cookies: TestCookies) {
-        postPassword(cookies, "/v1/register", "alice", "twelvechars!!").expectStatus(201)
-        mvc.postJson(cookies, "/v1/totp/begin", csrf = true, json = null).expectStatus(200)
-        val confirm = postCode(cookies, "/v1/totp/confirm", "123456")
+        postPassword(cookies, "/register", "alice", "twelvechars!!").expectStatus(201)
+        mvc.postJson(cookies, "/totp/begin", csrf = true, json = null).expectStatus(200)
+        val confirm = postCode(cookies, "/totp/confirm", "123456")
         confirm.expectStatus(200)
         assertTrue(confirm.bodyText().contains("backupCodes"))
-        mvc.postJson(cookies, "/v1/logout", csrf = true, json = null).expectStatus(200)
+        mvc.postJson(cookies, "/logout", csrf = true, json = null).expectStatus(200)
     }
 
     private fun passwordLoginNeedsTotp(cookies: TestCookies) {
-        val login = postPassword(cookies, "/v1/login", "alice", "twelvechars!!")
+        val login = postPassword(cookies, "/login", "alice", "twelvechars!!")
         login.expectStatus(200)
         assertTrue(login.bodyText().contains("totpRequired"))
-        assertEquals(401, mvc.getWithCookies(cookies, "/v1/me").response.status)
+        assertEquals(401, mvc.getWithCookies(cookies, "/me").response.status)
     }
 
     private fun finishTotp(cookies: TestCookies) {
-        postCode(cookies, "/v1/login/totp", "123456").expectStatus(200)
-        assertEquals(200, mvc.getWithCookies(cookies, "/v1/me").response.status)
+        postCode(cookies, "/login/totp", "123456").expectStatus(200)
+        assertEquals(200, mvc.getWithCookies(cookies, "/me").response.status)
     }
 
     private fun postPassword(cookies: TestCookies, path: String, username: String, password: String) =

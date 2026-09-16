@@ -21,10 +21,10 @@ class ConfigController(
     private val user: IdentityUser,
     private val trading: ObjectProvider<TradingService>,
 ) {
-    @GetMapping("/config")
+    @GetMapping("/config", headers = ["X-Api-Version=1"])
     fun get(): GameConfig = trading.orOffline().getConfig(user.id)
 
-    @PutMapping("/config")
+    @PutMapping("/config", headers = ["X-Api-Version=1"])
     fun put(@RequestBody body: UpdateConfigBody): GameConfig =
         trading.orOffline().updateConfig(
             user.id,
