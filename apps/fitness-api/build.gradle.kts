@@ -17,6 +17,8 @@ kotlin {
     jvmToolchain(21)
     compilerOptions {
         allWarningsAsErrors.set(true)
+        freeCompilerArgs.add("-Xjsr305=strict")
+        progressiveMode.set(true)
     }
 }
 

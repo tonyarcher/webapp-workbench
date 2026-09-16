@@ -219,6 +219,7 @@ or a `packages/log` workspace until a second language needs the same code.
 
 - `allWarningsAsErrors` on every API module. Fix the warning instead of suppressing it.
 - Explicit types on `const val` declarations. No `explicitApi()` on internal services.
+- `-Xjsr305=strict` plus progressive mode on every API module.
 - Detekt floors live in each API's `detekt.yml`. Split rather than suppress.
 
 ## Verification
