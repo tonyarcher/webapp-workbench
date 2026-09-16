@@ -73,22 +73,43 @@ export class ImportView extends LitElement {
                 <h1 class="title">Clipstack</h1>
                 <p class="help">Paste TikTok or Instagram links, or drop a .txt / .csv / .json — including a TikTok Like List or an Instagram data-export JSON.</p>
                 <input class="file-input" type="file" accept=".txt,.csv,.json,text/plain,text/csv,application/json" @change=${this.onFileChange}>
-                <textarea
-                    class="paste"
-                    placeholder="https://www.tiktok.com/@user/video/1234567890"
-                    .value=${this.text}
-                    @input=${this.onTextInput}
-                ></textarea>
-                <div class="actions">
-                    <button class="load-button" @click=${this.onLoad}>Load list</button>
-                    ${playable > 0
-                        ? html`<button class="start-button" @click=${this.emitImportParsed}>Start watching (${playable})</button>`
-                        : html``}
-                </div>
-                ${result ? html`<p class="summary">${playable} playable, ${skipped} skipped</p>` : html``}
+                ${this.pasteArea()}
+                ${this.actionsRow(playable)}
+                ${this.resultSummary(result, playable, skipped)}
                 ${this.renderSkipped()}
             </div>
         `
+    }
+
+    private pasteArea(): TemplateResult {
+        return html`
+            <textarea
+                class="paste"
+                placeholder="https://www.tiktok.com/@user/video/1234567890"
+                .value=${this.text}
+                @input=${this.onTextInput}
+            ></textarea>
+        `;
+    }
+
+    private actionsRow(playable: number): TemplateResult {
+        return html`
+            <div class="actions">
+                <button class="load-button" @click=${this.onLoad}>Load list</button>
+                ${playable > 0
+                    ? html`<button class="start-button" @click=${this.emitImportParsed}>Start watching (${playable})</button>`
+                    : html``}
+            </div>
+        `;
+    }
+
+    private resultSummary(
+        result: ParseResult | null,
+        playable: number,
+        skipped: number,
+    ): TemplateResult {
+        if (!result) return html``;
+        return html`<p class="summary">${playable} playable, ${skipped} skipped</p>`;
     }
 }
 

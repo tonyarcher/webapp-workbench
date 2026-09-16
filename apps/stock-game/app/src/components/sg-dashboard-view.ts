@@ -8,6 +8,24 @@ import './sg-portfolio-chart'
 import './sg-holdings-table'
 import { defineElement } from './define'
 
+type Settled<T> = PromiseSettledResult<T>
+
+function isRejected(...results: Array<Settled<unknown>>): boolean {
+  return results.some((result) => result.status === 'rejected')
+}
+
+function firstRejection(...results: Array<Settled<unknown>>): unknown {
+  for (const result of results) {
+    if (result.status === 'rejected') return result.reason as unknown
+  }
+  return null
+}
+
+function fulfilledValue<T>(result: Settled<T>): T {
+  if (result.status === 'rejected') throw result.reason
+  return result.value
+}
+
 export class SgDashboardView extends LitElement {
   static override styles = css`
     :host {
@@ -112,23 +130,14 @@ export class SgDashboardView extends LitElement {
       client.fetchQuery({ queryKey: ['holdings'], queryFn: () => fetchHoldings() }),
     ])
     if (!this.isConnected) return
-    if (
-      configResult.status === 'rejected' ||
-      seriesResult.status === 'rejected' ||
-      holdingsResult.status === 'rejected'
-    ) {
-      const err = (configResult.status === 'rejected'
-        ? configResult.reason
-        : seriesResult.status === 'rejected'
-          ? seriesResult.reason
-          : (holdingsResult as PromiseRejectedResult).reason) as unknown
-      this.setError(err)
+    if (isRejected(configResult, seriesResult, holdingsResult)) {
+      this.setError(firstRejection(configResult, seriesResult, holdingsResult))
       this.loading = false
       return
     }
-    this.config = configResult.value
-    this.series = seriesResult.value
-    this.holdings = holdingsResult.value
+    this.config = fulfilledValue(configResult)
+    this.series = fulfilledValue(seriesResult)
+    this.holdings = fulfilledValue(holdingsResult)
     this.loading = false
   }
 
@@ -136,26 +145,20 @@ export class SgDashboardView extends LitElement {
     const stats = this.statsFor(series, config)
     return html`
       <div class="row">
-        <div class="card stat">
-          <div class="label">Total value</div>
-          <div class="value">${fmtMoney(stats.totalCents)}</div>
-        </div>
-        <div class="card stat">
-          <div class="label">Cash</div>
-          <div class="value">${fmtMoney(stats.cash)}</div>
-        </div>
-        <div class="card stat">
-          <div class="label">Holdings</div>
-          <div class="value">${fmtMoney(stats.holdingsCents)}</div>
-        </div>
-        <div class="card stat">
-          <div class="label">Total return</div>
-          <div class="value ${stats.cls}">${fmtPct(series.totalReturnPct)}</div>
-        </div>
-        <div class="card stat">
-          <div class="label">Gain / Loss</div>
-          <div class="value ${stats.gainCls}">${fmtMoney(series.totalGainCents)}</div>
-        </div>
+        ${this.statCard('Total value', fmtMoney(stats.totalCents), '')}
+        ${this.statCard('Cash', fmtMoney(stats.cash), '')}
+        ${this.statCard('Holdings', fmtMoney(stats.holdingsCents), '')}
+        ${this.statCard('Total return', fmtPct(series.totalReturnPct), stats.cls)}
+        ${this.statCard('Gain / Loss', fmtMoney(series.totalGainCents), stats.gainCls)}
+      </div>
+    `
+  }
+
+  private statCard(label: string, value: string, cls: string): TemplateResult {
+    return html`
+      <div class="card stat">
+        <div class="label">${label}</div>
+        <div class="value ${cls}">${value}</div>
       </div>
     `
   }

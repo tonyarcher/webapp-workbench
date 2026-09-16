@@ -37,27 +37,43 @@ class AccountRoutesTest {
         application { module(settings, dataSource = null, accounts = accounts) }
         val client = apiClient()
         val csrf = csrfToken(client)
+        registerAlice(client, csrf)
+        assertMeContainsAlice(client)
+        logoutAndAssertUnauthorized(client, csrf)
+        loginAlice(client, csrf)
+        assertEquals(HttpStatusCode.OK, client.get("/v1/me").status)
+    }
+
+    private suspend fun ApplicationTestBuilder.registerAlice(client: HttpClient, csrf: String) {
         val created = client.post("/v1/register") {
             header(CSRF_HEADER, csrf)
             contentType(ContentType.Application.Json)
             setBody(PasswordBody("alice", "twelvechars!!"))
         }
         assertEquals(HttpStatusCode.Created, created.status)
+    }
+
+    private suspend fun assertMeContainsAlice(client: HttpClient) {
         val me = client.get("/v1/me")
         assertEquals(HttpStatusCode.OK, me.status)
         assertTrue(me.bodyAsText().contains("alice"))
+    }
+
+    private suspend fun ApplicationTestBuilder.logoutAndAssertUnauthorized(client: HttpClient, csrf: String) {
         val loggedOut = client.post("/v1/logout") {
             header(CSRF_HEADER, csrf)
         }
         assertEquals(HttpStatusCode.OK, loggedOut.status)
         assertEquals(HttpStatusCode.Unauthorized, client.get("/v1/me").status)
+    }
+
+    private suspend fun ApplicationTestBuilder.loginAlice(client: HttpClient, csrf: String) {
         val login = client.post("/v1/login") {
             header(CSRF_HEADER, csrf)
             contentType(ContentType.Application.Json)
             setBody(PasswordBody("alice", "twelvechars!!"))
         }
         assertEquals(HttpStatusCode.OK, login.status)
-        assertEquals(HttpStatusCode.OK, client.get("/v1/me").status)
     }
 
     @Test

@@ -296,20 +296,30 @@ export class AppShell extends LitElement {
 
     private async finishPasskeyCreate(body: unknown, signal: AbortSignal): Promise<void> {
         const parsed = readPasskeyBegin(body);
+        const cred = await this.createPasskey(parsed);
+        if (!cred || !parsed) return;
+        await this.sendPasskeyCreate(parsed.requestId, cred, signal);
+    }
+
+    private async createPasskey(
+        parsed: {options: unknown; requestId: string} | null,
+    ): Promise<PublicKeyCredential | null> {
         if (!parsed || !navigator.credentials) {
             this.busy = false;
             this.error = 'passkeys are not available';
-            return;
+            return null;
         }
         const cred = await navigator.credentials.create(decodeCreateOptions(parsed.options));
-        if (!(cred instanceof PublicKeyCredential)) {
-            this.busy = false;
-            this.error = 'passkey not created';
-            return;
-        }
+        if (cred instanceof PublicKeyCredential) return cred;
+        this.busy = false;
+        this.error = 'passkey not created';
+        return null;
+    }
+
+    private async sendPasskeyCreate(requestId: string, cred: PublicKeyCredential, signal: AbortSignal): Promise<void> {
         const finish = await this.postJson(
             passkeyRegisterFinishUrl(),
-            {requestId: parsed.requestId, credential: credentialToJson(cred)},
+            {requestId, credential: credentialToJson(cred)},
             signal,
         );
         if (!this.isConnected) return;
@@ -387,15 +397,21 @@ export class AppShell extends LitElement {
 
     private body(): TemplateResult {
         if (this.view === 'loading') return html`<p class="lead">Loading…</p>`;
-        if (this.view === 'totp') {
-            return html`
-                <p class="lead">Enter your authenticator or backup code.</p>
-                <uw-totp-form error=${this.error} .busy=${this.busy} @totp-submit=${this.onTotpLogin}></uw-totp-form>
-            `;
-        }
+        if (this.view === 'totp') return this.totpBody();
         if (this.view === 'enroll') return this.enrollBody();
         if (this.view === 'backups') return this.backupsBody();
         if (this.view === 'home') return this.homeBody();
+        return this.loginBody();
+    }
+
+    private totpBody(): TemplateResult {
+        return html`
+            <p class="lead">Enter your authenticator or backup code.</p>
+            <uw-totp-form error=${this.error} .busy=${this.busy} @totp-submit=${this.onTotpLogin}></uw-totp-form>
+        `;
+    }
+
+    private loginBody(): TemplateResult {
         return html`
             <uw-login-form
                 mode=${this.mode}

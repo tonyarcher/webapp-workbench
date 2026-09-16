@@ -206,31 +206,49 @@ export class WatchView extends LitElement {
     override render(): TemplateResult {
         return html`
             <div class="watch">
-                <button
-                    class="rail-toggle"
-                    aria-label=${this.sidebarOpen ? 'Close list' : 'Open list'}
-                    aria-expanded=${this.sidebarOpen}
-                    @click=${this.onToggleSidebar}
-                >☰</button>
-                <cs-progress-sidebar
-                    class=${this.sidebarOpen ? 'sidebar open' : 'sidebar'}
-                    .items=${this.links}
-                    .activeIndex=${this.activeIndex}
-                    .maxSeen=${this.maxSeen}
-                    .skippedCount=${this.skippedCount}
-                    @jump=${this.onJump}
-                    @new-list=${this.emitNewList}
-                    @close=${this.onBackdrop}
-                ></cs-progress-sidebar>
-                <vsc-scroll-viewport
-                    .items=${this.scrollItems}
-                    .resetKey=${this.resetKey}
-                    .startIndex=${this.startIndex}
-                    @active-index-change=${this.onActive}
-                    ${ref(this.onViewportRef)}
-                ></vsc-scroll-viewport>
+                ${this.railToggle()}
+                ${this.sidebar()}
+                ${this.scrollViewport()}
             </div>
         `
+    }
+
+    private railToggle(): TemplateResult {
+        return html`
+            <button
+                class="rail-toggle"
+                aria-label=${this.sidebarOpen ? 'Close list' : 'Open list'}
+                aria-expanded=${this.sidebarOpen}
+                @click=${this.onToggleSidebar}
+            >☰</button>
+        `;
+    }
+
+    private sidebar(): TemplateResult {
+        return html`
+            <cs-progress-sidebar
+                class=${this.sidebarOpen ? 'sidebar open' : 'sidebar'}
+                .items=${this.links}
+                .activeIndex=${this.activeIndex}
+                .maxSeen=${this.maxSeen}
+                .skippedCount=${this.skippedCount}
+                @jump=${this.onJump}
+                @new-list=${this.emitNewList}
+                @close=${this.onBackdrop}
+            ></cs-progress-sidebar>
+        `;
+    }
+
+    private scrollViewport(): TemplateResult {
+        return html`
+            <vsc-scroll-viewport
+                .items=${this.scrollItems}
+                .resetKey=${this.resetKey}
+                .startIndex=${this.startIndex}
+                @active-index-change=${this.onActive}
+                ${ref(this.onViewportRef)}
+            ></vsc-scroll-viewport>
+        `;
     }
 }
 

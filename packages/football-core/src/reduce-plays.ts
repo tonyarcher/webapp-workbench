@@ -46,11 +46,7 @@ export function applyKickoff(game: GameState, input: PlayInput): GameState {
     const situation = kickoffSpot(game, input, receiving);
     const playId = `play-${game.nextPlayId}`;
     const drive = openDrive({...game, situation}, receiving, playId);
-    const play = buildPlay(game, input, playId, drive.id, playResult({
-        yards: input.yards ?? 0,
-        firstDown: true,
-        deadAtYardline100: situation.yardline100,
-    }), 'none');
+    const play = kickoffPlay(game, input, playId, drive.id, situation);
     return {
         ...game,
         situation,
@@ -60,30 +56,33 @@ export function applyKickoff(game: GameState, input: PlayInput): GameState {
         drives: [...game.drives, {...drive, startYardline100: situation.yardline100, playIds: []}],
         nextPlayId: game.nextPlayId + 1,
         nextDriveId: game.nextDriveId + 1,
-        clock: {
-            ...game.clock,
-            gameClockSeconds: game.clock.untimed ? game.clock.gameClockSeconds : input.deadClock,
-            running: false,
-            playClockSeconds: 25,
-        },
+        clock: kickoffClock(game, input),
+    };
+}
+
+function kickoffPlay(game: GameState, input: PlayInput, playId: string, driveId: string, situation: Situation): Play {
+    return buildPlay(game, input, playId, driveId, playResult({
+        yards: input.yards ?? 0,
+        firstDown: true,
+        deadAtYardline100: situation.yardline100,
+    }), 'none');
+}
+
+function kickoffClock(game: GameState, input: PlayInput): GameState['clock'] {
+    return {
+        ...game.clock,
+        gameClockSeconds: game.clock.untimed ? game.clock.gameClockSeconds : input.deadClock,
+        running: false,
+        playClockSeconds: 25,
     };
 }
 
 export function applyTry(game: GameState, input: PlayInput): GameState {
     const scoringTeam = game.tryTeam ?? game.situation.possession;
-    const made = input.family === 'extra_point' ? input.extraPointMade === true : input.twoPointMade === true;
+    const made = tryMade(input);
     const points = input.family === 'extra_point' ? 1 : 2;
     const playId = `play-${game.nextPlayId}`;
-    const scoring = made ? (input.family === 'extra_point' ? 'extra_point' : 'two_point') : undefined;
-    const play = buildPlay(game, input, playId, '', {
-        yards: 0,
-        firstDown: made && input.family === 'two_point',
-        ...(scoring === undefined ? {} : {scoring}),
-        deadAtYardline100: game.situation.yardline100,
-        outOfBounds: false,
-        incomplete: !made && input.family === 'two_point',
-        sack: false,
-    }, 'try');
+    const play = tryPlay(game, input, playId, made);
     const ready = kickoffReady(game, scoringTeam);
     const next: GameState = {
         ...game,
@@ -98,6 +97,23 @@ export function applyTry(game: GameState, input: PlayInput): GameState {
     };
     next.clock.mercyActive = updateMercy(next);
     return next;
+}
+
+function tryMade(input: PlayInput): boolean {
+    return input.family === 'extra_point' ? input.extraPointMade === true : input.twoPointMade === true;
+}
+
+function tryPlay(game: GameState, input: PlayInput, playId: string, made: boolean): Play {
+    const scoring = made ? (input.family === 'extra_point' ? 'extra_point' : 'two_point') : undefined;
+    return buildPlay(game, input, playId, '', {
+        yards: 0,
+        firstDown: made && input.family === 'two_point',
+        ...(scoring === undefined ? {} : {scoring}),
+        deadAtYardline100: game.situation.yardline100,
+        outOfBounds: false,
+        incomplete: !made && input.family === 'two_point',
+        sack: false,
+    }, 'try');
 }
 
 function puntSituation(game: GameState, yards: number, touchback: boolean) {
@@ -135,15 +151,7 @@ export function applyPunt(game: GameState, input: PlayInput): GameState {
 function applyMadeFieldGoal(game: GameState, input: PlayInput): GameState {
     const kicking = game.situation.possession;
     const playId = `play-${game.nextPlayId}`;
-    const play = buildPlay(game, input, playId, currentDriveId(game), {
-        yards: game.situation.yardline100,
-        firstDown: false,
-        scoring: 'field_goal',
-        deadAtYardline100: 0,
-        outOfBounds: false,
-        incomplete: false,
-        sack: false,
-    }, 'score');
+    const play = madeFieldGoalPlay(game, input, playId);
     const ready = kickoffReady(game, kicking);
     const next: GameState = {
         ...game,
@@ -153,14 +161,30 @@ function applyMadeFieldGoal(game: GameState, input: PlayInput): GameState {
         plays: [...game.plays, play],
         drives: closeDrive(game.drives, 'fg'),
         nextPlayId: game.nextPlayId + 1,
-        clock: {
-            ...game.clock,
-            running: false,
-            gameClockSeconds: game.clock.untimed ? game.clock.gameClockSeconds : input.deadClock,
-        },
+        clock: fieldGoalClock(game, input),
     };
     next.clock.mercyActive = updateMercy(next);
     return next;
+}
+
+function madeFieldGoalPlay(game: GameState, input: PlayInput, playId: string): Play {
+    return buildPlay(game, input, playId, currentDriveId(game), {
+        yards: game.situation.yardline100,
+        firstDown: false,
+        scoring: 'field_goal',
+        deadAtYardline100: 0,
+        outOfBounds: false,
+        incomplete: false,
+        sack: false,
+    }, 'score');
+}
+
+function fieldGoalClock(game: GameState, input: PlayInput): GameState['clock'] {
+    return {
+        ...game.clock,
+        running: false,
+        gameClockSeconds: game.clock.untimed ? game.clock.gameClockSeconds : input.deadClock,
+    };
 }
 
 export function applyFieldGoal(game: GameState, input: PlayInput): GameState {
@@ -191,15 +215,7 @@ export function applyFieldGoal(game: GameState, input: PlayInput): GameState {
 function applyDownsTurnover(game: GameState, input: PlayInput, yards: number, deadAt: number): GameState {
     const situation = flipPossession(game.situation, deadAt);
     const playId = `play-${game.nextPlayId}`;
-    const play = buildPlay(game, input, playId, currentDriveId(game), {
-        yards,
-        firstDown: false,
-        turnover: 'downs',
-        deadAtYardline100: deadAt,
-        outOfBounds: input.outOfBounds === true,
-        incomplete: input.incomplete === true || input.family === 'spike',
-        sack: input.sack === true,
-    }, 'change_of_possession');
+    const play = downsPlay(game, input, playId, yards, deadAt);
     const drive = openDrive({...game, situation}, situation.possession, playId);
     return finishPlay({
         ...game,
@@ -209,14 +225,30 @@ function applyDownsTurnover(game: GameState, input: PlayInput, yards: number, de
         drives: [...closeDrive(appendPlayToDrive(game.drives, playId), 'downs'), {...drive, playIds: []}],
         nextPlayId: game.nextPlayId + 1,
         nextDriveId: game.nextDriveId + 1,
-    }, input, {
+    }, input, downsFacts(game, input, play));
+}
+
+function downsPlay(game: GameState, input: PlayInput, playId: string, yards: number, deadAt: number): Play {
+    return buildPlay(game, input, playId, currentDriveId(game), {
+        yards,
+        firstDown: false,
+        turnover: 'downs',
+        deadAtYardline100: deadAt,
+        outOfBounds: input.outOfBounds === true,
+        incomplete: input.incomplete === true || input.family === 'spike',
+        sack: input.sack === true,
+    }, 'change_of_possession');
+}
+
+function downsFacts(game: GameState, input: PlayInput, play: Play): ClockFactsInput {
+    return {
         downBefore: game.situation.down,
         firstDown: false,
         incomplete: play.result.incomplete,
         scored: false,
         turnover: true,
         outOfBounds: input.outOfBounds === true,
-    });
+    };
 }
 
 function scrimmageYards(input: PlayInput): {incomplete: boolean; yards: number} {
@@ -301,8 +333,26 @@ function recordTurnoverPlay(
     td: boolean,
 ): GameState {
     const playId = `play-${game.nextPlayId}`;
+    const play = turnoverPlay(game, input, playId, kind, yards, spot, td);
+    return {
+        ...game,
+        plays: [...game.plays, play],
+        drives: closeDrive(appendPlayToDrive(game.drives, playId), td ? 'td' : 'turnover'),
+        nextPlayId: game.nextPlayId + 1,
+    };
+}
+
+function turnoverPlay(
+    game: GameState,
+    input: PlayInput,
+    playId: string,
+    kind: 'interception' | 'fumble',
+    yards: number,
+    spot: number,
+    td: boolean,
+): Play {
     const scoring = td ? 'touchdown' : undefined;
-    const play = buildPlay(game, input, playId, currentDriveId(game), {
+    return buildPlay(game, input, playId, currentDriveId(game), {
         yards,
         firstDown: false,
         turnover: kind,
@@ -312,12 +362,6 @@ function recordTurnoverPlay(
         incomplete: false,
         sack: input.sack === true,
     }, td ? 'score' : 'change_of_possession');
-    return {
-        ...game,
-        plays: [...game.plays, play],
-        drives: closeDrive(appendPlayToDrive(game.drives, playId), td ? 'td' : 'turnover'),
-        nextPlayId: game.nextPlayId + 1,
-    };
 }
 
 function applyLostBall(
@@ -330,13 +374,7 @@ function applyLostBall(
 ): GameState {
     const situation = flipPossession(game.situation, spot);
     const playId = `play-${game.nextPlayId}`;
-    const play = buildPlay(game, input, playId, currentDriveId(game), playResult({
-        yards,
-        turnover: kind,
-        deadAtYardline100: spot,
-        outOfBounds: input.outOfBounds === true,
-        sack: input.sack === true,
-    }), 'change_of_possession');
+    const play = lostBallPlay(game, input, playId, kind, yards, spot);
     const drive = openDrive({...game, situation}, defense, playId);
     return finishPlay({
         ...game,
@@ -347,6 +385,23 @@ function applyLostBall(
         nextPlayId: game.nextPlayId + 1,
         nextDriveId: game.nextDriveId + 1,
     }, input, turnoverFacts(game, input));
+}
+
+function lostBallPlay(
+    game: GameState,
+    input: PlayInput,
+    playId: string,
+    kind: 'interception' | 'fumble',
+    yards: number,
+    spot: number,
+): Play {
+    return buildPlay(game, input, playId, currentDriveId(game), playResult({
+        yards,
+        turnover: kind,
+        deadAtYardline100: spot,
+        outOfBounds: input.outOfBounds === true,
+        sack: input.sack === true,
+    }), 'change_of_possession');
 }
 
 export function applyTurnover(
@@ -364,26 +419,7 @@ export function applyTurnover(
 }
 
 export function applyTouchdown(game: GameState, input: PlayInput, yards: number, scoringTeam: TeamId): GameState {
-    const alreadyRecorded = game.plays[game.plays.length - 1]?.result.scoring === 'touchdown';
-    let base = game;
-    if (!alreadyRecorded) {
-        const playId = `play-${game.nextPlayId}`;
-        const play = buildPlay(game, input, playId, currentDriveId(game), {
-            yards,
-            firstDown: true,
-            scoring: 'touchdown',
-            deadAtYardline100: 0,
-            outOfBounds: false,
-            incomplete: false,
-            sack: input.sack === true,
-        }, 'score');
-        base = {
-            ...game,
-            plays: [...game.plays, play],
-            drives: closeDrive(appendPlayToDrive(game.drives, playId), 'td'),
-            nextPlayId: game.nextPlayId + 1,
-        };
-    }
+    const base = withTouchdownPlay(game, input, yards);
     return finishPlay(afterScore(base, scoringTeam, addScore(base, scoringTeam, 6), true), input, {
         downBefore: game.situation.down,
         firstDown: true,
@@ -393,14 +429,34 @@ export function applyTouchdown(game: GameState, input: PlayInput, yards: number,
     });
 }
 
+function withTouchdownPlay(game: GameState, input: PlayInput, yards: number): GameState {
+    const alreadyRecorded = game.plays[game.plays.length - 1]?.result.scoring === 'touchdown';
+    if (alreadyRecorded) return game;
+    const playId = `play-${game.nextPlayId}`;
+    const play = touchdownPlay(game, input, playId, yards);
+    return {
+        ...game,
+        plays: [...game.plays, play],
+        drives: closeDrive(appendPlayToDrive(game.drives, playId), 'td'),
+        nextPlayId: game.nextPlayId + 1,
+    };
+}
+
+function touchdownPlay(game: GameState, input: PlayInput, playId: string, yards: number): Play {
+    return buildPlay(game, input, playId, currentDriveId(game), {
+        yards,
+        firstDown: true,
+        scoring: 'touchdown',
+        deadAtYardline100: 0,
+        outOfBounds: false,
+        incomplete: false,
+        sack: input.sack === true,
+    }, 'score');
+}
+
 export function applySafety(game: GameState, input: PlayInput, yards: number): GameState {
     const playId = `play-${game.nextPlayId}`;
-    const play = buildPlay(game, input, playId, currentDriveId(game), playResult({
-        yards,
-        scoring: 'safety',
-        deadAtYardline100: 100,
-        sack: input.sack === true,
-    }), 'score');
+    const play = safetyPlay(game, input, playId, yards);
     const next: GameState = {
         ...game,
         score: addScore(game, oppositeTeam(game.situation.possession), 2),
@@ -411,11 +467,24 @@ export function applySafety(game: GameState, input: PlayInput, yards: number): G
         clock: {...game.clock, running: false},
     };
     next.clock.mercyActive = updateMercy(next);
-    return finishPlay(next, input, {
+    return finishPlay(next, input, safetyFacts(game));
+}
+
+function safetyPlay(game: GameState, input: PlayInput, playId: string, yards: number): Play {
+    return buildPlay(game, input, playId, currentDriveId(game), playResult({
+        yards,
+        scoring: 'safety',
+        deadAtYardline100: 100,
+        sack: input.sack === true,
+    }), 'score');
+}
+
+function safetyFacts(game: GameState): ClockFactsInput {
+    return {
         downBefore: game.situation.down,
         firstDown: false,
         incomplete: false,
         scored: true,
         turnover: false,
-    });
+    };
 }

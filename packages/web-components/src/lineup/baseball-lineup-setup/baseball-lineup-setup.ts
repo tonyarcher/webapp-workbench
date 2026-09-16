@@ -273,12 +273,26 @@ export class BaseballLineupSetup extends LitElement {
         return html`
           <div class="slot-row">
             <span class="slot-num">${index + 1}</span>
+            ${this.nameInput(team, player, index)}
+            ${this.jerseyInput(team, player, index)}
+            ${this.positionSelect(team, player, index)}
+          </div>
+        `;
+    }
+
+    private nameInput(team: 'home' | 'away', player: PlayerInfo, index: number) {
+        return html`
             <input
                 class="form-control input-flex"
                 data-testid="${team}-slot-${index + 1}-name"
                 .value=${player.name}
                 @input=${(event: Event) => this.updatePlayer(team, index, 'name', (event.target as HTMLInputElement).value)}
             />
+        `;
+    }
+
+    private jerseyInput(team: 'home' | 'away', player: PlayerInfo, index: number) {
+        return html`
             <input
                 class="form-control input-num"
                 data-testid="${team}-slot-${index + 1}-jersey"
@@ -288,6 +302,11 @@ export class BaseballLineupSetup extends LitElement {
                 .value=${player.jerseyNumber ? String(player.jerseyNumber) : ''}
                 @input=${(event: Event) => this.updatePlayer(team, index, 'jerseyNumber', (event.target as HTMLInputElement).value)}
             />
+        `;
+    }
+
+    private positionSelect(team: 'home' | 'away', player: PlayerInfo, index: number) {
+        return html`
             <select
                 class="form-control select-pos"
                 data-testid="${team}-slot-${index + 1}-position"
@@ -296,7 +315,6 @@ export class BaseballLineupSetup extends LitElement {
             >
               ${FIELD_POSITIONS.map((position) => this.renderPositionOption(position, player.position))}
             </select>
-          </div>
         `;
     }
 

@@ -267,17 +267,31 @@ export async function loginLemmy(
     totpToken?: string,
     fetchImpl: FetchImpl = fetch,
 ): Promise<LoginResult> {
+    const body = loginBody(usernameOrEmail, password, totpToken);
+    const data = (await apiPost(instance, '/api/v3/user/login', body, fetchImpl)) as {
+        jwt?: string | {jwt: string} | null
+        registration_created?: boolean
+        verify_email_sent?: boolean
+    } | null
+    assertLoginOk(instance, data);
+    const jwt = loginJwt(data);
+    return {jwt, username: usernameOrEmail}
+}
+
+function loginBody(usernameOrEmail: string, password: string, totpToken?: string): Record<string, string | boolean> {
     const body: Record<string, string | boolean> = {
         username_or_email: usernameOrEmail,
         password,
         stay_logged_in: true,
     }
     if (totpToken) body['totp_2fa_token'] = totpToken
-    const data = (await apiPost(instance, '/api/v3/user/login', body, fetchImpl)) as {
-        jwt?: string | {jwt: string} | null
-        registration_created?: boolean
-        verify_email_sent?: boolean
-    } | null
+    return body;
+}
+
+function assertLoginOk(
+    instance: string,
+    data: {registration_created?: boolean; verify_email_sent?: boolean} | null,
+): asserts data is {registration_created?: boolean; verify_email_sent?: boolean} {
     if (!data) throw unexpectedResponse(instance, '/api/v3/user/login')
     if (data.registration_created) {
         throw new ApiError('That account is registered but not yet approved by the instance.')
@@ -285,9 +299,14 @@ export async function loginLemmy(
     if (data.verify_email_sent) {
         throw new ApiError('Verify your email address before logging in.')
     }
+}
+
+function loginJwt(
+    data: {jwt?: string | {jwt: string} | null},
+): string {
     const jwt = typeof data.jwt === 'string' ? data.jwt : data.jwt?.jwt
     if (!jwt) throw new ApiError('Login failed — check your username and password.', 401)
-    return {jwt, username: usernameOrEmail}
+    return jwt;
 }
 
 // ---- api calls ----

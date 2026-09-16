@@ -28,28 +28,39 @@ export class BaseballStep2Panel extends LitElement {
         return html`
             <div class="step2-card">
                 <h3 class="step2-title">Step 2: ${this.baseLabel} Details</h3>
-                ${this.doublePlayAvailable ? html`
-                    <label class="double-play-toggle">
-                        <input
-                            type="checkbox"
-                            .checked=${this.doublePlayActive}
-                            @change=${(event: Event) => (this.doublePlayActive = (event.target as HTMLInputElement).checked)}
-                        />
-                        Double Play (two outs)
-                    </label>
-                ` : ''}
-                <div class="location-grid">
-                    ${this.locations.map(loc => html`
-                        <button class="btn btn-action" @click=${() => this.selectLocation(loc)}>
-                            ${loc}
-                        </button>
-                    `)}
-                    <button class="btn btn-action" @click=${() => this.selectLocation(null)}>
-                        Unspecified Location
-                    </button>
-                </div>
+                ${this.doublePlayToggle()}
+                ${this.locationGrid()}
                 <button class="btn btn-secondary" @click=${() => this.cancelStep2()}>
                     ← Cancel
+                </button>
+            </div>
+        `;
+    }
+
+    private doublePlayToggle() {
+        if (!this.doublePlayAvailable) return '';
+        return html`
+            <label class="double-play-toggle">
+                <input
+                    type="checkbox"
+                    .checked=${this.doublePlayActive}
+                    @change=${(event: Event) => (this.doublePlayActive = (event.target as HTMLInputElement).checked)}
+                />
+                Double Play (two outs)
+            </label>
+        `;
+    }
+
+    private locationGrid() {
+        return html`
+            <div class="location-grid">
+                ${this.locations.map(loc => html`
+                    <button class="btn btn-action" @click=${() => this.selectLocation(loc)}>
+                        ${loc}
+                    </button>
+                `)}
+                <button class="btn btn-action" @click=${() => this.selectLocation(null)}>
+                    Unspecified Location
                 </button>
             </div>
         `;

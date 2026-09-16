@@ -35,12 +35,13 @@
     "max-lines-per-function": [
       "error",
       {
-        "max": 30,
+        "max": 25,
         "skipBlankLines": true,
         "skipComments": true
       }
     ],
-    "complexity": ["error", 10]
+    "complexity": ["error", 10],
+    "max-depth": ["error", 3]
   },
   "overrides": [
     {
@@ -48,7 +49,8 @@
       "rules": {
         "max-lines": "off",
         "max-lines-per-function": "off",
-        "complexity": "off"
+        "complexity": "off",
+        "max-depth": "off"
       }
     }
   ]

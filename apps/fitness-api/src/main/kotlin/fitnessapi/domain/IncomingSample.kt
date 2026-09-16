@@ -25,7 +25,8 @@ fun asSample(
     originId: String?,
 ): IncomingSample? {
     val metric = metricRaw?.let { parseMetricId(it) } ?: return null
-    if (t == null || !t.isFinite() || valueSi == null || !valueSi.isFinite()) return null
+    if (t == null || valueSi == null) return null
+    if (!t.isFinite() || !valueSi.isFinite()) return null
     if (originId.isNullOrEmpty()) return null
     return IncomingSample(metric, t.toLong(), valueSi, sampleSource(source), originId)
 }

@@ -1,7 +1,7 @@
 complexity:
   LongMethod:
     active: true
-    allowedLines: 30
+    allowedLines: 25
   TooManyFunctions:
     active: true
     allowedFunctionsPerFile: 10
@@ -14,13 +14,13 @@ complexity:
     ignoreOverridden: false
   CyclomaticComplexMethod:
     active: true
-    allowedComplexity: 15
+    allowedComplexity: 10
   NestedBlockDepth:
     active: true
-    allowedDepth: 4
+    allowedDepth: 3
   ComplexCondition:
     active: true
-    allowedConditions: 4
+    allowedConditions: 3
 
 style:
   MaxLineLength:

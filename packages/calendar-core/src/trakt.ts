@@ -425,17 +425,7 @@ async function loadHistoryEvents(
     }
 }
 
-export async function fetchTraktEvents({
-    fetch: fetchImpl,
-    baseUrl,
-    clientId,
-    accessToken,
-    includeCalendar = true,
-    includeHistory = true,
-    now = Date.now(),
-    onProgress,
-    onTruncate,
-}: {
+export interface FetchTraktOptions {
     fetch: FetchLike;
     baseUrl: string;
     clientId: string;
@@ -445,11 +435,19 @@ export async function fetchTraktEvents({
     now?: number;
     onProgress?: (progress: SyncProgress) => void;
     onTruncate?: (info: {type: 'shows' | 'movies'; page: number}) => void;
-}): Promise<CalEvent[]> {
+}
+
+export async function fetchTraktEvents(options: FetchTraktOptions): Promise<CalEvent[]> {
+    const {fetch: fetchImpl, baseUrl, clientId, accessToken} = options;
+    const includeCalendar = options.includeCalendar ?? true;
+    const includeHistory = options.includeHistory ?? true;
+    const now = options.now ?? Date.now();
     const headers = traktHeaders(clientId, accessToken);
     const events: CalEvent[] = [];
-    if (includeCalendar) await loadCalendarEvents(fetchImpl, baseUrl, headers, now, events, onProgress);
-    if (includeHistory) await loadHistoryEvents(fetchImpl, baseUrl, headers, events, onProgress, onTruncate);
-    onProgress?.({phase: 'convert', done: events.length, total: events.length});
+    if (includeCalendar) await loadCalendarEvents(fetchImpl, baseUrl, headers, now, events, options.onProgress);
+    if (includeHistory) {
+        await loadHistoryEvents(fetchImpl, baseUrl, headers, events, options.onProgress, options.onTruncate);
+    }
+    options.onProgress?.({phase: 'convert', done: events.length, total: events.length});
     return events;
 }

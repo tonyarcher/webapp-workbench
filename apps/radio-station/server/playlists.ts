@@ -119,14 +119,25 @@ async function persistWeek(
     entries: PlaylistEntryRow[],
 ): Promise<PlaylistRow> {
     const id = randomUUID();
+    await insertWeek(pool, id, stationId, seed, startsAt, weights, entries);
+    const created = await getPlaylist(id);
+    if (!created) throw new Error('playlist insert vanished');
+    return created;
+}
+
+async function insertWeek(
+    pool: pg.Pool,
+    id: string,
+    stationId: string,
+    seed: string,
+    startsAt: Date,
+    weights: Weights,
+    entries: PlaylistEntryRow[],
+): Promise<void> {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        await client.query(
-            `INSERT INTO playlists (id, station_id, seed, starts_at, duration_ms, weights)
-             VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
-            [id, stationId, seed, startsAt, WEEK_MS, weightsJson(weights)],
-        );
+        await insertPlaylistRow(client, id, stationId, seed, startsAt, weights);
         await insertEntries(client, id, entries);
         await client.query('COMMIT');
     } catch (err) {
@@ -135,9 +146,21 @@ async function persistWeek(
     } finally {
         client.release();
     }
-    const created = await getPlaylist(id);
-    if (!created) throw new Error('playlist insert vanished');
-    return created;
+}
+
+async function insertPlaylistRow(
+    client: pg.PoolClient,
+    id: string,
+    stationId: string,
+    seed: string,
+    startsAt: Date,
+    weights: Weights,
+): Promise<void> {
+    await client.query(
+        `INSERT INTO playlists (id, station_id, seed, starts_at, duration_ms, weights)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+        [id, stationId, seed, startsAt, WEEK_MS, weightsJson(weights)],
+    );
 }
 
 export async function getPlaylist(id: string): Promise<PlaylistRow | null> {
@@ -152,7 +175,12 @@ export async function getPlaylist(id: string): Promise<PlaylistRow | null> {
 }
 
 export async function getEntries(playlistId: string): Promise<PlaylistEntryRow[]> {
-    const {rows} = await getPool().query<{
+    const {rows} = await queryEntries(playlistId);
+    return rows.map((row) => mapEntryRow(row));
+}
+
+async function queryEntries(playlistId: string) {
+    return getPool().query<{
         idx: number;
         track_id: string;
         artist: string;
@@ -169,7 +197,19 @@ export async function getEntries(playlistId: string): Promise<PlaylistEntryRow[]
          ORDER BY e.idx`,
         [playlistId],
     );
-    return rows.map((row) => ({
+}
+
+function mapEntryRow(row: {
+    idx: number;
+    track_id: string;
+    artist: string;
+    title: string;
+    starts_at: Date;
+    duration_ms: number;
+    rotation: string;
+    era: string;
+}): PlaylistEntryRow {
+    return {
         idx: row.idx,
         trackId: row.track_id,
         artist: row.artist,
@@ -178,7 +218,7 @@ export async function getEntries(playlistId: string): Promise<PlaylistEntryRow[]
         durationMs: row.duration_ms,
         rotation: row.rotation as PlaylistEntryRow['rotation'],
         era: row.era as PlaylistEntryRow['era'],
-    }));
+    };
 }
 
 function utcMidnightMs(now = Date.now()): number {

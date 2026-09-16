@@ -244,9 +244,15 @@ export class SgTradeView extends LitElement {
           @sg-symbol-select=${this.onSymbolSelect}
           @sg-trade-submit=${this.onSubmit}
         ></sg-trade-form>
-        ${this.mutError ? html`<div class="error">${this.mutError}</div>` : ''}
-        ${this.mutSuccess ? html`<div class="positive">Order placed.</div>` : ''}
+        ${this.formMessages()}
       </div>
+    `
+  }
+
+  private formMessages(): TemplateResult {
+    return html`
+      ${this.mutError ? html`<div class="error">${this.mutError}</div>` : ''}
+      ${this.mutSuccess ? html`<div class="positive">Order placed.</div>` : ''}
     `
   }
 

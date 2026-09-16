@@ -38,14 +38,7 @@ export function parseCsv(text: string): string[][] {
     let cell = '';
     let inQuotes = false;
     for (let i = 0; i < text.length; i++) {
-        if (inQuotes) {
-            const stepped = stepQuoted(text, i, cell);
-            cell = stepped.cell;
-            i = stepped.next - 1;
-            inQuotes = stepped.inQuotes;
-            continue;
-        }
-        const stepped = stepUnquoted(text, i, cell, row, rows);
+        const stepped = stepOnce(text, i, cell, row, rows, inQuotes);
         if (stepped) {
             cell = stepped.cell;
             row = stepped.row;
@@ -55,9 +48,28 @@ export function parseCsv(text: string): string[][] {
         }
         cell += text[i] ?? '';
     }
+    finishCsv(rows, row, cell);
+    return rows;
+}
+
+function stepOnce(
+    text: string,
+    i: number,
+    cell: string,
+    row: string[],
+    rows: string[][],
+    inQuotes: boolean,
+): {cell: string; row: string[]; next: number; inQuotes: boolean} | null {
+    if (inQuotes) {
+        const stepped = stepQuoted(text, i, cell);
+        return {...stepped, row};
+    }
+    return stepUnquoted(text, i, cell, row, rows);
+}
+
+function finishCsv(rows: string[][], row: string[], cell: string): void {
     row.push(cell);
     if (row.some((value) => value.length > 0)) rows.push(row);
-    return rows;
 }
 
 function headerIndex(header: string[], ...names: string[]): number {

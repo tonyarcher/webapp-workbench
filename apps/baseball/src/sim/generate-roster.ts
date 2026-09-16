@@ -90,18 +90,7 @@ export function rosterFromLineup(
   pitcherName: string
 ): SimRoster {
   const usedJerseys = new Set<number>();
-  const lineup = players.slice(0, 9).map((player, index) => {
-    const jersey = player.jerseyNumber && player.jerseyNumber > 0 ? player.jerseyNumber : uniqueJersey(random, usedJerseys);
-    usedJerseys.add(jersey);
-    return {
-      batterName: player.batterName,
-      position: player.position || BATTER_POSITIONS[index] || 'DH',
-      jerseyNumber: jersey,
-      bats: handedness(random, 0.28),
-      throws: handedness(random, 0.12),
-      ratings: rollRatings(random, SLOT_BIAS[index] ?? {}),
-    };
-  });
+  const lineup = players.slice(0, 9).map((player, index) => lineupSlot(random, usedJerseys, player, index));
   return {
     teamName,
     lineup,
@@ -110,6 +99,24 @@ export function rosterFromLineup(
       throws: handedness(random, 0.28),
       ratings: rollPitcherRatings(random),
     },
+  };
+}
+
+function lineupSlot(
+  random: () => number,
+  usedJerseys: Set<number>,
+  player: LineupLike,
+  index: number,
+) {
+  const jersey = player.jerseyNumber && player.jerseyNumber > 0 ? player.jerseyNumber : uniqueJersey(random, usedJerseys);
+  usedJerseys.add(jersey);
+  return {
+    batterName: player.batterName,
+    position: player.position || BATTER_POSITIONS[index] || 'DH',
+    jerseyNumber: jersey,
+    bats: handedness(random, 0.28),
+    throws: handedness(random, 0.12),
+    ratings: rollRatings(random, SLOT_BIAS[index] ?? {}),
   };
 }
 

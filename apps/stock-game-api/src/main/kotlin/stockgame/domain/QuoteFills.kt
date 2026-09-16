@@ -33,8 +33,12 @@ fun quoteFillPrice(quote: Quote, source: String): Double {
     if (source == "last") return quote.price
     if (source == "bid") return quote.bid?.takeIf { it > 0 } ?: quote.price
     if (source == "ask") return quote.ask?.takeIf { it > 0 } ?: quote.price
-    val bid = quote.bid
-    val ask = quote.ask
-    if (bid != null && bid > 0 && ask != null && ask > 0) return (bid + ask) / 2
-    return quote.price
+    val mid = midPrice(quote.bid, quote.ask)
+    return mid ?: quote.price
+}
+
+private fun midPrice(bid: Double?, ask: Double?): Double? {
+    if (bid == null || ask == null) return null
+    if (bid <= 0 || ask <= 0) return null
+    return (bid + ask) / 2
 }

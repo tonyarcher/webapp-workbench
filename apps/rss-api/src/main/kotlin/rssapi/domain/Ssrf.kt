@@ -5,12 +5,22 @@ fun isPrivateIpv4(ip: String): Boolean {
     if (parts.size != 4) return true
     val p0 = parts[0]
     val p1 = parts[1]
-    if (p0 == 0 || p0 == 10 || p0 == 127) return true
-    if (p0 == 100 && p1 in 64..127) return true
-    if (p0 == 169 && p1 == 254) return true
-    if (p0 == 172 && p1 in 16..31) return true
-    return p0 == 192 && p1 == 168
+    if (isLoopbackOrWellKnown(p0)) return true
+    if (isCarrierGrade(p0, p1)) return true
+    if (isLinkLocal(p0, p1)) return true
+    if (isPrivate172(p0, p1)) return true
+    return isPrivate192(p0, p1)
 }
+
+private fun isLoopbackOrWellKnown(p0: Int): Boolean = p0 == 0 || p0 == 10 || p0 == 127
+
+private fun isCarrierGrade(p0: Int, p1: Int): Boolean = p0 == 100 && p1 in 64..127
+
+private fun isLinkLocal(p0: Int, p1: Int): Boolean = p0 == 169 && p1 == 254
+
+private fun isPrivate172(p0: Int, p1: Int): Boolean = p0 == 172 && p1 in 16..31
+
+private fun isPrivate192(p0: Int, p1: Int): Boolean = p0 == 192 && p1 == 168
 
 fun isPrivateIpv6Lower(lower: String): Boolean {
     if (lower == "::1" || lower == "::") return true

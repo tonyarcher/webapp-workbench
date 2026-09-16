@@ -112,17 +112,33 @@ function plateSceneMarkup(
           data-testid="plate-view"
           data-bats=${input.bats}
           data-throws=${input.throws}
-          style="--pitch-duration: ${input.playDurationMs}ms; --pitch-release: ${releaseX}px; --pitch-dx: ${dx - releaseX}px; --pitch-dy: ${dy}px"
+          style=${plateStyle(input, dx, dy, releaseX)}
       >
+        ${plateMain(input, result)}
+        ${plateTags(input)}
+      </div>
+    `;
+}
+
+function plateStyle(input: PlateSceneInput, dx: number, dy: number, releaseX: number): string {
+    return `--pitch-duration: ${input.playDurationMs}ms; --pitch-release: ${releaseX}px; --pitch-dx: ${dx - releaseX}px; --pitch-dy: ${dy}px`;
+}
+
+function plateMain(input: PlateSceneInput, result: PlateResult | '') {
+    return html`
         <div class="mound"></div>
         ${platePitcher(input.throws, input.pitcherColor)}
         ${plateGround()}
         ${plateZone(result, input)}
         <div class="pitch-ball" data-testid="pitch-ball"></div>
         ${plateBatter(input.bats, input.batterColor)}
+    `;
+}
+
+function plateTags(input: PlateSceneInput) {
+    return html`
         <div class="hand-tag pitcher-tag">${input.throws}HP${input.pitcherName ? ` ${input.pitcherName}` : ''}</div>
         <div class="hand-tag batter-tag">${input.bats}HB${input.batterName ? ` ${input.batterName}` : ''}</div>
-      </div>
     `;
 }
 

@@ -84,25 +84,33 @@ export function parseCsv(text: string): string[][] {
     let i = 0;
     let inQuotes = false;
     while (i < text.length) {
-        if (inQuotes) {
-            const res = stepQuoted(text, i, cell);
-            cell = res.cell;
-            i = res.next;
-            inQuotes = res.inQuotes;
-            continue;
-        }
-        const res = stepUnquoted(text, i, cell, row, rows);
-        if (res) {
-            cell = res.cell;
-            row = res.row;
-            i = res.next;
-            inQuotes = res.inQuotes;
+        const stepped = stepOnce(text, i, cell, row, rows, inQuotes);
+        if (stepped) {
+            cell = stepped.cell;
+            row = stepped.row;
+            i = stepped.next;
+            inQuotes = stepped.inQuotes;
             continue;
         }
         cell += text[i] ?? '';
         i++;
     }
     return finalizeCsv(rows, row, cell);
+}
+
+function stepOnce(
+    text: string,
+    i: number,
+    cell: string,
+    row: string[],
+    rows: string[][],
+    inQuotes: boolean,
+): {cell: string; row: string[]; next: number; inQuotes: boolean} | null {
+    if (inQuotes) {
+        const res = stepQuoted(text, i, cell);
+        return {cell: res.cell, row, next: res.next, inQuotes: res.inQuotes};
+    }
+    return stepUnquoted(text, i, cell, row, rows);
 }
 
 function pickField(record: Record<string, unknown>, names: string[]): string | undefined {

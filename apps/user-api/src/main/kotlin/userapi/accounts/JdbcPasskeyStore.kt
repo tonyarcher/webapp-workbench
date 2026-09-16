@@ -19,34 +19,29 @@ class JdbcPasskeyStore(private val dataSource: DataSource) : PasskeyStore {
         }
     }
 
-    override fun usernameForHandle(handle: ByteArray): String? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(USER_BY_HANDLE).use { ps ->
-                ps.setBytes(1, handle)
-                ps.executeQuery().use { rs -> return if (rs.next()) rs.getString(1) else null }
-            }
-        }
-    }
+    override fun usernameForHandle(handle: ByteArray): String? =
+        queryOne(
+            dataSource,
+            USER_BY_HANDLE,
+            { ps -> ps.setBytes(1, handle) },
+            { rs -> if (rs.next()) rs.getString(1) else null },
+        )
 
-    override fun handleForUsername(username: String): ByteArray? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(HANDLE_BY_USER).use { ps ->
-                ps.setString(1, username)
-                ps.executeQuery().use { rs -> return if (rs.next()) rs.getBytes(1) else null }
-            }
-        }
-    }
+    override fun handleForUsername(username: String): ByteArray? =
+        queryOne(
+            dataSource,
+            HANDLE_BY_USER,
+            { ps -> ps.setString(1, username) },
+            { rs -> if (rs.next()) rs.getBytes(1) else null },
+        )
 
-    override fun userIdForUsername(username: String): UUID? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(ID_BY_USER).use { ps ->
-                ps.setString(1, username)
-                ps.executeQuery().use { rs ->
-                    return if (rs.next()) rs.getObject(1, UUID::class.java) else null
-                }
-            }
-        }
-    }
+    override fun userIdForUsername(username: String): UUID? =
+        queryOne(
+            dataSource,
+            ID_BY_USER,
+            { ps -> ps.setString(1, username) },
+            { rs -> if (rs.next()) rs.getObject(1, UUID::class.java) else null },
+        )
 
     override fun insertPasskey(row: StoredPasskey) {
         dataSource.connection.use { conn ->
@@ -80,15 +75,16 @@ class JdbcPasskeyStore(private val dataSource: DataSource) : PasskeyStore {
         }
     }
 
-    override fun lookup(credentialId: ByteArray, userHandle: ByteArray): StoredPasskey? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(LOOKUP).use { ps ->
+    override fun lookup(credentialId: ByteArray, userHandle: ByteArray): StoredPasskey? =
+        queryOne(
+            dataSource,
+            LOOKUP,
+            { ps ->
                 ps.setBytes(1, credentialId)
                 ps.setBytes(2, userHandle)
-                ps.executeQuery().use { rs -> return if (rs.next()) readRow(rs) else null }
-            }
-        }
-    }
+            },
+            { rs -> if (rs.next()) readRow(rs) else null },
+        )
 
     override fun lookupAll(credentialId: ByteArray): List<StoredPasskey> {
         dataSource.connection.use { conn ->

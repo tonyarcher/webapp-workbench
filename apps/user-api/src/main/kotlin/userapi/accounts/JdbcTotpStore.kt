@@ -32,29 +32,7 @@ class JdbcTotpStore(private val dataSource: DataSource) : TotpStore {
     override fun enabledSecret(userId: UUID): String? = scalar(GET_ENABLED, userId)
 
     override fun replaceBackupHashes(userId: UUID, hashes: List<String>) {
-        dataSource.connection.use { conn ->
-            conn.autoCommit = false
-            try {
-                conn.prepareStatement(DELETE_CODES).use { ps ->
-                    ps.setObject(1, userId)
-                    ps.executeUpdate()
-                }
-                conn.prepareStatement(INSERT_CODE).use { ps ->
-                    for (hash in hashes) {
-                        ps.setObject(1, userId)
-                        ps.setString(2, hash)
-                        ps.addBatch()
-                    }
-                    ps.executeBatch()
-                }
-                conn.commit()
-            } catch (ex: SQLException) {
-                conn.rollback()
-                throw ex
-            } finally {
-                conn.autoCommit = true
-            }
-        }
+        dataSource.connection.use { conn -> replaceIn(conn, userId, hashes) }
     }
 
     override fun consumeBackupHash(userId: UUID, codeHash: String): Boolean {
@@ -78,17 +56,16 @@ class JdbcTotpStore(private val dataSource: DataSource) : TotpStore {
         }
     }
 
-    override fun findChallenge(tokenHash: String, now: Instant): UUID? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(FIND_CHALLENGE).use { ps ->
+    override fun findChallenge(tokenHash: String, now: Instant): UUID? =
+        queryOne(
+            dataSource,
+            FIND_CHALLENGE,
+            { ps ->
                 ps.setString(1, tokenHash)
                 ps.setTimestamp(2, Timestamp.from(now))
-                ps.executeQuery().use { rs ->
-                    return if (rs.next()) rs.getObject("user_id", UUID::class.java) else null
-                }
-            }
-        }
-    }
+            },
+            { rs -> if (rs.next()) rs.getObject("user_id", UUID::class.java) else null },
+        )
 
     override fun deleteChallenge(tokenHash: String) {
         dataSource.connection.use { conn ->
@@ -99,17 +76,50 @@ class JdbcTotpStore(private val dataSource: DataSource) : TotpStore {
         }
     }
 
-    private fun scalar(sql: String, userId: UUID): String? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(sql).use { ps ->
-                ps.setObject(1, userId)
-                ps.executeQuery().use { rs ->
-                    if (!rs.next()) return null
-                    return rs.getString(1)
-                }
-            }
-        }
+    private fun scalar(sql: String, userId: UUID): String? =
+        queryOne(
+            dataSource,
+            sql,
+            { ps -> ps.setObject(1, userId) },
+            { rs ->
+                if (!rs.next()) return@queryOne null
+                rs.getString(1)
+            },
+        )
+}
+
+private fun replaceIn(conn: java.sql.Connection, userId: UUID, hashes: List<String>) {
+    conn.autoCommit = false
+    try {
+        deleteCodes(conn, userId)
+        insertCodes(conn, userId, hashes)
+        conn.commit()
+    } catch (ex: SQLException) {
+        conn.rollback()
+        throw ex
+    } finally {
+        conn.autoCommit = true
     }
+}
+
+private fun deleteCodes(conn: java.sql.Connection, userId: UUID) {
+    conn.prepareStatement(DELETE_CODES).use { ps ->
+        ps.setObject(1, userId)
+        ps.executeUpdate()
+    }
+}
+
+private fun insertCodes(conn: java.sql.Connection, userId: UUID, hashes: List<String>) {
+    conn.prepareStatement(INSERT_CODE).use { ps -> batchCodes(ps, userId, hashes) }
+}
+
+private fun batchCodes(ps: java.sql.PreparedStatement, userId: UUID, hashes: List<String>) {
+    for (hash in hashes) {
+        ps.setObject(1, userId)
+        ps.setString(2, hash)
+        ps.addBatch()
+    }
+    ps.executeBatch()
 }
 
 private const val SET_PENDING = "UPDATE users SET totp_pending = ? WHERE id = ?"

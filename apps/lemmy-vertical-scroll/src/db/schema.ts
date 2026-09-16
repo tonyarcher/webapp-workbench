@@ -32,34 +32,48 @@ export interface LvsDB extends DBSchema {
 let dbPromise: Promise<import('idb').IDBPDatabase<LvsDB>> | null = null
 
 export function getDB(): Promise<import('idb').IDBPDatabase<LvsDB>> {
-    if (!dbPromise) {
-        dbPromise = openDB<LvsDB>('lemmy-vertical-scroll', 3, {
-            upgrade(db) {
-                // guards make the upgrade idempotent for v1 → v2 → v3 migrations
-                if (!db.objectStoreNames.contains('settings')) {
-                    db.createObjectStore('settings', {keyPath: 'key'})
-                }
-                if (!db.objectStoreNames.contains('postsCache')) {
-                    db.createObjectStore('postsCache', {keyPath: 'key'})
-                }
-                if (!db.objectStoreNames.contains('communitiesCache')) {
-                    db.createObjectStore('communitiesCache', {keyPath: 'key'})
-                }
-                if (!db.objectStoreNames.contains('auth')) {
-                    db.createObjectStore('auth', {keyPath: 'key'})
-                }
-                if (!db.objectStoreNames.contains('servers')) {
-                    db.createObjectStore('servers', {keyPath: 'host'})
-                }
-                if (!db.objectStoreNames.contains('registry')) {
-                    db.createObjectStore('registry', {keyPath: 'key'})
-                }
-            },
-        }).catch((error) => {
-            // a failed open must not poison the session — allow a retry
-            dbPromise = null
-            throw error
-        })
-    }
+    if (!dbPromise) dbPromise = openLvsDb();
     return dbPromise
+}
+
+function openLvsDb(): Promise<import('idb').IDBPDatabase<LvsDB>> {
+    return openDB<LvsDB>('lemmy-vertical-scroll', 3, {
+        upgrade(db) {
+            upgradeLvs(db);
+        },
+    }).catch((error) => {
+        // a failed open must not poison the session — allow a retry
+        dbPromise = null
+        throw error
+    })
+}
+
+function upgradeLvs(db: import('idb').IDBPDatabase<LvsDB>): void {
+    // guards make the upgrade idempotent for v1 → v2 → v3 migrations
+    ensureCore(db);
+    ensureAccounts(db);
+}
+
+function ensureCore(db: import('idb').IDBPDatabase<LvsDB>): void {
+    if (!db.objectStoreNames.contains('settings')) {
+        db.createObjectStore('settings', {keyPath: 'key'})
+    }
+    if (!db.objectStoreNames.contains('postsCache')) {
+        db.createObjectStore('postsCache', {keyPath: 'key'})
+    }
+    if (!db.objectStoreNames.contains('communitiesCache')) {
+        db.createObjectStore('communitiesCache', {keyPath: 'key'})
+    }
+}
+
+function ensureAccounts(db: import('idb').IDBPDatabase<LvsDB>): void {
+    if (!db.objectStoreNames.contains('auth')) {
+        db.createObjectStore('auth', {keyPath: 'key'})
+    }
+    if (!db.objectStoreNames.contains('servers')) {
+        db.createObjectStore('servers', {keyPath: 'host'})
+    }
+    if (!db.objectStoreNames.contains('registry')) {
+        db.createObjectStore('registry', {keyPath: 'key'})
+    }
 }
