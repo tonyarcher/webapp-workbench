@@ -39,10 +39,10 @@ export interface PlaylistEntry {
 }
 
 export interface GenerateBody {
-    stationId?: string;
-    seed?: string;
-    startsAt?: number;
-    weights?: Partial<Weights>;
+    stationId?: string | undefined;
+    seed?: string | undefined;
+    startsAt?: number | undefined;
+    weights?: Partial<Weights> | undefined;
 }
 
 export interface GenerateResult {

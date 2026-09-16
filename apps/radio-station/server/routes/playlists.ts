@@ -24,20 +24,20 @@ export const createPlaylistHandler: RouteHandler = async (ctx) => {
 };
 
 export const getPlaylistHandler: RouteHandler = async (ctx) => {
-    const playlist = await getPlaylist(requireId(ctx.params.id));
+    const playlist = await getPlaylist(requireId(ctx.params['id']));
     if (!playlist) throw new HttpError(404, 'playlist not found');
     return playlist;
 };
 
 export const getEntriesHandler: RouteHandler = async (ctx) => {
-    const id = requireId(ctx.params.id);
+    const id = requireId(ctx.params['id']);
     const playlist = await getPlaylist(id);
     if (!playlist) throw new HttpError(404, 'playlist not found');
     return getEntries(id);
 };
 
 export const getPlaylistTxtHandler: RouteHandler = async (ctx) => {
-    const id = requireId(ctx.params.id);
+    const id = requireId(ctx.params['id']);
     const playlist = await getPlaylist(id);
     if (!playlist) throw new HttpError(404, 'playlist not found');
     const entries = await getEntries(id);

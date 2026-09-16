@@ -17,11 +17,11 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
 export function canonicalizeWeights(raw: unknown): Weights {
     const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
     return {
-        hitGravity: clampInt(o.hitGravity, 0, 100, DEFAULT_WEIGHTS.hitGravity),
-        goldLeak: clampInt(o.goldLeak, 0, 100, DEFAULT_WEIGHTS.goldLeak),
-        temperature: clampInt(o.temperature, 0, 100, DEFAULT_WEIGHTS.temperature),
-        separation: clampInt(o.separation, 0, 100, DEFAULT_WEIGHTS.separation),
-        powerOrbitMin: clampInt(o.powerOrbitMin, 60, 150, DEFAULT_WEIGHTS.powerOrbitMin),
+        hitGravity: clampInt(o['hitGravity'], 0, 100, DEFAULT_WEIGHTS.hitGravity),
+        goldLeak: clampInt(o['goldLeak'], 0, 100, DEFAULT_WEIGHTS.goldLeak),
+        temperature: clampInt(o['temperature'], 0, 100, DEFAULT_WEIGHTS.temperature),
+        separation: clampInt(o['separation'], 0, 100, DEFAULT_WEIGHTS.separation),
+        powerOrbitMin: clampInt(o['powerOrbitMin'], 60, 150, DEFAULT_WEIGHTS.powerOrbitMin),
     };
 }
 
