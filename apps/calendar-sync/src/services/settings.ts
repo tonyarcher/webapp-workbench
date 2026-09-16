@@ -51,8 +51,8 @@ function baseTrakt(rec: Record<string, unknown> | null): TraktSettings {
     return {
         clientId: optString(rec, 'clientId') ?? '',
         clientSecret: optString(rec, 'clientSecret') ?? '',
-        includeCalendar: rec ? asBoolean(rec.includeCalendar, true) : true,
-        includeHistory: rec ? asBoolean(rec.includeHistory, true) : true,
+        includeCalendar: rec ? asBoolean(rec['includeCalendar'], true) : true,
+        includeHistory: rec ? asBoolean(rec['includeHistory'], true) : true,
     };
 }
 
@@ -73,8 +73,8 @@ function parseTrakt(raw: unknown): TraktSettings {
 }
 
 function googleWrittenUids(rec: Record<string, unknown> | null): string[] {
-    if (!rec || !Array.isArray(rec.writtenUids)) return [];
-    return rec.writtenUids.filter((id): id is string => typeof id === 'string');
+    if (!rec || !Array.isArray(rec['writtenUids'])) return [];
+    return rec['writtenUids'].filter((id): id is string => typeof id === 'string');
 }
 
 function applyGoogleTokens(google: GoogleSettings, rec: Record<string, unknown> | null): void {
@@ -99,8 +99,8 @@ function parseGoogle(raw: unknown): GoogleSettings {
 function parseNetflix(raw: unknown): NetflixSettings {
     const rec = asRecord(raw);
     const netflix: NetflixSettings = {};
-    const lastCount = rec ? asNumber(rec.lastCount) : undefined;
-    const lastAt = rec ? asNumber(rec.lastAt) : undefined;
+    const lastCount = rec ? asNumber(rec['lastCount']) : undefined;
+    const lastAt = rec ? asNumber(rec['lastAt']) : undefined;
     if (lastCount !== undefined) netflix.lastCount = lastCount;
     if (lastAt !== undefined) netflix.lastAt = lastAt;
     return netflix;
@@ -114,10 +114,10 @@ function parseDestination(value: unknown): 'google' | 'ics' | undefined {
 function parseLastSync(raw: unknown): AppSettings['lastSync'] | undefined {
     const last = asRecord(raw);
     if (!last) return undefined;
-    const at = asNumber(last.at);
-    const count = asNumber(last.count);
-    const failed = asNumber(last.failed);
-    const destination = parseDestination(last.destination);
+    const at = asNumber(last['at']);
+    const count = asNumber(last['count']);
+    const failed = asNumber(last['failed']);
+    const destination = parseDestination(last['destination']);
     if (at === undefined || count === undefined || failed === undefined || !destination) return undefined;
     return {at, count, failed, destination};
 }
@@ -125,11 +125,11 @@ function parseLastSync(raw: unknown): AppSettings['lastSync'] | undefined {
 function buildSettings(rec: Record<string, unknown>): AppSettings {
     const settings: AppSettings = {
         version: 1,
-        trakt: parseTrakt(rec.trakt),
-        google: parseGoogle(rec.google),
-        netflix: parseNetflix(rec.netflix),
+        trakt: parseTrakt(rec['trakt']),
+        google: parseGoogle(rec['google']),
+        netflix: parseNetflix(rec['netflix']),
     };
-    const lastSync = parseLastSync(rec.lastSync);
+    const lastSync = parseLastSync(rec['lastSync']);
     if (lastSync) settings.lastSync = lastSync;
     return settings;
 }
@@ -139,7 +139,7 @@ export function parseSettings(raw: string | null): AppSettings | null {
     try {
         const data: unknown = JSON.parse(raw);
         const rec = asRecord(data);
-        if (!rec || rec.version !== 1) return null;
+        if (!rec || rec['version'] !== 1) return null;
         return buildSettings(rec);
     } catch {
         return null;
