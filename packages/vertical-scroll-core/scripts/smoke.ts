@@ -25,7 +25,7 @@ assert(classifyScrollItem(linkItem) === 'link', 'link classify')
 assert(classifyScrollItem(ytItem) === 'video', 'youtube video classify')
 assert(classifyScrollItem(ttItem) === 'video', 'tiktok video classify')
 assert(classifyScrollItem(ttLinkItem) === 'video', 'tiktok url-only classifies as video')
-assert(embedUrlFor(ttLinkItem.url)?.includes('player/v1/1234567890'), 'tiktok url-only embed')
+assert(embedUrlFor(ttLinkItem.url ?? null)?.includes('player/v1/1234567890'), 'tiktok url-only embed')
 
 // image extraction
 assert(extractImageUrls(imageItem).length === 1, 'image extraction')

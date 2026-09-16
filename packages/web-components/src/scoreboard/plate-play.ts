@@ -70,7 +70,7 @@ export function safeColor(value: unknown): string {
     if (HEX_COLOR.test(value)) return value;
     const fn = COLOR_FN.exec(value);
     if (!fn) return DEFAULT_TEAM_COLOR;
-    const parts = fn[1].trim().split(/[\s,/]+/).filter(Boolean);
+    const parts = (fn[1] ?? '').trim().split(/[\s,/]+/).filter(Boolean);
     if (parts.length !== 3 && parts.length !== 4) return DEFAULT_TEAM_COLOR;
     return parts.every((part) => COLOR_TOKEN.test(part)) ? value : DEFAULT_TEAM_COLOR;
 }
@@ -95,17 +95,17 @@ function playFromRecord(
     fallbackBats: Handedness,
     fallbackThrows: Handedness
 ): ParsedPlatePlay {
-    const eventType = String(record.eventType ?? '');
-    const strikeKind = String(record.strikeKind ?? '');
+    const eventType = String(record['eventType'] ?? '');
+    const strikeKind = String(record['strikeKind'] ?? '');
     const swinging = strikeKind === 'looking' ? false : strikeKind === 'swinging' ? true : SWING_TYPES.has(eventType);
     return {
         eventType,
-        bats: asHand(record.bats, fallbackBats),
-        throws: asHand(record.throws, fallbackThrows),
+        bats: asHand(record['bats'], fallbackBats),
+        throws: asHand(record['throws'], fallbackThrows),
         result: plateResultLabel(eventType),
         swinging,
-        fieldPos: boundedInt(record.fieldPos, 1, 9),
-        zone: boundedInt(zoneValue(record.pitchLocation), 1, 17),
+        fieldPos: boundedInt(record['fieldPos'], 1, 9),
+        zone: boundedInt(zoneValue(record['pitchLocation']), 1, 17),
     };
 }
 

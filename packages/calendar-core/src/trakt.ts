@@ -27,7 +27,7 @@ export function traktHeaders(clientId: string, accessToken?: string): Record<str
         'trakt-api-version': TRAKT_API_VERSION,
         'trakt-api-key': clientId,
     };
-    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
     return headers;
 }
 
@@ -90,17 +90,17 @@ function safeVerificationUrl(value: string | undefined): string {
 
 export function parseDeviceCodeResponse(json: unknown): TraktDeviceCode | null {
     if (!isRecord(json)) return null;
-    const deviceCode = asString(json.device_code);
-    const userCode = asString(json.user_code);
-    const expiresIn = asNumber(json.expires_in);
-    const interval = asNumber(json.interval);
+    const deviceCode = asString(json['device_code']);
+    const userCode = asString(json['user_code']);
+    const expiresIn = asNumber(json['expires_in']);
+    const interval = asNumber(json['interval']);
     if (!deviceCode || !userCode || expiresIn === undefined || interval === undefined) {
         return null;
     }
     return {
         deviceCode,
         userCode,
-        verificationUrl: safeVerificationUrl(asString(json.verification_url)),
+        verificationUrl: safeVerificationUrl(asString(json['verification_url'])),
         expiresIn,
         interval,
     };
@@ -108,11 +108,11 @@ export function parseDeviceCodeResponse(json: unknown): TraktDeviceCode | null {
 
 export function parseTokenResponse(json: unknown): TraktToken | null {
     if (!isRecord(json)) return null;
-    const accessToken = asString(json.access_token);
-    const refreshToken = asString(json.refresh_token);
-    const expiresIn = asNumber(json.expires_in);
+    const accessToken = asString(json['access_token']);
+    const refreshToken = asString(json['refresh_token']);
+    const expiresIn = asNumber(json['expires_in']);
     if (!accessToken || !refreshToken || expiresIn === undefined) return null;
-    const createdAt = asNumber(json.created_at);
+    const createdAt = asNumber(json['created_at']);
     return createdAt === undefined
         ? {accessToken, refreshToken, expiresIn}
         : {accessToken, refreshToken, expiresIn, createdAt};
@@ -128,7 +128,7 @@ export type DevicePollResult =
 export function parseDevicePollResponse(httpStatus: number, json: unknown): DevicePollResult {
     const token = parseTokenResponse(json);
     if (token) return {status: 'token', token};
-    const error = isRecord(json) ? asString(json.error) : undefined;
+    const error = isRecord(json) ? asString(json['error']) : undefined;
     if (error === 'slow_down' || httpStatus === 429) return {status: 'slow_down'};
     if (error === 'access_denied' || error === 'denied') return {status: 'denied'};
     if (error === 'expired_token' || error === 'expired') return {status: 'expired'};
@@ -154,12 +154,12 @@ export function calendarWindows(
 
 function idsTrakt(ids: unknown): number | undefined {
     if (!isRecord(ids)) return undefined;
-    return asNumber(ids.trakt);
+    return asNumber(ids['trakt']);
 }
 
 function idsSlug(ids: unknown): string | undefined {
     if (!isRecord(ids)) return undefined;
-    return asString(ids.slug);
+    return asString(ids['slug']);
 }
 
 function runtimeMs(runtime: unknown, fallbackMinutes: number): number {
@@ -175,31 +175,31 @@ function parseInstant(raw: unknown): number | undefined {
 }
 
 function episodeBasics(item: Record<string, unknown>): {episode: Record<string, unknown>; show: Record<string, unknown>; start: number} | null {
-    const start = parseInstant(item.first_aired);
+    const start = parseInstant(item['first_aired']);
     if (start === undefined) return null;
-    const episode = isRecord(item.episode) ? item.episode : undefined;
-    const show = isRecord(item.show) ? item.show : undefined;
+    const episode = isRecord(item['episode']) ? item['episode'] : undefined;
+    const show = isRecord(item['show']) ? item['show'] : undefined;
     if (!episode || !show) return null;
     return {episode, show, start};
 }
 
 function episodeIds(show: Record<string, unknown>, episode: Record<string, unknown>): {showId: number; season: number; number: number} | null {
-    const showId = idsTrakt(show.ids);
-    const season = asNumber(episode.season);
-    const num = asNumber(episode.number);
+    const showId = idsTrakt(show['ids']);
+    const season = asNumber(episode['season']);
+    const num = asNumber(episode['number']);
     if (showId === undefined || season === undefined || num === undefined) return null;
     return {showId, season, number: num};
 }
 
 function episodeTitle(show: Record<string, unknown>, episode: Record<string, unknown>, season: number, num: number): string {
-    const showTitle = asString(show.title) ?? 'Show';
-    const epTitle = asString(episode.title);
+    const showTitle = asString(show['title']) ?? 'Show';
+    const epTitle = asString(episode['title']);
     const base = `${showTitle} S${pad2(season)}E${pad2(num)}`;
     return epTitle ? `${base}: ${epTitle}` : base;
 }
 
 function episodeUrl(show: Record<string, unknown>, season: number, num: number): string | undefined {
-    const slug = idsSlug(show.ids);
+    const slug = idsSlug(show['ids']);
     return slug ? `https://trakt.tv/shows/${slug}/seasons/${season}/episodes/${num}` : undefined;
 }
 
@@ -209,96 +209,104 @@ export function mapCalendarShow(item: unknown): CalEvent | null {
     if (!base) return null;
     const ids = episodeIds(base.show, base.episode);
     if (!ids) return null;
-    return {
+    const event: CalEvent = {
         uid: `cal-sync:trakt:air:show:${ids.showId}:s${ids.season}e${ids.number}`,
         source: 'trakt',
         title: episodeTitle(base.show, base.episode, ids.season, ids.number),
         start: base.start,
-        end: base.start + runtimeMs(base.episode.runtime ?? base.show.runtime, DEFAULT_EPISODE_MINUTES),
+        end: base.start + runtimeMs(base.episode['runtime'] ?? base.show['runtime'], DEFAULT_EPISODE_MINUTES),
         allDay: false,
-        url: episodeUrl(base.show, ids.season, ids.number),
     };
+    const url = episodeUrl(base.show, ids.season, ids.number);
+    if (url !== undefined) event.url = url;
+    return event;
 }
 
 function movieStart(item: Record<string, unknown>): number | undefined {
-    const released = asString(item.released);
-    const start = released ? Date.parse(`${released}T00:00:00Z`) : parseInstant(item.first_aired);
+    const released = asString(item['released']);
+    const start = released ? Date.parse(`${released}T00:00:00Z`) : parseInstant(item['first_aired']);
     if (start === undefined || !Number.isFinite(start)) return undefined;
     return start;
 }
 
 function movieTitle(movie: Record<string, unknown>): string {
-    const year = asNumber(movie.year);
-    const name = asString(movie.title) ?? 'Movie';
+    const year = asNumber(movie['year']);
+    const name = asString(movie['title']) ?? 'Movie';
     return year !== undefined ? `${name} (${year})` : name;
 }
 
 function movieUrl(movie: Record<string, unknown>): string | undefined {
-    const slug = idsSlug(movie.ids);
+    const slug = idsSlug(movie['ids']);
     return slug ? `https://trakt.tv/movies/${slug}` : undefined;
 }
 
 export function mapCalendarMovie(item: unknown): CalEvent | null {
     if (!isRecord(item)) return null;
-    const movie = isRecord(item.movie) ? item.movie : undefined;
+    const movie = isRecord(item['movie']) ? item['movie'] : undefined;
     if (!movie) return null;
-    const movieId = idsTrakt(movie.ids);
+    const movieId = idsTrakt(movie['ids']);
     if (movieId === undefined) return null;
     const start = movieStart(item);
     if (start === undefined) return null;
-    return {
+    const event: CalEvent = {
         uid: `cal-sync:trakt:air:movie:${movieId}:${utcYmd(start)}`,
         source: 'trakt',
         title: movieTitle(movie),
         start,
         end: start + DAY_MS,
         allDay: true,
-        url: movieUrl(movie),
     };
+    const url = movieUrl(movie);
+    if (url !== undefined) event.url = url;
+    return event;
 }
 
 function mapHistoryEpisode(item: Record<string, unknown>, start: number): CalEvent | null {
-    const episode = isRecord(item.episode) ? item.episode : undefined;
-    const show = isRecord(item.show) ? item.show : undefined;
+    const episode = isRecord(item['episode']) ? item['episode'] : undefined;
+    const show = isRecord(item['show']) ? item['show'] : undefined;
     if (!episode || !show) return null;
     const ids = episodeIds(show, episode);
     if (!ids) return null;
-    return {
+    const event: CalEvent = {
         uid: `cal-sync:trakt:watch:show:${ids.showId}:s${ids.season}e${ids.number}:${start}`,
         source: 'trakt',
         title: episodeTitle(show, episode, ids.season, ids.number),
         start,
-        end: start + runtimeMs(episode.runtime ?? show.runtime, DEFAULT_EPISODE_MINUTES),
+        end: start + runtimeMs(episode['runtime'] ?? show['runtime'], DEFAULT_EPISODE_MINUTES),
         allDay: false,
         description: 'Watched',
-        url: episodeUrl(show, ids.season, ids.number),
     };
+    const url = episodeUrl(show, ids.season, ids.number);
+    if (url !== undefined) event.url = url;
+    return event;
 }
 
 function mapHistoryMovie(item: Record<string, unknown>, start: number): CalEvent | null {
-    const movie = isRecord(item.movie) ? item.movie : undefined;
+    const movie = isRecord(item['movie']) ? item['movie'] : undefined;
     if (!movie) return null;
-    const movieId = idsTrakt(movie.ids);
+    const movieId = idsTrakt(movie['ids']);
     if (movieId === undefined) return null;
-    return {
+    const event: CalEvent = {
         uid: `cal-sync:trakt:watch:movie:${movieId}:${start}`,
         source: 'trakt',
         title: movieTitle(movie),
         start,
-        end: start + runtimeMs(movie.runtime, DEFAULT_MOVIE_MINUTES),
+        end: start + runtimeMs(movie['runtime'], DEFAULT_MOVIE_MINUTES),
         allDay: false,
         description: 'Watched',
-        url: movieUrl(movie),
     };
+    const url = movieUrl(movie);
+    if (url !== undefined) event.url = url;
+    return event;
 }
 
 function isEpisodeHistory(item: Record<string, unknown>): boolean {
-    return asString(item.type) === 'episode' || isRecord(item.episode);
+    return asString(item['type']) === 'episode' || isRecord(item['episode']);
 }
 
 export function mapHistoryItem(item: unknown): CalEvent | null {
     if (!isRecord(item)) return null;
-    const start = parseInstant(item.watched_at);
+    const start = parseInstant(item['watched_at']);
     if (start === undefined) return null;
     if (isEpisodeHistory(item)) return mapHistoryEpisode(item, start);
     return mapHistoryMovie(item, start);
@@ -317,7 +325,7 @@ async function traktGet(
         json = undefined;
     }
     if (!res.ok) {
-        const msg = isRecord(json) ? asString(json.error) ?? asString(json.message) : undefined;
+        const msg = isRecord(json) ? asString(json['error']) ?? asString(json['message']) : undefined;
         throw new TraktHttpError(res.status, msg ?? `Trakt HTTP ${res.status}`);
     }
     return {status: res.status, json, headers: res.headers};
@@ -393,7 +401,8 @@ async function loadHistoryType(fetchImpl: FetchLike, baseUrl: string, headers: R
         onProgress?.({phase: 'fetch', done: page - 1, label: `history ${type} page ${page}`});
         const batch = await fetchHistoryBatch(fetchImpl, baseUrl, headers, type, page);
         appendHistory(batch.items, events);
-        onProgress?.({phase: 'fetch', done: page, total: Number.isFinite(batch.pageCount) && batch.pageCount > 0 ? batch.pageCount : undefined, label: `history ${type} page ${page}`});
+        const total = Number.isFinite(batch.pageCount) && batch.pageCount > 0 ? batch.pageCount : undefined;
+        onProgress?.({phase: 'fetch', done: page, ...(total === undefined ? {} : {total}), label: `history ${type} page ${page}`});
         const action = historyAction(batch.items.length, page, batch.pageCount);
         if (action === 'stop') break;
         if (action === 'truncate') {

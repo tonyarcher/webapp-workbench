@@ -245,7 +245,7 @@ export class ScrollMediaVideo extends LitElement {
         if (this.candidates.length > 1) {
             const next = this.candidates.slice(1)
             this.candidates = next
-            this.src = next[0]
+            this.src = next[0] ?? null
             return
         }
         this.resolveFailed = true

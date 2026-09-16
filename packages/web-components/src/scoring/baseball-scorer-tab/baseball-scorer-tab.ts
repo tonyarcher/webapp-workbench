@@ -7,14 +7,14 @@ scorerTabSheet.replaceSync(scorerTabCssText);
 
 @customElement('baseball-scorer-tab')
 export class BaseballScorerTab extends LitElement {
-    static styles = scorerTabSheet;
+    static override styles = scorerTabSheet;
 
     @property({type: String, attribute: 'away-name'}) awayName = '';
     @property({type: String, attribute: 'home-name'}) homeName = '';
     @property({type: Boolean, attribute: 'no-game'}) noGame = false;
     @property({type: Boolean, attribute: 'watch'}) watch = false;
 
-    render() {
+    override render() {
         if (this.noGame) {
             return html`
                 <div class="empty-state-container">

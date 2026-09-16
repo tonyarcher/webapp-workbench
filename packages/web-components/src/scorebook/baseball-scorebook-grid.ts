@@ -36,7 +36,7 @@ export interface ScorebookSlotDto {
 
 @customElement('baseball-scorebook-grid')
 export class BaseballScorebookGrid extends LitElement {
-    static styles = scorebookSheet;
+    static override styles = scorebookSheet;
 
     @property({type: String, attribute: 'team-name'}) teamName = 'Team Scorecard';
     @property({type: Number, attribute: 'max-inning'}) maxInning = 9;
@@ -57,7 +57,7 @@ export class BaseballScorebookGrid extends LitElement {
     })
     rows: ScorebookSlotDto[] = [];
 
-    render() {
+    override render() {
         const inningsArray = Array.from({length: this.maxInning}, (_, i) => i + 1);
         return html`
       <div class="card scorebook-container">

@@ -18,7 +18,7 @@ export interface FielderPosition {
 
 @customElement('baseball-defense-diagram')
 export class BaseballDefenseDiagram extends LitElement {
-    static styles = defenseSheet;
+    static override styles = defenseSheet;
 
     @property({type: String, attribute: 'defending-team'}) defendingTeam = 'Defending Team';
     @property({
@@ -47,7 +47,7 @@ export class BaseballDefenseDiagram extends LitElement {
     })
     animations = true;
 
-    render() {
+    override render() {
         return html`
       <div class="field-diagram-card" data-testid="defense-diagram" style="--pitch-duration: ${this.playDurationMs}ms">
         <h3>Defensive Alignment - ${this.defendingTeam}</h3>

@@ -45,7 +45,7 @@ function idFromPrefixes(path: string): string | null {
 
 function idFromAtVideo(path: string): string | null {
     const atVideo = path.match(/\/video\/(\d+)/)
-    if (atVideo) return isValidId(atVideo[1])
+    if (atVideo) return isValidId(atVideo[1] ?? null)
     return null
 }
 
@@ -85,9 +85,9 @@ function parsePlayerMessage(data: unknown): EmbedPlayerEvent | null {
     if (!data || typeof data !== 'object') return null
     const msg = data as Record<string, unknown>
     if (msg[TIKTOK_PLAYER_FLAG] !== true) return null
-    if (msg.type === 'onPlayerReady') return {type: 'ready'}
-    if (msg.type === 'onStateChange') return stateEvent(msg.value)
-    if (msg.type === 'onCurrentTime') return timeEvent(msg.value)
+    if (msg['type'] === 'onPlayerReady') return {type: 'ready'}
+    if (msg['type'] === 'onStateChange') return stateEvent(msg['value'])
+    if (msg['type'] === 'onCurrentTime') return timeEvent(msg['value'])
     return null
 }
 

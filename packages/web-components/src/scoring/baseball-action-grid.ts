@@ -7,7 +7,7 @@ actionGridSheet.replaceSync(actionGridCssText);
 
 @customElement('baseball-action-grid')
 export class BaseballActionGrid extends LitElement {
-    static styles = actionGridSheet;
+    static override styles = actionGridSheet;
 
     @property({type: String, attribute: 'current-pitch-type'}) currentPitchType = '';
     @property({type: String, attribute: 'active-play-json'}) activePlayJson = '';
@@ -30,7 +30,7 @@ export class BaseballActionGrid extends LitElement {
     })
     animations = true;
 
-    render() {
+    override render() {
         return html`
             <div class="card action-card">
                 ${this.renderPitchTypes()}
@@ -144,10 +144,10 @@ export class BaseballActionGrid extends LitElement {
     private isPressed(match: {eventType?: string; variant?: string; base?: number; pitchType?: string}): string {
         const play = this.activePlay();
         if (!play) return '';
-        if (match.pitchType) return play.pitchType === match.pitchType ? 'sim-press' : '';
-        if (play.eventType !== match.eventType) return '';
-        if (match.base != null && Number(play.base) !== match.base) return '';
-        if (match.variant && play.strikeKind && play.strikeKind !== match.variant) return '';
+        if (match.pitchType) return play['pitchType'] === match.pitchType ? 'sim-press' : '';
+        if (play['eventType'] !== match.eventType) return '';
+        if (match.base != null && Number(play['base']) !== match.base) return '';
+        if (match.variant && play['strikeKind'] && play['strikeKind'] !== match.variant) return '';
         return 'sim-press';
     }
 

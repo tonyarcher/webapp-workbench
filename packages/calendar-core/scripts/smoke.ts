@@ -137,7 +137,7 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
 {
     const headers = traktHeaders('cid', 'tok');
     assert(headers['trakt-api-key'] === 'cid', 'trakt key header');
-    assert(headers.Authorization === 'Bearer tok', 'trakt bearer');
+    assert(headers['Authorization'] === 'Bearer tok', 'trakt bearer');
     assert(calendarShowsPath('2026-01-01', 7) === '/calendars/my/shows/2026-01-01/7', 'shows path');
 }
 
@@ -314,7 +314,7 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
         events,
         writtenUids: new Set(['1']),
         writeOne: async (event): Promise<WriteResult> => (event.uid === '3' ? 'fail' : 'ok'),
-        onProgress: (p) => snapshots.push({done: p.done, failed: p.failed}),
+        onProgress: (p) => snapshots.push(p.failed === undefined ? {done: p.done} : {done: p.done, failed: p.failed}),
     });
     assert(result.done === 2, 'two succeeded (skip + ok)');
     assert(result.failed === 1, 'one failed');
@@ -335,7 +335,7 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
 // Trakt history truncation surfaces via onTruncate when the max page cap is hit
 {
     // a full page (page size 100) so the loop can only end by hitting the cap
-    const fullPage = () => ({
+    const fullPage = async () => ({
         ok: true,
         status: 200,
         headers: {get: (name: string) => (name === 'x-pagination-page-count' ? '1000' : null)},

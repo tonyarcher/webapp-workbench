@@ -7,7 +7,7 @@ step2Sheet.replaceSync(step2CssText);
 
 @customElement('baseball-step2-panel')
 export class BaseballStep2Panel extends LitElement {
-    static styles = step2Sheet;
+    static override styles = step2Sheet;
 
     @property({type: String, attribute: 'base-label'}) baseLabel = '';
     @property({type: Boolean, attribute: 'is-hit'}) isHit = false;
@@ -24,7 +24,7 @@ export class BaseballStep2Panel extends LitElement {
             ];
     }
 
-    render() {
+    override render() {
         return html`
             <div class="step2-card">
                 <h3 class="step2-title">Step 2: ${this.baseLabel} Details</h3>

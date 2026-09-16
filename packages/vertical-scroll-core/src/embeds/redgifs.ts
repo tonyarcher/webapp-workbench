@@ -6,7 +6,7 @@ const REDGIFS_RE = /(?:^|[./])redgifs\.com\/(?:watch|ifr|i)\/([a-zA-Z0-9_-]+)/i
 /** Extracts the redgifs clip id from a watch/embed page URL, or null. */
 function redgifsId(url: string): string | null {
     const match = url.match(REDGIFS_RE)
-    return match ? match[1] : null
+    return match ? match[1] ?? null : null
 }
 
 export const REDGIFS: EmbedProvider = {

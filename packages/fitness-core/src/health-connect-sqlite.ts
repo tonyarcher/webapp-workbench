@@ -22,9 +22,9 @@ export function blobToHex(value: unknown): string {
 }
 
 function originFor(row: Record<string, unknown>, table: string, t: number): string {
-    const uuid = blobToHex(row.uuid);
+    const uuid = blobToHex(row['uuid']);
     if (uuid) return uuid;
-    const client = typeof row.client_record_id === 'string' ? row.client_record_id.trim() : '';
+    const client = typeof row['client_record_id'] === 'string' ? row['client_record_id'].trim() : '';
     if (client) return `client:${client}`;
     return `${table}:${t}`;
 }
@@ -92,8 +92,8 @@ function mapSleep(rows: Record<string, unknown>[]): {samples: Sample[]; skipped:
     const samples: Sample[] = [];
     const skipped: ParseSkip[] = [];
     for (const row of rows) {
-        const start = asNumber(row.start_time);
-        const end = asNumber(row.end_time);
+        const start = asNumber(row['start_time']);
+        const end = asNumber(row['end_time']);
         if (start == null || end == null || end <= start) {
             skipped.push({line: 'sleep_session_record_table', reason: 'bad sleep interval'});
             continue;
@@ -117,7 +117,7 @@ function mapMinuteSeries(
 ): Sample[] {
     const buckets = new Map<number, {sum: number; n: number}>();
     for (const row of rows) {
-        const t = asNumber(row.epoch_millis);
+        const t = asNumber(row['epoch_millis']);
         const raw = asNumber(row[valueCol]);
         if (t == null || raw == null) continue;
         const key = Math.floor(t / HR_BUCKET_MS) * HR_BUCKET_MS;
@@ -143,8 +143,8 @@ function mapExercise(rows: Record<string, unknown>[]): {samples: Sample[]; skipp
     const samples: Sample[] = [];
     const skipped: ParseSkip[] = [];
     for (const row of rows) {
-        const start = asNumber(row.start_time);
-        const end = asNumber(row.end_time);
+        const start = asNumber(row['start_time']);
+        const end = asNumber(row['end_time']);
         if (start == null || end == null || end <= start) {
             skipped.push({line: 'exercise_session_record_table', reason: 'bad exercise interval'});
             continue;
@@ -170,16 +170,16 @@ function merge(into: ParseResult, part: {samples: Sample[]; skipped: ParseSkip[]
  * Re-imports upsert: origin_id is the record UUID, or a stable minute key for HR.
  */
 function appendMinutes(result: ParseResult, tables: Record<string, Record<string, unknown>[]>): void {
-    result.samples.push(...mapMinuteSeries(tables.heart_rate_record_series_table ?? [], 'beats_per_minute', 'heart_rate', 'hr-minute'));
-    result.samples.push(...mapMinuteSeries(tables.speed_record_table ?? [], 'speed', 'speed', 'speed-minute'));
+    result.samples.push(...mapMinuteSeries(tables['heart_rate_record_series_table'] ?? [], 'beats_per_minute', 'heart_rate', 'hr-minute'));
+    result.samples.push(...mapMinuteSeries(tables['speed_record_table'] ?? [], 'speed', 'speed', 'speed-minute'));
 }
 
 export function parseHealthConnectSqliteTables(tables: Record<string, Record<string, unknown>[]>): ParseResult {
     const result: ParseResult = {samples: [], skipped: [], format: 'health-connect-db'};
     for (const spec of INSTANT) merge(result, mapSpecRows(tables[spec.table] ?? [], spec));
     for (const spec of INTERVAL) merge(result, mapSpecRows(tables[spec.table] ?? [], spec));
-    merge(result, mapSleep(tables.sleep_session_record_table ?? []));
-    merge(result, mapExercise(tables.exercise_session_record_table ?? []));
+    merge(result, mapSleep(tables['sleep_session_record_table'] ?? []));
+    merge(result, mapExercise(tables['exercise_session_record_table'] ?? []));
     appendMinutes(result, tables);
     if (!result.samples.length && !result.skipped.length) {
         result.skipped.push({line: '', reason: 'no mapped records'});
