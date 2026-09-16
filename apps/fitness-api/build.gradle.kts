@@ -13,7 +13,12 @@ version = "0.1.0"
 
 repositories { mavenCentral() }
 
-kotlin { jvmToolchain(21) }
+kotlin {
+    jvmToolchain(21)
+    compilerOptions {
+        allWarningsAsErrors.set(true)
+    }
+}
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
