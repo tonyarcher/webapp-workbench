@@ -119,13 +119,21 @@ an app runtime or a workspace dependency.
 ## Shared conventions (Vite + Lit)
 
 Applies to Vite + Lit apps and Lit packages (`web-components`, `vertical-scroll-core`).
-Stock-game documents its own exceptions (decorator-free Lit, React shells, ESLint,
+Stock-game documents its own exceptions (decorator-free Lit, React shells,
 “no comments unless asked”). Pure `*-core` packages follow TypeScript, formatting,
 comments, and workflow only — not Lit/CSS/PWA.
 
 ### TypeScript
 
-- Strict: `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`.
+- Strict plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`,
+  `noPropertyAccessFromIndexSignature`, `noImplicitReturns`, `useUnknownInCatchVariables`,
+  `erasableSyntaxOnly`, `noUncheckedSideEffectImports`, `forceConsistentCasingInFileNames`,
+  `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`.
+  Keep every workspace tsconfig on this set (`stock-game` inherits it from `tsconfig.base.json`).
+- TypeScript 7 via nested `7.0.2` pins. The root toolchain stays on 6 for compiler-API
+  tooling (`ttsc`, `vite-plugin-dts`); move a workspace to 7 once its builds and lint pass there.
+- Erasable-only syntax: no enums, namespaces, or parameter properties. Declare fields
+  explicitly and assign them in the constructor.
 - Client: `target: ES2022`, `moduleResolution: bundler`; `.ts` import specifiers are allowed where `allowImportingTsExtensions` is on.
 - Node APIs (`server/`): `module: NodeNext`, `.js` specifiers in compiled output.
 - Prefix unused params with `_`. Type-only imports: `import type {X} from '...'`.
@@ -139,7 +147,7 @@ comments, and workflow only — not Lit/CSS/PWA.
 - Single quotes; semicolons; trailing commas in multiline literals and params.
 - No space inside braces in value-position objects (`{keyPath: 'id'}`); spaces in type literals (`{ kind: 'all' }`).
 - Underscore separators in large numbers (`30_000`). Ternary chains for small conditionals; early-return guards.
-- No Prettier/ESLint config on these apps (root `oxlint` plus hand formatting). Stock-game uses ESLint.
+- No Prettier config on these apps (root `oxlint` plus hand formatting).
 
 ### Naming
 
@@ -206,6 +214,12 @@ or a `packages/log` workspace until a second language needs the same code.
 
 - Manifest + icons in `public/`. Paths are base-relative (`%BASE_URL%` / `import.meta.env.BASE_URL`) so subpath deploys work.
 - Never edit `dist/sw.js`. rss-reader generates it from `scripts/sw.template.js` via `write-sw.mjs`; most others stamp a cache version with `stamp-sw.mjs`.
+
+## Kotlin
+
+- `allWarningsAsErrors` on every API module. Fix the warning instead of suppressing it.
+- Explicit types on `const val` declarations. No `explicitApi()` on internal services.
+- Detekt floors live in each API's `detekt.yml`. Split rather than suppress.
 
 ## Verification
 

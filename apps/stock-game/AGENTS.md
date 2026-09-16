@@ -18,13 +18,13 @@ stock charts are out of scope — link out to Yahoo Finance (TradingView embeds 
 - **Vite static SPA** (React shells + Lit UI). No server runtime: the JSON API is
   `apps/stock-game-api` (Kotlin, Postgres `stock`). Do not add Node `pg` here.
 - **TanStack Router** (code-based routes, hash history, zod-validated search params),
-  **TanStack Query** v5, **TanStack Table** (`@tanstack/table-core` inside Lit).
+  **TanStack Query** v5. Tables are hand-rolled Lit.
 - **Lit** UI (forms, tables, chart, search). React is thin route shells only: owns Router/Query
   state, binds Lit via `.prop`, listens for `sg-*` events (`lib/useCustomEvents.ts`).
 - **Auth**: `user-api` OAuth2 Code+PKCE via `user-client` (`lib/auth.ts`). Every player
   signs in; API calls carry `Authorization: Bearer` with one 401 refresh retry.
 - **Charting**: TradingView `lightweight-charts` in `sg-portfolio-chart`.
-- **Lint**: ESLint (flat, strict-type-checked), not oxlint-only.
+- **Lint**: oxlint with local `.oxlintrc.json` (size, complexity, React hooks rules).
 
 ## Layout
 
@@ -44,7 +44,7 @@ npm install        # all workspaces
 npm run dev        # Vite on :3000 (proxies /api → :3005, /user-api → :3004)
 npm run build      # static dist/
 npm run typecheck  # strict tsc across workspaces
-npm run lint       # ESLint
+npm run lint       # oxlint
 npm test           # vitest (component + lib tests, network-free)
 ```
 
@@ -66,9 +66,19 @@ Dev sign-in needs two local rows the gateway seed does not cover: an
 - React shells attach listeners with the `useCustomEvents` callback-ref (not `useEffect`).
 - Custom elements must render standalone — no React inside Lit.
 - **Do not add code comments unless asked.**
-- TypeScript: also `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. No `any`. No `!`
+- TypeScript: root strict set via `tsconfig.base.json` (strictest flags plus
+  `erasableSyntaxOnly`; TypeScript 7). No `any`. No `!`
   except tests accessing fixtures.
 - Every route search param is zod-validated (`validateSearch`).
+
+## Phases
+
+- Phase 1 (done): tables are hand-rolled Lit; `@tanstack/table-core` removed.
+- Phase 2: Lit route shells behind the house hash router — settings (done), orders,
+  portfolio, trade, dashboard, root auth gate last.
+- Phase 3: hand validation replacing zod in components, then `shared/` and the API client.
+- Keeps: decorator-free Lit, lightweight-charts (no house equivalent for price
+  series), money/time domain rules.
 
 ## Money, time, prices
 
