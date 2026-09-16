@@ -1,10 +1,10 @@
 package fitnessapi.domain
 
-const val DEFAULT_SAMPLE_LIMIT = 2_000
-const val MAX_SAMPLE_LIMIT = 5_000
-const val MAX_IMPORT_ROWS = 2_000
-const val SERIES_LTTB_LIMIT = 1_500
-const val SERIES_ORIGIN_LIMIT = 80
+const val DEFAULT_SAMPLE_LIMIT: Int = 2_000
+const val MAX_SAMPLE_LIMIT: Int = 5_000
+const val MAX_IMPORT_ROWS: Int = 2_000
+const val SERIES_LTTB_LIMIT: Int = 1_500
+const val SERIES_ORIGIN_LIMIT: Int = 80
 
 fun clampLimit(raw: Double?): Int {
     if (raw == null || !raw.isFinite()) return DEFAULT_SAMPLE_LIMIT
