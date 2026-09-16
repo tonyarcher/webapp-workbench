@@ -10,7 +10,7 @@ import userapi.domain.newBackupCodes
 
 @RestController
 class TotpController(private val accounts: AccountServices) {
-    @PostMapping("/v1/totp/begin")
+    @PostMapping("/totp/begin", headers = ["X-Api-Version=1"])
     fun totpBegin(request: HttpServletRequest): TotpBeginBody {
         val store = requireStore(accounts)
         val totpStore = accounts.totpStore ?: throw ApiException(503, "unavailable", "database offline")
@@ -21,7 +21,7 @@ class TotpController(private val accounts: AccountServices) {
         return TotpBeginBody(secret = secret, otpauth = accounts.totp.otpauth(session.username, secret))
     }
 
-    @PostMapping("/v1/totp/confirm")
+    @PostMapping("/totp/confirm", headers = ["X-Api-Version=1"])
     fun totpConfirm(@RequestBody body: TotpConfirmBody, request: HttpServletRequest): BackupCodesBody {
         requireStore(accounts)
         val totpStore = accounts.totpStore ?: throw ApiException(503, "unavailable", "database offline")

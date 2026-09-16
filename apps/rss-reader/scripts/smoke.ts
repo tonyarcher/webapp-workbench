@@ -30,6 +30,7 @@ import {
   summarizeArticle
 } from '../src/ai';
 import {isTokenFresh, tokenExp} from '../src/services/auth';
+import {API_VERSION, API_VERSION_HEADER} from '../src/services/api';
 
 (globalThis as Record<string, unknown>).DOMParser = DOMParser;
 (globalThis as Record<string, unknown>).XMLSerializer = XMLSerializer;
@@ -40,6 +41,8 @@ function assert(cond: boolean, msg: string): asserts cond {
     }
     console.log(`ok: ${msg}`);
 }
+
+assert(API_VERSION_HEADER === 'X-Api-Version' && API_VERSION === '1', 'api version header');
 
 const rss = `<?xml version="1.0"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:slash="http://purl.org/rss/1.0/modules/slash/" xmlns:thr="http://purl.org/syndication/thread/1.0">

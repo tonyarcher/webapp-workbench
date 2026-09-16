@@ -34,13 +34,13 @@ class OpmlController(
     private val importer: OpmlImportService,
     private val membershipService: MembershipService,
 ) {
-    @GetMapping("/opml", produces = [MediaType.TEXT_XML_VALUE])
+    @GetMapping("/opml", produces = [MediaType.TEXT_XML_VALUE], headers = ["X-Api-Version=1"])
     fun export(): ResponseEntity<String> {
         val xml = buildOpml()
         return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/xml; charset=utf-8")).body(xml)
     }
 
-    @PostMapping("/opml")
+    @PostMapping("/opml", headers = ["X-Api-Version=1"])
     fun importOpml(@RequestBody body: OpmlImportBody): OpmlImportResult {
         val xml = body.xml ?: throw ApiException(400, "xml string is required")
         return importer.run(user.id, xml)

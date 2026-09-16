@@ -17,7 +17,7 @@ class SeriesController(
     private val samples: ObjectProvider<SampleStore>,
     private val clock: Clock,
 ) {
-    @GetMapping("/series")
+    @GetMapping("/series", headers = ["X-Api-Version=1"])
     fun series(
         @RequestParam(required = false) metric: String?,
         @RequestParam(required = false) from: String?,

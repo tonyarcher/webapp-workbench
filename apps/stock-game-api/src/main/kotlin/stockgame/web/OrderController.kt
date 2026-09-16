@@ -29,14 +29,14 @@ class OrderController(
     private val user: IdentityUser,
     private val trading: ObjectProvider<TradingService>,
 ) {
-    @GetMapping("/orders")
+    @GetMapping("/orders", headers = ["X-Api-Version=1"])
     fun list(): List<Order> {
         val svc = trading.orOffline()
         svc.executeDueOrders(user.id)
         return svc.listOrders(user.id)
     }
 
-    @PostMapping("/orders")
+    @PostMapping("/orders", headers = ["X-Api-Version=1"])
     fun place(@RequestBody body: PlaceOrderBody): Order {
         val symbol = body.symbol.trim().uppercase()
         if (symbol.isEmpty() || body.qty <= 0) throw ApiException(400, "invalid order")
@@ -60,7 +60,7 @@ class OrderController(
         )
     }
 
-    @PostMapping("/orders/{id}/cancel")
+    @PostMapping("/orders/{id}/cancel", headers = ["X-Api-Version=1"])
     fun cancel(@PathVariable id: Long): OkBody {
         trading.orOffline().cancelOrder(user.id, id)
         return OkBody()

@@ -10,14 +10,14 @@ import stockgame.provider.PriceProvider
 
 @RestController
 class MarketController(private val provider: PriceProvider) {
-    @GetMapping("/quote")
+    @GetMapping("/quote", headers = ["X-Api-Version=1"])
     fun quote(@RequestParam symbol: String): Quote {
         val s = symbol.trim().uppercase()
         if (s.isEmpty()) throw ApiException(400, "symbol required")
         return provider.getQuote(s)
     }
 
-    @GetMapping("/bars")
+    @GetMapping("/bars", headers = ["X-Api-Version=1"])
     fun bars(
         @RequestParam symbol: String,
         @RequestParam interval: String,
@@ -29,7 +29,7 @@ class MarketController(private val provider: PriceProvider) {
         return provider.getBars(s, interval, from, to)
     }
 
-    @GetMapping("/search")
+    @GetMapping("/search", headers = ["X-Api-Version=1"])
     fun search(@RequestParam q: String): List<SymbolHit> {
         val query = q.trim()
         if (query.isEmpty()) throw ApiException(400, "q required")

@@ -97,8 +97,10 @@ describe('api client', () => {
   it('attaches a Bearer token and parses a quoteless quote', async () => {
     seedTokens();
     const seen: Array<string | undefined> = [];
+    const versions: Array<string | undefined> = [];
     vi.stubGlobal('fetch', async (url: unknown, init?: {headers?: Record<string, string>}) => {
       seen.push(init?.headers?.['Authorization']);
+      versions.push(init?.headers?.['X-Api-Version']);
       expect(`${url}`).toContain('/quote?symbol=aapl');
       return jsonResponse({symbol: 'AAPL', name: 'Apple', price: 90, currency: 'USD', exchange: 'T', time: 0});
     });
@@ -107,6 +109,7 @@ describe('api client', () => {
     expect(quote.bid).toBeUndefined();
     expect(seen).toHaveLength(1);
     expect(seen[0]?.startsWith('Bearer ')).toBe(true);
+    expect(versions).toEqual(['1']);
     vi.unstubAllGlobals();
   });
 

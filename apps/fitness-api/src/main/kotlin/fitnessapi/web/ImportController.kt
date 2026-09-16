@@ -14,7 +14,7 @@ import fitnessapi.store.SampleStore
 
 @RestController
 class ImportController(private val samples: ObjectProvider<SampleStore>) {
-    @PostMapping("/imports")
+    @PostMapping("/imports", headers = ["X-Api-Version=1"])
     fun importSamples(@RequestBody(required = false) body: JsonNode?): ImportJson {
         val raw = body?.get("samples")
         val size = if (raw != null && raw.isArray) raw.size() else 0

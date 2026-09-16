@@ -11,7 +11,7 @@ import fitnessapi.store.StoredSample
 
 @RestController
 class PatchSampleController(private val samples: ObjectProvider<SampleStore>) {
-    @PatchMapping("/samples")
+    @PatchMapping("/samples", headers = ["X-Api-Version=1"])
     fun patch(@RequestBody body: JsonNode): Any {
         val metric = body.string("metric")
         val originId = body.string("originId")

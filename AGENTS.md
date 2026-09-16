@@ -225,6 +225,20 @@ or a `packages/log` workspace until a second language needs the same code.
 - `-Xjsr305=strict` plus progressive mode on every API module.
 - Detekt floors live in each API's `detekt.yml`. Split rather than suppress.
 
+## API versioning
+
+First-party APIs are versioned with a request header, not URL prefixes.
+Every data route requires `X-Api-Version: 1`. `/healthz`, `/readyz`, and
+`/oauth/*` stay unversioned: probes, browser navigation, and stock JWT
+fetchers cannot send custom headers.
+
+- Kotlin: `headers = ["X-Api-Version=1"]` on each mapping. Once past security,
+  a missing or wrong version answers 404, like an unknown route.
+- TypeScript clients send the header on every API fetch. Centralize it in the
+  app's fetch helper (`services/api.ts`, `lib/api.ts`).
+- Node servers gate the same header by hand (`radio-station/server/`).
+- Breaking version changes update consumer and API together. No compat shims.
+
 ## Verification
 
 - Workspace `npm test` then `npm run build` must pass before finishing.

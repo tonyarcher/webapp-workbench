@@ -27,6 +27,14 @@ export interface RouteCtx {
 
 export type RouteHandler = (ctx: RouteCtx) => Promise<unknown>;
 
+export const API_VERSION_HEADER: string = 'x-api-version';
+export const API_VERSION: string = '1';
+
+function versionOk(req: IncomingMessage, pathname: string): boolean {
+    if (pathname === '/healthz') return true;
+    return req.headers[API_VERSION_HEADER] === API_VERSION;
+}
+
 export interface Route {
     method: string;
     pattern: string;
@@ -147,25 +155,33 @@ async function handleDispatch(req: IncomingMessage, res: ServerResponse, routes:
         const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
         const pathname = url.pathname.replace(/(\/playlists\/[0-9a-f-]+)\.txt$/i, '$1/txt');
         const {route, params} = findMatched(routes, req.method ?? 'GET', pathname);
-        if (!route) {
+        if (!route || !versionOk(req, pathname)) {
             sendJson(res, 404, {error: 'not found'});
             return;
         }
-        const result = await route.handler({req, res, params, query: url.searchParams});
-        if (!res.headersSent && result !== undefined) sendJson(res, 200, result);
+        await runRoute(route, {req, res, params, query: url.searchParams});
     } catch (err) {
-        const status = errorStatus(err);
-        if (status >= 500) {
-            log('radio-api', {
-                level: 'error',
-                msg: 'request failed',
-                err: formatErr(err),
-                request_id: res.getHeader('X-Request-ID'),
-            });
-        }
-        if (!res.headersSent) sendJson(res, status, {error: errorMessage(err, status)});
-        else res.destroy();
+        failDispatch(res, err);
     }
+}
+
+async function runRoute(route: Route, ctx: RouteCtx): Promise<void> {
+    const result = await route.handler(ctx);
+    if (!ctx.res.headersSent && result !== undefined) sendJson(ctx.res, 200, result);
+}
+
+function failDispatch(res: ServerResponse, err: unknown): void {
+    const status = errorStatus(err);
+    if (status >= 500) {
+        log('radio-api', {
+            level: 'error',
+            msg: 'request failed',
+            err: formatErr(err),
+            request_id: res.getHeader('X-Request-ID'),
+        });
+    }
+    if (!res.headersSent) sendJson(res, status, {error: errorMessage(err, status)});
+    else res.destroy();
 }
 
 export function createDispatcher(routes: Route[]): (req: IncomingMessage, res: ServerResponse) => void {

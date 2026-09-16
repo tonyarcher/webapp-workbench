@@ -1,11 +1,14 @@
 import {parseImportText, parseHealthConnectSqliteTables, planLift, lbToKg} from 'fitness-core';
 import {rowObject, rowsFromExec} from '../src/services/sqlite-rows';
 import {displaySeries, rollupPoints} from '../src/services/chart-data';
+import {API_VERSION, API_VERSION_HEADER} from '../src/services/api.ts';
 
 function assert(cond: boolean, msg: string): asserts cond {
     if (!cond) throw new Error(`FAIL: ${msg}`);
     console.log(`ok: ${msg}`);
 }
+
+assert(API_VERSION_HEADER === 'X-Api-Version' && API_VERSION === '1', 'api version header');
 
 const csv = parseImportText('metric,timestamp,value,unit\nweight,2026-01-01T08:00:00Z,80,kg\n');
 assert(csv.samples.length === 1, 'csv import one sample');

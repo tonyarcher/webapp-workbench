@@ -70,7 +70,9 @@ class AuthTest {
 
     @Test
     fun libraryWithoutTokenIs401() {
-        val result = mvc.get("/library").andReturn()
+        val result = mvc.get("/library") {
+            header("X-Api-Version", "1")
+        }.andReturn()
         assertEquals(401, result.response.status)
         assertEquals("""{"error":"unauthorized"}""", result.response.contentAsString)
     }
@@ -79,6 +81,7 @@ class AuthTest {
     fun libraryWithBadTokenIs401() {
         whenever(decoder.decode(any())).thenThrow(org.springframework.security.oauth2.jwt.BadJwtException("bad"))
         val result = mvc.get("/library") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer nope")
         }.andReturn()
         assertEquals(401, result.response.status)
@@ -93,6 +96,7 @@ class AuthTest {
         whenever(service.library(any())).thenReturn(LibraryJson(emptyList(), emptyList()))
 
         val result = mvc.get("/library") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
         }.andReturn()
         assertEquals(200, result.response.status)
@@ -118,6 +122,7 @@ class AuthTest {
         whenever(service.library(any())).thenReturn(LibraryJson(emptyList(), emptyList()))
 
         val result = mvc.get("/library") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
         }.andReturn()
         assertEquals(200, result.response.status)
@@ -140,6 +145,7 @@ class AuthTest {
         val oldSeen = existing.lastSeenAt!!
 
         val result = mvc.get("/library") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
         }.andReturn()
         assertEquals(200, result.response.status)
@@ -214,6 +220,7 @@ class SharedPoolTest {
 
     private fun postFeed(token: String, body: String = """{"url":"https://example.com/rss"}"""): Int {
         val result = mvc.post("/feeds") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer $token")
             contentType = org.springframework.http.MediaType.APPLICATION_JSON
             content = body

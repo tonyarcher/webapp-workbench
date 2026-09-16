@@ -76,19 +76,19 @@ class PasskeyRoutesTest {
     @Test
     fun registerBeginNeedsSessionAndReturnsOptions() {
         val cookies = TestCookies()
-        mvc.getWithCookies(cookies, "/v1/csrf").expectStatus(200)
-        val anon = mvc.postJson(cookies, "/v1/passkey/register/begin", csrf = true, json = null)
+        mvc.getWithCookies(cookies, "/csrf").expectStatus(200)
+        val anon = mvc.postJson(cookies, "/passkey/register/begin", csrf = true, json = null)
         assertEquals(401, anon.response.status)
         mvc.postJson(
             cookies,
-            "/v1/register",
+            "/register",
             csrf = true,
             json = mapper.writeValueAsString(mapOf("username" to "alice", "password" to "twelvechars!!")),
         ).expectStatus(201)
-        val begin = mvc.postJson(cookies, "/v1/passkey/register/begin", csrf = true, json = null)
+        val begin = mvc.postJson(cookies, "/passkey/register/begin", csrf = true, json = null)
         begin.expectStatus(200)
         assertTrue(begin.bodyText().contains("publicKey"))
-        val loginBegin = mvc.postJson(cookies, "/v1/passkey/login/begin", csrf = true, json = null)
+        val loginBegin = mvc.postJson(cookies, "/passkey/login/begin", csrf = true, json = null)
         loginBegin.expectStatus(200)
         assertTrue(loginBegin.bodyText().contains("publicKey"))
     }

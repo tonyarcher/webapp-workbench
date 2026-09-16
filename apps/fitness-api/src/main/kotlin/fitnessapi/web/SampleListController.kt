@@ -13,13 +13,13 @@ class SampleListController(
     private val samples: ObjectProvider<SampleStore>,
     private val clock: Clock,
 ) {
-    @GetMapping("/stats")
+    @GetMapping("/stats", headers = ["X-Api-Version=1"])
     fun stats(): StatsJson = StatsJson(samples.orOffline().stats(LOCAL_USER_ID).map { it.toJson() })
 
-    @GetMapping("/samples/latest")
+    @GetMapping("/samples/latest", headers = ["X-Api-Version=1"])
     fun latest(): LatestJson = LatestJson(samples.orOffline().latest(LOCAL_USER_ID).map { it.toJson() })
 
-    @GetMapping("/samples")
+    @GetMapping("/samples", headers = ["X-Api-Version=1"])
     fun list(
         @RequestParam(required = false) metric: String?,
         @RequestParam(required = false) from: String?,
@@ -32,7 +32,7 @@ class SampleListController(
         return SamplesJson(rows.map { it.toJson() })
     }
 
-    @GetMapping("/rollups")
+    @GetMapping("/rollups", headers = ["X-Api-Version=1"])
     fun rollups(): RollupsJson =
         RollupsJson(samples.orOffline().rollups(LOCAL_USER_ID).map { it.toJson() })
 }

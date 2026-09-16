@@ -13,7 +13,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.post
 
 @WebMvcTest
 @Import(TestStoresConfig::class)
@@ -119,6 +121,15 @@ class FitnessRoutesTest {
         val res = mvc.getPath("/nope")
         assertEquals(404, res.response.status)
         assertEquals("""{"error":"not found"}""", res.response.contentAsString)
+    }
+
+    @Test
+    fun missingVersionHeaderIsNotRouted() {
+        val res = mvc.post("/imports") {
+            contentType = MediaType.APPLICATION_JSON
+            content = BODY_MASS
+        }.andReturn()
+        assertEquals(404, res.response.status)
     }
 
     @Test

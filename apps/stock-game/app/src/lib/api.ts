@@ -41,6 +41,7 @@ function withAuth(init: RequestInit | undefined, token: string): RequestInit {
   const incoming = init?.headers as Record<string, string> | undefined
   if (incoming) Object.assign(headers, incoming)
   headers['Authorization'] = `Bearer ${token}`
+  headers['X-Api-Version'] = '1'
   if (init?.body && typeof init.body === 'string') {
     headers['Content-Type'] = 'application/json'
   }

@@ -15,7 +15,7 @@ class PasskeyController(
     private val settings: Settings,
     private val mapper: ObjectMapper,
 ) {
-    @PostMapping("/v1/passkey/register/begin")
+    @PostMapping("/passkey/register/begin", headers = ["X-Api-Version=1"])
     fun passkeyRegisterBegin(request: HttpServletRequest): PasskeyBeginBody {
         val store = requireStore(accounts)
         val passkeys = accounts.passkeys ?: throw ApiException(503, "unavailable", "passkeys offline")
@@ -24,7 +24,7 @@ class PasskeyController(
         return PasskeyBeginBody(requestId = id, options = mapper.readTree(json))
     }
 
-    @PostMapping("/v1/passkey/register/finish")
+    @PostMapping("/passkey/register/finish", headers = ["X-Api-Version=1"])
     fun passkeyRegisterFinish(@RequestBody body: PasskeyFinishBody, request: HttpServletRequest): OkBody {
         requireStore(accounts)
         val passkeys = accounts.passkeys ?: throw ApiException(503, "unavailable", "passkeys offline")
@@ -33,7 +33,7 @@ class PasskeyController(
         return OkBody(ok = true)
     }
 
-    @PostMapping("/v1/passkey/login/begin")
+    @PostMapping("/passkey/login/begin", headers = ["X-Api-Version=1"])
     fun passkeyLoginBegin(request: HttpServletRequest): PasskeyBeginBody {
         checkRate(accounts, "passkey", request)
         val passkeys = accounts.passkeys ?: throw ApiException(503, "unavailable", "passkeys offline")
@@ -41,7 +41,7 @@ class PasskeyController(
         return PasskeyBeginBody(requestId = id, options = mapper.readTree(json))
     }
 
-    @PostMapping("/v1/passkey/login/finish")
+    @PostMapping("/passkey/login/finish", headers = ["X-Api-Version=1"])
     fun passkeyLoginFinish(
         @RequestBody body: PasskeyFinishBody,
         request: HttpServletRequest,

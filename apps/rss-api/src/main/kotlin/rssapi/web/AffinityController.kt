@@ -17,7 +17,7 @@ class AffinityController(
     private val affinity: AffinityRepo,
     private val subs: SubscriptionRepo,
 ) {
-    @PostMapping("/affinity")
+    @PostMapping("/affinity", headers = ["X-Api-Version=1"])
     fun add(@RequestBody body: AffinityBody): OkBody {
         val articleId = body.articleId
         val amount = body.amount

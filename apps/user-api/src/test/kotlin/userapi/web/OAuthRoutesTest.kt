@@ -87,7 +87,7 @@ class OAuthRoutesTest {
     @Test
     fun authorizeTokenAndRejectReplay() {
         val cookies = TestCookies()
-        mvc.getWithCookies(cookies, "/v1/csrf").expectStatus(200)
+        mvc.getWithCookies(cookies, "/csrf").expectStatus(200)
         registerAlice(cookies)
         val code = authorize(cookies)
         val token = exchange(code)
@@ -99,7 +99,7 @@ class OAuthRoutesTest {
     private fun registerAlice(cookies: TestCookies) {
         val created = mvc.postJson(
             cookies,
-            "/v1/register",
+            "/register",
             csrf = true,
             json = mapper.writeValueAsString(mapOf("username" to "alice", "password" to "twelvechars!!")),
         )

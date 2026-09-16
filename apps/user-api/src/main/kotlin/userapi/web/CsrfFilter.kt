@@ -23,7 +23,7 @@ class CsrfFilter(private val mapper: ObjectMapper) : OncePerRequestFilter() {
     }
 
     private fun needsCsrf(request: HttpServletRequest): Boolean =
-        request.method == "POST" && request.requestURI.startsWith("/v1/")
+        request.method == "POST" && request.requestURI != "/oauth/token"
 
     private fun csrfOk(request: HttpServletRequest): Boolean {
         val cookie = request.cookieValue(CSRF_COOKIE).orEmpty()

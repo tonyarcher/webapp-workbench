@@ -65,6 +65,7 @@ class ArticleWriteControllerTest {
         whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedA, feedB))
 
         mvc.post("/articles/read-before") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"feedIds":["$feedA"],"cutoff":1720000000000}"""
@@ -88,6 +89,7 @@ class ArticleWriteControllerTest {
         whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(owned))
 
         mvc.post("/articles/read-all") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"feedId":"$owned"}"""
@@ -107,6 +109,7 @@ class ArticleWriteControllerTest {
         whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(owned))
 
         mvc.post("/articles/read-all") {
+            header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"feedId":"$stranger"}"""

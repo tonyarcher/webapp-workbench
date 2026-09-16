@@ -8,7 +8,8 @@ repo-root `AGENTS.md`. Phase 3: register, login, TOTP, passkeys.
 - Vite + Lit. Custom elements `uw-*`.
 - Talks to `user-api` at origin-absolute `/user-api/` (gateway). Vite proxies
   that prefix to `:3004` in dev. `credentials: 'include'` for the session cookie.
-- CSRF: `GET /v1/csrf` then `X-CSRF-Token` on POSTs.
+- CSRF: `GET /csrf` then `X-CSRF-Token` on POSTs.
+- API version: `X-Api-Version: 1` on every `user-api` fetch.
 - Landing redirect: `?return=/fitness/` (same-origin path only).
 - No PWA. No OAuth UI yet.
 

@@ -1,55 +1,57 @@
 export const USER_API_PREFIX = '/user-api';
 
+export const API_VERSION_HEADERS: Record<string, string> = {'X-Api-Version': '1'};
+
 export function healthzUrl(): string {
     return `${USER_API_PREFIX}/healthz`;
 }
 
 export function csrfUrl(): string {
-    return `${USER_API_PREFIX}/v1/csrf`;
+    return `${USER_API_PREFIX}/csrf`;
 }
 
 export function meUrl(): string {
-    return `${USER_API_PREFIX}/v1/me`;
+    return `${USER_API_PREFIX}/me`;
 }
 
 export function registerUrl(): string {
-    return `${USER_API_PREFIX}/v1/register`;
+    return `${USER_API_PREFIX}/register`;
 }
 
 export function loginUrl(): string {
-    return `${USER_API_PREFIX}/v1/login`;
+    return `${USER_API_PREFIX}/login`;
 }
 
 export function logoutUrl(): string {
-    return `${USER_API_PREFIX}/v1/logout`;
+    return `${USER_API_PREFIX}/logout`;
 }
 
 export function loginTotpUrl(): string {
-    return `${USER_API_PREFIX}/v1/login/totp`;
+    return `${USER_API_PREFIX}/login/totp`;
 }
 
 export function totpBeginUrl(): string {
-    return `${USER_API_PREFIX}/v1/totp/begin`;
+    return `${USER_API_PREFIX}/totp/begin`;
 }
 
 export function totpConfirmUrl(): string {
-    return `${USER_API_PREFIX}/v1/totp/confirm`;
+    return `${USER_API_PREFIX}/totp/confirm`;
 }
 
 export function passkeyRegisterBeginUrl(): string {
-    return `${USER_API_PREFIX}/v1/passkey/register/begin`;
+    return `${USER_API_PREFIX}/passkey/register/begin`;
 }
 
 export function passkeyRegisterFinishUrl(): string {
-    return `${USER_API_PREFIX}/v1/passkey/register/finish`;
+    return `${USER_API_PREFIX}/passkey/register/finish`;
 }
 
 export function passkeyLoginBeginUrl(): string {
-    return `${USER_API_PREFIX}/v1/passkey/login/begin`;
+    return `${USER_API_PREFIX}/passkey/login/begin`;
 }
 
 export function passkeyLoginFinishUrl(): string {
-    return `${USER_API_PREFIX}/v1/passkey/login/finish`;
+    return `${USER_API_PREFIX}/passkey/login/finish`;
 }
 
 export function isHealthOk(body: unknown): boolean {

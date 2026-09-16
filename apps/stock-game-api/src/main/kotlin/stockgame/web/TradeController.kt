@@ -24,10 +24,10 @@ class TradeController(
     private val user: IdentityUser,
     private val trading: ObjectProvider<TradingService>,
 ) {
-    @GetMapping("/trades")
+    @GetMapping("/trades", headers = ["X-Api-Version=1"])
     fun list(): List<Trade> = trading.orOffline().listTrades(user.id)
 
-    @PostMapping("/trades")
+    @PostMapping("/trades", headers = ["X-Api-Version=1"])
     fun place(@RequestBody body: PlaceTradeBody): Trade {
         val symbol = body.symbol.trim().uppercase()
         if (symbol.isEmpty() || body.qty <= 0) throw ApiException(400, "invalid trade")

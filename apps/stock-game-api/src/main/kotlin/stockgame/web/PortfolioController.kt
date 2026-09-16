@@ -21,13 +21,13 @@ class PortfolioController(
     private val provider: PriceProvider,
     private val clock: Clock,
 ) {
-    @GetMapping("/holdings")
+    @GetMapping("/holdings", headers = ["X-Api-Version=1"])
     fun holdings(): List<HoldingsEntry> = accounts.orOffline().getHoldings(user.id)
 
-    @GetMapping("/cash")
+    @GetMapping("/cash", headers = ["X-Api-Version=1"])
     fun cash(): CashBody = CashBody(accounts.orOffline().cashNowCents(user.id))
 
-    @GetMapping("/portfolio")
+    @GetMapping("/portfolio", headers = ["X-Api-Version=1"])
     fun series(): PortfolioSeries {
         val svc = trading.orOffline()
         val uid = user.id

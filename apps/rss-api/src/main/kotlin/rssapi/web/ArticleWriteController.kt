@@ -20,7 +20,7 @@ class ArticleWriteController(
     private val states: ArticleStateRepo,
     private val subs: SubscriptionRepo,
 ) {
-    @PostMapping("/articles/state")
+    @PostMapping("/articles/state", headers = ["X-Api-Version=1"])
     fun updateState(@RequestBody body: StateListBody): StateResult {
         val updates = body.updates ?: throw ApiException(400, "updates array is required")
         val owned = ownedArticleIds(updates.mapNotNull { it.id })
@@ -36,7 +36,7 @@ class ArticleWriteController(
         return StateResult(updated = n)
     }
 
-    @PostMapping("/articles/read-before")
+    @PostMapping("/articles/read-before", headers = ["X-Api-Version=1"])
     @Transactional
     fun readBefore(@RequestBody body: ReadBeforeBody): OkBody {
         val cutoff = body.cutoff ?: throw ApiException(400, "cutoff (epoch ms) is required")
@@ -48,7 +48,7 @@ class ArticleWriteController(
         return OkBody()
     }
 
-    @PostMapping("/articles/read-all")
+    @PostMapping("/articles/read-all", headers = ["X-Api-Version=1"])
     @Transactional
     fun readAll(@RequestBody body: ReadAllBody?): OkBody {
         val feedId = body?.feedId
