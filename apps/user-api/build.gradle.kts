@@ -14,6 +14,9 @@ repositories {
 
 kotlin {
     jvmToolchain(21)
+    compilerOptions {
+        allWarningsAsErrors.set(true)
+    }
 }
 
 val ktor = "3.2.3"

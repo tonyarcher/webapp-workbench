@@ -12,6 +12,11 @@ class RankingTest {
     }
 
     @Test
+    fun invalidLinkFallsBackToInput() {
+        assertEquals("not a url", normalizeLink("not a url"))
+    }
+
+    @Test
     fun popularityAndHot() {
         assertEquals(1.0, popularityScore(1, 0))
         assertEquals(4.0, popularityScore(2, 0))

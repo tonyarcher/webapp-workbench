@@ -1,6 +1,6 @@
 package rssapi.domain
 
-import java.net.URL
+import java.net.URI
 
 private val TRACKING_PARAMS = setOf(
     "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id",
@@ -9,7 +9,7 @@ private val TRACKING_PARAMS = setOf(
 
 fun normalizeLink(url: String): String {
     return try {
-        val u = URL(url)
+        val u = URI(url).toURL()
         val host = u.host.lowercase().removePrefix("www.")
         val path = u.path.replace(Regex("/+$"), "")
         val search = filteredSearch(u.query)
