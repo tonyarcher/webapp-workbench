@@ -74,10 +74,11 @@ export function applyTry(game: GameState, input: PlayInput): GameState {
     const made = input.family === 'extra_point' ? input.extraPointMade === true : input.twoPointMade === true;
     const points = input.family === 'extra_point' ? 1 : 2;
     const playId = `play-${game.nextPlayId}`;
+    const scoring = made ? (input.family === 'extra_point' ? 'extra_point' : 'two_point') : undefined;
     const play = buildPlay(game, input, playId, '', {
         yards: 0,
         firstDown: made && input.family === 'two_point',
-        scoring: made ? (input.family === 'extra_point' ? 'extra_point' : 'two_point') : undefined,
+        ...(scoring === undefined ? {} : {scoring}),
         deadAtYardline100: game.situation.yardline100,
         outOfBounds: false,
         incomplete: !made && input.family === 'two_point',
@@ -300,11 +301,12 @@ function recordTurnoverPlay(
     td: boolean,
 ): GameState {
     const playId = `play-${game.nextPlayId}`;
+    const scoring = td ? 'touchdown' : undefined;
     const play = buildPlay(game, input, playId, currentDriveId(game), {
         yards,
         firstDown: false,
         turnover: kind,
-        scoring: td ? 'touchdown' : undefined,
+        ...(scoring === undefined ? {} : {scoring}),
         deadAtYardline100: spot,
         outOfBounds: false,
         incomplete: false,

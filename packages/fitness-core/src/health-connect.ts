@@ -125,7 +125,7 @@ const EXTRACTORS: Array<{match: RegExp; ext: Extractor}> = [
 ];
 
 function recordType(rec: Record<string, unknown>): string {
-    return asString(rec.recordType) ?? asString(rec.type) ?? asString(rec.dataType) ?? asString(rec.name) ?? '';
+    return asString(rec['recordType']) ?? asString(rec['type']) ?? asString(rec['dataType']) ?? asString(rec['name']) ?? '';
 }
 
 function firstString(rec: Record<string, unknown>, keys: string[]): string | undefined {
@@ -156,15 +156,15 @@ function parseTime(rec: Record<string, unknown>): number | null {
 }
 
 function parseEnd(rec: Record<string, unknown>): number | null {
-    const raw = asString(rec.endTime) ?? asString(rec.end);
+    const raw = asString(rec['endTime']) ?? asString(rec['end']);
     if (!raw) return null;
     const ms = Date.parse(raw);
     return Number.isFinite(ms) ? ms : null;
 }
 
 function originId(rec: Record<string, unknown>, metric: MetricId, t: number, valueSi: number): string {
-    const meta = isRecord(rec.metadata) ? asString(rec.metadata.id) : undefined;
-    return asString(rec.id) ?? asString(rec.uid) ?? meta ?? `${metric}:${t}:${valueSi}`;
+    const meta = isRecord(rec['metadata']) ? asString(rec['metadata']['id']) : undefined;
+    return asString(rec['id']) ?? asString(rec['uid']) ?? meta ?? `${metric}:${t}:${valueSi}`;
 }
 
 function collectKeyedRecords(payload: Record<string, unknown>): unknown[] {
@@ -172,7 +172,7 @@ function collectKeyedRecords(payload: Record<string, unknown>): unknown[] {
     for (const [key, value] of Object.entries(payload)) {
         if (!Array.isArray(value)) continue;
         for (const item of value) {
-            if (isRecord(item) && !item.recordType && !item.type) out.push({...item, recordType: key});
+            if (isRecord(item) && !item['recordType'] && !item['type']) out.push({...item, recordType: key});
             else out.push(item);
         }
     }
@@ -180,14 +180,14 @@ function collectKeyedRecords(payload: Record<string, unknown>): unknown[] {
 }
 
 function isSingleRecord(payload: Record<string, unknown>): boolean {
-    return !!(payload.recordType || payload.type || payload.startTime || payload.weight);
+    return !!(payload['recordType'] || payload['type'] || payload['startTime'] || payload['weight']);
 }
 
 function recordsFrom(payload: unknown): unknown[] {
     if (Array.isArray(payload)) return payload;
     if (!isRecord(payload)) return [];
-    if (Array.isArray(payload.records)) return payload.records;
-    if (Array.isArray(payload.data)) return payload.data;
+    if (Array.isArray(payload['records'])) return payload['records'];
+    if (Array.isArray(payload['data'])) return payload['data'];
     const keyed = collectKeyedRecords(payload);
     if (keyed.length) return keyed;
     return isSingleRecord(payload) ? [payload] : [];

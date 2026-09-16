@@ -21,16 +21,14 @@ export function personnelForPossession(game: GameState, possession: TeamId) {
 }
 
 export function closeDrive(drives: Drive[], result: DriveResult): Drive[] {
-    if (drives.length === 0) return drives;
-    const last = drives[drives.length - 1];
-    if (last.result) return drives;
+    const last = drives.at(-1);
+    if (last === undefined || last.result) return drives;
     return [...drives.slice(0, -1), {...last, result}];
 }
 
 export function appendPlayToDrive(drives: Drive[], playId: string): Drive[] {
-    if (drives.length === 0) return drives;
-    const last = drives[drives.length - 1];
-    if (last.result) return drives;
+    const last = drives.at(-1);
+    if (last === undefined || last.result) return drives;
     return [...drives.slice(0, -1), {...last, playIds: [...last.playIds, playId]}];
 }
 
@@ -46,13 +44,18 @@ export function openDrive(game: GameState, team: TeamId, playId: string): Drive 
 }
 
 export function currentDriveId(game: GameState): string {
-    const last = game.drives[game.drives.length - 1];
-    return last && !last.result ? last.id : '';
+    const last = game.drives.at(-1);
+    if (last === undefined || last.result) return '';
+    return last.id;
+}
+
+function withPlayerId(playerId: string | undefined): {playerId?: string} {
+    return playerId === undefined ? {} : {playerId};
 }
 
 function fumbleEvents(input: PlayInput): PlayEvent[] {
     const events: PlayEvent[] = [
-        {kind: 'run', playerId: input.rusherId, yards: input.yards ?? 0},
+        {kind: 'run', ...withPlayerId(input.rusherId), yards: input.yards ?? 0},
         {kind: 'fumble'},
     ];
     if (input.fumbleOwn) events.push({kind: 'recovery'});
@@ -61,13 +64,13 @@ function fumbleEvents(input: PlayInput): PlayEvent[] {
 
 function scrimmageEvents(input: PlayInput): PlayEvent[] {
     if (input.passerId || input.receiverId) {
-        return [{kind: 'pass', playerId: input.passerId}, {kind: 'catch', playerId: input.receiverId}];
+        return [{kind: 'pass', ...withPlayerId(input.passerId)}, {kind: 'catch', ...withPlayerId(input.receiverId)}];
     }
-    return [{kind: 'run', playerId: input.rusherId, yards: input.yards ?? 0}];
+    return [{kind: 'run', ...withPlayerId(input.rusherId), yards: input.yards ?? 0}];
 }
 
 function passEvents(kind: 'incomplete' | 'interception', input: PlayInput): PlayEvent[] {
-    return [{kind: 'pass', playerId: input.passerId}, {kind, playerId: input.intendedId}];
+    return [{kind: 'pass', ...withPlayerId(input.passerId)}, {kind, ...withPlayerId(input.intendedId)}];
 }
 
 function specialOutcome(input: PlayInput): PlayEvent[] | null {
@@ -229,12 +232,10 @@ function clockAfterPlay(
 
 export function finishPlay(game: GameState, input: PlayInput, facts?: ClockFactsInput): GameState {
     const {clockSeconds, warned, stopReason, running} = clockAfterPlay(game, input, facts);
-    const plays = game.plays.length
-        ? [...game.plays.slice(0, -1), {
-            ...game.plays[game.plays.length - 1],
-            clock: {...game.plays[game.plays.length - 1].clock, stopReason},
-        }]
-        : game.plays;
+    const prev = game.plays.at(-1);
+    const plays = prev === undefined
+        ? game.plays
+        : [...game.plays.slice(0, -1), {...prev, clock: {...prev.clock, stopReason}}];
     const next: GameState = {
         ...game,
         plays,

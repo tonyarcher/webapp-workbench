@@ -9,7 +9,7 @@ scoreboardStyleSheet.replaceSync(scoreboardCssText);
 
 @customElement('baseball-scoreboard')
 export class BaseballScoreboard extends LitElement {
-    static styles = scoreboardStyleSheet;
+    static override styles = scoreboardStyleSheet;
 
     @property({type: String, attribute: 'away-name'}) awayName = 'AWAY';
     @property({type: String, attribute: 'home-name'}) homeName = 'HOME';
@@ -88,7 +88,7 @@ export class BaseballScoreboard extends LitElement {
     })
     boxScoreData: any = null;
 
-    render() {
+    override render() {
         const vm = this.buildViewModel();
         return html`
             <div class="scoreboard-led">

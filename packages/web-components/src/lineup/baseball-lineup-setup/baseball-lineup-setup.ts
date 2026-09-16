@@ -37,21 +37,21 @@ function normalizePlayer(raw: unknown, index: number): PlayerInfo {
 }
 
 function resolvePlayerName(record: Record<string, unknown> | null): string {
-    return String(record?.name ?? record?.batterName ?? '');
+    return String(record?.['name'] ?? record?.['batterName'] ?? '');
 }
 
 function resolvePlayerJersey(record: Record<string, unknown> | null): number {
-    const jerseyRaw = Number(record?.jerseyNumber);
+    const jerseyRaw = Number(record?.['jerseyNumber']);
     return Number.isFinite(jerseyRaw) ? jerseyRaw : 0;
 }
 
 function resolvePlayerPosition(record: Record<string, unknown> | null, index: number): string {
-    const raw = String(record?.position ?? FIELD_POSITIONS[index] ?? 'DH');
+    const raw = String(record?.['position'] ?? FIELD_POSITIONS[index] ?? 'DH');
     return raw || 'DH';
 }
 
 function resolvePlayerId(record: Record<string, unknown> | null, index: number): number {
-    const id = Number(record?.id ?? index + 1);
+    const id = Number(record?.['id'] ?? index + 1);
     return Number.isFinite(id) ? id : index + 1;
 }
 
@@ -104,7 +104,7 @@ function validateLineup(players: PlayerInfo[], teamLabel: string): string[] {
 
 @customElement('baseball-lineup-setup')
 export class BaseballLineupSetup extends LitElement {
-    static styles = lineupSetupSheet;
+    static override styles = lineupSetupSheet;
 
     @property({type: String, attribute: 'home-team-name'}) homeTeamName = 'Home Team';
     @property({type: String, attribute: 'away-team-name'}) awayTeamName = 'Away Team';
@@ -157,7 +157,7 @@ export class BaseballLineupSetup extends LitElement {
         };
     }
 
-    protected willUpdate(changed: PropertyValues<this>) {
+    protected override willUpdate(changed: PropertyValues<this>) {
         if (!this.shouldSyncDraft(changed)) return;
         this.syncDraftFromProps();
         if (this.hasUpdated) this.errors = [];
@@ -178,11 +178,11 @@ export class BaseballLineupSetup extends LitElement {
         );
     }
 
-    protected firstUpdated() {
+    protected override firstUpdated() {
         this.emitChange();
     }
 
-    render() {
+    override render() {
         if (this.variant === 'modal' && !this.isOpen) return html``;
         const body = this.renderBody();
         return this.variant === 'modal' ? html`<div class="overlay-catch">${body}</div>` : body;

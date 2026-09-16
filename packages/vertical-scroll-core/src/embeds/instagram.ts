@@ -40,7 +40,7 @@ function codeFromPrefixed(path: string): string | null {
 
 function codeFromNested(path: string): string | null {
     const nested = path.match(/^\/[^/]+\/(reel|reels|p)\/([A-Za-z0-9_-]{5,64})(?:\/|$)/)
-    if (nested) return isValidCode(nested[2])
+    if (nested) return isValidCode(nested[2] ?? null)
     return null
 }
 

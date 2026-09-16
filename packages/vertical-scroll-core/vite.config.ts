@@ -5,7 +5,6 @@ export default defineConfig({
     plugins: [
         dts({
             include: ['src/**/*.ts'],
-            rollupTypes: true,
         }),
     ],
     build: {

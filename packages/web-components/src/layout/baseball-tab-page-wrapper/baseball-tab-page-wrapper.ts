@@ -7,13 +7,13 @@ wrapperSheet.replaceSync(wrapperCssText);
 
 @customElement('baseball-tab-page-wrapper')
 export class BaseballTabPageWrapper extends LitElement {
-    static styles = wrapperSheet;
+    static override styles = wrapperSheet;
 
     @property({type: String, attribute: 'page-title'}) pageTitle = '';
     @property({type: String, attribute: 'loading-message'}) loadingMessage = '';
     @property({type: String, attribute: 'empty-message'}) emptyMessage = '';
 
-    render() {
+    override render() {
         if (this.loadingMessage) {
             return html`<div class="loading-state">${this.loadingMessage}</div>`;
         }

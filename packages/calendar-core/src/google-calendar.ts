@@ -87,8 +87,8 @@ async function safeJson(res: {json(): Promise<unknown>}): Promise<unknown> {
 function findCalendarId(items: unknown[], summary: string): string | undefined {
     for (const item of items) {
         if (!isRecord(item)) continue;
-        if (asString(item.summary) !== summary) continue;
-        const id = asString(item.id);
+        if (asString(item['summary']) !== summary) continue;
+        const id = asString(item['id']);
         if (id) return id;
     }
     return undefined;
@@ -101,7 +101,7 @@ async function searchExistingCalendar(fetchImpl: FetchLike, accessToken: string,
     });
     if (!list.ok) return undefined;
     const json = await safeJson(list);
-    const items = isRecord(json) ? asArray(json.items) ?? [] : [];
+    const items = isRecord(json) ? asArray(json['items']) ?? [] : [];
     return findCalendarId(items, summary);
 }
 
@@ -112,7 +112,7 @@ async function createCalendar(fetchImpl: FetchLike, accessToken: string, summary
         body: JSON.stringify({summary}),
     });
     const createdJson = await safeJson(created);
-    const id = isRecord(createdJson) ? asString(createdJson.id) : undefined;
+    const id = isRecord(createdJson) ? asString(createdJson['id']) : undefined;
     if (!created.ok || !id) throw new Error(`Google calendar create failed (${created.status})`);
     return id;
 }

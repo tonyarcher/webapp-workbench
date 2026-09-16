@@ -7,7 +7,7 @@ controlsSheet.replaceSync(controlsCssText);
 
 @customElement('baseball-scoring-controls')
 export class BaseballScoringControls extends LitElement {
-    static styles = controlsSheet;
+    static override styles = controlsSheet;
 
     // Which top-level mode to show
     @property({type: String, attribute: 'game-status'}) gameStatus: 'active' | 'completed' = 'active';
@@ -54,7 +54,7 @@ export class BaseballScoringControls extends LitElement {
     })
     animations = true;
 
-    render() {
+    override render() {
         return this.gameStatus === 'completed'
             ? this.renderCompleted()
             : this.renderActive();

@@ -30,6 +30,11 @@
 
     /* Strict Quality Controls */
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "verbatimModuleSyntax": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
     "noUnusedLocals": true,

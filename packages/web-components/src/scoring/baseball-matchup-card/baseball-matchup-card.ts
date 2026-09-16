@@ -7,7 +7,7 @@ matchupSheet.replaceSync(matchupCssText);
 
 @customElement('baseball-matchup-card')
 export class BaseballMatchupCard extends LitElement {
-    static styles = matchupSheet;
+    static override styles = matchupSheet;
 
     @property({type: String, attribute: 'batter-name'}) batterName = 'Current Batter';
     @property({type: String, attribute: 'batter-stats'}) batterStats = '';
@@ -15,7 +15,7 @@ export class BaseballMatchupCard extends LitElement {
     @property({type: String, attribute: 'pitcher-name'}) pitcherName = 'Current Pitcher';
     @property({type: String, attribute: 'pitcher-stats'}) pitcherStats = '';
 
-    render() {
+    override render() {
         return html`
       <div class="card matchup-card">
         <div class="matchup-header">

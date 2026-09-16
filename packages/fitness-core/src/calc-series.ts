@@ -63,12 +63,13 @@ export function navyBfSeries(
     const maps = sex === 'female' ? [h, n, w, byDay(hip)] : [h, n, w];
     const hipMap = byDay(hip);
     return joinDays(maps).flatMap((day) => {
+        const hip = hipMap.get(day);
         const v = navyBodyFat({
             sex,
             heightM: h.get(day) ?? 0,
             neckM: n.get(day) ?? 0,
             waistM: w.get(day) ?? 0,
-            hipM: hipMap.get(day),
+            ...(hip === undefined ? {} : {hipM: hip}),
         });
         return v == null ? [] : [{t: dayMs(day), v}];
     });

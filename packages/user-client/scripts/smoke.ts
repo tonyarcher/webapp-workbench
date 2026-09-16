@@ -22,7 +22,7 @@ assert(url.includes('code_challenge_method=S256'), 'authorize S256');
 assert(url.includes('client_id=fitness'), 'authorize client');
 assert(parseJwtPayload('not-a-jwt') === null, 'reject junk jwt');
 const payload = btoa(JSON.stringify({sub: '1'})).replace(/=+$/g, '');
-assert(parseJwtPayload(`aaa.${payload}.bbb`)?.sub === '1', 'parse jwt payload');
+assert(parseJwtPayload(`aaa.${payload}.bbb`)?.['sub'] === '1', 'parse jwt payload');
 
 function hex(bytes: Uint8Array): string {
     return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
