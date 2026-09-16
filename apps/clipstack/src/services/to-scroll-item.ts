@@ -3,16 +3,17 @@ import type {ClipLink} from '../types'
 
 export function toScrollItem(link: ClipLink, index: number, total: number): ScrollItem {
     const page = link.pageUrl ?? link.url
-    return {
+    const item: ScrollItem = {
         id: link.id,
         title: link.title ?? (link.author ? `@${link.author}` : ''),
-        author: link.author,
-        authorName: link.authorName,
         mediaType: 'Video',
         videoUrl: page,
         url: page,
         originalUrl: page,
-        thumbnailUrl: link.thumbnailUrl,
         metaLine: link.date ? `${index + 1} of ${total} · ${link.date}` : `${index + 1} of ${total}`,
     }
+    if (link.author !== undefined) item.author = link.author
+    if (link.authorName !== undefined) item.authorName = link.authorName
+    if (link.thumbnailUrl !== undefined) item.thumbnailUrl = link.thumbnailUrl
+    return item
 }

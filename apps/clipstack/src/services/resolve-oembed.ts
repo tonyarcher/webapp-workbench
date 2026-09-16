@@ -27,7 +27,7 @@ function extractString(data: Record<string, unknown>, key: string): string | und
 }
 
 function thumbFrom(data: Record<string, unknown>): string | undefined {
-    const raw = data.thumbnail_url
+    const raw = data['thumbnail_url']
     return typeof raw === 'string' ? safeUrl(raw) ?? undefined : undefined
 }
 
