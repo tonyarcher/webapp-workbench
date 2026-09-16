@@ -11,7 +11,7 @@ export class FtChart extends LitElement {
 
     @property({attribute: false}) xs: number[] = [];
     @property({attribute: false}) ys: number[] = [];
-    @property() title = '';
+    @property() override title = '';
     @property() fmt = '';
 
     private plot: uPlot | null = null;
