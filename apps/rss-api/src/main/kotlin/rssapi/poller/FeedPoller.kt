@@ -30,7 +30,7 @@ class FeedPoller(
 
     companion object {
         /** Over-fetch due rows so inactive-only feeds do not crowd out active ones. */
-        const val OVERFETCH = 20
+        const val OVERFETCH: Int = 20
     }
 
     fun queue(ids: List<UUID>) {

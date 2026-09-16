@@ -13,9 +13,9 @@ import java.util.Date
 import java.util.UUID
 import userapi.accounts.OAuthStore
 
-const val ACCESS_TTL_SEC = 15 * 60
-const val REFRESH_TTL_SEC = 7 * 24 * 60 * 60
-const val AUTH_CODE_TTL_SEC = 10 * 60
+const val ACCESS_TTL_SEC: Int = 15 * 60
+const val REFRESH_TTL_SEC: Int = 7 * 24 * 60 * 60
+const val AUTH_CODE_TTL_SEC: Int = 10 * 60
 
 class JwtSigner(store: OAuthStore, private val issuer: String) {
     private val key: RSAKey = loadOrCreate(store)

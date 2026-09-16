@@ -72,6 +72,6 @@ class IdentityUser(private val users: UserRepo) {
 
     companion object {
         /** Throttle last-seen writes so every API call does not become a DB write. */
-        const val LAST_SEEN_TOUCH_MS = 60 * 60 * 1_000L
+        const val LAST_SEEN_TOUCH_MS: Long = 60 * 60 * 1_000L
     }
 }

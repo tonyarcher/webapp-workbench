@@ -37,9 +37,11 @@
     "verbatimModuleSyntax": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
+    "useUnknownInCatchVariables": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     // Ignores external package type issues to speed up compilation
     "declaration": true

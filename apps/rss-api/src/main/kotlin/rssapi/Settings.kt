@@ -23,10 +23,10 @@ fun settingsFromEnv(env: Map<String, String>): Settings {
     return Settings(port, databaseUrl, logLevel, service, pollTickMs, pollMaxAgeMs, allowLocalFetch)
 }
 
-const val POLL_BATCH = 5
-const val FETCH_TIMEOUT_MS = 15_000L
-const val MAX_FEED_BYTES = 5 * 1024 * 1024
-const val MAX_ARTICLES_PER_FEED = 400
-const val MAX_CONTENT_BYTES = 256 * 1024
-const val PAGE_LIMIT_DEFAULT = 50
-const val MAX_BODY_BYTES = 2_000_000
+const val POLL_BATCH: Int = 5
+const val FETCH_TIMEOUT_MS: Long = 15_000L
+const val MAX_FEED_BYTES: Int = 5 * 1024 * 1024
+const val MAX_ARTICLES_PER_FEED: Int = 400
+const val MAX_CONTENT_BYTES: Int = 256 * 1024
+const val PAGE_LIMIT_DEFAULT: Int = 50
+const val MAX_BODY_BYTES: Int = 2_000_000

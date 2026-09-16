@@ -9,11 +9,11 @@ import userapi.domain.PENDING_MAX_AGE_SEC
 import userapi.domain.newToken
 import userapi.domain.tokenEquals
 
-const val SESSION_COOKIE = "wb_session"
-const val PENDING_COOKIE = "wb_pending"
-const val CSRF_COOKIE = "wb_csrf"
-const val CSRF_HEADER = "X-CSRF-Token"
-const val SESSION_MAX_AGE_SEC = 12 * 60 * 60
+const val SESSION_COOKIE: String = "wb_session"
+const val PENDING_COOKIE: String = "wb_pending"
+const val CSRF_COOKIE: String = "wb_csrf"
+const val CSRF_HEADER: String = "X-CSRF-Token"
+const val SESSION_MAX_AGE_SEC: Int = 12 * 60 * 60
 
 fun ApplicationCall.sessionToken(): String? = request.cookies[SESSION_COOKIE]?.ifBlank { null }
 

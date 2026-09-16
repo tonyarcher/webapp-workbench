@@ -14,8 +14,8 @@ import java.time.Instant
  * and brand-new users are never starved.
  */
 object FeedRecency {
-    const val ACTIVE_DAYS = 7L
-    const val STOP_DAYS = 30L
+    const val ACTIVE_DAYS: Long = 7L
+    const val STOP_DAYS: Long = 30L
     private val FIB_DAYS = listOf(1L, 2L, 3L, 5L)
 
     /**
