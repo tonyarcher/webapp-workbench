@@ -1,37 +1,39 @@
 import { LitElement, html } from 'lit'
-import type { PropertyValues, TemplateResult } from 'lit'
-import {
-  createColumnHelper,
-  createTable,
-  getCoreRowModel,
-  getSortedRowModel,
-} from '@tanstack/table-core'
-import type { Cell, Header, HeaderGroup, Row, Table, TableState } from '@tanstack/table-core'
+import type { TemplateResult } from 'lit'
 import type { HoldingsEntry } from '@stock-game/shared'
 import { fmtMoney, fmtMoneySigned, fmtNumber, fmtPct, fmtPrice } from '../lib/format'
 import { tableStyles } from './shared-styles'
 import { defineElement } from './define'
 
-const columnHelper = createColumnHelper<HoldingsEntry>()
+type SortKey =
+  | 'symbol'
+  | 'qty'
+  | 'avgCostCents'
+  | 'currentPrice'
+  | 'marketValueCents'
+  | 'unrealizedPnlCents'
+  | 'unrealizedPnlPct'
 
-const columns = [
-  columnHelper.accessor('symbol', { header: 'Symbol', sortingFn: 'text' }),
-  columnHelper.accessor('qty', { header: 'Shares', sortingFn: 'basic' }),
-  columnHelper.accessor('avgCostCents', { header: 'Avg Cost', sortingFn: 'basic' }),
-  columnHelper.accessor('currentPrice', { header: 'Price', sortingFn: 'basic' }),
-  columnHelper.accessor('marketValueCents', { header: 'Value', sortingFn: 'basic' }),
-  columnHelper.accessor('unrealizedPnlCents', { header: 'Unrealized', sortingFn: 'basic' }),
-  columnHelper.accessor('unrealizedPnlPct', { header: 'Return', sortingFn: 'basic' }),
+type SortDir = 'asc' | 'desc'
+
+interface Column {
+  id: SortKey
+  label: string
+}
+
+const COLUMNS: Column[] = [
+  { id: 'symbol', label: 'Symbol' },
+  { id: 'qty', label: 'Shares' },
+  { id: 'avgCostCents', label: 'Avg Cost' },
+  { id: 'currentPrice', label: 'Price' },
+  { id: 'marketValueCents', label: 'Value' },
+  { id: 'unrealizedPnlCents', label: 'Unrealized' },
+  { id: 'unrealizedPnlPct', label: 'Return' },
 ]
 
-const HEADER_LABELS: Record<string, string> = {
-  symbol: 'Symbol',
-  qty: 'Shares',
-  avgCostCents: 'Avg Cost',
-  currentPrice: 'Price',
-  marketValueCents: 'Value',
-  unrealizedPnlCents: 'Unrealized',
-  unrealizedPnlPct: 'Return',
+function compareHoldings(a: HoldingsEntry, b: HoldingsEntry, key: SortKey): number {
+  if (key === 'symbol') return a.symbol < b.symbol ? -1 : a.symbol > b.symbol ? 1 : 0
+  return Number(a[key]) - Number(b[key])
 }
 
 function formatCellValue(id: string, value: unknown): string {
@@ -60,37 +62,30 @@ export class SgHoldingsTable extends LitElement {
 
   static override properties = {
     holdings: { attribute: false },
+    sortKey: { attribute: false },
+    sortDir: { attribute: false },
   }
 
   holdings: HoldingsEntry[] = []
+  sortKey: SortKey | null = null
+  sortDir: SortDir = 'asc'
 
-  private table: Table<HoldingsEntry>
-  private state: TableState
-
-  constructor() {
-    super()
-    this.table = createTable<HoldingsEntry>({
-      data: [],
-      columns,
-      state: {},
-      initialState: { sorting: [] },
-      onStateChange: (updater) => {
-        this.state = typeof updater === 'function' ? updater(this.state) : updater
-        this.table.setOptions((prev) => ({ ...prev, state: this.state }))
-        this.requestUpdate()
-      },
-      getCoreRowModel: getCoreRowModel(),
-      getSortedRowModel: getSortedRowModel(),
-      getRowId: (row) => row.symbol,
-      renderFallbackValue: '',
-    })
-    this.state = this.table.initialState
-    this.table.setOptions((prev) => ({ ...prev, state: this.state }))
+  private sortedHoldings(): HoldingsEntry[] {
+    if (!this.sortKey) return this.holdings
+    const key = this.sortKey
+    const dir = this.sortDir === 'asc' ? 1 : -1
+    return [...this.holdings].sort((a, b) => compareHoldings(a, b, key) * dir)
   }
 
-  override willUpdate(changed: PropertyValues): void {
-    if (changed.has('holdings')) {
-      this.table.setOptions((prev) => ({ ...prev, data: this.holdings }))
+  private onSort(key: SortKey): void {
+    if (this.sortKey !== key) {
+      this.sortKey = key
+      this.sortDir = 'asc'
+    } else if (this.sortDir === 'asc') {
+      this.sortDir = 'desc'
+    } else {
+      this.sortKey = null
+      this.sortDir = 'asc'
     }
   }
 
@@ -104,48 +99,41 @@ export class SgHoldingsTable extends LitElement {
     )
   }
 
-  private renderHeaderCell(header: Header<HoldingsEntry, unknown>): TemplateResult {
-    const sorted = header.column.getIsSorted()
-    const label = HEADER_LABELS[header.column.id] ?? header.column.id
+  private renderHeaderCell(column: Column): TemplateResult {
+    const sorted = this.sortKey === column.id ? this.sortDir : null
     const indicator = sorted === 'asc' ? ' ▲' : sorted === 'desc' ? ' ▼' : ''
-    const cls = header.column.id === 'symbol' ? '' : 'num'
-    return html`<th class=${cls} @click=${() => header.column.toggleSorting()}>
-      ${label}${indicator}
+    const cls = column.id === 'symbol' ? '' : 'num'
+    return html`<th class=${cls} @click=${() => this.onSort(column.id)}>
+      ${column.label}${indicator}
     </th>`
   }
 
-  private renderHeaderGroup(group: HeaderGroup<HoldingsEntry>): TemplateResult {
-    return html`<tr>
-      ${group.headers.map((header) => this.renderHeaderCell(header))}
-    </tr>`
-  }
-
-  private renderRow(row: Row<HoldingsEntry>): TemplateResult {
-    return html`<tr @click=${() => this.onRowClick(row.original.symbol)}>
-      ${row.getVisibleCells().map((cell) => this.renderCell(cell))}
+  private renderRow(holding: HoldingsEntry): TemplateResult {
+    return html`<tr @click=${() => this.onRowClick(holding.symbol)}>
+      ${COLUMNS.map((column) => this.renderCell(column.id, holding))}
     </tr>`
   }
 
   override render(): TemplateResult {
-    const rows = this.table.getRowModel().rows
-    const groups = this.table.getHeaderGroups()
     return html`
       <table class="sg-table">
         <thead>
-          ${groups.map((group) => this.renderHeaderGroup(group))}
+          <tr>
+            ${COLUMNS.map((column) => this.renderHeaderCell(column))}
+          </tr>
         </thead>
         <tbody>
-          ${rows.map((row) => this.renderRow(row))}
+          ${this.sortedHoldings().map((holding) => this.renderRow(holding))}
         </tbody>
       </table>
     `
   }
 
-  private renderCell(cell: Cell<HoldingsEntry, unknown>): TemplateResult {
-    const id = cell.column.id
-    const value = Number(cell.getValue())
+  private renderCell(id: SortKey, holding: HoldingsEntry): TemplateResult {
+    const raw: string | number = holding[id]
+    const value = Number(raw)
     const className = cellClassName(id, value)
-    const text = formatCellValue(id, cell.getValue())
+    const text = formatCellValue(id, raw)
     return html`<td class=${className}>${text}</td>`
   }
 }
