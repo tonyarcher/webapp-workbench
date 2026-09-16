@@ -37,18 +37,23 @@ export function interleaveArticles(pages: Article[][], limit: number): Article[]
     const out: Article[] = [];
     let added = true;
     while (out.length < limit && added) {
-        added = false;
-        for (const i of order) {
-            if (out.length >= limit) break;
-            const page = nonEmpty[i];
-            const idx = pointers[i] ?? 0;
-            if (page === undefined || idx >= page.length) continue;
-            const article = page[idx];
-            if (article === undefined) continue;
-            out.push(article);
-            pointers[i] = idx + 1;
-            added = true;
-        }
+        added = takeRound(order, nonEmpty, pointers, out, limit);
     }
     return out;
+}
+
+function takeRound(order: number[], pages: Article[][], pointers: number[], out: Article[], limit: number): boolean {
+    let added = false;
+    for (const i of order) {
+        if (out.length >= limit) break;
+        const page = pages[i];
+        const idx = pointers[i] ?? 0;
+        if (page === undefined || idx >= page.length) continue;
+        const article = page[idx];
+        if (article === undefined) continue;
+        out.push(article);
+        pointers[i] = idx + 1;
+        added = true;
+    }
+    return added;
 }

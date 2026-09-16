@@ -32,34 +32,43 @@ async function apiFetch(path: string, init?: RequestInit, retried = false): Prom
         emitAuthRequired();
         throw new AuthError();
     }
-    const url = apiUrl(path);
+    const res = await fetch(apiUrl(path), withAuthHeaders(init, token));
+    if (res.status === 401 && !retried) return retryFetch(path, init);
+    if (!res.ok) await throwForStatus(res);
+    return res.json() as Promise<unknown>;
+}
+
+function withAuthHeaders(init: RequestInit | undefined, token: string): RequestInit {
     const headers: Record<string, string> = {...(init?.headers as Record<string, string> ?? {})};
     headers['Authorization'] = `Bearer ${token}`;
     if (init?.body && typeof init.body === 'string') {
         headers['Content-Type'] = 'application/json';
     }
-    const res = await fetch(url, {...init, headers});
-    if (res.status === 401 && !retried) {
-        const next = await refreshTokens();
-        if (next) return apiFetch(path, init, true);
+    return {...init, headers};
+}
+
+async function retryFetch(path: string, init: RequestInit | undefined): Promise<unknown> {
+    const next = await refreshTokens();
+    if (next) return apiFetch(path, init, true);
+    emitAuthRequired();
+    throw new AuthError();
+}
+
+async function throwForStatus(res: Response): Promise<never> {
+    if (res.status === 401) {
         emitAuthRequired();
         throw new AuthError();
     }
-    if (!res.ok) {
-        if (res.status === 401) {
-            emitAuthRequired();
-            throw new AuthError();
-        }
-        let message = res.statusText;
-        try {
-            const body = await res.json() as { error?: string };
-            if (body.error) message = body.error;
-        } catch {
-            // ignore
-        }
-        throw new Error(message);
+    throw new Error(await errorMessage(res));
+}
+
+async function errorMessage(res: Response): Promise<string> {
+    try {
+        const body = await res.json() as { error?: string };
+        return body.error || res.statusText;
+    } catch {
+        return res.statusText;
     }
-    return res.json() as Promise<unknown>;
 }
 
 // ---- library (progressive: folders, then names, then badges) ----
