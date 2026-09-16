@@ -60,6 +60,8 @@ declare module 'react' {
         busy?: boolean
       }
       'sg-settings-view': ElementProps
+      'sg-orders-view': ElementProps
+      'sg-portfolio-view': ElementProps
     }
   }
 }
