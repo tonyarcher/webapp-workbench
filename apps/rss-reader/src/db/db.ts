@@ -27,7 +27,9 @@ export async function reorderFolders(folderIds: string[]): Promise<void> {
     const db = await getDb();
     const tx = db.transaction('folders', 'readwrite');
     for (let i = 0; i < folderIds.length; i++) {
-        const folder = await tx.store.get(folderIds[i]);
+        const id = folderIds[i];
+        if (id === undefined) continue;
+        const folder = await tx.store.get(id);
         if (folder) {
             folder.sortOrder = i;
             await tx.store.put(folder);

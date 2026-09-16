@@ -37,9 +37,9 @@ export function dropFolderId(
 ): string | null {
     const selector = draggingKind === 'feed' ? '[data-folder-id], [data-feed-id]' : '[data-folder-id]';
     const el = target?.closest<HTMLElement>(selector) ?? null;
-    if (el?.dataset.folderId) return el.dataset.folderId;
-    if (el?.dataset.feedId) {
-        const feed = libraryFeeds.find((f) => f.id === el.dataset.feedId);
+    if (el?.dataset['folderId']) return el.dataset['folderId'];
+    if (el?.dataset['feedId']) {
+        const feed = libraryFeeds.find((f) => f.id === el.dataset['feedId']);
         return feed?.folderIds[0] ?? null;
     }
     return null;

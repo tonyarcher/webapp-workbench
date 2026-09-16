@@ -50,10 +50,10 @@ export function popularityScore(syndicationCount: number, comments: number): num
  */
 export interface EngagementInput {
     title: string;
-    content?: string;
-    summary?: string;
-    author?: string;
-    media?: string;
+    content?: string | undefined;
+    summary?: string | undefined;
+    author?: string | undefined;
+    media?: string | undefined;
 }
 
 const URGENCY_WORDS = new Set([

@@ -67,7 +67,7 @@ export class ArticleList extends LitElement {
     private lastFolderKey = '';
     private resumeApplied = false;
     private pendingReset = false;
-    private resizeObserver?: ResizeObserver;
+    private resizeObserver: ResizeObserver | undefined;
     private feedWindowOffset = 0;
     private refreshJob: Promise<void> | null = null;
     private refreshJobKey: string | null = null;
@@ -474,7 +474,8 @@ export class ArticleList extends LitElement {
         e.preventDefault();
         const next = this.nextCursorIndex(e.key);
         this.cursor = next;
-        void this.openArticle(this.items[next]);
+        const article = this.items[next];
+        if (article) void this.openArticle(article);
     };
 
     private async onMarkShownRead() { await markShownReadAction(this as never); }

@@ -50,7 +50,7 @@ export async function fetchSinglePage(
     sort: ArticleSort,
     pageSize: number,
     items: Article[],
-): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string }> {
+): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string | undefined }> {
     const key = feedId ?? 'all';
     const cursor = cursors.get(key);
     const scope = feedId ? `feed:${feedId}` : undefined;
@@ -68,7 +68,7 @@ export async function fetchFolderPage(
     sort: ArticleSort,
     pageSize: number,
     items: Article[],
-): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string }> {
+): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string | undefined }> {
     const cursor = cursors.get(folderKey);
     const res = await fetchArticlesPage({scope: folderKey, unreadOnly: unreadOnly || hideRead, sort, limit: pageSize, cursor});
     const next = res.nextCursor;

@@ -112,7 +112,7 @@ export class QueryController<T = unknown> implements ReactiveController {
         queryFn: () => Promise<T> | T;
     };
     private observer: QueryObserver<T, Error>;
-    private unsubscribe?: () => void;
+    private unsubscribe: (() => void) | undefined;
     private lastKey = '';
 
     constructor(

@@ -8,7 +8,7 @@ interface AiSession {
 
 interface AiCreator {
     capabilities?: () => Promise<{ available?: string }>;
-    create: (opts?: { systemPrompt?: string }) => Promise<AiSession>;
+    create: (opts?: { systemPrompt?: string | undefined }) => Promise<AiSession>;
 }
 
 interface LanguageModelGlobal {
@@ -24,7 +24,7 @@ type AiWindow = {
     ai?: {
         languageModel?: AiCreator;
         canCreateTextSession?: () => Promise<string>;
-        createTextSession?: (opts?: { systemPrompt?: string }) => Promise<AiSession>;
+        createTextSession?: (opts?: { systemPrompt?: string | undefined }) => Promise<AiSession>;
     };
 };
 
@@ -64,7 +64,7 @@ export interface AiDiagnostics {
     hasModelApi: boolean;
     hasAiApi: boolean;
     hasLanguageModelApi: boolean;
-    capabilitiesValue?: string;
+    capabilitiesValue?: string | undefined;
     hasCreator: boolean;
     isLocalhost: boolean;
     isSecureContext: boolean;
@@ -215,18 +215,18 @@ export async function aiAvailability(): Promise<AiAvailability> {
     return setAvailability('unsupported');
 }
 
-async function lmCreator(prompt?: string): Promise<AiSession | undefined> {
+async function lmCreator(prompt?: string | undefined): Promise<AiSession | undefined> {
     const lm = languageModel();
     if (typeof lm?.create === 'function') return lm.create(prompt ? {initialPrompts: [{role: 'system', content: prompt}]} : undefined);
     return undefined;
 }
 
-async function modelCreator(prompt?: string): Promise<AiSession | undefined> {
+async function modelCreator(prompt?: string | undefined): Promise<AiSession | undefined> {
     if (aiWindow.model?.create) return aiWindow.model.create({systemPrompt: prompt});
     return undefined;
 }
 
-async function aiLmCreator(prompt?: string): Promise<AiSession | undefined> {
+async function aiLmCreator(prompt?: string | undefined): Promise<AiSession | undefined> {
     if (aiWindow.ai?.languageModel?.create) return aiWindow.ai.languageModel.create({systemPrompt: prompt});
     return undefined;
 }
