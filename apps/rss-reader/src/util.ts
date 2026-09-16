@@ -31,9 +31,8 @@ export function domainOf(url: string | undefined): string {
 export function interleaveArticles(pages: Article[][], limit: number): Article[] {
     const nonEmpty = pages.filter((p) => p.length > 0);
     if (!nonEmpty.length || limit <= 0) return [];
-    const order = [...nonEmpty.keys()].sort(
-        (a, b) => (nonEmpty[b][0]?.hot ?? -Infinity) - (nonEmpty[a][0]?.hot ?? -Infinity),
-    );
+    const head = (page: Article[] | undefined): number => page?.[0]?.hot ?? -Infinity;
+    const order = [...nonEmpty.keys()].sort((a, b) => head(nonEmpty[b]) - head(nonEmpty[a]));
     const pointers = new Array(nonEmpty.length).fill(0);
     const out: Article[] = [];
     let added = true;
@@ -41,12 +40,14 @@ export function interleaveArticles(pages: Article[][], limit: number): Article[]
         added = false;
         for (const i of order) {
             if (out.length >= limit) break;
-            const idx = pointers[i];
-            if (idx < nonEmpty[i].length) {
-                out.push(nonEmpty[i][idx]);
-                pointers[i]++;
-                added = true;
-            }
+            const page = nonEmpty[i];
+            const idx = pointers[i] ?? 0;
+            if (page === undefined || idx >= page.length) continue;
+            const article = page[idx];
+            if (article === undefined) continue;
+            out.push(article);
+            pointers[i] = idx + 1;
+            added = true;
         }
     }
     return out;

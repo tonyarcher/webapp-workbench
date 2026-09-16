@@ -119,12 +119,12 @@ export async function setFeedFolders(id: string, folderIds: string[]): Promise<{
 // ---- articles ----
 
 export interface ArticlePageParams {
-    scope?: string;
-    unreadOnly?: boolean;
-    sort?: 'hot' | 'newest' | 'oldest';
-    cursor?: string;
-    limit?: number;
-    since?: number;
+    scope?: string | undefined;
+    unreadOnly?: boolean | undefined;
+    sort?: 'hot' | 'newest' | 'oldest' | undefined;
+    cursor?: string | undefined;
+    limit?: number | undefined;
+    since?: number | undefined;
 }
 
 export async function fetchArticlesPage(params: ArticlePageParams = {}): Promise<{ items: Article[]; nextCursor?: string }> {
@@ -250,9 +250,9 @@ export async function requestServerSummary(title: string | undefined, text: stri
 // ---- migration ----
 
 export interface MigratePayload {
-    folders: Array<{ title: string; sortOrder?: number }>;
-    feeds: Array<{ url: string; title?: string; siteUrl?: string; folderTitles?: string[] }>;
-    states: Array<{ feedUrl: string; guid?: string; link?: string; read: boolean; readAt?: number; starred: boolean }>;
+    folders: Array<{ title: string; sortOrder?: number | undefined }>;
+    feeds: Array<{ url: string; title?: string | undefined; siteUrl?: string | undefined; folderTitles?: string[] | undefined }>;
+    states: Array<{ feedUrl: string; guid?: string | undefined; link?: string | undefined; read: boolean; readAt?: number | undefined; starred: boolean }>;
     affinity: Array<{ key: string; value: number }>;
 }
 

@@ -48,7 +48,8 @@ function isImageType(type: string | null): boolean {
 
 function enclosureMedia(item: Element): string | undefined {
     const enc = item.getElementsByTagName('enclosure')[0];
-    const url = enc?.getAttribute('url');
+    if (!enc) return undefined;
+    const url = enc.getAttribute('url');
     if (url && isImageType(enc.getAttribute('type'))) return safeHttpUrl(url);
     return undefined;
 }
@@ -235,14 +236,15 @@ export function firstImageUrl(html: string | undefined): string | undefined {
     if (src) return safeHttpUrl(src[1]);
     const srcset = /<img[^>]+srcset=["']([^"']+)["']/i.exec(html);
     if (srcset) {
-        const first = srcset[1].split(',')[0]?.trim().split(' ')[0];
+        const candidate = srcset[1]?.split(',')[0]?.trim();
+        const first = candidate?.split(' ')[0];
         if (first) return safeHttpUrl(first);
     }
     return undefined;
 }
 
 /** Thumbnail for an article card, derived at render time from content. */
-export function articleImage(article: { content?: string } & { image?: string }): string | undefined {
+export function articleImage(article: { content?: string | undefined } & { image?: string | undefined }): string | undefined {
     const fromContent = firstImageUrl(article.content);
     if (fromContent) return fromContent;
     return safeHttpUrl((article as { image?: string }).image);

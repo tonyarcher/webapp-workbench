@@ -2,20 +2,20 @@ export interface Folder {
     id: string;
     title: string;
     createdAt: number;
-    sortOrder?: number;
+    sortOrder?: number | undefined;
 }
 
 export interface Feed {
     id: string;
     title: string;
     url: string;
-    siteUrl?: string;
-    icon?: string;
+    siteUrl?: string | undefined;
+    icon?: string | undefined;
     folderIds: string[];
     unread: number;
     addedAt: number;
-    lastFetchedAt?: number;
-    lastError?: string;
+    lastFetchedAt?: number | undefined;
+    lastError?: string | undefined;
 }
 
 export interface Article {
@@ -23,18 +23,18 @@ export interface Article {
     feedId: string;
     guid: string;
     title: string;
-    link?: string;
-    author?: string;
-    summary?: string;
-    content?: string;
+    link?: string | undefined;
+    author?: string | undefined;
+    summary?: string | undefined;
+    content?: string | undefined;
     published: number;
     fetchedAt: number;
     read: 0 | 1;
     starred: boolean;
-    normLink?: string;
-    comments?: number;
+    normLink?: string | undefined;
+    comments?: number | undefined;
     popularity: number;
-    engagement?: number;
+    engagement?: number | undefined;
     hot: number;
 }
 
@@ -52,25 +52,25 @@ export type View =
 export interface ParsedItem {
     guid: string;
     title: string;
-    link?: string;
-    author?: string;
-    summary?: string;
-    content?: string;
-    media?: string;
-    comments?: number;
+    link?: string | undefined;
+    author?: string | undefined;
+    summary?: string | undefined;
+    content?: string | undefined;
+    media?: string | undefined;
+    comments?: number | undefined;
     published: number;
 }
 
 export interface ParsedFeed {
     title: string;
-    siteUrl?: string;
+    siteUrl?: string | undefined;
     items: ParsedItem[];
 }
 
 export interface OpmlSource {
     title: string;
     xmlUrl: string;
-    htmlUrl?: string;
+    htmlUrl?: string | undefined;
 }
 
 export type OpmlNode = OpmlSource | OpmlFolder;

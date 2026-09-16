@@ -125,7 +125,7 @@ export class SettingsDialog extends LitElement {
     }
 
     private onThemeClick(e: Event) {
-        const theme = (e.currentTarget as HTMLElement).dataset.theme as Theme | undefined;
+        const theme = (e.currentTarget as HTMLElement).dataset['theme'] as Theme | undefined;
         if (theme) this.setTheme(theme);
     }
 

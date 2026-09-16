@@ -48,7 +48,14 @@ function buildArticle(
 }
 
 function engagementFor(
-    item: { title: string; content?: string; summary?: string; author?: string; link?: string; media?: string },
+    item: {
+        title: string;
+        content?: string | undefined;
+        summary?: string | undefined;
+        author?: string | undefined;
+        link?: string | undefined;
+        media?: string | undefined;
+    },
     feedAffinity: number,
     affMap: Map<string, number>,
     velocity: number,
