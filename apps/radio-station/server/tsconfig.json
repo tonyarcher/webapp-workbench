@@ -4,6 +4,8 @@
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
         "strict": true,
+        "forceConsistentCasingInFileNames": true,
+        "noUncheckedSideEffectImports": true,
         "noUncheckedIndexedAccess": true,
         "exactOptionalPropertyTypes": true,
         "noImplicitOverride": true,

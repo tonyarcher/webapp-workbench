@@ -5,6 +5,8 @@
         "moduleResolution": "bundler",
         "lib": ["ES2022"],
         "strict": true,
+        "forceConsistentCasingInFileNames": true,
+        "noUncheckedSideEffectImports": true,
         "noUncheckedIndexedAccess": true,
         "exactOptionalPropertyTypes": true,
         "noImplicitOverride": true,

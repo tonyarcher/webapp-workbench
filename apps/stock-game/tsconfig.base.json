@@ -20,6 +20,7 @@
     "isolatedModules": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "noUncheckedSideEffectImports": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true
