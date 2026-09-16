@@ -19,7 +19,7 @@
     "@web/dev-server-esbuild": "^2.0.0",
     "@web/test-runner": "^1.0.0",
     "@web/test-runner-playwright": "^1.0.0",
-    "typescript": "^5.8.0",
+    "typescript": "7.0.2",
     "vite": "^6.4.3"
   }
 }

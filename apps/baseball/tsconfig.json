@@ -10,6 +10,8 @@
     "erasableSyntaxOnly": true,
     "noEmit": true,
     "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUncheckedSideEffectImports": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
