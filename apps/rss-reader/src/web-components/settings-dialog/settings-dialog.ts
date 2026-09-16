@@ -62,7 +62,7 @@ export class SettingsDialog extends LitElement {
         if (!this.adding) return html``;
         return html`
       <div class="add-row">
-        <input data-add-url type="url" placeholder="https://example.com/feed.xml" @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter') this.submitAdd(); }} />
+        <input data-add-url type="url" placeholder="https://example.com/feed.xml" @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter') void this.submitAdd(); }} />
         <button class="btn primary" @click=${this.submitAdd} ?disabled=${this.busy}>Add</button>
         <button class="btn" @click=${this.cancelAdd}>Cancel</button>
       </div>

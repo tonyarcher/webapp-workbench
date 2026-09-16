@@ -218,7 +218,7 @@ describe('custom elements render and react to properties', () => {
     const headers = [...(el.shadowRoot?.querySelectorAll('th') ?? [])]
     const firstSymbols = () =>
       [...(el.shadowRoot?.querySelectorAll('tbody tr') ?? [])].map((row) =>
-        row.querySelector('td')?.textContent?.trim(),
+        row.querySelector('td')?.textContent.trim(),
       )
     expect(firstSymbols()).toEqual(['MSFT', 'AAPL'])
 

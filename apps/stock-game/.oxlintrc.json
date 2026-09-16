@@ -1,6 +1,6 @@
 {
   "$schema": "../../node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint"],
+  "plugins": ["eslint", "typescript"],
   "categories": {
     "correctness": "off",
     "suspicious": "off",
@@ -20,6 +20,10 @@
     "**/*.gen.ts"
   ],
   "rules": {
+    "typescript/no-floating-promises": "error",
+    "typescript/no-unnecessary-condition": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
     "max-lines": [
       "error",
       {
