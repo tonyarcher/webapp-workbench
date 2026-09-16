@@ -49,17 +49,19 @@ function validId(raw: string): string | null {
  * checked first so `/@user/video/{id}` and `/video/{id}` win over the
  * shorter `/v/{id}` mobile form.
  */
+const ID_PATTERNS: Array<{ re: RegExp; pick: (match: RegExpMatchArray) => string | null }> = [
+    { re: /\/share\/video\/(\d{6,32})/, pick: (match) => match[1] ?? null },
+    { re: /(?:^|\/)video\/(\d{6,32})/, pick: (match) => match[1] ?? null },
+    { re: /(?:^|\/)v\/(\d{6,32})(?:\.html)?/i, pick: (match) => validId(match[1] ?? '') },
+    { re: /\/embed\/v2\/(\d{6,32})/, pick: (match) => match[1] ?? null },
+    { re: /\/player\/v1\/(\d{6,32})/, pick: (match) => match[1] ?? null },
+]
+
 function tiktokVideoId(path: string): string | null {
-    const share = path.match(/\/share\/video\/(\d{6,32})/)
-    if (share) return share[1] ?? null
-    const video = path.match(/(?:^|\/)video\/(\d{6,32})/)
-    if (video) return video[1] ?? null
-    const v = path.match(/(?:^|\/)v\/(\d{6,32})(?:\.html)?/i)
-    if (v) return validId(v[1] ?? '')
-    const embed = path.match(/\/embed\/v2\/(\d{6,32})/)
-    if (embed) return embed[1] ?? null
-    const player = path.match(/\/player\/v1\/(\d{6,32})/)
-    if (player) return player[1] ?? null
+    for (const pattern of ID_PATTERNS) {
+        const match = path.match(pattern.re)
+        if (match) return pattern.pick(match)
+    }
     return null
 }
 
