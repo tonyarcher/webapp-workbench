@@ -76,7 +76,7 @@ Dev sign-in needs two local rows the gateway seed does not cover: an
 - Phase 1 (done): tables are hand-rolled Lit; `@tanstack/table-core` removed.
 - Phase 2: Lit route shells behind the house hash router — settings (done), orders (done),
   portfolio (done), trade (done), dashboard (done), root (done).
-- Phase 3: hand validation replacing zod in components, then `shared/` and the API client.
+- Phase 3: hand validation replacing zod — components (done), then `shared/` and the API client.
 - Keeps: decorator-free Lit, lightweight-charts (no house equivalent for price
   series), money/time domain rules.
 
