@@ -62,6 +62,11 @@ declare module 'react' {
       'sg-settings-view': ElementProps
       'sg-orders-view': ElementProps
       'sg-portfolio-view': ElementProps
+      'sg-trade-view': ElementProps & {
+        symbol?: string | undefined
+      }
+      'sg-dashboard-view': ElementProps
+      'sg-app-shell': ElementProps
     }
   }
 }
