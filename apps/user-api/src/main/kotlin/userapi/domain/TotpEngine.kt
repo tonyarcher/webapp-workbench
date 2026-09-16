@@ -2,9 +2,9 @@ package userapi.domain
 
 import java.time.Instant
 
-const val TOTP_ISSUER = "Workbench"
-const val PENDING_MAX_AGE_SEC = 5 * 60
-const val BACKUP_CODE_COUNT = 10
+const val TOTP_ISSUER: String = "Workbench"
+const val PENDING_MAX_AGE_SEC: Int = 5 * 60
+const val BACKUP_CODE_COUNT: Int = 10
 
 interface TotpEngine {
     fun newSecret(): String

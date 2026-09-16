@@ -7,7 +7,7 @@ import rssapi.web.ApiException
 
 data class AiStatus(val provider: String, val model: String, val available: Boolean)
 
-const val AI_SYSTEM_PROMPT = "You summarize news articles concisely and neutrally. Never invent facts."
+const val AI_SYSTEM_PROMPT: String = "You summarize news articles concisely and neutrally. Never invent facts."
 
 /**
  * Server AI summarization behind the admin provider setting. Prompts and

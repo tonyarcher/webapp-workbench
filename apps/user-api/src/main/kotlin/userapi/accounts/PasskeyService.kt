@@ -19,8 +19,8 @@ import userapi.Settings
 import userapi.domain.PENDING_MAX_AGE_SEC
 import userapi.domain.newToken
 
-const val CHALLENGE_REGISTER = "register"
-const val CHALLENGE_LOGIN = "login"
+const val CHALLENGE_REGISTER: String = "register"
+const val CHALLENGE_LOGIN: String = "login"
 
 class PasskeyService(
     val rp: RelyingParty,

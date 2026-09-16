@@ -1,6 +1,6 @@
 package userapi.domain
 
-const val OAUTH_RESPONSE_TYPE = "code"
+const val OAUTH_RESPONSE_TYPE: String = "code"
 
 data class OAuthClient(
     val id: String,

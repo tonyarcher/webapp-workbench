@@ -21,6 +21,8 @@
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "verbatimModuleSyntax": true,
+    "noImplicitReturns": true,
+    "useUnknownInCatchVariables": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true

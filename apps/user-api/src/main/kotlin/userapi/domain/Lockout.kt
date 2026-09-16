@@ -3,7 +3,7 @@ package userapi.domain
 import java.time.Duration
 import java.time.Instant
 
-const val LOCKOUT_FAILURES = 5
+const val LOCKOUT_FAILURES: Int = 5
 val LOCKOUT_DURATION: Duration = Duration.ofMinutes(15)
 
 data class LockoutState(
