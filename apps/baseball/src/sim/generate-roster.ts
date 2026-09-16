@@ -2,7 +2,7 @@ import { clamp, pickItem, pickIndex } from './rng';
 import { PITCH_TYPES } from './types';
 import type { Handedness, PitchType, PlayerRatings, SimPlayer, SimPitcher, SimRoster } from './types';
 
-const TEAM_NAMES = [
+const TEAM_NAMES: [string, ...string[]] = [
   'Springfield Isotopes',
   'New York Knights',
   'Durham Bulls',
@@ -61,9 +61,12 @@ export function generateMatchup(random: () => number): { home: SimRoster; away: 
   const first = pickIndex(random, TEAM_NAMES.length);
   let second = pickIndex(random, TEAM_NAMES.length);
   if (second === first) second = (first + 1) % TEAM_NAMES.length;
+  const awayName = TEAM_NAMES[first];
+  const homeName = TEAM_NAMES[second];
+  if (awayName === undefined || homeName === undefined) throw new Error('no team names');
   return {
-    away: generateRoster(random, TEAM_NAMES[first]),
-    home: generateRoster(random, TEAM_NAMES[second]),
+    away: generateRoster(random, awayName),
+    home: generateRoster(random, homeName),
   };
 }
 
@@ -161,7 +164,8 @@ function rollPitcherRatings(random: () => number): SimPitcher['ratings'] {
   const pool = [...extras];
   for (let i = 0; i < extraCount && pool.length > 0; i++) {
     const index = pickIndex(random, pool.length);
-    arsenal.push(pool.splice(index, 1)[0]);
+    const [picked] = pool.splice(index, 1);
+    if (picked !== undefined) arsenal.push(picked);
   }
   return {
     control: rating(random, 0),

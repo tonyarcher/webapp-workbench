@@ -43,10 +43,10 @@ export interface ScoringEvent {
   base?: number;
   fieldPos?: number;
   doublePlay?: boolean;
-  homeLineup?: LineupAssignment[];
-  awayLineup?: LineupAssignment[];
-  homePitcherName?: string;
-  awayPitcherName?: string;
+  homeLineup?: LineupAssignment[] | undefined;
+  awayLineup?: LineupAssignment[] | undefined;
+  homePitcherName?: string | undefined;
+  awayPitcherName?: string | undefined;
 }
 
 export interface EngineAtBatCell {

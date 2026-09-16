@@ -222,8 +222,8 @@ export function handleStolenBase(game: EngineGameState, toBase?: number): Engine
   if (!game.runners[from - 1]) return game;
   const destination = toBase === 4 ? 4 : (toBase as number);
   if (destination <= 3 && game.runners[destination - 1]) return game;
-  const slot = game.runnerSlots[from - 1];
-  const originInning = game.runnerInnings[from - 1];
+  const slot = game.runnerSlots[from - 1] ?? null;
+  const originInning = game.runnerInnings[from - 1] ?? null;
   const next = clearBase(game, from);
   if (destination === 4) return handleStealHome(next, slot, originInning, from);
   return handleStealAdvance(next, slot, originInning, from, destination);
@@ -251,8 +251,8 @@ export function handleCaughtStealing(game: EngineGameState, toBase?: number): En
   if (from == null) return game;
   if (!game.runners[from - 1]) return game;
   const destination = toBase === 4 ? 4 : (toBase as number);
-  const slot = game.runnerSlots[from - 1];
-  const originInning = game.runnerInnings[from - 1];
+  const slot = game.runnerSlots[from - 1] ?? null;
+  const originInning = game.runnerInnings[from - 1] ?? null;
   const marked = markCaughtStealingCell(game, slot, originInning, from, destination);
   const cleared = clearBase(marked, from);
   return recordOut(cleared);

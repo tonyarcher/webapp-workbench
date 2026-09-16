@@ -193,21 +193,21 @@ function boundedInt(value: unknown, min: number, max: number): number | undefine
 }
 
 function applyLineupDetail(event: ScoringEvent, detail: Record<string, unknown>): void {
-  event.homeLineup = lineupPlayersFromUnknown(detail.homeLineup);
-  event.awayLineup = lineupPlayersFromUnknown(detail.awayLineup);
-  event.homePitcherName = optionalString(detail.homePitcherName);
-  event.awayPitcherName = optionalString(detail.awayPitcherName);
+  event.homeLineup = lineupPlayersFromUnknown(detail['homeLineup']);
+  event.awayLineup = lineupPlayersFromUnknown(detail['awayLineup']);
+  event.homePitcherName = optionalString(detail['homePitcherName']);
+  event.awayPitcherName = optionalString(detail['awayPitcherName']);
 }
 
 function toScoringEvent(record: LocalGameEventRecord): ScoringEvent | null {
   const eventType = record.eventType as ScoringEventType;
   if (!ALL_ENGINE_EVENT_TYPES.includes(eventType)) return null;
   const event: ScoringEvent = { type: eventType };
-  const fieldPos = boundedInt(record.detail?.fieldPos, 1, 9);
-  const base = boundedInt(record.detail?.base, 1, 4);
+  const fieldPos = boundedInt(record.detail?.['fieldPos'], 1, 9);
+  const base = boundedInt(record.detail?.['base'], 1, 4);
   if (fieldPos !== undefined) event.fieldPos = fieldPos;
   if (base !== undefined) event.base = base;
-  if (record.detail?.doublePlay === true) event.doublePlay = true;
+  if (record.detail?.['doublePlay'] === true) event.doublePlay = true;
   if (eventType === 'SET_LINEUP') applyLineupDetail(event, record.detail);
   return event;
 }

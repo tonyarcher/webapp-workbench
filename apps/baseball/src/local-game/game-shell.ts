@@ -35,11 +35,11 @@ function nextEventId(): number {
 }
 
 export class BaseballGameShell extends LitElement {
-  createRenderRoot() {
+  override createRenderRoot() {
     return this;
   }
 
-  static properties = {
+  static override properties = {
     game: { attribute: false },
     store: { attribute: false },
   };
@@ -74,7 +74,7 @@ export class BaseballGameShell extends LitElement {
   private virtualizerCleanup: (() => void) | null = null;
   private virtualItemsKey = '';
 
-  firstUpdated() {
+  override firstUpdated() {
     const root = this.containerRef.value;
     if (root) {
       root.addEventListener('trigger-scoring-event', this.handleTriggerScoringEvent);
@@ -92,7 +92,7 @@ export class BaseballGameShell extends LitElement {
     this.maybeStartWatchLoop();
   }
 
-  disconnectedCallback() {
+  override disconnectedCallback() {
     this.stopWatchLoop();
     const root = this.containerRef.value;
     if (root) this.removeAllListeners(root);
@@ -116,7 +116,7 @@ export class BaseballGameShell extends LitElement {
     root.removeEventListener('pitch-location-selected', this.handlePitchLocationSelected);
   }
 
-  updated() {
+  override updated() {
     if (this.isWatch()) this.maybeStartWatchLoop();
     else if (this.watchAutoStarted || this.watch.playing) this.stopWatchLoop();
     this.ensureVirtualizer();
@@ -142,7 +142,9 @@ export class BaseballGameShell extends LitElement {
       observeElementRect,
       observeElementOffset,
       scrollToFn: (offset, options, instance) => {
-        instance.scrollElement?.scrollTo({ top: offset, behavior: options.behavior });
+        const behavior = options.behavior;
+        const scrollOptions: ScrollToOptions = behavior === undefined ? {top: offset} : {top: offset, behavior};
+        instance.scrollElement?.scrollTo(scrollOptions);
       },
       onChange: () => this.handleVirtualChange(),
     };
@@ -225,16 +227,16 @@ export class BaseballGameShell extends LitElement {
   private handleTriggerScoringEvent = (event: Event) => {
     if (this.isWatch()) return;
     const detail = ((event as CustomEvent).detail ?? {}) as Record<string, unknown>;
-    this.recordOnce(event, String(detail.eventType ?? 'trigger-scoring-event'), detail);
+    this.recordOnce(event, String(detail['eventType'] ?? 'trigger-scoring-event'), detail);
   };
 
   private handleRenderStep2 = (event: Event) => {
     if (this.isWatch()) return;
     const detail = ((event as CustomEvent).detail ?? {}) as Record<string, unknown>;
-    const eventType = String(detail.eventType ?? '');
+    const eventType = String(detail['eventType'] ?? '');
     this.pendingEventType = eventType;
-    this.pendingBaseLabel = String(detail.baseLabel ?? '');
-    this.step2Label = String(detail.baseLabel ?? '');
+    this.pendingBaseLabel = String(detail['baseLabel'] ?? '');
+    this.step2Label = String(detail['baseLabel'] ?? '');
     this.step2IsHit = HIT_EVENT_TYPES.has(eventType);
     this.step2DoublePlayAvailable = DOUBLE_PLAY_EVENT_TYPES.has(eventType);
     this.panelMode = 'step2';
@@ -279,17 +281,17 @@ export class BaseballGameShell extends LitElement {
     }
     const detail = ((event as CustomEvent).detail ?? {}) as Record<string, unknown>;
     this.record('SET_LINEUP', {
-      homeLineup: editorPlayersToLineup(detail.homeLineup),
-      awayLineup: editorPlayersToLineup(detail.awayLineup),
-      homePitcherName: String(detail.homePitcherName ?? ''),
-      awayPitcherName: String(detail.awayPitcherName ?? ''),
+      homeLineup: editorPlayersToLineup(detail['homeLineup']),
+      awayLineup: editorPlayersToLineup(detail['awayLineup']),
+      homePitcherName: String(detail['homePitcherName'] ?? ''),
+      awayPitcherName: String(detail['awayPitcherName'] ?? ''),
     });
     this.requestUpdate();
   };
 
   private handlePitchTypeSelected = (event: Event) => {
     const detail = ((event as CustomEvent).detail ?? {}) as Record<string, unknown>;
-    this.currentPitchType = String(detail.pitchType ?? '');
+    this.currentPitchType = String(detail['pitchType'] ?? '');
     this.requestUpdate();
   };
 
@@ -358,7 +360,7 @@ export class BaseballGameShell extends LitElement {
     this.store?.newGame();
   };
 
-  render() {
+  override render() {
     const game = this.game;
     if (!game) return nothing;
     return html` <main class="local-shell">${this.renderSimTransport()} ${this.renderContainer(game)} ${this.renderEventLog(game)}</main> `;
