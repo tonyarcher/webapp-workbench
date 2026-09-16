@@ -16,6 +16,7 @@
     "noUnusedParameters": true,
     "useUnknownInCatchVariables": true,
     "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
     "isolatedModules": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

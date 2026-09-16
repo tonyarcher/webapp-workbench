@@ -391,11 +391,15 @@ export class QueryController<TFnData, TData = TFnData, TError = Error> implement
     protected observer: QueryObserver<TFnData, TError, TData, TData, QueryKey> | null = null
     private result: QueryObserverResult<TData, TError> | null = null
     private lastKey = ''
+    private readonly host: ReactiveControllerHost
+    private readonly factory: () => QueryObserverOptions<TFnData, TError, TData, TData, QueryKey>
 
     constructor(
-        private readonly host: ReactiveControllerHost,
-        private readonly factory: () => QueryObserverOptions<TFnData, TError, TData, TData, QueryKey>,
+        host: ReactiveControllerHost,
+        factory: () => QueryObserverOptions<TFnData, TError, TData, TData, QueryKey>,
     ) {
+        this.host = host
+        this.factory = factory
         host.addController(this)
     }
 

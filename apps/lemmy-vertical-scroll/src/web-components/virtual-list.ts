@@ -17,13 +17,21 @@ const NEAR_END_THRESHOLD = 400
 export class VirtualizerController<TItem extends {id: number}> implements ReactiveController {
     private virtualizer: Virtualizer<HTMLElement, HTMLElement> | null = null
     private items: TItem[] = []
+    private readonly host: ReactiveControllerHost & Element
+    private readonly getScrollEl: () => HTMLElement | null
+    private readonly getItems: () => TItem[]
+    private readonly onNearEnd: () => void
 
     constructor(
-        private readonly host: ReactiveControllerHost & Element,
-        private readonly getScrollEl: () => HTMLElement | null,
-        private readonly getItems: () => TItem[],
-        private readonly onNearEnd: () => void,
+        host: ReactiveControllerHost & Element,
+        getScrollEl: () => HTMLElement | null,
+        getItems: () => TItem[],
+        onNearEnd: () => void,
     ) {
+        this.host = host
+        this.getScrollEl = getScrollEl
+        this.getItems = getItems
+        this.onNearEnd = onNearEnd
         host.addController(this)
     }
 
