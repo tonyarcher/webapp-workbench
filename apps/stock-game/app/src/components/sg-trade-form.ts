@@ -152,7 +152,7 @@ export class SgTradeForm extends LitElement {
     return payload
   }
 
-  private isValidTradePayload(payload: Record<string, unknown>): payload is PlaceTradeRequest {
+  private isValidTradePayload(payload: Record<string, unknown>): boolean {
     if (typeof payload['symbol'] !== 'string' || !payload['symbol'] || (payload['symbol'] as string).length > 16) return false
     if (typeof payload['qty'] !== 'number' || !Number.isInteger(payload['qty']) || payload['qty'] <= 0) return false
     if (typeof payload['at'] !== 'number' || !Number.isInteger(payload['at'])) return false
@@ -178,7 +178,7 @@ export class SgTradeForm extends LitElement {
       this.error = 'Invalid trade details'
       return
     }
-    this.emit({ mode: 'backdated', data: payload })
+    this.emit({ mode: 'backdated', data: payload as unknown as PlaceTradeRequest })
   }
 
   private buildScheduledPayload(symbol: string, qty: number, ms: number | undefined): Record<string, unknown> {
@@ -196,7 +196,7 @@ export class SgTradeForm extends LitElement {
     return payload
   }
 
-  private isValidOrderPayload(payload: Record<string, unknown>): payload is PlaceOrderRequest {
+  private isValidOrderPayload(payload: Record<string, unknown>): boolean {
     if (typeof payload['symbol'] !== 'string' || !payload['symbol'] || (payload['symbol'] as string).length > 16) return false
     if (typeof payload['qty'] !== 'number' || !Number.isInteger(payload['qty']) || payload['qty'] <= 0) return false
     const executeAt = payload['executeAt'] as number | undefined
@@ -214,7 +214,7 @@ export class SgTradeForm extends LitElement {
       this.error = 'Invalid order details'
       return
     }
-    this.emit({ mode: 'scheduled', data: payload })
+    this.emit({ mode: 'scheduled', data: payload as unknown as PlaceOrderRequest })
   }
 
   private onSubmit(): void {

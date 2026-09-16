@@ -12,8 +12,8 @@ Individual stock charts aren't built in — the app links out to Yahoo Finance (
 planned later).
 
 Built with React route shells, TanStack Router/Query, and web components: **Vite**
-static SPA, **TanStack Router** (zod-validated search params, hash history),
-**TanStack Query**, **TanStack Table** core, and **Lit** custom elements for all UI.
+static SPA, **TanStack Router** (hand-validated search params, hash history),
+**TanStack Query**, hand-rolled tables, and **Lit** custom elements for all UI.
 Persistence is Postgres (`stock` database) behind `apps/stock-game-api`
 (Kotlin); price data comes from that API.
 
@@ -50,7 +50,7 @@ The app itself needs no env files. Run the API alongside it:
 ## Repository layout
 
 ```
-shared/                  zod schemas + TS types shared client/server (the API contract)
+shared/                  TS types plus hand validators shared client/server (the API contract)
 app/
   src/
     routes/              React route shells (thin, data-fed)

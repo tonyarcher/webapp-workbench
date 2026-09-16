@@ -17,7 +17,7 @@ stock charts are out of scope — link out to Yahoo Finance (TradingView embeds 
 
 - **Vite static SPA** (React shells + Lit UI). No server runtime: the JSON API is
   `apps/stock-game-api` (Kotlin, Postgres `stock`). Do not add Node `pg` here.
-- **TanStack Router** (code-based routes, hash history, zod-validated search params),
+- **TanStack Router** (code-based routes, hash history, hand-validated search params),
   **TanStack Query** v5. Tables are hand-rolled Lit.
 - **Lit** UI (forms, tables, chart, search). React is thin route shells only: owns Router/Query
   state and binds Lit via `.prop`. Lit views bind `sg-*` events with `@event` bindings.
@@ -29,7 +29,7 @@ stock charts are out of scope — link out to Yahoo Finance (TradingView embeds 
 ## Layout
 
 ```
-shared/                  zod schemas + TS types (the API contract)
+shared/                  TS types plus hand validators (the API contract)
 app/                     Vite SPA (static build served by nginx)
   src/
     routes/              React shells (thin, data-fed)
@@ -69,14 +69,14 @@ Dev sign-in needs two local rows the gateway seed does not cover: an
 - TypeScript: root strict set via `tsconfig.base.json` (strictest flags plus
   `erasableSyntaxOnly`; TypeScript 7). No `any`. No `!`
   except tests accessing fixtures.
-- Every route search param is zod-validated (`validateSearch`).
+- Every route search param is hand-validated.
 
 ## Phases
 
 - Phase 1 (done): tables are hand-rolled Lit; `@tanstack/table-core` removed.
 - Phase 2: Lit route shells behind the house hash router — settings (done), orders (done),
   portfolio (done), trade (done), dashboard (done), root (done).
-- Phase 3: hand validation replacing zod — components (done), then `shared/` and the API client.
+- Phase 3: hand validation replacing zod — components (done), `shared/` and the API client (done).
 - Keeps: decorator-free Lit, lightweight-charts (no house equivalent for price
   series), money/time domain rules.
 
