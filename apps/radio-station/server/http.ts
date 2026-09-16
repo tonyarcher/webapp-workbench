@@ -8,11 +8,13 @@ export function isUuid(value: string | undefined | null): value is string {
 }
 
 export class HttpError extends Error {
+    public status: number;
     constructor(
-        public status: number,
+        status: number,
         message: string,
     ) {
         super(message);
+        this.status = status;
     }
 }
 

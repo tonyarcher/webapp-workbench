@@ -10,13 +10,21 @@ import type {ReactiveController, ReactiveControllerHost} from 'lit';
 export class VirtualizerController<T> implements ReactiveController {
     private virtualizer: Virtualizer<HTMLElement, HTMLElement> | null = null;
     private items: T[] = [];
+    private readonly host: ReactiveControllerHost & Element;
+    private readonly getScrollEl: () => HTMLElement | null;
+    private readonly getItems: () => T[];
+    private readonly estimateSize: (index: number) => number;
 
     constructor(
-        private readonly host: ReactiveControllerHost & Element,
-        private readonly getScrollEl: () => HTMLElement | null,
-        private readonly getItems: () => T[],
-        private readonly estimateSize: (index: number) => number,
+        host: ReactiveControllerHost & Element,
+        getScrollEl: () => HTMLElement | null,
+        getItems: () => T[],
+        estimateSize: (index: number) => number,
     ) {
+        this.host = host;
+        this.getScrollEl = getScrollEl;
+        this.getItems = getItems;
+        this.estimateSize = estimateSize;
         host.addController(this);
     }
 

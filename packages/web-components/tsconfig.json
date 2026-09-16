@@ -35,6 +35,7 @@
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
     "useUnknownInCatchVariables": true,
