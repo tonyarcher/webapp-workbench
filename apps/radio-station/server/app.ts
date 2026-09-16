@@ -39,8 +39,8 @@ function makeShutdown(srv: Server): () => Promise<void> {
 }
 
 export async function startServer(
-    port = Number(process.env.PORT ?? PORT),
-    host = process.env.LISTEN_HOST ?? '0.0.0.0',
+    port = Number(process.env['PORT'] ?? PORT),
+    host = process.env['LISTEN_HOST'] ?? '0.0.0.0',
 ): Promise<RunningServer> {
     await bootDb();
     const dispatch = createDispatcher(routes);

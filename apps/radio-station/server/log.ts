@@ -5,7 +5,7 @@ export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 const RANK: Record<LogLevel, number> = {debug: 10, info: 20, warn: 30, error: 40};
 
 export function minLevel(): LogLevel {
-    const raw = (process.env.LOG_LEVEL ?? 'info').toLowerCase();
+    const raw = (process.env['LOG_LEVEL'] ?? 'info').toLowerCase();
     if (raw === 'debug' || raw === 'info' || raw === 'warn' || raw === 'error') return raw;
     return 'info';
 }
