@@ -62,32 +62,45 @@ export function matchRoute(pattern: string, pathname: string): Record<string, st
 }
 
 export async function readJsonBody(req: IncomingMessage, maxBytes = 64_000): Promise<unknown> {
+    const chunks = await collectChunks(req, maxBytes);
+    return parseBody(chunks);
+}
+
+function collectChunks(req: IncomingMessage, maxBytes: number): Promise<Buffer[]> {
     return new Promise((resolve, reject) => {
         const chunks: Buffer[] = [];
-        let size = 0;
-        req.on('data', (chunk: Buffer) => {
-            size += chunk.length;
-            if (size > maxBytes) {
-                reject(new HttpError(400, 'Request body too large'));
-                req.destroy();
-                return;
-            }
-            chunks.push(chunk);
-        });
-        req.on('end', () => {
-            const body = Buffer.concat(chunks).toString('utf8');
-            if (!body) {
-                resolve(null);
-                return;
-            }
-            try {
-                resolve(JSON.parse(body));
-            } catch {
-                reject(new HttpError(400, 'Invalid JSON'));
-            }
-        });
+        const state = {size: 0};
+        req.on('data', (chunk: Buffer) => onChunk(req, chunk, chunks, maxBytes, state, reject));
+        req.on('end', () => resolve(chunks));
         req.on('error', reject);
     });
+}
+
+function onChunk(
+    req: IncomingMessage,
+    chunk: Buffer,
+    chunks: Buffer[],
+    maxBytes: number,
+    state: {size: number},
+    reject: (err: unknown) => void,
+): void {
+    state.size += chunk.length;
+    if (state.size > maxBytes) {
+        reject(new HttpError(400, 'Request body too large'));
+        req.destroy();
+        return;
+    }
+    chunks.push(chunk);
+}
+
+function parseBody(chunks: Buffer[]): unknown {
+    const body = Buffer.concat(chunks).toString('utf8');
+    if (!body) return null;
+    try {
+        return JSON.parse(body);
+    } catch {
+        throw new HttpError(400, 'Invalid JSON');
+    }
 }
 
 export function sendJson(res: ServerResponse, status: number, value: unknown): void {

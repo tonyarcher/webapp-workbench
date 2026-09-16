@@ -26,12 +26,20 @@ class HealthController(private val dataSource: ObjectProvider<DataSource>) {
 
 private fun probe(dataSource: DataSource): Boolean {
     return try {
-        dataSource.connection.use { conn ->
-            conn.createStatement().use { st ->
-                st.executeQuery("SELECT 1").use { rs -> rs.next() }
-            }
-        }
+        probeOnce(dataSource)
     } catch (_: SQLException) {
         false
     }
+}
+
+private fun probeOnce(dataSource: DataSource): Boolean {
+    dataSource.connection.use { conn -> return queryOne(conn) }
+}
+
+private fun queryOne(conn: java.sql.Connection): Boolean {
+    conn.createStatement().use { st -> return queryRow(st) }
+}
+
+private fun queryRow(st: java.sql.Statement): Boolean {
+    st.executeQuery("SELECT 1").use { rs -> return rs.next() }
 }

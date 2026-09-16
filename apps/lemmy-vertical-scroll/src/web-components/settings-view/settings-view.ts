@@ -45,28 +45,40 @@ export class SettingsView extends LitElement {
             this.error = 'That does not look like a valid instance URL (try lemmy.world).'
             return
         }
-        this.validating = true
-        this.error = ''
-        this.warning = ''
-        this.saved = false
+        this.beginValidation();
         try {
             const {site, software} = await fetchSite(host)
-            if (software === 'piefed') {
-                this.warning = `${host} runs PieFed — feeds will use PieFed's own API.`
-            } else if (software === 'unknown') {
-                this.warning =
-                    `${host} responds, but reports no compatible API version. ` +
-                    `Feeds may not load unless it supports the Lemmy or PieFed API.`
-            }
-            this.site = site
-            await rememberServer(host, site.name || host, software)
-            setInstance(host)
-            this.saved = true
+            this.warnForSoftware(host, software);
+            await this.persistSite(host, site, software);
         } catch (e) {
             this.error = e instanceof Error ? e.message : String(e)
         } finally {
             this.validating = false
         }
+    }
+
+    private beginValidation(): void {
+        this.validating = true
+        this.error = ''
+        this.warning = ''
+        this.saved = false
+    }
+
+    private warnForSoftware(host: string, software: Software): void {
+        if (software === 'piefed') {
+            this.warning = `${host} runs PieFed — feeds will use PieFed's own API.`
+        } else if (software === 'unknown') {
+            this.warning =
+                `${host} responds, but reports no compatible API version. ` +
+                `Feeds may not load unless it supports the Lemmy or PieFed API.`
+        }
+    }
+
+    private async persistSite(host: string, site: LemmySite, software: Software): Promise<void> {
+        this.site = site
+        await rememberServer(host, site.name || host, software)
+        setInstance(host)
+        this.saved = true
     }
 
     private onMakeActive(server: ServerRecord): void {

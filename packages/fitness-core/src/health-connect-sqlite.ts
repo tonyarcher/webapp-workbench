@@ -115,6 +115,11 @@ function mapMinuteSeries(
     metric: MetricId,
     originPrefix: string,
 ): Sample[] {
+    const buckets = bucketRows(rows, valueCol);
+    return bucketsToSamples(buckets, metric, originPrefix);
+}
+
+function bucketRows(rows: Record<string, unknown>[], valueCol: string): Map<number, {sum: number; n: number}> {
     const buckets = new Map<number, {sum: number; n: number}>();
     for (const row of rows) {
         const t = asNumber(row['epoch_millis']);
@@ -126,6 +131,14 @@ function mapMinuteSeries(
         bucket.n += 1;
         buckets.set(key, bucket);
     }
+    return buckets;
+}
+
+function bucketsToSamples(
+    buckets: Map<number, {sum: number; n: number}>,
+    metric: MetricId,
+    originPrefix: string,
+): Sample[] {
     const samples: Sample[] = [];
     for (const [t, bucket] of buckets) {
         samples.push({

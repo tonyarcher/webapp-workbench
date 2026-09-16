@@ -26,10 +26,37 @@ function buildArticle(
 ): Article {
     const normLink = item.link ? normalizeLink(item.link) : undefined;
     const content = withMedia(item.content, item.media);
+    return assembleArticle({feedId, item, popularity, engagement, normLink, content});
+}
+
+interface ArticleParts {
+    feedId: string;
+    item: ParsedItem;
+    popularity: number;
+    engagement: number;
+    normLink: string | undefined;
+    content: string | undefined;
+}
+
+function assembleArticle(parts: ArticleParts): Article {
+    const {feedId, item, popularity, engagement, normLink, content} = parts;
     return {
-        id: `${feedId}:${item.guid}`,
-        feedId,
-        guid: item.guid,
+        ...articleIds(feedId, item),
+        ...articleBody(item, normLink, content),
+        ...articleScores(popularity, engagement, item.published),
+    };
+}
+
+function articleIds(feedId: string, item: ParsedItem): Pick<Article, 'id' | 'feedId' | 'guid'> {
+    return {id: `${feedId}:${item.guid}`, feedId, guid: item.guid};
+}
+
+function articleBody(
+    item: ParsedItem,
+    normLink: string | undefined,
+    content: string | undefined,
+): Omit<Article, 'id' | 'feedId' | 'guid' | 'popularity' | 'engagement' | 'hot' | 'fetchedAt' | 'read' | 'starred'> {
+    return {
         title: item.title,
         link: item.link,
         author: item.author,
@@ -37,13 +64,22 @@ function buildArticle(
         content,
         comments: item.comments,
         published: item.published,
+        normLink,
+    };
+}
+
+function articleScores(
+    popularity: number,
+    engagement: number,
+    published: number,
+): Pick<Article, 'popularity' | 'engagement' | 'hot' | 'fetchedAt' | 'read' | 'starred'> {
+    return {
+        popularity,
+        engagement,
+        hot: hotScore(popularity, engagement, published),
         fetchedAt: Date.now(),
         read: 0,
         starred: false,
-        normLink,
-        popularity,
-        engagement,
-        hot: hotScore(popularity, engagement, item.published),
     };
 }
 

@@ -84,33 +84,37 @@ export class DashboardView extends LitElement {
     }
 
     private renderCalc(): TemplateResult {
-        const mass = this.pts('body_mass');
-        const height = this.pts('height');
-        const waist = this.pts('waist');
-        const neck = this.pts('neck');
         const tiles: TemplateResult[] = [];
-        const bmiPts = bmiSeries(mass, height);
-        if (bmiPts.length >= 2) {
-            tiles.push(html`<div class="tile">
-                <ft-chart .xs=${bmiPts.map((p) => p.t / 1_000)} .ys=${bmiPts.map((p) => p.v)} title="BMI" fmt=""></ft-chart>
-            </div>`);
-        }
-        const whtr = whtrSeries(waist, height);
-        if (whtr.length >= 2) {
-            tiles.push(html`<div class="tile">
-                <ft-chart .xs=${whtr.map((p) => p.t / 1_000)} .ys=${whtr.map((p) => p.v)} title="Waist-to-height" fmt=""></ft-chart>
-            </div>`);
-        }
-        const sex = this.profile?.sex;
-        if (sex) {
-            const navy = navyBfSeries(sex, height, neck, waist, this.pts('hip'));
-            if (navy.length >= 2) {
-                tiles.push(html`<div class="tile">
-                    <ft-chart .xs=${navy.map((p) => p.t / 1_000)} .ys=${navy.map((p) => p.v)} title="Navy body fat" fmt="%"></ft-chart>
-                </div>`);
-            }
-        }
+        this.pushBmiTile(tiles);
+        this.pushWhtrTile(tiles);
+        this.pushNavyTile(tiles);
         return html`${tiles}`;
+    }
+
+    private pushBmiTile(tiles: TemplateResult[]): void {
+        const bmiPts = bmiSeries(this.pts('body_mass'), this.pts('height'));
+        if (bmiPts.length < 2) return;
+        tiles.push(html`<div class="tile">
+            <ft-chart .xs=${bmiPts.map((p) => p.t / 1_000)} .ys=${bmiPts.map((p) => p.v)} title="BMI" fmt=""></ft-chart>
+        </div>`);
+    }
+
+    private pushWhtrTile(tiles: TemplateResult[]): void {
+        const whtr = whtrSeries(this.pts('waist'), this.pts('height'));
+        if (whtr.length < 2) return;
+        tiles.push(html`<div class="tile">
+            <ft-chart .xs=${whtr.map((p) => p.t / 1_000)} .ys=${whtr.map((p) => p.v)} title="Waist-to-height" fmt=""></ft-chart>
+        </div>`);
+    }
+
+    private pushNavyTile(tiles: TemplateResult[]): void {
+        const sex = this.profile?.sex;
+        if (!sex) return;
+        const navy = navyBfSeries(sex, this.pts('height'), this.pts('neck'), this.pts('waist'), this.pts('hip'));
+        if (navy.length < 2) return;
+        tiles.push(html`<div class="tile">
+            <ft-chart .xs=${navy.map((p) => p.t / 1_000)} .ys=${navy.map((p) => p.v)} title="Navy body fat" fmt="%"></ft-chart>
+        </div>`);
     }
 
     private renderLatest(): TemplateResult {

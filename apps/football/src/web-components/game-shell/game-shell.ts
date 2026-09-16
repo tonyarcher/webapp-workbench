@@ -8,7 +8,7 @@ import {
     parseClock,
     RULEBOOKS,
 } from 'football-core';
-import type {PlayFamily, PlayInput, ScoringEvent, Tackler} from 'football-core';
+import type {GameState, GameSetup, PlayFamily, PlayInput, ScoringEvent, Tackler} from 'football-core';
 import type {GameStore} from '../../local-game/game-store';
 import type {LiveLocalGameState} from '../../local-game/game-state';
 import {SPEED_OPTIONS} from '../../sim/playback';
@@ -199,22 +199,13 @@ export class GameShell extends LitElement {
     private renderBug(): TemplateResult {
         const {engine, setup} = this.game;
         const poss = engine.situation.possession === 'home' ? setup.homeName : setup.awayName;
-        const flags = [
-            engine.kickoffPending ? 'kickoff' : '',
-            engine.pendingTry ? 'try' : '',
-            engine.clock.mercyActive ? 'mercy clock' : '',
-            engine.clock.running ? 'clock running' : 'clock stopped',
-        ].filter(Boolean).join(' · ');
         return html`
             <header class="bug">
-                <div class="team">
-                    <span class="name">${setup.awayName}</span>
-                    <span class="score">${engine.score.away}</span>
-                </div>
+                ${this.bugTeams(setup, engine)}
                 <div class="mid">
                     <div class="clock">Q${engine.clock.period} ${formatClock(engine.clock.gameClockSeconds)}</div>
                     <div class="sit">${poss} · ${formatDownDistance(engine.situation, setup.homeName, setup.awayName)}</div>
-                    <div class="flags">${RULEBOOKS[setup.rulebookId].label} · TO ${engine.timeouts.away}-${engine.timeouts.home} · ${flags}</div>
+                    <div class="flags">${RULEBOOKS[setup.rulebookId].label} · TO ${engine.timeouts.away}-${engine.timeouts.home} · ${this.bugFlags(engine)}</div>
                 </div>
                 <div class="team home">
                     <span class="name">${setup.homeName}</span>
@@ -222,6 +213,25 @@ export class GameShell extends LitElement {
                 </div>
             </header>
         `;
+    }
+
+    private bugTeams(setup: GameSetup, engine: GameState): TemplateResult {
+        return html`
+            <div class="team">
+                <span class="name">${setup.awayName}</span>
+                <span class="score">${engine.score.away}</span>
+            </div>
+        `;
+    }
+
+    private bugFlags(engine: GameState): string {
+        const flags = [
+            engine.kickoffPending ? 'kickoff' : '',
+            engine.pendingTry ? 'try' : '',
+            engine.clock.mercyActive ? 'mercy clock' : '',
+            engine.clock.running ? 'clock running' : 'clock stopped',
+        ].filter(Boolean).join(' · ');
+        return flags;
     }
 
     private padClass(label: string, primary?: boolean): string {
@@ -319,6 +329,17 @@ export class GameShell extends LitElement {
         return html`
             ${this.renderBug()}
             ${this.renderWatch()}
+            ${this.renderField(engine, setup)}
+            <div class="personnel">On field (offense): ${this.offenseJerseys() || '—'}</div>
+            ${watch ? '' : this.renderFields()}
+            ${this.renderPad()}
+            ${this.renderToolbar(watch)}
+            ${this.renderLog(engine, setup)}
+        `;
+    }
+
+    private renderField(engine: GameState, setup: GameSetup): TemplateResult {
+        return html`
             <fb-field
                 .situation=${engine.situation}
                 .lastPlay=${engine.plays.at(-1) ?? null}
@@ -326,14 +347,21 @@ export class GameShell extends LitElement {
                 .awayName=${setup.awayName}
                 .animations=${this.watch.animations}
             ></fb-field>
-            <div class="personnel">On field (offense): ${this.offenseJerseys() || '—'}</div>
-            ${watch ? '' : this.renderFields()}
-            ${this.renderPad()}
+        `;
+    }
+
+    private renderToolbar(watch: boolean): TemplateResult {
+        return html`
             <div class="toolbar">
                 <button ?disabled=${!this.store.canUndo || watch} @click=${() => this.store.undo()}>Undo</button>
                 <button ?disabled=${!this.store.canRedo || watch} @click=${() => this.store.redo()}>Redo</button>
                 <button @click=${() => this.store.newGame()}>New game</button>
             </div>
+        `;
+    }
+
+    private renderLog(engine: GameState, setup: GameSetup): TemplateResult {
+        return html`
             <ol class="log">
                 ${[...engine.plays].reverse().map(
                     (play) => html`<li>${describePlay(play, setup.homeName, setup.awayName)}</li>`,

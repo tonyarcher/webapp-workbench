@@ -102,22 +102,27 @@ export class ScrollMediaImage extends LitElement {
                 @pointerdown=${this.onPointerDown}
                 @click=${this.onClick}
             >
-                <div class="carousel-track" style="transform: translateX(${-this.index * 100}%)">
-                    ${this.images.map(
-                        (src) => {
-                            const safe = safeUrl(src)
-                            return html`<div class="carousel-slide">
-                                ${safe
-                                    ? html`<img class="media-img" src=${safe} alt="" loading="lazy" draggable="false" referrerpolicy="no-referrer"/>`
-                                    : html``}
-                            </div>`
-                        },
-                    )}
-                </div>
+                ${this.carouselTrack()}
                 ${single ? nothing : this.renderArrows()}
                 ${this.renderDots()}
             </div>
         `
+    }
+
+    private carouselTrack(): TemplateResult {
+        return html`
+            <div class="carousel-track" style="transform: translateX(${-this.index * 100}%)">
+                ${this.images.map((src) => this.carouselSlide(src))}
+            </div>
+        `;
+    }
+
+    private carouselSlide(src: string): TemplateResult {
+        const safe = safeUrl(src)
+        if (!safe) return html`<div class="carousel-slide"></div>`;
+        return html`<div class="carousel-slide">
+            <img class="media-img" src=${safe} alt="" loading="lazy" draggable="false" referrerpolicy="no-referrer"/>
+        </div>`;
     }
 }
 

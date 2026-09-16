@@ -4,7 +4,7 @@ import {goalToGoDistance} from './down-distance';
 import {getRulebook, oppositeTeam} from './rulebook';
 import {closeDrive, personnelForPossession} from './reduce-helpers';
 import {applyFieldGoal, applyKickoff, applyPunt, applyScrimmage, applyTry} from './reduce-plays';
-import type {GameSetup, GameState, PlayInput, ScoringEvent, TeamId} from './types';
+import type {GameSetup, GameState, PlayInput, Player, ScoringEvent, TeamId} from './types';
 
 function initialClock(quarterLength: number): GameState['clock'] {
     return {
@@ -20,11 +20,9 @@ function initialClock(quarterLength: number): GameState['clock'] {
 
 export function createGame(setup: GameSetup): GameState {
     const rb = getRulebook(setup.rulebookId);
-    const homeRoster = setup.homeRoster?.length ? setup.homeRoster : generateRoster('home');
-    const awayRoster = setup.awayRoster?.length ? setup.awayRoster : generateRoster('away');
+    const {homeRoster, awayRoster} = resolveRosters(setup);
     const kicking = oppositeTeam(setup.receivingTeam);
-    const offense = kicking === 'home' ? homeRoster : awayRoster;
-    const defense = kicking === 'home' ? awayRoster : homeRoster;
+    const personnel = personnelForKicking(homeRoster, awayRoster, kicking);
     return {
         rulebookId: setup.rulebookId,
         home: {id: 'home', name: setup.homeName, roster: homeRoster},
@@ -34,7 +32,7 @@ export function createGame(setup: GameSetup): GameState {
         situation: {down: 1, distance: 10, yardline100: rb.kickoffYardline, hash: 'middle', possession: kicking},
         timeouts: {home: rb.timeoutsPerHalf, away: rb.timeoutsPerHalf},
         score: {home: 0, away: 0},
-        personnel: personnelFromRosters(offense, defense),
+        personnel,
         drives: [],
         plays: [],
         pendingTry: false,
@@ -44,6 +42,18 @@ export function createGame(setup: GameSetup): GameState {
         nextPlayId: 1,
         nextDriveId: 1,
     };
+}
+
+function resolveRosters(setup: GameSetup): {homeRoster: Player[]; awayRoster: Player[]} {
+    const homeRoster = setup.homeRoster?.length ? setup.homeRoster : generateRoster('home');
+    const awayRoster = setup.awayRoster?.length ? setup.awayRoster : generateRoster('away');
+    return {homeRoster, awayRoster};
+}
+
+function personnelForKicking(homeRoster: Player[], awayRoster: Player[], kicking: TeamId): GameState['personnel'] {
+    const offense = kicking === 'home' ? homeRoster : awayRoster;
+    const defense = kicking === 'home' ? awayRoster : homeRoster;
+    return personnelFromRosters(offense, defense);
 }
 
 function handleTimeout(game: GameState, team: TeamId): GameState {
@@ -89,22 +99,12 @@ function advanceQuarter(game: GameState): GameState {
     const nextReceiving = halfTime ? oppositeTeam(game.receivingTeam) : game.situation.possession;
     const next: GameState = {
         ...game,
-        clock: {
-            period: game.clock.period + 1,
-            gameClockSeconds: rb.quarterLengthSeconds,
-            playClockSeconds: 25,
-            running: false,
-            untimed: false,
-            twoMinuteWarnedThisHalf: halfTime ? false : game.clock.twoMinuteWarnedThisHalf,
-            mercyActive: game.clock.mercyActive,
-        },
+        clock: quarterClock(game, rb.quarterLengthSeconds, halfTime),
         timeouts: halfTime ? {home: rb.timeoutsPerHalf, away: rb.timeoutsPerHalf} : game.timeouts,
         kickoffPending: halfTime || game.kickoffPending,
         pendingTry: false,
         tryTeam: null,
-        situation: halfTime
-            ? {down: 1, distance: 10, yardline100: rb.kickoffYardline, hash: 'middle', possession: oppositeTeam(nextReceiving)}
-            : game.situation,
+        situation: halfTime ? halfTimeSituation(rb, nextReceiving) : game.situation,
         personnel: halfTime ? personnelForPossession(game, oppositeTeam(nextReceiving)) : game.personnel,
         drives: halfTime ? closeDrive(game.drives, 'end_half') : game.drives,
     };
@@ -112,24 +112,31 @@ function advanceQuarter(game: GameState): GameState {
     return next;
 }
 
+function quarterClock(game: GameState, quarterLengthSeconds: number, halfTime: boolean): GameState['clock'] {
+    return {
+        period: game.clock.period + 1,
+        gameClockSeconds: quarterLengthSeconds,
+        playClockSeconds: 25,
+        running: false,
+        untimed: false,
+        twoMinuteWarnedThisHalf: halfTime ? false : game.clock.twoMinuteWarnedThisHalf,
+        mercyActive: game.clock.mercyActive,
+    };
+}
+
+function halfTimeSituation(rb: {kickoffYardline: number}, nextReceiving: TeamId): GameState['situation'] {
+    return {down: 1, distance: 10, yardline100: rb.kickoffYardline, hash: 'middle', possession: oppositeTeam(nextReceiving)};
+}
+
 function enterOvertime(game: GameState): GameState {
     const rb = getRulebook(game.rulebookId);
     const ot = rb.overtime;
     const nfl = ot.kind === 'nfl-2024';
-    const first: TeamId = 'home';
-    const possession = nfl ? oppositeTeam(first) : first;
+    const possession = overtimePossession(nfl);
     const yardline100 = nfl ? rb.kickoffYardline : ot.startYardline100;
     return {
         ...game,
-        clock: {
-            period: game.clock.period + 1,
-            gameClockSeconds: nfl ? ot.periodSeconds : 0,
-            playClockSeconds: 25,
-            running: false,
-            untimed: ot.periodSeconds === 0,
-            twoMinuteWarnedThisHalf: false,
-            mercyActive: false,
-        },
+        clock: overtimeClock(game, nfl, ot.periodSeconds),
         timeouts: {home: 2, away: 2},
         kickoffPending: nfl,
         pendingTry: false,
@@ -137,6 +144,23 @@ function enterOvertime(game: GameState): GameState {
         situation: {down: 1, distance: goalToGoDistance(nfl ? 10 : yardline100), yardline100, hash: 'middle', possession},
         personnel: personnelForPossession(game, possession),
         drives: closeDrive(game.drives, 'end_half'),
+    };
+}
+
+function overtimePossession(nfl: boolean): TeamId {
+    const first: TeamId = 'home';
+    return nfl ? oppositeTeam(first) : first;
+}
+
+function overtimeClock(game: GameState, nfl: boolean, periodSeconds: number): GameState['clock'] {
+    return {
+        period: game.clock.period + 1,
+        gameClockSeconds: nfl ? periodSeconds : 0,
+        playClockSeconds: 25,
+        running: false,
+        untimed: periodSeconds === 0,
+        twoMinuteWarnedThisHalf: false,
+        mercyActive: false,
     };
 }
 

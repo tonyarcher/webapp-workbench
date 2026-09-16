@@ -100,22 +100,26 @@ export class AppShell extends LitElement {
                 startsAt: localMidnightMs(this.now),
                 weights: this.weights,
             });
-            this.result = result;
-            this.seed = result.playlist.seed;
-            this.weights = result.playlist.weights;
-            this.day = 'all';
-            saveSession({
-                version: 1,
-                playlistId: result.playlist.id,
-                seed: result.playlist.seed,
-                weights: result.playlist.weights,
-                startsAt: result.playlist.startsAt,
-            });
+            this.applyResult(result);
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         } finally {
             this.busy = false;
         }
+    }
+
+    private applyResult(result: GenerateResult): void {
+        this.result = result;
+        this.seed = result.playlist.seed;
+        this.weights = result.playlist.weights;
+        this.day = 'all';
+        saveSession({
+            version: 1,
+            playlistId: result.playlist.id,
+            seed: result.playlist.seed,
+            weights: result.playlist.weights,
+            startsAt: result.playlist.startsAt,
+        });
     }
 
     private onExport(): void {

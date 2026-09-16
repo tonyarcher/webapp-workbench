@@ -12,12 +12,17 @@ function nestedNumber(rec: Record<string, unknown>, keys: string[], inner: strin
         const node = rec[key];
         const direct = asNumber(node);
         if (direct != null) return direct;
-        if (isRecord(node)) {
-            for (const innerKey of inner) {
-                const n = asNumber(node[innerKey]);
-                if (n != null) return n;
-            }
-        }
+        const found = innerNumber(node, inner);
+        if (found != null) return found;
+    }
+    return null;
+}
+
+function innerNumber(node: unknown, inner: string[]): number | null {
+    if (!isRecord(node)) return null;
+    for (const innerKey of inner) {
+        const n = asNumber(node[innerKey]);
+        if (n != null) return n;
     }
     return null;
 }

@@ -105,19 +105,9 @@ export class BaseballScoreboard extends LitElement {
         const bs = this.boxScoreData;
         const runners = this.resolveRunners(g);
         return {
-            awayName: this.resolveAwayName(g),
-            homeName: this.resolveHomeName(g),
-            awayScore: this.resolveAwayScore(g),
-            homeScore: this.resolveHomeScore(g),
-            awayHits: this.resolveAwayHits(bs),
-            homeHits: this.resolveHomeHits(bs),
-            awayErrors: this.resolveAwayErrors(bs),
-            homeErrors: this.resolveHomeErrors(bs),
-            inning: this.resolveInning(g),
-            half: this.resolveHalf(g),
-            balls: this.resolveBalls(g),
-            strikes: this.resolveStrikes(g),
-            outs: this.resolveOuts(g),
+            ...this.resolveTeamNames(g),
+            ...this.resolveTeamScores(g, bs),
+            ...this.resolveCounts(g),
             lastPlay: this.resolveLastPlay(g),
             batterName: this.resolveBatterName(g),
             pitcherName: this.resolvePitcherName(g),
@@ -128,6 +118,34 @@ export class BaseballScoreboard extends LitElement {
             ...runners,
             inningSymbol: this.resolveInningSymbol(g),
             outsStr: this.formatOuts(this.resolveOuts(g)),
+        };
+    }
+
+    private resolveTeamNames(g: any) {
+        return {
+            awayName: this.resolveAwayName(g),
+            homeName: this.resolveHomeName(g),
+        };
+    }
+
+    private resolveTeamScores(g: any, bs: any) {
+        return {
+            awayScore: this.resolveAwayScore(g),
+            homeScore: this.resolveHomeScore(g),
+            awayHits: this.resolveAwayHits(bs),
+            homeHits: this.resolveHomeHits(bs),
+            awayErrors: this.resolveAwayErrors(bs),
+            homeErrors: this.resolveHomeErrors(bs),
+        };
+    }
+
+    private resolveCounts(g: any) {
+        return {
+            inning: this.resolveInning(g),
+            half: this.resolveHalf(g),
+            balls: this.resolveBalls(g),
+            strikes: this.resolveStrikes(g),
+            outs: this.resolveOuts(g),
         };
     }
 

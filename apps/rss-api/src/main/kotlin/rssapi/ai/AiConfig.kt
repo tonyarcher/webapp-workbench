@@ -22,17 +22,25 @@ data class AiConfig(
 }
 
 fun aiConfigFromEnv(env: Map<String, String> = System.getenv()): AiConfig {
-    val provider = (env["AI_PROVIDER"] ?: "").trim().lowercase()
+    val provider = envText(env, "AI_PROVIDER").lowercase()
     return AiConfig(
         provider = provider,
-        baseUrl = (env["AI_API_URL"] ?: "").trim().trimEnd('/'),
-        model = (env["AI_MODEL"] ?: "").trim(),
-        timeoutMs = env["AI_TIMEOUT_MS"]?.toLongOrNull() ?: 90_000L,
-        probeTimeoutMs = env["AI_PROBE_TIMEOUT_MS"]?.toLongOrNull() ?: 5_000L,
-        hourlyLimit = env["AI_HOURLY_LIMIT"]?.toIntOrNull() ?: 30,
-        dailyLimit = env["AI_DAILY_LIMIT"]?.toIntOrNull() ?: 100,
-        maxInputChars = env["AI_MAX_INPUT_CHARS"]?.toIntOrNull() ?: 8_000,
+        baseUrl = envText(env, "AI_API_URL").trimEnd('/'),
+        model = envText(env, "AI_MODEL"),
+        timeoutMs = envLong(env, "AI_TIMEOUT_MS", 90_000L),
+        probeTimeoutMs = envLong(env, "AI_PROBE_TIMEOUT_MS", 5_000L),
+        hourlyLimit = envInt(env, "AI_HOURLY_LIMIT", 30),
+        dailyLimit = envInt(env, "AI_DAILY_LIMIT", 100),
+        maxInputChars = envInt(env, "AI_MAX_INPUT_CHARS", 8_000),
         basicUser = env["AI_API_USER"] ?: "",
         basicPassword = env["AI_API_PASSWORD"] ?: "",
     )
 }
+
+private fun envText(env: Map<String, String>, key: String): String = (env[key] ?: "").trim()
+
+private fun envLong(env: Map<String, String>, key: String, default: Long): Long =
+    env[key]?.toLongOrNull() ?: default
+
+private fun envInt(env: Map<String, String>, key: String, default: Int): Int =
+    env[key]?.toIntOrNull() ?: default

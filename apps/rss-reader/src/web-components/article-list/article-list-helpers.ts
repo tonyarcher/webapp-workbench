@@ -86,13 +86,19 @@ export function virtualizerOptionsFor(host: {
         scrollToFn: elementScroll,
         observeElementRect,
         observeElementOffset,
-        measureElement: (element: HTMLDivElement, entry: ResizeObserverEntry | undefined, instance: Virtualizer<HTMLDivElement, HTMLDivElement>) => {
-            const box = entry?.borderBoxSize?.[0];
-            if (box && box.blockSize > 0) return Math.round(box.blockSize);
-            const height = element.offsetHeight;
-            if (height > 0) return height;
-            return instance.options.estimateSize(instance.indexFromElement(element));
-        },
+        measureElement: measureRow,
         onChange: () => host.requestUpdate(),
     };
+}
+
+function measureRow(
+    element: HTMLDivElement,
+    entry: ResizeObserverEntry | undefined,
+    instance: Virtualizer<HTMLDivElement, HTMLDivElement>,
+): number {
+    const box = entry?.borderBoxSize?.[0];
+    if (box && box.blockSize > 0) return Math.round(box.blockSize);
+    const height = element.offsetHeight;
+    if (height > 0) return height;
+    return instance.options.estimateSize(instance.indexFromElement(element));
 }

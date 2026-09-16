@@ -14,10 +14,14 @@ class IngestSync(
     private val sync: FeedSyncRepo,
 ) {
     fun maybeRename(feed: FeedEntity, title: String) {
-        if ((feed.title == "Untitled feed" || feed.title.isEmpty()) && title.isNotEmpty() && title != "Untitled feed") {
-            feed.title = title
-            feeds.save(feed)
-        }
+        if (!shouldRename(feed.title, title)) return
+        feed.title = title
+        feeds.save(feed)
+    }
+
+    private fun shouldRename(current: String, title: String): Boolean {
+        if (title.isEmpty() || title == "Untitled feed") return false
+        return current == "Untitled feed" || current.isEmpty()
     }
 
     fun saveError(feedId: UUID, message: String) {

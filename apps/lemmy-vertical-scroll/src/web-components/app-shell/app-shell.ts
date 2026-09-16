@@ -166,30 +166,43 @@ export class AppShell extends LitElement {
     private renderContextControls(): TemplateResult {
         const settings = this.settings
         if (!settings) return html``
-        const postSorts = postSortsFor(this.software)
-        const communitySorts = communitySortsFor(this.software)
         switch (this.view.kind) {
             case 'feed':
-                return html`
-                    ${this.renderViewModeSelect(settings.viewMode)}
-                    ${this.renderNsfwSelect(settings.nsfwFilter)}
-                    ${this.renderFeedTypeSelect(this.clampFeedType(settings.feedType), this.onFeedTypeChange)}
-                    ${this.renderSortSelect(settings.postSort, this.onPostSortChange, postSorts)}
-                `
+                return this.feedControls(settings);
             case 'community':
-                return html`
-                    ${this.renderViewModeSelect(settings.viewMode)}
-                    ${this.renderNsfwSelect(settings.nsfwFilter)}
-                    ${this.renderSortSelect(settings.postSort, this.onPostSortChange, postSorts)}
-                `
+                return this.communityControls(settings);
             case 'communities':
-                return html`
-                    ${this.renderCommunityTypeSelect(this.clampCommunityType(settings.communityType), this.onCommunityTypeChange)}
-                    ${this.renderSortSelect(settings.communitySort, this.onCommunitySortChange, communitySorts)}
-                `
+                return this.communitiesControls(settings);
             case 'settings':
                 return html``
         }
+    }
+
+    private feedControls(settings: Settings): TemplateResult {
+        const postSorts = postSortsFor(this.software)
+        return html`
+            ${this.renderViewModeSelect(settings.viewMode)}
+            ${this.renderNsfwSelect(settings.nsfwFilter)}
+            ${this.renderFeedTypeSelect(this.clampFeedType(settings.feedType), this.onFeedTypeChange)}
+            ${this.renderSortSelect(settings.postSort, this.onPostSortChange, postSorts)}
+        `;
+    }
+
+    private communityControls(settings: Settings): TemplateResult {
+        const postSorts = postSortsFor(this.software)
+        return html`
+            ${this.renderViewModeSelect(settings.viewMode)}
+            ${this.renderNsfwSelect(settings.nsfwFilter)}
+            ${this.renderSortSelect(settings.postSort, this.onPostSortChange, postSorts)}
+        `;
+    }
+
+    private communitiesControls(settings: Settings): TemplateResult {
+        const communitySorts = communitySortsFor(this.software)
+        return html`
+            ${this.renderCommunityTypeSelect(this.clampCommunityType(settings.communityType), this.onCommunityTypeChange)}
+            ${this.renderSortSelect(settings.communitySort, this.onCommunitySortChange, communitySorts)}
+        `;
     }
 
     /** Sorts the instance supports; falls back to Hot when the saved sort is unavailable. */

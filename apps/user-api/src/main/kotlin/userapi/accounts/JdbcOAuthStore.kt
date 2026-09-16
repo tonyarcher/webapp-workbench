@@ -6,27 +6,21 @@ import java.util.UUID
 import javax.sql.DataSource
 
 class JdbcOAuthStore(private val dataSource: DataSource) : OAuthStore {
-    override fun findClient(clientId: String): userapi.domain.OAuthClient? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(LOAD_REDIRECTS).use { ps ->
-                ps.setString(1, clientId)
-                ps.executeQuery().use { rs ->
-                    val uris = mutableSetOf<String>()
-                    while (rs.next()) uris.add(rs.getString(1))
-                    if (uris.isEmpty()) return null
-                    return userapi.domain.OAuthClient(clientId, uris)
-                }
-            }
-        }
-    }
+    override fun findClient(clientId: String): userapi.domain.OAuthClient? =
+        queryOne(
+            dataSource,
+            LOAD_REDIRECTS,
+            { ps -> ps.setString(1, clientId) },
+            { rs -> buildClient(rs, clientId) },
+        )
 
-    override fun loadSigningJwk(): String? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(LOAD_JWK).use { ps ->
-                ps.executeQuery().use { rs -> return if (rs.next()) rs.getString(1) else null }
-            }
-        }
-    }
+    override fun loadSigningJwk(): String? =
+        queryOne(
+            dataSource,
+            LOAD_JWK,
+            { _ -> },
+            { rs -> if (rs.next()) rs.getString(1) else null },
+        )
 
     override fun saveSigningJwk(kid: String, jwk: String) {
         dataSource.connection.use { conn ->
@@ -59,23 +53,16 @@ class JdbcOAuthStore(private val dataSource: DataSource) : OAuthStore {
         }
     }
 
-    override fun takeAuthCode(codeHash: String, now: Instant): StoredAuthCode? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(TAKE_CODE).use { ps ->
+    override fun takeAuthCode(codeHash: String, now: Instant): StoredAuthCode? =
+        queryOne(
+            dataSource,
+            TAKE_CODE,
+            { ps ->
                 ps.setString(1, codeHash)
                 ps.setTimestamp(2, Timestamp.from(now))
-                ps.executeQuery().use { rs ->
-                    if (!rs.next()) return null
-                    return StoredAuthCode(
-                        userId = rs.getObject("user_id", UUID::class.java),
-                        clientId = rs.getString("client_id"),
-                        redirectUri = rs.getString("redirect_uri"),
-                        codeChallenge = rs.getString("code_challenge"),
-                    )
-                }
-            }
-        }
-    }
+            },
+            { rs -> buildCode(rs) },
+        )
 
     override fun insertRefresh(
         tokenHash: String,
@@ -112,6 +99,23 @@ class JdbcOAuthStore(private val dataSource: DataSource) : OAuthStore {
             }
         }
     }
+}
+
+private fun buildClient(rs: java.sql.ResultSet, clientId: String): userapi.domain.OAuthClient? {
+    val uris = mutableSetOf<String>()
+    while (rs.next()) uris.add(rs.getString(1))
+    if (uris.isEmpty()) return null
+    return userapi.domain.OAuthClient(clientId, uris)
+}
+
+private fun buildCode(rs: java.sql.ResultSet): StoredAuthCode? {
+    if (!rs.next()) return null
+    return StoredAuthCode(
+        userId = rs.getObject("user_id", UUID::class.java),
+        clientId = rs.getString("client_id"),
+        redirectUri = rs.getString("redirect_uri"),
+        codeChallenge = rs.getString("code_challenge"),
+    )
 }
 
 private fun consumeUnusedRefresh(

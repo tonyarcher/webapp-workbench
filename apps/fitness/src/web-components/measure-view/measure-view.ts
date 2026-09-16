@@ -108,33 +108,38 @@ export class MeasureView extends LitElement {
     }
 
     private async saveSample(): Promise<void> {
+        const parsed = this.parseSampleInput();
+        if (!parsed) return;
+        this.error = '';
+        this.saved = false;
+        try {
+            await postImport([parsed], 'manual');
+            this.saved = true;
+            await this.reload();
+        } catch (err) {
+            this.error = err instanceof Error ? err.message : String(err);
+        }
+    }
+
+    private parseSampleInput(): Sample | null {
         const n = Number(this.value);
         const metric = parseMetricId(this.metric);
         if (!metric || !this.value.trim() || !Number.isFinite(n)) {
             this.error = 'need metric and value';
-            return;
+            return null;
         }
         const valueSi = toSi(metric, n, this.unit);
         if (valueSi == null) {
             this.error = 'unknown unit for this metric';
-            return;
+            return null;
         }
-        const sample: Sample = {
+        return {
             metric,
             t: Date.now(),
             valueSi,
             source: 'manual',
             originId: `manual:${metric}:${Date.now()}`,
         };
-        this.error = '';
-        this.saved = false;
-        try {
-            await postImport([sample], 'manual');
-            this.saved = true;
-            await this.reload();
-        } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
-        }
     }
 
     private onMetric = (event: Event): void => {

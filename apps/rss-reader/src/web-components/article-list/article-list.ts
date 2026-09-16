@@ -158,6 +158,10 @@ export class ArticleList extends LitElement {
 
     override updated(_changed: Map<string, unknown>) {
         const viewKey = `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}`;
+        this.handleUpdate(viewKey);
+    }
+
+    private handleUpdate(viewKey: string): void {
         if (viewKey !== this.lastViewKey) {
             this.hideRead = false;
             this.loadViewSettings();
@@ -177,13 +181,11 @@ export class ArticleList extends LitElement {
             void this.reset();
             return;
         }
-        if (this.view.kind === 'folder') {
-            const folderKey = this.folderFeeds().map((f) => f.id).join(',');
-            if (folderKey !== this.lastFolderKey) {
-                this.lastFolderKey = folderKey;
-                void this.reset();
-            }
-        }
+        if (this.view.kind !== 'folder') return;
+        const folderKey = this.folderFeeds().map((f) => f.id).join(',');
+        if (folderKey === this.lastFolderKey) return;
+        this.lastFolderKey = folderKey;
+        void this.reset();
     }
 
     private needsLibrary(): boolean {

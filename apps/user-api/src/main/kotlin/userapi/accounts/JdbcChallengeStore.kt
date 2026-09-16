@@ -20,13 +20,17 @@ class JdbcChallengeStore(private val dataSource: DataSource) : WebauthnChallenge
     }
 
     override fun takeChallenge(id: String, now: Instant): WebauthnChallenge? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(TAKE).use { ps ->
-                ps.setString(1, id)
-                ps.setTimestamp(2, Timestamp.from(now))
-                ps.executeQuery().use { rs -> return if (rs.next()) read(rs) else null }
-            }
-        }
+        dataSource.connection.use { conn -> return takeIn(conn, id, now) }
+    }
+
+    private fun takeIn(conn: java.sql.Connection, id: String, now: Instant): WebauthnChallenge? {
+        conn.prepareStatement(TAKE).use { ps -> return readTake(ps, id, now) }
+    }
+
+    private fun readTake(ps: java.sql.PreparedStatement, id: String, now: Instant): WebauthnChallenge? {
+        ps.setString(1, id)
+        ps.setTimestamp(2, Timestamp.from(now))
+        ps.executeQuery().use { rs -> return if (rs.next()) read(rs) else null }
     }
 }
 

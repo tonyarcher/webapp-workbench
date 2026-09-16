@@ -52,30 +52,47 @@ async function readWithLimit(response: Response, maxBytes: number): Promise<stri
     return out + decoder.decode();
 }
 
+function delayMs(ms: number): Promise<void> {
+    return new Promise((r) => setTimeout(r, ms));
+}
+
+function assertOk(res: Response): void {
+    if (!res.ok) throw new FetchError(`Proxy responded ${res.status}`);
+}
+
+function assertNonEmpty(text: string): void {
+    if (!text.trim()) throw new FetchError('Empty response');
+}
+
+function mapFetchError(err: unknown): unknown {
+    if (err instanceof DOMException && err.name === 'AbortError') return new FetchError('Feed fetch timed out');
+    return err;
+}
+
+async function fetchViaProxy(url: string, proxy: string): Promise<string> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+        const res = await fetch(proxy + encodeURIComponent(url), {signal: controller.signal});
+        assertOk(res);
+        const text = await readWithLimit(res, MAX_FEED_BYTES);
+        assertNonEmpty(text);
+        return text;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 export async function fetchFeedText(rawUrl: string): Promise<string> {
     const url = validateFeedUrl(rawUrl);
     let lastError: unknown;
     for (let attempt = 0; attempt < 2; attempt++) {
-        if (attempt > 0) await new Promise((r) => setTimeout(r, 2_000));
+        if (attempt > 0) await delayMs(2_000);
         for (const proxy of PROXIES) {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
             try {
-                const res = await fetch(proxy + encodeURIComponent(url), {signal: controller.signal});
-                if (!res.ok) {
-                    throw new FetchError(`Proxy responded ${res.status}`);
-                }
-                const text = await readWithLimit(res, MAX_FEED_BYTES);
-                if (!text.trim()) throw new FetchError('Empty response');
-                return text;
+                return await fetchViaProxy(url, proxy);
             } catch (err) {
-                if (err instanceof DOMException && err.name === 'AbortError') {
-                    lastError = new FetchError('Feed fetch timed out');
-                } else {
-                    lastError = err;
-                }
-            } finally {
-                clearTimeout(timer);
+                lastError = mapFetchError(err);
             }
         }
     }

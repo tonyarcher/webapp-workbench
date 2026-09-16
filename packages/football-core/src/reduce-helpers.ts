@@ -158,22 +158,30 @@ export function buildPlay(
         id: playId,
         driveId,
         period: game.clock.period,
-        clock: {
-            snap: input.snapClock,
-            dead: input.deadClock,
-            playClockAtSnap: input.playClockAtSnap ?? 40,
-            stopReason,
-        },
+        clock: playClock(input, stopReason),
         situation: {...game.situation},
         personnel: game.personnel,
-        call: {
-            family: input.family,
-            concept: input.concept ?? (input.scramble ? 'scramble' : 'unknown'),
-            formation: input.formation ?? 'unknown',
-        },
+        call: playCall(input),
         events: synthesizeEvents(input),
         result,
         tacklers: input.tacklers ?? [],
+    };
+}
+
+function playClock(input: PlayInput, stopReason: Play['clock']['stopReason']): Play['clock'] {
+    return {
+        snap: input.snapClock,
+        dead: input.deadClock,
+        playClockAtSnap: input.playClockAtSnap ?? 40,
+        stopReason,
+    };
+}
+
+function playCall(input: PlayInput): Play['call'] {
+    return {
+        family: input.family,
+        concept: input.concept ?? (input.scramble ? 'scramble' : 'unknown'),
+        formation: input.formation ?? 'unknown',
     };
 }
 

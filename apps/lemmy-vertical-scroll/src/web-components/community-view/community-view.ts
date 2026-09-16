@@ -71,23 +71,7 @@ export class CommunityView extends LitElement {
     }
 
     override render(): TemplateResult {
-        const posts = this.viewMode === 'scroll'
-            ? html`<lvs-scroll-feed
-                .instance=${this.instance}
-                .sort=${this.sort}
-                .software=${this.software}
-                .nsfwFilter=${this.nsfwFilter}
-                .communityId=${this.communityId}
-                .auth=${this.auth}
-            ></lvs-scroll-feed>`
-            : html`<lvs-post-list
-                .instance=${this.instance}
-                .sort=${this.sort}
-                .software=${this.software}
-                .nsfwFilter=${this.nsfwFilter}
-                .communityId=${this.communityId}
-                .auth=${this.auth}
-            ></lvs-post-list>`
+        const posts = this.postsFeed();
         if (this.viewMode === 'scroll') {
             // scroll mode is a pure post feed — no community header, matching the feed tab
             return html`<div class="community-posts">${posts}</div>`
@@ -96,6 +80,27 @@ export class CommunityView extends LitElement {
             ${this.renderHeader()}
             <div class="community-posts">${posts}</div>
         `
+    }
+
+    private postsFeed(): TemplateResult {
+        if (this.viewMode === 'scroll') {
+            return html`<lvs-scroll-feed
+                .instance=${this.instance}
+                .sort=${this.sort}
+                .software=${this.software}
+                .nsfwFilter=${this.nsfwFilter}
+                .communityId=${this.communityId}
+                .auth=${this.auth}
+            ></lvs-scroll-feed>`;
+        }
+        return html`<lvs-post-list
+            .instance=${this.instance}
+            .sort=${this.sort}
+            .software=${this.software}
+            .nsfwFilter=${this.nsfwFilter}
+            .communityId=${this.communityId}
+            .auth=${this.auth}
+        ></lvs-post-list>`;
     }
 }
 

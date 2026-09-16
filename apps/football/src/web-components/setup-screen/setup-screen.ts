@@ -63,24 +63,36 @@ export class SetupScreen extends LitElement {
                 <label>Home
                     <input name="homeName" value=${DEFAULT_GAME_SETUP.homeName} required/>
                 </label>
-                <label>Rulebook
-                    <select name="rulebookId">
-                        ${Object.values(RULEBOOKS).map(
-                            (book) => html`<option value=${book.id} ?selected=${book.id === DEFAULT_GAME_SETUP.rulebookId}>
-                                ${book.label}
-                            </option>`,
-                        )}
-                    </select>
-                </label>
-                <label>Receives opening kickoff
-                    <select name="receivingTeam">
-                        <option value="away" selected>Away</option>
-                        <option value="home">Home</option>
-                    </select>
-                </label>
+                ${this.rulebookField()}
+                ${this.receivingField()}
                 <button type="submit">Score a game</button>
                 <button type="button" class="secondary" @click=${this.emitWatch}>Watch simulated game</button>
             </form>
+        `;
+    }
+
+    private rulebookField(): TemplateResult {
+        return html`
+            <label>Rulebook
+                <select name="rulebookId">
+                    ${Object.values(RULEBOOKS).map(
+                        (book) => html`<option value=${book.id} ?selected=${book.id === DEFAULT_GAME_SETUP.rulebookId}>
+                            ${book.label}
+                        </option>`,
+                    )}
+                </select>
+            </label>
+        `;
+    }
+
+    private receivingField(): TemplateResult {
+        return html`
+            <label>Receives opening kickoff
+                <select name="receivingTeam">
+                    <option value="away" selected>Away</option>
+                    <option value="home">Home</option>
+                </select>
+            </label>
         `;
     }
 }

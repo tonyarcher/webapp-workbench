@@ -425,23 +425,14 @@ export class BaseballGameShell extends LitElement {
     return html`
       <baseball-scoring-controls
         game-status=${engine.over ? 'completed' : 'active'}
-        away-name=${setup.awayTeamName}
-        home-name=${setup.homeTeamName}
-        away-score=${String(engine.awayScore)}
-        home-score=${String(engine.homeScore)}
-        balls=${engine.balls}
-        strikes=${engine.strikes}
-        outs=${engine.outs}
+        away-name=${setup.awayTeamName} home-name=${setup.homeTeamName}
+        away-score=${String(engine.awayScore)} home-score=${String(engine.homeScore)}
+        balls=${engine.balls} strikes=${engine.strikes} outs=${engine.outs}
         live-inning-text=${engineBadge(engine)}
-        batter-name=${currentBatter}
-        pitcher-name=${currentPitcher}
-        panel-mode=${this.panelMode}
-        current-pitch-type=${this.currentPitchType}
-        step2-label=${this.step2Label}
-        ?step2-is-hit=${this.step2IsHit}
-        ?step2-double-play-available=${this.step2DoublePlayAvailable}
-        interactive=${this.isWatch() ? 'false' : 'true'}
-        animations=${this.watch.animations ? 'true' : 'false'}
+        batter-name=${currentBatter} pitcher-name=${currentPitcher}
+        panel-mode=${this.panelMode} current-pitch-type=${this.currentPitchType} step2-label=${this.step2Label}
+        ?step2-is-hit=${this.step2IsHit} ?step2-double-play-available=${this.step2DoublePlayAvailable}
+        interactive=${this.isWatch() ? 'false' : 'true'} animations=${this.watch.animations ? 'true' : 'false'}
         active-play-json=${this.watch.activePlayJson}
       ></baseball-scoring-controls>
     `;

@@ -214,6 +214,15 @@ interface FilteredPostPage extends PostPage {
     rawCount: number
 }
 
+export interface PostsQueryParams {
+    instance: string;
+    feedType: PostFeedType;
+    sort: PostSort;
+    software: Software;
+    nsfwFilter: NsfwFilter;
+    auth: string;
+}
+
 export function postsInfiniteQuery(
     instance: string,
     feedType: PostFeedType,
@@ -222,29 +231,27 @@ export function postsInfiniteQuery(
     nsfwFilter: NsfwFilter,
     auth: string,
 ): InfinitePostsOptions {
+    const params: PostsQueryParams = {instance, feedType, sort, software, nsfwFilter, auth};
     return {
         queryKey: postsKey(instance, feedType, sort, nsfwFilter, software, auth),
         initialPageParam: 1,
-        queryFn: async ({pageParam}) => {
-            const page =
-                software === 'piefed'
-                    ? await fetchPiefedPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
-                    : await fetchPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
-            const filtered = clientFilterPosts(page.posts, nsfwFilter)
-            void putPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, software, auth, pageParam), filtered).catch(() => {})
-            return {posts: filtered, page: page.page, rawCount: page.posts.length}
-        },
+        queryFn: async ({pageParam}) => fetchPostPage(params, pageParam),
         // rawCount from the queryFn tracks the unfiltered page size;
         // fallback to posts.length for hydrated pages that lack it
-        getNextPageParam: (lastPage) => {
-            // rawCount is the unfiltered page size from the live queryFn;
-            // hydrated pages lack it — treat as PAGE_SIZE (continue) rather than
-            // the filtered count, which could be 0 and would falsely stop the feed.
-            const rawCount = (lastPage as FilteredPostPage).rawCount ?? PAGE_SIZE
-            return rawCount > 0 ? lastPage.page + 1 : undefined
-        },
+        getNextPageParam: (lastPage) => nextPostPage(lastPage),
         staleTime: 30_000,
     }
+}
+
+async function fetchPostPage(params: PostsQueryParams, pageParam: number): Promise<FilteredPostPage> {
+    const {instance, feedType, sort, software, nsfwFilter, auth} = params;
+    const page =
+        software === 'piefed'
+            ? await fetchPiefedPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
+            : await fetchPosts({instance, feedType, sort, page: pageParam, limit: PAGE_SIZE, nsfwFilter, auth})
+    const filtered = clientFilterPosts(page.posts, nsfwFilter)
+    void putPostsCache(postsCacheKey(instance, feedType, sort, nsfwFilter, software, auth, pageParam), filtered).catch(() => {})
+    return {posts: filtered, page: page.page, rawCount: page.posts.length}
 }
 
 async function fetchCommunityPostsPage(instance: string, communityId: number, sort: PostSort, software: Software, nsfwFilter: NsfwFilter, auth: string, pageParam: number): Promise<FilteredPostPage> {
