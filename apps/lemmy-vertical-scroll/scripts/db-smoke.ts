@@ -116,7 +116,7 @@ void (async () => {
 
     await putPostsCache('posts:test.instance:All:Hot:1', [post])
     const cached = await getPostsCache('posts:test.instance:All:Hot:1', 60_000)
-    assert(cached?.length === 1 && cached[0].id === 1, 'posts cache roundtrip')
+    assert(cached?.length === 1 && cached?.[0]!.id === 1, 'posts cache roundtrip')
 
     const expired = await getPostsCache('posts:test.instance:All:Hot:1', 0)
     assert(expired === null, 'posts cache respects ttl')
@@ -129,7 +129,7 @@ void (async () => {
 
     await putCommunitiesCache('communities:test.instance:Hot:1', [community])
     const cachedCommunities = await getCommunitiesCache('communities:test.instance:Hot:1', 60_000)
-    assert(cachedCommunities?.length === 1 && cachedCommunities[0].name === 'main', 'communities cache roundtrip')
+    assert(cachedCommunities?.length === 1 && cachedCommunities?.[0]!.name === 'main', 'communities cache roundtrip')
 
     assert(await getCommunitiesCache('communities:test.instance:Hot:1', 0) === null, 'communities cache respects ttl')
 
@@ -168,7 +168,7 @@ void (async () => {
     assert(await getRegistryCache(60_000) === null, 'registry cache starts empty')
     await putRegistryCache([{host: 'a.example', name: 'A', nsfw: false}])
     const registryCached = await getRegistryCache(60_000)
-    assert(registryCached?.length === 1 && registryCached[0].host === 'a.example', 'registry cache roundtrip')
+    assert(registryCached?.length === 1 && registryCached?.[0]!.host === 'a.example', 'registry cache roundtrip')
     assert(await getRegistryCache(0) === null, 'registry cache respects ttl')
 
     console.log('db-smoke.ts: all assertions passed')

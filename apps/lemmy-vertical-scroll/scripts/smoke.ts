@@ -166,11 +166,11 @@ void (async () => {
     )
     assert(query().get('nsfw') === 'Only', 'posts forward nsfwFilter Only')
     assert(page.posts.length === 1, 'posts mapped')
-    assert(page.posts[0].communityTitle === 'Main', 'community title mapped')
-    assert(page.posts[0].score === 42 && page.posts[0].comments === 3, 'counts mapped')
-    assert(page.posts[0].creatorDisplayName === 'Bob', 'creator mapped')
-    assert(page.posts[0].postUrl === 'https://lemmy.ca/post/12345', 'ap_id mapped to postUrl')
-    assert(page.posts[0].postType === 'Link' && page.posts[0].linkUrl === 'https://example.com/hello', 'link post classified')
+    assert(page.posts[0]!.communityTitle === 'Main', 'community title mapped')
+    assert(page.posts[0]!.score === 42 && page.posts[0]!.comments === 3, 'counts mapped')
+    assert(page.posts[0]!.creatorDisplayName === 'Bob', 'creator mapped')
+    assert(page.posts[0]!.postUrl === 'https://lemmy.ca/post/12345', 'ap_id mapped to postUrl')
+    assert(page.posts[0]!.postType === 'Link' && page.posts[0]!.linkUrl === 'https://example.com/hello', 'link post classified')
 
     await assertRejects(
         () => fetchPosts({instance: 'lemmy.ml', feedType: 'All', sort: 'Hot', page: 1, limit: 20}, mockFetchImpl({}, 400)),
@@ -299,9 +299,9 @@ void (async () => {
         capturingAuthFetchImpl({posts: []}),
     )
     assert(query().get('nsfw') === 'Exclude', 'piefed posts forward nsfwFilter')
-    assert(pp.posts[0].communityTitle === 'NSFW' && pp.posts[0].score === 42, 'piefed post mapped')
-    assert(pp.posts[0].creatorDisplayName === 'Bob' && pp.posts[0].pinnedLocal, 'piefed creator/sticky mapped')
-    assert(pp.posts[0].nsfw === true, 'piefed nsfw mapped')
+    assert(pp.posts[0]!.communityTitle === 'NSFW' && pp.posts[0]!.score === 42, 'piefed post mapped')
+    assert(pp.posts[0]!.creatorDisplayName === 'Bob' && pp.posts[0]!.pinnedLocal, 'piefed creator/sticky mapped')
+    assert(pp.posts[0]!.nsfw === true, 'piefed nsfw mapped')
 
     await fetchPiefedCommunityPosts(
         {instance: 'fedinsfw.app', communityId: 7, sort: 'New', page: 1, limit: 20},
@@ -331,14 +331,14 @@ void (async () => {
         capturingFetchImpl({communities: []}),
     )
     assert(query().get('show_nsfw') === 'true', 'piefed Only degrades to showing nsfw (boolean API)')
-    assert(pc.communities[0].subscribers === 10 && pc.communities[0].posts === 5 && pc.communities[0].comments === 2, 'piefed community counts mapped')
+    assert(pc.communities[0]!.subscribers === 10 && pc.communities[0]!.posts === 5 && pc.communities[0]!.comments === 2, 'piefed community counts mapped')
 
     const searchHits = await fetchPiefedCommunitySearch('fedinsfw.app', 'nsfw', 20, capturingFetchImpl({communities: [{community: {id: 2, name: 'nsfw2', title: 'NSFW2', actor_id: 'https://fedinsfw.app/c/nsfw2', local: true, icon: null, banner: null, description: null, published: '2026-01-01T00:00:00Z'}, counts: {subscriptions_count: 1, post_count: 1, post_reply_count: 1, published: '2026-01-01T00:00:00Z'}, subscribed: 'NotSubscribed', blocked: false}]}))
     assert(request().pathname === '/api/alpha/search' && query().get('type_') === 'Communities', 'piefed search hits alpha search')
     assert(query().get('listing_type') === 'All', 'piefed search defaults to All listing')
     await fetchPiefedCommunitySearch('fedinsfw.app', 'nsfw', 20, capturingFetchImpl({communities: []}), 'Include', 'Local')
     assert(query().get('listing_type') === 'Local', 'piefed search forwards Local listing')
-    assert(searchHits.length === 1 && searchHits[0].name === 'nsfw2', 'piefed search mapped')
+    assert(searchHits.length === 1 && searchHits[0]!.name === 'nsfw2', 'piefed search mapped')
 
     const single = await fetchPiefedCommunity('fedinsfw.app', 7, capturingFetchImpl({community_view: {community: {id: 7, name: 'x', title: 'X', actor_id: 'https://fedinsfw.app/c/x', local: true, icon: null, banner: null, description: null, published: '2026-01-01T00:00:00Z'}, counts: {subscriptions_count: 3, post_count: 2, post_reply_count: 1, published: '2026-01-01T00:00:00Z'}, subscribed: 'Subscribed', blocked: false}}))
     assert(single.subscribed === true && single.id === 7, 'piefed community by id mapped')
@@ -375,14 +375,14 @@ void (async () => {
     assert(lastHeaders().get('Authorization') === null, 'login itself sends no auth header')
     const loginBody = lastBody()
     assert(
-        loginBody.username_or_email === 'bob' && loginBody.password === 'secret',
+        loginBody['username_or_email'] === 'bob' && loginBody['password'] === 'secret',
         'login body carries username and password',
     )
-    assert(loginBody.stay_logged_in === true, 'lemmy login stays logged in')
+    assert(loginBody['stay_logged_in'] === true, 'lemmy login stays logged in')
     assert(lemmyLogin.jwt === 'jwtA' && lemmyLogin.username === 'bob', 'lemmy login returns session')
 
     await loginLemmy('lemmy.ml', 'bob', 'secret', '123456', capturingAuthFetchImpl({jwt: 'jwtB'}))
-    assert(lastBody().totp_2fa_token === '123456', 'totp token forwarded when provided')
+    assert(lastBody()['totp_2fa_token'] === '123456', 'totp token forwarded when provided')
 
     const objJwt = await loginLemmy('lemmy.ml', 'bob', 'secret', undefined, capturingAuthFetchImpl({jwt: {jwt: 'jwtC', registration_created: false}}))
     assert(objJwt.jwt === 'jwtC', 'object-shaped jwt parsed')
@@ -410,7 +410,7 @@ void (async () => {
 
     const piefedLogin = await loginPiefed('piefed.social', 'bob', 'secret', capturingAuthFetchImpl({jwt: 'pjwt'}))
     assert(new URL(lastRequestDetails!.url).pathname === '/api/alpha/user/login', 'piefed login hits alpha user/login')
-    assert(lastBody().username_or_email === 'bob', 'piefed login accepts username_or_email')
+    assert(lastBody()['username_or_email'] === 'bob', 'piefed login accepts username_or_email')
     assert(piefedLogin.jwt === 'pjwt' && piefedLogin.username === 'bob', 'piefed login returns session')
 
     // ---- popular server registry ----
@@ -426,9 +426,9 @@ void (async () => {
     ].join('\n')
     const parsed = parseRegistryCsv(csv)
     assert(parsed.length === 3, 'registry parse skips malformed and empty rows')
-    assert(parsed[0].host === 'lemmy.world' && parsed[0].name === 'Lemmy.World', 'registry sorts by monthly users')
-    assert(parsed[1].host === 'lemmynsfw.com' && parsed[1].nsfw === true, 'registry tags known NSFW hosts')
-    assert(parsed[2].host === 'small.example', 'registry keeps smaller instances after the top')
+    assert(parsed[0]!.host === 'lemmy.world' && parsed[0]!.name === 'Lemmy.World', 'registry sorts by monthly users')
+    assert(parsed[1]!.host === 'lemmynsfw.com' && parsed[1]!.nsfw === true, 'registry tags known NSFW hosts')
+    assert(parsed[2]!.host === 'small.example', 'registry keeps smaller instances after the top')
     assert(!parsed.some((s) => s.host === 'nousers.example'), 'registry drops rows with invalid user counts')
 
     const failedRegistry = await fetchRegistryPopular(
@@ -446,7 +446,7 @@ void (async () => {
         {host: 'lemmy.world', name: 'Lemmy.World', nsfw: false},
         {host: 'brand.new', name: 'Brand New', nsfw: false},
     ])
-    assert(merged[0].host === 'lemmy.world', 'registry entries rank before bundled duplicates')
+    assert(merged[0]!.host === 'lemmy.world', 'registry entries rank before bundled duplicates')
     assert(merged.length === POPULAR_SERVERS.length + 1, 'merge dedupes overlapping hosts')
     assert(merged.some((s) => s.host === 'brand.new'), 'merge keeps registry-only hosts')
     assert(POPULAR_SERVERS.some((s) => s.host === 'lemmynsfw.com' && s.nsfw), 'bundled list flags NSFW instances')

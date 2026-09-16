@@ -148,7 +148,7 @@ export async function apiGet(
     let response: Awaited<ReturnType<FetchImpl>>
     try {
         const headers: Record<string, string> = {Accept: 'application/json'}
-        if (auth) headers.Authorization = `Bearer ${auth}`
+        if (auth) headers['Authorization'] = `Bearer ${auth}`
         response = await fetchImpl(`https://${instance}${path}?${query}`, {method: 'GET', headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)})
     } catch (error) {
         throwNetworkError(instance, error)
@@ -172,7 +172,7 @@ export async function apiPost(
     let response: Awaited<ReturnType<FetchImpl>>
     try {
         const headers: Record<string, string> = {'Content-Type': 'application/json'}
-        if (auth) headers.Authorization = `Bearer ${auth}`
+        if (auth) headers['Authorization'] = `Bearer ${auth}`
         response = await fetchImpl(`https://${instance}${path}`, {method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)})
     } catch (error) {
         throwNetworkError(instance, error)
@@ -272,7 +272,7 @@ export async function loginLemmy(
         password,
         stay_logged_in: true,
     }
-    if (totpToken) body.totp_2fa_token = totpToken
+    if (totpToken) body['totp_2fa_token'] = totpToken
     const data = (await apiPost(instance, '/api/v3/user/login', body, fetchImpl)) as {
         jwt?: string | {jwt: string} | null
         registration_created?: boolean
@@ -388,9 +388,9 @@ export interface CommunitiesQuery {
     sort: CommunitySort
     page: number
     limit: number
-    search?: string
-    nsfwFilter?: NsfwFilter
-    auth?: string
+    search?: string | undefined
+    nsfwFilter?: NsfwFilter | undefined
+    auth?: string | undefined
 }
 
 export async function fetchCommunities(

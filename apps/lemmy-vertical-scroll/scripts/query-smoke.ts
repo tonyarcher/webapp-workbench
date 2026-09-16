@@ -106,7 +106,7 @@ void (async () => {
     const seeded = queryClient.getQueryData(postsKey('lemmy.ml', 'All', 'Hot', 'Include', 'piefed', ''))
     assert(
         !!seeded &&
-            (seeded as {pages: {posts: LemmyPost[]}[]}).pages[0].posts[0].id === 1,
+            (seeded as {pages: {posts: LemmyPost[]}[]}).pages[0]!.posts[0]!.id === 1,
         'hydratePosts seeds query data from the idb cache',
     )
     await clearPostsCache()
@@ -116,7 +116,7 @@ void (async () => {
     const seededCommunities = queryClient.getQueryData(communitiesKey('lemmy.ml', 'All', 'Hot', '', 'Include', 'piefed', ''))
     assert(
         !!seededCommunities &&
-            (seededCommunities as {pages: {communities: LemmyCommunity[]}[]}).pages[0].communities[0].name === 'main',
+            (seededCommunities as {pages: {communities: LemmyCommunity[]}[]}).pages[0]!.communities[0]!.name === 'main',
         'hydrateCommunities seeds query data from the idb cache',
     )
     await clearCommunitiesCache()
@@ -127,7 +127,7 @@ void (async () => {
     const lemmySeeded = queryClient.getQueryData(postsKey('lemmy.ml', 'All', 'Hot', 'Include', 'lemmy', '')) as {
         pages: {posts: LemmyPost[]}[]
     }
-    assert(lemmySeeded.pages[0].posts[0].id === 99, 'software-scoped caches stay separate')
+    assert(lemmySeeded.pages[0]!.posts[0]!.id === 99, 'software-scoped caches stay separate')
 
     // auth-scoped hydration stays separate
     await putPostsCache('posts:lemmy.ml:All:Hot:Include:lemmy:jwt1:1', [{...post, id: 7}])
@@ -135,7 +135,7 @@ void (async () => {
     const authSeeded = queryClient.getQueryData(postsKey('lemmy.ml', 'All', 'Hot', 'Include', 'lemmy', 'jwt1')) as {
         pages: {posts: LemmyPost[]}[]
     }
-    assert(authSeeded.pages[0].posts[0].id === 7, 'auth-scoped caches stay separate')
+    assert(authSeeded.pages[0]!.posts[0]!.id === 7, 'auth-scoped caches stay separate')
     await clearPostsCache()
 
     // ---- auth query resolves the persisted session ----
@@ -185,7 +185,7 @@ void (async () => {
     await putServer({host: 'a.example', name: 'A', software: 'lemmy', addedAt: 1, lastUsedAt: 1})
     await putServer({host: 'b.example', name: 'B', software: 'piefed', addedAt: 2, lastUsedAt: 2})
     const servers = await queryClient.fetchQuery(serversQuery())
-    assert(servers.length === 2 && servers[0].host === 'b.example', 'serversQuery orders by last used')
+    assert(servers.length === 2 && servers[0]!.host === 'b.example', 'serversQuery orders by last used')
     assert(serversKey[0] === 'servers', 'serversKey shape')
     await deleteServer('a.example')
     await deleteServer('b.example')
@@ -194,7 +194,7 @@ void (async () => {
 
     await putRegistryCache([{host: 'c.example', name: 'C', nsfw: true}])
     const popular = await queryClient.fetchQuery(popularServersQuery())
-    assert(popular[0].host === 'c.example', 'registry cache ranks before bundled')
+    assert(popular[0]!.host === 'c.example', 'registry cache ranks before bundled')
     assert(
         popular.some((s) => s.host === 'piefed.social') && popular.some((s) => s.host === 'c.example'),
         'popular merges bundled and registry',
