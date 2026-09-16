@@ -4,7 +4,7 @@ import stockgame.domain.GameConfig
 import stockgame.store.GameStore
 import java.util.UUID
 
-const val DEFAULT_CASH_CENTS = 10_000_000L
+const val DEFAULT_CASH_CENTS: Long = 10_000_000L
 
 fun loadConfig(store: GameStore, userId: UUID, defaultProvider: String): GameConfig {
     val existing = store.getConfig(userId)
