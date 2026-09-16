@@ -49,18 +49,18 @@ describe('nextPlay', () => {
     for (let i = 0; i < 80 && !engine.over; i++) {
       const play = nextPlay(engine, matchupFromGame(engine, home, away), mulberry32(1000 + i));
       expect(LEGAL, play.type).toContain(play.type);
-      const fieldPos = play.detail.fieldPos;
+      const fieldPos = play.detail['fieldPos'];
       if (typeof fieldPos === 'number') {
         expect(fieldPos).toBeGreaterThanOrEqual(1);
         expect(fieldPos).toBeLessThanOrEqual(9);
       }
-      const zone = (play.detail.pitchLocation as { zone?: number } | undefined)?.zone;
+      const zone = (play.detail['pitchLocation'] as { zone?: number } | undefined)?.zone;
       if (typeof zone === 'number') {
         expect(zone).toBeGreaterThanOrEqual(1);
         expect(zone).toBeLessThanOrEqual(17);
       }
       if (play.type === 'STOLEN_BASE' || play.type === 'CAUGHT_STEALING') {
-        expect(engine.runners[(Number(play.detail.base) || 2) - 2]).toBe(true);
+        expect(engine.runners[(Number(play.detail['base']) || 2) - 2]).toBe(true);
       }
       engine = reduceGame(engine, toScoringEvent(play));
     }
@@ -83,7 +83,7 @@ describe('nextPlay', () => {
       const play = nextPlay(engine, matchupFromGame(engine, home, away), mulberry32(2000 + i));
       if (play.type === 'BALL') {
         balls += 1;
-        expect((play.detail.pitchLocation as { zone: number }).zone).toBeGreaterThanOrEqual(10);
+        expect((play.detail['pitchLocation'] as { zone: number }).zone).toBeGreaterThanOrEqual(10);
       }
       engine = reduceGame(engine, toScoringEvent(play));
     }
@@ -104,8 +104,8 @@ describe('nextPlay', () => {
       awayPitcherName: away.pitcher.name,
     });
     const play = nextPlay(engine, matchupFromGame(engine, home, away), () => 0.1);
-    if (play.detail.pitchType) {
-      expect(['Fastball', 'Slider']).toContain(play.detail.pitchType);
+    if (play.detail['pitchType']) {
+      expect(['Fastball', 'Slider']).toContain(play.detail['pitchType']);
     }
   });
 });

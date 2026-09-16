@@ -46,5 +46,6 @@ export interface AdvancementArcPoints {
 export function advancementArcPoints(advancement: Advancement): AdvancementArcPoints {
   const from = SCOREBOOK_BASE_POINTS[advancement.from] ?? SCOREBOOK_BASE_POINTS[4];
   const to = SCOREBOOK_BASE_POINTS[advancement.to] ?? SCOREBOOK_BASE_POINTS[4];
+  if (!from || !to) return { x1: 0, y1: 0, x2: 0, y2: 0 };
   return { x1: from.x, y1: from.y, x2: to.x, y2: to.y };
 }

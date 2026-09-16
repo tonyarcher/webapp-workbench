@@ -16,7 +16,7 @@ export interface LocalGameSetup {
   awayLineup?: LineupPlayer[];
   homePitcherName?: string;
   awayPitcherName?: string;
-  mode?: LocalGameMode;
+  mode?: LocalGameMode | undefined;
   simSeed?: number;
   homeRoster?: SimRoster;
   awayRoster?: SimRoster;

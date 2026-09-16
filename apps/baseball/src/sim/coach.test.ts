@@ -4,7 +4,13 @@ import type { EngineGameState } from '../local-game/rule-engine';
 import { canSacrificeBunt, decideIntent, stealDestination } from './coach';
 import { generateRoster } from './generate-roster';
 import { mulberry32 } from './rng';
-import type { SimMatchup, SimRoster } from './types';
+import type { PlayerRatings, SimMatchup, SimPlayer, SimRoster } from './types';
+
+function withRatings(lineup: SimPlayer[], index: number, ratings: Partial<PlayerRatings>): void {
+    const player = lineup[index];
+    if (!player) throw new Error('missing fixture player');
+    lineup[index] = {...player, ratings: {...player.ratings, ...ratings}};
+}
 
 function baseGame(): EngineGameState {
   const home = generateRoster(mulberry32(1), 'Home');
@@ -23,7 +29,7 @@ function baseGame(): EngineGameState {
 function matchupWith(offense: SimRoster, batterIndex: number): SimMatchup {
   const defense = generateRoster(mulberry32(4), 'Defense');
   return {
-    batter: offense.lineup[batterIndex],
+    batter: offense.lineup[batterIndex]!,
     pitcher: defense.pitcher,
     offense,
     defense,
@@ -33,10 +39,7 @@ function matchupWith(offense: SimRoster, batterIndex: number): SimMatchup {
 describe('coach', () => {
   it('bunts in a late close game with a weak hitter and a runner on first', () => {
     const offense = generateRoster(mulberry32(8), 'Offense');
-    offense.lineup[8] = {
-      ...offense.lineup[8],
-      ratings: { ...offense.lineup[8].ratings, contact: 40, bunt: 70, power: 30, speed: 35 },
-    };
+    withRatings(offense.lineup, 8, {contact: 40, bunt: 70, power: 30, speed: 35});
     const engine = {
       ...baseGame(),
       inning: 8,
@@ -53,10 +56,7 @@ describe('coach', () => {
 
   it('does not bunt with two outs or in a blowout', () => {
     const offense = generateRoster(mulberry32(8), 'Offense');
-    offense.lineup[8] = {
-      ...offense.lineup[8],
-      ratings: { ...offense.lineup[8].ratings, contact: 40, bunt: 80, power: 30 },
-    };
+    withRatings(offense.lineup, 8, {contact: 40, bunt: 80, power: 30});
     const matchup = matchupWith(offense, 8);
     const twoOuts = {
       ...baseGame(),
@@ -81,7 +81,7 @@ describe('coach', () => {
 
   it('steals second when a fast runner is on first and second is open', () => {
     const offense = generateRoster(mulberry32(11), 'Offense');
-    offense.lineup[0] = { ...offense.lineup[0], ratings: { ...offense.lineup[0].ratings, speed: 88 } };
+    withRatings(offense.lineup, 0, {speed: 88});
     const engine = {
       ...baseGame(),
       runners: [true, false, false] as EngineGameState['runners'],
@@ -99,7 +99,7 @@ describe('coach', () => {
 
   it('does not steal with a slow runner or the bases loaded', () => {
     const offense = generateRoster(mulberry32(11), 'Offense');
-    offense.lineup[0] = { ...offense.lineup[0], ratings: { ...offense.lineup[0].ratings, speed: 40 } };
+    withRatings(offense.lineup, 0, {speed: 40});
     const slow = {
       ...baseGame(),
       runners: [true, false, false] as EngineGameState['runners'],

@@ -30,11 +30,11 @@ export function rngForEngine(seed: number, engine: EngineGameState, eventCount: 
 
 export function toScoringEvent(play: ResolvedPlay): ScoringEvent {
   const event: ScoringEvent = { type: play.type as ScoringEventType };
-  const fieldPos = Number(play.detail.fieldPos);
-  const base = Number(play.detail.base);
+  const fieldPos = Number(play.detail['fieldPos']);
+  const base = Number(play.detail['base']);
   if (Number.isFinite(fieldPos) && fieldPos >= 1 && fieldPos <= 9) event.fieldPos = fieldPos;
   if (Number.isFinite(base) && base >= 1 && base <= 4) event.base = base;
-  if (play.detail.doublePlay === true) event.doublePlay = true;
+  if (play.detail['doublePlay'] === true) event.doublePlay = true;
   return event;
 }
 

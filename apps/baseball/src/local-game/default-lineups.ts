@@ -56,9 +56,9 @@ function emptyLineupPlayer(): LineupPlayer {
 function playerFromUnknown(entry: unknown): LineupPlayer {
   if (typeof entry !== 'object' || entry === null) return emptyLineupPlayer();
   const record = entry as Record<string, unknown>;
-  const name = record.batterName ?? record.name;
-  const jerseyRaw = Number(record.jerseyNumber);
-  const position = String(record.position ?? '').trim();
+  const name = record['batterName'] ?? record['name'];
+  const jerseyRaw = Number(record['jerseyNumber']);
+  const position = String(record['position'] ?? '').trim();
   return {
     batterName: String(name ?? '').trim(),
     position: position || 'DH',

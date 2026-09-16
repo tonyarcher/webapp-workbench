@@ -21,9 +21,9 @@ describe('GameStore lineups', () => {
     });
 
     const game = store.current();
-    expect(game?.engine.awayLineup.rows[0].batterName).toBe('Tony Gwynn');
-    expect(game?.engine.awayLineup.rows[0].jerseyNumber).toBe(19);
-    expect(game?.engine.homeLineup.rows[0].batterName).toBe('Ryne Sandberg');
+    expect(game?.engine.awayLineup.rows[0]!.batterName).toBe('Tony Gwynn');
+    expect(game?.engine.awayLineup.rows[0]!.jerseyNumber).toBe(19);
+    expect(game?.engine.homeLineup.rows[0]!.batterName).toBe('Ryne Sandberg');
     expect(game?.engine.awayLineup.pitcherName).toBe('Trevor Hoffman');
     expect(game?.engine.homeLineup.pitcherName).toBe('Shota Imanaga');
   });
@@ -32,8 +32,8 @@ describe('GameStore lineups', () => {
     const store = new GameStore();
     store.startGame({ homeTeamName: 'Chicago Cubs', awayTeamName: 'St. Louis Cardinals', innings: 9 });
     const game = store.current();
-    expect(game?.engine.awayLineup.rows[0].batterName).toBe('Brendan Donovan');
-    expect(game?.engine.homeLineup.rows[0].batterName).toBe('Nico Hoerner');
+    expect(game?.engine.awayLineup.rows[0]!.batterName).toBe('Brendan Donovan');
+    expect(game?.engine.homeLineup.rows[0]!.batterName).toBe('Nico Hoerner');
     expect(game?.engine.homeLineup.pitcherName).toBe(DEFAULT_HOME_PITCHER);
     expect(game?.engine.awayLineup.pitcherName).toBe(DEFAULT_AWAY_PITCHER);
   });
@@ -50,11 +50,11 @@ describe('GameStore lineups', () => {
         awayPitcherName: 'Trevor Hoffman',
       },
     });
-    expect(store.current()?.engine.awayLineup.rows[0].batterName).toBe('Tony Gwynn');
+    expect(store.current()?.engine.awayLineup.rows[0]!.batterName).toBe('Tony Gwynn');
     store.undo();
-    expect(store.current()?.engine.awayLineup.rows[0].batterName).toBe('Brendan Donovan');
+    expect(store.current()?.engine.awayLineup.rows[0]!.batterName).toBe('Brendan Donovan');
     store.redo();
-    expect(store.current()?.engine.awayLineup.rows[0].batterName).toBe('Tony Gwynn');
+    expect(store.current()?.engine.awayLineup.rows[0]!.batterName).toBe('Tony Gwynn');
   });
 
   it('does not shift later batting slots when a SET_LINEUP entry has a blank name', () => {

@@ -22,12 +22,12 @@ describe('generateRoster', () => {
   it('generates two different team names for a matchup', () => {
     const matchup = generateMatchup(mulberry32(99));
     expect(matchup.home.teamName).not.toBe(matchup.away.teamName);
-    expect(matchup.home.lineup[0].batterName).not.toBe(matchup.away.lineup[0].batterName);
+    expect(matchup.home.lineup[0]!.batterName).not.toBe(matchup.away.lineup[0]!.batterName);
   });
 
   it('wraps an existing lineup with generated ratings', () => {
     const roster = rosterFromLineup(mulberry32(3), 'Cubs', [{ batterName: 'Nico Hoerner', position: '2B', jerseyNumber: 2 }], 'Shota Imanaga');
-    expect(roster.lineup[0].batterName).toBe('Nico Hoerner');
+    expect(roster.lineup[0]!.batterName).toBe('Nico Hoerner');
     expect(roster.pitcher.name).toBe('Shota Imanaga');
     expect(lineupFromRoster(roster)[0]).toEqual({ batterName: 'Nico Hoerner', position: '2B', jerseyNumber: 2 });
   });

@@ -34,9 +34,9 @@ export function lastPlayLabel(events: LocalGameEventRecord[]): string {
 function formatLastPlay(last: LocalGameEventRecord): string {
   const detail = last.detail ?? {};
   const parts = [last.eventType];
-  if (detail.doublePlay === true) parts.push('DOUBLE PLAY');
-  if (detail.location) parts.push(String(detail.location));
-  if (detail.fieldPos) parts.push(`F${detail.fieldPos}`);
+  if (detail['doublePlay'] === true) parts.push('DOUBLE PLAY');
+  if (detail['location']) parts.push(String(detail['location']));
+  if (detail['fieldPos']) parts.push(`F${detail['fieldPos']}`);
   return parts.join(' · ');
 }
 
@@ -136,9 +136,9 @@ export function editorPlayersToLineup(value: unknown): LineupPlayer[] {
 
 function toLineupPlayer(record: Record<string, unknown>): LineupPlayer {
   return {
-    batterName: String(record.batterName ?? record.name ?? '').trim(),
-    position: String(record.position ?? 'DH').trim() || 'DH',
-    jerseyNumber: Number(record.jerseyNumber ?? 0),
+    batterName: String(record['batterName'] ?? record['name'] ?? '').trim(),
+    position: String(record['position'] ?? 'DH').trim() || 'DH',
+    jerseyNumber: Number(record['jerseyNumber'] ?? 0),
   };
 }
 

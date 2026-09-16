@@ -6,6 +6,7 @@ export function matchupFromGame(engine: EngineGameState, home: SimRoster, away: 
   const defense = engine.half === 'TOP' ? home : away;
   const batterIndex = engine.half === 'TOP' ? engine.awayBatterIdx : engine.homeBatterIdx;
   const batter = offense.lineup[batterIndex % offense.lineup.length] ?? offense.lineup[0];
+  if (!batter) throw new Error('matchup needs a non-empty lineup');
   return { batter, pitcher: defense.pitcher, offense, defense };
 }
 
@@ -15,6 +16,6 @@ export function playerBySlot(roster: SimRoster, slot: number | null): SimPlayer 
 }
 
 export function runnerSpeed(engine: EngineGameState, offense: SimRoster, baseIndex: number): number {
-  const slot = engine.runnerSlots[baseIndex];
+  const slot = engine.runnerSlots[baseIndex] ?? null;
   return playerBySlot(offense, slot)?.ratings.speed ?? 50;
 }

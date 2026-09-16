@@ -9,7 +9,7 @@ import './setup-screen';
 import './game-shell';
 
 export class BaseballApp extends LitElement {
-  createRenderRoot() {
+  override createRenderRoot() {
     return this;
   }
 
@@ -24,7 +24,7 @@ export class BaseballApp extends LitElement {
     this.history = createBrowserHistory();
   }
 
-  connectedCallback() {
+  override connectedCallback() {
     super.connectedCallback();
     this.unsubscribeStore = this.store.subscribe((game) => {
       this.game = game;
@@ -37,7 +37,7 @@ export class BaseballApp extends LitElement {
     void this.store.hydrate();
   }
 
-  disconnectedCallback() {
+  override disconnectedCallback() {
     this.unsubscribeStore?.();
     this.unsubscribeHistory?.();
     this.history.destroy();
@@ -60,7 +60,7 @@ export class BaseballApp extends LitElement {
     this.store.startGame(event.detail);
   };
 
-  render() {
+  override render() {
     const screen = this.game
       ? html`<baseball-game-shell .game=${this.game} .store=${this.store}></baseball-game-shell>`
       : html`<baseball-setup-screen @start-game=${this.handleStartGame}></baseball-setup-screen>`;

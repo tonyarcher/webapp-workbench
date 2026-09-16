@@ -44,73 +44,73 @@ function isNumberArray(value: unknown): value is number[] {
 }
 
 function hasLineupShape(value: Record<string, unknown>): boolean {
-  if (!isRecord(value.awayLineup) || !isRecord(value.homeLineup)) return false;
-  return Array.isArray(value.awayLineup.rows) && Array.isArray(value.homeLineup.rows);
+  if (!isRecord(value['awayLineup']) || !isRecord(value['homeLineup'])) return false;
+  return Array.isArray(value['awayLineup']['rows']) && Array.isArray(value['homeLineup']['rows']);
 }
 
 function hasCountShape(value: Record<string, unknown>): boolean {
   return (
-    typeof value.inning === 'number' &&
-    typeof value.balls === 'number' &&
-    typeof value.strikes === 'number' &&
-    typeof value.outs === 'number'
+    typeof value['inning'] === 'number' &&
+    typeof value['balls'] === 'number' &&
+    typeof value['strikes'] === 'number' &&
+    typeof value['outs'] === 'number'
   );
 }
 
 function hasScoreShape(value: Record<string, unknown>): boolean {
   return (
-    typeof value.awayScore === 'number' &&
-    typeof value.homeScore === 'number' &&
-    typeof value.awayErrors === 'number' &&
-    typeof value.homeErrors === 'number'
+    typeof value['awayScore'] === 'number' &&
+    typeof value['homeScore'] === 'number' &&
+    typeof value['awayErrors'] === 'number' &&
+    typeof value['homeErrors'] === 'number'
   );
 }
 
 function hasMetaShape(value: Record<string, unknown>): boolean {
-  const halfOk = value.half === 'TOP' || value.half === 'BOTTOM';
-  const runnersOk = Array.isArray(value.runners) && value.runners.length === 3;
-  const idxOk = typeof value.awayBatterIdx === 'number' && typeof value.homeBatterIdx === 'number';
-  return halfOk && runnersOk && idxOk && typeof value.totalInnings === 'number' && typeof value.over === 'boolean';
+  const halfOk = value['half'] === 'TOP' || value['half'] === 'BOTTOM';
+  const runnersOk = Array.isArray(value['runners']) && value['runners'].length === 3;
+  const idxOk = typeof value['awayBatterIdx'] === 'number' && typeof value['homeBatterIdx'] === 'number';
+  return halfOk && runnersOk && idxOk && typeof value['totalInnings'] === 'number' && typeof value['over'] === 'boolean';
 }
 
 function isEngineGameState(value: unknown): value is EngineGameState {
   if (!isRecord(value) || !hasLineupShape(value) || !hasCountShape(value) || !hasScoreShape(value)) return false;
-  return hasMetaShape(value) && isNumberArray(value.awayRunsByInning) && isNumberArray(value.homeRunsByInning);
+  return hasMetaShape(value) && isNumberArray(value['awayRunsByInning']) && isNumberArray(value['homeRunsByInning']);
 }
 
 function isLocalGameSetup(value: unknown): value is LocalGameSetup {
   if (!isRecord(value)) return false;
   return (
-    typeof value.homeTeamName === 'string' &&
-    typeof value.awayTeamName === 'string' &&
-    typeof value.innings === 'number'
+    typeof value['homeTeamName'] === 'string' &&
+    typeof value['awayTeamName'] === 'string' &&
+    typeof value['innings'] === 'number'
   );
 }
 
 function isLocalGameEventRecord(value: unknown): value is LocalGameEventRecord {
   if (!isRecord(value)) return false;
   return (
-    typeof value.id === 'number' &&
-    typeof value.eventType === 'string' &&
-    typeof value.occurredAt === 'string' &&
-    isRecord(value.detail)
+    typeof value['id'] === 'number' &&
+    typeof value['eventType'] === 'string' &&
+    typeof value['occurredAt'] === 'string' &&
+    isRecord(value['detail'])
   );
 }
 
 function hasEventList(value: Record<string, unknown>): boolean {
-  return Array.isArray(value.events) && value.events.every(isLocalGameEventRecord);
+  return Array.isArray(value['events']) && value['events'].every(isLocalGameEventRecord);
 }
 
 function hasHistoryIndex(value: Record<string, unknown>, eventCount: number): boolean {
-  if (typeof value.historyIndex !== 'number' || !Number.isInteger(value.historyIndex)) return false;
-  return value.historyIndex >= 0 && value.historyIndex <= eventCount;
+  if (typeof value['historyIndex'] !== 'number' || !Number.isInteger(value['historyIndex'])) return false;
+  return value['historyIndex'] >= 0 && value['historyIndex'] <= eventCount;
 }
 
 export function isValidPersistedGameState(value: unknown): value is PersistedGameState {
-  if (!isRecord(value) || value.version !== SAVE_STATE_VERSION) return false;
-  if (typeof value.savedAt !== 'string' || !isLocalGameSetup(value.setup)) return false;
-  if (!isEngineGameState(value.engine) || !hasEventList(value)) return false;
-  return hasHistoryIndex(value, (value.events as LocalGameEventRecord[]).length);
+  if (!isRecord(value) || value['version'] !== SAVE_STATE_VERSION) return false;
+  if (typeof value['savedAt'] !== 'string' || !isLocalGameSetup(value['setup'])) return false;
+  if (!isEngineGameState(value['engine']) || !hasEventList(value)) return false;
+  return hasHistoryIndex(value, (value['events'] as LocalGameEventRecord[]).length);
 }
 
 export async function loadGameState(

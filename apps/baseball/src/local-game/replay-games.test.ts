@@ -59,10 +59,10 @@ describe('playing games: custom lineups actually bat', () => {
         { batterName: 'Steve Finley', position: 'CF', jerseyNumber: 12 },
       ],
     });
-    expect(game.awayLineup.rows[0].batterName).toBe('Tony Gwynn');
+    expect(game.awayLineup.rows[0]!.batterName).toBe('Tony Gwynn');
     expect(game.awayLineup.pitcherName).toBe('Trevor Hoffman');
     game = reduceGame(game, { type: 'SINGLE' });
-    expect(game.awayLineup.rows[0].hits).toBe(1);
+    expect(game.awayLineup.rows[0]!.hits).toBe(1);
     expect(game.runnerSlots).toEqual([1, null, null]);
   });
 });
@@ -95,12 +95,12 @@ describe('playing games: Kirk Gibson walk-off shape', () => {
     game = apply(game, { type: 'STRIKEOUT' }, { type: 'WALK' }, { type: 'STOLEN_BASE', base: 2 }, { type: 'HOME_RUN' });
     expect(game.homeScore).toBe(2);
     expect(game.over).toBe(true);
-    expect(game.homeLineup.rows[1].batterName).toBe('Mike Davis');
-    expect(game.homeLineup.rows[1].runs).toBe(1);
-    expect(game.homeLineup.rows[1].atBats).toBe(0);
-    expect(game.homeLineup.rows[2].batterName).toBe('Kirk Gibson');
-    expect(game.homeLineup.rows[2].runs).toBe(1);
-    expect(game.homeLineup.rows[2].rbi).toBe(2);
+    expect(game.homeLineup.rows[1]!.batterName).toBe('Mike Davis');
+    expect(game.homeLineup.rows[1]!.runs).toBe(1);
+    expect(game.homeLineup.rows[1]!.atBats).toBe(0);
+    expect(game.homeLineup.rows[2]!.batterName).toBe('Kirk Gibson');
+    expect(game.homeLineup.rows[2]!.runs).toBe(1);
+    expect(game.homeLineup.rows[2]!.rbi).toBe(2);
   });
 });
 
@@ -128,13 +128,13 @@ describe('playing games: a messy sandlot half-inning', () => {
 
     expect(game.awayScore).toBe(2);
     expect(game.outs).toBe(2);
-    expect(game.awayLineup.rows[0].runs).toBe(1);
-    expect(game.awayLineup.rows[0].atBats).toBe(0);
-    expect(game.awayLineup.rows[1].runs).toBe(1);
-    expect(game.awayLineup.rows[1].atBats).toBe(0);
-    expect(game.awayLineup.rows[2].rbi).toBe(1);
-    expect(game.awayLineup.rows[3].atBats).toBe(0);
-    expect(game.awayLineup.rows[3].innings['1']).toMatchObject({ notation: 'SF8' });
+    expect(game.awayLineup.rows[0]!.runs).toBe(1);
+    expect(game.awayLineup.rows[0]!.atBats).toBe(0);
+    expect(game.awayLineup.rows[1]!.runs).toBe(1);
+    expect(game.awayLineup.rows[1]!.atBats).toBe(0);
+    expect(game.awayLineup.rows[2]!.rbi).toBe(1);
+    expect(game.awayLineup.rows[3]!.atBats).toBe(0);
+    expect(game.awayLineup.rows[3]!.innings['1']).toMatchObject({ notation: 'SF8' });
     expect(game.awayBatterIdx).toBe(6);
   });
 
@@ -148,11 +148,11 @@ describe('playing games: a messy sandlot half-inning', () => {
     });
     game = apply(game, { type: 'WALK' }, { type: 'WALK' }, { type: 'WALK' }, { type: 'HOME_RUN' });
     expect(game.awayScore).toBe(4);
-    expect(game.awayLineup.rows[0].runs).toBe(1);
-    expect(game.awayLineup.rows[1].runs).toBe(1);
-    expect(game.awayLineup.rows[2].runs).toBe(1);
-    expect(game.awayLineup.rows[3].runs).toBe(1);
-    expect(game.awayLineup.rows[3].rbi).toBe(4);
+    expect(game.awayLineup.rows[0]!.runs).toBe(1);
+    expect(game.awayLineup.rows[1]!.runs).toBe(1);
+    expect(game.awayLineup.rows[2]!.runs).toBe(1);
+    expect(game.awayLineup.rows[3]!.runs).toBe(1);
+    expect(game.awayLineup.rows[3]!.rbi).toBe(4);
     const box = buildBoxScore(game);
     expect(box.away.runs).toBe(4);
     expect(box.away.hits).toBe(1);

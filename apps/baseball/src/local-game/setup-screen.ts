@@ -71,7 +71,7 @@ function nextSeed(): number {
 }
 
 export class BaseballSetupScreen extends LitElement {
-  createRenderRoot() {
+  override createRenderRoot() {
     return this;
   }
 
@@ -161,7 +161,7 @@ export class BaseballSetupScreen extends LitElement {
     };
   }
 
-  render() {
+  override render() {
     return html`
       <main class="local-setup">
         <div class="card">

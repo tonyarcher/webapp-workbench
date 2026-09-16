@@ -27,7 +27,9 @@ export function pickIndex(random: () => number, length: number): number {
 }
 
 export function pickItem<T>(random: () => number, items: readonly T[]): T {
-  return items[pickIndex(random, items.length)];
+  const item = items[pickIndex(random, items.length)];
+  if (item === undefined) throw new Error('pickItem needs a non-empty array');
+  return item;
 }
 
 export function chance(random: () => number, probability: number): boolean {

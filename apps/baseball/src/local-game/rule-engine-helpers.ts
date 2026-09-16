@@ -215,7 +215,7 @@ export function creditPlateAppearanceRuns(
   let result = addTeamScore(game, countRunsScored(runners, bases) + extraRuns);
   for (const base of runnersOn(runners)) {
     if (base + bases > 3) {
-      result = creditRunToSlot(result, runnerSlots[base - 1]);
+      result = creditRunToSlot(result, runnerSlots[base - 1] ?? null);
     }
   }
   return result;

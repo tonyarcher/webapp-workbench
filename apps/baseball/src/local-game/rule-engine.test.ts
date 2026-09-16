@@ -50,7 +50,7 @@ describe('rule engine: count and plate appearances', () => {
     game = reduceGame(game, event('BALL'));
     expect(game.balls).toBe(0);
     expect(game.runners[0]).toBe(true);
-    expect(game.awayLineup.rows[0].walks).toBe(1);
+    expect(game.awayLineup.rows[0]!.walks).toBe(1);
   });
 
   it('advances strikes and turns the third strike into a strikeout', () => {
@@ -60,7 +60,7 @@ describe('rule engine: count and plate appearances', () => {
     game = reduceGame(game, event('STRIKE'));
     expect(game.outs).toBe(1);
     expect(game.strikes).toBe(0);
-    expect(game.awayLineup.rows[0].atBats).toBe(1);
+    expect(game.awayLineup.rows[0]!.atBats).toBe(1);
   });
 
   it('caps foul balls at two strikes', () => {
@@ -101,15 +101,15 @@ describe('rule engine: count and plate appearances', () => {
 
   it('does not treat a walk as an official at-bat', () => {
     const game = reduceGame(createDefaultGame(), event('WALK'));
-    expect(game.awayLineup.rows[0].walks).toBe(1);
-    expect(game.awayLineup.rows[0].atBats).toBe(0);
+    expect(game.awayLineup.rows[0]!.walks).toBe(1);
+    expect(game.awayLineup.rows[0]!.atBats).toBe(0);
   });
 
   it('records hit-by-pitch as HBP without a walk or at-bat', () => {
     const game = reduceGame(createDefaultGame(), event('HIT_BY_PITCH'));
-    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({ notation: 'HBP', base: 1 });
-    expect(game.awayLineup.rows[0].walks).toBe(0);
-    expect(game.awayLineup.rows[0].atBats).toBe(0);
+    expect(game.awayLineup.rows[0]!.innings['1']).toMatchObject({ notation: 'HBP', base: 1 });
+    expect(game.awayLineup.rows[0]!.walks).toBe(0);
+    expect(game.awayLineup.rows[0]!.atBats).toBe(0);
     expect(game.runners[0]).toBe(true);
   });
 });
@@ -125,9 +125,9 @@ describe('rule engine: runners and runs', () => {
     );
     expect(game.awayScore).toBe(1);
     expect(game.runners).toEqual([true, true, true]);
-    expect(game.awayLineup.rows[3].rbi).toBe(1);
-    expect(game.awayLineup.rows[0].runs).toBe(1);
-    expect(game.awayLineup.rows[3].atBats).toBe(0);
+    expect(game.awayLineup.rows[3]!.rbi).toBe(1);
+    expect(game.awayLineup.rows[0]!.runs).toBe(1);
+    expect(game.awayLineup.rows[3]!.atBats).toBe(0);
   });
 
   it('places the batter on first and keeps a runner on third after a walk', () => {
@@ -166,15 +166,15 @@ describe('rule engine: runners and runs', () => {
     game = reduceGame(game, event('HOME_RUN'));
     expect(game.awayScore).toBe(4);
     expect(game.runners).toEqual([false, false, false]);
-    expect(game.awayLineup.rows[3].hits).toBe(1);
-    expect(game.awayLineup.rows[3].rbi).toBe(4);
+    expect(game.awayLineup.rows[3]!.hits).toBe(1);
+    expect(game.awayLineup.rows[3]!.rbi).toBe(4);
   });
 
   it('a home run with the bases empty scores one run', () => {
     const game = reduceGame(createDefaultGame(), event('HOME_RUN'));
     expect(game.awayScore).toBe(1);
-    expect(game.awayLineup.rows[0].rbi).toBe(1);
-    expect(game.awayLineup.rows[0].runs).toBe(1);
+    expect(game.awayLineup.rows[0]!.rbi).toBe(1);
+    expect(game.awayLineup.rows[0]!.runs).toBe(1);
   });
 
   it('tracks runs and RBIs on the scorebook rows', () => {
@@ -183,7 +183,7 @@ describe('rule engine: runners and runs', () => {
     expect(game.awayScore).toBe(0);
     game = reduceGame(game, event('TRIPLE'));
     expect(game.awayScore).toBe(2);
-    expect(game.awayLineup.rows[2].rbi).toBe(2);
+    expect(game.awayLineup.rows[2]!.rbi).toBe(2);
   });
 });
 
@@ -248,7 +248,7 @@ describe('rule engine: defensive events', () => {
   it('records at-bats for in-play outs', () => {
     const game = reduceGame(createDefaultGame(), event('GROUNDOUT'));
     expect(game.outs).toBe(1);
-    expect(game.awayLineup.rows[0].atBats).toBe(1);
+    expect(game.awayLineup.rows[0]!.atBats).toBe(1);
   });
 
   it('advances the batter after a flyout with the bases empty', () => {
@@ -265,9 +265,9 @@ describe('rule engine: defensive events', () => {
     game = reduceGame(game, event('SACRIFICE_FLY'));
     expect(game.awayScore).toBe(1);
     expect(game.outs).toBe(1);
-    expect(game.awayLineup.rows[3].rbi).toBe(1);
-    expect(game.awayLineup.rows[3].atBats).toBe(0);
-    expect(game.awayLineup.rows[0].runs).toBe(1);
+    expect(game.awayLineup.rows[3]!.rbi).toBe(1);
+    expect(game.awayLineup.rows[3]!.atBats).toBe(0);
+    expect(game.awayLineup.rows[0]!.runs).toBe(1);
   });
 
   it('does not score a runner from third on a plain flyout', () => {
@@ -277,14 +277,14 @@ describe('rule engine: defensive events', () => {
     expect(game.awayScore).toBe(0);
     expect(game.runners[2]).toBe(true);
     expect(game.outs).toBe(1);
-    expect(game.awayLineup.rows[3].atBats).toBe(1);
+    expect(game.awayLineup.rows[3]!.atBats).toBe(1);
   });
 
   it('records at-bats without an out for fielder choices and errors', () => {
     const game = apply(createDefaultGame(), event('ERROR'), event('FIELDER_CHOICE'));
     expect(game.outs).toBe(0);
-    expect(game.awayLineup.rows[0].atBats).toBe(1);
-    expect(game.awayLineup.rows[1].atBats).toBe(1);
+    expect(game.awayLineup.rows[0]!.atBats).toBe(1);
+    expect(game.awayLineup.rows[1]!.atBats).toBe(1);
   });
 });
 
@@ -333,31 +333,31 @@ describe('rule engine: scorebook cells', () => {
     let game = createDefaultGame();
     game = apply(game, event('BALL'), event('STRIKE'), event('STRIKE'));
     game = reduceGame(game, event('STRIKEOUT'));
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell).toMatchObject({ notation: 'K', count: '1-2', outNum: 1, hasEndedInningLine: false });
   });
 
   it('records a walk cell with the batter reaching first base', () => {
     const game = reduceGame(createDefaultGame(), event('WALK'));
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell).toMatchObject({ notation: 'BB', base: 1, outNum: null, hasEndedInningLine: false });
   });
 
   it('records a home run cell without a base marker', () => {
     const game = reduceGame(createDefaultGame(), event('HOME_RUN'));
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell).toMatchObject({ notation: 'HR', base: 0, outNum: null });
   });
 
   it('records a single cell with the batter reaching first', () => {
     const game = reduceGame(createDefaultGame(), event('SINGLE'));
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell).toMatchObject({ notation: '1B', base: 1 });
   });
 
   it('records a groundout cell with the out number', () => {
     const game = reduceGame(createDefaultGame(), event('GROUNDOUT'));
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell).toMatchObject({ notation: 'GO', outNum: 1 });
   });
 
@@ -365,7 +365,7 @@ describe('rule engine: scorebook cells', () => {
     let game = createDefaultGame();
     game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'));
     game = reduceGame(game, event('SACRIFICE_FLY'));
-    const cell = game.awayLineup.rows[3].innings['1'];
+    const cell = game.awayLineup.rows[3]!.innings['1']!;
     expect(cell).toMatchObject({ notation: 'SF', outNum: 1 });
   });
 
@@ -373,30 +373,30 @@ describe('rule engine: scorebook cells', () => {
     let game = createDefaultGame();
     game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'));
     game = reduceGame(game, event('STRIKEOUT'));
-    const cell = game.awayLineup.rows[2].innings['1'];
+    const cell = game.awayLineup.rows[2]!.innings['1']!;
     expect(cell).toMatchObject({ outNum: 3, hasEndedInningLine: true });
     expect(game.half).toBe('BOTTOM');
   });
 
   it('records an error cell with the batter reaching first without an out', () => {
     const game = reduceGame(createDefaultGame(), event('ERROR'));
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell).toMatchObject({ notation: 'E', base: 1, outNum: null });
     expect(game.outs).toBe(0);
   });
 
   it('records a fielder choice cell', () => {
     const game = reduceGame(createDefaultGame(), event('FIELDER_CHOICE'));
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell).toMatchObject({ notation: 'FC', base: 1 });
   });
 
   it('keeps a struck-out batter cell intact after the inning flips', () => {
     let game = createDefaultGame();
     game = apply(game, event('STRIKEOUT'), event('STRIKEOUT'), event('STRIKEOUT'));
-    const cell = game.awayLineup.rows[2].innings['1'];
+    const cell = game.awayLineup.rows[2]!.innings['1']!;
     expect(cell.notation).toBe('K');
-    expect(game.homeLineup.rows[0].innings).toEqual({});
+    expect(game.homeLineup.rows[0]!.innings).toEqual({});
   });
 });
 
@@ -488,35 +488,35 @@ describe('rule engine: per-inning runs and errors', () => {
 describe('rule engine: fielding positions and run marks', () => {
   it('records a groundout with the fielding positions', () => {
     const game = reduceGame(createDefaultGame(), { type: 'GROUNDOUT', fieldPos: 6 });
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell).toMatchObject({ notation: '6-3', outNum: 1 });
   });
 
   it('records a groundout fielded by first base without a pair', () => {
     const game = reduceGame(createDefaultGame(), { type: 'GROUNDOUT', fieldPos: 3 });
-    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({ notation: '3' });
+    expect(game.awayLineup.rows[0]!.innings['1']).toMatchObject({ notation: '3' });
   });
 
   it('falls back to GO without a fielding position', () => {
     const game = reduceGame(createDefaultGame(), event('GROUNDOUT'));
-    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({ notation: 'GO' });
+    expect(game.awayLineup.rows[0]!.innings['1']).toMatchObject({ notation: 'GO' });
   });
 
   it('records flyout, lineout, popout, and sac fly with positions', () => {
     let game = reduceGame(createDefaultGame(), { type: 'FLYOUT', fieldPos: 8 });
-    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({ notation: '8' });
+    expect(game.awayLineup.rows[0]!.innings['1']).toMatchObject({ notation: '8' });
     game = reduceGame(game, { type: 'LINE_OUT', fieldPos: 9 });
-    expect(game.awayLineup.rows[1].innings['1']).toMatchObject({ notation: 'L9' });
+    expect(game.awayLineup.rows[1]!.innings['1']).toMatchObject({ notation: 'L9' });
     game = reduceGame(game, { type: 'POP_OUT', fieldPos: 6 });
-    expect(game.awayLineup.rows[2].innings['1']).toMatchObject({ notation: 'P6' });
+    expect(game.awayLineup.rows[2]!.innings['1']).toMatchObject({ notation: 'P6' });
   });
 
   it('records an error and fielder choice with the fielder position', () => {
     let game = reduceGame(createDefaultGame(), { type: 'ERROR', fieldPos: 6 });
-    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({ notation: 'E6' });
+    expect(game.awayLineup.rows[0]!.innings['1']).toMatchObject({ notation: 'E6' });
     expect(game.homeErrors).toBe(1);
     game = reduceGame(game, { type: 'FIELDER_CHOICE', fieldPos: 4 });
-    expect(game.awayLineup.rows[1].innings['1']).toMatchObject({ notation: 'FC4' });
+    expect(game.awayLineup.rows[1]!.innings['1']).toMatchObject({ notation: 'FC4' });
   });
 
   it('places the batter on first base when he reaches on an error', () => {
@@ -532,7 +532,7 @@ describe('rule engine: fielding positions and run marks', () => {
     game = reduceGame(game, { type: 'ERROR', fieldPos: 6 });
     expect(game.runners).toEqual([true, true, false]);
     expect(game.runnerSlots).toEqual([2, 1, null]);
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([{ from: 1, to: 2, scored: false }]);
+    expect(game.awayLineup.rows[0]!.innings['1']!.advancements).toEqual([{ from: 1, to: 2, scored: false }]);
   });
 
   it('scores the runner from third with an RBI when the bases are loaded and the batter reaches on an error', () => {
@@ -540,8 +540,8 @@ describe('rule engine: fielding positions and run marks', () => {
     game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'));
     game = reduceGame(game, { type: 'ERROR', fieldPos: 6 });
     expect(game.awayScore).toBe(1);
-    expect(game.awayLineup.rows[3].innings['1']).toMatchObject({ notation: 'E6', base: 1, rbiCount: 1 });
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toContainEqual({ from: 3, to: 4, scored: true });
+    expect(game.awayLineup.rows[3]!.innings['1']).toMatchObject({ notation: 'E6', base: 1, rbiCount: 1 });
+    expect(game.awayLineup.rows[0]!.innings['1']!.advancements).toContainEqual({ from: 3, to: 4, scored: true });
   });
 
   it('retires the forced runner on first and puts the batter on base on a fielder\'s choice', () => {
@@ -550,12 +550,12 @@ describe('rule engine: fielding positions and run marks', () => {
     game = reduceGame(game, { type: 'FIELDER_CHOICE', fieldPos: 4 });
     expect(game.runners).toEqual([true, false, false]);
     expect(game.runnerSlots).toEqual([2, null, null]);
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toBeUndefined();
+    expect(game.awayLineup.rows[0]!.innings['1']!.advancements).toBeUndefined();
   });
 
   it('marks a solo home run with a run dot and one RBI', () => {
     const game = reduceGame(createDefaultGame(), event('HOME_RUN'));
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell).toMatchObject({ notation: 'HR', run: true, rbiCount: 1 });
   });
 
@@ -563,7 +563,7 @@ describe('rule engine: fielding positions and run marks', () => {
     let game = createDefaultGame();
     game = apply(game, event('SINGLE'), event('DOUBLE'));
     game = reduceGame(game, event('SINGLE'));
-    const cell = game.awayLineup.rows[2].innings['1'];
+    const cell = game.awayLineup.rows[2]!.innings['1']!;
     expect(cell).toMatchObject({ notation: '1B', run: false, rbiCount: 1 });
   });
 
@@ -571,7 +571,7 @@ describe('rule engine: fielding positions and run marks', () => {
     let game = createDefaultGame();
     game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'));
     game = reduceGame(game, event('WALK'));
-    const cell = game.awayLineup.rows[3].innings['1'];
+    const cell = game.awayLineup.rows[3]!.innings['1']!;
     expect(cell).toMatchObject({ notation: 'BB', run: false, rbiCount: 1 });
   });
 
@@ -579,7 +579,7 @@ describe('rule engine: fielding positions and run marks', () => {
     let game = createDefaultGame();
     game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'));
     game = reduceGame(game, { type: 'SACRIFICE_FLY', fieldPos: 8 });
-    const cell = game.awayLineup.rows[3].innings['1'];
+    const cell = game.awayLineup.rows[3]!.innings['1']!;
     expect(cell).toMatchObject({ notation: 'SF8', run: false, rbiCount: 1 });
     expect(game.outs).toBe(1);
   });
@@ -590,9 +590,9 @@ describe('rule engine: runner advancement arcs', () => {
     let game = createDefaultGame();
     game = apply(game, event('SINGLE'));
     game = reduceGame(game, event('DOUBLE'));
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell.advancements).toEqual([{ from: 1, to: 3, scored: false }]);
-    expect(game.awayLineup.rows[1].innings['1'].advancements).toBeUndefined();
+    expect(game.awayLineup.rows[1]!.innings['1']!.advancements).toBeUndefined();
   });
 
   it('advances the first batter to second when a second batter singles', () => {
@@ -601,75 +601,75 @@ describe('rule engine: runner advancement arcs', () => {
     game = reduceGame(game, event('SINGLE'));
     expect(game.runners).toEqual([true, true, false]);
     expect(game.runnerSlots).toEqual([2, 1, null]);
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell.advancements).toEqual([{ from: 1, to: 2, scored: false }]);
-    expect(game.awayLineup.rows[1].innings['1'].advancements).toBeUndefined();
+    expect(game.awayLineup.rows[1]!.innings['1']!.advancements).toBeUndefined();
   });
 
   it('advances runners one base on a walk and scores the runner from third', () => {
     let game = createDefaultGame();
     game = apply(game, event('WALK'), event('WALK'), event('WALK'));
     game = reduceGame(game, event('WALK'));
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([
+    expect(game.awayLineup.rows[0]!.innings['1']!.advancements).toEqual([
       { from: 1, to: 2, scored: false },
       { from: 2, to: 3, scored: false },
       { from: 3, to: 4, scored: true },
     ]);
-    expect(game.awayLineup.rows[1].innings['1'].advancements).toEqual([
+    expect(game.awayLineup.rows[1]!.innings['1']!.advancements).toEqual([
       { from: 1, to: 2, scored: false },
       { from: 2, to: 3, scored: false },
     ]);
-    expect(game.awayLineup.rows[2].innings['1'].advancements).toEqual([{ from: 1, to: 2, scored: false }]);
-    expect(game.awayLineup.rows[3].innings['1'].advancements).toBeUndefined();
+    expect(game.awayLineup.rows[2]!.innings['1']!.advancements).toEqual([{ from: 1, to: 2, scored: false }]);
+    expect(game.awayLineup.rows[3]!.innings['1']!.advancements).toBeUndefined();
   });
 
   it('moves runners up on a single, marking each runner\'s advance in their own cell', () => {
     let game = createDefaultGame();
     game = apply(game, event('SINGLE'), event('SINGLE'));
     game = reduceGame(game, event('SINGLE'));
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([
+    expect(game.awayLineup.rows[0]!.innings['1']!.advancements).toEqual([
       { from: 1, to: 2, scored: false },
       { from: 2, to: 3, scored: false },
     ]);
-    expect(game.awayLineup.rows[1].innings['1'].advancements).toEqual([{ from: 1, to: 2, scored: false }]);
-    expect(game.awayLineup.rows[2].innings['1'].advancements).toBeUndefined();
+    expect(game.awayLineup.rows[1]!.innings['1']!.advancements).toEqual([{ from: 1, to: 2, scored: false }]);
+    expect(game.awayLineup.rows[2]!.innings['1']!.advancements).toBeUndefined();
   });
 
   it('scores runners from first and second on a triple, marking each scorer in their own cell', () => {
     let game = createDefaultGame();
     game = apply(game, event('SINGLE'), event('SINGLE'));
     game = reduceGame(game, event('TRIPLE'));
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([
+    expect(game.awayLineup.rows[0]!.innings['1']!.advancements).toEqual([
       { from: 1, to: 2, scored: false },
       { from: 2, to: 4, scored: true },
     ]);
-    expect(game.awayLineup.rows[1].innings['1'].advancements).toEqual([{ from: 1, to: 4, scored: true }]);
+    expect(game.awayLineup.rows[1]!.innings['1']!.advancements).toEqual([{ from: 1, to: 4, scored: true }]);
   });
 
   it('records a sacrifice fly advancement when a runner scores from third', () => {
     let game = createDefaultGame();
     game = apply(game, event('SINGLE'), event('SINGLE'), event('SINGLE'));
     game = reduceGame(game, { type: 'SACRIFICE_FLY', fieldPos: 8 });
-    const cell = game.awayLineup.rows[0].innings['1'];
+    const cell = game.awayLineup.rows[0]!.innings['1']!;
     expect(cell.advancements).toEqual([
       { from: 1, to: 2, scored: false },
       { from: 2, to: 3, scored: false },
       { from: 3, to: 4, scored: true },
     ]);
-    expect(game.awayLineup.rows[1].innings['1'].advancements).toEqual([{ from: 1, to: 2, scored: false }]);
-    expect(game.awayLineup.rows[2].innings['1'].advancements).toBeUndefined();
+    expect(game.awayLineup.rows[1]!.innings['1']!.advancements).toEqual([{ from: 1, to: 2, scored: false }]);
+    expect(game.awayLineup.rows[2]!.innings['1']!.advancements).toBeUndefined();
   });
 
   it('keeps advancement records empty for a home run with no runners', () => {
     const game = reduceGame(createDefaultGame(), event('HOME_RUN'));
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toBeUndefined();
+    expect(game.awayLineup.rows[0]!.innings['1']!.advancements).toBeUndefined();
   });
 
   it('leaves advancements unset for outs and strikeouts', () => {
     let game = reduceGame(createDefaultGame(), { type: 'GROUNDOUT', fieldPos: 6 });
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toBeUndefined();
+    expect(game.awayLineup.rows[0]!.innings['1']!.advancements).toBeUndefined();
     game = reduceGame(game, event('STRIKEOUT'));
-    expect(game.awayLineup.rows[1].innings['1'].advancements).toBeUndefined();
+    expect(game.awayLineup.rows[1]!.innings['1']!.advancements).toBeUndefined();
   });
 });
 
@@ -749,7 +749,7 @@ describe('rule engine: double plays', () => {
     expect(game.outs).toBe(2);
     expect(game.runners).toEqual([false, false, false]);
     expect(game.runnerSlots).toEqual([null, null, null]);
-    expect(game.awayLineup.rows[1].innings['1']).toMatchObject({ notation: '6-4-3', outNum: 1 });
+    expect(game.awayLineup.rows[1]!.innings['1']).toMatchObject({ notation: '6-4-3', outNum: 1 });
   });
 
   it('keeps runners on second and third when a force double play retires first', () => {
@@ -767,13 +767,13 @@ describe('rule engine: double plays', () => {
     game = reduceGame(game, { type: 'GROUNDOUT', fieldPos: 6, doublePlay: true });
     expect(game.outs).toBe(0);
     expect(game.half).toBe('BOTTOM');
-    expect(game.awayLineup.rows[2].innings['1'].hasEndedInningLine).toBe(true);
+    expect(game.awayLineup.rows[2]!.innings['1']!.hasEndedInningLine).toBe(true);
   });
 
   it('records a single out when a double play is requested without a runner on first', () => {
     const game = reduceGame(createDefaultGame(), { type: 'GROUNDOUT', fieldPos: 4, doublePlay: true });
     expect(game.outs).toBe(1);
-    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({ notation: '4-3' });
+    expect(game.awayLineup.rows[0]!.innings['1']).toMatchObject({ notation: '4-3' });
   });
 });
 
@@ -784,11 +784,11 @@ describe('rule engine: lineups and baserunning', () => {
       awayLineup: [{ batterName: 'Tony Gwynn', position: 'RF', jerseyNumber: 19 }],
       awayPitcherName: 'Trevor Hoffman',
     });
-    expect(game.awayLineup.rows[0].batterName).toBe('Tony Gwynn');
-    expect(game.awayLineup.rows[0].position).toBe('RF');
-    expect(game.awayLineup.rows[0].jerseyNumber).toBe(19);
+    expect(game.awayLineup.rows[0]!.batterName).toBe('Tony Gwynn');
+    expect(game.awayLineup.rows[0]!.position).toBe('RF');
+    expect(game.awayLineup.rows[0]!.jerseyNumber).toBe(19);
     expect(game.awayLineup.pitcherName).toBe('Trevor Hoffman');
-    expect(game.awayLineup.rows[1].batterName).toBe('Paul Goldschmidt');
+    expect(game.awayLineup.rows[1]!.batterName).toBe('Paul Goldschmidt');
   });
 
   it('steals second when first is occupied', () => {
@@ -796,15 +796,15 @@ describe('rule engine: lineups and baserunning', () => {
     game = reduceGame(game, { type: 'STOLEN_BASE', base: 2 });
     expect(game.runners).toEqual([false, true, false]);
     expect(game.runnerSlots).toEqual([null, 1, null]);
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([{ from: 1, to: 2, scored: false }]);
+    expect(game.awayLineup.rows[0]!.innings['1']!.advancements).toEqual([{ from: 1, to: 2, scored: false }]);
   });
 
   it('scores a runner from third on a wild pitch without an RBI', () => {
     let game = apply(createDefaultGame(), event('SINGLE'), event('SINGLE'), event('SINGLE'));
     game = reduceGame(game, { type: 'WILD_PITCH' });
     expect(game.awayScore).toBe(1);
-    expect(game.awayLineup.rows[0].runs).toBe(1);
-    expect(game.awayLineup.rows[3].rbi).toBe(0);
+    expect(game.awayLineup.rows[0]!.runs).toBe(1);
+    expect(game.awayLineup.rows[3]!.rbi).toBe(0);
     expect(game.runners).toEqual([false, true, true]);
   });
 
@@ -819,13 +819,13 @@ describe('rule engine: lineups and baserunning', () => {
   it('writes CS notation and an out number on the runner\'s own cell', () => {
     let game = reduceGame(createDefaultGame(), event('WALK'));
     game = reduceGame(game, { type: 'CAUGHT_STEALING', base: 2 });
-    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({
+    expect(game.awayLineup.rows[0]!.innings['1']).toMatchObject({
       notation: 'BB CS',
       base: 1,
       outNum: 1,
       hasEndedInningLine: false,
     });
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toEqual([{ from: 1, to: 2, scored: false }]);
+    expect(game.awayLineup.rows[0]!.innings['1']!.advancements).toEqual([{ from: 1, to: 2, scored: false }]);
   });
 
   it('does not mark a run when a runner is caught stealing home', () => {
@@ -833,15 +833,15 @@ describe('rule engine: lineups and baserunning', () => {
     expect(game.runners[2]).toBe(true);
     game = reduceGame(game, { type: 'CAUGHT_STEALING', base: 4 });
     expect(game.awayScore).toBe(0);
-    expect(game.awayLineup.rows[0].runs).toBe(0);
+    expect(game.awayLineup.rows[0]!.runs).toBe(0);
     expect(game.outs).toBe(1);
     expect(game.runners[2]).toBe(false);
-    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({
+    expect(game.awayLineup.rows[0]!.innings['1']).toMatchObject({
       notation: '1B CS',
       outNum: 1,
       run: false,
     });
-    expect(game.awayLineup.rows[0].innings['1'].advancements).toContainEqual({ from: 3, to: 4, scored: false });
+    expect(game.awayLineup.rows[0]!.innings['1']!.advancements).toContainEqual({ from: 3, to: 4, scored: false });
   });
 
   it('ends the inning on a caught stealing for the third out', () => {
@@ -849,7 +849,7 @@ describe('rule engine: lineups and baserunning', () => {
     expect(game.outs).toBe(2);
     game = reduceGame(game, { type: 'CAUGHT_STEALING', base: 2 });
     expect(game.half).toBe('BOTTOM');
-    expect(game.awayLineup.rows[0].innings['1']).toMatchObject({
+    expect(game.awayLineup.rows[0]!.innings['1']).toMatchObject({
       notation: 'BB CS',
       outNum: 3,
       hasEndedInningLine: true,
@@ -861,7 +861,7 @@ describe('rule engine: lineups and baserunning', () => {
     game = reduceGame(game, { type: 'SACRIFICE_BUNT', fieldPos: 1 });
     expect(game.outs).toBe(1);
     expect(game.runners).toEqual([false, true, false]);
-    expect(game.awayLineup.rows[1].atBats).toBe(0);
-    expect(game.awayLineup.rows[1].innings['1']).toMatchObject({ notation: 'SH1', outNum: 1 });
+    expect(game.awayLineup.rows[1]!.atBats).toBe(0);
+    expect(game.awayLineup.rows[1]!.innings['1']).toMatchObject({ notation: 'SH1', outNum: 1 });
   });
 });

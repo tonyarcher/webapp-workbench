@@ -49,13 +49,13 @@ function countRunsScored(runners: RunnersOnBase, bases: number): number {
 }
 
 function randomEvent(random: () => number): ScoringEvent {
-  const type = AT_BAT_EVENT_TYPES[Math.floor(random() * AT_BAT_EVENT_TYPES.length)];
+  const type = AT_BAT_EVENT_TYPES[Math.floor(random() * AT_BAT_EVENT_TYPES.length)]!;
   const event: ScoringEvent = { type };
   if (type === 'GROUNDOUT' || type === 'LINE_OUT') {
-    event.fieldPos = FIELD_POS_RANGE[Math.floor(random() * FIELD_POS_RANGE.length)];
+    event.fieldPos = FIELD_POS_RANGE[Math.floor(random() * FIELD_POS_RANGE.length)]!;
     event.doublePlay = random() < 0.3;
   } else if (type === 'FLYOUT' || type === 'POP_OUT' || type === 'SACRIFICE_FLY' || type === 'ERROR' || type === 'FIELDER_CHOICE') {
-    event.fieldPos = FIELD_POS_RANGE[Math.floor(random() * FIELD_POS_RANGE.length)];
+    event.fieldPos = FIELD_POS_RANGE[Math.floor(random() * FIELD_POS_RANGE.length)]!;
   }
   return event;
 }
@@ -159,6 +159,7 @@ function cellForBatter(
 ): EngineAtBatCell {
   const lineup = half === 'TOP' ? game.awayLineup : game.homeLineup;
   const row = lineup.rows[batterIdx % lineup.rows.length];
+  if (!row) throw new Error('missing fixture row');
   return row.innings[String(inning)] ?? { count: '', notation: '', base: 0, outNum: null, hasEndedInningLine: false, run: false, rbiCount: 0 };
 }
 
@@ -364,19 +365,24 @@ function applyModelEvent(model: ScorebookModel, event: ScoringEvent, rowCount: n
   return { runs: scoredArcs + (batterScores ? 1 : 0), touched };
 }
 
+function basePointOrThrow(points: Record<number, { x: number; y: number }>, base: number, context: string): { x: number; y: number } {
+  const point = points[base];
+  if (!point) throw new Error(`${context}: arc endpoints known`);
+  return point;
+}
+
 function assertModelCells(game: EngineGameState, model: ScorebookModel, context: string, touched: string[]): number {
   for (const key of touched) {
     const [half, slotStr, inningStr] = key.split(':');
     const lineup = half === 'TOP' ? game.awayLineup : game.homeLineup;
     const row = lineup.rows[Number(slotStr) - 1];
-    const cell = row?.innings[inningStr];
+    const cell = row?.innings[inningStr as string];
     const expected = model.expectedCells.get(key) ?? [];
-    const actual = (cell?.advancements ?? []).map((advancement) => ({ ...advancement }));
+    const actual = (cell?.advancements ?? []).map((advancement: Advancement) => ({ ...advancement }));
     expect(actual, `${context}: arcs in cell ${key}`).toEqual(expected);
     for (const advancement of expected) {
-      const from = SCOREBOOK_BASE_POINTS[advancement.from];
-      const to = SCOREBOOK_BASE_POINTS[advancement.to];
-      expect(from && to, `${context}: arc endpoints known`).toBeTruthy();
+      const from = basePointOrThrow(SCOREBOOK_BASE_POINTS, advancement.from, context);
+      const to = basePointOrThrow(SCOREBOOK_BASE_POINTS, advancement.to, context);
       const arc = advancementArcPoints(advancement);
       expect([arc.x1, arc.y1], `${context}: arc from point`).toEqual([from.x, from.y]);
       expect([arc.x2, arc.y2], `${context}: arc to point`).toEqual([to.x, to.y]);
