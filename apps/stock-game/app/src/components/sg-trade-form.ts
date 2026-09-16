@@ -2,8 +2,6 @@ import { LitElement, html } from 'lit'
 import type { PropertyValues, TemplateResult } from 'lit'
 import {
   defaultFillPriceSource,
-  placeOrderRequestSchema,
-  placeTradeRequestSchema,
   type FillPriceSource,
   type HoldingsEntry,
   type OrderType,
@@ -154,13 +152,33 @@ export class SgTradeForm extends LitElement {
     return payload
   }
 
+  private isValidTradePayload(payload: Record<string, unknown>): payload is PlaceTradeRequest {
+    if (typeof payload['symbol'] !== 'string' || !payload['symbol'] || (payload['symbol'] as string).length > 16) return false
+    if (typeof payload['qty'] !== 'number' || !Number.isInteger(payload['qty']) || payload['qty'] <= 0) return false
+    if (typeof payload['at'] !== 'number' || !Number.isInteger(payload['at'])) return false
+    return this.hasValidOrderPrices(payload['orderType'] as OrderType, payload['limitPrice'] as number | undefined, payload['stopPrice'] as number | undefined)
+  }
+
+  private hasValidOrderPrices(orderType: OrderType, limitPrice: number | undefined, stopPrice: number | undefined): boolean {
+    if (!this.isValidPrice(limitPrice) || !this.isValidPrice(stopPrice)) return false
+    const needsLimit = orderType === 'limit' || orderType === 'stopLimit'
+    const needsStop = orderType === 'stop' || orderType === 'stopLimit'
+    if (needsLimit && limitPrice === undefined) return false
+    if (needsStop && stopPrice === undefined) return false
+    return true
+  }
+
+  private isValidPrice(value: number | undefined): boolean {
+    return value === undefined || value > 0
+  }
+
   private submitBackdated(symbol: string, qty: number, ms: number): void {
-    const parsed = placeTradeRequestSchema.safeParse(this.buildBackdatedPayload(symbol, qty, ms))
-    if (!parsed.success) {
+    const payload = this.buildBackdatedPayload(symbol, qty, ms)
+    if (!this.isValidTradePayload(payload)) {
       this.error = 'Invalid trade details'
       return
     }
-    this.emit({ mode: 'backdated', data: parsed.data })
+    this.emit({ mode: 'backdated', data: payload })
   }
 
   private buildScheduledPayload(symbol: string, qty: number, ms: number | undefined): Record<string, unknown> {
@@ -178,17 +196,25 @@ export class SgTradeForm extends LitElement {
     return payload
   }
 
+  private isValidOrderPayload(payload: Record<string, unknown>): payload is PlaceOrderRequest {
+    if (typeof payload['symbol'] !== 'string' || !payload['symbol'] || (payload['symbol'] as string).length > 16) return false
+    if (typeof payload['qty'] !== 'number' || !Number.isInteger(payload['qty']) || payload['qty'] <= 0) return false
+    const executeAt = payload['executeAt'] as number | undefined
+    if (executeAt !== undefined && (!Number.isInteger(executeAt))) return false
+    return this.hasValidOrderPrices(payload['orderType'] as OrderType, payload['limitPrice'] as number | undefined, payload['stopPrice'] as number | undefined)
+  }
+
   private submitScheduled(symbol: string, qty: number, ms: number | undefined): void {
     if (ms !== undefined && ms <= Date.now()) {
       this.error = 'Scheduled execution time must be in the future'
       return
     }
-    const parsed = placeOrderRequestSchema.safeParse(this.buildScheduledPayload(symbol, qty, ms))
-    if (!parsed.success) {
+    const payload = this.buildScheduledPayload(symbol, qty, ms)
+    if (!this.isValidOrderPayload(payload)) {
       this.error = 'Invalid order details'
       return
     }
-    this.emit({ mode: 'scheduled', data: parsed.data })
+    this.emit({ mode: 'scheduled', data: payload })
   }
 
   private onSubmit(): void {

@@ -1,7 +1,6 @@
 import { LitElement, css, html } from 'lit'
 import type { TemplateResult } from 'lit'
-import { z } from 'zod'
-import { symbolSchema, type GameConfig } from '@stock-game/shared'
+import type { GameConfig } from '@stock-game/shared'
 import { defineElement } from './define'
 
 export interface SettingsSubmitDetail {
@@ -14,13 +13,35 @@ export interface SettingsSubmitDetail {
 
 const PROVIDERS = ['yahoo', 'twelvedata', 'alphaVantage'] as const
 
-const formSchema = z.object({
-  startingCashCents: z.number().int().min(1),
-  startDate: z.number().int(),
-  provider: symbolSchema.or(z.enum(PROVIDERS)),
-  quoteDelayMinutes: z.number().int().min(0).max(120),
-  commissionCentsPerTrade: z.number().int().min(0),
-})
+function isValidProvider(value: string | undefined): boolean {
+  if (!value) return false
+  if ((PROVIDERS as readonly string[]).includes(value)) return true
+  const trimmed = value.trim().toUpperCase()
+  return trimmed.length >= 1 && trimmed.length <= 16
+}
+
+function isValidCash(cents: number): boolean {
+  return Number.isInteger(cents) && cents >= 1
+}
+
+function isValidDelay(minutes: number): boolean {
+  return Number.isInteger(minutes) && minutes >= 0 && minutes <= 120
+}
+
+function isValidSettingsForm(
+  cashCents: number,
+  dateMs: number,
+  provider: string | undefined,
+  quoteDelayMinutes: number,
+  commissionCentsPerTrade: number,
+): boolean {
+  if (!isValidProvider(provider)) return false
+  if (!isValidCash(cashCents)) return false
+  if (!Number.isInteger(dateMs) || Number.isNaN(dateMs)) return false
+  if (!isValidDelay(quoteDelayMinutes)) return false
+  if (!Number.isInteger(commissionCentsPerTrade) || commissionCentsPerTrade < 0) return false
+  return true
+}
 
 export class SgSettingsForm extends LitElement {
   static override styles = css`
@@ -135,20 +156,13 @@ export class SgSettingsForm extends LitElement {
     quoteDelayMinutes: number,
     commissionCentsPerTrade: number,
   ): boolean {
-    const parsed = formSchema.safeParse({
-      startingCashCents: cashCents,
-      startDate: dateMs,
-      provider,
-      quoteDelayMinutes,
-      commissionCentsPerTrade,
-    })
-    if (!parsed.success || Number.isNaN(dateMs)) {
+    if (!isValidSettingsForm(cashCents, dateMs, provider, quoteDelayMinutes, commissionCentsPerTrade)) {
       this.error = 'Check the starting cash and start date values'
       return false
     }
     this.dispatchEvent(
       new CustomEvent<SettingsSubmitDetail>('sg-config-submit', {
-        detail: parsed.data,
+        detail: { startingCashCents: cashCents, startDate: dateMs, provider: provider as string, quoteDelayMinutes, commissionCentsPerTrade },
         bubbles: true,
         composed: true,
       }),
