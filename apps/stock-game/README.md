@@ -13,7 +13,7 @@ planned later).
 
 Built with web components: **Vite** static SPA, hash router plus **TanStack QueryClient**,
 hand-rolled tables, and **Lit** custom elements for all UI.
-Persistence is Postgres (`stock` database) behind `apps/stock-game-api`
+Persistence is Postgres (`stock` database) behind `apps/stock-game/api`
 (Kotlin); price data comes from that API.
 
 ## Requirements

@@ -427,7 +427,7 @@ try {
     };
     let oversized = false;
     try {
-        await fetchFeedText('https://ok.example/big');
+        await fetchFeedText('https://ok.example/big', 0);
     } catch (err) {
         oversized = err instanceof FetchError && err.message === 'Feed is too large';
     }
@@ -438,7 +438,7 @@ try {
     };
     let timedOut = false;
     try {
-        await fetchFeedText('https://ok.example/slow');
+        await fetchFeedText('https://ok.example/slow', 0);
     } catch (err) {
         timedOut = err instanceof FetchError && err.message.includes('timed out');
     }

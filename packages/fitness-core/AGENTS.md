@@ -3,7 +3,7 @@
 `fitness-core` — SI units, 5/3/1 programming, body formulas, Health Connect/CSV importers, downsample.
 Shared TypeScript / formatting / workflow: repo-root `AGENTS.md`.
 
-Consumed by `apps/fitness`.
+Consumed by `apps/fitness/app`.
 
 ## Commands
 

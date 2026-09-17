@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Fitness **API microservice**. Own process, own image, own Postgres database
-`fitness`. The Lit UI lives in `apps/fitness`. Identity is `user-api` (JWT `sub`).
+`fitness`. The Lit UI lives in `apps/fitness/app`. Identity is `user-api` (JWT `sub`).
 
 Do not put fitness tables in `user-api`. Do not add Node `pg` here.
 

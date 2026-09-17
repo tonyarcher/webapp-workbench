@@ -1,7 +1,10 @@
 # AGENTS.md
 
-Paper-trading simulator. Root `AGENTS.md` covers workflow, git, and monorepo rules.
+Paper-trading simulator: static SPA (`app`), shared contract (`shared/`), and
+JSON API (`api`, Kotlin, Postgres `stock`). Root `AGENTS.md` covers workflow, git, and monorepo rules.
 This app **does not** follow the shared Vite+Lit decorator conventions — see exceptions below.
+
+Work on the whole product together: `./deploy.sh apps/stock-game`, `./build.sh apps/stock-game`.
 
 ## Project
 
@@ -16,7 +19,7 @@ stock charts are out of scope — link out to Yahoo Finance (TradingView embeds 
 ## Stack
 
 - **Vite static SPA** (Lit UI). No server runtime: the JSON API is
-  `apps/stock-game-api` (Kotlin, Postgres `stock`). Do not add Node `pg` here.
+  `apps/stock-game/api` (Kotlin, Postgres `stock`). Do not add Node `pg` here.
 - **Hash router** (`src/router.ts`: `View` union, `parsePath`/`viewToPath`) over
   `@tanstack/history`. **QueryClient** from `@tanstack/query-core`, shared by all views.
 - **Lit** UI (views, forms, tables, chart, search). Views own their queries and bind
@@ -36,6 +39,7 @@ app/                     Vite SPA (static build served by nginx)
     components/          local Lit UI (sg-*); not a monorepo package
     lib/                 query client, API client, auth, formatters
     main.ts              boot (auth callback, mounts `sg-app-shell`)
+api/                     JSON API (Kotlin, Spring Data JPA, Postgres `stock`)
 ```
 
 ## Commands
@@ -87,7 +91,7 @@ Dev sign-in needs two local rows the gateway seed does not cover: an
   accumulate ledger floats across trades without rounding to cents.
 - Timestamps: epoch milliseconds (integer) over the wire. Trading-day rules live
   in the API, not the client.
-- Price data comes from `apps/stock-game-api` (`/quote`, `/bars`, `/search`).
+- Price data comes from `apps/stock-game/api` (`/quote`, `/bars`, `/search`).
   Rate limits surface as a user error, not a crash.
 
 ## Testing

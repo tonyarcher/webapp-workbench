@@ -58,6 +58,7 @@ class SampleErrorTest {
     fun bodyTooLarge() {
         val payload = "x".repeat(2_000_001)
         val res = mvc.post("/imports") {
+            header("X-Api-Version", "1")
             contentType = MediaType.APPLICATION_JSON
             content = payload
         }.andReturn()
@@ -68,6 +69,7 @@ class SampleErrorTest {
     @Test
     fun profileMissingBody() {
         val res = mvc.put("/profile") {
+            header("X-Api-Version", "1")
             contentType = MediaType.APPLICATION_JSON
         }.andReturn()
         assertEquals(400, res.response.status)

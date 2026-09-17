@@ -2,7 +2,7 @@
 
 RSS reader UI. Shared TypeScript / Lit / CSS / workflow: repo-root `AGENTS.md`.
 
-The JSON API is `apps/rss-api` (Kotlin, Spring Data JPA, Postgres `rss`).
+The JSON API is `apps/rss/api` (Kotlin, Spring Data JPA, Postgres `rss`).
 Every reader signs in through `user-api` (OAuth2 Code + PKCE, `user-client`
 helpers). API calls carry `Authorization: Bearer`. Do not add Node `pg` here.
 
@@ -58,5 +58,5 @@ Identity: `npm run dev -w user-api` (`:3004`, same port the Vite proxy uses).
 ## Blocking
 
 - Raw IndexedDB outside `src/db/`.
-- API/schema changes need assertions in `apps/rss-api` tests.
+- API/schema changes need assertions in `apps/rss/api` tests.
 - Changes to `src/services/*`, `src/db/*` need assertions in `scripts/smoke.ts` or `scripts/db-smoke.ts`.

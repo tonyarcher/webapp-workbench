@@ -8,7 +8,7 @@ import { existsSync } from "node:fs";
 import net from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { formatAppList, resolveApps } from "./apps.mjs";
+import { expandFolders, formatAppList, resolveApps } from "./apps.mjs";
 import { renderGateway } from "./render-gateway.mjs";
 import { ensureGatewayCerts } from "./gen-certs.mjs";
 
@@ -23,7 +23,7 @@ Deploy the gateway stack with docker compose.
 
 Pass one or more app names to rebuild and roll out only those services.
 Node app Dockerfiles compile inside the image. Kotlin APIs compile on
-the host (Gradle installDist or bootJar); the image only copies jars.
+the host (Gradle bootJar); the image only copies jars.
 The gateway nginx config renders from deploy/nginx/default.conf.template
 on every run (TLS block when TLS_HOSTS is set); certificates come from a
 local CA or TLS_CERT_FILE/TLS_KEY_FILE (see deploy/README.md).
@@ -57,6 +57,7 @@ Environment:
 Examples:
   ./deploy.sh
   ./deploy.sh rss
+  ./deploy.sh apps/rss   (UI and API together)
   ./deploy.sh --remote baseball
   ./deploy.sh lemmy stock
   ./deploy.sh --local
@@ -333,7 +334,7 @@ function splitExtra(extra) {
     if (arg.startsWith("-")) composeExtras.push(arg);
     else names.push(arg);
   }
-  const services = resolveApps(names).map((app) => app.service);
+  const services = resolveApps(expandFolders(names)).map((app) => app.service);
   return { services, composeExtras };
 }
 
@@ -359,27 +360,27 @@ function printHelp() {
 const JVM_APIS = [
   {
     service: "user-api",
-    script: join("apps", "user-api", "scripts", "gradlew.mjs"),
+    script: join("apps", "user", "api", "scripts", "gradlew.mjs"),
     task: "bootJar",
-    artifact: join("apps", "user-api", "build", "libs", "user-api-0.1.0.jar"),
+    artifact: join("apps", "user", "api", "build", "libs", "user-api-0.1.0.jar"),
   },
   {
     service: "fitness-api",
-    script: join("apps", "fitness-api", "scripts", "gradlew.mjs"),
+    script: join("apps", "fitness", "api", "scripts", "gradlew.mjs"),
     task: "bootJar",
-    artifact: join("apps", "fitness-api", "build", "libs", "fitness-api-0.1.0.jar"),
+    artifact: join("apps", "fitness", "api", "build", "libs", "fitness-api-0.1.0.jar"),
   },
   {
     service: "rss-api",
-    script: join("apps", "rss-api", "scripts", "gradlew.mjs"),
+    script: join("apps", "rss", "api", "scripts", "gradlew.mjs"),
     task: "bootJar",
-    artifact: join("apps", "rss-api", "build", "libs", "rss-api-0.1.0.jar"),
+    artifact: join("apps", "rss", "api", "build", "libs", "rss-api-0.1.0.jar"),
   },
   {
     service: "stock-game-api",
-    script: join("apps", "stock-game-api", "scripts", "gradlew.mjs"),
+    script: join("apps", "stock-game", "api", "scripts", "gradlew.mjs"),
     task: "bootJar",
-    artifact: join("apps", "stock-game-api", "build", "libs", "stock-game-api-0.1.0.jar"),
+    artifact: join("apps", "stock-game", "api", "build", "libs", "stock-game-api-0.1.0.jar"),
   },
 ];
 

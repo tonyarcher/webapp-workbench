@@ -10,6 +10,6 @@ RUN npm install --no-save --ignore-scripts --no-audit --no-fund @typescript/type
 RUN npm run build -w user-web
 
 FROM nginx:alpine AS runtime
-COPY --from=build /app/apps/user-web/dist /usr/share/nginx/html
+COPY --from=build /app/apps/user/app/dist /usr/share/nginx/html
 COPY deploy/user-web/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 3000

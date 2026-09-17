@@ -18,6 +18,6 @@ RUN rm -f package-lock.json && npm install --no-audit --no-fund
 RUN APP_BASE_PATH=/rss-reader/ npm run build -w rss-reader
 
 FROM nginx:alpine AS runtime
-COPY --from=build /app/apps/rss-reader/dist /usr/share/nginx/html
+COPY --from=build /app/apps/rss/app/dist /usr/share/nginx/html
 COPY deploy/rss-reader/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 3000

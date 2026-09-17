@@ -5,7 +5,10 @@
   "description": "Sandbox of small web apps: baseball tracker, rss-reader, stock-game, lemmy-vertical-scroll, clipstack, calendar-sync, radio-station, football, fitness, accounts.",
   "workspaces": [
     "apps/*",
+    "apps/rss/*",
+    "apps/fitness/*",
     "apps/stock-game/*",
+    "apps/user/*",
     "packages/*"
   ],
   "scripts": {

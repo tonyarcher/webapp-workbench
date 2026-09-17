@@ -21,19 +21,15 @@ database rows, not a hardcoded app list.
 ## Layout
 
 - `apps/baseball/` — baseball scorekeeping (`baseball-tracker`), client-side only. Depends on `@baseball/web-components`.
-- `apps/rss-reader/` — RSS reader UI (TanStack core, hash router, PWA).
-- `apps/rss-api/` — RSS JSON API + poller (Kotlin, Spring Data JPA). Postgres database `rss`. Host JDK; JRE image copies the boot jar. Cookie `rss_uid` per browser.
-- `apps/stock-game/` — paper-trading simulator; nested workspaces `app/` (`@stock-game/app`, static Vite SPA) and `shared/` (`@stock-game/shared` contract); JSON API is `stock-game-api`.
+- `apps/rss/` — reader UI (`app`) plus JSON API + poller (`api`, Kotlin, Spring Data JPA, Postgres `rss`). See `apps/rss/AGENTS.md`.
+- `apps/stock-game/` — paper-trading simulator; nested workspaces `app/` (`@stock-game/app`, static Vite SPA), `shared/` (`@stock-game/shared` contract), and `api/` (Kotlin, Postgres `stock`). See `apps/stock-game/AGENTS.md`.
 - `apps/lemmy-vertical-scroll/` — vertical feed scroller. Depends on `vertical-scroll-core`.
 - `apps/clipstack/` — short-video list scroller. Depends on `vertical-scroll-core`.
 - `apps/calendar-sync/` — Trakt + Netflix → ICS / Google Calendar. Depends on `calendar-core`.
 - `apps/radio-station/` — radio-station simulator. Postgres catalog + node API.
 - `apps/football/` — football live scorekeeping. Pluggable NFL/NCAA/MN/CO rulebooks; IndexedDB. Depends on `football-core`.
-- `apps/fitness/` — fitness tracker UI. Health Connect/CSV import, 5/3/1. Depends on `fitness-core`.
-- `apps/fitness-api/` — fitness JSON API (Kotlin 2.2 / JVM 21 / Spring Data JPA). Postgres database `fitness`. Host JDK `bootJar`; JRE image copies the jar. Uses the legacy local user id until the UI sends a `user-api` JWT.
-- `apps/stock-game-api/` — stock game JSON API (Kotlin 2.2 / JVM 21 / Spring Data JPA). Postgres database `stock`. Host JDK `bootJar`; JRE image copies the jar.
-- `apps/user-web/` — accounts landing page (`/auth/`). Lit shell; talks to `user-api`.
-- `apps/user-api/` — shared identity API (Kotlin 2.2 / JVM 21 / Spring Boot Web + Security + JPA). Postgres database `users`. Compile on the host JDK (`gradlew bootJar`); the compose image is JRE-only and copies the boot jar. Do not run Gradle inside Docker.
+- `apps/fitness/` — tracker UI (`app`) plus JSON API (`api`, Kotlin, Spring Data JPA, Postgres `fitness`). See `apps/fitness/AGENTS.md`.
+- `apps/user/` — accounts landing page (`app`, served at `/auth/`) plus identity API (`api`, Kotlin, Spring Boot, Postgres `users`). See `apps/user/AGENTS.md`.
 - `packages/web-components/` — `@baseball/web-components` Lit library.
 - `packages/vertical-scroll-core/` — Lit scroller + embed players.
 - `packages/calendar-core/` — ICS / Trakt / Netflix / Google Calendar helpers.

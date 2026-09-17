@@ -11,6 +11,6 @@ RUN npm run build -w fitness-core
 RUN npm run build -w fitness
 
 FROM nginx:alpine AS runtime
-COPY --from=build /app/apps/fitness/dist /usr/share/nginx/html
+COPY --from=build /app/apps/fitness/app/dist /usr/share/nginx/html
 COPY deploy/fitness/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 3000

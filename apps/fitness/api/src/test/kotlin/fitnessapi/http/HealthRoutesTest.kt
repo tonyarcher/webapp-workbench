@@ -33,6 +33,7 @@ class HealthRoutesTest {
     @Test
     fun echoesRequestId() {
         val response = mvc.get("/healthz") {
+            header("X-Api-Version", "1")
             header("X-Request-ID", "req-1")
         }.andReturn()
         assertEquals("req-1", response.response.getHeader("X-Request-ID"))
