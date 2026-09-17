@@ -211,6 +211,28 @@ export function workspacesFor(apps) {
   return workspaces;
 }
 
+/**
+ * Group workspaces into waves that can each build in parallel: wave N holds
+ * the Nth workspace of every app, so a library (`[lib, app]` entries list the
+ * library first) always finishes before the apps that consume its `dist/`.
+ * Raw workspace names keep a trailing wave of their own, preserving the old
+ * serial order after every app wave.
+ */
+export function buildWaves(apps, unknown) {
+  const waves = [];
+  const seen = new Set();
+  const push = (index, workspace) => {
+    if (seen.has(workspace)) return;
+    seen.add(workspace);
+    (waves[index] ??= []).push(workspace);
+  };
+  for (const app of apps) {
+    app.workspaces.forEach((workspace, index) => push(index, workspace));
+  }
+  if (unknown.length > 0) waves.push([...new Set(unknown.filter((name) => !seen.has(name)))]);
+  return waves.filter((wave) => wave.length > 0);
+}
+
 export function completionWords() {
   const words = new Set();
   for (const app of APPS) {

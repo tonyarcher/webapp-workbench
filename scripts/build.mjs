@@ -8,7 +8,8 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { formatAppList, expandFolders, resolveApp, resolveApps, workspacesFor } from "./apps.mjs";
+import { buildWaves, expandFolders, formatAppList, resolveApp, resolveApps } from "./apps.mjs";
+import { runPool } from "./pool.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -20,6 +21,9 @@ app:  ./deploy.sh rss-reader   (or .\\deploy.ps1 rss-reader)
 
 Usage:
   build.sh | build.ps1 [app...]
+
+Named workspaces build in parallel across CPUs (JOBS caps it, default: CPU
+count). A bare run still delegates to npm's serial --workspaces.
 
 Apps:
 ${formatAppList()}
@@ -78,9 +82,9 @@ async function main() {
   const known = expanded.filter((name) => resolveApp(name));
   const unknown = expanded.filter((name) => !resolveApp(name));
   const apps = resolveApps(known);
-  const workspaces = [...workspacesFor(apps), ...unknown];
+  const waves = buildWaves(apps, unknown);
 
-  if (workspaces.length === 0) {
+  if (waves.length === 0) {
     if (apps.length > 0 && apps.every((app) => app.workspaces.length === 0)) {
       const services = apps.map((app) => app.service).join(' ');
       console.log(`==> ${names.join(', ')} has no npm workspace; use ./deploy.sh --build-only ${services}`);
@@ -89,10 +93,20 @@ async function main() {
     throw new Error(`Nothing to build for: ${names.join(", ")}`);
   }
 
-  for (const workspace of workspaces) {
-    console.log(`==> npm run build -w ${workspace}`);
-    const code = await spawnNpm(["run", "build", "-w", workspace]);
-    if (code !== 0) return code;
+  for (const wave of waves) {
+    const failed = await runPool(wave, async (workspace) => {
+      console.log(`==> npm run build -w ${workspace}`);
+      const code = await spawnNpm(["run", "build", "-w", workspace]);
+      if (code !== 0) {
+        const error = new Error(`npm run build -w ${workspace} failed with code ${code}.`);
+        error.code = code;
+        throw error;
+      }
+    });
+    if (failed.length > 0) {
+      for (const { error } of failed) console.error(`error: ${error.message}`);
+      return Number(failed[0].error.code) || 1;
+    }
   }
   return 0;
 }
