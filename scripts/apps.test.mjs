@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  buildWaves,
   completionWords,
   expandFolders,
   resolveApps,
@@ -64,4 +65,23 @@ test("completion includes folder shortcuts", () => {
   for (const folder of ["apps/rss", "apps/fitness", "apps/user", "apps/stock-game"]) {
     assert.ok(words.includes(folder), `missing completion for ${folder}`);
   }
+});
+
+test("buildWaves orders libraries before their apps", () => {
+  const apps = resolveApps(["lemmy", "clipstack"]);
+  assert.deepEqual(buildWaves(apps, []), [
+    ["vertical-scroll-core"],
+    ["lemmy-vertical-scroll", "clipstack"],
+  ]);
+});
+
+test("buildWaves keeps single-workspace apps in wave zero", () => {
+  const apps = resolveApps(["rss-reader", "rss-api"]);
+  assert.deepEqual(buildWaves(apps, []), [["rss-reader", "rss-api"]]);
+});
+
+test("buildWaves puts raw names in a trailing wave", () => {
+  assert.deepEqual(buildWaves([], ["foo", "bar"]), [["foo", "bar"]]);
+  assert.deepEqual(buildWaves([], ["foo", "foo"]), [["foo"]]);
+  assert.deepEqual(buildWaves([], []), []);
 });

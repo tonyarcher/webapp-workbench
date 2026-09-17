@@ -9,6 +9,7 @@ import net from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expandFolders, formatAppList, resolveApps } from "./apps.mjs";
+import { runPool } from "./pool.mjs";
 import { renderGateway } from "./render-gateway.mjs";
 import { ensureGatewayCerts } from "./gen-certs.mjs";
 
@@ -53,6 +54,7 @@ Environment:
   DOCKER_HOST      Used as-is when it is already set (unless --local)
   DOCKER_TUNNEL    Remote daemon URL (default ${DEFAULT_TUNNEL})
   DEPLOY_TARGET    auto | local | remote
+  JOBS             Max parallel host builds (default: CPU count)
 
 Examples:
   ./deploy.sh
@@ -406,16 +408,26 @@ function prepareGateway(flags, services) {
 
 async function prepareJvmHostBuild(services, flags) {
   if (flags.down || flags.status || flags.noBuild) return;
-  for (const api of JVM_APIS) {
-    if (services.length > 0 && !services.includes(api.service)) continue;
+  const apis = JVM_APIS.filter((api) => services.length === 0 || services.includes(api.service));
+  const failed = await runPool(apis, async (api) => {
     console.log(`==> gradle ${api.task} (host JVM → ${api.service})`);
-    const result = await spawnCommand("node", [api.script, api.task], { inherit: true });
+    const result = await spawnCommand("node", [api.script, api.task], { inherit: false });
     if (result.code !== 0) {
+      process.stdout.write(`--- ${api.service} output ---\n${result.stdout}`);
+      process.stderr.write(`--- ${api.service} errors ---\n${result.stderr}`);
       throw new Error(`${api.service} host build failed (gradle ${api.task}).`);
     }
     if (!existsSync(join(ROOT, api.artifact))) {
       throw new Error(`Missing ${api.artifact} after ${api.task}.`);
     }
+  });
+  for (const { item, error } of failed) {
+    console.error(`error: ${item.service}: ${error.message}`);
+  }
+  if (failed.length > 0) {
+    throw new Error(
+      `host builds failed: ${failed.map(({ item }) => item.service).join(", ")}.`,
+    );
   }
 }
 
