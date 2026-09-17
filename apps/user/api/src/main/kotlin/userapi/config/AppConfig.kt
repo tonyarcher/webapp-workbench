@@ -47,8 +47,10 @@ class AppConfig {
     fun clock(): Clock = Clock.systemUTC()
 
     @Bean
-    fun dataSource(): DataSource {
-        val url = System.getenv("DATABASE_URL").orEmpty()
+    fun dataSource(): DataSource = dataSourceFromEnv(System.getenv())
+
+    internal fun dataSourceFromEnv(env: Map<String, String>): DataSource {
+        val url = env["DATABASE_URL"].orEmpty()
         require(url.isNotBlank()) { "DATABASE_URL required" }
         ensureDatabase(url)
         return dataSource(url)

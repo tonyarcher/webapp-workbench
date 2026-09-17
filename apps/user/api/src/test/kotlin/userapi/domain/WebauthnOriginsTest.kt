@@ -19,5 +19,15 @@ class WebauthnOriginsTest {
         assertEquals("localhost", validRpId("LocalHost"))
         assertFailsWith<IllegalArgumentException> { validRpId("example.com/app") }
         assertFailsWith<IllegalArgumentException> { validRpId("localhost:3000") }
+        assertFailsWith<IllegalArgumentException> { validRpId("   ") }
+        assertFailsWith<IllegalArgumentException> { validRpId("has space") }
+        assertEquals("example.com", validRpId("  Example.COM  "))
+    }
+
+    @Test
+    fun originsEdgeCases() {
+        assertTrue(parseOrigins("").isEmpty())
+        assertTrue(parseOrigins("   ").isEmpty())
+        assertEquals(setOf("https://a.example"), parseOrigins("https://a.example,https://a.example"))
     }
 }

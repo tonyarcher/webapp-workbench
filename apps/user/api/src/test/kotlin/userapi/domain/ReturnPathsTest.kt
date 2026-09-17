@@ -19,5 +19,12 @@ class ReturnPathsTest {
         assertNull(safeReturnPath("fitness/"))
         assertNull(safeReturnPath("/foo\nbar"))
         assertNull(safeReturnPath(null))
+        assertNull(safeReturnPath(""))
+        assertNull(safeReturnPath("   "))
+        assertNull(safeReturnPath("x".repeat(300)))
+        assertNull(safeReturnPath("/foo bar"))
+        assertNull(safeReturnPath("/foo\\bar"))
+        assertNull(safeReturnPath("/foo://bar"))
+        assertNull(safeReturnPath("/ok\u001f"))
     }
 }

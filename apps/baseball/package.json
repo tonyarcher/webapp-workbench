@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "oxlint",
     "test:unit": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "npm run build:components && playwright test",
     "build:components": "npm run build --prefix ../../packages/web-components",
     "test": "npm run test:unit"
@@ -24,6 +25,7 @@
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.1.2",
+    "@vitest/coverage-v8": "^4.1.11",
     "fake-indexeddb": "^6.2.5",
     "oxlint": "^1.75.0",
     "typescript": "7.0.2",

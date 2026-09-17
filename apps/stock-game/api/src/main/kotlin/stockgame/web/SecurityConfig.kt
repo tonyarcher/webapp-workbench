@@ -33,6 +33,11 @@ class SecurityConfig {
             authorizeHttpRequests {
                 authorize(HttpMethod.GET, "/healthz", permitAll)
                 authorize(HttpMethod.GET, "/readyz", permitAll)
+                authorize(HttpMethod.GET, "/", permitAll)
+                authorize(HttpMethod.GET, "/v3/api-docs/**", permitAll)
+                authorize(HttpMethod.GET, "/swagger-ui.html", permitAll)
+                authorize(HttpMethod.GET, "/swagger-ui/**", permitAll)
+                authorize(HttpMethod.GET, "/webjars/**", permitAll)
                 authorize(anyRequest, authenticated)
             }
             oauth2ResourceServer {
@@ -62,13 +67,16 @@ class SecurityConfig {
             DelegatingOAuth2TokenValidator(
                 JwtTimestampValidator(),
                 JwtIssuerValidator(issuer),
-                OAuth2TokenValidator { token: Jwt ->
-                    val aud = token.audience ?: emptyList()
-                    if (aud.contains(audience)) OAuth2TokenValidatorResult.success()
-                    else OAuth2TokenValidatorResult.failure(OAuth2Error("invalid_token", "bad audience", null))
-                },
+                audienceValidator(audience),
             ),
         )
         return decoder
     }
 }
+
+internal fun audienceValidator(audience: String): OAuth2TokenValidator<Jwt> =
+    OAuth2TokenValidator { token: Jwt ->
+        val aud = token.audience ?: emptyList()
+        if (aud.contains(audience)) OAuth2TokenValidatorResult.success()
+        else OAuth2TokenValidatorResult.failure(OAuth2Error("invalid_token", "bad audience", null))
+    }

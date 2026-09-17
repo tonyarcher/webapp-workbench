@@ -82,6 +82,28 @@ class ArticleWriteControllerTest {
     }
 
     @Test
+    fun readBeforeWithoutFeedsMarksAll() {
+        val uid = UUID.randomUUID()
+        val feedA = UUID.randomUUID()
+        stubAuth(uid)
+        whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedA))
+
+        mvc.post("/articles/read-before") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"cutoff":1720000000000}"""
+        }.andExpect {
+            status { isOk() }
+        }
+        verify(states).markReadBefore(
+            org.mockito.kotlin.eq(uid),
+            org.mockito.kotlin.eq(listOf(feedA)),
+            org.mockito.kotlin.eq(java.time.Instant.ofEpochMilli(1720000000000)),
+        )
+    }
+
+    @Test
     fun readAllMarksInBulk() {
         val uid = UUID.randomUUID()
         val owned = UUID.randomUUID()

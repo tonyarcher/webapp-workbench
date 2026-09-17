@@ -92,4 +92,19 @@ class PasskeyRoutesTest {
         loginBegin.expectStatus(200)
         assertTrue(loginBegin.bodyText().contains("publicKey"))
     }
+
+    @Test
+    fun meCountsPasskeys() {
+        val cookies = TestCookies()
+        mvc.getWithCookies(cookies, "/csrf").expectStatus(200)
+        mvc.postJson(
+            cookies,
+            "/register",
+            csrf = true,
+            json = mapper.writeValueAsString(mapOf("username" to "bob", "password" to "twelvechars!!")),
+        ).expectStatus(201)
+        val me = mvc.getWithCookies(cookies, "/me")
+        me.expectStatus(200)
+        assertTrue(me.bodyText().contains("passkeyCount"))
+    }
 }

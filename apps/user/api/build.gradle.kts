@@ -6,6 +6,7 @@ plugins {
     id("org.springframework.boot") version "3.4.5"
     id("io.spring.dependency-management") version "1.1.7"
     id("dev.detekt") version "2.0.0-alpha.6"
+    jacoco
 }
 
 group = "userapi"
@@ -28,6 +29,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-hateoas")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.postgresql:postgresql")
@@ -56,11 +59,73 @@ detekt {
 }
 
 tasks.named("check") {
-    dependsOn("detekt")
+    dependsOn("detekt", "jacocoTestCoverageVerification", "jacocoBranchCoverageVerification")
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+val jacocoExcludes = listOf(
+    "userapi/persist/**",
+    "userapi/accounts/Jpa*",
+    "userapi/db/**",
+    "userapi/config/StoreConfig*",
+    "userapi/UserApiApplicationKt*",
+)
+
+tasks.named<JacocoReport>("jacocoTestReport") {
+    dependsOn("test")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+    dependsOn("test")
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.90".toBigDecimal()
+            }
+        }
+    }
+}
+
+val jacocoBranchCoverageVerification by tasks.registering(JacocoCoverageVerification::class) {
+    group = "verification"
+    description = "Verifies 90% branch coverage."
+    dependsOn("test")
+    executionData.setFrom(files(layout.buildDirectory.file("jacoco/test.exec")))
+    violationRules {
+        rule {
+            limit {
+                counter = "BRANCH"
+                value = "COVEREDRATIO"
+                minimum = "0.90".toBigDecimal()
+            }
+        }
+    }
+}
+
+afterEvaluate {
+    tasks.named<JacocoReport>("jacocoTestReport") {
+        classDirectories.setFrom(
+            files(classDirectories.files.map { dir -> fileTree(dir) { exclude(jacocoExcludes) } }),
+        )
+    }
+    tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+        classDirectories.setFrom(
+            files(classDirectories.files.map { dir -> fileTree(dir) { exclude(jacocoExcludes) } }),
+        )
+    }
+    val lineDirs = tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification").get().classDirectories
+    jacocoBranchCoverageVerification {
+        classDirectories.setFrom(lineDirs)
+    }
 }
 
 configurations.matching { it.name == "detekt" }.configureEach {

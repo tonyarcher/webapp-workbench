@@ -56,6 +56,18 @@ class LibraryServiceTest {
     }
 
     @Test
+    fun emptyLibrary() {
+        whenever(folders.findByUserIdOrderBySortOrderAscCreatedAtAsc(uid)).thenReturn(emptyList())
+        whenever(subs.findFeedIdsByUserId(uid)).thenReturn(emptyList())
+        assertEquals(0, service.feeds(uid).size)
+        assertEquals(0, service.counts(uid).size)
+        val lib = service.library(uid)
+        assertEquals(0, lib.feeds.size)
+        assertEquals(0, lib.folders.size)
+        verifyNoInteractions(feeds)
+    }
+
+    @Test
     fun feedsAssembleWithoutArticles() {
         stubReads()
 

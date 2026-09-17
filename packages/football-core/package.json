@@ -19,10 +19,12 @@
     "scripts": {
         "build": "vite build",
         "test": "vitest run",
+        "test:coverage": "vitest run --coverage",
         "typecheck": "tsc --noEmit",
         "prepare": "npm run build"
     },
     "devDependencies": {
+        "@vitest/coverage-v8": "^4.1.11",
         "typescript": "7.0.2",
         "vite": "^8.2.0",
         "vite-plugin-dts": "^5.0.3",

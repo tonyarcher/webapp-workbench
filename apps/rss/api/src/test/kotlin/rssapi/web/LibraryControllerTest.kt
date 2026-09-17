@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import rssapi.persist.FolderEntity
@@ -155,5 +156,100 @@ class LibraryControllerTest {
             assert(it.first { e -> e.id == folderB }.sortOrder == 0)
             assert(it.first { e -> e.id == folderA }.sortOrder == 1)
         })
+    }
+
+    @Test
+    fun createFolderValidates() {
+        stubAuth(UUID.randomUUID())
+        mvc.post("/folders") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{}"""
+        }.andExpect {
+            status { isBadRequest() }
+        }
+        mvc.post("/folders") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"title":"   "}"""
+        }.andExpect {
+            status { isBadRequest() }
+        }
+    }
+
+    @Test
+    fun createFolderReusesExisting() {
+        val uid = UUID.randomUUID()
+        val folderId = UUID.randomUUID()
+        stubAuth(uid)
+        whenever(folders.findByUserIdAndTitle(uid, "Tech")).thenReturn(
+            FolderEntity(id = folderId, userId = uid, title = "Tech"),
+        )
+        mvc.post("/folders") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"title":"  Tech  "}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.id") { value(folderId.toString()) }
+        }
+        verify(folders, org.mockito.kotlin.never()).save(any())
+    }
+
+    @Test
+    fun deleteFolderValidates() {
+        stubAuth(UUID.randomUUID())
+        mvc.delete("/folders/nope") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }.andExpect {
+            status { isBadRequest() }
+        }
+    }
+
+    @Test
+    fun deleteFolderRemovesOwned() {
+        val uid = UUID.randomUUID()
+        val folderId = UUID.randomUUID()
+        stubAuth(uid)
+        whenever(folders.findById(folderId)).thenReturn(
+            java.util.Optional.of(FolderEntity(id = folderId, userId = uid, title = "Tech")),
+        )
+        mvc.delete("/folders/$folderId") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }.andExpect {
+            status { isOk() }
+        }
+        verify(folders).delete(any())
+    }
+
+    @Test
+    fun reorderEmptyIds() {
+        stubAuth(UUID.randomUUID())
+        mvc.post("/folders/reorder") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"ids":[]}"""
+        }.andExpect {
+            status { isOk() }
+        }
+    }
+
+    @Test
+    fun reorderMissingIds() {
+        stubAuth(UUID.randomUUID())
+        mvc.post("/folders/reorder") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{}"""
+        }.andExpect {
+            status { isBadRequest() }
+        }
     }
 }

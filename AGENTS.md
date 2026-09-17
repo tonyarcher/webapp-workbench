@@ -220,6 +220,14 @@ or a `packages/log` workspace until a second language needs the same code.
 - Explicit types on `const val` declarations. No `explicitApi()` on internal services.
 - `-Xjsr305=strict` plus progressive mode on every API module.
 - Detekt floors live in each API's `detekt.yml`. Split rather than suppress.
+- Coverage floor is **90% lines and 90% branches** on every API module.
+  `check` enforces both (`jacocoTestCoverageVerification` for lines,
+  `jacocoBranchCoverageVerification` for branches, each with the same
+  class filters); `test:coverage` renders the HTML/XML report without the gate.
+  Excluded because they need a database or a booted server, not unit-coverable:
+  `persist/*`, `db/*`, `DataSourceConfig`/`StoreConfig`, JPA store impls (`Jpa*`,
+  `EntityMapKt`, `SampleWrites`), and the `*ApplicationKt` `main()` entry point.
+  Slice tests cover those paths through fakes.
 
 ## API versioning
 
@@ -238,6 +246,17 @@ fetchers cannot send custom headers.
 ## Verification
 
 - Workspace `npm test` then `npm run build` must pass before finishing.
+- Coverage floor is **90% lines/branches/functions/statements** on measured workspaces:
+  Jacoco on the four Kotlin APIs (`rss-api`, `fitness-api`, `stock-game-api`,
+  `user-api`); `vitest --coverage` (v8) on `football-core`, `football`,
+  `@stock-game/app`, `baseball-tracker`; `wtr --coverage` on
+  `@baseball/web-components` (thresholds 90/90/90/90 in
+  `web-test-runner.config.js`). Several workspaces sit below the floor today
+  (untested entry points, Lit shells, branch tails) — raise uncovered areas to
+  meet it; exclude only harness-mismatched entry files with a comment saying why.
+  Kotlin `npm test` (`gradle check`) enforces its gate. JS `npm test` runs unit
+  tests without coverage; run `test:coverage` in the JS workspace you touched
+  when changing covered logic.
 - Smoke tests (`scripts/smoke.ts`, `db-smoke.ts`, …) cover pure logic — extend them when touching those modules.
 - API/schema changes that boot Postgres need assertions in that service’s tests
   (`user-api` / `fitness-api` / `rss-api` JUnit / Flyway; do not grow Node
