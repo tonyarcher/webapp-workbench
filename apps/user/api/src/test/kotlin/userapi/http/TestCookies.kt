@@ -31,6 +31,10 @@ class TestCookies {
     }
 
     fun csrf(): String = jar[CSRF_COOKIE] ?: error("missing csrf cookie")
+
+    fun put(name: String, value: String) {
+        jar[name] = value
+    }
 }
 
 fun MockMvc.getWithCookies(cookies: TestCookies, path: String, vararg headers: Pair<String, String>): MvcResult {

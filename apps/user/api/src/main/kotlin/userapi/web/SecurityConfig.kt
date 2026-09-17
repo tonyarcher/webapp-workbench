@@ -39,7 +39,12 @@ class SecurityConfig(
     ) {
         reg.requestMatchers(HttpMethod.GET, "/healthz").permitAll()
         reg.requestMatchers(HttpMethod.GET, "/readyz").permitAll()
+        reg.requestMatchers(HttpMethod.GET, "/").permitAll()
         reg.requestMatchers(HttpMethod.GET, "/csrf").permitAll()
+        reg.requestMatchers(HttpMethod.GET, "/v3/api-docs/**").permitAll()
+        reg.requestMatchers(HttpMethod.GET, "/swagger-ui.html").permitAll()
+        reg.requestMatchers(HttpMethod.GET, "/swagger-ui/**").permitAll()
+        reg.requestMatchers(HttpMethod.GET, "/webjars/**").permitAll()
         reg.requestMatchers(HttpMethod.POST, "/register").permitAll()
         reg.requestMatchers(HttpMethod.POST, "/login").permitAll()
         reg.requestMatchers(HttpMethod.POST, "/login/totp").permitAll()

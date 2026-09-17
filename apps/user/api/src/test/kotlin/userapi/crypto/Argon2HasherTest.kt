@@ -14,4 +14,12 @@ class Argon2HasherTest {
         assertFalse(hasher.verify("twelvechars!!", hash + "x"))
         assertFalse(hasher.verify("wrong-password", hash))
     }
+
+    @Test
+    fun rejectsBlankAndGarbageHash() {
+        val hasher = Argon2Hasher()
+        assertFalse(hasher.verify("twelvechars!!", ""))
+        assertFalse(hasher.verify("twelvechars!!", "   "))
+        assertFalse(hasher.verify("twelvechars!!", "not-a-hash"))
+    }
 }

@@ -76,4 +76,16 @@ class HealthRoutesTest {
         val response = mvc.perform(get("/healthz").header("X-Request-ID", "req-1")).andReturn().response
         assertEquals("req-1", response.getHeader("X-Request-ID"))
     }
+
+    @Test
+    fun traceparentPropagates() {
+        val response = mvc.perform(
+            get("/healthz").header(
+                "traceparent",
+                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+            ),
+        ).andReturn().response
+        assertEquals(200, response.status)
+        assertEquals("4bf92f3577b34da6a3ce929d0e0e4736", response.getHeader("X-Request-ID"))
+    }
 }

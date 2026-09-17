@@ -158,6 +158,57 @@ class ApiRoutesTest {
     }
 
     @Test
+    fun cancelMissingOrderIsOk() {
+        asUser(ALICE_SUB, ALICE_ID)
+        val res = mvc.post("/orders/9999/cancel") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer alice-token")
+        }.andReturn()
+        assertEquals(200, res.response.status)
+    }
+
+    @Test
+    fun orderValidation() {
+        asUser(ALICE_SUB, ALICE_ID)
+        fun placeOrder(body: String): Int = mvc.post("/orders") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer alice-token")
+            contentType = MediaType.APPLICATION_JSON
+            content = body
+        }.andReturn().response.status
+        assertEquals(400, placeOrder("""{"symbol":"","side":"buy","qty":1}"""))
+        assertEquals(400, placeOrder("""{"symbol":"AAPL","side":"buy","qty":0}"""))
+        assertEquals(400, placeOrder("""{"symbol":"AAPL","side":"BUY","qty":1}"""))
+    }
+
+    @Test
+    fun orderWithDayTifAndFillSource() {
+        asUser(ALICE_SUB, ALICE_ID)
+        val base = """{"symbol":"AAPL","side":"buy","qty":1,"executeAt":4102444800000"""
+        val res = mvc.post("/orders") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer alice-token")
+            contentType = MediaType.APPLICATION_JSON
+            content = """$base,"tif":"DAY","fillPriceSource":"mid"}"""
+        }.andReturn()
+        assertEquals(200, res.response.status)
+        val badTif = mvc.post("/orders") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer alice-token")
+            contentType = MediaType.APPLICATION_JSON
+            content = """$base,"tif":"WEEK"}"""
+        }.andReturn()
+        assertEquals(400, badTif.response.status)
+        val badSource = mvc.post("/orders") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer alice-token")
+            contentType = MediaType.APPLICATION_JSON
+            content = """$base,"fillPriceSource":"close"}"""
+        }.andReturn()
+        assertEquals(400, badSource.response.status)
+    }
+
+    @Test
     fun quoteOmitsNullBidAsk() {
         asUser(ALICE_SUB, ALICE_ID)
         val res = authedGet("/quote?symbol=AAPL", "alice-token")
