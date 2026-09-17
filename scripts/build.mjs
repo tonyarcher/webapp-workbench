@@ -8,7 +8,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { formatAppList, resolveApp, resolveApps, workspacesFor } from "./apps.mjs";
+import { formatAppList, expandFolders, resolveApp, resolveApps, workspacesFor } from "./apps.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -28,6 +28,7 @@ Examples:
   ./build.sh
   ./build.sh baseball
   ./build.sh rss lemmy
+  ./build.sh apps/rss   (UI and API together)
 `.trim();
 
 function spawnNpm(args) {
@@ -73,8 +74,9 @@ async function main() {
     return spawnNpm(["run", "build"]);
   }
 
-  const known = names.filter((name) => resolveApp(name));
-  const unknown = names.filter((name) => !resolveApp(name));
+  const expanded = expandFolders(names);
+  const known = expanded.filter((name) => resolveApp(name));
+  const unknown = expanded.filter((name) => !resolveApp(name));
   const apps = resolveApps(known);
   const workspaces = [...workspacesFor(apps), ...unknown];
 

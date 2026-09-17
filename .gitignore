@@ -34,11 +34,11 @@ deploy/nginx/default.conf
 
 # Gradle / Kotlin
 .gradle/
-apps/user-api/build/
-apps/user-api/.kotlin/
-apps/fitness-api/build/
-apps/fitness-api/.kotlin/
-apps/rss-api/build/
-apps/rss-api/.kotlin/
-apps/stock-game-api/build/
-apps/stock-game-api/.kotlin/
+apps/user/api/build/
+apps/user/api/.kotlin/
+apps/fitness/api/build/
+apps/fitness/api/.kotlin/
+apps/rss/api/build/
+apps/rss/api/.kotlin/
+apps/stock-game/api/build/
+apps/stock-game/api/.kotlin/

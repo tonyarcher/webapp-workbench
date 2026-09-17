@@ -9,7 +9,7 @@ same reverse-proxy gateway.
 | Path | App | Stack | Focus |
 |---|---|---|---|
 | `apps/baseball/` | Baseball tracker | Vite + Lit + TanStack core | Scorekeeping, client-side only |
-| `apps/rss-reader/` | RSS reader | Vite + Lit + TanStack core | Feed reading, PWA, hash routing |
+| `apps/rss/` | RSS reader + API | Vite + Lit + TanStack core / Kotlin + JPA | Feed reading, PWA, hash routing |
 | `apps/stock-game/` | Stock game | Vite + Lit + TanStack core | Paper trading, hash routing |
 | `apps/lemmy-vertical-scroll/` | Lemmy scroller | Vite + Lit + TanStack core | Vertical feed scrolling |
 | `apps/clipstack/` | Clipstack | Vite + Lit + vertical-scroll-core | Import a short-video link list and scroll it |

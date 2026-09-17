@@ -4,7 +4,7 @@
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 ENV PORT=3000
-COPY apps/rss-api/build/libs/rss-api-0.1.0.jar /app/app.jar
+COPY apps/rss/api/build/libs/rss-api-0.1.0.jar /app/app.jar
 USER nobody
 EXPOSE 3000
 CMD ["java", "-jar", "/app/app.jar"]

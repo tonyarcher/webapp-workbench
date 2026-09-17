@@ -83,11 +83,11 @@ async function fetchViaProxy(url: string, proxy: string): Promise<string> {
     }
 }
 
-export async function fetchFeedText(rawUrl: string): Promise<string> {
+export async function fetchFeedText(rawUrl: string, retryDelayMs = 2_000): Promise<string> {
     const url = validateFeedUrl(rawUrl);
     let lastError: unknown;
     for (let attempt = 0; attempt < 2; attempt++) {
-        if (attempt > 0) await delayMs(2_000);
+        if (attempt > 0) await delayMs(retryDelayMs);
         for (const proxy of PROXIES) {
             try {
                 return await fetchViaProxy(url, proxy);

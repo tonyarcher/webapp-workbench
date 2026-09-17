@@ -1,7 +1,7 @@
 # AGENTS.md
 
 RSS **API microservice**. Own process, own image, own Postgres database `rss`.
-The Lit UI lives in `apps/rss-reader`. Identity is `user-api` (JWT `sub`);
+The Lit UI lives in `apps/rss/app`. Identity is `user-api` (JWT `sub`);
 every reader signs in, no anonymous users.
 
 Do not put RSS tables in `user-api`. Do not add Node `pg` here.
