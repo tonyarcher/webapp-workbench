@@ -28,15 +28,17 @@ database rows, not a hardcoded app list.
 - `apps/calendar-sync/` — Trakt + Netflix → ICS / Google Calendar. Depends on `calendar-core`.
 - `apps/radio-station/` — radio-station simulator. Postgres catalog + node API.
 - `apps/football/` — football live scorekeeping. Pluggable NFL/NCAA/MN/CO rulebooks; IndexedDB. Depends on `football-core`.
+- `apps/basketball/` — basketball live scorekeeping (`basketball-tracker`). Pluggable HS/College/NBA/WNBA rulebooks, shot chart, sim; IndexedDB. Depends on `basketball-core`.
 - `apps/fitness/` — tracker UI (`app`) plus JSON API (`api`, Kotlin, Spring Data JPA, Postgres `fitness`). See `apps/fitness/AGENTS.md`.
 - `apps/user/` — accounts landing page (`app`, served at `/auth/`) plus identity API (`api`, Kotlin, Spring Boot, Postgres `users`). See `apps/user/AGENTS.md`.
 - `packages/web-components/` — `@baseball/web-components` Lit library.
 - `packages/vertical-scroll-core/` — Lit scroller + embed players.
 - `packages/calendar-core/` — ICS / Trakt / Netflix / Google Calendar helpers.
 - `packages/football-core/` — rulebooks, play-by-play reducer, clock, notation.
+- `packages/basketball-core/` — rulebooks, court geometry, shot clock, play reducer.
 - `packages/fitness-core/` — units, 5/3/1, body formulas, importers.
 - `packages/user-client/` — headless PKCE + JWT payload parse for identity.
-- `deploy/` — Docker Compose reverse-proxy gateway (`/` hello page; apps under `/baseball/`, `/rss-reader/`, `/stock-game/`, `/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/fitness/`, `/auth/`, `/user-api/`).
+- `deploy/` — Docker Compose reverse-proxy gateway (`/` hello page; apps under `/baseball/`, `/rss-reader/`, `/stock-game/`, `/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/basketball/`, `/fitness/`, `/auth/`, `/user-api/`).
 
 Library `prepare` scripts build `dist/` on install. After changing a package, rebuild it
 (`npm run build -w <name>`) or reinstall before consumers pick up the change.
@@ -50,7 +52,7 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 | Test all | `npm test` |
 | Typecheck all | `npm run typecheck` |
 | Lint all | `npm run lint` |
-| Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:rss-api` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` / `dev:fitness` / `dev:fitness-api` / `dev:user-web` / `dev:user-api` |
+| Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:rss-api` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` / `dev:basketball` / `dev:fitness` / `dev:fitness-api` / `dev:user-web` / `dev:user-api` |
 | Build (OS script) | `./build.sh` or `.\build.ps1` (`./build.sh rss` for one app) |
 | Deploy compose stack | `./deploy.sh` or `.\deploy.ps1` (auto local Docker vs SSH tunnel; `./deploy.sh rss` rebuilds one app). PowerShell tab-completes app names on `.\deploy.ps1`; bash: `source scripts/complete-deploy.bash`. |
 
@@ -249,7 +251,8 @@ fetchers cannot send custom headers.
 - Coverage floor is **90% lines/branches/functions/statements** on measured workspaces:
   Jacoco on the four Kotlin APIs (`rss-api`, `fitness-api`, `stock-game-api`,
   `user-api`); `vitest --coverage` (v8) on `football-core`, `football`,
-  `@stock-game/app`, `baseball-tracker`; `wtr --coverage` on
+  `basketball-core`, `basketball-tracker`, `@stock-game/app`, `baseball-tracker`;
+  `wtr --coverage` on
   `@baseball/web-components` (thresholds 90/90/90/90 in
   `web-test-runner.config.js`). Several workspaces sit below the floor today
   (untested entry points, Lit shells, branch tails) — raise uncovered areas to
@@ -276,7 +279,7 @@ User-wide rules apply (never commit/push `.env`; examples only in git). This rep
 - **Deploy secrets:** `deploy/.env` copied from `deploy/.env.example` (Postgres). Compose reads it at run; it must never land in an image layer.
 - **Stock-game app** needs no env file; provider config lives on `stock-game-api`.
 - **Calendar OAuth** stays in the browser (localStorage), not in `.env`.
-- `APP_BASE_PATH` is public and baked at image build — not a secret, not a reason to commit `.env`.
+- `APP_BASE_PATH` is public and baked at **host** Vite build (deploy.py) — not a secret, not a reason to commit `.env`.
 - Do not log tokens, secrets, or raw sample/PII payloads.
 
 Before commit: staged files must not include `.env` / `.env.*` except `.env.example`.

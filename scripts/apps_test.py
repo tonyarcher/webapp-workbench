@@ -85,6 +85,13 @@ class BuildWavesTest(unittest.TestCase):
             [["vertical-scroll-core"], ["lemmy-vertical-scroll", "clipstack"]],
         )
 
+    def test_basketball_orders_core_before_app(self) -> None:
+        apps = resolve_apps(["basketball"])
+        self.assertEqual(
+            build_waves(apps, []),
+            [["basketball-core"], ["basketball-tracker"]],
+        )
+
     def test_single_workspace_apps_share_wave_zero(self) -> None:
         apps = resolve_apps(["rss-reader", "rss-api"])
         self.assertEqual(build_waves(apps, []), [["rss-reader", "rss-api"]])

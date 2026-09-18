@@ -20,7 +20,8 @@ from dataclasses import dataclass, field
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from scripts.apps import expand_folders, format_app_list, resolve_apps
+from scripts.apps import expand_folders, format_app_list, resolve_app, resolve_apps
+from scripts.build import ensure_installed
 from scripts.gen_certs import ensure_gateway_certs
 from scripts.pool import run_pool
 from scripts.render_gateway import render_gateway
@@ -33,8 +34,8 @@ TCP_PROBE_TIMEOUT = 0.8
 HELP = f"""Deploy the gateway stack with docker compose.
 
 Pass one or more app names to rebuild and roll out only those services.
-Node app Dockerfiles compile inside the image. Kotlin APIs compile on
-the host (Gradle bootJar); the image only copies jars.
+TypeScript compiles on the host (Vite / tsc, same as Gradle bootJar).
+Images only copy dist or jars — no tsc, vite, or lockfile rm in Docker.
 The gateway nginx config renders from deploy/nginx/default.conf.template
 on every run (TLS block when TLS_HOSTS is set); certificates come from a
 local CA or TLS_CERT_FILE/TLS_KEY_FILE (see deploy/README.md).
@@ -155,6 +156,48 @@ class JvmApi:
     dir: str
     task: str
     artifact: str
+
+
+@dataclass
+class HostJsApp:
+    """TypeScript app compiled on the host before compose copies dist."""
+
+    service: str
+    dist: str
+    base_path: str = ""
+    script: str = "build"
+
+
+HOST_JS_APPS: list[HostJsApp] = [
+    HostJsApp("baseball", os.path.join("apps", "baseball", "dist"), "/baseball/"),
+    HostJsApp("rss-reader", os.path.join("apps", "rss", "app", "dist"), "/rss-reader/"),
+    HostJsApp(
+        "stock-game", os.path.join("apps", "stock-game", "app", "dist"), "/stock-game/"
+    ),
+    HostJsApp(
+        "lemmy-vertical-scroll", os.path.join("apps", "lemmy-vertical-scroll", "dist")
+    ),
+    HostJsApp("clipstack", os.path.join("apps", "clipstack", "dist")),
+    HostJsApp("calendar-sync", os.path.join("apps", "calendar-sync", "dist")),
+    HostJsApp("radio-station", os.path.join("apps", "radio-station", "dist")),
+    HostJsApp(
+        "radio-api",
+        os.path.join("apps", "radio-station", "dist-server"),
+        script="build:server",
+    ),
+    HostJsApp("football", os.path.join("apps", "football", "dist"), "/football/"),
+    HostJsApp("basketball", os.path.join("apps", "basketball", "dist"), "/basketball/"),
+    HostJsApp("fitness", os.path.join("apps", "fitness", "app", "dist")),
+    HostJsApp("user-web", os.path.join("apps", "user", "app", "dist")),
+]
+
+
+def host_js_apps_for(services: list[str]) -> list[HostJsApp]:
+    """HOST_JS_APPS filtered to the named compose services, or all."""
+    if not services:
+        return list(HOST_JS_APPS)
+    wanted = set(services)
+    return [item for item in HOST_JS_APPS if item.service in wanted]
 
 
 JVM_APIS: list[JvmApi] = [
@@ -507,9 +550,115 @@ def prepare_gateway(flags: Flags, services: list[str]) -> None:
     )
 
 
+def skip_host_build(flags: Flags) -> bool:
+    """True when deploy should not compile on the host."""
+    return flags.down or flags.status or flags.no_build
+
+
+def npm_env(base_path: str) -> dict[str, str]:
+    """Process env, with APP_BASE_PATH when the SPA is served on a subpath."""
+    env = dict(os.environ)
+    if base_path:
+        env["APP_BASE_PATH"] = base_path
+    else:
+        env.pop("APP_BASE_PATH", None)
+    return env
+
+
+@dataclass
+class JsWorkspaceJob:
+    """One npm workspace build in a host-JS wave."""
+
+    workspace: str
+    script: str
+    base_path: str
+
+
+def js_workspace_waves(items: list[HostJsApp]) -> list[list[JsWorkspaceJob]]:
+    """Group unique (workspace, script) jobs so libraries finish before apps."""
+    waves: list[list[JsWorkspaceJob]] = []
+    seen: set[tuple[str, str]] = set()
+    for item in items:
+        _push_item_jobs(item, waves, seen)
+    return [wave for wave in waves if wave]
+
+
+def _push_item_jobs(
+    item: HostJsApp,
+    waves: list[list[JsWorkspaceJob]],
+    seen: set[tuple[str, str]],
+) -> None:
+    app = resolve_app(item.service)
+    if app is None:
+        raise RuntimeError(f"Unknown host JS app {item.service}.")
+    last = len(app.workspaces) - 1
+    for index, workspace in enumerate(app.workspaces):
+        job = JsWorkspaceJob(
+            workspace,
+            item.script if index == last else "build",
+            item.base_path if index == last else "",
+        )
+        key = (job.workspace, job.script)
+        if key in seen:
+            continue
+        seen.add(key)
+        while len(waves) <= index:
+            waves.append([])
+        waves[index].append(job)
+
+
+def npm_run_workspace(workspace: str, script: str, base_path: str) -> None:
+    """Run `npm run <script> -w <workspace>` in ROOT."""
+    print(f"==> npm run {script} -w {workspace}")
+    result = spawn_command(
+        "npm",
+        ["run", script, "-w", workspace],
+        env=npm_env(base_path),
+        inherit=True,
+        shell=sys.platform == "win32",
+    )
+    if result.code != 0:
+        raise RuntimeError(f"npm run {script} -w {workspace} failed ({result.code}).")
+
+
+def run_js_wave(jobs: list[JsWorkspaceJob]) -> None:
+    """Parallel workspaces; sequential scripts that share a workspace."""
+    by_ws: dict[str, list[JsWorkspaceJob]] = {}
+    for job in jobs:
+        by_ws.setdefault(job.workspace, []).append(job)
+
+    def run_workspace(workspace: str) -> None:
+        for job in by_ws[workspace]:
+            npm_run_workspace(job.workspace, job.script, job.base_path)
+
+    failed = run_pool(list(by_ws), run_workspace)
+    for workspace, error in failed:
+        print(f"error: {workspace}: {error}", file=sys.stderr)
+    if failed:
+        raise RuntimeError(
+            f"host JS builds failed: {', '.join(name for name, _ in failed)}."
+        )
+
+
+def prepare_js_host_build(services: list[str], flags: Flags) -> None:
+    """Compile TypeScript on the host before compose copies dist into images."""
+    if skip_host_build(flags):
+        return
+    items = host_js_apps_for(services)
+    if not items:
+        return
+    if ensure_installed("npm") != 0:
+        raise RuntimeError("npm install failed.")
+    for wave in js_workspace_waves(items):
+        run_js_wave(wave)
+    for item in items:
+        if not os.path.exists(os.path.join(ROOT, item.dist)):
+            raise RuntimeError(f"Missing {item.dist} after host JS build.")
+
+
 def prepare_jvm_host_build(services: list[str], flags: Flags) -> None:
     """Compile Kotlin boot jars on the host JDK before compose builds images."""
-    if flags.down or flags.status or flags.no_build:
+    if skip_host_build(flags):
         return
     apis = [api for api in JVM_APIS if not services or api.service in services]
 
@@ -560,6 +709,7 @@ def main() -> int:
     split = split_extra(flags.extra)
     target = resolve_target(requested_target(flags))
     prepare_gateway(flags, split.services)
+    prepare_js_host_build(split.services, flags)
     prepare_jvm_host_build(split.services, flags)
     compose = compose_invocation()
     args = [*compose.prefix, *compose_args(flags, split.services, split.compose_extras)]

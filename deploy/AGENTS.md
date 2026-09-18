@@ -11,11 +11,13 @@ Docker Compose reverse-proxy stack. Workflow and monorepo rules: repo-root `AGEN
   for static apps (including `/stock-game/`).
 - `gateway/certs/` — leaf cert/key baked into the image, plus the local CA.
   Generated, gitignored (`.gitkeep` keeps the dir). Never commit keys.
-- `hello/index.html` — page at `/`. Link **text** is the project name (Baseball, RSS Reader, …); `href` stays the subpath (`/auth/` for Accounts).
+- `hello/index.html` — page at `/`. Link **text** is the project name (Baseball, RSS Reader, Basketball, …); `href` stays the subpath (`/auth/` for Accounts).
 - Per-app Dockerfiles under `deploy/<app>/`. Build context is the **repo root**.
-- Node/static images compile inside Linux. JVM APIs compile on the host
-  JDK (`gradle bootJar`); each image is **JRE only**. Do not run Gradle or install a JDK
-  in those images.
+- TypeScript compiles on the host (`deploy.py` runs npm / Vite / tsc, same as
+  Gradle `bootJar`). Static images copy `dist/` into nginx. radio-api copies
+  `dist-server/` and `npm install --omit=dev` for Linux `pg`. JVM images are
+  **JRE only** and copy jars. Do not run `tsc`, Vite, or Gradle in Docker.
+  Do not `rm` the lockfile.
 
 ## Commands
 
@@ -36,5 +38,6 @@ do not expect Kotlin to derive them from the env.
 - App images listen on `3000` internally. Gateway publishes host `80` always
   and `443` (bound even with TLS off — free the host port or drop the mapping
   if something else holds 443).
-- `APP_BASE_PATH` is baked in at image build so assets and service workers work under the subpath.
+- `APP_BASE_PATH` is public and baked at **host** Vite build (deploy.py sets it)
+  so assets and service workers work under the subpath.
 - Secrets: `deploy/.env` from `deploy/.env.example` (gitignored). Compose interpolates `${POSTGRES_*}` from that file at **run** (project-directory `.env`, not an image `COPY`). Never commit it.

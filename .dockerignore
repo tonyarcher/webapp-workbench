@@ -11,6 +11,7 @@
 
 **/node_modules
 **/dist
+**/dist-server
 **/coverage
 **/test-results
 **/playwright-report
@@ -36,3 +37,29 @@ deploy/nginx/default.conf
 !apps/stock-game/api/build
 !apps/stock-game/api/build/libs
 !apps/stock-game/api/build/libs/**
+
+# Host-built SPA / Node API output copied into images (same pattern as jars).
+!apps/baseball/dist
+!apps/baseball/dist/**
+!apps/rss/app/dist
+!apps/rss/app/dist/**
+!apps/stock-game/app/dist
+!apps/stock-game/app/dist/**
+!apps/lemmy-vertical-scroll/dist
+!apps/lemmy-vertical-scroll/dist/**
+!apps/clipstack/dist
+!apps/clipstack/dist/**
+!apps/calendar-sync/dist
+!apps/calendar-sync/dist/**
+!apps/radio-station/dist
+!apps/radio-station/dist/**
+!apps/radio-station/dist-server
+!apps/radio-station/dist-server/**
+!apps/football/dist
+!apps/football/dist/**
+!apps/basketball/dist
+!apps/basketball/dist/**
+!apps/fitness/app/dist
+!apps/fitness/app/dist/**
+!apps/user/app/dist
+!apps/user/app/dist/**

@@ -107,6 +107,13 @@ APPS: list[App] = [
         summary="Football tracker (also builds football-core)",
     ),
     App(
+        id="basketball",
+        service="basketball",
+        workspaces=["basketball-core", "basketball-tracker"],
+        aliases=["basketball", "apps/basketball"],
+        summary="Basketball tracker (also builds basketball-core)",
+    ),
+    App(
         id="fitness",
         service="fitness",
         workspaces=["fitness-core", "fitness"],

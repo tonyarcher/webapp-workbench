@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+    <title>Basketball Tracker</title>
+    <meta name="description" content="Live basketball shot chart, clock, and simulation."/>
+    <meta name="theme-color" content="#07080c"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <link rel="manifest" href="%BASE_URL%manifest.json"/>
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg"/>
+    <link rel="apple-touch-icon" href="%BASE_URL%favicon.svg"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        html {
+            background: #07080c;
+            color-scheme: dark;
+        }
+    </style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module" src="/src/main.ts"></script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('%BASE_URL%sw.js').catch(() => undefined);
+        });
+    }
+</script>
+</body>
+</html>
