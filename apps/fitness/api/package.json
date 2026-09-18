@@ -4,10 +4,10 @@
     "version": "0.1.0",
     "description": "Fitness microservice (Kotlin / Spring Data JPA).",
     "scripts": {
-        "dev": "node scripts/gradlew.mjs bootRun",
-        "build": "node scripts/gradlew.mjs bootJar",
-        "test": "node scripts/gradlew.mjs check",
-        "test:coverage": "node scripts/gradlew.mjs test jacocoTestReport",
-        "lint": "node scripts/gradlew.mjs detekt"
+        "dev": "gradle bootRun",
+        "build": "gradle bootJar",
+        "test": "gradle check",
+        "test:coverage": "gradle test jacocoTestReport",
+        "lint": "gradle detekt"
     }
 }

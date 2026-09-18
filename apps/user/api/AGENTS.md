@@ -31,7 +31,7 @@ npm run build -w user-api     # gradle bootJar
 npm run dev -w user-api       # :3004 (PORT=3004). DATABASE_URL required.
 ```
 
-JDK 21+ on PATH (toolchain 21). Gradle wrapper is in this directory.
+JDK 21+ on PATH (toolchain 21). npm scripts call `gradle` directly.
 Deploy compiles here on the **host JDK**, then copies the boot jar into a **JRE** image.
 Do not run Gradle inside Docker. Do not use a JDK base image for runtime.
 
