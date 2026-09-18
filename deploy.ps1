@@ -1,6 +1,6 @@
 # Deploy the compose stack (Windows PowerShell).
 # Auto-selects the SSH-tunneled remote Docker daemon or local Docker.
-# Tab completion lists app names from scripts/apps.mjs.
+# Tab completion lists app names from scripts/apps.py.
 [CmdletBinding()]
 param(
     [Parameter(ValueFromRemainingArguments = $true)]
@@ -10,19 +10,19 @@ param(
             '--local', '--remote', '--no-build', '--build-only', '--down', '--status', '--help'
         )
         $repo = (Get-Location).Path
-        $appsJs = Join-Path $repo 'scripts\apps.mjs'
-        if (-not (Test-Path -LiteralPath $appsJs)) {
+        $appsPy = Join-Path $repo 'scripts\apps.py'
+        if (-not (Test-Path -LiteralPath $appsPy)) {
             $invoked = $commandAst.CommandElements[0].Extent.Text.Trim('"').Trim("'")
             try {
                 $scriptPath = (Resolve-Path -LiteralPath $invoked -ErrorAction Stop).Path
-                $appsJs = Join-Path (Split-Path -Parent $scriptPath) 'scripts\apps.mjs'
+                $appsPy = Join-Path (Split-Path -Parent $scriptPath) 'scripts\apps.py'
             } catch {
-                $appsJs = $null
+                $appsPy = $null
             }
         }
         $apps = @()
-        if ($appsJs -and (Test-Path -LiteralPath $appsJs)) {
-            $apps = @(node -- $appsJs --complete 2>$null)
+        if ($appsPy -and (Test-Path -LiteralPath $appsPy)) {
+            $apps = @(python -- $appsPy --complete 2>$null)
         }
         $prior = @($commandAst.CommandElements | Select-Object -Skip 1)
         if ($prior.Count -gt 1) { $prior = $prior[0..($prior.Count - 2)] } else { $prior = @() }
@@ -39,11 +39,11 @@ param(
 $ErrorActionPreference = "Stop"
 Set-Location -LiteralPath $PSScriptRoot
 
-$node = Get-Command node -ErrorAction SilentlyContinue
-if (-not $node) {
-    Write-Error "node is required to run deploy.ps1"
+$python = Get-Command python -ErrorAction SilentlyContinue
+if (-not $python) {
+    Write-Error "python is required to run deploy.ps1"
     exit 1
 }
 
-& node (Join-Path $PSScriptRoot "scripts\deploy.mjs") @DeployArgs
+& python (Join-Path $PSScriptRoot "scripts\deploy.py") @DeployArgs
 exit $LASTEXITCODE

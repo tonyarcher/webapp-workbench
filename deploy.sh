@@ -7,9 +7,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-if ! command -v node >/dev/null 2>&1; then
-  echo "error: node is required to run deploy.sh" >&2
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "error: python3 is required to run deploy.sh" >&2
   exit 1
 fi
 
-exec node "$ROOT/scripts/deploy.mjs" "$@"
+exec python3 "$ROOT/scripts/deploy.py" "$@"

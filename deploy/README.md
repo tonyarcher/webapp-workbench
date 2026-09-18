@@ -14,7 +14,7 @@ Docker-compatible container runtime) already installed.
   mapping (or stop the other listener) before `up`.
 - `nginx/default.conf.template` — gateway config template. Rendered to
   `nginx/default.conf` (gitignored, never edit it) on every deploy run;
-  direct `docker compose` on a fresh clone needs `node scripts/render-gateway.mjs` first.
+  direct `docker compose` on a fresh clone needs `python3 scripts/render_gateway.py` first.
 - `hello/index.html` — static hello-world page copied into the `gateway` image and served at the root `/`.
 - `gateway/` — Dockerfile that builds the `gateway` image from the `deploy/` context.
 - `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `clipstack/`, `calendar-sync/`, `radio-station/`, `football/`, `fitness/` — Dockerfiles + nginx configs for the static apps. Calendar Sync also proxies `/api/trakt/` to api.trakt.tv.

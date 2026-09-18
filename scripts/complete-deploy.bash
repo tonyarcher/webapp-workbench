@@ -4,7 +4,7 @@ _webapp_workbench_deploy() {
   local cur root apps opts
   cur="${COMP_WORDS[COMP_CWORD]}"
   root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-  apps="$(node "$root/scripts/apps.mjs" --complete 2>/dev/null || true)"
+  apps="$(python3 "$root/scripts/apps.py" --complete 2>/dev/null || true)"
   opts="--local --remote --no-build --build-only --down --status --help"
   COMPREPLY=( $(compgen -W "$opts $apps" -- "$cur") )
 }
