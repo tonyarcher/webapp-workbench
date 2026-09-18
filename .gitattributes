@@ -19,7 +19,6 @@
 *.template text eol=lf
 *.kt text eol=lf
 *.kts text eol=lf
-gradlew text eol=lf
 *.jar binary
 *.png binary
 

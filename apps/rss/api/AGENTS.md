@@ -26,7 +26,7 @@ npm run dev -w rss-api   # :3001 (same port the Vite proxy uses)
 `DATABASE_URL` is required for data routes. Example:
 `postgres://rss:rss@localhost:5432/rss`.
 
-Host JDK + Gradle on PATH. `scripts/gradlew.mjs` runs `gradle`. Do not commit
+Host JDK + Gradle on PATH. npm scripts call `gradle` directly. Do not commit
 `gradle-wrapper.jar`. JRE image copies the boot jar. Do not run Gradle inside
 Docker.
 

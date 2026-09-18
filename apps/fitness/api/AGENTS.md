@@ -23,7 +23,7 @@ npm run dev -w fitness-api   # :3003 (same port the Vite proxy uses)
 the rest is `503 {"error":"database offline"}`). Example:
 `postgres://rss:rss@localhost:5432/fitness`.
 
-Host JDK + Gradle on PATH. `scripts/gradlew.mjs` runs `gradle`. Do not commit
+Host JDK + Gradle on PATH. npm scripts call `gradle` directly. Do not commit
 `gradle-wrapper.jar`. JRE image copies the boot jar. Do not run Gradle inside
 Docker.
 

@@ -20,7 +20,7 @@ npm run dev -w stock-game-api   # :3005 (`:3004` is user-api)
 `DATABASE_URL` is required for data routes. Example:
 `postgres://rss:rss@localhost:5432/stock`.
 
-Host JDK + Gradle on PATH. `scripts/gradlew.mjs` runs `gradle`. Do not commit
+Host JDK + Gradle on PATH. npm scripts call `gradle` directly. Do not commit
 `gradle-wrapper.jar`. JRE image copies the boot jar.
 
 ## Contract
