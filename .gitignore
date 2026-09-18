@@ -42,3 +42,7 @@ apps/rss/api/build/
 apps/rss/api/.kotlin/
 apps/stock-game/api/build/
 apps/stock-game/api/.kotlin/
+
+# Python
+__pycache__/
+*.pyc

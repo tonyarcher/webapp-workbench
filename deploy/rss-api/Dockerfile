@@ -1,5 +1,5 @@
 # rss-api runtime. Compile on the host (`npm run build -w rss-api` / gradle bootJar),
-# then copy the Spring Boot jar. deploy.mjs runs that host build unless --no-build.
+# then copy the Spring Boot jar. deploy.py runs that host build unless --no-build.
 
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
