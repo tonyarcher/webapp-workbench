@@ -1,0 +1,58 @@
+:root {
+    --bg: #07080c;
+    --bg-raise: #101218;
+    --line: rgba(255, 255, 255, 0.1);
+    --text: #f4f6fb;
+    --text-soft: #9aa3b5;
+    --gold: #f5d76e;
+    --gold-glow: rgba(245, 215, 110, 0.35);
+    --make: #f8fafc;
+    --miss: #0b0d12;
+    --wood: #c4a06a;
+    --wood-dark: #8a6236;
+    --paint: #1e3a8a;
+    --home: #3b82f6;
+    --away: #f97316;
+    --shot-red: #ef4444;
+    --danger: #fb7185;
+    color-scheme: dark;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    font-family: Outfit, sans-serif;
+    background:
+        radial-gradient(1200px 500px at 80% -10%, rgba(59, 130, 246, 0.16), transparent 55%),
+        radial-gradient(900px 420px at 10% 0%, rgba(249, 115, 22, 0.12), transparent 50%),
+        var(--bg);
+    color: var(--text);
+}
+
+#app {
+    height: 100%;
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

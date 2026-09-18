@@ -19,6 +19,7 @@
 #   radio-api    - node server, JSON API for Radio Station under
 #                  /radio-station/api/ (prefix stripped by the gateway).
 #   football     - nginx static, serves Football under /football/.
+#   basketball   - nginx static, serves Basketball under /basketball/.
 #   fitness      - nginx static, serves Fitness under /fitness/.
 #   fitness-api  - Kotlin JSON API (Spring Data JPA) for Fitness under /fitness/api/
 #                  (prefix stripped by the gateway). Postgres database `fitness`.
@@ -50,6 +51,7 @@ services:
       - radio-station
       - radio-api
       - football
+      - basketball
       - fitness
       - fitness-api
       - user-web
@@ -200,6 +202,14 @@ services:
     build:
       context: ..
       dockerfile: deploy/football/Dockerfile
+    restart: unless-stopped
+    networks:
+      - baseball
+
+  basketball:
+    build:
+      context: ..
+      dockerfile: deploy/basketball/Dockerfile
     restart: unless-stopped
     networks:
       - baseball

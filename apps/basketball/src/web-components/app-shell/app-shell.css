@@ -1,0 +1,9 @@
+:host {
+    display: block;
+    height: 100%;
+}
+
+.loading {
+    padding: 32px;
+    color: var(--text-soft);
+}

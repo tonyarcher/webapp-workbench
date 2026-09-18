@@ -6,7 +6,7 @@ library workspaces those apps need.
 
 Run: `python3 scripts/build.py [app...]` (usually via build.sh / build.ps1).
 JS runtime: npm by default, `bun` opt-in via `--js-runtime` or `JS_RUNTIME`.
-Docker image builds stay on npm regardless; this flag is local-only.
+Deploy copies host `dist/` into images; this flag is local-only.
 Only stdlib is used (subprocess, concurrent via scripts.pool).
 """
 
@@ -32,7 +32,7 @@ from scripts.pool import run_pool
 
 HELP = f"""Build JS workspaces locally from the repo root (npm by default, bun opt-in).
 
-Docker image builds happen in deploy, not here (images stay on npm).
+Deploy compiles TypeScript on the host, then copies dist into images.
 To rebuild and roll out one app:  ./deploy.sh rss-reader   (or .\\deploy.ps1 rss-reader)
 
 Usage:

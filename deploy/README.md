@@ -1,8 +1,9 @@
 # Deployment
 
-Docker Compose stack that runs a reverse-proxy gateway in front of nine
-SPA apps (Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll, Clipstack,
-Calendar Sync, Radio Station, Football, Fitness). It is
+Docker Compose stack that runs a reverse-proxy gateway in front of the
+static SPAs (Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll,
+Clipstack, Calendar Sync, Radio Station, Football, Basketball, Fitness,
+Accounts). It is
 designed to run on a remote Ubuntu host with Docker (or K3s / a
 Docker-compatible container runtime) already installed.
 
@@ -17,7 +18,7 @@ Docker-compatible container runtime) already installed.
   direct `docker compose` on a fresh clone needs `python3 scripts/render_gateway.py` first.
 - `hello/index.html` — static hello-world page copied into the `gateway` image and served at the root `/`.
 - `gateway/` — Dockerfile that builds the `gateway` image from the `deploy/` context.
-- `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `clipstack/`, `calendar-sync/`, `radio-station/`, `football/`, `fitness/` — Dockerfiles + nginx configs for the static apps. Calendar Sync also proxies `/api/trakt/` to api.trakt.tv.
+- `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `clipstack/`, `calendar-sync/`, `radio-station/`, `football/`, `basketball/`, `fitness/`, `user-web/` — Dockerfiles + nginx configs for the static apps. Calendar Sync also proxies `/api/trakt/` to api.trakt.tv.
 - `radio-api/` — Dockerfile for the Radio Station node API. On startup it creates the `radio` Postgres database if the volume predates this service.
 - `fitness-api/` — JRE image for the Fitness Kotlin API. Compile on the host JDK (`gradle bootJar`); the image copies the jar. Creates the `fitness` Postgres database on startup.
 - `stock-game-api/` — JRE image for the Stock Game Kotlin API. Compile on the host JDK (`gradle bootJar`); the image copies the jar. Creates the `stock` Postgres database on startup.
@@ -26,12 +27,10 @@ Docker-compatible container runtime) already installed.
   `stock-game-api` (Kotlin, Postgres `stock`).
 
 All app Dockerfiles use the repo root as the build context (`context: ..` in
-compose). Inside the containers the Windows-generated lockfile is discarded
-and dependencies are resolved fresh (npm records only the generating
-platform's native binaries — issue npm/cli#4828), so the images install the
-correct Linux binaries. Each app container listens on port `3000` internally;
-the gateway strips the prefix for the static apps. The `gateway` image is
-built from the `deploy/` context.
+compose). TypeScript is compiled on the host (`deploy.py` runs npm / Vite /
+tsc, same as Gradle `bootJar`); images copy `dist/` or jars. Each app
+container listens on port `3000` internally; the gateway strips the prefix
+for the static apps. The `gateway` image is built from the `deploy/` context.
 
 ## Routes
 
@@ -47,18 +46,20 @@ built from the `deploy/` context.
 | `/radio-station/` | Radio Station (nginx static, prefix stripped) |
 | `/radio-station/api/` | Radio Station API (node, prefix stripped). Creates Postgres database `radio` on startup. |
 | `/football/` | Football tracker (nginx static, prefix stripped) |
+| `/basketball/` | Basketball tracker (nginx static, prefix stripped) |
 | `/fitness/` | Fitness (nginx static, prefix stripped) |
+| `/auth/` | Accounts landing page (nginx static, prefix stripped) |
 | `/fitness/api/` | Fitness API (Kotlin, prefix stripped). Creates Postgres database `fitness` on startup. |
 | `/git/` | Gitea git + wiki (prefix stripped, `ROOT_URL` carries `/git/`). SSH on the mapped host port via VPN. |
 
 The bare paths (e.g. `/stock-game`) redirect to their trailing-slash forms.
-Each app is served under its own subpath with the base baked in at build time
-(`APP_BASE_PATH`), so relative assets, manifests, and service workers resolve
-correctly behind the gateway.
+Each app is served under its own subpath with the base baked in at host Vite
+build (`APP_BASE_PATH`), so relative assets, manifests, and service workers
+resolve correctly behind the gateway.
 
 ## How each app is served
 
-- **Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll, Clipstack, Calendar Sync, Radio Station, Football, Fitness** are static Vite builds served
+- **Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll, Clipstack, Calendar Sync, Radio Station, Football, Basketball, Fitness, Accounts** are static Vite builds served
   by an nginx container. The gateway strips the app's prefix and nginx serves
   the built `dist/` at the root, with gzip, an SPA fallback to `index.html`,
   no-cache for the shell/service worker, and long-lived immutable caching for
@@ -104,16 +105,16 @@ one place.
 
 Short names: `baseball`, `rss`, `stock`, `lemmy`, `clipstack`, `calendar`, `gateway`, `git`, `gitea`.
 
-A local `./build.sh rss` compiles that workspace on this machine. It is
-optional before deploy: each image already runs `npm install` / `npm run
-build` inside Docker (needed for Linux native binaries). Use the local
-build when you want a faster typecheck/compile before sending context
-through the tunnel.
+`./deploy.sh` compiles TypeScript on the host (Vite / tsc, with
+`APP_BASE_PATH` for subpath SPAs) then copies `dist/` into nginx images.
+`./build.sh rss` is the same host compile without Docker — useful as a
+typecheck before a tunnel upload. Images do not run `tsc` or Vite.
 
 The gateway listens on port `80` (plus `443` when `TLS_HOSTS` is set — see
 HTTPS below). Visit `http://<host>/` for the hello page and
 `http://<host>/baseball/` (plus `/rss-reader/`, `/stock-game/`,
-`/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/fitness/`) for the apps.
+`/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`,
+`/football/`, `/basketball/`, `/fitness/`, `/auth/`) for the apps.
 
 ## HTTPS: LAN deploy vs cloud deploy
 
@@ -191,8 +192,8 @@ ssh -N -L 2375:/var/run/docker.sock user@remote-host
 ```
 
 `DOCKER_TUNNEL` changes the tunnel URL (default `tcp://127.0.0.1:2375`). A
-root `.dockerignore` keeps `node_modules/`, `dist/`, and `.git` out of the
-build context so tunnel uploads stay small.
+root `.dockerignore` keeps `node_modules/` and `.git` out of the build
+context. Host-built `dist/` folders are un-ignored so compose can COPY them.
 
 ## Data
 

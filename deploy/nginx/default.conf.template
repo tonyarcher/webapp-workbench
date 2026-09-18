@@ -3,7 +3,7 @@
 # edit this file, never the rendered output.
 # - `/` serves a hello-world page from the hello volume.
 # - `/baseball/`, `/rss-reader/`, `/lemmy-vertical-scroll/`,
-#   `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/fitness/`,
+#   `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/basketball/`, `/fitness/`,
 #   and `/auth/` proxy to the matching app services with the prefix stripped
 #   (static nginx apps). `/user-api/` is the identity API (prefix stripped).
 #   `/git/` is Gitea git + wiki (prefix stripped; ROOT_URL carries the public subpath).
@@ -106,6 +106,10 @@ server {
 
     location = /football {
         return 301 /football/$is_args$args;
+    }
+
+    location = /basketball {
+        return 301 /basketball/$is_args$args;
     }
 
     location = /fitness {
@@ -252,6 +256,19 @@ server {
         set $upstream_football http://football:3000;
         rewrite ^/football/(.*)$ /$1 break;
         proxy_pass $upstream_football;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /basketball/ {
+        set $upstream_basketball http://basketball:3000;
+        rewrite ^/basketball/(.*)$ /$1 break;
+        proxy_pass $upstream_basketball;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;

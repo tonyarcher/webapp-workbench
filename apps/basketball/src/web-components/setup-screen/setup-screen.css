@@ -1,0 +1,109 @@
+:host {
+    display: block;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 32px 20px 48px;
+}
+
+h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+}
+
+.lead {
+    color: var(--text-soft);
+    margin: 0 0 24px;
+}
+
+form {
+    display: grid;
+    gap: 16px;
+    background: rgba(16, 18, 24, 0.86);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+label {
+    display: grid;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+}
+
+input,
+select {
+    background: #0b0d12;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+button {
+    appearance: none;
+    border: 0;
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+button[type='submit'] {
+    background: var(--gold);
+    color: #111;
+}
+
+.secondary {
+    background: #1a1d27;
+    color: var(--text);
+    border: 1px solid var(--line);
+}
+
+.ghost {
+    background: transparent;
+    color: var(--text-soft);
+    border: 1px solid var(--line);
+}
+
+.rosters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.roster h2 {
+    margin: 0 0 8px;
+    font-size: 14px;
+}
+
+.player {
+    display: grid;
+    grid-template-columns: 52px 1fr 52px;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+@media (max-width: 720px) {
+    .row,
+    .rosters {
+        grid-template-columns: 1fr;
+    }
+}
