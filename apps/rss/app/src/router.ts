@@ -20,9 +20,6 @@ export function parsePath(pathname: string): View {
     if (parts[0] === 'frontpage') {
         return {kind: 'frontpage'};
     }
-    if (parts[0] === 'interesting' && parts[1]) {
-        return {kind: 'interesting', folderId: decodeURIComponent(parts[1])};
-    }
     return {kind: 'all'};
 }
 
@@ -40,8 +37,6 @@ export function viewToPath(view: View): string {
             return `/folder/${encodeURIComponent(view.id)}`;
         case 'feed':
             return `/feed/${encodeURIComponent(view.id)}`;
-        case 'interesting':
-            return `/interesting/${encodeURIComponent(view.folderId)}`;
     }
 }
 

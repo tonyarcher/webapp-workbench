@@ -126,4 +126,19 @@ class FeedPollerTest {
         verify(ingest).pollFeed(badFeed)
         verify(ingest).pollFeed(goodFeed)
     }
+
+    @Test
+    fun destroyedPollerSkipsTick() {
+        val feedId = UUID.randomUUID()
+        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(
+            listOf(row(feedId, now.minus(Duration.ofHours(2)))),
+        )
+        whenever(subs.findMaxLastSeenByFeedId(feedId)).thenReturn(null)
+
+        val poller = FeedPoller(ingest, syncRows, sync, subs)
+        poller.destroy()
+        poller.scheduledTick()
+
+        verify(ingest, never()).pollFeed(any())
+    }
 }

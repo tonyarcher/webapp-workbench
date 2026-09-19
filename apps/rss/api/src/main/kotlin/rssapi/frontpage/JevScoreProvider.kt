@@ -3,6 +3,7 @@ package rssapi.frontpage
 import com.fasterxml.jackson.databind.JsonNode
 import rssapi.ai.JevBackend
 import rssapi.ai.jsonBody
+import rssapi.domain.affinitySum
 import rssapi.persist.ArticleEntity
 
 const val JEV_BATCH_MAX: Int = 20
@@ -45,14 +46,16 @@ class JevScoreProvider(
         val batch = candidates.take(minOf(JEV_BATCH_MAX, JEV_MAX_QUESTIONS / 3))
         if (batch.isEmpty()) return emptyMap()
         val answers = backend.score(stateJson(topWords, affinity, batch), questionsFor(batch))
-        return batch.associate { it.id to scoresFor(it, answers) }
+        return batch.mapNotNull { candidate ->
+            scoresFor(candidate, answers)?.let { candidate.id to it }
+        }.toMap()
     }
 
-    private fun scoresFor(candidate: JevCandidate, answers: JsonNode): SignalScores {
+    private fun scoresFor(candidate: JevCandidate, answers: JsonNode): SignalScores? {
         val fallback = signals.score(candidate.input)
         val worthy = answers.path(candidate.id + "_worthy").path("noul").asDouble(Double.NaN)
         val interest = answers.path(candidate.id + "_interest").path("score").asDouble(Double.NaN)
-        if (!worthy.isFinite() || !interest.isFinite()) return fallback
+        if (!worthy.isFinite() || !interest.isFinite()) return null
         val topic = answers.path(candidate.id + "_topic").path("choice").asText().takeIf { it in TOPIC_CHOICES }
         return SignalScores(
             worthy = worthy.coerceIn(0.0, 1.0),
@@ -99,12 +102,8 @@ class JevScoreProvider(
 }
 
 /** Reader-affinity total for one article: feed plus domain plus author components, floored at zero. */
-internal fun affinityOf(article: ArticleEntity, affinityMap: Map<String, Float>): Double {
-    var total = (affinityMap["aff:feed:${article.feedId}"] ?: 0f).toDouble()
-    article.domain?.let { total += (affinityMap["aff:domain:$it"] ?: 0f).toDouble() }
-    article.author?.let { total += (affinityMap["aff:author:${it.lowercase()}"] ?: 0f).toDouble() }
-    return maxOf(0.0, total)
-}
+internal fun affinityOf(article: ArticleEntity, affinityMap: Map<String, Float>): Double =
+    affinitySum(article.feedId, article.domain, article.author, affinityMap)
 
 /** Raw signal inputs for one article, shared by the signal path and Jev fallback. */
 internal fun signalInputOf(article: ArticleEntity, affinityMap: Map<String, Float>): SignalInput = SignalInput(

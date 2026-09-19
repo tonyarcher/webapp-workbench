@@ -1,22 +1,27 @@
 import {html, LitElement, unsafeCSS} from 'lit';
 import {customElement, state} from 'lit/decorators.js';
-import {fetchLibrary, frontPageKey, libraryKey, queryClient, QueryController} from '../../query';
-import {fetchFrontPage} from '../../services/api';
-import {articleImage, safeHttpUrl} from '../../services/parser';
+import {
+    editionKey,
+    editionsKey,
+    fetchLibrary,
+    frontPageKey,
+    invalidateEdition,
+    libraryKey,
+    queryClient,
+    QueryController,
+} from '../../query';
+import {buildEdition, fetchEdition, fetchEditions, fetchFrontPage, fetchLatestEdition, QuotaError} from '../../services/api';
 import {markArticleRead, toggleStar} from '../../mutations';
 import {
-    buildFrontPageSections,
-    DEFAULT_FRONT_PAGE_OPTIONS,
-    FRONT_PAGE_PER_FOLDER_OPTIONS,
-    FRONT_PAGE_SINCE_HOURS_OPTIONS,
-    loadFrontPageOptions,
-    saveFrontPageOptions,
-    type FrontPageOptions,
-    type FrontPageSection,
-} from '../../services/front-page';
-import type {Article, Feed, Folder} from '../../types';
+    applyWeights,
+    EDITION_WINDOW_HOURS_OPTIONS,
+    loadEditionOptions,
+    pruneEditionOptions,
+    saveEditionOptions,
+    type EditionOptions,
+} from '../../services/edition-options';
+import type {Article, Edition, EditionMeta, EditionSection, Feed, Folder} from '../../types';
 import {domainOf, formatDate} from '../../util';
-import '../lazy-img/lazy-img';
 import styles from './front-page.css?inline';
 
 interface Library {
@@ -24,19 +29,47 @@ interface Library {
     feeds: Feed[];
 }
 
-const PAGE_LIMIT = 500;
+const HISTORY_LIMIT = 10;
+const MEMBER_LIMIT = 500;
+const POLL_MS = 15_000;
+const POLL_WINDOW_MS = 5 * 60_000;
 
-function editionDate(now: number): string {
-    return new Date(now).toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'});
+function editionDate(ts: number): string {
+    return new Date(ts).toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'});
+}
+
+/** Server summaries are plain text; blank lines mark paragraph breaks. */
+function splitParagraphs(summary: string | undefined): string[] {
+    if (!summary) return [];
+    return summary
+        .split(/\n\n+/)
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
+}
+
+/** Unique member story count across every section. */
+function storyCount(sections: EditionSection[]): number {
+    const seen = new Set<string>();
+    for (const s of sections) {
+        for (const id of s.articleIds) seen.add(id);
+    }
+    return seen.size;
 }
 
 @customElement('front-page')
 export class FrontPage extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @state() private options: FrontPageOptions = loadFrontPageOptions();
+    @state() private options: EditionOptions = loadEditionOptions();
     @state() private optionsOpen = false;
+    @state() private expandedIds: string[] = [];
+    @state() private selectedId: string | null = null;
+    @state() private building = false;
+    @state() private buildError = '';
+    @state() private buildStartedAt = 0;
     @state() private now = Date.now();
+
+    private pollTimer: number | null = null;
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
@@ -44,30 +77,50 @@ export class FrontPage extends LitElement {
         refetchInterval: 60_000,
     }));
 
-    private articles = new QueryController<Article[]>(this, () => ({
-        queryKey: frontPageKey({since: this.sinceCutoff(), unreadOnly: this.options.unreadOnly, limit: PAGE_LIMIT}),
+    private history = new QueryController<EditionMeta[]>(this, () => ({
+        queryKey: editionsKey({limit: HISTORY_LIMIT}),
+        queryFn: () => fetchEditions(HISTORY_LIMIT),
+    }));
+
+    private edition = new QueryController<Edition | null>(this, () => ({
+        queryKey: editionKey({id: this.selectedId ?? 'latest'}),
+        queryFn: () => (this.selectedId ? fetchEdition(this.selectedId) : fetchLatestEdition()),
+    }));
+
+    private members = new QueryController<Article[]>(this, () => ({
+        queryKey: frontPageKey({since: this.membersCutoff(), limit: MEMBER_LIMIT, edition: this.edition.data?.id ?? 'latest'}),
         queryFn: async () => {
-            const res = await fetchFrontPage({since: this.sinceCutoff(), unreadOnly: this.options.unreadOnly, limit: PAGE_LIMIT});
+            const res = await fetchFrontPage({since: this.membersCutoff(), limit: MEMBER_LIMIT});
             return res.articles;
         },
     }));
 
-    private sinceCutoff(): number {
-        return this.options.sinceHours > 0 ? this.now - this.options.sinceHours * 3_600_000 : 0;
+    /** Member lookup window anchored on the edition itself so older editions still resolve. */
+    private membersCutoff(): number {
+        const edition = this.edition.data;
+        const hours = edition?.windowHours ?? this.options.windowHours;
+        const anchor = edition ? edition.generatedAt : this.now;
+        return hours > 0 ? anchor - hours * 3_600_000 : 0;
     }
 
     override connectedCallback() {
         super.connectedCallback();
+        this.now = Date.now();
         window.addEventListener('feeds-refreshed', this.onFeedsRefreshed);
-        window.addEventListener('article-read', this.onArticleRead);
-        window.addEventListener('article-starred', this.onArticleStarred);
+        window.addEventListener('article-read', this.onArticleEvent);
+        window.addEventListener('article-starred', this.onArticleEvent);
     }
 
     override disconnectedCallback() {
         super.disconnectedCallback();
         window.removeEventListener('feeds-refreshed', this.onFeedsRefreshed);
-        window.removeEventListener('article-read', this.onArticleRead);
-        window.removeEventListener('article-starred', this.onArticleStarred);
+        window.removeEventListener('article-read', this.onArticleEvent);
+        window.removeEventListener('article-starred', this.onArticleEvent);
+        this.clearPollTimer();
+    }
+
+    override updated() {
+        this.syncPoll();
     }
 
     private onFeedsRefreshed = () => {
@@ -75,164 +128,250 @@ export class FrontPage extends LitElement {
         void queryClient.invalidateQueries({queryKey: ['front-page']});
     };
 
-    private onArticleRead = () => {
+    private onArticleEvent = () => {
         void queryClient.invalidateQueries({queryKey: ['front-page']});
     };
 
-    private onArticleStarred = () => {
-        void queryClient.invalidateQueries({queryKey: ['front-page']});
-    };
-
-    private getViewData(): { folders: Folder[]; feeds: Feed[]; sections: FrontPageSection[]; count: number } {
-        const folders = this.library.data?.folders ?? [];
-        const feeds = this.library.data?.feeds ?? [];
-        const articles = this.articles.data ?? [];
-        const sections = buildFrontPageSections(articles, feeds, folders, [], this.options, this.now);
-        const seen = new Set<string>();
-        let count = 0;
-        for (const s of sections) {
-            for (const a of s.articles) {
-                if (!seen.has(a.id)) {
-                    seen.add(a.id);
-                    count += 1;
-                }
-            }
+    /** Poll the selected edition while it is building, up to 5 minutes. */
+    private syncPoll(): void {
+        const building = this.edition.data?.status === 'building';
+        const anchor = this.buildStartedAt > 0 ? this.buildStartedAt : (this.edition.data?.generatedAt ?? Date.now());
+        const fresh = Date.now() - anchor < POLL_WINDOW_MS;
+        if (building && fresh && this.pollTimer === null) {
+            this.pollTimer = window.setTimeout(this.onPollTick, POLL_MS);
+        } else if ((!building || !fresh) && this.pollTimer !== null) {
+            this.clearPollTimer();
         }
-        return {folders, feeds, sections, count};
     }
 
-    /** Every article on screen in display order, deduped so j/k navigation visits each once. */
-    private visibleArticles(sections: FrontPageSection[]): Article[] {
+    private clearPollTimer(): void {
+        if (this.pollTimer !== null) {
+            window.clearTimeout(this.pollTimer);
+            this.pollTimer = null;
+        }
+    }
+
+    private onPollTick = () => {
+        this.pollTimer = null;
+        this.now = Date.now();
+        void invalidateEdition();
+    };
+
+    private articleById(): Map<string, Article> {
+        return new Map((this.members.data ?? []).map((a) => [a.id, a]));
+    }
+
+    /** Resolved member articles in display order, deduped for j/k navigation. */
+    private visibleItems(sections: EditionSection[]): Article[] {
+        const byId = this.articleById();
         const seen = new Set<string>();
-        return sections.flatMap((s) => s.articles).filter((a) => {
-            if (seen.has(a.id)) return false;
-            seen.add(a.id);
-            return true;
-        });
+        const out: Article[] = [];
+        for (const s of sections) {
+            for (const id of s.articleIds) {
+                if (seen.has(id)) continue;
+                seen.add(id);
+                const article = byId.get(id);
+                if (article) out.push(article);
+            }
+        }
+        return out;
     }
 
     override render() {
-        const {folders, feeds, sections, count} = this.getViewData();
+        const edition = this.edition.data ?? null;
+        const sections = edition ? applyWeights(edition.sections, this.options).slice(0, this.options.sectionCount) : [];
         return html`
       <header class="masthead">
         <div class="nameplate">Front Page</div>
-        <div class="edition"><span>${editionDate(this.now)}</span><span aria-hidden="true"> · </span><span>${count === 1 ? '1 story' : `${count} stories`}</span>
+        <div class="edition">${this.renderEditionLine(edition, storyCount(sections))}</div>
+        <div class="masthead-actions">
           <button class="options-btn" @click=${() => (this.optionsOpen = !this.optionsOpen)} aria-expanded=${this.optionsOpen}>Options</button>
+          <button class="options-btn" @click=${this.onRefresh} ?disabled=${this.building}>Refresh</button>
+          <button class="build-btn" @click=${this.onBuild} ?disabled=${this.building}>${this.building ? 'Building…' : 'Build edition'}</button>
         </div>
+        ${this.renderHistory(edition)}
         ${this.optionsOpen ? this.renderOptionsForm() : ''}
+        ${this.buildError ? html`<p class="error">${this.buildError}</p>` : ''}
       </header>
-      <div class="body">${this.renderBody(folders, feeds, sections)}</div>`;
+      <div class="body">${this.renderBody(edition, sections)}</div>`;
+    }
+
+    private renderEditionLine(edition: Edition | null, displayed: number) {
+        if (!edition) return html`<span>No edition yet</span>`;
+        return html`<span>${editionDate(edition.generatedAt)}</span><span aria-hidden="true"> · </span><span>${displayed === 1 ? '1 story' : `${displayed} stories`}</span>${edition.model ? html`<span aria-hidden="true"> · </span><span>${edition.model}</span>` : ''}<span aria-hidden="true"> · </span><span>${edition.status}</span>`;
+    }
+
+    private renderHistory(edition: Edition | null) {
+        const metas = this.history.data ?? [];
+        if (!metas.length && !this.selectedId) return '';
+        // The just-built edition may not be in history yet; show it anyway.
+        const shown: EditionMeta[] =
+            this.selectedId && edition && !metas.some((m) => m.id === this.selectedId)
+                ? [{id: this.selectedId, generatedAt: edition.generatedAt, windowHours: edition.windowHours, status: edition.status}, ...metas]
+                : metas;
+        if (!shown.length) return '';
+        const value = this.selectedId ?? 'latest';
+        return html`
+      <label class="history">Edition
+        <select .value=${value} @change=${this.onHistoryChange}>
+          <option value="latest">Latest${edition && !this.selectedId ? ` — ${editionDate(edition.generatedAt)}` : ''}</option>
+          ${shown.map((m) => html`<option value=${m.id}>${editionDate(m.generatedAt)} — ${m.status}</option>`)}
+        </select>
+      </label>`;
+    }
+
+    private onHistoryChange(e: Event) {
+        const value = (e.target as HTMLSelectElement).value;
+        this.selectedId = value === 'latest' ? null : value;
+        this.expandedIds = [];
     }
 
     private renderOptionsForm() {
         const o = this.options;
         return html`
       <form class="options" @change=${this.onOptionsChange}>
-        <label>Per section
-          <select name="perFolder" .value=${String(o.perFolder)}>
-            ${FRONT_PAGE_PER_FOLDER_OPTIONS.map((n) => html`<option value=${n}>${n}</option>`)}
+        <label>Window
+          <select name="windowHours" .value=${String(o.windowHours)}>
+            ${EDITION_WINDOW_HOURS_OPTIONS.map((n) => html`<option value=${n}>Last ${n}h</option>`)}
           </select>
         </label>
-        <label>Since
-          <select name="sinceHours" .value=${String(o.sinceHours)}>
-            ${FRONT_PAGE_SINCE_HOURS_OPTIONS.map((n) => html`<option value=${n}>Last ${n}h</option>`)}
-          </select>
+        <label>Sections
+          <input name="sectionCount" type="number" min="1" max="12" step="1" .value=${String(o.sectionCount)} />
         </label>
-        <label>Min worthy
-          <input name="minWorthy" type="number" min="0" step="1" .value=${String(o.minWorthy)} />
+        <label>General
+          <input name="weightGeneral" type="number" min="0" max="1" step="0.05" .value=${String(o.weightGeneral)} />
         </label>
-        <label class="check"><input name="unreadOnly" type="checkbox" .checked=${o.unreadOnly} /> Unread only</label>
-        <label class="check"><input name="showTopStory" type="checkbox" .checked=${o.showTopStory} /> Top story</label>
-        <label class="check"><input name="showBreaking" type="checkbox" .checked=${o.showBreaking} /> Breaking</label>
-        <label class="check"><input name="showDeepReads" type="checkbox" .checked=${o.showDeepReads} /> Deep reads</label>
-        <label class="check"><input name="showByFolder" type="checkbox" .checked=${o.showByFolder} /> By folder</label>
-      </form>`;
+        <label>Personal
+          <input name="weightPersonal" type="number" min="0" max="1" step="0.05" .value=${String(o.weightPersonal)} />
+        </label>
+        <label>Newness
+          <input name="weightNewness" type="number" min="0" max="1" step="0.05" .value=${String(o.weightNewness)} />
+        </label>
+        <label>Popularity
+          <input name="weightPopularity" type="number" min="0" max="1" step="0.05" .value=${String(o.weightPopularity)} />
+        </label>
+        <label class="check"><input name="showOpinion" type="checkbox" .checked=${o.showOpinion} /> Opinion</label>
+        <label class="check"><input name="showFactCheck" type="checkbox" .checked=${o.showFactCheck} /> Fact-check</label>
+      </form>
+      <p class="options-note">Weights re-sort instantly. Window and section count apply to the next build.</p>`;
     }
 
     private onOptionsChange(e: Event) {
         const form = (e.currentTarget as HTMLElement).querySelectorAll('select, input');
-        const next: FrontPageOptions = {...this.options};
+        const next: EditionOptions = {...this.options};
         for (const el of form) {
-            const field = (el as HTMLSelectElement | HTMLInputElement).name as keyof FrontPageOptions;
-            if (field === 'perFolder' || field === 'sinceHours' || field === 'minWorthy') {
+            const field = (el as HTMLSelectElement | HTMLInputElement).name as keyof EditionOptions;
+            if (field === 'windowHours' || field === 'sectionCount' || field === 'weightGeneral' || field === 'weightPersonal' || field === 'weightNewness' || field === 'weightPopularity') {
                 const n = Number((el as HTMLSelectElement | HTMLInputElement).value);
                 if (Number.isFinite(n)) (next[field] as number) = n;
-            } else if (field in next) {
+            } else if (field === 'showOpinion' || field === 'showFactCheck') {
                 (next[field] as boolean) = (el as HTMLInputElement).checked;
             }
         }
-        if (next.perFolder !== this.options.perFolder) {
-            next.perFolder = (FRONT_PAGE_PER_FOLDER_OPTIONS as readonly number[]).includes(next.perFolder)
-                ? next.perFolder
-                : DEFAULT_FRONT_PAGE_OPTIONS.perFolder;
-        }
-        if (next.sinceHours !== this.options.sinceHours) {
-            next.sinceHours = (FRONT_PAGE_SINCE_HOURS_OPTIONS as readonly number[]).includes(next.sinceHours)
-                ? next.sinceHours
-                : DEFAULT_FRONT_PAGE_OPTIONS.sinceHours;
-        }
-        this.options = next;
-        saveFrontPageOptions(next);
+        this.options = pruneEditionOptions(next);
+        saveEditionOptions(this.options);
     }
 
-    private renderBody(folders: Folder[], feeds: Feed[], sections: FrontPageSection[]) {
-        if (this.articles.error) return html`<div class="empty" style="color: var(--danger)">Could not load the front page.</div>`;
-        if (!folders.length && !this.library.error) return html`<div class="empty">No folders yet. Import an OPML file to create some.</div>`;
-        if (this.library.error && !folders.length) return html`<div class="empty">Could not load feeds.</div>`;
-        if (!sections.length) {
-            return html`<div class="empty">${this.options.unreadOnly ? 'Nothing unread in this window.' : 'Nothing in this window yet. Hit Refresh to sync.'}</div>`;
-        }
-        const [first, ...rest] = sections;
-        if (!first) return html`<div class="empty">Nothing in this window yet.</div>`;
-        if (first.id === 'top-story') {
-            const hero = first.articles[0];
-            if (!hero) return html`<div class="empty">Nothing in this window yet.</div>`;
-            return html`${this.renderHero(hero, feeds)}${rest.map((s) => this.renderSection(s, feeds))}`;
-        }
-        return html`${sections.map((s) => this.renderSection(s, feeds))}`;
+    private onRefresh() {
+        this.now = Date.now();
+        void invalidateEdition();
+        void queryClient.invalidateQueries({queryKey: ['front-page']});
     }
 
-    private renderHero(article: Article, feeds: Feed[]) {
-        const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
-        const link = safeHttpUrl(article.link);
-        const image = articleImage(article);
+    private async onBuild() {
+        if (this.building) return;
+        this.building = true;
+        this.buildError = '';
+        try {
+            const res = await buildEdition(this.options.windowHours, this.options.sectionCount);
+            this.buildStartedAt = Date.now();
+            this.now = Date.now();
+            this.selectedId = res.id ? res.id : null;
+            this.expandedIds = [];
+            await invalidateEdition();
+        } catch (err) {
+            this.buildError = err instanceof QuotaError || err instanceof Error ? err.message : 'Could not build the edition.';
+        } finally {
+            this.building = false;
+        }
+    }
+
+    private renderBody(edition: Edition | null, sections: EditionSection[]) {
+        if (this.edition.error) {
+            return html`<div class="empty" style="color: var(--danger)">Could not load the edition. <button class="options-btn" @click=${this.onRefresh}>Retry</button></div>`;
+        }
+        if (this.edition.result.isPending) return html`<div class="empty">Loading the paper…</div>`;
+        if (!edition) {
+            return html`<div class="empty">
+          <p><strong>The Front Page is a generated newspaper</strong>, not a headline list: one long-form edition with an editorial, merged multi-source sections, and fact-check badges.</p>
+          <p>No edition exists yet. Build the first one from the last ${this.options.windowHours} hours of your feeds.</p>
+          <button class="build-btn" @click=${this.onBuild} ?disabled=${this.building}>${this.building ? 'Building…' : 'Build edition'}</button>
+        </div>`;
+        }
+        if (edition.status === 'building' && !sections.length) {
+            return html`<div class="empty">Edition building… this page refreshes automatically.</div>`;
+        }
+        if (edition.status === 'failed' && !sections.length) {
+            return html`<div class="empty">
+          <p>The last build failed. Try again with a wider window or more subscribed feeds.</p>
+          <button class="build-btn" @click=${this.onBuild} ?disabled=${this.building}>${this.building ? 'Building…' : 'Build edition'}</button>
+        </div>`;
+        }
+        const feeds = this.library.data?.feeds ?? [];
+        return html`${edition.status === 'building' ? html`<p class="building-note">Edition still building — showing the latest draft.</p>` : ''}
+      ${this.options.showOpinion && edition.opinion ? this.renderEditorial(edition.opinion) : ''}
+      ${sections.map((s) => this.renderSection(s, feeds))}`;
+    }
+
+    private renderEditorial(opinion: string) {
         return html`
-      <article class="hero ${article.read ? 'read' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}"
-        @click=${() => this.openArticle(article)} @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}>
-        ${image ? html`<lazy-img class="hero-img" .src=${image}></lazy-img>` : ''}
-        <div class="hero-body">
-          <div class="kicker">Top Story${feedTitle ? html` · ${feedTitle}` : ''}</div>
-          ${link
-                ? html`<a class="hero-title" href=${link} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${article.title}</a>`
-                : html`<span class="hero-title">${article.title}</span>`}
-          ${article.summary ? html`<p class="hero-summary">${article.summary}</p>` : ''}
-          <div class="meta"><span>${domainOf(article.link)}</span><span>${formatDate(article.published)}</span>${article.author ? html`<span>by ${article.author}</span>` : ''}${this.renderStarBtn(article)}</div>
-        </div>
+      <article class="editorial">
+        <div class="opinion-label">Opinion</div>
+        ${splitParagraphs(opinion).map((p) => html`<p>${p}</p>`)}
       </article>`;
     }
 
-    private renderSection(section: FrontPageSection, feeds: Feed[]) {
+    private renderSection(section: EditionSection, feeds: Feed[]) {
+        const expanded = this.expandedIds.includes(section.id);
+        const count = section.articleIds.length;
         return html`
-      <section class="fp-section">
-        <h2 class="section-head">${section.title}</h2>
-        <div class="headlines">${section.articles.map((a) => this.renderHeadline(a, feeds))}</div>
-      </section>`;
+      <article class="story">
+        ${section.topic ? html`<div class="kicker">${section.topic}</div>` : ''}
+        <h2 class="story-title">${section.title}</h2>
+        ${this.options.showFactCheck ? this.renderBadge(section.verified) : ''}
+        ${splitParagraphs(section.summary).map((p) => html`<p class="story-body">${p}</p>`)}
+        ${section.opinion ? html`<p class="section-opinion">${section.opinion}</p>` : ''}
+        <div class="sources-line">
+          <span>${count === 1 ? '1 source' : `${count} sources`}</span>
+          ${count > 0 ? html`<button class="more-btn" @click=${() => this.toggleExpanded(section.id)} aria-expanded=${expanded}>${expanded ? 'Fewer' : 'More'}</button>` : ''}
+        </div>
+        ${expanded ? html`<div class="members">${section.articleIds.map((id) => this.renderMember(id, feeds))}</div>` : ''}
+      </article>`;
     }
 
-    private renderHeadline(article: Article, feeds: Feed[]) {
+    private renderBadge(verified: boolean | undefined) {
+        if (!verified) return '';
+        return html`<span class="badge ok">✓ Verified</span>`;
+    }
+
+    private renderMember(id: string, feeds: Feed[]) {
+        const article = this.articleById().get(id);
+        if (!article) return html`<div class="member-row missing"><span class="title">Story unavailable</span></div>`;
         const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
-        const link = safeHttpUrl(article.link);
         return html`
-      <div class="row headline ${article.read ? 'read' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}"
+      <div class="member-row ${article.read ? 'read' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}"
         @click=${() => this.openArticle(article)} @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}>
-        <div class="row-top">${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}${feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}${link
-            ? html`<a class="title title-link" href=${link} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${article.title}</a>`
-            : html`<span class="title">${article.title}</span>`}<span class="headline-date">${formatDate(article.published)}</span>${this.renderStarBtn(article)}</div>
+        <div class="row-top">${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}${feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}<span class="title">${article.title}</span><span class="member-date">${formatDate(article.published)}</span>${this.renderStarBtn(article)}</div>
+        <div class="meta"><span>${domainOf(article.link)}</span>${article.author ? html`<span>by ${article.author}</span>` : ''}</div>
       </div>`;
     }
 
     private renderStarBtn(article: Article) {
         return html`<button class="star" title="Star" aria-label="Star" @click=${(e: Event) => this.onStar(e, article)}>${article.starred ? '★' : '☆'}</button>`;
+    }
+
+    private toggleExpanded(id: string) {
+        this.expandedIds = this.expandedIds.includes(id) ? this.expandedIds.filter((x) => x !== id) : [...this.expandedIds, id];
     }
 
     private onRowKey(e: KeyboardEvent, article: Article) {
@@ -246,21 +385,17 @@ export class FrontPage extends LitElement {
     private onStar(e: Event, article: Article) {
         e.stopPropagation();
         const starred = !article.starred;
-        void toggleStar(article.id, starred).then(() =>
-            queryClient.invalidateQueries({queryKey: ['front-page']}),
-        );
-        window.dispatchEvent(
-            new CustomEvent('article-starred', {detail: {id: article.id, starred}}),
-        );
+        void toggleStar(article.id, starred).then(() => queryClient.invalidateQueries({queryKey: ['front-page']}));
+        window.dispatchEvent(new CustomEvent('article-starred', {detail: {id: article.id, starred}}));
     }
 
     private openArticle(article: Article) {
         if (article.read === 0) {
-            void markArticleRead(article.id).then(() =>
-                queryClient.invalidateQueries({queryKey: ['front-page']}),
-            );
+            void markArticleRead(article.id).then(() => queryClient.invalidateQueries({queryKey: ['front-page']}));
         }
-        const items = this.visibleArticles(this.getViewData().sections);
+        const edition = this.edition.data;
+        const sections = edition ? applyWeights(edition.sections, this.options).slice(0, this.options.sectionCount) : [];
+        const items = this.visibleItems(sections);
         const index = items.findIndex((a) => a.id === article.id);
         this.dispatchEvent(
             new CustomEvent('open-article', {

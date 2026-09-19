@@ -86,6 +86,16 @@ export function topWords(wordMap: Record<string, number>, n: number): ScoredWord
         .slice(0, n);
 }
 
+/**
+ * Rank articles by their interestingScore desc, ties broken on id
+ * (deterministic). Returns a new array; the input is never mutated.
+ */
+export function rankInteresting<T extends { id: string; title: string }>(articles: T[], wordMap: Record<string, number>): T[] {
+    return [...articles].sort(
+        (a, b) => interestingScore(b, wordMap) - interestingScore(a, wordMap) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    );
+}
+
 export interface JevCandidateInput {
     id: string;
     title: string;

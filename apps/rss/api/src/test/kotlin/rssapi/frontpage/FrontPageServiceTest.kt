@@ -332,6 +332,59 @@ class FrontPageServiceTest {
     }
 
     @Test
+    fun jevWithoutQuotaServiceFallsBackToSignals() {
+        stubCandidates(article("a1"))
+        whenever(scoreRows.findAllById(anyOrNull())).thenReturn(emptyList())
+        whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
+            .thenAnswer { it.getArgument<List<ArticleScoreEntity>>(0) }
+        val poster = FrontPageJevPoster(jevReply("a1"))
+        val config = AiConfig(provider = "jev", jevApiKey = "test-key")
+        val provider = JevScoreProvider(JevBackend(config, poster), SignalScoreProvider())
+        val service = FrontPageService(articles, states, affinity, scoreRows, scorer, config, null, provider)
+
+        val out = service.frontPage(uid, 1_700_000_000_000L, false, 10)
+
+        assertEquals(1, out.size)
+        assertEquals(SCORE_MODEL, out[0].scoreRow.model)
+        assertTrue(poster.calls.isEmpty())
+    }
+
+    @Test
+    fun jevWithoutProviderFallsBackToSignals() {
+        stubCandidates(article("a1"))
+        whenever(scoreRows.findAllById(anyOrNull())).thenReturn(emptyList())
+        whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
+            .thenAnswer { it.getArgument<List<ArticleScoreEntity>>(0) }
+        val quotas = AiQuotaService(mock())
+        val config = AiConfig(provider = "jev", jevApiKey = "test-key")
+        val service = FrontPageService(articles, states, affinity, scoreRows, scorer, config, quotas, null)
+
+        val out = service.frontPage(uid, 1_700_000_000_000L, false, 10)
+
+        assertEquals(1, out.size)
+        assertEquals(SCORE_MODEL, out[0].scoreRow.model)
+    }
+
+    @Test
+    fun jevBatchKeepsFreshAndFallsBackMissing() {
+        stubCandidates(article("fresh"), article("stale-a"), article("stale-b"))
+        val now = Instant.now()
+        whenever(scoreRows.findAllById(anyOrNull())).thenReturn(listOf(stored("fresh", 0.1, now)))
+        whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
+            .thenAnswer { it.getArgument<List<ArticleScoreEntity>>(0) }
+        val (quotas, _) = openQuota()
+        val poster = FrontPageJevPoster(jevReply("stale-a"))
+        val service = jevService(poster, quotas)
+
+        val out = service.frontPage(uid, 1_700_000_000_000L, false, 10)
+            .associateBy { it.article.id }
+
+        assertEquals(SCORE_MODEL, out.getValue("fresh").scoreRow.model)
+        assertEquals("jev-latest", out.getValue("stale-a").scoreRow.model)
+        assertEquals(SCORE_MODEL, out.getValue("stale-b").scoreRow.model)
+    }
+
+    @Test
     fun quota429Passthrough() {
         stubCandidates(article("a1"))
         whenever(scoreRows.findAllById(anyOrNull())).thenReturn(emptyList())

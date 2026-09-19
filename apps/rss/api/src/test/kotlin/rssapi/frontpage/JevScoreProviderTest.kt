@@ -2,6 +2,7 @@ package rssapi.frontpage
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import rssapi.ai.AiConfig
 import rssapi.ai.AiException
@@ -83,7 +84,14 @@ class JevScoreProviderTest {
     }
 
     @Test
-    fun missingQuestionFallsBackPerArticle() {
+    fun partialAnswersLeftOutForCallerFallback() {
+        val poster = providerPoster(answers(noul("a_worthy", "0.7")))
+        val out = providerOf(poster).scoreBatch(emptyList(), emptyMap(), listOf(candidate("a")))
+        assertNull(out["a"])
+    }
+
+    @Test
+    fun missingQuestionLeftOutForCallerFallback() {
         val poster = providerPoster(
             answers(
                 noul("a_worthy", "0.9"),
@@ -94,15 +102,14 @@ class JevScoreProviderTest {
         val provider = providerOf(poster)
         val out = provider.scoreBatch(emptyList(), emptyMap(), listOf(candidate("a"), candidate("b")))
         assertEquals(0.9, out.getValue("a").worthy, 1e-9)
-        val expected = SignalScoreProvider().score(candidate("b").input)
-        assertEquals(expected, out.getValue("b"))
+        assertNull(out["b"])
     }
 
     @Test
-    fun malformedAnswerFallsBackPerArticle() {
+    fun malformedAnswerLeftOutForCallerFallback() {
         val poster = providerPoster(answers(noul("a_worthy", "1e999"), score("a_interest", "1e999")))
         val out = providerOf(poster).scoreBatch(emptyList(), emptyMap(), listOf(candidate("a")))
-        assertEquals(SignalScoreProvider().score(candidate("a").input), out.getValue("a"))
+        assertNull(out["a"])
     }
 
     @Test
@@ -125,7 +132,12 @@ class JevScoreProviderTest {
 
     @Test
     fun capsBatchAtTwenty() {
-        val poster = providerPoster(answers())
+        val reply = answers(
+            *(0 until 20).flatMap { i ->
+                listOf(noul("c${i}_worthy", "0.5"), score("c${i}_interest", "1.0"), choice("c${i}_topic", "news"))
+            }.toTypedArray(),
+        )
+        val poster = providerPoster(reply)
         val many = (0 until 100).map { candidate("c$it") }
         val out = providerOf(poster).scoreBatch(emptyList(), emptyMap(), many)
         assertEquals(20, out.size)

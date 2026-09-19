@@ -10,7 +10,7 @@ import type {Feed, FeedSort, Folder, View} from '../../types';
 import '../feed-list-menu/feed-list-menu';
 import '../today-menu/today-menu';
 import styles from './source-list.css?inline';
-import {feedRowTemplate, filterIconTemplate, folderRowTemplate, iconTemplate, interestingRowTemplate, menuIconTemplate, pinIconTemplate} from './source-list-render';
+import {feedRowTemplate, filterIconTemplate, folderRowTemplate, iconTemplate, menuIconTemplate, pinIconTemplate} from './source-list-render';
 import {dropFolderId, folderFeedsFor, folderUnreadFor, uncategorizedFor} from './source-list-helpers';
 import {handleDragOver, handleDragStart, handleEndDrag, handleFeedMove, handleFolderReorder} from './source-list-drag';
 
@@ -378,7 +378,6 @@ export class SourceList extends LitElement {
     private isActive(view: View): boolean {
         if (this.view.kind !== view.kind) return false;
         if (this.view.kind === 'all' || this.view.kind === 'brief' || this.view.kind === 'today' || this.view.kind === 'frontpage') return true;
-        if (this.view.kind === 'interesting' && view.kind === 'interesting') return this.view.folderId === view.folderId;
         if (this.view.kind === 'folder' && view.kind === 'folder') return this.view.id === view.id;
         if (this.view.kind === 'feed' && view.kind === 'feed') return this.view.id === view.id;
         return false;
@@ -567,13 +566,8 @@ export class SourceList extends LitElement {
         const isCollapsed = Boolean(this.collapsed[folder.id]);
         const active = this.isActive({kind: 'folder', id: folder.id});
         const unread = this.folderUnread(folder.id);
-        return html`${folderRowTemplate(folder, feeds, isCollapsed, active, unread, (f) => this.select({kind: 'folder', id: f.id}), (e, f) => this.onItemKey(e, {kind: 'folder', id: f.id}), (e, f) => this.onDragStart(e, 'folder', f.id), (id) => this.toggleFolder(id), (e, f) => this.openFolderMenu(f, e), (feed) => this.feedRow(feed))}${this.shadowRow(folder, isCollapsed)}`;
-    }
-
-    private shadowRow(folder: Folder, isCollapsed: boolean) {
-        if (this.interestingShadow[folder.id] !== true || isCollapsed) return '';
-        const view: View = {kind: 'interesting', folderId: folder.id};
-        return html`<div class="folder-children">${interestingRowTemplate(this.isActive(view), () => this.select(view), (e) => this.onItemKey(e, view))}</div>`;
+        const shadow = this.interestingShadow[folder.id] === true;
+        return html`${folderRowTemplate(folder, feeds, isCollapsed, active, unread, (f) => this.select({kind: 'folder', id: f.id}), (e, f) => this.onItemKey(e, {kind: 'folder', id: f.id}), (e, f) => this.onDragStart(e, 'folder', f.id), (id) => this.toggleFolder(id), (e, f) => this.openFolderMenu(f, e), (feed) => this.feedRow(feed), shadow)}`;
     }
 
     private async doRefresh(feed: Feed) {

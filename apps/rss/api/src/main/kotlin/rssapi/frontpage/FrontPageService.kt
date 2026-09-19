@@ -13,6 +13,7 @@ import rssapi.ai.JEV_DEFAULT_MODEL
 import rssapi.ai.aiConfigFromEnv
 import rssapi.domain.ArticleScope
 import rssapi.domain.ArticleSort
+import rssapi.domain.affinityKeys
 import rssapi.log.log
 import rssapi.persist.AffinityId
 import rssapi.persist.AffinityRepo
@@ -207,11 +208,7 @@ class FrontPageService(
 
     private fun loadAffinity(userId: UUID, candidates: List<ArticleEntity>): Map<String, Float> {
         val keys = candidates.flatMapTo(mutableSetOf()) { article ->
-            listOfNotNull(
-                "aff:feed:${article.feedId}",
-                article.domain?.let { "aff:domain:$it" },
-                article.author?.let { "aff:author:${it.lowercase()}" },
-            )
+            affinityKeys(article.feedId, article.domain, article.author)
         }
         return affinity.findAllById(keys.map { AffinityId(userId, it) }).associate { it.key to it.value }
     }
