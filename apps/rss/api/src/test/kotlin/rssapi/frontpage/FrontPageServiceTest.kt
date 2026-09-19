@@ -431,6 +431,29 @@ class FrontPageServiceTest {
 
         assertEquals("custom-jev", out.single().scoreRow.model)
     }
+
+    @Test
+    fun concurrentInsertRaceKeepsComputedRows() {
+        val rows = listOf(ArticleScoreEntity(articleId = "a1"))
+        whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
+            .thenThrow(org.springframework.dao.DataIntegrityViolationException("duplicate key"))
+
+        val out = service.persistScores(rows)
+
+        assertEquals(rows, out)
+    }
+
+    @Test
+    fun frontPageSurvivesConcurrentInsertRace() {
+        stubCandidates(article("b1"), article("a1"))
+        whenever(scoreRows.findAllById(anyOrNull())).thenReturn(emptyList())
+        whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
+            .thenThrow(org.springframework.dao.DataIntegrityViolationException("duplicate key"))
+
+        val out = service.frontPage(uid, 1_700_000_000_000L, false, 10)
+
+        assertEquals(listOf("a1", "b1"), out.map { it.article.id })
+    }
 }
 
 private class FrontPageJevPoster(private val reply: String, private val fail: Boolean = false) : HttpPoster {

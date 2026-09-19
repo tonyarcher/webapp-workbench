@@ -486,7 +486,7 @@ export class ArticleList extends LitElement {
         const res = await fetchArticlesPage({scope: `folder:${this.view.id}`, sort: 'newest', limit: INTERESTING_BATCH, unreadOnly: this.unreadOnly});
         if (gen !== this.gen) return;
         const visible = this.hideRead ? res.items.filter((a) => a.read === 0) : res.items;
-        this.items = rankInteresting(visible, this.interestingWordMap(visible));
+        this.items = rankInteresting(visible, this.interestingWordMap(visible)).slice(0, this.pageSize);
         this.hasMoreSingle = false;
         this.cursors.clear();
     }

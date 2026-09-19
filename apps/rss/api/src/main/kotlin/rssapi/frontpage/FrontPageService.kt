@@ -3,10 +3,10 @@ package rssapi.frontpage
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import rssapi.ai.AiConfig
 import rssapi.ai.AiQuotaService
 import rssapi.ai.JEV_DEFAULT_MODEL
@@ -88,8 +88,25 @@ class FrontPageService(
             .take(limit)
     }
 
-    @Transactional
-    fun persistScores(rows: List<ArticleScoreEntity>): List<ArticleScoreEntity> = scoreRows.saveAll(rows)
+    /**
+     * Not transactional on purpose: [scoreRows] runs each call in its own
+     * transaction, so a duplicate-key from a concurrent serve surfaces here
+     * (not at some outer commit) where the catch below absorbs it. An outer
+     * @Transactional would defer the violation past the try and leave the
+     * transaction rollback-only.
+     */
+    fun persistScores(rows: List<ArticleScoreEntity>): List<ArticleScoreEntity> {
+        if (rows.isEmpty()) return rows
+        return try {
+            scoreRows.saveAll(rows)
+        } catch (_: DataIntegrityViolationException) {
+            // Lost a race with a concurrent serve inserting the same new
+            // rows: their content is identical and our scores are already
+            // computed in memory, so return what we have.
+            log("rss-api", "warn", "front-page score race", mapOf("rows" to rows.size))
+            rows
+        }
+    }
 
     private fun scoreAll(
         userId: UUID,
