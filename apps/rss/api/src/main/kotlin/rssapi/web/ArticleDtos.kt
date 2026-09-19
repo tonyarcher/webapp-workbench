@@ -19,9 +19,22 @@ data class ArticleJson(
     val normLink: String? = null,
     val comments: Int? = null,
     val engagement: Double? = null,
+    val scores: ArticleScoresJson? = null,
 )
 
 data class ArticlePageJson(val items: List<ArticleJson>, val nextCursor: String? = null)
+
+data class ArticleScoresJson(
+    val worthy: Double,
+    val interest: Double,
+    val topic: String? = null,
+    val popularityOutlook: Double,
+    val readability: Double,
+    val scoredAt: Long? = null,
+    val model: String? = null,
+)
+
+data class FrontPageJson(val generatedAt: Long, val articles: List<ArticleJson>)
 
 data class StateUpdateBody(val id: String?, val read: Boolean? = null, val starred: Boolean? = null)
 

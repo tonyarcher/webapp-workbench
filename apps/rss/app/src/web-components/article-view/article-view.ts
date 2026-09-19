@@ -2,7 +2,7 @@ import {html, LitElement, unsafeCSS} from 'lit';
 import {unsafeHTML} from 'lit/directives/unsafe-html.js';
 import {customElement, property, state} from 'lit/decorators.js';
 import {sanitizeHtml, safeHttpUrl, stripHtml} from '../../services/parser';
-import {summarizeBest} from '../../ai';
+import {SUMMARY_LENGTHS, loadSummaryLength, saveSummaryLength, summarizeBest, type SummaryLength} from '../../ai';
 import {toggleStar} from '../../mutations';
 import type {Article} from '../../types';
 import {domainOf, formatDate} from '../../util';
@@ -21,6 +21,7 @@ export class ArticleView extends LitElement {
     @state() private summarizing = false;
     @state() private aiSummary: string | null = null;
     @state() private aiError = '';
+    @state() private summaryLength: SummaryLength = loadSummaryLength();
 
     override updated(changed: Map<string, unknown>) {
         if (changed.has('article')) {
@@ -62,10 +63,11 @@ export class ArticleView extends LitElement {
     }
 
     private renderAiCard() {
-        if (this.aiError) return html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="ai-text" style="color: var(--danger)">${this.aiError}</div></div>`;
-        if (this.summarizing) return html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="spinner"><span class="spin"></span> Summarizing…</div></div>`;
-        if (this.aiSummary) return html`<div class="ai-card"><div class="head">✨ AI Summary</div><div class="ai-text">${this.aiSummary}</div></div>`;
-        return '';
+        const head = html`<div class="head"><span>✨ AI Summary</span><div class="seg" role="group" aria-label="Summary length">${SUMMARY_LENGTHS.map((l) => html`<button class="seg-btn ${this.summaryLength === l ? 'on' : ''}" ?disabled=${this.summarizing} @click=${() => this.setSummaryLength(l)}>${l === 'brief' ? 'Brief' : l === 'deep' ? 'Deep' : 'Standard'}</button>`)}</div></div>`;
+        if (this.aiError) return html`<div class="ai-card">${head}<div class="ai-text" style="color: var(--danger)">${this.aiError}</div></div>`;
+        if (this.summarizing) return html`<div class="ai-card">${head}<div class="spinner"><span class="spin"></span> Summarizing…</div></div>`;
+        if (this.aiSummary) return html`<div class="ai-card">${head}<div class="ai-text">${this.aiSummary}</div></div>`;
+        return html`<div class="ai-card">${head}<div class="ai-text muted">Pick a length, then <button class="link-btn" @click=${this.onSummarize}>Summarize</button>.</div></div>`;
     }
 
     private renderBody(body: string, a: Article) {
@@ -98,7 +100,7 @@ export class ArticleView extends LitElement {
     }
 
     private tryCached(a: Article): boolean {
-        const cached = summaryCache.get(a.id);
+        const cached = summaryCache.get(this.summaryCacheKey(a));
         if (!cached) return false;
         this.aiSummary = cached;
         return true;
@@ -121,15 +123,27 @@ export class ArticleView extends LitElement {
         try {
             const text = this.getSummarizeText(a);
             if (!text) return;
-            const summary = await summarizeBest(a.title, text.slice(0, MAX_SUMMARY_CHARS));
+            const summary = await summarizeBest(a.title, text.slice(0, MAX_SUMMARY_CHARS), this.summaryLength);
             if (this.article?.id !== a.id) return;
-            summaryCache.set(a.id, summary);
+            summaryCache.set(this.summaryCacheKey(a), summary);
             this.aiSummary = summary;
         } catch (err) {
             this.aiError = err instanceof Error ? err.message : 'Could not summarize this article';
         } finally {
             this.summarizing = false;
         }
+    }
+
+    private summaryCacheKey(a: Article): string {
+        return `${a.id}:${this.summaryLength}`;
+    }
+
+    private setSummaryLength(length: SummaryLength) {
+        if (this.summaryLength === length || this.summarizing) return;
+        this.summaryLength = length;
+        saveSummaryLength(length);
+        this.aiSummary = null;
+        this.aiError = '';
     }
 }
 

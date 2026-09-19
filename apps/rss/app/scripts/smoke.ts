@@ -779,6 +779,7 @@ assert(payload.affinity.every((a) => a.key.startsWith('aff:')), 'migrate payload
         resetServerAi();
         assert((await summarizeWithServer('T', 'body')) === '- server', 'server summarize returns model text');
         assert(seen.some((s) => s.url.endsWith('/api/ai/summarize') && (s.body?.includes('"title":"T"') ?? false)), 'server summarize posts title and text');
+        assert(seen.some((s) => s.url.endsWith('/api/ai/summarize') && (s.body?.includes('"length":"standard"') ?? false)), 'server summarize posts the default length');
         assert(seen.every((s) => s.auth === 'Bearer test-access'), 'server AI sends the Bearer token');
 
         resetServerAi();
@@ -1365,6 +1366,259 @@ assert(isTokenFresh(Math.floor(Date.now() / 1000) + 30) === false, 'isTokenFresh
     shims['fetch'] = realFetch;
     shims['location'] = realLocation;
     shims['localStorage'] = realLocalStorage;
+}
+
+// ---- front page sections ----
+{
+    const {buildFrontPageSections, DEFAULT_FRONT_PAGE_OPTIONS, defaultFrontPageOptions} = await import('../src/services/front-page');
+    const {summarizeArticle: summarizeWithLength} = await import('../src/ai');
+
+    assert(
+        DEFAULT_FRONT_PAGE_OPTIONS.perFolder === 5 &&
+            DEFAULT_FRONT_PAGE_OPTIONS.unreadOnly === false &&
+            DEFAULT_FRONT_PAGE_OPTIONS.sinceHours === 48 &&
+            DEFAULT_FRONT_PAGE_OPTIONS.minWorthy === 0 &&
+            DEFAULT_FRONT_PAGE_OPTIONS.showTopStory &&
+            DEFAULT_FRONT_PAGE_OPTIONS.showBreaking &&
+            DEFAULT_FRONT_PAGE_OPTIONS.showDeepReads &&
+            DEFAULT_FRONT_PAGE_OPTIONS.showByFolder,
+        'front page defaults are sane',
+    );
+    assert(
+        JSON.stringify(defaultFrontPageOptions()) === JSON.stringify(DEFAULT_FRONT_PAGE_OPTIONS),
+        'defaultFrontPageOptions matches DEFAULT_FRONT_PAGE_OPTIONS',
+    );
+
+    const NOW = Date.parse('2025-08-01T12:00:00Z');
+    const fpFolders = [
+        {id: 'f1', title: 'Tech', createdAt: 0},
+        {id: 'f2', title: 'News', createdAt: 0},
+    ];
+    const fpFeeds = [
+        {id: 'fa', title: 'A', url: 'https://a.example/rss', folderIds: ['f1'], unread: 0, addedAt: 0},
+        {id: 'fb', title: 'B', url: 'https://b.example/rss', folderIds: ['f2'], unread: 0, addedAt: 0},
+        {id: 'fc', title: 'C', url: 'https://c.example/rss', folderIds: ['f1', 'f2'], unread: 0, addedAt: 0},
+    ];
+    const fpArticle = (
+        id: string,
+        feedId: string,
+        opts: {worthy: number; hot: number; engagement: number; publishedAgoH: number; read?: 0 | 1},
+    ): Article => ({
+        id,
+        feedId,
+        guid: id,
+        title: id,
+        published: NOW - opts.publishedAgoH * 3_600_000,
+        fetchedAt: NOW,
+        read: opts.read ?? 0,
+        starred: false,
+        popularity: 1,
+        engagement: opts.engagement,
+        hot: opts.hot,
+        scores: {worthy: opts.worthy, interest: 1, popularityOutlook: 1, readability: 1},
+    });
+    const fpArticles = [
+        fpArticle('a1', 'fa', {worthy: 9, hot: 10, engagement: 2, publishedAgoH: 1}),
+        fpArticle('b1', 'fb', {worthy: 4, hot: 20, engagement: 5, publishedAgoH: 2}),
+        fpArticle('c1', 'fc', {worthy: 7, hot: 5, engagement: 10, publishedAgoH: 30}),
+    ];
+
+    const sections = buildFrontPageSections(fpArticles, fpFeeds, fpFolders, [], DEFAULT_FRONT_PAGE_OPTIONS, NOW);
+    assert(
+        sections.map((s) => s.id).join(',') === 'top-story,breaking,deep-reads,folder-f1,folder-f2',
+        'front page has global sections first, then folders in sidebar order',
+    );
+    assert(sections[0].articles.map((a) => a.id).join(',') === 'a1', 'top story is the highest-worthy article');
+    assert(sections[1].articles.map((a) => a.id).join(',') === 'b1,a1', 'breaking takes recent stories by hot desc');
+    assert(sections[2].articles.map((a) => a.id).join(',') === 'c1,b1,a1', 'deep reads rank by engagement desc');
+    assert(sections[3].articles.map((a) => a.id).join(',') === 'a1,c1', 'per-folder sections rank by worthy desc');
+    assert(sections[4].articles.map((a) => a.id).join(',') === 'c1,b1', 'shared-feed articles appear in each folder');
+
+    const gated = buildFrontPageSections(fpArticles, fpFeeds, fpFolders, [], {...DEFAULT_FRONT_PAGE_OPTIONS, minWorthy: 100}, NOW);
+    assert(!gated.some((s) => s.id === 'top-story'), 'minWorthy gate omits the top story when nothing qualifies');
+    assert(gated.length > 0, 'minWorthy gate keeps the other sections');
+
+    const capped = buildFrontPageSections(fpArticles, fpFeeds, fpFolders, [], {...DEFAULT_FRONT_PAGE_OPTIONS, perFolder: 1}, NOW);
+    assert(capped.every((s) => s.articles.length <= 1), 'perFolder caps every ranked section');
+    assert(capped.find((s) => s.id === 'breaking')?.articles[0].id === 'b1', 'perFolder keeps the hottest breaking story');
+
+    const tied = [
+        fpArticle('t-b', 'fa', {worthy: 9, hot: 10, engagement: 1, publishedAgoH: 1}),
+        fpArticle('t-a', 'fa', {worthy: 9, hot: 10, engagement: 1, publishedAgoH: 1}),
+    ];
+    const first = buildFrontPageSections(tied, fpFeeds, fpFolders, [], DEFAULT_FRONT_PAGE_OPTIONS, NOW);
+    const second = buildFrontPageSections(tied, fpFeeds, fpFolders, [], DEFAULT_FRONT_PAGE_OPTIONS, NOW);
+    assert(first[0].articles[0].id === 't-a', 'ties break on article id (top story)');
+    assert(first[1].articles.map((a) => a.id).join(',') === 't-a,t-b', 'ties break on article id (breaking)');
+    assert(JSON.stringify(first) === JSON.stringify(second), 'front page ranking is deterministic');
+
+    assert(
+        buildFrontPageSections([], fpFeeds, fpFolders, [], DEFAULT_FRONT_PAGE_OPTIONS, NOW).length === 0,
+        'front page omits every section for empty input',
+    );
+    const hidden = buildFrontPageSections(fpArticles, fpFeeds, fpFolders, [], {
+        ...DEFAULT_FRONT_PAGE_OPTIONS,
+        showTopStory: false,
+        showBreaking: false,
+        showDeepReads: false,
+        showByFolder: false,
+    }, NOW);
+    assert(hidden.length === 0, 'front page omits every section when all toggles are off');
+
+    const readArticles = fpArticles.map((a) => (a.id === 'a1' ? {...a, read: 1 as const} : a));
+    const unreadSections = buildFrontPageSections(readArticles, fpFeeds, fpFolders, [], {...DEFAULT_FRONT_PAGE_OPTIONS, unreadOnly: true}, NOW);
+    assert(unreadSections[0].articles[0].id === 'c1', 'unread-only skips read articles before ranking');
+
+    const excluded = buildFrontPageSections(fpArticles, fpFeeds, fpFolders, ['f1'], DEFAULT_FRONT_PAGE_OPTIONS, NOW);
+    assert(!excluded.some((s) => s.id === 'folder-f1'), 'front page skips excluded folders');
+    assert(excluded.some((s) => s.id === 'folder-f2'), 'front page keeps included folders');
+    assert(!excluded.flatMap((s) => s.articles).some((a) => a.id === 'a1'), 'articles of fully-excluded feeds leave the page');
+
+    // ---- router frontpage round-trip ----
+    // router.ts builds a hash history at import, so it needs a browser-ish
+    // window/document present before the first import.
+    {
+        const shims = globalThis as Record<string, unknown>;
+        const realWindow = shims['window'];
+        const realDocument = shims['document'];
+        const fakeHistory = {
+            state: undefined,
+            pushState() {},
+            replaceState() {},
+            go() {},
+            back() {},
+            forward() {},
+        };
+        shims['window'] = {
+            dispatchEvent: () => false,
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            history: fakeHistory,
+            location: {pathname: '/', search: '', hash: '', href: 'http://localhost/'},
+        };
+        shims['document'] = {};
+        try {
+            const {parsePath, viewToPath} = await import('../src/router');
+            assert(viewToPath({kind: 'frontpage'}) === '/frontpage', 'frontpage serializes to #/frontpage');
+            assert(parsePath('/frontpage').kind === 'frontpage', 'frontpage parses back to a View');
+            assert(
+                JSON.stringify(parsePath(viewToPath({kind: 'frontpage'}))) === JSON.stringify({kind: 'frontpage'}),
+                'frontpage router round-trips',
+            );
+        } finally {
+            shims['window'] = realWindow;
+            shims['document'] = realDocument;
+        }
+    }
+
+    // ---- summary length threads into the prompt ----
+    const prompts: string[] = [];
+    (g as Record<string, unknown>)['model'] = {
+        capabilities: async () => ({available: 'readily'}),
+        create: async () => ({
+            prompt: async (text: string) => {
+                prompts.push(text);
+                return 'ok';
+            },
+            destroy: () => {},
+        }),
+    };
+    await summarizeWithLength('T', 'body', 'brief');
+    await summarizeWithLength('T', 'body', 'standard');
+    await summarizeWithLength('T', 'body', 'deep');
+    assert(prompts[0]?.includes('3 short bullet points') ?? false, 'brief summaries ask for 3 bullets');
+    assert(prompts[1]?.includes('4-6 short bullet points') ?? false, 'standard summaries ask for 4-6 bullets');
+    assert(prompts[2]?.includes('8-10 short bullet points') ?? false, 'deep summaries ask for 8-10 bullets');
+    delete (g as Record<string, unknown>)['model'];
+}
+
+// ---- interesting shadow: starred-word map, settings, jev state, router ----
+{
+    const {buildWordMap, extractWords, interestingScore, topWords, toJevState} = await import('../src/services/interesting-words');
+    const {adjustWordMap, isHideReadFolder, loadInterestingShadow, loadWordMap, saveInterestingShadow, saveWordMap} = await import('../src/services/interesting-settings');
+
+    assert(extractWords('The Quick, Brown Fox!').join(',') === 'quick,brown,fox', 'extractWords lowercases and drops stopwords');
+    assert(extractWords('Go to Mars').join(',') === 'mars', 'extractWords drops short tokens and stopwords');
+    assert(extractWords('the and of').length === 0, 'extractWords empties glue-only titles');
+
+    const starredTitles = [{title: 'Kubernetes Rust Performance'}];
+    const readTitles = [{title: 'Kubernetes News Roundup'}];
+    const wordMap = buildWordMap(starredTitles, readTitles);
+    assert(wordMap['kubernetes'] === 5, 'buildWordMap adds star weight 4 and read weight 1');
+    assert(wordMap['rust'] === 4, 'buildWordMap star-only word weighs 4');
+    assert(wordMap['news'] === 1, 'buildWordMap read-only word weighs 1');
+
+    assert(interestingScore({title: 'Rust Kubernetes'}, wordMap) === 4.5, 'interestingScore averages weights over tokens');
+    assert(interestingScore({title: 'Unrelated Zebra'}, wordMap) === 0, 'interestingScore is 0 for unknown words');
+    assert(interestingScore({title: 'the!'}, wordMap) === 0, 'interestingScore is 0 for empty token lists');
+
+    const top = topWords({b: 2, a: 2, c: 1}, 2);
+    assert(top.map((w) => w.word).join(',') === 'a,b', 'topWords breaks ties alphabetically');
+    assert(topWords({a: 1}, 0).length === 0, 'topWords with n=0 returns empty');
+
+    const shims = globalThis as Record<string, unknown>;
+    const mem = new Map<string, string>();
+    shims['localStorage'] = {
+        getItem: (k: string) => mem.get(k) ?? null,
+        setItem: (k: string, v: string) => void mem.set(k, String(v)),
+        removeItem: (k: string) => void mem.delete(k),
+    };
+    saveInterestingShadow({f1: true});
+    assert(loadInterestingShadow()['f1'] === true, 'interesting shadow settings round-trip');
+    mem.set('rss-reader:interesting-shadow', 'oops');
+    assert(Object.keys(loadInterestingShadow()).length === 0, 'interesting shadow falls back to {} on invalid JSON');
+    mem.set('rss-reader:interesting-shadow', JSON.stringify({f1: 'yes', f2: 1}));
+    assert(Object.keys(loadInterestingShadow()).length === 0, 'interesting shadow keeps true-valued string keys only');
+
+    saveWordMap({rust: 4});
+    assert(loadWordMap()['rust'] === 4, 'word map settings round-trip');
+    adjustWordMap('Rust Performance', 4);
+    assert(loadWordMap()['rust'] === 8, 'adjustWordMap adds star weight to cached words');
+    adjustWordMap('Rust Performance', -8);
+    assert(loadWordMap()['rust'] === undefined, 'adjustWordMap clamps to zero and removes the entry');
+    mem.set('rss-reader:word-map', JSON.stringify({rust: 'lots'}));
+    assert(loadWordMap()['rust'] === undefined, 'word map drops non-numeric entries');
+    saveWordMap({});
+    mem.delete('rss-reader:word-map-ids');
+    adjustWordMap('Rust Performance', 4, 'a1');
+    adjustWordMap('Rust Performance', 4, 'a1');
+    assert(loadWordMap()['rust'] === 4, 'adjustWordMap counts one article once');
+    adjustWordMap('Rust Performance', -4, 'a1');
+    assert(loadWordMap()['rust'] === undefined, 'adjustWordMap unstar forgets the id');
+    adjustWordMap('Rust Performance', 4, 'a1');
+    assert(loadWordMap()['rust'] === 4, 'adjustWordMap re-star counts again');
+
+    mem.set('rss-reader:hide-read-by-folder', JSON.stringify({f1: true}));
+    assert(isHideReadFolder('f1') === true, 'hide-read lookup follows the folder toggle');
+    assert(isHideReadFolder('f2') === false, 'hide-read lookup defaults to false');
+
+    const candidates = [
+        {id: 'a1', title: 'Rust Kubernetes Guide', feedId: 'fa', hot: 10},
+        {id: 'a2', title: 'Zebra News', feedId: 'fb', hot: 5},
+        {id: 'a3', title: 'Rust Performance Tips', feedId: 'fa', hot: 8},
+    ];
+    const full = toJevState(candidates, wordMap, {'aff:feed:fa': 3}, 100_000);
+    const parsedFull = JSON.parse(full) as {candidates: Array<{id: string; title: string; feed: string; hot: number}>};
+    assert(parsedFull.candidates.length === 3, 'toJevState keeps all candidates when under budget');
+    assert(parsedFull.candidates[0].feed === 'fa' && typeof parsedFull.candidates[0].hot === 'number', 'toJevState candidates carry feed and hot');
+    const tight = toJevState(candidates, wordMap, {'aff:feed:fa': 3}, 200);
+    assert(tight.length <= 200, 'toJevState never exceeds maxChars');
+    const parsedTight = JSON.parse(tight) as {candidates: Array<{id: string; title: string; feed: string; hot: number}>};
+    assert(parsedTight.candidates.length < parsedFull.candidates.length, 'toJevState drops whole candidates over budget');
+    for (const c of parsedTight.candidates) {
+        assert(typeof c.id === 'string' && typeof c.title === 'string' && typeof c.feed === 'string' && typeof c.hot === 'number', 'toJevState never truncates mid-article');
+    }
+
+    const {parsePath, viewToPath} = await import('../src/router');
+    assert(viewToPath({kind: 'interesting', folderId: 'f 1'}) === '/interesting/f%201', 'interesting serializes to #/interesting/:id');
+    assert(
+        JSON.stringify(parsePath(viewToPath({kind: 'interesting', folderId: 'f1'}))) === JSON.stringify({kind: 'interesting', folderId: 'f1'}),
+        'interesting router round-trips',
+    );
+
+    const {interestingKey} = await import('../src/query');
+    const keyJson = JSON.stringify(interestingKey({folderId: 'f1', limit: 200}));
+    assert(keyJson.includes('f1') && keyJson.includes('200'), 'interestingKey includes every param');
 }
 
 console.log('\nAll parser smoke tests passed.');

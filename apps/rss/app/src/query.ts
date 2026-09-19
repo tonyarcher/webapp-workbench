@@ -122,6 +122,22 @@ export function articlesKey(params: {
     return ['articles', params] as const;
 }
 
+export function frontPageKey(params: {
+    since?: number;
+    unreadOnly?: boolean;
+    limit?: number;
+}) {
+    return ['front-page', params] as const;
+}
+
+export function interestingKey(params: {
+    folderId: string;
+    unreadOnly?: boolean;
+    limit?: number;
+}) {
+    return ['interesting', params] as const;
+}
+
 export class QueryController<T = unknown> implements ReactiveController {
     result: QueryObserverResult<T, Error>;
     private host: ReactiveControllerHost;
@@ -203,4 +219,12 @@ export function invalidateLibrary() {
 
 export function invalidateArticles() {
     return queryClient.invalidateQueries({queryKey: ['articles']});
+}
+
+export function invalidateFrontPage() {
+    return queryClient.invalidateQueries({queryKey: ['front-page']});
+}
+
+export function invalidateInteresting() {
+    return queryClient.invalidateQueries({queryKey: ['interesting']});
 }

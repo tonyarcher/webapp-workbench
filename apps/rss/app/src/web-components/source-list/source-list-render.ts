@@ -87,3 +87,16 @@ export function folderRowTemplate(
       </div>
     `;
 }
+
+export function interestingRowTemplate(
+    active: boolean,
+    onSelect: () => void,
+    onKey: (e: KeyboardEvent) => void,
+) {
+    return html`
+      <div class="feed-row interesting-row ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="Open interesting articles" @click=${onSelect} @keydown=${onKey}>
+        <span class="dot"></span>
+        <span class="label">✨ Interesting</span>
+      </div>
+    `;
+}

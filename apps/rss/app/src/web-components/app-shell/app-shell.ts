@@ -120,6 +120,8 @@ export class AppShell extends LitElement {
     private renderMain() {
         if (this.route.kind === 'brief') return html`<brief-view @open-article=${this.onOpenArticle}></brief-view>`;
         if (this.route.kind === 'today') return html`<today-view @open-article=${this.onOpenArticle}></today-view>`;
+        if (this.route.kind === 'frontpage') return html`<front-page @open-article=${this.onOpenArticle}></front-page>`;
+        if (this.route.kind === 'interesting') return html`<interesting-view .folderId=${this.route.folderId} @open-article=${this.onOpenArticle}></interesting-view>`;
         return html`<article-list .view=${this.route} .active=${!this.article} .resumeArticleId=${this.resumeArticleId} @open-article=${this.onOpenArticle}></article-list>`;
     }
 

@@ -3,6 +3,7 @@ package rssapi.ai
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 
 class BackendParseTest {
     @Test
@@ -81,6 +82,15 @@ class BackendParseTest {
         }
         val config = AiConfig(provider = "ollama", baseUrl = "http://x", model = "m")
         kotlin.test.assertFalse(OllamaBackend(config, poster).probe())
+    }
+
+    @Test
+    fun jevKeyParsesTrimmedAndStaysOutOfToString() {
+        val config = aiConfigFromEnv(mapOf("AI_PROVIDER" to "jev", "TYPESAFE_API_KEY" to "  secret-key  "))
+        assertEquals("jev", config.provider)
+        assertEquals("secret-key", config.jevApiKey)
+        assertFalse(config.toString().contains("secret-key"))
+        assertEquals("", aiConfigFromEnv(emptyMap()).jevApiKey)
     }
 
     @Test

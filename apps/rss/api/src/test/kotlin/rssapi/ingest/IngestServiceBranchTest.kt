@@ -89,6 +89,17 @@ class IngestServiceBranchTest {
     }
 
     @Test
+    fun malformedXmlSavesError() {
+        whenever(feeds.findById(feedId)).thenReturn(Optional.of(feed))
+        whenever(sync.meta(feedId)).thenReturn(null to null)
+        whenever(fetcher.fetch(eq(feed.xmlUrl), anyOrNull(), anyOrNull()))
+            .thenReturn(FetchResult(200, text = "junk before <rss>"))
+        ingest.fetchAndIngest(feedId)
+        verify(sync).saveError(eq(feedId), org.mockito.kotlin.argThat { isNotEmpty() })
+        verify(articles, never()).save(any())
+    }
+
+    @Test
     fun pollDelegates() {
         whenever(feeds.findById(feedId)).thenReturn(Optional.empty())
         ingest.pollFeed(feedId)

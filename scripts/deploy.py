@@ -687,6 +687,10 @@ def prepare_jvm_host_build(services: list[str], flags: Flags) -> None:
 
 def main() -> int:
     """Deploy entry point; returns the process exit code."""
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     flags = parse_args(sys.argv[1:])
     if flags.help:
         print(HELP)

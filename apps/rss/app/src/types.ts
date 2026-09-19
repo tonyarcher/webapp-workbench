@@ -36,6 +36,15 @@ export interface Article {
     popularity: number;
     engagement?: number | undefined;
     hot: number;
+    scores?: {
+        worthy: number;
+        interest: number;
+        topic?: string | undefined;
+        popularityOutlook: number;
+        readability: number;
+        scoredAt?: number | undefined;
+        model?: string | undefined;
+    } | undefined;
 }
 
 export type ArticleSort = 'hot' | 'newest' | 'oldest';
@@ -47,7 +56,9 @@ export type View =
     | { kind: 'folder'; id: string }
     | { kind: 'feed'; id: string }
     | { kind: 'brief' }
-    | { kind: 'today' };
+    | { kind: 'today' }
+    | { kind: 'frontpage' }
+    | { kind: 'interesting'; folderId: string };
 
 export interface ParsedItem {
     guid: string;

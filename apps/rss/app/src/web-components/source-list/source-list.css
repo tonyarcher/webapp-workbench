@@ -197,6 +197,10 @@
     color: var(--active-text);
 }
 
+.feed-row.interesting-row {
+    color: var(--text);
+}
+
 .feed-row .label {
     flex: 1;
     min-width: 0;

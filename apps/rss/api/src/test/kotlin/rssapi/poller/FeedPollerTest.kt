@@ -106,4 +106,24 @@ class FeedPollerTest {
 
         verify(ingest).pollFeed(feedId)
     }
+
+    @Test
+    fun poisonFeedDoesNotAbortDrain() {
+        val badFeed = UUID.randomUUID()
+        val goodFeed = UUID.randomUUID()
+        val fetched = now.minus(Duration.ofHours(2))
+        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(
+            listOf(row(badFeed, fetched), row(goodFeed, fetched)),
+        )
+        whenever(subs.findMaxLastSeenByFeedId(badFeed)).thenReturn(now.minus(Duration.ofDays(1)))
+        whenever(subs.findMaxLastSeenByFeedId(goodFeed)).thenReturn(now.minus(Duration.ofDays(1)))
+        whenever(ingest.pollFeed(badFeed)).thenThrow(
+            org.springframework.dao.DataRetrievalFailureException("poison"),
+        )
+
+        tickOnce()
+
+        verify(ingest).pollFeed(badFeed)
+        verify(ingest).pollFeed(goodFeed)
+    }
 }

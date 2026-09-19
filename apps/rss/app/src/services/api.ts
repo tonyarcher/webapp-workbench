@@ -1,4 +1,5 @@
 import type {Article, Feed, Folder} from '../types';
+import type {SummaryLength} from '../ai';
 import {getAccessToken, refreshTokens} from './auth';
 
 // ---- base fetch ----
@@ -241,6 +242,27 @@ export async function importOpmlXml(xml: string): Promise<OpmlImportResult> {
     }) as Promise<OpmlImportResult>;
 }
 
+// ---- front page ----
+
+export interface FrontPageParams {
+    since?: number | undefined;
+    unreadOnly?: boolean | undefined;
+    limit?: number | undefined;
+}
+
+export interface FrontPageJson {
+    generatedAt: number;
+    articles: Article[];
+}
+
+export async function fetchFrontPage(params: FrontPageParams = {}): Promise<FrontPageJson> {
+    const q = new URLSearchParams();
+    if (params.since) q.set('since', String(params.since));
+    if (params.unreadOnly) q.set('unreadOnly', '1');
+    if (params.limit) q.set('limit', String(params.limit));
+    return apiFetch(`/front-page?${q}`) as Promise<FrontPageJson>;
+}
+
 // ---- server AI (admin provider setting; hidden when unavailable) ----
 
 export interface ServerAiStatus {
@@ -253,10 +275,10 @@ export async function aiStatus(): Promise<ServerAiStatus> {
     return apiFetch('/ai/status') as Promise<ServerAiStatus>;
 }
 
-export async function requestServerSummary(title: string | undefined, text: string): Promise<{ summary: string }> {
+export async function requestServerSummary(title: string | undefined, text: string, length: SummaryLength = 'standard'): Promise<{ summary: string }> {
     return apiFetch('/ai/summarize', {
         method: 'POST',
-        body: JSON.stringify({title, text}),
+        body: JSON.stringify({title, text, length}),
     }) as Promise<{ summary: string }>;
 }
 

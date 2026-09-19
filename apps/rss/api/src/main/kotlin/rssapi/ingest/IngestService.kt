@@ -4,6 +4,7 @@ import java.time.Instant
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.xml.sax.SAXException
 import rssapi.MAX_ARTICLES_PER_FEED
 import rssapi.MAX_CONTENT_BYTES
 import rssapi.domain.EngagementInput
@@ -41,6 +42,11 @@ class IngestService(
         } catch (err: IllegalStateException) {
             sync.saveError(feedId, err.message ?: "error")
         } catch (err: IllegalArgumentException) {
+            sync.saveError(feedId, err.message ?: "error")
+        } catch (err: SAXException) {
+            // Malformed feeds (SAXParseException and kin) must also land on
+            // the sync row: an unrecorded failure leaves the feed perpetually
+            // due and the exception would abort the poller's drain.
             sync.saveError(feedId, err.message ?: "error")
         }
     }

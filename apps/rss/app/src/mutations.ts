@@ -14,8 +14,10 @@ import {
 } from './services/api';
 import {createCoalescer} from './services/coalesce';
 import {allSyncKey} from './services/sync-keys';
-import {invalidateArticles, invalidateLibrary, updateArticlesInCache, libraryKey, queryClient, bustCounts, type LibraryData} from './query';
-import type {Feed} from './types';
+import {invalidateArticles, invalidateFrontPage, invalidateInteresting, invalidateLibrary, updateArticlesInCache, libraryKey, queryClient, bustCounts, type LibraryData} from './query';
+import type {Article, Feed} from './types';
+import {adjustWordMap} from './services/interesting-settings';
+import {STAR_WORD_WEIGHT} from './services/interesting-words';
 
 // Elevator-button coalescing for refreshes: mashing Refresh joins the
 // in-flight job rather than spawning a second sync.
@@ -146,12 +148,16 @@ export async function markArticleRead(articleId: string): Promise<boolean> {
         // Revert the optimistic paint: refetch truth instead of leaving a
         // read-looking row the server never recorded.
         await invalidateArticles();
+        await invalidateFrontPage();
+        await invalidateInteresting();
         bustCounts();
         await invalidateLibrary();
         return false;
     }
     bustCounts();
     await invalidateLibrary();
+    await invalidateFrontPage();
+    await invalidateInteresting();
     return true;
 }
 
@@ -166,10 +172,38 @@ export async function toggleStar(articleId: string, nowStarred: boolean): Promis
     } catch (err) {
         console.error('toggleStar failed', err);
         await invalidateArticles();
+        await invalidateFrontPage();
+        await invalidateInteresting();
         return false;
     }
     if (nowStarred) void recordAffinity(articleId, 4).catch(() => {});
+    // Teach the shadow word map from the toggled title when it is visible in
+    // a cached page; the interesting view covers the rest from its own items.
+    const title = findCachedArticleTitle(articleId);
+    if (title !== undefined) adjustWordMap(title, nowStarred ? STAR_WORD_WEIGHT : -STAR_WORD_WEIGHT, articleId);
+    await invalidateFrontPage();
+    await invalidateInteresting();
     return true;
+}
+
+/** Title lookup across cached article pages (articles + front-page + interesting lists). */
+function findCachedArticleTitle(articleId: string): string | undefined {
+    for (const query of queryClient.getQueryCache().findAll({queryKey: ['articles']})) {
+        const data = query.state.data as { items: Article[] } | undefined;
+        const found = data?.items.find((a) => a.id === articleId);
+        if (found) return found.title;
+    }
+    for (const query of queryClient.getQueryCache().findAll({queryKey: ['front-page']})) {
+        const data = query.state.data as Article[] | undefined;
+        const found = data?.find((a) => a.id === articleId);
+        if (found) return found.title;
+    }
+    for (const query of queryClient.getQueryCache().findAll({queryKey: ['interesting']})) {
+        const data = query.state.data as Article[] | undefined;
+        const found = data?.find((a) => a.id === articleId);
+        if (found) return found.title;
+    }
+    return undefined;
 }
 
 export async function markAllRead(feedId?: string) {
@@ -177,6 +211,8 @@ export async function markAllRead(feedId?: string) {
     await invalidateArticles();
     bustCounts();
     await invalidateLibrary();
+    await invalidateFrontPage();
+    await invalidateInteresting();
 }
 
 export async function markShownRead(articleIds: string[]) {
@@ -191,6 +227,8 @@ export async function markShownRead(articleIds: string[]) {
     }
     bustCounts();
     await invalidateLibrary();
+    await invalidateFrontPage();
+    await invalidateInteresting();
 }
 
 export async function markReadBefore(feedIds: string[] | undefined, cutoff: number) {
@@ -198,4 +236,6 @@ export async function markReadBefore(feedIds: string[] | undefined, cutoff: numb
     await invalidateArticles();
     bustCounts();
     await invalidateLibrary();
+    await invalidateFrontPage();
+    await invalidateInteresting();
 }

@@ -4,6 +4,8 @@ import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -17,6 +19,7 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import rssapi.ai.AiService
 import rssapi.ai.AiStatus
+import rssapi.ai.SummaryLength
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
 
@@ -67,7 +70,7 @@ class AiControllerTest {
     @Test
     fun summarizeReturnsText() {
         stubAuth()
-        whenever(ai.summarize(any(), any(), any())).thenReturn("- a\n- b")
+        whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenReturn("- a\n- b")
 
         mvc.post("/ai/summarize") {
             header("X-Api-Version", "1")
@@ -81,9 +84,39 @@ class AiControllerTest {
     }
 
     @Test
+    fun summarizeForwardsLength() {
+        stubAuth()
+        whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenReturn("- a")
+
+        mvc.post("/ai/summarize") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"text":"body","length":"brief"}"""
+        }.andExpect {
+            status { isOk() }
+        }
+        verify(ai).summarize(any(), anyOrNull(), eq("body"), eq(SummaryLength.BRIEF))
+    }
+
+    @Test
+    fun invalidLengthIs400() {
+        stubAuth()
+
+        mvc.post("/ai/summarize") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"text":"body","length":"huge"}"""
+        }.andExpect {
+            status { isBadRequest() }
+        }
+    }
+
+    @Test
     fun quotaErrorSurfaces429() {
         stubAuth()
-        whenever(ai.summarize(any(), anyOrNull(), any())).thenThrow(ApiException(429, "hourly AI budget used"))
+        whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenThrow(ApiException(429, "hourly AI budget used"))
 
         mvc.post("/ai/summarize") {
             header("X-Api-Version", "1")
