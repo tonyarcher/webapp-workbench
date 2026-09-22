@@ -1,7 +1,7 @@
 /**
  * Root Gradle build for the Kotlin API modules.
  *
- * Four Spring Boot APIs live under (apps/<app>/api). Gradle 9 does not read a
+ * Spring Boot APIs live under apps/<app>/api. Gradle 9 does not read a
  * subproject's own settings file once it is included here, so the toolchain
  * resolver both sides need is configured once, at the root.
  *
@@ -27,9 +27,10 @@ plugins {
 
 rootProject.name = "webapp-workbench"
 
-include(":fitness-api", ":rss-api", ":stock-game-api", ":user-api")
+include(":fitness-api", ":rss-api", ":stock-game-api", ":user-api", ":radio-api")
 
 project(":fitness-api").projectDir = file("apps/fitness/api")
 project(":rss-api").projectDir = file("apps/rss/api")
 project(":stock-game-api").projectDir = file("apps/stock-game/api")
 project(":user-api").projectDir = file("apps/user/api")
+project(":radio-api").projectDir = file("apps/radio-station/api")

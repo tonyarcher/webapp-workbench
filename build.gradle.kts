@@ -29,8 +29,7 @@ val npmCommand = if (System.getProperty("os.name").lowercase().contains("windows
 /**
  * Per-app host build: npm workspaces in dependency order, the compose
  * services they produce, the Vite `APP_BASE_PATH` (empty = served at root),
- * and an optional npm script for the last workspace (radio-api builds its
- * server bundle with `build:server`). `@stock-game/app` is reached through
+ * `@stock-game/app` is reached through
  * stock-game's own build script; `user-client` has no build script.
  */
 data class HostApp(
@@ -51,7 +50,7 @@ val appMappings: Map<String, HostApp> = mapOf(
     "clipstack" to HostApp(listOf("vertical-scroll-core", "clipstack"), listOf("clipstack")),
     "calendar-sync" to HostApp(listOf("calendar-core", "calendar-sync"), listOf("calendar-sync")),
     "radio-station" to HostApp(listOf("radio-station"), listOf("radio-station")),
-    "radio-api" to HostApp(listOf("radio-station"), listOf("radio-api"), buildScript = "build:server"),
+    "radio-api" to HostApp(listOf("radio-api"), listOf("radio-api")),
     "football" to HostApp(listOf("football-core", "football"), listOf("football"), "/football/"),
     "basketball" to HostApp(listOf("basketball-core", "basketball-tracker"), listOf("basketball"), "/basketball/"),
     "fitness" to HostApp(listOf("fitness-core", "fitness"), listOf("fitness")),
@@ -102,7 +101,7 @@ val appAliases: Map<String, String> = mapOf(
     "apps/calendar-sync" to "calendar-sync",
     "radio" to "radio-station",
     "apps/radio-station" to "radio-station",
-    "apps/radio-station/server" to "radio-api",
+    "apps/radio-station/api" to "radio-api",
     "apps/football" to "football",
     "apps/basketball" to "basketball",
     "apps/fitness/app" to "fitness",
@@ -364,6 +363,7 @@ class ApiJars {
         "fitness-api" to "apps/fitness/api/build/libs/fitness-api-0.1.0.jar",
         "rss-api" to "apps/rss/api/build/libs/rss-api-0.1.0.jar",
         "stock-game-api" to "apps/stock-game/api/build/libs/stock-game-api-0.1.0.jar",
+        "radio-api" to "apps/radio-station/api/build/libs/radio-api-0.1.0.jar",
     )
 }
 
@@ -394,11 +394,28 @@ fun startAndWait(builder: ProcessBuilder, timeoutSeconds: Long): Pair<Process?, 
     }
 }
 
-/** Inherited-output run: waits and reports the process exit code (or timeout). */
+/**
+ * Stream child output through println. inheritIO() attaches to the Gradle
+ * daemon, not the terminal that ran deploy.py, so compose looked frozen.
+ */
 fun runInherited(builder: ProcessBuilder, timeoutSeconds: Long): Pair<Int, String> {
-    builder.inheritIO()
-    val (process, failure) = startAndWait(builder, timeoutSeconds)
-    return failure ?: (process!!.waitFor() to "")
+    builder.redirectErrorStream(true)
+    val process = try {
+        builder.start()
+    } catch (error: java.io.IOException) {
+        return 1 to error.message.orEmpty()
+    }
+    process.inputStream.bufferedReader().useLines { lines ->
+        lines.forEach { line ->
+            println(line)
+            System.out.flush()
+        }
+    }
+    if (timeoutSeconds > 0 && process.isAlive) {
+        process.destroyForcibly()
+        return 1 to "timed out"
+    }
+    return process.waitFor() to ""
 }
 
 /** Captured-output run: waits, reads everything, reports the exit code. */
@@ -852,6 +869,14 @@ fun composeArgsFor(services: List<String>): List<String> {
     return base + extras
 }
 
+/** `--progress` is global. `up --progress` is an unknown flag on Compose v5. */
+fun composeLine(compose: List<String>, args: List<String>): List<String> {
+    val builds = args.firstOrNull() == "build" || "--build" in args
+    val already = args.any { it == "--progress" || it.startsWith("--progress=") }
+    val progress = if (builds && !already) listOf("--progress", "plain") else emptyList()
+    return compose + progress + listOf("-f", composeFile) + args
+}
+
 fun composeCommand(): List<String> {
     if (runProcess(listOf("docker", "compose", "version")).first == 0) {
         return listOf("docker", "compose")
@@ -930,12 +955,16 @@ tasks.register("deploy") {
             env["DOCKER_HOST"] = dockerHost
             env["DOCKER_CONTEXT"] = ""
         }
+        // One context upload for every service that shares the repo root.
+        env["COMPOSE_BAKE"] = "true"
+        env["BUILDKIT_PROGRESS"] = "plain"
         val args = composeArgsFor(services)
         val compose = composeCommand()
+        val command = composeLine(compose, args)
         val label = if (dockerHost.isNullOrEmpty()) "local Docker" else "remote Docker ($dockerHost)"
         println("==> Using $label")
-        println("==> ${compose.joinToString(" ")} -f $composeFile ${args.joinToString(" ")}")
-        val (code, _) = runProcess(compose + listOf("-f", composeFile) + args, env = env, inherit = true)
+        println("==> ${command.joinToString(" ")}")
+        val (code, _) = runProcess(command, env = env, inherit = true)
         if (code != 0) error("docker compose failed with code $code")
     }
 }

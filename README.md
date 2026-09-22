@@ -14,7 +14,7 @@ same reverse-proxy gateway.
 | `apps/lemmy-vertical-scroll/` | Lemmy scroller | Vite + Lit + TanStack core | Vertical feed scrolling |
 | `apps/clipstack/` | Clipstack | Vite + Lit + vertical-scroll-core | Import a short-video link list and scroll it |
 | `apps/calendar-sync/` | Calendar Sync | Vite + Lit + calendar-core | Trakt + Netflix → ICS / Google Calendar |
-| `apps/radio-station/` | Radio Station | Vite + Lit + Postgres API | 7-day Top 40 log generator |
+| `apps/radio-station/` | Radio Station | Vite + Lit + Kotlin API | 7-day Top 40 log generator |
 
 ## Packages
 

@@ -9,6 +9,7 @@
     "apps/fitness/*",
     "apps/stock-game/*",
     "apps/user/*",
+    "apps/radio-station/*",
     "packages/*"
   ],
   "scripts": {
@@ -24,7 +25,7 @@
     "dev:clipstack": "npm run dev -w clipstack",
     "dev:calendar-sync": "npm run dev -w calendar-sync",
     "dev:radio-station": "npm run dev -w radio-station",
-    "dev:radio-api": "npm run dev:server -w radio-station",
+    "dev:radio-api": "npm run dev -w radio-api",
     "dev:football": "npm run dev -w football",
     "dev:basketball": "npm run dev -w basketball-tracker",
     "dev:fitness": "npm run dev -w fitness",

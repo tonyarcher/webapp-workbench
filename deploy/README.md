@@ -19,7 +19,7 @@ Docker-compatible container runtime) already installed.
 - `hello/index.html` — static hello-world page copied into the `gateway` image and served at the root `/`.
 - `gateway/` — Dockerfile that builds the `gateway` image from the `deploy/` context.
 - `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `clipstack/`, `calendar-sync/`, `radio-station/`, `football/`, `basketball/`, `fitness/`, `user-web/` — Dockerfiles + nginx configs for the static apps. Calendar Sync also proxies `/api/trakt/` to api.trakt.tv.
-- `radio-api/` — Dockerfile for the Radio Station node API. On startup it creates the `radio` Postgres database if the volume predates this service.
+- `radio-api/` — Dockerfile for the Radio Station Kotlin API. On startup it creates the `radio` Postgres database if the volume predates this service.
 - `fitness-api/` — JRE image for the Fitness Kotlin API. Compile on the host JDK (`gradle bootJar`); the image copies the jar. Creates the `fitness` Postgres database on startup.
 - `stock-game-api/` — JRE image for the Stock Game Kotlin API. Compile on the host JDK (`gradle bootJar`); the image copies the jar. Creates the `stock` Postgres database on startup.
 - `stock-game/` — Dockerfile + `nginx.conf`, a static Vite SPA build served
@@ -45,7 +45,7 @@ for the static apps. The `gateway` image is built from the `deploy/` context.
 | `/clipstack/` | Clipstack (nginx static, prefix stripped) |
 | `/calendar-sync/` | Calendar Sync (nginx static + Trakt proxy, prefix stripped) |
 | `/radio-station/` | Radio Station (nginx static, prefix stripped) |
-| `/radio-station/api/` | Radio Station API (node, prefix stripped). Creates Postgres database `radio` on startup. |
+| `/radio-station/api/` | Radio Station API (Kotlin, prefix stripped). Creates Postgres database `radio` on startup. |
 | `/football/` | Football tracker (nginx static, prefix stripped) |
 | `/basketball/` | Basketball tracker (nginx static, prefix stripped) |
 | `/fitness/` | Fitness (nginx static, prefix stripped) |
@@ -192,8 +192,8 @@ python deploy.py --remote
 ```
 
 `DOCKER_TUNNEL` changes the tunnel URL (default `tcp://127.0.0.1:2375`). A
-root `.dockerignore` keeps `node_modules/` and `.git` out of the build
-context. Host-built `dist/` folders are un-ignored so compose can COPY them.
+root `.dockerignore` sends only host-built `dist/` folders, boot jars, and
+nginx.conf. Source, `node_modules/`, and `deploy/.env` stay off the tunnel.
 
 ## Data
 

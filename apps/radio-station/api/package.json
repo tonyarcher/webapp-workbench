@@ -1,0 +1,13 @@
+{
+    "name": "radio-api",
+    "private": true,
+    "version": "0.1.0",
+    "description": "Radio station microservice (Kotlin / Spring Data JPA).",
+    "scripts": {
+        "dev": "gradle bootRun",
+        "build": "gradle bootJar",
+        "test": "gradle check",
+        "test:coverage": "gradle test jacocoTestReport",
+        "lint": "gradle detekt"
+    }
+}
