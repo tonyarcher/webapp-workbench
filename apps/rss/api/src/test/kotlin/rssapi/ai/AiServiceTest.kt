@@ -205,6 +205,6 @@ class AiServiceTest {
         val poster = FakePoster { _, _, _ -> throw AssertionError("quota must gate the backend") }
         val err = assertFailsWith<ApiException> { AiService(quotas, ollamaConfig(), poster).summarize(uid, null, "x") }
         assertEquals(429, err.status)
-        verify(repo, never()).saveAndFlush(any())
+        verify(repo, never()).saveAndFlush(any<AiQuotaEntity>())
     }
 }

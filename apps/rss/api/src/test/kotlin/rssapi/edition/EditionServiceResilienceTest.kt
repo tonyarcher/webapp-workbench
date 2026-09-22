@@ -99,7 +99,7 @@ class EditionServiceResilienceTest {
 
     private fun stubQuota() {
         whenever(quotaRepo.findById(any())).thenReturn(Optional.empty())
-        whenever(quotaRepo.saveAndFlush(any())).thenAnswer { it.getArgument(0) }
+        whenever(quotaRepo.saveAndFlush(any<AiQuotaEntity>())).thenAnswer { it.getArgument(0) }
     }
 
     private fun bodyOf(row: EditionEntity) = ObjectMapper().readTree(row.body!!)

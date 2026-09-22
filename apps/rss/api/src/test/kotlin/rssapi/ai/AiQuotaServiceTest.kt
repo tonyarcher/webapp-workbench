@@ -66,7 +66,7 @@ class AiQuotaServiceTest {
 
         val err = assertFailsWith<ApiException> { quotaServiceAt(repo, now).consume(uid, 30, 100) }
         assertEquals(429, err.status)
-        verify(repo, never()).saveAndFlush(any())
+        verify(repo, never()).saveAndFlush(any<AiQuotaEntity>())
     }
 
     @Test
@@ -83,7 +83,7 @@ class AiQuotaServiceTest {
     fun writeContentionReturns429() {
         val repo: AiQuotaRepo = mock()
         whenever(repo.findById(uid)).thenReturn(Optional.empty())
-        whenever(repo.saveAndFlush(any())).thenThrow(
+        whenever(repo.saveAndFlush(any<AiQuotaEntity>())).thenThrow(
             org.springframework.orm.ObjectOptimisticLockingFailureException(AiQuotaEntity::class.java, uid),
         )
 
@@ -95,7 +95,7 @@ class AiQuotaServiceTest {
     fun firstWriteRaceReturns429() {
         val repo: AiQuotaRepo = mock()
         whenever(repo.findById(uid)).thenReturn(Optional.empty())
-        whenever(repo.saveAndFlush(any())).thenThrow(
+        whenever(repo.saveAndFlush(any<AiQuotaEntity>())).thenThrow(
             org.springframework.dao.DataIntegrityViolationException("duplicate key"),
         )
 

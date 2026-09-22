@@ -10,7 +10,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.oauth2.jwt.Jwt
@@ -80,7 +80,7 @@ class ApiRoutesTest {
         whenever(decoder.decode(any())).thenReturn(jwt(ALICE_SUB))
         whenever(users.findBySubject(ALICE_SUB)).thenReturn(null)
         val saved = UserEntity(id = ALICE_ID, subject = ALICE_SUB, username = ALICE_SUB)
-        whenever(users.save(any())).thenReturn(saved)
+        whenever(users.save(any<UserEntity>())).thenReturn(saved)
         val res = authedGet("/config", "alice-token")
         assertEquals(200, res.response.status)
         val captor = argumentCaptor<UserEntity>()

@@ -1,9 +1,9 @@
 plugins {
-    kotlin("jvm") version "2.2.21"
-    kotlin("plugin.spring") version "2.2.21"
-    kotlin("plugin.serialization") version "2.2.21"
-    kotlin("plugin.jpa") version "2.2.21"
-    id("org.springframework.boot") version "3.4.5"
+    kotlin("jvm") version "2.4.20"
+    kotlin("plugin.spring") version "2.4.20"
+    kotlin("plugin.serialization") version "2.4.20"
+    kotlin("plugin.jpa") version "2.4.20"
+    id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
     id("dev.detekt") version "2.0.0-alpha.6"
     jacoco
@@ -26,25 +26,36 @@ kotlin {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-hateoas")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
-    implementation("org.flywaydb:flyway-core")
+    implementation("org.springframework.boot:spring-boot-starter-flyway")
+    // Boot 4 serializes HTTP with Jackson 3. Call sites still construct the
+    // Jackson 2 ObjectMapper, so keep that line on the patched 2.21 BOM.
+    implementation("org.springframework.boot:spring-boot-jackson2")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.postgresql:postgresql")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("com.password4j:password4j:1.8.4")
-    implementation("com.eatthepath:java-otp:0.4.0")
-    implementation("commons-codec:commons-codec:1.17.2")
-    implementation("com.yubico:webauthn-server-core:2.5.4")
-    implementation("com.nimbusds:nimbus-jose-jwt:9.47")
+    implementation("com.eatthepath:java-otp:1.0.0")
+    implementation("commons-codec:commons-codec")
+    implementation("com.yubico:webauthn-server-core:2.9.0")
+    implementation("com.nimbusds:nimbus-jose-jwt:10.10")
+    // Floor if a transitive reintroduces Bouncy Castle. webauthn 2.9 does not pull it.
+    constraints {
+        implementation("org.bouncycastle:bcprov-jdk18on:1.86")
+        implementation("org.bouncycastle:bcpkix-jdk18on:1.86")
+        implementation("org.bouncycastle:bcpg-jdk18on:1.86")
+    }
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {

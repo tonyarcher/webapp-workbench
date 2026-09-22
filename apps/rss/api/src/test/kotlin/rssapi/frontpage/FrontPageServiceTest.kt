@@ -227,7 +227,7 @@ class FrontPageServiceTest {
     private fun openQuota(): Pair<AiQuotaService, AiQuotaRepo> {
         val repo: AiQuotaRepo = mock()
         whenever(repo.findById(any())).thenReturn(Optional.empty())
-        whenever(repo.saveAndFlush(any())).thenAnswer { it.getArgument<AiQuotaEntity>(0) }
+        whenever(repo.saveAndFlush(any<AiQuotaEntity>())).thenAnswer { it.getArgument<AiQuotaEntity>(0) }
         return AiQuotaService(repo) to repo
     }
 
@@ -270,7 +270,7 @@ class FrontPageServiceTest {
         assertEquals(SCORE_MODEL, out.getValue("fresh").scoreRow.model)
         assertEquals(0.1, out.getValue("fresh").scores.worthy, 1e-9)
         assertNull(out.getValue("fresh").scoreRow.topic)
-        verify(quotaRepo).saveAndFlush(any())
+        verify(quotaRepo).saveAndFlush(any<AiQuotaEntity>())
         assertEquals(1, poster.calls.size)
     }
 
@@ -306,7 +306,7 @@ class FrontPageServiceTest {
 
         assertEquals(1, out.size)
         assertEquals(SCORE_MODEL, out[0].scoreRow.model)
-        verify(repo, never()).saveAndFlush(any())
+        verify(repo, never()).saveAndFlush(any<AiQuotaEntity>())
         assertTrue(poster.calls.isEmpty())
     }
 
@@ -327,7 +327,7 @@ class FrontPageServiceTest {
 
         assertEquals(1, out.size)
         assertEquals(SCORE_MODEL, out[0].scoreRow.model)
-        verify(repo, never()).saveAndFlush(any())
+        verify(repo, never()).saveAndFlush(any<AiQuotaEntity>())
         assertTrue(poster.calls.isEmpty())
     }
 
@@ -398,7 +398,7 @@ class FrontPageServiceTest {
         }
 
         assertEquals(429, err.status)
-        verify(repo, never()).saveAndFlush(any())
+        verify(repo, never()).saveAndFlush(any<AiQuotaEntity>())
         assertTrue(poster.calls.isEmpty())
     }
 
@@ -414,7 +414,7 @@ class FrontPageServiceTest {
         val out = jevService(poster, quotas).frontPage(uid, 1_700_000_000_000L, false, 10)
 
         assertEquals(0.3, out.single().scores.worthy, 1e-9)
-        verify(repo, never()).saveAndFlush(any())
+        verify(repo, never()).saveAndFlush(any<AiQuotaEntity>())
         assertTrue(poster.calls.isEmpty())
     }
 

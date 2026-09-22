@@ -1,6 +1,5 @@
-# Gateway build context (deploy/). The leaf cert/key are baked into the image;
-# the CA key, CA cert, serial, and deploy secrets must never enter any layer.
-.env
-gateway/certs/ca.key
-gateway/certs/ca.crt
-gateway/certs/ca.srl
+# Cert install leftovers. nginx only needs leaf.crt and leaf.key; a previous
+# private key at leaf.key.bak must not be baked into the gateway image.
+gateway/certs/*.bak
+gateway/certs/*.work
+gateway/certs/*.installing

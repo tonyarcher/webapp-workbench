@@ -1,6 +1,6 @@
 package userapi.web
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import java.time.Clock
@@ -26,7 +26,7 @@ import userapi.accounts.buildRelyingParty
 class PasskeyControllerBranchTest {
     private val clock = Clock.fixed(Instant.parse("2026-09-11T17:00:00Z"), ZoneOffset.UTC)
     private val settings = Settings(3000, "", "error", "user-api", cookieSecure = false)
-    private val mapper = ObjectMapper()
+    private val mapper = JsonMapper()
     private val userId = UUID.randomUUID()
 
     private fun sessionRequest(): HttpServletRequest {

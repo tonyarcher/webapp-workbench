@@ -1,7 +1,7 @@
 package userapi.web
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.JsonNode
+import tools.jackson.databind.JsonNode
 
 data class PasswordBody(val username: String, val password: String)
 

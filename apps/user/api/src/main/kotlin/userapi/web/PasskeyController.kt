@@ -1,6 +1,6 @@
 package userapi.web
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.web.bind.annotation.PostMapping
@@ -13,7 +13,7 @@ import userapi.accounts.AccountServices
 class PasskeyController(
     private val accounts: AccountServices,
     private val settings: Settings,
-    private val mapper: ObjectMapper,
+    private val mapper: JsonMapper,
 ) {
     @PostMapping("/passkey/register/begin", headers = ["X-Api-Version=1"])
     fun passkeyRegisterBegin(request: HttpServletRequest): PasskeyBeginBody {

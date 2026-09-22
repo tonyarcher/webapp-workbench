@@ -14,6 +14,7 @@ import rssapi.persist.ArticleMaintenanceRepo
 import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
+import rssapi.persist.ArticleEntity
 
 class IngestServiceTest {
     private val feeds: FeedRepo = mock()
@@ -34,7 +35,7 @@ class IngestServiceTest {
     fun popularityRefreshStaysOnIngestedFeed() {
         val feedId = UUID.randomUUID()
         val feed = FeedEntity(id = feedId, xmlUrl = "https://example.com/rss", title = "t")
-        whenever(articles.save(any())).thenAnswer { it.getArgument(0) }
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
 
         ingest.ingestXml(feed, rss)
 

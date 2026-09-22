@@ -3,6 +3,7 @@ package stockgame.log
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -30,8 +31,9 @@ class JsonLogBranchTest {
             mapOf("a" to 1, "b" to true, "c" to "x", "n" to null, "m" to mapOf(1 to "x", "k" to "v", "nil" to null)),
             now = now,
         )
-        assertTrue(line?.contains("\"a\":1") == true)
-        assertTrue(line?.contains("\"service\":\"s\"") == true)
+        val text = assertNotNull(line)
+        assertTrue(text.contains("\"a\":1"))
+        assertTrue(text.contains("\"service\":\"s\""))
     }
 
     @Test

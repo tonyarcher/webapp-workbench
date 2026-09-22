@@ -1,6 +1,6 @@
 package fitnessapi.web
 
-import com.fasterxml.jackson.databind.JsonNode
+import tools.jackson.databind.JsonNode
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -22,7 +22,8 @@ class ImportController(private val samples: ObjectProvider<SampleStore>) {
             throw ApiException(400, "at most $MAX_IMPORT_ROWS samples per request")
         }
         val incoming = if (raw != null && raw.isArray) {
-            raw.map { parseIncoming(it) }
+            // Jackson 3 ArrayNode.map is not Kotlin's map.
+            (0 until raw.size()).map { index -> parseIncoming(raw.get(index)) }
         } else {
             emptyList()
         }

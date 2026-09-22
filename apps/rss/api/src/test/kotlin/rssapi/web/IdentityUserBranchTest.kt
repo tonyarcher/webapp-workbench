@@ -62,7 +62,7 @@ class IdentityUserBranchTest {
             lastSeenAt = Instant.now().minusSeconds(7200),
         )
         whenever(users.findBySubject("s1")).thenReturn(stale)
-        whenever(users.save(any())).thenAnswer { it.getArgument(0) }
+        whenever(users.save(any<UserEntity>())).thenAnswer { it.getArgument(0) }
         assertEquals(id, IdentityUser(users).id)
         verify(users).save(any())
         clear()
@@ -75,7 +75,7 @@ class IdentityUserBranchTest {
         whenever(users.findBySubject("s2"))
             .thenReturn(null)
             .thenReturn(UserEntity(id = id, subject = "s2"))
-        whenever(users.save(any()))
+        whenever(users.save(any<UserEntity>()))
             .thenThrow(DataIntegrityViolationException("race"))
             .thenAnswer { it.getArgument(0) }
         assertEquals(id, IdentityUser(users).id)
@@ -86,7 +86,7 @@ class IdentityUserBranchTest {
     fun raceWithoutRowIs500() {
         auth("s3", null)
         whenever(users.findBySubject("s3")).thenReturn(null)
-        whenever(users.save(any())).thenThrow(DataIntegrityViolationException("race"))
+        whenever(users.save(any<UserEntity>())).thenThrow(DataIntegrityViolationException("race"))
         assertFailsWith<ApiException> { IdentityUser(users).id }
         clear()
     }

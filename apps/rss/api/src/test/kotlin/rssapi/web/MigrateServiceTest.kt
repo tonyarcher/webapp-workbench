@@ -56,7 +56,7 @@ class MigrateServiceTest {
 
     private fun stubFolders(folderId: UUID) {
         whenever(folders.findByUserIdAndTitle(userId, "News")).thenReturn(null)
-        whenever(folders.save(any())).thenAnswer {
+        whenever(folders.save(any<FolderEntity>())).thenAnswer {
             val e = it.getArgument<FolderEntity>(0)
             e.id = folderId
             e
@@ -65,7 +65,7 @@ class MigrateServiceTest {
 
     private fun stubFeeds(feedId: UUID) {
         whenever(feeds.findByXmlUrl("https://example.com/rss")).thenReturn(null)
-        whenever(feeds.save(any())).thenAnswer {
+        whenever(feeds.save(any<FeedEntity>())).thenAnswer {
             val e = it.getArgument<FeedEntity>(0)
             e.id = feedId
             e
