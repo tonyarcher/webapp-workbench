@@ -80,7 +80,7 @@ A stale Vite process on 5199 hangs baseball e2e — kill it first.
    Fix blocking findings and re-dispatch until `APPROVE`. The reviewer does not edit or commit.
 5. Do not commit or push unless the user explicitly asks. Conventional commits
    (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`). Stage files explicitly.
-6. Do not edit `opencode.json` unless the task asks. `AGENTS.md` files may be
+6. `AGENTS.md` files may be
    updated to stay in sync with the code — but never to dodge the work. Do not
    weaken a documented rule or floor instead of meeting it. Change the code
    first, then the docs.
@@ -273,7 +273,6 @@ fetchers cannot send custom headers.
   `scripts/integration.ts` for new Postgres). Legacy radio integration tests
   stay until that API migrates.
 - Library changes need tests in that package (`scripts/smoke.ts` or co-located `*.test.ts`).
-- Architecture: use the `ttsc-graph` MCP (`opencode.json`) for callers, callees, and hotspots. Do not grep the graph.
 - Secrets: `gitleaks detect` when touching auth, env, or API code.
 - Dependencies: `osv-scanner -r .` or `npm audit` on lockfile changes.
 - Structural hunt: `ast-grep` (`sg`) for `unsafeHTML`, concatenated SQL, and `eval`.
