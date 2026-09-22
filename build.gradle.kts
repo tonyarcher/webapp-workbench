@@ -570,12 +570,13 @@ fun leafCovers(openssl: String, hosts: List<String>, leafCrt: java.io.File, leaf
         .flatMap { it.split(",") }
         .map { it.trim().lowercase() }
         .toSet()
-    return hosts.all { host ->
+    val covered = hosts.all { host ->
         val entry = sanEntry(host)
         val name = entry.substringAfter(":").lowercase()
         val want = if (entry.startsWith("IP:")) "ip address:$name" else "dns:$name"
         want in have
     }
+    return covered && pairMatches(openssl, leafCrt, leafKey)
 }
 
 /** Write the CSR and SAN extension file for a leaf cert; returns their paths. */
@@ -596,20 +597,97 @@ fun writeLeafRequest(openssl: String, hosts: List<String>, leafKey: java.io.File
     return csr to ext
 }
 
+/** Private keys are owner-read/write on POSIX. Windows has no POSIX view. */
+fun ownerOnly(path: java.io.File) {
+    val posix = java.nio.file.attribute.PosixFileAttributeView::class.java
+    val view = java.nio.file.Files.getFileAttributeView(path.toPath(), posix) ?: return
+    val mode = java.nio.file.attribute.PosixFilePermissions.fromString("rw-------")
+    view.setPermissions(mode)
+}
+
+/** Delete a leftover key/cert file, or fail. A silent miss would be copied into the image. */
+fun removeFile(path: java.io.File) {
+    if (path.exists() && !path.delete()) {
+        error("could not remove leftover ${path.name}")
+    }
+}
+
+/** Drop install leftovers so the gateway image cannot bake a previous private key. */
+fun sweepCertLeftovers(dir: java.io.File) {
+    val names = listOf(
+        "leaf.key.bak", "leaf.crt.bak",
+        "leaf.key.work", "leaf.crt.work",
+        "leaf.key.installing", "leaf.crt.installing",
+    )
+    names.forEach { name -> removeFile(java.io.File(dir, name)) }
+}
+
+/** Same-directory rename. Puts dest back if the new file cannot take its place. */
+fun replaceFile(source: java.io.File, dest: java.io.File) {
+    val backup = java.io.File(dest.parentFile, dest.name + ".bak")
+    removeFile(backup)
+    if (dest.exists() && !dest.renameTo(backup)) {
+        error("could not move ${dest.name} aside")
+    }
+    if (!source.renameTo(dest)) {
+        if (backup.exists()) backup.renameTo(dest)
+        error("could not install ${dest.name}")
+    }
+    removeFile(backup)
+}
+
+/** Install a signed pair. copyTo would make the key world-readable on Linux. */
+fun installLeafPair(crtOut: java.io.File, keyOut: java.io.File, certs: GatewayCerts) {
+    val crtNew = java.io.File(certs.dir, "leaf.crt.installing")
+    val keyNew = java.io.File(certs.dir, "leaf.key.installing")
+    crtOut.copyTo(crtNew, overwrite = true)
+    keyOut.copyTo(keyNew, overwrite = true)
+    ownerOnly(keyNew)
+    replaceFile(crtNew, certs.leafCrt)
+    replaceFile(keyNew, certs.leafKey)
+    ownerOnly(certs.leafKey)
+}
+
+/** openssl modulus line, or null when the file is not a cert/key of that kind. */
+fun modulusOf(openssl: String, args: List<String>): String? {
+    val (code, output) = runProcess(listOf(openssl) + args)
+    return if (code == 0) output.lineSequence().firstOrNull { it.startsWith("Modulus=") } else null
+}
+
+/** True when the leaf cert and key are a pair. A failed mint must not leave them split. */
+fun pairMatches(openssl: String, cert: java.io.File, key: java.io.File): Boolean {
+    val certMod = modulusOf(openssl, listOf("x509", "-noout", "-modulus", "-in", cert.absolutePath))
+    val keyMod = modulusOf(openssl, listOf("rsa", "-noout", "-modulus", "-in", key.absolutePath))
+    return certMod != null && certMod == keyMod
+}
+
 fun mintLeaf(openssl: String, hosts: List<String>, certs: GatewayCerts) {
-    val (csr, ext) = writeLeafRequest(openssl, hosts, certs.leafKey)
+    // Work files sit next to the live pair, not in the system temp directory.
+    certs.dir.mkdirs()
+    val keyOut = java.io.File(certs.dir, "leaf.key.work")
+    val crtOut = java.io.File(certs.dir, "leaf.crt.work")
+    keyOut.delete()
+    crtOut.delete()
     try {
-        opensslRun(
-            openssl,
-            listOf(
-                "x509", "-req", "-in", csr.absolutePath,
-                "-CA", certs.caCrt.absolutePath, "-CAkey", certs.caKey.absolutePath, "-CAcreateserial",
-                "-out", certs.leafCrt.absolutePath, "-days", "825", "-extfile", ext.absolutePath,
-            ),
-        )
+        val (csr, ext) = writeLeafRequest(openssl, hosts, keyOut)
+        ownerOnly(keyOut)
+        try {
+            opensslRun(
+                openssl,
+                listOf(
+                    "x509", "-req", "-in", csr.absolutePath,
+                    "-CA", certs.caCrt.absolutePath, "-CAkey", certs.caKey.absolutePath, "-CAcreateserial",
+                    "-out", crtOut.absolutePath, "-days", "825", "-extfile", ext.absolutePath,
+                ),
+            )
+            installLeafPair(crtOut, keyOut, certs)
+        } finally {
+            csr.delete()
+            ext.delete()
+        }
     } finally {
-        csr.delete()
-        ext.delete()
+        keyOut.delete()
+        crtOut.delete()
     }
 }
 
@@ -624,8 +702,7 @@ fun installProvidedCert(providedCert: String, providedKey: String, certs: Gatewa
         println("==> provided TLS cert already installed for: ${hosts.joinToString(", ")}")
         return false
     }
-    file(providedCert).copyTo(certs.leafCrt, overwrite = true)
-    file(providedKey).copyTo(certs.leafKey, overwrite = true)
+    installLeafPair(file(providedCert), file(providedKey), certs)
     println("==> installed provided TLS cert for: ${hosts.joinToString(", ")}")
     return true
 }
@@ -644,6 +721,7 @@ fun ensureLocalCa(openssl: String, caKey: java.io.File, caCrt: java.io.File): Bo
             "-addext", "keyUsage=critical,keyCertSign,cRLSign",
         ),
     )
+    ownerOnly(caKey)
     return true
 }
 
@@ -806,6 +884,8 @@ fun deployValidate() {
 /** Render the gateway and refresh certs; warns when a rebuild would pick them up. */
 fun prepareGateway(services: List<String>) {
     renderGateway()
+    // The gateway image copies this directory. Leftovers must not survive a matched pair.
+    sweepCertLeftovers(file("deploy/gateway/certs"))
     if (deployHas("down") || deployHas("status")) return
     val hosts = splitHosts(gatewayEnv()["TLS_HOSTS"] ?: "")
     if (hosts.isEmpty()) return

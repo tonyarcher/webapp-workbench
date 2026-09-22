@@ -39,6 +39,7 @@ import rssapi.persist.FolderFeedEntity
 import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
 import rssapi.web.ApiException
+import rssapi.persist.AiQuotaEntity
 
 private val SERVICE_NOW: Instant = Instant.parse("2026-09-13T12:00:00Z")
 private val SERVICE_UID: UUID = UUID.fromString("22222222-2222-2222-2222-222222222222")
@@ -107,7 +108,7 @@ class EditionServiceTest {
 
     private fun stubQuota() {
         whenever(quotaRepo.findById(any())).thenReturn(Optional.empty())
-        whenever(quotaRepo.saveAndFlush(any())).thenAnswer { it.getArgument(0) }
+        whenever(quotaRepo.saveAndFlush(any<AiQuotaEntity>())).thenAnswer { it.getArgument(0) }
     }
 
     private fun stubWindow(
@@ -195,7 +196,7 @@ class EditionServiceTest {
 
         service().buildEdition(SERVICE_UID, 24, 12)
 
-        verify(quotaRepo, times(1)).saveAndFlush(any())
+        verify(quotaRepo, times(1)).saveAndFlush(any<AiQuotaEntity>())
     }
 
     @Test

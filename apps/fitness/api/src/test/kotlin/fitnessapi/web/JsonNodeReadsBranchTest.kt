@@ -1,12 +1,12 @@
 package fitnessapi.web
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class JsonNodeReadsBranchTest {
-    private val mapper = ObjectMapper()
+    private val mapper = JsonMapper()
     private fun node(json: String) = mapper.readTree(json)
 
     @Test

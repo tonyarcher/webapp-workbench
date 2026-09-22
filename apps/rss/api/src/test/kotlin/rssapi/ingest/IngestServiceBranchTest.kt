@@ -19,6 +19,7 @@ import rssapi.persist.ArticleMaintenanceRepo
 import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
+import rssapi.persist.ArticleEntity
 
 class IngestServiceBranchTest {
     private val feeds: FeedRepo = mock()
@@ -101,7 +102,7 @@ class IngestServiceBranchTest {
 
     @Test
     fun contentBeatsSummary() {
-        whenever(articles.save(any())).thenAnswer { it.getArgument(0) }
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
         val xml = """<?xml version="1.0"?>""" +
             """<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">""" +
             """<channel><title>t</title>""" +
@@ -117,7 +118,7 @@ class IngestServiceBranchTest {
 
     @Test
     fun matchingMediaIsNotPrepended() {
-        whenever(articles.save(any())).thenAnswer { it.getArgument(0) }
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
         val xml = """<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>""" +
             """<item><title>t</title><link>https://example.com/m</link>""" +
             """<description><![CDATA[<img src="https://example.com/i.png"/>]]></description>""" +
@@ -139,7 +140,7 @@ class IngestServiceBranchTest {
 
     @Test
     fun emptyTitleFallsBack() {
-        whenever(articles.save(any())).thenAnswer { it.getArgument(0) }
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
         val xml = """
             <?xml version="1.0"?><rss version="2.0"><channel><title>t</title>
             <item><link>https://example.com/y</link></item>
@@ -152,7 +153,7 @@ class IngestServiceBranchTest {
 
     @Test
     fun emptyItemsSkipsPopularity() {
-        whenever(articles.save(any())).thenAnswer { it.getArgument(0) }
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
         val xml = """<?xml version="1.0"?><rss version="2.0"><channel><title>t</title></channel></rss>"""
         ingest.ingestXml(feed, xml)
         verify(maintenance, never()).updatePopularity(any(), any())
@@ -162,7 +163,7 @@ class IngestServiceBranchTest {
 
     @Test
     fun largeContentTruncated() {
-        whenever(articles.save(any())).thenAnswer { it.getArgument(0) }
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
         val big = "x".repeat(rssapi.MAX_CONTENT_BYTES + 10)
         val xml = """<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>""" +
             """<item><title>t</title><link>https://example.com/z</link><description>$big</description></item>""" +
@@ -175,7 +176,7 @@ class IngestServiceBranchTest {
 
     @Test
     fun mediaPrepended() {
-        whenever(articles.save(any())).thenAnswer { it.getArgument(0) }
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
         val xml = """
             <?xml version="1.0"?><rss version="2.0"><channel><title>t</title>
             <item><title>t</title><link>https://example.com/w</link>
@@ -191,7 +192,7 @@ class IngestServiceBranchTest {
 
     @Test
     fun linklessItems() {
-        whenever(articles.save(any())).thenAnswer { it.getArgument(0) }
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
         val xml = """
             <?xml version="1.0"?><rss version="2.0"><channel><title>t</title>
             <item><title>no link here</title><guid>g9</guid></item>

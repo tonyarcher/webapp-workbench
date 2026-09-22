@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.oauth2.jwt.Jwt
@@ -92,7 +92,7 @@ class AffinityControllerTest {
         )
         whenever(subs.existsByUserIdAndFeedId(uid, feedId)).thenReturn(true)
         whenever(affinity.findById(any())).thenReturn(Optional.empty())
-        whenever(affinity.save(any())).thenAnswer { it.getArgument<AffinityEntity>(0) }
+        whenever(affinity.save(any<AffinityEntity>())).thenAnswer { it.getArgument<AffinityEntity>(0) }
         val res = mvc.post("/affinity") {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer t")
