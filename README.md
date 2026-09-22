@@ -32,6 +32,25 @@ npm run build      # builds every workspace
 npm test           # runs every workspace's tests
 ```
 
+Everything that can build on a host (JS workspaces + the Kotlin/Spring APIs) in
+one command from the repo root:
+
+```sh
+./gradlew buildAll   # JS workspaces + all APIs
+./gradlew buildJvm   # Kotlin APIs only (bootJar)
+./gradlew buildNode  # JS workspaces only
+./gradlew checkAll   # API tests, detekt, Jacoco gates
+./gradlew buildAll -Papps=rss   # one app (ids, aliases, or folders)
+```
+
+The wrapper is local-only (`gradle wrapper` generates it, nothing committed); the
+Python entry points below fall back to `gradle` on PATH when it is absent.
+
+`python build.py` / `python deploy.py` are thin entry points over Gradle:
+deploy builds the host artifacts, renders the gateway config, and mints TLS
+certs before calling `docker compose`. Pass an app name to do one service:
+`python deploy.py rss`. See `deploy/README.md` for details.
+
 One app at a time:
 
 ```sh
@@ -51,8 +70,10 @@ Each app directory carries its own `AGENTS.md` with detailed conventions.
 
 `deploy/` holds the nginx reverse-proxy gateway stack: hello world at `/` and
 each app under its own path (`/baseball/`, `/rss-reader/`, `/stock-game/`,
-`/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`). From the repo root, `./build.sh` / `.\build.ps1`
-builds workspaces locally and `./deploy.sh` / `.\deploy.ps1` brings the
-compose stack up (auto-selects a local Docker engine or an SSH-tunneled
-remote daemon). Pass an app name to do one service: `./deploy.sh rss`.
+`/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`). From the repo root, `python build.py`
+builds workspaces locally and `python deploy.py` brings the compose stack up
+(auto-selects a local Docker engine or an SSH-tunneled remote daemon). Both are
+thin entry points over the root Gradle build: deploy builds the host artifacts,
+renders the gateway config, and mints TLS certs before calling `docker compose`.
+Pass an app name to do one service: `python deploy.py rss`.
 See `deploy/README.md` for details.

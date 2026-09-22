@@ -53,10 +53,17 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 | Typecheck all | `npm run typecheck` |
 | Lint all | `npm run lint` |
 | Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:rss-api` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` / `dev:basketball` / `dev:fitness` / `dev:fitness-api` / `dev:user-web` / `dev:user-api` |
-| Build (OS script) | `./build.sh` or `.\build.ps1` (`./build.sh rss` for one app) |
-| Deploy compose stack | `./deploy.sh` or `.\deploy.ps1` (auto local Docker vs SSH tunnel; `./deploy.sh rss` rebuilds one app). PowerShell tab-completes app names on `.\deploy.ps1`; bash: `source scripts/complete-deploy.bash`. |
+| Build (entry point) | `python build.py [app...]` (or `python3`); calls `./gradlew buildAll` |
+| Build everything, one command | `./gradlew buildAll` (root; JS workspaces + all Kotlin APIs). `./gradlew buildJvm` = APIs only, `./gradlew buildNode` = JS only, `./gradlew checkAll` = API tests/detekt/Jacoco. Add `-Papps=rss` (or `apps/rss`) to build one app |
+| Deploy compose stack | `python deploy.py [options] [app...]` (or `python3`); calls `./gradlew deploy`, which builds, renders the gateway, mints certs, then runs compose. Tab completion: `source scripts/complete-deploy.bash`. |
 
 Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm test`).
+
+The root `settings.gradle.kts` includes the Kotlin APIs and `build.gradle.kts` owns the
+app map; `./gradlew buildAll` builds both sides on the host and `./gradlew deploy` does
+the deploy. `-Papps` limits either half to one app. Keep the app map in `build.gradle.kts`
+in sync when an app changes. The wrapper is local-only (`gradle wrapper` generates it);
+the entry points fall back to `gradle` on PATH when it is absent.
 
 `packages/web-components` tests use @web/test-runner in real Chromium; `apps/baseball` e2e
 uses Playwright on `:5199` (`headless: true`). Fresh machine: `npx playwright install`.
@@ -73,7 +80,7 @@ A stale Vite process on 5199 hangs baseball e2e — kill it first.
    Fix blocking findings and re-dispatch until `APPROVE`. The reviewer does not edit or commit.
 5. Do not commit or push unless the user explicitly asks. Conventional commits
    (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`). Stage files explicitly.
-6. Do not edit `opencode.json` unless the task asks. `AGENTS.md` files may be
+6. `AGENTS.md` files may be
    updated to stay in sync with the code — but never to dodge the work. Do not
    weaken a documented rule or floor instead of meeting it. Change the code
    first, then the docs.
@@ -113,7 +120,7 @@ generators, data munging, log scraping, experiments. Prefer the stdlib. Do not a
 an app runtime or a workspace dependency.
 
 - Do not reach for Node, bash, or PowerShell for a new helper unless you are extending an
-  existing npm/deploy script (e.g. `scripts/*.mjs`, `stamp-sw.mjs`, `write-sw.mjs`, `build.ps1`).
+  existing npm/build script (e.g. `scripts/*.mjs`, `stamp-sw.mjs`, `write-sw.mjs`, `build.py`).
 - Scratch scripts stay out of the repo unless the user wants them kept. Kept helpers go in
   root `tools/` as `.py` files, not inside an app.
 
@@ -266,7 +273,6 @@ fetchers cannot send custom headers.
   `scripts/integration.ts` for new Postgres). Legacy radio integration tests
   stay until that API migrates.
 - Library changes need tests in that package (`scripts/smoke.ts` or co-located `*.test.ts`).
-- Architecture: use the `ttsc-graph` MCP (`opencode.json`) for callers, callees, and hotspots. Do not grep the graph.
 - Secrets: `gitleaks detect` when touching auth, env, or API code.
 - Dependencies: `osv-scanner -r .` or `npm audit` on lockfile changes.
 - Structural hunt: `ast-grep` (`sg`) for `unsafeHTML`, concatenated SQL, and `eval`.
@@ -279,7 +285,7 @@ User-wide rules apply (never commit/push `.env`; examples only in git). This rep
 - **Deploy secrets:** `deploy/.env` copied from `deploy/.env.example` (Postgres). Compose reads it at run; it must never land in an image layer.
 - **Stock-game app** needs no env file; provider config lives on `stock-game-api`.
 - **Calendar OAuth** stays in the browser (localStorage), not in `.env`.
-- `APP_BASE_PATH` is public and baked at **host** Vite build (deploy.py) — not a secret, not a reason to commit `.env`.
+- `APP_BASE_PATH` is public and baked at **host** Vite build (`gradle buildAll`) — not a secret, not a reason to commit `.env`.
 - Do not log tokens, secrets, or raw sample/PII payloads.
 
 Before commit: staged files must not include `.env` / `.env.*` except `.env.example`.

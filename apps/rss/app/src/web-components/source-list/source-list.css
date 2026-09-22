@@ -146,6 +146,12 @@
     white-space: nowrap;
 }
 
+.shadow-mark {
+    flex: none;
+    font-size: 12px;
+    line-height: 1;
+}
+
 .icon {
     width: 16px;
     height: 16px;

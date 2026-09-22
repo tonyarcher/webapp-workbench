@@ -13,9 +13,9 @@ Docker-compatible container runtime) already installed.
   host ports `80` and `443`; with TLS off nothing listens on 443, but Docker
   still binds the host port — if yours is taken, comment out the `443:443`
   mapping (or stop the other listener) before `up`.
-- `nginx/default.conf.template` — gateway config template. Rendered to
-  `nginx/default.conf` (gitignored, never edit it) on every deploy run;
-  direct `docker compose` on a fresh clone needs `python3 scripts/render_gateway.py` first.
+- `nginx/default.conf.template` — gateway config template. `./gradlew deploy`
+  renders it to `nginx/default.conf` (gitignored, never edit it) on every run;
+  a direct `docker compose` needs a `./gradlew deploy -Pargs="status"` first.
 - `hello/index.html` — static hello-world page copied into the `gateway` image and served at the root `/`.
 - `gateway/` — Dockerfile that builds the `gateway` image from the `deploy/` context.
 - `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `clipstack/`, `calendar-sync/`, `radio-station/`, `football/`, `basketball/`, `fitness/`, `user-web/` — Dockerfiles + nginx configs for the static apps. Calendar Sync also proxies `/api/trakt/` to api.trakt.tv.
@@ -27,9 +27,10 @@ Docker-compatible container runtime) already installed.
   `stock-game-api` (Kotlin, Postgres `stock`).
 
 All app Dockerfiles use the repo root as the build context (`context: ..` in
-compose). TypeScript is compiled on the host (`deploy.py` runs npm / Vite /
-tsc, same as Gradle `bootJar`); images copy `dist/` or jars. Each app
-container listens on port `3000` internally; the gateway strips the prefix
+compose). TypeScript and Kotlin compile on the host through Gradle
+(`./gradlew buildAll`; `./gradlew deploy` runs it first) and the gateway config
+is rendered by the same `./gradlew deploy`; images copy `dist/` or jars. Each
+app container listens on port `3000` internally; the gateway strips the prefix
 for the static apps. The `gateway` image is built from the `deploy/` context.
 
 ## Routes
@@ -68,24 +69,23 @@ resolve correctly behind the gateway.
 
 ## Build and run
 
-From the repo root, use the OS deploy script. It rebuilds images and starts
+From the repo root, use the Python entry point. It rebuilds images and starts
 the stack, and it picks a Docker engine automatically (see below):
 
 ```sh
-./deploy.sh            # Linux / macOS / Git Bash
-.\deploy.ps1           # Windows PowerShell
+python deploy.py       # python3 on Linux / macOS
 npm run deploy         # same entry point
 ```
 
 Useful flags:
 
 ```sh
-./deploy.sh --local            # force the local Docker engine
-./deploy.sh --remote           # force the SSH-tunneled remote engine
-./deploy.sh --no-build         # start without rebuilding images
-./deploy.sh --build-only       # build images only
-./deploy.sh --status           # docker compose ps
-./deploy.sh --down             # stop and remove the stack
+python deploy.py --local            # force the local Docker engine
+python deploy.py --remote           # force the SSH-tunneled remote engine
+python deploy.py --no-build         # start without rebuilding images
+python deploy.py --build-only       # build images only
+python deploy.py --status           # docker compose ps
+python deploy.py --down             # stop and remove the stack
 ```
 
 ## One app
@@ -96,18 +96,18 @@ the monorepo as the build context, and tunnel vs local Docker lives in
 one place.
 
 ```sh
-./deploy.sh rss                # rebuild + roll out rss-reader
-./deploy.sh baseball           # also accepted: baseball-tracker
-./deploy.sh lemmy stock
-./deploy.sh --remote rss
-./deploy.sh --build-only lemmy
+python deploy.py rss                # rebuild + roll out rss-reader
+python deploy.py baseball           # also accepted: baseball-tracker
+python deploy.py lemmy stock
+python deploy.py --remote rss
+python deploy.py --build-only lemmy
 ```
 
 Short names: `baseball`, `rss`, `stock`, `lemmy`, `clipstack`, `calendar`, `gateway`, `git`, `gitea`.
 
-`./deploy.sh` compiles TypeScript on the host (Vite / tsc, with
+`python deploy.py` compiles TypeScript on the host (Vite / tsc, with
 `APP_BASE_PATH` for subpath SPAs) then copies `dist/` into nginx images.
-`./build.sh rss` is the same host compile without Docker — useful as a
+`python build.py rss` is the same host compile without Docker — useful as a
 typecheck before a tunnel upload. Images do not run `tsc` or Vite.
 
 The gateway listens on port `80` (plus `443` when `TLS_HOSTS` is set — see
@@ -180,15 +180,15 @@ is pushed through the Docker client to the remote daemon, so you can drive a
 remote server from WSL or any machine.
 
 If an SSH tunnel is already exposing the remote daemon on `127.0.0.1:2375`,
-`./deploy.sh` / `.\deploy.ps1` uses it. Otherwise they fall back to local
-Docker. Override with `--local`, `--remote`, `DEPLOY_TARGET`, or `DOCKER_HOST`.
+`python deploy.py` uses it. Otherwise it falls back to local Docker. Override
+with `--local`, `--remote`, `DEPLOY_TARGET`, or `DOCKER_HOST`.
 
 ```sh
 # Optional: expose the remote daemon yourself, then deploy.
-# The script also detects this tunnel without setting DOCKER_HOST.
+# The entry point also detects this tunnel without setting DOCKER_HOST.
 ssh -N -L 2375:/var/run/docker.sock user@remote-host
 
-./deploy.sh --remote
+python deploy.py --remote
 ```
 
 `DOCKER_TUNNEL` changes the tunnel URL (default `tcp://127.0.0.1:2375`). A
@@ -224,7 +224,7 @@ GitHub repos for fast browsing.
    `GITEA_SSH_BIND` defaults to `127.0.0.1`. Set it to the VPN address
    (e.g. `10.13.13.1`) or `0.0.0.0` behind a firewall, or VPN clients
    cannot reach SSH.
-3. Deploy: `./deploy.sh gitea gateway`. Gitea migrates its database on
+3. Deploy: `python deploy.py gitea gateway`. Gitea migrates its database on
    first boot (`INSTALL_LOCK` is true for a headless install: env seeds
    `app.ini`, so no web-installer step is needed).
 4. Open `https://<host>/git/`. Register the first user — it becomes admin.

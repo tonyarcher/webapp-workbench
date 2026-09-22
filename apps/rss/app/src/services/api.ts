@@ -1,4 +1,5 @@
-import type {Article, Feed, Folder} from '../types';
+import type {Article, Edition, EditionMeta, EditionSection, EditionStatus, Feed, Folder} from '../types';
+import type {SummaryLength} from '../ai';
 import {getAccessToken, refreshTokens} from './auth';
 
 // ---- base fetch ----
@@ -241,6 +242,27 @@ export async function importOpmlXml(xml: string): Promise<OpmlImportResult> {
     }) as Promise<OpmlImportResult>;
 }
 
+// ---- front page ----
+
+export interface FrontPageParams {
+    since?: number | undefined;
+    unreadOnly?: boolean | undefined;
+    limit?: number | undefined;
+}
+
+export interface FrontPageJson {
+    generatedAt: number;
+    articles: Article[];
+}
+
+export async function fetchFrontPage(params: FrontPageParams = {}): Promise<FrontPageJson> {
+    const q = new URLSearchParams();
+    if (params.since) q.set('since', String(params.since));
+    if (params.unreadOnly) q.set('unreadOnly', '1');
+    if (params.limit) q.set('limit', String(params.limit));
+    return apiFetch(`/front-page?${q}`) as Promise<FrontPageJson>;
+}
+
 // ---- server AI (admin provider setting; hidden when unavailable) ----
 
 export interface ServerAiStatus {
@@ -253,10 +275,10 @@ export async function aiStatus(): Promise<ServerAiStatus> {
     return apiFetch('/ai/status') as Promise<ServerAiStatus>;
 }
 
-export async function requestServerSummary(title: string | undefined, text: string): Promise<{ summary: string }> {
+export async function requestServerSummary(title: string | undefined, text: string, length: SummaryLength = 'standard'): Promise<{ summary: string }> {
     return apiFetch('/ai/summarize', {
         method: 'POST',
-        body: JSON.stringify({title, text}),
+        body: JSON.stringify({title, text, length}),
     }) as Promise<{ summary: string }>;
 }
 
@@ -274,4 +296,158 @@ export async function migrateLibrary(payload: MigratePayload): Promise<{ feedsAd
         method: 'POST',
         body: JSON.stringify(payload),
     }) as Promise<{ feedsAdded: number; foldersAdded: number; statesQueued: number }>;
+}
+
+// ---- editions (front page newspaper) ----
+
+/** apiFetch twin that preserves the HTTP status so callers can map 404/429. */
+export class ApiError extends Error {
+    status: number;
+    constructor(status: number, message: string) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+    }
+}
+
+/** Thrown by buildEdition when the server answers 429 (build quota spent). */
+export class QuotaError extends Error {
+    constructor(message = 'Edition build quota reached — try again later.') {
+        super(message);
+        this.name = 'QuotaError';
+    }
+}
+
+async function authedFetch(path: string, init?: RequestInit, retried = false): Promise<Response> {
+    const token = await getAccessToken();
+    if (!token) {
+        emitAuthRequired();
+        throw new AuthError();
+    }
+    const res = await fetch(apiUrl(path), withAuthHeaders(init, token));
+    if (res.status === 401 && !retried) return retryFetchRaw(path, init);
+    return res;
+}
+
+async function retryFetchRaw(path: string, init: RequestInit | undefined): Promise<Response> {
+    const next = await refreshTokens();
+    if (next) return authedFetch(path, init, true);
+    emitAuthRequired();
+    throw new AuthError();
+}
+
+async function apiFetchWithStatus(path: string, init?: RequestInit): Promise<unknown> {
+    const res = await authedFetch(path, init);
+    if (res.status === 401) {
+        emitAuthRequired();
+        throw new AuthError();
+    }
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
+    return res.json() as Promise<unknown>;
+}
+
+const EDITION_STATUSES: readonly string[] = ['ready', 'building', 'failed'];
+
+function editionStatusOf(value: unknown): EditionStatus {
+    return typeof value === 'string' && EDITION_STATUSES.includes(value) ? (value as EditionStatus) : 'failed';
+}
+
+function stringArrayOf(value: unknown): string[] {
+    return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+}
+
+/**
+ * Shape guard for server edition JSON. Missing sections become [], unknown
+ * statuses become 'failed', so a half-formed payload renders an empty paper
+ * instead of crashing the view.
+ */
+export function normalizeEditionJson(json: unknown): Edition {
+    const o = (json ?? {}) as Record<string, unknown>;
+    const rawSections = Array.isArray(o['sections']) ? o['sections'] : [];
+    return {
+        id: typeof o['id'] === 'string' ? o['id'] : '',
+        generatedAt: typeof o['generatedAt'] === 'number' ? o['generatedAt'] : 0,
+        windowHours: typeof o['windowHours'] === 'number' ? o['windowHours'] : 0,
+        status: editionStatusOf(o['status']),
+        ...(typeof o['model'] === 'string' ? {model: o['model']} : {}),
+        ...(typeof o['opinion'] === 'string' ? {opinion: o['opinion']} : {}),
+        sections: rawSections.map(normalizeSectionJson),
+    };
+}
+
+function normalizeSectionJson(json: unknown): EditionSection {
+    const o = (json ?? {}) as Record<string, unknown>;
+    const scores = o['scores'] as Record<string, unknown> | undefined;
+    const worthy = scores?.['worthy'];
+    const interest = scores?.['interest'];
+    const newness = scores?.['newness'];
+    const popularity = scores?.['popularity'];
+    return {
+        id: typeof o['id'] === 'string' ? o['id'] : '',
+        ...(typeof o['topic'] === 'string' ? {topic: o['topic']} : {}),
+        title: typeof o['title'] === 'string' ? o['title'] : '(untitled)',
+        ...(typeof o['summary'] === 'string' ? {summary: o['summary']} : {}),
+        ...(typeof o['opinion'] === 'string' ? {opinion: o['opinion']} : {}),
+        articleIds: stringArrayOf(o['articleIds']),
+        ...(typeof worthy === 'number' && typeof interest === 'number'
+            ? {
+                scores: {
+                    worthy,
+                    interest,
+                    ...(typeof newness === 'number' ? {newness} : {}),
+                    ...(typeof popularity === 'number' ? {popularity} : {}),
+                },
+            }
+            : {}),
+        ...(typeof o['verified'] === 'boolean' ? {verified: o['verified']} : {}),
+    };
+}
+
+export function normalizeEditionMeta(json: unknown): EditionMeta {
+    const o = (json ?? {}) as Record<string, unknown>;
+    return {
+        id: typeof o['id'] === 'string' ? o['id'] : '',
+        generatedAt: typeof o['generatedAt'] === 'number' ? o['generatedAt'] : 0,
+        windowHours: typeof o['windowHours'] === 'number' ? o['windowHours'] : 0,
+        status: editionStatusOf(o['status']),
+    };
+}
+
+/** Latest generated edition, or null when none exists yet (404). */
+export async function fetchLatestEdition(): Promise<Edition | null> {
+    try {
+        return normalizeEditionJson(await apiFetchWithStatus('/editions/latest'));
+    } catch (err) {
+        if (err instanceof ApiError && err.status === 404) return null;
+        throw err;
+    }
+}
+
+/** One edition by id (used by the history switcher). */
+export async function fetchEdition(id: string): Promise<Edition> {
+    return normalizeEditionJson(await apiFetchWithStatus(`/editions/${encodeURIComponent(id)}`));
+}
+
+/** Recent edition metadata, newest first. */
+export async function fetchEditions(limit = 10): Promise<EditionMeta[]> {
+    const json = (await apiFetchWithStatus(`/editions?limit=${limit}`)) as { editions?: unknown } | unknown[];
+    const list = Array.isArray(json) ? json : json.editions;
+    if (!Array.isArray(list)) return [];
+    return list.map(normalizeEditionMeta);
+}
+
+/** Queue a build over the last windowHours of articles. 429 → QuotaError. */
+export async function buildEdition(windowHours: number, sectionCount: number): Promise<{ id: string; status: string }> {
+    try {
+        const json = (await apiFetchWithStatus(`/editions/build?windowHours=${windowHours}&sectionCount=${sectionCount}`, {
+            method: 'POST',
+        })) as { id?: unknown; status?: unknown };
+        return {
+            id: typeof json.id === 'string' ? json.id : '',
+            status: typeof json.status === 'string' ? json.status : 'building',
+        };
+    } catch (err) {
+        if (err instanceof ApiError && err.status === 429) throw new QuotaError();
+        throw err;
+    }
 }

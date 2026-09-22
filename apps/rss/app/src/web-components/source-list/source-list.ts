@@ -4,6 +4,7 @@ import {libraryKey, queryClient, QueryController, fetchLibrary} from '../../quer
 import {deleteFeed, deleteFolder, refreshFeed, refreshFolder, reorderFolders, setFeedFolderMembership, syncAllFeeds} from '../../mutations';
 import {navigate} from '../../router';
 import {loadTodaySettings, pruneTodaySettings, saveTodaySettings, type TodaySettings} from '../../services/today-settings';
+import {loadInterestingShadow, saveInterestingShadow} from '../../services/interesting-settings';
 import type {MenuAnchor} from '../feed-menu/feed-menu';
 import type {Feed, FeedSort, Folder, View} from '../../types';
 import '../feed-list-menu/feed-list-menu';
@@ -74,6 +75,7 @@ export class SourceList extends LitElement {
     @state() private collapsed: Record<string, boolean> = loadCollapsed();
     @state() private feedSort: FeedSort = loadFeedSort();
     @state() private hideReadByFolder: Record<string, boolean> = loadHideReadByFolder();
+    @state() private interestingShadow: Record<string, true> = loadInterestingShadow();
 
     private hideTimer: number | null = null;
     private resizing = false;
@@ -154,8 +156,13 @@ export class SourceList extends LitElement {
 
     private renderStaticNav() {
         return html`
-      ${this.renderBriefNav()}${this.renderTodayNav()}${this.renderAllNav()}
+      ${this.renderFrontPageNav()}${this.renderBriefNav()}${this.renderTodayNav()}${this.renderAllNav()}
     `;
+    }
+
+    private renderFrontPageNav() {
+        const active = this.isActive({kind: 'frontpage'});
+        return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="Front Page" @click=${() => this.select({kind: 'frontpage'})} @keydown=${(e: KeyboardEvent) => this.onItemKey(e, {kind: 'frontpage'})}><span class="icon">📰</span><span class="label">Front Page</span></div>`;
     }
 
     private renderBriefNav() {
@@ -185,7 +192,7 @@ export class SourceList extends LitElement {
     private renderMenus(folders: Folder[], menuFeed: Feed | undefined, folderMenuFolder: Folder | undefined) {
         return html`
       <feed-menu .feed=${menuFeed ?? null} .folders=${folders} .open=${this.menuOpen && menuFeed !== undefined} .anchor=${this.menuAnchor} @close=${this.closeMenu} @refresh=${this.onMenuRefresh} @delete=${this.onMenuDelete} @folders-change=${this.onMenuFoldersChange}></feed-menu>
-      <folder-menu .folder=${folderMenuFolder ?? null} .open=${this.folderMenuOpen && folderMenuFolder !== undefined} .anchor=${this.folderMenuAnchor} .unreadOnly=${folderMenuFolder ? Boolean(this.hideReadByFolder[folderMenuFolder.id]) : false} @close=${this.closeFolderMenu} @delete=${this.onFolderMenuDelete} @refresh=${this.onFolderMenuRefresh} @unread-only-change=${this.onFolderMenuUnreadOnly}></folder-menu>
+      <folder-menu .folder=${folderMenuFolder ?? null} .open=${this.folderMenuOpen && folderMenuFolder !== undefined} .anchor=${this.folderMenuAnchor} .unreadOnly=${folderMenuFolder ? Boolean(this.hideReadByFolder[folderMenuFolder.id]) : false} .shadow=${folderMenuFolder ? this.interestingShadow[folderMenuFolder.id] === true : false} @close=${this.closeFolderMenu} @delete=${this.onFolderMenuDelete} @refresh=${this.onFolderMenuRefresh} @unread-only-change=${this.onFolderMenuUnreadOnly} @shadow-change=${this.onFolderMenuShadow}></folder-menu>
       <feed-list-menu .open=${this.feedListMenuOpen} .anchor=${this.feedListMenuAnchor} .feedSort=${this.feedSort} @close=${this.closeFeedListMenu} @sort-change=${this.onFeedSortChange} @sort-folders=${this.onSortFolders} @refresh-all=${this.onRefreshAll}></feed-list-menu>
       <today-menu .open=${this.todayMenuOpen} .anchor=${this.todayMenuAnchor} .folders=${folders} .settings=${this.todaySettings} @close=${() => (this.todayMenuOpen = false)} @settings-change=${this.onTodaySettingsChange}></today-menu>
     `;
@@ -337,6 +344,17 @@ export class SourceList extends LitElement {
         );
     }
 
+    private onFolderMenuShadow(e: Event) {
+        const folder = this.folderMenuFolder();
+        if (!folder) return;
+        const enabled = (e as CustomEvent<boolean>).detail;
+        const next = {...this.interestingShadow};
+        if (enabled) next[folder.id] = true;
+        else delete next[folder.id];
+        this.interestingShadow = next;
+        saveInterestingShadow(next);
+    }
+
     private async onSortFolders() {
         const folders = this.libraryData.folders;
         if (folders.length < 2) return;
@@ -359,8 +377,10 @@ export class SourceList extends LitElement {
 
     private isActive(view: View): boolean {
         if (this.view.kind !== view.kind) return false;
-        if (this.view.kind === 'all' || this.view.kind === 'brief' || this.view.kind === 'today') return true;
-        return (this.view as { id: string }).id === (view as { id: string }).id;
+        if (this.view.kind === 'all' || this.view.kind === 'brief' || this.view.kind === 'today' || this.view.kind === 'frontpage') return true;
+        if (this.view.kind === 'folder' && view.kind === 'folder') return this.view.id === view.id;
+        if (this.view.kind === 'feed' && view.kind === 'feed') return this.view.id === view.id;
+        return false;
     }
 
     private toggleFolder(id: string) {
@@ -546,7 +566,8 @@ export class SourceList extends LitElement {
         const isCollapsed = Boolean(this.collapsed[folder.id]);
         const active = this.isActive({kind: 'folder', id: folder.id});
         const unread = this.folderUnread(folder.id);
-        return folderRowTemplate(folder, feeds, isCollapsed, active, unread, (f) => this.select({kind: 'folder', id: f.id}), (e, f) => this.onItemKey(e, {kind: 'folder', id: f.id}), (e, f) => this.onDragStart(e, 'folder', f.id), (id) => this.toggleFolder(id), (e, f) => this.openFolderMenu(f, e), (feed) => this.feedRow(feed));
+        const shadow = this.interestingShadow[folder.id] === true;
+        return html`${folderRowTemplate(folder, feeds, isCollapsed, active, unread, (f) => this.select({kind: 'folder', id: f.id}), (e, f) => this.onItemKey(e, {kind: 'folder', id: f.id}), (e, f) => this.onDragStart(e, 'folder', f.id), (id) => this.toggleFolder(id), (e, f) => this.openFolderMenu(f, e), (feed) => this.feedRow(feed), shadow)}`;
     }
 
     private async doRefresh(feed: Feed) {

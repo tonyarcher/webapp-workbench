@@ -1,5 +1,5 @@
 # stock-game-api runtime. Compile on the host (`npm run build -w stock-game-api` /
-# gradle bootJar), then copy the Spring Boot jar. deploy.py runs that host
+# gradle bootJar), then copy the Spring Boot jar. deploy runs that host
 # build unless --no-build.
 
 FROM eclipse-temurin:21-jre-jammy

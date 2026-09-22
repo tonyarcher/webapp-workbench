@@ -3,6 +3,9 @@ import {customElement, property, state} from 'lit/decorators.js';
 import {createRef, ref, type Ref} from 'lit/directives/ref.js';
 import {Virtualizer} from '@tanstack/virtual-core';
 import {libraryKey, queryClient, QueryController, fetchLibrary} from '../../query';
+import {fetchArticlesPage} from '../../services/api';
+import {buildWordMap, rankInteresting, topWords} from '../../services/interesting-words';
+import {loadInterestingShadow, loadWordMap, loadWordMapIds} from '../../services/interesting-settings';
 import {markBeforeAction, markShownReadAction, openArticleAction, toggleStarAction} from './article-list-actions';
 import {refreshFeed, refreshFolder, syncAllFeeds} from '../../mutations';
 import type {Article, ArticleSort, Feed, Folder, ListViewType, View} from '../../types';
@@ -33,6 +36,9 @@ import {
     virtualizerOptionsFor,
 } from './article-list-helpers';
 
+/** Bounded newest batch the ✨ Interesting folder filter ranks at once. */
+export const INTERESTING_BATCH = 200;
+
 @customElement('article-list')
 export class ArticleList extends LitElement {
     static override styles = unsafeCSS(styles);
@@ -54,6 +60,7 @@ export class ArticleList extends LitElement {
     @state() private advancedOpen = false;
     @state() private advancedAnchor: MenuAnchor | null = null;
     @state() private refreshing = false;
+    @state() private interestingOnly = false;
 
     private scrollElRef: Ref<HTMLDivElement> = createRef();
     private virtualizer!: Virtualizer<HTMLDivElement, HTMLDivElement>;
@@ -149,6 +156,8 @@ export class ArticleList extends LitElement {
     override willUpdate(changed: Map<string, unknown>) {
         if (changed.has('view')) {
             this.loadViewSettings();
+            // Ephemeral per-view filter: every folder starts at All.
+            this.interestingOnly = false;
         }
         if (this.virtualizer) {
             this.virtualizer.setOptions(this.virtualizerOptions());
@@ -157,7 +166,7 @@ export class ArticleList extends LitElement {
     }
 
     override updated(_changed: Map<string, unknown>) {
-        const viewKey = `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}`;
+        const viewKey = `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}|${this.interestingOnly}`;
         this.handleUpdate(viewKey);
     }
 
@@ -165,7 +174,7 @@ export class ArticleList extends LitElement {
         if (viewKey !== this.lastViewKey) {
             this.hideRead = false;
             this.loadViewSettings();
-            this.lastViewKey = `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}`;
+            this.lastViewKey = viewKey;
             if (this.needsLibrary() && !this.library.data) {
                 // Feed-set views need the library (feed list) before loading;
                 // updated() re-fires when the library query resolves.
@@ -197,9 +206,20 @@ export class ArticleList extends LitElement {
         const showFeed = this.view.kind !== 'feed';
         return html`
       ${this.renderToolbar()}
+      ${this.renderInterestingHint()}
       ${this.renderAdvancedMenu()}
       ${this.renderScroll(virtualItems, showFeed)}
     `;
+    }
+
+    /** The ✨ filter is offered only on folders opted into the shadow setting. */
+    private shadowEnabled(): boolean {
+        if (this.view.kind !== 'folder') return false;
+        return loadInterestingShadow()[this.view.id] === true;
+    }
+
+    private interestingActive(): boolean {
+        return this.interestingOnly && this.shadowEnabled();
     }
 
     private renderToolbar() {
@@ -207,7 +227,7 @@ export class ArticleList extends LitElement {
       <div class="toolbar">
         <h2>${this.viewTitle()}</h2>
         <div class="actions">
-          ${this.renderSortSelect()}${this.renderViewSelect()}${this.renderCardColsSelect()}${this.renderPageSizeSelect()}
+          ${this.renderInterestingFilter()}${this.renderSortSelect()}${this.renderViewSelect()}${this.renderCardColsSelect()}${this.renderPageSizeSelect()}
           <button class="btn" @click=${this.onMarkShownRead}>Mark shown as read</button>
           <button class="btn" @click=${this.onToggleAdvanced}>Advanced</button>
           <button class="btn" @click=${this.onRefresh}>${this.refreshing ? 'Refreshing…' : 'Refresh'}</button>
@@ -216,7 +236,20 @@ export class ArticleList extends LitElement {
     `;
     }
 
+    private renderInterestingFilter() {
+        if (!this.shadowEnabled()) return html``;
+        return html`<div class="segmented" role="group" aria-label="Article filter"><button class="seg ${!this.interestingOnly ? 'on' : ''}" aria-pressed=${!this.interestingOnly} @click=${() => { this.interestingOnly = false; }}>All</button><button class="seg ${this.interestingOnly ? 'on' : ''}" aria-pressed=${this.interestingOnly} @click=${() => { this.interestingOnly = true; }}>✨ Interesting</button></div>`;
+    }
+
+    private renderInterestingHint() {
+        if (!this.shadowEnabled()) return html``;
+        const words = topWords(this.interestingWordMap(this.items), 3);
+        if (!words.length) return html`<div class="interesting-hint">Star articles to teach this filter.</div>`;
+        return html`<div class="interesting-hint" title="Top learned words">✨ ${words.map((w) => `${w.word} · ${w.score}`).join(', ')}</div>`;
+    }
+
     private renderSortSelect() {
+        if (this.interestingActive()) return html``;
         return html`<label class="sort"><select .value=${this.sort} @change=${(e: Event) => { this.sort = (e.target as HTMLSelectElement).value as ArticleSort; this.saveViewSettings(); }}><option value="hot">Hot</option><option value="newest">Newest</option><option value="oldest">Oldest</option></select></label>`;
     }
 
@@ -268,9 +301,15 @@ export class ArticleList extends LitElement {
         return html`
       ${this.loading ? html`<div class="end">Loading…</div>` : ''}
       ${!this.loading && this.items.length ? html`<div class="mark-end"><button class="mark-end-btn" ?disabled=${!this.items.some((a) => a.read === 0)} @click=${this.onMarkShownRead}>Mark shown as read</button></div>` : ''}
-      ${!this.loading && !this.items.length ? html`<div class="empty">${this.unreadOnly || this.hideRead ? 'Nothing unread here — "Unread only" is filtering this view.' : 'No articles yet. Hit Refresh to sync this view.'}</div>` : ''}
+      ${!this.loading && !this.items.length ? html`<div class="empty">${this.emptyText()}</div>` : ''}
       ${this.library.error && this.view.kind !== 'feed' ? html`<div class="empty">Could not load your feeds. <button class="btn" @click=${this.onRetryLibrary}>Retry</button></div>` : ''}
     `;
+    }
+
+    private emptyText(): string {
+        if (this.unreadOnly || this.hideRead) return 'Nothing unread here — "Unread only" is filtering this view.';
+        if (this.interestingActive()) return 'Nothing here yet. Star articles to teach this filter what you like.';
+        return 'No articles yet. Hit Refresh to sync this view.';
     }
 
     private onRetryLibrary() {
@@ -382,7 +421,9 @@ export class ArticleList extends LitElement {
         this.loadingRef = true;
         this.loading = true;
         try {
-            if (this.view.kind === 'folder') {
+            if (this.interestingActive()) {
+                await this.loadInterestingBatch(gen);
+            } else if (this.view.kind === 'folder') {
                 await this.loadFolderPage(gen);
             } else {
                 await this.loadSinglePage(gen);
@@ -433,6 +474,38 @@ export class ArticleList extends LitElement {
         this.hasMoreSingle = res.hasMore;
         this.items = res.items;
         if (res.nextCursor) this.cursors.set(key, res.nextCursor);
+    }
+
+    /**
+     * Interesting filter: one bounded newest batch for the folder, ranked by
+     * the learned word map. No cursors, no further paging — the batch is the
+     * whole list until the filter toggles off.
+     */
+    private async loadInterestingBatch(gen: number) {
+        if (this.view.kind !== 'folder') return;
+        const res = await fetchArticlesPage({scope: `folder:${this.view.id}`, sort: 'newest', limit: INTERESTING_BATCH, unreadOnly: this.unreadOnly});
+        if (gen !== this.gen) return;
+        const visible = this.hideRead ? res.items.filter((a) => a.read === 0) : res.items;
+        this.items = rankInteresting(visible, this.interestingWordMap(visible)).slice(0, this.pageSize);
+        this.hasMoreSingle = false;
+        this.cursors.clear();
+    }
+
+    /**
+     * Word map for ranking: the cache (every star toggle maintains it) plus
+     * fresh weights for batch-starred articles the cache has not counted yet
+     * (e.g. starred on another device). Counted ids are skipped so a star
+     * visible in the batch never counts twice.
+     */
+    private interestingWordMap(batch: Article[]): Record<string, number> {
+        const cached = loadWordMap();
+        const counted = new Set(loadWordMapIds());
+        const fresh = batch.filter((a) => a.starred && !counted.has(a.id));
+        if (!fresh.length) return cached;
+        const extra = buildWordMap(fresh, []);
+        const merged: Record<string, number> = {...cached};
+        for (const [word, weight] of Object.entries(extra)) merged[word] = (merged[word] ?? 0) + weight;
+        return merged;
     }
 
     private async loadFeedSetPage(feeds: Feed[], gen: number) {
