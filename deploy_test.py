@@ -14,38 +14,49 @@ from deploy import gradle_argv, gradle_command, main
 
 class GradleArgvTest(unittest.TestCase):
     def test_no_args_deploys_everything(self) -> None:
-        self.assertEqual(gradle_argv([]), ["deploy"])
+        self.assertEqual(gradle_argv([]), ["deploy", "--console=plain"])
 
     def test_flags_become_bare_tokens(self) -> None:
         self.assertEqual(
             gradle_argv(["--local", "rss"]),
-            ["deploy", "-Pargs=local rss", "-Papps=rss"],
+            ["deploy", "--console=plain", "-Pargs=local rss", "-Papps=rss"],
         )
         self.assertEqual(
             gradle_argv(["--remote", "--no-build"]),
-            ["deploy", "-Pargs=remote no-build"],
+            ["deploy", "--console=plain", "-Pargs=remote no-build"],
         )
 
     def test_app_names_pass_through(self) -> None:
         self.assertEqual(
             gradle_argv(["rss"]),
-            ["deploy", "-Pargs=rss", "-Papps=rss"],
+            ["deploy", "--console=plain", "-Pargs=rss", "-Papps=rss"],
         )
         self.assertEqual(
             gradle_argv(["apps/rss", "stock"]),
-            ["deploy", "-Pargs=apps/rss stock", "-Papps=apps/rss,stock"],
+            [
+                "deploy",
+                "--console=plain",
+                "-Pargs=apps/rss stock",
+                "-Papps=apps/rss,stock",
+            ],
         )
 
     def test_app_after_a_flag_is_kept(self) -> None:
         self.assertEqual(
             gradle_argv(["--remote", "rss"]),
-            ["deploy", "-Pargs=remote rss", "-Papps=rss"],
+            ["deploy", "--console=plain", "-Pargs=remote rss", "-Papps=rss"],
         )
 
     def test_unknown_dash_args_go_to_compose(self) -> None:
         self.assertEqual(
             gradle_argv(["-q", "rss"]),
-            ["deploy", "-Pargs=rss", "-Ppassthrough=-q", "-Papps=rss"],
+            [
+                "deploy",
+                "--console=plain",
+                "-Pargs=rss",
+                "-Ppassthrough=-q",
+                "-Papps=rss",
+            ],
         )
 
     def test_separator_routes_the_rest_to_compose(self) -> None:
@@ -53,6 +64,7 @@ class GradleArgvTest(unittest.TestCase):
             gradle_argv(["rss", "--status", "--", "--force-recreate", "-q"]),
             [
                 "deploy",
+                "--console=plain",
                 "-Pargs=rss status",
                 "-Ppassthrough=--force-recreate -q",
                 "-Papps=rss",
@@ -62,7 +74,7 @@ class GradleArgvTest(unittest.TestCase):
     def test_dry_run_is_not_mapped(self) -> None:
         self.assertEqual(
             gradle_argv(["--dry-run", "rss"]),
-            ["deploy", "-Pargs=rss", "-Papps=rss"],
+            ["deploy", "--console=plain", "-Pargs=rss", "-Papps=rss"],
         )
 
 

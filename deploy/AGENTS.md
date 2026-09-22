@@ -15,7 +15,7 @@ Docker Compose reverse-proxy stack. Workflow and monorepo rules: repo-root `AGEN
 - Per-app Dockerfiles under `deploy/<app>/`. Build context is the **repo root**.
 - TypeScript and Kotlin compile on the host through Gradle (`./gradlew buildAll`;
   `./gradlew deploy` runs it first). Static images copy `dist/` into nginx.
-  radio-api copies `dist-server/` and `npm install --omit=dev` for Linux `pg`.
+  radio-api copies the host-built boot jar into a JRE image.
   JVM images are **JRE only** and copy jars. Do not run `tsc`, Vite, or Gradle
   in Docker. Do not `rm` the lockfile.
 

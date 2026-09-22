@@ -4,28 +4,27 @@ Radio Station (Pulse 101). Shared TypeScript / Lit / CSS / workflow: repo-root `
 
 ## Stack
 
-- Vite + Lit. `@tanstack/virtual-core` for the 7-day log.
-- Node `http` + `pg` API (`server/`); Postgres database `radio` on the shared compose instance.
-- Smoke tests with `tsx`; integration tests use `embedded-postgres`. PWA via `stamp-sw.mjs`.
+- Vite + Lit UI. `@tanstack/virtual-core` for the 7-day log.
+- API: Kotlin, Spring Data JPA + Flyway (`api/`). Postgres database `radio`.
+- Host JDK (`gradle bootJar`). The compose image is JRE-only and copies the boot jar.
+- Smoke tests with `tsx`. PWA via `stamp-sw.mjs`.
 
 ## Commands
 
 ```bash
-npm run dev          # Vite (proxies /api → :3002)
-npm run dev:server   # API on :3002
-npm run build        # tsc --noEmit && vite build && stamp SW version
-npm run build:server # tsc -p server/tsconfig.json → dist-server/
-npm run test         # tsx scripts/smoke.ts && tsx scripts/integration.ts
-npm run verify       # npm run build && npm run test
+npm run dev                 # Vite (proxies /api → :3002)
+npm run dev -w radio-api    # API on :3002. DATABASE_URL is required for data routes.
+npm run build               # tsc --noEmit && vite build && stamp SW version
+npm test                    # client smoke
+npm test -w radio-api       # gradle check
 ```
 
 ## Architecture
 
 - `src/types.ts` — client domain types.
 - `src/services/` — `api.ts`, `export-txt.ts`, `now-playing.ts`, `list-items.ts`, `session-store.ts`, `format.ts`.
-- `server/` — Postgres schema, catalog seed, CHR scheduler, JSON/txt HTTP API. No DOM. NodeNext `.js` specifiers.
+- `api/` — JPA catalog, CHR scheduler, JSON/txt HTTP API. No DOM.
 - Custom elements `rs-*` in `src/web-components/` are local UI, not a shared package.
-- `scripts/integration.ts` boots embedded Postgres.
 
 ## Data & state
 
@@ -35,5 +34,5 @@ npm run verify       # npm run build && npm run test
 
 ## Blocking
 
-- `src/services/*` or `server/services/*` changes need assertions in `scripts/smoke.ts`.
-- API/schema changes need assertions in `scripts/integration.ts`.
+- `src/services/*` changes need assertions in `scripts/smoke.ts`.
+- API/schema changes need JUnit assertions in `api/`.

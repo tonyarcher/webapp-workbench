@@ -16,7 +16,7 @@
 #   calendar-sync - nginx static + Trakt API proxy, serves Calendar Sync
 #                   under /calendar-sync/.
 #   radio-station - nginx static, serves Radio Station under /radio-station/.
-#   radio-api    - node server, JSON API for Radio Station under
+#   radio-api    - Kotlin JSON API for Radio Station under
 #                  /radio-station/api/ (prefix stripped by the gateway).
 #   football     - nginx static, serves Football under /football/.
 #   basketball   - nginx static, serves Basketball under /basketball/.

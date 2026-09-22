@@ -50,6 +50,8 @@ apps/rss/api/build/
 apps/rss/api/.kotlin/
 apps/stock-game/api/build/
 apps/stock-game/api/.kotlin/
+apps/radio-station/api/build/
+apps/radio-station/api/.kotlin/
 
 # Python
 __pycache__/

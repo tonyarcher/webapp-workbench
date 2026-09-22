@@ -1,13 +1,10 @@
-# radio-api runtime. Compile TypeScript on the host
-# (`npm run build:server -w radio-station`); the image copies dist-server
-# and installs Linux production deps (pg). No TypeScript compile in Docker.
+# radio-api runtime. Compile on the host (`gradle :radio-api:bootJar`).
+# The image copies the boot jar. No npm install.
 
-FROM node:22-slim
+FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
-ENV NODE_ENV=production PORT=3000
-COPY apps/radio-station/package.json ./package.json
-RUN npm install --omit=dev --no-audit --no-fund
-COPY apps/radio-station/dist-server ./dist-server
-USER node
+ENV PORT=3000
+COPY apps/radio-station/api/build/libs/radio-api-0.1.0.jar /app/app.jar
+USER nobody
 EXPOSE 3000
-CMD ["node", "dist-server/index.js"]
+CMD ["java", "-jar", "/app/app.jar"]

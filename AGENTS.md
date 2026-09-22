@@ -26,7 +26,7 @@ database rows, not a hardcoded app list.
 - `apps/lemmy-vertical-scroll/` — vertical feed scroller. Depends on `vertical-scroll-core`.
 - `apps/clipstack/` — short-video list scroller. Depends on `vertical-scroll-core`.
 - `apps/calendar-sync/` — Trakt + Netflix → ICS / Google Calendar. Depends on `calendar-core`.
-- `apps/radio-station/` — radio-station simulator. Postgres catalog + node API.
+- `apps/radio-station/` — radio-station simulator. UI plus Kotlin API (`api`). Postgres database `radio`.
 - `apps/football/` — football live scorekeeping. Pluggable NFL/NCAA/MN/CO rulebooks; IndexedDB. Depends on `football-core`.
 - `apps/basketball/` — basketball live scorekeeping (`basketball-tracker`). Pluggable HS/College/NBA/WNBA rulebooks, shot chart, sim; IndexedDB. Depends on `basketball-core`.
 - `apps/fitness/` — tracker UI (`app`) plus JSON API (`api`, Kotlin, Spring Data JPA, Postgres `fitness`). See `apps/fitness/AGENTS.md`.
@@ -249,7 +249,7 @@ fetchers cannot send custom headers.
   a missing or wrong version answers 404, like an unknown route.
 - TypeScript clients send the header on every API fetch. Centralize it in the
   app's fetch helper (`services/api.ts`, `lib/api.ts`).
-- Node servers gate the same header by hand (`radio-station/server/`).
+- Kotlin APIs declare `headers = ["X-Api-Version=1"]` on each data mapping.
 - Breaking version changes update consumer and API together. No compat shims.
 
 ## Verification
@@ -269,9 +269,8 @@ fetchers cannot send custom headers.
   when changing covered logic.
 - Smoke tests (`scripts/smoke.ts`, `db-smoke.ts`, …) cover pure logic — extend them when touching those modules.
 - API/schema changes that boot Postgres need assertions in that service’s tests
-  (`user-api` / `fitness-api` / `rss-api` JUnit / Flyway; do not grow Node
-  `scripts/integration.ts` for new Postgres). Legacy radio integration tests
-  stay until that API migrates.
+  (`user-api` / `fitness-api` / `rss-api` / `radio-api` JUnit / Flyway; do not grow Node
+  `scripts/integration.ts` for new Postgres).
 - Library changes need tests in that package (`scripts/smoke.ts` or co-located `*.test.ts`).
 - Secrets: `gitleaks detect` when touching auth, env, or API code.
 - Dependencies: `osv-scanner -r .` or `npm audit` on lockfile changes.

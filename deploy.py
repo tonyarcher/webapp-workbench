@@ -70,7 +70,8 @@ def gradle_argv(argv: list[str]) -> list[str]:
             passthrough.append(arg)
         else:
             tokens.append(arg)
-    args = ["deploy"]
+    # Plain console: the rich progress bar hides compose lines.
+    args = ["deploy", "--console=plain"]
     if tokens:
         args.append(f"-Pargs={' '.join(tokens)}")
     if passthrough:
