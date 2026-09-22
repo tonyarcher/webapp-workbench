@@ -284,11 +284,51 @@ export async function runAiPrompt(prompt: string, systemPrompt?: string): Promis
 }
 
 /** Summarizes an article body into concise bullets. */
-export async function summarizeArticle(title: string, body: string): Promise<string> {
+export type SummaryLength = 'brief' | 'standard' | 'deep';
+
+export const SUMMARY_LENGTHS: readonly SummaryLength[] = ['brief', 'standard', 'deep'];
+
+const SUMMARY_LENGTH_KEY = 'rss-reader:summary-length';
+
+export function defaultSummaryLength(): SummaryLength {
+    return 'standard';
+}
+
+export function loadSummaryLength(): SummaryLength {
+    try {
+        const raw = localStorage.getItem(SUMMARY_LENGTH_KEY);
+        if (raw === 'brief' || raw === 'standard' || raw === 'deep') return raw;
+        return defaultSummaryLength();
+    } catch {
+        return defaultSummaryLength();
+    }
+}
+
+export function saveSummaryLength(length: SummaryLength): void {
+    try {
+        localStorage.setItem(SUMMARY_LENGTH_KEY, length);
+    } catch {
+        // storage unavailable; length just won't persist
+    }
+}
+
+function bulletInstruction(length: SummaryLength): string {
+    switch (length) {
+        case 'brief':
+            return 'Summarize the following article in 3 short bullet points.';
+        case 'deep':
+            return 'Summarize the following article in 8-10 short bullet points.';
+        case 'standard':
+        default:
+            return 'Summarize the following article in 4-6 short bullet points.';
+    }
+}
+
+export async function summarizeArticle(title: string, body: string, length: SummaryLength = 'standard'): Promise<string> {
     const systemPrompt =
         'You summarize news articles concisely and neutrally. Never invent facts.';
     const prompt = [
-        `Summarize the following article in 4-6 short bullet points.`,
+        bulletInstruction(length),
         `Write in the same language as the article itself.`,
         `Include the key facts, any notable figures, and the conclusion.`,
         ``,
@@ -325,9 +365,9 @@ export async function serverSummaryAvailable(): Promise<boolean> {
 }
 
 /** Summarizes through the configured server model host. Throws on failure. */
-export async function summarizeWithServer(title: string, body: string): Promise<string> {
+export async function summarizeWithServer(title: string, body: string, length: SummaryLength = 'standard'): Promise<string> {
     const {requestServerSummary} = await import('./services/api');
-    return (await requestServerSummary(title, body)).summary;
+    return (await requestServerSummary(title, body, length)).summary;
 }
 
 /**
@@ -335,13 +375,13 @@ export async function summarizeWithServer(title: string, body: string): Promise<
  * otherwise the on-device model. A server failure falls back to local so a
  * down model host never blocks reading.
  */
-export async function summarizeBest(title: string, body: string): Promise<string> {
+export async function summarizeBest(title: string, body: string, length: SummaryLength = 'standard'): Promise<string> {
     if (await serverSummaryAvailable()) {
         try {
-            return await summarizeWithServer(title, body);
+            return await summarizeWithServer(title, body, length);
         } catch {
             // fall through to local
         }
     }
-    return summarizeArticle(title, body);
+    return summarizeArticle(title, body, length);
 }

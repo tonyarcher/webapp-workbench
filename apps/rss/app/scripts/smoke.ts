@@ -779,6 +779,7 @@ assert(payload.affinity.every((a) => a.key.startsWith('aff:')), 'migrate payload
         resetServerAi();
         assert((await summarizeWithServer('T', 'body')) === '- server', 'server summarize returns model text');
         assert(seen.some((s) => s.url.endsWith('/api/ai/summarize') && (s.body?.includes('"title":"T"') ?? false)), 'server summarize posts title and text');
+        assert(seen.some((s) => s.url.endsWith('/api/ai/summarize') && (s.body?.includes('"length":"standard"') ?? false)), 'server summarize posts the default length');
         assert(seen.every((s) => s.auth === 'Bearer test-access'), 'server AI sends the Bearer token');
 
         resetServerAi();
@@ -1365,6 +1366,342 @@ assert(isTokenFresh(Math.floor(Date.now() / 1000) + 30) === false, 'isTokenFresh
     shims['fetch'] = realFetch;
     shims['location'] = realLocation;
     shims['localStorage'] = realLocalStorage;
+}
+
+    // ---- router frontpage round-trip ----
+    // router.ts builds a hash history at import, so it needs a browser-ish
+    // window/document present before the first import.
+    {
+        const shims = globalThis as Record<string, unknown>;
+        const realWindow = shims['window'];
+        const realDocument = shims['document'];
+        const fakeHistory = {
+            state: undefined,
+            pushState() {},
+            replaceState() {},
+            go() {},
+            back() {},
+            forward() {},
+        };
+        shims['window'] = {
+            dispatchEvent: () => false,
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            history: fakeHistory,
+            location: {pathname: '/', search: '', hash: '', href: 'http://localhost/'},
+        };
+        shims['document'] = {};
+        try {
+            const {parsePath, viewToPath} = await import('../src/router');
+            assert(viewToPath({kind: 'frontpage'}) === '/frontpage', 'frontpage serializes to #/frontpage');
+            assert(parsePath('/frontpage').kind === 'frontpage', 'frontpage parses back to a View');
+            assert(
+                JSON.stringify(parsePath(viewToPath({kind: 'frontpage'}))) === JSON.stringify({kind: 'frontpage'}),
+                'frontpage router round-trips',
+            );
+        } finally {
+            shims['window'] = realWindow;
+            shims['document'] = realDocument;
+        }
+    }
+
+    // ---- summary length threads into the prompt ----
+    const prompts: string[] = [];
+    (g as Record<string, unknown>)['model'] = {
+        capabilities: async () => ({available: 'readily'}),
+        create: async () => ({
+            prompt: async (text: string) => {
+                prompts.push(text);
+                return 'ok';
+            },
+            destroy: () => {},
+        }),
+    };
+    await summarizeArticle('T', 'body', 'brief');
+    await summarizeArticle('T', 'body', 'standard');
+    await summarizeArticle('T', 'body', 'deep');
+    assert(prompts[0]?.includes('3 short bullet points') ?? false, 'brief summaries ask for 3 bullets');
+    assert(prompts[1]?.includes('4-6 short bullet points') ?? false, 'standard summaries ask for 4-6 bullets');
+    assert(prompts[2]?.includes('8-10 short bullet points') ?? false, 'deep summaries ask for 8-10 bullets');
+    delete (g as Record<string, unknown>)['model'];
+
+// ---- interesting filter: starred-word map, settings, ranking, jev state, router ----
+{
+    const {buildWordMap, extractWords, interestingScore, rankInteresting, topWords, toJevState} = await import('../src/services/interesting-words');
+    const {adjustWordMap, isHideReadFolder, loadInterestingShadow, loadWordMap, saveInterestingShadow, saveWordMap} = await import('../src/services/interesting-settings');
+
+    assert(extractWords('The Quick, Brown Fox!').join(',') === 'quick,brown,fox', 'extractWords lowercases and drops stopwords');
+    assert(extractWords('Go to Mars').join(',') === 'mars', 'extractWords drops short tokens and stopwords');
+    assert(extractWords('the and of').length === 0, 'extractWords empties glue-only titles');
+
+    const starredTitles = [{title: 'Kubernetes Rust Performance'}];
+    const readTitles = [{title: 'Kubernetes News Roundup'}];
+    const wordMap = buildWordMap(starredTitles, readTitles);
+    assert(wordMap['kubernetes'] === 5, 'buildWordMap adds star weight 4 and read weight 1');
+    assert(wordMap['rust'] === 4, 'buildWordMap star-only word weighs 4');
+    assert(wordMap['news'] === 1, 'buildWordMap read-only word weighs 1');
+
+    assert(interestingScore({title: 'Rust Kubernetes'}, wordMap) === 4.5, 'interestingScore averages weights over tokens');
+    assert(interestingScore({title: 'Unrelated Zebra'}, wordMap) === 0, 'interestingScore is 0 for unknown words');
+    assert(interestingScore({title: 'the!'}, wordMap) === 0, 'interestingScore is 0 for empty token lists');
+
+    const top = topWords({b: 2, a: 2, c: 1}, 2);
+    assert(top.map((w) => w.word).join(',') === 'a,b', 'topWords breaks ties alphabetically');
+    assert(topWords({a: 1}, 0).length === 0, 'topWords with n=0 returns empty');
+
+    const shims = globalThis as Record<string, unknown>;
+    const mem = new Map<string, string>();
+    shims['localStorage'] = {
+        getItem: (k: string) => mem.get(k) ?? null,
+        setItem: (k: string, v: string) => void mem.set(k, String(v)),
+        removeItem: (k: string) => void mem.delete(k),
+    };
+    saveInterestingShadow({f1: true});
+    assert(loadInterestingShadow()['f1'] === true, 'interesting shadow settings round-trip');
+    mem.set('rss-reader:interesting-shadow', 'oops');
+    assert(Object.keys(loadInterestingShadow()).length === 0, 'interesting shadow falls back to {} on invalid JSON');
+    mem.set('rss-reader:interesting-shadow', JSON.stringify({f1: 'yes', f2: 1}));
+    assert(Object.keys(loadInterestingShadow()).length === 0, 'interesting shadow keeps true-valued string keys only');
+
+    saveWordMap({rust: 4});
+    assert(loadWordMap()['rust'] === 4, 'word map settings round-trip');
+    adjustWordMap('Rust Performance', 4);
+    assert(loadWordMap()['rust'] === 8, 'adjustWordMap adds star weight to cached words');
+    adjustWordMap('Rust Performance', -8);
+    assert(loadWordMap()['rust'] === undefined, 'adjustWordMap clamps to zero and removes the entry');
+    mem.set('rss-reader:word-map', JSON.stringify({rust: 'lots'}));
+    assert(loadWordMap()['rust'] === undefined, 'word map drops non-numeric entries');
+    saveWordMap({});
+    mem.delete('rss-reader:word-map-ids');
+    adjustWordMap('Rust Performance', 4, 'a1');
+    adjustWordMap('Rust Performance', 4, 'a1');
+    assert(loadWordMap()['rust'] === 4, 'adjustWordMap counts one article once');
+    adjustWordMap('Rust Performance', -4, 'a1');
+    assert(loadWordMap()['rust'] === undefined, 'adjustWordMap unstar forgets the id');
+    adjustWordMap('Rust Performance', 4, 'a1');
+    assert(loadWordMap()['rust'] === 4, 'adjustWordMap re-star counts again');
+
+    mem.set('rss-reader:hide-read-by-folder', JSON.stringify({f1: true}));
+    assert(isHideReadFolder('f1') === true, 'hide-read lookup follows the folder toggle');
+    assert(isHideReadFolder('f2') === false, 'hide-read lookup defaults to false');
+
+    const candidates = [
+        {id: 'a1', title: 'Rust Kubernetes Guide', feedId: 'fa', hot: 10},
+        {id: 'a2', title: 'Zebra News', feedId: 'fb', hot: 5},
+        {id: 'a3', title: 'Rust Performance Tips', feedId: 'fa', hot: 8},
+    ];
+    const full = toJevState(candidates, wordMap, {'aff:feed:fa': 3}, 100_000);
+    const parsedFull = JSON.parse(full) as {candidates: Array<{id: string; title: string; feed: string; hot: number}>};
+    assert(parsedFull.candidates.length === 3, 'toJevState keeps all candidates when under budget');
+    assert(parsedFull.candidates[0].feed === 'fa' && typeof parsedFull.candidates[0].hot === 'number', 'toJevState candidates carry feed and hot');
+    const tight = toJevState(candidates, wordMap, {'aff:feed:fa': 3}, 200);
+    assert(tight.length <= 200, 'toJevState never exceeds maxChars');
+    const parsedTight = JSON.parse(tight) as {candidates: Array<{id: string; title: string; feed: string; hot: number}>};
+    assert(parsedTight.candidates.length < parsedFull.candidates.length, 'toJevState drops whole candidates over budget');
+    for (const c of parsedTight.candidates) {
+        assert(typeof c.id === 'string' && typeof c.title === 'string' && typeof c.feed === 'string' && typeof c.hot === 'number', 'toJevState never truncates mid-article');
+    }
+
+    const rankMap = buildWordMap([{title: 'Rust Performance'}], []);
+    const ranked = rankInteresting(
+        [
+            {id: 'b', title: 'Zebra News'},
+            {id: 'a', title: 'Rust Performance'},
+        ],
+        rankMap,
+    );
+    assert(ranked.map((a) => a.id).join(',') === 'a,b', 'rankInteresting orders by score desc');
+    const tiedRank = rankInteresting(
+        [
+            {id: 'b', title: 'Rust Guide'},
+            {id: 'a', title: 'Rust Guide'},
+        ],
+        rankMap,
+    );
+    assert(tiedRank.map((a) => a.id).join(',') === 'a,b', 'rankInteresting tiebreaks on id');
+    assert(rankInteresting([], rankMap).length === 0, 'rankInteresting handles empty input');
+    const rankSrc = [
+        {id: 'b', title: 'Zebra News'},
+        {id: 'a', title: 'Rust Performance'},
+    ];
+    rankInteresting(rankSrc, rankMap);
+    assert(rankSrc[0].id === 'b', 'rankInteresting does not mutate the input');
+
+    const {parsePath} = await import('../src/router');
+    assert(parsePath('/interesting/f1').kind === 'all', '#/interesting/:id no longer parses to a view (falls back to all)');
+}
+
+// ---- edition options: defaults, load/save/validate, prune, re-rank ----
+{
+    const {
+        DEFAULT_EDITION_OPTIONS,
+        defaultEditionOptions,
+        loadEditionOptions,
+        saveEditionOptions,
+        pruneEditionOptions,
+        applyWeights,
+    } = await import('../src/services/edition-options');
+
+    assert(
+        DEFAULT_EDITION_OPTIONS.windowHours === 24 &&
+            DEFAULT_EDITION_OPTIONS.sectionCount === 12 &&
+            DEFAULT_EDITION_OPTIONS.weightGeneral === 0.3 &&
+            DEFAULT_EDITION_OPTIONS.weightPersonal === 0.3 &&
+            DEFAULT_EDITION_OPTIONS.weightNewness === 0.25 &&
+            DEFAULT_EDITION_OPTIONS.weightPopularity === 0.15 &&
+            DEFAULT_EDITION_OPTIONS.showOpinion &&
+            DEFAULT_EDITION_OPTIONS.showFactCheck,
+        'edition options defaults match the server ranker',
+    );
+    assert(
+        JSON.stringify(defaultEditionOptions()) === JSON.stringify(DEFAULT_EDITION_OPTIONS),
+        'defaultEditionOptions matches DEFAULT_EDITION_OPTIONS',
+    );
+
+    const shims = globalThis as Record<string, unknown>;
+    const realLS = shims['localStorage'];
+    const mem = new Map<string, string>();
+    shims['localStorage'] = {
+        getItem: (k: string) => mem.get(k) ?? null,
+        setItem: (k: string, v: string) => void mem.set(k, String(v)),
+        removeItem: (k: string) => void mem.delete(k),
+    };
+    try {
+        saveEditionOptions({...DEFAULT_EDITION_OPTIONS, sectionCount: 7, showOpinion: false});
+        const roundTrip = loadEditionOptions();
+        assert(roundTrip.sectionCount === 7, 'edition options save/load round trip keeps section count');
+        assert(roundTrip.showOpinion === false, 'edition options save/load round trip keeps opinion toggle');
+        assert(roundTrip.weightGeneral === 0.3, 'edition options round trip keeps weights');
+
+        mem.set(
+            'rss-reader:edition-options',
+            JSON.stringify({windowHours: 13, sectionCount: 999, weightGeneral: -2, weightPopularity: Number.NaN, showFactCheck: 'yes'}),
+        );
+        const validated = loadEditionOptions();
+        assert(validated.windowHours === DEFAULT_EDITION_OPTIONS.windowHours, 'edition options reject an unknown window');
+        assert(validated.sectionCount === DEFAULT_EDITION_OPTIONS.sectionCount, 'edition options reject an out-of-range section count');
+        assert(validated.weightGeneral === DEFAULT_EDITION_OPTIONS.weightGeneral, 'edition options reject a negative weight');
+        assert(validated.weightPopularity === DEFAULT_EDITION_OPTIONS.weightPopularity, 'edition options reject a NaN weight');
+        assert(validated.showFactCheck === false, 'edition options keep strict boolean toggles');
+
+        mem.set('rss-reader:edition-options', 'oops');
+        assert(
+            JSON.stringify(loadEditionOptions()) === JSON.stringify(DEFAULT_EDITION_OPTIONS),
+            'edition options fall back to defaults on invalid JSON',
+        );
+
+        const pruned = pruneEditionOptions({
+            ...DEFAULT_EDITION_OPTIONS,
+            sectionCount: 0,
+            weightGeneral: 5,
+            weightNewness: -1,
+        });
+        assert(pruned.sectionCount >= 1, 'edition options prune clamps a tiny section count up');
+        assert(pruned.weightGeneral <= 1, 'edition options prune clamps an oversized weight down');
+        assert(pruned.weightNewness >= 0, 'edition options prune clamps a negative weight up');
+
+        const edSection = (id: string, worthy: number, interest: number, newness = 0, popularity = 0) => ({
+            id,
+            title: id,
+            articleIds: [id],
+            scores: {worthy, interest, newness, popularity},
+        });
+        const edSections = [edSection('b', 1, 1), edSection('a', 9, 9)];
+        const ranked = applyWeights(edSections, DEFAULT_EDITION_OPTIONS);
+        assert(ranked[0].id === 'a' && ranked[1].id === 'b', 'applyWeights ranks higher scores first');
+        assert(edSections[0].id === 'b', 'applyWeights does not mutate the input');
+        const zeroed = applyWeights(edSections, {
+            ...DEFAULT_EDITION_OPTIONS,
+            weightGeneral: 0,
+            weightPersonal: 0,
+            weightNewness: 0,
+            weightPopularity: 0,
+        });
+        assert(zeroed[0].id === 'a' && zeroed[1].id === 'b', 'applyWeights with zero weights falls back to id order');
+        const tied = applyWeights([edSection('t-b', 5, 5), edSection('t-a', 5, 5)], DEFAULT_EDITION_OPTIONS);
+        assert(tied[0].id === 't-a', 'applyWeights tiebreaks on section id');
+        const freshFirst = applyWeights(
+            [edSection('old', 9, 9, 0, 0), edSection('new', 1, 1, 1, 1)],
+            {...DEFAULT_EDITION_OPTIONS, weightGeneral: 0, weightPersonal: 0, weightNewness: 0.5, weightPopularity: 0.5},
+        );
+        assert(freshFirst[0].id === 'new', 'applyWeights honors newness and popularity weights');
+        assert(
+            JSON.stringify(applyWeights(edSections, DEFAULT_EDITION_OPTIONS)) ===
+                JSON.stringify(applyWeights(edSections, DEFAULT_EDITION_OPTIONS)),
+            'applyWeights ranking is deterministic',
+        );
+    } finally {
+        shims['localStorage'] = realLS;
+    }
+}
+
+// ---- edition JSON shape guards ----
+{
+    const {normalizeEditionJson, normalizeEditionMeta} = await import('../src/services/api');
+
+    const missing = normalizeEditionJson({id: 'e1', generatedAt: 123, windowHours: 48, status: 'ready'});
+    assert(Array.isArray(missing.sections) && missing.sections.length === 0, 'edition guard defaults missing sections to []');
+    assert(missing.model === undefined && missing.opinion === undefined, 'edition guard omits absent optional fields');
+
+    const badStatus = normalizeEditionJson({id: 'e1', generatedAt: 1, windowHours: 48, status: 'weird', sections: []});
+    assert(badStatus.status === 'failed', 'edition guard maps unknown status to failed');
+
+    const full = normalizeEditionJson({
+        id: 'e1',
+        generatedAt: 1,
+        windowHours: 48,
+        status: 'ready',
+        model: 'qwen3:8b',
+        opinion: 'Our take.',
+        sections: [
+            {id: 's1', topic: 'Tech', title: 'Big Story', summary: 'A.\n\nB.', articleIds: ['a', 'b', 7], scores: {worthy: 1, interest: 2}, verified: true},
+            {id: 's2', title: 'Second'},
+        ],
+    });
+    assert(full.sections.length === 2, 'edition guard keeps every section');
+    assert(full.sections[0].articleIds.join(',') === 'a,b', 'edition guard drops non-string article ids');
+    assert(full.sections[0].scores?.worthy === 1 && full.sections[0].verified === true, 'edition guard keeps scores and verified');
+    assert(full.sections[1].articleIds.length === 0, 'edition guard defaults a missing article list to []');
+    assert(full.opinion === 'Our take.' && full.model === 'qwen3:8b', 'edition guard keeps opinion and model');
+
+    const meta = normalizeEditionMeta({id: 'e1', generatedAt: 5, windowHours: 24, status: 'building'});
+    assert(meta.id === 'e1' && meta.status === 'building' && meta.windowHours === 24, 'edition meta guard keeps valid rows');
+    assert(normalizeEditionMeta({}).status === 'failed', 'edition meta guard maps unknown status to failed');
+
+    const {editionKey, editionsKey} = await import('../src/query');
+    assert(JSON.stringify(editionKey({id: 'e1'})).includes('e1'), 'editionKey includes every param');
+    assert(JSON.stringify(editionsKey({limit: 10})).includes('10'), 'editionsKey includes every param');
+}
+
+// ---- router frontpage unchanged ----
+{
+    const shims = globalThis as Record<string, unknown>;
+    const realWindow = shims['window'];
+    const realDocument = shims['document'];
+    const fakeHistory = {
+        state: undefined,
+        pushState() {},
+        replaceState() {},
+        go() {},
+        back() {},
+        forward() {},
+    };
+    shims['window'] = {
+        dispatchEvent: () => false,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        history: fakeHistory,
+        location: {pathname: '/', search: '', hash: '', href: 'http://localhost/'},
+    };
+    shims['document'] = {};
+    try {
+        const {parsePath, viewToPath} = await import('../src/router');
+        assert(viewToPath({kind: 'frontpage'}) === '/frontpage', 'frontpage still serializes to #/frontpage');
+        assert(parsePath('/frontpage').kind === 'frontpage', 'frontpage still parses back to a View');
+    } finally {
+        shims['window'] = realWindow;
+        shims['document'] = realDocument;
+    }
 }
 
 console.log('\nAll parser smoke tests passed.');

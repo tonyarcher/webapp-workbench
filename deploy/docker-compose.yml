@@ -104,6 +104,9 @@ services:
       AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-100}
       AI_API_USER: ${AI_API_USER:-}
       AI_API_PASSWORD: ${AI_API_PASSWORD:-}
+      # TypeSafe Jev key for front-page ranking (AI_PROVIDER=jev). Empty by
+      # default; the real value stays in the untracked deploy/.env.
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

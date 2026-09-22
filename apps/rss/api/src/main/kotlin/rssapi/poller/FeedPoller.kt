@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import org.springframework.beans.factory.DisposableBean
+import org.springframework.dao.DataAccessException
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import rssapi.POLL_BATCH
@@ -110,6 +111,11 @@ class FeedPoller(
         } catch (err: IllegalStateException) {
             logPoll(id, err)
         } catch (err: IllegalArgumentException) {
+            logPoll(id, err)
+        } catch (err: DataAccessException) {
+            // Backstop for store failures (sync rows, transactions): one
+            // poison feed must never abort the drain and starve every feed
+            // behind it. Anything else is a real bug and stays loud.
             logPoll(id, err)
         }
     }

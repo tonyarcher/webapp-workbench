@@ -12,6 +12,7 @@ export class FolderMenu extends LitElement {
     @property({attribute: false}) open = false;
     @property({attribute: false}) anchor: MenuAnchor | null = null;
     @property({attribute: false}) unreadOnly = false;
+    @property({attribute: false}) shadow = false;
 
     private menuEl: HTMLElement | null = null;
 
@@ -69,6 +70,10 @@ export class FolderMenu extends LitElement {
                   <label class="opt">
                     <input type="checkbox" .checked=${this.unreadOnly} @change=${this.onUnreadChange} />
                     <span class="label" title="Hide feeds with no new articles">Hide empty feeds</span>
+                  </label>
+                  <label class="opt">
+                    <input type="checkbox" .checked=${this.shadow} @change=${this.onShadowChange} />
+                    <span class="label" title="Show a ranked shadow list of this folder's most interesting articles">✨ Interesting shadow</span>
                   </label>`;
     }
 
@@ -127,6 +132,13 @@ export class FolderMenu extends LitElement {
         const checked = (e.target as HTMLInputElement).checked;
         this.dispatchEvent(
             new CustomEvent('unread-only-change', {detail: checked, bubbles: true, composed: true}),
+        );
+    }
+
+    private onShadowChange(e: Event) {
+        const checked = (e.target as HTMLInputElement).checked;
+        this.dispatchEvent(
+            new CustomEvent('shadow-change', {detail: checked, bubbles: true, composed: true}),
         );
     }
 }

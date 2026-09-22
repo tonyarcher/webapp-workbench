@@ -8,4 +8,4 @@ covers workflow, git, and monorepo rules.
 - Readers sign in through `user-api` (OAuth2 Code + PKCE, `user-client`
   helpers). API calls carry `Authorization: Bearer`.
 - Host JDK + Gradle on PATH. JRE image copies the boot jar.
-- Work on both halves together: `./deploy.sh apps/rss`, `./build.sh apps/rss`.
+- Work on both halves together: `python deploy.py apps/rss`, `python build.py apps/rss`.

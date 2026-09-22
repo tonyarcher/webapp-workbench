@@ -89,6 +89,48 @@ class IngestServiceBranchTest {
     }
 
     @Test
+    fun malformedXmlSavesError() {
+        whenever(feeds.findById(feedId)).thenReturn(Optional.of(feed))
+        whenever(sync.meta(feedId)).thenReturn(null to null)
+        whenever(fetcher.fetch(eq(feed.xmlUrl), anyOrNull(), anyOrNull()))
+            .thenReturn(FetchResult(200, text = "junk before <rss>"))
+        ingest.fetchAndIngest(feedId)
+        verify(sync).saveError(eq(feedId), org.mockito.kotlin.argThat { isNotEmpty() })
+        verify(articles, never()).save(any())
+    }
+
+    @Test
+    fun contentBeatsSummary() {
+        whenever(articles.save(any())).thenAnswer { it.getArgument(0) }
+        val xml = """<?xml version="1.0"?>""" +
+            """<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">""" +
+            """<channel><title>t</title>""" +
+            """<item><title>t</title><link>https://example.com/c</link>""" +
+            """<description>fallback summary</description>""" +
+            """<content:encoded>real content here</content:encoded></item>""" +
+            """</channel></rss>"""
+        ingest.ingestXml(feed, xml)
+        val captor = argumentCaptor<rssapi.persist.ArticleEntity>()
+        verify(articles).save(captor.capture())
+        assertTrue(captor.firstValue.contentHtml?.contains("real content here") == true)
+    }
+
+    @Test
+    fun matchingMediaIsNotPrepended() {
+        whenever(articles.save(any())).thenAnswer { it.getArgument(0) }
+        val xml = """<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>""" +
+            """<item><title>t</title><link>https://example.com/m</link>""" +
+            """<description><![CDATA[<img src="https://example.com/i.png"/>]]></description>""" +
+            """<enclosure url="https://example.com/i.png" type="image/png"/></item>""" +
+            """</channel></rss>"""
+        ingest.ingestXml(feed, xml)
+        val captor = argumentCaptor<rssapi.persist.ArticleEntity>()
+        verify(articles).save(captor.capture())
+        val html = captor.firstValue.contentHtml ?: ""
+        assertEquals(1, html.split("https://example.com/i.png").size - 1)
+    }
+
+    @Test
     fun pollDelegates() {
         whenever(feeds.findById(feedId)).thenReturn(Optional.empty())
         ingest.pollFeed(feedId)

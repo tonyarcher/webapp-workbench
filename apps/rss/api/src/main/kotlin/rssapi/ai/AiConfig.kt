@@ -4,6 +4,8 @@ package rssapi.ai
  * Server AI knobs. The provider is an admin server setting: empty means off
  * and the reader hides every server option. Model credentials never live
  * here; basic-auth pairs for the model host stay in the untracked .env.
+ * The TypeSafe key (TYPESAFE_API_KEY) likewise stays out of git and out of
+ * toString(); only presence is ever checked in code.
  */
 data class AiConfig(
     val provider: String = "",
@@ -16,6 +18,7 @@ data class AiConfig(
     val maxInputChars: Int = 8_000,
     val basicUser: String = "",
     val basicPassword: String = "",
+    val jevApiKey: String = "",
 ) {
     override fun toString(): String =
         "AiConfig(provider=$provider, baseUrl=$baseUrl, model=$model, timeoutMs=$timeoutMs)"
@@ -34,6 +37,7 @@ fun aiConfigFromEnv(env: Map<String, String> = System.getenv()): AiConfig {
         maxInputChars = envInt(env, "AI_MAX_INPUT_CHARS", 8_000),
         basicUser = env["AI_API_USER"] ?: "",
         basicPassword = env["AI_API_PASSWORD"] ?: "",
+        jevApiKey = envText(env, "TYPESAFE_API_KEY"),
     )
 }
 

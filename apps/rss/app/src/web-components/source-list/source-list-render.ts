@@ -55,12 +55,14 @@ function folderHeaderTemplate(
     onDragStart: (e: DragEvent, folder: Folder) => void,
     onToggle: (id: string) => void,
     onOpenMenu: (e: MouseEvent, folder: Folder) => void,
+    shadow: boolean,
 ) {
     return html`
       <div class="item ${active ? 'active' : ''}" data-folder-id="${folder.id}" draggable="true" role="button" tabindex="0" aria-label="Open folder ${folder.title}" @dragstart=${(e: DragEvent) => onDragStart(e, folder)} @click=${() => onSelect(folder)} @keydown=${(e: KeyboardEvent) => onKey(e, folder)}>
         <span class="icon" style="cursor:pointer" @click=${(e: Event) => { e.stopPropagation(); onToggle(folder.id); }}>${isCollapsed ? '▸' : '▾'}</span>
         ${iconTemplate('folder')}
         <span class="label" title="${folder.title}">${folder.title}</span>
+        ${shadow ? html`<span class="shadow-mark" title="Interesting filter available">✨</span>` : ''}
         ${unread > 0 ? html`<span class="badge">${unread}</span>` : ''}
         <button class="menu-btn" title="Folder options" @click=${(e: MouseEvent) => onOpenMenu(e, folder)}>${menuIconTemplate()}</button>
       </div>
@@ -79,10 +81,11 @@ export function folderRowTemplate(
     onToggle: (id: string) => void,
     onOpenMenu: (e: MouseEvent, folder: Folder) => void,
     feedRow: (feed: Feed) => unknown,
+    shadow = false,
 ) {
     return html`
       <div>
-        ${folderHeaderTemplate(folder, active, isCollapsed, unread, onSelectFolder, onKeyFolder, onDragFolder, onToggle, onOpenMenu)}
+        ${folderHeaderTemplate(folder, active, isCollapsed, unread, onSelectFolder, onKeyFolder, onDragFolder, onToggle, onOpenMenu, shadow)}
         ${isCollapsed ? '' : html`<div class="folder-children">${feeds.map((f) => feedRow(f))}</div>`}
       </div>
     `;

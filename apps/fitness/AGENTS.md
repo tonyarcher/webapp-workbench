@@ -8,4 +8,4 @@ covers workflow, git, and monorepo rules.
 - One Postgres database `fitness`, owned by `api`. Uses the legacy local user
   id until the UI sends a `user-api` JWT.
 - Host JDK `bootJar`; JRE image copies the jar.
-- Work on both halves together: `./deploy.sh apps/fitness`, `./build.sh apps/fitness`.
+- Work on both halves together: `python deploy.py apps/fitness`, `python build.py apps/fitness`.

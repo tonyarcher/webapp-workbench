@@ -135,6 +135,45 @@ class AiServiceTest {
     }
 
     @Test
+    fun summarizeStandardPromptIsUnchanged() {
+        val poster = FakePoster { _, _, _ ->
+            okJson("""{"choices":[{"message":{"content":"- a"}}]}""")
+        }
+        service(ollamaConfig(), poster).summarize(uid, "T", "Some body text here")
+        val body = poster.bodies.single()
+        assertTrue(body.contains(""""content":"$AI_SYSTEM_PROMPT""""))
+        assertFalse(body.contains("bullet points"))
+    }
+
+    @Test
+    fun summarizeBriefRequestsThreeBullets() {
+        val poster = FakePoster { _, _, _ ->
+            okJson("""{"choices":[{"message":{"content":"- a"}}]}""")
+        }
+        service(ollamaConfig(), poster).summarize(uid, "T", "Some body text here", SummaryLength.BRIEF)
+        assertTrue(poster.bodies.single().contains("Summarize in exactly 3 short bullet points."))
+    }
+
+    @Test
+    fun summarizeDeepRequestsEightToTenBullets() {
+        val poster = FakePoster { _, _, _ ->
+            okJson("""{"choices":[{"message":{"content":"- a"}}]}""")
+        }
+        service(ollamaConfig(), poster).summarize(uid, null, "Some body text here", SummaryLength.DEEP)
+        assertTrue(poster.bodies.single().contains("Summarize in 8-10 short bullet points."))
+    }
+
+    @Test
+    fun summaryLengthParseIsStrict() {
+        assertEquals(SummaryLength.STANDARD, SummaryLength.parse(null))
+        assertEquals(SummaryLength.STANDARD, SummaryLength.parse("standard"))
+        assertEquals(SummaryLength.BRIEF, SummaryLength.parse("brief"))
+        assertEquals(SummaryLength.DEEP, SummaryLength.parse("deep"))
+        val err = assertFailsWith<ApiException> { SummaryLength.parse("long") }
+        assertEquals(400, err.status)
+    }
+
+    @Test
     fun summarizeBlankTextIs400() {
         val poster = FakePoster { _, _, _ -> throw AssertionError("no HTTP on validation failure") }
         val err = assertFailsWith<ApiException> { service(ollamaConfig(), poster).summarize(uid, null, "  ") }

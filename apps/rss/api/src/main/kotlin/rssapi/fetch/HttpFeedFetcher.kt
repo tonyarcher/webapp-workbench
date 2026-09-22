@@ -17,7 +17,7 @@ class HttpFeedFetcher(private val allowLocal: Boolean) : FeedFetcher {
     override fun fetch(url: String, etag: String?, lastModified: String?): FetchResult {
         var current = url
         repeat(6) { hop ->
-            assertPublicHost(current, allowLocal)
+            checkHost(current)
             val resp = send(current, etag, lastModified)
             val loc = resp.headers().firstValue("location")
             if (resp.statusCode() in 300..399 && loc.isPresent) {
@@ -28,6 +28,16 @@ class HttpFeedFetcher(private val allowLocal: Boolean) : FeedFetcher {
             return toResult(resp)
         }
         throw IllegalStateException("Too many redirects")
+    }
+
+    private fun checkHost(url: String) {
+        try {
+            assertPublicHost(url, allowLocal)
+        } catch (err: java.io.IOException) {
+            // DNS/SSRF check failure (e.g. unresolvable host): same contract
+            // as transport failures so callers record it per feed.
+            throw IllegalStateException("unresolvable host", err)
+        }
     }
 
     private fun send(url: String, etag: String?, lastModified: String?): HttpResponse<ByteArray> {

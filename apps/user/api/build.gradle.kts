@@ -95,7 +95,7 @@ tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
     }
 }
 
-val jacocoBranchCoverageVerification by tasks.registering(JacocoCoverageVerification::class) {
+val jacocoBranchCoverageVerification = tasks.register<JacocoCoverageVerification>("jacocoBranchCoverageVerification") {
     group = "verification"
     description = "Verifies 90% branch coverage."
     dependsOn("test")
@@ -123,7 +123,7 @@ afterEvaluate {
         )
     }
     val lineDirs = tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification").get().classDirectories
-    jacocoBranchCoverageVerification {
+    jacocoBranchCoverageVerification.configure {
         classDirectories.setFrom(lineDirs)
     }
 }

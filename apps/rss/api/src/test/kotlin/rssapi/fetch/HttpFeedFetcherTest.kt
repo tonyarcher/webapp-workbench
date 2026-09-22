@@ -119,6 +119,13 @@ class HttpFeedFetcherTest {
     }
 
     @Test
+    fun unresolvableHostThrows() {
+        assertFailsWith<IllegalStateException> {
+            HttpFeedFetcher(allowLocal = true).fetch("http://nonexistent.invalid/rss")
+        }
+    }
+
+    @Test
     fun conditionalHeadersSent() {
         val (srv, base) = server { ex ->
             val inm = ex.requestHeaders.getFirst("If-None-Match")

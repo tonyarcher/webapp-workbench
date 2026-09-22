@@ -9,6 +9,24 @@ data class AiStatus(val provider: String, val model: String, val available: Bool
 
 const val AI_SYSTEM_PROMPT: String = "You summarize news articles concisely and neutrally. Never invent facts."
 
+/** Summary length contract for `POST /ai/summarize`. Absent means standard; anything else is 400. */
+enum class SummaryLength {
+    BRIEF,
+    STANDARD,
+    DEEP,
+    ;
+
+    companion object {
+        fun parse(raw: String?): SummaryLength = when (raw) {
+            null -> STANDARD
+            "brief" -> BRIEF
+            "standard" -> STANDARD
+            "deep" -> DEEP
+            else -> throw ApiException(400, "invalid length")
+        }
+    }
+}
+
 /**
  * Server AI summarization behind the admin provider setting. Prompts and
  * article text never reach logs; only counts and durations do.
@@ -24,14 +42,19 @@ class AiService(
         return AiStatus(config.provider, config.model, probeQuietly(backend))
     }
 
-    fun summarize(userId: UUID, title: String?, text: String): String {
+    fun summarize(userId: UUID, title: String?, text: String, length: SummaryLength = SummaryLength.STANDARD): String {
         val input = cleanInput(text)
         val backend = requiredBackend()
         quotas.consume(userId, config.hourlyLimit, config.dailyLimit)
         val started = System.currentTimeMillis()
         try {
+            val system = when (length) {
+                SummaryLength.BRIEF -> "$AI_SYSTEM_PROMPT Summarize in exactly 3 short bullet points."
+                SummaryLength.STANDARD -> AI_SYSTEM_PROMPT
+                SummaryLength.DEEP -> "$AI_SYSTEM_PROMPT Summarize in 8-10 short bullet points."
+            }
             val prompt = if (title.isNullOrBlank()) input else "Title: ${title.trim()}\n\n$input"
-            val summary = requireText(backend.summarize(AI_SYSTEM_PROMPT, prompt).trim())
+            val summary = requireText(backend.summarize(system, prompt).trim())
             logAi("summarize ok", input.length, elapsed(started))
             return summary
         } catch (err: ApiException) {

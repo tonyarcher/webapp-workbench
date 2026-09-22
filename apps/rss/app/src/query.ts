@@ -122,6 +122,15 @@ export function articlesKey(params: {
     return ['articles', params] as const;
 }
 
+export function frontPageKey(params: {
+    since?: number;
+    unreadOnly?: boolean;
+    limit?: number;
+    edition?: string;
+}) {
+    return ['front-page', params] as const;
+}
+
 export class QueryController<T = unknown> implements ReactiveController {
     result: QueryObserverResult<T, Error>;
     private host: ReactiveControllerHost;
@@ -203,4 +212,23 @@ export function invalidateLibrary() {
 
 export function invalidateArticles() {
     return queryClient.invalidateQueries({queryKey: ['articles']});
+}
+
+export function invalidateFrontPage() {
+    return queryClient.invalidateQueries({queryKey: ['front-page']});
+}
+
+export function editionKey(params: { id?: string } = {}) {
+    return ['edition', params] as const;
+}
+
+export function editionsKey(params: { limit?: number } = {}) {
+    return ['editions', params] as const;
+}
+
+export function invalidateEdition() {
+    return Promise.all([
+        queryClient.invalidateQueries({queryKey: ['edition']}),
+        queryClient.invalidateQueries({queryKey: ['editions']}),
+    ]);
 }

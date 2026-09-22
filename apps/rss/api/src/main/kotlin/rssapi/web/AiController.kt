@@ -5,10 +5,11 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import rssapi.ai.AiService
+import rssapi.ai.SummaryLength
 
 data class AiStatusJson(val available: Boolean, val provider: String, val model: String)
 
-data class AiSummarizeBody(val title: String?, val text: String?)
+data class AiSummarizeBody(val title: String?, val text: String?, val length: String? = null)
 
 data class AiSummaryJson(val summary: String)
 
@@ -26,6 +27,7 @@ class AiController(
     @PostMapping("/ai/summarize", headers = ["X-Api-Version=1"])
     fun summarize(@RequestBody body: AiSummarizeBody): AiSummaryJson {
         val text = body.text ?: throw ApiException(400, "text is required")
-        return AiSummaryJson(ai.summarize(user.id, body.title, text))
+        val length = SummaryLength.parse(body.length)
+        return AiSummaryJson(ai.summarize(user.id, body.title, text, length))
     }
 }
