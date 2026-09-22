@@ -33,7 +33,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.postgresql:postgresql")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("org.jsoup:jsoup:1.21.2")
+    implementation("org.jsoup:jsoup:1.23.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")

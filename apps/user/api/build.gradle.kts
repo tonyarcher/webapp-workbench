@@ -40,7 +40,7 @@ dependencies {
     implementation("com.eatthepath:java-otp:0.4.0")
     implementation("commons-codec:commons-codec:1.17.2")
     implementation("com.yubico:webauthn-server-core:2.5.4")
-    implementation("com.nimbusds:nimbus-jose-jwt:9.47")
+    implementation("com.nimbusds:nimbus-jose-jwt:10.0.2")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
