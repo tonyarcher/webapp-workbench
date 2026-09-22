@@ -8,7 +8,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
@@ -29,6 +29,7 @@ import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import rssapi.persist.SubscriptionEntity
 
 private fun jwt(sub: String, name: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")
@@ -94,7 +95,7 @@ class AuthTest {
         whenever(decoder.decode(any())).thenReturn(jwt("idp-1", "alice"))
         whenever(users.findBySubject("idp-1")).thenReturn(null)
         val saved = UserEntity(id = UUID.randomUUID(), label = "identity", subject = "idp-1", username = "alice")
-        whenever(users.save(any())).thenReturn(saved)
+        whenever(users.save(any<UserEntity>())).thenReturn(saved)
         whenever(service.library(any())).thenReturn(LibraryJson(emptyList(), emptyList()))
 
         val result = mvc.get("/library") {
@@ -142,7 +143,7 @@ class AuthTest {
         )
         whenever(decoder.decode(any())).thenReturn(jwt("idp-3", "carol"))
         whenever(users.findBySubject("idp-3")).thenReturn(existing)
-        whenever(users.save(any())).thenAnswer { it.getArgument<UserEntity>(0) }
+        whenever(users.save(any<UserEntity>())).thenAnswer { it.getArgument<UserEntity>(0) }
         whenever(service.library(any())).thenReturn(LibraryJson(emptyList(), emptyList()))
         val oldSeen = existing.lastSeenAt!!
 
@@ -210,7 +211,7 @@ class SharedPoolTest {
         whenever(subs.existsByUserIdAndFeedId(any(), any())).thenAnswer { inv ->
             subscribed.contains(inv.getArgument<UUID>(0) to inv.getArgument<UUID>(1))
         }
-        whenever(subs.save(any())).thenAnswer { inv ->
+        whenever(subs.save(any<SubscriptionEntity>())).thenAnswer { inv ->
             val entity = inv.getArgument<rssapi.persist.SubscriptionEntity>(0)
             subscribed.add(entity.userId to entity.feedId)
             entity
@@ -334,7 +335,7 @@ class SharedPoolTest {
 
     private fun stubNewFeed(feedId: UUID) {
         whenever(feeds.findByXmlUrl("https://new.example/rss")).thenReturn(null)
-        whenever(feeds.save(any())).thenAnswer { inv ->
+        whenever(feeds.save(any<FeedEntity>())).thenAnswer { inv ->
             val e = inv.getArgument<FeedEntity>(0)
             e.id = feedId
             e

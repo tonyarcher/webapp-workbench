@@ -24,7 +24,7 @@ fun articleSpec(
     sinceMs: Long?,
 ): Specification<ArticleEntity> = Specification { root, query, cb ->
     val parts = mutableListOf(
-        scopePredicate(userId, scope, root, query!!, cb),
+        scopePredicate(userId, scope, root, query, cb),
     )
     if (unreadOnly) parts.add(unreadPredicate(userId, root, query, cb))
     if (sinceMs != null) {

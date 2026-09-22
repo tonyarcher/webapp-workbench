@@ -1,15 +1,15 @@
 package fitnessapi.web
 
-import com.fasterxml.jackson.databind.JsonNode
+import tools.jackson.databind.JsonNode
 
 fun JsonNode.string(key: String): String? {
     val n = this.get(key) ?: return null
-    return if (n.isTextual) n.asText() else null
+    return if (n.isString) n.asString() else null
 }
 
 fun JsonNode.numberLike(key: String): Double? {
     val n = this.get(key) ?: return null
-    val d = if (n.isTextual) n.asText().toDoubleOrNull() else if (n.isNumber) n.asDouble() else null
+    val d = if (n.isString) n.asString().toDoubleOrNull() else if (n.isNumber) n.asDouble() else null
     return d?.takeIf { it.isFinite() }
 }
 
