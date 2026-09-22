@@ -15,7 +15,7 @@ api/                     JSON API + poller (Flyway migrations in api/src/main/re
 ```
 npm run dev -w rss-reader    # Vite (proxies /api → :3001, /user-api → :3004)
 npm run dev -w rss-api       # :3001, DATABASE_URL required
-./deploy.sh apps/rss         # both halves together
+python deploy.py apps/rss    # both halves together
 ```
 
 Readers sign in through `user-api` (OAuth2 Code + PKCE); API calls carry

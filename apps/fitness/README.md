@@ -17,7 +17,7 @@ Shared math and parsers live in `packages/fitness-core`, not copied here.
 ```
 npm run dev -w fitness        # Vite (proxies /api → :3003)
 npm run dev -w fitness-api    # :3003, DATABASE_URL required
-./deploy.sh apps/fitness      # both halves together
+python deploy.py apps/fitness  # both halves together
 ```
 
 ## More

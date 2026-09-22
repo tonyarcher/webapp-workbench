@@ -1,5 +1,5 @@
 # user-api runtime. Compile on the host (`npm run build -w user-api` / gradle bootJar),
-# then copy the Spring Boot jar. deploy.py runs that host build unless --no-build.
+# then copy the Spring Boot jar. gradle buildJvm (deploy runs it) builds that.
 
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app

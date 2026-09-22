@@ -4,7 +4,7 @@ Paper-trading simulator: static SPA (`app`), shared contract (`shared/`), and
 JSON API (`api`, Kotlin, Postgres `stock`). Root `AGENTS.md` covers workflow, git, and monorepo rules.
 This app **does not** follow the shared Vite+Lit decorator conventions — see exceptions below.
 
-Work on the whole product together: `./deploy.sh apps/stock-game`, `./build.sh apps/stock-game`.
+Work on the whole product together: `python deploy.py apps/stock-game`, `python build.py apps/stock-game`.
 
 ## Project
 

@@ -16,7 +16,7 @@ api/                     OAuth2 Authorization Code + PKCE, JWKS, JWT, passkeys, 
 ```
 npm run dev -w user-web    # Vite (proxies /user-api → :3004)
 npm run dev -w user-api    # :3004, DATABASE_URL required
-./deploy.sh apps/user      # both halves together
+python deploy.py apps/user  # both halves together
 ```
 
 ## More
