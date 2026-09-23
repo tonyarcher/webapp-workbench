@@ -17,17 +17,28 @@ export class CommunityCard extends LitElement {
         navigate({ kind: 'community', communityId: this.community.id });
     }
 
+    private renderIcon(): TemplateResult {
+        const { community } = this;
+        if (safeUrl(community.icon)) {
+            return html`<img src=${safeUrl(community.icon)} alt="" loading="lazy" referrerpolicy="no-referrer"/>`;
+        }
+        return html`<span class="icon-fallback">${community.name.charAt(0).toUpperCase()}</span>`;
+    }
+
+    private renderStats(): TemplateResult {
+        const { community } = this;
+        return html`<span class="community-stats">
+            <span class="stat">${compactNumber(community.subscribers)} subscribers</span>
+            <span class="stat">${compactNumber(community.posts)} posts</span>
+            <span class="stat">${compactNumber(community.comments)} comments</span>
+        </span>`;
+    }
+
     override render(): TemplateResult {
         const { community } = this;
         return html`
             <button class="community-card" @click=${this.open}>
-                <div class="community-icon" aria-hidden="true">
-                    ${
-                        safeUrl(community.icon)
-                            ? html`<img src=${safeUrl(community.icon)} alt="" loading="lazy" referrerpolicy="no-referrer"/>`
-                            : html`<span class="icon-fallback">${community.name.charAt(0).toUpperCase()}</span>`
-                    }
-                </div>
+                <div class="community-icon" aria-hidden="true">${this.renderIcon()}</div>
                 <div class="community-info">
                     <span class="community-title">${community.title}</span>
                     <span class="community-name">!${community.name}${community.local ? ' · local' : ''}</span>
@@ -36,11 +47,7 @@ export class CommunityCard extends LitElement {
                             ? html`<p class="community-description">${community.description}</p>`
                             : nothing
                     }
-                    <span class="community-stats">
-                        <span class="stat">${compactNumber(community.subscribers)} subscribers</span>
-                        <span class="stat">${compactNumber(community.posts)} posts</span>
-                        <span class="stat">${compactNumber(community.comments)} comments</span>
-                    </span>
+                    ${this.renderStats()}
                 </div>
             </button>
         `;

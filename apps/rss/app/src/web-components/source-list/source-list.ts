@@ -51,31 +51,31 @@ export class SourceList extends LitElement {
     @property({ attribute: false }) view: View = { kind: 'all' };
     @property({ attribute: 'auto-hide', type: Boolean, reflect: true }) autoHide = loadAutoHide();
     @property({ attribute: 'hover', type: Boolean, reflect: true }) hover = false;
-    @state() private collapsed: Record<string, boolean> = loadCollapsed();
+    @state() collapsed: Record<string, boolean> = loadCollapsed();
     @state() private feedSort: FeedSort = loadFeedSort();
     @state() private hideReadByFolder: Record<string, boolean> = loadHideReadByFolder();
-    @state() private interestingShadow: Record<string, true> = loadInterestingShadow();
+    @state() interestingShadow: Record<string, true> = loadInterestingShadow();
 
     private hideTimer: number | null = null;
     private resizing = false;
     private resizeHandleEl: HTMLElement | null = null;
-    private feedListMenuTriggerId: string | null = null;
-    @state() private feedListMenuOpen = false;
-    @state() private feedListMenuAnchor: MenuAnchor | null = null;
+    feedListMenuTriggerId: string | null = null;
+    @state() feedListMenuOpen = false;
+    @state() feedListMenuAnchor: MenuAnchor | null = null;
 
     private dragging: { kind: 'folder' | 'feed'; id: string } | null = null;
     private dragTargetEl: HTMLElement | null = null;
-    private menuTriggerFeedId: string | null = null;
-    @state() private menuOpen = false;
+    menuTriggerFeedId: string | null = null;
+    @state() menuOpen = false;
     @state() private menuFeedId: string | null = null;
-    @state() private menuAnchor: MenuAnchor | null = null;
-    private folderMenuTriggerId: string | null = null;
-    @state() private folderMenuOpen = false;
+    @state() menuAnchor: MenuAnchor | null = null;
+    folderMenuTriggerId: string | null = null;
+    @state() folderMenuOpen = false;
     @state() private folderMenuFolderId: string | null = null;
-    @state() private folderMenuAnchor: MenuAnchor | null = null;
-    @state() private todayMenuOpen = false;
-    @state() private todayMenuAnchor: MenuAnchor | null = null;
-    @state() private todaySettings: TodaySettings = loadTodaySettings();
+    @state() folderMenuAnchor: MenuAnchor | null = null;
+    @state() todayMenuOpen = false;
+    @state() todayMenuAnchor: MenuAnchor | null = null;
+    @state() todaySettings: TodaySettings = loadTodaySettings();
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
@@ -87,7 +87,7 @@ export class SourceList extends LitElement {
         return this.library.data ?? { folders: [], feeds: [] };
     }
 
-    private get totalUnread(): number {
+    get totalUnread(): number {
         return this.libraryData.feeds.reduce((sum, f) => sum + f.unread, 0);
     }
 
@@ -138,7 +138,7 @@ export class SourceList extends LitElement {
         }, 1500);
     };
 
-    private onResizeStart(e: PointerEvent) {
+    onResizeStart(e: PointerEvent) {
         if (e.button !== 0) return;
         const handle = e.currentTarget as HTMLElement;
         handle.setPointerCapture(e.pointerId);
@@ -154,7 +154,7 @@ export class SourceList extends LitElement {
         document.body.style.userSelect = 'none';
     }
 
-    private onResizeMove(e: PointerEvent) {
+    onResizeMove(e: PointerEvent) {
         if (!this.resizing) return;
         const rect = this.getBoundingClientRect();
         const width = Math.round(Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, e.clientX - rect.left)));
@@ -162,7 +162,7 @@ export class SourceList extends LitElement {
         saveSidebarWidth(width);
     }
 
-    private onResizeEnd(e: PointerEvent) {
+    onResizeEnd(e: PointerEvent) {
         if (!this.resizing) return;
         this.resizing = false;
         this.resizeHandleEl?.classList.remove('resizing');
@@ -180,27 +180,27 @@ export class SourceList extends LitElement {
         }
     }
 
-    private icon(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash') {
+    icon(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash') {
         return iconTemplate(kind);
     }
 
-    private pinIcon() {
+    pinIcon() {
         return pinIconTemplate(this.autoHide);
     }
 
-    private filterIcon() {
+    filterIcon() {
         return filterIconTemplate();
     }
 
-    private menuIcon() {
+    menuIcon() {
         return menuIconTemplate();
     }
 
-    private folderUnread(folderId: string): number {
+    folderUnread(folderId: string): number {
         return folderUnreadFor(this.libraryData.feeds, folderId);
     }
 
-    private folderFeeds(folderId: string): Feed[] {
+    folderFeeds(folderId: string): Feed[] {
         return folderFeedsFor(this.libraryData.feeds, folderId, this.feedSort, this.hideReadByFolder);
     }
 
@@ -220,7 +220,7 @@ export class SourceList extends LitElement {
         navigate(view);
     }
 
-    private isActive(view: View): boolean {
+    isActive(view: View): boolean {
         if (this.view.kind !== view.kind) return false;
         if (
             this.view.kind === 'all' ||
@@ -234,19 +234,19 @@ export class SourceList extends LitElement {
         return false;
     }
 
-    private toggleFolder(id: string) {
+    toggleFolder(id: string) {
         toggleFolderAction(this as never, id);
     }
 
-    private onDragStart(e: DragEvent, kind: 'folder' | 'feed', id: string) {
+    onDragStart(e: DragEvent, kind: 'folder' | 'feed', id: string) {
         handleDragStart(this as never, e, kind, id);
     }
 
-    private onDragOver(e: DragEvent) {
+    onDragOver(e: DragEvent) {
         handleDragOver(this as never, e);
     }
 
-    private onDragLeave(e: DragEvent) {
+    onDragLeave(e: DragEvent) {
         const nav = this.shadowRoot?.querySelector('.nav');
         const related = e.relatedTarget as Node | null;
         if (!nav || !nav.contains(related)) this.clearDragOver();
@@ -261,7 +261,7 @@ export class SourceList extends LitElement {
         return { folderId: dropFolderId(this.dragging?.kind ?? null, e.target as HTMLElement, this.libraryData.feeds) };
     }
 
-    private async onDrop(e: DragEvent) {
+    async onDrop(e: DragEvent) {
         e.preventDefault();
         if (!this.dragging) return;
         const target = this.dropTarget(e);
@@ -270,7 +270,7 @@ export class SourceList extends LitElement {
         this.endDrag();
     }
 
-    private onDragEnd() {
+    onDragEnd() {
         handleEndDrag(this as never);
     }
 
@@ -286,7 +286,7 @@ export class SourceList extends LitElement {
         await handleFeedMove(this as never, feedId, target);
     }
 
-    private onItemKey(e: KeyboardEvent, view: View) {
+    onItemKey(e: KeyboardEvent, view: View) {
         if (e.key !== 'Enter' && e.key !== ' ') return;
         // Let child controls (menu buttons, toggles) handle their own keys.
         const tag = (e.target as HTMLElement | null)?.tagName;
@@ -295,7 +295,7 @@ export class SourceList extends LitElement {
         this.select(view);
     }
 
-    private onRetryLibrary() {
+    onRetryLibrary() {
         void queryClient.invalidateQueries({ queryKey: libraryKey });
     }
 }

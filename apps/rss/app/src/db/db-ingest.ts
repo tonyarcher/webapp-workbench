@@ -37,6 +37,26 @@ async function storeArticles(
     return { inserted, insertedLinks };
 }
 
+async function applyBumpForSpec(
+    store: IDBPObjectStore<ReaderDB, ['articles', 'feeds'], 'articles', 'readwrite'>,
+    spec: BumpSpec,
+): Promise<void> {
+    const current = await store.get(spec.id);
+    if (!current) return;
+    const bumped = {
+        ...current,
+        popularity: current.popularity + 3,
+        engagement: contentEngagement(current) + spec.affinityBoost + spec.velocity,
+        hot: hotScore(
+            current.popularity + 3,
+            contentEngagement(current) + spec.affinityBoost + spec.velocity,
+            current.published,
+        ),
+    } as Article & { image?: string };
+    if ('image' in bumped) delete bumped.image;
+    await store.put(bumped as Article);
+}
+
 async function applyBumps(
     store: IDBPObjectStore<ReaderDB, ['articles', 'feeds'], 'articles', 'readwrite'>,
     insertedLinks: Set<string>,
@@ -46,20 +66,7 @@ async function applyBumps(
         const specs = bumpsByLink.get(link);
         if (!specs) continue;
         for (const spec of specs.values()) {
-            const current = await store.get(spec.id);
-            if (!current) continue;
-            const bumped = {
-                ...current,
-                popularity: current.popularity + 3,
-                engagement: contentEngagement(current) + spec.affinityBoost + spec.velocity,
-                hot: hotScore(
-                    current.popularity + 3,
-                    contentEngagement(current) + spec.affinityBoost + spec.velocity,
-                    current.published,
-                ),
-            } as Article & { image?: string };
-            if ('image' in bumped) delete bumped.image;
-            await store.put(bumped as Article);
+            await applyBumpForSpec(store, spec);
         }
     }
 }

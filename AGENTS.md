@@ -140,8 +140,9 @@ comments, and workflow only — not Lit/CSS/PWA.
   `erasableSyntaxOnly`, `noUncheckedSideEffectImports`, `forceConsistentCasingInFileNames`,
   `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`.
   Keep every workspace tsconfig on this set (`stock-game` inherits it from `tsconfig.base.json`).
-- TypeScript 7 via nested `7.0.2` pins. The root toolchain stays on 6 for compiler-API
-  tooling (`ttsc`, `vite-plugin-dts`); move a workspace to 7 once its builds and lint pass there.
+- TypeScript 7 via exact `7.0.2` pins in the workspaces; the root `~7.0.2` range
+  currently dedupes to that same copy. Root `ttsc` and `vite-plugin-dts` are
+  verified against TS 7 (`npx ttsc --version`, full `npm run build`).
 - Erasable-only syntax: no enums, namespaces, or parameter properties. Declare fields
   explicitly and assign them in the constructor.
 - Client: `target: ES2022`, `moduleResolution: bundler`; `.ts` import specifiers are allowed where `allowImportingTsExtensions` is on.
@@ -166,7 +167,7 @@ comments, and workflow only — not Lit/CSS/PWA.
 
 ### Lit
 
-- `@customElement('prefix-name')`, `@property()` for public API, `@property({attribute: false})` for object/boolean props, `@state() private` for internal state. A plain field is not reactive — anything the template reads must be `@state()` or a property.
+- `@customElement('prefix-name')`, `@property()` for public API, `@property({attribute: false})` for object/boolean props, `@state() private` for internal state. A plain field is not reactive — anything the template reads must be `@state()` or a property. Drop `private` (keep `@state()` on reactive fields) only for members shared with sibling modules through a host interface — Lit reactivity requires the declarations to stay on the element, and `noUnusedLocals` flags class-unread privates.
 - `static override styles = unsafeCSS(styles)` with `import styles from './x.css?inline'`.
 - Private fields after decorators, typed explicitly.
 - Lifecycle: `willUpdate` for prop changes, `updated` for DOM side effects, `connectedCallback` / `disconnectedCallback` for listeners (always remove on disconnect). Abort in-flight timers and loops on disconnect. Do not close over the app store from a helper that can outlive the element.

@@ -174,6 +174,10 @@ export async function apiGet(
  * POST helper for write-ish endpoints (login). Sends a JSON body and shares
  * the GET helper's timeout and error handling.
  */
+function throwPostError(instance: string, path: string, status: number, detail: string): never {
+    throw new ApiError(`Instance ${instance} rejected request to ${path}${detail}`, status);
+}
+
 export async function apiPost(
     instance: string,
     path: string,
@@ -195,11 +199,7 @@ export async function apiPost(
         throwNetworkError(instance, error);
     }
     const data = (await response.json().catch(() => null)) as { error?: string } | null;
-    if (!response.ok)
-        throw new ApiError(
-            `Instance ${instance} rejected request to ${path}${data?.error ? `: ${data.error}` : ''}`,
-            response.status,
-        );
+    if (!response.ok) throwPostError(instance, path, response.status, data?.error ? `: ${data.error}` : '');
     return data;
 }
 
@@ -235,8 +235,7 @@ function assertCommunityView(data: unknown, instance: string, path: string): { c
     return data as { community_view: RawCommunityView };
 }
 
-function basePost(view: RawPostView): LemmyPost {
-    const { post, community, creator, counts } = view;
+function postContent(post: RawPost) {
     return {
         id: post.id,
         name: post.name,
@@ -247,6 +246,12 @@ function basePost(view: RawPostView): LemmyPost {
         pinnedLocal: post.pinned_local,
         pinnedCommunity: post.pinned_community,
         published: post.published,
+    };
+}
+
+function postRelations(view: RawPostView) {
+    const { post, community, creator, counts } = view;
+    return {
         communityId: community.id,
         communityName: community.name,
         communityActorId: community.actor_id,
@@ -263,6 +268,13 @@ function basePost(view: RawPostView): LemmyPost {
         myVote: view.my_vote ?? null,
         postUrl: post.ap_id,
         postType: post.post_url_content_type ?? null,
+    };
+}
+
+function basePost(view: RawPostView): LemmyPost {
+    return {
+        ...postContent(view.post),
+        ...postRelations(view),
         imageUrls: [],
         videoUrl: null,
         linkUrl: null,

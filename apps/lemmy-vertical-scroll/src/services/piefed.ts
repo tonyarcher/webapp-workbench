@@ -93,8 +93,7 @@ function postTypeOf(raw: string): LemmyPost['postType'] {
     return raw === 'Image' || raw === 'Video' || raw === 'Link' ? raw : null;
 }
 
-function basePiefedPost(view: RawPiefedPostView): LemmyPost {
-    const { post, community, creator, counts } = view;
+function piefedContent(post: RawPiefedPost) {
     return {
         id: post.id,
         name: post.title,
@@ -105,6 +104,12 @@ function basePiefedPost(view: RawPiefedPostView): LemmyPost {
         pinnedLocal: post.instance_sticky,
         pinnedCommunity: post.sticky,
         published: post.published,
+    };
+}
+
+function piefedRelations(view: RawPiefedPostView) {
+    const { post, community, creator, counts } = view;
+    return {
         communityId: community.id,
         communityName: community.name,
         communityActorId: community.actor_id,
@@ -121,6 +126,13 @@ function basePiefedPost(view: RawPiefedPostView): LemmyPost {
         myVote: view.my_vote ?? null,
         postUrl: post.ap_id,
         postType: postTypeOf(post.post_type),
+    };
+}
+
+function basePiefedPost(view: RawPiefedPostView): LemmyPost {
+    return {
+        ...piefedContent(view.post),
+        ...piefedRelations(view),
         imageUrls: [],
         videoUrl: null,
         linkUrl: null,

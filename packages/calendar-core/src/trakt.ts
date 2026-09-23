@@ -416,6 +416,21 @@ function historyAction(itemsLen: number, page: number, pageCount: number): 'stop
     return 'next';
 }
 
+function reportHistoryPage(
+    onProgress: ((p: SyncProgress) => void) | undefined,
+    type: 'shows' | 'movies',
+    page: number,
+    pageCount: number,
+): void {
+    const total = Number.isFinite(pageCount) && pageCount > 0 ? pageCount : undefined;
+    onProgress?.({
+        phase: 'fetch',
+        done: page,
+        ...(total === undefined ? {} : { total }),
+        label: `history ${type} page ${page}`,
+    });
+}
+
 async function loadHistoryType(
     fetchImpl: FetchLike,
     baseUrl: string,
@@ -429,13 +444,7 @@ async function loadHistoryType(
         onProgress?.({ phase: 'fetch', done: page - 1, label: `history ${type} page ${page}` });
         const batch = await fetchHistoryBatch(fetchImpl, baseUrl, headers, type, page);
         appendHistory(batch.items, events);
-        const total = Number.isFinite(batch.pageCount) && batch.pageCount > 0 ? batch.pageCount : undefined;
-        onProgress?.({
-            phase: 'fetch',
-            done: page,
-            ...(total === undefined ? {} : { total }),
-            label: `history ${type} page ${page}`,
-        });
+        reportHistoryPage(onProgress, type, page, batch.pageCount);
         const action = historyAction(batch.items.length, page, batch.pageCount);
         if (action === 'stop') break;
         if (action === 'truncate') {

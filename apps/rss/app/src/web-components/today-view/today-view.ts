@@ -329,6 +329,10 @@ export class TodayView extends LitElement {
             settings.perFolder,
             settings.unreadOnly,
         );
+        return this.dedupeArticles(sections);
+    }
+
+    private dedupeArticles(sections: ReturnType<typeof buildTodaySections>): Article[] {
         const seen = new Set<string>();
         return sections
             .flatMap((s) => s.articles)

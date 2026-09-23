@@ -157,14 +157,8 @@ export class BaseballScoreboard extends LitElement {
         };
     }
 
-    private resolveRunners(g: any) {
-        const runnerFirst = this.resolveRunnerFirst(g);
-        const runnerSecond = this.resolveRunnerSecond(g);
-        const runnerThird = this.resolveRunnerThird(g);
+    private resolveRunnerDisplayNames(g: any, runnerFirst: boolean, runnerSecond: boolean, runnerThird: boolean) {
         return {
-            runnerFirst,
-            runnerSecond,
-            runnerThird,
             runnerFirstName: this.resolveRunnerName(
                 g?.gameState?.runnerFirstName,
                 this.runnerFirstName,
@@ -183,6 +177,18 @@ export class BaseballScoreboard extends LitElement {
                 runnerThird,
                 'Runner on 3B',
             ),
+        };
+    }
+
+    private resolveRunners(g: any) {
+        const runnerFirst = this.resolveRunnerFirst(g);
+        const runnerSecond = this.resolveRunnerSecond(g);
+        const runnerThird = this.resolveRunnerThird(g);
+        return {
+            runnerFirst,
+            runnerSecond,
+            runnerThird,
+            ...this.resolveRunnerDisplayNames(g, runnerFirst, runnerSecond, runnerThird),
         };
     }
 

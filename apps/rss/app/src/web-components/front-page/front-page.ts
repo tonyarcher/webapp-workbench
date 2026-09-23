@@ -63,6 +63,37 @@ function storyCount(sections: EditionSection[]): number {
     return seen.size;
 }
 
+/** Prepend the just-built edition when history does not list it yet. */
+function withSelectedEdition(metas: EditionMeta[], edition: Edition | null, selectedId: string | null): EditionMeta[] {
+    // The just-built edition may not be in history yet; show it anyway.
+    return selectedId && edition && !metas.some((m) => m.id === selectedId)
+        ? [
+              {
+                  id: selectedId,
+                  generatedAt: edition.generatedAt,
+                  windowHours: edition.windowHours,
+                  status: edition.status,
+              },
+              ...metas,
+          ]
+        : metas;
+}
+
+function isNumericEditionField(field: keyof EditionOptions): boolean {
+    return (
+        field === 'windowHours' ||
+        field === 'sectionCount' ||
+        field === 'weightGeneral' ||
+        field === 'weightPersonal' ||
+        field === 'weightNewness' ||
+        field === 'weightPopularity'
+    );
+}
+
+function isToggleEditionField(field: keyof EditionOptions): boolean {
+    return field === 'showOpinion' || field === 'showFactCheck';
+}
+
 @customElement('front-page')
 export class FrontPage extends LitElement {
     static override styles = unsafeCSS(styles);
@@ -146,8 +177,16 @@ export class FrontPage extends LitElement {
     /** Poll the selected edition while it is building, up to 5 minutes. */
     private syncPoll(): void {
         const building = this.edition.data?.status === 'building';
-        const anchor = this.buildStartedAt > 0 ? this.buildStartedAt : (this.edition.data?.generatedAt ?? Date.now());
-        const fresh = Date.now() - anchor < POLL_WINDOW_MS;
+        const fresh = Date.now() - this.pollAnchor() < POLL_WINDOW_MS;
+        this.updatePollTimer(building, fresh);
+    }
+
+    /** Anchor the poll window on the build start, falling back to edition time. */
+    private pollAnchor(): number {
+        return this.buildStartedAt > 0 ? this.buildStartedAt : (this.edition.data?.generatedAt ?? Date.now());
+    }
+
+    private updatePollTimer(building: boolean, fresh: boolean): void {
         if (building && fresh && this.pollTimer === null) {
             this.pollTimer = window.setTimeout(this.onPollTick, POLL_MS);
         } else if ((!building || !fresh) && this.pollTimer !== null) {
@@ -217,20 +256,12 @@ export class FrontPage extends LitElement {
     private renderHistory(edition: Edition | null) {
         const metas = this.history.data ?? [];
         if (!metas.length && !this.selectedId) return '';
-        // The just-built edition may not be in history yet; show it anyway.
-        const shown: EditionMeta[] =
-            this.selectedId && edition && !metas.some((m) => m.id === this.selectedId)
-                ? [
-                      {
-                          id: this.selectedId,
-                          generatedAt: edition.generatedAt,
-                          windowHours: edition.windowHours,
-                          status: edition.status,
-                      },
-                      ...metas,
-                  ]
-                : metas;
+        const shown = withSelectedEdition(metas, edition, this.selectedId);
         if (!shown.length) return '';
+        return this.renderHistorySelect(edition, shown);
+    }
+
+    private renderHistorySelect(edition: Edition | null, shown: EditionMeta[]) {
         const value = this.selectedId ?? 'latest';
         return html`
       <label class="history">Edition
@@ -259,6 +290,15 @@ export class FrontPage extends LitElement {
         <label>Sections
           <input name="sectionCount" type="number" min="1" max="12" step="1" .value=${String(o.sectionCount)} />
         </label>
+        ${this.renderWeightFields(o)}
+        <label class="check"><input name="showOpinion" type="checkbox" .checked=${o.showOpinion} /> Opinion</label>
+        <label class="check"><input name="showFactCheck" type="checkbox" .checked=${o.showFactCheck} /> Fact-check</label>
+      </form>
+      <p class="options-note">Weights re-sort instantly. Window and section count apply to the next build.</p>`;
+    }
+
+    private renderWeightFields(o: EditionOptions) {
+        return html`
         <label>General
           <input name="weightGeneral" type="number" min="0" max="1" step="0.05" .value=${String(o.weightGeneral)} />
         </label>
@@ -270,34 +310,31 @@ export class FrontPage extends LitElement {
         </label>
         <label>Popularity
           <input name="weightPopularity" type="number" min="0" max="1" step="0.05" .value=${String(o.weightPopularity)} />
-        </label>
-        <label class="check"><input name="showOpinion" type="checkbox" .checked=${o.showOpinion} /> Opinion</label>
-        <label class="check"><input name="showFactCheck" type="checkbox" .checked=${o.showFactCheck} /> Fact-check</label>
-      </form>
-      <p class="options-note">Weights re-sort instantly. Window and section count apply to the next build.</p>`;
+        </label>`;
     }
 
     private onOptionsChange(e: Event) {
         const form = (e.currentTarget as HTMLElement).querySelectorAll('select, input');
         const next: EditionOptions = { ...this.options };
         for (const el of form) {
-            const field = (el as HTMLSelectElement | HTMLInputElement).name as keyof EditionOptions;
-            if (
-                field === 'windowHours' ||
-                field === 'sectionCount' ||
-                field === 'weightGeneral' ||
-                field === 'weightPersonal' ||
-                field === 'weightNewness' ||
-                field === 'weightPopularity'
-            ) {
-                const n = Number((el as HTMLSelectElement | HTMLInputElement).value);
-                if (Number.isFinite(n)) (next[field] as number) = n;
-            } else if (field === 'showOpinion' || field === 'showFactCheck') {
-                (next[field] as boolean) = (el as HTMLInputElement).checked;
-            }
+            this.applyOptionField(next, el as HTMLSelectElement | HTMLInputElement);
         }
         this.options = pruneEditionOptions(next);
         saveEditionOptions(this.options);
+    }
+
+    private applyOptionField(next: EditionOptions, el: HTMLSelectElement | HTMLInputElement): void {
+        const field = el.name as keyof EditionOptions;
+        if (isNumericEditionField(field)) {
+            this.applyNumericOption(next, field, el.value);
+        } else if (isToggleEditionField(field)) {
+            (next[field] as boolean) = (el as HTMLInputElement).checked;
+        }
+    }
+
+    private applyNumericOption(next: EditionOptions, field: keyof EditionOptions, value: string): void {
+        const n = Number(value);
+        if (Number.isFinite(n)) (next[field] as number) = n;
     }
 
     private onRefresh() {
@@ -330,22 +367,30 @@ export class FrontPage extends LitElement {
             return html`<div class="empty" style="color: var(--danger)">Could not load the edition. <button class="options-btn" @click=${this.onRefresh}>Retry</button></div>`;
         }
         if (this.edition.result.isPending) return html`<div class="empty">Loading the paper…</div>`;
-        if (!edition) {
-            return html`<div class="empty">
+        if (!edition) return this.renderMissingEdition();
+        if (edition.status === 'building' && !sections.length) {
+            return html`<div class="empty">Edition building… this page refreshes automatically.</div>`;
+        }
+        if (edition.status === 'failed' && !sections.length) return this.renderFailedEdition();
+        return this.renderEditionContent(edition, sections);
+    }
+
+    private renderMissingEdition() {
+        return html`<div class="empty">
           <p><strong>The Front Page is a generated newspaper</strong>, not a headline list: one long-form edition with an editorial, merged multi-source sections, and fact-check badges.</p>
           <p>No edition exists yet. Build the first one from the last ${this.options.windowHours} hours of your feeds.</p>
           <button class="build-btn" @click=${this.onBuild} ?disabled=${this.building}>${this.building ? 'Building…' : 'Build edition'}</button>
         </div>`;
-        }
-        if (edition.status === 'building' && !sections.length) {
-            return html`<div class="empty">Edition building… this page refreshes automatically.</div>`;
-        }
-        if (edition.status === 'failed' && !sections.length) {
-            return html`<div class="empty">
+    }
+
+    private renderFailedEdition() {
+        return html`<div class="empty">
           <p>The last build failed. Try again with a wider window or more subscribed feeds.</p>
           <button class="build-btn" @click=${this.onBuild} ?disabled=${this.building}>${this.building ? 'Building…' : 'Build edition'}</button>
         </div>`;
-        }
+    }
+
+    private renderEditionContent(edition: Edition, sections: EditionSection[]) {
         const feeds = this.library.data?.feeds ?? [];
         return html`${edition.status === 'building' ? html`<p class="building-note">Edition still building — showing the latest draft.</p>` : ''}
       ${this.options.showOpinion && edition.opinion ? this.renderEditorial(edition.opinion) : ''}

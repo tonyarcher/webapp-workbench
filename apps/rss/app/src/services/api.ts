@@ -397,30 +397,37 @@ export function normalizeEditionJson(json: unknown): Edition {
     };
 }
 
-function normalizeSectionJson(json: unknown): EditionSection {
-    const o = (json ?? {}) as Record<string, unknown>;
-    const scores = o['scores'] as Record<string, unknown> | undefined;
+function sectionScores(scores: Record<string, unknown> | undefined): EditionSection['scores'] {
     const worthy = scores?.['worthy'];
     const interest = scores?.['interest'];
+    if (typeof worthy !== 'number' || typeof interest !== 'number') return undefined;
     const newness = scores?.['newness'];
     const popularity = scores?.['popularity'];
     return {
-        id: typeof o['id'] === 'string' ? o['id'] : '',
+        worthy,
+        interest,
+        ...(typeof newness === 'number' ? { newness } : {}),
+        ...(typeof popularity === 'number' ? { popularity } : {}),
+    };
+}
+
+function sectionTextFields(o: Record<string, unknown>): Pick<EditionSection, 'topic' | 'summary' | 'opinion'> {
+    return {
         ...(typeof o['topic'] === 'string' ? { topic: o['topic'] } : {}),
-        title: typeof o['title'] === 'string' ? o['title'] : '(untitled)',
         ...(typeof o['summary'] === 'string' ? { summary: o['summary'] } : {}),
         ...(typeof o['opinion'] === 'string' ? { opinion: o['opinion'] } : {}),
+    };
+}
+
+function normalizeSectionJson(json: unknown): EditionSection {
+    const o = (json ?? {}) as Record<string, unknown>;
+    const scores = sectionScores(o['scores'] as Record<string, unknown> | undefined);
+    return {
+        id: typeof o['id'] === 'string' ? o['id'] : '',
+        ...sectionTextFields(o),
+        title: typeof o['title'] === 'string' ? o['title'] : '(untitled)',
         articleIds: stringArrayOf(o['articleIds']),
-        ...(typeof worthy === 'number' && typeof interest === 'number'
-            ? {
-                  scores: {
-                      worthy,
-                      interest,
-                      ...(typeof newness === 'number' ? { newness } : {}),
-                      ...(typeof popularity === 'number' ? { popularity } : {}),
-                  },
-              }
-            : {}),
+        ...(scores ? { scores } : {}),
         ...(typeof o['verified'] === 'boolean' ? { verified: o['verified'] } : {}),
     };
 }

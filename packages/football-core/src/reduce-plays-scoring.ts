@@ -46,6 +46,26 @@ function recordTurnoverPlay(
     };
 }
 
+function turnoverPlayResult(
+    input: PlayInput,
+    kind: 'interception' | 'fumble',
+    yards: number,
+    spot: number,
+    td: boolean,
+): Parameters<typeof buildPlay>[4] {
+    const scoring = td ? 'touchdown' : undefined;
+    return {
+        yards,
+        firstDown: false,
+        turnover: kind,
+        ...(scoring === undefined ? {} : { scoring }),
+        deadAtYardline100: spot,
+        outOfBounds: false,
+        incomplete: false,
+        sack: input.sack === true,
+    };
+}
+
 function turnoverPlay(
     game: GameState,
     input: PlayInput,
@@ -55,24 +75,33 @@ function turnoverPlay(
     spot: number,
     td: boolean,
 ): Play {
-    const scoring = td ? 'touchdown' : undefined;
     return buildPlay(
         game,
         input,
         playId,
         currentDriveId(game),
-        {
-            yards,
-            firstDown: false,
-            turnover: kind,
-            ...(scoring === undefined ? {} : { scoring }),
-            deadAtYardline100: spot,
-            outOfBounds: false,
-            incomplete: false,
-            sack: input.sack === true,
-        },
+        turnoverPlayResult(input, kind, yards, spot, td),
         td ? 'score' : 'change_of_possession',
     );
+}
+
+function lostBallNext(
+    game: GameState,
+    situation: GameState['situation'],
+    defense: TeamId,
+    play: Play,
+    playId: string,
+    drive: ReturnType<typeof openDrive>,
+): GameState {
+    return {
+        ...game,
+        situation,
+        personnel: personnelForPossession(game, defense),
+        plays: [...game.plays, play],
+        drives: [...closeDrive(appendPlayToDrive(game.drives, playId), 'turnover'), { ...drive, playIds: [] }],
+        nextPlayId: game.nextPlayId + 1,
+        nextDriveId: game.nextDriveId + 1,
+    };
 }
 
 function applyLostBall(
@@ -87,19 +116,7 @@ function applyLostBall(
     const playId = `play-${game.nextPlayId}`;
     const play = lostBallPlay(game, input, playId, kind, yards, spot);
     const drive = openDrive({ ...game, situation }, defense, playId);
-    return finishPlay(
-        {
-            ...game,
-            situation,
-            personnel: personnelForPossession(game, defense),
-            plays: [...game.plays, play],
-            drives: [...closeDrive(appendPlayToDrive(game.drives, playId), 'turnover'), { ...drive, playIds: [] }],
-            nextPlayId: game.nextPlayId + 1,
-            nextDriveId: game.nextDriveId + 1,
-        },
-        input,
-        turnoverFacts(game, input),
-    );
+    return finishPlay(lostBallNext(game, situation, defense, play, playId, drive), input, turnoverFacts(game, input));
 }
 
 function lostBallPlay(

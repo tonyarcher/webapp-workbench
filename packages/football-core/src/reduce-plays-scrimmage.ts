@@ -103,6 +103,22 @@ function drivesAfterPlay(game: GameState, playId: string) {
     };
 }
 
+function ordinaryResult(
+    input: PlayInput,
+    yards: number,
+    incomplete: boolean,
+    advance: { yardline100: number; firstDown: boolean },
+): ReturnType<typeof playResult> {
+    return playResult({
+        yards,
+        firstDown: advance.firstDown,
+        deadAtYardline100: advance.yardline100,
+        outOfBounds: input.outOfBounds === true,
+        incomplete,
+        sack: input.sack === true,
+    });
+}
+
 function ordinaryPlay(
     game: GameState,
     input: PlayInput,
@@ -118,16 +134,43 @@ function ordinaryPlay(
             input,
             playId,
             currentDriveId(game),
-            playResult({
-                yards,
-                firstDown: advance.firstDown,
-                deadAtYardline100: advance.yardline100,
-                outOfBounds: input.outOfBounds === true,
-                incomplete,
-                sack: input.sack === true,
-            }),
+            ordinaryResult(input, yards, incomplete, advance),
             'none',
         ),
+    };
+}
+
+function ordinaryGainFacts(
+    game: GameState,
+    input: PlayInput,
+    advance: { firstDown: boolean },
+    incomplete: boolean,
+): ClockFactsInput {
+    return {
+        downBefore: game.situation.down,
+        firstDown: advance.firstDown,
+        incomplete,
+        scored: false,
+        turnover: false,
+        outOfBounds: input.outOfBounds === true,
+    };
+}
+
+function ordinaryGainNext(
+    game: GameState,
+    input: PlayInput,
+    advance: { down: Situation['down']; distance: number; yardline100: number },
+    play: Play,
+    drives: GameState['drives'],
+    nextDriveId: number,
+): GameState {
+    return {
+        ...game,
+        situation: gainSituation(game, input, advance),
+        plays: [...game.plays, play],
+        drives,
+        nextPlayId: game.nextPlayId + 1,
+        nextDriveId,
     };
 }
 
@@ -141,22 +184,8 @@ function applyOrdinaryGain(
     const { playId, play } = ordinaryPlay(game, input, yards, incomplete, advance);
     const { drives, nextDriveId } = drivesAfterPlay(game, playId);
     return finishPlay(
-        {
-            ...game,
-            situation: gainSituation(game, input, advance),
-            plays: [...game.plays, play],
-            drives,
-            nextPlayId: game.nextPlayId + 1,
-            nextDriveId,
-        },
+        ordinaryGainNext(game, input, advance, play, drives, nextDriveId),
         input,
-        {
-            downBefore: game.situation.down,
-            firstDown: advance.firstDown,
-            incomplete,
-            scored: false,
-            turnover: false,
-            outOfBounds: input.outOfBounds === true,
-        },
+        ordinaryGainFacts(game, input, advance, incomplete),
     );
 }

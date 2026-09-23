@@ -130,8 +130,8 @@ export function communityPostsInfiniteQuery(
     instance: string,
     communityId: number,
     sort: PostSort,
-    nsfwFilter: NsfwFilter,
     software: Software,
+    nsfwFilter: NsfwFilter,
     auth: string,
 ): InfinitePostsOptions {
     return {

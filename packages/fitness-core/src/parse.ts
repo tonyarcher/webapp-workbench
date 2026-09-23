@@ -2,6 +2,18 @@ import { looksLikeCsv, parseSampleCsv } from './csv';
 import { looksLikeHealthConnect, parseHealthConnectJson } from './health-connect';
 import type { ParseResult } from './types';
 
+function parseJsonText(trimmed: string): ParseResult {
+    try {
+        return parseHealthConnectJson(JSON.parse(trimmed) as unknown);
+    } catch {
+        return {
+            samples: [],
+            skipped: [{ line: trimmed.slice(0, 80), reason: 'invalid json' }],
+            format: 'unknown',
+        };
+    }
+}
+
 export function parseImportText(text: string): ParseResult {
     const trimmed = text.trim();
     if (!trimmed) {
@@ -16,15 +28,7 @@ export function parseImportText(text: string): ParseResult {
     }
     if (looksLikeCsv(trimmed)) return parseSampleCsv(trimmed);
     if (looksLikeHealthConnect(trimmed) || trimmed.startsWith('{') || trimmed.startsWith('[')) {
-        try {
-            return parseHealthConnectJson(JSON.parse(trimmed) as unknown);
-        } catch {
-            return {
-                samples: [],
-                skipped: [{ line: trimmed.slice(0, 80), reason: 'invalid json' }],
-                format: 'unknown',
-            };
-        }
+        return parseJsonText(trimmed);
     }
     if (trimmed.includes(',')) return parseSampleCsv(trimmed);
     return { samples: [], skipped: [{ line: trimmed.slice(0, 80), reason: 'unrecognized format' }], format: 'unknown' };
