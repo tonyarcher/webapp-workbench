@@ -10,19 +10,13 @@ import org.gradle.api.Project
  */
 
 /** Boot jar paths keyed by compose service (what the API Dockerfiles copy). */
-class ApiJars {
-    val paths: Map<String, String> = mapOf(
-        "user-api" to "apps/user/api/build/libs/user-api-0.1.0.jar",
-        "fitness-api" to "apps/fitness/api/build/libs/fitness-api-0.1.0.jar",
-        "rss-api" to "apps/rss/api/build/libs/rss-api-0.1.0.jar",
-        "stock-game-api" to "apps/stock-game/api/build/libs/stock-game-api-0.1.0.jar",
-        "radio-api" to "apps/radio-station/api/build/libs/radio-api-0.1.0.jar",
-    )
-}
+class ApiJars(val paths: Map<String, String>)
 
-val apiJars = ApiJars()
+val Project.apiJars: ApiJars
+    get() = ApiJars(appCatalog.apiJars)
 
-val composeFile: String = "deploy/docker-compose.yml"
+val Project.composeFile: String
+    get() = appCatalog.composeFile
 
 /** Parse a `tcp://host:port` Docker URL, or null. */
 fun parseDockerHost(host: String): Pair<String, Int>? {
@@ -117,7 +111,7 @@ fun Project.composeArgsFor(services: List<String>): List<String> {
 }
 
 /** `--progress` is global. `up --progress` is an unknown flag on Compose v5. */
-fun composeLine(compose: List<String>, args: List<String>): List<String> {
+fun Project.composeLine(compose: List<String>, args: List<String>): List<String> {
     val builds = args.firstOrNull() == "build" || "--build" in args
     val already = args.any { it == "--progress" || it.startsWith("--progress=") }
     val progress = if (builds && !already) listOf("--progress", "plain") else emptyList()

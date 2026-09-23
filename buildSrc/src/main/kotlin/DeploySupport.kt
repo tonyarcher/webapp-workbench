@@ -11,7 +11,7 @@ import org.gradle.api.Project
  * identical.
  */
 
-fun deployHelp(): String = """
+fun Project.deployHelp(): String = """
 Deploy the compose stack with docker compose.
 
   gradle deploy                     build host artifacts, render the gateway, compose up
