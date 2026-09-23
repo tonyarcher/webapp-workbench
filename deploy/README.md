@@ -35,23 +35,23 @@ for the static apps. The `gateway` image is built from the `deploy/` context.
 
 ## Routes
 
-| Route | Target |
-|---|---|
-| `/` | hello-world page |
-| `/baseball/` | Baseball app (nginx static, prefix stripped) |
-| `/rss-reader/` | RSS Reader (nginx static, prefix stripped) |
-| `/stock-game/` | Stock Game (nginx static, prefix stripped; hash routes) |
-| `/lemmy-vertical-scroll/` | Lemmy Vertical Scroll (nginx static, prefix stripped) |
-| `/clipstack/` | Clipstack (nginx static, prefix stripped) |
-| `/calendar-sync/` | Calendar Sync (nginx static + Trakt proxy, prefix stripped) |
-| `/radio-station/` | Radio Station (nginx static, prefix stripped) |
-| `/radio-station/api/` | Radio Station API (Kotlin, prefix stripped). Creates Postgres database `radio` on startup. |
-| `/football/` | Football tracker (nginx static, prefix stripped) |
-| `/basketball/` | Basketball tracker (nginx static, prefix stripped) |
-| `/fitness/` | Fitness (nginx static, prefix stripped) |
-| `/auth/` | Accounts landing page (nginx static, prefix stripped) |
-| `/fitness/api/` | Fitness API (Kotlin, prefix stripped). Creates Postgres database `fitness` on startup. |
-| `/git/` | Gitea git + wiki (prefix stripped, `ROOT_URL` carries `/git/`). SSH on the mapped host port via VPN. |
+| Route                     | Target                                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `/`                       | hello-world page                                                                                     |
+| `/baseball/`              | Baseball app (nginx static, prefix stripped)                                                         |
+| `/rss-reader/`            | RSS Reader (nginx static, prefix stripped)                                                           |
+| `/stock-game/`            | Stock Game (nginx static, prefix stripped; hash routes)                                              |
+| `/lemmy-vertical-scroll/` | Lemmy Vertical Scroll (nginx static, prefix stripped)                                                |
+| `/clipstack/`             | Clipstack (nginx static, prefix stripped)                                                            |
+| `/calendar-sync/`         | Calendar Sync (nginx static + Trakt proxy, prefix stripped)                                          |
+| `/radio-station/`         | Radio Station (nginx static, prefix stripped)                                                        |
+| `/radio-station/api/`     | Radio Station API (Kotlin, prefix stripped). Creates Postgres database `radio` on startup.           |
+| `/football/`              | Football tracker (nginx static, prefix stripped)                                                     |
+| `/basketball/`            | Basketball tracker (nginx static, prefix stripped)                                                   |
+| `/fitness/`               | Fitness (nginx static, prefix stripped)                                                              |
+| `/auth/`                  | Accounts landing page (nginx static, prefix stripped)                                                |
+| `/fitness/api/`           | Fitness API (Kotlin, prefix stripped). Creates Postgres database `fitness` on startup.               |
+| `/git/`                   | Gitea git + wiki (prefix stripped, `ROOT_URL` carries `/git/`). SSH on the mapped host port via VPN. |
 
 The bare paths (e.g. `/stock-game`) redirect to their trailing-slash forms.
 Each app is served under its own subpath with the base baked in at host Vite
@@ -131,26 +131,26 @@ browsers only do passkeys on a registrable hostname. Passkeys additionally need
 Pick a hosts-file name, e.g. `workbench.lan`:
 
 1. Point it at the host. On each device, as admin:
-   - Windows: `Add-Content "$env:SystemRoot\System32\drivers\etc\hosts" "`n10.0.0.63`tworkbench.lan"`
-   - Linux/macOS: `echo '10.0.0.63 workbench.lan' | sudo tee -a /etc/hosts`
+    - Windows: `Add-Content "$env:SystemRoot\System32\drivers\etc\hosts" "`n10.0.0.63`tworkbench.lan"`
+    - Linux/macOS: `echo '10.0.0.63 workbench.lan' | sudo tee -a /etc/hosts`
 2. In `deploy/.env`:
-   ```
-   TLS_HOSTS=workbench.lan
-   WEBAUTHN_RP_ID=workbench.lan
-   WEBAUTHN_ORIGINS=https://workbench.lan
-   ```
+    ```
+    TLS_HOSTS=workbench.lan
+    WEBAUTHN_RP_ID=workbench.lan
+    WEBAUTHN_ORIGINS=https://workbench.lan
+    ```
 3. Deploy. The script mints a local CA and a leaf cert into
    `deploy/gateway/certs/` (gitignored) and bakes the leaf into the image.
 4. Trust the CA once per device:
-   - Windows (admin): `certutil -addstore Root deploy\gateway\certs\ca.crt`
-   - Linux: copy `ca.crt` to `/usr/local/share/ca-certificates/` then `sudo update-ca-certificates`
-   - macOS: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain deploy/gateway/certs/ca.crt`
+    - Windows (admin): `certutil -addstore Root deploy\gateway\certs\ca.crt`
+    - Linux: copy `ca.crt` to `/usr/local/share/ca-certificates/` then `sudo update-ca-certificates`
+    - macOS: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain deploy/gateway/certs/ca.crt`
 5. Register the origin with identity (DB rows, not code):
-   ```sql
-   INSERT INTO oauth_redirect_uris (client_id, redirect_uri)
-     VALUES ('rss-reader', 'https://workbench.lan/rss-reader/') ON CONFLICT DO NOTHING;
-   ```
-   (Repeat per app origin; run with `docker compose exec postgres psql -U rss -d users`.)
+    ```sql
+    INSERT INTO oauth_redirect_uris (client_id, redirect_uri)
+      VALUES ('rss-reader', 'https://workbench.lan/rss-reader/') ON CONFLICT DO NOTHING;
+    ```
+    (Repeat per app origin; run with `docker compose exec postgres psql -U rss -d users`.)
 6. Browse `https://workbench.lan/`. Set `TLS_REDIRECT=1` to send port-80 stragglers to https.
 
 Delete the leaf (or set `TLS_FORCE=1`) to rotate; the CA persists so devices
@@ -210,20 +210,20 @@ GitHub repos for fast browsing.
    `deploy/postgres/initdb/10-gitea.sql` (the postgres image builds from
    `deploy/`, like the gateway, because remote daemons cannot use host bind
    mounts). Existing volumes need one manual step after postgres is up:
-   ```sh
-   docker compose -f deploy/docker-compose.yml up -d postgres
-   docker compose -f deploy/docker-compose.yml exec postgres psql -U ${POSTGRES_USER:-rss} -d postgres -c "SELECT 'CREATE DATABASE gitea' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'gitea')\gexec"
-   ```
+    ```sh
+    docker compose -f deploy/docker-compose.yml up -d postgres
+    docker compose -f deploy/docker-compose.yml exec postgres psql -U ${POSTGRES_USER:-rss} -d postgres -c "SELECT 'CREATE DATABASE gitea' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'gitea')\gexec"
+    ```
 2. Set in `deploy/.env`:
-   ```
-   GITEA_ROOT_URL=https://<host>/git/
-   GITEA_SSH_DOMAIN=<vpn-host>
-   GITEA_SSH_BIND=<vpn-address>
-   GITEA_SSH_PORT=2222
-   ```
-   `GITEA_SSH_BIND` defaults to `127.0.0.1`. Set it to the VPN address
-   (e.g. `10.13.13.1`) or `0.0.0.0` behind a firewall, or VPN clients
-   cannot reach SSH.
+    ```
+    GITEA_ROOT_URL=https://<host>/git/
+    GITEA_SSH_DOMAIN=<vpn-host>
+    GITEA_SSH_BIND=<vpn-address>
+    GITEA_SSH_PORT=2222
+    ```
+    `GITEA_SSH_BIND` defaults to `127.0.0.1`. Set it to the VPN address
+    (e.g. `10.13.13.1`) or `0.0.0.0` behind a firewall, or VPN clients
+    cannot reach SSH.
 3. Deploy: `python deploy.py gitea gateway`. Gitea migrates its database on
    first boot (`INSTALL_LOCK` is true for a headless install: env seeds
    `app.ini`, so no web-installer step is needed).

@@ -1,0 +1,9 @@
+# hadolint findings for the deploy images. Threshold is "warning", so the
+# info-level noise below is reported but never fails verify.py.
+failure-threshold: warning
+
+ignored:
+    # DL3066: the JRE images use a named non-root USER (e.g. `nobody`). Hadolint
+    # wants a numeric uid so the host can resolve it; the image is self-contained
+    # and never bind-mounts a host user, so the name is fine.
+    - DL3066
