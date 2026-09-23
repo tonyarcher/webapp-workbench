@@ -45,17 +45,19 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 
 ## Commands (run from the repo root)
 
-| Task | Command |
-|---|---|
-| Install all workspaces | `npm install` |
-| Build all | `npm run build` (delegates `--workspaces --if-present`) |
-| Test all | `npm test` |
-| Typecheck all | `npm run typecheck` |
-| Lint all | `npm run lint` |
-| Dev server (one app) | `npm run dev:baseball` / `dev:rss-reader` / `dev:rss-api` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` / `dev:basketball` / `dev:fitness` / `dev:fitness-api` / `dev:user-web` / `dev:user-api` |
-| Build (entry point) | `python build.py [app...]` (or `python3`); calls `./gradlew buildAll` |
-| Build everything, one command | `./gradlew buildAll` (root; JS workspaces + all Kotlin APIs). `./gradlew buildJvm` = APIs only, `./gradlew buildNode` = JS only, `./gradlew checkAll` = API tests/detekt/Jacoco. Add `-Papps=rss` (or `apps/rss`) to build one app |
-| Deploy compose stack | `python deploy.py [options] [app...]` (or `python3`); calls `./gradlew deploy`, which builds, renders the gateway, mints certs, then runs compose. Tab completion: `source scripts/complete-deploy.bash`. |
+| Task                          | Command                                                                                                                                                                                                                                                                              |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Install all workspaces        | `npm install`                                                                                                                                                                                                                                                                        |
+| Build all                     | `npm run build` (delegates `--workspaces --if-present`)                                                                                                                                                                                                                              |
+| Test all                      | `npm test`                                                                                                                                                                                                                                                                           |
+| Typecheck all                 | `npm run typecheck`                                                                                                                                                                                                                                                                  |
+| Lint all                      | `npm run lint`                                                                                                                                                                                                                                                                       |
+| Dev server (one app)          | `npm run dev:baseball` / `dev:rss-reader` / `dev:rss-api` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` / `dev:basketball` / `dev:fitness` / `dev:fitness-api` / `dev:user-web` / `dev:user-api` |
+| Build (entry point)           | `python build.py [app...]` (or `python3`); calls `./gradlew buildAll`                                                                                                                                                                                                                |
+| Build everything, one command | `./gradlew buildAll` (root; JS workspaces + all Kotlin APIs). `./gradlew buildJvm` = APIs only, `./gradlew buildNode` = JS only, `./gradlew checkAll` = API tests/detekt/Jacoco. Add `-Papps=rss` (or `apps/rss`) to build one app                                                   |
+| Deploy compose stack          | `python deploy.py [options] [app...]` (or `python3`); calls `./gradlew deploy`, which builds, renders the gateway, mints certs, then runs compose. Tab completion: `source scripts/complete-deploy.bash`.                                                                            |
+| Format everything             | `npm run format` (prettier --write). Check only: `npm run format:check`.                                                                                                                                                                                                             |
+| Verify format + lint          | `python verify.py` (check mode) or `python verify.py --fix` (apply the formatters). It owns the tool list.                                                                                                                                                                           |
 
 Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm test`).
 
@@ -151,11 +153,9 @@ comments, and workflow only — not Lit/CSS/PWA.
 
 ### Formatting
 
-- 4-space indent; LF line endings (`.gitattributes`; `*.png` binary). Do not convert to CRLF.
-- Single quotes; semicolons; trailing commas in multiline literals and params.
-- No space inside braces in value-position objects (`{keyPath: 'id'}`); spaces in type literals (`{ kind: 'all' }`).
+- Layout is config, not prose: root `.prettierrc.json`, `.editorconfig`, `.gitattributes`. Run `npm run format`. Do not restate those settings here.
+- `oxlint` owns correctness.
 - Underscore separators in large numbers (`30_000`). Ternary chains for small conditionals; early-return guards.
-- No Prettier config on these apps (root `oxlint` plus hand formatting).
 
 ### Naming
 
@@ -177,13 +177,13 @@ comments, and workflow only — not Lit/CSS/PWA.
 
 ### CSS
 
-- Plain CSS, kebab-case classes, 4-space indent, no nesting.
+- Plain CSS, kebab-case classes, no nesting.
 - Theme via CSS custom properties on `:root` / `[data-theme='...']`. Components use `var(--...)`, never hardcoded colors.
 - Honor `prefers-reduced-motion`.
 
 ### Comments
 
-- JSDoc (`/** */`) on non-obvious functions: the *why* and tradeoffs, not the what.
+- JSDoc (`/** */`) on non-obvious functions: the _why_ and tradeoffs, not the what.
 - Comment magic numbers and heuristics. No boilerplate or self-explanatory-line comments.
 
 ### Data, purity, safety
@@ -255,6 +255,8 @@ fetchers cannot send custom headers.
 ## Verification
 
 - Workspace `npm test` then `npm run build` must pass before finishing.
+- `python verify.py` passes. It owns the full tool list; `--fix` applies the formatters.
+  Tools come from the `ops-scripts` installers.
 - Coverage floor is **90% lines/branches/functions/statements** on measured workspaces:
   Jacoco on the four Kotlin APIs (`rss-api`, `fitness-api`, `stock-game-api`,
   `user-api`); `vitest --coverage` (v8) on `football-core`, `football`,

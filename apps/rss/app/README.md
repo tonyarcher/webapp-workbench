@@ -36,7 +36,7 @@ If 4173 is already taken by another app, `vite preview` picks the next free port
 `powershell -File scripts/install-firefox.ps1 -Url http://localhost:4174`.
 
 - **Chrome / Edge**: open http://localhost:4173, then use the install icon in the address
-  bar if offered (or `⋮` → *Install RSS Reader*). It launches from the Start menu /
+  bar if offered (or `⋮` → _Install RSS Reader_). It launches from the Start menu /
   taskbar, runs in its own window, and works offline once loaded.
 - **Firefox**: desktop Firefox doesn't support installing manifest PWAs (no native
   install UI), so run `powershell -File scripts/install-firefox.ps1` to create a

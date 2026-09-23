@@ -1,0 +1,17 @@
+# Layout-only formatting for Flyway migrations and init SQL.
+# These files are applied history: never rewrite keyword case, never
+# restructure a statement. Only spacing, indentation, and blank lines change.
+[sqlfluff]
+dialect = postgres
+templater = raw
+max_line_length = 120
+# LT* is the layout family. CP (capitalisation), RF (references), AM
+# (ambiguity) and ST (structure) are excluded on purpose.
+rules = LT01,LT02,LT03,LT04,LT06,LT07,LT08,LT12,LT13,LT15
+# LT05 (long lines) is not fixable and migrations contain deliberate long
+# DDL. LT09/LT10/LT11/LT14 reflow SELECT and keyword layout, which is too
+# aggressive for applied history.
+
+[sqlfluff:indentation]
+indent_unit = space
+tab_space_size = 4

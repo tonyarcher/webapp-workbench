@@ -1,33 +1,52 @@
 complexity:
-  LongMethod:
-    active: true
-    allowedLines: 25
-  TooManyFunctions:
-    active: true
-    allowedFunctionsPerFile: 10
-    allowedFunctionsPerClass: 10
-    allowedFunctionsPerInterface: 10
-    allowedFunctionsPerObject: 10
-    allowedFunctionsPerEnum: 10
-    ignoreDeprecated: false
-    ignorePrivate: false
-    ignoreOverridden: false
-  CyclomaticComplexMethod:
-    active: true
-    allowedComplexity: 10
-  NestedBlockDepth:
-    active: true
-    allowedDepth: 3
-  ComplexCondition:
-    active: true
-    allowedConditions: 3
+    LargeClass:
+        # Shared 500-line budget across the toolchain (matches oxlint
+        # `max-lines`). ktlint and ruff have no file-length rule at all.
+        active: true
+        allowedLines: 500
+    LongMethod:
+        active: true
+        allowedLines: 25
+    TooManyFunctions:
+        active: true
+        allowedFunctionsPerFile: 10
+        allowedFunctionsPerClass: 10
+        allowedFunctionsPerInterface: 10
+        allowedFunctionsPerObject: 10
+        allowedFunctionsPerEnum: 10
+        ignoreDeprecated: false
+        ignorePrivate: false
+        ignoreOverridden: false
+    CyclomaticComplexMethod:
+        active: true
+        allowedComplexity: 10
+    NestedBlockDepth:
+        active: true
+        allowedDepth: 3
+    ComplexCondition:
+        active: true
+        allowedConditions: 3
 
 style:
-  MaxLineLength:
-    active: true
-    maxLineLength: 120
-    excludeCommentStatements: true
-  MagicNumber:
-    active: false
-  ReturnCount:
-    max: 6
+    MaxLineLength:
+        # ktlint owns line length (max_line_length in .editorconfig). Left
+        # inactive so the two cannot disagree.
+        active: false
+        maxLineLength: 120
+        excludeCommentStatements: true
+    MagicNumber:
+        # Extra rule ktlint does not cover, so detekt owns it. Named constants,
+        # property defaults, annotations, ranges and enum entries are not magic.
+        active: true
+        ignoreNumbers: ['-1', '0', '1', '2']
+        ignoreHashCodeFunction: true
+        ignoreExtensionFunctions: true
+        ignoreNamedArgument: true
+        ignorePropertyDeclaration: true
+        ignoreCompanionObjectPropertyDeclaration: true
+        ignoreConstantDeclaration: true
+        ignoreAnnotation: true
+        ignoreRanges: true
+        ignoreEnums: true
+    ReturnCount:
+        max: 6

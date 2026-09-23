@@ -6,23 +6,23 @@ same reverse-proxy gateway.
 
 ## Apps
 
-| Path | App | Stack | Focus |
-|---|---|---|---|
-| `apps/baseball/` | Baseball tracker | Vite + Lit + TanStack core | Scorekeeping, client-side only |
-| `apps/rss/` | RSS reader + API | Vite + Lit + TanStack core / Kotlin + JPA | Feed reading, PWA, hash routing |
-| `apps/stock-game/` | Stock game | Vite + Lit + TanStack core | Paper trading, hash routing |
-| `apps/lemmy-vertical-scroll/` | Lemmy scroller | Vite + Lit + TanStack core | Vertical feed scrolling |
-| `apps/clipstack/` | Clipstack | Vite + Lit + vertical-scroll-core | Import a short-video link list and scroll it |
-| `apps/calendar-sync/` | Calendar Sync | Vite + Lit + calendar-core | Trakt + Netflix → ICS / Google Calendar |
-| `apps/radio-station/` | Radio Station | Vite + Lit + Kotlin API | 7-day Top 40 log generator |
+| Path                          | App              | Stack                                     | Focus                                        |
+| ----------------------------- | ---------------- | ----------------------------------------- | -------------------------------------------- |
+| `apps/baseball/`              | Baseball tracker | Vite + Lit + TanStack core                | Scorekeeping, client-side only               |
+| `apps/rss/`                   | RSS reader + API | Vite + Lit + TanStack core / Kotlin + JPA | Feed reading, PWA, hash routing              |
+| `apps/stock-game/`            | Stock game       | Vite + Lit + TanStack core                | Paper trading, hash routing                  |
+| `apps/lemmy-vertical-scroll/` | Lemmy scroller   | Vite + Lit + TanStack core                | Vertical feed scrolling                      |
+| `apps/clipstack/`             | Clipstack        | Vite + Lit + vertical-scroll-core         | Import a short-video link list and scroll it |
+| `apps/calendar-sync/`         | Calendar Sync    | Vite + Lit + calendar-core                | Trakt + Netflix → ICS / Google Calendar      |
+| `apps/radio-station/`         | Radio Station    | Vite + Lit + Kotlin API                   | 7-day Top 40 log generator                   |
 
 ## Packages
 
-| Path | Package | Purpose |
-|---|---|---|
-| `packages/web-components/` | `@baseball/web-components` | Baseball UI component library |
-| `packages/vertical-scroll-core/` | `vertical-scroll-core` | Generic vertical-scroller components |
-| `packages/calendar-core/` | `calendar-core` | ICS emit, Trakt/Netflix mappers, Google Calendar helpers |
+| Path                             | Package                    | Purpose                                                  |
+| -------------------------------- | -------------------------- | -------------------------------------------------------- |
+| `packages/web-components/`       | `@baseball/web-components` | Baseball UI component library                            |
+| `packages/vertical-scroll-core/` | `vertical-scroll-core`     | Generic vertical-scroller components                     |
+| `packages/calendar-core/`        | `calendar-core`            | ICS emit, Trakt/Netflix mappers, Google Calendar helpers |
 
 ## Getting started
 

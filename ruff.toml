@@ -1,0 +1,14 @@
+# Lint floor from AGENTS.md: ruff check, ruff format, ANN, C901 <= 15.
+# Quote style follows PEP 8 (double) for Python; single quotes are the TS rule.
+target-version = "py312"
+
+[lint]
+extend-select = ["ANN", "C90", "E", "F", "W", "I", "UP", "B"]
+
+[lint.mccabe]
+max-complexity = 15
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

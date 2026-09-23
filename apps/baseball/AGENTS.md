@@ -14,15 +14,15 @@ repo-root `AGENTS.md`.
 
 ## Commands
 
-| Task | Command |
-|---|---|
-| Dev server | `npm run dev` |
-| Build + type check | `npm run build` (`tsc --noEmit && vite build`) |
-| Lint | `npm run lint` (oxlint) |
-| Unit tests | `npm test` (vitest) |
-| Component tests | `npm --prefix ../../packages/web-components run test` |
-| Component build | `npm run build:components` |
-| E2E | `npm run test:e2e` (builds components, then Playwright) |
+| Task               | Command                                                 |
+| ------------------ | ------------------------------------------------------- |
+| Dev server         | `npm run dev`                                           |
+| Build + type check | `npm run build` (`tsc --noEmit && vite build`)          |
+| Lint               | `npm run lint` (oxlint)                                 |
+| Unit tests         | `npm test` (vitest)                                     |
+| Component tests    | `npm --prefix ../../packages/web-components run test`   |
+| Component build    | `npm run build:components`                              |
+| E2E                | `npm run test:e2e` (builds components, then Playwright) |
 
 After editing `packages/web-components`, rebuild it before the app.
 
