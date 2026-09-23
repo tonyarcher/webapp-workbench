@@ -11,14 +11,13 @@ import userapi.http.RequestIds
 import userapi.http.requestIdsFrom
 import userapi.log.log
 
+/** The status that means 'error' in the JSON log line. */
+private const val HTTP_INTERNAL_ERROR = 500
+
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class RequestIdFilter : OncePerRequestFilter() {
-    override fun doFilterInternal(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-        chain: FilterChain,
-    ) {
+    override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
         val ids = requestIdsFrom(request.getHeader("X-Request-ID"), request.getHeader("traceparent"))
         response.setHeader("X-Request-ID", ids.requestId)
         val started = System.nanoTime()
@@ -62,10 +61,9 @@ class RequestIdFilter : OncePerRequestFilter() {
         return extra
     }
 
-    private fun levelFor(status: Int, health: Boolean): String =
-        when {
-            status >= 500 -> "error"
-            health -> "debug"
-            else -> "info"
-        }
+    private fun levelFor(status: Int, health: Boolean): String = when {
+        status >= HTTP_INTERNAL_ERROR -> "error"
+        health -> "debug"
+        else -> "info"
+    }
 }

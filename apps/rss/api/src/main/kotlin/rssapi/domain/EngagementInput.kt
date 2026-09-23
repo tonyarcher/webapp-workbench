@@ -1,5 +1,20 @@
 package rssapi.domain
 
+/** Engagement points awarded per signal. */
+private const val MEDIA_POINTS = 2
+private const val SUBSTANCE_LONG_POINTS = 3
+private const val SUBSTANCE_MEDIUM_POINTS = 2
+private const val SUBSTANCE_SHORT_POINTS = 1
+private const val LINK_POINTS = 1
+
+/** Word-count tiers behind [substanceScore]. */
+private const val LONG_WORDS = 1000
+private const val MEDIUM_WORDS = 250
+private const val SHORT_WORDS = 50
+
+/** A body needs at least this many outbound links to read as a real post. */
+private const val LINK_THRESHOLD = 3
+
 data class EngagementInput(
     val title: String,
     val content: String? = null,
@@ -30,16 +45,16 @@ fun contentEngagement(input: EngagementInput): Double {
 }
 
 private fun mediaScore(input: EngagementInput, content: String): Int {
-    if (!input.media.isNullOrEmpty()) return 2
-    if (Regex("<img[\\s>]", RegexOption.IGNORE_CASE).containsMatchIn(content)) return 2
+    if (!input.media.isNullOrEmpty()) return MEDIA_POINTS
+    if (Regex("<img[\\s>]", RegexOption.IGNORE_CASE).containsMatchIn(content)) return MEDIA_POINTS
     return 0
 }
 
 private fun substanceScore(content: String): Int {
     val words = stripTags(content).split(Regex("\\s+")).filter { it.isNotEmpty() }.size
-    if (words >= 1000) return 3
-    if (words >= 250) return 2
-    if (words >= 50) return 1
+    if (words >= LONG_WORDS) return SUBSTANCE_LONG_POINTS
+    if (words >= MEDIUM_WORDS) return SUBSTANCE_MEDIUM_POINTS
+    if (words >= SHORT_WORDS) return SUBSTANCE_SHORT_POINTS
     return 0
 }
 
@@ -57,5 +72,5 @@ private fun titleScore(title: String): Int {
 
 private fun linkScore(content: String): Int {
     val count = Regex("<a[\\s>]", RegexOption.IGNORE_CASE).findAll(content).count()
-    return if (count >= 3) 1 else 0
+    return if (count >= LINK_THRESHOLD) LINK_POINTS else 0
 }

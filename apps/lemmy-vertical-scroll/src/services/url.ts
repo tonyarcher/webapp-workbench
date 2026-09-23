@@ -5,11 +5,11 @@
  * `data:` into an attribute.
  */
 export function safeUrl(url: string | null): string | null {
-    if (!url) return null
+    if (!url) return null;
     try {
-        const parsed = new URL(url)
-        return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? url : null
+        const parsed = new URL(url);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? url : null;
     } catch {
-        return null
+        return null;
     }
 }

@@ -1,4 +1,4 @@
-import type {SavedSession} from '../types';
+import type { SavedSession } from '../types';
 
 const KEY = 'radio-station.session.v1';
 

@@ -1,24 +1,24 @@
-import {applyStamp, isValidStamp} from './clock';
-import {isHalfTime, getRulebook, oppositeTeam} from './rulebook';
-import {creditStints, setPossession, startStint, teamSide} from './reduce-helpers';
-import type {FoulEvent, GameState, SetClockEvent, TimeoutEvent, TurnoverEvent} from './types';
-import {addStat, flipPossession} from './reduce-helpers';
-import {isOnCourt} from './lineup';
-import {bonusTripForFouls} from './reduce-shots';
+import { applyStamp, isValidStamp } from './clock';
+import { isHalfTime, getRulebook, oppositeTeam } from './rulebook';
+import { creditStints, setPossession, startStint, teamSide } from './reduce-helpers';
+import type { FoulEvent, GameState, SetClockEvent, TimeoutEvent, TurnoverEvent } from './types';
+import { addStat, flipPossession } from './reduce-helpers';
+import { isOnCourt } from './lineup';
+import { bonusTripForFouls } from './reduce-shots';
 
 export function applySetClock(game: GameState, event: SetClockEvent): GameState {
     if (!isValidStamp(event.clock)) return game;
     const next = creditStints(game, event.clock);
     const running = event.running ?? next.clock.running;
-    return {...next, clock: applyStamp(next.clock, event.clock, running)};
+    return { ...next, clock: applyStamp(next.clock, event.clock, running) };
 }
 
 export function applyTimeout(game: GameState, event: TimeoutEvent): GameState {
     const side = teamSide(game, event.team);
     if (side.timeouts <= 0) return game;
-    const nextSide = {...side, timeouts: side.timeouts - 1};
-    const withSide = event.team === 'home' ? {...game, home: nextSide} : {...game, away: nextSide};
-    return {...withSide, clock: {...withSide.clock, running: false}};
+    const nextSide = { ...side, timeouts: side.timeouts - 1 };
+    const withSide = event.team === 'home' ? { ...game, home: nextSide } : { ...game, away: nextSide };
+    return { ...withSide, clock: { ...withSide.clock, running: false } };
 }
 
 export function applyTurnover(game: GameState, event: TurnoverEvent): GameState {
@@ -42,7 +42,7 @@ export function applyFoul(game: GameState, event: FoulEvent): GameState {
     if (!isOnCourt(teamSide(game, event.team).onCourt, event.playerId)) return game;
     let next = creditStints(game, event.clock);
     next = addStat(next, event.playerId, 'pf', 1);
-    next = {...next, clock: {...next.clock, running: false}};
+    next = { ...next, clock: { ...next.clock, running: false } };
     if (event.offensive) return applyOffensiveFoul(next, event);
     next = addTeamFoul(next, event.team);
     return attachFoulTrip(next, event);
@@ -66,7 +66,7 @@ function attachFoulTrip(game: GameState, event: FoulEvent): GameState {
     }
     const trip = bonusTripForFouls(game, event.team, event.fouledId);
     if (!trip) return game;
-    return {...game, pendingFt: trip};
+    return { ...game, pendingFt: trip };
 }
 
 function applyOffensiveFoul(game: GameState, event: FoulEvent): GameState {
@@ -75,7 +75,7 @@ function applyOffensiveFoul(game: GameState, event: FoulEvent): GameState {
 }
 
 function addTeamFoul(game: GameState, team: GameState['home']['id']): GameState {
-    return {...game, teamFouls: {...game.teamFouls, [team]: game.teamFouls[team] + 1}};
+    return { ...game, teamFouls: { ...game.teamFouls, [team]: game.teamFouls[team] + 1 } };
 }
 
 export function applyPeriodEnd(game: GameState): GameState {
@@ -95,7 +95,7 @@ export function applyPeriodEnd(game: GameState): GameState {
         );
     }
     if (credited.score.home !== credited.score.away) {
-        return {...credited, over: true, pendingFt: null, clock: {...credited.clock, running: false}};
+        return { ...credited, over: true, pendingFt: null, clock: { ...credited.clock, running: false } };
     }
     return nextPeriod(credited, rb.otLengthSeconds, false, true);
 }
@@ -119,16 +119,17 @@ function periodShell(
     flipBaskets: boolean,
     resetFouls: boolean,
 ): GameState {
-    const sides = period > rb.regulationPeriods
-        ? {home: {...game.home, timeouts: 1}, away: {...game.away, timeouts: 1}}
-        : {home: game.home, away: game.away};
-    const stamp = {period, gameClockSeconds: length, shotClockSeconds: rb.shotClockSeconds};
+    const sides =
+        period > rb.regulationPeriods
+            ? { home: { ...game.home, timeouts: 1 }, away: { ...game.away, timeouts: 1 } }
+            : { home: game.home, away: game.away };
+    const stamp = { period, gameClockSeconds: length, shotClockSeconds: rb.shotClockSeconds };
     return {
         ...game,
         ...sides,
         homeAttacksLeft: flipBaskets ? !game.homeAttacksLeft : game.homeAttacksLeft,
         pendingFt: null,
-        teamFouls: resetFouls ? {home: 0, away: 0} : game.teamFouls,
+        teamFouls: resetFouls ? { home: 0, away: 0 } : game.teamFouls,
         clock: applyStamp(game.clock, stamp, false),
         stintStart: {},
     };

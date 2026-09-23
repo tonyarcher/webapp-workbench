@@ -1,7 +1,7 @@
-import {describe, expect, it} from 'vitest';
-import type {Play, Situation} from 'football-core';
-import {FIELD_HEIGHT, FIELD_WIDTH, fgTarget, kickAim, playFlight} from './field-geom';
-import {paintFieldSvg, playPath} from './field-paint';
+import { describe, expect, it } from 'vitest';
+import type { Play, Situation } from 'football-core';
+import { FIELD_HEIGHT, FIELD_WIDTH, fgTarget, kickAim, playFlight } from './field-geom';
+import { paintFieldSvg, playPath } from './field-paint';
 
 const situation: Situation = {
     down: 1,
@@ -31,15 +31,15 @@ function fgPlay(id: string, made: boolean): Play {
         id,
         driveId: 'd1',
         period: 1,
-        clock: {snap: 700, dead: 694, playClockAtSnap: 40, stopReason: 'score'},
+        clock: { snap: 700, dead: 694, playClockAtSnap: 40, stopReason: 'score' },
         situation,
-        personnel: {offense: [], defense: [], grouping: ''},
-        call: {family: 'field_goal', concept: 'unknown', formation: ''},
+        personnel: { offense: [], defense: [], grouping: '' },
+        call: { family: 'field_goal', concept: 'unknown', formation: '' },
         events: [],
         result: {
             yards: 0,
             firstDown: false,
-            ...(scoring === undefined ? {} : {scoring}),
+            ...(scoring === undefined ? {} : { scoring }),
             deadAtYardline100: 0,
             outOfBounds: false,
             incomplete: false,
@@ -106,7 +106,7 @@ describe('paintFieldSvg', () => {
     });
 
     it('escapes end-zone names', () => {
-        const markup = paint({homeName: 'A&B <C>'});
+        const markup = paint({ homeName: 'A&B <C>' });
         expect(markup).toContain('A&amp;B &lt;C&gt;');
         expect(markup).not.toContain('A&B <C>');
     });
@@ -114,22 +114,26 @@ describe('paintFieldSvg', () => {
 
 describe('playPath', () => {
     it('draws a run as a straight horizontal line', () => {
-        expect(playPath({
-            kind: 'run',
-            fromX: 100,
-            toX: 200,
-            fromY: 50,
-            toY: 50,
-        })).toBe('M 100 50 L 200 50');
+        expect(
+            playPath({
+                kind: 'run',
+                fromX: 100,
+                toX: 200,
+                fromY: 50,
+                toY: 50,
+            }),
+        ).toBe('M 100 50 L 200 50');
     });
 
     it('sends a made field goal through the posts', () => {
         const flight = playFlight(fgPlay('p-good', true));
-        expect(flight).toEqual(expect.objectContaining({
-            kind: 'fg',
-            aim: 'through',
-            toY: FIELD_HEIGHT / 2,
-        }));
+        expect(flight).toEqual(
+            expect.objectContaining({
+                kind: 'fg',
+                aim: 'through',
+                toY: FIELD_HEIGHT / 2,
+            }),
+        );
         if (!flight) return;
         expect(flight.toX).toBeGreaterThan(FIELD_WIDTH);
         expect(playPath(flight)).toContain(` ${flight.toX} `);
@@ -141,7 +145,7 @@ describe('kickAim', () => {
         expect(kickAim(fgPlay('p-good', true))).toBe('through');
         const miss = kickAim(fgPlay('p-miss', false));
         expect(miss === 'left' || miss === 'right').toBe(true);
-        const {toY} = fgTarget(400, FIELD_HEIGHT / 2, 'home', miss);
+        const { toY } = fgTarget(400, FIELD_HEIGHT / 2, 'home', miss);
         expect(toY).not.toBe(FIELD_HEIGHT / 2);
     });
 });

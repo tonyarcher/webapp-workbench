@@ -1,12 +1,6 @@
 package stockgame.domain
 
-fun shouldFillQuote(
-    quote: Double,
-    side: String,
-    orderType: String,
-    limitPrice: Double?,
-    stopPrice: Double?,
-): Boolean {
+fun shouldFillQuote(quote: Double, side: String, orderType: String, limitPrice: Double?, stopPrice: Double?): Boolean {
     if (orderType == "market") return true
     if (orderType == "limit") return shouldLimit(quote, side, limitPrice)
     if (orderType == "stop") return shouldStop(quote, side, stopPrice)
@@ -25,8 +19,11 @@ private fun shouldStop(quote: Double, side: String, stop: Double?): Boolean {
 
 private fun shouldStopLimit(quote: Double, side: String, limit: Double?, stop: Double?): Boolean {
     if (limit == null || stop == null) return false
-    return if (side == "sell" || side == "short") quote <= stop && quote >= limit
-    else quote >= stop && quote <= limit
+    return if (side == "sell" || side == "short") {
+        quote <= stop && quote >= limit
+    } else {
+        quote >= stop && quote <= limit
+    }
 }
 
 fun quoteFillPrice(quote: Quote, source: String): Double {

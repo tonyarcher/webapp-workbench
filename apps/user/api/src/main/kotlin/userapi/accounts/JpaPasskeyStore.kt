@@ -1,16 +1,13 @@
 package userapi.accounts
 
-import java.security.SecureRandom
-import java.util.UUID
 import org.springframework.transaction.annotation.Transactional
 import userapi.persist.PasskeyEntity
 import userapi.persist.PasskeyRepo
 import userapi.persist.UserRepo
+import java.security.SecureRandom
+import java.util.UUID
 
-open class JpaPasskeyStore(
-    private val passkeys: PasskeyRepo,
-    private val users: UserRepo,
-) : PasskeyStore {
+open class JpaPasskeyStore(private val passkeys: PasskeyRepo, private val users: UserRepo) : PasskeyStore {
     private val random = SecureRandom()
 
     @Transactional
@@ -22,14 +19,11 @@ open class JpaPasskeyStore(
         return readHandle(users, userId) ?: handle
     }
 
-    override fun usernameForHandle(handle: ByteArray): String? =
-        users.findByWebauthnHandle(handle)?.username
+    override fun usernameForHandle(handle: ByteArray): String? = users.findByWebauthnHandle(handle)?.username
 
-    override fun handleForUsername(username: String): ByteArray? =
-        users.findByUsername(username)?.webauthnHandle
+    override fun handleForUsername(username: String): ByteArray? = users.findByUsername(username)?.webauthnHandle
 
-    override fun userIdForUsername(username: String): UUID? =
-        users.findByUsername(username)?.id
+    override fun userIdForUsername(username: String): UUID? = users.findByUsername(username)?.id
 
     override fun insertPasskey(row: StoredPasskey) {
         passkeys.save(
@@ -62,8 +56,7 @@ open class JpaPasskeyStore(
     override fun countForUser(userId: UUID): Int = passkeys.countByUserId(userId)
 }
 
-private fun readHandle(users: UserRepo, userId: UUID): ByteArray? =
-    users.findById(userId).orElse(null)?.webauthnHandle
+private fun readHandle(users: UserRepo, userId: UUID): ByteArray? = users.findById(userId).orElse(null)?.webauthnHandle
 
 private fun writeHandle(users: UserRepo, userId: UUID, handle: ByteArray) {
     val user = users.findById(userId).orElse(null) ?: return

@@ -1,7 +1,6 @@
 package rssapi.web
 
-import java.net.URI
-import java.util.UUID
+import org.springframework.http.HttpStatus
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -20,6 +19,8 @@ import rssapi.persist.FeedSyncRepo
 import rssapi.persist.FolderRepo
 import rssapi.persist.SubscriptionEntity
 import rssapi.persist.SubscriptionRepo
+import java.net.URI
+import java.util.UUID
 
 @RestController
 class FeedController(
@@ -35,8 +36,9 @@ class FeedController(
 ) {
     @PostMapping("/feeds", headers = ["X-Api-Version=1"])
     fun create(@RequestBody body: CreateFeedBody): FeedJson {
-        val url = body.url ?: throw ApiException(400, "url is required")
-        val validated = safeHttpUrl(url) ?: throw ApiException(400, "Invalid feed URL (must be http/https)")
+        val url = body.url ?: throw ApiException(HttpStatus.BAD_REQUEST, "url is required")
+        val validated =
+            safeHttpUrl(url) ?: throw ApiException(HttpStatus.BAD_REQUEST, "Invalid feed URL (must be http/https)")
         val folderIds = parseFolderIds(body.folderIds ?: emptyList())
         requireOwnedFolders(folderIds)
         val title = URI(validated).toURL().host
@@ -51,7 +53,7 @@ class FeedController(
     @DeleteMapping("/feeds/{id}", headers = ["X-Api-Version=1"])
     @Transactional
     fun delete(@PathVariable id: String): OkBody {
-        if (!isUuid(id)) throw ApiException(400, "invalid feed id")
+        if (!isUuid(id)) throw ApiException(HttpStatus.BAD_REQUEST, "invalid feed id")
         val feedId = UUID.fromString(id)
         requireSubscribed(feedId)
         subs.deleteByUserIdAndFeedId(user.id, feedId)
@@ -65,8 +67,8 @@ class FeedController(
     @PutMapping("/feeds/{id}/folders", headers = ["X-Api-Version=1"])
     @Transactional
     fun setFolders(@PathVariable id: String, @RequestBody body: FolderIdsBody): OkBody {
-        if (!isUuid(id)) throw ApiException(400, "invalid feed id")
-        val folderIds = body.folderIds ?: throw ApiException(400, "folderIds array is required")
+        if (!isUuid(id)) throw ApiException(HttpStatus.BAD_REQUEST, "invalid feed id")
+        val folderIds = body.folderIds ?: throw ApiException(HttpStatus.BAD_REQUEST, "folderIds array is required")
         val feedId = UUID.fromString(id)
         requireSubscribed(feedId)
         val uuids = parseFolderIds(folderIds)
@@ -78,7 +80,7 @@ class FeedController(
 
     private fun loadedFeed(feedId: UUID): FeedJson {
         requireSubscribed(feedId)
-        val fresh = feeds.findById(feedId).orElseThrow { ApiException(404, "Feed not found") }
+        val fresh = feeds.findById(feedId).orElseThrow { ApiException(HttpStatus.NOT_FOUND, "Feed not found") }
         val st = syncRows.findById(feedId).orElse(null)
         return fresh.toJson(
             membershipService.ownedFolderIds(user.id, feedId),
@@ -89,7 +91,7 @@ class FeedController(
     }
 
     private fun requireSubscribed(feedId: UUID) {
-        if (!subs.existsByUserIdAndFeedId(user.id, feedId)) throw ApiException(404, "Feed not found")
+        if (!subs.existsByUserIdAndFeedId(user.id, feedId)) throw ApiException(HttpStatus.NOT_FOUND, "Feed not found")
     }
 
     private fun ensureSubscribed(feedId: UUID) {
@@ -107,11 +109,11 @@ class FeedController(
     private fun requireOwnedFolders(ids: List<UUID>) {
         if (ids.isEmpty()) return
         val owned = folders.findByUserIdAndIdIn(user.id, ids)
-        if (owned.size != ids.size) throw ApiException(400, "Unknown folder in folderIds")
+        if (owned.size != ids.size) throw ApiException(HttpStatus.BAD_REQUEST, "Unknown folder in folderIds")
     }
 
     private fun parseFolderIds(raw: List<String>): List<UUID> {
-        if (raw.any { !isUuid(it) }) throw ApiException(400, "Unknown folder in folderIds")
+        if (raw.any { !isUuid(it) }) throw ApiException(HttpStatus.BAD_REQUEST, "Unknown folder in folderIds")
         return raw.map { UUID.fromString(it) }
     }
 }

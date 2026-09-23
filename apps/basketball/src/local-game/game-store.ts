@@ -1,8 +1,8 @@
-import {createGame, reduce, SCORING_EVENT_TYPES} from 'basketball-core';
-import type {ScoringEvent} from 'basketball-core';
-import type {LiveLocalGameState} from './game-state';
-import type {LocalGameEventRecord, LocalGameSetup} from './game-types';
-import {clearGameState, loadGameState, saveGameState} from './save-state';
+import { createGame, reduce, SCORING_EVENT_TYPES } from 'basketball-core';
+import type { ScoringEvent } from 'basketball-core';
+import type { LiveLocalGameState } from './game-state';
+import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
+import { clearGameState, loadGameState, saveGameState } from './save-state';
 
 export class GameStore {
     private state: LiveLocalGameState | null = null;
@@ -61,12 +61,16 @@ export class GameStore {
         this.nextEventId += 1;
         const engine = reduce(previous.engine, event);
         const debounce = previous.setup.mode === 'watch' && !engine.over;
-        this.setState({
-            setup: previous.setup,
-            engine,
-            historyIndex: previous.historyIndex + 1,
-            events: [...previous.events.slice(0, previous.historyIndex), record],
-        }, true, debounce);
+        this.setState(
+            {
+                setup: previous.setup,
+                engine,
+                historyIndex: previous.historyIndex + 1,
+                events: [...previous.events.slice(0, previous.historyIndex), record],
+            },
+            true,
+            debounce,
+        );
     }
 
     undo(): void {
@@ -103,7 +107,7 @@ export class GameStore {
         for (const record of state.events.slice(0, historyIndex)) {
             engine = reduce(engine, record.event);
         }
-        this.setState({...state, engine, historyIndex});
+        this.setState({ ...state, engine, historyIndex });
     }
 
     private setState(state: LiveLocalGameState | null, persist = true, debounce = false): void {

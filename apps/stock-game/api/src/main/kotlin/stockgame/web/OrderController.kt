@@ -1,6 +1,7 @@
 package stockgame.web
 
 import org.springframework.beans.factory.ObjectProvider
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -25,10 +26,7 @@ data class PlaceOrderBody(
 data class OkBody(val ok: Boolean = true)
 
 @RestController
-class OrderController(
-    private val user: IdentityUser,
-    private val trading: ObjectProvider<TradingService>,
-) {
+class OrderController(private val user: IdentityUser, private val trading: ObjectProvider<TradingService>) {
     @GetMapping("/orders", headers = ["X-Api-Version=1"])
     fun list(): List<Order> {
         val svc = trading.orOffline()
@@ -39,7 +37,7 @@ class OrderController(
     @PostMapping("/orders", headers = ["X-Api-Version=1"])
     fun place(@RequestBody body: PlaceOrderBody): Order {
         val symbol = body.symbol.trim().uppercase()
-        if (symbol.isEmpty() || body.qty <= 0) throw ApiException(400, "invalid order")
+        if (symbol.isEmpty() || body.qty <= 0) throw ApiException(HttpStatus.BAD_REQUEST, "invalid order")
         val orderType = requireOrderType(body.orderType ?: "market")
         val tif = requireTif(body.tif ?: "GTC")
         if (body.fillPriceSource != null) requireFillSource(body.fillPriceSource)

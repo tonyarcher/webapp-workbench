@@ -1,5 +1,8 @@
 package userapi.accounts
 
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import userapi.Settings
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -8,9 +11,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
-import userapi.Settings
 
 class PasskeyServiceBranchTest {
     private val clock = Clock.fixed(Instant.parse("2026-09-11T17:00:00Z"), ZoneOffset.UTC)

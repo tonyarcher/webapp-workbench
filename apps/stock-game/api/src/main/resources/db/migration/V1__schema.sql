@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS orders (
     created_at bigint NOT NULL,
     trade_id bigint UNIQUE REFERENCES trades (id),
     order_type text NOT NULL DEFAULT 'market'
-        CHECK (order_type IN ('market', 'limit', 'stop', 'stopLimit')),
+    CHECK (order_type IN ('market', 'limit', 'stop', 'stopLimit')),
     tif text NOT NULL DEFAULT 'GTC' CHECK (tif IN ('DAY', 'GTC')),
     limit_price double precision,
     stop_price double precision,

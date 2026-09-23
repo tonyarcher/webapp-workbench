@@ -1,4 +1,4 @@
-import type {Player} from './types';
+import type { Player } from './types';
 
 export const ON_COURT = 5;
 

@@ -14,7 +14,7 @@ declare module 'sql.js' {
         Database: typeof Database;
     }
 
-    export default function initSqlJs(config?: {locateFile?: (file: string) => string}): Promise<SqlJsStatic>;
+    export default function initSqlJs(config?: { locateFile?: (file: string) => string }): Promise<SqlJsStatic>;
 }
 
 declare module 'sql.js/dist/sql-wasm.wasm?url' {

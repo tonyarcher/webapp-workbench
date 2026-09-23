@@ -1,14 +1,15 @@
 package fitnessapi.http
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import fitnessapi.web.HealthController
+import fitnessapi.web.RequestIdFilter
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
-import fitnessapi.web.HealthController
-import fitnessapi.web.RequestIdFilter
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 @WebMvcTest(HealthController::class)
 @Import(RequestIdFilter::class)
@@ -26,7 +27,7 @@ class HealthRoutesTest {
     @Test
     fun readyzUnavailableWithoutDatabase() {
         val response = mvc.get("/readyz").andReturn()
-        assertEquals(503, response.response.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), response.response.status)
         assertEquals("""{"ok":false}""", response.response.contentAsString)
     }
 

@@ -1,12 +1,12 @@
 package userapi.http
 
-import java.time.Instant
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 import userapi.accounts.OAuthStore
 import userapi.accounts.StoredAuthCode
 import userapi.accounts.StoredRefresh
 import userapi.domain.OAuthClient
+import java.time.Instant
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class FakeOAuthStore : OAuthStore {
     var jwk: String? = null
@@ -43,13 +43,7 @@ class FakeOAuthStore : OAuthStore {
         return if (pair.second.isAfter(now)) pair.first else null
     }
 
-    override fun insertRefresh(
-        tokenHash: String,
-        familyId: UUID,
-        userId: UUID,
-        clientId: String,
-        expiresAt: Instant,
-    ) {
+    override fun insertRefresh(tokenHash: String, familyId: UUID, userId: UUID, clientId: String, expiresAt: Instant) {
         refresh[tokenHash] = StoredRefresh(familyId, userId, clientId, revoked = false)
         refreshExp[tokenHash] = expiresAt
     }

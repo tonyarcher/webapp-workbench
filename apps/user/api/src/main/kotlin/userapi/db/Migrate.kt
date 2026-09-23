@@ -1,7 +1,7 @@
 package userapi.db
 
-import javax.sql.DataSource
 import org.flywaydb.core.Flyway
+import javax.sql.DataSource
 
 fun migrate(dataSource: DataSource) {
     Flyway.configure()

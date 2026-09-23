@@ -1,4 +1,4 @@
-import type {Play, PlayFamily, TeamId} from 'football-core';
+import type { Play, PlayFamily, TeamId } from 'football-core';
 
 /** SVG units: 10 per yard. Home goal line at x=100, away at x=1100. */
 export const FIELD_SCALE = 10;
@@ -99,7 +99,7 @@ export function kickAim(play: Play): FgAim {
  * Straight kick that crosses the post plane at the aim point, then runs past it.
  * The origin is needed so the frozen ball continues along the same line.
  */
-export function fgTarget(fromX: number, fromY: number, possession: TeamId, aim: FgAim): {toX: number; toY: number} {
+export function fgTarget(fromX: number, fromY: number, possession: TeamId, aim: FgAim): { toX: number; toY: number } {
     const towardAway = possession === 'home';
     const postX = towardAway ? FIELD_WIDTH : 0;
     let aimY = POST_CENTER_Y;
@@ -113,7 +113,7 @@ export function fgTarget(fromX: number, fromY: number, possession: TeamId, aim: 
     const dist = Math.hypot(dx, dy) || 1;
     const ux = dx / dist;
     const uy = dy / dist;
-    return {toX: postX + ux * POST_PAST, toY: aimY + uy * POST_PAST};
+    return { toX: postX + ux * POST_PAST, toY: aimY + uy * POST_PAST };
 }
 
 export function playFlight(play: Play): PlayFlight | null {
@@ -124,11 +124,11 @@ export function playFlight(play: Play): PlayFlight | null {
     const fromX = ballX(play.situation.yardline100, poss);
     if (kind === 'fg') {
         const aim = kickAim(play);
-        const {toX, toY} = fgTarget(fromX, fromY, poss, aim);
-        return {kind, fromX, fromY, toX, toY, aim};
+        const { toX, toY } = fgTarget(fromX, fromY, poss, aim);
+        return { kind, fromX, fromY, toX, toY, aim };
     }
     const dir = poss === 'home' ? 1 : -1;
     const yards = play.result.incomplete ? 12 : play.result.yards;
     const toX = xFromHomeYards(yardsFromHomeGoal(play.situation.yardline100, poss) + dir * yards);
-    return {kind, fromX, fromY, toX, toY: fromY};
+    return { kind, fromX, fromY, toX, toY: fromY };
 }

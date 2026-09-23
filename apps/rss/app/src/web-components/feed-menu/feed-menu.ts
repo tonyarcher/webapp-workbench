@@ -1,6 +1,6 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, property, state} from 'lit/decorators.js';
-import type {Feed, Folder} from '../../types';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import type { Feed, Folder } from '../../types';
 import styles from './feed-menu.css?inline';
 
 export interface MenuAnchor {
@@ -12,10 +12,10 @@ export interface MenuAnchor {
 export class FeedMenu extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) feed: Feed | null = null;
-    @property({attribute: false}) folders: Folder[] = [];
-    @property({attribute: false}) open = false;
-    @property({attribute: false}) anchor: MenuAnchor | null = null;
+    @property({ attribute: false }) feed: Feed | null = null;
+    @property({ attribute: false }) folders: Folder[] = [];
+    @property({ attribute: false }) open = false;
+    @property({ attribute: false }) anchor: MenuAnchor | null = null;
 
     @state() private selected = new Set<string>();
 
@@ -76,7 +76,8 @@ export class FeedMenu extends LitElement {
     }
 
     private renderFolderSection() {
-        if (!this.folders.length) return html`<div class="hint">No folders yet. Import an OPML file to create some.</div>`;
+        if (!this.folders.length)
+            return html`<div class="hint">No folders yet. Import an OPML file to create some.</div>`;
         return html`<div class="folder-list">${this.folders.map((f) => this.renderFolderOpt(f))}</div>`;
     }
 
@@ -109,7 +110,7 @@ export class FeedMenu extends LitElement {
         if (!el) return;
         const margin = 8;
         const rect = el.getBoundingClientRect();
-        let {left, top} = rect;
+        let { left, top } = rect;
         if (rect.right > window.innerWidth - margin) {
             left = Math.max(margin, window.innerWidth - rect.width - margin);
         }
@@ -132,7 +133,7 @@ export class FeedMenu extends LitElement {
     };
 
     private emitClose() {
-        this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     }
 
     private toggleFolder(id: string, checked: boolean) {
@@ -153,11 +154,11 @@ export class FeedMenu extends LitElement {
     }
 
     private emitRefresh() {
-        this.dispatchEvent(new CustomEvent('refresh', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('refresh', { bubbles: true, composed: true }));
     }
 
     private emitDelete() {
-        this.dispatchEvent(new CustomEvent('delete', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('delete', { bubbles: true, composed: true }));
     }
 }
 

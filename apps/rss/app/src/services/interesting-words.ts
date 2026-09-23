@@ -21,12 +21,64 @@ export const READ_WORD_WEIGHT = 1;
  * Tokens shorter than 3 letters are dropped separately by extractWords.
  */
 export const STOPWORDS: ReadonlySet<string> = new Set([
-    'the', 'a', 'an', 'and', 'or', 'of', 'to', 'in', 'on', 'for', 'with',
-    'at', 'by', 'from', 'as', 'is', 'are', 'was', 'were', 'be', 'been',
-    'it', 'its', 'this', 'that', 'these', 'those', 'you', 'your', 'we',
-    'our', 'he', 'she', 'they', 'their', 'his', 'her', 'but', 'not', 'no',
-    'so', 'if', 'then', 'than', 'too', 'very', 'can', 'will', 'just',
-    'about', 'into', 'over', 'after', 'before', 'up', 'out', 'off', 'vs',
+    'the',
+    'a',
+    'an',
+    'and',
+    'or',
+    'of',
+    'to',
+    'in',
+    'on',
+    'for',
+    'with',
+    'at',
+    'by',
+    'from',
+    'as',
+    'is',
+    'are',
+    'was',
+    'were',
+    'be',
+    'been',
+    'it',
+    'its',
+    'this',
+    'that',
+    'these',
+    'those',
+    'you',
+    'your',
+    'we',
+    'our',
+    'he',
+    'she',
+    'they',
+    'their',
+    'his',
+    'her',
+    'but',
+    'not',
+    'no',
+    'so',
+    'if',
+    'then',
+    'than',
+    'too',
+    'very',
+    'can',
+    'will',
+    'just',
+    'about',
+    'into',
+    'over',
+    'after',
+    'before',
+    'up',
+    'out',
+    'off',
+    'vs',
 ]);
 
 /**
@@ -81,7 +133,7 @@ export interface ScoredWord {
 export function topWords(wordMap: Record<string, number>, n: number): ScoredWord[] {
     if (n <= 0) return [];
     return Object.entries(wordMap)
-        .map(([word, score]) => ({word, score}))
+        .map(([word, score]) => ({ word, score }))
         .sort((a, b) => b.score - a.score || (a.word < b.word ? -1 : a.word > b.word ? 1 : 0))
         .slice(0, n);
 }
@@ -90,9 +142,13 @@ export function topWords(wordMap: Record<string, number>, n: number): ScoredWord
  * Rank articles by their interestingScore desc, ties broken on id
  * (deterministic). Returns a new array; the input is never mutated.
  */
-export function rankInteresting<T extends { id: string; title: string }>(articles: T[], wordMap: Record<string, number>): T[] {
+export function rankInteresting<T extends { id: string; title: string }>(
+    articles: T[],
+    wordMap: Record<string, number>,
+): T[] {
     return [...articles].sort(
-        (a, b) => interestingScore(b, wordMap) - interestingScore(a, wordMap) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+        (a, b) =>
+            interestingScore(b, wordMap) - interestingScore(a, wordMap) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
     );
 }
 
@@ -116,11 +172,11 @@ export function toJevState(
     affinity: Record<string, number>,
     maxChars: number,
 ): string {
-    let candidates = articles.map((a) => ({id: a.id, title: a.title, feed: a.feedId, hot: a.hot}));
+    let candidates = articles.map((a) => ({ id: a.id, title: a.title, feed: a.feedId, hot: a.hot }));
     const words: Record<string, number> = {};
-    for (const {word, score} of topWords(wordMap, 50)) words[word] = score;
-    const aff: Record<string, number> = {...affinity};
-    const encode = () => JSON.stringify({candidates, wordScores: words, affinity: aff});
+    for (const { word, score } of topWords(wordMap, 50)) words[word] = score;
+    const aff: Record<string, number> = { ...affinity };
+    const encode = () => JSON.stringify({ candidates, wordScores: words, affinity: aff });
     let out = encode();
     while (out.length > maxChars && candidates.length > 0) {
         candidates = candidates.slice(0, -1);

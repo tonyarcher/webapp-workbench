@@ -1,5 +1,4 @@
 package stockgame.web
-
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.context.annotation.Bean
@@ -21,6 +20,9 @@ import org.springframework.security.oauth2.jwt.JwtTimestampValidator
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.SecurityFilterChain
+
+/** Unauthenticated request handling for the resource server. */
+private const val HTTP_UNAUTHORIZED = 401
 
 @Configuration
 @EnableWebSecurity
@@ -52,7 +54,7 @@ class SecurityConfig {
 
     private fun unauthorizedEntryPoint(): AuthenticationEntryPoint =
         AuthenticationEntryPoint { _: HttpServletRequest, response: HttpServletResponse, _: AuthenticationException? ->
-            response.status = 401
+            response.status = HTTP_UNAUTHORIZED
             response.contentType = "application/json"
             response.writer.write("""{"error":"unauthorized"}""")
         }
@@ -74,9 +76,11 @@ class SecurityConfig {
     }
 }
 
-internal fun audienceValidator(audience: String): OAuth2TokenValidator<Jwt> =
-    OAuth2TokenValidator { token: Jwt ->
-        val aud = token.audience ?: emptyList()
-        if (aud.contains(audience)) OAuth2TokenValidatorResult.success()
-        else OAuth2TokenValidatorResult.failure(OAuth2Error("invalid_token", "bad audience", null))
+internal fun audienceValidator(audience: String): OAuth2TokenValidator<Jwt> = OAuth2TokenValidator { token: Jwt ->
+    val aud = token.audience ?: emptyList()
+    if (aud.contains(audience)) {
+        OAuth2TokenValidatorResult.success()
+    } else {
+        OAuth2TokenValidatorResult.failure(OAuth2Error("invalid_token", "bad audience", null))
     }
+}

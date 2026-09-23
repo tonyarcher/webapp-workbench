@@ -1,5 +1,5 @@
-import type {GameSetup, ScoringEvent} from 'basketball-core';
-import type {SimRatings} from '../sim/types';
+import type { GameSetup, ScoringEvent } from 'basketball-core';
+import type { SimRatings } from '../sim/types';
 
 export interface LocalGameEventRecord {
     id: number;

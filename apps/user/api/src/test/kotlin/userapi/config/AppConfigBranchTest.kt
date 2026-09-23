@@ -1,10 +1,10 @@
 package userapi.config
 
+import org.mockito.kotlin.mock
+import userapi.accounts.OAuthStore
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
-import org.mockito.kotlin.mock
-import userapi.accounts.OAuthStore
 
 class AppConfigBranchTest {
     @Test

@@ -1,13 +1,13 @@
 package fitnessapi.persist
 
-import java.io.Serializable
-import java.time.LocalDate
-import java.util.UUID
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.IdClass
 import jakarta.persistence.Table
+import java.io.Serializable
+import java.time.LocalDate
+import java.util.UUID
 
 data class DailyRollupId(
     var userId: UUID = UUID(0, 0),

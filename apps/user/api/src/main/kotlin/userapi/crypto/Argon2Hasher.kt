@@ -15,9 +15,7 @@ class Argon2Hasher : PasswordHasher {
     private val fn: Argon2Function =
         Argon2Function.getInstance(MEMORY_KIB, ITERATIONS, PARALLELISM, HASH_LENGTH, Argon2.ID)
 
-    override fun hash(password: String): String {
-        return Password.hash(password).addRandomSalt().with(fn).result
-    }
+    override fun hash(password: String): String = Password.hash(password).addRandomSalt().with(fn).result
 
     override fun verify(password: String, passwordHash: String): Boolean {
         if (passwordHash.isBlank()) return false

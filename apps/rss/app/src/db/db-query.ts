@@ -1,8 +1,8 @@
-import type {IDBPCursorWithValue} from 'idb';
-import {contentEngagement, hotScore} from '../services/ranking';
-import type {Article} from '../types';
-import {getDb} from './db-base';
-import type {ReaderDB} from './db-base';
+import type { IDBPCursorWithValue } from 'idb';
+import { contentEngagement, hotScore } from '../services/ranking';
+import type { Article } from '../types';
+import { getDb } from './db-base';
+import type { ReaderDB } from './db-base';
 
 export async function getArticle(id: string): Promise<Article | undefined> {
     return (await getDb()).get('articles', id);
@@ -33,11 +33,7 @@ function pickIndex(feedId: string | undefined, sort: ArticleSort): string {
     return sort === 'hot' ? 'byHot' : 'byPublished';
 }
 
-function feedRange(
-    feedId: string,
-    cursor: ArticleCursor | undefined,
-    descending: boolean,
-): IDBKeyRange {
+function feedRange(feedId: string, cursor: ArticleCursor | undefined, descending: boolean): IDBKeyRange {
     const lower: [string, number, string] = [feedId, Number.NEGATIVE_INFINITY, ''];
     const upper: [string, number, string] = [feedId, Number.POSITIVE_INFINITY, ''];
     if (!cursor) return IDBKeyRange.bound(lower, upper);
@@ -80,7 +76,7 @@ export async function queryArticles({
         unreadOnly ? (a: Article) => a.read === 0 : undefined,
     );
     const hasMore = raw.length >= limit;
-    return {items: raw, hasMore};
+    return { items: raw, hasMore };
 }
 
 async function takeFromCursor(
@@ -145,7 +141,7 @@ async function recomputeAllHot(db: Awaited<ReturnType<typeof getDb>>) {
         await cursor.update(article as Article);
         cursor = await cursor.continue();
     }
-    await tx.objectStore('meta').put({key: 'hot-version', value: HOT_VERSION});
+    await tx.objectStore('meta').put({ key: 'hot-version', value: HOT_VERSION });
     await tx.done;
 }
 
@@ -156,7 +152,9 @@ export async function reconcileUnreadCounts(): Promise<void> {
     const feedStore = tx.objectStore('feeds');
     const feeds = await feedStore.getAll();
     for (const feed of feeds) {
-        const unread = (await articleStore.index('byFeedRead').getAllKeys(IDBKeyRange.bound([feed.id, 0], [feed.id, 0]))).length;
+        const unread = (
+            await articleStore.index('byFeedRead').getAllKeys(IDBKeyRange.bound([feed.id, 0], [feed.id, 0]))
+        ).length;
         if (feed.unread !== unread) {
             feed.unread = unread;
             await feedStore.put(feed);

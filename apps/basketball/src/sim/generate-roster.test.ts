@@ -1,6 +1,6 @@
-import {describe, expect, it} from 'vitest';
-import {mulberry32} from './rng';
-import {generateMatchup, generateSide} from './generate-roster';
+import { describe, expect, it } from 'vitest';
+import { mulberry32 } from './rng';
+import { generateMatchup, generateSide } from './generate-roster';
 
 describe('generate-roster', () => {
     it('builds unique names and twelve players', () => {

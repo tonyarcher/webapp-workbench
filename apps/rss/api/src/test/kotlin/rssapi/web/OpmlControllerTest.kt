@@ -1,6 +1,5 @@
 package rssapi.web
 
-import java.util.UUID
 import org.hamcrest.Matchers
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -23,6 +22,7 @@ import rssapi.persist.FolderRepo
 import rssapi.persist.SubscriptionRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import java.util.UUID
 
 private fun opmlJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")

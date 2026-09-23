@@ -10,11 +10,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 import userapi.domain.tokenEquals
 
 class CsrfFilter(private val mapper: ObjectMapper) : OncePerRequestFilter() {
-    override fun doFilterInternal(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-        chain: FilterChain,
-    ) {
+    override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
         if (needsCsrf(request) && !csrfOk(request)) {
             rejectCsrf(response)
             return

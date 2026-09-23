@@ -1,7 +1,5 @@
 package rssapi.web
 
-import java.util.Optional
-import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
@@ -10,6 +8,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -24,12 +23,14 @@ import rssapi.persist.FeedRepo
 import rssapi.persist.FeedSyncRepo
 import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
+import rssapi.persist.SubscriptionEntity
 import rssapi.persist.SubscriptionRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import java.util.Optional
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import rssapi.persist.SubscriptionEntity
 
 private fun jwt(sub: String, name: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")
@@ -76,7 +77,7 @@ class AuthTest {
         val result = mvc.get("/library") {
             header("X-Api-Version", "1")
         }.andReturn()
-        assertEquals(401, result.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), result.response.status)
         assertEquals("""{"error":"unauthorized"}""", result.response.contentAsString)
     }
 
@@ -87,7 +88,7 @@ class AuthTest {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer nope")
         }.andReturn()
-        assertEquals(401, result.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), result.response.status)
     }
 
     @Test
@@ -245,14 +246,18 @@ class SharedPoolTest {
         assertEquals(200, postFeed("b"))
 
         verify(feeds, org.mockito.kotlin.never()).save(any())
-        verify(subs).save(org.mockito.kotlin.check {
-            assertEquals(alice, it.userId)
-            assertEquals(feedId, it.feedId)
-        })
-        verify(subs).save(org.mockito.kotlin.check {
-            assertEquals(bob, it.userId)
-            assertEquals(feedId, it.feedId)
-        })
+        verify(subs).save(
+            org.mockito.kotlin.check {
+                assertEquals(alice, it.userId)
+                assertEquals(feedId, it.feedId)
+            },
+        )
+        verify(subs).save(
+            org.mockito.kotlin.check {
+                assertEquals(bob, it.userId)
+                assertEquals(feedId, it.feedId)
+            },
+        )
     }
 
     @Test
@@ -275,9 +280,12 @@ class SharedPoolTest {
     @Test
     fun createValidates() {
         asUser("dave-sub", UUID.randomUUID())
-        assertEquals(400, postFeed("d", """{}"""))
-        assertEquals(400, postFeed("d", """{"url":"ftp://example.com/rss"}"""))
-        assertEquals(400, postFeed("d", """{"url":"https://example.com/rss","folderIds":["nope"]}"""))
+        assertEquals(HttpStatus.BAD_REQUEST.value(), postFeed("d", """{}"""))
+        assertEquals(HttpStatus.BAD_REQUEST.value(), postFeed("d", """{"url":"ftp://example.com/rss"}"""))
+        assertEquals(
+            HttpStatus.BAD_REQUEST.value(),
+            postFeed("d", """{"url":"https://example.com/rss","folderIds":["nope"]}"""),
+        )
     }
 
     @Test
@@ -363,7 +371,7 @@ class SharedPoolTest {
             contentType = org.springframework.http.MediaType.APPLICATION_JSON
             content = """{"folderIds":["${UUID.randomUUID()}"]}"""
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     private fun assertDeleteRejects() {
@@ -371,12 +379,12 @@ class SharedPoolTest {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer e")
         }.andReturn()
-        assertEquals(400, bad.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), bad.response.status)
         val missing = mvc.delete("/feeds/${UUID.randomUUID()}") {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer e")
         }.andReturn()
-        assertEquals(404, missing.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), missing.response.status)
     }
 
     @Test
@@ -391,9 +399,9 @@ class SharedPoolTest {
             contentType = org.springframework.http.MediaType.APPLICATION_JSON
             content = body
         }.andReturn().response.status
-        assertEquals(400, putFolders("nope", """{"folderIds":[]}"""))
-        assertEquals(400, putFolders("$feedId", """{}"""))
-        assertEquals(404, putFolders("${UUID.randomUUID()}", """{"folderIds":[]}"""))
+        assertEquals(HttpStatus.BAD_REQUEST.value(), putFolders("nope", """{"folderIds":[]}"""))
+        assertEquals(HttpStatus.BAD_REQUEST.value(), putFolders("$feedId", """{}"""))
+        assertEquals(HttpStatus.NOT_FOUND.value(), putFolders("${UUID.randomUUID()}", """{"folderIds":[]}"""))
         val folderId = UUID.randomUUID()
         whenever(folders.findByUserIdAndIdIn(any(), any())).thenReturn(
             listOf(rssapi.persist.FolderEntity(id = folderId, userId = uid, title = "N")),

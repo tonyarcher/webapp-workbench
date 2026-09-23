@@ -1,8 +1,5 @@
 package userapi.accounts
 
-import java.time.Clock
-import java.time.Duration
-import java.util.UUID
 import userapi.crypto.AUTH_CODE_TTL_SEC
 import userapi.crypto.JwtSigner
 import userapi.crypto.REFRESH_TTL_SEC
@@ -11,14 +8,13 @@ import userapi.domain.newToken
 import userapi.domain.pkceMatches
 import userapi.domain.redirectAllowed
 import userapi.domain.sha256Hex
+import java.time.Clock
+import java.time.Duration
+import java.util.UUID
 
 data class TokenPair(val accessToken: String, val refreshToken: String, val expiresIn: Int)
 
-class OAuthService(
-    val store: OAuthStore,
-    val signer: JwtSigner,
-    val clock: Clock,
-) {
+class OAuthService(val store: OAuthStore, val signer: JwtSigner, val clock: Clock) {
     fun client(id: String): OAuthClient? = store.findClient(id)
 
     fun allowedRedirect(clientId: String, redirectUri: String): Boolean {
@@ -26,12 +22,7 @@ class OAuthService(
         return redirectAllowed(found, redirectUri)
     }
 
-    fun issueCode(
-        userId: UUID,
-        clientId: String,
-        redirectUri: String,
-        codeChallenge: String,
-    ): String {
+    fun issueCode(userId: UUID, clientId: String, redirectUri: String, codeChallenge: String): String {
         val raw = newToken()
         val expires = clock.instant().plus(Duration.ofSeconds(AUTH_CODE_TTL_SEC.toLong()))
         store.insertAuthCode(sha256Hex(raw), userId, clientId, redirectUri, codeChallenge, expires)

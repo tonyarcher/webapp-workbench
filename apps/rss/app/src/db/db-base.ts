@@ -1,5 +1,5 @@
-import {type DBSchema, type IDBPDatabase, type IDBPTransaction, type StoreNames, openDB} from 'idb';
-import type {Article, Feed, Folder} from '../types';
+import { type DBSchema, type IDBPDatabase, type IDBPTransaction, type StoreNames, openDB } from 'idb';
+import type { Article, Feed, Folder } from '../types';
 
 export interface ReaderDB extends DBSchema {
     folders: {
@@ -34,14 +34,7 @@ export interface ReaderDB extends DBSchema {
 type UpgradeTx = IDBPTransaction<ReaderDB, StoreNames<ReaderDB>[], 'versionchange'>;
 
 type ArticleIndexName =
-    | 'byFeedId'
-    | 'byPublished'
-    | 'byFeedDate'
-    | 'byReadDate'
-    | 'byFeedRead'
-    | 'byLink'
-    | 'byHot'
-    | 'byFeedHot';
+    'byFeedId' | 'byPublished' | 'byFeedDate' | 'byReadDate' | 'byFeedRead' | 'byLink' | 'byHot' | 'byFeedHot';
 
 const ARTICLE_INDEXES: [ArticleIndexName, string | string[]][] = [
     ['byFeedId', 'feedId'],
@@ -56,18 +49,18 @@ const ARTICLE_INDEXES: [ArticleIndexName, string | string[]][] = [
 
 export function ensureSchema(db: IDBPDatabase<ReaderDB>, tx: UpgradeTx) {
     if (!db.objectStoreNames.contains('folders')) {
-        db.createObjectStore('folders', {keyPath: 'id'});
+        db.createObjectStore('folders', { keyPath: 'id' });
     }
     if (!db.objectStoreNames.contains('feeds')) {
-        const feeds = db.createObjectStore('feeds', {keyPath: 'id'});
+        const feeds = db.createObjectStore('feeds', { keyPath: 'id' });
         feeds.createIndex('byFolderId', 'folderId');
     }
     if (!db.objectStoreNames.contains('articles')) {
-        const articles = db.createObjectStore('articles', {keyPath: 'id'});
+        const articles = db.createObjectStore('articles', { keyPath: 'id' });
         for (const [name, keyPath] of ARTICLE_INDEXES) articles.createIndex(name, keyPath as never);
     }
     if (!db.objectStoreNames.contains('meta')) {
-        db.createObjectStore('meta', {keyPath: 'key'});
+        db.createObjectStore('meta', { keyPath: 'key' });
     }
     const feeds = tx.objectStore('feeds');
     if (!feeds.indexNames.contains('byFolderId')) feeds.createIndex('byFolderId', 'folderId');

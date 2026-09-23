@@ -1,5 +1,5 @@
-import type {CalEvent, FetchLike, SyncProgress} from './types';
-import {asArray, asNumber, asString, isRecord, joinUrl, pad2, startOfUtcDay, utcYmd} from './util';
+import type { CalEvent, FetchLike, SyncProgress } from './types';
+import { asArray, asNumber, asString, isRecord, joinUrl, pad2, startOfUtcDay, utcYmd } from './util';
 
 export const TRAKT_API_VERSION = '2';
 export const TRAKT_MAX_CALENDAR_DAYS = 33;
@@ -114,39 +114,39 @@ export function parseTokenResponse(json: unknown): TraktToken | null {
     if (!accessToken || !refreshToken || expiresIn === undefined) return null;
     const createdAt = asNumber(json['created_at']);
     return createdAt === undefined
-        ? {accessToken, refreshToken, expiresIn}
-        : {accessToken, refreshToken, expiresIn, createdAt};
+        ? { accessToken, refreshToken, expiresIn }
+        : { accessToken, refreshToken, expiresIn, createdAt };
 }
 
 export type DevicePollResult =
-    | {status: 'pending'}
-    | {status: 'slow_down'}
-    | {status: 'denied'}
-    | {status: 'expired'}
-    | {status: 'token'; token: TraktToken};
+    | { status: 'pending' }
+    | { status: 'slow_down' }
+    | { status: 'denied' }
+    | { status: 'expired' }
+    | { status: 'token'; token: TraktToken };
 
 export function parseDevicePollResponse(httpStatus: number, json: unknown): DevicePollResult {
     const token = parseTokenResponse(json);
-    if (token) return {status: 'token', token};
+    if (token) return { status: 'token', token };
     const error = isRecord(json) ? asString(json['error']) : undefined;
-    if (error === 'slow_down' || httpStatus === 429) return {status: 'slow_down'};
-    if (error === 'access_denied' || error === 'denied') return {status: 'denied'};
-    if (error === 'expired_token' || error === 'expired') return {status: 'expired'};
-    return {status: 'pending'};
+    if (error === 'slow_down' || httpStatus === 429) return { status: 'slow_down' };
+    if (error === 'access_denied' || error === 'denied') return { status: 'denied' };
+    if (error === 'expired_token' || error === 'expired') return { status: 'expired' };
+    return { status: 'pending' };
 }
 
 export function calendarWindows(
     fromMs: number,
     toMs: number,
     maxDays = TRAKT_MAX_CALENDAR_DAYS,
-): Array<{start: string; days: number}> {
-    const windows: Array<{start: string; days: number}> = [];
+): Array<{ start: string; days: number }> {
+    const windows: Array<{ start: string; days: number }> = [];
     let cursor = startOfUtcDay(fromMs);
     const end = Math.max(cursor + DAY_MS, toMs);
     while (cursor < end) {
         const remaining = Math.max(1, Math.ceil((end - cursor) / DAY_MS));
         const days = Math.min(maxDays, remaining);
-        windows.push({start: utcYmd(cursor), days});
+        windows.push({ start: utcYmd(cursor), days });
         cursor += days * DAY_MS;
     }
     return windows;
@@ -174,24 +174,34 @@ function parseInstant(raw: unknown): number | undefined {
     return Number.isFinite(ms) ? ms : undefined;
 }
 
-function episodeBasics(item: Record<string, unknown>): {episode: Record<string, unknown>; show: Record<string, unknown>; start: number} | null {
+function episodeBasics(
+    item: Record<string, unknown>,
+): { episode: Record<string, unknown>; show: Record<string, unknown>; start: number } | null {
     const start = parseInstant(item['first_aired']);
     if (start === undefined) return null;
     const episode = isRecord(item['episode']) ? item['episode'] : undefined;
     const show = isRecord(item['show']) ? item['show'] : undefined;
     if (!episode || !show) return null;
-    return {episode, show, start};
+    return { episode, show, start };
 }
 
-function episodeIds(show: Record<string, unknown>, episode: Record<string, unknown>): {showId: number; season: number; number: number} | null {
+function episodeIds(
+    show: Record<string, unknown>,
+    episode: Record<string, unknown>,
+): { showId: number; season: number; number: number } | null {
     const showId = idsTrakt(show['ids']);
     const season = asNumber(episode['season']);
     const num = asNumber(episode['number']);
     if (showId === undefined || season === undefined || num === undefined) return null;
-    return {showId, season, number: num};
+    return { showId, season, number: num };
 }
 
-function episodeTitle(show: Record<string, unknown>, episode: Record<string, unknown>, season: number, num: number): string {
+function episodeTitle(
+    show: Record<string, unknown>,
+    episode: Record<string, unknown>,
+    season: number,
+    num: number,
+): string {
     const showTitle = asString(show['title']) ?? 'Show';
     const epTitle = asString(episode['title']);
     const base = `${showTitle} S${pad2(season)}E${pad2(num)}`;
@@ -316,8 +326,8 @@ async function traktGet(
     fetchImpl: FetchLike,
     url: string,
     headers: Record<string, string>,
-): Promise<{status: number; json: unknown; headers: {get(name: string): string | null}}> {
-    const res = await fetchImpl(url, {method: 'GET', headers});
+): Promise<{ status: number; json: unknown; headers: { get(name: string): string | null } }> {
+    const res = await fetchImpl(url, { method: 'GET', headers });
     let json: unknown;
     try {
         json = await res.json();
@@ -325,17 +335,17 @@ async function traktGet(
         json = undefined;
     }
     if (!res.ok) {
-        const msg = isRecord(json) ? asString(json['error']) ?? asString(json['message']) : undefined;
+        const msg = isRecord(json) ? (asString(json['error']) ?? asString(json['message'])) : undefined;
         throw new TraktHttpError(res.status, msg ?? `Trakt HTTP ${res.status}`);
     }
-    return {status: res.status, json, headers: res.headers};
+    return { status: res.status, json, headers: res.headers };
 }
 
 async function fetchCalendarWindow(
     fetchImpl: FetchLike,
     baseUrl: string,
     headers: Record<string, string>,
-    window: {start: string; days: number},
+    window: { start: string; days: number },
     events: CalEvent[],
 ): Promise<void> {
     const shows = await traktGet(fetchImpl, joinUrl(baseUrl, calendarShowsPath(window.start, window.days)), headers);
@@ -364,10 +374,10 @@ async function loadCalendarEvents(
     const total = windows.length * 2;
     let processed = 0;
     for (const window of windows) {
-        onProgress?.({phase: 'fetch', done: processed, total, label: `calendar ${window.start}`});
+        onProgress?.({ phase: 'fetch', done: processed, total, label: `calendar ${window.start}` });
         await fetchCalendarWindow(fetchImpl, baseUrl, headers, window, events);
         processed += 2;
-        onProgress?.({phase: 'fetch', done: processed, total, label: `calendar ${window.start}`});
+        onProgress?.({ phase: 'fetch', done: processed, total, label: `calendar ${window.start}` });
     }
 }
 
@@ -378,9 +388,19 @@ function historyShouldStop(itemsLength: number, page: number, pageCount: number)
     return false;
 }
 
-async function fetchHistoryBatch(fetchImpl: FetchLike, baseUrl: string, headers: Record<string, string>, type: 'shows' | 'movies', page: number): Promise<{items: unknown[]; pageCount: number; resHeaders: {get(n: string): string | null}}> {
+async function fetchHistoryBatch(
+    fetchImpl: FetchLike,
+    baseUrl: string,
+    headers: Record<string, string>,
+    type: 'shows' | 'movies',
+    page: number,
+): Promise<{ items: unknown[]; pageCount: number; resHeaders: { get(n: string): string | null } }> {
     const res = await traktGet(fetchImpl, joinUrl(baseUrl, historyPath(type, page, TRAKT_HISTORY_PAGE_SIZE)), headers);
-    return {items: asArray(res.json) ?? [], pageCount: Number(res.headers.get('x-pagination-page-count')), resHeaders: res.headers};
+    return {
+        items: asArray(res.json) ?? [],
+        pageCount: Number(res.headers.get('x-pagination-page-count')),
+        resHeaders: res.headers,
+    };
 }
 
 function appendHistory(items: unknown[], events: CalEvent[]): void {
@@ -396,17 +416,30 @@ function historyAction(itemsLen: number, page: number, pageCount: number): 'stop
     return 'next';
 }
 
-async function loadHistoryType(fetchImpl: FetchLike, baseUrl: string, headers: Record<string, string>, type: 'shows' | 'movies', events: CalEvent[], onProgress?: (p: SyncProgress) => void, onTruncate?: (info: {type: 'shows' | 'movies'; page: number}) => void): Promise<void> {
+async function loadHistoryType(
+    fetchImpl: FetchLike,
+    baseUrl: string,
+    headers: Record<string, string>,
+    type: 'shows' | 'movies',
+    events: CalEvent[],
+    onProgress?: (p: SyncProgress) => void,
+    onTruncate?: (info: { type: 'shows' | 'movies'; page: number }) => void,
+): Promise<void> {
     for (let page = 1; page <= TRAKT_HISTORY_MAX_PAGES; page++) {
-        onProgress?.({phase: 'fetch', done: page - 1, label: `history ${type} page ${page}`});
+        onProgress?.({ phase: 'fetch', done: page - 1, label: `history ${type} page ${page}` });
         const batch = await fetchHistoryBatch(fetchImpl, baseUrl, headers, type, page);
         appendHistory(batch.items, events);
         const total = Number.isFinite(batch.pageCount) && batch.pageCount > 0 ? batch.pageCount : undefined;
-        onProgress?.({phase: 'fetch', done: page, ...(total === undefined ? {} : {total}), label: `history ${type} page ${page}`});
+        onProgress?.({
+            phase: 'fetch',
+            done: page,
+            ...(total === undefined ? {} : { total }),
+            label: `history ${type} page ${page}`,
+        });
         const action = historyAction(batch.items.length, page, batch.pageCount);
         if (action === 'stop') break;
         if (action === 'truncate') {
-            onTruncate?.({type, page});
+            onTruncate?.({ type, page });
             break;
         }
     }
@@ -418,7 +451,7 @@ async function loadHistoryEvents(
     headers: Record<string, string>,
     events: CalEvent[],
     onProgress?: (progress: SyncProgress) => void,
-    onTruncate?: (info: {type: 'shows' | 'movies'; page: number}) => void,
+    onTruncate?: (info: { type: 'shows' | 'movies'; page: number }) => void,
 ): Promise<void> {
     for (const type of ['shows', 'movies'] as const) {
         await loadHistoryType(fetchImpl, baseUrl, headers, type, events, onProgress, onTruncate);
@@ -434,11 +467,11 @@ export interface FetchTraktOptions {
     includeHistory?: boolean;
     now?: number;
     onProgress?: (progress: SyncProgress) => void;
-    onTruncate?: (info: {type: 'shows' | 'movies'; page: number}) => void;
+    onTruncate?: (info: { type: 'shows' | 'movies'; page: number }) => void;
 }
 
 export async function fetchTraktEvents(options: FetchTraktOptions): Promise<CalEvent[]> {
-    const {fetch: fetchImpl, baseUrl, clientId, accessToken} = options;
+    const { fetch: fetchImpl, baseUrl, clientId, accessToken } = options;
     const includeCalendar = options.includeCalendar ?? true;
     const includeHistory = options.includeHistory ?? true;
     const now = options.now ?? Date.now();
@@ -448,6 +481,6 @@ export async function fetchTraktEvents(options: FetchTraktOptions): Promise<CalE
     if (includeHistory) {
         await loadHistoryEvents(fetchImpl, baseUrl, headers, events, options.onProgress, options.onTruncate);
     }
-    options.onProgress?.({phase: 'convert', done: events.length, total: events.length});
+    options.onProgress?.({ phase: 'convert', done: events.length, total: events.length });
     return events;
 }

@@ -1,16 +1,12 @@
 import initSqlJs from 'sql.js';
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
-import {
-    HEALTH_CONNECT_SQLITE_TABLES,
-    parseHealthConnectSqliteTables,
-    type ParseResult,
-} from 'fitness-core';
-import {rowsFromExec} from './sqlite-rows';
+import { HEALTH_CONNECT_SQLITE_TABLES, parseHealthConnectSqliteTables, type ParseResult } from 'fitness-core';
+import { rowsFromExec } from './sqlite-rows';
 
 let sqlReady: Promise<Awaited<ReturnType<typeof initSqlJs>>> | null = null;
 
 function loadSql(): Promise<Awaited<ReturnType<typeof initSqlJs>>> {
-    if (!sqlReady) sqlReady = initSqlJs({locateFile: () => wasmUrl});
+    if (!sqlReady) sqlReady = initSqlJs({ locateFile: () => wasmUrl });
     return sqlReady;
 }
 

@@ -1,12 +1,12 @@
 package stockgame.trading
 
+import stockgame.domain.GameConfig
+import stockgame.domain.TradingError
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import stockgame.domain.GameConfig
-import stockgame.domain.TradingError
 
 class BackdatedBranchTest {
     private val store = FakeGameStore()

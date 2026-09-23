@@ -1,8 +1,20 @@
 package userapi.web
 
-import tools.jackson.databind.json.JsonMapper
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import tools.jackson.databind.json.JsonMapper
+import userapi.Settings
+import userapi.accounts.AccountServices
+import userapi.accounts.PasskeyService
+import userapi.accounts.StoredSession
+import userapi.accounts.buildRelyingParty
+import userapi.http.FakeAccountStore
+import userapi.http.FakeChallengeStore
+import userapi.http.FakePasskeyStore
+import userapi.http.PlainHasher
+import userapi.http.RateLimiter
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -10,18 +22,6 @@ import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
-import userapi.Settings
-import userapi.accounts.AccountServices
-import userapi.accounts.StoredSession
-import userapi.http.FakeAccountStore
-import userapi.http.FakeChallengeStore
-import userapi.http.FakePasskeyStore
-import userapi.http.PlainHasher
-import userapi.http.RateLimiter
-import userapi.accounts.PasskeyService
-import userapi.accounts.buildRelyingParty
 
 class PasskeyControllerBranchTest {
     private val clock = Clock.fixed(Instant.parse("2026-09-11T17:00:00Z"), ZoneOffset.UTC)

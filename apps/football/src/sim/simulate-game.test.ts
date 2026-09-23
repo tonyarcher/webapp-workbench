@@ -1,8 +1,8 @@
-import {describe, expect, it} from 'vitest';
-import {createGame, reduce} from 'football-core';
-import {DEFAULT_GAME_SETUP} from '../local-game/game-types';
-import {nextEvent, rngForEngine} from './resolve-play';
-import {simulateGame} from './simulate-game';
+import { describe, expect, it } from 'vitest';
+import { createGame, reduce } from 'football-core';
+import { DEFAULT_GAME_SETUP } from '../local-game/game-types';
+import { nextEvent, rngForEngine } from './resolve-play';
+import { simulateGame } from './simulate-game';
 
 describe('simulateGame', () => {
     it('is deterministic for a seed', () => {

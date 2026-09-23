@@ -1,8 +1,5 @@
 package rssapi.frontpage
 
-import java.time.Duration
-import java.time.Instant
-import java.util.UUID
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -24,6 +21,9 @@ import rssapi.persist.ArticleScoreRepo
 import rssapi.persist.ArticleStateEntity
 import rssapi.persist.ArticleStateRepo
 import rssapi.web.articleSpec
+import java.time.Duration
+import java.time.Instant
+import java.util.UUID
 
 const val FRONT_PAGE_MAX_ROWS: Int = 500
 const val SCORE_TTL_HOURS: Long = 1L
@@ -174,22 +174,19 @@ class FrontPageService(
         return toScored(article, state, refresh(article, input, existing, now, jevScores, model))
     }
 
-    private fun toScored(
-        article: ArticleEntity,
-        state: ArticleStateEntity?,
-        row: ArticleScoreEntity,
-    ): ScoredArticle = ScoredArticle(
-        article,
-        state,
-        SignalScores(
-            row.worthy ?: 0.0,
-            row.interest ?: 0.0,
-            row.popularityOutlook ?: 0.0,
-            row.readability ?: 0.0,
-            row.topic,
-        ),
-        row,
-    )
+    private fun toScored(article: ArticleEntity, state: ArticleStateEntity?, row: ArticleScoreEntity): ScoredArticle =
+        ScoredArticle(
+            article,
+            state,
+            SignalScores(
+                row.worthy ?: 0.0,
+                row.interest ?: 0.0,
+                row.popularityOutlook ?: 0.0,
+                row.readability ?: 0.0,
+                row.topic,
+            ),
+            row,
+        )
 
     private fun scoreOne(
         article: ArticleEntity,

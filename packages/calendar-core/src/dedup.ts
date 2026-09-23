@@ -1,4 +1,4 @@
-import type {CalEvent} from './types';
+import type { CalEvent } from './types';
 
 /** Keep the first event for each uid; later duplicates are dropped. */
 export function dedupEvents(events: readonly CalEvent[]): CalEvent[] {

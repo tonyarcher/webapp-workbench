@@ -40,14 +40,14 @@ async function readWithLimit(response: Response, maxBytes: number): Promise<stri
     let out = '';
     let total = 0;
     for (;;) {
-        const {done, value} = await reader.read();
+        const { done, value } = await reader.read();
         if (done) break;
         total += value.byteLength;
         if (total > maxBytes) {
             await reader.cancel().catch(() => {});
             throw new FetchError('Feed is too large');
         }
-        out += decoder.decode(value, {stream: true});
+        out += decoder.decode(value, { stream: true });
     }
     return out + decoder.decode();
 }
@@ -73,7 +73,7 @@ async function fetchViaProxy(url: string, proxy: string): Promise<string> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
-        const res = await fetch(proxy + encodeURIComponent(url), {signal: controller.signal});
+        const res = await fetch(proxy + encodeURIComponent(url), { signal: controller.signal });
         assertOk(res);
         const text = await readWithLimit(res, MAX_FEED_BYTES);
         assertNonEmpty(text);

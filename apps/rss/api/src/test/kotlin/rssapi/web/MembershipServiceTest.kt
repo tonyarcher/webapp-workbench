@@ -1,9 +1,5 @@
 package rssapi.web
 
-import java.util.UUID
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -13,6 +9,10 @@ import rssapi.persist.FolderEntity
 import rssapi.persist.FolderFeedEntity
 import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
+import java.util.UUID
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class MembershipServiceTest {
     private val folders: FolderRepo = mock()

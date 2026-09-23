@@ -1,9 +1,9 @@
-import {isValidStamp} from './clock';
-import {offensiveHoop, shotPoints} from './court-geom';
-import {isOnCourt} from './lineup';
-import {bonusKind, getRulebook} from './rulebook';
-import {addStat, creditStints, flipPossession, resetShotClock, setPossession, teamSide} from './reduce-helpers';
-import type {FreeThrowEvent, GameState, PendingFt, ReboundEvent, ShotEvent, ShotMark, TeamId} from './types';
+import { isValidStamp } from './clock';
+import { offensiveHoop, shotPoints } from './court-geom';
+import { isOnCourt } from './lineup';
+import { bonusKind, getRulebook } from './rulebook';
+import { addStat, creditStints, flipPossession, resetShotClock, setPossession, teamSide } from './reduce-helpers';
+import type { FreeThrowEvent, GameState, PendingFt, ReboundEvent, ShotEvent, ShotMark, TeamId } from './types';
 
 function legalShooter(game: GameState, team: TeamId, shooterId: string): boolean {
     return game.possession === team && isOnCourt(teamSide(game, team).onCourt, shooterId);
@@ -30,7 +30,12 @@ function markFrom(game: GameState, event: ShotEvent, points: 0 | 2 | 3, assistId
     return mark;
 }
 
-function applyFieldGoalStats(game: GameState, event: ShotEvent, points: 0 | 2 | 3, assistId: string | undefined): GameState {
+function applyFieldGoalStats(
+    game: GameState,
+    event: ShotEvent,
+    points: 0 | 2 | 3,
+    assistId: string | undefined,
+): GameState {
     let next = addStat(game, event.shooterId, 'fga', 1);
     if (points === 3 || (!event.made && points === 0 && shotWasThree(game, event))) {
         next = addStat(next, event.shooterId, 'tpa', 1);
@@ -51,8 +56,9 @@ function shotWasThree(game: GameState, event: ShotEvent): boolean {
 
 function shootingTrip(game: GameState, event: ShotEvent, points: 0 | 2 | 3): PendingFt {
     const three = points === 3 || shotWasThree(game, event);
-    if (event.made) return {team: event.team, shooterId: event.shooterId, remaining: 1, oneAndOne: false, andOne: true};
-    return {team: event.team, shooterId: event.shooterId, remaining: three ? 3 : 2, oneAndOne: false, andOne: false};
+    if (event.made)
+        return { team: event.team, shooterId: event.shooterId, remaining: 1, oneAndOne: false, andOne: true };
+    return { team: event.team, shooterId: event.shooterId, remaining: three ? 3 : 2, oneAndOne: false, andOne: false };
 }
 
 function applyBlock(game: GameState, blockerId: string | undefined, defense: TeamId): GameState {
@@ -75,12 +81,10 @@ export function applyShot(game: GameState, event: ShotEvent): GameState {
         ...next,
         shots: [...next.shots, markFrom(next, event, points, assistId)],
         nextShotId: next.nextShotId + 1,
-        score: event.made
-            ? {...next.score, [event.team]: next.score[event.team] + points}
-            : next.score,
+        score: event.made ? { ...next.score, [event.team]: next.score[event.team] + points } : next.score,
     };
     if (event.shootingFoul) {
-        return {...next, pendingFt: shootingTrip(next, event, points), clock: {...next.clock, running: false}};
+        return { ...next, pendingFt: shootingTrip(next, event, points), clock: { ...next.clock, running: false } };
     }
     return event.made ? flipPossession(next) : next;
 }
@@ -94,14 +98,14 @@ export function applyFreeThrow(game: GameState, event: FreeThrowEvent): GameStat
     if (event.made) {
         next = addStat(next, event.shooterId, 'ftm', 1);
         next = addStat(next, event.shooterId, 'pts', 1);
-        next = {...next, score: {...next.score, [pending.team]: next.score[pending.team] + 1}};
+        next = { ...next, score: { ...next.score, [pending.team]: next.score[pending.team] + 1 } };
     }
     const stopTrip = pending.oneAndOne && !event.made;
     const remaining = stopTrip ? 0 : pending.remaining - 1;
     if (remaining > 0) {
-        return {...next, pendingFt: {...pending, remaining}, clock: {...next.clock, running: false}};
+        return { ...next, pendingFt: { ...pending, remaining }, clock: { ...next.clock, running: false } };
     }
-    next = {...next, pendingFt: null, clock: {...next.clock, running: false}};
+    next = { ...next, pendingFt: null, clock: { ...next.clock, running: false } };
     if (event.made) return flipPossession(next);
     return next;
 }
@@ -113,7 +117,7 @@ export function applyRebound(game: GameState, event: ReboundEvent): GameState {
     const rb = getRulebook(game.rulebookId);
     let next = creditStints(game, event.clock);
     next = addStat(next, event.playerId, event.offensive ? 'orb' : 'drb', 1);
-    next = setPossession({...next, pendingFt: null}, event.team);
+    next = setPossession({ ...next, pendingFt: null }, event.team);
     if (event.offensive) return resetShotClock(next, rb.shotClockOrebSeconds);
     return next;
 }

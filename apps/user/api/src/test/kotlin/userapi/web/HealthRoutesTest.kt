@@ -1,10 +1,5 @@
 package userapi.web
 
-import java.sql.Connection
-import java.sql.ResultSet
-import java.sql.SQLException
-import java.sql.Statement
-import javax.sql.DataSource
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
@@ -14,11 +9,17 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import userapi.Settings
 import userapi.accounts.AccountServices
+import java.sql.Connection
+import java.sql.ResultSet
+import java.sql.SQLException
+import java.sql.Statement
+import javax.sql.DataSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -67,7 +68,7 @@ class HealthRoutesTest {
     fun readyzUnavailableWhenDatabaseDown() {
         whenever(dataSource.connection).doThrow(SQLException("down"))
         val response = mvc.perform(get("/readyz")).andReturn().response
-        assertEquals(503, response.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), response.status)
         assertEquals("""{"ok":false}""", response.contentAsString)
     }
 

@@ -1,14 +1,14 @@
 /* Import global design tokens and styles from top-level styles directory */
-@import "../styles/styles.css";
+@import '../styles/styles.css';
 
 /* Reset Vite template container overrides to allow global full-width radial dark background */
 #root {
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
-  text-align: left;
-  border: none;
-  min-height: 100vh;
-  display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    border: none;
+    min-height: 100vh;
+    display: block;
 }

@@ -1,18 +1,16 @@
 package rssapi.frontpage
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import rssapi.ai.AiConfig
 import rssapi.ai.AiException
 import rssapi.ai.HttpPoster
 import rssapi.ai.HttpResult
 import rssapi.ai.JevBackend
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
-private class ProviderFakePoster(
-    private val handler: (body: String) -> HttpResult,
-) : HttpPoster {
+private class ProviderFakePoster(private val handler: (body: String) -> HttpResult) : HttpPoster {
     val calls = mutableListOf<String>()
     var lastBody: String = ""
     override fun get(url: String, headers: Map<String, String>, timeoutMs: Long): HttpResult {
@@ -30,8 +28,7 @@ private class ProviderFakePoster(
     }
 }
 
-private fun providerPoster(reply: String): ProviderFakePoster =
-    ProviderFakePoster { HttpResult(200, reply) }
+private fun providerPoster(reply: String): ProviderFakePoster = ProviderFakePoster { HttpResult(200, reply) }
 
 private fun providerOf(poster: ProviderFakePoster): JevScoreProvider =
     JevScoreProvider(JevBackend(AiConfig(provider = "jev", jevApiKey = "test-key"), poster))
@@ -44,8 +41,7 @@ private fun candidate(id: String): JevCandidate = JevCandidate(
     input = SignalInput(hot = 6_300.0, popularity = 2.0, engagement = 1.0, affinity = 0.0, wordCount = 500),
 )
 
-private fun answers(vararg entries: String): String =
-    """{"model":"jev-latest","answers":{${entries.joinToString(",")}},
+private fun answers(vararg entries: String): String = """{"model":"jev-latest","answers":{${entries.joinToString(",")}},
        "usage":{"input_tokens":10,"output_tokens":5}}"""
 
 private fun noul(id: String, value: String): String = """"$id":{"type":"noul","noul":$value}"""

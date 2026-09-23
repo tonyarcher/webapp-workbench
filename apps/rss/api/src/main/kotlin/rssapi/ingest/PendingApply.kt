@@ -1,8 +1,4 @@
 package rssapi.ingest
-
-import java.time.Instant
-import java.time.Duration
-import java.util.UUID
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import rssapi.persist.ArticleRepo
@@ -10,6 +6,12 @@ import rssapi.persist.ArticleStateEntity
 import rssapi.persist.ArticleStateRepo
 import rssapi.persist.PendingStateEntity
 import rssapi.persist.PendingStateRepo
+import java.time.Duration
+import java.time.Instant
+import java.util.UUID
+
+/** Pending rows older than this are swept as stale. */
+private const val PENDING_TTL_HOURS = 48L
 
 @Component
 class PendingApply(
@@ -20,7 +22,7 @@ class PendingApply(
     @Transactional
     fun applyForFeed(feedId: UUID) {
         pending.findByFeedId(feedId).forEach { applyOne(it) }
-        pending.deleteByFeedIdAndCreatedAtBefore(feedId, Instant.now().minus(Duration.ofHours(48)))
+        pending.deleteByFeedIdAndCreatedAtBefore(feedId, Instant.now().minus(Duration.ofHours(PENDING_TTL_HOURS)))
     }
 
     private fun applyOne(row: PendingStateEntity) {

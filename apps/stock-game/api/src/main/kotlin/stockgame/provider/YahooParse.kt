@@ -1,10 +1,16 @@
 package stockgame.provider
-
 import com.fasterxml.jackson.databind.JsonNode
 import stockgame.domain.Bar
 import stockgame.domain.ProviderError
 import stockgame.domain.Quote
 import stockgame.domain.round2
+
+/** Yahoo bar fields arrive as parallel arrays in this order. */
+private const val CLOSE_INDEX = 3
+private const val VOLUME_INDEX = 4
+
+/** Yahoo timestamps are seconds; the domain stores milliseconds. */
+private const val MS_PER_SECOND = 1000L
 
 fun parseYahooQuote(symbol: String, chart: JsonNode, book: JsonNode?): Quote {
     val block = chartBlock(chart)
@@ -13,15 +19,16 @@ fun parseYahooQuote(symbol: String, chart: JsonNode, book: JsonNode?): Quote {
     val sym = textOr(meta, "symbol") ?: throw ProviderError("No quote data for $symbol")
     val price = quotePrice(meta, bars, symbol)
     val time = quoteTime(meta, bars)
-    val base = Quote(
-        symbol = sym,
-        name = textOr(meta, "shortName") ?: textOr(meta, "longName") ?: symbol,
-        price = round2(price),
-        currency = textOr(meta, "currency") ?: "USD",
-        exchange = textOr(meta, "fullExchangeName") ?: textOr(meta, "exchangeName") ?: "",
-        time = time,
-        delayMinutes = 15,
-    )
+    val base =
+        Quote(
+            symbol = sym,
+            name = textOr(meta, "shortName") ?: textOr(meta, "longName") ?: symbol,
+            price = round2(price),
+            currency = textOr(meta, "currency") ?: "USD",
+            exchange = textOr(meta, "fullExchangeName") ?: textOr(meta, "exchangeName") ?: "",
+            time = time,
+            delayMinutes = 15,
+        )
     return mergeBook(base, book)
 }
 
@@ -31,7 +38,7 @@ fun parseYahooBars(block: JsonNode): List<Bar> {
     if (!timestamps.isArray || quote.isMissingNode) return emptyList()
     return timestamps.mapIndexedNotNull { i, t ->
         val quoteAt = quoteAt(quote, i)
-        barAt(t, quoteAt[0], quoteAt[1], quoteAt[2], quoteAt[3], quoteAt[4])
+        barAt(t, quoteAt[0], quoteAt[1], quoteAt[2], quoteAt[CLOSE_INDEX], quoteAt[VOLUME_INDEX])
     }
 }
 
@@ -56,7 +63,7 @@ private fun barAt(
     val lowV = if (low.isNumber) low.asDouble() else closeV
     val vol = if (volume.isNumber) volume.asLong() else 0L
     if (!listOf(openV, highV, lowV, closeV).all { it.isFinite() }) return null
-    return Bar(timeNode.asLong() * 1000, openV, highV, lowV, closeV, vol)
+    return Bar(timeNode.asLong() * MS_PER_SECOND, openV, highV, lowV, closeV, vol)
 }
 
 private fun mergeBook(base: Quote, book: JsonNode?): Quote {
@@ -78,13 +85,14 @@ private fun quoteAt(quote: JsonNode, i: Int): List<JsonNode> = listOf(
 )
 
 private fun quotePrice(meta: JsonNode, bars: List<Bar>, symbol: String): Double {
-    val price = numOrNull(meta, "regularMarketPrice") ?: bars.lastOrNull()?.close
-        ?: throw ProviderError("No quote data for $symbol")
+    val price =
+        numOrNull(meta, "regularMarketPrice") ?: bars.lastOrNull()?.close
+            ?: throw ProviderError("No quote data for $symbol")
     if (!price.isFinite()) throw ProviderError("No quote data for $symbol")
     return price
 }
 
 private fun quoteTime(meta: JsonNode, bars: List<Bar>): Long {
-    if (meta.path("regularMarketTime").isNumber) return meta.path("regularMarketTime").asLong() * 1000
+    if (meta.path("regularMarketTime").isNumber) return meta.path("regularMarketTime").asLong() * MS_PER_SECOND
     return bars.lastOrNull()?.time ?: System.currentTimeMillis()
 }

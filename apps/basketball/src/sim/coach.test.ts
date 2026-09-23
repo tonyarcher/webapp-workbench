@@ -1,8 +1,8 @@
-import {describe, expect, it} from 'vitest';
-import {createGame} from 'basketball-core';
-import {DEFAULT_GAME_SETUP} from '../local-game/game-types';
-import {pickShooter, pickZone, ratingsFor, shouldAssist, shouldSub} from './coach';
-import {mulberry32} from './rng';
+import { describe, expect, it } from 'vitest';
+import { createGame } from 'basketball-core';
+import { DEFAULT_GAME_SETUP } from '../local-game/game-types';
+import { pickShooter, pickZone, ratingsFor, shouldAssist, shouldSub } from './coach';
+import { mulberry32 } from './rng';
 
 describe('coach', () => {
     it('picks on-court shooters and occasional subs', () => {
@@ -19,14 +19,17 @@ describe('coach', () => {
         }
         expect(found).toBe(true);
         const zeros = Object.fromEntries(
-            game.away.onCourt.map((id) => [id, {
-                shooting: 0,
-                three: 0,
-                playmaking: 0,
-                rebounding: 0,
-                defense: 0,
-                stamina: 0,
-            }]),
+            game.away.onCourt.map((id) => [
+                id,
+                {
+                    shooting: 0,
+                    three: 0,
+                    playmaking: 0,
+                    rebounding: 0,
+                    defense: 0,
+                    stamina: 0,
+                },
+            ]),
         );
         expect(game.away.onCourt.includes(pickShooter(game, 'away', random, zeros))).toBe(true);
         expect(game.away.onCourt.includes(pickShooter(game, 'away', () => 0.9999))).toBe(true);

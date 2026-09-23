@@ -1,58 +1,63 @@
-import type {EmbedProvider} from './types'
-import {safeUrl} from '../url'
+import type { EmbedProvider } from './types';
+import { safeUrl } from '../url';
 
-const IG_HOST_RE = /(?:^|[./])(?:instagram\.com|instagr\.am)\//i
-const IG_CODE_RE = /^[A-Za-z0-9_-]{5,64}$/
+const IG_HOST_RE = /(?:^|[./])(?:instagram\.com|instagr\.am)\//i;
+const IG_CODE_RE = /^[A-Za-z0-9_-]{5,64}$/;
 
 function isValidCode(code: string | null): string | null {
-    return code && IG_CODE_RE.test(code) ? code : null
+    return code && IG_CODE_RE.test(code) ? code : null;
 }
 
 function pathSegmentAfter(path: string, prefix: string): string | null {
-    if (!path.startsWith(prefix)) return null
-    const rest = path.slice(prefix.length)
-    return rest.split('/')[0] || null
+    if (!path.startsWith(prefix)) return null;
+    const rest = path.slice(prefix.length);
+    return rest.split('/')[0] || null;
 }
 
 function parseUrlSafe(url: string): URL | null {
     try {
-        return new URL(url)
+        return new URL(url);
     } catch {
-        return null
+        return null;
     }
 }
 
 function isIgHost(host: string): boolean {
-    return host === 'instagram.com' || host.endsWith('.instagram.com') || host === 'instagr.am' || host.endsWith('.instagr.am')
+    return (
+        host === 'instagram.com' ||
+        host.endsWith('.instagram.com') ||
+        host === 'instagr.am' ||
+        host.endsWith('.instagr.am')
+    );
 }
 
 function isIgShortHost(host: string): boolean {
-    return host === 'l.instagram.com' || host.endsWith('.l.instagram.com')
+    return host === 'l.instagram.com' || host.endsWith('.l.instagram.com');
 }
 
 function codeFromPrefixed(path: string): string | null {
     for (const prefix of ['/reel/', '/reels/', '/p/']) {
-        const code = isValidCode(pathSegmentAfter(path + '/', prefix))
-        if (code) return code
+        const code = isValidCode(pathSegmentAfter(path + '/', prefix));
+        if (code) return code;
     }
-    return null
+    return null;
 }
 
 function codeFromNested(path: string): string | null {
-    const nested = path.match(/^\/[^/]+\/(reel|reels|p)\/([A-Za-z0-9_-]{5,64})(?:\/|$)/)
-    if (nested) return isValidCode(nested[2] ?? null)
-    return null
+    const nested = path.match(/^\/[^/]+\/(reel|reels|p)\/([A-Za-z0-9_-]{5,64})(?:\/|$)/);
+    if (nested) return isValidCode(nested[2] ?? null);
+    return null;
 }
 
 export function instagramId(url: string): string | null {
-    if (!IG_HOST_RE.test(url)) return null
-    const parsed = parseUrlSafe(url)
-    if (!parsed) return null
-    const host = parsed.hostname.toLowerCase()
-    if (!isIgHost(host) || isIgShortHost(host)) return null
-    const path = parsed.pathname.replace(/\/+$/, '') || '/'
-    if (path.startsWith('/share/')) return null
-    return codeFromPrefixed(path) ?? codeFromNested(path)
+    if (!IG_HOST_RE.test(url)) return null;
+    const parsed = parseUrlSafe(url);
+    if (!parsed) return null;
+    const host = parsed.hostname.toLowerCase();
+    if (!isIgHost(host) || isIgShortHost(host)) return null;
+    const path = parsed.pathname.replace(/\/+$/, '') || '/';
+    if (path.startsWith('/share/')) return null;
+    return codeFromPrefixed(path) ?? codeFromNested(path);
 }
 
 export const INSTAGRAM: EmbedProvider = {
@@ -65,11 +70,11 @@ export const INSTAGRAM: EmbedProvider = {
     // click the iframe's own play button. The `portrait` class in
     // media-video.ts still frames it 9:16.
     embedUrl(url) {
-        const code = instagramId(url ?? '')
+        const code = instagramId(url ?? '');
         // /p/{code}/embed is the documented iframe and works for reels too.
-        return code ? safeUrl(`https://www.instagram.com/p/${code}/embed`) : null
+        return code ? safeUrl(`https://www.instagram.com/p/${code}/embed`) : null;
     },
     poster() {
-        return null
+        return null;
     },
-}
+};

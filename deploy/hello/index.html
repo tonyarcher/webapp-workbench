@@ -1,75 +1,240 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gateway</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-    <style>
-      :root { color-scheme: dark; }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-        background: linear-gradient(135deg, #1b1e24, #0f1115);
-        color: #e8eaed;
-      }
-      .card {
-        background: #23272f;
-        border: 1px solid #3a3f4a;
-        border-radius: 16px;
-        padding: 2.5rem 3rem;
-        text-align: center;
-        max-width: 90vw;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-      }
-      h1 { margin: 0 0 0.5rem; font-size: 2.2rem; }
-      p { margin: 0.4rem 0; color: #b6bcc8; }
-      code {
-        background: #14161b;
-        border: 1px solid #3a3f4a;
-        border-radius: 8px;
-        padding: 0.35rem 0.7rem;
-        font-size: 0.9rem;
-      }
-      .route { font-size: 1.1rem; margin-top: 1rem; }
-      .apps {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.45rem;
-        margin-top: 1rem;
-      }
-      .apps a { color: #8ab4f8; }
-    </style>
-  </head>
-  <body>
-    <main class="card">
-      <h1>Hello, world!</h1>
-      <p>This is the reverse-proxy gateway root page.</p>
-      <p class="route">
-        You requested route <code id="route">/</code>
-      </p>
-      <p>Apps:</p>
-      <nav class="apps">
-        <a href="/baseball/">Baseball</a>
-        <a href="/rss-reader/">RSS Reader</a>
-        <a href="/stock-game/">Stock Game</a>
-        <a href="/lemmy-vertical-scroll/">Lemmy Vertical Scroll</a>
-        <a href="/clipstack/">Clipstack</a>
-        <a href="/calendar-sync/">Calendar Sync</a>
-        <a href="/radio-station/">Pulse 101</a>
-        <a href="/football/">Football</a>
-        <a href="/basketball/">Basketball</a>
-        <a href="/fitness/">Fitness</a>
-        <a href="/auth/">Accounts</a>
-        <a href="/git/">Git</a>
-      </nav>
-    </main>
-    <script>
-      document.getElementById('route').textContent = window.location.pathname || '/';
-    </script>
-  </body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Gateway</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <style>
+            :root {
+                color-scheme: dark;
+            }
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                min-height: 100vh;
+                display: grid;
+                padding: 2rem 1rem;
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    Roboto,
+                    sans-serif;
+                background: linear-gradient(135deg, #1b1e24, #0f1115);
+                color: #e8eaed;
+            }
+            .card {
+                background: #23272f;
+                border: 1px solid #3a3f4a;
+                border-radius: 16px;
+                padding: 2.5rem 3rem;
+                text-align: center;
+                width: min(42rem, 100%);
+                margin: auto;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            }
+            h1 {
+                margin: 0 0 0.5rem;
+                font-size: 2.2rem;
+            }
+            p {
+                margin: 0.4rem 0;
+                color: #b6bcc8;
+            }
+            code {
+                background: #14161b;
+                border: 1px solid #3a3f4a;
+                border-radius: 8px;
+                padding: 0.35rem 0.7rem;
+                font-size: 0.9rem;
+            }
+            .route {
+                font-size: 1.1rem;
+                margin-top: 1rem;
+            }
+            .apps-heading {
+                margin: 1.25rem 0 0;
+                font-size: 1rem;
+                font-weight: 600;
+                color: #b6bcc8;
+            }
+            .apps {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.75rem;
+                margin-top: 0.75rem;
+            }
+            .apps a {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                padding: 0.85rem 1rem;
+                background: #2b303a;
+                border: 1px solid #3a3f4a;
+                border-radius: 12px;
+                color: #e8eaed;
+                text-decoration: none;
+                font-weight: 600;
+                line-height: 1.2;
+                text-align: left;
+                transition:
+                    background 150ms ease,
+                    border-color 150ms ease,
+                    transform 150ms ease;
+            }
+            .apps a:hover {
+                background: #343b47;
+                border-color: #8ab4f8;
+                transform: translateY(-1px);
+            }
+            .apps a:focus-visible {
+                outline: 2px solid #8ab4f8;
+                outline-offset: 2px;
+            }
+            .app-icon {
+                font-size: 1.4rem;
+                width: 2rem;
+                flex: none;
+                text-align: center;
+            }
+            .app-text {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.15rem;
+                min-width: 0;
+            }
+            .app-name {
+                font-size: 1rem;
+            }
+            .app-path {
+                font-size: 0.8rem;
+                font-weight: 400;
+                color: #9aa3b2;
+                font-family:
+                    ui-monospace,
+                    'Cascadia Mono',
+                    Consolas,
+                    monospace;
+            }
+            @media (max-width: 35rem) {
+                .card {
+                    padding: 1.75rem 1.25rem;
+                }
+                .apps {
+                    grid-template-columns: minmax(0, 1fr);
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .apps a {
+                    transition: none;
+                }
+                .apps a:hover {
+                    transform: none;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main class="card">
+            <h1>Hello, world!</h1>
+            <p>This is the reverse-proxy gateway root page.</p>
+            <p class="route">You requested route <code id="route">/</code></p>
+            <h2 class="apps-heading">Apps</h2>
+            <nav class="apps">
+                <a href="/baseball/">
+                    <span class="app-icon" aria-hidden="true">⚾</span>
+                    <span class="app-text">
+                        <span class="app-name">Baseball</span>
+                        <span class="app-path">/baseball/</span>
+                    </span>
+                </a>
+                <a href="/rss-reader/">
+                    <span class="app-icon" aria-hidden="true">📰</span>
+                    <span class="app-text">
+                        <span class="app-name">RSS Reader</span>
+                        <span class="app-path">/rss-reader/</span>
+                    </span>
+                </a>
+                <a href="/stock-game/">
+                    <span class="app-icon" aria-hidden="true">📈</span>
+                    <span class="app-text">
+                        <span class="app-name">Stock Game</span>
+                        <span class="app-path">/stock-game/</span>
+                    </span>
+                </a>
+                <a href="/lemmy-vertical-scroll/">
+                    <span class="app-icon" aria-hidden="true">💬</span>
+                    <span class="app-text">
+                        <span class="app-name">Lemmy Vertical Scroll</span>
+                        <span class="app-path">/lemmy-vertical-scroll/</span>
+                    </span>
+                </a>
+                <a href="/clipstack/">
+                    <span class="app-icon" aria-hidden="true">🎬</span>
+                    <span class="app-text">
+                        <span class="app-name">Clipstack</span>
+                        <span class="app-path">/clipstack/</span>
+                    </span>
+                </a>
+                <a href="/calendar-sync/">
+                    <span class="app-icon" aria-hidden="true">📅</span>
+                    <span class="app-text">
+                        <span class="app-name">Calendar Sync</span>
+                        <span class="app-path">/calendar-sync/</span>
+                    </span>
+                </a>
+                <a href="/radio-station/">
+                    <span class="app-icon" aria-hidden="true">📻</span>
+                    <span class="app-text">
+                        <span class="app-name">Pulse 101</span>
+                        <span class="app-path">/radio-station/</span>
+                    </span>
+                </a>
+                <a href="/football/">
+                    <span class="app-icon" aria-hidden="true">🏈</span>
+                    <span class="app-text">
+                        <span class="app-name">Football</span>
+                        <span class="app-path">/football/</span>
+                    </span>
+                </a>
+                <a href="/basketball/">
+                    <span class="app-icon" aria-hidden="true">🏀</span>
+                    <span class="app-text">
+                        <span class="app-name">Basketball</span>
+                        <span class="app-path">/basketball/</span>
+                    </span>
+                </a>
+                <a href="/fitness/">
+                    <span class="app-icon" aria-hidden="true">💪</span>
+                    <span class="app-text">
+                        <span class="app-name">Fitness</span>
+                        <span class="app-path">/fitness/</span>
+                    </span>
+                </a>
+                <a href="/auth/">
+                    <span class="app-icon" aria-hidden="true">👤</span>
+                    <span class="app-text">
+                        <span class="app-name">Accounts</span>
+                        <span class="app-path">/auth/</span>
+                    </span>
+                </a>
+                <a href="/git/">
+                    <span class="app-icon" aria-hidden="true">🗂️</span>
+                    <span class="app-text">
+                        <span class="app-name">Git</span>
+                        <span class="app-path">/git/</span>
+                    </span>
+                </a>
+            </nav>
+        </main>
+        <script>
+            document.getElementById('route').textContent = window.location.pathname || '/';
+        </script>
+    </body>
 </html>

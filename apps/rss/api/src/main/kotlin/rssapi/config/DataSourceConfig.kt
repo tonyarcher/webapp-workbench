@@ -1,10 +1,10 @@
 package rssapi.config
 
-import javax.sql.DataSource
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import rssapi.db.dataSource
 import rssapi.db.ensureDatabase
+import javax.sql.DataSource
 
 @Configuration
 class DataSourceConfig {

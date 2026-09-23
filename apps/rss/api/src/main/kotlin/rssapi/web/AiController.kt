@@ -1,5 +1,6 @@
 package rssapi.web
 
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -14,10 +15,7 @@ data class AiSummarizeBody(val title: String?, val text: String?, val length: St
 data class AiSummaryJson(val summary: String)
 
 @RestController
-class AiController(
-    private val user: IdentityUser,
-    private val ai: AiService,
-) {
+class AiController(private val user: IdentityUser, private val ai: AiService) {
     @GetMapping("/ai/status", headers = ["X-Api-Version=1"])
     fun status(): AiStatusJson {
         val status = ai.status()
@@ -26,7 +24,7 @@ class AiController(
 
     @PostMapping("/ai/summarize", headers = ["X-Api-Version=1"])
     fun summarize(@RequestBody body: AiSummarizeBody): AiSummaryJson {
-        val text = body.text ?: throw ApiException(400, "text is required")
+        val text = body.text ?: throw ApiException(HttpStatus.BAD_REQUEST, "text is required")
         val length = SummaryLength.parse(body.length)
         return AiSummaryJson(ai.summarize(user.id, body.title, text, length))
     }

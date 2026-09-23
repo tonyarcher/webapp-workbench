@@ -1,10 +1,5 @@
 package rssapi.ingest
 
-import java.util.Optional
-import java.util.UUID
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
@@ -15,11 +10,16 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import rssapi.fetch.FeedFetcher
 import rssapi.fetch.FetchResult
+import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleMaintenanceRepo
 import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
-import rssapi.persist.ArticleEntity
+import java.util.Optional
+import java.util.UUID
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class IngestServiceBranchTest {
     private val feeds: FeedRepo = mock()

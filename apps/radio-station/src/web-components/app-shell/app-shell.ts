@@ -1,15 +1,15 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
-import type {DayFilter, GenerateResult, ListItem, PlaylistEntry, Weights} from '../../types';
-import {DEFAULT_WEIGHTS} from '../../services/defaults';
-import {createPlaylist, restorePlaylist} from '../../services/api';
-import {formatPlaylistTxt} from '../../services/export-txt';
-import {findNowPlaying, type NowPlaying} from '../../services/now-playing';
-import {toListItems, weekDays} from '../../services/list-items';
-import {localMidnightMs} from '../../services/format';
-import {clearSession, loadSession, saveSession} from '../../services/session-store';
-import type {GenerateDetail} from '../toolbar/toolbar';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import type { DayFilter, GenerateResult, ListItem, PlaylistEntry, Weights } from '../../types';
+import { DEFAULT_WEIGHTS } from '../../services/defaults';
+import { createPlaylist, restorePlaylist } from '../../services/api';
+import { formatPlaylistTxt } from '../../services/export-txt';
+import { findNowPlaying, type NowPlaying } from '../../services/now-playing';
+import { toListItems, weekDays } from '../../services/list-items';
+import { localMidnightMs } from '../../services/format';
+import { clearSession, loadSession, saveSession } from '../../services/session-store';
+import type { GenerateDetail } from '../toolbar/toolbar';
 import '../toolbar/toolbar';
 import '../now-playing/now-playing';
 import '../day-filter/day-filter';
@@ -29,7 +29,7 @@ export class AppShell extends LitElement {
     @state() private now = Date.now();
     @state() private jumpToken = 0;
     @state() private listItems: ListItem[] = [];
-    @state() private days: {key: string; label: string}[] = [];
+    @state() private days: { key: string; label: string }[] = [];
 
     private timer: number | null = null;
     private listKey = '';
@@ -132,7 +132,7 @@ export class AppShell extends LitElement {
             entries: result.entries,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
-        const blob = new Blob([txt], {type: 'text/plain;charset=utf-8'});
+        const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -198,10 +198,14 @@ export class AppShell extends LitElement {
                 @jump-now=${this.onJumpNow}
             ></rs-now-playing>
             ${this.error ? html`<p class="error">${this.error}</p>` : ''}
-            ${this.result ? this.renderWeek() : html`<div class="empty">
+            ${
+                this.result
+                    ? this.renderWeek()
+                    : html`<div class="empty">
                 <p class="empty-title">Generate a week of Pulse 101</p>
                 <p class="empty-copy">Seven days of Top 40, no commercials. Tweak the gravity knobs, then export a log.</p>
-            </div>`}
+            </div>`
+            }
         `;
     }
 }

@@ -1,15 +1,15 @@
 package stockgame.trading
 
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import stockgame.domain.Quote
+import stockgame.store.GameStore
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
-import stockgame.domain.Quote
-import stockgame.store.GameStore
 
 class DueFillsBranchTest {
     private val now = Instant.parse("2024-01-03T15:00:00Z")
@@ -207,23 +207,22 @@ class DueFillsBranchTest {
         assertEquals(0, svc.executeDueOrders(user, now.toEpochMilli() + 10_000))
     }
 
-    private fun pendingOrder(id: Long, side: String, qty: Int): stockgame.domain.Order =
-        stockgame.domain.Order(
-            id = id,
-            symbol = "AAPL",
-            side = side,
-            qty = qty,
-            executeAt = now.toEpochMilli(),
-            status = "pending",
-            createdAt = now.toEpochMilli(),
-            tradeId = null,
-            orderType = "market",
-            tif = "GTC",
-            limitPrice = null,
-            stopPrice = null,
-            expiresAt = null,
-            fillPriceSource = "last",
-        )
+    private fun pendingOrder(id: Long, side: String, qty: Int): stockgame.domain.Order = stockgame.domain.Order(
+        id = id,
+        symbol = "AAPL",
+        side = side,
+        qty = qty,
+        executeAt = now.toEpochMilli(),
+        status = "pending",
+        createdAt = now.toEpochMilli(),
+        tradeId = null,
+        orderType = "market",
+        tif = "GTC",
+        limitPrice = null,
+        stopPrice = null,
+        expiresAt = null,
+        fillPriceSource = "last",
+    )
 
     private fun stubDue(
         store: GameStore,

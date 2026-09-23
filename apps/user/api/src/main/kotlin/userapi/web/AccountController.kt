@@ -3,7 +3,6 @@ package userapi.web
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -25,6 +24,7 @@ import userapi.domain.recordFailure
 import userapi.domain.sha256Hex
 import userapi.domain.validPassword
 import userapi.domain.validUsername
+import java.util.UUID
 
 @RestController
 class AccountController(
@@ -59,20 +59,16 @@ class AccountController(
         checkRate(accounts, "register", request)
         val username = validUsername(body.username)
         if (username == null || !validPassword(body.password, username)) {
-            throw ApiException(400, "validation", "username or password does not meet requirements")
+            throw ApiException(HttpStatus.BAD_REQUEST, "validation", "username or password does not meet requirements")
         }
         val id = store.createUser(username, accounts.hasher.hash(body.password))
-            ?: throw ApiException(409, "conflict", "username taken")
+            ?: throw ApiException(HttpStatus.CONFLICT, "conflict", "username taken")
         issueSession(response, settings, store, accounts, id)
         return ResponseEntity.status(HttpStatus.CREATED).body(MeBody(id = id.toString(), username = username))
     }
 
     @PostMapping("/login", headers = ["X-Api-Version=1"])
-    fun login(
-        @RequestBody body: PasswordBody,
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-    ): Any {
+    fun login(@RequestBody body: PasswordBody, request: HttpServletRequest, response: HttpServletResponse): Any {
         val store = requireStore(accounts)
         checkRate(accounts, "login", request)
         val username = validUsername(body.username) ?: normalizeUsername(body.username)
@@ -99,7 +95,8 @@ class AccountController(
         response: HttpServletResponse,
     ): MeBody {
         val store = requireStore(accounts)
-        val totpStore = accounts.totpStore ?: throw ApiException(503, "unavailable", "database offline")
+        val totpStore =
+            accounts.totpStore ?: throw ApiException(HttpStatus.SERVICE_UNAVAILABLE, "unavailable", "database offline")
         checkRate(accounts, "login2f", request)
         val pending = pendingToken(request)
         val userId = pending?.let { totpStore.findChallenge(sha256Hex(it), accounts.clock.instant()) }

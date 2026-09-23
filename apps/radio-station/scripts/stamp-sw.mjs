@@ -1,7 +1,7 @@
-import {createHash} from 'node:crypto';
-import {readFileSync, readdirSync, writeFileSync} from 'node:fs';
-import {dirname, join} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import { createHash } from 'node:crypto';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const dist = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const assets = readdirSync(join(dist, 'assets')).sort().join(',');

@@ -1,8 +1,8 @@
-import {describe, expect, it} from 'vitest';
-import {createGame} from 'basketball-core';
-import {DEFAULT_GAME_SETUP} from '../local-game/game-types';
-import {delayForPlay, PlaybackClock, yieldDelay} from './playback';
-import {WatchRunner, watchBadge, watchLoopAlive} from './watch-runner';
+import { describe, expect, it } from 'vitest';
+import { createGame } from 'basketball-core';
+import { DEFAULT_GAME_SETUP } from '../local-game/game-types';
+import { delayForPlay, PlaybackClock, yieldDelay } from './playback';
+import { WatchRunner, watchBadge, watchLoopAlive } from './watch-runner';
 
 describe('watch-runner', () => {
     it('only emits in watch mode', () => {
@@ -16,7 +16,7 @@ describe('watch-runner', () => {
         expect(runner.takeEvent(score)).toBeNull();
         const watch = {
             ...score,
-            setup: {...DEFAULT_GAME_SETUP, mode: 'watch' as const, simSeed: 4},
+            setup: { ...DEFAULT_GAME_SETUP, mode: 'watch' as const, simSeed: 4 },
         };
         expect(runner.takeEvent(watch)?.type).toBeTruthy();
         expect(watchLoopAlive(true, true, false)).toBe(true);
@@ -26,14 +26,24 @@ describe('watch-runner', () => {
         expect(watchBadge(false, false)).toBe('PAUSED');
         runner.reset();
         expect(runner.playing).toBe(false);
-        expect(runner.delayMs({type: 'shot', team: 'away', shooterId: 'away-1', xFeet: 10, yFeet: 25, made: true, clock: {period: 1, gameClockSeconds: 1, shotClockSeconds: 1}})).toBeGreaterThan(0);
+        expect(
+            runner.delayMs({
+                type: 'shot',
+                team: 'away',
+                shooterId: 'away-1',
+                xFeet: 10,
+                yFeet: 25,
+                made: true,
+                clock: { period: 1, gameClockSeconds: 1, shotClockSeconds: 1 },
+            }),
+        ).toBeGreaterThan(0);
         const capped = {
             ...watch,
             historyIndex: 700,
         };
         expect(runner.takeEvent(capped)?.type).toBe('period_end');
-        expect(runner.takeEvent({...watch, historyIndex: 720})).toBeNull();
-        expect(runner.takeEvent({...watch, engine: {...watch.engine, over: true}})).toBeNull();
+        expect(runner.takeEvent({ ...watch, historyIndex: 720 })).toBeNull();
+        expect(runner.takeEvent({ ...watch, engine: { ...watch.engine, over: true } })).toBeNull();
     });
 });
 

@@ -61,6 +61,6 @@ export interface SavedSession {
 export type DayFilter = 'all' | string;
 
 export type ListItem =
-    | {kind: 'day'; key: string; label: string; day: string}
-    | {kind: 'hour'; key: string; label: string}
-    | {kind: 'track'; key: string; entry: PlaylistEntry};
+    | { kind: 'day'; key: string; label: string; day: string }
+    | { kind: 'hour'; key: string; label: string }
+    | { kind: 'track'; key: string; entry: PlaylistEntry };

@@ -1,10 +1,10 @@
 package radioapi.service
 
-import java.util.UUID
 import radioapi.domain.GenerateCommand
 import radioapi.domain.ScheduledEntry
 import radioapi.domain.generateWeek
 import radioapi.domain.weightsJson
+import java.util.UUID
 
 class UnknownStation : RuntimeException("unknown station")
 
@@ -39,14 +39,12 @@ class PlaylistWriter(private val records: PlaylistRecords) {
         command: GenerateCommand,
         weights: String,
         scheduled: List<ScheduledEntry>,
-    ): GeneratedWeek {
-        return try {
-            val rows = toRows(scheduled)
-            val playlist = records.insert(command.stationId, command.seed, command.startsAtMs, command.weights, rows)
-            GeneratedWeek(playlist, rows)
-        } catch (_: DuplicatePlaylist) {
-            raced(command, weights)
-        }
+    ): GeneratedWeek = try {
+        val rows = toRows(scheduled)
+        val playlist = records.insert(command.stationId, command.seed, command.startsAtMs, command.weights, rows)
+        GeneratedWeek(playlist, rows)
+    } catch (_: DuplicatePlaylist) {
+        raced(command, weights)
     }
 
     private fun raced(command: GenerateCommand, weights: String): GeneratedWeek {
@@ -56,16 +54,15 @@ class PlaylistWriter(private val records: PlaylistRecords) {
     }
 }
 
-private fun toRows(scheduled: List<ScheduledEntry>): List<EntryRow> =
-    scheduled.mapIndexed { index, entry ->
-        EntryRow(
-            idx = index,
-            trackId = entry.trackId,
-            artist = entry.artist,
-            title = entry.title,
-            startsAt = entry.startsAtMs,
-            durationMs = entry.durationMs,
-            rotation = entry.rotation,
-            era = entry.era,
-        )
-    }
+private fun toRows(scheduled: List<ScheduledEntry>): List<EntryRow> = scheduled.mapIndexed { index, entry ->
+    EntryRow(
+        idx = index,
+        trackId = entry.trackId,
+        artist = entry.artist,
+        title = entry.title,
+        startsAt = entry.startsAtMs,
+        durationMs = entry.durationMs,
+        rotation = entry.rotation,
+        era = entry.era,
+    )
+}

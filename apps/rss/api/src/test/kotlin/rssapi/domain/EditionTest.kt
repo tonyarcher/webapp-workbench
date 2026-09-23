@@ -127,9 +127,12 @@ class EditionTest {
 
     @Test
     fun nonFinitePopularityStaysFinite() {
-        val cluster = Cluster("solo:a", listOf(
-            editionArticle("a", popularity = Double.NaN, engagement = Double.POSITIVE_INFINITY),
-        ))
+        val cluster = Cluster(
+            "solo:a",
+            listOf(
+                editionArticle("a", popularity = Double.NaN, engagement = Double.POSITIVE_INFINITY),
+            ),
+        )
         val score = compositeRank(cluster, emptyMap(), RankWeights(0.25, 0.25, 0.25, 0.25), NOW, 24)
         assertTrue(score.isFinite())
     }

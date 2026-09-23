@@ -1,5 +1,14 @@
 package rssapi.ai
 
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import org.springframework.http.HttpStatus
+import rssapi.persist.AiQuotaEntity
+import rssapi.persist.AiQuotaRepo
+import rssapi.web.ApiException
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
@@ -8,14 +17,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.mockito.kotlin.any
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
-import rssapi.persist.AiQuotaEntity
-import rssapi.persist.AiQuotaRepo
-import rssapi.web.ApiException
 
 private class FakePoster(private val handler: (method: String, url: String, body: String) -> HttpResult) : HttpPoster {
     val calls = mutableListOf<String>()
@@ -65,8 +66,11 @@ class AiServiceTest {
     @Test
     fun ollamaStatusChecksModelTag() {
         val poster = FakePoster { _, url, _ ->
-            if (url.endsWith("/api/tags")) okJson("""{"models":[{"name":"qwen3:8b"}]}""")
-            else okJson("Ollama is running")
+            if (url.endsWith("/api/tags")) {
+                okJson("""{"models":[{"name":"qwen3:8b"}]}""")
+            } else {
+                okJson("Ollama is running")
+            }
         }
         assertTrue(service(ollamaConfig(), poster).status().available)
     }
@@ -130,7 +134,7 @@ class AiServiceTest {
         }
         val config = AiConfig(provider = "opencode", baseUrl = "http://opencode:4096", model = "opencode/big-pickle")
         val err = assertFailsWith<ApiException> { service(config, poster).summarize(uid, null, "Some body text here") }
-        assertEquals(502, err.status)
+        assertEquals(HttpStatus.BAD_GATEWAY.value(), err.status.value())
         assertTrue(poster.calls.any { it == "DELETE http://opencode:4096/session/s9" })
     }
 
@@ -170,14 +174,14 @@ class AiServiceTest {
         assertEquals(SummaryLength.BRIEF, SummaryLength.parse("brief"))
         assertEquals(SummaryLength.DEEP, SummaryLength.parse("deep"))
         val err = assertFailsWith<ApiException> { SummaryLength.parse("long") }
-        assertEquals(400, err.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), err.status.value())
     }
 
     @Test
     fun summarizeBlankTextIs400() {
         val poster = FakePoster { _, _, _ -> throw AssertionError("no HTTP on validation failure") }
         val err = assertFailsWith<ApiException> { service(ollamaConfig(), poster).summarize(uid, null, "  ") }
-        assertEquals(400, err.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), err.status.value())
     }
 
     @Test
@@ -185,14 +189,14 @@ class AiServiceTest {
         val poster = FakePoster { _, _, _ -> throw AssertionError("no HTTP when off") }
         val service = AiService(AiQuotaService(quotaRepo()), AiConfig(), poster)
         val err = assertFailsWith<ApiException> { service.summarize(uid, null, "x") }
-        assertEquals(503, err.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), err.status.value())
     }
 
     @Test
     fun summarizeBackendFailureIs502() {
         val poster = FakePoster { _, _, _ -> throw AiException("conn refused") }
         val err = assertFailsWith<ApiException> { service(ollamaConfig(), poster).summarize(uid, null, "x") }
-        assertEquals(502, err.status)
+        assertEquals(HttpStatus.BAD_GATEWAY.value(), err.status.value())
     }
 
     @Test
@@ -204,7 +208,7 @@ class AiServiceTest {
         quotas.clock = java.time.Clock.fixed(now, java.time.ZoneOffset.UTC)
         val poster = FakePoster { _, _, _ -> throw AssertionError("quota must gate the backend") }
         val err = assertFailsWith<ApiException> { AiService(quotas, ollamaConfig(), poster).summarize(uid, null, "x") }
-        assertEquals(429, err.status)
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), err.status.value())
         verify(repo, never()).saveAndFlush(any<AiQuotaEntity>())
     }
 }

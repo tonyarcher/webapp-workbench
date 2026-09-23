@@ -1,11 +1,11 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {unsafeHTML} from 'lit/directives/unsafe-html.js';
-import {customElement, property, state} from 'lit/decorators.js';
-import {sanitizeHtml, safeHttpUrl, stripHtml} from '../../services/parser';
-import {SUMMARY_LENGTHS, loadSummaryLength, saveSummaryLength, summarizeBest, type SummaryLength} from '../../ai';
-import {toggleStar} from '../../mutations';
-import type {Article} from '../../types';
-import {domainOf, formatDate} from '../../util';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { customElement, property, state } from 'lit/decorators.js';
+import { sanitizeHtml, safeHttpUrl, stripHtml } from '../../services/parser';
+import { SUMMARY_LENGTHS, loadSummaryLength, saveSummaryLength, summarizeBest, type SummaryLength } from '../../ai';
+import { toggleStar } from '../../mutations';
+import type { Article } from '../../types';
+import { domainOf, formatDate } from '../../util';
 import styles from './article-view.css?inline';
 
 const summaryCache = new Map<string, string>();
@@ -16,7 +16,7 @@ const MAX_SUMMARY_CHARS = 12_000;
 export class ArticleView extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) article: Article | null = null;
+    @property({ attribute: false }) article: Article | null = null;
 
     @state() private summarizing = false;
     @state() private aiSummary: string | null = null;
@@ -51,7 +51,7 @@ export class ArticleView extends LitElement {
     }
 
     private emitClose = () => {
-        this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     };
 
     private renderTitle(a: Article, link: string | undefined) {
@@ -64,8 +64,10 @@ export class ArticleView extends LitElement {
 
     private renderAiCard() {
         const head = html`<div class="head"><span>✨ AI Summary</span><div class="seg" role="group" aria-label="Summary length">${SUMMARY_LENGTHS.map((l) => html`<button class="seg-btn ${this.summaryLength === l ? 'on' : ''}" ?disabled=${this.summarizing} @click=${() => this.setSummaryLength(l)}>${l === 'brief' ? 'Brief' : l === 'deep' ? 'Deep' : 'Standard'}</button>`)}</div></div>`;
-        if (this.aiError) return html`<div class="ai-card">${head}<div class="ai-text" style="color: var(--danger)">${this.aiError}</div></div>`;
-        if (this.summarizing) return html`<div class="ai-card">${head}<div class="spinner"><span class="spin"></span> Summarizing…</div></div>`;
+        if (this.aiError)
+            return html`<div class="ai-card">${head}<div class="ai-text" style="color: var(--danger)">${this.aiError}</div></div>`;
+        if (this.summarizing)
+            return html`<div class="ai-card">${head}<div class="spinner"><span class="spin"></span> Summarizing…</div></div>`;
         if (this.aiSummary) return html`<div class="ai-card">${head}<div class="ai-text">${this.aiSummary}</div></div>`;
         return html`<div class="ai-card">${head}<div class="ai-text muted">Pick a length, then <button class="link-btn" @click=${this.onSummarize}>Summarize</button>.</div></div>`;
     }
@@ -80,15 +82,13 @@ export class ArticleView extends LitElement {
         const started = this.article;
         if (!started) return;
         const next = !started.starred;
-        this.article = {...started, starred: next};
+        this.article = { ...started, starred: next };
         if (await toggleStar(started.id, next)) {
-            window.dispatchEvent(
-                new CustomEvent('article-starred', {detail: {id: started.id, starred: next}}),
-            );
+            window.dispatchEvent(new CustomEvent('article-starred', { detail: { id: started.id, starred: next } }));
         } else if (this.article?.id === started.id) {
-            this.article = {...started, starred: started.starred};
+            this.article = { ...started, starred: started.starred };
             window.dispatchEvent(
-                new CustomEvent('article-starred', {detail: {id: started.id, starred: started.starred}}),
+                new CustomEvent('article-starred', { detail: { id: started.id, starred: started.starred } }),
             );
         }
     }

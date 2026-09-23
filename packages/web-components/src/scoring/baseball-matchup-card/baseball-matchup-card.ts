@@ -1,5 +1,5 @@
-import {html, LitElement} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import { html, LitElement } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import matchupCssText from './baseball-matchup-card.css?inline';
 
 const matchupSheet = new CSSStyleSheet();
@@ -9,11 +9,11 @@ matchupSheet.replaceSync(matchupCssText);
 export class BaseballMatchupCard extends LitElement {
     static override styles = matchupSheet;
 
-    @property({type: String, attribute: 'batter-name'}) batterName = 'Current Batter';
-    @property({type: String, attribute: 'batter-stats'}) batterStats = '';
+    @property({ type: String, attribute: 'batter-name' }) batterName = 'Current Batter';
+    @property({ type: String, attribute: 'batter-stats' }) batterStats = '';
 
-    @property({type: String, attribute: 'pitcher-name'}) pitcherName = 'Current Pitcher';
-    @property({type: String, attribute: 'pitcher-stats'}) pitcherStats = '';
+    @property({ type: String, attribute: 'pitcher-name' }) pitcherName = 'Current Pitcher';
+    @property({ type: String, attribute: 'pitcher-stats' }) pitcherStats = '';
 
     override render() {
         return html`

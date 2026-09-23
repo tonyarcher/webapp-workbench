@@ -1,6 +1,6 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
 import {
     LIFTS,
     TEMPLATES,
@@ -14,8 +14,8 @@ import {
     type TemplateId,
     type WeekKind,
 } from 'fitness-core';
-import {fetchProfile, saveProfile} from '../../services/api';
-import type {Profile} from '../../types';
+import { fetchProfile, saveProfile } from '../../services/api';
+import type { Profile } from '../../types';
 import styles from './lifts-view.css?inline';
 
 @customElement('ft-lifts-view')
@@ -62,13 +62,19 @@ export class LiftsView extends LitElement {
 
     private async persist(): Promise<void> {
         if (!this.profile) {
-            this.profile = {sex: null, birthYear: null, heightM: null, displayUnit: this.display, tm: {squat: null, bench: null, deadlift: null, press: null}};
+            this.profile = {
+                sex: null,
+                birthYear: null,
+                heightM: null,
+                displayUnit: this.display,
+                tm: { squat: null, bench: null, deadlift: null, press: null },
+            };
         }
         const tmKg = this.tmKg();
         const next: Profile = {
             ...this.profile,
             displayUnit: this.display,
-            tm: {...this.profile.tm, [this.lift]: tmKg || null},
+            tm: { ...this.profile.tm, [this.lift]: tmKg || null },
         };
         this.error = '';
         this.saved = false;
@@ -102,7 +108,13 @@ export class LiftsView extends LitElement {
     private renderSets(): TemplateResult {
         const tmKg = this.tmKg();
         if (tmKg <= 0) return html`<p class="help">Enter a training max to see the wave.</p>`;
-        const sets = planLift({lift: this.lift, tmKg, week: this.week, template: this.template, display: this.display});
+        const sets = planLift({
+            lift: this.lift,
+            tmKg,
+            week: this.week,
+            template: this.template,
+            display: this.display,
+        });
         return html`<table class="table">
             <thead><tr><th>Slot</th><th>%</th><th>Reps</th><th>Load</th><th>Plates / side</th></tr></thead>
             <tbody>

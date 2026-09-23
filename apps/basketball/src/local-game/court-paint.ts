@@ -1,6 +1,6 @@
-import {restrictedArcPath, threePointJoin, threePointPath} from 'basketball-core';
-import type {CourtSpec, Point} from 'basketball-core';
-import {SCALE, courtToSvg} from './court-map';
+import { restrictedArcPath, threePointJoin, threePointPath } from 'basketball-core';
+import type { CourtSpec, Point } from 'basketball-core';
+import { SCALE, courtToSvg } from './court-map';
 
 export function threePointSvg(hoop: Point, spec: CourtSpec, side: 'left' | 'right'): string {
     const join = threePointJoin(spec);

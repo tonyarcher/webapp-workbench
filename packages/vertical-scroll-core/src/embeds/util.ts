@@ -5,13 +5,13 @@
  */
 export function stripImageProxy(url: string): string {
     try {
-        const parsed = new URL(url)
+        const parsed = new URL(url);
         if (parsed.pathname.includes('/image_proxy') || parsed.pathname.includes('/proxy/image')) {
-            const target = parsed.searchParams.get('url')
-            if (target) return target
+            const target = parsed.searchParams.get('url');
+            if (target) return target;
         }
     } catch {
         // not a URL we can parse — fall through
     }
-    return url
+    return url;
 }

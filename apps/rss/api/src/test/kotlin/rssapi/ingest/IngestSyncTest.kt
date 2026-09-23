@@ -1,10 +1,5 @@
 package rssapi.ingest
 
-import java.util.Optional
-import java.util.UUID
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -14,6 +9,11 @@ import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
 import rssapi.persist.FeedSyncEntity
 import rssapi.persist.FeedSyncRepo
+import java.util.Optional
+import java.util.UUID
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class IngestSyncTest {
     private val feeds: FeedRepo = mock()

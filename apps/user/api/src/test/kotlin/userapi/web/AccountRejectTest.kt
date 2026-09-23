@@ -1,19 +1,13 @@
 package userapi.web
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import javax.sql.DataSource
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.mockito.kotlin.mock
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
 import userapi.Settings
 import userapi.accounts.AccountServices
@@ -25,6 +19,13 @@ import userapi.http.bodyText
 import userapi.http.expectStatus
 import userapi.http.getWithCookies
 import userapi.http.postJson
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import javax.sql.DataSource
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @WebMvcTest(AccountController::class, TotpController::class)
 @Import(
@@ -69,9 +70,9 @@ class AccountRejectTest {
         val cookies = TestCookies()
         mvc.getWithCookies(cookies, "/csrf").expectStatus(200)
         val short = mvc.postJson(cookies, "/register", csrf = true, json = json("bob", "short"))
-        assertEquals(400, short.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), short.response.status)
         val badName = mvc.postJson(cookies, "/register", csrf = true, json = json("x", "twelvechars!!"))
-        assertEquals(400, badName.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), badName.response.status)
     }
 
     @Test
@@ -79,10 +80,10 @@ class AccountRejectTest {
         val cookies = TestCookies()
         mvc.getWithCookies(cookies, "/csrf").expectStatus(200)
         val res = mvc.postJson(cookies, "/login", csrf = true, json = json("ghost", "twelvechars!!"))
-        assertEquals(401, res.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), res.response.status)
         assertTrue(res.bodyText().contains("invalid credentials"))
         val malformed = mvc.postJson(cookies, "/login", csrf = true, json = json("x", "twelvechars!!"))
-        assertEquals(401, malformed.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), malformed.response.status)
     }
 
     @Test
@@ -95,7 +96,7 @@ class AccountRejectTest {
             csrf = true,
             json = mapper.writeValueAsString(mapOf("code" to "123456")),
         )
-        assertEquals(503, res.response.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), res.response.status)
     }
 
     @Test
@@ -104,7 +105,7 @@ class AccountRejectTest {
         mvc.getWithCookies(cookies, "/csrf").expectStatus(200)
         mvc.postJson(cookies, "/register", csrf = true, json = json("hank", "twelvechars!!")).expectStatus(201)
         val res = mvc.postJson(cookies, "/totp/begin", csrf = true, json = null)
-        assertEquals(503, res.response.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), res.response.status)
     }
 
     @Test
@@ -118,7 +119,7 @@ class AccountRejectTest {
             csrf = true,
             json = mapper.writeValueAsString(mapOf("code" to "123456")),
         )
-        assertEquals(503, res.response.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), res.response.status)
     }
 
     @Test
@@ -132,6 +133,6 @@ class AccountRejectTest {
     @Test
     fun meWithoutSession() {
         val cookies = TestCookies()
-        assertEquals(401, mvc.getWithCookies(cookies, "/me").response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), mvc.getWithCookies(cookies, "/me").response.status)
     }
 }

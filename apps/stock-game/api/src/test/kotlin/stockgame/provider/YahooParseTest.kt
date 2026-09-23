@@ -1,10 +1,10 @@
 package stockgame.provider
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import stockgame.domain.ProviderError
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import stockgame.domain.ProviderError
 
 private val MAPPER = ObjectMapper()
 
@@ -42,9 +42,10 @@ class YahooParseTest {
 
     @Test
     fun parsesSearch() {
-        val json = MAPPER.readTree(
-            """{"quotes":[{"symbol":"AAPL","shortname":"Apple","exchange":"NMS","quoteType":"EQUITY"}]}""",
-        )
+        val json =
+            MAPPER.readTree(
+                """{"quotes":[{"symbol":"AAPL","shortname":"Apple","exchange":"NMS","quoteType":"EQUITY"}]}""",
+            )
         val hits = parseYahooSearch(json)
         assertEquals(1, hits.size)
         assertEquals("AAPL", hits[0].symbol)

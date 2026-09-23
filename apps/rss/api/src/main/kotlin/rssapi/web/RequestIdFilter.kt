@@ -1,21 +1,20 @@
 package rssapi.web
-
-import java.util.UUID
+import jakarta.servlet.FilterChain
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 import rssapi.domain.requestIdsFrom
 import rssapi.log.log
-import jakarta.servlet.FilterChain
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
+import java.util.UUID
+
+/** Nanosecond to millisecond conversion, and the status that means 'error'. */
+private const val NS_PER_MS = 1_000_000
+private const val HTTP_INTERNAL_ERROR = 500
 
 @Component
 class RequestIdFilter : OncePerRequestFilter() {
-    override fun doFilterInternal(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-        chain: FilterChain,
-    ) {
+    override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
         val ids = requestIdsFrom(request.getHeader("X-Request-ID"), request.getHeader("traceparent"))
         response.setHeader("X-Request-ID", ids.requestId)
         val started = System.nanoTime()
@@ -41,16 +40,15 @@ class RequestIdFilter : OncePerRequestFilter() {
                 "method" to request.method,
                 "path" to path,
                 "status" to status,
-                "duration_ms" to (System.nanoTime() - started) / 1_000_000,
+                "duration_ms" to (System.nanoTime() - started) / NS_PER_MS,
                 "request_id" to requestId,
             ),
         )
     }
 
-    private fun levelFor(status: Int, health: Boolean): String =
-        when {
-            status >= 500 -> "error"
-            health -> "debug"
-            else -> "info"
-        }
+    private fun levelFor(status: Int, health: Boolean): String = when {
+        status >= HTTP_INTERNAL_ERROR -> "error"
+        health -> "debug"
+        else -> "info"
+    }
 }

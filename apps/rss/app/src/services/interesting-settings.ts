@@ -4,7 +4,7 @@
  * source-list.ts (HIDE_READ_KEY): validated loads, silent saves, {} on
  * anything unexpected. No API changes — these toggles never leave the browser.
  */
-import {extractWords} from './interesting-words';
+import { extractWords } from './interesting-words';
 
 const SHADOW_KEY = 'rss-reader:interesting-shadow';
 const WORD_MAP_KEY = 'rss-reader:word-map';

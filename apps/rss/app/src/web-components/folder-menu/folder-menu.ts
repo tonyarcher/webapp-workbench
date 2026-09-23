@@ -1,18 +1,18 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
-import type {Folder} from '../../types';
-import type {MenuAnchor} from '../feed-menu/feed-menu';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import type { Folder } from '../../types';
+import type { MenuAnchor } from '../feed-menu/feed-menu';
 import styles from './folder-menu.css?inline';
 
 @customElement('folder-menu')
 export class FolderMenu extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) folder: Folder | null = null;
-    @property({attribute: false}) open = false;
-    @property({attribute: false}) anchor: MenuAnchor | null = null;
-    @property({attribute: false}) unreadOnly = false;
-    @property({attribute: false}) shadow = false;
+    @property({ attribute: false }) folder: Folder | null = null;
+    @property({ attribute: false }) open = false;
+    @property({ attribute: false }) anchor: MenuAnchor | null = null;
+    @property({ attribute: false }) unreadOnly = false;
+    @property({ attribute: false }) shadow = false;
 
     private menuEl: HTMLElement | null = null;
 
@@ -94,7 +94,7 @@ export class FolderMenu extends LitElement {
         if (!el) return;
         const margin = 8;
         const rect = el.getBoundingClientRect();
-        let {left, top} = rect;
+        let { left, top } = rect;
         if (rect.right > window.innerWidth - margin) {
             left = Math.max(margin, window.innerWidth - rect.width - margin);
         }
@@ -117,29 +117,25 @@ export class FolderMenu extends LitElement {
     };
 
     private emitClose() {
-        this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     }
 
     private emitDelete() {
-        this.dispatchEvent(new CustomEvent('delete', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('delete', { bubbles: true, composed: true }));
     }
 
     private emitRefresh() {
-        this.dispatchEvent(new CustomEvent('refresh', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('refresh', { bubbles: true, composed: true }));
     }
 
     private onUnreadChange(e: Event) {
         const checked = (e.target as HTMLInputElement).checked;
-        this.dispatchEvent(
-            new CustomEvent('unread-only-change', {detail: checked, bubbles: true, composed: true}),
-        );
+        this.dispatchEvent(new CustomEvent('unread-only-change', { detail: checked, bubbles: true, composed: true }));
     }
 
     private onShadowChange(e: Event) {
         const checked = (e.target as HTMLInputElement).checked;
-        this.dispatchEvent(
-            new CustomEvent('shadow-change', {detail: checked, bubbles: true, composed: true}),
-        );
+        this.dispatchEvent(new CustomEvent('shadow-change', { detail: checked, bubbles: true, composed: true }));
     }
 }
 

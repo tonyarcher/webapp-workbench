@@ -1,207 +1,213 @@
-import {LitElement, html, unsafeCSS} from 'lit'
-import type {TemplateResult} from 'lit'
-import {customElement, property, state} from 'lit/decorators.js'
-import {ref} from 'lit/directives/ref.js'
-import {toScrollItem} from '../../services/to-scroll-item'
-import {resolveTiktokOEmbed, watchedOEmbedIndex} from '../../services/resolve-oembed'
-import type {ClipLink} from '../../types'
-import type {ScrollItem, ScrollViewport} from 'vertical-scroll-core'
-import 'vertical-scroll-core'
-import '../progress-sidebar/progress-sidebar'
-import styles from './watch-view.css?inline'
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { ref } from 'lit/directives/ref.js';
+import { toScrollItem } from '../../services/to-scroll-item';
+import { resolveTiktokOEmbed, watchedOEmbedIndex } from '../../services/resolve-oembed';
+import type { ClipLink } from '../../types';
+import type { ScrollItem, ScrollViewport } from 'vertical-scroll-core';
+import 'vertical-scroll-core';
+import '../progress-sidebar/progress-sidebar';
+import styles from './watch-view.css?inline';
 
-const MAX_OEMBED_ATTEMPTS = 3
+const MAX_OEMBED_ATTEMPTS = 3;
 
 @customElement('cs-watch-view')
 export class WatchView extends LitElement {
-    static override styles = unsafeCSS(styles)
+    static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) items: ClipLink[] = []
-    @property({attribute: false}) skippedCount = 0
-    @property({attribute: false}) startIndex = 0
-    @property({attribute: false}) startMaxSeen = 0
+    @property({ attribute: false }) items: ClipLink[] = [];
+    @property({ attribute: false }) skippedCount = 0;
+    @property({ attribute: false }) startIndex = 0;
+    @property({ attribute: false }) startMaxSeen = 0;
 
-    @state() private links: ClipLink[] = []
-    @state() private scrollItems: ScrollItem[] = []
-    @state() private activeIndex = 0
-    @state() private maxSeen = 0
-    @state() private resetKey = ''
-    @state() private sidebarOpen = false
+    @state() private links: ClipLink[] = [];
+    @state() private scrollItems: ScrollItem[] = [];
+    @state() private activeIndex = 0;
+    @state() private maxSeen = 0;
+    @state() private resetKey = '';
+    @state() private sidebarOpen = false;
 
-    private viewport: ScrollViewport | null = null
-    private prevItems: ClipLink[] = []
-    private resolving = new Set<string>()
-    private resolveAttempts = new Map<string, number>()
-    private resolveAbort: AbortController | null = null
-    private listGen = 0
-    private progressTimer: ReturnType<typeof setTimeout> | null = null
-    private linksSaveTimer: ReturnType<typeof setTimeout> | null = null
+    private viewport: ScrollViewport | null = null;
+    private prevItems: ClipLink[] = [];
+    private resolving = new Set<string>();
+    private resolveAttempts = new Map<string, number>();
+    private resolveAbort: AbortController | null = null;
+    private listGen = 0;
+    private progressTimer: ReturnType<typeof setTimeout> | null = null;
+    private linksSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
     override willUpdate(changed: Map<string, unknown>): void {
         if (changed.has('items')) {
-            const items = this.items
+            const items = this.items;
             if (items !== this.prevItems) {
-                this.prevItems = items
-                this.links = items.map((link) => ({...link}))
-                this.scrollItems = this.links.map((link, index) => toScrollItem(link, index, this.links.length))
-                this.listGen += 1
-                this.resetKey = `${items[0]?.id ?? ''}:${items.length}:${this.listGen}`
-                this.activeIndex = this.startIndex
-                this.maxSeen = Math.max(this.startMaxSeen, this.startIndex)
-                this.resolving.clear()
-                this.resolveAttempts.clear()
-                this.resolveWatched(this.activeIndex)
+                this.prevItems = items;
+                this.links = items.map((link) => ({ ...link }));
+                this.scrollItems = this.links.map((link, index) => toScrollItem(link, index, this.links.length));
+                this.listGen += 1;
+                this.resetKey = `${items[0]?.id ?? ''}:${items.length}:${this.listGen}`;
+                this.activeIndex = this.startIndex;
+                this.maxSeen = Math.max(this.startMaxSeen, this.startIndex);
+                this.resolving.clear();
+                this.resolveAttempts.clear();
+                this.resolveWatched(this.activeIndex);
             }
         }
     }
 
     private shouldResolve(link: ClipLink | undefined): boolean {
-        return !!link && !link.pageUrl && link.provider !== 'instagram' && !this.resolving.has(link.id) && (this.resolveAttempts.get(link.id) ?? 0) < MAX_OEMBED_ATTEMPTS
+        return (
+            !!link &&
+            !link.pageUrl &&
+            link.provider !== 'instagram' &&
+            !this.resolving.has(link.id) &&
+            (this.resolveAttempts.get(link.id) ?? 0) < MAX_OEMBED_ATTEMPTS
+        );
     }
 
     private applyOEmbed(linkId: string, info: Awaited<ReturnType<typeof resolveTiktokOEmbed>>): void {
         if (!info) {
-            this.resolveAttempts.set(linkId, (this.resolveAttempts.get(linkId) ?? 0) + 1)
-            return
+            this.resolveAttempts.set(linkId, (this.resolveAttempts.get(linkId) ?? 0) + 1);
+            return;
         }
-        this.resolveAttempts.delete(linkId)
-        const itemIndex = this.links.findIndex((item) => item.id === linkId)
-        if (itemIndex < 0) return
-        const current = this.links[itemIndex]
-        if (current === undefined) return
-        const next: ClipLink = {...current}
-        if (info.author !== undefined) next.author = info.author
-        if (info.authorName !== undefined) next.authorName = info.authorName
-        if (info.title !== undefined) next.title = info.title
-        if (info.pageUrl !== undefined) next.pageUrl = info.pageUrl
-        if (info.thumbnailUrl !== undefined) next.thumbnailUrl = info.thumbnailUrl
-        const links = this.links.slice()
-        links[itemIndex] = next
-        this.links = links
-        const scrollItems = this.scrollItems.slice()
-        scrollItems[itemIndex] = toScrollItem(next, itemIndex, links.length)
-        this.scrollItems = scrollItems
-        this.scheduleLinksSave()
+        this.resolveAttempts.delete(linkId);
+        const itemIndex = this.links.findIndex((item) => item.id === linkId);
+        if (itemIndex < 0) return;
+        const current = this.links[itemIndex];
+        if (current === undefined) return;
+        const next: ClipLink = { ...current };
+        if (info.author !== undefined) next.author = info.author;
+        if (info.authorName !== undefined) next.authorName = info.authorName;
+        if (info.title !== undefined) next.title = info.title;
+        if (info.pageUrl !== undefined) next.pageUrl = info.pageUrl;
+        if (info.thumbnailUrl !== undefined) next.thumbnailUrl = info.thumbnailUrl;
+        const links = this.links.slice();
+        links[itemIndex] = next;
+        this.links = links;
+        const scrollItems = this.scrollItems.slice();
+        scrollItems[itemIndex] = toScrollItem(next, itemIndex, links.length);
+        this.scrollItems = scrollItems;
+        this.scheduleLinksSave();
     }
 
     private resolveOne(link: ClipLink, signal: AbortSignal | undefined): void {
-        this.resolving.add(link.id)
+        this.resolving.add(link.id);
         void resolveTiktokOEmbed(link.id, signal)
             .then((info) => {
-                this.resolving.delete(link.id)
-                if (signal?.aborted) return
-                this.applyOEmbed(link.id, info)
+                this.resolving.delete(link.id);
+                if (signal?.aborted) return;
+                this.applyOEmbed(link.id, info);
             })
             .catch((err: unknown) => {
-                this.resolving.delete(link.id)
-                if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) return
-                this.resolveAttempts.set(link.id, (this.resolveAttempts.get(link.id) ?? 0) + 1)
-            })
+                this.resolving.delete(link.id);
+                if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
+                this.resolveAttempts.set(link.id, (this.resolveAttempts.get(link.id) ?? 0) + 1);
+            });
     }
 
     /** Abort in-flight probes and fetch only the clip on screen. */
     private resolveWatched(index: number): void {
-        this.resolveAbort?.abort()
-        this.resolveAbort = new AbortController()
-        const target = watchedOEmbedIndex(index, this.links.length)
-        if (target === null) return
-        const link = this.links[target]
-        if (link === undefined || !this.shouldResolve(link)) return
-        this.resolveOne(link, this.resolveAbort.signal)
+        this.resolveAbort?.abort();
+        this.resolveAbort = new AbortController();
+        const target = watchedOEmbedIndex(index, this.links.length);
+        if (target === null) return;
+        const link = this.links[target];
+        if (link === undefined || !this.shouldResolve(link)) return;
+        this.resolveOne(link, this.resolveAbort.signal);
     }
 
     /** Stable identity so the ref directive only fires on attach/detach. */
     private readonly onViewportRef = (el: Element | undefined): void => {
-        this.viewport = (el as ScrollViewport | undefined) ?? null
-    }
+        this.viewport = (el as ScrollViewport | undefined) ?? null;
+    };
 
-    private onActive(event: CustomEvent<{index: number}>): void {
-        this.activeIndex = event.detail.index
-        this.maxSeen = Math.max(this.maxSeen, event.detail.index)
-        this.resolveWatched(event.detail.index)
-        this.scheduleProgress()
+    private onActive(event: CustomEvent<{ index: number }>): void {
+        this.activeIndex = event.detail.index;
+        this.maxSeen = Math.max(this.maxSeen, event.detail.index);
+        this.resolveWatched(event.detail.index);
+        this.scheduleProgress();
     }
 
     private scheduleLinksSave(): void {
-        if (this.linksSaveTimer !== null) clearTimeout(this.linksSaveTimer)
+        if (this.linksSaveTimer !== null) clearTimeout(this.linksSaveTimer);
         this.linksSaveTimer = setTimeout(() => {
-            this.linksSaveTimer = null
+            this.linksSaveTimer = null;
             this.dispatchEvent(
                 new CustomEvent('links-enriched', {
-                    detail: {items: this.links},
+                    detail: { items: this.links },
                     bubbles: true,
                     composed: true,
                 }),
-            )
-        }, 400)
+            );
+        }, 400);
     }
 
     private scheduleProgress(): void {
-        if (this.progressTimer !== null) clearTimeout(this.progressTimer)
+        if (this.progressTimer !== null) clearTimeout(this.progressTimer);
         this.progressTimer = setTimeout(() => {
-            this.progressTimer = null
+            this.progressTimer = null;
             this.dispatchEvent(
                 new CustomEvent('progress', {
-                    detail: {index: this.activeIndex, maxSeen: this.maxSeen},
+                    detail: { index: this.activeIndex, maxSeen: this.maxSeen },
                     bubbles: true,
                     composed: true,
                 }),
-            )
-        }, 300)
+            );
+        }, 300);
     }
 
-    private onJump(event: CustomEvent<{index: number}>): void {
-        this.viewport?.goToIndex(event.detail.index)
+    private onJump(event: CustomEvent<{ index: number }>): void {
+        this.viewport?.goToIndex(event.detail.index);
     }
 
     private onBackdrop(): void {
-        this.sidebarOpen = false
+        this.sidebarOpen = false;
     }
 
     private onToggleSidebar(): void {
-        this.sidebarOpen = !this.sidebarOpen
+        this.sidebarOpen = !this.sidebarOpen;
     }
 
     private emitNewList(): void {
-        this.dispatchEvent(new CustomEvent('new-list', {bubbles: true, composed: true}))
+        this.dispatchEvent(new CustomEvent('new-list', { bubbles: true, composed: true }));
     }
 
     override connectedCallback(): void {
-        super.connectedCallback()
-        window.addEventListener('keydown', this.onWindowKeydown)
-        window.addEventListener('pagehide', this.flushProgress)
+        super.connectedCallback();
+        window.addEventListener('keydown', this.onWindowKeydown);
+        window.addEventListener('pagehide', this.flushProgress);
     }
 
     override disconnectedCallback(): void {
-        super.disconnectedCallback()
-        window.removeEventListener('keydown', this.onWindowKeydown)
-        window.removeEventListener('pagehide', this.flushProgress)
-        this.resolveAbort?.abort()
-        this.resolveAbort = null
+        super.disconnectedCallback();
+        window.removeEventListener('keydown', this.onWindowKeydown);
+        window.removeEventListener('pagehide', this.flushProgress);
+        this.resolveAbort?.abort();
+        this.resolveAbort = null;
         if (this.linksSaveTimer !== null) {
-            clearTimeout(this.linksSaveTimer)
-            this.linksSaveTimer = null
+            clearTimeout(this.linksSaveTimer);
+            this.linksSaveTimer = null;
         }
-        this.flushProgress()
+        this.flushProgress();
     }
 
     private readonly flushProgress = (): void => {
         if (this.progressTimer !== null) {
-            clearTimeout(this.progressTimer)
-            this.progressTimer = null
+            clearTimeout(this.progressTimer);
+            this.progressTimer = null;
         }
         this.dispatchEvent(
             new CustomEvent('progress', {
-                detail: {index: this.activeIndex, maxSeen: this.maxSeen},
+                detail: { index: this.activeIndex, maxSeen: this.maxSeen },
                 bubbles: true,
                 composed: true,
             }),
-        )
-    }
+        );
+    };
 
     private readonly onWindowKeydown = (event: KeyboardEvent): void => {
-        if (event.key === 'Escape' && this.sidebarOpen) this.sidebarOpen = false
-    }
+        if (event.key === 'Escape' && this.sidebarOpen) this.sidebarOpen = false;
+    };
 
     override render(): TemplateResult {
         return html`
@@ -210,7 +216,7 @@ export class WatchView extends LitElement {
                 ${this.sidebar()}
                 ${this.scrollViewport()}
             </div>
-        `
+        `;
     }
 
     private railToggle(): TemplateResult {
@@ -254,6 +260,6 @@ export class WatchView extends LitElement {
 
 declare global {
     interface HTMLElementTagNameMap {
-        'cs-watch-view': WatchView
+        'cs-watch-view': WatchView;
     }
 }

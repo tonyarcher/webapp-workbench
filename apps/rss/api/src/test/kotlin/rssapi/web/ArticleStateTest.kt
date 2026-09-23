@@ -1,14 +1,12 @@
 package rssapi.web
 
-import java.util.Optional
-import java.util.UUID
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -20,6 +18,9 @@ import rssapi.persist.ArticleStateRepo
 import rssapi.persist.SubscriptionRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import java.util.Optional
+import java.util.UUID
+import kotlin.test.assertEquals
 
 private fun stateJwt(sub: String): org.springframework.security.oauth2.jwt.Jwt =
     org.springframework.security.oauth2.jwt.Jwt.withTokenValue("tok")
@@ -64,7 +65,7 @@ class ArticleStateTest {
             contentType = MediaType.APPLICATION_JSON
             content = """{}"""
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test
@@ -111,7 +112,7 @@ class ArticleStateTest {
             contentType = MediaType.APPLICATION_JSON
             content = """{"feedIds":["nope"],"cutoff":1}"""
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test
@@ -123,7 +124,7 @@ class ArticleStateTest {
             contentType = MediaType.APPLICATION_JSON
             content = """{}"""
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test
@@ -202,6 +203,6 @@ class ArticleStateTest {
             contentType = MediaType.APPLICATION_JSON
             content = """{"feedId":"nope"}"""
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 }

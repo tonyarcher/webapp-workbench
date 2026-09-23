@@ -1,6 +1,5 @@
 package rssapi.web
 
-import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
@@ -10,6 +9,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
@@ -22,6 +22,7 @@ import rssapi.ai.AiStatus
 import rssapi.ai.SummaryLength
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import java.util.UUID
 
 private fun aiJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")
@@ -116,7 +117,9 @@ class AiControllerTest {
     @Test
     fun quotaErrorSurfaces429() {
         stubAuth()
-        whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenThrow(ApiException(429, "hourly AI budget used"))
+        whenever(
+            ai.summarize(any(), anyOrNull(), any(), any()),
+        ).thenThrow(ApiException(HttpStatus.TOO_MANY_REQUESTS, "hourly AI budget used"))
 
         mvc.post("/ai/summarize") {
             header("X-Api-Version", "1")

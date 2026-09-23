@@ -1,12 +1,12 @@
 package rssapi.web
 
-import java.util.UUID
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import rssapi.ingest.IngestSync
 import rssapi.persist.SubscriptionRepo
 import rssapi.poller.FeedPoller
+import java.util.UUID
 
 data class SyncBody(val scope: Any? = null)
 

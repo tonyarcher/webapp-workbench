@@ -1,8 +1,8 @@
-import {html} from 'lit';
-import {repeat} from 'lit/directives/repeat.js';
-import {safeColor} from './plate-play';
-import type {Handedness, ParsedPlatePlay, PlateResult} from './plate-play';
-import {batterFigure, pitcherFigure} from './plate-figures';
+import { html } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
+import { safeColor } from './plate-play';
+import type { Handedness, ParsedPlatePlay, PlateResult } from './plate-play';
+import { batterFigure, pitcherFigure } from './plate-figures';
 
 export interface PlateSceneInput {
     play: ParsedPlatePlay | null;
@@ -25,7 +25,7 @@ export function plateSceneClass(
     swinging: boolean,
     animated: boolean,
     locationKnown = true,
-    interactive = false
+    interactive = false,
 ): string {
     const parts = ['plate-scene'];
     if (result) parts.push(`result-${result.replace(' ', '-')}`, 'has-pitch');
@@ -40,19 +40,19 @@ export function plateSceneClass(
 const ZONE_TOP = 112;
 const ZONE_W = 34;
 const ZONE_H = 52;
-const OUTSIDE_OFFSETS: Record<number, {dx: number; dy: number}> = {
-    10: {dx: 0, dy: 89},
-    11: {dx: 0, dy: 163},
-    12: {dx: -31, dy: 129},
-    13: {dx: 31, dy: 129},
-    14: {dx: -24, dy: 89},
-    15: {dx: 24, dy: 89},
-    16: {dx: -24, dy: 163},
-    17: {dx: 24, dy: 163},
+const OUTSIDE_OFFSETS: Record<number, { dx: number; dy: number }> = {
+    10: { dx: 0, dy: 89 },
+    11: { dx: 0, dy: 163 },
+    12: { dx: -31, dy: 129 },
+    13: { dx: 31, dy: 129 },
+    14: { dx: -24, dy: 89 },
+    15: { dx: 24, dy: 89 },
+    16: { dx: -24, dy: 163 },
+    17: { dx: 24, dy: 163 },
 };
 
 /** Ball flight offset from the release point to the target zone cell. */
-export function zoneOffsets(zone: number | null): {dx: number; dy: number} {
+export function zoneOffsets(zone: number | null): { dx: number; dy: number } {
     const z = Math.min(17, Math.max(1, Math.round(zone ?? 5)));
     const outside = OUTSIDE_OFFSETS[z];
     if (outside) return outside;
@@ -75,18 +75,13 @@ export function zoneFromPoint(x: number, y: number, width: number, height: numbe
 export function zoneFromClick(
     clientX: number,
     clientY: number,
-    box: {left: number; top: number},
+    box: { left: number; top: number },
     borderLeft: number,
     borderTop: number,
     width: number,
     height: number,
 ): number {
-    return zoneFromPoint(
-        clientX - box.left - borderLeft,
-        clientY - box.top - borderTop,
-        width,
-        height,
-    );
+    return zoneFromPoint(clientX - box.left - borderLeft, clientY - box.top - borderTop, width, height);
 }
 
 export function renderPlateScene(input: PlateSceneInput) {
@@ -94,7 +89,11 @@ export function renderPlateScene(input: PlateSceneInput) {
     const swinging = Boolean(input.play?.swinging);
     const animated = input.animations && input.playDurationMs > 40 && Boolean(result);
     const locationKnown = input.play !== null && input.play.zone !== null;
-    return html`${repeat([input.playSeq], (seq) => seq, () => plateSceneMarkup(input, result, swinging, animated, locationKnown))}`;
+    return html`${repeat(
+        [input.playSeq],
+        (seq) => seq,
+        () => plateSceneMarkup(input, result, swinging, animated, locationKnown),
+    )}`;
 }
 
 function plateSceneMarkup(
@@ -102,9 +101,9 @@ function plateSceneMarkup(
     result: PlateResult | '',
     swinging: boolean,
     animated: boolean,
-    locationKnown: boolean
+    locationKnown: boolean,
 ) {
-    const {dx, dy} = zoneOffsets(input.play?.zone ?? null);
+    const { dx, dy } = zoneOffsets(input.play?.zone ?? null);
     const releaseX = input.throws === 'L' ? 16 : -16;
     return html`
       <div
@@ -161,9 +160,11 @@ function plateZone(result: PlateResult | '', input: PlateSceneInput) {
       <div class="zone" @click=${(event: MouseEvent) => onZoneClick(event, input)}>
         <div class="zone-grid"></div>
         <div class="zone-result" data-testid="plate-result" aria-live="polite">${result}</div>
-        ${col >= 0
-            ? html`<div class="zone-pick" data-testid="zone-pick" style="left: ${((col + 0.5) * 100) / 3}%; top: ${((row + 0.5) * 100) / 3}%"></div>`
-            : ''}
+        ${
+            col >= 0
+                ? html`<div class="zone-pick" data-testid="zone-pick" style="left: ${((col + 0.5) * 100) / 3}%; top: ${((row + 0.5) * 100) / 3}%"></div>`
+                : ''
+        }
       </div>
     `;
 }

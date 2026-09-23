@@ -1,16 +1,9 @@
-export type {
-    CalEvent,
-    FetchLike,
-    SourceId,
-    SyncPhase,
-    SyncProgress,
-    WriteResult,
-} from './types';
+export type { CalEvent, FetchLike, SourceId, SyncPhase, SyncProgress, WriteResult } from './types';
 
-export {escapeText, eventsToIcs, foldLine, formatUtcDate, formatUtcStamp} from './ics';
-export {dedupEvents} from './dedup';
-export {collectEvents, writeEvents} from './sync';
-export {joinUrl, fnv1a, fnv1a64, utcYmd} from './util';
+export { escapeText, eventsToIcs, foldLine, formatUtcDate, formatUtcStamp } from './ics';
+export { dedupEvents } from './dedup';
+export { collectEvents, writeEvents } from './sync';
+export { joinUrl, fnv1a, fnv1a64, utcYmd } from './util';
 
 export {
     DEFAULT_CALENDAR_FUTURE_DAYS,
@@ -39,10 +32,10 @@ export {
     refreshTokenPath,
     traktHeaders,
 } from './trakt';
-export type {DevicePollResult, TraktDeviceCode, TraktToken} from './trakt';
+export type { DevicePollResult, TraktDeviceCode, TraktToken } from './trakt';
 
-export {DEFAULT_NETFLIX_MINUTES, parseCsv, parseFlexibleDate, parseNetflixExport} from './netflix';
-export type {NetflixParseResult, NetflixSkipped} from './netflix';
+export { DEFAULT_NETFLIX_MINUTES, parseCsv, parseFlexibleDate, parseNetflixExport } from './netflix';
+export type { NetflixParseResult, NetflixSkipped } from './netflix';
 
 export {
     GOOGLE_CALENDAR_API,
@@ -54,4 +47,4 @@ export {
     findOrCreateCalendar,
     googleInsertEvent,
 } from './google-calendar';
-export type {GoogleCalendarEvent, GoogleDate, GoogleDateTime} from './google-calendar';
+export type { GoogleCalendarEvent, GoogleDate, GoogleDateTime } from './google-calendar';

@@ -1,13 +1,14 @@
 package fitnessapi.http
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @WebMvcTest
 @Import(TestStoresConfig::class)
@@ -30,7 +31,7 @@ class WebBranchTest {
     @Test
     fun profileMissingBodyIs400() {
         val res = mvc.putJson("/profile", "null")
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test

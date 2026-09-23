@@ -2,6 +2,7 @@ package rssapi.web
 
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -32,13 +33,18 @@ class ArticleListController(
         val parsedScope = try {
             parseArticleScope(scope ?: "all")
         } catch (err: IllegalArgumentException) {
-            throw ApiException(400, err.message ?: "invalid scope", err)
+            throw ApiException(HttpStatus.BAD_REQUEST, err.message ?: "invalid scope", err)
         }
         val sinceMs = parseSince(since)
         val articleSort = parseArticleSort(sort)
         val pageLimit = clampPageLimit(limit?.toDoubleOrNull())
         val spec = articleSpec(
-            user.id, parsedScope, unreadOnly == "1", articleSort, cursor?.let { decodeCursor(it) }, sinceMs,
+            user.id,
+            parsedScope,
+            unreadOnly == "1",
+            articleSort,
+            cursor?.let { decodeCursor(it) },
+            sinceMs,
         )
         val rows = articles.findAll(spec, PageRequest.of(0, pageLimit + 1, sortFor(articleSort))).content
         val hasMore = rows.size > pageLimit
@@ -50,7 +56,7 @@ class ArticleListController(
 
 private fun parseSince(since: String?): Long? {
     if (since == null) return null
-    return since.toDoubleOrNull()?.toLong() ?: throw ApiException(400, "invalid since")
+    return since.toDoubleOrNull()?.toLong() ?: throw ApiException(HttpStatus.BAD_REQUEST, "invalid since")
 }
 
 private fun sortFor(sort: ArticleSort): Sort = when (sort) {

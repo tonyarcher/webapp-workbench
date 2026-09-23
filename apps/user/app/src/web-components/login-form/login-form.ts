@@ -1,6 +1,6 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import styles from './login-form.css?inline';
 
 @customElement('uw-login-form')
@@ -9,7 +9,7 @@ export class LoginForm extends LitElement {
 
     @property() mode: 'login' | 'register' = 'login';
     @property() error = '';
-    @property({type: Boolean}) busy = false;
+    @property({ type: Boolean }) busy = false;
 
     private onSubmit = (event: Event): void => {
         event.preventDefault();
@@ -18,19 +18,23 @@ export class LoginForm extends LitElement {
         const data = new FormData(form);
         const username = String(data.get('username') ?? '');
         const password = String(data.get('password') ?? '');
-        this.dispatchEvent(new CustomEvent('account-submit', {
-            detail: {mode: this.mode, username, password},
-            bubbles: true,
-            composed: true,
-        }));
+        this.dispatchEvent(
+            new CustomEvent('account-submit', {
+                detail: { mode: this.mode, username, password },
+                bubbles: true,
+                composed: true,
+            }),
+        );
     };
 
     private switchMode = (mode: 'login' | 'register'): void => {
-        this.dispatchEvent(new CustomEvent('account-mode', {
-            detail: {mode},
-            bubbles: true,
-            composed: true,
-        }));
+        this.dispatchEvent(
+            new CustomEvent('account-mode', {
+                detail: { mode },
+                bubbles: true,
+                composed: true,
+            }),
+        );
     };
 
     override render(): TemplateResult {
@@ -51,9 +55,11 @@ export class LoginForm extends LitElement {
                 </button>
             </form>
             <p class="switch">
-                ${register
-                    ? html`<button type="button" class="link" @click=${() => this.switchMode('login')}>Have an account? Sign in</button>`
-                    : html`<button type="button" class="link" @click=${() => this.switchMode('register')}>Need an account? Register</button>`}
+                ${
+                    register
+                        ? html`<button type="button" class="link" @click=${() => this.switchMode('login')}>Have an account? Sign in</button>`
+                        : html`<button type="button" class="link" @click=${() => this.switchMode('register')}>Need an account? Register</button>`
+                }
             </p>
         `;
     }

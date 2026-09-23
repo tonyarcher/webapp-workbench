@@ -1,7 +1,5 @@
 package userapi.config
 
-import java.time.Clock
-import javax.sql.DataSource
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import userapi.Settings
@@ -37,6 +35,8 @@ import userapi.persist.SigningKeyRepo
 import userapi.persist.UserRepo
 import userapi.persist.WebauthnChallengeRepo
 import userapi.settingsFromEnv
+import java.time.Clock
+import javax.sql.DataSource
 
 @Configuration
 class AppConfig {
@@ -57,8 +57,7 @@ class AppConfig {
     }
 
     @Bean
-    fun jwtSigner(oauthStore: OAuthStore, settings: Settings): JwtSigner =
-        JwtSigner(oauthStore, settings.issuer)
+    fun jwtSigner(oauthStore: OAuthStore, settings: Settings): JwtSigner = JwtSigner(oauthStore, settings.issuer)
 }
 
 @Configuration
@@ -76,8 +75,7 @@ class StoreConfig {
         JpaPasskeyStore(passkeyRepo, userRepo)
 
     @Bean
-    fun challengeStore(challengeRepo: WebauthnChallengeRepo): WebauthnChallengeStore =
-        JpaChallengeStore(challengeRepo)
+    fun challengeStore(challengeRepo: WebauthnChallengeRepo): WebauthnChallengeStore = JpaChallengeStore(challengeRepo)
 
     @Bean
     fun oauthStore(

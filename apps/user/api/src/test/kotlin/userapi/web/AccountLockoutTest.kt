@@ -1,19 +1,13 @@
 package userapi.web
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import javax.sql.DataSource
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.mockito.kotlin.mock
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
 import userapi.Settings
 import userapi.accounts.AccountServices
@@ -25,6 +19,13 @@ import userapi.http.bodyText
 import userapi.http.expectStatus
 import userapi.http.getWithCookies
 import userapi.http.postJson
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import javax.sql.DataSource
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @WebMvcTest(AccountController::class)
 @Import(
@@ -70,10 +71,10 @@ class AccountLockoutTest {
         mvc.postJson(cookies, "/register", csrf = true, json = json("dave", "twelvechars!!")).expectStatus(201)
         repeat(5) {
             val wrong = mvc.postJson(cookies, "/login", csrf = true, json = json("dave", "wrongpassword1"))
-            assertEquals(401, wrong.response.status)
+            assertEquals(HttpStatus.UNAUTHORIZED.value(), wrong.response.status)
         }
         val locked = mvc.postJson(cookies, "/login", csrf = true, json = json("dave", "twelvechars!!"))
-        assertEquals(401, locked.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), locked.response.status)
         assertTrue(locked.bodyText().contains("invalid credentials"))
     }
 
@@ -83,7 +84,7 @@ class AccountLockoutTest {
         mvc.getWithCookies(cookies, "/csrf").expectStatus(200)
         repeat(3) {
             val res = mvc.postJson(cookies, "/login", csrf = true, json = json("nobody", "twelvechars!!"))
-            assertEquals(401, res.response.status)
+            assertEquals(HttpStatus.UNAUTHORIZED.value(), res.response.status)
         }
     }
 }

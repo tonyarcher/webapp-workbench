@@ -33,18 +33,22 @@ class ApiRootControllerTest {
 
     @Test
     fun rootHalContentType() {
-        val result = mvc.get("/") {
-            header("Accept", "application/hal+json")
-        }.andReturn()
+        val result =
+            mvc
+                .get("/") {
+                    header("Accept", "application/hal+json")
+                }.andReturn()
         assertEquals(200, result.response.status)
         assertTrue(result.response.contentType?.contains("hal") == true)
     }
 
     @Test
     fun rootJsonAlsoHasLinks() {
-        val result = mvc.get("/") {
-            header("Accept", "application/json")
-        }.andReturn()
+        val result =
+            mvc
+                .get("/") {
+                    header("Accept", "application/json")
+                }.andReturn()
         assertEquals(200, result.response.status)
         assertTrue(result.response.contentAsString.contains("\"_links\""))
     }

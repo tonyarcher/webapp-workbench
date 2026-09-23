@@ -1,14 +1,14 @@
 package rssapi.web
 
+import rssapi.domain.ArticleSort
+import rssapi.persist.ArticleEntity
+import rssapi.persist.ArticleStateEntity
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import rssapi.domain.ArticleSort
-import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleStateEntity
 
 class ArticleJsonMapTest {
     private fun article(id: String, hot: Float, published: Long): ArticleEntity = ArticleEntity(

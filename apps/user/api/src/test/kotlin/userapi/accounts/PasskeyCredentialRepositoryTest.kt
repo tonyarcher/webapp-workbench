@@ -1,12 +1,12 @@
 package userapi.accounts
 
 import com.yubico.webauthn.data.ByteArray
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 
 class PasskeyCredentialRepositoryTest {
     private val userId = UUID.randomUUID()

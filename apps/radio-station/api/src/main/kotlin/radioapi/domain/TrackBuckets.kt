@@ -36,5 +36,4 @@ fun groupTracks(tracks: List<Track>): TrackBuckets {
     return TrackBuckets(power, current, recurrent, gold2000s, gold1990s)
 }
 
-fun numberOne(buckets: TrackBuckets): Track? =
-    buckets.power.find { it.rank == 1 } ?: buckets.power.firstOrNull()
+fun numberOne(buckets: TrackBuckets): Track? = buckets.power.find { it.rank == 1 } ?: buckets.power.firstOrNull()

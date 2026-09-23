@@ -1,12 +1,17 @@
 package rssapi.fetch
-
+import rssapi.FETCH_TIMEOUT_MS
+import rssapi.MAX_FEED_BYTES
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
-import rssapi.FETCH_TIMEOUT_MS
-import rssapi.MAX_FEED_BYTES
+
+/** Redirect chasing is bounded; 304/200 are HTTP semantics, not tunables. */
+private const val MAX_FETCH_HOPS = 6
+private const val MAX_REDIRECTS = 5
+private const val NOT_MODIFIED = 304
+private const val HTTP_OK = 200
 
 class HttpFeedFetcher(private val allowLocal: Boolean) : FeedFetcher {
     private val client = HttpClient.newBuilder()
@@ -16,12 +21,12 @@ class HttpFeedFetcher(private val allowLocal: Boolean) : FeedFetcher {
 
     override fun fetch(url: String, etag: String?, lastModified: String?): FetchResult {
         var current = url
-        repeat(6) { hop ->
+        repeat(MAX_FETCH_HOPS) { hop ->
             checkHost(current)
             val resp = send(current, etag, lastModified)
             val loc = resp.headers().firstValue("location")
             if (resp.statusCode() in 300..399 && loc.isPresent) {
-                if (hop >= 5) throw IllegalStateException("Too many redirects")
+                if (hop >= MAX_REDIRECTS) throw IllegalStateException("Too many redirects")
                 current = URI(current).resolve(loc.get()).toString()
                 return@repeat
             }
@@ -64,10 +69,10 @@ class HttpFeedFetcher(private val allowLocal: Boolean) : FeedFetcher {
     private fun toResult(resp: HttpResponse<ByteArray>): FetchResult {
         val etag = resp.headers().firstValue("etag").orElse(null)
         val lastMod = resp.headers().firstValue("last-modified").orElse(null)
-        if (resp.statusCode() == 304) return FetchResult(304, etag = etag, lastModified = lastMod)
+        if (resp.statusCode() == NOT_MODIFIED) return FetchResult(NOT_MODIFIED, etag = etag, lastModified = lastMod)
         if (resp.statusCode() !in 200..299) throw IllegalStateException("HTTP ${resp.statusCode()}")
         val body = resp.body()
         if (body.size > MAX_FEED_BYTES) throw IllegalStateException("feed too large")
-        return FetchResult(200, String(body, Charsets.UTF_8), etag, lastMod)
+        return FetchResult(HTTP_OK, String(body, Charsets.UTF_8), etag, lastMod)
     }
 }

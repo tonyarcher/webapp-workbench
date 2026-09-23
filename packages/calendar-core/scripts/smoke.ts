@@ -1,8 +1,8 @@
-import type {CalEvent, FetchLike, WriteResult} from '../src/types';
-import {escapeText, eventsToIcs, foldLine, formatUtcDate, formatUtcStamp} from '../src/ics';
-import {dedupEvents} from '../src/dedup';
-import {collectEvents, writeEvents} from '../src/sync';
-import {fnv1a, fnv1a64, joinUrl, utf8ByteLength} from '../src/util';
+import type { CalEvent, FetchLike, WriteResult } from '../src/types';
+import { escapeText, eventsToIcs, foldLine, formatUtcDate, formatUtcStamp } from '../src/ics';
+import { dedupEvents } from '../src/dedup';
+import { collectEvents, writeEvents } from '../src/sync';
+import { fnv1a, fnv1a64, joinUrl, utf8ByteLength } from '../src/util';
 import {
     TRAKT_VERIFICATION_URL,
     calendarShowsPath,
@@ -16,8 +16,8 @@ import {
     parseTokenResponse,
     traktHeaders,
 } from '../src/trakt';
-import {parseCsv, parseFlexibleDate, parseNetflixExport} from '../src/netflix';
-import {eventToGoogleBody, googleInsertEvent} from '../src/google-calendar';
+import { parseCsv, parseFlexibleDate, parseNetflixExport } from '../src/netflix';
+import { eventToGoogleBody, googleInsertEvent } from '../src/google-calendar';
 
 function assert(cond: unknown, msg: string): void {
     if (!cond) throw new Error(`FAIL: ${msg}`);
@@ -90,7 +90,10 @@ assert(formatUtcDate(Date.UTC(2026, 0, 15)) === '20260115', 'utc date');
 // joinUrl
 assert(joinUrl('./', 'api/trakt') === './api/trakt', 'join ./');
 assert(joinUrl('/calendar-sync/', 'api/trakt') === '/calendar-sync/api/trakt', 'join subpath');
-assert(joinUrl('https://api.trakt.tv', '/calendars/my/shows') === 'https://api.trakt.tv/calendars/my/shows', 'join host');
+assert(
+    joinUrl('https://api.trakt.tv', '/calendars/my/shows') === 'https://api.trakt.tv/calendars/my/shows',
+    'join host',
+);
 assert(fnv1a('a') !== fnv1a('b'), 'fnv distinct');
 assert(/^[0-9a-f]{16}$/.test(fnv1a64('x')), 'fnv1a64 16 hex chars');
 assert(fnv1a64('same') === fnv1a64('same'), 'fnv1a64 deterministic');
@@ -100,8 +103,8 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
 {
     const show = mapCalendarShow({
         first_aired: '2026-01-15T02:00:00.000Z',
-        episode: {season: 1, number: 2, title: 'Pilot', runtime: 45, ids: {trakt: 99}},
-        show: {title: 'Severance', ids: {trakt: 7, slug: 'severance'}, runtime: 50},
+        episode: { season: 1, number: 2, title: 'Pilot', runtime: 45, ids: { trakt: 99 } },
+        show: { title: 'Severance', ids: { trakt: 7, slug: 'severance' }, runtime: 50 },
     });
     assert(show !== null, 'map show');
     assert(show?.uid === 'cal-sync:trakt:air:show:7:s1e2', 'show uid');
@@ -109,13 +112,13 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
     assert(show?.end === Date.UTC(2026, 0, 15, 2, 45, 0), 'show runtime 45m');
     assert(show?.url === 'https://trakt.tv/shows/severance/seasons/1/episodes/2', 'show url');
     assert(mapCalendarShow({}) === null, 'empty show skipped');
-    assert(mapCalendarShow({first_aired: 'nope', episode: {}, show: {}}) === null, 'bad air skipped');
+    assert(mapCalendarShow({ first_aired: 'nope', episode: {}, show: {} }) === null, 'bad air skipped');
 }
 
 {
     const movie = mapCalendarMovie({
         released: '2026-02-01',
-        movie: {title: 'Dune', year: 2026, ids: {trakt: 5, slug: 'dune-2026'}, runtime: 180},
+        movie: { title: 'Dune', year: 2026, ids: { trakt: 5, slug: 'dune-2026' }, runtime: 180 },
     });
     assert(movie !== null, 'map movie');
     assert(movie?.allDay === true, 'movie all-day');
@@ -127,10 +130,13 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
     const watched = mapHistoryItem({
         watched_at: '2026-01-15T02:00:00.000Z',
         type: 'episode',
-        episode: {season: 2, number: 3, title: 'Hi', runtime: 30, ids: {trakt: 1}},
-        show: {title: 'Show', ids: {trakt: 8, slug: 'show'}},
+        episode: { season: 2, number: 3, title: 'Hi', runtime: 30, ids: { trakt: 1 } },
+        show: { title: 'Show', ids: { trakt: 8, slug: 'show' } },
     });
-    assert(watched?.uid === `cal-sync:trakt:watch:show:8:s2e3:${Date.UTC(2026, 0, 15, 2, 0, 0)}`, 'watch uid includes time');
+    assert(
+        watched?.uid === `cal-sync:trakt:watch:show:8:s2e3:${Date.UTC(2026, 0, 15, 2, 0, 0)}`,
+        'watch uid includes time',
+    );
     assert(watched?.description === 'Watched', 'watch description');
 }
 
@@ -167,29 +173,38 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
         interval: 5,
     });
     assert(unsafe?.verificationUrl === TRAKT_VERIFICATION_URL, 'javascript url sanitized');
-    assert(parseDeviceCodeResponse({
-        device_code: 'dev',
-        user_code: 'IJKL',
-        verification_url: 'https://evil.example.com/activate',
-        expires_in: 600,
-        interval: 5,
-    })?.verificationUrl === TRAKT_VERIFICATION_URL, 'untrusted host sanitized');
+    assert(
+        parseDeviceCodeResponse({
+            device_code: 'dev',
+            user_code: 'IJKL',
+            verification_url: 'https://evil.example.com/activate',
+            expires_in: 600,
+            interval: 5,
+        })?.verificationUrl === TRAKT_VERIFICATION_URL,
+        'untrusted host sanitized',
+    );
     // suffix spoof (trakt.tv.evil.com) is not a trakt.tv host
-    assert(parseDeviceCodeResponse({
-        device_code: 'dev',
-        user_code: 'MNOP',
-        verification_url: 'https://trakt.tv.evil.com/activate',
-        expires_in: 600,
-        interval: 5,
-    })?.verificationUrl === TRAKT_VERIFICATION_URL, 'trakt suffix spoof sanitized');
+    assert(
+        parseDeviceCodeResponse({
+            device_code: 'dev',
+            user_code: 'MNOP',
+            verification_url: 'https://trakt.tv.evil.com/activate',
+            expires_in: 600,
+            interval: 5,
+        })?.verificationUrl === TRAKT_VERIFICATION_URL,
+        'trakt suffix spoof sanitized',
+    );
     // a real trakt.tv URL (case-normalized) is kept
-    assert(parseDeviceCodeResponse({
-        device_code: 'dev',
-        user_code: 'QRST',
-        verification_url: 'HTTPS://TRAKT.TV/activate',
-        expires_in: 600,
-        interval: 5,
-    })?.verificationUrl === 'https://trakt.tv/activate', 'case-insensitive trakt host kept');
+    assert(
+        parseDeviceCodeResponse({
+            device_code: 'dev',
+            user_code: 'QRST',
+            verification_url: 'HTTPS://TRAKT.TV/activate',
+            expires_in: 600,
+            interval: 5,
+        })?.verificationUrl === 'https://trakt.tv/activate',
+        'case-insensitive trakt host kept',
+    );
     const token = parseTokenResponse({
         access_token: 'a',
         refresh_token: 'r',
@@ -197,9 +212,12 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
         created_at: 1,
     });
     assert(token?.accessToken === 'a' && token.refreshToken === 'r', 'token parse');
-    assert(parseDevicePollResponse(400, {error: 'pending'}).status === 'pending', 'poll pending');
-    assert(parseDevicePollResponse(400, {error: 'slow_down'}).status === 'slow_down', 'poll slow_down');
-    assert(parseDevicePollResponse(200, {access_token: 'a', refresh_token: 'r', expires_in: 1}).status === 'token', 'poll token');
+    assert(parseDevicePollResponse(400, { error: 'pending' }).status === 'pending', 'poll pending');
+    assert(parseDevicePollResponse(400, { error: 'slow_down' }).status === 'slow_down', 'poll slow_down');
+    assert(
+        parseDevicePollResponse(200, { access_token: 'a', refresh_token: 'r', expires_in: 1 }).status === 'token',
+        'poll token',
+    );
 }
 
 // Netflix CSV
@@ -209,8 +227,14 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
     assert(csv.events[0]?.title === 'The Crown: Season 1: Windsor', 'csv title');
     assert(csv.events[0]?.allDay === true, 'csv all-day');
     assert(csv.events[0]?.start === Date.UTC(2024, 0, 15), 'csv date utc');
-    assert(csv.skipped.some((s) => s.reason === 'no-date'), 'csv no-date skipped');
-    assert(csv.skipped.some((s) => s.reason === 'no-title'), 'csv no-title skipped');
+    assert(
+        csv.skipped.some((s) => s.reason === 'no-date'),
+        'csv no-date skipped',
+    );
+    assert(
+        csv.skipped.some((s) => s.reason === 'no-title'),
+        'csv no-title skipped',
+    );
 }
 
 {
@@ -219,16 +243,14 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
 }
 
 {
-    const json = parseNetflixExport(
-        JSON.stringify([{title: 'Stranger Things', date: '2024-06-07T01:25:56Z'}]),
-    );
+    const json = parseNetflixExport(JSON.stringify([{ title: 'Stranger Things', date: '2024-06-07T01:25:56Z' }]));
     assert(json.events.length === 1, 'json one event');
     assert(json.events[0]?.allDay === false, 'json timed');
     assert(json.events[0]?.title === 'Stranger Things', 'json title');
 }
 
 {
-    const wrapped = parseNetflixExport(JSON.stringify({viewedItems: [{Title: 'Film', Date: '2024-01-02'}]}));
+    const wrapped = parseNetflixExport(JSON.stringify({ viewedItems: [{ Title: 'Film', Date: '2024-01-02' }] }));
     assert(wrapped.events.length === 1, 'wrapped json array');
     assert(wrapped.events[0]?.title === 'Film', 'wrapped title');
 }
@@ -247,9 +269,9 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
 
 // Dedup keeps first
 {
-    const a: CalEvent = {...sample, uid: 'x', title: 'first'};
-    const b: CalEvent = {...sample, uid: 'x', title: 'second'};
-    const c: CalEvent = {...sample, uid: 'y', title: 'other'};
+    const a: CalEvent = { ...sample, uid: 'x', title: 'first' };
+    const b: CalEvent = { ...sample, uid: 'x', title: 'second' };
+    const c: CalEvent = { ...sample, uid: 'y', title: 'other' };
     const out = dedupEvents([a, b, c]);
     assert(out.length === 2, 'dedup length');
     assert(out[0]?.title === 'first', 'dedup keeps first');
@@ -281,7 +303,7 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
         return {
             ok: false,
             status: 409,
-            headers: {get: () => null},
+            headers: { get: () => null },
             json: async () => ({}),
             text: async () => '',
         };
@@ -295,7 +317,7 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
     const fakeFetch: FetchLike = async () => ({
         ok: false,
         status: 500,
-        headers: {get: () => null},
+        headers: { get: () => null },
         json: async () => ({}),
         text: async () => '',
     });
@@ -305,16 +327,17 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
 // Sync progress
 {
     const events: CalEvent[] = [
-        {...sample, uid: '1', title: 'a'},
-        {...sample, uid: '2', title: 'b'},
-        {...sample, uid: '3', title: 'c'},
+        { ...sample, uid: '1', title: 'a' },
+        { ...sample, uid: '2', title: 'b' },
+        { ...sample, uid: '3', title: 'c' },
     ];
-    const snapshots: Array<{done: number; failed?: number}> = [];
+    const snapshots: Array<{ done: number; failed?: number }> = [];
     const result = await writeEvents({
         events,
         writtenUids: new Set(['1']),
         writeOne: async (event): Promise<WriteResult> => (event.uid === '3' ? 'fail' : 'ok'),
-        onProgress: (p) => snapshots.push(p.failed === undefined ? {done: p.done} : {done: p.done, failed: p.failed}),
+        onProgress: (p) =>
+            snapshots.push(p.failed === undefined ? { done: p.done } : { done: p.done, failed: p.failed }),
     });
     assert(result.done === 2, 'two succeeded (skip + ok)');
     assert(result.failed === 1, 'one failed');
@@ -326,8 +349,8 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
 
 {
     const collected = await collectEvents([
-        async () => [{...sample, uid: 'a'}],
-        async () => [{...sample, uid: 'b'}],
+        async () => [{ ...sample, uid: 'a' }],
+        async () => [{ ...sample, uid: 'b' }],
     ]);
     assert(collected.length === 2, 'collect both loaders');
 }
@@ -338,17 +361,17 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
     const fullPage = async () => ({
         ok: true,
         status: 200,
-        headers: {get: (name: string) => (name === 'x-pagination-page-count' ? '1000' : null)},
+        headers: { get: (name: string) => (name === 'x-pagination-page-count' ? '1000' : null) },
         json: async () =>
-            Array.from({length: 100}, (_, i) => ({
+            Array.from({ length: 100 }, (_, i) => ({
                 watched_at: `2026-01-01T00:${String(i % 60).padStart(2, '0')}:00Z`,
                 type: 'episode',
-                episode: {season: 1, number: 1, runtime: 30, ids: {trakt: i}},
-                show: {title: 'S', ids: {trakt: i, slug: 's'}},
+                episode: { season: 1, number: 1, runtime: 30, ids: { trakt: i } },
+                show: { title: 'S', ids: { trakt: i, slug: 's' } },
             })),
         text: async () => '',
     });
-    const truncated: Array<{type: string; page: number}> = [];
+    const truncated: Array<{ type: string; page: number }> = [];
     await fetchTraktEvents({
         fetch: fullPage,
         baseUrl: 'https://example.test',
@@ -356,7 +379,7 @@ assert(fnv1a64('a') === 'af63dc4c8601ec8c', 'fnv1a64 canonical vector');
         accessToken: 'tok',
         includeCalendar: false,
         includeHistory: true,
-        onTruncate: (info) => truncated.push({type: info.type, page: info.page}),
+        onTruncate: (info) => truncated.push({ type: info.type, page: info.page }),
     });
     assert(truncated.length === 2, 'truncation reported for shows and movies');
     assert(truncated[0]?.page === 50, 'truncation at max page');

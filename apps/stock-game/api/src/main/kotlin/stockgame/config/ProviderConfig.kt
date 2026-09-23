@@ -1,6 +1,5 @@
 package stockgame.config
 
-import java.time.Clock
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.context.annotation.Bean
@@ -14,16 +13,18 @@ import stockgame.store.BarCache
 import stockgame.store.GameStore
 import stockgame.trading.AccountService
 import stockgame.trading.TradingService
+import java.time.Clock
 
 @Configuration
 class ProviderConfig {
     @Bean
     fun priceProvider(cache: ObjectProvider<BarCache>): PriceProvider {
         val settings = settingsFromEnv(System.getenv())
-        val raw = when (settings.provider) {
-            "yahoo" -> YahooProvider()
-            else -> throw ProviderError("Unknown PRICE_PROVIDER: ${settings.provider}")
-        }
+        val raw =
+            when (settings.provider) {
+                "yahoo" -> YahooProvider()
+                else -> throw ProviderError("Unknown PRICE_PROVIDER: ${settings.provider}")
+            }
         val bars = cache.ifAvailable ?: return raw
         return CachedProvider(raw, bars, settings.quoteTtlMs)
     }

@@ -1,13 +1,6 @@
-import {applyStamp, elapsedSeconds, isValidStamp, stampFromClock} from './clock';
-import {getRulebook, oppositeTeam} from './rulebook';
-import type {
-    ClockStamp,
-    GameState,
-    PlayerStatLine,
-    StatKey,
-    TeamId,
-    TeamSide,
-} from './types';
+import { applyStamp, elapsedSeconds, isValidStamp, stampFromClock } from './clock';
+import { getRulebook, oppositeTeam } from './rulebook';
+import type { ClockStamp, GameState, PlayerStatLine, StatKey, TeamId, TeamSide } from './types';
 
 const ZERO_STATS: Omit<PlayerStatLine, 'playerId'> = {
     seconds: 0,
@@ -28,7 +21,7 @@ const ZERO_STATS: Omit<PlayerStatLine, 'playerId'> = {
 };
 
 export function emptyStat(playerId: string): PlayerStatLine {
-    return {playerId, ...ZERO_STATS};
+    return { playerId, ...ZERO_STATS };
 }
 
 export function teamSide(game: GameState, team: TeamId): TeamSide {
@@ -36,7 +29,7 @@ export function teamSide(game: GameState, team: TeamId): TeamSide {
 }
 
 export function withTeam(game: GameState, team: TeamId, side: TeamSide): GameState {
-    return team === 'home' ? {...game, home: side} : {...game, away: side};
+    return team === 'home' ? { ...game, home: side } : { ...game, away: side };
 }
 
 export function addStat(game: GameState, playerId: string, key: StatKey, amount: number): GameState {
@@ -44,12 +37,12 @@ export function addStat(game: GameState, playerId: string, key: StatKey, amount:
     if (!row) return game;
     return {
         ...game,
-        stats: {...game.stats, [playerId]: {...row, [key]: row[key] + amount}},
+        stats: { ...game.stats, [playerId]: { ...row, [key]: row[key] + amount } },
     };
 }
 
 export function resetShotClock(game: GameState, seconds: number): GameState {
-    return {...game, clock: {...game.clock, shotClockSeconds: seconds}};
+    return { ...game, clock: { ...game.clock, shotClockSeconds: seconds } };
 }
 
 export function setPossession(game: GameState, team: TeamId): GameState {
@@ -58,19 +51,19 @@ export function setPossession(game: GameState, team: TeamId): GameState {
         ...game,
         possession: team,
         pendingFt: null,
-        clock: {...game.clock, shotClockSeconds: rb.shotClockSeconds, running: false},
+        clock: { ...game.clock, shotClockSeconds: rb.shotClockSeconds, running: false },
     };
 }
 
 export function creditStints(game: GameState, until: ClockStamp): GameState {
     if (!isValidStamp(until)) return game;
-    const stats = {...game.stats};
-    const stintStart = {...game.stintStart};
+    const stats = { ...game.stats };
+    const stintStart = { ...game.stintStart };
     for (const id of [...game.home.onCourt, ...game.away.onCourt]) {
         const start = stintStart[id];
         const row = stats[id];
         if (!start || !row) continue;
-        stats[id] = {...row, seconds: row.seconds + elapsedSeconds(start, until)};
+        stats[id] = { ...row, seconds: row.seconds + elapsedSeconds(start, until) };
         stintStart[id] = until;
     }
     return {
@@ -84,17 +77,15 @@ export function creditStints(game: GameState, until: ClockStamp): GameState {
 export function startStint(game: GameState, playerId: string): GameState {
     return {
         ...game,
-        stintStart: {...game.stintStart, [playerId]: stampFromClock(game.clock)},
+        stintStart: { ...game.stintStart, [playerId]: stampFromClock(game.clock) },
     };
 }
 
 export function stopStint(game: GameState, playerId: string): GameState {
-    const {[playerId]: _dropped, ...rest} = game.stintStart;
-    return {...game, stintStart: rest};
+    const { [playerId]: _dropped, ...rest } = game.stintStart;
+    return { ...game, stintStart: rest };
 }
 
 export function flipPossession(game: GameState): GameState {
     return setPossession(game, oppositeTeam(game.possession));
 }
-
-

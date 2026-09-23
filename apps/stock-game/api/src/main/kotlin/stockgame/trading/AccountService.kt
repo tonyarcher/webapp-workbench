@@ -1,10 +1,10 @@
 package stockgame.trading
 
-import java.time.Clock
-import java.util.UUID
 import stockgame.domain.HoldingsEntry
 import stockgame.provider.PriceProvider
 import stockgame.store.GameStore
+import java.time.Clock
+import java.util.UUID
 
 class AccountService(
     private val store: GameStore,

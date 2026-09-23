@@ -1,4 +1,4 @@
-import type {Weights} from '../types';
+import type { Weights } from '../types';
 
 export const DEFAULT_WEIGHTS: Weights = {
     hitGravity: 70,

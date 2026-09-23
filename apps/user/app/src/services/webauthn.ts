@@ -1,6 +1,5 @@
 function b64urlToBytes(value: string): Uint8Array {
-    const padded = value.replace(/-/g, '+').replace(/_/g, '/')
-        + '='.repeat((4 - (value.length % 4)) % 4);
+    const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (value.length % 4)) % 4);
     const bin = atob(padded);
     const out = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
@@ -27,7 +26,7 @@ export function decodeCreateOptions(options: unknown): CredentialCreationOptions
     if (!pk) throw new Error('missing publicKey');
     pk.challenge = toBuffer(pk.challenge);
     if (pk.user) pk.user.id = toBuffer(pk.user.id);
-    pk.excludeCredentials = (pk.excludeCredentials ?? []).map((c) => ({...c, id: toBuffer(c.id)}));
+    pk.excludeCredentials = (pk.excludeCredentials ?? []).map((c) => ({ ...c, id: toBuffer(c.id) }));
     return clone;
 }
 
@@ -39,7 +38,7 @@ export function decodeRequestOptions(options: unknown): CredentialRequestOptions
     const pk = clone.publicKey;
     if (!pk) throw new Error('missing publicKey');
     pk.challenge = toBuffer(pk.challenge);
-    pk.allowCredentials = (pk.allowCredentials ?? []).map((c) => ({...c, id: toBuffer(c.id)}));
+    pk.allowCredentials = (pk.allowCredentials ?? []).map((c) => ({ ...c, id: toBuffer(c.id) }));
     return clone;
 }
 

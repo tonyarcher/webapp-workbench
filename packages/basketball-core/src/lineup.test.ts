@@ -1,6 +1,6 @@
-import {describe, expect, it} from 'vitest';
-import {generateRoster} from './default-roster';
-import {applySub, isOnCourt, isValidOnCourt, startersOf} from './lineup';
+import { describe, expect, it } from 'vitest';
+import { generateRoster } from './default-roster';
+import { applySub, isOnCourt, isValidOnCourt, startersOf } from './lineup';
 
 describe('lineup', () => {
     const roster = generateRoster('home');

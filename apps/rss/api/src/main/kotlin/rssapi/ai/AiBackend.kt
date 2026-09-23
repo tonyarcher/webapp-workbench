@@ -59,15 +59,13 @@ class JdkHttpPoster : HttpPoster {
         }
     }
 
-    private inline fun <T> wrapIo(block: () -> T): T {
-        return try {
-            block()
-        } catch (err: InterruptedException) {
-            Thread.currentThread().interrupt()
-            throw AiException("interrupted", err)
-        } catch (err: java.io.IOException) {
-            throw AiException("request failed", err)
-        }
+    private inline fun <T> wrapIo(block: () -> T): T = try {
+        block()
+    } catch (err: InterruptedException) {
+        Thread.currentThread().interrupt()
+        throw AiException("interrupted", err)
+    } catch (err: java.io.IOException) {
+        throw AiException("request failed", err)
     }
 }
 

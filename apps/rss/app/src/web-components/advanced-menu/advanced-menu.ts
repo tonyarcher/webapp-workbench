@@ -1,28 +1,28 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
-import type {MenuAnchor} from '../feed-menu/feed-menu';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import type { MenuAnchor } from '../feed-menu/feed-menu';
 import styles from './advanced-menu.css?inline';
 
 const HOUR = 3_600_000;
 
 const AGE_OPTIONS: { label: string; age: number | null }[] = [
-    {label: 'Older than 1 hour', age: HOUR},
-    {label: 'Older than 12 hours', age: 12 * HOUR},
-    {label: 'Older than 1 day', age: 24 * HOUR},
-    {label: 'Older than 3 days', age: 3 * 24 * HOUR},
-    {label: 'Older than 7 days', age: 7 * 24 * HOUR},
-    {label: 'Older than 30 days', age: 30 * 24 * HOUR},
-    {label: 'All time', age: null},
+    { label: 'Older than 1 hour', age: HOUR },
+    { label: 'Older than 12 hours', age: 12 * HOUR },
+    { label: 'Older than 1 day', age: 24 * HOUR },
+    { label: 'Older than 3 days', age: 3 * 24 * HOUR },
+    { label: 'Older than 7 days', age: 7 * 24 * HOUR },
+    { label: 'Older than 30 days', age: 30 * 24 * HOUR },
+    { label: 'All time', age: null },
 ];
 
 @customElement('advanced-menu')
 export class AdvancedMenu extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) open = false;
-    @property({attribute: false}) anchor: MenuAnchor | null = null;
-    @property({attribute: false}) unreadOnly = false;
-    @property({attribute: false}) scopeLabel = '';
+    @property({ attribute: false }) open = false;
+    @property({ attribute: false }) anchor: MenuAnchor | null = null;
+    @property({ attribute: false }) unreadOnly = false;
+    @property({ attribute: false }) scopeLabel = '';
 
     private menuEl: HTMLElement | null = null;
 
@@ -93,7 +93,7 @@ export class AdvancedMenu extends LitElement {
         if (!el) return;
         const margin = 8;
         const rect = el.getBoundingClientRect();
-        let {left, top} = rect;
+        let { left, top } = rect;
         if (rect.right > window.innerWidth - margin) {
             left = Math.max(margin, window.innerWidth - rect.width - margin);
         }
@@ -116,7 +116,7 @@ export class AdvancedMenu extends LitElement {
     };
 
     private emitClose() {
-        this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     }
 
     private onUnreadChange(e: Event) {

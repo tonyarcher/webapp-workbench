@@ -1,15 +1,15 @@
 package rssapi.ai
 
+/** A healthy Ollama root answers 200. */
+private const val HTTP_OK = 200
+
 /** Ollama over its OpenAI-compatible API. No auth; model tags are plain names. */
-class OllamaBackend(
-    private val config: AiConfig,
-    private val http: HttpPoster = JdkHttpPoster(),
-) : AiBackend {
+class OllamaBackend(private val config: AiConfig, private val http: HttpPoster = JdkHttpPoster()) : AiBackend {
     override fun probe(): Boolean {
         if (config.baseUrl.isEmpty() || config.model.isEmpty()) return false
         return try {
             val root = http.get(config.baseUrl + "/", emptyMap(), config.probeTimeoutMs)
-            if (root.status != 200) return false
+            if (root.status != HTTP_OK) return false
             listedModels().any { it == config.model || it.startsWith(config.model + ":") }
         } catch (_: AiException) {
             false

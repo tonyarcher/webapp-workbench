@@ -1,14 +1,14 @@
-import type {Point} from './types';
+import type { Point } from './types';
 
 function average(points: Point[]): Point {
-    if (!points.length) return {t: 0, v: 0};
+    if (!points.length) return { t: 0, v: 0 };
     let t = 0;
     let v = 0;
     for (const p of points) {
         t += p.t;
         v += p.v;
     }
-    return {t: t / points.length, v: v / points.length};
+    return { t: t / points.length, v: v / points.length };
 }
 
 function pickLargest(pointA: Point, range: Point[], avg: Point, rangeStart: number): number {
@@ -46,7 +46,12 @@ export function downsampleLttb(points: Point[], limit: number): Point[] {
         const pointA = points[a];
         if (!pointA) break;
         const avgPts = points.slice(avgStart, avgEnd);
-        const nextA = pickLargest(pointA, points.slice(rangeStart, rangeEnd), average(avgPts.length ? avgPts : [last]), rangeStart);
+        const nextA = pickLargest(
+            pointA,
+            points.slice(rangeStart, rangeEnd),
+            average(avgPts.length ? avgPts : [last]),
+            rangeStart,
+        );
         const chosen = points[nextA];
         if (chosen && chosen !== last) sampled.push(chosen);
         a = nextA;

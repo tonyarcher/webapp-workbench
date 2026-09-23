@@ -1,10 +1,8 @@
 package radioapi.store
 
-import java.time.Instant
-import java.util.UUID
 import radioapi.domain.Track
-import radioapi.domain.Weights
 import radioapi.domain.WEEK_MS
+import radioapi.domain.Weights
 import radioapi.domain.canonicalizeWeights
 import radioapi.domain.weightsJson
 import radioapi.persist.PlaylistEntity
@@ -14,6 +12,8 @@ import radioapi.persist.TrackEntity
 import radioapi.service.EntryRow
 import radioapi.service.PlaylistRow
 import tools.jackson.databind.json.JsonMapper
+import java.time.Instant
+import java.util.UUID
 
 fun TrackEntity.toTrack(): Track = Track(
     id = id.toString(),

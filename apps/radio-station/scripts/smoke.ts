@@ -1,7 +1,7 @@
-import {formatPlaylistTxt} from '../src/services/export-txt';
-import {findNowPlaying} from '../src/services/now-playing';
-import {filterEntries, toListItems, weekDays} from '../src/services/list-items';
-import type {PlaylistEntry, Weights} from '../src/types';
+import { formatPlaylistTxt } from '../src/services/export-txt';
+import { findNowPlaying } from '../src/services/now-playing';
+import { filterEntries, toListItems, weekDays } from '../src/services/list-items';
+import type { PlaylistEntry, Weights } from '../src/types';
 
 function assert(cond: boolean, msg: string): asserts cond {
     if (!cond) throw new Error(`FAIL: ${msg}`);
@@ -36,8 +36,8 @@ const txt = formatPlaylistTxt({
     weights: DEFAULT_WEIGHTS,
     timeZone: 'UTC',
     entries: [
-        entry({idx: 0, startsAt: START, artist: 'The Chartliners', title: 'Neon Boulevard'}),
-        entry({idx: 1, startsAt: START + 180_000, artist: 'Luna Vox', title: 'Midnight Static'}),
+        entry({ idx: 0, startsAt: START, artist: 'The Chartliners', title: 'Neon Boulevard' }),
+        entry({ idx: 1, startsAt: START + 180_000, artist: 'Luna Vox', title: 'Midnight Static' }),
     ],
 });
 assert(txt.startsWith('Pulse 101 — 2026-09-01 to 2026-09-08\n'), 'txt header station + week');
@@ -45,8 +45,8 @@ assert(txt.includes('seed: autumn-oak'), 'txt includes seed');
 assert(txt.includes('2026-09-01 00:00  The Chartliners — Neon Boulevard'), 'txt first row');
 
 const npEntries = [
-    entry({idx: 0, startsAt: START, durationMs: 180_000, trackId: 'a'}),
-    entry({idx: 1, startsAt: START + 180_000, durationMs: 180_000, trackId: 'b'}),
+    entry({ idx: 0, startsAt: START, durationMs: 180_000, trackId: 'a' }),
+    entry({ idx: 1, startsAt: START + 180_000, durationMs: 180_000, trackId: 'b' }),
 ];
 assert(findNowPlaying(npEntries, START - 1).kind === 'outside', 'now-playing before week');
 const mid = findNowPlaying(npEntries, START + 60_000);
@@ -54,9 +54,9 @@ assert(mid.kind === 'track' && mid.entry.trackId === 'a', 'now-playing during fi
 assert(findNowPlaying(npEntries, START + 180_000).kind === 'track', 'now-playing at boundary is next');
 
 const listEntries = [
-    entry({idx: 0, startsAt: START, artist: 'A', title: 'One'}),
-    entry({idx: 1, startsAt: START + 3_600_000, artist: 'B', title: 'Two'}),
-    entry({idx: 2, startsAt: START + 24 * 3_600_000, artist: 'C', title: 'Three'}),
+    entry({ idx: 0, startsAt: START, artist: 'A', title: 'One' }),
+    entry({ idx: 1, startsAt: START + 3_600_000, artist: 'B', title: 'Two' }),
+    entry({ idx: 2, startsAt: START + 24 * 3_600_000, artist: 'C', title: 'Three' }),
 ];
 const items = toListItems(listEntries, 'all');
 assert(items.filter((i) => i.kind === 'day').length === 2, 'list inserts day headers');

@@ -1,11 +1,12 @@
 package radioapi.web
 
-import java.sql.SQLException
-import javax.sql.DataSource
 import org.springframework.beans.factory.ObjectProvider
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
+import java.sql.SQLException
+import javax.sql.DataSource
 
 data class HealthBody(val ok: Boolean)
 
@@ -17,7 +18,9 @@ class HealthController(private val dataSource: ObjectProvider<DataSource>) {
     @GetMapping("/readyz")
     fun readyz(): ResponseEntity<HealthBody> {
         val source = dataSource.ifAvailable
-        if (source == null || !probe(source)) return ResponseEntity.status(503).body(HealthBody(ok = false))
+        if (source == null || !probe(source)) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(HealthBody(ok = false))
+        }
         return ResponseEntity.ok(HealthBody(ok = true))
     }
 }

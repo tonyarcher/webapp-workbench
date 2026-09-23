@@ -12,12 +12,12 @@ import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions
 import com.yubico.webauthn.data.ResidentKeyRequirement
 import com.yubico.webauthn.data.UserIdentity
 import com.yubico.webauthn.data.UserVerificationRequirement
-import java.time.Clock
-import java.time.Duration
-import java.util.UUID
 import userapi.Settings
 import userapi.domain.PENDING_MAX_AGE_SEC
 import userapi.domain.newToken
+import java.time.Clock
+import java.time.Duration
+import java.util.UUID
 
 const val CHALLENGE_REGISTER: String = "register"
 const val CHALLENGE_LOGIN: String = "login"
@@ -94,16 +94,15 @@ fun buildRelyingParty(settings: Settings, store: PasskeyStore): RelyingParty {
         .build()
 }
 
-private fun registerOptions(user: UserIdentity): StartRegistrationOptions =
-    StartRegistrationOptions.builder()
-        .user(user)
-        .authenticatorSelection(
-            AuthenticatorSelectionCriteria.builder()
-                .residentKey(ResidentKeyRequirement.REQUIRED)
-                .userVerification(UserVerificationRequirement.PREFERRED)
-                .build(),
-        )
-        .build()
+private fun registerOptions(user: UserIdentity): StartRegistrationOptions = StartRegistrationOptions.builder()
+    .user(user)
+    .authenticatorSelection(
+        AuthenticatorSelectionCriteria.builder()
+            .residentKey(ResidentKeyRequirement.REQUIRED)
+            .userVerification(UserVerificationRequirement.PREFERRED)
+            .build(),
+    )
+    .build()
 
 private fun toRow(userId: UUID, handle: ByteArray, result: com.yubico.webauthn.RegistrationResult): StoredPasskey =
     StoredPasskey(

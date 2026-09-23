@@ -1,7 +1,7 @@
 package fitnessapi.store
 
-import java.util.UUID
 import fitnessapi.domain.IncomingSample
+import java.util.UUID
 
 data class StoredSample(
     val userId: UUID,
@@ -30,12 +30,7 @@ data class RollupRow(
 
 data class SeriesPoint(val t: Long, val valueSi: Double, val originId: String, val source: String)
 
-data class ImportResult(
-    val importId: String?,
-    val stored: Int,
-    val skipped: Int,
-    val errors: List<String>,
-)
+data class ImportResult(val importId: String?, val stored: Int, val skipped: Int, val errors: List<String>)
 
 interface SampleStore {
     fun stats(userId: UUID): List<MetricStats>

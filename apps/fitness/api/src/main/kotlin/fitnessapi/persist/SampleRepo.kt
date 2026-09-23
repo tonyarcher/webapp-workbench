@@ -1,11 +1,11 @@
 package fitnessapi.persist
 
-import java.time.Instant
-import java.util.UUID
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.Instant
+import java.util.UUID
 
 interface SampleRepo : JpaRepository<SampleEntity, UUID> {
     fun findByUserIdAndMetricAndOriginId(userId: UUID, metric: String, originId: String): SampleEntity?

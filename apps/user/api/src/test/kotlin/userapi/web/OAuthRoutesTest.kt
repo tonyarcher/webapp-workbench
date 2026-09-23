@@ -1,15 +1,5 @@
 package userapi.web
-import userapi.http.FakeAccountStore
-import userapi.http.FakeOAuthStore
-import userapi.http.PlainHasher
-import userapi.http.RateLimiter
-import userapi.http.TestCookies
-
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import javax.sql.DataSource
 import org.mockito.kotlin.mock
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
@@ -23,18 +13,27 @@ import userapi.accounts.OAuthService
 import userapi.crypto.JwtSigner
 import userapi.domain.OAuthClient
 import userapi.domain.pkceS256
-import userapi.web.AccountController
-import userapi.web.OAuthController
-import userapi.web.RequestIdFilter
-import userapi.web.SecurityConfig
-import kotlin.test.Test
-import kotlin.test.assertTrue
+import userapi.http.FakeAccountStore
+import userapi.http.FakeOAuthStore
+import userapi.http.PlainHasher
+import userapi.http.RateLimiter
+import userapi.http.TestCookies
 import userapi.http.bodyText
 import userapi.http.expectStatus
 import userapi.http.getWithCookies
 import userapi.http.location
 import userapi.http.postForm
 import userapi.http.postJson
+import userapi.web.AccountController
+import userapi.web.OAuthController
+import userapi.web.RequestIdFilter
+import userapi.web.SecurityConfig
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import javax.sql.DataSource
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
 @WebMvcTest(AccountController::class, OAuthController::class)
 @Import(

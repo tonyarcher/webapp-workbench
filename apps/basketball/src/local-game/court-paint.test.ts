@@ -1,6 +1,6 @@
-import {describe, expect, it} from 'vitest';
-import {NBA, NFHS, leftHoop, rightHoop} from 'basketball-core';
-import {restrictedCommandsMatch, threePointCommandsMatch, threePointSvg} from './court-paint';
+import { describe, expect, it } from 'vitest';
+import { NBA, NFHS, leftHoop, rightHoop } from 'basketball-core';
+import { restrictedCommandsMatch, threePointCommandsMatch, threePointSvg } from './court-paint';
 
 describe('court-paint', () => {
     it('keeps the same 3-point command structure as core', () => {

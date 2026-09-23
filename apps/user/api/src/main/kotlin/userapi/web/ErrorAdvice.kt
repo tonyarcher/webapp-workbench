@@ -1,5 +1,6 @@
 package userapi.web
 
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.HttpMediaTypeNotSupportedException
@@ -22,7 +23,7 @@ class ErrorAdvice(private val settings: Settings) {
 
     @ExceptionHandler(NoHandlerFoundException::class)
     fun handleNoHandler(): ResponseEntity<ErrBody> =
-        ResponseEntity.status(404).body(ErrBody(ErrDetail("not found", "not found")))
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrBody(ErrDetail("not found", "not found")))
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleBadJson(): ResponseEntity<ErrBody> =
@@ -30,11 +31,12 @@ class ErrorAdvice(private val settings: Settings) {
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
     fun handleMethod(): ResponseEntity<ErrBody> =
-        ResponseEntity.status(405).body(ErrBody(ErrDetail("method", "method not allowed")))
+        ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(ErrBody(ErrDetail("method", "method not allowed")))
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException::class)
-    fun handleMediaType(): ResponseEntity<ErrBody> =
-        ResponseEntity.status(415).body(ErrBody(ErrDetail("validation", "unsupported media type")))
+    fun handleMediaType(): ResponseEntity<ErrBody> = ResponseEntity.status(
+        HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+    ).body(ErrBody(ErrDetail("validation", "unsupported media type")))
 
     @ExceptionHandler(Exception::class)
     fun handleOther(ex: Exception): ResponseEntity<ErrBody> {

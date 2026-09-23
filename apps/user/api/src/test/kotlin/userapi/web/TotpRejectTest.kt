@@ -1,13 +1,6 @@
 package userapi.web
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import javax.sql.DataSource
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.mockito.kotlin.mock
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
@@ -27,6 +20,13 @@ import userapi.http.bodyText
 import userapi.http.expectStatus
 import userapi.http.getWithCookies
 import userapi.http.postJson
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import javax.sql.DataSource
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @WebMvcTest(AccountController::class, TotpController::class)
 @Import(

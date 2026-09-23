@@ -1,7 +1,7 @@
-import {isOnCourt} from 'basketball-core';
-import type {GameState, TeamId} from 'basketball-core';
-import {chance, pickIndex} from './rng';
-import type {SimRatings} from './types';
+import { isOnCourt } from 'basketball-core';
+import type { GameState, TeamId } from 'basketball-core';
+import { chance, pickIndex } from './rng';
+import type { SimRatings } from './types';
 
 export type ShotZone = 'paint' | 'mid' | 'three';
 
@@ -18,7 +18,12 @@ export function ratingsFor(id: string, table: Record<string, SimRatings> | undef
     return table?.[id] ?? DEFAULT;
 }
 
-export function pickShooter(game: GameState, team: TeamId, random: () => number, table?: Record<string, SimRatings>): string {
+export function pickShooter(
+    game: GameState,
+    team: TeamId,
+    random: () => number,
+    table?: Record<string, SimRatings>,
+): string {
     return pickOnCourt(game, team, random, table, 'shooting');
 }
 
@@ -37,10 +42,20 @@ export function pickOnCourt(
     return pickWeighted(ids, weights, random) ?? ids[0] ?? '';
 }
 
-export function pickPasser(game: GameState, team: TeamId, shooterId: string, random: () => number, table?: Record<string, SimRatings>): string | undefined {
+export function pickPasser(
+    game: GameState,
+    team: TeamId,
+    shooterId: string,
+    random: () => number,
+    table?: Record<string, SimRatings>,
+): string | undefined {
     const ids = (team === 'home' ? game.home.onCourt : game.away.onCourt).filter((id) => id !== shooterId);
     if (ids.length === 0) return undefined;
-    const passer = pickWeighted(ids, ids.map((id) => ratingsFor(id, table).playmaking), random);
+    const passer = pickWeighted(
+        ids,
+        ids.map((id) => ratingsFor(id, table).playmaking),
+        random,
+    );
     return passer;
 }
 
@@ -54,7 +69,7 @@ export function shouldAssist(random: () => number, passer: SimRatings): boolean 
     return chance(random, 0.25 + passer.playmaking / 250);
 }
 
-export function shouldSub(game: GameState, team: TeamId, random: () => number): {outId: string; inId: string} | null {
+export function shouldSub(game: GameState, team: TeamId, random: () => number): { outId: string; inId: string } | null {
     if (!chance(random, 0.04)) return null;
     const side = team === 'home' ? game.home : game.away;
     const bench = side.roster.map((p) => p.id).filter((id) => !isOnCourt(side.onCourt, id));
@@ -62,7 +77,7 @@ export function shouldSub(game: GameState, team: TeamId, random: () => number): 
     const outId = side.onCourt[pickIndex(random, side.onCourt.length)];
     const inId = bench[pickIndex(random, bench.length)];
     if (!outId || !inId) return null;
-    return {outId, inId};
+    return { outId, inId };
 }
 
 function pickWeighted(ids: string[], weights: number[], random: () => number): string | undefined {

@@ -5,14 +5,14 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import java.io.PrintWriter
-import java.io.StringWriter
-import kotlin.test.Test
-import kotlin.test.assertTrue
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.io.PrintWriter
+import java.io.StringWriter
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
 class CsrfFilterBranchTest {
     private val filter = CsrfFilter(ObjectMapper())

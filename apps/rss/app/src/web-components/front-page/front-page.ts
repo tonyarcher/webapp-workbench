@@ -1,5 +1,5 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
 import {
     editionKey,
     editionsKey,
@@ -10,8 +10,15 @@ import {
     queryClient,
     QueryController,
 } from '../../query';
-import {buildEdition, fetchEdition, fetchEditions, fetchFrontPage, fetchLatestEdition, QuotaError} from '../../services/api';
-import {markArticleRead, toggleStar} from '../../mutations';
+import {
+    buildEdition,
+    fetchEdition,
+    fetchEditions,
+    fetchFrontPage,
+    fetchLatestEdition,
+    QuotaError,
+} from '../../services/api';
+import { markArticleRead, toggleStar } from '../../mutations';
 import {
     applyWeights,
     EDITION_WINDOW_HOURS_OPTIONS,
@@ -20,8 +27,8 @@ import {
     saveEditionOptions,
     type EditionOptions,
 } from '../../services/edition-options';
-import type {Article, Edition, EditionMeta, EditionSection, Feed, Folder} from '../../types';
-import {domainOf, formatDate} from '../../util';
+import type { Article, Edition, EditionMeta, EditionSection, Feed, Folder } from '../../types';
+import { domainOf, formatDate } from '../../util';
 import styles from './front-page.css?inline';
 
 interface Library {
@@ -35,7 +42,7 @@ const POLL_MS = 15_000;
 const POLL_WINDOW_MS = 5 * 60_000;
 
 function editionDate(ts: number): string {
-    return new Date(ts).toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'});
+    return new Date(ts).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 /** Server summaries are plain text; blank lines mark paragraph breaks. */
@@ -78,19 +85,23 @@ export class FrontPage extends LitElement {
     }));
 
     private history = new QueryController<EditionMeta[]>(this, () => ({
-        queryKey: editionsKey({limit: HISTORY_LIMIT}),
+        queryKey: editionsKey({ limit: HISTORY_LIMIT }),
         queryFn: () => fetchEditions(HISTORY_LIMIT),
     }));
 
     private edition = new QueryController<Edition | null>(this, () => ({
-        queryKey: editionKey({id: this.selectedId ?? 'latest'}),
+        queryKey: editionKey({ id: this.selectedId ?? 'latest' }),
         queryFn: () => (this.selectedId ? fetchEdition(this.selectedId) : fetchLatestEdition()),
     }));
 
     private members = new QueryController<Article[]>(this, () => ({
-        queryKey: frontPageKey({since: this.membersCutoff(), limit: MEMBER_LIMIT, edition: this.edition.data?.id ?? 'latest'}),
+        queryKey: frontPageKey({
+            since: this.membersCutoff(),
+            limit: MEMBER_LIMIT,
+            edition: this.edition.data?.id ?? 'latest',
+        }),
         queryFn: async () => {
-            const res = await fetchFrontPage({since: this.membersCutoff(), limit: MEMBER_LIMIT});
+            const res = await fetchFrontPage({ since: this.membersCutoff(), limit: MEMBER_LIMIT });
             return res.articles;
         },
     }));
@@ -125,11 +136,11 @@ export class FrontPage extends LitElement {
 
     private onFeedsRefreshed = () => {
         this.now = Date.now();
-        void queryClient.invalidateQueries({queryKey: ['front-page']});
+        void queryClient.invalidateQueries({ queryKey: ['front-page'] });
     };
 
     private onArticleEvent = () => {
-        void queryClient.invalidateQueries({queryKey: ['front-page']});
+        void queryClient.invalidateQueries({ queryKey: ['front-page'] });
     };
 
     /** Poll the selected edition while it is building, up to 5 minutes. */
@@ -179,7 +190,9 @@ export class FrontPage extends LitElement {
 
     override render() {
         const edition = this.edition.data ?? null;
-        const sections = edition ? applyWeights(edition.sections, this.options).slice(0, this.options.sectionCount) : [];
+        const sections = edition
+            ? applyWeights(edition.sections, this.options).slice(0, this.options.sectionCount)
+            : [];
         return html`
       <header class="masthead">
         <div class="nameplate">Front Page</div>
@@ -207,7 +220,15 @@ export class FrontPage extends LitElement {
         // The just-built edition may not be in history yet; show it anyway.
         const shown: EditionMeta[] =
             this.selectedId && edition && !metas.some((m) => m.id === this.selectedId)
-                ? [{id: this.selectedId, generatedAt: edition.generatedAt, windowHours: edition.windowHours, status: edition.status}, ...metas]
+                ? [
+                      {
+                          id: this.selectedId,
+                          generatedAt: edition.generatedAt,
+                          windowHours: edition.windowHours,
+                          status: edition.status,
+                      },
+                      ...metas,
+                  ]
                 : metas;
         if (!shown.length) return '';
         const value = this.selectedId ?? 'latest';
@@ -258,10 +279,17 @@ export class FrontPage extends LitElement {
 
     private onOptionsChange(e: Event) {
         const form = (e.currentTarget as HTMLElement).querySelectorAll('select, input');
-        const next: EditionOptions = {...this.options};
+        const next: EditionOptions = { ...this.options };
         for (const el of form) {
             const field = (el as HTMLSelectElement | HTMLInputElement).name as keyof EditionOptions;
-            if (field === 'windowHours' || field === 'sectionCount' || field === 'weightGeneral' || field === 'weightPersonal' || field === 'weightNewness' || field === 'weightPopularity') {
+            if (
+                field === 'windowHours' ||
+                field === 'sectionCount' ||
+                field === 'weightGeneral' ||
+                field === 'weightPersonal' ||
+                field === 'weightNewness' ||
+                field === 'weightPopularity'
+            ) {
                 const n = Number((el as HTMLSelectElement | HTMLInputElement).value);
                 if (Number.isFinite(n)) (next[field] as number) = n;
             } else if (field === 'showOpinion' || field === 'showFactCheck') {
@@ -275,7 +303,7 @@ export class FrontPage extends LitElement {
     private onRefresh() {
         this.now = Date.now();
         void invalidateEdition();
-        void queryClient.invalidateQueries({queryKey: ['front-page']});
+        void queryClient.invalidateQueries({ queryKey: ['front-page'] });
     }
 
     private async onBuild() {
@@ -290,7 +318,8 @@ export class FrontPage extends LitElement {
             this.expandedIds = [];
             await invalidateEdition();
         } catch (err) {
-            this.buildError = err instanceof QuotaError || err instanceof Error ? err.message : 'Could not build the edition.';
+            this.buildError =
+                err instanceof QuotaError || err instanceof Error ? err.message : 'Could not build the edition.';
         } finally {
             this.building = false;
         }
@@ -371,7 +400,9 @@ export class FrontPage extends LitElement {
     }
 
     private toggleExpanded(id: string) {
-        this.expandedIds = this.expandedIds.includes(id) ? this.expandedIds.filter((x) => x !== id) : [...this.expandedIds, id];
+        this.expandedIds = this.expandedIds.includes(id)
+            ? this.expandedIds.filter((x) => x !== id)
+            : [...this.expandedIds, id];
     }
 
     private onRowKey(e: KeyboardEvent, article: Article) {
@@ -385,21 +416,23 @@ export class FrontPage extends LitElement {
     private onStar(e: Event, article: Article) {
         e.stopPropagation();
         const starred = !article.starred;
-        void toggleStar(article.id, starred).then(() => queryClient.invalidateQueries({queryKey: ['front-page']}));
-        window.dispatchEvent(new CustomEvent('article-starred', {detail: {id: article.id, starred}}));
+        void toggleStar(article.id, starred).then(() => queryClient.invalidateQueries({ queryKey: ['front-page'] }));
+        window.dispatchEvent(new CustomEvent('article-starred', { detail: { id: article.id, starred } }));
     }
 
     private openArticle(article: Article) {
         if (article.read === 0) {
-            void markArticleRead(article.id).then(() => queryClient.invalidateQueries({queryKey: ['front-page']}));
+            void markArticleRead(article.id).then(() => queryClient.invalidateQueries({ queryKey: ['front-page'] }));
         }
         const edition = this.edition.data;
-        const sections = edition ? applyWeights(edition.sections, this.options).slice(0, this.options.sectionCount) : [];
+        const sections = edition
+            ? applyWeights(edition.sections, this.options).slice(0, this.options.sectionCount)
+            : [];
         const items = this.visibleItems(sections);
         const index = items.findIndex((a) => a.id === article.id);
         this.dispatchEvent(
             new CustomEvent('open-article', {
-                detail: {article, index, items},
+                detail: { article, index, items },
                 bubbles: true,
                 composed: true,
             }),

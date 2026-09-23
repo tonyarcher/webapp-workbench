@@ -1,10 +1,10 @@
 export const SPEED_OPTIONS = [
-    {label: '1x', value: 1},
-    {label: '2x', value: 2},
-    {label: '4x', value: 4},
-    {label: '8x', value: 8},
-    {label: '16x', value: 16},
-    {label: 'Max', value: 0},
+    { label: '1x', value: 1 },
+    { label: '2x', value: 2 },
+    { label: '4x', value: 4 },
+    { label: '8x', value: 8 },
+    { label: '16x', value: 16 },
+    { label: 'Max', value: 0 },
 ] as const;
 
 export function delayForPlay(type: string, speed: number, animations: boolean): number {
@@ -28,7 +28,7 @@ export function yieldDelay(ms: number, signal?: AbortSignal): Promise<void> {
                 clearTimeout(id);
                 resolve();
             },
-            {once: true},
+            { once: true },
         );
     });
 }
@@ -54,7 +54,7 @@ export class PlaybackClock {
         const generation = this.generation + 1;
         this.generation = generation;
         this.abort = new AbortController();
-        const {signal} = this.abort;
+        const { signal } = this.abort;
         this.playing = true;
         while (this.playing && this.generation === generation && !signal.aborted) {
             const keepGoing = await step();

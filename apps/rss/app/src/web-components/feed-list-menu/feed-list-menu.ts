@@ -1,16 +1,16 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
-import type {MenuAnchor} from '../feed-menu/feed-menu';
-import type {FeedSort} from '../../types';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import type { MenuAnchor } from '../feed-menu/feed-menu';
+import type { FeedSort } from '../../types';
 import styles from './feed-list-menu.css?inline';
 
 @customElement('feed-list-menu')
 export class FeedListMenu extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) open = false;
-    @property({attribute: false}) anchor: MenuAnchor | null = null;
-    @property({attribute: false}) feedSort: FeedSort = 'alpha';
+    @property({ attribute: false }) open = false;
+    @property({ attribute: false }) anchor: MenuAnchor | null = null;
+    @property({ attribute: false }) feedSort: FeedSort = 'alpha';
 
     private menuEl: HTMLElement | null = null;
 
@@ -77,7 +77,7 @@ export class FeedListMenu extends LitElement {
         if (!el) return;
         const margin = 8;
         const rect = el.getBoundingClientRect();
-        let {left, top} = rect;
+        let { left, top } = rect;
         if (rect.right > window.innerWidth - margin) {
             left = Math.max(margin, window.innerWidth - rect.width - margin);
         }
@@ -100,26 +100,20 @@ export class FeedListMenu extends LitElement {
     };
 
     private emitClose() {
-        this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     }
 
     private setSort(sort: FeedSort) {
         if (sort === this.feedSort) return;
-        this.dispatchEvent(
-            new CustomEvent('sort-change', {detail: sort, bubbles: true, composed: true}),
-        );
+        this.dispatchEvent(new CustomEvent('sort-change', { detail: sort, bubbles: true, composed: true }));
     }
 
     private emitSortFolders() {
-        this.dispatchEvent(
-            new CustomEvent('sort-folders', {bubbles: true, composed: true}),
-        );
+        this.dispatchEvent(new CustomEvent('sort-folders', { bubbles: true, composed: true }));
     }
 
     private emitRefreshAll() {
-        this.dispatchEvent(
-            new CustomEvent('refresh-all', {bubbles: true, composed: true}),
-        );
+        this.dispatchEvent(new CustomEvent('refresh-all', { bubbles: true, composed: true }));
     }
 
     private segment(active: boolean, onClick: () => void, label: string) {

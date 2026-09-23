@@ -1,7 +1,9 @@
 package rssapi.domain
-
 import org.w3c.dom.Document
 import org.w3c.dom.Element
+
+/** Stored summaries are truncated to one short paragraph. */
+private const val SUMMARY_CHARS = 500
 
 internal fun parseRss(doc: Document, fallbackPublished: Long): ParsedFeed {
     val channel = doc.documentElement.descendants("channel").firstOrNull() ?: doc.documentElement
@@ -24,7 +26,7 @@ private fun rssItem(item: Element, fallbackPublished: Long, feedTitle: String): 
         published = published,
         link = safeHttpUrl(item.childText("link").ifEmpty { null }),
         author = rssAuthor(item),
-        summary = stripHtml(description).take(500).ifEmpty { null },
+        summary = stripHtml(description).take(SUMMARY_CHARS).ifEmpty { null },
         content = content,
         media = parseMedia(item) ?: firstImageUrl(content),
         comments = parseCommentCount(item),

@@ -1,35 +1,35 @@
 package userapi.web
-import userapi.http.AcceptingTotp
-import userapi.http.FakeAccountStore
-import userapi.http.FakeTotpStore
-import userapi.http.PlainHasher
-import userapi.http.RateLimiter
-import userapi.http.TestCookies
-
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import javax.sql.DataSource
 import org.mockito.kotlin.mock
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
 import userapi.Settings
 import userapi.accounts.AccountServices
-import userapi.web.AccountController
-import userapi.web.RequestIdFilter
-import userapi.web.SecurityConfig
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import userapi.http.AcceptingTotp
+import userapi.http.FakeAccountStore
+import userapi.http.FakeTotpStore
+import userapi.http.PlainHasher
+import userapi.http.RateLimiter
+import userapi.http.TestCookies
 import userapi.http.bodyText
 import userapi.http.expectStatus
 import userapi.http.getWithCookies
 import userapi.http.postJson
+import userapi.web.AccountController
+import userapi.web.RequestIdFilter
+import userapi.web.SecurityConfig
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import javax.sql.DataSource
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @WebMvcTest(AccountController::class, TotpController::class)
 @Import(
@@ -90,7 +90,7 @@ class TotpRoutesTest {
         val login = postPassword(cookies, "/login", "alice", "twelvechars!!")
         login.expectStatus(200)
         assertTrue(login.bodyText().contains("totpRequired"))
-        assertEquals(401, mvc.getWithCookies(cookies, "/me").response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), mvc.getWithCookies(cookies, "/me").response.status)
     }
 
     private fun finishTotp(cookies: TestCookies) {
@@ -98,19 +98,17 @@ class TotpRoutesTest {
         assertEquals(200, mvc.getWithCookies(cookies, "/me").response.status)
     }
 
-    private fun postPassword(cookies: TestCookies, path: String, username: String, password: String) =
-        mvc.postJson(
-            cookies,
-            path,
-            csrf = true,
-            json = mapper.writeValueAsString(mapOf("username" to username, "password" to password)),
-        )
+    private fun postPassword(cookies: TestCookies, path: String, username: String, password: String) = mvc.postJson(
+        cookies,
+        path,
+        csrf = true,
+        json = mapper.writeValueAsString(mapOf("username" to username, "password" to password)),
+    )
 
-    private fun postCode(cookies: TestCookies, path: String, code: String) =
-        mvc.postJson(
-            cookies,
-            path,
-            csrf = true,
-            json = mapper.writeValueAsString(mapOf("code" to code)),
-        )
+    private fun postCode(cookies: TestCookies, path: String, code: String) = mvc.postJson(
+        cookies,
+        path,
+        csrf = true,
+        json = mapper.writeValueAsString(mapOf("code" to code)),
+    )
 }

@@ -57,14 +57,15 @@ detekt {
 tasks.named("check") { dependsOn("detekt", "jacocoTestCoverageVerification", "jacocoBranchCoverageVerification") }
 tasks.withType<Test> { useJUnitPlatform() }
 
-val jacocoExcludes = listOf(
-    "stockgame/persist/**",
-    "stockgame/store/Jpa*",
-    "stockgame/store/EntityMapKt*",
-    "stockgame/db/**",
-    "stockgame/config/DataSourceConfig*",
-    "stockgame/StockGameApplicationKt*",
-)
+val jacocoExcludes =
+    listOf(
+        "stockgame/persist/**",
+        "stockgame/store/Jpa*",
+        "stockgame/store/EntityMapKt*",
+        "stockgame/db/**",
+        "stockgame/config/DataSourceConfig*",
+        "stockgame/StockGameApplicationKt*",
+    )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
     dependsOn("test")
@@ -87,21 +88,22 @@ tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
     }
 }
 
-val jacocoBranchCoverageVerification = tasks.register<JacocoCoverageVerification>("jacocoBranchCoverageVerification") {
-    group = "verification"
-    description = "Verifies 90% branch coverage."
-    dependsOn("test")
-    executionData.setFrom(files(layout.buildDirectory.file("jacoco/test.exec")))
-    violationRules {
-        rule {
-            limit {
-                counter = "BRANCH"
-                value = "COVEREDRATIO"
-                minimum = "0.90".toBigDecimal()
+val jacocoBranchCoverageVerification =
+    tasks.register<JacocoCoverageVerification>("jacocoBranchCoverageVerification") {
+        group = "verification"
+        description = "Verifies 90% branch coverage."
+        dependsOn("test")
+        executionData.setFrom(files(layout.buildDirectory.file("jacoco/test.exec")))
+        violationRules {
+            rule {
+                limit {
+                    counter = "BRANCH"
+                    value = "COVEREDRATIO"
+                    minimum = "0.90".toBigDecimal()
+                }
             }
         }
     }
-}
 
 afterEvaluate {
     tasks.named<JacocoReport>("jacocoTestReport") {

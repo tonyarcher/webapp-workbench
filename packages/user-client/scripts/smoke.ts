@@ -1,5 +1,5 @@
-import {authorizeUrl, challengeS256, parseJwtPayload, randomVerifier} from '../src/index.ts';
-import {sha256Bytes} from '../src/sha256.ts';
+import { authorizeUrl, challengeS256, parseJwtPayload, randomVerifier } from '../src/index.ts';
+import { sha256Bytes } from '../src/sha256.ts';
 
 function assert(cond: boolean, msg: string): asserts cond {
     if (!cond) throw new Error(`FAIL: ${msg}`);
@@ -21,7 +21,7 @@ const url = authorizeUrl({
 assert(url.includes('code_challenge_method=S256'), 'authorize S256');
 assert(url.includes('client_id=fitness'), 'authorize client');
 assert(parseJwtPayload('not-a-jwt') === null, 'reject junk jwt');
-const payload = btoa(JSON.stringify({sub: '1'})).replace(/=+$/g, '');
+const payload = btoa(JSON.stringify({ sub: '1' })).replace(/=+$/g, '');
 assert(parseJwtPayload(`aaa.${payload}.bbb`)?.['sub'] === '1', 'parse jwt payload');
 
 function hex(bytes: Uint8Array): string {
@@ -30,13 +30,11 @@ function hex(bytes: Uint8Array): string {
 
 const enc = new TextEncoder();
 assert(
-    hex(sha256Bytes(enc.encode(''))) ===
-        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    hex(sha256Bytes(enc.encode(''))) === 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
     'sha256 empty vector',
 );
 assert(
-    hex(sha256Bytes(enc.encode('abc'))) ===
-        'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+    hex(sha256Bytes(enc.encode('abc'))) === 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
     'sha256 abc vector',
 );
 for (const input of ['abcdbcdecdefdefgefghfghighijhijk', 'x'.repeat(200)]) {
@@ -52,7 +50,7 @@ assert(
 {
     // Plain-HTTP origins have no WebCrypto: pin the fallback to WebCrypto output.
     const expected = await challengeS256(verifier);
-    Object.defineProperty(globalThis.crypto, 'subtle', {value: undefined, configurable: true});
+    Object.defineProperty(globalThis.crypto, 'subtle', { value: undefined, configurable: true });
     try {
         assert((await challengeS256(verifier)) === expected, 'fallback challenge matches WebCrypto');
     } finally {

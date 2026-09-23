@@ -1,4 +1,4 @@
-import { css } from 'lit'
+import { css } from 'lit';
 
 export const tradeFormStyles = css`
   :host {
@@ -151,4 +151,4 @@ export const tradeFormStyles = css`
     opacity: 0.5;
     cursor: default;
   }
-`
+`;

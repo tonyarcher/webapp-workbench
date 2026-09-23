@@ -1,30 +1,30 @@
-import { LitElement, html } from 'lit'
-import type { TemplateResult } from 'lit'
-import type { Trade } from '@stock-game/shared'
-import { fmtDate, fmtMoney, fmtNumber, fmtPrice } from '../lib/format'
-import { tableStyles } from './shared-styles'
-import { defineElement } from './define'
+import { LitElement, html } from 'lit';
+import type { TemplateResult } from 'lit';
+import type { Trade } from '@stock-game/shared';
+import { fmtDate, fmtMoney, fmtNumber, fmtPrice } from '../lib/format';
+import { tableStyles } from './shared-styles';
+import { defineElement } from './define';
 
 export class SgTradesTable extends LitElement {
-  static override styles = tableStyles
+    static override styles = tableStyles;
 
-  static override properties = {
-    trades: { attribute: false },
-  }
+    static override properties = {
+        trades: { attribute: false },
+    };
 
-  trades: Trade[] = []
+    trades: Trade[] = [];
 
-  private renderEmpty(): TemplateResult {
-    return html`<p class="muted">No trades yet. Place one from the Trade page.</p>`
-  }
+    private renderEmpty(): TemplateResult {
+        return html`<p class="muted">No trades yet. Place one from the Trade page.</p>`;
+    }
 
-  private sideClass(side: string): string {
-    if (side === 'buy' || side === 'cover') return 'positive'
-    return 'negative'
-  }
+    private sideClass(side: string): string {
+        if (side === 'buy' || side === 'cover') return 'positive';
+        return 'negative';
+    }
 
-  private renderTradeRow(trade: Trade): TemplateResult {
-    return html`<tr>
+    private renderTradeRow(trade: Trade): TemplateResult {
+        return html`<tr>
       <td>${fmtDate(trade.executedAt)}</td>
       <td>${trade.symbol}</td>
       <td class=${this.sideClass(trade.side)}>${trade.side}</td>
@@ -32,11 +32,11 @@ export class SgTradesTable extends LitElement {
       <td class="num">${fmtPrice(trade.price)}</td>
       <td class="num">${fmtMoney(Math.abs(trade.cashDeltaCents))}</td>
       <td>${trade.mode}</td>
-    </tr>`
-  }
+    </tr>`;
+    }
 
-  private renderTable(): TemplateResult {
-    return html`<table class="sg-table">
+    private renderTable(): TemplateResult {
+        return html`<table class="sg-table">
       <thead>
         <tr>
           <th>Date</th>
@@ -51,13 +51,13 @@ export class SgTradesTable extends LitElement {
       <tbody>
         ${this.trades.map((trade) => this.renderTradeRow(trade))}
       </tbody>
-    </table>`
-  }
+    </table>`;
+    }
 
-  override render(): TemplateResult {
-    if (this.trades.length === 0) return this.renderEmpty()
-    return this.renderTable()
-  }
+    override render(): TemplateResult {
+        if (this.trades.length === 0) return this.renderEmpty();
+        return this.renderTable();
+    }
 }
 
-defineElement('sg-trades-table', SgTradesTable)
+defineElement('sg-trades-table', SgTradesTable);

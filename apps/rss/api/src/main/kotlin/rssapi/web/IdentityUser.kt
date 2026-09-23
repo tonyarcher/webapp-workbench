@@ -1,15 +1,16 @@
 package rssapi.web
 
-import java.time.Duration
-import java.time.Instant
-import java.util.UUID
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.http.HttpStatus
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 import org.springframework.stereotype.Component
 import org.springframework.web.context.annotation.RequestScope
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import java.time.Duration
+import java.time.Instant
+import java.util.UUID
 
 @Component
 @RequestScope
@@ -21,9 +22,9 @@ class IdentityUser(private val users: UserRepo) {
 
     private fun subject(): String {
         val auth = SecurityContextHolder.getContext().authentication as? JwtAuthenticationToken
-            ?: throw ApiException(401, "unauthorized")
+            ?: throw ApiException(HttpStatus.UNAUTHORIZED, "unauthorized")
         return auth.token.subject?.takeIf { it.isNotBlank() }
-            ?: throw ApiException(401, "unauthorized")
+            ?: throw ApiException(HttpStatus.UNAUTHORIZED, "unauthorized")
     }
 
     private fun usernameClaim(): String? {
@@ -49,7 +50,8 @@ class IdentityUser(private val users: UserRepo) {
             )
         } catch (_: DataIntegrityViolationException) {
             // A parallel first request provisioned the same subject.
-            val raced = users.findBySubject(subject) ?: throw ApiException(500, "internal error")
+            val raced =
+                users.findBySubject(subject) ?: throw ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "internal error")
             touch(raced, name)
             return raced
         }

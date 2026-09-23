@@ -1,5 +1,8 @@
 package stockgame.trading
 
+import stockgame.domain.Quote
+import stockgame.domain.TradingError
+import stockgame.store.GameStore
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -8,17 +11,15 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-import stockgame.domain.Quote
-import stockgame.domain.TradingError
-import stockgame.store.GameStore
 
-private val BARS = listOf(
-    dayBar("2024-01-02", 100.0),
-    dayBar("2024-01-03", 105.0),
-    dayBar("2024-01-04", 110.0),
-    dayBar("2024-01-05", 115.0),
-    dayBar("2024-01-08", 120.0),
-)
+private val BARS =
+    listOf(
+        dayBar("2024-01-02", 100.0),
+        dayBar("2024-01-03", 105.0),
+        dayBar("2024-01-04", 110.0),
+        dayBar("2024-01-05", 115.0),
+        dayBar("2024-01-08", 120.0),
+    )
 private val EARLY = Instant.parse("2023-01-01T00:00:00Z").toEpochMilli()
 private val USER = UUID.fromString("00000000-0000-4000-8000-000000000001")
 private val OTHER = UUID.fromString("00000000-0000-4000-8000-000000000002")
@@ -119,10 +120,11 @@ class TradingServiceTest {
         val clock = Clock.fixed(now, ZoneOffset.UTC)
         val quote = Quote("AAPL", "Apple", 90.0, "USD", "T", 0, 0)
         val svc = services(FakeProvider(quote = quote), clock)
-        val order = svc.trading.placeOrder(
-            USER,
-            OrderRequest("AAPL", "buy", 2, now.toEpochMilli() + 5_000, "market", "GTC", null, null, null),
-        )
+        val order =
+            svc.trading.placeOrder(
+                USER,
+                OrderRequest("AAPL", "buy", 2, now.toEpochMilli() + 5_000, "market", "GTC", null, null, null),
+            )
         assertEquals(0, svc.trading.executeDueOrders(OTHER, now.toEpochMilli() + 10_000))
         assertEquals("pending", svc.trading.listOrders(USER)[0].status)
         svc.trading.cancelOrder(OTHER, order.id)

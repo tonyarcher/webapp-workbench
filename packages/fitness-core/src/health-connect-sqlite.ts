@@ -1,5 +1,5 @@
-import type {MetricId, ParseResult, ParseSkip, Sample} from './types';
-import {KCAL_TO_J, asNumber} from './units';
+import type { MetricId, ParseResult, ParseSkip, Sample } from './types';
+import { KCAL_TO_J, asNumber } from './units';
 
 const SQLITE_MAGIC = 'SQLite format 3';
 const HR_BUCKET_MS = 60_000;
@@ -39,23 +39,83 @@ interface ColSpec {
 
 /** Health Connect Room stores mass in grams and Energy in small calories. */
 const INSTANT: ColSpec[] = [
-    {table: 'weight_record_table', metric: 'body_mass', valueCol: 'weight', timeCol: 'time', toSi: (g) => g / 1_000},
-    {table: 'height_record_table', metric: 'height', valueCol: 'height', timeCol: 'time', toSi: (m) => m},
-    {table: 'resting_heart_rate_record_table', metric: 'resting_heart_rate', valueCol: 'beats_per_minute', timeCol: 'time', toSi: (v) => v},
-    {table: 'lean_body_mass_record_table', metric: 'lean_mass', valueCol: 'mass', timeCol: 'time', toSi: (g) => g / 1_000},
-    {table: 'body_fat_record_table', metric: 'body_fat', valueCol: 'percentage', timeCol: 'time', toSi: (p) => (p > 1 ? p / 100 : p)},
-    {table: 'vo2_max_record_table', metric: 'vo2max', valueCol: 'vo2_milliliters_per_minute_kilogram', timeCol: 'time', toSi: (v) => v},
-    {table: 'heart_rate_variability_rmssd_record_table', metric: 'hrv_rmssd', valueCol: 'heart_rate_variability_millis', timeCol: 'time', toSi: (ms) => ms / 1_000},
-    {table: 'oxygen_saturation_record_table', metric: 'oxygen_sat', valueCol: 'percentage', timeCol: 'time', toSi: (p) => (p > 1 ? p / 100 : p)},
-    {table: 'basal_metabolic_rate_record_table', metric: 'bmr', valueCol: 'basal_metabolic_rate', timeCol: 'time', toSi: (v) => v},
+    { table: 'weight_record_table', metric: 'body_mass', valueCol: 'weight', timeCol: 'time', toSi: (g) => g / 1_000 },
+    { table: 'height_record_table', metric: 'height', valueCol: 'height', timeCol: 'time', toSi: (m) => m },
+    {
+        table: 'resting_heart_rate_record_table',
+        metric: 'resting_heart_rate',
+        valueCol: 'beats_per_minute',
+        timeCol: 'time',
+        toSi: (v) => v,
+    },
+    {
+        table: 'lean_body_mass_record_table',
+        metric: 'lean_mass',
+        valueCol: 'mass',
+        timeCol: 'time',
+        toSi: (g) => g / 1_000,
+    },
+    {
+        table: 'body_fat_record_table',
+        metric: 'body_fat',
+        valueCol: 'percentage',
+        timeCol: 'time',
+        toSi: (p) => (p > 1 ? p / 100 : p),
+    },
+    {
+        table: 'vo2_max_record_table',
+        metric: 'vo2max',
+        valueCol: 'vo2_milliliters_per_minute_kilogram',
+        timeCol: 'time',
+        toSi: (v) => v,
+    },
+    {
+        table: 'heart_rate_variability_rmssd_record_table',
+        metric: 'hrv_rmssd',
+        valueCol: 'heart_rate_variability_millis',
+        timeCol: 'time',
+        toSi: (ms) => ms / 1_000,
+    },
+    {
+        table: 'oxygen_saturation_record_table',
+        metric: 'oxygen_sat',
+        valueCol: 'percentage',
+        timeCol: 'time',
+        toSi: (p) => (p > 1 ? p / 100 : p),
+    },
+    {
+        table: 'basal_metabolic_rate_record_table',
+        metric: 'bmr',
+        valueCol: 'basal_metabolic_rate',
+        timeCol: 'time',
+        toSi: (v) => v,
+    },
 ];
 
 const INTERVAL: ColSpec[] = [
-    {table: 'steps_record_table', metric: 'steps', valueCol: 'count', timeCol: 'start_time', toSi: (v) => v},
-    {table: 'distance_record_table', metric: 'distance', valueCol: 'distance', timeCol: 'start_time', toSi: (m) => m},
-    {table: 'total_calories_burned_record_table', metric: 'energy_total', valueCol: 'energy', timeCol: 'start_time', toSi: (cal) => (cal / 1_000) * KCAL_TO_J},
-    {table: 'active_calories_burned_record_table', metric: 'energy_active', valueCol: 'energy', timeCol: 'start_time', toSi: (cal) => (cal / 1_000) * KCAL_TO_J},
-    {table: 'floors_climbed_record_table', metric: 'floors', valueCol: 'floors', timeCol: 'start_time', toSi: (v) => v},
+    { table: 'steps_record_table', metric: 'steps', valueCol: 'count', timeCol: 'start_time', toSi: (v) => v },
+    { table: 'distance_record_table', metric: 'distance', valueCol: 'distance', timeCol: 'start_time', toSi: (m) => m },
+    {
+        table: 'total_calories_burned_record_table',
+        metric: 'energy_total',
+        valueCol: 'energy',
+        timeCol: 'start_time',
+        toSi: (cal) => (cal / 1_000) * KCAL_TO_J,
+    },
+    {
+        table: 'active_calories_burned_record_table',
+        metric: 'energy_active',
+        valueCol: 'energy',
+        timeCol: 'start_time',
+        toSi: (cal) => (cal / 1_000) * KCAL_TO_J,
+    },
+    {
+        table: 'floors_climbed_record_table',
+        metric: 'floors',
+        valueCol: 'floors',
+        timeCol: 'start_time',
+        toSi: (v) => v,
+    },
 ];
 
 export const HEALTH_CONNECT_SQLITE_TABLES = [
@@ -67,14 +127,14 @@ export const HEALTH_CONNECT_SQLITE_TABLES = [
     'exercise_session_record_table',
 ];
 
-function mapSpecRows(rows: Record<string, unknown>[], spec: ColSpec): {samples: Sample[]; skipped: ParseSkip[]} {
+function mapSpecRows(rows: Record<string, unknown>[], spec: ColSpec): { samples: Sample[]; skipped: ParseSkip[] } {
     const samples: Sample[] = [];
     const skipped: ParseSkip[] = [];
     for (const row of rows) {
         const t = asNumber(row[spec.timeCol]);
         const raw = asNumber(row[spec.valueCol]);
         if (t == null || raw == null) {
-            skipped.push({line: spec.table, reason: 'missing time or value'});
+            skipped.push({ line: spec.table, reason: 'missing time or value' });
             continue;
         }
         samples.push({
@@ -85,17 +145,17 @@ function mapSpecRows(rows: Record<string, unknown>[], spec: ColSpec): {samples: 
             originId: originFor(row, spec.table, t),
         });
     }
-    return {samples, skipped};
+    return { samples, skipped };
 }
 
-function mapSleep(rows: Record<string, unknown>[]): {samples: Sample[]; skipped: ParseSkip[]} {
+function mapSleep(rows: Record<string, unknown>[]): { samples: Sample[]; skipped: ParseSkip[] } {
     const samples: Sample[] = [];
     const skipped: ParseSkip[] = [];
     for (const row of rows) {
         const start = asNumber(row['start_time']);
         const end = asNumber(row['end_time']);
         if (start == null || end == null || end <= start) {
-            skipped.push({line: 'sleep_session_record_table', reason: 'bad sleep interval'});
+            skipped.push({ line: 'sleep_session_record_table', reason: 'bad sleep interval' });
             continue;
         }
         samples.push({
@@ -106,7 +166,7 @@ function mapSleep(rows: Record<string, unknown>[]): {samples: Sample[]; skipped:
             originId: originFor(row, 'sleep_session_record_table', start),
         });
     }
-    return {samples, skipped};
+    return { samples, skipped };
 }
 
 function mapMinuteSeries(
@@ -119,14 +179,14 @@ function mapMinuteSeries(
     return bucketsToSamples(buckets, metric, originPrefix);
 }
 
-function bucketRows(rows: Record<string, unknown>[], valueCol: string): Map<number, {sum: number; n: number}> {
-    const buckets = new Map<number, {sum: number; n: number}>();
+function bucketRows(rows: Record<string, unknown>[], valueCol: string): Map<number, { sum: number; n: number }> {
+    const buckets = new Map<number, { sum: number; n: number }>();
     for (const row of rows) {
         const t = asNumber(row['epoch_millis']);
         const raw = asNumber(row[valueCol]);
         if (t == null || raw == null) continue;
         const key = Math.floor(t / HR_BUCKET_MS) * HR_BUCKET_MS;
-        const bucket = buckets.get(key) ?? {sum: 0, n: 0};
+        const bucket = buckets.get(key) ?? { sum: 0, n: 0 };
         bucket.sum += raw;
         bucket.n += 1;
         buckets.set(key, bucket);
@@ -135,7 +195,7 @@ function bucketRows(rows: Record<string, unknown>[], valueCol: string): Map<numb
 }
 
 function bucketsToSamples(
-    buckets: Map<number, {sum: number; n: number}>,
+    buckets: Map<number, { sum: number; n: number }>,
     metric: MetricId,
     originPrefix: string,
 ): Sample[] {
@@ -152,14 +212,14 @@ function bucketsToSamples(
     return samples;
 }
 
-function mapExercise(rows: Record<string, unknown>[]): {samples: Sample[]; skipped: ParseSkip[]} {
+function mapExercise(rows: Record<string, unknown>[]): { samples: Sample[]; skipped: ParseSkip[] } {
     const samples: Sample[] = [];
     const skipped: ParseSkip[] = [];
     for (const row of rows) {
         const start = asNumber(row['start_time']);
         const end = asNumber(row['end_time']);
         if (start == null || end == null || end <= start) {
-            skipped.push({line: 'exercise_session_record_table', reason: 'bad exercise interval'});
+            skipped.push({ line: 'exercise_session_record_table', reason: 'bad exercise interval' });
             continue;
         }
         samples.push({
@@ -170,10 +230,10 @@ function mapExercise(rows: Record<string, unknown>[]): {samples: Sample[]; skipp
             originId: originFor(row, 'exercise_session_record_table', start),
         });
     }
-    return {samples, skipped};
+    return { samples, skipped };
 }
 
-function merge(into: ParseResult, part: {samples: Sample[]; skipped: ParseSkip[]}): void {
+function merge(into: ParseResult, part: { samples: Sample[]; skipped: ParseSkip[] }): void {
     into.samples.push(...part.samples);
     into.skipped.push(...part.skipped);
 }
@@ -183,19 +243,26 @@ function merge(into: ParseResult, part: {samples: Sample[]; skipped: ParseSkip[]
  * Re-imports upsert: origin_id is the record UUID, or a stable minute key for HR.
  */
 function appendMinutes(result: ParseResult, tables: Record<string, Record<string, unknown>[]>): void {
-    result.samples.push(...mapMinuteSeries(tables['heart_rate_record_series_table'] ?? [], 'beats_per_minute', 'heart_rate', 'hr-minute'));
+    result.samples.push(
+        ...mapMinuteSeries(
+            tables['heart_rate_record_series_table'] ?? [],
+            'beats_per_minute',
+            'heart_rate',
+            'hr-minute',
+        ),
+    );
     result.samples.push(...mapMinuteSeries(tables['speed_record_table'] ?? [], 'speed', 'speed', 'speed-minute'));
 }
 
 export function parseHealthConnectSqliteTables(tables: Record<string, Record<string, unknown>[]>): ParseResult {
-    const result: ParseResult = {samples: [], skipped: [], format: 'health-connect-db'};
+    const result: ParseResult = { samples: [], skipped: [], format: 'health-connect-db' };
     for (const spec of INSTANT) merge(result, mapSpecRows(tables[spec.table] ?? [], spec));
     for (const spec of INTERVAL) merge(result, mapSpecRows(tables[spec.table] ?? [], spec));
     merge(result, mapSleep(tables['sleep_session_record_table'] ?? []));
     merge(result, mapExercise(tables['exercise_session_record_table'] ?? []));
     appendMinutes(result, tables);
     if (!result.samples.length && !result.skipped.length) {
-        result.skipped.push({line: '', reason: 'no mapped records'});
+        result.skipped.push({ line: '', reason: 'no mapped records' });
     }
     return result;
 }

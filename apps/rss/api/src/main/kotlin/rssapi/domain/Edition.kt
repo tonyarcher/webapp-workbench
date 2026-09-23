@@ -1,9 +1,12 @@
 package rssapi.domain
-
 import java.time.Instant
 import java.util.UUID
 
-/**
+/** Saturating curve and window arithmetic shared by the edition scores. */
+private const val SATURATION_SCALE = 10.0
+private const val MS_PER_HOUR = 3_600_000.0
+
+/*
  * Pure edition ranking (Phase A). Deterministic: same inputs always give the
  * same clusters and scores, so builds are reproducible and unit-testable.
  * No Spring, no persistence, no logging here.
@@ -65,12 +68,7 @@ fun affinityKeys(feedId: UUID, domain: String?, author: String?): List<String> =
 )
 
 /** Reader-affinity total for one article: feed plus domain plus author, floored at zero. */
-fun affinitySum(
-    feedId: UUID,
-    domain: String?,
-    author: String?,
-    affinity: Map<String, Float>,
-): Double {
+fun affinitySum(feedId: UUID, domain: String?, author: String?, affinity: Map<String, Float>): Double {
     var total = (affinity["aff:feed:$feedId"] ?: 0f).toDouble()
     domain?.let { total += (affinity["aff:domain:$it"] ?: 0f).toDouble() }
     author?.let { total += (affinity["aff:author:${it.lowercase()}"] ?: 0f).toDouble() }
@@ -82,7 +80,7 @@ private fun saturating(value: Double): Double = when {
     value.isNaN() -> 0.0
     value <= 0.0 -> 0.0
     !value.isFinite() -> 1.0
-    else -> value / (value + 10.0)
+    else -> value / (value + SATURATION_SCALE)
 }
 
 /** Linear recency decay over the edition window: 1 at [now], 0 past the window edge. */
@@ -90,7 +88,7 @@ internal fun newnessOf(publishedAt: Instant, now: Instant, windowHours: Long): D
     if (windowHours <= 0) return 0.0
     val ageMs = now.toEpochMilli() - publishedAt.toEpochMilli()
     if (ageMs <= 0) return 1.0
-    return maxOf(0.0, 1.0 - ageMs.toDouble() / (windowHours * 3_600_000.0))
+    return maxOf(0.0, 1.0 - ageMs.toDouble() / (windowHours * MS_PER_HOUR))
 }
 
 /**
@@ -120,8 +118,10 @@ fun compositeRank(
     }
     val freshMean = cluster.articles.map { newnessOf(it.publishedAt, now, windowHours) }
     val popularMean = cluster.articles.map { (saturating(it.popularity) + saturating(it.engagement)) / 2.0 }
-    return (general * generalMean.average() + personal * personalMean.average() +
-        fresh * freshMean.average() + popular * popularMean.average()) / total
+    return (
+        general * generalMean.average() + personal * personalMean.average() +
+            fresh * freshMean.average() + popular * popularMean.average()
+        ) / total
 }
 
 private fun affinityOf(article: EditionArticle, affinity: Map<String, Float>): Double =

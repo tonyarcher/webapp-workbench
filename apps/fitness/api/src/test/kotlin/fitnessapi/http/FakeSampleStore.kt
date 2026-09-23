@@ -1,7 +1,5 @@
 package fitnessapi.http
 
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 import fitnessapi.domain.IncomingSample
 import fitnessapi.store.ImportResult
 import fitnessapi.store.LatestPoint
@@ -10,6 +8,8 @@ import fitnessapi.store.RollupRow
 import fitnessapi.store.SampleStore
 import fitnessapi.store.SeriesPoint
 import fitnessapi.store.StoredSample
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class FakeSampleStore : SampleStore {
     private val rows = ConcurrentHashMap<String, StoredSample>()
@@ -19,13 +19,8 @@ class FakeSampleStore : SampleStore {
 
     override fun latest(userId: UUID): List<LatestPoint> = visibleLatest(rows.values, userId)
 
-    override fun listSamples(
-        userId: UUID,
-        metric: String?,
-        from: Long,
-        to: Long,
-        limit: Int,
-    ): List<StoredSample> = visibleList(rows.values, userId, metric, from, to, limit)
+    override fun listSamples(userId: UUID, metric: String?, from: Long, to: Long, limit: Int): List<StoredSample> =
+        visibleList(rows.values, userId, metric, from, to, limit)
 
     override fun seriesRows(userId: UUID, metric: String, from: Long, to: Long): List<SeriesPoint> =
         visibleSeries(rows.values, userId, metric, from, to)

@@ -1,10 +1,18 @@
 package radioapi.domain
 
 private const val GOLD_2000S_SHARE = 0.6
+
+/** Sliders run 0..100; 100 means "no randomness, pick uniformly". */
+private const val PERCENT_MAX = 100
+private const val PERCENT_SCALE = 100.0
+
+/** How fast the temperature flattens the due-score weighting at full heat. */
+private const val TEMPERATURE_DECAY = 0.99
+
 private val RELAX_STEPS = listOf(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)
 
 fun chooseBucket(rng: Rng, weights: Weights): String {
-    if (rng.next() < weights.goldLeak / 100.0) {
+    if (rng.next() < weights.goldLeak / PERCENT_SCALE) {
         return if (rng.next() < GOLD_2000S_SHARE) "gold2000s" else "gold1990s"
     }
     val mix = bucketMix(weights.hitGravity)
@@ -45,17 +53,11 @@ fun pickFromBucket(
     val pool = buckets.named(name).ifEmpty { buckets.all() }
     val fit = eligible(pool, now, lastByTrack, lastByArtist, windows, orbitMinMs, numberOneId)
     if (fit.size == 1) return fit.first()
-    if (temperature >= 100) return pickUniform(rng, fit)
+    if (temperature >= PERCENT_MAX) return pickUniform(rng, fit)
     return pickByTemperature(rng, fit, now, lastByTrack, temperature)
 }
 
-private fun orbitBlocks(
-    track: Track,
-    now: Long,
-    titleLast: Long?,
-    orbitMinMs: Double,
-    numberOneId: String?,
-): Boolean {
+private fun orbitBlocks(track: Track, now: Long, titleLast: Long?, orbitMinMs: Double, numberOneId: String?): Boolean {
     if (numberOneId == null || track.id != numberOneId || titleLast == null) return false
     return now - titleLast < orbitMinMs
 }
@@ -119,7 +121,7 @@ private fun pickByTemperature(
     temperature: Int,
 ): Track {
     if (temperature <= 0) return mostDue(pool, now, lastByTrack)
-    val exp = 1 - 0.99 * (temperature / 100.0)
+    val exp = 1 - TEMPERATURE_DECAY * (temperature / PERCENT_SCALE)
     val weights = pool.map { track ->
         val score = dueScore(track, now, lastByTrack[track.id]).coerceAtLeast(1.0)
         Math.pow(score, exp)

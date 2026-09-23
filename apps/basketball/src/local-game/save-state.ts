@@ -1,9 +1,9 @@
-import {openDB} from 'idb';
-import type {DBSchema, IDBPDatabase} from 'idb';
-import {SCORING_EVENT_TYPES} from 'basketball-core';
-import type {GameState, ScoringEvent} from 'basketball-core';
-import type {LiveLocalGameState} from './game-state';
-import type {LocalGameEventRecord, LocalGameSetup} from './game-types';
+import { openDB } from 'idb';
+import type { DBSchema, IDBPDatabase } from 'idb';
+import { SCORING_EVENT_TYPES } from 'basketball-core';
+import type { GameState, ScoringEvent } from 'basketball-core';
+import type { LiveLocalGameState } from './game-state';
+import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
 
 export const SAVE_DB_NAME = 'basketball-db';
 export const SAVE_STORE_NAME = 'games';
@@ -58,18 +58,18 @@ function isScoringEvent(value: unknown): value is ScoringEvent {
 
 function isLocalGameEventRecord(value: unknown): value is LocalGameEventRecord {
     if (!isRecord(value)) return false;
-    return (
-        typeof value['id'] === 'number' &&
-        typeof value['occurredAt'] === 'string' &&
-        isScoringEvent(value['event'])
-    );
+    return typeof value['id'] === 'number' && typeof value['occurredAt'] === 'string' && isScoringEvent(value['event']);
 }
 
 function isEngineGameState(value: unknown): value is GameState {
     if (!isRecord(value) || !isRecord(value['clock']) || !isRecord(value['score'])) return false;
     const flags = typeof value['over'] === 'boolean' && typeof value['homeAttacksLeft'] === 'boolean';
-    const nested = [value['clock']['period'], value['clock']['gameClockSeconds'], value['score']['home'], value['score']['away']]
-        .every((n) => typeof n === 'number');
+    const nested = [
+        value['clock']['period'],
+        value['clock']['gameClockSeconds'],
+        value['score']['home'],
+        value['score']['away'],
+    ].every((n) => typeof n === 'number');
     return typeof value['rulebookId'] === 'string' && flags && nested && Array.isArray(value['shots']);
 }
 
@@ -79,7 +79,8 @@ function hasHistoryIndex(value: Record<string, unknown>, eventCount: number): bo
 }
 
 export function isValidPersistedGameState(value: unknown): value is PersistedGameState {
-    if (!isRecord(value) || value['version'] !== SAVE_STATE_VERSION || typeof value['savedAt'] !== 'string') return false;
+    if (!isRecord(value) || value['version'] !== SAVE_STATE_VERSION || typeof value['savedAt'] !== 'string')
+        return false;
     if (!isLocalGameSetup(value['setup']) || !isEngineGameState(value['engine'])) return false;
     if (!Array.isArray(value['events']) || !value['events'].every(isLocalGameEventRecord)) return false;
     return hasHistoryIndex(value, value['events'].length);
@@ -91,7 +92,7 @@ export async function loadGameState(
     const database = await db;
     const raw = await database.get(SAVE_STORE_NAME, SAVE_RECORD_KEY);
     if (!isValidPersistedGameState(raw)) return null;
-    return {setup: raw.setup, engine: raw.engine, historyIndex: raw.historyIndex, events: raw.events};
+    return { setup: raw.setup, engine: raw.engine, historyIndex: raw.historyIndex, events: raw.events };
 }
 
 export async function saveGameState(
@@ -111,9 +112,7 @@ export async function saveGameState(
     await database.put(SAVE_STORE_NAME, persisted, SAVE_RECORD_KEY);
 }
 
-export async function clearGameState(
-    db: Promise<IDBPDatabase<BasketballDB>> = openGameDB(),
-): Promise<void> {
+export async function clearGameState(db: Promise<IDBPDatabase<BasketballDB>> = openGameDB()): Promise<void> {
     const database = await db;
     await database.delete(SAVE_STORE_NAME, SAVE_RECORD_KEY);
 }

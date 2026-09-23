@@ -13,14 +13,14 @@ CREATE TABLE oauth_redirect_uris (
 );
 
 INSERT INTO oauth_clients (client_id) VALUES
-    ('fitness'),
-    ('rss-reader'),
-    ('user-web');
+('fitness'),
+('rss-reader'),
+('user-web');
 
 INSERT INTO oauth_redirect_uris (client_id, redirect_uri) VALUES
-    ('fitness', 'http://localhost/fitness/'),
-    ('fitness', 'http://127.0.0.1/fitness/'),
-    ('rss-reader', 'http://localhost/rss-reader/'),
-    ('rss-reader', 'http://127.0.0.1/rss-reader/'),
-    ('user-web', 'http://localhost/auth/'),
-    ('user-web', 'http://127.0.0.1/auth/');
+('fitness', 'http://localhost/fitness/'),
+('fitness', 'http://127.0.0.1/fitness/'),
+('rss-reader', 'http://localhost/rss-reader/'),
+('rss-reader', 'http://127.0.0.1/rss-reader/'),
+('user-web', 'http://localhost/auth/'),
+('user-web', 'http://127.0.0.1/auth/');

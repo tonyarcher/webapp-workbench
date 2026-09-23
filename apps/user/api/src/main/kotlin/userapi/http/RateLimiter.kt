@@ -2,9 +2,12 @@ package userapi.http
 
 import java.util.concurrent.ConcurrentHashMap
 
+/** Default: 30 attempts per 10 minutes. */
+private const val DEFAULT_WINDOW_MS = 10 * 60 * 1000L
+
 class RateLimiter(
     private val limit: Int = 30,
-    private val windowMs: Long = 10 * 60 * 1000L,
+    private val windowMs: Long = DEFAULT_WINDOW_MS,
     private val nowMs: () -> Long = System::currentTimeMillis,
 ) {
     private val buckets = ConcurrentHashMap<String, Bucket>()

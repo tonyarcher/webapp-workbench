@@ -1,7 +1,7 @@
-import type {Player, Position, TeamId} from 'basketball-core';
-import {makePlayer} from 'basketball-core';
-import {between, clamp, pickIndex} from './rng';
-import type {SimRatings} from './types';
+import type { Player, Position, TeamId } from 'basketball-core';
+import { makePlayer } from 'basketball-core';
+import { between, clamp, pickIndex } from './rng';
+import type { SimRatings } from './types';
 
 const TEAM_NAMES: [string, ...string[]] = [
     'Harbor Lights',
@@ -17,28 +17,64 @@ const TEAM_NAMES: [string, ...string[]] = [
 ];
 
 const FIRST_NAMES = [
-    'Avery', 'Jordan', 'Cam', 'Riley', 'Quinn', 'Sage', 'Drew', 'Kai', 'Nico', 'Elena',
-    'Marcus', 'Priya', 'Diego', 'Hannah', 'Omar', 'Chloe', 'Theo', 'Aisha', 'Jamal', 'Leah',
+    'Avery',
+    'Jordan',
+    'Cam',
+    'Riley',
+    'Quinn',
+    'Sage',
+    'Drew',
+    'Kai',
+    'Nico',
+    'Elena',
+    'Marcus',
+    'Priya',
+    'Diego',
+    'Hannah',
+    'Omar',
+    'Chloe',
+    'Theo',
+    'Aisha',
+    'Jamal',
+    'Leah',
 ];
 
 const LAST_NAMES = [
-    'Haddad', 'Okoye', 'Brennan', 'Sato', 'Vargas', 'Keller', 'Nwosu', 'Berg', 'Duarte', 'Singh',
-    'Moreau', 'Perez', 'Cho', 'Alvarez', 'Brooks', 'Ibrahim', 'Novak', 'Patel', 'Reyes', 'Kim',
+    'Haddad',
+    'Okoye',
+    'Brennan',
+    'Sato',
+    'Vargas',
+    'Keller',
+    'Nwosu',
+    'Berg',
+    'Duarte',
+    'Singh',
+    'Moreau',
+    'Perez',
+    'Cho',
+    'Alvarez',
+    'Brooks',
+    'Ibrahim',
+    'Novak',
+    'Patel',
+    'Reyes',
+    'Kim',
 ];
 
-const SLOTS: {position: Position; jersey: number; bias: Partial<SimRatings>}[] = [
-    {position: 'G', jersey: 1, bias: {playmaking: 14, three: 8}},
-    {position: 'G', jersey: 2, bias: {three: 12, shooting: 8}},
-    {position: 'F', jersey: 11, bias: {shooting: 10, stamina: 6}},
-    {position: 'F', jersey: 21, bias: {rebounding: 10, defense: 8}},
-    {position: 'C', jersey: 32, bias: {rebounding: 16, shooting: -6}},
-    {position: 'G', jersey: 3, bias: {three: 6}},
-    {position: 'G', jersey: 4, bias: {playmaking: 6}},
-    {position: 'F', jersey: 12, bias: {defense: 8}},
-    {position: 'F', jersey: 22, bias: {rebounding: 6}},
-    {position: 'C', jersey: 33, bias: {rebounding: 10, defense: 6}},
-    {position: 'F', jersey: 13, bias: {shooting: 4}},
-    {position: 'C', jersey: 34, bias: {rebounding: 8}},
+const SLOTS: { position: Position; jersey: number; bias: Partial<SimRatings> }[] = [
+    { position: 'G', jersey: 1, bias: { playmaking: 14, three: 8 } },
+    { position: 'G', jersey: 2, bias: { three: 12, shooting: 8 } },
+    { position: 'F', jersey: 11, bias: { shooting: 10, stamina: 6 } },
+    { position: 'F', jersey: 21, bias: { rebounding: 10, defense: 8 } },
+    { position: 'C', jersey: 32, bias: { rebounding: 16, shooting: -6 } },
+    { position: 'G', jersey: 3, bias: { three: 6 } },
+    { position: 'G', jersey: 4, bias: { playmaking: 6 } },
+    { position: 'F', jersey: 12, bias: { defense: 8 } },
+    { position: 'F', jersey: 22, bias: { rebounding: 6 } },
+    { position: 'C', jersey: 33, bias: { rebounding: 10, defense: 6 } },
+    { position: 'F', jersey: 13, bias: { shooting: 4 } },
+    { position: 'C', jersey: 34, bias: { rebounding: 8 } },
 ];
 
 export interface GeneratedSide {
@@ -47,7 +83,7 @@ export interface GeneratedSide {
     ratings: Record<string, SimRatings>;
 }
 
-export function generateMatchup(random: () => number): {home: GeneratedSide; away: GeneratedSide} {
+export function generateMatchup(random: () => number): { home: GeneratedSide; away: GeneratedSide } {
     const first = pickIndex(random, TEAM_NAMES.length);
     let second = pickIndex(random, TEAM_NAMES.length);
     if (second === first) second = (first + 1) % TEAM_NAMES.length;
@@ -68,7 +104,7 @@ export function generateSide(random: () => number, team: TeamId, teamName: strin
         roster.push(player);
         ratings[player.id] = rollRatings(random, slot.bias);
     }
-    return {teamName, roster, ratings};
+    return { teamName, roster, ratings };
 }
 
 function namedPlayer(
@@ -79,7 +115,7 @@ function namedPlayer(
     usedNames: Set<string>,
 ): Player {
     const base = makePlayer(team, position, jersey);
-    return {...base, name: uniqueName(random, usedNames)};
+    return { ...base, name: uniqueName(random, usedNames) };
 }
 
 function uniqueName(random: () => number, used: Set<string>): string {

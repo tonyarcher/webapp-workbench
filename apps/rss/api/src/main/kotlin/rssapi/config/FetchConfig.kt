@@ -8,6 +8,5 @@ import rssapi.fetch.HttpFeedFetcher
 @Configuration
 class FetchConfig {
     @Bean
-    fun feedFetcher(): FeedFetcher =
-        HttpFeedFetcher(System.getenv("RSS_ALLOW_LOCAL_FETCH") == "1")
+    fun feedFetcher(): FeedFetcher = HttpFeedFetcher(System.getenv("RSS_ALLOW_LOCAL_FETCH") == "1")
 }

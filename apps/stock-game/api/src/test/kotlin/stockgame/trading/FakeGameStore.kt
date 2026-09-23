@@ -1,14 +1,14 @@
 package stockgame.trading
 
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
 import stockgame.domain.GameConfig
 import stockgame.domain.Order
 import stockgame.domain.Trade
 import stockgame.store.GameStore
 import stockgame.store.NewOrder
 import stockgame.store.NewTrade
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 class FakeGameStore : GameStore {
     private val tradeSeq = AtomicLong(1)
@@ -17,11 +17,13 @@ class FakeGameStore : GameStore {
     private val trades = ConcurrentHashMap<UUID, ConcurrentHashMap<Long, Trade>>()
     private val orders = ConcurrentHashMap<UUID, ConcurrentHashMap<Long, Order>>()
 
-    private fun tradesOf(userId: UUID): ConcurrentHashMap<Long, Trade> =
-        trades.computeIfAbsent(userId) { ConcurrentHashMap() }
+    private fun tradesOf(userId: UUID): ConcurrentHashMap<Long, Trade> = trades.computeIfAbsent(userId) {
+        ConcurrentHashMap()
+    }
 
-    private fun ordersOf(userId: UUID): ConcurrentHashMap<Long, Order> =
-        orders.computeIfAbsent(userId) { ConcurrentHashMap() }
+    private fun ordersOf(userId: UUID): ConcurrentHashMap<Long, Order> = orders.computeIfAbsent(userId) {
+        ConcurrentHashMap()
+    }
 
     override fun getConfig(userId: UUID): GameConfig? = configs[userId]
 
@@ -69,10 +71,9 @@ class FakeGameStore : GameStore {
         rows[orderId] = order.copy(status = "cancelled")
     }
 
-    override fun userIdsWithPendingOrders(): List<UUID> =
-        orders.entries
-            .filter { (_, rows) -> rows.values.any { it.status == "pending" } }
-            .map { (userId, _) -> userId }
+    override fun userIdsWithPendingOrders(): List<UUID> = orders.entries
+        .filter { (_, rows) -> rows.values.any { it.status == "pending" } }
+        .map { (userId, _) -> userId }
 }
 
 private fun toTrade(id: Long, trade: NewTrade): Trade = Trade(

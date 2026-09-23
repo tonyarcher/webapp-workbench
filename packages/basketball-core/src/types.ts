@@ -6,9 +6,9 @@ export type Position = 'G' | 'F' | 'C';
 
 export type BonusKind = 'none' | 'one-and-one' | 'double';
 
-export type PeriodBonus = {kind: 'period'; doubleAt: number};
+export type PeriodBonus = { kind: 'period'; doubleAt: number };
 
-export type HalfBonus = {kind: 'half'; oneAndOneAt: number; doubleAt: number};
+export type HalfBonus = { kind: 'half'; oneAndOneAt: number; doubleAt: number };
 
 export type BonusRule = PeriodBonus | HalfBonus;
 
@@ -221,9 +221,9 @@ export type SubstitutionEvent = {
     inId: string;
 };
 
-export type TimeoutEvent = {type: 'timeout'; team: TeamId};
+export type TimeoutEvent = { type: 'timeout'; team: TeamId };
 
-export type PeriodEndEvent = {type: 'period_end'};
+export type PeriodEndEvent = { type: 'period_end' };
 
 export type SetClockEvent = {
     type: 'set_clock';

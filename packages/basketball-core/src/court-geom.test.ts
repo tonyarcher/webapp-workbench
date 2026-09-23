@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
     inBounds,
     isThreePoint,
@@ -11,7 +11,7 @@ import {
     threePointJoin,
     threePointPath,
 } from './court-geom';
-import {NBA, NCAA, NFHS, WNBA} from './rulebook';
+import { NBA, NCAA, NFHS, WNBA } from './rulebook';
 
 describe('isThreePoint', () => {
     it('NBA paint is two and above-the-break is three', () => {
@@ -54,7 +54,7 @@ describe('shotPoints', () => {
 
 describe('court layout', () => {
     it('places hoops on both baselines', () => {
-        expect(leftHoop(NBA.court)).toEqual({x: 5.25, y: 25});
+        expect(leftHoop(NBA.court)).toEqual({ x: 5.25, y: 25 });
         expect(rightHoop(NBA.court).x).toBe(NBA.court.length - 5.25);
         expect(inBounds(0, 0, NBA.court)).toBe(true);
         expect(inBounds(-1, 25, NBA.court)).toBe(false);

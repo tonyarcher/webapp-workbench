@@ -2,6 +2,7 @@ package radioapi.web
 
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -29,8 +30,8 @@ class PlaylistController(private val writers: ObjectProvider<PlaylistWriter>) {
     fun playlist(@PathVariable id: String): PlaylistRow = load(id)
 
     @GetMapping("/playlists/{id}/entries", headers = ["X-Api-Version=1"])
-    fun entries(@PathVariable id: String): List<EntryRow> =
-        writers.orOffline().entries(parsePlaylistId(id)) ?: throw ApiException(404, "playlist not found")
+    fun entries(@PathVariable id: String): List<EntryRow> = writers.orOffline().entries(parsePlaylistId(id))
+        ?: throw ApiException(HttpStatus.NOT_FOUND, "playlist not found")
 
     @GetMapping("/playlists/{id}/txt", headers = ["X-Api-Version=1"])
     fun txt(
@@ -38,12 +39,13 @@ class PlaylistController(private val writers: ObjectProvider<PlaylistWriter>) {
         @RequestParam(name = "tz", required = false) tz: String?,
     ): ResponseEntity<String> {
         val playlist = load(id)
-        val entries = writers.orOffline().entries(playlist.id) ?: throw ApiException(404, "playlist not found")
+        val entries =
+            writers.orOffline().entries(playlist.id) ?: throw ApiException(HttpStatus.NOT_FOUND, "playlist not found")
         return textFile(playlist, entries, tz)
     }
 
-    private fun load(id: String): PlaylistRow =
-        writers.orOffline().playlist(parsePlaylistId(id)) ?: throw ApiException(404, "playlist not found")
+    private fun load(id: String): PlaylistRow = writers.orOffline().playlist(parsePlaylistId(id))
+        ?: throw ApiException(HttpStatus.NOT_FOUND, "playlist not found")
 }
 
 private fun textFile(playlist: PlaylistRow, entries: List<EntryRow>, tz: String?): ResponseEntity<String> {

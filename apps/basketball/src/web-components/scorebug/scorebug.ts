@@ -1,6 +1,6 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property, state} from 'lit/decorators.js';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
 import {
     bonusKind,
     formatClock,
@@ -11,17 +11,17 @@ import {
     periodLabel,
     stepSeconds,
 } from 'basketball-core';
-import type {ClockStamp, GameState} from 'basketball-core';
+import type { ClockStamp, GameState } from 'basketball-core';
 import styles from './scorebug.css?inline';
 
 @customElement('bball-scorebug')
 export class Scorebug extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) engine!: GameState;
+    @property({ attribute: false }) engine!: GameState;
     @property() homeName = 'HOME';
     @property() awayName = 'AWAY';
-    @property({type: Boolean}) editable = false;
+    @property({ type: Boolean }) editable = false;
 
     @state() private open = false;
     @state() private clockText = '';
@@ -36,11 +36,13 @@ export class Scorebug extends LitElement {
     }
 
     private emitClock(stamp: ClockStamp, running = this.engine.clock.running): void {
-        this.dispatchEvent(new CustomEvent('clock-change', {
-            detail: {clock: stamp, running},
-            bubbles: true,
-            composed: true,
-        }));
+        this.dispatchEvent(
+            new CustomEvent('clock-change', {
+                detail: { clock: stamp, running },
+                bubbles: true,
+                composed: true,
+            }),
+        );
     }
 
     private currentStamp(): ClockStamp {
@@ -77,7 +79,7 @@ export class Scorebug extends LitElement {
         this.clockText = target.value;
         const parsed = parseClock(target.value);
         if (parsed == null) return;
-        this.emitClock({...this.currentStamp(), gameClockSeconds: stepSeconds(parsed, 0, this.periodMax())});
+        this.emitClock({ ...this.currentStamp(), gameClockSeconds: stepSeconds(parsed, 0, this.periodMax()) });
     };
 
     private onShotTyped = (event: Event): void => {
@@ -87,7 +89,7 @@ export class Scorebug extends LitElement {
         const parsed = parseShotClock(target.value);
         if (parsed == null) return;
         const rb = getRulebook(this.engine.rulebookId);
-        this.emitClock({...this.currentStamp(), shotClockSeconds: stepSeconds(parsed, 0, rb.shotClockSeconds)});
+        this.emitClock({ ...this.currentStamp(), shotClockSeconds: stepSeconds(parsed, 0, rb.shotClockSeconds) });
     };
 
     private toggle = (): void => {

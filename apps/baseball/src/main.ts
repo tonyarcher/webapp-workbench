@@ -6,5 +6,5 @@ import './local-game/app-shell';
 
 const root = document.getElementById('root');
 if (root) {
-  render(html`<baseball-app></baseball-app>`, root);
+    render(html`<baseball-app></baseball-app>`, root);
 }

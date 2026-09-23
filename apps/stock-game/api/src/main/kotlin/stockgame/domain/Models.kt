@@ -21,12 +21,7 @@ data class Quote(
     val ask: Double? = null,
 )
 
-data class SymbolHit(
-    val symbol: String,
-    val name: String,
-    val exchange: String,
-    val type: String,
-)
+data class SymbolHit(val symbol: String, val name: String, val exchange: String, val type: String)
 
 data class GameConfig(
     val startingCashCents: Long,

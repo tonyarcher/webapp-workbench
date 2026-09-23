@@ -1,5 +1,6 @@
 package rssapi.web
 
+import org.springframework.http.HttpStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -8,12 +9,18 @@ class ErrorAdviceBranchTest {
 
     @Test
     fun mapsErrors() {
-        assertEquals(400, advice.handleApi(ApiException(400, "bad")).statusCode.value())
-        assertEquals("bad", advice.handleApi(ApiException(400, "bad")).body?.error)
-        assertEquals(500, advice.handleApi(ApiException(500, "x")).statusCode.value())
-        assertEquals(404, advice.handleMissing().statusCode.value())
-        assertEquals(404, advice.handleNoHandler().statusCode.value())
-        assertEquals(400, advice.handleBadJson().statusCode.value())
-        assertEquals(500, advice.handleOther().statusCode.value())
+        assertEquals(
+            HttpStatus.BAD_REQUEST.value(),
+            advice.handleApi(ApiException(HttpStatus.BAD_REQUEST, "bad")).statusCode.value(),
+        )
+        assertEquals("bad", advice.handleApi(ApiException(HttpStatus.BAD_REQUEST, "bad")).body?.error)
+        assertEquals(
+            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            advice.handleApi(ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "x")).statusCode.value(),
+        )
+        assertEquals(HttpStatus.NOT_FOUND.value(), advice.handleMissing().statusCode.value())
+        assertEquals(HttpStatus.NOT_FOUND.value(), advice.handleNoHandler().statusCode.value())
+        assertEquals(HttpStatus.BAD_REQUEST.value(), advice.handleBadJson().statusCode.value())
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), advice.handleOther().statusCode.value())
     }
 }

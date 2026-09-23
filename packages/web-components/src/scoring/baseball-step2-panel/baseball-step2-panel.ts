@@ -1,5 +1,5 @@
-import {html, LitElement} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import { html, LitElement } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import step2CssText from './baseball-step2-panel.css?inline';
 
 const step2Sheet = new CSSStyleSheet();
@@ -9,9 +9,9 @@ step2Sheet.replaceSync(step2CssText);
 export class BaseballStep2Panel extends LitElement {
     static override styles = step2Sheet;
 
-    @property({type: String, attribute: 'base-label'}) baseLabel = '';
-    @property({type: Boolean, attribute: 'is-hit'}) isHit = false;
-    @property({type: Boolean, attribute: 'double-play-available'}) doublePlayAvailable = false;
+    @property({ type: String, attribute: 'base-label' }) baseLabel = '';
+    @property({ type: Boolean, attribute: 'is-hit' }) isHit = false;
+    @property({ type: Boolean, attribute: 'double-play-available' }) doublePlayAvailable = false;
 
     private doublePlayActive = false;
 
@@ -19,9 +19,16 @@ export class BaseballStep2Panel extends LitElement {
         return this.isHit
             ? ['Left Field', 'Center Field', 'Right Field', 'Infield', 'Down the Line', 'Gap']
             : [
-                'Pitcher (1)', 'Catcher (2)', '1st Base (3)', '2nd Base (4)', '3rd Base (5)',
-                'Shortstop (6)', 'Left Field (7)', 'Center Field (8)', 'Right Field (9)',
-            ];
+                  'Pitcher (1)',
+                  'Catcher (2)',
+                  '1st Base (3)',
+                  '2nd Base (4)',
+                  '3rd Base (5)',
+                  'Shortstop (6)',
+                  'Left Field (7)',
+                  'Center Field (8)',
+                  'Right Field (9)',
+              ];
     }
 
     override render() {
@@ -54,11 +61,13 @@ export class BaseballStep2Panel extends LitElement {
     private locationGrid() {
         return html`
             <div class="location-grid">
-                ${this.locations.map(loc => html`
+                ${this.locations.map(
+                    (loc) => html`
                     <button class="btn btn-action" @click=${() => this.selectLocation(loc)}>
                         ${loc}
                     </button>
-                `)}
+                `,
+                )}
                 <button class="btn btn-action" @click=${() => this.selectLocation(null)}>
                     Unspecified Location
                 </button>
@@ -67,15 +76,17 @@ export class BaseballStep2Panel extends LitElement {
     }
 
     private selectLocation(location: string | null) {
-        this.dispatchEvent(new CustomEvent('location-selected', {
-            detail: {
-                location,
-                fieldPos: this.fieldPosFromLabel(location),
-                doublePlay: this.doublePlayAvailable ? this.doublePlayActive : false,
-            },
-            bubbles: true,
-            composed: true,
-        }));
+        this.dispatchEvent(
+            new CustomEvent('location-selected', {
+                detail: {
+                    location,
+                    fieldPos: this.fieldPosFromLabel(location),
+                    doublePlay: this.doublePlayAvailable ? this.doublePlayActive : false,
+                },
+                bubbles: true,
+                composed: true,
+            }),
+        );
     }
 
     private fieldPosFromLabel(location: string | null): number | null {
@@ -84,10 +95,12 @@ export class BaseballStep2Panel extends LitElement {
     }
 
     private cancelStep2() {
-        this.dispatchEvent(new CustomEvent('cancel-step2', {
-            bubbles: true,
-            composed: true,
-        }));
+        this.dispatchEvent(
+            new CustomEvent('cancel-step2', {
+                bubbles: true,
+                composed: true,
+            }),
+        );
     }
 }
 

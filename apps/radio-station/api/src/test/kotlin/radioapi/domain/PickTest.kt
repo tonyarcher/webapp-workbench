@@ -55,7 +55,12 @@ class PickTest {
     fun artistSeparationBlocks() {
         val song = track("song", artist = "Same")
         val blocked = passesSeparation(
-            song, now, emptyMap(), mapOf("Same" to now - 1_000), windows, 0.0,
+            song,
+            now,
+            emptyMap(),
+            mapOf("Same" to now - 1_000),
+            windows,
+            0.0,
         )
         assertFalse(blocked)
         val orbit = orbitPolicy(DEFAULT_WEIGHTS)
@@ -79,5 +84,9 @@ private fun track(id: String, artist: String = id, rank: Int = 2): Track = Track
 )
 
 private fun buckets(power: List<Track> = emptyList(), current: List<Track> = emptyList()) = TrackBuckets(
-    power, current, emptyList(), emptyList(), emptyList(),
+    power,
+    current,
+    emptyList(),
+    emptyList(),
+    emptyList(),
 )

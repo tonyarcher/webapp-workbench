@@ -12,23 +12,12 @@ data class ParsedItem(
     val comments: Int? = null,
 )
 
-data class ParsedFeed(
-    val title: String,
-    val siteUrl: String? = null,
-    val items: List<ParsedItem>,
-)
+data class ParsedFeed(val title: String, val siteUrl: String? = null, val items: List<ParsedItem>)
 
 sealed class OpmlNode {
     abstract val title: String
 }
 
-data class OpmlSource(
-    override val title: String,
-    val xmlUrl: String,
-    val htmlUrl: String? = null,
-) : OpmlNode()
+data class OpmlSource(override val title: String, val xmlUrl: String, val htmlUrl: String? = null) : OpmlNode()
 
-data class OpmlFolder(
-    override val title: String,
-    val children: List<OpmlNode>,
-) : OpmlNode()
+data class OpmlFolder(override val title: String, val children: List<OpmlNode>) : OpmlNode()

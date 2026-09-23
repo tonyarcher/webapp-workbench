@@ -72,7 +72,10 @@ const URGENCY_WORDS = new Set([
 
 function stripTags(html: string | undefined): string {
     if (!html) return '';
-    return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return html
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 function mediaScore(input: EngagementInput, content: string): number {
@@ -95,7 +98,10 @@ function titleScore(title: string): number {
     if (title.includes('?')) s += 1;
     if (/\b[A-Z]{3,}\b/.test(title)) s += 1;
     if (/\d/.test(title)) s += 1;
-    const words = title.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+    const words = title
+        .toLowerCase()
+        .split(/[^a-z]+/)
+        .filter(Boolean);
     if (words.some((w) => URGENCY_WORDS.has(w))) s += 1;
     if (title.includes(': ')) s += 1;
     return s;

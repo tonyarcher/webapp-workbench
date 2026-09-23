@@ -1,18 +1,18 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
-import type {DayFilter} from '../../types';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import type { DayFilter } from '../../types';
 import styles from './day-filter.css?inline';
 
 @customElement('rs-day-filter')
 export class DayFilterBar extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) days: {key: string; label: string}[] = [];
+    @property({ attribute: false }) days: { key: string; label: string }[] = [];
     @property() selected: DayFilter = 'all';
 
     private emitDay(day: DayFilter): void {
-        this.dispatchEvent(new CustomEvent('day-change', {detail: day, bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('day-change', { detail: day, bubbles: true, composed: true }));
     }
 
     private chip(day: DayFilter, label: string): TemplateResult {

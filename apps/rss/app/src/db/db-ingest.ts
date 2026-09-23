@@ -1,7 +1,7 @@
-import {contentEngagement, hotScore} from '../services/ranking';
-import type {Article, Feed} from '../types';
-import {getDb, type ReaderDB} from './db-base';
-import type {IDBPObjectStore} from 'idb';
+import { contentEngagement, hotScore } from '../services/ranking';
+import type { Article, Feed } from '../types';
+import { getDb, type ReaderDB } from './db-base';
+import type { IDBPObjectStore } from 'idb';
 
 export interface BumpSpec {
     id: string;
@@ -23,7 +23,9 @@ async function storeArticles(
     for (const article of items) {
         const existing = await store.get(article.id);
         if (existing) {
-            const merged = {...existing, ...article, read: existing.read, starred: existing.starred} as Article & { image?: string };
+            const merged = { ...existing, ...article, read: existing.read, starred: existing.starred } as Article & {
+                image?: string;
+            };
             if ('image' in merged) delete merged.image;
             await store.put(merged as Article);
         } else {
@@ -32,7 +34,7 @@ async function storeArticles(
             if (article.normLink) insertedLinks.add(article.normLink);
         }
     }
-    return {inserted, insertedLinks};
+    return { inserted, insertedLinks };
 }
 
 async function applyBumps(
@@ -50,7 +52,11 @@ async function applyBumps(
                 ...current,
                 popularity: current.popularity + 3,
                 engagement: contentEngagement(current) + spec.affinityBoost + spec.velocity,
-                hot: hotScore(current.popularity + 3, contentEngagement(current) + spec.affinityBoost + spec.velocity, current.published),
+                hot: hotScore(
+                    current.popularity + 3,
+                    contentEngagement(current) + spec.affinityBoost + spec.velocity,
+                    current.published,
+                ),
             } as Article & { image?: string };
             if ('image' in bumped) delete bumped.image;
             await store.put(bumped as Article);
@@ -59,7 +65,7 @@ async function applyBumps(
 }
 
 function buildMergedFeed(currentFeed: Feed | undefined, feedPatch: Feed, unread: number): Feed {
-    if (!currentFeed) return {...feedPatch, unread};
+    if (!currentFeed) return { ...feedPatch, unread };
     return {
         ...currentFeed,
         title: feedPatch.title,
@@ -81,23 +87,23 @@ export async function ingestArticlesTx(
     const currentFeed = await tx.objectStore('feeds').get(feedPatch.id);
     if (!currentFeed && !createIfMissing) {
         await tx.done;
-        return {inserted: 0, unread: 0};
+        return { inserted: 0, unread: 0 };
     }
     const store = tx.objectStore('articles');
-    const {inserted, insertedLinks} = await storeArticles(store, items);
+    const { inserted, insertedLinks } = await storeArticles(store, items);
     await applyBumps(store, insertedLinks, bumpsByLink);
     const unread = (currentFeed?.unread ?? 0) + inserted;
     const merged = buildMergedFeed(currentFeed, feedPatch, unread);
     await tx.objectStore('feeds').put(merged);
     await tx.done;
-    return {inserted, unread};
+    return { inserted, unread };
 }
 
 export async function updateFeedErrorIfExists(feedId: string, lastError: string): Promise<void> {
     const db = await getDb();
     const tx = db.transaction('feeds', 'readwrite');
     const feed = await tx.store.get(feedId);
-    if (feed) await tx.store.put({...feed, lastError});
+    if (feed) await tx.store.put({ ...feed, lastError });
     await tx.done;
 }
 
@@ -108,7 +114,9 @@ export async function upsertArticles(articles: Article[]): Promise<number> {
     for (const article of articles) {
         const existing = await tx.store.get(article.id);
         if (existing) {
-            const merged = {...existing, ...article, read: existing.read, starred: existing.starred} as Article & { image?: string };
+            const merged = { ...existing, ...article, read: existing.read, starred: existing.starred } as Article & {
+                image?: string;
+            };
             if ('image' in merged) delete merged.image;
             await tx.store.put(merged as Article);
         } else {

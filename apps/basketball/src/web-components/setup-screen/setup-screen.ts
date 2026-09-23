@@ -1,13 +1,13 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
-import {RULEBOOKS, generateRoster} from 'basketball-core';
-import type {Player, RulebookId, TeamId} from 'basketball-core';
-import type {LocalGameMode, LocalGameSetup} from '../../local-game/game-types';
-import {DEFAULT_GAME_SETUP} from '../../local-game/game-types';
-import {generateMatchup} from '../../sim/generate-roster';
-import {mulberry32} from '../../sim/rng';
-import type {SimRatings} from '../../sim/types';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { RULEBOOKS, generateRoster } from 'basketball-core';
+import type { Player, RulebookId, TeamId } from 'basketball-core';
+import type { LocalGameMode, LocalGameSetup } from '../../local-game/game-types';
+import { DEFAULT_GAME_SETUP } from '../../local-game/game-types';
+import { generateMatchup } from '../../sim/generate-roster';
+import { mulberry32 } from '../../sim/rng';
+import type { SimRatings } from '../../sim/types';
 import styles from './setup-screen.css?inline';
 
 @customElement('bball-setup-screen')
@@ -34,7 +34,7 @@ export class SetupScreen extends LitElement {
         };
         if (Object.keys(this.simRatings).length) setup.simRatings = this.simRatings;
         if (mode === 'watch') setup.simSeed = Date.now();
-        this.dispatchEvent(new CustomEvent('start-game', {detail: setup, bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('start-game', { detail: setup, bubbles: true, composed: true }));
     }
 
     private onSubmit = (event: SubmitEvent): void => {
@@ -52,7 +52,7 @@ export class SetupScreen extends LitElement {
         this.homeName = matchup.home.teamName;
         this.awayRoster = matchup.away.roster;
         this.homeRoster = matchup.home.roster;
-        this.simRatings = {...matchup.away.ratings, ...matchup.home.ratings};
+        this.simRatings = { ...matchup.away.ratings, ...matchup.home.ratings };
     };
 
     private onName = (team: TeamId, event: Event): void => {
@@ -80,9 +80,10 @@ export class SetupScreen extends LitElement {
         const roster = team === 'home' ? [...this.homeRoster] : [...this.awayRoster];
         const current = roster[index];
         if (!current) return;
-        const next: Player = field === 'name'
-            ? {...current, name: target.value}
-            : {...current, jersey: Number(target.value) || current.jersey};
+        const next: Player =
+            field === 'name'
+                ? { ...current, name: target.value }
+                : { ...current, jersey: Number(target.value) || current.jersey };
         roster[index] = next;
         if (team === 'home') this.homeRoster = roster;
         else this.awayRoster = roster;
@@ -126,9 +127,11 @@ export class SetupScreen extends LitElement {
             <div class="row">
                 <label>Level
                     <select @change=${this.onBook}>
-                        ${Object.values(RULEBOOKS).map((book) => html`
+                        ${Object.values(RULEBOOKS).map(
+                            (book) => html`
                             <option value=${book.id} ?selected=${book.id === this.rulebookId}>${book.label}</option>
-                        `)}
+                        `,
+                        )}
                     </select>
                 </label>
                 <label>Opens with the ball
@@ -145,7 +148,8 @@ export class SetupScreen extends LitElement {
         return html`
             <section class="roster">
                 <h2>${team === 'home' ? 'Home roster' : 'Away roster'}</h2>
-                ${roster.map((player, index) => html`
+                ${roster.map(
+                    (player, index) => html`
                     <div class="player">
                         <input
                             inputmode="numeric"
@@ -160,7 +164,8 @@ export class SetupScreen extends LitElement {
                         />
                         <input .value=${player.position} disabled aria-label="Position"/>
                     </div>
-                `)}
+                `,
+                )}
             </section>
         `;
     }

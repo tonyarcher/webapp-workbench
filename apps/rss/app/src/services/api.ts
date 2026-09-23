@@ -1,6 +1,6 @@
-import type {Article, Edition, EditionMeta, EditionSection, EditionStatus, Feed, Folder} from '../types';
-import type {SummaryLength} from '../ai';
-import {getAccessToken, refreshTokens} from './auth';
+import type { Article, Edition, EditionMeta, EditionSection, EditionStatus, Feed, Folder } from '../types';
+import type { SummaryLength } from '../ai';
+import { getAccessToken, refreshTokens } from './auth';
 
 // ---- base fetch ----
 
@@ -43,13 +43,13 @@ async function apiFetch(path: string, init?: RequestInit, retried = false): Prom
 }
 
 function withAuthHeaders(init: RequestInit | undefined, token: string): RequestInit {
-    const headers: Record<string, string> = {...(init?.headers as Record<string, string> ?? {})};
+    const headers: Record<string, string> = { ...((init?.headers as Record<string, string>) ?? {}) };
     headers['Authorization'] = `Bearer ${token}`;
     headers[API_VERSION_HEADER] = API_VERSION;
     if (init?.body && typeof init.body === 'string') {
         headers['Content-Type'] = 'application/json';
     }
-    return {...init, headers};
+    return { ...init, headers };
 }
 
 async function retryFetch(path: string, init: RequestInit | undefined): Promise<unknown> {
@@ -69,7 +69,7 @@ async function throwForStatus(res: Response): Promise<never> {
 
 async function errorMessage(res: Response): Promise<string> {
     try {
-        const body = await res.json() as { error?: string };
+        const body = (await res.json()) as { error?: string };
         return body.error || res.statusText;
     } catch {
         return res.statusText;
@@ -95,18 +95,18 @@ export async function getLibraryCounts(): Promise<{ counts: Record<string, numbe
 export async function addFolder(title: string): Promise<Folder> {
     return apiFetch('/folders', {
         method: 'POST',
-        body: JSON.stringify({title}),
+        body: JSON.stringify({ title }),
     }) as Promise<Folder>;
 }
 
 export async function deleteFolder(id: string): Promise<{ ok: true }> {
-    return apiFetch(`/folders/${id}`, {method: 'DELETE'}) as Promise<{ ok: true }>;
+    return apiFetch(`/folders/${id}`, { method: 'DELETE' }) as Promise<{ ok: true }>;
 }
 
 export async function reorderFolders(ids: string[]): Promise<{ ok: true }> {
     return apiFetch('/folders/reorder', {
         method: 'POST',
-        body: JSON.stringify({ids}),
+        body: JSON.stringify({ ids }),
     }) as Promise<{ ok: true }>;
 }
 
@@ -115,18 +115,18 @@ export async function reorderFolders(ids: string[]): Promise<{ ok: true }> {
 export async function addFeed(url: string, folderIds?: string[]): Promise<Feed> {
     return apiFetch('/feeds', {
         method: 'POST',
-        body: JSON.stringify({url, folderIds}),
+        body: JSON.stringify({ url, folderIds }),
     }) as Promise<Feed>;
 }
 
 export async function deleteFeed(id: string): Promise<{ ok: true }> {
-    return apiFetch(`/feeds/${id}`, {method: 'DELETE'}) as Promise<{ ok: true }>;
+    return apiFetch(`/feeds/${id}`, { method: 'DELETE' }) as Promise<{ ok: true }>;
 }
 
 export async function setFeedFolders(id: string, folderIds: string[]): Promise<{ ok: true }> {
     return apiFetch(`/feeds/${id}/folders`, {
         method: 'PUT',
-        body: JSON.stringify({folderIds}),
+        body: JSON.stringify({ folderIds }),
     }) as Promise<{ ok: true }>;
 }
 
@@ -141,7 +141,9 @@ export interface ArticlePageParams {
     since?: number | undefined;
 }
 
-export async function fetchArticlesPage(params: ArticlePageParams = {}): Promise<{ items: Article[]; nextCursor?: string }> {
+export async function fetchArticlesPage(
+    params: ArticlePageParams = {},
+): Promise<{ items: Article[]; nextCursor?: string }> {
     const q = new URLSearchParams();
     if (params.scope) q.set('scope', params.scope);
     if (params.unreadOnly) q.set('unreadOnly', '1');
@@ -161,21 +163,21 @@ export interface ArticleStateUpdate {
 export async function updateArticleState(updates: ArticleStateUpdate[]): Promise<{ ok: true; updated: number }> {
     return apiFetch('/articles/state', {
         method: 'POST',
-        body: JSON.stringify({updates}),
+        body: JSON.stringify({ updates }),
     }) as Promise<{ ok: true; updated: number }>;
 }
 
 export async function readBefore(feedIds: string[] | undefined, cutoff: number): Promise<{ ok: true }> {
     return apiFetch('/articles/read-before', {
         method: 'POST',
-        body: JSON.stringify({feedIds, cutoff}),
+        body: JSON.stringify({ feedIds, cutoff }),
     }) as Promise<{ ok: true }>;
 }
 
 export async function readAll(feedId?: string): Promise<{ ok: true }> {
     return apiFetch('/articles/read-all', {
         method: 'POST',
-        body: JSON.stringify({feedId}),
+        body: JSON.stringify({ feedId }),
     }) as Promise<{ ok: true }>;
 }
 
@@ -184,7 +186,7 @@ export async function readAll(feedId?: string): Promise<{ ok: true }> {
 export async function recordAffinity(articleId: string, amount: number): Promise<{ ok: true }> {
     return apiFetch('/affinity', {
         method: 'POST',
-        body: JSON.stringify({articleId, amount}),
+        body: JSON.stringify({ articleId, amount }),
     }) as Promise<{ ok: true }>;
 }
 
@@ -193,7 +195,7 @@ export async function recordAffinity(articleId: string, amount: number): Promise
 export async function requestSync(scope?: 'all' | { feedIds: string[] }): Promise<{ queued: number }> {
     return apiFetch('/sync', {
         method: 'POST',
-        body: JSON.stringify({scope}),
+        body: JSON.stringify({ scope }),
     }) as Promise<{ queued: number }>;
 }
 
@@ -205,7 +207,9 @@ async function apiFetchText(path: string, retried = false): Promise<string> {
         emitAuthRequired();
         throw new AuthError();
     }
-    const res = await fetch(apiUrl(path), {headers: {Authorization: `Bearer ${token}`, [API_VERSION_HEADER]: API_VERSION}});
+    const res = await fetch(apiUrl(path), {
+        headers: { Authorization: `Bearer ${token}`, [API_VERSION_HEADER]: API_VERSION },
+    });
     if (res.status === 401 && !retried) {
         const next = await refreshTokens();
         if (next) return apiFetchText(path, true);
@@ -238,7 +242,7 @@ export interface OpmlImportResult {
 export async function importOpmlXml(xml: string): Promise<OpmlImportResult> {
     return apiFetch('/opml', {
         method: 'POST',
-        body: JSON.stringify({xml}),
+        body: JSON.stringify({ xml }),
     }) as Promise<OpmlImportResult>;
 }
 
@@ -275,10 +279,14 @@ export async function aiStatus(): Promise<ServerAiStatus> {
     return apiFetch('/ai/status') as Promise<ServerAiStatus>;
 }
 
-export async function requestServerSummary(title: string | undefined, text: string, length: SummaryLength = 'standard'): Promise<{ summary: string }> {
+export async function requestServerSummary(
+    title: string | undefined,
+    text: string,
+    length: SummaryLength = 'standard',
+): Promise<{ summary: string }> {
     return apiFetch('/ai/summarize', {
         method: 'POST',
-        body: JSON.stringify({title, text, length}),
+        body: JSON.stringify({ title, text, length }),
     }) as Promise<{ summary: string }>;
 }
 
@@ -286,12 +294,26 @@ export async function requestServerSummary(title: string | undefined, text: stri
 
 export interface MigratePayload {
     folders: Array<{ title: string; sortOrder?: number | undefined }>;
-    feeds: Array<{ url: string; title?: string | undefined; siteUrl?: string | undefined; folderTitles?: string[] | undefined }>;
-    states: Array<{ feedUrl: string; guid?: string | undefined; link?: string | undefined; read: boolean; readAt?: number | undefined; starred: boolean }>;
+    feeds: Array<{
+        url: string;
+        title?: string | undefined;
+        siteUrl?: string | undefined;
+        folderTitles?: string[] | undefined;
+    }>;
+    states: Array<{
+        feedUrl: string;
+        guid?: string | undefined;
+        link?: string | undefined;
+        read: boolean;
+        readAt?: number | undefined;
+        starred: boolean;
+    }>;
     affinity: Array<{ key: string; value: number }>;
 }
 
-export async function migrateLibrary(payload: MigratePayload): Promise<{ feedsAdded: number; foldersAdded: number; statesQueued: number }> {
+export async function migrateLibrary(
+    payload: MigratePayload,
+): Promise<{ feedsAdded: number; foldersAdded: number; statesQueued: number }> {
     return apiFetch('/migrate/library', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -369,8 +391,8 @@ export function normalizeEditionJson(json: unknown): Edition {
         generatedAt: typeof o['generatedAt'] === 'number' ? o['generatedAt'] : 0,
         windowHours: typeof o['windowHours'] === 'number' ? o['windowHours'] : 0,
         status: editionStatusOf(o['status']),
-        ...(typeof o['model'] === 'string' ? {model: o['model']} : {}),
-        ...(typeof o['opinion'] === 'string' ? {opinion: o['opinion']} : {}),
+        ...(typeof o['model'] === 'string' ? { model: o['model'] } : {}),
+        ...(typeof o['opinion'] === 'string' ? { opinion: o['opinion'] } : {}),
         sections: rawSections.map(normalizeSectionJson),
     };
 }
@@ -384,22 +406,22 @@ function normalizeSectionJson(json: unknown): EditionSection {
     const popularity = scores?.['popularity'];
     return {
         id: typeof o['id'] === 'string' ? o['id'] : '',
-        ...(typeof o['topic'] === 'string' ? {topic: o['topic']} : {}),
+        ...(typeof o['topic'] === 'string' ? { topic: o['topic'] } : {}),
         title: typeof o['title'] === 'string' ? o['title'] : '(untitled)',
-        ...(typeof o['summary'] === 'string' ? {summary: o['summary']} : {}),
-        ...(typeof o['opinion'] === 'string' ? {opinion: o['opinion']} : {}),
+        ...(typeof o['summary'] === 'string' ? { summary: o['summary'] } : {}),
+        ...(typeof o['opinion'] === 'string' ? { opinion: o['opinion'] } : {}),
         articleIds: stringArrayOf(o['articleIds']),
         ...(typeof worthy === 'number' && typeof interest === 'number'
             ? {
-                scores: {
-                    worthy,
-                    interest,
-                    ...(typeof newness === 'number' ? {newness} : {}),
-                    ...(typeof popularity === 'number' ? {popularity} : {}),
-                },
-            }
+                  scores: {
+                      worthy,
+                      interest,
+                      ...(typeof newness === 'number' ? { newness } : {}),
+                      ...(typeof popularity === 'number' ? { popularity } : {}),
+                  },
+              }
             : {}),
-        ...(typeof o['verified'] === 'boolean' ? {verified: o['verified']} : {}),
+        ...(typeof o['verified'] === 'boolean' ? { verified: o['verified'] } : {}),
     };
 }
 
@@ -439,9 +461,12 @@ export async function fetchEditions(limit = 10): Promise<EditionMeta[]> {
 /** Queue a build over the last windowHours of articles. 429 → QuotaError. */
 export async function buildEdition(windowHours: number, sectionCount: number): Promise<{ id: string; status: string }> {
     try {
-        const json = (await apiFetchWithStatus(`/editions/build?windowHours=${windowHours}&sectionCount=${sectionCount}`, {
-            method: 'POST',
-        })) as { id?: unknown; status?: unknown };
+        const json = (await apiFetchWithStatus(
+            `/editions/build?windowHours=${windowHours}&sectionCount=${sectionCount}`,
+            {
+                method: 'POST',
+            },
+        )) as { id?: unknown; status?: unknown };
         return {
             id: typeof json.id === 'string' ? json.id : '',
             status: typeof json.status === 'string' ? json.status : 'building',

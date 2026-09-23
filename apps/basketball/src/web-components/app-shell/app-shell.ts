@@ -1,9 +1,9 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
-import {GameStore} from '../../local-game/game-store';
-import type {LiveLocalGameState} from '../../local-game/game-state';
-import type {LocalGameSetup} from '../../local-game/game-types';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { GameStore } from '../../local-game/game-store';
+import type { LiveLocalGameState } from '../../local-game/game-state';
+import type { LocalGameSetup } from '../../local-game/game-types';
 import '../setup-screen/setup-screen';
 import '../game-shell/game-shell';
 import styles from './app-shell.css?inline';
@@ -24,11 +24,14 @@ export class AppShell extends LitElement {
         this.unsubscribe = this.store.subscribe((game) => {
             this.game = game;
         });
-        void this.store.hydrate().then(() => {
-            this.ready = true;
-        }).catch(() => {
-            this.ready = true;
-        });
+        void this.store
+            .hydrate()
+            .then(() => {
+                this.ready = true;
+            })
+            .catch(() => {
+                this.ready = true;
+            });
     }
 
     override disconnectedCallback(): void {

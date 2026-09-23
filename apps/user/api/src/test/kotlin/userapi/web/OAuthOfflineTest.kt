@@ -1,17 +1,12 @@
 package userapi.web
 
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import javax.sql.DataSource
-import kotlin.test.Test
-import kotlin.test.assertEquals
 import org.mockito.kotlin.mock
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -25,6 +20,12 @@ import userapi.http.FakeOAuthStore
 import userapi.http.PlainHasher
 import userapi.http.RateLimiter
 import userapi.http.TestCookies
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import javax.sql.DataSource
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 @WebMvcTest(OAuthController::class)
 @Import(
@@ -60,19 +61,19 @@ class OAuthOfflineTest {
     @Test
     fun authorizeOffline() {
         val response = mvc.perform(get("/oauth/authorize")).andReturn().response
-        assertEquals(503, response.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), response.status)
     }
 
     @Test
     fun jwksOffline() {
         val response = mvc.perform(get("/oauth/jwks")).andReturn().response
-        assertEquals(503, response.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), response.status)
     }
 
     @Test
     fun tokenOffline() {
         val response = mvc.perform(post("/oauth/token")).andReturn().response
-        assertEquals(503, response.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), response.status)
     }
 }
 
@@ -119,7 +120,7 @@ class OAuthStorelessTest {
     @Test
     fun authorizeStoreless() {
         val response = mvc.perform(get("/oauth/authorize")).andReturn().response
-        assertEquals(503, response.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), response.status)
     }
 
     @Test
@@ -127,6 +128,6 @@ class OAuthStorelessTest {
         val response = mvc.perform(
             post("/oauth/token").param("grant_type", "authorization_code").param("code", "x"),
         ).andReturn().response
-        assertEquals(503, response.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), response.status)
     }
 }

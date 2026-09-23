@@ -42,7 +42,8 @@ INSERT INTO articles (
     id, feed_id, guid, title, link, norm_link, domain, author, summary,
     content_html, comments, published_at, fetched_at, popularity, engagement, hot
 )
-SELECT encode(digest(r.survivor_id::text || chr(10) || a.guid, 'sha256'), 'hex'),
+SELECT
+    encode(digest(r.survivor_id::text || chr(10) || a.guid, 'sha256'), 'hex'),
     r.survivor_id, a.guid, a.title, a.link, a.norm_link, a.domain, a.author, a.summary,
     a.content_html, a.comments, a.published_at, a.fetched_at, a.popularity, a.engagement, a.hot
 FROM articles a JOIN feed_remap r ON r.dup_id = a.feed_id
@@ -51,7 +52,8 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Merge read/starred state onto the survivor article ids (OR semantics).
 INSERT INTO article_state (user_id, article_id, read, read_at, starred)
-SELECT st.user_id,
+SELECT
+    st.user_id,
     encode(digest(r.survivor_id::text || chr(10) || a.guid, 'sha256'), 'hex'),
     st.read, st.read_at, st.starred
 FROM article_state st

@@ -1,4 +1,4 @@
-import type {ClockStamp, ClockState} from './types';
+import type { ClockStamp, ClockState } from './types';
 
 export function formatClock(seconds: number): string {
     const clamped = Math.max(0, Math.round(seconds));

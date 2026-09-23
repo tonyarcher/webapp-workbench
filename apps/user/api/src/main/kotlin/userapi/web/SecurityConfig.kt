@@ -16,12 +16,12 @@ import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.access.intercept.AuthorizationFilter
 import userapi.accounts.AccountServices
 
+/** Unauthenticated request handling for the resource server. */
+private const val HTTP_UNAUTHORIZED = 401
+
 @Configuration
 @EnableWebSecurity
-class SecurityConfig(
-    private val mapper: ObjectMapper,
-    private val accounts: AccountServices,
-) {
+class SecurityConfig(private val mapper: ObjectMapper, private val accounts: AccountServices) {
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http.csrf { it.disable() }
@@ -59,7 +59,7 @@ class SecurityConfig(
 
     private fun sessionEntryPoint(): AuthenticationEntryPoint =
         AuthenticationEntryPoint { _: HttpServletRequest, response: HttpServletResponse, _ ->
-            response.status = 401
+            response.status = HTTP_UNAUTHORIZED
             response.contentType = MediaType.APPLICATION_JSON_VALUE
             response.writer.write(
                 mapper.writeValueAsString(ErrBody(ErrDetail("unauthorized", "not signed in"))),

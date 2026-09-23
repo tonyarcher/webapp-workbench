@@ -1,18 +1,15 @@
 package rssapi.web
 
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import rssapi.persist.FolderFeedEntity
 import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
+import java.util.UUID
 
 @Service
 @Transactional
-class MembershipService(
-    private val folders: FolderRepo,
-    private val memberships: FolderFeedRepo,
-) {
+class MembershipService(private val folders: FolderRepo, private val memberships: FolderFeedRepo) {
     fun addMembership(folderId: UUID, feedId: UUID) {
         if (!memberships.existsByFolderIdAndFeedId(folderId, feedId)) {
             memberships.save(FolderFeedEntity(folderId = folderId, feedId = feedId))

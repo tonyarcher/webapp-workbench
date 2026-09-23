@@ -1,7 +1,5 @@
 package rssapi.web
 
-import java.time.Instant
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import rssapi.domain.hostTitleFor
@@ -17,6 +15,8 @@ import rssapi.persist.PendingStateEntity
 import rssapi.persist.PendingStateRepo
 import rssapi.persist.SubscriptionEntity
 import rssapi.persist.SubscriptionRepo
+import java.time.Instant
+import java.util.UUID
 
 @Service
 class MigrateService(
@@ -48,11 +48,7 @@ class MigrateService(
         return map
     }
 
-    private fun insertFeeds(
-        userId: UUID,
-        rows: List<MigrateFeed>?,
-        folderMap: Map<String, UUID>,
-    ): Map<String, UUID> {
+    private fun insertFeeds(userId: UUID, rows: List<MigrateFeed>?, folderMap: Map<String, UUID>): Map<String, UUID> {
         val map = mutableMapOf<String, UUID>()
         rows?.forEach { f ->
             val title = f.title ?: hostTitleFor(f.url)
@@ -70,11 +66,7 @@ class MigrateService(
         return map
     }
 
-    private fun insertStates(
-        userId: UUID,
-        rows: List<MigrateState>?,
-        feedMap: Map<String, UUID>,
-    ): Int {
+    private fun insertStates(userId: UUID, rows: List<MigrateState>?, feedMap: Map<String, UUID>): Int {
         var n = 0
         rows?.forEach { s ->
             val feedId = feedMap[s.feedUrl] ?: return@forEach

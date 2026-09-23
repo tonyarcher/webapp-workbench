@@ -1,4 +1,4 @@
-import type {AppSettings, GoogleSettings, NetflixSettings, TraktSettings} from '../types';
+import type { AppSettings, GoogleSettings, NetflixSettings, TraktSettings } from '../types';
 
 export const SETTINGS_KEY = 'calendar-sync.settings.v1';
 
@@ -119,7 +119,7 @@ function parseLastSync(raw: unknown): AppSettings['lastSync'] | undefined {
     const failed = asNumber(last['failed']);
     const destination = parseDestination(last['destination']);
     if (at === undefined || count === undefined || failed === undefined || !destination) return undefined;
-    return {at, count, failed, destination};
+    return { at, count, failed, destination };
 }
 
 function buildSettings(rec: Record<string, unknown>): AppSettings {

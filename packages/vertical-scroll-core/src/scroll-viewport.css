@@ -49,7 +49,9 @@
     will-change: transform, opacity;
     transform: scale(0.985);
     opacity: 0.85;
-    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.28s ease;
+    transition:
+        transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+        opacity 0.28s ease;
 }
 
 .slide-inner.active {

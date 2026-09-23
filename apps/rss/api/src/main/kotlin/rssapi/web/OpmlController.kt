@@ -1,5 +1,6 @@
 package rssapi.web
 
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -42,7 +43,7 @@ class OpmlController(
 
     @PostMapping("/opml", headers = ["X-Api-Version=1"])
     fun importOpml(@RequestBody body: OpmlImportBody): OpmlImportResult {
-        val xml = body.xml ?: throw ApiException(400, "xml string is required")
+        val xml = body.xml ?: throw ApiException(HttpStatus.BAD_REQUEST, "xml string is required")
         return importer.run(user.id, xml)
     }
 

@@ -35,7 +35,7 @@ export type FetchLike = (
 ) => Promise<{
     ok: boolean;
     status: number;
-    headers: {get(name: string): string | null};
+    headers: { get(name: string): string | null };
     json: () => Promise<unknown>;
     text: () => Promise<string>;
 }>;

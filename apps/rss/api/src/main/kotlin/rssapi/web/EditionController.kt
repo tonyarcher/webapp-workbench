@@ -1,8 +1,7 @@
 package rssapi.web
-
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.util.UUID
 import org.springframework.data.domain.Sort
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -12,9 +11,15 @@ import rssapi.domain.clampPageLimit
 import rssapi.edition.EDITION_DEFAULT_WINDOW_HOURS
 import rssapi.edition.EDITION_MAX_SECTIONS
 import rssapi.edition.EditionService
-import rssapi.persist.EDITION_READY as READY_STATUS
 import rssapi.persist.EditionEntity
 import rssapi.persist.EditionRepo
+import java.util.UUID
+import rssapi.persist.EDITION_READY as READY_STATUS
+
+/** Edition window bounds, in hours (168 is one week). */
+private const val MIN_WINDOW_HOURS = 1
+private const val MAX_WINDOW_HOURS = 168
+private const val MS_PER_HOUR = 3_600_000L
 
 data class EditionBuildJson(val id: UUID?, val status: String)
 
@@ -77,14 +82,14 @@ class EditionController(
     @GetMapping("/editions/latest", headers = ["X-Api-Version=1"])
     fun latest(): EditionDetailJson {
         val row = editions.findTopByUserIdAndStatusOrderByCreatedAtDesc(user.id, READY_STATUS)
-            ?: throw ApiException(404, "no edition yet")
+            ?: throw ApiException(HttpStatus.NOT_FOUND, "no edition yet")
         return row.toDetail()
     }
 
     @GetMapping("/editions/{id}", headers = ["X-Api-Version=1"])
     fun byId(@PathVariable id: UUID): EditionDetailJson {
         val row = editions.findById(id).orElse(null)?.takeIf { it.userId == user.id }
-            ?: throw ApiException(404, "no such edition")
+            ?: throw ApiException(HttpStatus.NOT_FOUND, "no such edition")
         return row.toDetail()
     }
 
@@ -98,22 +103,26 @@ class EditionController(
 
 private fun parseWindowHours(raw: String?): Long {
     if (raw == null) return EDITION_DEFAULT_WINDOW_HOURS
-    val hours = raw.toLongOrNull() ?: throw ApiException(400, "invalid windowHours")
-    if (hours < 1 || hours > 168) throw ApiException(400, "invalid windowHours")
+    val hours = raw.toLongOrNull() ?: throw ApiException(HttpStatus.BAD_REQUEST, "invalid windowHours")
+    if (hours < MIN_WINDOW_HOURS ||
+        hours > MAX_WINDOW_HOURS
+    ) {
+        throw ApiException(HttpStatus.BAD_REQUEST, "invalid windowHours")
+    }
     return hours
 }
 
 private fun parseSectionCount(raw: String?): Int {
     if (raw == null) return EDITION_MAX_SECTIONS
-    val count = raw.toIntOrNull() ?: throw ApiException(400, "invalid sectionCount")
-    if (count < 1 || count > EDITION_MAX_SECTIONS) throw ApiException(400, "invalid sectionCount")
+    val count = raw.toIntOrNull() ?: throw ApiException(HttpStatus.BAD_REQUEST, "invalid sectionCount")
+    if (count < 1 || count > EDITION_MAX_SECTIONS) throw ApiException(HttpStatus.BAD_REQUEST, "invalid sectionCount")
     return count
 }
 
 private val detailMapper = ObjectMapper()
 
 private fun windowHoursOf(row: EditionEntity): Long =
-    (row.windowEnd.toEpochMilli() - row.windowStart.toEpochMilli()) / 3_600_000
+    (row.windowEnd.toEpochMilli() - row.windowStart.toEpochMilli()) / MS_PER_HOUR
 
 private fun EditionEntity.toDetail(): EditionDetailJson {
     val body = try {

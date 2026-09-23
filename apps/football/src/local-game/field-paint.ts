@@ -1,4 +1,4 @@
-import type {Situation} from 'football-core';
+import type { Situation } from 'football-core';
 import {
     AWAY_GOAL_X,
     ENDZONE_YARDS,
@@ -12,7 +12,7 @@ import {
     hashY,
     unitX,
 } from './field-geom';
-import type {FieldAnimKind, PlayFlight} from './field-geom';
+import type { FieldAnimKind, PlayFlight } from './field-geom';
 
 const LINE = '#f4f7f2';
 const PAD_X = 90;
@@ -53,11 +53,7 @@ export interface FieldPaintInput {
 }
 
 export function escapeXml(text: string): string {
-    return text
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;');
+    return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
 export function playPath(flight: PlayFlight): string {
@@ -138,7 +134,9 @@ function hashMarkup(): string {
                 `<line class="hk" x1="${x - HASH_HALF}" y1="${y}" x2="${x + HASH_HALF}" y2="${y}" stroke="${LINE}" stroke-width="${HASH_STROKE}"/>`,
             );
         }
-        ticks.push(`<line class="hk" x1="${x}" y1="0" x2="${x}" y2="${HASH_EDGE}" stroke="${LINE}" stroke-width="${HASH_STROKE}"/>`);
+        ticks.push(
+            `<line class="hk" x1="${x}" y1="0" x2="${x}" y2="${HASH_EDGE}" stroke="${LINE}" stroke-width="${HASH_STROKE}"/>`,
+        );
         ticks.push(
             `<line class="hk" x1="${x}" y1="${H - HASH_EDGE}" x2="${x}" y2="${H}" stroke="${LINE}" stroke-width="${HASH_STROKE}"/>`,
         );
@@ -195,7 +193,7 @@ function postMarkup(goalX: number, intoPad: 1 | -1): string {
 }
 
 function overlayMarkup(input: FieldPaintInput): string {
-    const {situation} = input;
+    const { situation } = input;
     const losX = ballX(situation.yardline100, situation.possession);
     const fdX = firstDownX(situation.yardline100, situation.distance, situation.possession);
     const y = hashY(situation.hash);

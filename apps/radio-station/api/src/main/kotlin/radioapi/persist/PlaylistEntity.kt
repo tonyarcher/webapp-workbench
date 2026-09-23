@@ -7,11 +7,11 @@ import jakarta.persistence.PostLoad
 import jakarta.persistence.PostPersist
 import jakarta.persistence.Table
 import jakarta.persistence.Transient
-import java.time.Instant
-import java.util.UUID
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.domain.Persistable
+import java.time.Instant
+import java.util.UUID
 
 @Entity
 @Table(name = "playlists")

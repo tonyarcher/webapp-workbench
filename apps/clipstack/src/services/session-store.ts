@@ -1,69 +1,69 @@
-import type {SavedSession, SkippedLink, ClipLink} from '../types'
+import type { SavedSession, SkippedLink, ClipLink } from '../types';
 
-export const SESSION_KEY = 'cs-session'
-const PROGRESS_KEY = 'cs-session-progress'
-const LEGACY_SESSION_KEY = 'tts-session'
-const LEGACY_PROGRESS_KEY = 'tts-session-progress'
+export const SESSION_KEY = 'cs-session';
+const PROGRESS_KEY = 'cs-session-progress';
+const LEGACY_SESSION_KEY = 'tts-session';
+const LEGACY_PROGRESS_KEY = 'tts-session-progress';
 
 function compactLink(link: ClipLink): ClipLink {
-    const out: ClipLink = {id: link.id, url: link.url}
-    if (link.provider) out.provider = link.provider
-    if (link.author) out.author = link.author
-    if (link.authorName) out.authorName = link.authorName
-    if (link.date) out.date = link.date
-    if (link.pageUrl) out.pageUrl = link.pageUrl
-    if (link.title) out.title = link.title
-    if (link.thumbnailUrl) out.thumbnailUrl = link.thumbnailUrl
-    return out
+    const out: ClipLink = { id: link.id, url: link.url };
+    if (link.provider) out.provider = link.provider;
+    if (link.author) out.author = link.author;
+    if (link.authorName) out.authorName = link.authorName;
+    if (link.date) out.date = link.date;
+    if (link.pageUrl) out.pageUrl = link.pageUrl;
+    if (link.title) out.title = link.title;
+    if (link.thumbnailUrl) out.thumbnailUrl = link.thumbnailUrl;
+    return out;
 }
 
 function isLink(value: unknown): value is ClipLink {
-    if (!value || typeof value !== 'object') return false
-    const link = value as ClipLink
-    return typeof link.id === 'string' && link.id.length > 0 && typeof link.url === 'string' && link.url.length > 0
+    if (!value || typeof value !== 'object') return false;
+    const link = value as ClipLink;
+    return typeof link.id === 'string' && link.id.length > 0 && typeof link.url === 'string' && link.url.length > 0;
 }
 
 function isSkipped(value: unknown): value is SkippedLink {
-    if (!value || typeof value !== 'object') return false
-    const skipped = value as SkippedLink
+    if (!value || typeof value !== 'object') return false;
+    const skipped = value as SkippedLink;
     return (
         typeof skipped.url === 'string' &&
         (skipped.reason === 'short-link' ||
             skipped.reason === 'no-id' ||
             skipped.reason === 'not-tiktok' ||
             skipped.reason === 'unsupported')
-    )
+    );
 }
 
 function toIndex(value: unknown, fallback: number): number {
-    return typeof value === 'number' && value >= 0 ? Math.floor(value) : fallback
+    return typeof value === 'number' && value >= 0 ? Math.floor(value) : fallback;
 }
 
 function parseSessionItems(rawItems: unknown): ClipLink[] | null {
-    if (!Array.isArray(rawItems)) return null
-    const items = rawItems.filter(isLink)
-    return items.length > 0 ? items : null
+    if (!Array.isArray(rawItems)) return null;
+    const items = rawItems.filter(isLink);
+    return items.length > 0 ? items : null;
 }
 
 function parseSkipped(raw: unknown): SkippedLink[] {
-    return Array.isArray(raw) ? raw.filter(isSkipped) : []
+    return Array.isArray(raw) ? raw.filter(isSkipped) : [];
 }
 
 export function parseSession(raw: string | null): SavedSession | null {
-    if (!raw) return null
+    if (!raw) return null;
     try {
-        const data = JSON.parse(raw) as unknown
-        if (!data || typeof data !== 'object') return null
-        const session = data as Partial<SavedSession>
-        if (session.version !== 1) return null
-        const items = parseSessionItems(session.items)
-        if (!items) return null
-        const skipped = parseSkipped(session.skipped)
-        const activeIndex = toIndex(session.activeIndex, 0)
-        const maxSeen = toIndex(session.maxSeen, activeIndex)
-        return {version: 1, items, skipped, activeIndex, maxSeen}
+        const data = JSON.parse(raw) as unknown;
+        if (!data || typeof data !== 'object') return null;
+        const session = data as Partial<SavedSession>;
+        if (session.version !== 1) return null;
+        const items = parseSessionItems(session.items);
+        if (!items) return null;
+        const skipped = parseSkipped(session.skipped);
+        const activeIndex = toIndex(session.activeIndex, 0);
+        const maxSeen = toIndex(session.maxSeen, activeIndex);
+        return { version: 1, items, skipped, activeIndex, maxSeen };
     } catch {
-        return null
+        return null;
     }
 }
 
@@ -74,43 +74,43 @@ export function serializeSession(session: SavedSession): string {
         skipped: session.skipped,
         activeIndex: session.activeIndex,
         maxSeen: session.maxSeen,
-    }
-    return JSON.stringify(payload)
+    };
+    return JSON.stringify(payload);
 }
 
 function readStored(key: string, legacy: string): string | null {
-    return localStorage.getItem(key) ?? localStorage.getItem(legacy)
+    return localStorage.getItem(key) ?? localStorage.getItem(legacy);
 }
 
 export function loadSession(): SavedSession | null {
     try {
-        const session = parseSession(readStored(SESSION_KEY, LEGACY_SESSION_KEY))
-        if (!session) return null
-        const progressRaw = readStored(PROGRESS_KEY, LEGACY_PROGRESS_KEY)
+        const session = parseSession(readStored(SESSION_KEY, LEGACY_SESSION_KEY));
+        if (!session) return null;
+        const progressRaw = readStored(PROGRESS_KEY, LEGACY_PROGRESS_KEY);
         if (progressRaw) {
-            const progress = JSON.parse(progressRaw) as {activeIndex?: unknown; maxSeen?: unknown}
+            const progress = JSON.parse(progressRaw) as { activeIndex?: unknown; maxSeen?: unknown };
             if (typeof progress.activeIndex === 'number' && progress.activeIndex >= 0) {
-                session.activeIndex = Math.floor(progress.activeIndex)
+                session.activeIndex = Math.floor(progress.activeIndex);
             }
             if (typeof progress.maxSeen === 'number' && progress.maxSeen >= 0) {
-                session.maxSeen = Math.floor(progress.maxSeen)
+                session.maxSeen = Math.floor(progress.maxSeen);
             }
         }
-        return session
+        return session;
     } catch {
-        return null
+        return null;
     }
 }
 
 export function saveSession(session: SavedSession): void {
     try {
-        localStorage.setItem(SESSION_KEY, serializeSession(session))
+        localStorage.setItem(SESSION_KEY, serializeSession(session));
         localStorage.setItem(
             PROGRESS_KEY,
-            JSON.stringify({activeIndex: session.activeIndex, maxSeen: session.maxSeen}),
-        )
-        localStorage.removeItem(LEGACY_SESSION_KEY)
-        localStorage.removeItem(LEGACY_PROGRESS_KEY)
+            JSON.stringify({ activeIndex: session.activeIndex, maxSeen: session.maxSeen }),
+        );
+        localStorage.removeItem(LEGACY_SESSION_KEY);
+        localStorage.removeItem(LEGACY_PROGRESS_KEY);
     } catch {
         // quota / private mode — list stays in memory for this visit
     }
@@ -119,10 +119,10 @@ export function saveSession(session: SavedSession): void {
 /** Write enriched author/title/pageUrl without touching the progress cursor. */
 export function saveSessionItems(items: ClipLink[]): void {
     try {
-        const session = parseSession(readStored(SESSION_KEY, LEGACY_SESSION_KEY))
-        if (!session) return
-        session.items = items.map(compactLink)
-        localStorage.setItem(SESSION_KEY, serializeSession(session))
+        const session = parseSession(readStored(SESSION_KEY, LEGACY_SESSION_KEY));
+        if (!session) return;
+        session.items = items.map(compactLink);
+        localStorage.setItem(SESSION_KEY, serializeSession(session));
     } catch {
         // ignore
     }
@@ -131,7 +131,7 @@ export function saveSessionItems(items: ClipLink[]): void {
 /** Write only the cursor so scrolling a long list does not re-serialize every row. */
 export function saveProgress(activeIndex: number, maxSeen: number): void {
     try {
-        localStorage.setItem(PROGRESS_KEY, JSON.stringify({activeIndex, maxSeen}))
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify({ activeIndex, maxSeen }));
     } catch {
         // ignore
     }
@@ -139,10 +139,10 @@ export function saveProgress(activeIndex: number, maxSeen: number): void {
 
 export function clearSession(): void {
     try {
-        localStorage.removeItem(SESSION_KEY)
-        localStorage.removeItem(PROGRESS_KEY)
-        localStorage.removeItem(LEGACY_SESSION_KEY)
-        localStorage.removeItem(LEGACY_PROGRESS_KEY)
+        localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(PROGRESS_KEY);
+        localStorage.removeItem(LEGACY_SESSION_KEY);
+        localStorage.removeItem(LEGACY_PROGRESS_KEY);
     } catch {
         // ignore
     }

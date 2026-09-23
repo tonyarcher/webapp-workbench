@@ -1,10 +1,10 @@
 package userapi.http
 
+import userapi.accounts.TotpStore
+import userapi.domain.TotpEngine
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import userapi.accounts.TotpStore
-import userapi.domain.TotpEngine
 
 class AcceptingTotp : TotpEngine {
     override fun newSecret(): String = "TESTSECRETBASE32"
@@ -36,9 +36,7 @@ class FakeTotpStore : TotpStore {
         backups[userId] = hashes.toMutableSet()
     }
 
-    override fun consumeBackupHash(userId: UUID, codeHash: String): Boolean {
-        return backups[userId]?.remove(codeHash) == true
-    }
+    override fun consumeBackupHash(userId: UUID, codeHash: String): Boolean = backups[userId]?.remove(codeHash) == true
 
     override fun insertChallenge(userId: UUID, tokenHash: String, expiresAt: Instant) {
         challenges[tokenHash] = userId to expiresAt

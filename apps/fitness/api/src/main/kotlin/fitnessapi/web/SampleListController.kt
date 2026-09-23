@@ -1,18 +1,15 @@
 package fitnessapi.web
 
-import java.time.Clock
+import fitnessapi.LOCAL_USER_ID
+import fitnessapi.store.SampleStore
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import fitnessapi.LOCAL_USER_ID
-import fitnessapi.store.SampleStore
+import java.time.Clock
 
 @RestController
-class SampleListController(
-    private val samples: ObjectProvider<SampleStore>,
-    private val clock: Clock,
-) {
+class SampleListController(private val samples: ObjectProvider<SampleStore>, private val clock: Clock) {
     @GetMapping("/stats", headers = ["X-Api-Version=1"])
     fun stats(): StatsJson = StatsJson(samples.orOffline().stats(LOCAL_USER_ID).map { it.toJson() })
 
@@ -33,6 +30,5 @@ class SampleListController(
     }
 
     @GetMapping("/rollups", headers = ["X-Api-Version=1"])
-    fun rollups(): RollupsJson =
-        RollupsJson(samples.orOffline().rollups(LOCAL_USER_ID).map { it.toJson() })
+    fun rollups(): RollupsJson = RollupsJson(samples.orOffline().rollups(LOCAL_USER_ID).map { it.toJson() })
 }

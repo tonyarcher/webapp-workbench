@@ -1,14 +1,6 @@
 package rssapi.edition
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.time.ZoneOffset
-import java.util.Optional
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
@@ -24,10 +16,12 @@ import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.jpa.domain.Specification
+import org.springframework.http.HttpStatus
 import rssapi.ai.AiConfig
 import rssapi.ai.AiQuotaService
 import rssapi.ai.AiService
 import rssapi.persist.AffinityRepo
+import rssapi.persist.AiQuotaEntity
 import rssapi.persist.AiQuotaRepo
 import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleRepo
@@ -39,7 +33,14 @@ import rssapi.persist.FolderFeedEntity
 import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
 import rssapi.web.ApiException
-import rssapi.persist.AiQuotaEntity
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneOffset
+import java.util.Optional
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 private val SERVICE_NOW: Instant = Instant.parse("2026-09-13T12:00:00Z")
 private val SERVICE_UID: UUID = UUID.fromString("22222222-2222-2222-2222-222222222222")
@@ -131,7 +132,7 @@ class EditionServiceTest {
     private fun stubAi(responses: Map<String, String> = emptyMap(), failTitles: Set<String> = emptySet()) {
         whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenAnswer { inv ->
             val title = inv.getArgument<String?>(1) ?: ""
-            if (title in failTitles) throw ApiException(502, "server AI failed")
+            if (title in failTitles) throw ApiException(HttpStatus.BAD_GATEWAY, "server AI failed")
             responses[title] ?: "summary for $title"
         }
     }
@@ -142,11 +143,13 @@ class EditionServiceTest {
     fun buildsReadyEditionWithSectionsAndOpinion() {
         val feed = UUID.randomUUID()
         stubQuota()
-        stubWindow(listOf(
-            serviceArticle("a1", "story-1", feed, hoursAgo = 2),
-            serviceArticle("a2", "story-1", feed, hoursAgo = 1),
-            serviceArticle("b1", null, feed, hoursAgo = 3),
-        ))
+        stubWindow(
+            listOf(
+                serviceArticle("a1", "story-1", feed, hoursAgo = 2),
+                serviceArticle("a2", "story-1", feed, hoursAgo = 1),
+                serviceArticle("b1", null, feed, hoursAgo = 3),
+            ),
+        )
         stubAi(mapOf("Editorial opinion" to "Opinion: a quiet day."))
 
         val row = service().buildEdition(SERVICE_UID, 24, 12)
@@ -177,10 +180,12 @@ class EditionServiceTest {
     @Test
     fun sectionCountCapsPublishedSections() {
         stubQuota()
-        stubWindow(listOf(
-            serviceArticle("a1", "story-1", UUID.randomUUID()),
-            serviceArticle("b1", "story-2", UUID.randomUUID()),
-        ))
+        stubWindow(
+            listOf(
+                serviceArticle("a1", "story-1", UUID.randomUUID()),
+                serviceArticle("b1", "story-2", UUID.randomUUID()),
+            ),
+        )
         stubAi()
 
         val row = service().buildEdition(SERVICE_UID, 24, 1)
@@ -203,10 +208,12 @@ class EditionServiceTest {
     fun failedClusterContinuesWithNullSummary() {
         val feed = UUID.randomUUID()
         stubQuota()
-        stubWindow(listOf(
-            serviceArticle("a1", "story-1", feed, title = "Alpha"),
-            serviceArticle("b1", "story-2", feed, title = "Beta"),
-        ))
+        stubWindow(
+            listOf(
+                serviceArticle("a1", "story-1", feed, title = "Alpha"),
+                serviceArticle("b1", "story-2", feed, title = "Beta"),
+            ),
+        )
         stubAi(failTitles = setOf("Alpha"))
 
         val row = service().buildEdition(SERVICE_UID, 24, 12)

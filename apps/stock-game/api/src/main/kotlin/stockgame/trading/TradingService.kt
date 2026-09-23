@@ -1,14 +1,14 @@
 package stockgame.trading
 
-import java.time.Clock
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 import stockgame.domain.GameConfig
 import stockgame.domain.Order
 import stockgame.domain.Trade
 import stockgame.provider.PriceProvider
 import stockgame.store.GameStore
+import java.time.Clock
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 class TradingService(
     private val store: GameStore,

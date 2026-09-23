@@ -1,11 +1,11 @@
 package rssapi.web
 
-import kotlin.test.Test
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.springframework.security.oauth2.jwt.Jwt
+import kotlin.test.Test
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class SecurityConfigBranchTest {
     @Test

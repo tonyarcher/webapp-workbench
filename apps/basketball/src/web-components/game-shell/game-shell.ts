@@ -1,13 +1,13 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property, state} from 'lit/decorators.js';
-import {describeEvent, findPlayer, stampFromClock, teamSide} from 'basketball-core';
-import type {ClockStamp, Player, Point, ScoringEvent, TeamId} from 'basketball-core';
-import type {LiveLocalGameState} from '../../local-game/game-state';
-import type {GameStore} from '../../local-game/game-store';
-import {boxScoreText} from '../../local-game/box-score-view';
-import {SPEED_OPTIONS, yieldDelay} from '../../sim/playback';
-import {WatchRunner, watchBadge, watchLoopAlive} from '../../sim/watch-runner';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { describeEvent, findPlayer, stampFromClock, teamSide } from 'basketball-core';
+import type { ClockStamp, Player, Point, ScoringEvent, TeamId } from 'basketball-core';
+import type { LiveLocalGameState } from '../../local-game/game-state';
+import type { GameStore } from '../../local-game/game-store';
+import { boxScoreText } from '../../local-game/box-score-view';
+import { SPEED_OPTIONS, yieldDelay } from '../../sim/playback';
+import { WatchRunner, watchBadge, watchLoopAlive } from '../../sim/watch-runner';
 import '../scorebug/scorebug';
 import '../court/court';
 import styles from './game-shell.css?inline';
@@ -16,8 +16,8 @@ import styles from './game-shell.css?inline';
 export class GameShell extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) game: LiveLocalGameState | null = null;
-    @property({attribute: false}) store: GameStore | null = null;
+    @property({ attribute: false }) game: LiveLocalGameState | null = null;
+    @property({ attribute: false }) store: GameStore | null = null;
 
     @state() private pending: Point | null = null;
     @state() private shooterId = '';
@@ -61,8 +61,8 @@ export class GameShell extends LitElement {
     }
 
     private onClock = (event: Event): void => {
-        const custom = event as CustomEvent<{clock: ClockStamp; running: boolean}>;
-        this.record({type: 'set_clock', clock: custom.detail.clock, running: custom.detail.running});
+        const custom = event as CustomEvent<{ clock: ClockStamp; running: boolean }>;
+        this.record({ type: 'set_clock', clock: custom.detail.clock, running: custom.detail.running });
     };
 
     private onSpot = (event: Event): void => {
@@ -95,7 +95,8 @@ export class GameShell extends LitElement {
     }
 
     private async runWatchLoop(): Promise<void> {
-        if (!watchLoopAlive(this.isConnected, this.isWatch(), Boolean(this.game?.engine.over)) || this.watch.playing) return;
+        if (!watchLoopAlive(this.isConnected, this.isWatch(), Boolean(this.game?.engine.over)) || this.watch.playing)
+            return;
         await this.watch.clock.play(async () => this.stepWatch());
     }
 
@@ -178,10 +179,11 @@ export class GameShell extends LitElement {
 
     private chip(team: TeamId, player: Player | undefined, on: boolean): TemplateResult {
         if (!player) return html``;
-        const selected = this.shooterId === player.id
-            || this.assistId === player.id
-            || this.actorId === player.id
-            || this.subOut === player.id;
+        const selected =
+            this.shooterId === player.id ||
+            this.assistId === player.id ||
+            this.actorId === player.id ||
+            this.subOut === player.id;
         return html`
             <button
                 class="chip"
@@ -203,7 +205,7 @@ export class GameShell extends LitElement {
             return;
         }
         if (!this.subOut || this.idTeam(this.subOut) !== team) return;
-        this.record({type: 'substitution', team, outId: this.subOut, inId: playerId});
+        this.record({ type: 'substitution', team, outId: this.subOut, inId: playerId });
         this.subOut = '';
     }
 
@@ -249,13 +251,15 @@ export class GameShell extends LitElement {
     }
 
     private renderFtPad(shooterId: string): TemplateResult {
-        const clock = stampFromClock(this.game?.engine.clock ?? {period: 1, gameClockSeconds: 0, shotClockSeconds: 0, running: false});
+        const clock = stampFromClock(
+            this.game?.engine.clock ?? { period: 1, gameClockSeconds: 0, shotClockSeconds: 0, running: false },
+        );
         return html`
             <section class="card">
                 <h2>Free throws</h2>
                 <div class="pad">
-                    <button class="primary" @click=${() => this.record({type: 'free_throw', shooterId, made: true, clock})}>Make FT</button>
-                    <button @click=${() => this.record({type: 'free_throw', shooterId, made: false, clock})}>Miss FT</button>
+                    <button class="primary" @click=${() => this.record({ type: 'free_throw', shooterId, made: true, clock })}>Make FT</button>
+                    <button @click=${() => this.record({ type: 'free_throw', shooterId, made: false, clock })}>Miss FT</button>
                 </div>
             </section>
         `;
@@ -279,15 +283,15 @@ export class GameShell extends LitElement {
         return html`
             <button class="primary" ?disabled=${!this.pending} @click=${() => this.logShot(true)}>Make ○</button>
             <button ?disabled=${!this.pending} @click=${() => this.logShot(false)}>Miss ✕</button>
-            <button @click=${() => this.record({type: 'rebound', team: poss, playerId: this.firstOn(poss), offensive: true, clock})}>OREB</button>
-            <button @click=${() => this.record({type: 'rebound', team: defense, playerId: this.firstOn(defense), offensive: false, clock})}>DREB</button>
-            <button @click=${() => this.record({type: 'turnover', team: poss, playerId: this.firstOn(poss), clock})}>Turnover</button>
+            <button @click=${() => this.record({ type: 'rebound', team: poss, playerId: this.firstOn(poss), offensive: true, clock })}>OREB</button>
+            <button @click=${() => this.record({ type: 'rebound', team: defense, playerId: this.firstOn(defense), offensive: false, clock })}>DREB</button>
+            <button @click=${() => this.record({ type: 'turnover', team: poss, playerId: this.firstOn(poss), clock })}>Turnover</button>
             <button @click=${() => this.recordFoul()}>Foul</button>
             <button @click=${() => {
                 this.shootingFoul = !this.shootingFoul;
             }}>${this.shootingFoul ? 'Shooting foul on' : 'Shooting foul'}</button>
-            <button @click=${() => this.record({type: 'timeout', team: poss})}>Timeout</button>
-            <button @click=${() => this.record({type: 'period_end'})}>Period end</button>
+            <button @click=${() => this.record({ type: 'timeout', team: poss })}>Timeout</button>
+            <button @click=${() => this.record({ type: 'period_end' })}>Period end</button>
             <button @click=${() => {
                 this.pending = null;
             }}>Clear spot</button>
@@ -325,9 +329,11 @@ export class GameShell extends LitElement {
                 <button ?disabled=${!this.watch.playing} @click=${() => this.watch.pause()}>Pause</button>
                 <label>Speed
                     <select @change=${this.onSpeed}>
-                        ${SPEED_OPTIONS.map((opt) => html`
+                        ${SPEED_OPTIONS.map(
+                            (opt) => html`
                             <option value=${String(opt.value)} ?selected=${this.watch.speed === opt.value}>${opt.label}</option>
-                        `)}
+                        `,
+                        )}
                     </select>
                 </label>
             </div>
@@ -344,7 +350,7 @@ export class GameShell extends LitElement {
     private renderBox(): TemplateResult {
         const game = this.game;
         if (!game) return html``;
-        const {engine, setup} = game;
+        const { engine, setup } = game;
         const text = `${boxScoreText(engine, 'away', setup.awayName)}\n\n${boxScoreText(engine, 'home', setup.homeName)}`;
         return html`
             <div class="overlay" @click=${() => {

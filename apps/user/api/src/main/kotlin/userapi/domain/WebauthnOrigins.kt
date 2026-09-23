@@ -1,11 +1,9 @@
 package userapi.domain
 
-fun parseOrigins(raw: String): Set<String> {
-    return raw.split(',')
-        .map { it.trim() }
-        .filter { it.startsWith("http://") || it.startsWith("https://") }
-        .toSet()
-}
+fun parseOrigins(raw: String): Set<String> = raw.split(',')
+    .map { it.trim() }
+    .filter { it.startsWith("http://") || it.startsWith("https://") }
+    .toSet()
 
 fun validRpId(raw: String): String {
     val id = raw.trim().lowercase()

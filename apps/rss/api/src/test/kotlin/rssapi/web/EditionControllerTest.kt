@@ -1,8 +1,5 @@
 package rssapi.web
 
-import java.time.Instant
-import java.util.UUID
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -12,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.data.domain.Sort
+import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -25,6 +23,9 @@ import rssapi.persist.EditionEntity
 import rssapi.persist.EditionRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import java.time.Instant
+import java.util.UUID
+import kotlin.test.assertEquals
 
 private fun editionJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")
@@ -111,7 +112,7 @@ class EditionControllerTest {
                 header("X-Api-Version", "1")
                 header("Authorization", "Bearer t")
             }.andReturn()
-            assertEquals(400, res.response.status, "windowHours=$raw")
+            assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status, "windowHours=$raw")
             assertEquals("""{"error":"invalid windowHours"}""", res.response.contentAsString)
         }
     }
@@ -126,7 +127,7 @@ class EditionControllerTest {
                 header("X-Api-Version", "1")
                 header("Authorization", "Bearer t")
             }.andReturn()
-            assertEquals(400, res.response.status, "sectionCount=$raw")
+            assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status, "sectionCount=$raw")
             assertEquals("""{"error":"invalid sectionCount"}""", res.response.contentAsString)
         }
     }
@@ -174,7 +175,7 @@ class EditionControllerTest {
             header("Authorization", "Bearer t")
         }.andReturn()
 
-        assertEquals(404, res.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), res.response.status)
         assertEquals("""{"error":"no edition yet"}""", res.response.contentAsString)
     }
 
@@ -268,7 +269,7 @@ class EditionControllerTest {
             header("Authorization", "Bearer t")
         }.andReturn()
 
-        assertEquals(404, res.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), res.response.status)
         assertEquals("""{"error":"no such edition"}""", res.response.contentAsString)
     }
 
@@ -286,13 +287,13 @@ class EditionControllerTest {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer t")
         }.andReturn()
-        assertEquals(404, latest.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), latest.response.status)
 
         val one = mvc.get("/editions/$theirId") {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer t")
         }.andReturn()
-        assertEquals(404, one.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), one.response.status)
         assertEquals("""{"error":"no such edition"}""", one.response.contentAsString)
     }
 
@@ -333,7 +334,7 @@ class EditionControllerTest {
         val res = mvc.post("/editions/build") {
             header("X-Api-Version", "1")
         }.andReturn()
-        assertEquals(401, res.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), res.response.status)
         assertEquals("""{"error":"unauthorized"}""", res.response.contentAsString)
     }
 }
