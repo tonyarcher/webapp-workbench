@@ -70,7 +70,10 @@ export function safeColor(value: unknown): string {
     if (HEX_COLOR.test(value)) return value;
     const fn = COLOR_FN.exec(value);
     if (!fn) return DEFAULT_TEAM_COLOR;
-    const parts = (fn[1] ?? '').trim().split(/[\s,/]+/).filter(Boolean);
+    const parts = (fn[1] ?? '')
+        .trim()
+        .split(/[\s,/]+/)
+        .filter(Boolean);
     if (parts.length !== 3 && parts.length !== 4) return DEFAULT_TEAM_COLOR;
     return parts.every((part) => COLOR_TOKEN.test(part)) ? value : DEFAULT_TEAM_COLOR;
 }
@@ -78,7 +81,7 @@ export function safeColor(value: unknown): string {
 export function parsePlatePlay(
     json: string,
     fallbackBats: Handedness = 'R',
-    fallbackThrows: Handedness = 'R'
+    fallbackThrows: Handedness = 'R',
 ): ParsedPlatePlay | null {
     if (!json) return null;
     try {
@@ -93,7 +96,7 @@ export function parsePlatePlay(
 function playFromRecord(
     record: Record<string, unknown>,
     fallbackBats: Handedness,
-    fallbackThrows: Handedness
+    fallbackThrows: Handedness,
 ): ParsedPlatePlay {
     const eventType = String(record['eventType'] ?? '');
     const strikeKind = String(record['strikeKind'] ?? '');
@@ -111,7 +114,7 @@ function playFromRecord(
 
 function zoneValue(location: unknown): unknown {
     if (typeof location !== 'object' || location === null) return location;
-    return (location as {zone?: unknown}).zone;
+    return (location as { zone?: unknown }).zone;
 }
 
 function boundedInt(value: unknown, min: number, max: number): number | null {

@@ -1,6 +1,6 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
 import {
     CHARTS,
     bmiSeries,
@@ -16,9 +16,9 @@ import {
     type MetricId,
     type Point,
 } from 'fitness-core';
-import {fetchHealth, fetchLatest, fetchProfile, fetchRollups} from '../../services/api';
-import {displaySeries, rollupPoints} from '../../services/chart-data';
-import type {LatestSample, Profile, RollupRow} from '../../types';
+import { fetchHealth, fetchLatest, fetchProfile, fetchRollups } from '../../services/api';
+import { displaySeries, rollupPoints } from '../../services/chart-data';
+import type { LatestSample, Profile, RollupRow } from '../../types';
 import '../chart/chart';
 import styles from './dashboard-view.css?inline';
 
@@ -118,7 +118,8 @@ export class DashboardView extends LitElement {
     }
 
     private renderLatest(): TemplateResult {
-        if (!this.latest.length) return html`<p class="empty">No samples yet. Import a Health Connect .db or log a measurement.</p>`;
+        if (!this.latest.length)
+            return html`<p class="empty">No samples yet. Import a Health Connect .db or log a measurement.</p>`;
         return html`<ul class="latest">
             ${this.latest.map((row) => {
                 const shown = formatSi(row.metric as MetricId, row.valueSi, this.display);

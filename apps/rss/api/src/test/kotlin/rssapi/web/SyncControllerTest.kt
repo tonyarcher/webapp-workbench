@@ -1,8 +1,5 @@
 package rssapi.web
 
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
@@ -20,6 +17,9 @@ import rssapi.persist.SubscriptionRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
 import rssapi.poller.FeedPoller
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 private fun syncJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")

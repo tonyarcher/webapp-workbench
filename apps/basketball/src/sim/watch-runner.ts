@@ -1,7 +1,7 @@
-import type {ScoringEvent} from 'basketball-core';
-import type {LiveLocalGameState} from '../local-game/game-state';
-import {delayForPlay, PlaybackClock} from './playback';
-import {nextEvent, rngForEngine} from './resolve-play';
+import type { ScoringEvent } from 'basketball-core';
+import type { LiveLocalGameState } from '../local-game/game-state';
+import { delayForPlay, PlaybackClock } from './playback';
+import { nextEvent, rngForEngine } from './resolve-play';
 
 const MAX_EVENTS = 700;
 const MAX_WIND_DOWN = 8;
@@ -48,7 +48,7 @@ export class WatchRunner {
                 game.setup.simRatings,
             );
         }
-        return game.historyIndex < MAX_EVENTS + MAX_WIND_DOWN ? {type: 'period_end'} : null;
+        return game.historyIndex < MAX_EVENTS + MAX_WIND_DOWN ? { type: 'period_end' } : null;
     }
 }
 

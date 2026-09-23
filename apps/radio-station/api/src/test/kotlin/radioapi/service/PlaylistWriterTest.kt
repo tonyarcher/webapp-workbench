@@ -1,15 +1,15 @@
 package radioapi.service
 
+import radioapi.domain.DEFAULT_WEIGHTS
+import radioapi.domain.GenerateCommand
+import radioapi.domain.Track
+import radioapi.domain.weightsJson
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import radioapi.domain.DEFAULT_WEIGHTS
-import radioapi.domain.GenerateCommand
-import radioapi.domain.Track
-import radioapi.domain.weightsJson
 
 class PlaylistWriterTest {
     @Test

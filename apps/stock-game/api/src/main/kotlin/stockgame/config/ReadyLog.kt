@@ -14,8 +14,11 @@ class ReadyLog {
         if (settings.databaseUrl.isBlank()) {
             log(settings.service, "warn", "no-database", minLevel = settings.logLevel)
         }
-        val port = event.applicationContext.environment.getProperty("local.server.port")?.toIntOrNull()
-            ?: settings.port
+        val port =
+            event.applicationContext.environment
+                .getProperty("local.server.port")
+                ?.toIntOrNull()
+                ?: settings.port
         log(settings.service, "info", "listening", mapOf("port" to port), settings.logLevel)
     }
 }

@@ -35,5 +35,5 @@ export function createCoalescer<K extends string, T>() {
         return Array.from(inflight.keys());
     }
 
-    return {run, get, has, keys};
+    return { run, get, has, keys };
 }

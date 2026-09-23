@@ -1,6 +1,5 @@
 package rssapi.web
 
-import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
@@ -20,6 +19,7 @@ import rssapi.persist.FolderEntity
 import rssapi.persist.FolderRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import java.util.UUID
 
 private fun libJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")
@@ -152,10 +152,12 @@ class LibraryControllerTest {
         }.andExpect {
             status { isOk() }
         }
-        verify(folders).saveAll(org.mockito.kotlin.check<List<FolderEntity>> {
-            assert(it.first { e -> e.id == folderB }.sortOrder == 0)
-            assert(it.first { e -> e.id == folderA }.sortOrder == 1)
-        })
+        verify(folders).saveAll(
+            org.mockito.kotlin.check<List<FolderEntity>> {
+                assert(it.first { e -> e.id == folderB }.sortOrder == 0)
+                assert(it.first { e -> e.id == folderA }.sortOrder == 1)
+            },
+        )
     }
 
     @Test

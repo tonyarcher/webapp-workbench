@@ -1,9 +1,9 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
-import {libraryKey, queryClient, QueryController, fetchLibrary} from '../../query';
-import {fetchArticlesPage} from '../../services/api';
-import {markArticleRead, markShownRead, toggleStar} from '../../mutations';
-import {articleImage, safeHttpUrl} from '../../services/parser';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { libraryKey, queryClient, QueryController, fetchLibrary } from '../../query';
+import { fetchArticlesPage } from '../../services/api';
+import { markArticleRead, markShownRead, toggleStar } from '../../mutations';
+import { articleImage, safeHttpUrl } from '../../services/parser';
 import {
     loadTodaySettings,
     pruneTodaySettings,
@@ -11,9 +11,9 @@ import {
     type TodayListView,
     type TodaySettings,
 } from '../../services/today-settings';
-import {buildTodaySections} from '../../services/today';
-import type {Article, Feed, Folder} from '../../types';
-import {domainOf, formatDate} from '../../util';
+import { buildTodaySections } from '../../services/today';
+import type { Article, Feed, Folder } from '../../types';
+import { domainOf, formatDate } from '../../util';
 import '../lazy-img/lazy-img';
 import styles from './today-view.css?inline';
 
@@ -46,7 +46,7 @@ export class TodayView extends LitElement {
     private articles = new QueryController<Article[]>(this, () => ({
         queryKey: ['today', this.startOfToday.toDateString()],
         queryFn: async () => {
-            const res = await fetchArticlesPage({since: this.startOfToday.getTime(), sort: 'newest', limit: 10_000});
+            const res = await fetchArticlesPage({ since: this.startOfToday.getTime(), sort: 'newest', limit: 10_000 });
             return res.items;
         },
     }));
@@ -84,15 +84,15 @@ export class TodayView extends LitElement {
     };
 
     private onFeedsRefreshed = () => {
-        void queryClient.invalidateQueries({queryKey: ['today']});
+        void queryClient.invalidateQueries({ queryKey: ['today'] });
     };
 
     private onArticleRead = () => {
-        void queryClient.invalidateQueries({queryKey: ['today']});
+        void queryClient.invalidateQueries({ queryKey: ['today'] });
     };
 
     private onArticleStarred = () => {
-        void queryClient.invalidateQueries({queryKey: ['today']});
+        void queryClient.invalidateQueries({ queryKey: ['today'] });
     };
 
     private scheduleMidnightRollover() {
@@ -114,14 +114,28 @@ export class TodayView extends LitElement {
         const folders = this.library.data?.folders ?? [];
         const feeds = this.library.data?.feeds ?? [];
         const articles = this.articles.data ?? [];
-        const settings = pruneTodaySettings(this.settings, folders.map((f) => f.id));
-        const sections = buildTodaySections(articles, feeds, folders, settings.excludedFolderIds, settings.perFolder, settings.unreadOnly);
-        const todayLabel = this.startOfToday.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'});
-        return {folders, feeds, articles, settings, sections, todayLabel};
+        const settings = pruneTodaySettings(
+            this.settings,
+            folders.map((f) => f.id),
+        );
+        const sections = buildTodaySections(
+            articles,
+            feeds,
+            folders,
+            settings.excludedFolderIds,
+            settings.perFolder,
+            settings.unreadOnly,
+        );
+        const todayLabel = this.startOfToday.toLocaleDateString([], {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+        });
+        return { folders, feeds, articles, settings, sections, todayLabel };
     }
 
     override render() {
-        const {folders, feeds, articles, settings, sections, todayLabel} = this.getViewData();
+        const { folders, feeds, articles, settings, sections, todayLabel } = this.getViewData();
         return html`
       <div class="toolbar">${this.renderToolbar(todayLabel, settings)}</div>
       <div class="body ${settings.listView}">${this.renderBody(folders, feeds, articles, settings, sections)}</div>`;
@@ -145,16 +159,29 @@ export class TodayView extends LitElement {
         <button class="btn" @click=${this.onMarkShownRead}>Mark shown as read</button>`;
     }
 
-    private renderBody(folders: Folder[], feeds: Feed[], articles: Article[], settings: TodaySettings, sections: ReturnType<typeof buildTodaySections>) {
+    private renderBody(
+        folders: Folder[],
+        feeds: Feed[],
+        articles: Article[],
+        settings: TodaySettings,
+        sections: ReturnType<typeof buildTodaySections>,
+    ) {
         return html`
         ${this.renderBodyContent(folders, settings, sections, feeds)}
         ${this.renderMarkEnd(sections, articles, feeds, folders, settings)}`;
     }
 
-    private renderBodyContent(folders: Folder[], settings: TodaySettings, sections: ReturnType<typeof buildTodaySections>, feeds: Feed[]) {
-        if (this.articles.error) return html`<div class="empty" style="color: var(--danger)">Could not load today's articles.</div>`;
+    private renderBodyContent(
+        folders: Folder[],
+        settings: TodaySettings,
+        sections: ReturnType<typeof buildTodaySections>,
+        feeds: Feed[],
+    ) {
+        if (this.articles.error)
+            return html`<div class="empty" style="color: var(--danger)">Could not load today's articles.</div>`;
         if (!folders.length) return html`<div class="empty">No folders yet. Import an OPML file to create some.</div>`;
-        if (settings.excludedFolderIds.length === folders.length) return html`<div class="empty">All folders are hidden. Tick some back on in Today's ⋯ menu in the sidebar.</div>`;
+        if (settings.excludedFolderIds.length === folders.length)
+            return html`<div class="empty">All folders are hidden. Tick some back on in Today's ⋯ menu in the sidebar.</div>`;
         if (sections.length) return html`${sections.map((s) => this.renderSection(s, feeds, settings.listView))}`;
         return html`<div class="empty">${settings.unreadOnly ? 'Nothing unread today in these folders.' : 'Nothing published today in these folders yet. Hit Refresh to sync.'}</div>`;
     }
@@ -167,7 +194,13 @@ export class TodayView extends LitElement {
                           </section>`;
     }
 
-    private renderMarkEnd(sections: ReturnType<typeof buildTodaySections>, articles: Article[], feeds: Feed[], folders: Folder[], settings: TodaySettings) {
+    private renderMarkEnd(
+        sections: ReturnType<typeof buildTodaySections>,
+        articles: Article[],
+        feeds: Feed[],
+        folders: Folder[],
+        settings: TodaySettings,
+    ) {
         if (!sections.length) return '';
         const disabled = !this.visibleArticles(articles, feeds, folders, settings).some((a) => a.read === 0);
         return html`<div class="mark-end"><button class="mark-end-btn" ?disabled=${disabled} @click=${this.onMarkShownRead}>Mark shown as read</button></div>`;
@@ -180,11 +213,11 @@ export class TodayView extends LitElement {
     }
 
     private setUnreadOnly(unreadOnly: boolean) {
-        this.persist({...this.settings, unreadOnly});
+        this.persist({ ...this.settings, unreadOnly });
     }
 
     private setListView(listView: TodayListView) {
-        this.persist({...this.settings, listView});
+        this.persist({ ...this.settings, listView });
     }
 
     private renderItem(article: Article, feeds: Feed[], listView: TodayListView) {
@@ -202,7 +235,8 @@ export class TodayView extends LitElement {
     }
 
     private renderTitleLink(article: Article, link: string | undefined, cls: string) {
-        if (link) return html`<a class=${cls} href=${link} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${article.title}</a>`;
+        if (link)
+            return html`<a class=${cls} href=${link} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${article.title}</a>`;
         return html`<span class=${cls}>${article.title}</span>`;
     }
 
@@ -271,12 +305,8 @@ export class TodayView extends LitElement {
         const starred = !article.starred;
         // Chain the refetch after the write so it can't win the race and
         // re-show the old star state.
-        void toggleStar(article.id, starred).then(() =>
-            queryClient.invalidateQueries({queryKey: ['today']}),
-        );
-        window.dispatchEvent(
-            new CustomEvent('article-starred', {detail: {id: article.id, starred}}),
-        );
+        void toggleStar(article.id, starred).then(() => queryClient.invalidateQueries({ queryKey: ['today'] }));
+        window.dispatchEvent(new CustomEvent('article-starred', { detail: { id: article.id, starred } }));
     }
 
     /** The articles actually on screen after exclusions, per-folder caps,
@@ -286,7 +316,10 @@ export class TodayView extends LitElement {
         articles = this.articles.data ?? [],
         feeds = this.library.data?.feeds ?? [],
         folders = this.library.data?.folders ?? [],
-        settings = pruneTodaySettings(this.settings, folders.map((f) => f.id)),
+        settings = pruneTodaySettings(
+            this.settings,
+            folders.map((f) => f.id),
+        ),
     ): Article[] {
         const sections = buildTodaySections(
             articles,
@@ -297,33 +330,35 @@ export class TodayView extends LitElement {
             settings.unreadOnly,
         );
         const seen = new Set<string>();
-        return sections.flatMap((s) => s.articles).filter((a) => {
-            if (seen.has(a.id)) return false;
-            seen.add(a.id);
-            return true;
-        });
+        return sections
+            .flatMap((s) => s.articles)
+            .filter((a) => {
+                if (seen.has(a.id)) return false;
+                seen.add(a.id);
+                return true;
+            });
     }
 
     private async onMarkShownRead() {
-        const ids = this.visibleArticles().filter((a) => a.read === 0).map((a) => a.id);
+        const ids = this.visibleArticles()
+            .filter((a) => a.read === 0)
+            .map((a) => a.id);
         if (!ids.length) return;
         await markShownRead(ids);
-        await queryClient.invalidateQueries({queryKey: ['today']});
+        await queryClient.invalidateQueries({ queryKey: ['today'] });
     }
 
     private openArticle(article: Article) {
         if (article.read === 0) {
             // Chain the query refresh after the write so a refetch can't win
             // the race and re-show the article as unread.
-            void markArticleRead(article.id).then(() =>
-                queryClient.invalidateQueries({queryKey: ['today']}),
-            );
+            void markArticleRead(article.id).then(() => queryClient.invalidateQueries({ queryKey: ['today'] }));
         }
         const items = this.visibleArticles();
         const index = items.findIndex((a) => a.id === article.id);
         this.dispatchEvent(
             new CustomEvent('open-article', {
-                detail: {article, index, items},
+                detail: { article, index, items },
                 bubbles: true,
                 composed: true,
             }),

@@ -1,12 +1,12 @@
 package stockgame
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import stockgame.trading.AccountService
 import stockgame.trading.FakeGameStore
 import stockgame.trading.FakeProvider
 import stockgame.trading.TradingService
-import stockgame.trading.AccountService
 import java.time.Clock
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class SettingsTest {
     @Test

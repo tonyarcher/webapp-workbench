@@ -1,5 +1,7 @@
 package fitnessapi.domain
 
+private const val MAX_REPORTED_ERRORS = 20
+
 data class IncomingSample(
     val metric: String,
     val t: Long,
@@ -8,22 +10,11 @@ data class IncomingSample(
     val originId: String,
 )
 
-data class CollectedSamples(
-    val samples: List<IncomingSample>,
-    val errorCount: Int,
-    val errors: List<String>,
-)
+data class CollectedSamples(val samples: List<IncomingSample>, val errorCount: Int, val errors: List<String>)
 
-fun sampleKey(sample: IncomingSample): String =
-    "${sample.metric}|${sample.t}|${sample.source}|${sample.originId}"
+fun sampleKey(sample: IncomingSample): String = "${sample.metric}|${sample.t}|${sample.source}|${sample.originId}"
 
-fun asSample(
-    metricRaw: String?,
-    t: Double?,
-    valueSi: Double?,
-    source: String?,
-    originId: String?,
-): IncomingSample? {
+fun asSample(metricRaw: String?, t: Double?, valueSi: Double?, source: String?, originId: String?): IncomingSample? {
     val metric = metricRaw?.let { parseMetricId(it) } ?: return null
     if (t == null || valueSi == null) return null
     if (!t.isFinite() || !valueSi.isFinite()) return null
@@ -41,7 +32,7 @@ fun collectSamples(items: List<IncomingSample?>): CollectedSamples {
             continue
         }
         errorCount += 1
-        if (errors.size < 20) errors.add("invalid sample")
+        if (errors.size < MAX_REPORTED_ERRORS) errors.add("invalid sample")
     }
     return CollectedSamples(byKey.values.toList(), errorCount, errors)
 }

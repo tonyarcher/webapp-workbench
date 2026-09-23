@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
     applyStamp,
     elapsedSeconds,
@@ -10,7 +10,7 @@ import {
     stampFromClock,
     stepSeconds,
 } from './clock';
-import type {ClockState} from './types';
+import type { ClockState } from './types';
 
 const CLOCK: ClockState = {
     period: 1,
@@ -53,16 +53,16 @@ describe('stamps', () => {
             gameClockSeconds: 720,
             shotClockSeconds: 24,
         });
-        expect(isValidStamp({period: 0, gameClockSeconds: 1, shotClockSeconds: 1})).toBe(false);
-        expect(isValidStamp({period: 1, gameClockSeconds: -1, shotClockSeconds: 1})).toBe(false);
-        const next = applyStamp(CLOCK, {period: 2, gameClockSeconds: 60, shotClockSeconds: 14}, true);
+        expect(isValidStamp({ period: 0, gameClockSeconds: 1, shotClockSeconds: 1 })).toBe(false);
+        expect(isValidStamp({ period: 1, gameClockSeconds: -1, shotClockSeconds: 1 })).toBe(false);
+        const next = applyStamp(CLOCK, { period: 2, gameClockSeconds: 60, shotClockSeconds: 14 }, true);
         expect(next.running).toBe(true);
         expect(next.period).toBe(2);
     });
 
     it('elapsed time uses the countdown', () => {
-        const start = {period: 1, gameClockSeconds: 100, shotClockSeconds: 24};
-        expect(elapsedSeconds(start, {...start, gameClockSeconds: 80})).toBe(20);
-        expect(elapsedSeconds(start, {period: 2, gameClockSeconds: 720, shotClockSeconds: 24})).toBe(100);
+        const start = { period: 1, gameClockSeconds: 100, shotClockSeconds: 24 };
+        expect(elapsedSeconds(start, { ...start, gameClockSeconds: 80 })).toBe(20);
+        expect(elapsedSeconds(start, { period: 2, gameClockSeconds: 720, shotClockSeconds: 24 })).toBe(100);
     });
 });

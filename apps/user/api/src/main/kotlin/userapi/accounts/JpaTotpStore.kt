@@ -1,13 +1,13 @@
 package userapi.accounts
 
-import java.time.Instant
-import java.util.UUID
 import org.springframework.transaction.annotation.Transactional
 import userapi.persist.BackupCodeEntity
 import userapi.persist.BackupCodeRepo
 import userapi.persist.LoginChallengeEntity
 import userapi.persist.LoginChallengeRepo
 import userapi.persist.UserRepo
+import java.time.Instant
+import java.util.UUID
 
 open class JpaTotpStore(
     private val users: UserRepo,
@@ -19,8 +19,7 @@ open class JpaTotpStore(
         users.findById(userId).orElse(null)?.totpPending = secret
     }
 
-    override fun pendingSecret(userId: UUID): String? =
-        users.findById(userId).orElse(null)?.totpPending
+    override fun pendingSecret(userId: UUID): String? = users.findById(userId).orElse(null)?.totpPending
 
     @Transactional
     override fun enableSecret(userId: UUID, secret: String) {
@@ -29,8 +28,7 @@ open class JpaTotpStore(
         user.totpPending = null
     }
 
-    override fun enabledSecret(userId: UUID): String? =
-        users.findById(userId).orElse(null)?.totpSecret
+    override fun enabledSecret(userId: UUID): String? = users.findById(userId).orElse(null)?.totpSecret
 
     @Transactional
     override fun replaceBackupHashes(userId: UUID, hashes: List<String>) {
@@ -39,16 +37,14 @@ open class JpaTotpStore(
     }
 
     @Transactional
-    override fun consumeBackupHash(userId: UUID, codeHash: String): Boolean =
-        backups.consume(userId, codeHash) == 1
+    override fun consumeBackupHash(userId: UUID, codeHash: String): Boolean = backups.consume(userId, codeHash) == 1
 
     override fun insertChallenge(userId: UUID, tokenHash: String, expiresAt: Instant) {
         challenges.save(LoginChallengeEntity(tokenHash = tokenHash, userId = userId, expiresAt = expiresAt))
     }
 
     @Transactional
-    override fun findChallenge(tokenHash: String, now: Instant): UUID? =
-        challenges.findValid(tokenHash, now)?.userId
+    override fun findChallenge(tokenHash: String, now: Instant): UUID? = challenges.findValid(tokenHash, now)?.userId
 
     @Transactional
     override fun deleteChallenge(tokenHash: String) {

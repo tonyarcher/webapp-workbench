@@ -1,8 +1,8 @@
 package rssapi.persist
 
-import java.util.UUID
 import org.springframework.data.domain.Sort
 import org.springframework.data.jpa.repository.JpaRepository
+import java.util.UUID
 
 interface EditionRepo : JpaRepository<EditionEntity, UUID> {
     fun findTopByUserIdAndStatusOrderByCreatedAtDesc(userId: UUID, status: String): EditionEntity?

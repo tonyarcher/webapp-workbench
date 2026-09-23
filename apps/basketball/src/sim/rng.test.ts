@@ -1,5 +1,5 @@
-import {describe, expect, it} from 'vitest';
-import {between, chance, clamp, mixSeed, mulberry32, pickIndex} from './rng';
+import { describe, expect, it } from 'vitest';
+import { between, chance, clamp, mixSeed, mulberry32, pickIndex } from './rng';
 
 describe('rng', () => {
     it('is deterministic', () => {

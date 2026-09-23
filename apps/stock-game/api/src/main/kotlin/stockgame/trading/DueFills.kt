@@ -1,6 +1,5 @@
 package stockgame.trading
 
-import java.util.UUID
 import stockgame.domain.Order
 import stockgame.domain.applyCommission
 import stockgame.domain.cashDelta
@@ -11,14 +10,9 @@ import stockgame.domain.shouldFillQuote
 import stockgame.provider.PriceProvider
 import stockgame.store.GameStore
 import stockgame.store.NewTrade
+import java.util.UUID
 
-fun executeDue(
-    store: GameStore,
-    provider: PriceProvider,
-    defaultProvider: String,
-    userId: UUID,
-    now: Long,
-): Int {
+fun executeDue(store: GameStore, provider: PriceProvider, defaultProvider: String, userId: UUID, now: Long): Int {
     cancelExpired(store, userId, now)
     if (!isNyseOpen(now)) return 0
     var filled = 0
@@ -70,11 +64,12 @@ private fun fillIfPossible(
     val config = loadConfig(store, userId, defaultProvider)
     val delta = applyCommission(cashDelta(order.side, order.qty, price), config.commissionCentsPerTrade)
     if (!isFillPossible(store, defaultProvider, userId, order, delta)) return false
-    val trade = store.fillOrderWithTrade(
-        userId,
-        order.id,
-        NewTrade(userId, order.symbol, order.side, order.qty, price, delta, "scheduled", now, now),
-    )
+    val trade =
+        store.fillOrderWithTrade(
+            userId,
+            order.id,
+            NewTrade(userId, order.symbol, order.side, order.qty, price, delta, "scheduled", now, now),
+        )
     return trade != null
 }
 

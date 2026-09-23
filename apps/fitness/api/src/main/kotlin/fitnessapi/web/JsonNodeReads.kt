@@ -9,7 +9,13 @@ fun JsonNode.string(key: String): String? {
 
 fun JsonNode.numberLike(key: String): Double? {
     val n = this.get(key) ?: return null
-    val d = if (n.isString) n.asString().toDoubleOrNull() else if (n.isNumber) n.asDouble() else null
+    val d = if (n.isString) {
+        n.asString().toDoubleOrNull()
+    } else if (n.isNumber) {
+        n.asDouble()
+    } else {
+        null
+    }
     return d?.takeIf { it.isFinite() }
 }
 

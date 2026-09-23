@@ -1,18 +1,18 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
-import {history, parsePath} from '../../router';
-import {markArticleRead} from '../../mutations';
-import {bustCounts, queryClient} from '../../query';
-import {clearClientDb} from '../../db/db';
-import {currentUsername, hasSession, logout, startLogin} from '../../services/auth';
-import type {Article, View} from '../../types';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { history, parsePath } from '../../router';
+import { markArticleRead } from '../../mutations';
+import { bustCounts, queryClient } from '../../query';
+import { clearClientDb } from '../../db/db';
+import { currentUsername, hasSession, logout, startLogin } from '../../services/auth';
+import type { Article, View } from '../../types';
 import styles from './app-shell.css?inline';
 
 @customElement('app-shell')
 export class AppShell extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @state() private route: View = {kind: 'all'};
+    @state() private route: View = { kind: 'all' };
     @state() private article: Article | null = null;
     @state() private settingsOpen = false;
     @state() private resume: { view: string; id: string } | null = null;
@@ -26,7 +26,7 @@ export class AppShell extends LitElement {
     override connectedCallback() {
         super.connectedCallback();
         this.route = parsePath(history.location.pathname);
-        this.unsubscribe = history.subscribe(({location}) => {
+        this.unsubscribe = history.subscribe(({ location }) => {
             this.route = parsePath(location.pathname);
             this.closeArticle();
             this.resume = null;
@@ -159,7 +159,7 @@ export class AppShell extends LitElement {
 
     private handleNavKey(e: KeyboardEvent) {
         if (!this.readContext) return;
-        const {items, index} = this.readContext;
+        const { items, index } = this.readContext;
         if (this.isNextKey(e.key)) this.handleNext(e, items, index);
         else if (this.isPrevKey(e.key)) this.handlePrev(e, index);
         else if (this.isCloseKey(e.key)) this.handleClose(e);
@@ -196,19 +196,19 @@ export class AppShell extends LitElement {
         if (!this.readContext) return;
         const article = this.readContext.items[index];
         if (!article) return;
-        this.readContext = {...this.readContext, index};
+        this.readContext = { ...this.readContext, index };
         this.article = article;
-        this.resume = {view: JSON.stringify(this.route), id: article.id};
+        this.resume = { view: JSON.stringify(this.route), id: article.id };
         if (await markArticleRead(article.id)) {
-            window.dispatchEvent(new CustomEvent('article-read', {detail: article.id}));
+            window.dispatchEvent(new CustomEvent('article-read', { detail: article.id }));
         }
     }
 
     private onOpenArticle(e: Event) {
         const detail = (e as CustomEvent<{ article: Article; index: number; items: Article[] }>).detail;
-        this.readContext = {items: detail.items, index: detail.index};
+        this.readContext = { items: detail.items, index: detail.index };
         this.article = detail.article;
-        this.resume = {view: JSON.stringify(this.route), id: detail.article.id};
+        this.resume = { view: JSON.stringify(this.route), id: detail.article.id };
     }
 
     private closeArticle() {

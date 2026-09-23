@@ -1,8 +1,8 @@
 package rssapi.fetch
 
+import rssapi.domain.isPrivateIp
 import java.net.InetAddress
 import java.net.URI
-import rssapi.domain.isPrivateIp
 
 fun assertPublicHost(raw: String, allowLocal: Boolean) {
     val url = URI(raw).toURL()

@@ -1,7 +1,5 @@
 package userapi.accounts
 
-import java.time.Instant
-import java.util.UUID
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.transaction.annotation.Transactional
 import userapi.persist.AuthCodeEntity
@@ -12,6 +10,8 @@ import userapi.persist.RefreshTokenEntity
 import userapi.persist.RefreshTokenRepo
 import userapi.persist.SigningKeyEntity
 import userapi.persist.SigningKeyRepo
+import java.time.Instant
+import java.util.UUID
 
 open class JpaOAuthStore(
     private val clients: OAuthClientRepo,
@@ -27,8 +27,7 @@ open class JpaOAuthStore(
         return userapi.domain.OAuthClient(clientId, uris)
     }
 
-    override fun loadSigningJwk(): String? =
-        signingKeys.findFirstByOrderByCreatedAtDesc()?.jwk
+    override fun loadSigningJwk(): String? = signingKeys.findFirstByOrderByCreatedAtDesc()?.jwk
 
     override fun saveSigningJwk(kid: String, jwk: String) {
         if (signingKeys.existsById(kid)) return
@@ -63,13 +62,7 @@ open class JpaOAuthStore(
     override fun takeAuthCode(codeHash: String, now: Instant): StoredAuthCode? =
         authCodes.takeAuthCode(codeHash, now)?.toStored()
 
-    override fun insertRefresh(
-        tokenHash: String,
-        familyId: UUID,
-        userId: UUID,
-        clientId: String,
-        expiresAt: Instant,
-    ) {
+    override fun insertRefresh(tokenHash: String, familyId: UUID, userId: UUID, clientId: String, expiresAt: Instant) {
         refreshTokens.save(
             RefreshTokenEntity(
                 tokenHash = tokenHash,

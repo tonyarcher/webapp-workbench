@@ -1,20 +1,16 @@
 package fitnessapi.http
 
-import java.util.UUID
 import fitnessapi.domain.IncomingSample
 import fitnessapi.store.LatestPoint
 import fitnessapi.store.MetricStats
 import fitnessapi.store.SeriesPoint
 import fitnessapi.store.StoredSample
+import java.util.UUID
 
 internal fun sampleMapKey(userId: UUID, metric: String, t: Long, source: String, originId: String): String =
     "$userId|$metric|$t|$source|$originId"
 
-internal fun upsertIncoming(
-    rows: MutableMap<String, StoredSample>,
-    userId: UUID,
-    sample: IncomingSample,
-) {
+internal fun upsertIncoming(rows: MutableMap<String, StoredSample>, userId: UUID, sample: IncomingSample) {
     val key = sampleMapKey(userId, sample.metric, sample.t, sample.source, sample.originId)
     val prev = rows[key]
     rows[key] = StoredSample(

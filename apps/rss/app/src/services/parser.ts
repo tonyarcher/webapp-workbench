@@ -1,4 +1,4 @@
-import type {OpmlFolder, OpmlNode, OpmlSource, ParsedFeed} from '../types';
+import type { OpmlFolder, OpmlNode, OpmlSource, ParsedFeed } from '../types';
 
 /**
  * Returns the URL if it is absolute http(s), else undefined. Blocks
@@ -35,8 +35,7 @@ function parseCommentCount(item: Element): number | undefined {
         const node = item.getElementsByTagNameNS('*', localName)[0];
         return node?.textContent?.trim();
     };
-    const candidate =
-        text('comments') ?? text('total') ?? text('comment_count') ?? text('comment-count');
+    const candidate = text('comments') ?? text('total') ?? text('comment_count') ?? text('comment-count');
     if (!candidate) return undefined;
     const n = Number(candidate);
     return Number.isFinite(n) && n >= 0 ? Math.round(n) : undefined;
@@ -136,14 +135,14 @@ function rssContentPair(item: Element): { description: string; content: string |
     const description = childText(item, 'description');
     const encoded = item.getElementsByTagNameNS('*', 'encoded')[0]?.textContent?.trim() ?? '';
     const content = encoded || description || undefined;
-    return {description, content};
+    return { description, content };
 }
 
 function rssItem(item: Element, fallbackPublished: number, feedTitle: string) {
     const published = rssPublished(item, fallbackPublished);
     const guid = rssGuid(item, published, feedTitle);
     const link = safeHttpUrl(childText(item, 'link'));
-    const {description, content} = rssContentPair(item);
+    const { description, content } = rssContentPair(item);
     return {
         guid,
         title: childText(item, 'title') || '(untitled)',
@@ -162,7 +161,7 @@ function parseRss(doc: Document, fallbackPublished: number): ParsedFeed {
     const title = childText(channel, 'title') || 'Untitled feed';
     const siteUrl = childText(channel, 'link') || undefined;
     const items = Array.from(doc.getElementsByTagName('item')).map((it) => rssItem(it, fallbackPublished, title));
-    return {title, siteUrl, items};
+    return { title, siteUrl, items };
 }
 
 function atomSiteUrl(feedEl: Element): string | undefined {
@@ -184,7 +183,9 @@ function atomLink(entry: Element): string | undefined {
 }
 
 function atomPublished(entry: Element, fallbackPublished: number): number {
-    return parseDate(childText(entry, 'published'), 0) || parseDate(childText(entry, 'updated'), 0) || fallbackPublished;
+    return (
+        parseDate(childText(entry, 'published'), 0) || parseDate(childText(entry, 'updated'), 0) || fallbackPublished
+    );
 }
 
 function atomEntry(entry: Element, fallbackPublished: number, feedTitle: string) {
@@ -210,20 +211,20 @@ function parseAtom(doc: Document, fallbackPublished: number): ParsedFeed {
     const title = childText(feedEl, 'title') || 'Untitled feed';
     const siteUrl = atomSiteUrl(feedEl);
     const items = Array.from(doc.getElementsByTagName('entry')).map((e) => atomEntry(e, fallbackPublished, title));
-    return {title, siteUrl, items};
+    return { title, siteUrl, items };
 }
 
 export function stripHtml(html: string | undefined): string {
-  if (!html) return '';
-  let text: string;
-  try {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const root = (doc as Document & { body?: HTMLElement }).body ?? doc.documentElement;
-    text = root?.textContent ?? '';
-  } catch {
-    text = html.replace(/<[^>]*>/g, ' ');
-  }
-  return text.replace(/\s+/g, ' ').trim();
+    if (!html) return '';
+    let text: string;
+    try {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const root = (doc as Document & { body?: HTMLElement }).body ?? doc.documentElement;
+        text = root?.textContent ?? '';
+    } catch {
+        text = html.replace(/<[^>]*>/g, ' ');
+    }
+    return text.replace(/\s+/g, ' ').trim();
 }
 
 /** First image URL inside an HTML string, if any (http(s) only). */
@@ -244,7 +245,9 @@ export function firstImageUrl(html: string | undefined): string | undefined {
 }
 
 /** Thumbnail for an article card, derived at render time from content. */
-export function articleImage(article: { content?: string | undefined } & { image?: string | undefined }): string | undefined {
+export function articleImage(
+    article: { content?: string | undefined } & { image?: string | undefined },
+): string | undefined {
     const fromContent = firstImageUrl(article.content);
     if (fromContent) return fromContent;
     return safeHttpUrl((article as { image?: string }).image);

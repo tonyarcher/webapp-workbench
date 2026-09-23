@@ -1,5 +1,15 @@
-﻿package rssapi.ai
+package rssapi.ai
 
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import org.springframework.http.HttpStatus
+import rssapi.persist.AiQuotaEntity
+import rssapi.persist.AiQuotaRepo
+import rssapi.web.ApiException
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -8,15 +18,6 @@ import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
-import rssapi.persist.AiQuotaEntity
-import rssapi.persist.AiQuotaRepo
-import rssapi.web.ApiException
 
 private fun fixedClockAt(now: Instant): Clock = Clock.fixed(now, ZoneOffset.UTC)
 
@@ -65,7 +66,7 @@ class AiQuotaServiceTest {
         whenever(repo.findById(uid)).thenReturn(Optional.of(spent))
 
         val err = assertFailsWith<ApiException> { quotaServiceAt(repo, now).consume(uid, 30, 100) }
-        assertEquals(429, err.status)
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), err.status.value())
         verify(repo, never()).saveAndFlush(any<AiQuotaEntity>())
     }
 
@@ -76,7 +77,7 @@ class AiQuotaServiceTest {
         whenever(repo.findById(uid)).thenReturn(Optional.of(spent))
 
         val err = assertFailsWith<ApiException> { quotaServiceAt(repo, now).consume(uid, 30, 100) }
-        assertEquals(429, err.status)
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), err.status.value())
     }
 
     @Test
@@ -88,7 +89,7 @@ class AiQuotaServiceTest {
         )
 
         val err = assertFailsWith<ApiException> { quotaServiceAt(repo, now).consume(uid, 30, 100) }
-        assertEquals(429, err.status)
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), err.status.value())
     }
 
     @Test
@@ -100,6 +101,6 @@ class AiQuotaServiceTest {
         )
 
         val err = assertFailsWith<ApiException> { quotaServiceAt(repo, now).consume(uid, 30, 100) }
-        assertEquals(429, err.status)
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), err.status.value())
     }
 }

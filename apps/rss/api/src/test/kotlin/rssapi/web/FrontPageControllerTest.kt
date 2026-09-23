@@ -1,8 +1,5 @@
 package rssapi.web
 
-import java.time.Instant
-import java.util.UUID
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
@@ -13,6 +10,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -25,6 +23,9 @@ import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleScoreEntity
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import java.time.Instant
+import java.util.UUID
+import kotlin.test.assertEquals
 
 private fun frontJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")
@@ -110,7 +111,7 @@ class FrontPageControllerTest {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer t")
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
         assertEquals("""{"error":"invalid since"}""", res.response.contentAsString)
     }
 
@@ -119,7 +120,7 @@ class FrontPageControllerTest {
         val res = mvc.get("/front-page") {
             header("X-Api-Version", "1")
         }.andReturn()
-        assertEquals(401, res.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), res.response.status)
         assertEquals("""{"error":"unauthorized"}""", res.response.contentAsString)
     }
 

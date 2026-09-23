@@ -1,12 +1,12 @@
 package stockgame.provider
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import stockgame.domain.ProviderError
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import stockgame.domain.ProviderError
 
 private val BRANCH_MAPPER = ObjectMapper()
 
@@ -34,18 +34,20 @@ class YahooParseBranchTest {
     fun skipsBadRows() {
         val row = """[1,"x"]"""
         val quote = """{"open":$row,"high":$row,"low":$row,"close":$row,"volume":$row}"""
-        val json = BRANCH_MAPPER.readTree(
-            """{"timestamp":[1,"x"],"indicators":{"quote":[$quote]}}""",
-        )
+        val json =
+            BRANCH_MAPPER.readTree(
+                """{"timestamp":[1,"x"],"indicators":{"quote":[$quote]}}""",
+            )
         val bars = parseYahooBars(json)
         assertEquals(1, bars.size)
     }
 
     @Test
     fun fillsMissingOhlcFromClose() {
-        val json = BRANCH_MAPPER.readTree(
-            """{"timestamp":[10],"indicators":{"quote":[{"close":[5.0]}]}}""",
-        )
+        val json =
+            BRANCH_MAPPER.readTree(
+                """{"timestamp":[10],"indicators":{"quote":[{"close":[5.0]}]}}""",
+            )
         val bars = parseYahooBars(json)
         assertEquals(1, bars.size)
         assertEquals(5.0, bars[0].open)
@@ -54,28 +56,31 @@ class YahooParseBranchTest {
 
     @Test
     fun nonFiniteFiltered() {
-        val json = BRANCH_MAPPER.readTree(
-            """{"timestamp":[10],"indicators":{"quote":[{"close":[1e400]}]}}""",
-        )
+        val json =
+            BRANCH_MAPPER.readTree(
+                """{"timestamp":[10],"indicators":{"quote":[{"close":[1e400]}]}}""",
+            )
         assertTrue(parseYahooBars(json).isEmpty())
     }
 
     @Test
     fun bookMergesBidAsk() {
         val chart = BRANCH_MAPPER.readTree(BRANCH_CHART)
-        val book = BRANCH_MAPPER.readTree(
-            """{"quoteResponse":{"result":[{"bid":149.0,"ask":151.0}]}}""",
-        )
+        val book =
+            BRANCH_MAPPER.readTree(
+                """{"quoteResponse":{"result":[{"bid":149.0,"ask":151.0}]}}""",
+            )
         val quote = parseYahooQuote("AAPL", chart, book)
         assertEquals(149.0, quote.bid)
         assertEquals(151.0, quote.ask)
         val empty = parseYahooQuote("AAPL", chart, BRANCH_MAPPER.readTree("""{"quoteResponse":{}}"""))
         assertNull(empty.bid)
-        val nobid = parseYahooQuote(
-            "AAPL",
-            chart,
-            BRANCH_MAPPER.readTree("""{"quoteResponse":{"result":[{}]}}"""),
-        )
+        val nobid =
+            parseYahooQuote(
+                "AAPL",
+                chart,
+                BRANCH_MAPPER.readTree("""{"quoteResponse":{"result":[{}]}}"""),
+            )
         assertNull(nobid.ask)
     }
 
@@ -83,17 +88,19 @@ class YahooParseBranchTest {
     fun longNameFallback() {
         val meta = """{"symbol":"AAPL","longName":"Apple Incorporated","regularMarketPrice":1.0}"""
         val body = """"timestamp":[1],"indicators":{"quote":[{"close":[1.0]}]}"""
-        val chart = BRANCH_MAPPER.readTree(
-            """{"chart":{"result":[{"meta":$meta,$body}]}}""",
-        )
+        val chart =
+            BRANCH_MAPPER.readTree(
+                """{"chart":{"result":[{"meta":$meta,$body}]}}""",
+            )
         assertEquals("Apple Incorporated", parseYahooQuote("AAPL", chart, null).name)
     }
 
     @Test
     fun noPriceThrows() {
-        val chart = BRANCH_MAPPER.readTree(
-            """{"chart":{"result":[{"meta":{"symbol":"AAPL"},"timestamp":[],"indicators":{"quote":[{}]}}]}}""",
-        )
+        val chart =
+            BRANCH_MAPPER.readTree(
+                """{"chart":{"result":[{"meta":{"symbol":"AAPL"},"timestamp":[],"indicators":{"quote":[{}]}}]}}""",
+            )
         assertFailsWith<ProviderError> { parseYahooQuote("AAPL", chart, null) }
     }
 
@@ -105,9 +112,10 @@ class YahooParseBranchTest {
 
     @Test
     fun nonNumericTimeSkipped() {
-        val json = BRANCH_MAPPER.readTree(
-            """{"timestamp":["x"],"indicators":{"quote":[{"close":[1.0]}]}}""",
-        )
+        val json =
+            BRANCH_MAPPER.readTree(
+                """{"timestamp":["x"],"indicators":{"quote":[{"close":[1.0]}]}}""",
+            )
         assertTrue(parseYahooBars(json).isEmpty())
     }
 
@@ -124,9 +132,10 @@ class YahooParseBranchTest {
     fun priceWithoutTimeUsesClock() {
         val meta = """"symbol":"AAPL","regularMarketPrice":9.0"""
         val body = """"timestamp":[],"indicators":{"quote":[{}]}"""
-        val chart = BRANCH_MAPPER.readTree(
-            """{"chart":{"result":[{"meta":{$meta},$body}]}}""",
-        )
+        val chart =
+            BRANCH_MAPPER.readTree(
+                """{"chart":{"result":[{"meta":{$meta},$body}]}}""",
+            )
         val quote = parseYahooQuote("AAPL", chart, null)
         assertEquals(9.0, quote.price)
         assertTrue(quote.time > 0)

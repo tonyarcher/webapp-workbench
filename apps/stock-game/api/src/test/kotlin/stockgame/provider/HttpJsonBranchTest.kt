@@ -1,11 +1,11 @@
 package stockgame.provider
 
 import com.sun.net.httpserver.HttpServer
+import stockgame.domain.ProviderError
 import java.net.InetSocketAddress
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import stockgame.domain.ProviderError
 
 class HttpJsonBranchTest {
     private fun server(code: Int, body: String): Pair<HttpServer, String> {

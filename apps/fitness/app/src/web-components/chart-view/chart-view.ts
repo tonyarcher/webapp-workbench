@@ -1,6 +1,6 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property, state} from 'lit/decorators.js';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
 import {
     formatSi,
     linearSlope,
@@ -12,9 +12,9 @@ import {
     type DisplayUnit,
     type MetricId,
 } from 'fitness-core';
-import {fetchProfile, fetchSeries, patchSample} from '../../services/api';
-import {displaySeries} from '../../services/chart-data';
-import type {SeriesOrigin, SeriesResult} from '../../types';
+import { fetchProfile, fetchSeries, patchSample } from '../../services/api';
+import { displaySeries } from '../../services/chart-data';
+import type { SeriesOrigin, SeriesResult } from '../../types';
 import '../chart/chart';
 import styles from './chart-view.css?inline';
 
@@ -58,7 +58,7 @@ export class ChartView extends LitElement {
     private async hide(originId: string): Promise<void> {
         const id = this.metricId();
         if (!id) return;
-        await patchSample({metric: id, originId, hidden: true});
+        await patchSample({ metric: id, originId, hidden: true });
         await this.reload();
     }
 
@@ -80,7 +80,7 @@ export class ChartView extends LitElement {
             this.error = 'bad override unit';
             return;
         }
-        await patchSample({metric: id, originId: this.editOrigin, valueSi});
+        await patchSample({ metric: id, originId: this.editOrigin, valueSi });
         this.editOrigin = '';
         await this.reload();
     }
@@ -111,7 +111,7 @@ export class ChartView extends LitElement {
     override render(): TemplateResult {
         const id = this.metricId();
         const points = this.series?.points ?? [];
-        const series = id && points.length ? displaySeries(id, points, this.display) : {xs: [], ys: [], fmt: ''};
+        const series = id && points.length ? displaySeries(id, points, this.display) : { xs: [], ys: [], fmt: '' };
         const advice = id ? trendAdvice(id, linearSlope(points), pctChange(points), points.length) : null;
         return html`
             <div class="page">
@@ -121,14 +121,16 @@ export class ChartView extends LitElement {
                 ${advice ? html`<p class="advice">${advice}</p>` : html``}
                 <ft-chart .xs=${series.xs} .ys=${series.ys} title=${metricLabel(this.metric)} fmt=${series.fmt}></ft-chart>
                 <p class="help">Hover the chart for exact values. Edit/hide overrides imported points without deleting them.</p>
-                ${this.editOrigin
-                    ? html`<div class="row">
+                ${
+                    this.editOrigin
+                        ? html`<div class="row">
                         <input type="number" .value=${this.editValue} @input=${(e: Event) => {
                             this.editValue = (e.target as HTMLInputElement).value;
                         }}>
                         <button class="btn primary" @click=${() => void this.saveEdit()}>Save override</button>
                     </div>`
-                    : html``}
+                        : html``
+                }
                 ${this.renderRows()}
             </div>
         `;

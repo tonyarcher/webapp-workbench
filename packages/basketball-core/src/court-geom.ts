@@ -1,11 +1,11 @@
-import type {CourtSpec, Point, TeamId} from './types';
+import type { CourtSpec, Point, TeamId } from './types';
 
 export function leftHoop(spec: CourtSpec): Point {
-    return {x: spec.hoopFromBaseline, y: spec.width / 2};
+    return { x: spec.hoopFromBaseline, y: spec.width / 2 };
 }
 
 export function rightHoop(spec: CourtSpec): Point {
-    return {x: spec.length - spec.hoopFromBaseline, y: spec.width / 2};
+    return { x: spec.length - spec.hoopFromBaseline, y: spec.width / 2 };
 }
 
 export function offensiveHoop(homeAttacksLeft: boolean, possession: TeamId, spec: CourtSpec): Point {
@@ -13,11 +13,11 @@ export function offensiveHoop(homeAttacksLeft: boolean, possession: TeamId, spec
     return attacksLeft ? leftHoop(spec) : rightHoop(spec);
 }
 
-export function threePointJoin(spec: CourtSpec): {along: number; across: number} {
+export function threePointJoin(spec: CourtSpec): { along: number; across: number } {
     const across = spec.width / 2 - spec.threeCornerSidelineOffset;
     const radius = spec.threeArcRadius;
     const along = Math.sqrt(Math.max(0, radius * radius - across * across));
-    return {along, across};
+    return { along, across };
 }
 
 export function isThreePoint(x: number, y: number, hoop: Point, spec: CourtSpec): boolean {
@@ -56,10 +56,13 @@ export function threePointPath(hoop: Point, spec: CourtSpec, side: 'left' | 'rig
     ].join(' ');
 }
 
-export function laneRect(spec: CourtSpec, side: 'left' | 'right'): {x: number; y: number; width: number; height: number} {
+export function laneRect(
+    spec: CourtSpec,
+    side: 'left' | 'right',
+): { x: number; y: number; width: number; height: number } {
     const height = spec.laneWidth;
     const y = (spec.width - height) / 2;
-    if (side === 'left') return {x: 0, y, width: spec.ftLineFromBaseline, height};
+    if (side === 'left') return { x: 0, y, width: spec.ftLineFromBaseline, height };
     return {
         x: spec.length - spec.ftLineFromBaseline,
         y,

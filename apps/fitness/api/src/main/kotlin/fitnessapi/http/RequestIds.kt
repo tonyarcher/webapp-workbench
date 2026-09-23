@@ -2,11 +2,7 @@ package fitnessapi.http
 
 import java.util.UUID
 
-data class RequestIds(
-    val requestId: String,
-    val traceId: String? = null,
-    val spanId: String? = null,
-)
+data class RequestIds(val requestId: String, val traceId: String? = null, val spanId: String? = null)
 
 private val TRACEPARENT =
     Regex("^00-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$", RegexOption.IGNORE_CASE)

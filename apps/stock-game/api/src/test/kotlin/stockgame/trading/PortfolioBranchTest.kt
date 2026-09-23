@@ -1,11 +1,11 @@
 package stockgame.trading
 
+import stockgame.domain.GameConfig
+import stockgame.domain.Trade
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import stockgame.domain.GameConfig
-import stockgame.domain.Trade
 
 class PortfolioBranchTest {
     private fun trade(symbol: String, side: String, qty: Int, at: Long, delta: Long): Trade = Trade(
@@ -66,10 +66,11 @@ class PortfolioBranchTest {
         val bars = listOf(dayBar(t0, 100.0))
         val provider = FakeProvider(bars)
         val config = GameConfig(1_000_000L, t0 - 86_400_000L, "fake")
-        val trades = listOf(
-            trade("AAPL", "buy", 10, t0, -100_000L),
-            trade("AAPL", "sell", 10, t0, 100_000L),
-        )
+        val trades =
+            listOf(
+                trade("AAPL", "buy", 10, t0, -100_000L),
+                trade("AAPL", "sell", 10, t0, 100_000L),
+            )
         val series = portfolioSeries(provider, config, trades, t0 + 86_400_000L)
         assertTrue(series.points.all { it.holdingsCents == 0L })
     }
@@ -77,14 +78,18 @@ class PortfolioBranchTest {
     @Test
     fun missingBarsValuedZero() {
         val config = GameConfig(1_000_000L, 1_700_000_000_000L, "fake")
-        val emptyBars = object : stockgame.provider.PriceProvider {
-            override val id: String = "empty"
-            override fun getQuote(symbol: String): stockgame.domain.Quote =
-                stockgame.domain.Quote(symbol, symbol, 10.0, "USD", "T", 0, 0)
-            override fun getBars(symbol: String, interval: String, from: Long, to: Long) =
-                emptyList<stockgame.domain.Bar>()
-            override fun search(query: String) = emptyList<stockgame.domain.SymbolHit>()
-        }
+        val emptyBars =
+            object : stockgame.provider.PriceProvider {
+                override val id: String = "empty"
+
+                override fun getQuote(symbol: String): stockgame.domain.Quote =
+                    stockgame.domain.Quote(symbol, symbol, 10.0, "USD", "T", 0, 0)
+
+                override fun getBars(symbol: String, interval: String, from: Long, to: Long) =
+                    emptyList<stockgame.domain.Bar>()
+
+                override fun search(query: String) = emptyList<stockgame.domain.SymbolHit>()
+            }
         val trades = listOf(trade("AAPL", "buy", 10, 1_700_000_000_000L, -100_000L))
         val series = portfolioSeries(emptyBars, config, trades, 1_700_100_000_000L)
         assertTrue(series.points.all { it.holdingsCents == 0L })

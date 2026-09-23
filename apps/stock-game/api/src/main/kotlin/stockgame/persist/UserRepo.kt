@@ -1,7 +1,7 @@
 package stockgame.persist
 
-import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
+import java.util.UUID
 
 interface UserRepo : JpaRepository<UserEntity, UUID> {
     fun findBySubject(subject: String): UserEntity?

@@ -1,12 +1,5 @@
 package fitnessapi.store
 
-import java.time.Instant
-import java.util.UUID
-import javax.sql.DataSource
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
-import org.springframework.data.domain.PageRequest
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import fitnessapi.domain.IncomingSample
 import fitnessapi.persist.DailyRollupRepo
 import fitnessapi.persist.SampleRepo
@@ -15,6 +8,13 @@ import fitnessapi.persist.toRow
 import fitnessapi.persist.toSeries
 import fitnessapi.persist.toStats
 import fitnessapi.persist.toStored
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+import org.springframework.data.domain.PageRequest
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.util.UUID
+import javax.sql.DataSource
 
 @Service
 @ConditionalOnBean(DataSource::class)
@@ -27,19 +27,14 @@ class JpaSampleStore(
 
     override fun latest(userId: UUID): List<LatestPoint> = samples.latest(userId).map { it.toLatest() }
 
-    override fun listSamples(
-        userId: UUID,
-        metric: String?,
-        from: Long,
-        to: Long,
-        limit: Int,
-    ): List<StoredSample> = samples.listVisible(
-        userId,
-        metric,
-        Instant.ofEpochMilli(from),
-        Instant.ofEpochMilli(to),
-        PageRequest.of(0, limit),
-    ).map { it.toStored() }
+    override fun listSamples(userId: UUID, metric: String?, from: Long, to: Long, limit: Int): List<StoredSample> =
+        samples.listVisible(
+            userId,
+            metric,
+            Instant.ofEpochMilli(from),
+            Instant.ofEpochMilli(to),
+            PageRequest.of(0, limit),
+        ).map { it.toStored() }
 
     override fun seriesRows(userId: UUID, metric: String, from: Long, to: Long): List<SeriesPoint> =
         samples.seriesRows(userId, metric, Instant.ofEpochMilli(from), Instant.ofEpochMilli(to))

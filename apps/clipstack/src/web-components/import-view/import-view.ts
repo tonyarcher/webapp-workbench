@@ -1,53 +1,53 @@
-import {LitElement, html, unsafeCSS} from 'lit'
-import type {TemplateResult} from 'lit'
-import {customElement, state} from 'lit/decorators.js'
-import {parseLinkList} from '../../services/parse-list'
-import type {ParseResult} from '../../types'
-import styles from './import-view.css?inline'
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { parseLinkList } from '../../services/parse-list';
+import type { ParseResult } from '../../types';
+import styles from './import-view.css?inline';
 
 @customElement('cs-import-view')
 export class ImportView extends LitElement {
-    static override styles = unsafeCSS(styles)
+    static override styles = unsafeCSS(styles);
 
-    @state() private text = ''
-    @state() private result: ParseResult | null = null
+    @state() private text = '';
+    @state() private result: ParseResult | null = null;
 
     private onTextInput(event: Event): void {
-        this.text = (event.target as HTMLTextAreaElement).value
-        this.result = null
+        this.text = (event.target as HTMLTextAreaElement).value;
+        this.result = null;
     }
 
     private onFileChange(event: Event): void {
-        const input = event.target as HTMLInputElement
-        const file = input.files?.[0]
-        if (!file) return
+        const input = event.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
         void file
             .text()
             .then((text) => {
-                this.text = text
-                this.result = null
-                this.parse()
+                this.text = text;
+                this.result = null;
+                this.parse();
             })
-            .catch(() => {})
+            .catch(() => {});
     }
 
     private onLoad(): void {
-        this.parse()
+        this.parse();
     }
 
     private parse(): void {
-        this.result = parseLinkList(this.text)
+        this.result = parseLinkList(this.text);
     }
 
     private emitImportParsed(): void {
-        const result = this.result
-        if (!result || result.items.length === 0) return
-        this.dispatchEvent(new CustomEvent('import-parsed', {detail: result, bubbles: true, composed: true}))
+        const result = this.result;
+        if (!result || result.items.length === 0) return;
+        this.dispatchEvent(new CustomEvent('import-parsed', { detail: result, bubbles: true, composed: true }));
     }
 
     private renderSkipped(): TemplateResult {
-        const skipped = this.result?.skipped ?? []
-        if (skipped.length === 0) return html``
+        const skipped = this.result?.skipped ?? [];
+        if (skipped.length === 0) return html``;
         return html`
             <div class="skipped">
                 <p class="skipped-title">${skipped.length} skipped</p>
@@ -61,13 +61,13 @@ export class ImportView extends LitElement {
                 </ul>
                 <p class="skipped-hint">Short links need the full /@user/video/{id} URL to play.</p>
             </div>
-        `
+        `;
     }
 
     override render(): TemplateResult {
-        const result = this.result
-        const playable = result?.items.length ?? 0
-        const skipped = result?.skipped.length ?? 0
+        const result = this.result;
+        const playable = result?.items.length ?? 0;
+        const skipped = result?.skipped.length ?? 0;
         return html`
             <div class="import">
                 <h1 class="title">Clipstack</h1>
@@ -78,7 +78,7 @@ export class ImportView extends LitElement {
                 ${this.resultSummary(result, playable, skipped)}
                 ${this.renderSkipped()}
             </div>
-        `
+        `;
     }
 
     private pasteArea(): TemplateResult {
@@ -96,18 +96,16 @@ export class ImportView extends LitElement {
         return html`
             <div class="actions">
                 <button class="load-button" @click=${this.onLoad}>Load list</button>
-                ${playable > 0
-                    ? html`<button class="start-button" @click=${this.emitImportParsed}>Start watching (${playable})</button>`
-                    : html``}
+                ${
+                    playable > 0
+                        ? html`<button class="start-button" @click=${this.emitImportParsed}>Start watching (${playable})</button>`
+                        : html``
+                }
             </div>
         `;
     }
 
-    private resultSummary(
-        result: ParseResult | null,
-        playable: number,
-        skipped: number,
-    ): TemplateResult {
+    private resultSummary(result: ParseResult | null, playable: number, skipped: number): TemplateResult {
         if (!result) return html``;
         return html`<p class="summary">${playable} playable, ${skipped} skipped</p>`;
     }
@@ -115,6 +113,6 @@ export class ImportView extends LitElement {
 
 declare global {
     interface HTMLElementTagNameMap {
-        'cs-import-view': ImportView
+        'cs-import-view': ImportView;
     }
 }

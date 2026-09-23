@@ -1,10 +1,10 @@
 package userapi.crypto
 
+import org.apache.commons.codec.binary.Base32
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.apache.commons.codec.binary.Base32
 
 class Rfc6238TotpBranchTest {
     private val totp = Rfc6238Totp()

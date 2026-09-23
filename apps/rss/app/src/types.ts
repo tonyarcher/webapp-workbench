@@ -36,15 +36,17 @@ export interface Article {
     popularity: number;
     engagement?: number | undefined;
     hot: number;
-    scores?: {
-        worthy: number;
-        interest: number;
-        topic?: string | undefined;
-        popularityOutlook: number;
-        readability: number;
-        scoredAt?: number | undefined;
-        model?: string | undefined;
-    } | undefined;
+    scores?:
+        | {
+              worthy: number;
+              interest: number;
+              topic?: string | undefined;
+              popularityOutlook: number;
+              readability: number;
+              scoredAt?: number | undefined;
+              model?: string | undefined;
+          }
+        | undefined;
 }
 
 export type ArticleSort = 'hot' | 'newest' | 'oldest';
@@ -97,7 +99,8 @@ export interface EditionSection {
     summary?: string | undefined;
     opinion?: string | undefined;
     articleIds: string[];
-    scores?: { worthy: number; interest: number; newness?: number | undefined; popularity?: number | undefined } | undefined;
+    scores?:
+        { worthy: number; interest: number; newness?: number | undefined; popularity?: number | undefined } | undefined;
     verified?: boolean | undefined;
 }
 

@@ -1,18 +1,15 @@
 package rssapi.ingest
 
-import java.time.Instant
-import java.util.UUID
 import org.springframework.stereotype.Component
 import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
 import rssapi.persist.FeedSyncEntity
 import rssapi.persist.FeedSyncRepo
+import java.time.Instant
+import java.util.UUID
 
 @Component
-class IngestSync(
-    private val feeds: FeedRepo,
-    private val sync: FeedSyncRepo,
-) {
+class IngestSync(private val feeds: FeedRepo, private val sync: FeedSyncRepo) {
     fun maybeRename(feed: FeedEntity, title: String) {
         if (!shouldRename(feed.title, title)) return
         feed.title = title

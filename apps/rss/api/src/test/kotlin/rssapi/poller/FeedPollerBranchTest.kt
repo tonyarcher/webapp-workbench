@@ -1,8 +1,5 @@
 package rssapi.poller
 
-import java.time.Instant
-import java.util.UUID
-import kotlin.test.Test
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.never
@@ -15,6 +12,9 @@ import rssapi.ingest.IngestSync
 import rssapi.persist.FeedSyncEntity
 import rssapi.persist.FeedSyncRepo
 import rssapi.persist.SubscriptionRepo
+import java.time.Instant
+import java.util.UUID
+import kotlin.test.Test
 
 class FeedPollerBranchTest {
     private val ingest = mock(IngestService::class.java)

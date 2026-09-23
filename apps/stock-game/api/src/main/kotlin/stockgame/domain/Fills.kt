@@ -1,12 +1,6 @@
 package stockgame.domain
 
-fun fillPriceForBar(
-    bar: Bar,
-    side: String,
-    orderType: String,
-    limitPrice: Double?,
-    stopPrice: Double?,
-): Double? {
+fun fillPriceForBar(bar: Bar, side: String, orderType: String, limitPrice: Double?, stopPrice: Double?): Double? {
     if (orderType == "market") return bar.close
     if (orderType == "limit") return fillLimit(bar, side, limitPrice)
     if (orderType == "stop") return fillStop(bar, side, stopPrice)

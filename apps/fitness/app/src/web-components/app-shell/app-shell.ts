@@ -1,7 +1,7 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
-import type {View} from '../../types';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import type { View } from '../../types';
 import '../dashboard-view/dashboard-view';
 import '../import-view/import-view';
 import '../lifts-view/lifts-view';
@@ -11,11 +11,11 @@ import styles from './app-shell.css?inline';
 
 const NAV: View[] = ['dashboard', 'import', 'lifts', 'measure'];
 
-function parseHash(): {view: View; metric: string} {
+function parseHash(): { view: View; metric: string } {
     const raw = location.hash.replace(/^#\/?/, '');
-    if (raw.startsWith('charts/')) return {view: 'chart', metric: decodeURIComponent(raw.slice(7))};
-    if (NAV.includes(raw as View)) return {view: raw as View, metric: ''};
-    return {view: 'dashboard', metric: ''};
+    if (raw.startsWith('charts/')) return { view: 'chart', metric: decodeURIComponent(raw.slice(7)) };
+    if (NAV.includes(raw as View)) return { view: raw as View, metric: '' };
+    return { view: 'dashboard', metric: '' };
 }
 
 @customElement('ft-app-shell')
@@ -58,15 +58,17 @@ export class AppShell extends LitElement {
                     >${v}</button>`,
                 )}
             </nav>
-            ${view === 'dashboard'
-                ? html`<ft-dashboard-view></ft-dashboard-view>`
-                : view === 'import'
-                    ? html`<ft-import-view></ft-import-view>`
-                    : view === 'lifts'
+            ${
+                view === 'dashboard'
+                    ? html`<ft-dashboard-view></ft-dashboard-view>`
+                    : view === 'import'
+                      ? html`<ft-import-view></ft-import-view>`
+                      : view === 'lifts'
                         ? html`<ft-lifts-view></ft-lifts-view>`
                         : view === 'chart'
-                            ? html`<ft-chart-view metric=${this.metric}></ft-chart-view>`
-                            : html`<ft-measure-view></ft-measure-view>`}
+                          ? html`<ft-chart-view metric=${this.metric}></ft-chart-view>`
+                          : html`<ft-measure-view></ft-measure-view>`
+            }
         `;
     }
 }

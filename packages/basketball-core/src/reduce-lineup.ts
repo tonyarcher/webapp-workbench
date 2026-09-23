@@ -1,7 +1,7 @@
-import {applySub, isValidOnCourt, rosterIds} from './lineup';
-import {creditStints, startStint, stopStint, teamSide, withTeam} from './reduce-helpers';
-import {stampFromClock} from './clock';
-import type {GameState, SetLineupEvent, SubstitutionEvent} from './types';
+import { applySub, isValidOnCourt, rosterIds } from './lineup';
+import { creditStints, startStint, stopStint, teamSide, withTeam } from './reduce-helpers';
+import { stampFromClock } from './clock';
+import type { GameState, SetLineupEvent, SubstitutionEvent } from './types';
 
 export function applySubstitution(game: GameState, event: SubstitutionEvent): GameState {
     const side = teamSide(game, event.team);
@@ -10,7 +10,7 @@ export function applySubstitution(game: GameState, event: SubstitutionEvent): Ga
     if (!nextOnCourt) return game;
     let next = creditStints(game, stampFromClock(game.clock));
     next = stopStint(next, event.outId);
-    next = withTeam(next, event.team, {...teamSide(next, event.team), onCourt: nextOnCourt});
+    next = withTeam(next, event.team, { ...teamSide(next, event.team), onCourt: nextOnCourt });
     return startStint(next, event.inId);
 }
 
@@ -19,7 +19,7 @@ export function applySetLineup(game: GameState, event: SetLineupEvent): GameStat
     if (!isValidOnCourt(event.onCourt, side.roster)) return game;
     let next = creditStints(game, stampFromClock(game.clock));
     for (const id of side.onCourt) next = stopStint(next, id);
-    next = withTeam(next, event.team, {...teamSide(next, event.team), onCourt: [...event.onCourt]});
+    next = withTeam(next, event.team, { ...teamSide(next, event.team), onCourt: [...event.onCourt] });
     for (const id of event.onCourt) next = startStint(next, id);
     return next;
 }

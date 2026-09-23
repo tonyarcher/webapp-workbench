@@ -1,6 +1,5 @@
 package rssapi.web
 
-import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.never
@@ -20,6 +19,7 @@ import rssapi.persist.ArticleStateRepo
 import rssapi.persist.SubscriptionRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import java.util.UUID
 
 private fun writeJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")

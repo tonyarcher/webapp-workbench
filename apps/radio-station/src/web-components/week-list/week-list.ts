@@ -1,21 +1,21 @@
-import {LitElement, html, nothing, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
-import {ref} from 'lit/directives/ref.js';
-import type {ListItem, PlaylistEntry} from '../../types';
-import {rowTime} from '../../services/format';
-import {VirtualizerController} from '../virtual-list';
+import { LitElement, html, nothing, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import { ref } from 'lit/directives/ref.js';
+import type { ListItem, PlaylistEntry } from '../../types';
+import { rowTime } from '../../services/format';
+import { VirtualizerController } from '../virtual-list';
 import styles from './week-list.css?inline';
 
-const SIZE = {day: 40, hour: 28, track: 44} as const;
+const SIZE = { day: 40, hour: 28, track: 44 } as const;
 
 @customElement('rs-week-list')
 export class WeekList extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) items: ListItem[] = [];
-    @property({type: Number}) currentIdx = -1;
-    @property({type: Number}) jumpToken = 0;
+    @property({ attribute: false }) items: ListItem[] = [];
+    @property({ type: Number }) currentIdx = -1;
+    @property({ type: Number }) jumpToken = 0;
 
     private listEl: HTMLElement | null = null;
     private readonly virtualizer = new VirtualizerController<ListItem>(
@@ -38,17 +38,15 @@ export class WeekList extends LitElement {
     }
 
     private scrollToCurrent(): void {
-        const index = this.items.findIndex(
-            (item) => item.kind === 'track' && item.entry.idx === this.currentIdx,
-        );
+        const index = this.items.findIndex((item) => item.kind === 'track' && item.entry.idx === this.currentIdx);
         if (index >= 0) this.virtualizer.scrollToIndex(index);
     }
 
-    private renderDay(item: Extract<ListItem, {kind: 'day'}>): TemplateResult {
+    private renderDay(item: Extract<ListItem, { kind: 'day' }>): TemplateResult {
         return html`<div class="day">${item.label}</div>`;
     }
 
-    private renderHour(item: Extract<ListItem, {kind: 'hour'}>): TemplateResult {
+    private renderHour(item: Extract<ListItem, { kind: 'hour' }>): TemplateResult {
         return html`<div class="hour">${item.label}</div>`;
     }
 
@@ -74,14 +72,16 @@ export class WeekList extends LitElement {
         return html`
             <div class="scroller" ${ref(this.setListEl)}>
                 <div class="spacer" style="height: ${this.virtualizer.totalSize}px">
-                    ${this.virtualizer.virtualItems.map((row) => html`
+                    ${this.virtualizer.virtualItems.map(
+                        (row) => html`
                         <div
                             class="row"
                             data-index=${row.index}
                             style="transform: translateY(${row.start}px)"
                             ${ref(this.measureRow)}
                         >${this.renderItem(this.items[row.index])}</div>
-                    `)}
+                    `,
+                    )}
                 </div>
             </div>
         `;

@@ -1,6 +1,6 @@
-import type {IDBPObjectStore} from 'idb';
-import type {ReaderDB} from './db-base';
-import {getDb} from './db-base';
+import type { IDBPObjectStore } from 'idb';
+import type { ReaderDB } from './db-base';
+import { getDb } from './db-base';
 
 type ArticlesStore = IDBPObjectStore<ReaderDB, ['feeds', 'articles'], 'articles', 'readwrite'>;
 type FeedsStore = IDBPObjectStore<ReaderDB, ['feeds', 'articles'], 'feeds', 'readwrite'>;
@@ -26,7 +26,7 @@ export async function setArticleStarred(id: string, starred: boolean): Promise<v
 async function markFeedRead(articleStore: ArticlesStore, feedId: string) {
     let cursor = await articleStore.index('byFeedId').openCursor(feedId);
     while (cursor) {
-        if (cursor.value.read === 0) await cursor.update({...cursor.value, read: 1 as const});
+        if (cursor.value.read === 0) await cursor.update({ ...cursor.value, read: 1 as const });
         cursor = await cursor.continue();
     }
 }
@@ -34,7 +34,7 @@ async function markFeedRead(articleStore: ArticlesStore, feedId: string) {
 async function markAllArticlesRead(articleStore: ArticlesStore) {
     let cursor = await articleStore.openCursor();
     while (cursor) {
-        if (cursor.value.read === 0) await cursor.update({...cursor.value, read: 1 as const});
+        if (cursor.value.read === 0) await cursor.update({ ...cursor.value, read: 1 as const });
         cursor = await cursor.continue();
     }
 }
@@ -80,7 +80,7 @@ export async function markArticlesRead(ids: string[]): Promise<void> {
     for (const id of ids) {
         const article = await articleStore.get(id);
         if (article && article.read === 0) {
-            await articleStore.put({...article, read: 1});
+            await articleStore.put({ ...article, read: 1 });
             unreadCounts.set(article.feedId, (unreadCounts.get(article.feedId) ?? 0) + 1);
         }
     }
@@ -98,14 +98,19 @@ async function applyUnreadDecrements(feedStore: FeedsStore, counts: Map<string, 
     }
 }
 
-async function markBeforeForFeed(articleStore: ArticlesStore, feedId: string, cutoff: number, counts: Map<string, number>) {
+async function markBeforeForFeed(
+    articleStore: ArticlesStore,
+    feedId: string,
+    cutoff: number,
+    counts: Map<string, number>,
+) {
     const lower: [string, number, string] = [feedId, Number.NEGATIVE_INFINITY, ''];
     const upper: [string, number, string] = [feedId, cutoff, ''];
     let cursor = await articleStore.index('byFeedDate').openCursor(IDBKeyRange.bound(lower, upper), 'next');
     while (cursor) {
         if (cursor.value.read === 0) {
             counts.set(feedId, (counts.get(feedId) ?? 0) + 1);
-            await cursor.update({...cursor.value, read: 1});
+            await cursor.update({ ...cursor.value, read: 1 });
         }
         cursor = await cursor.continue();
     }
@@ -118,7 +123,7 @@ async function markBeforeAll(articleStore: ArticlesStore, cutoff: number, counts
     while (cursor) {
         if (cursor.value.read === 0) {
             counts.set(cursor.value.feedId, (counts.get(cursor.value.feedId) ?? 0) + 1);
-            await cursor.update({...cursor.value, read: 1});
+            await cursor.update({ ...cursor.value, read: 1 });
         }
         cursor = await cursor.continue();
     }

@@ -1,5 +1,5 @@
-import {html, LitElement} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import { html, LitElement } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import wrapperCssText from './baseball-tab-page-wrapper.css?inline';
 
 const wrapperSheet = new CSSStyleSheet();
@@ -9,9 +9,9 @@ wrapperSheet.replaceSync(wrapperCssText);
 export class BaseballTabPageWrapper extends LitElement {
     static override styles = wrapperSheet;
 
-    @property({type: String, attribute: 'page-title'}) pageTitle = '';
-    @property({type: String, attribute: 'loading-message'}) loadingMessage = '';
-    @property({type: String, attribute: 'empty-message'}) emptyMessage = '';
+    @property({ type: String, attribute: 'page-title' }) pageTitle = '';
+    @property({ type: String, attribute: 'loading-message' }) loadingMessage = '';
+    @property({ type: String, attribute: 'empty-message' }) emptyMessage = '';
 
     override render() {
         if (this.loadingMessage) {
@@ -20,9 +20,7 @@ export class BaseballTabPageWrapper extends LitElement {
 
         return html`
             ${this.pageTitle ? html`<h1>${this.pageTitle}</h1>` : ''}
-            ${this.emptyMessage
-            ? html`<p class="empty-state">${this.emptyMessage}</p>`
-            : html`<slot></slot>`}
+            ${this.emptyMessage ? html`<p class="empty-state">${this.emptyMessage}</p>` : html`<slot></slot>`}
         `;
     }
 }

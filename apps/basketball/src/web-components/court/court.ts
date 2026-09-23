@@ -1,10 +1,10 @@
-import {LitElement, html, svg, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
-import {getRulebook, laneRect, leftHoop, rightHoop} from 'basketball-core';
-import type {CourtSpec, Point, RulebookId, ShotMark} from 'basketball-core';
-import {PAD_X, PAD_Y, SCALE, clientToCourt, courtToSvg, viewSize} from '../../local-game/court-map';
-import {restrictedSvg, threePointSvg} from '../../local-game/court-paint';
+import { LitElement, html, svg, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import { getRulebook, laneRect, leftHoop, rightHoop } from 'basketball-core';
+import type { CourtSpec, Point, RulebookId, ShotMark } from 'basketball-core';
+import { PAD_X, PAD_Y, SCALE, clientToCourt, courtToSvg, viewSize } from '../../local-game/court-map';
+import { restrictedSvg, threePointSvg } from '../../local-game/court-paint';
 import styles from './court.css?inline';
 
 @customElement('bball-court')
@@ -12,9 +12,9 @@ export class CourtView extends LitElement {
     static override styles = unsafeCSS(styles);
 
     @property() rulebookId: RulebookId = 'nba';
-    @property({attribute: false}) shots: ShotMark[] = [];
-    @property({attribute: false}) pending: Point | null = null;
-    @property({type: Boolean}) interactive = false;
+    @property({ attribute: false }) shots: ShotMark[] = [];
+    @property({ attribute: false }) pending: Point | null = null;
+    @property({ type: Boolean }) interactive = false;
 
     private onClick = (event: MouseEvent): void => {
         if (!this.interactive) return;
@@ -23,11 +23,13 @@ export class CourtView extends LitElement {
         const spec = getRulebook(this.rulebookId).court;
         const point = clientToCourt(event.clientX, event.clientY, svgEl.getBoundingClientRect(), spec);
         if (!point) return;
-        this.dispatchEvent(new CustomEvent('spot-picked', {
-            detail: point,
-            bubbles: true,
-            composed: true,
-        }));
+        this.dispatchEvent(
+            new CustomEvent('spot-picked', {
+                detail: point,
+                bubbles: true,
+                composed: true,
+            }),
+        );
     };
 
     override render(): TemplateResult {
@@ -65,7 +67,7 @@ function courtLayers(spec: CourtSpec): TemplateResult {
     `;
 }
 
-function woodFloor(spec: CourtSpec, size: {width: number; height: number}): TemplateResult {
+function woodFloor(spec: CourtSpec, size: { width: number; height: number }): TemplateResult {
     return svg`
         <defs>
             <linearGradient id="wood" x1="0" x2="0" y1="0" y2="1">
@@ -100,7 +102,7 @@ function lineWork(spec: CourtSpec, lHoop: Point, rHoop: Point): TemplateResult {
     `;
 }
 
-function lane(rect: {x: number; y: number; width: number; height: number}, fill: string): TemplateResult {
+function lane(rect: { x: number; y: number; width: number; height: number }, fill: string): TemplateResult {
     const p = courtToSvg(rect.x, rect.y);
     return svg`
         <rect

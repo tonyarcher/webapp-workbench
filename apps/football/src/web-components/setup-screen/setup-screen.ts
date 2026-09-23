@@ -1,10 +1,10 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement} from 'lit/decorators.js';
-import {RULEBOOKS} from 'football-core';
-import type {RulebookId, TeamId} from 'football-core';
-import type {LocalGameMode, LocalGameSetup} from '../../local-game/game-types';
-import {DEFAULT_GAME_SETUP} from '../../local-game/game-types';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement } from 'lit/decorators.js';
+import { RULEBOOKS } from 'football-core';
+import type { RulebookId, TeamId } from 'football-core';
+import type { LocalGameMode, LocalGameSetup } from '../../local-game/game-types';
+import { DEFAULT_GAME_SETUP } from '../../local-game/game-types';
 import styles from './setup-screen.css?inline';
 
 @customElement('fb-setup-screen')
@@ -27,11 +27,13 @@ export class SetupScreen extends LitElement {
         event.preventDefault();
         const form = event.currentTarget;
         if (!(form instanceof HTMLFormElement)) return;
-        this.dispatchEvent(new CustomEvent('start-game', {
-            detail: this.setupFrom(form, 'score'),
-            bubbles: true,
-            composed: true,
-        }));
+        this.dispatchEvent(
+            new CustomEvent('start-game', {
+                detail: this.setupFrom(form, 'score'),
+                bubbles: true,
+                composed: true,
+            }),
+        );
     };
 
     private emitWatch = (event: Event): void => {
@@ -39,11 +41,13 @@ export class SetupScreen extends LitElement {
         if (!(button instanceof HTMLElement)) return;
         const form = button.closest('form');
         if (!(form instanceof HTMLFormElement)) return;
-        this.dispatchEvent(new CustomEvent('start-game', {
-            detail: this.setupFrom(form, 'watch'),
-            bubbles: true,
-            composed: true,
-        }));
+        this.dispatchEvent(
+            new CustomEvent('start-game', {
+                detail: this.setupFrom(form, 'watch'),
+                bubbles: true,
+                composed: true,
+            }),
+        );
     };
 
     override render(): TemplateResult {

@@ -31,8 +31,7 @@ private class JevFakePoster(
 
 private fun jevConfig() = AiConfig(provider = "jev", jevApiKey = "test-key")
 
-private fun failingJevPoster(error: Exception): JevFakePoster =
-    JevFakePoster { _, _, _, _ -> throw error }
+private fun failingJevPoster(error: Exception): JevFakePoster = JevFakePoster { _, _, _, _ -> throw error }
 
 private fun okJson(json: String) = HttpResult(200, json)
 

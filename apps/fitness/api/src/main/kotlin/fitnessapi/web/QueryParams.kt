@@ -1,8 +1,8 @@
 package fitnessapi.web
 
-import java.time.Clock
 import fitnessapi.domain.clampLimit
 import fitnessapi.domain.queryMillis
+import java.time.Clock
 
 fun queryRange(fromRaw: String?, toRaw: String?, clock: Clock): Pair<Long, Long> {
     val from = queryMillis(fromRaw?.toDoubleOrNull(), 0L)

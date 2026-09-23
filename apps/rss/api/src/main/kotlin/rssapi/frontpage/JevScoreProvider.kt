@@ -11,13 +11,7 @@ const val JEV_TOP_WORDS: Int = 10
 const val JEV_MAX_QUESTIONS: Int = 64
 
 /** One front-page candidate packaged for a Jev batch call, with its signal input for fallback. */
-data class JevCandidate(
-    val id: String,
-    val title: String,
-    val feed: String,
-    val hot: Double,
-    val input: SignalInput,
-)
+data class JevCandidate(val id: String, val title: String, val feed: String, val hot: Double, val input: SignalInput)
 
 private val INTEREST_LEVELS = listOf("Not interesting to this reader", "Worth a skim", "Must read")
 

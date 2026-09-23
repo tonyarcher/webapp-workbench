@@ -1,6 +1,6 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import styles from './totp-form.css?inline';
 
 @customElement('uw-totp-form')
@@ -8,7 +8,7 @@ export class TotpForm extends LitElement {
     static override styles = unsafeCSS(styles);
 
     @property() error = '';
-    @property({type: Boolean}) busy = false;
+    @property({ type: Boolean }) busy = false;
     @property() submitLabel = 'Verify';
 
     private onSubmit = (event: Event): void => {
@@ -17,11 +17,13 @@ export class TotpForm extends LitElement {
         if (!(form instanceof HTMLFormElement)) return;
         const data = new FormData(form);
         const code = String(data.get('code') ?? '');
-        this.dispatchEvent(new CustomEvent('totp-submit', {
-            detail: {code},
-            bubbles: true,
-            composed: true,
-        }));
+        this.dispatchEvent(
+            new CustomEvent('totp-submit', {
+                detail: { code },
+                bubbles: true,
+                composed: true,
+            }),
+        );
     };
 
     override render(): TemplateResult {

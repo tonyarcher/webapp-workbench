@@ -10,19 +10,15 @@ fun FolderEntity.toJson(): FolderJson = FolderJson(
     sortOrder = sortOrder,
 )
 
-fun FeedEntity.toJson(
-    folderIds: List<String>,
-    unread: Int,
-    lastFetchedAt: Long?,
-    lastError: String?,
-): FeedJson = FeedJson(
-    id = id.toString(),
-    title = title,
-    url = xmlUrl,
-    folderIds = folderIds,
-    unread = unread,
-    addedAt = addedAt.toEpochMilli(),
-    siteUrl = siteUrl,
-    lastFetchedAt = lastFetchedAt,
-    lastError = lastError,
-)
+fun FeedEntity.toJson(folderIds: List<String>, unread: Int, lastFetchedAt: Long?, lastError: String?): FeedJson =
+    FeedJson(
+        id = id.toString(),
+        title = title,
+        url = xmlUrl,
+        folderIds = folderIds,
+        unread = unread,
+        addedAt = addedAt.toEpochMilli(),
+        siteUrl = siteUrl,
+        lastFetchedAt = lastFetchedAt,
+        lastError = lastError,
+    )

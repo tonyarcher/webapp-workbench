@@ -13,9 +13,7 @@ interface AiCreator {
 
 interface LanguageModelGlobal {
     availability?: (opts?: unknown) => Promise<string>;
-    create: (opts?: {
-        initialPrompts?: Array<{ role: string; content: string }>;
-    }) => Promise<AiSession>;
+    create: (opts?: { initialPrompts?: Array<{ role: string; content: string }> }) => Promise<AiSession>;
 }
 
 type AiWindow = {
@@ -151,9 +149,7 @@ export function resetAiAvailability() {
     cachedAvailability = undefined;
 }
 
-async function probeCreatorAvailability(
-    available: string | undefined,
-): Promise<AiAvailability> {
+async function probeCreatorAvailability(available: string | undefined): Promise<AiAvailability> {
     const status = normalizeAvailability(available);
     if (status === 'readily' && !hasCreator()) return setAvailability('unsupported');
     return setAvailability(status);
@@ -217,22 +213,23 @@ export async function aiAvailability(): Promise<AiAvailability> {
 
 async function lmCreator(prompt?: string | undefined): Promise<AiSession | undefined> {
     const lm = languageModel();
-    if (typeof lm?.create === 'function') return lm.create(prompt ? {initialPrompts: [{role: 'system', content: prompt}]} : undefined);
+    if (typeof lm?.create === 'function')
+        return lm.create(prompt ? { initialPrompts: [{ role: 'system', content: prompt }] } : undefined);
     return undefined;
 }
 
 async function modelCreator(prompt?: string | undefined): Promise<AiSession | undefined> {
-    if (aiWindow.model?.create) return aiWindow.model.create({systemPrompt: prompt});
+    if (aiWindow.model?.create) return aiWindow.model.create({ systemPrompt: prompt });
     return undefined;
 }
 
 async function aiLmCreator(prompt?: string | undefined): Promise<AiSession | undefined> {
-    if (aiWindow.ai?.languageModel?.create) return aiWindow.ai.languageModel.create({systemPrompt: prompt});
+    if (aiWindow.ai?.languageModel?.create) return aiWindow.ai.languageModel.create({ systemPrompt: prompt });
     return undefined;
 }
 
 async function legacyCreator(prompt?: string): Promise<AiSession | undefined> {
-    if (aiWindow.ai?.createTextSession) return aiWindow.ai.createTextSession({systemPrompt: prompt});
+    if (aiWindow.ai?.createTextSession) return aiWindow.ai.createTextSession({ systemPrompt: prompt });
     return undefined;
 }
 
@@ -258,10 +255,10 @@ async function resolvePrompt(result: string | ReadableStream): Promise<string> {
     const reader = result.getReader();
     const decoder = new TextDecoder();
     let out = '';
-    for (; ;) {
-        const {done, value} = await reader.read();
+    for (;;) {
+        const { done, value } = await reader.read();
         if (done) break;
-        out += decoder.decode(value, {stream: true});
+        out += decoder.decode(value, { stream: true });
     }
     return out + decoder.decode();
 }
@@ -324,9 +321,12 @@ function bulletInstruction(length: SummaryLength): string {
     }
 }
 
-export async function summarizeArticle(title: string, body: string, length: SummaryLength = 'standard'): Promise<string> {
-    const systemPrompt =
-        'You summarize news articles concisely and neutrally. Never invent facts.';
+export async function summarizeArticle(
+    title: string,
+    body: string,
+    length: SummaryLength = 'standard',
+): Promise<string> {
+    const systemPrompt = 'You summarize news articles concisely and neutrally. Never invent facts.';
     const prompt = [
         bulletInstruction(length),
         `Write in the same language as the article itself.`,
@@ -355,7 +355,7 @@ export async function serverSummaryAvailable(): Promise<boolean> {
         return cachedServerAvailable;
     }
     try {
-        const {aiStatus} = await import('./services/api');
+        const { aiStatus } = await import('./services/api');
         cachedServerAvailable = (await aiStatus()).available;
     } catch {
         cachedServerAvailable = false;
@@ -365,8 +365,12 @@ export async function serverSummaryAvailable(): Promise<boolean> {
 }
 
 /** Summarizes through the configured server model host. Throws on failure. */
-export async function summarizeWithServer(title: string, body: string, length: SummaryLength = 'standard'): Promise<string> {
-    const {requestServerSummary} = await import('./services/api');
+export async function summarizeWithServer(
+    title: string,
+    body: string,
+    length: SummaryLength = 'standard',
+): Promise<string> {
+    const { requestServerSummary } = await import('./services/api');
     return (await requestServerSummary(title, body, length)).summary;
 }
 

@@ -38,9 +38,5 @@ class BranchTest {
     }
 }
 
-private fun track(
-    id: String,
-    era: String = "current",
-    rotation: String = "current",
-    rank: Int = 1,
-) = Track(id, id, id, 180_000, 2024, "pop", era, rotation, rank, false, true)
+private fun track(id: String, era: String = "current", rotation: String = "current", rank: Int = 1) =
+    Track(id, id, id, 180_000, 2024, "pop", era, rotation, rank, false, true)

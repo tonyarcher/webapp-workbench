@@ -2,23 +2,22 @@ package userapi.web
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.Cookie
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import javax.sql.DataSource
 import org.mockito.kotlin.mock
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
-import org.springframework.test.annotation.DirtiesContext
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import userapi.Settings
 import userapi.accounts.AccountServices
+import userapi.http.API_VERSION
+import userapi.http.API_VERSION_HEADER
 import userapi.http.FakeAccountStore
 import userapi.http.PlainHasher
 import userapi.http.RateLimiter
@@ -26,8 +25,10 @@ import userapi.http.TestCookies
 import userapi.http.expectStatus
 import userapi.http.getWithCookies
 import userapi.http.postJson
-import userapi.http.API_VERSION
-import userapi.http.API_VERSION_HEADER
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import javax.sql.DataSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -73,10 +74,10 @@ class HttpMethodTest {
         mvc.getWithCookies(cookies, "/csrf").expectStatus(200)
         registerAlice(cookies)
         val wrongMethod = mvc.getWithCookies(cookies, "/logout")
-        assertEquals(405, wrongMethod.response.status)
+        assertEquals(HttpStatus.METHOD_NOT_ALLOWED.value(), wrongMethod.response.status)
         assertTrue(wrongMethod.response.contentAsString.contains("\"type\":\"method\""))
         val wrongMedia = postPlain(cookies, "/register")
-        assertEquals(415, wrongMedia.response.status)
+        assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), wrongMedia.response.status)
         assertTrue(wrongMedia.response.contentAsString.contains("unsupported media type"))
     }
 
@@ -86,7 +87,7 @@ class HttpMethodTest {
         mvc.getWithCookies(cookies, "/csrf").expectStatus(200)
         registerAlice(cookies)
         val legacy = mvc.getWithCookies(cookies, "/v1/me")
-        assertEquals(404, legacy.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), legacy.response.status)
     }
 
     @Test
@@ -100,7 +101,7 @@ class HttpMethodTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(registerJson("alice2")),
         ).andReturn().response
-        assertEquals(404, unversioned.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), unversioned.status)
     }
 
     private fun registerJson(username: String = "alice"): String =
@@ -115,10 +116,9 @@ class HttpMethodTest {
         ).expectStatus(201)
     }
 
-    private fun postPlain(cookies: TestCookies, path: String) =
-        mvc.perform(
-            cookies.postWithContent(path, "plain body", MediaType.TEXT_PLAIN),
-        ).andReturn().also { cookies.capture(it) }
+    private fun postPlain(cookies: TestCookies, path: String) = mvc.perform(
+        cookies.postWithContent(path, "plain body", MediaType.TEXT_PLAIN),
+    ).andReturn().also { cookies.capture(it) }
 
     private fun TestCookies.postWithContent(
         path: String,

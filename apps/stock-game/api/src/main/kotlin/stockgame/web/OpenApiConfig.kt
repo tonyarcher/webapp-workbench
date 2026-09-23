@@ -59,8 +59,7 @@ class OpenApiConfig {
                     "Paper-trading JSON API. Data routes require X-Api-Version: 1 " +
                         "and Bearer JWT from user-api. Probes, docs and discovery stay unversioned.",
                 ),
-        )
-        .components(
+        ).components(
             Components().addSecuritySchemes(
                 "bearer",
                 SecurityScheme()
@@ -69,8 +68,7 @@ class OpenApiConfig {
                     .bearerFormat("JWT")
                     .description("user-api JWT with stock-game audience"),
             ),
-        )
-        .addSecurityItem(SecurityRequirement().addList("bearer"))
+        ).addSecurityItem(SecurityRequirement().addList("bearer"))
 
     @Bean
     fun versionHeaderCustomizer(): OpenApiCustomizer = OpenApiCustomizer { api -> addVersionHeader(api) }

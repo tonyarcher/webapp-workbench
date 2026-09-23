@@ -1,50 +1,50 @@
-import { LitElement, css, html } from 'lit'
-import type { TemplateResult } from 'lit'
-import type { GameConfig } from '@stock-game/shared'
-import { defineElement } from './define'
+import { LitElement, css, html } from 'lit';
+import type { TemplateResult } from 'lit';
+import type { GameConfig } from '@stock-game/shared';
+import { defineElement } from './define';
 
 export interface SettingsSubmitDetail {
-  startingCashCents: number
-  startDate: number
-  provider: string
-  quoteDelayMinutes: number
-  commissionCentsPerTrade: number
+    startingCashCents: number;
+    startDate: number;
+    provider: string;
+    quoteDelayMinutes: number;
+    commissionCentsPerTrade: number;
 }
 
-const PROVIDERS = ['yahoo', 'twelvedata', 'alphaVantage'] as const
+const PROVIDERS = ['yahoo', 'twelvedata', 'alphaVantage'] as const;
 
 function isValidProvider(value: string | undefined): boolean {
-  if (!value) return false
-  if ((PROVIDERS as readonly string[]).includes(value)) return true
-  const trimmed = value.trim().toUpperCase()
-  return trimmed.length >= 1 && trimmed.length <= 16
+    if (!value) return false;
+    if ((PROVIDERS as readonly string[]).includes(value)) return true;
+    const trimmed = value.trim().toUpperCase();
+    return trimmed.length >= 1 && trimmed.length <= 16;
 }
 
 function isValidCash(cents: number): boolean {
-  return Number.isInteger(cents) && cents >= 1
+    return Number.isInteger(cents) && cents >= 1;
 }
 
 function isValidDelay(minutes: number): boolean {
-  return Number.isInteger(minutes) && minutes >= 0 && minutes <= 120
+    return Number.isInteger(minutes) && minutes >= 0 && minutes <= 120;
 }
 
 function isValidSettingsForm(
-  cashCents: number,
-  dateMs: number,
-  provider: string | undefined,
-  quoteDelayMinutes: number,
-  commissionCentsPerTrade: number,
+    cashCents: number,
+    dateMs: number,
+    provider: string | undefined,
+    quoteDelayMinutes: number,
+    commissionCentsPerTrade: number,
 ): boolean {
-  if (!isValidProvider(provider)) return false
-  if (!isValidCash(cashCents)) return false
-  if (!Number.isInteger(dateMs) || Number.isNaN(dateMs)) return false
-  if (!isValidDelay(quoteDelayMinutes)) return false
-  if (!Number.isInteger(commissionCentsPerTrade) || commissionCentsPerTrade < 0) return false
-  return true
+    if (!isValidProvider(provider)) return false;
+    if (!isValidCash(cashCents)) return false;
+    if (!Number.isInteger(dateMs) || Number.isNaN(dateMs)) return false;
+    if (!isValidDelay(quoteDelayMinutes)) return false;
+    if (!Number.isInteger(commissionCentsPerTrade) || commissionCentsPerTrade < 0) return false;
+    return true;
 }
 
 export class SgSettingsForm extends LitElement {
-  static override styles = css`
+    static override styles = css`
     :host {
       display: block;
       max-width: 480px;
@@ -105,90 +105,98 @@ export class SgSettingsForm extends LitElement {
       opacity: 0.5;
       cursor: default;
     }
-  `
+  `;
 
-  static override properties = {
-    config: { attribute: false },
-    busy: { type: Boolean },
-  }
+    static override properties = {
+        config: { attribute: false },
+        busy: { type: Boolean },
+    };
 
-  config: GameConfig | null = null
-  busy = false
+    config: GameConfig | null = null;
+    busy = false;
 
-  private error: string | undefined
-  private startDateDraft = ''
+    private error: string | undefined;
+    private startDateDraft = '';
 
-  private get cashDraft(): string {
-    return this.config !== null ? (this.config.startingCashCents / 100).toString() : ''
-  }
-
-  private get commissionDraft(): string {
-    return this.config !== null ? (this.config.commissionCentsPerTrade / 100).toString() : ''
-  }
-
-  private get quoteDelayDraft(): string {
-    return this.config !== null ? String(this.config.quoteDelayMinutes) : ''
-  }
-
-  private onDateInput(event: Event): void {
-    this.startDateDraft = (event.target as HTMLInputElement).value
-  }
-
-  private collectFormValues(): {
-    cashInput: string | undefined
-    provider: string | undefined
-    dateMs: number
-    quoteDelayInput: string | undefined
-    commissionInput: string | undefined
-  } {
-    const cashInput = this.renderRoot.querySelector<HTMLInputElement>('#cash')?.value
-    const provider = this.renderRoot.querySelector<HTMLSelectElement>('#provider')?.value
-    const quoteDelayInput = this.renderRoot.querySelector<HTMLInputElement>('#quoteDelay')?.value
-    const commissionInput = this.renderRoot.querySelector<HTMLInputElement>('#commission')?.value
-    const dateMs = this.startDateDraft ? Date.parse(`${this.startDateDraft}T00:00:00`) : (this.config?.startDate ?? 0)
-    return { cashInput, provider, dateMs, quoteDelayInput, commissionInput }
-  }
-
-  private validateAndEmit(
-    cashCents: number,
-    dateMs: number,
-    provider: string | undefined,
-    quoteDelayMinutes: number,
-    commissionCentsPerTrade: number,
-  ): boolean {
-    if (!isValidSettingsForm(cashCents, dateMs, provider, quoteDelayMinutes, commissionCentsPerTrade)) {
-      this.error = 'Check the starting cash and start date values'
-      return false
+    private get cashDraft(): string {
+        return this.config !== null ? (this.config.startingCashCents / 100).toString() : '';
     }
-    this.dispatchEvent(
-      new CustomEvent<SettingsSubmitDetail>('sg-config-submit', {
-        detail: { startingCashCents: cashCents, startDate: dateMs, provider: provider as string, quoteDelayMinutes, commissionCentsPerTrade },
-        bubbles: true,
-        composed: true,
-      }),
-    )
-    return true
-  }
 
-  private onSubmit(): void {
-    this.error = undefined
-    if (!this.config) return
-    const { cashInput, provider, dateMs, quoteDelayInput, commissionInput } = this.collectFormValues()
-    const cashCents = Math.round(Number(cashInput) * 100)
-    const quoteDelayMinutes = Math.round(Number(quoteDelayInput))
-    const commissionCentsPerTrade = Math.round(Number(commissionInput) * 100)
-    this.validateAndEmit(cashCents, dateMs, provider, quoteDelayMinutes, commissionCentsPerTrade)
-  }
+    private get commissionDraft(): string {
+        return this.config !== null ? (this.config.commissionCentsPerTrade / 100).toString() : '';
+    }
 
-  private renderCashField(): TemplateResult {
-    return html`<div class="field">
+    private get quoteDelayDraft(): string {
+        return this.config !== null ? String(this.config.quoteDelayMinutes) : '';
+    }
+
+    private onDateInput(event: Event): void {
+        this.startDateDraft = (event.target as HTMLInputElement).value;
+    }
+
+    private collectFormValues(): {
+        cashInput: string | undefined;
+        provider: string | undefined;
+        dateMs: number;
+        quoteDelayInput: string | undefined;
+        commissionInput: string | undefined;
+    } {
+        const cashInput = this.renderRoot.querySelector<HTMLInputElement>('#cash')?.value;
+        const provider = this.renderRoot.querySelector<HTMLSelectElement>('#provider')?.value;
+        const quoteDelayInput = this.renderRoot.querySelector<HTMLInputElement>('#quoteDelay')?.value;
+        const commissionInput = this.renderRoot.querySelector<HTMLInputElement>('#commission')?.value;
+        const dateMs = this.startDateDraft
+            ? Date.parse(`${this.startDateDraft}T00:00:00`)
+            : (this.config?.startDate ?? 0);
+        return { cashInput, provider, dateMs, quoteDelayInput, commissionInput };
+    }
+
+    private validateAndEmit(
+        cashCents: number,
+        dateMs: number,
+        provider: string | undefined,
+        quoteDelayMinutes: number,
+        commissionCentsPerTrade: number,
+    ): boolean {
+        if (!isValidSettingsForm(cashCents, dateMs, provider, quoteDelayMinutes, commissionCentsPerTrade)) {
+            this.error = 'Check the starting cash and start date values';
+            return false;
+        }
+        this.dispatchEvent(
+            new CustomEvent<SettingsSubmitDetail>('sg-config-submit', {
+                detail: {
+                    startingCashCents: cashCents,
+                    startDate: dateMs,
+                    provider: provider as string,
+                    quoteDelayMinutes,
+                    commissionCentsPerTrade,
+                },
+                bubbles: true,
+                composed: true,
+            }),
+        );
+        return true;
+    }
+
+    private onSubmit(): void {
+        this.error = undefined;
+        if (!this.config) return;
+        const { cashInput, provider, dateMs, quoteDelayInput, commissionInput } = this.collectFormValues();
+        const cashCents = Math.round(Number(cashInput) * 100);
+        const quoteDelayMinutes = Math.round(Number(quoteDelayInput));
+        const commissionCentsPerTrade = Math.round(Number(commissionInput) * 100);
+        this.validateAndEmit(cashCents, dateMs, provider, quoteDelayMinutes, commissionCentsPerTrade);
+    }
+
+    private renderCashField(): TemplateResult {
+        return html`<div class="field">
       <label for="cash">Starting cash (USD)</label>
       <input id="cash" type="number" min="1" step="0.01" .value=${this.cashDraft} />
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderDateField(defaultDate: string): TemplateResult {
-    return html`<div class="field">
+    private renderDateField(defaultDate: string): TemplateResult {
+        return html`<div class="field">
       <label for="date">Game start date</label>
       <input
         id="date"
@@ -199,15 +207,15 @@ export class SgSettingsForm extends LitElement {
       <p class="hint">
         Backdated trades before this date are not possible; the portfolio chart starts here.
       </p>
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderProviderField(): TemplateResult {
-    return html`<div class="field">
+    private renderProviderField(): TemplateResult {
+        return html`<div class="field">
       <label for="provider">Price provider</label>
       <select id="provider">
         ${PROVIDERS.map(
-          (provider) => html`
+            (provider) => html`
             <option value=${provider} ?selected=${this.config?.provider === provider}>
               ${provider}
             </option>
@@ -218,41 +226,41 @@ export class SgSettingsForm extends LitElement {
         Providers sit behind one interface; switching is instant. Key-based providers need their env
         vars set.
       </p>
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderQuoteDelayField(): TemplateResult {
-    return html`<div class="field">
+    private renderQuoteDelayField(): TemplateResult {
+        return html`<div class="field">
       <label for="quoteDelay">Quote delay (minutes)</label>
       <input id="quoteDelay" type="number" min="0" max="120" step="1" .value=${this.quoteDelayDraft} />
       <p class="hint">Delayed quotes like Yahoo; ASAP orders wait this long then until the next NYSE open if needed. 0 = next open with no extra wait.</p>
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderCommissionField(): TemplateResult {
-    return html`<div class="field">
+    private renderCommissionField(): TemplateResult {
+        return html`<div class="field">
       <label for="commission">Commission per trade (USD)</label>
       <input id="commission" type="number" min="0" step="0.01" .value=${this.commissionDraft} />
       <p class="hint">Flat fee taken from cash on every fill (backdated and scheduled).</p>
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderForm(defaultDate: string): TemplateResult {
-    return html`
+    private renderForm(defaultDate: string): TemplateResult {
+        return html`
       ${this.renderCashField()} ${this.renderDateField(defaultDate)} ${this.renderProviderField()}
       ${this.renderQuoteDelayField()} ${this.renderCommissionField()}
       ${this.error ? html`<div class="error">${this.error}</div>` : ''}
       <button class="submit" type="button" ?disabled=${this.busy} @click=${() => this.onSubmit()}>
         Save configuration
       </button>
-    `
-  }
+    `;
+    }
 
-  override render(): TemplateResult {
-    if (!this.config) return html`<p class="hint">Loading configuration…</p>`
-    const defaultDate = new Date(this.config.startDate).toISOString().slice(0, 10)
-    return this.renderForm(defaultDate)
-  }
+    override render(): TemplateResult {
+        if (!this.config) return html`<p class="hint">Loading configuration…</p>`;
+        const defaultDate = new Date(this.config.startDate).toISOString().slice(0, 10);
+        return this.renderForm(defaultDate);
+    }
 }
 
-defineElement('sg-settings-form', SgSettingsForm)
+defineElement('sg-settings-form', SgSettingsForm);

@@ -1,6 +1,9 @@
 package rssapi.domain
-
 import java.util.UUID
+
+/** Clamp for a request scope hint. */
+private const val MIN_SCOPE = 1
+private const val MAX_SCOPE = 10_000
 
 sealed class ArticleScope {
     data object All : ArticleScope()
@@ -32,5 +35,5 @@ fun parseArticleSort(raw: String?): ArticleSort = when (raw) {
 
 fun clampPageLimit(raw: Double?): Int {
     if (raw == null || !raw.isFinite()) return rssapi.PAGE_LIMIT_DEFAULT
-    return minOf(10_000, maxOf(1, raw.toInt()))
+    return minOf(MAX_SCOPE, maxOf(MIN_SCOPE, raw.toInt()))
 }

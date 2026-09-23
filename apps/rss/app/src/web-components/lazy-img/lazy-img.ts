@@ -1,6 +1,6 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, property, state} from 'lit/decorators.js';
-import {safeHttpUrl} from '../../services/parser';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { safeHttpUrl } from '../../services/parser';
 import styles from './lazy-img.css?inline';
 
 /**
@@ -37,7 +37,7 @@ export class LazyImg extends LitElement {
                         this.load();
                     }
                 },
-                {rootMargin: '500px 0px'},
+                { rootMargin: '500px 0px' },
             );
             this.observer.observe(this);
         }

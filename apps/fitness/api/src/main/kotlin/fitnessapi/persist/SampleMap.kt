@@ -17,14 +17,11 @@ fun SampleEntity.toStored(): StoredSample = StoredSample(
     note = note,
 )
 
-fun SampleEntity.toSeries(): SeriesPoint =
-    SeriesPoint(t.toEpochMilli(), valueSi, originId, source)
+fun SampleEntity.toSeries(): SeriesPoint = SeriesPoint(t.toEpochMilli(), valueSi, originId, source)
 
 fun MetricStatsView.toStats(): MetricStats =
     MetricStats(getMetric(), getN(), getFirstT().toEpochMilli(), getLastT().toEpochMilli())
 
-fun LatestView.toLatest(): LatestPoint =
-    LatestPoint(getMetric(), getT().toEpochMilli(), getValueSi())
+fun LatestView.toLatest(): LatestPoint = LatestPoint(getMetric(), getT().toEpochMilli(), getValueSi())
 
-fun DailyRollupEntity.toRow(): RollupRow =
-    RollupRow(metric, day.toString(), minSi, maxSi, avgSi, sumSi, n)
+fun DailyRollupEntity.toRow(): RollupRow = RollupRow(metric, day.toString(), minSi, maxSi, avgSi, sumSi, n)

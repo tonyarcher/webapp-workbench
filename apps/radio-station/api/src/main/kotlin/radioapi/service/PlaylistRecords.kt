@@ -1,8 +1,8 @@
 package radioapi.service
 
-import java.util.UUID
 import radioapi.domain.Track
 import radioapi.domain.Weights
+import java.util.UUID
 
 data class StationRow(val id: String, val name: String, val format: String)
 

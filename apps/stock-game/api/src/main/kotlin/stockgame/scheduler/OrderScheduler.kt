@@ -24,10 +24,11 @@ class OrderScheduler(
                     "scheduler tick",
                     mapOf(
                         "user_id" to userId.toString(),
-                        "err" to mapOf(
-                            "type" to (err::class.simpleName ?: "Error"),
-                            "message" to (err.message ?: ""),
-                        ),
+                        "err" to
+                            mapOf(
+                                "type" to (err::class.simpleName ?: "Error"),
+                                "message" to (err.message ?: ""),
+                            ),
                     ),
                 )
             }

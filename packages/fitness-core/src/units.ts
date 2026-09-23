@@ -1,4 +1,4 @@
-import type {DisplayUnit, MetricId} from './types';
+import type { DisplayUnit, MetricId } from './types';
 
 export const LB_TO_KG = 0.45359237;
 export const IN_TO_M = 0.0254;
@@ -91,27 +91,57 @@ const LENGTH_UNITS: Record<string, number> = {
 };
 
 const OTHER_UNITS: Partial<Record<MetricId, Record<string, number>>> = {
-    body_fat: {'%': 0.01, percent: 0.01, pct: 0.01, fraction: 1, ratio: 1, '': 1},
-    energy_total: {j: 1, joule: 1, joules: 1, kj: 1_000, kcal: KCAL_TO_J, cal: KCAL_TO_J, calorie: KCAL_TO_J, calories: KCAL_TO_J},
-    energy_active: {j: 1, joule: 1, joules: 1, kj: 1_000, kcal: KCAL_TO_J, cal: KCAL_TO_J, calorie: KCAL_TO_J, calories: KCAL_TO_J},
-    oxygen_sat: {'%': 0.01, percent: 0.01, pct: 0.01, fraction: 1, '': 1},
-    bmr: {w: 1, watt: 1, watts: 1, '': 1},
-    speed: {'m/s': 1, mps: 1, '': 1, kph: 1 / 3.6, 'km/h': 1 / 3.6, mph: 0.44704},
-    floors: {'': 1, floor: 1, floors: 1, count: 1},
-    exercise: {s: 1, sec: 1, second: 1, seconds: 1, min: 60, minute: 60, minutes: 60, h: 3_600, '': 1},
-    sleep: {s: 1, sec: 1, second: 1, seconds: 1, min: 60, minute: 60, minutes: 60, h: 3_600, hr: 3_600, hour: 3_600, hours: 3_600},
-    heart_rate: {bpm: 1, beats: 1, '': 1},
-    resting_heart_rate: {bpm: 1, beats: 1, '': 1},
-    steps: {'': 1, count: 1, steps: 1, step: 1},
-    distance: {m: 1, meter: 1, meters: 1, km: 1_000, mi: 1_609.344, mile: 1_609.344, miles: 1_609.344, '': 1},
-    hrv_rmssd: {ms: 0.001, '': 0.001},
-    vo2max: {'': 1, 'ml/kg/min': 1},
-    active_knee_extension: {deg: 1, degree: 1, degrees: 1, '°': 1, '': 1},
-    shoulder_flexion: {deg: 1, degree: 1, degrees: 1, '°': 1, '': 1},
-    shoulder_er: {deg: 1, degree: 1, degrees: 1, '°': 1, '': 1},
-    hip_ir: {deg: 1, degree: 1, degrees: 1, '°': 1, '': 1},
-    hip_er: {deg: 1, degree: 1, degrees: 1, '°': 1, '': 1},
-    wrist_extension: {deg: 1, degree: 1, degrees: 1, '°': 1, '': 1},
+    body_fat: { '%': 0.01, percent: 0.01, pct: 0.01, fraction: 1, ratio: 1, '': 1 },
+    energy_total: {
+        j: 1,
+        joule: 1,
+        joules: 1,
+        kj: 1_000,
+        kcal: KCAL_TO_J,
+        cal: KCAL_TO_J,
+        calorie: KCAL_TO_J,
+        calories: KCAL_TO_J,
+    },
+    energy_active: {
+        j: 1,
+        joule: 1,
+        joules: 1,
+        kj: 1_000,
+        kcal: KCAL_TO_J,
+        cal: KCAL_TO_J,
+        calorie: KCAL_TO_J,
+        calories: KCAL_TO_J,
+    },
+    oxygen_sat: { '%': 0.01, percent: 0.01, pct: 0.01, fraction: 1, '': 1 },
+    bmr: { w: 1, watt: 1, watts: 1, '': 1 },
+    speed: { 'm/s': 1, mps: 1, '': 1, kph: 1 / 3.6, 'km/h': 1 / 3.6, mph: 0.44704 },
+    floors: { '': 1, floor: 1, floors: 1, count: 1 },
+    exercise: { s: 1, sec: 1, second: 1, seconds: 1, min: 60, minute: 60, minutes: 60, h: 3_600, '': 1 },
+    sleep: {
+        s: 1,
+        sec: 1,
+        second: 1,
+        seconds: 1,
+        min: 60,
+        minute: 60,
+        minutes: 60,
+        h: 3_600,
+        hr: 3_600,
+        hour: 3_600,
+        hours: 3_600,
+    },
+    heart_rate: { bpm: 1, beats: 1, '': 1 },
+    resting_heart_rate: { bpm: 1, beats: 1, '': 1 },
+    steps: { '': 1, count: 1, steps: 1, step: 1 },
+    distance: { m: 1, meter: 1, meters: 1, km: 1_000, mi: 1_609.344, mile: 1_609.344, miles: 1_609.344, '': 1 },
+    hrv_rmssd: { ms: 0.001, '': 0.001 },
+    vo2max: { '': 1, 'ml/kg/min': 1 },
+    active_knee_extension: { deg: 1, degree: 1, degrees: 1, '°': 1, '': 1 },
+    shoulder_flexion: { deg: 1, degree: 1, degrees: 1, '°': 1, '': 1 },
+    shoulder_er: { deg: 1, degree: 1, degrees: 1, '°': 1, '': 1 },
+    hip_ir: { deg: 1, degree: 1, degrees: 1, '°': 1, '': 1 },
+    hip_er: { deg: 1, degree: 1, degrees: 1, '°': 1, '': 1 },
+    wrist_extension: { deg: 1, degree: 1, degrees: 1, '°': 1, '': 1 },
 };
 
 /**
@@ -127,29 +157,31 @@ export function toSi(metric: MetricId, value: number, unit: string): number | nu
     return scale(value, u, OTHER_UNITS[metric] ?? {});
 }
 
-const FORMAT_EXTRA: Partial<Record<MetricId, {scale: number; unit: string}>> = {
-    body_fat: {scale: 100, unit: '%'},
-    energy_total: {scale: 1 / KCAL_TO_J, unit: 'kcal'},
-    energy_active: {scale: 1 / KCAL_TO_J, unit: 'kcal'},
-    oxygen_sat: {scale: 100, unit: '%'},
-    bmr: {scale: 1, unit: 'W'},
-    speed: {scale: 3.6, unit: 'km/h'},
-    floors: {scale: 1, unit: 'floors'},
-    exercise: {scale: 1 / 60, unit: 'min'},
-    sleep: {scale: 1 / 3_600, unit: 'h'},
-    hrv_rmssd: {scale: 1_000, unit: 'ms'},
-    heart_rate: {scale: 1, unit: 'bpm'},
-    resting_heart_rate: {scale: 1, unit: 'bpm'},
-    steps: {scale: 1, unit: 'steps'},
-    distance: {scale: 0.001, unit: 'km'},
+const FORMAT_EXTRA: Partial<Record<MetricId, { scale: number; unit: string }>> = {
+    body_fat: { scale: 100, unit: '%' },
+    energy_total: { scale: 1 / KCAL_TO_J, unit: 'kcal' },
+    energy_active: { scale: 1 / KCAL_TO_J, unit: 'kcal' },
+    oxygen_sat: { scale: 100, unit: '%' },
+    bmr: { scale: 1, unit: 'W' },
+    speed: { scale: 3.6, unit: 'km/h' },
+    floors: { scale: 1, unit: 'floors' },
+    exercise: { scale: 1 / 60, unit: 'min' },
+    sleep: { scale: 1 / 3_600, unit: 'h' },
+    hrv_rmssd: { scale: 1_000, unit: 'ms' },
+    heart_rate: { scale: 1, unit: 'bpm' },
+    resting_heart_rate: { scale: 1, unit: 'bpm' },
+    steps: { scale: 1, unit: 'steps' },
+    distance: { scale: 0.001, unit: 'km' },
 };
 
-export function formatSi(metric: MetricId, valueSi: number, display: DisplayUnit): {value: number; unit: string} {
+export function formatSi(metric: MetricId, valueSi: number, display: DisplayUnit): { value: number; unit: string } {
     const kind = metricKind(metric);
-    if (kind === 'mass') return display === 'lb' ? {value: kgToLb(valueSi), unit: 'lb'} : {value: valueSi, unit: 'kg'};
-    if (kind === 'length') return display === 'lb' ? {value: mToIn(valueSi), unit: 'in'} : {value: mToCm(valueSi), unit: 'cm'};
+    if (kind === 'mass')
+        return display === 'lb' ? { value: kgToLb(valueSi), unit: 'lb' } : { value: valueSi, unit: 'kg' };
+    if (kind === 'length')
+        return display === 'lb' ? { value: mToIn(valueSi), unit: 'in' } : { value: mToCm(valueSi), unit: 'cm' };
     const extra = FORMAT_EXTRA[metric];
-    return extra ? {value: valueSi * extra.scale, unit: extra.unit} : {value: valueSi, unit: ''};
+    return extra ? { value: valueSi * extra.scale, unit: extra.unit } : { value: valueSi, unit: '' };
 }
 
 const METRIC_ALIASES: Record<string, MetricId> = {
@@ -205,7 +237,10 @@ const METRIC_ALIASES: Record<string, MetricId> = {
 };
 
 export function parseMetricId(raw: string): MetricId | null {
-    const key = raw.trim().toLowerCase().replace(/[\s-]+/g, '_');
+    const key = raw
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, '_');
     return METRIC_ALIASES[key] ?? null;
 }
 

@@ -5,53 +5,53 @@ export const PITCH_TYPES = ['Fastball', 'Curveball', 'Slider', 'Changeup', 'Sink
 export type PitchType = (typeof PITCH_TYPES)[number];
 
 export interface PlayerRatings {
-  contact: number;
-  power: number;
-  discipline: number;
-  speed: number;
-  bunt: number;
+    contact: number;
+    power: number;
+    discipline: number;
+    speed: number;
+    bunt: number;
 }
 
 export interface PitcherRatings {
-  control: number;
-  stuff: number;
-  gbTendency: number;
-  arsenal: PitchType[];
+    control: number;
+    stuff: number;
+    gbTendency: number;
+    arsenal: PitchType[];
 }
 
 export interface SimPlayer {
-  batterName: string;
-  position: string;
-  jerseyNumber: number;
-  bats: Handedness;
-  throws: Handedness;
-  ratings: PlayerRatings;
+    batterName: string;
+    position: string;
+    jerseyNumber: number;
+    bats: Handedness;
+    throws: Handedness;
+    ratings: PlayerRatings;
 }
 
 export interface SimPitcher {
-  name: string;
-  throws: Handedness;
-  ratings: PitcherRatings;
+    name: string;
+    throws: Handedness;
+    ratings: PitcherRatings;
 }
 
 export interface SimRoster {
-  teamName: string;
-  lineup: SimPlayer[];
-  pitcher: SimPitcher;
+    teamName: string;
+    lineup: SimPlayer[];
+    pitcher: SimPitcher;
 }
 
 export interface SimMatchup {
-  batter: SimPlayer;
-  pitcher: SimPitcher;
-  offense: SimRoster;
-  defense: SimRoster;
+    batter: SimPlayer;
+    pitcher: SimPitcher;
+    offense: SimRoster;
+    defense: SimRoster;
 }
 
 export interface PitchLocation {
-  zone: number;
+    zone: number;
 }
 
 export interface ResolvedPlay {
-  type: string;
-  detail: Record<string, unknown>;
+    type: string;
+    detail: Record<string, unknown>;
 }

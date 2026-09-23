@@ -1,8 +1,8 @@
 package stockgame.persist
 
-import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
+import java.util.UUID
 
 interface TradeRepo : JpaRepository<TradeEntity, Long> {
     fun findByUserIdOrderByExecutedAtAscIdAsc(userId: UUID): List<TradeEntity>
@@ -10,6 +10,7 @@ interface TradeRepo : JpaRepository<TradeEntity, Long> {
 
 interface OrderRepo : JpaRepository<OrderEntity, Long> {
     fun findByUserIdOrderByExecuteAtAscIdAsc(userId: UUID): List<OrderEntity>
+
     fun findByUserIdAndStatusAndExecuteAtLessThanEqualOrderByExecuteAtAsc(
         userId: UUID,
         status: String,

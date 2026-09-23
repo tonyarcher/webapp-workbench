@@ -1,12 +1,12 @@
 package stockgame.trading
 
+import stockgame.domain.GameConfig
+import stockgame.domain.Trade
+import stockgame.domain.TradingError
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import stockgame.domain.GameConfig
-import stockgame.domain.Trade
-import stockgame.domain.TradingError
 
 class CashBranchTest {
     private val uid = UUID.randomUUID()
@@ -33,11 +33,12 @@ class CashBranchTest {
 
     @Test
     fun heldFilters() {
-        val trades = listOf(
-            trade("A", "buy", 5, 100L, -50L),
-            trade("B", "buy", 3, 100L, -30L),
-            trade("A", "sell", 2, 300L, 20L),
-        )
+        val trades =
+            listOf(
+                trade("A", "buy", 5, 100L, -50L),
+                trade("B", "buy", 3, 100L, -30L),
+                trade("A", "sell", 2, 300L, 20L),
+            )
         assertEquals(5, heldQtyUpTo(trades, "A", 200L))
         assertEquals(3, heldQtyUpTo(trades, "A", 400L))
         assertEquals(0, heldQtyUpTo(trades, "Z", 400L))

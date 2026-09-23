@@ -1,8 +1,8 @@
-import {html, LitElement, nothing} from 'lit';
-import {repeat} from 'lit/directives/repeat.js';
-import {customElement, property} from 'lit/decorators.js';
-import {isBattedBall, parsePlatePlay} from '../../scoreboard/plate-play';
-import {HOME_POINT, hitEndpoint} from './hit-line';
+import { html, LitElement, nothing } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
+import { customElement, property } from 'lit/decorators.js';
+import { isBattedBall, parsePlatePlay } from '../../scoreboard/plate-play';
+import { HOME_POINT, hitEndpoint } from './hit-line';
 import defenseCssText from './baseball-defense-diagram.css?inline';
 
 const defenseSheet = new CSSStyleSheet();
@@ -20,7 +20,7 @@ export interface FielderPosition {
 export class BaseballDefenseDiagram extends LitElement {
     static override styles = defenseSheet;
 
-    @property({type: String, attribute: 'defending-team'}) defendingTeam = 'Defending Team';
+    @property({ type: String, attribute: 'defending-team' }) defendingTeam = 'Defending Team';
     @property({
         attribute: 'fielders-json',
         converter: (value: string | null) => {
@@ -34,9 +34,9 @@ export class BaseballDefenseDiagram extends LitElement {
         },
     })
     fielders: FielderPosition[] = [];
-    @property({type: String, attribute: 'active-play-json'}) activePlayJson = '';
-    @property({type: Number, attribute: 'play-seq'}) playSeq = 0;
-    @property({type: Number, attribute: 'play-duration-ms'}) playDurationMs = 4000;
+    @property({ type: String, attribute: 'active-play-json' }) activePlayJson = '';
+    @property({ type: Number, attribute: 'play-seq' }) playSeq = 0;
+    @property({ type: Number, attribute: 'play-duration-ms' }) playDurationMs = 4000;
     @property({
         attribute: 'animations',
         converter: {
@@ -53,7 +53,11 @@ export class BaseballDefenseDiagram extends LitElement {
         <h3>Defensive Alignment - ${this.defendingTeam}</h3>
         <div class="field-diagram-wrapper">
           <div id="field-diamond-bg"></div>
-          ${repeat([this.playSeq], (seq) => seq, () => this.renderHitLine())}
+          ${repeat(
+              [this.playSeq],
+              (seq) => seq,
+              () => this.renderHitLine(),
+          )}
           ${this.renderFielders()}
         </div>
       </div>
@@ -64,9 +68,9 @@ export class BaseballDefenseDiagram extends LitElement {
         const provided = new Map(
             this.fielders
                 .filter((fielder) => typeof fielder?.posName === 'string')
-                .map((fielder) => [fielder.posName, fielder])
+                .map((fielder) => [fielder.posName, fielder]),
         );
-        return FIELD_POSITIONS.map((pos) => provided.get(pos) ?? {posName: pos, playerName: '', jerseyNumber: 0});
+        return FIELD_POSITIONS.map((pos) => provided.get(pos) ?? { posName: pos, playerName: '', jerseyNumber: 0 });
     }
 
     private renderFielders() {
@@ -78,9 +82,7 @@ export class BaseballDefenseDiagram extends LitElement {
         return html`
           <div class="field-position-badge ${posClass}" data-pos=${fielder.posName}>
             <span class="pos-code">${fielder.posName}${fielder.jerseyNumber ? ` #${fielder.jerseyNumber}` : ''}</span>
-            ${fielder.playerName
-                ? html`<span class="fielder-name">${fielder.playerName}</span>`
-                : nothing}
+            ${fielder.playerName ? html`<span class="fielder-name">${fielder.playerName}</span>` : nothing}
           </div>
         `;
     }

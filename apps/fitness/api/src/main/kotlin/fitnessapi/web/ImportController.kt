@@ -1,16 +1,17 @@
 package fitnessapi.web
 
-import tools.jackson.databind.JsonNode
-import org.springframework.beans.factory.ObjectProvider
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RestController
 import fitnessapi.LOCAL_USER_ID
 import fitnessapi.domain.MAX_IMPORT_ROWS
 import fitnessapi.domain.asSample
 import fitnessapi.domain.collectSamples
 import fitnessapi.domain.sampleSource
 import fitnessapi.store.SampleStore
+import org.springframework.beans.factory.ObjectProvider
+import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RestController
+import tools.jackson.databind.JsonNode
 
 @RestController
 class ImportController(private val samples: ObjectProvider<SampleStore>) {
@@ -19,7 +20,7 @@ class ImportController(private val samples: ObjectProvider<SampleStore>) {
         val raw = body?.get("samples")
         val size = if (raw != null && raw.isArray) raw.size() else 0
         if (size > MAX_IMPORT_ROWS) {
-            throw ApiException(400, "at most $MAX_IMPORT_ROWS samples per request")
+            throw ApiException(HttpStatus.BAD_REQUEST, "at most $MAX_IMPORT_ROWS samples per request")
         }
         val incoming = if (raw != null && raw.isArray) {
             // Jackson 3 ArrayNode.map is not Kotlin's map.

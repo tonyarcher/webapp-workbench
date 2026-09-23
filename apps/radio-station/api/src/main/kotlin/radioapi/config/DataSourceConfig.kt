@@ -1,11 +1,11 @@
 package radioapi.config
 
-import javax.sql.DataSource
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Conditional
 import org.springframework.context.annotation.Configuration
 import radioapi.db.dataSource
 import radioapi.db.ensureDatabase
+import javax.sql.DataSource
 
 @Configuration
 class DataSourceConfig {

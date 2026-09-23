@@ -1,15 +1,15 @@
 package fitnessapi.store
 
-import java.time.Instant
-import java.util.UUID
-import javax.sql.DataSource
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import fitnessapi.domain.ProfileData
 import fitnessapi.domain.emptyProfile
 import fitnessapi.persist.ProfileEntity
 import fitnessapi.persist.ProfileRepo
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.util.UUID
+import javax.sql.DataSource
 
 @Service
 @ConditionalOnBean(DataSource::class)

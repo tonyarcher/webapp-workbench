@@ -1,5 +1,10 @@
 package userapi.accounts
 
+import userapi.crypto.JwtSigner
+import userapi.domain.OAuthClient
+import userapi.domain.pkceS256
+import userapi.domain.sha256Hex
+import userapi.http.FakeOAuthStore
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -9,11 +14,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import userapi.crypto.JwtSigner
-import userapi.domain.OAuthClient
-import userapi.domain.pkceS256
-import userapi.domain.sha256Hex
-import userapi.http.FakeOAuthStore
 
 class OAuthServiceTest {
     private val clock = Clock.fixed(Instant.parse("2026-09-11T17:00:00Z"), ZoneOffset.UTC)

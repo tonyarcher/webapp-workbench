@@ -1,15 +1,13 @@
 package rssapi.web
 
-import java.util.UUID
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.data.domain.PageImpl
+import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -20,6 +18,8 @@ import rssapi.persist.ArticleRepo
 import rssapi.persist.ArticleStateRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import java.util.UUID
+import kotlin.test.assertEquals
 
 private fun listJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")
@@ -85,7 +85,7 @@ class ArticleListControllerTest {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer t")
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test
@@ -95,7 +95,7 @@ class ArticleListControllerTest {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer t")
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test

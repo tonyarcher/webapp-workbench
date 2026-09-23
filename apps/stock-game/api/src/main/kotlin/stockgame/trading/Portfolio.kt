@@ -1,5 +1,4 @@
 package stockgame.trading
-
 import stockgame.domain.GameConfig
 import stockgame.domain.PortfolioPoint
 import stockgame.domain.PortfolioSeries
@@ -7,6 +6,9 @@ import stockgame.domain.Trade
 import stockgame.domain.round2
 import stockgame.domain.signedQty
 import stockgame.provider.PriceProvider
+
+/** Holdings are valued in integer cents. */
+private const val CENTS_PER_UNIT = 100
 
 private const val DAY_MS = 24 * 60 * 60 * 1000L
 
@@ -18,8 +20,12 @@ fun portfolioSeries(provider: PriceProvider, config: GameConfig, trades: List<Tr
     val days = collectDays(startDate, now, ordered, barsBySymbol)
     val points = buildPoints(days, ordered, barsBySymbol, config.startingCashCents)
     val last = points.lastOrNull()
-    val ret = if (last == null || config.startingCashCents <= 0) 0.0
-    else ((last.totalCents - config.startingCashCents).toDouble() / config.startingCashCents) * 100
+    val ret =
+        if (last == null || config.startingCashCents <= 0) {
+            0.0
+        } else {
+            ((last.totalCents - config.startingCashCents).toDouble() / config.startingCashCents) * 100
+        }
     return PortfolioSeries(
         startingCashCents = config.startingCashCents,
         startDate = days.firstOrNull() ?: startDate,
@@ -111,7 +117,7 @@ private fun positionValue(
     }
     barIndex[symbol] = i
     val close = lastClose[symbol] ?: return null
-    return Math.round(q * close * 100)
+    return Math.round(q * close * CENTS_PER_UNIT)
 }
 
 private fun dayOf(ms: Long): Long = (ms / DAY_MS) * DAY_MS

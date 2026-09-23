@@ -1,7 +1,7 @@
-import type {AuthSession, Software} from '../types'
-import {loginLemmy} from './lemmy'
-import type {LoginResult} from './lemmy'
-import {loginPiefed} from './piefed'
+import type { AuthSession, Software } from '../types';
+import { loginLemmy } from './lemmy';
+import type { LoginResult } from './lemmy';
+import { loginPiefed } from './piefed';
 
 /**
  * Logs into the current instance's software and returns a session to persist.
@@ -17,6 +17,6 @@ export async function login(
     const result: LoginResult =
         software === 'piefed'
             ? await loginPiefed(instance, usernameOrEmail, password)
-            : await loginLemmy(instance, usernameOrEmail, password, totpToken)
-    return {jwt: result.jwt, username: result.username}
+            : await loginLemmy(instance, usernameOrEmail, password, totpToken);
+    return { jwt: result.jwt, username: result.username };
 }

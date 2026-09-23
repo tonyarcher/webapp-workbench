@@ -1,4 +1,4 @@
-import type {CalEvent, SyncProgress, WriteResult} from './types';
+import type { CalEvent, SyncProgress, WriteResult } from './types';
 
 export async function collectEvents(
     loaders: Array<() => Promise<CalEvent[]>>,
@@ -7,12 +7,12 @@ export async function collectEvents(
     const all: CalEvent[] = [];
     const total = loaders.length;
     for (let i = 0; i < loaders.length; i++) {
-        onProgress?.({phase: 'fetch', done: i, total, label: `source ${i + 1}`});
+        onProgress?.({ phase: 'fetch', done: i, total, label: `source ${i + 1}` });
         const loader = loaders[i];
         if (!loader) continue;
         all.push(...(await loader()));
     }
-    onProgress?.({phase: 'fetch', done: total, total});
+    onProgress?.({ phase: 'fetch', done: total, total });
     return all;
 }
 
@@ -20,7 +20,7 @@ async function handleWrite(
     event: CalEvent,
     known: ReadonlySet<string>,
     writeOne: (event: CalEvent) => Promise<WriteResult>,
-    state: {succeeded: number; failed: number; newUids: string[]},
+    state: { succeeded: number; failed: number; newUids: string[] },
 ): Promise<void> {
     if (known.has(event.uid)) {
         state.succeeded++;
@@ -37,7 +37,7 @@ async function handleWrite(
 function emitProgress(
     event: CalEvent,
     total: number,
-    state: {succeeded: number; failed: number},
+    state: { succeeded: number; failed: number },
     onProgress?: (progress: SyncProgress) => void,
 ): void {
     onProgress?.({
@@ -59,14 +59,14 @@ export async function writeEvents({
     writtenUids?: ReadonlySet<string>;
     writeOne: (event: CalEvent) => Promise<WriteResult>;
     onProgress?: (progress: SyncProgress) => void;
-}): Promise<{done: number; failed: number; newUids: string[]}> {
+}): Promise<{ done: number; failed: number; newUids: string[] }> {
     const known = writtenUids ?? new Set<string>();
-    const state = {succeeded: 0, failed: 0, newUids: [] as string[]};
+    const state = { succeeded: 0, failed: 0, newUids: [] as string[] };
     const total = events.length;
     for (const event of events) {
         if (!event) continue;
         await handleWrite(event, known, writeOne, state);
         emitProgress(event, total, state, onProgress);
     }
-    return {done: state.succeeded, failed: state.failed, newUids: state.newUids};
+    return { done: state.succeeded, failed: state.failed, newUids: state.newUids };
 }

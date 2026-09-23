@@ -1,9 +1,12 @@
 package fitnessapi.domain
 
+/** Fewer than three points cannot form a bucket, so LTTB has nothing to thin. */
+private const val MIN_LTTB_POINTS = 3
+
 data class Point(val t: Long, val v: Double)
 
 fun downsampleLttb(points: List<Point>, limit: Int): List<Point> {
-    if (limit < 3 || points.size <= limit) return points.toList()
+    if (limit < MIN_LTTB_POINTS || points.size <= limit) return points.toList()
     val first = points.firstOrNull() ?: return emptyList()
     val last = points.last()
     val sampled = mutableListOf(first)
@@ -47,12 +50,7 @@ private fun average(points: List<Point>): Pair<Double, Double> {
     return (t / points.size) to (v / points.size)
 }
 
-private fun pickLargest(
-    pointA: Point,
-    range: List<Point>,
-    avg: Pair<Double, Double>,
-    rangeStart: Int,
-): Int {
+private fun pickLargest(pointA: Point, range: List<Point>, avg: Pair<Double, Double>, rangeStart: Int): Int {
     var maxArea = -1.0
     var nextA = rangeStart
     for (j in range.indices) {

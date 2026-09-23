@@ -1,21 +1,21 @@
 package rssapi.poller
 
-import java.time.Duration
-import java.time.Instant
-import java.util.UUID
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.mockito.Mockito.mock
 import org.springframework.data.domain.Pageable
 import rssapi.ingest.IngestService
 import rssapi.ingest.IngestSync
 import rssapi.persist.FeedSyncEntity
 import rssapi.persist.FeedSyncRepo
 import rssapi.persist.SubscriptionRepo
+import java.time.Duration
+import java.time.Instant
+import java.util.UUID
 import kotlin.test.assertEquals
 
 class FeedPollerTest {

@@ -1,8 +1,6 @@
 package userapi.web
 
 import jakarta.servlet.http.HttpServletRequest
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -14,21 +12,20 @@ import userapi.Settings
 import userapi.accounts.AccountServices
 import userapi.accounts.OAuthService
 import userapi.accounts.TokenPair
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+
+/** RFC 7636: a PKCE S256 challenge is a base64url SHA-256 digest (43 chars min). */
+private const val MIN_CODE_CHALLENGE_CHARS = 43
 
 @RestController
-class OAuthController(
-    private val accounts: AccountServices,
-    private val settings: Settings,
-) {
+class OAuthController(private val accounts: AccountServices, private val settings: Settings) {
     @GetMapping("/oauth/authorize")
-    fun authorize(
-        @RequestParam params: Map<String, String>,
-        request: HttpServletRequest,
-    ): ResponseEntity<Void> {
+    fun authorize(@RequestParam params: Map<String, String>, request: HttpServletRequest): ResponseEntity<Void> {
         val oauth = requireOauth()
         val store = requireStore(accounts)
         if (!authorizeParamsOk(oauth, params)) {
-            throw ApiException(400, "oauth", "invalid authorize request")
+            throw ApiException(HttpStatus.BAD_REQUEST, "oauth", "invalid authorize request")
         }
         val session = peekSession(request)
         if (session == null) {
@@ -44,10 +41,7 @@ class OAuthController(
     }
 
     @PostMapping("/oauth/token")
-    fun token(
-        @RequestParam form: Map<String, String>,
-        request: HttpServletRequest,
-    ): TokenResponseBody {
+    fun token(@RequestParam form: Map<String, String>, request: HttpServletRequest): TokenResponseBody {
         val oauth = requireOauth()
         checkRate(accounts, "oauth", request)
         val pair = when (form["grant_type"]) {
@@ -66,7 +60,7 @@ class OAuthController(
     fun jwks(): String = requireOauth().signer.jwksJson()
 
     private fun requireOauth(): OAuthService =
-        accounts.oauth ?: throw ApiException(503, "unavailable", "oauth offline")
+        accounts.oauth ?: throw ApiException(HttpStatus.SERVICE_UNAVAILABLE, "unavailable", "oauth offline")
 
     private fun tokenFromCode(oauth: OAuthService, form: Map<String, String>): TokenPair {
         val store = requireStore(accounts)
@@ -96,7 +90,7 @@ internal fun authorizeParamsOk(oauth: OAuthService, params: Map<String, String>)
     if (!oauth.allowedRedirect(clientId, redirect)) return false
     if (params["response_type"] != "code") return false
     if (params["code_challenge_method"] != "S256") return false
-    return params["code_challenge"].orEmpty().length >= 43
+    return params["code_challenge"].orEmpty().length >= MIN_CODE_CHALLENGE_CHARS
 }
 
 internal fun loginRedirect(settings: Settings, query: String?): String {

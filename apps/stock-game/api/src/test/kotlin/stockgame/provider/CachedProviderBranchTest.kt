@@ -1,8 +1,5 @@
 package stockgame.provider
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -11,10 +8,12 @@ import stockgame.domain.Bar
 import stockgame.domain.Quote
 import stockgame.store.BarCache
 import stockgame.trading.FakeProvider
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CachedProviderBranchTest {
-    private fun quote(symbol: String, price: Double): Quote =
-        Quote(symbol, symbol, price, "USD", "T", 0, 0)
+    private fun quote(symbol: String, price: Double): Quote = Quote(symbol, symbol, price, "USD", "T", 0, 0)
 
     @Test
     fun quoteCachesWithinTtl() {
@@ -24,7 +23,9 @@ class CachedProviderBranchTest {
         val cached = CachedProvider(inner, cache, 60_000L)
         assertEquals(10.0, cached.getQuote("AAPL").price)
         assertEquals(10.0, cached.getQuote("AAPL").price)
-        org.mockito.kotlin.verify(inner, org.mockito.kotlin.times(1)).getQuote("AAPL")
+        org.mockito.kotlin
+            .verify(inner, org.mockito.kotlin.times(1))
+            .getQuote("AAPL")
     }
 
     @Test
@@ -35,7 +36,9 @@ class CachedProviderBranchTest {
         val cached = CachedProvider(inner, cache, 0L)
         assertEquals(10.0, cached.getQuote("AAPL").price)
         assertEquals(10.0, cached.getQuote("AAPL").price)
-        org.mockito.kotlin.verify(inner, org.mockito.kotlin.times(2)).getQuote("AAPL")
+        org.mockito.kotlin
+            .verify(inner, org.mockito.kotlin.times(2))
+            .getQuote("AAPL")
     }
 
     @Test

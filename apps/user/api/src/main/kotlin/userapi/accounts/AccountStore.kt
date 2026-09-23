@@ -1,8 +1,8 @@
 package userapi.accounts
 
+import userapi.domain.LockoutState
 import java.time.Instant
 import java.util.UUID
-import userapi.domain.LockoutState
 
 data class StoredUser(
     val id: UUID,

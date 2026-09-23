@@ -1,14 +1,12 @@
 package rssapi.web
 
-import java.util.Optional
-import java.util.UUID
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
@@ -23,6 +21,9 @@ import rssapi.persist.ArticleRepo
 import rssapi.persist.SubscriptionRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import java.util.Optional
+import java.util.UUID
+import kotlin.test.assertEquals
 
 private fun affinityJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")
@@ -66,7 +67,7 @@ class AffinityControllerTest {
             contentType = MediaType.APPLICATION_JSON
             content = """{"articleId":null,"amount":null}"""
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test
@@ -79,7 +80,7 @@ class AffinityControllerTest {
             contentType = MediaType.APPLICATION_JSON
             content = """{"articleId":"nope","amount":1.0}"""
         }.andReturn()
-        assertEquals(404, res.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), res.response.status)
     }
 
     @Test
@@ -115,6 +116,6 @@ class AffinityControllerTest {
             contentType = MediaType.APPLICATION_JSON
             content = """{"articleId":"a1","amount":1.0}"""
         }.andReturn()
-        assertEquals(404, res.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), res.response.status)
     }
 }

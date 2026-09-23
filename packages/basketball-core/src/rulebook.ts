@@ -1,4 +1,4 @@
-import type {BonusRule, CourtSpec, Rulebook, RulebookId, TeamId} from './types';
+import type { BonusRule, CourtSpec, Rulebook, RulebookId, TeamId } from './types';
 
 const HOOP_FROM_BASELINE = 5.25;
 const COURT_WIDTH = 50;
@@ -10,7 +10,13 @@ const NBA_ARC = 23 + 9 / 12;
 const NCAA_CORNER = 21 + 8 / 12;
 const HS_ARC = 19 + 9 / 12;
 
-function court(overrides: Partial<CourtSpec> & Pick<CourtSpec, 'length' | 'threeArcRadius' | 'threeCornerDistance' | 'threeCornerSidelineOffset' | 'laneWidth'>): CourtSpec {
+function court(
+    overrides: Partial<CourtSpec> &
+        Pick<
+            CourtSpec,
+            'length' | 'threeArcRadius' | 'threeCornerDistance' | 'threeCornerSidelineOffset' | 'laneWidth'
+        >,
+): CourtSpec {
     return {
         width: COURT_WIDTH,
         hoopFromBaseline: HOOP_FROM_BASELINE,
@@ -21,8 +27,8 @@ function court(overrides: Partial<CourtSpec> & Pick<CourtSpec, 'length' | 'three
     };
 }
 
-const PERIOD_BONUS: BonusRule = {kind: 'period', doubleAt: 5};
-const HALF_BONUS: BonusRule = {kind: 'half', oneAndOneAt: 7, doubleAt: 10};
+const PERIOD_BONUS: BonusRule = { kind: 'period', doubleAt: 5 };
+const HALF_BONUS: BonusRule = { kind: 'half', oneAndOneAt: 7, doubleAt: 10 };
 
 export const NFHS: Rulebook = {
     id: 'nfhs',

@@ -1,7 +1,7 @@
-import {QueryClient, QueryObserver, type QueryObserverResult} from '@tanstack/query-core';
-import type {ReactiveController, ReactiveControllerHost} from 'lit';
-import {getLibraryCounts, getLibraryFeeds, getLibraryFolders} from './services/api';
-import type {Article, Feed, Folder} from './types';
+import { QueryClient, QueryObserver, type QueryObserverResult } from '@tanstack/query-core';
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import { getLibraryCounts, getLibraryFeeds, getLibraryFolders } from './services/api';
+import type { Article, Feed, Folder } from './types';
 
 export const queryClient = new QueryClient({
     defaultOptions: {
@@ -55,10 +55,10 @@ export async function fetchLibrary(): Promise<LibraryData> {
     // this one, so a late response can neither overwrite fresher badges nor
     // re-arm the counts throttle.
     const mySeq = ++fetchSeq;
-    const ctx: FetchCtx = {prev, prevUnread, superseded: () => mySeq !== fetchSeq};
+    const ctx: FetchCtx = { prev, prevUnread, superseded: () => mySeq !== fetchSeq };
     const first = await fetchFoldersStage(ctx);
     if ('reuse' in first) return first.reuse;
-    const paintedFolders: LibraryData = {folders: first.folders, feeds: prev?.feeds ?? []};
+    const paintedFolders: LibraryData = { folders: first.folders, feeds: prev?.feeds ?? [] };
     if (ctx.superseded()) return cachedLibrary() ?? paintedFolders;
     queryClient.setQueryData(libraryKey, paintedFolders);
     return fetchFeedsStage(ctx, first.folders, paintedFolders);
@@ -72,21 +72,21 @@ interface FetchCtx {
 
 async function fetchFoldersStage(ctx: FetchCtx): Promise<{ folders: Folder[] } | { reuse: LibraryData }> {
     try {
-        return {folders: (await getLibraryFolders()).folders};
+        return { folders: (await getLibraryFolders()).folders };
     } catch (err) {
         if (!ctx.prev) throw err;
-        return {reuse: ctx.prev};
+        return { reuse: ctx.prev };
     }
 }
 
 async function fetchFeedsStage(ctx: FetchCtx, folders: Folder[], paintedFolders: LibraryData): Promise<LibraryData> {
     const hadFeeds = (ctx.prev?.feeds.length ?? 0) > 0;
     try {
-        const {feeds} = await getLibraryFeeds();
+        const { feeds } = await getLibraryFeeds();
         if (ctx.superseded()) return cachedLibrary() ?? paintedFolders;
         const paintedFeeds: LibraryData = {
             folders,
-            feeds: feeds.map((f) => ({...f, unread: ctx.prevUnread.get(f.id) ?? 0})),
+            feeds: feeds.map((f) => ({ ...f, unread: ctx.prevUnread.get(f.id) ?? 0 })),
         };
         queryClient.setQueryData(libraryKey, paintedFeeds);
         if (Date.now() - lastCountsAt < COUNTS_STALE_MS) return paintedFeeds;
@@ -99,12 +99,12 @@ async function fetchFeedsStage(ctx: FetchCtx, folders: Folder[], paintedFolders:
 
 async function fetchCountsStage(ctx: FetchCtx, folders: Folder[], paintedFeeds: LibraryData): Promise<LibraryData> {
     try {
-        const {counts} = await getLibraryCounts();
+        const { counts } = await getLibraryCounts();
         if (ctx.superseded()) return cachedLibrary() ?? paintedFeeds;
         lastCountsAt = Date.now();
         const merged: LibraryData = {
             folders,
-            feeds: paintedFeeds.feeds.map((f) => ({...f, unread: counts[f.id] ?? 0})),
+            feeds: paintedFeeds.feeds.map((f) => ({ ...f, unread: counts[f.id] ?? 0 })),
         };
         queryClient.setQueryData(libraryKey, merged);
         return merged;
@@ -122,12 +122,7 @@ export function articlesKey(params: {
     return ['articles', params] as const;
 }
 
-export function frontPageKey(params: {
-    since?: number;
-    unreadOnly?: boolean;
-    limit?: number;
-    edition?: string;
-}) {
+export function frontPageKey(params: { since?: number; unreadOnly?: boolean; limit?: number; edition?: string }) {
     return ['front-page', params] as const;
 }
 
@@ -189,12 +184,12 @@ export class QueryController<T = unknown> implements ReactiveController {
 }
 
 export function updateArticlesInCache(articleId: string, patch: Partial<Article>) {
-    for (const query of queryClient.getQueryCache().findAll({queryKey: ['articles']})) {
+    for (const query of queryClient.getQueryCache().findAll({ queryKey: ['articles'] })) {
         const data = query.state.data as { items: Article[] } | undefined;
         if (!data?.items) continue;
-        const next = data.items.map((a) => (a.id === articleId ? {...a, ...patch} : a));
+        const next = data.items.map((a) => (a.id === articleId ? { ...a, ...patch } : a));
         if (next !== data.items) {
-            queryClient.setQueryData(query.queryKey, {...data, items: next});
+            queryClient.setQueryData(query.queryKey, { ...data, items: next });
         }
     }
 }
@@ -205,17 +200,17 @@ export function invalidateLibrary() {
     // replacement. Canceled fetches fail their generation checks and paint
     // nothing; the invalidate below always starts a fresh one.
     return (async () => {
-        await queryClient.cancelQueries({queryKey: libraryKey});
-        return queryClient.invalidateQueries({queryKey: libraryKey});
+        await queryClient.cancelQueries({ queryKey: libraryKey });
+        return queryClient.invalidateQueries({ queryKey: libraryKey });
     })();
 }
 
 export function invalidateArticles() {
-    return queryClient.invalidateQueries({queryKey: ['articles']});
+    return queryClient.invalidateQueries({ queryKey: ['articles'] });
 }
 
 export function invalidateFrontPage() {
-    return queryClient.invalidateQueries({queryKey: ['front-page']});
+    return queryClient.invalidateQueries({ queryKey: ['front-page'] });
 }
 
 export function editionKey(params: { id?: string } = {}) {
@@ -228,7 +223,7 @@ export function editionsKey(params: { limit?: number } = {}) {
 
 export function invalidateEdition() {
     return Promise.all([
-        queryClient.invalidateQueries({queryKey: ['edition']}),
-        queryClient.invalidateQueries({queryKey: ['editions']}),
+        queryClient.invalidateQueries({ queryKey: ['edition'] }),
+        queryClient.invalidateQueries({ queryKey: ['editions'] }),
     ]);
 }

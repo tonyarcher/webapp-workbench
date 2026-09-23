@@ -1,5 +1,5 @@
-import type {CalEvent, FetchLike, WriteResult} from './types';
-import {asArray, asString, isRecord, joinUrl, utcYmd} from './util';
+import type { CalEvent, FetchLike, WriteResult } from './types';
+import { asArray, asString, isRecord, joinUrl, utcYmd } from './util';
 
 export const GOOGLE_CALENDAR_NAME = 'Calendar Sync';
 export const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
@@ -18,7 +18,7 @@ export interface GoogleCalendarEvent {
     summary: string;
     description?: string;
     location?: string;
-    source?: {url: string; title: string};
+    source?: { url: string; title: string };
     start: GoogleDateTime | GoogleDate;
     end: GoogleDateTime | GoogleDate;
 }
@@ -34,16 +34,14 @@ export function eventToGoogleBody(event: CalEvent): GoogleCalendarEvent {
     const body: GoogleCalendarEvent = {
         iCalUID: event.uid,
         summary: event.title,
-        start: event.allDay
-            ? {date: utcYmd(event.start)}
-            : {dateTime: new Date(event.start).toISOString()},
+        start: event.allDay ? { date: utcYmd(event.start) } : { dateTime: new Date(event.start).toISOString() },
         end: event.allDay
-            ? {date: utcYmd(event.end > event.start ? event.end : event.start + DAY_MS)}
-            : {dateTime: new Date(event.end).toISOString()},
+            ? { date: utcYmd(event.end > event.start ? event.end : event.start + DAY_MS) }
+            : { dateTime: new Date(event.end).toISOString() },
     };
     if (event.description) body.description = event.description;
     if (event.location) body.location = event.location;
-    if (event.url) body.source = {url: event.url, title: event.title};
+    if (event.url) body.source = { url: event.url, title: event.title };
     return body;
 }
 
@@ -76,7 +74,7 @@ export async function googleInsertEvent(
     return 'fail';
 }
 
-async function safeJson(res: {json(): Promise<unknown>}): Promise<unknown> {
+async function safeJson(res: { json(): Promise<unknown> }): Promise<unknown> {
     try {
         return await res.json();
     } catch {
@@ -94,22 +92,32 @@ function findCalendarId(items: unknown[], summary: string): string | undefined {
     return undefined;
 }
 
-async function searchExistingCalendar(fetchImpl: FetchLike, accessToken: string, summary: string, apiBase: string): Promise<string | undefined> {
+async function searchExistingCalendar(
+    fetchImpl: FetchLike,
+    accessToken: string,
+    summary: string,
+    apiBase: string,
+): Promise<string | undefined> {
     const list = await fetchImpl(joinUrl(apiBase, calendarListPath()), {
         method: 'GET',
         headers: googleHeaders(accessToken),
     });
     if (!list.ok) return undefined;
     const json = await safeJson(list);
-    const items = isRecord(json) ? asArray(json['items']) ?? [] : [];
+    const items = isRecord(json) ? (asArray(json['items']) ?? []) : [];
     return findCalendarId(items, summary);
 }
 
-async function createCalendar(fetchImpl: FetchLike, accessToken: string, summary: string, apiBase: string): Promise<string> {
+async function createCalendar(
+    fetchImpl: FetchLike,
+    accessToken: string,
+    summary: string,
+    apiBase: string,
+): Promise<string> {
     const created = await fetchImpl(joinUrl(apiBase, calendarsInsertPath()), {
         method: 'POST',
         headers: googleHeaders(accessToken),
-        body: JSON.stringify({summary}),
+        body: JSON.stringify({ summary }),
     });
     const createdJson = await safeJson(created);
     const id = isRecord(createdJson) ? asString(createdJson['id']) : undefined;

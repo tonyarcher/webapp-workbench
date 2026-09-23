@@ -1,6 +1,6 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
 import {
     API_VERSION_HEADERS,
     csrfUrl,
@@ -25,8 +25,8 @@ import {
     totpConfirmUrl,
     totpRequired,
 } from '../../services/api';
-import {returnPathFromSearch} from '../../services/return-path';
-import {credentialToJson, decodeCreateOptions, decodeRequestOptions} from '../../services/webauthn';
+import { returnPathFromSearch } from '../../services/return-path';
+import { credentialToJson, decodeCreateOptions, decodeRequestOptions } from '../../services/webauthn';
 import '../login-form/login-form';
 import '../totp-form/totp-form';
 import styles from './app-shell.css?inline';
@@ -94,7 +94,7 @@ export class AppShell extends LitElement {
 
     private async ping(signal: AbortSignal): Promise<void> {
         try {
-            const response = await fetch(healthzUrl(), {signal, headers: {...API_VERSION_HEADERS}});
+            const response = await fetch(healthzUrl(), { signal, headers: { ...API_VERSION_HEADERS } });
             const body: unknown = await response.json();
             if (!this.isConnected) return;
             this.apiStatus = response.ok && isHealthOk(body) ? 'ok' : 'down';
@@ -105,24 +105,32 @@ export class AppShell extends LitElement {
     }
 
     private async loadCsrf(signal: AbortSignal): Promise<string | null> {
-        const response = await fetch(csrfUrl(), {signal, credentials: 'include', headers: {...API_VERSION_HEADERS}});
+        const response = await fetch(csrfUrl(), {
+            signal,
+            credentials: 'include',
+            headers: { ...API_VERSION_HEADERS },
+        });
         const body: unknown = await response.json();
         return readCsrf(body);
     }
 
-    private async loadMe(signal: AbortSignal): Promise<{id: string; username: string; totpEnabled: boolean; passkeyCount: number} | null> {
-        const response = await fetch(meUrl(), {signal, credentials: 'include', headers: {...API_VERSION_HEADERS}});
+    private async loadMe(
+        signal: AbortSignal,
+    ): Promise<{ id: string; username: string; totpEnabled: boolean; passkeyCount: number } | null> {
+        const response = await fetch(meUrl(), { signal, credentials: 'include', headers: { ...API_VERSION_HEADERS } });
         if (response.status === 401) return null;
         const body: unknown = await response.json();
         return readMe(body);
     }
 
-    private onMode = (event: CustomEvent<{mode: 'login' | 'register'}>): void => {
+    private onMode = (event: CustomEvent<{ mode: 'login' | 'register' }>): void => {
         this.mode = event.detail.mode;
         this.error = '';
     };
 
-    private onSubmit = (event: CustomEvent<{mode: 'login' | 'register'; username: string; password: string}>): void => {
+    private onSubmit = (
+        event: CustomEvent<{ mode: 'login' | 'register'; username: string; password: string }>,
+    ): void => {
         const signal = this.abort?.signal;
         if (!signal) return;
         void this.submitPassword(event.detail, signal).catch(() => {});
@@ -135,14 +143,14 @@ export class AppShell extends LitElement {
     }
 
     private async submitPassword(
-        detail: {mode: 'login' | 'register'; username: string; password: string},
+        detail: { mode: 'login' | 'register'; username: string; password: string },
         signal: AbortSignal,
     ): Promise<void> {
         this.busy = true;
         this.error = '';
         try {
             const url = detail.mode === 'register' ? registerUrl() : loginUrl();
-            const result = await this.postJson(url, {username: detail.username, password: detail.password}, signal);
+            const result = await this.postJson(url, { username: detail.username, password: detail.password }, signal);
             if (!this.isConnected) return;
             this.busy = false;
             this.applyAuthResult(detail.username, result);
@@ -151,7 +159,7 @@ export class AppShell extends LitElement {
         }
     }
 
-    private applyAuthResult(username: string, result: {ok: boolean; body: unknown}): void {
+    private applyAuthResult(username: string, result: { ok: boolean; body: unknown }): void {
         if (!result.ok) {
             this.error = readErr(result.body);
             return;
@@ -169,7 +177,7 @@ export class AppShell extends LitElement {
         this.signedIn(me?.username ?? username, me?.totpEnabled ?? false, me?.passkeyCount ?? 0);
     }
 
-    private onTotpLogin = (event: CustomEvent<{code: string}>): void => {
+    private onTotpLogin = (event: CustomEvent<{ code: string }>): void => {
         const signal = this.abort?.signal;
         if (!signal) return;
         void this.submitTotpLogin(event.detail.code, signal).catch(() => {});
@@ -179,7 +187,7 @@ export class AppShell extends LitElement {
         this.busy = true;
         this.error = '';
         try {
-            const result = await this.postJson(loginTotpUrl(), {code}, signal);
+            const result = await this.postJson(loginTotpUrl(), { code }, signal);
             if (!this.isConnected) return;
             this.busy = false;
             this.applyAuthResult(this.username, result);
@@ -216,7 +224,7 @@ export class AppShell extends LitElement {
         }
     }
 
-    private onTotpConfirm = (event: CustomEvent<{code: string}>): void => {
+    private onTotpConfirm = (event: CustomEvent<{ code: string }>): void => {
         const signal = this.abort?.signal;
         if (!signal) return;
         void this.confirmEnroll(event.detail.code, signal).catch(() => {});
@@ -226,7 +234,7 @@ export class AppShell extends LitElement {
         this.busy = true;
         this.error = '';
         try {
-            const result = await this.postJson(totpConfirmUrl(), {code}, signal);
+            const result = await this.postJson(totpConfirmUrl(), { code }, signal);
             if (!this.isConnected) return;
             this.busy = false;
             if (!result.ok) {
@@ -252,7 +260,7 @@ export class AppShell extends LitElement {
             method: 'POST',
             signal,
             credentials: 'include',
-            headers: {...API_VERSION_HEADERS, 'X-CSRF-Token': this.csrf},
+            headers: { ...API_VERSION_HEADERS, 'X-CSRF-Token': this.csrf },
         });
         if (!this.isConnected) return;
         if (!result.ok) {
@@ -303,7 +311,7 @@ export class AppShell extends LitElement {
     }
 
     private async createPasskey(
-        parsed: {options: unknown; requestId: string} | null,
+        parsed: { options: unknown; requestId: string } | null,
     ): Promise<PublicKeyCredential | null> {
         if (!parsed || !navigator.credentials) {
             this.busy = false;
@@ -320,7 +328,7 @@ export class AppShell extends LitElement {
     private async sendPasskeyCreate(requestId: string, cred: PublicKeyCredential, signal: AbortSignal): Promise<void> {
         const finish = await this.postJson(
             passkeyRegisterFinishUrl(),
-            {requestId, credential: credentialToJson(cred)},
+            { requestId, credential: credentialToJson(cred) },
             signal,
         );
         if (!this.isConnected) return;
@@ -364,7 +372,7 @@ export class AppShell extends LitElement {
         }
         const finish = await this.postJson(
             passkeyLoginFinishUrl(),
-            {requestId: parsed.requestId, credential: credentialToJson(cred)},
+            { requestId: parsed.requestId, credential: credentialToJson(cred) },
             signal,
         );
         if (!this.isConnected) return;
@@ -372,7 +380,11 @@ export class AppShell extends LitElement {
         this.applyAuthResult(this.username, finish);
     }
 
-    private async postJson(url: string, payload: unknown, signal: AbortSignal): Promise<{ok: boolean; body: unknown}> {
+    private async postJson(
+        url: string,
+        payload: unknown,
+        signal: AbortSignal,
+    ): Promise<{ ok: boolean; body: unknown }> {
         const response = await fetch(url, {
             method: 'POST',
             signal,
@@ -384,7 +396,7 @@ export class AppShell extends LitElement {
             },
             body: JSON.stringify(payload),
         });
-        return {ok: response.ok, body: await response.json()};
+        return { ok: response.ok, body: await response.json() };
     }
 
     override render(): TemplateResult {
@@ -459,7 +471,9 @@ export class AppShell extends LitElement {
         return html`
             <p class="lead">Save these backup codes. They will not be shown again.</p>
             <ul class="codes">${this.backupCodes.map((c) => html`<li>${c}</li>`)}</ul>
-            <button class="logout" type="button" @click=${() => { this.view = 'home'; }}>Done</button>
+            <button class="logout" type="button" @click=${() => {
+                this.view = 'home';
+            }}>Done</button>
         `;
     }
 

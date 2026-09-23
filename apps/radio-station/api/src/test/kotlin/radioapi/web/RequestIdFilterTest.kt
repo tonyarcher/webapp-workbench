@@ -2,10 +2,10 @@ package radioapi.web
 
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletResponse
-import kotlin.test.Test
-import kotlin.test.assertEquals
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class RequestIdFilterTest {
     @Test

@@ -1,8 +1,5 @@
 package fitnessapi.http
 
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.MvcResult
@@ -10,6 +7,9 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.patch
 import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.put
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 internal val TEST_CLOCK: Clock = Clock.fixed(Instant.parse("2026-09-11T17:00:00Z"), ZoneOffset.UTC)
 

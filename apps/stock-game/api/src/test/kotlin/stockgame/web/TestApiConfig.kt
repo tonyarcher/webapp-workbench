@@ -1,7 +1,5 @@
 package stockgame.web
 
-import java.time.Clock
-import java.util.UUID
 import org.mockito.kotlin.whenever
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
@@ -14,6 +12,8 @@ import stockgame.trading.AccountService
 import stockgame.trading.FakeGameStore
 import stockgame.trading.FakeProvider
 import stockgame.trading.TradingService
+import java.time.Clock
+import java.util.UUID
 
 @TestConfiguration
 class TestApiConfig {

@@ -1,12 +1,12 @@
 package fitnessapi.config
 
-import kotlin.test.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment
+import kotlin.test.Test
 
 private typealias ReadyMocks = Triple<ApplicationReadyEvent, ConfigurableApplicationContext, ConfigurableEnvironment>
 

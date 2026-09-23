@@ -11,67 +11,67 @@ const assetBase = scopeRoot;
 // worker works both at the app root (dev/tests) and under a subpath like
 // `/baseball/` in production.
 const ASSETS_TO_CACHE = [
-  scopeRoot,
-  `${assetBase}index.html`,
-  `${assetBase}manifest.json`,
-  `${assetBase}icons.svg`,
-  `${assetBase}favicon.svg`,
+    scopeRoot,
+    `${assetBase}index.html`,
+    `${assetBase}manifest.json`,
+    `${assetBase}icons.svg`,
+    `${assetBase}favicon.svg`,
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
-  self.skipWaiting();
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(ASSETS_TO_CACHE);
+        }),
+    );
+    self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.filter((cacheName) => cacheName !== CACHE_NAME).map((cacheName) => caches.delete(cacheName)),
-      );
-    })
-  );
-  self.clients.claim();
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.filter((cacheName) => cacheName !== CACHE_NAME).map((cacheName) => caches.delete(cacheName)),
+            );
+        }),
+    );
+    self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  if (request.method !== 'GET') return;
+    const { request } = event;
+    if (request.method !== 'GET') return;
 
-  if (request.mode === 'navigate') {
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            fetch(request)
+                .then(async (response) => {
+                    if (response.ok && response.type === 'basic') {
+                        const copy = response.clone();
+                        const cache = await caches.open(CACHE_NAME);
+                        await cache.put(request, copy);
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    return caches.match(request).then((cached) => cached || caches.match(`${assetBase}index.html`));
+                }),
+        );
+        return;
+    }
+
     event.respondWith(
-      fetch(request)
-        .then(async (response) => {
-          if (response.ok && response.type === 'basic') {
-            const copy = response.clone();
-            const cache = await caches.open(CACHE_NAME);
-            await cache.put(request, copy);
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(request).then((cached) => cached || caches.match(`${assetBase}index.html`));
-        })
+        fetch(request)
+            .then(async (response) => {
+                if (response.ok && response.type === 'basic') {
+                    const copy = response.clone();
+                    const cache = await caches.open(CACHE_NAME);
+                    await cache.put(request, copy);
+                }
+                return response;
+            })
+            .catch(() => {
+                return caches.match(request).then((cached) => cached);
+            }),
     );
-    return;
-  }
-
-  event.respondWith(
-    fetch(request)
-      .then(async (response) => {
-        if (response.ok && response.type === 'basic') {
-          const copy = response.clone();
-          const cache = await caches.open(CACHE_NAME);
-          await cache.put(request, copy);
-        }
-        return response;
-      })
-      .catch(() => {
-        return caches.match(request).then((cached) => cached);
-      })
-  );
 });

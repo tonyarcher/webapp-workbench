@@ -1,6 +1,6 @@
-import type {ScrollItem} from 'vertical-scroll-core'
-import type {LemmyPost} from '../types'
-import {timeAgo} from './format'
+import type { ScrollItem } from 'vertical-scroll-core';
+import type { LemmyPost } from '../types';
+import { timeAgo } from './format';
 
 export function toScrollItem(post: LemmyPost): ScrollItem {
     return {
@@ -16,6 +16,6 @@ export function toScrollItem(post: LemmyPost): ScrollItem {
         nsfw: post.nsfw,
         originalUrl: post.postUrl,
         metaLine: `${post.communityTitle} • ${post.creatorDisplayName ?? post.creatorName} • ${timeAgo(post.published)}`,
-        stats: {up: post.upvotes, down: post.downvotes, comments: post.comments},
-    }
+        stats: { up: post.upvotes, down: post.downvotes, comments: post.comments },
+    };
 }

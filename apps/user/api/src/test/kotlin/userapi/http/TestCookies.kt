@@ -20,8 +20,11 @@ class TestCookies {
 
     fun capture(result: MvcResult) {
         for (cookie in result.response.cookies) {
-            if (cookie.maxAge == 0) jar.remove(cookie.name)
-            else jar[cookie.name] = cookie.value
+            if (cookie.maxAge == 0) {
+                jar.remove(cookie.name)
+            } else {
+                jar[cookie.name] = cookie.value
+            }
         }
     }
 
@@ -60,12 +63,7 @@ fun MockMvc.postJson(
     return perform(builder).andReturn().also { cookies.capture(it) }
 }
 
-fun MockMvc.postForm(
-    cookies: TestCookies,
-    path: String,
-    csrf: Boolean,
-    params: Map<String, String>,
-): MvcResult {
+fun MockMvc.postForm(cookies: TestCookies, path: String, csrf: Boolean, params: Map<String, String>): MvcResult {
     val builder = cookies.apply(post(path))
     builder.header(API_VERSION_HEADER, API_VERSION)
     if (csrf) builder.header(CSRF_HEADER, cookies.csrf())
@@ -85,7 +83,6 @@ fun MvcResult.statusIs(value: Int): Boolean = response.status == value
 
 fun MvcResult.bodyText(): String = response.contentAsString
 
-fun MvcResult.csrfToken(mapper: ObjectMapper): String =
-    mapper.readTree(bodyText())["csrf"].asText()
+fun MvcResult.csrfToken(mapper: ObjectMapper): String = mapper.readTree(bodyText())["csrf"].asText()
 
 fun MvcResult.location(): String = response.getHeader(HttpHeaders.LOCATION).orEmpty()

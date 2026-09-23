@@ -25,16 +25,13 @@ fun parseDatabaseUrl(raw: String): JdbcTarget {
     return JdbcTarget("jdbc:postgresql://$host:$port/$database", user, password, database, host, port)
 }
 
-fun adminJdbcUrl(target: JdbcTarget): String =
-    "jdbc:postgresql://${target.host}:${target.port}/postgres"
+fun adminJdbcUrl(target: JdbcTarget): String = "jdbc:postgresql://${target.host}:${target.port}/postgres"
 
-private fun normalizeScheme(raw: String): String {
-    return when {
-        raw.startsWith("jdbc:postgresql://") -> raw.removePrefix("jdbc:")
-        raw.startsWith("postgresql://") -> raw
-        raw.startsWith("postgres://") -> "postgresql://" + raw.removePrefix("postgres://")
-        else -> error("unsupported database URL scheme")
-    }
+private fun normalizeScheme(raw: String): String = when {
+    raw.startsWith("jdbc:postgresql://") -> raw.removePrefix("jdbc:")
+    raw.startsWith("postgresql://") -> raw
+    raw.startsWith("postgres://") -> "postgresql://" + raw.removePrefix("postgres://")
+    else -> error("unsupported database URL scheme")
 }
 
 private fun userInfo(userInfo: String?): Pair<String, String> {

@@ -1,8 +1,8 @@
 package rssapi.domain
 
-import java.util.Base64
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.util.Base64
 
 @Serializable
 data class CursorPayload(val k: Double, val id: String)

@@ -1,6 +1,6 @@
-import {html, LitElement} from 'lit';
-import {customElement, property, state} from 'lit/decorators.js';
-import type {PropertyValues} from 'lit';
+import { html, LitElement } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import type { PropertyValues } from 'lit';
 import lineupSetupCssText from './baseball-lineup-setup.css?inline';
 
 const lineupSetupSheet = new CSSStyleSheet();
@@ -56,7 +56,7 @@ function resolvePlayerId(record: Record<string, unknown> | null, index: number):
 }
 
 function padLineup(players: PlayerInfo[]): PlayerInfo[] {
-    const next = players.slice(0, 9).map((player, index) => ({...player, id: index + 1}));
+    const next = players.slice(0, 9).map((player, index) => ({ ...player, id: index + 1 }));
     while (next.length < 9) {
         const index = next.length;
         next.push({
@@ -84,7 +84,7 @@ function lineupConverter(val: string | null): PlayerInfo[] {
 }
 
 function cloneLineup(players: PlayerInfo[]): PlayerInfo[] {
-    return players.map((player) => ({...player}));
+    return players.map((player) => ({ ...player }));
 }
 
 function validateLineup(players: PlayerInfo[], teamLabel: string): string[] {
@@ -92,9 +92,7 @@ function validateLineup(players: PlayerInfo[], teamLabel: string): string[] {
     if (players.some((player) => !player.name.trim())) {
         errors.push(`${teamLabel}: every batting slot needs a name.`);
     }
-    const defensive = players
-        .map((player) => player.position)
-        .filter((position) => position && position !== 'DH');
+    const defensive = players.map((player) => player.position).filter((position) => position && position !== 'DH');
     const duplicates = defensive.filter((position, index) => defensive.indexOf(position) !== index);
     if (duplicates.length > 0) {
         errors.push(`${teamLabel}: duplicate positions (${[...new Set(duplicates)].join(', ')}).`);
@@ -106,39 +104,39 @@ function validateLineup(players: PlayerInfo[], teamLabel: string): string[] {
 export class BaseballLineupSetup extends LitElement {
     static override styles = lineupSetupSheet;
 
-    @property({type: String, attribute: 'home-team-name'}) homeTeamName = 'Home Team';
-    @property({type: String, attribute: 'away-team-name'}) awayTeamName = 'Away Team';
-    @property({type: Boolean, attribute: 'is-open'}) isOpen = false;
-    @property({type: String, attribute: 'variant'}) variant: 'modal' | 'embedded' = 'modal';
-    @property({type: String, attribute: 'home-pitcher-name'}) homePitcherName = '';
-    @property({type: String, attribute: 'away-pitcher-name'}) awayPitcherName = '';
-    @property({type: Number, attribute: 'sync-token'}) syncToken = 0;
+    @property({ type: String, attribute: 'home-team-name' }) homeTeamName = 'Home Team';
+    @property({ type: String, attribute: 'away-team-name' }) awayTeamName = 'Away Team';
+    @property({ type: Boolean, attribute: 'is-open' }) isOpen = false;
+    @property({ type: String, attribute: 'variant' }) variant: 'modal' | 'embedded' = 'modal';
+    @property({ type: String, attribute: 'home-pitcher-name' }) homePitcherName = '';
+    @property({ type: String, attribute: 'away-pitcher-name' }) awayPitcherName = '';
+    @property({ type: Number, attribute: 'sync-token' }) syncToken = 0;
 
     @property({
         type: Array,
         attribute: 'home-lineup-json',
-        converter: {fromAttribute: lineupConverter},
+        converter: { fromAttribute: lineupConverter },
     })
     homeLineup: PlayerInfo[] = padLineup([]);
 
     @property({
         type: Array,
         attribute: 'away-lineup-json',
-        converter: {fromAttribute: lineupConverter},
+        converter: { fromAttribute: lineupConverter },
     })
     awayLineup: PlayerInfo[] = padLineup([]);
 
     @property({
         type: Array,
         attribute: 'home-bench-json',
-        converter: {fromAttribute: lineupConverter},
+        converter: { fromAttribute: lineupConverter },
     })
     homeBench: PlayerInfo[] = [];
 
     @property({
         type: Array,
         attribute: 'away-bench-json',
-        converter: {fromAttribute: lineupConverter},
+        converter: { fromAttribute: lineupConverter },
     })
     awayBench: PlayerInfo[] = [];
 
@@ -209,7 +207,9 @@ export class BaseballLineupSetup extends LitElement {
     }
 
     private renderError() {
-        return this.errors.length ? html`<div class="error-banner" data-testid="lineup-error">${this.errors.join(' ')}</div>` : '';
+        return this.errors.length
+            ? html`<div class="error-banner" data-testid="lineup-error">${this.errors.join(' ')}</div>`
+            : '';
     }
 
     private renderGrid() {
@@ -330,7 +330,9 @@ export class BaseballLineupSetup extends LitElement {
     }
 
     private hasDraftEdits(): boolean {
-        return this.draftHome.some((player) => player.name.trim()) || this.draftAway.some((player) => player.name.trim());
+        return (
+            this.draftHome.some((player) => player.name.trim()) || this.draftAway.some((player) => player.name.trim())
+        );
     }
 
     private setPitcher(team: 'home' | 'away', value: string) {
@@ -339,15 +341,20 @@ export class BaseballLineupSetup extends LitElement {
         this.emitChange();
     }
 
-    private updatePlayer(team: 'home' | 'away', index: number, field: 'name' | 'jerseyNumber' | 'position', value: string) {
+    private updatePlayer(
+        team: 'home' | 'away',
+        index: number,
+        field: 'name' | 'jerseyNumber' | 'position',
+        value: string,
+    ) {
         const target = team === 'home' ? [...this.draftHome] : [...this.draftAway];
         const current = target[index];
         if (!current) return;
         if (field === 'jerseyNumber') {
             const parsed = Number(value);
-            target[index] = {...current, jerseyNumber: Number.isFinite(parsed) ? parsed : 0};
+            target[index] = { ...current, jerseyNumber: Number.isFinite(parsed) ? parsed : 0 };
         } else {
-            target[index] = {...current, [field]: value};
+            target[index] = { ...current, [field]: value };
         }
         if (team === 'home') this.draftHome = target;
         else this.draftAway = target;
@@ -360,7 +367,7 @@ export class BaseballLineupSetup extends LitElement {
                 detail: this.getLineups(),
                 bubbles: true,
                 composed: true,
-            })
+            }),
         );
     }
 
@@ -374,7 +381,7 @@ export class BaseballLineupSetup extends LitElement {
     private onClose() {
         this.isOpen = false;
         this.removeAttribute('is-open');
-        this.dispatchEvent(new CustomEvent('close-lineup-setup', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('close-lineup-setup', { bubbles: true, composed: true }));
     }
 
     private onSave() {
@@ -395,7 +402,7 @@ export class BaseballLineupSetup extends LitElement {
                 },
                 bubbles: true,
                 composed: true,
-            })
+            }),
         );
     }
 }

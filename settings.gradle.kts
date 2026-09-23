@@ -1,4 +1,4 @@
-/**
+/*
  * Root Gradle build for the Kotlin API modules.
  *
  * Spring Boot APIs live under apps/<app>/api. Gradle 9 does not read a

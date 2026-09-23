@@ -55,7 +55,6 @@ class FeedRssBranchTest {
         assertEquals("(untitled)", parseFeedXml(untitledItem(), 0L).items[0].title)
     }
 
-    private fun untitledItem(): String =
-        """<rss version="2.0"><channel><title>N</title>""" +
-            """<item><link>https://example.com/a</link></item></channel></rss>"""
+    private fun untitledItem(): String = """<rss version="2.0"><channel><title>N</title>""" +
+        """<item><link>https://example.com/a</link></item></channel></rss>"""
 }

@@ -1,10 +1,10 @@
 package fitnessapi.http
 
+import fitnessapi.store.RollupRow
+import fitnessapi.store.StoredSample
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
-import fitnessapi.store.RollupRow
-import fitnessapi.store.StoredSample
 
 internal data class RollupKey(val userId: UUID, val metric: String, val day: String)
 

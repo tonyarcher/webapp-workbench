@@ -1,7 +1,6 @@
 package rssapi.web
 
-import java.time.Instant
-import java.util.UUID
+import org.springframework.http.HttpStatus
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -12,6 +11,8 @@ import rssapi.persist.ArticleStateEntity
 import rssapi.persist.ArticleStateId
 import rssapi.persist.ArticleStateRepo
 import rssapi.persist.SubscriptionRepo
+import java.time.Instant
+import java.util.UUID
 
 @RestController
 class ArticleWriteController(
@@ -22,13 +23,14 @@ class ArticleWriteController(
 ) {
     @PostMapping("/articles/state", headers = ["X-Api-Version=1"])
     fun updateState(@RequestBody body: StateListBody): StateResult {
-        val updates = body.updates ?: throw ApiException(400, "updates array is required")
+        val updates = body.updates ?: throw ApiException(HttpStatus.BAD_REQUEST, "updates array is required")
         val owned = ownedArticleIds(updates.mapNotNull { it.id })
         var n = 0
         updates.mapNotNull { u ->
             val id = u.id ?: return@mapNotNull null
-            if (id !in owned || (u.read == null && u.starred == null)) null
-            else {
+            if (id !in owned || (u.read == null && u.starred == null)) {
+                null
+            } else {
                 upsertState(id, u.read, u.starred)
                 1
             }
@@ -39,9 +41,9 @@ class ArticleWriteController(
     @PostMapping("/articles/read-before", headers = ["X-Api-Version=1"])
     @Transactional
     fun readBefore(@RequestBody body: ReadBeforeBody): OkBody {
-        val cutoff = body.cutoff ?: throw ApiException(400, "cutoff (epoch ms) is required")
+        val cutoff = body.cutoff ?: throw ApiException(HttpStatus.BAD_REQUEST, "cutoff (epoch ms) is required")
         if (body.feedIds != null && body.feedIds.any { !isUuid(it) }) {
-            throw ApiException(400, "invalid feed id")
+            throw ApiException(HttpStatus.BAD_REQUEST, "invalid feed id")
         }
         val ids = body.feedIds?.map { UUID.fromString(it) }
         markRead(feedIds = ids, cutoff = Instant.ofEpochMilli(cutoff))
@@ -52,7 +54,7 @@ class ArticleWriteController(
     @Transactional
     fun readAll(@RequestBody body: ReadAllBody?): OkBody {
         val feedId = body?.feedId
-        if (feedId != null && !isUuid(feedId)) throw ApiException(400, "invalid feed id")
+        if (feedId != null && !isUuid(feedId)) throw ApiException(HttpStatus.BAD_REQUEST, "invalid feed id")
         markRead(feedIds = feedId?.let { listOf(UUID.fromString(it)) }, cutoff = null)
         return OkBody()
     }
@@ -78,7 +80,10 @@ class ArticleWriteController(
         val userFeeds = subs.findFeedIdsByUserId(user.id)
         val allowed = if (feedIds.isNullOrEmpty()) userFeeds else feedIds.filter { it in userFeeds }
         if (allowed.isEmpty()) return
-        if (cutoff == null) states.markReadAll(user.id, allowed)
-        else states.markReadBefore(user.id, allowed, cutoff)
+        if (cutoff == null) {
+            states.markReadAll(user.id, allowed)
+        } else {
+            states.markReadBefore(user.id, allowed, cutoff)
+        }
     }
 }

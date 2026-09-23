@@ -1,10 +1,10 @@
 package radioapi.persist
 
-import java.time.Instant
-import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.Instant
+import java.util.UUID
 
 interface StationRepo : JpaRepository<StationEntity, String> {
     fun findAllByOrderByNameAsc(): List<StationEntity>

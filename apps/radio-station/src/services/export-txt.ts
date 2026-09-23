@@ -1,4 +1,4 @@
-import type {PlaylistEntry, Weights} from '../types';
+import type { PlaylistEntry, Weights } from '../types';
 
 export interface TxtInput {
     stationName: string;

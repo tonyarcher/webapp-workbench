@@ -1,12 +1,12 @@
 package userapi.http
 
-import java.time.Instant
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 import userapi.accounts.PasskeyStore
 import userapi.accounts.StoredPasskey
 import userapi.accounts.WebauthnChallenge
 import userapi.accounts.WebauthnChallengeStore
+import java.time.Instant
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class FakePasskeyStore : PasskeyStore {
     private val handles = ConcurrentHashMap<UUID, ByteArray>()
@@ -17,8 +17,7 @@ class FakePasskeyStore : PasskeyStore {
         names[userId] = username
     }
 
-    override fun ensureUserHandle(userId: UUID): ByteArray =
-        handles.getOrPut(userId) { ByteArray(32) { 1 } }
+    override fun ensureUserHandle(userId: UUID): ByteArray = handles.getOrPut(userId) { ByteArray(32) { 1 } }
 
     override fun usernameForHandle(handle: ByteArray): String? {
         val id = handles.entries.find { it.value.contentEquals(handle) }?.key ?: return null
@@ -30,8 +29,7 @@ class FakePasskeyStore : PasskeyStore {
         return handles[id]
     }
 
-    override fun userIdForUsername(username: String): UUID? =
-        names.entries.find { it.value == username }?.key
+    override fun userIdForUsername(username: String): UUID? = names.entries.find { it.value == username }?.key
 
     override fun insertPasskey(row: StoredPasskey) {
         rows[row.credentialId.contentToString()] = row

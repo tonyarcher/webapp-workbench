@@ -1,8 +1,8 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
-import {libraryKey, queryClient, QueryController, fetchLibrary} from '../../query';
-import {fetchArticlesPage} from '../../services/api';
-import {markArticleRead} from '../../mutations';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { libraryKey, queryClient, QueryController, fetchLibrary } from '../../query';
+import { fetchArticlesPage } from '../../services/api';
+import { markArticleRead } from '../../mutations';
 import {
     aiAvailability,
     type AiAvailability,
@@ -11,8 +11,8 @@ import {
     aiStatusMessage,
     runAiPrompt,
 } from '../../ai';
-import type {Article, Feed, Folder} from '../../types';
-import {domainOf, formatDate} from '../../util';
+import type { Article, Feed, Folder } from '../../types';
+import { domainOf, formatDate } from '../../util';
 import styles from './brief-view.css?inline';
 
 interface Library {
@@ -49,7 +49,11 @@ export class BriefView extends LitElement {
     private articles = new QueryController<Article[]>(this, () => ({
         queryKey: ['brief', this.startOfToday.toDateString()],
         queryFn: async () => {
-            const res = await fetchArticlesPage({since: this.startOfToday.getTime(), sort: 'newest', limit: MAX_ARTICLES});
+            const res = await fetchArticlesPage({
+                since: this.startOfToday.getTime(),
+                sort: 'newest',
+                limit: MAX_ARTICLES,
+            });
             return res.items;
         },
     }));
@@ -183,7 +187,8 @@ export class BriefView extends LitElement {
     }
 
     private renderSummaryState(articles: Article[]) {
-        if (this.generating) return html`<div class="spinner"><span class="spin"></span> Summarizing ${articles.length} articles…</div>`;
+        if (this.generating)
+            return html`<div class="spinner"><span class="spin"></span> Summarizing ${articles.length} articles…</div>`;
         if (this.summary) return html`<div class="summary-text">${this.summary}</div>`;
         return html`<div class="spinner"><span class="spin"></span> Reading today’s articles…</div>`;
     }
@@ -225,7 +230,8 @@ export class BriefView extends LitElement {
     }
 
     private buildPrompt(lines: string[]): { prompt: string; systemPrompt: string } {
-        const systemPrompt = 'You are a news briefing assistant. Turn a reader\'s daily RSS articles into a clear, scannable daily brief. Group related stories, keep it factual and neutral, and never invent details.';
+        const systemPrompt =
+            "You are a news briefing assistant. Turn a reader's daily RSS articles into a clear, scannable daily brief. Group related stories, keep it factual and neutral, and never invent details.";
         const prompt = [
             `Here are today's articles from the reader's feeds (newest first):`,
             ``,
@@ -233,25 +239,28 @@ export class BriefView extends LitElement {
             ``,
             `Write a concise daily brief covering these stories. Use short markdown bullets. Highlight the most important items first. Do not mention "the user" or "the reader".`,
         ].join('\n');
-        return {prompt, systemPrompt};
+        return { prompt, systemPrompt };
     }
 
     private async ensureAvailable(): Promise<boolean> {
         const status = await aiAvailability();
-        if (status !== 'readily') { this.availability = status; return false; }
+        if (status !== 'readily') {
+            this.availability = status;
+            return false;
+        }
         return true;
     }
 
     private async generate() {
         const articles = this.articles.data ?? [];
         if (!articles.length) return;
-        if (!await this.ensureAvailable()) return;
+        if (!(await this.ensureAvailable())) return;
         this.generatedFor = this.startOfToday.toDateString();
         this.generating = true;
         this.error = '';
         try {
             const lines = this.buildPromptLines(articles);
-            const {prompt, systemPrompt} = this.buildPrompt(lines);
+            const { prompt, systemPrompt } = this.buildPrompt(lines);
             const summary = await runAiPrompt(prompt, systemPrompt);
             if (this.generatedFor !== this.startOfToday.toDateString()) return;
             this.summary = summary;
@@ -266,15 +275,13 @@ export class BriefView extends LitElement {
         if (article.read === 0) {
             // Chain the brief refresh after the write so a refetch can't win
             // the race and re-show the article as unread.
-            void markArticleRead(article.id).then(() =>
-                queryClient.invalidateQueries({queryKey: ['brief']}),
-            );
+            void markArticleRead(article.id).then(() => queryClient.invalidateQueries({ queryKey: ['brief'] }));
         }
         const items = this.articles.data ?? [];
         const index = items.findIndex((a) => a.id === article.id);
         this.dispatchEvent(
             new CustomEvent('open-article', {
-                detail: {article, index, items},
+                detail: { article, index, items },
                 bubbles: true,
                 composed: true,
             }),
@@ -286,8 +293,7 @@ export class BriefView extends LitElement {
     }
 
     private renderDiagRow(label: string, value: boolean | string) {
-        const display =
-            typeof value === 'boolean' ? (value ? 'present / yes' : 'absent / no') : value;
+        const display = typeof value === 'boolean' ? (value ? 'present / yes' : 'absent / no') : value;
         const ok = value === true || (typeof value === 'string' && value !== 'none' && value !== 'no');
         return html`<div class="diag-row"><span>${label}</span><span class="${ok ? 'diag-ok' : 'diag-bad'}">${display}</span></div>`;
     }

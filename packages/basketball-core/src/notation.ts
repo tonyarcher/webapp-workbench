@@ -1,8 +1,8 @@
-import {formatClock} from './clock';
-import {findPlayer} from './lineup';
-import {periodLabel, getRulebook} from './rulebook';
-import {teamSide} from './reduce-helpers';
-import type {GameState, ScoringEvent} from './types';
+import { formatClock } from './clock';
+import { findPlayer } from './lineup';
+import { periodLabel, getRulebook } from './rulebook';
+import { teamSide } from './reduce-helpers';
+import type { GameState, ScoringEvent } from './types';
 
 function playerName(game: GameState, playerId: string): string {
     const home = findPlayer(game.home.roster, playerId);
@@ -39,13 +39,13 @@ function describeAdmin(event: ScoringEvent, game: GameState): string {
     return event.type;
 }
 
-function describeShot(event: Extract<ScoringEvent, {type: 'shot'}>, game: GameState): string {
+function describeShot(event: Extract<ScoringEvent, { type: 'shot' }>, game: GameState): string {
     const result = event.made ? 'make' : 'miss';
     const assist = event.made && event.assistId ? ` (${playerName(game, event.assistId)})` : '';
     return `${playerName(game, event.shooterId)} ${result}${assist}`;
 }
 
-function describeTurnover(event: Extract<ScoringEvent, {type: 'turnover'}>, game: GameState): string {
+function describeTurnover(event: Extract<ScoringEvent, { type: 'turnover' }>, game: GameState): string {
     if (!event.stealPlayerId) return `${playerName(game, event.playerId)} turnover`;
     return `${playerName(game, event.stealPlayerId)} steal (${playerName(game, event.playerId)})`;
 }

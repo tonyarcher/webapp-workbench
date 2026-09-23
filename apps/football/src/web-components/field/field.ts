@@ -1,23 +1,23 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property, state} from 'lit/decorators.js';
-import {unsafeHTML} from 'lit/directives/unsafe-html.js';
-import {describePlay} from 'football-core';
-import type {Play, Situation} from 'football-core';
-import {playFlight} from '../../local-game/field-geom';
-import type {FieldAnimKind} from '../../local-game/field-geom';
-import {paintFieldSvg, playPath} from '../../local-game/field-paint';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { describePlay } from 'football-core';
+import type { Play, Situation } from 'football-core';
+import { playFlight } from '../../local-game/field-geom';
+import type { FieldAnimKind } from '../../local-game/field-geom';
+import { paintFieldSvg, playPath } from '../../local-game/field-paint';
 import styles from './field.css?inline';
 
 @customElement('fb-field')
 export class FieldView extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) situation!: Situation;
-    @property({attribute: false}) lastPlay: Play | null = null;
+    @property({ attribute: false }) situation!: Situation;
+    @property({ attribute: false }) lastPlay: Play | null = null;
     @property() homeName = 'HOME';
     @property() awayName = 'AWAY';
-    @property({type: Boolean}) animations = true;
+    @property({ type: Boolean }) animations = true;
 
     @state() private trailPath = '';
     @state() private trailKind: FieldAnimKind | null = null;
@@ -60,9 +60,7 @@ export class FieldView extends LitElement {
 
     override render(): TemplateResult {
         if (!this.situation) return html``;
-        const caption = this.lastPlay
-            ? describePlay(this.lastPlay, this.homeName, this.awayName)
-            : 'Ball spotted';
+        const caption = this.lastPlay ? describePlay(this.lastPlay, this.homeName, this.awayName) : 'Ball spotted';
         const svg = paintFieldSvg({
             situation: this.situation,
             homeName: this.homeName,

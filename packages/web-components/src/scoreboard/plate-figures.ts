@@ -1,4 +1,4 @@
-import {svg} from 'lit';
+import { svg } from 'lit';
 
 /**
  * Hand-authored neon athletes for the plate scene.

@@ -1,13 +1,15 @@
 package rssapi.persist
 
-import java.util.UUID
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.util.UUID
 
-interface ArticleRepo : JpaRepository<ArticleEntity, String>, JpaSpecificationExecutor<ArticleEntity> {
+interface ArticleRepo :
+    JpaRepository<ArticleEntity, String>,
+    JpaSpecificationExecutor<ArticleEntity> {
     fun findByFeedIdAndGuid(feedId: UUID, guid: String): ArticleEntity?
     fun findByFeedIdOrderByPublishedAtDesc(feedId: UUID, page: Pageable): List<ArticleEntity>
     fun findByFeedIdAndNormLink(feedId: UUID, normLink: String): ArticleEntity?

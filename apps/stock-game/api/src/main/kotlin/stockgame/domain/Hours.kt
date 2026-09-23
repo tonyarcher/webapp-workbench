@@ -1,9 +1,11 @@
 package stockgame.domain
-
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
+
+/** Scheduling delays are given in minutes. */
+private const val MS_PER_MINUTE = 60_000L
 
 private val NY: ZoneId = ZoneId.of("America/New_York")
 private val OPEN: LocalTime = LocalTime.of(9, 30)
@@ -20,7 +22,13 @@ fun nextNyseOpen(nowMs: Long): Long {
     if (isNyseOpen(nowMs)) return nowMs
     val startDate = Instant.ofEpochMilli(nowMs).atZone(NY).toLocalDate()
     for (offset in 0..8) {
-        val candidate = startDate.plusDays(offset.toLong()).atTime(OPEN).atZone(NY).toInstant().toEpochMilli()
+        val candidate =
+            startDate
+                .plusDays(offset.toLong())
+                .atTime(OPEN)
+                .atZone(NY)
+                .toInstant()
+                .toEpochMilli()
         if (candidate <= nowMs) continue
         val dow = Instant.ofEpochMilli(candidate).atZone(NY).dayOfWeek
         if (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY) return candidate
@@ -30,8 +38,11 @@ fun nextNyseOpen(nowMs: Long): Long {
 
 fun expiresAtForOrder(executeAt: Long): Long {
     val day = Instant.ofEpochMilli(executeAt).atZone(NY).toLocalDate()
-    return day.atTime(CLOSE).atZone(NY).toInstant().toEpochMilli()
+    return day
+        .atTime(CLOSE)
+        .atZone(NY)
+        .toInstant()
+        .toEpochMilli()
 }
 
-fun asapExecuteAt(nowMs: Long, delayMinutes: Int): Long =
-    nextNyseOpen(nowMs + delayMinutes * 60_000L)
+fun asapExecuteAt(nowMs: Long, delayMinutes: Int): Long = nextNyseOpen(nowMs + delayMinutes * MS_PER_MINUTE)

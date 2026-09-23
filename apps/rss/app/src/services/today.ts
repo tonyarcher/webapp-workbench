@@ -1,4 +1,4 @@
-import type {Article, Feed, Folder} from '../types';
+import type { Article, Feed, Folder } from '../types';
 
 export interface TodaySection {
     folder: Folder;
@@ -11,7 +11,12 @@ export interface TodaySection {
  * nothing today is omitted. Section order follows the sidebar `folders`
  * order. Articles of feeds in multiple folders appear in each section.
  */
-function bucketArticles(articles: Article[], feedById: Map<string, Feed>, excluded: Set<string>, unreadOnly: boolean): Map<string, Article[]> {
+function bucketArticles(
+    articles: Article[],
+    feedById: Map<string, Feed>,
+    excluded: Set<string>,
+    unreadOnly: boolean,
+): Map<string, Article[]> {
     const buckets = new Map<string, Article[]>();
     for (const article of articles) {
         if (unreadOnly && article.read !== 0) continue;
@@ -27,14 +32,19 @@ function bucketArticles(articles: Article[], feedById: Map<string, Feed>, exclud
     return buckets;
 }
 
-function orderSections(folders: Folder[], buckets: Map<string, Article[]>, excluded: Set<string>, perFolder: number): TodaySection[] {
+function orderSections(
+    folders: Folder[],
+    buckets: Map<string, Article[]>,
+    excluded: Set<string>,
+    perFolder: number,
+): TodaySection[] {
     const sections: TodaySection[] = [];
     for (const folder of folders) {
         if (excluded.has(folder.id)) continue;
         const bucket = buckets.get(folder.id);
         if (!bucket?.length) continue;
         const hottest = [...bucket].sort((a, b) => b.hot - a.hot || a.id.localeCompare(b.id)).slice(0, perFolder);
-        sections.push({folder, articles: hottest});
+        sections.push({ folder, articles: hottest });
     }
     return sections;
 }

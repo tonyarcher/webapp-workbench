@@ -2,8 +2,6 @@ package stockgame.store
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import java.util.UUID
-import javax.sql.DataSource
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -15,6 +13,8 @@ import stockgame.persist.GameConfigId
 import stockgame.persist.GameConfigRepo
 import stockgame.persist.OrderRepo
 import stockgame.persist.TradeRepo
+import java.util.UUID
+import javax.sql.DataSource
 
 @Service
 @ConditionalOnBean(DataSource::class)

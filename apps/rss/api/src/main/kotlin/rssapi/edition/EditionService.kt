@@ -1,12 +1,9 @@
 package rssapi.edition
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.util.UUID
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import rssapi.ai.AiConfig
 import rssapi.ai.AiQuotaService
@@ -39,6 +36,10 @@ import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
 import rssapi.web.ApiException
 import rssapi.web.articleSpec
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.util.UUID
 
 const val EDITION_MAX_CLUSTERS: Int = 12
 const val EDITION_MAX_SECTIONS: Int = 12
@@ -101,7 +102,7 @@ class EditionService(
             throw err
         } catch (_: Exception) {
             failRow(row)
-            throw ApiException(500, "edition build failed")
+            throw ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "edition build failed")
         }
     }
 
@@ -119,11 +120,16 @@ class EditionService(
         val sections = summarizeAll(userId, ranked)
         val opinion = opinionFor(userId, sections)
         finishReady(row, sections, opinion, now)
-        log("rss-api", "info", "edition build ok", mapOf(
-            "clusters" to ranked.size,
-            "summaries" to sections.count { it.summary != null },
-            "duration_ms" to (System.currentTimeMillis() - started),
-        ))
+        log(
+            "rss-api",
+            "info",
+            "edition build ok",
+            mapOf(
+                "clusters" to ranked.size,
+                "summaries" to sections.count { it.summary != null },
+                "duration_ms" to (System.currentTimeMillis() - started),
+            ),
+        )
         return row
     }
 
@@ -133,9 +139,11 @@ class EditionService(
         val found = articles.findAll(spec, PageRequest.of(0, EDITION_MAX_ARTICLES, sort)).content
         val inputs = found.map { article ->
             val excerpt = plainExcerpt(article.summary ?: article.contentHtml, EDITION_EXCERPT_CHARS)
-            EditionArticle(article.id, article.feedId, article.title, excerpt, article.publishedAt,
+            EditionArticle(
+                article.id, article.feedId, article.title, excerpt, article.publishedAt,
                 article.hot.toDouble(), article.popularity.toDouble(), article.engagement.toDouble(),
-                article.domain, article.author, article.normLink)
+                article.domain, article.author, article.normLink,
+            )
         }
         val keys = found.flatMapTo(mutableSetOf()) { affinityKeys(it.feedId, it.domain, it.author) }
         val affinities = affinity.findAllById(keys.map { AffinityId(userId, it) }).associate { it.key to it.value }
@@ -207,12 +215,14 @@ class EditionService(
     }
 
     private fun finishReady(row: EditionEntity, sections: List<SectionDraft>, opinion: String?, now: Instant) {
-        row.body = mapper.writeValueAsString(mapOf(
-            "sections" to sections.map(::sectionJson),
-            "opinion" to opinion?.let { mapOf("text" to it) },
-            "generatedAt" to now.toEpochMilli(),
-            "model" to aiConfig.model,
-        ))
+        row.body = mapper.writeValueAsString(
+            mapOf(
+                "sections" to sections.map(::sectionJson),
+                "opinion" to opinion?.let { mapOf("text" to it) },
+                "generatedAt" to now.toEpochMilli(),
+                "model" to aiConfig.model,
+            ),
+        )
         row.model = aiConfig.model
         row.status = EDITION_READY
         editions.save(row)
@@ -243,4 +253,4 @@ class EditionService(
 
 /** Owner is always set by [EditionService.buildEdition]; fail loud otherwise. */
 private fun EditionEntity.requireOwner(): UUID =
-    userId ?: throw ApiException(500, "edition has no owner")
+    userId ?: throw ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "edition has no owner")

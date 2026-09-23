@@ -1,13 +1,13 @@
-import type {ParseResult, ParseSkip, Sample, SampleSource} from './types';
-import {asNumber, parseMetricId, toSi} from './units';
+import type { ParseResult, ParseSkip, Sample, SampleSource } from './types';
+import { asNumber, parseMetricId, toSi } from './units';
 
-function stepQuoted(text: string, i: number, cell: string): {cell: string; next: number; inQuotes: boolean} {
+function stepQuoted(text: string, i: number, cell: string): { cell: string; next: number; inQuotes: boolean } {
     const c = text[i];
     if (c === '"') {
-        if (text[i + 1] === '"') return {cell: cell + '"', next: i + 2, inQuotes: true};
-        return {cell, next: i + 1, inQuotes: false};
+        if (text[i + 1] === '"') return { cell: cell + '"', next: i + 2, inQuotes: true };
+        return { cell, next: i + 1, inQuotes: false };
     }
-    return {cell: cell + (c ?? ''), next: i + 1, inQuotes: true};
+    return { cell: cell + (c ?? ''), next: i + 1, inQuotes: true };
 }
 
 function stepUnquoted(
@@ -16,18 +16,18 @@ function stepUnquoted(
     cell: string,
     row: string[],
     rows: string[][],
-): {cell: string; row: string[]; next: number; inQuotes: boolean} | null {
+): { cell: string; row: string[]; next: number; inQuotes: boolean } | null {
     const c = text[i];
-    if (c === '"') return {cell, row, next: i + 1, inQuotes: true};
+    if (c === '"') return { cell, row, next: i + 1, inQuotes: true };
     if (c === ',') {
         row.push(cell);
-        return {cell: '', row, next: i + 1, inQuotes: false};
+        return { cell: '', row, next: i + 1, inQuotes: false };
     }
     if (c === '\n' || c === '\r') {
         const skip = c === '\r' && text[i + 1] === '\n' ? 1 : 0;
         row.push(cell);
         if (row.some((value) => value.length > 0)) rows.push(row);
-        return {cell: '', row: [], next: i + 1 + skip, inQuotes: false};
+        return { cell: '', row: [], next: i + 1 + skip, inQuotes: false };
     }
     return null;
 }
@@ -59,10 +59,10 @@ function stepOnce(
     row: string[],
     rows: string[][],
     inQuotes: boolean,
-): {cell: string; row: string[]; next: number; inQuotes: boolean} | null {
+): { cell: string; row: string[]; next: number; inQuotes: boolean } | null {
     if (inQuotes) {
         const stepped = stepQuoted(text, i, cell);
-        return {...stepped, row};
+        return { ...stepped, row };
     }
     return stepUnquoted(text, i, cell, row, rows);
 }
@@ -127,7 +127,7 @@ function cell(row: string[], idx: number): string {
 }
 
 function skip(line: string, reason: string): ParseSkip {
-    return {line, reason};
+    return { line, reason };
 }
 
 function rowToSample(row: string[], cols: CsvCols, fallback: SampleSource): Sample | ParseSkip {
@@ -157,22 +157,30 @@ export function parseSampleCsv(text: string, defaultSource: SampleSource = 'csv'
     const rows = parseCsv(text);
     const skipped: ParseSkip[] = [];
     const samples: Sample[] = [];
-    if (!rows.length) return {samples, skipped, format: 'csv'};
+    if (!rows.length) return { samples, skipped, format: 'csv' };
     const header = (rows[0] ?? []).map((h) => h.trim().toLowerCase());
     const cols = csvCols(header);
     if (!cols) {
-        return {samples, skipped: [{line: header.join(','), reason: 'missing metric,timestamp,value header'}], format: 'csv'};
+        return {
+            samples,
+            skipped: [{ line: header.join(','), reason: 'missing metric,timestamp,value header' }],
+            format: 'csv',
+        };
     }
     for (let r = 1; r < rows.length; r++) {
         const parsed = rowToSample(rows[r] ?? [], cols, defaultSource);
         if ('reason' in parsed) skipped.push(parsed);
         else samples.push(parsed);
     }
-    return {samples, skipped, format: 'csv'};
+    return { samples, skipped, format: 'csv' };
 }
 
 export function looksLikeCsv(text: string): boolean {
     const first = text.trimStart().slice(0, 200).split(/\r?\n/, 1)[0] ?? '';
     const lower = first.toLowerCase();
-    return lower.includes('metric') && lower.includes(',') && (lower.includes('timestamp') || lower.includes('time') || lower.includes('date'));
+    return (
+        lower.includes('metric') &&
+        lower.includes(',') &&
+        (lower.includes('timestamp') || lower.includes('time') || lower.includes('date'))
+    );
 }

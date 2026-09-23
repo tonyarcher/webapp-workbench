@@ -1,54 +1,48 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property, state} from 'lit/decorators.js';
-import {
-    describePlay,
-    formatClock,
-    formatDownDistance,
-    parseClock,
-    RULEBOOKS,
-} from 'football-core';
-import type {GameState, GameSetup, PlayFamily, PlayInput, ScoringEvent, Tackler} from 'football-core';
-import type {GameStore} from '../../local-game/game-store';
-import type {LiveLocalGameState} from '../../local-game/game-state';
-import {SPEED_OPTIONS} from '../../sim/playback';
-import {highlightLabel, WatchRunner, watchBadge, watchLoopAlive} from '../../sim/watch-runner';
-import {yieldDelay} from '../../sim/playback';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { describePlay, formatClock, formatDownDistance, parseClock, RULEBOOKS } from 'football-core';
+import type { GameState, GameSetup, PlayFamily, PlayInput, ScoringEvent, Tackler } from 'football-core';
+import type { GameStore } from '../../local-game/game-store';
+import type { LiveLocalGameState } from '../../local-game/game-state';
+import { SPEED_OPTIONS } from '../../sim/playback';
+import { highlightLabel, WatchRunner, watchBadge, watchLoopAlive } from '../../sim/watch-runner';
+import { yieldDelay } from '../../sim/playback';
 import '../field/field';
 import styles from './game-shell.css?inline';
 
-type PadButton = {label: string; family: PlayFamily; extra?: Partial<PlayInput>; primary?: boolean};
+type PadButton = { label: string; family: PlayFamily; extra?: Partial<PlayInput>; primary?: boolean };
 
 const TRY_BUTTONS: PadButton[] = [
-    {label: 'XP good', family: 'extra_point', extra: {extraPointMade: true}, primary: true},
-    {label: 'XP miss', family: 'extra_point', extra: {extraPointMade: false}},
-    {label: '2pt good', family: 'two_point', extra: {twoPointMade: true}},
-    {label: '2pt miss', family: 'two_point', extra: {twoPointMade: false}},
+    { label: 'XP good', family: 'extra_point', extra: { extraPointMade: true }, primary: true },
+    { label: 'XP miss', family: 'extra_point', extra: { extraPointMade: false } },
+    { label: '2pt good', family: 'two_point', extra: { twoPointMade: true } },
+    { label: '2pt miss', family: 'two_point', extra: { twoPointMade: false } },
 ];
 
 const SCRIMMAGE_BUTTONS: PadButton[] = [
-    {label: 'Run', family: 'scrimmage', extra: {concept: 'inside_zone'}, primary: true},
-    {label: 'Complete', family: 'scrimmage', extra: {concept: 'dropback'}},
-    {label: 'Incomplete', family: 'scrimmage', extra: {incomplete: true, yards: 0}},
-    {label: 'Sack', family: 'scrimmage', extra: {sack: true}},
-    {label: 'Scramble', family: 'scrimmage', extra: {scramble: true, concept: 'scramble'}},
-    {label: 'TD', family: 'scrimmage', extra: {touchdown: true}, primary: true},
-    {label: 'INT', family: 'scrimmage', extra: {interception: true}},
-    {label: 'Fumble lost', family: 'scrimmage', extra: {fumbleLost: true}},
-    {label: 'Fumble own', family: 'scrimmage', extra: {fumbleOwn: true}},
-    {label: 'Kneel', family: 'kneel', extra: {yards: -1}},
-    {label: 'Spike', family: 'spike', extra: {incomplete: true, yards: 0}},
-    {label: 'Punt', family: 'punt'},
-    {label: 'FG good', family: 'field_goal', extra: {fieldGoalMade: true}},
-    {label: 'FG miss', family: 'field_goal', extra: {fieldGoalMade: false}},
+    { label: 'Run', family: 'scrimmage', extra: { concept: 'inside_zone' }, primary: true },
+    { label: 'Complete', family: 'scrimmage', extra: { concept: 'dropback' } },
+    { label: 'Incomplete', family: 'scrimmage', extra: { incomplete: true, yards: 0 } },
+    { label: 'Sack', family: 'scrimmage', extra: { sack: true } },
+    { label: 'Scramble', family: 'scrimmage', extra: { scramble: true, concept: 'scramble' } },
+    { label: 'TD', family: 'scrimmage', extra: { touchdown: true }, primary: true },
+    { label: 'INT', family: 'scrimmage', extra: { interception: true } },
+    { label: 'Fumble lost', family: 'scrimmage', extra: { fumbleLost: true } },
+    { label: 'Fumble own', family: 'scrimmage', extra: { fumbleOwn: true } },
+    { label: 'Kneel', family: 'kneel', extra: { yards: -1 } },
+    { label: 'Spike', family: 'spike', extra: { incomplete: true, yards: 0 } },
+    { label: 'Punt', family: 'punt' },
+    { label: 'FG good', family: 'field_goal', extra: { fieldGoalMade: true } },
+    { label: 'FG miss', family: 'field_goal', extra: { fieldGoalMade: false } },
 ];
 
 @customElement('fb-game-shell')
 export class GameShell extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) store!: GameStore;
-    @property({attribute: false}) game!: LiveLocalGameState;
+    @property({ attribute: false }) store!: GameStore;
+    @property({ attribute: false }) game!: LiveLocalGameState;
 
     @state() private yards = 0;
     @state() private snapText = '';
@@ -94,7 +88,8 @@ export class GameShell extends LitElement {
     };
 
     private async runWatchLoop(): Promise<void> {
-        if (!watchLoopAlive(this.isConnected, this.isWatch(), Boolean(this.game?.engine.over)) || this.watch.playing) return;
+        if (!watchLoopAlive(this.isConnected, this.isWatch(), Boolean(this.game?.engine.over)) || this.watch.playing)
+            return;
         await this.watch.clock.play(async () => this.stepWatch());
         if (this.isConnected) {
             void this.store.flushPersist();
@@ -123,12 +118,13 @@ export class GameShell extends LitElement {
     private tacklers(): Tackler[] {
         const jersey = Number(this.tacklerJersey);
         if (!Number.isInteger(jersey) || jersey <= 0) return [];
-        const defense = this.game.engine.situation.possession === 'home'
-            ? this.game.engine.away.roster
-            : this.game.engine.home.roster;
+        const defense =
+            this.game.engine.situation.possession === 'home'
+                ? this.game.engine.away.roster
+                : this.game.engine.home.roster;
         const player = defense.find((row) => row.jersey === jersey);
         if (!player) return [];
-        return [{playerId: player.id, role: 'solo'}];
+        return [{ playerId: player.id, role: 'solo' }];
     }
 
     private playInput(partial: Omit<PlayInput, 'snapClock' | 'deadClock'>): PlayInput {
@@ -149,7 +145,7 @@ export class GameShell extends LitElement {
     }
 
     private recordPlay(partial: Omit<PlayInput, 'snapClock' | 'deadClock'>): void {
-        this.record({type: 'play', input: this.playInput(partial)});
+        this.record({ type: 'play', input: this.playInput(partial) });
     }
 
     private onYards = (event: Event): void => {
@@ -176,12 +172,12 @@ export class GameShell extends LitElement {
         this.tacklerJersey = target.value;
     };
 
-    private padButtons(): {label: string; family: PlayFamily; extra?: Partial<PlayInput>; primary?: boolean}[] {
+    private padButtons(): { label: string; family: PlayFamily; extra?: Partial<PlayInput>; primary?: boolean }[] {
         if (this.game.engine.kickoffPending) {
             return [
-                {label: 'Kickoff TB', family: 'kickoff', extra: {touchback: true}, primary: true},
-                {label: 'Kickoff return', family: 'kickoff', extra: {touchback: false}},
-                {label: 'Kickoff OOB', family: 'kickoff', extra: {touchback: false, outOfBounds: true}},
+                { label: 'Kickoff TB', family: 'kickoff', extra: { touchback: true }, primary: true },
+                { label: 'Kickoff return', family: 'kickoff', extra: { touchback: false } },
+                { label: 'Kickoff OOB', family: 'kickoff', extra: { touchback: false, outOfBounds: true } },
             ];
         }
         if (this.game.engine.pendingTry) return TRY_BUTTONS;
@@ -197,7 +193,7 @@ export class GameShell extends LitElement {
     }
 
     private renderBug(): TemplateResult {
-        const {engine, setup} = this.game;
+        const { engine, setup } = this.game;
         const poss = engine.situation.possession === 'home' ? setup.homeName : setup.awayName;
         return html`
             <header class="bug">
@@ -230,7 +226,9 @@ export class GameShell extends LitElement {
             engine.pendingTry ? 'try' : '',
             engine.clock.mercyActive ? 'mercy clock' : '',
             engine.clock.running ? 'clock running' : 'clock stopped',
-        ].filter(Boolean).join(' · ');
+        ]
+            .filter(Boolean)
+            .join(' · ');
         return flags;
     }
 
@@ -248,19 +246,20 @@ export class GameShell extends LitElement {
                     (btn) => html`<button
                         class=${this.padClass(btn.label, btn.primary)}
                         ?disabled=${watch}
-                        @click=${() => this.recordPlay({family: btn.family, ...btn.extra})}
+                        @click=${() => this.recordPlay({ family: btn.family, ...btn.extra })}
                     >${btn.label}</button>`,
                 )}
-                <button class=${this.padClass('Timeout away')} ?disabled=${watch} @click=${() => this.record({type: 'timeout', team: 'away'})}>Timeout away</button>
-                <button class=${this.padClass('Timeout home')} ?disabled=${watch} @click=${() => this.record({type: 'timeout', team: 'home'})}>Timeout home</button>
-                <button ?disabled=${watch} @click=${() => this.record({
-                    type: 'penalty',
-                    team: possession,
-                    yards: Math.abs(this.yards) || 5,
-                    accepted: true,
-                    foul: 'generic',
-                })}>Penalty vs offense</button>
-                <button class=${this.padClass('Period end')} ?disabled=${watch} @click=${() => this.record({type: 'period_end'})}>Period end</button>
+                <button class=${this.padClass('Timeout away')} ?disabled=${watch} @click=${() => this.record({ type: 'timeout', team: 'away' })}>Timeout away</button>
+                <button class=${this.padClass('Timeout home')} ?disabled=${watch} @click=${() => this.record({ type: 'timeout', team: 'home' })}>Timeout home</button>
+                <button ?disabled=${watch} @click=${() =>
+                    this.record({
+                        type: 'penalty',
+                        team: possession,
+                        yards: Math.abs(this.yards) || 5,
+                        accepted: true,
+                        foul: 'generic',
+                    })}>Penalty vs offense</button>
+                <button class=${this.padClass('Period end')} ?disabled=${watch} @click=${() => this.record({ type: 'period_end' })}>Period end</button>
             </div>
         `;
     }
@@ -300,7 +299,7 @@ export class GameShell extends LitElement {
 
     private renderWatch(): TemplateResult | '' {
         if (!this.isWatch()) return '';
-        const {setup, engine} = this.game;
+        const { setup, engine } = this.game;
         return html`
             <section class="sim-transport">
                 <span class="sim-badge">${watchBadge(engine.over, this.watch.playing)}</span>
@@ -311,7 +310,8 @@ export class GameShell extends LitElement {
                 <label>Speed
                     <select @change=${this.onSpeedChange}>
                         ${SPEED_OPTIONS.map(
-                            (option) => html`<option value=${String(option.value)} ?selected=${this.watch.speed === option.value}>${option.label}</option>`,
+                            (option) =>
+                                html`<option value=${String(option.value)} ?selected=${this.watch.speed === option.value}>${option.label}</option>`,
                         )}
                     </select>
                 </label>
@@ -324,7 +324,7 @@ export class GameShell extends LitElement {
     }
 
     override render(): TemplateResult {
-        const {engine, setup} = this.game;
+        const { engine, setup } = this.game;
         const watch = this.isWatch();
         return html`
             ${this.renderBug()}
@@ -363,9 +363,9 @@ export class GameShell extends LitElement {
     private renderLog(engine: GameState, setup: GameSetup): TemplateResult {
         return html`
             <ol class="log">
-                ${[...engine.plays].reverse().map(
-                    (play) => html`<li>${describePlay(play, setup.homeName, setup.awayName)}</li>`,
-                )}
+                ${[...engine.plays]
+                    .reverse()
+                    .map((play) => html`<li>${describePlay(play, setup.homeName, setup.awayName)}</li>`)}
             </ol>
         `;
     }

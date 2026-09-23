@@ -1,15 +1,6 @@
 package rssapi.edition
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import java.util.Optional
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
@@ -26,6 +17,7 @@ import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.jpa.domain.Specification
+import org.springframework.http.HttpStatus
 import rssapi.ai.AiConfig
 import rssapi.ai.AiQuotaService
 import rssapi.ai.AiService
@@ -42,6 +34,15 @@ import rssapi.persist.EditionRepo
 import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
 import rssapi.web.ApiException
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import java.util.Optional
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 private val RESILIENCE_NOW: Instant = Instant.parse("2026-09-13T12:00:00Z")
 private val RESILIENCE_UID: UUID = UUID.fromString("33333333-3333-3333-3333-333333333333")
@@ -112,7 +113,7 @@ class EditionServiceResilienceTest {
 
         val err = assertFailsWith<ApiException> { service().buildEdition(RESILIENCE_UID, 24, 12) }
 
-        assertEquals(429, err.status)
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), err.status.value())
         verify(ai, never()).summarize(any(), anyOrNull(), any(), any())
         val saved = argumentCaptor<EditionEntity>()
         verify(editions, times(2)).save(saved.capture())
@@ -129,7 +130,7 @@ class EditionServiceResilienceTest {
 
         val err = assertFailsWith<ApiException> { service().buildEdition(RESILIENCE_UID, 24, 12) }
 
-        assertEquals(500, err.status)
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), err.status.value())
         val saved = argumentCaptor<EditionEntity>()
         verify(editions, times(2)).save(saved.capture())
         assertEquals(EDITION_FAILED, saved.lastValue.status)
@@ -202,7 +203,11 @@ class EditionServiceResilienceTest {
         whenever(affinity.findAllById(any<Iterable<AffinityId>>())).thenReturn(emptyList())
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(emptyList())
         whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenAnswer { inv ->
-            if ((inv.getArgument<String?>(1) ?: "") == "Editorial opinion") throw ApiException(502, "server AI failed")
+            if ((inv.getArgument<String?>(1) ?: "") ==
+                "Editorial opinion"
+            ) {
+                throw ApiException(HttpStatus.BAD_GATEWAY, "server AI failed")
+            }
             "section summary"
         }
         whenever(editions.save(any<EditionEntity>())).thenAnswer { it.getArgument<EditionEntity>(0) }

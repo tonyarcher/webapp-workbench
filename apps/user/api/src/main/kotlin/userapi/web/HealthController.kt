@@ -1,11 +1,11 @@
 package userapi.web
 
-import java.sql.SQLException
-import javax.sql.DataSource
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
+import java.sql.SQLException
+import javax.sql.DataSource
 
 @RestController
 class HealthController(private val dataSource: DataSource) {
@@ -21,12 +21,10 @@ class HealthController(private val dataSource: DataSource) {
     }
 }
 
-private fun probe(dataSource: DataSource): Boolean {
-    return try {
-        probeOnce(dataSource)
-    } catch (_: SQLException) {
-        false
-    }
+private fun probe(dataSource: DataSource): Boolean = try {
+    probeOnce(dataSource)
+} catch (_: SQLException) {
+    false
 }
 
 private fun probeOnce(dataSource: DataSource): Boolean {

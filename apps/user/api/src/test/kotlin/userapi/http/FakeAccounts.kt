@@ -1,18 +1,17 @@
 package userapi.http
 
-import java.time.Instant
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 import userapi.accounts.AccountStore
 import userapi.accounts.StoredSession
 import userapi.accounts.StoredUser
 import userapi.domain.LockoutState
 import userapi.domain.PasswordHasher
+import java.time.Instant
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class PlainHasher : PasswordHasher {
     override fun hash(password: String): String = "plain:$password"
-    override fun verify(password: String, passwordHash: String): Boolean =
-        passwordHash == "plain:$password"
+    override fun verify(password: String, passwordHash: String): Boolean = passwordHash == "plain:$password"
 }
 
 class FakeAccountStore : AccountStore {

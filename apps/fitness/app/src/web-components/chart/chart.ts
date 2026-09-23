@@ -1,7 +1,7 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
-import {ref} from 'lit/directives/ref.js';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import { ref } from 'lit/directives/ref.js';
 import uPlot from 'uplot';
 import styles from './chart.css?inline';
 
@@ -9,8 +9,8 @@ import styles from './chart.css?inline';
 export class FtChart extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) xs: number[] = [];
-    @property({attribute: false}) ys: number[] = [];
+    @property({ attribute: false }) xs: number[] = [];
+    @property({ attribute: false }) ys: number[] = [];
     @property() override title = '';
     @property() fmt = '';
 
@@ -46,9 +46,9 @@ export class FtChart extends LitElement {
         return {
             width,
             height: 180,
-            cursor: {show: true},
-            legend: {show: true, live: true},
-            scales: {x: {time: true}},
+            cursor: { show: true },
+            legend: { show: true, live: true },
+            scales: { x: { time: true } },
             series: [
                 {},
                 {

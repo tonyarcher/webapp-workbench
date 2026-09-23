@@ -1,10 +1,5 @@
 package rssapi.poller
 
-import java.time.Instant
-import java.util.UUID
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.dao.DataAccessException
 import org.springframework.scheduling.annotation.Scheduled
@@ -16,6 +11,11 @@ import rssapi.log.log
 import rssapi.persist.FeedSyncEntity
 import rssapi.persist.FeedSyncRepo
 import rssapi.persist.SubscriptionRepo
+import java.time.Instant
+import java.util.UUID
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Component
 class FeedPoller(
@@ -27,6 +27,7 @@ class FeedPoller(
     private val extra = ConcurrentLinkedQueue<UUID>()
     private val inFlight = AtomicBoolean(false)
     private val worker = Executors.newSingleThreadExecutor()
+
     @Volatile private var stopped = false
 
     companion object {

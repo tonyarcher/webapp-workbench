@@ -1,9 +1,9 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
-import {looksLikeSqlite, parseImportText, type ParseResult} from 'fitness-core';
-import {postImport} from '../../services/api';
-import {parseHealthConnectSqliteFile} from '../../services/health-connect-db';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { looksLikeSqlite, parseImportText, type ParseResult } from 'fitness-core';
+import { postImport } from '../../services/api';
+import { parseHealthConnectSqliteFile } from '../../services/health-connect-db';
 import styles from './import-view.css?inline';
 
 const CHUNK = 500;

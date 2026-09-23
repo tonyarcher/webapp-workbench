@@ -1,16 +1,12 @@
 package stockgame.persist
 
-import java.io.Serializable
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.IdClass
 import jakarta.persistence.Table
+import java.io.Serializable
 
-data class PriceCacheId(
-    var symbol: String = "",
-    var interval: String = "",
-    var date: Long = 0,
-) : Serializable {
+data class PriceCacheId(var symbol: String = "", var interval: String = "", var date: Long = 0) : Serializable {
     companion object {
         private const val serialVersionUID: Long = 1
     }

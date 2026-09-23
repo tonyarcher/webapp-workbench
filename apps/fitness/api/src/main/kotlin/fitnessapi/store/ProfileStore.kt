@@ -1,7 +1,7 @@
 package fitnessapi.store
 
-import java.util.UUID
 import fitnessapi.domain.ProfileData
+import java.util.UUID
 
 interface ProfileStore {
     fun getProfile(userId: UUID): ProfileData

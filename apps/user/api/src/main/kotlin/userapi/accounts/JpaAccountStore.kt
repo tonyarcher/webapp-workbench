@@ -1,32 +1,25 @@
 package userapi.accounts
 
-import java.time.Instant
-import java.util.UUID
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.transaction.annotation.Transactional
 import userapi.domain.LockoutState
-import userapi.persist.SessionRepo
 import userapi.persist.SessionEntity
+import userapi.persist.SessionRepo
 import userapi.persist.UserEntity
 import userapi.persist.UserRepo
+import java.time.Instant
+import java.util.UUID
 
-open class JpaAccountStore(
-    private val users: UserRepo,
-    private val sessions: SessionRepo,
-) : AccountStore {
-    override fun createUser(username: String, passwordHash: String): UUID? {
-        return try {
-            users.save(UserEntity(username = username, passwordHash = passwordHash)).id
-        } catch (_: DataIntegrityViolationException) {
-            null
-        }
+open class JpaAccountStore(private val users: UserRepo, private val sessions: SessionRepo) : AccountStore {
+    override fun createUser(username: String, passwordHash: String): UUID? = try {
+        users.save(UserEntity(username = username, passwordHash = passwordHash)).id
+    } catch (_: DataIntegrityViolationException) {
+        null
     }
 
-    override fun findByUsername(username: String): StoredUser? =
-        users.findByUsername(username)?.toStored()
+    override fun findByUsername(username: String): StoredUser? = users.findByUsername(username)?.toStored()
 
-    override fun findById(id: UUID): StoredUser? =
-        users.findById(id).orElse(null)?.toStored()
+    override fun findById(id: UUID): StoredUser? = users.findById(id).orElse(null)?.toStored()
 
     @Transactional
     override fun writeLockout(id: UUID, state: LockoutState) {

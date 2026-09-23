@@ -1,4 +1,4 @@
-import type {EditionSection} from '../types';
+import type { EditionSection } from '../types';
 
 /**
  * Front Page edition options. windowHours/sectionCount shape the next server
@@ -35,7 +35,7 @@ export const EDITION_SECTION_COUNT_MAX = 12;
 const STORAGE_KEY = 'rss-reader:edition-options';
 
 export function defaultEditionOptions(): EditionOptions {
-    return {...DEFAULT_EDITION_OPTIONS};
+    return { ...DEFAULT_EDITION_OPTIONS };
 }
 
 function isOneOf(value: unknown, options: readonly number[]): value is number {
@@ -47,7 +47,10 @@ function weightOr(value: unknown, fallback: number): number {
 }
 
 function sectionCountOr(value: unknown, fallback: number): number {
-    return typeof value === 'number' && Number.isInteger(value) && value >= EDITION_SECTION_COUNT_MIN && value <= EDITION_SECTION_COUNT_MAX
+    return typeof value === 'number' &&
+        Number.isInteger(value) &&
+        value >= EDITION_SECTION_COUNT_MIN &&
+        value <= EDITION_SECTION_COUNT_MAX
         ? value
         : fallback;
 }
@@ -77,12 +80,22 @@ export function loadEditionOptions(): EditionOptions {
         if (!raw) return defaultEditionOptions();
         const parsed = JSON.parse(raw) as Partial<EditionOptions>;
         return pruneEditionOptions({
-            windowHours: typeof parsed.windowHours === 'number' ? parsed.windowHours : DEFAULT_EDITION_OPTIONS.windowHours,
-            sectionCount: typeof parsed.sectionCount === 'number' ? parsed.sectionCount : DEFAULT_EDITION_OPTIONS.sectionCount,
-            weightGeneral: typeof parsed.weightGeneral === 'number' ? parsed.weightGeneral : DEFAULT_EDITION_OPTIONS.weightGeneral,
-            weightPersonal: typeof parsed.weightPersonal === 'number' ? parsed.weightPersonal : DEFAULT_EDITION_OPTIONS.weightPersonal,
-            weightNewness: typeof parsed.weightNewness === 'number' ? parsed.weightNewness : DEFAULT_EDITION_OPTIONS.weightNewness,
-            weightPopularity: typeof parsed.weightPopularity === 'number' ? parsed.weightPopularity : DEFAULT_EDITION_OPTIONS.weightPopularity,
+            windowHours:
+                typeof parsed.windowHours === 'number' ? parsed.windowHours : DEFAULT_EDITION_OPTIONS.windowHours,
+            sectionCount:
+                typeof parsed.sectionCount === 'number' ? parsed.sectionCount : DEFAULT_EDITION_OPTIONS.sectionCount,
+            weightGeneral:
+                typeof parsed.weightGeneral === 'number' ? parsed.weightGeneral : DEFAULT_EDITION_OPTIONS.weightGeneral,
+            weightPersonal:
+                typeof parsed.weightPersonal === 'number'
+                    ? parsed.weightPersonal
+                    : DEFAULT_EDITION_OPTIONS.weightPersonal,
+            weightNewness:
+                typeof parsed.weightNewness === 'number' ? parsed.weightNewness : DEFAULT_EDITION_OPTIONS.weightNewness,
+            weightPopularity:
+                typeof parsed.weightPopularity === 'number'
+                    ? parsed.weightPopularity
+                    : DEFAULT_EDITION_OPTIONS.weightPopularity,
             showOpinion: parsed.showOpinion === true,
             showFactCheck: parsed.showFactCheck === true,
         });

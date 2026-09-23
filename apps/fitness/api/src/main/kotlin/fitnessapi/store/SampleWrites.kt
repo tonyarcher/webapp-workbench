@@ -1,17 +1,17 @@
 package fitnessapi.store
 
-import java.time.Instant
-import java.util.UUID
-import javax.sql.DataSource
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
-import org.springframework.stereotype.Component
 import fitnessapi.domain.IncomingSample
 import fitnessapi.persist.DailyRollupRepo
 import fitnessapi.persist.ImportEntity
 import fitnessapi.persist.ImportRepo
 import fitnessapi.persist.SampleWriteRepo
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+import org.springframework.stereotype.Component
+import java.time.Instant
+import java.util.UUID
+import javax.sql.DataSource
 
 @Component
 @ConditionalOnBean(DataSource::class)

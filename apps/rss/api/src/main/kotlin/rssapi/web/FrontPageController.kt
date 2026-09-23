@@ -1,17 +1,15 @@
 package rssapi.web
 
-import java.time.Instant
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import rssapi.domain.clampPageLimit
 import rssapi.frontpage.FrontPageService
+import java.time.Instant
 
 @RestController
-class FrontPageController(
-    private val user: IdentityUser,
-    private val frontPage: FrontPageService,
-) {
+class FrontPageController(private val user: IdentityUser, private val frontPage: FrontPageService) {
     @GetMapping("/front-page", headers = ["X-Api-Version=1"])
     fun frontPage(
         @RequestParam(required = false) since: String?,
@@ -30,5 +28,5 @@ class FrontPageController(
 
 private fun parseFrontPageSince(since: String?): Long? {
     if (since == null) return null
-    return since.toDoubleOrNull()?.toLong() ?: throw ApiException(400, "invalid since")
+    return since.toDoubleOrNull()?.toLong() ?: throw ApiException(HttpStatus.BAD_REQUEST, "invalid since")
 }

@@ -1,7 +1,7 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
-import type {CalEvent, SyncProgress} from 'calendar-core';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import type { CalEvent, SyncProgress } from 'calendar-core';
 import {
     TraktHttpError,
     dedupEvents,
@@ -13,12 +13,12 @@ import {
     parseNetflixExport,
     writeEvents,
 } from 'calendar-core';
-import type {AppSettings, DeviceFlowView} from '../../types';
-import {loadSettings, saveSettings} from '../../services/settings';
-import {traktProxyUrl} from '../../services/url';
-import {pollDeviceToken, refreshAccessToken, requestDeviceCode, tokenExpiry} from '../../services/trakt-auth';
-import {requestGoogleToken} from '../../services/google-auth';
-import {downloadText} from '../../services/download';
+import type { AppSettings, DeviceFlowView } from '../../types';
+import { loadSettings, saveSettings } from '../../services/settings';
+import { traktProxyUrl } from '../../services/url';
+import { pollDeviceToken, refreshAccessToken, requestDeviceCode, tokenExpiry } from '../../services/trakt-auth';
+import { requestGoogleToken } from '../../services/google-auth';
+import { downloadText } from '../../services/download';
 import '../source-card/source-card';
 import '../progress-bar/progress-bar';
 import styles from './app-shell.css?inline';
@@ -74,7 +74,7 @@ export class AppShell extends LitElement {
         const value = (event.target as HTMLInputElement).value;
         this.persist({
             ...this.settings,
-            trakt: {...this.settings.trakt, [field]: value},
+            trakt: { ...this.settings.trakt, [field]: value },
         });
     }
 
@@ -82,7 +82,7 @@ export class AppShell extends LitElement {
         const value = (event.target as HTMLInputElement).value;
         this.persist({
             ...this.settings,
-            google: {...this.settings.google, clientId: value},
+            google: { ...this.settings.google, clientId: value },
         });
     }
 
@@ -90,7 +90,7 @@ export class AppShell extends LitElement {
         const checked = (event.target as HTMLInputElement).checked;
         this.persist({
             ...this.settings,
-            trakt: {...this.settings.trakt, [field]: checked},
+            trakt: { ...this.settings.trakt, [field]: checked },
         });
     }
 
@@ -116,19 +116,17 @@ export class AppShell extends LitElement {
         this.netflixSkipped = parsed.skipped.length;
         this.persist({
             ...this.settings,
-            netflix: {lastCount: parsed.events.length, lastAt: Date.now()},
+            netflix: { lastCount: parsed.events.length, lastAt: Date.now() },
         });
         this.progress = {
             phase: 'convert',
             done: parsed.events.length,
             total: parsed.events.length + parsed.skipped.length,
-            label: parsed.skipped.length
-                ? `${parsed.skipped.length} rows skipped`
-                : 'Netflix export parsed',
+            label: parsed.skipped.length ? `${parsed.skipped.length} rows skipped` : 'Netflix export parsed',
         };
     }
 
-    private persistTraktToken(token: {accessToken: string; refreshToken: string; expiresIn: number}): void {
+    private persistTraktToken(token: { accessToken: string; refreshToken: string; expiresIn: number }): void {
         this.persist({
             ...this.settings,
             trakt: {
@@ -169,7 +167,10 @@ export class AppShell extends LitElement {
             includeCalendar: this.settings.trakt.includeCalendar,
             includeHistory: this.settings.trakt.includeHistory,
             onProgress: this.onProgress,
-            onTruncate: (info) => this.showNotice(`Trakt ${info.type} history goes back further than this app pulls (page ${info.page}); older entries were not synced.`),
+            onTruncate: (info) =>
+                this.showNotice(
+                    `Trakt ${info.type} history goes back further than this app pulls (page ${info.page}); older entries were not synced.`,
+                ),
         });
     }
 
@@ -179,7 +180,13 @@ export class AppShell extends LitElement {
 
     private async refreshAndRetry(): Promise<CalEvent[]> {
         const t = this.settings.trakt;
-        const token = await refreshAccessToken(fetch, traktProxyUrl(import.meta.env.BASE_URL), t.clientId, t.clientSecret, t.refreshToken ?? '');
+        const token = await refreshAccessToken(
+            fetch,
+            traktProxyUrl(import.meta.env.BASE_URL),
+            t.clientId,
+            t.clientSecret,
+            t.refreshToken ?? '',
+        );
         this.persistTraktToken(token);
         return this.loadTraktEvents(token.accessToken);
     }
@@ -198,7 +205,7 @@ export class AppShell extends LitElement {
     }
 
     private validateTraktCreds(): boolean {
-        const {clientId, clientSecret} = this.settings.trakt;
+        const { clientId, clientSecret } = this.settings.trakt;
         if (!clientId || !clientSecret) {
             this.error = 'Paste a Trakt client id and secret in Settings.';
             return false;
@@ -207,10 +214,10 @@ export class AppShell extends LitElement {
     }
 
     private async runDeviceFlow(signal: AbortSignal): Promise<void> {
-        const {clientId, clientSecret} = this.settings.trakt;
+        const { clientId, clientSecret } = this.settings.trakt;
         const baseUrl = traktProxyUrl(import.meta.env.BASE_URL);
         const code = await requestDeviceCode(fetch, baseUrl, clientId);
-        this.deviceFlow = {userCode: code.userCode, verificationUrl: code.verificationUrl};
+        this.deviceFlow = { userCode: code.userCode, verificationUrl: code.verificationUrl };
         const token = await pollDeviceToken({
             fetch,
             baseUrl,
@@ -234,7 +241,7 @@ export class AppShell extends LitElement {
         try {
             await this.runDeviceFlow(this.abort.signal);
         } catch (err) {
-            if ((err as {name?: string}).name === 'AbortError') return;
+            if ((err as { name?: string }).name === 'AbortError') return;
             this.error = err instanceof Error ? err.message : 'Trakt connect failed';
         } finally {
             this.busy = null;
@@ -316,10 +323,10 @@ export class AppShell extends LitElement {
         try {
             const ics = eventsToIcs(events);
             downloadText('calendar-sync.ics', ics, 'text/calendar;charset=utf-8');
-            this.progress = {phase: 'write', done: events.length, total: events.length, label: 'Downloaded ICS'};
+            this.progress = { phase: 'write', done: events.length, total: events.length, label: 'Downloaded ICS' };
             this.persist({
                 ...this.settings,
-                lastSync: {at: Date.now(), count: events.length, failed: 0, destination: 'ics'},
+                lastSync: { at: Date.now(), count: events.length, failed: 0, destination: 'ics' },
             });
         } finally {
             this.busy = null;
@@ -330,11 +337,15 @@ export class AppShell extends LitElement {
         const existing = this.settings.google.calendarId;
         if (existing) return existing;
         const calendarId = await findOrCreateCalendar(fetch, accessToken);
-        this.persist({...this.settings, google: {...this.settings.google, calendarId}});
+        this.persist({ ...this.settings, google: { ...this.settings.google, calendarId } });
         return calendarId;
     }
 
-    private pushGoogleEvents(events: CalEvent[], accessToken: string, calendarId: string): Promise<{done: number; failed: number; newUids: string[]}> {
+    private pushGoogleEvents(
+        events: CalEvent[],
+        accessToken: string,
+        calendarId: string,
+    ): Promise<{ done: number; failed: number; newUids: string[] }> {
         const written = new Set(this.settings.google.writtenUids);
         return writeEvents({
             events,
@@ -344,7 +355,7 @@ export class AppShell extends LitElement {
         });
     }
 
-    private persistGooglePush(calendarId: string, result: {done: number; failed: number; newUids: string[]}): void {
+    private persistGooglePush(calendarId: string, result: { done: number; failed: number; newUids: string[] }): void {
         this.persist({
             ...this.settings,
             google: {
@@ -352,7 +363,7 @@ export class AppShell extends LitElement {
                 calendarId,
                 writtenUids: [...this.settings.google.writtenUids, ...result.newUids],
             },
-            lastSync: {at: Date.now(), count: result.done, failed: result.failed, destination: 'google'},
+            lastSync: { at: Date.now(), count: result.done, failed: result.failed, destination: 'google' },
         });
     }
 

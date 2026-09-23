@@ -1,12 +1,12 @@
-import {describe, expect, it} from 'vitest';
-import {createGame, reduce} from 'basketball-core';
-import {DEFAULT_GAME_SETUP} from '../local-game/game-types';
-import {nextEvent, rngForEngine} from './resolve-play';
+import { describe, expect, it } from 'vitest';
+import { createGame, reduce } from 'basketball-core';
+import { DEFAULT_GAME_SETUP } from '../local-game/game-types';
+import { nextEvent, rngForEngine } from './resolve-play';
 
 describe('nextEvent', () => {
     it('ends the period when the clock is out', () => {
         const game = createGame(DEFAULT_GAME_SETUP);
-        const expired = {...game, clock: {...game.clock, gameClockSeconds: 0}};
+        const expired = { ...game, clock: { ...game.clock, gameClockSeconds: 0 } };
         expect(nextEvent(expired, () => 0).type).toBe('period_end');
     });
 

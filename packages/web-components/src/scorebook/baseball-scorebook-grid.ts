@@ -1,5 +1,5 @@
-import {html, svg, LitElement} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import { html, svg, LitElement } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import scorebookCssText from './baseball-scorebook-grid.css?inline';
 
 const scorebookSheet = new CSSStyleSheet();
@@ -38,8 +38,8 @@ export interface ScorebookSlotDto {
 export class BaseballScorebookGrid extends LitElement {
     static override styles = scorebookSheet;
 
-    @property({type: String, attribute: 'team-name'}) teamName = 'Team Scorecard';
-    @property({type: Number, attribute: 'max-inning'}) maxInning = 9;
+    @property({ type: String, attribute: 'team-name' }) teamName = 'Team Scorecard';
+    @property({ type: Number, attribute: 'max-inning' }) maxInning = 9;
 
     @property({
         type: Array,
@@ -52,13 +52,13 @@ export class BaseballScorebookGrid extends LitElement {
                 } catch {
                     return [];
                 }
-            }
-        }
+            },
+        },
     })
     rows: ScorebookSlotDto[] = [];
 
     override render() {
-        const inningsArray = Array.from({length: this.maxInning}, (_, i) => i + 1);
+        const inningsArray = Array.from({ length: this.maxInning }, (_, i) => i + 1);
         return html`
       <div class="card scorebook-container">
         <h2 class="scorebook-title">${this.teamName} - Scorebook Sheet</h2>
@@ -162,7 +162,7 @@ export class BaseballScorebookGrid extends LitElement {
           x2="${basePointX(advancement.to)}"
           y2="${basePointY(advancement.to)}"
         ></line>
-      `
+      `,
         );
         return html`<svg class="advancement-svg" viewBox="0 0 52 52" data-testid="advancement-svg">${lines}</svg>`;
     }

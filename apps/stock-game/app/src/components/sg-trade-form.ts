@@ -1,310 +1,330 @@
-import { LitElement, html } from 'lit'
-import type { PropertyValues, TemplateResult } from 'lit'
+import { LitElement, html } from 'lit';
+import type { PropertyValues, TemplateResult } from 'lit';
 import {
-  defaultFillPriceSource,
-  type FillPriceSource,
-  type HoldingsEntry,
-  type OrderType,
-  type PlaceOrderRequest,
-  type PlaceTradeRequest,
-  type Quote,
-  type Side,
-  type SymbolSearchResult,
-  type Tif,
-  type TradeMode,
-} from '@stock-game/shared'
-import { fmtMoney, fmtPrice } from '../lib/format'
-import { maxQtyForSide } from '../lib/max-qty'
-import { quoteFillPriceClient } from '../lib/quote-fill'
-import { SgSymbolSearch } from './sg-symbol-search'
-import { defineElement } from './define'
-import { tradeFormStyles } from './sg-trade-form-styles'
+    defaultFillPriceSource,
+    type FillPriceSource,
+    type HoldingsEntry,
+    type OrderType,
+    type PlaceOrderRequest,
+    type PlaceTradeRequest,
+    type Quote,
+    type Side,
+    type SymbolSearchResult,
+    type Tif,
+    type TradeMode,
+} from '@stock-game/shared';
+import { fmtMoney, fmtPrice } from '../lib/format';
+import { maxQtyForSide } from '../lib/max-qty';
+import { quoteFillPriceClient } from '../lib/quote-fill';
+import { SgSymbolSearch } from './sg-symbol-search';
+import { defineElement } from './define';
+import { tradeFormStyles } from './sg-trade-form-styles';
 
-type SubmitDetail =
-  | { mode: 'backdated'; data: PlaceTradeRequest }
-  | { mode: 'scheduled'; data: PlaceOrderRequest }
+type SubmitDetail = { mode: 'backdated'; data: PlaceTradeRequest } | { mode: 'scheduled'; data: PlaceOrderRequest };
 
 export class SgTradeForm extends LitElement {
-  static override styles = tradeFormStyles
+    static override styles = tradeFormStyles;
 
-  static override properties = {
-    results: { attribute: false },
-    query: { type: String },
-    quote: { attribute: false },
-    cashCents: { type: Number },
-    holdings: { attribute: false },
-    busy: { type: Boolean },
-    symbol: { type: String },
-    searching: { type: Boolean },
-    searchError: { attribute: false },
-    quoteLoading: { type: Boolean },
-    quoteError: { attribute: false },
-    commissionCents: { type: Number },
-    quoteDelayMinutes: { type: Number },
-  }
+    static override properties = {
+        results: { attribute: false },
+        query: { type: String },
+        quote: { attribute: false },
+        cashCents: { type: Number },
+        holdings: { attribute: false },
+        busy: { type: Boolean },
+        symbol: { type: String },
+        searching: { type: Boolean },
+        searchError: { attribute: false },
+        quoteLoading: { type: Boolean },
+        quoteError: { attribute: false },
+        commissionCents: { type: Number },
+        quoteDelayMinutes: { type: Number },
+    };
 
-  results: SymbolSearchResult[] = []
-  query = ''
-  quote: Quote | null = null
-  cashCents = 0
-  holdings: HoldingsEntry[] = []
-  busy = false
-  symbol = ''
-  searching = false
-  searchError: string | null = null
-  quoteLoading = false
-  quoteError: string | null = null
-  commissionCents = 0
-  quoteDelayMinutes = 15
+    results: SymbolSearchResult[] = [];
+    query = '';
+    quote: Quote | null = null;
+    cashCents = 0;
+    holdings: HoldingsEntry[] = [];
+    busy = false;
+    symbol = '';
+    searching = false;
+    searchError: string | null = null;
+    quoteLoading = false;
+    quoteError: string | null = null;
+    commissionCents = 0;
+    quoteDelayMinutes = 15;
 
-  private typedSymbol = ''
-  private side: Side = 'buy'
-  private qty = 1
-  private mode: TradeMode = 'scheduled'
-  private useCalendar = false
-  private when = ''
-  private orderType: OrderType = 'market'
-  private tif: Tif = 'GTC'
-  private limitPrice: number | undefined
-  private stopPrice: number | undefined
-  private fillPriceSource: FillPriceSource = 'ask'
-  private error: string | undefined
+    private typedSymbol = '';
+    private side: Side = 'buy';
+    private qty = 1;
+    private mode: TradeMode = 'scheduled';
+    private useCalendar = false;
+    private when = '';
+    private orderType: OrderType = 'market';
+    private tif: Tif = 'GTC';
+    private limitPrice: number | undefined;
+    private stopPrice: number | undefined;
+    private fillPriceSource: FillPriceSource = 'ask';
+    private error: string | undefined;
 
-  override firstUpdated(): void {
-    this.applyExternalSymbol()
-  }
-
-  override updated(changed: PropertyValues): void {
-    if (changed.has('symbol')) this.applyExternalSymbol()
-  }
-
-  private applyExternalSymbol(): void {
-    if (this.symbol === '') return
-    this.typedSymbol = this.symbol
-    const search = this.renderRoot.querySelector('sg-symbol-search')
-    if (search !== null) (search as SgSymbolSearch).value = this.symbol
-  }
-
-  private onSymbolTyped(event: CustomEvent<{ value: string }>): void {
-    this.typedSymbol = event.detail.value
-  }
-
-  private onSymbolSelected(event: CustomEvent<SymbolSearchResult>): void {
-    this.typedSymbol = event.detail.symbol
-  }
-
-  private selectSide(side: Side): void {
-    this.side = side
-    this.fillPriceSource = defaultFillPriceSource(side)
-    this.requestUpdate()
-  }
-
-  private selectMode(mode: TradeMode): void {
-    this.mode = mode
-    if (mode === 'backdated') this.useCalendar = true
-    this.requestUpdate()
-  }
-
-  private setUseCalendar(on: boolean): void {
-    this.useCalendar = on
-    if (!on) {
-      this.mode = 'scheduled'
-      this.when = ''
+    override firstUpdated(): void {
+        this.applyExternalSymbol();
     }
-    this.requestUpdate()
-  }
 
-  private selectFillSource(source: FillPriceSource): void {
-    this.fillPriceSource = source
-    this.requestUpdate()
-  }
-
-  private getSymbol(): string | undefined {
-    const symbol = this.typedSymbol.trim().toUpperCase()
-    if (!symbol) {
-      this.error = 'Enter a symbol'
-      return undefined
+    override updated(changed: PropertyValues): void {
+        if (changed.has('symbol')) this.applyExternalSymbol();
     }
-    return symbol
-  }
 
-  private getValidatedQty(): number | undefined {
-    if (!Number.isInteger(this.qty) || this.qty <= 0) {
-      this.error = 'Enter a positive whole number of shares'
-      return undefined
+    private applyExternalSymbol(): void {
+        if (this.symbol === '') return;
+        this.typedSymbol = this.symbol;
+        const search = this.renderRoot.querySelector('sg-symbol-search');
+        if (search !== null) (search as SgSymbolSearch).value = this.symbol;
     }
-    return this.qty
-  }
 
-  private getValidatedTime(): number | undefined {
-    const ms = Date.parse(this.when)
-    if (Number.isNaN(ms)) {
-      this.error = 'Enter a valid date and time'
-      return undefined
+    private onSymbolTyped(event: CustomEvent<{ value: string }>): void {
+        this.typedSymbol = event.detail.value;
     }
-    return ms
-  }
 
-  private buildBackdatedPayload(symbol: string, qty: number, ms: number): Record<string, unknown> {
-    const payload: Record<string, unknown> = { symbol, side: this.side, qty, at: ms, orderType: this.orderType }
-    if (this.limitPrice !== undefined) payload['limitPrice'] = this.limitPrice
-    if (this.stopPrice !== undefined) payload['stopPrice'] = this.stopPrice
-    return payload
-  }
-
-  private isValidTradePayload(payload: Record<string, unknown>): boolean {
-    if (typeof payload['symbol'] !== 'string' || !payload['symbol'] || (payload['symbol'] as string).length > 16) return false
-    if (typeof payload['qty'] !== 'number' || !Number.isInteger(payload['qty']) || payload['qty'] <= 0) return false
-    if (typeof payload['at'] !== 'number' || !Number.isInteger(payload['at'])) return false
-    return this.hasValidOrderPrices(payload['orderType'] as OrderType, payload['limitPrice'] as number | undefined, payload['stopPrice'] as number | undefined)
-  }
-
-  private hasValidOrderPrices(orderType: OrderType, limitPrice: number | undefined, stopPrice: number | undefined): boolean {
-    if (!this.isValidPrice(limitPrice) || !this.isValidPrice(stopPrice)) return false
-    const needsLimit = orderType === 'limit' || orderType === 'stopLimit'
-    const needsStop = orderType === 'stop' || orderType === 'stopLimit'
-    if (needsLimit && limitPrice === undefined) return false
-    if (needsStop && stopPrice === undefined) return false
-    return true
-  }
-
-  private isValidPrice(value: number | undefined): boolean {
-    return value === undefined || value > 0
-  }
-
-  private submitBackdated(symbol: string, qty: number, ms: number): void {
-    const payload = this.buildBackdatedPayload(symbol, qty, ms)
-    if (!this.isValidTradePayload(payload)) {
-      this.error = 'Invalid trade details'
-      return
+    private onSymbolSelected(event: CustomEvent<SymbolSearchResult>): void {
+        this.typedSymbol = event.detail.symbol;
     }
-    this.emit({ mode: 'backdated', data: payload as unknown as PlaceTradeRequest })
-  }
 
-  private buildScheduledPayload(symbol: string, qty: number, ms: number | undefined): Record<string, unknown> {
-    const payload: Record<string, unknown> = {
-      symbol,
-      side: this.side,
-      qty,
-      orderType: this.orderType,
-      tif: this.tif,
-      fillPriceSource: this.fillPriceSource,
+    private selectSide(side: Side): void {
+        this.side = side;
+        this.fillPriceSource = defaultFillPriceSource(side);
+        this.requestUpdate();
     }
-    if (ms !== undefined) payload['executeAt'] = ms
-    if (this.limitPrice !== undefined) payload['limitPrice'] = this.limitPrice
-    if (this.stopPrice !== undefined) payload['stopPrice'] = this.stopPrice
-    return payload
-  }
 
-  private isValidOrderPayload(payload: Record<string, unknown>): boolean {
-    if (typeof payload['symbol'] !== 'string' || !payload['symbol'] || (payload['symbol'] as string).length > 16) return false
-    if (typeof payload['qty'] !== 'number' || !Number.isInteger(payload['qty']) || payload['qty'] <= 0) return false
-    const executeAt = payload['executeAt'] as number | undefined
-    if (executeAt !== undefined && (!Number.isInteger(executeAt))) return false
-    return this.hasValidOrderPrices(payload['orderType'] as OrderType, payload['limitPrice'] as number | undefined, payload['stopPrice'] as number | undefined)
-  }
-
-  private submitScheduled(symbol: string, qty: number, ms: number | undefined): void {
-    if (ms !== undefined && ms <= Date.now()) {
-      this.error = 'Scheduled execution time must be in the future'
-      return
+    private selectMode(mode: TradeMode): void {
+        this.mode = mode;
+        if (mode === 'backdated') this.useCalendar = true;
+        this.requestUpdate();
     }
-    const payload = this.buildScheduledPayload(symbol, qty, ms)
-    if (!this.isValidOrderPayload(payload)) {
-      this.error = 'Invalid order details'
-      return
+
+    private setUseCalendar(on: boolean): void {
+        this.useCalendar = on;
+        if (!on) {
+            this.mode = 'scheduled';
+            this.when = '';
+        }
+        this.requestUpdate();
     }
-    this.emit({ mode: 'scheduled', data: payload as unknown as PlaceOrderRequest })
-  }
 
-  private onSubmit(): void {
-    this.error = undefined
-    const symbol = this.getSymbol()
-    if (symbol === undefined) return
-    const qty = this.getValidatedQty()
-    if (qty === undefined) return
-    if (!this.useCalendar || this.mode !== 'backdated') this.handleScheduledSubmit(symbol, qty)
-    else this.handleBackdatedSubmit(symbol, qty)
-  }
-
-  private handleBackdatedSubmit(symbol: string, qty: number): void {
-    const ms = this.getValidatedTime()
-    if (ms === undefined) return
-    this.submitBackdated(symbol, qty, ms)
-  }
-
-  private handleScheduledSubmit(symbol: string, qty: number): void {
-    if (!this.useCalendar || this.when.trim() === '') {
-      this.submitScheduled(symbol, qty, undefined)
-      return
+    private selectFillSource(source: FillPriceSource): void {
+        this.fillPriceSource = source;
+        this.requestUpdate();
     }
-    const ms = this.getValidatedTime()
-    if (ms === undefined) return
-    this.submitScheduled(symbol, qty, ms)
-  }
 
-  private emit(detail: SubmitDetail): void {
-    this.dispatchEvent(new CustomEvent('sg-trade-submit', { detail, bubbles: true, composed: true }))
-  }
-
-  private get heldQty(): number {
-    const symbol = this.typedSymbol.trim().toUpperCase()
-    if (!symbol) return 0
-    return this.holdings.find((holding) => holding.symbol === symbol)?.qty ?? 0
-  }
-
-  private sizingPrice(): number | undefined {
-    if ((this.orderType === 'limit' || this.orderType === 'stopLimit') && this.limitPrice !== undefined && this.limitPrice > 0) return this.limitPrice
-    if (this.quote === null) return undefined
-    if (this.mode === 'scheduled') return quoteFillPriceClient(this.quote, this.fillPriceSource)
-    return this.quote.price
-  }
-
-  private applySellMax(): void {
-    const qty = maxQtyForSide('sell', 0, 0, 0, this.heldQty)
-    if (qty < 1) {
-      this.error = 'No shares held'
-      this.requestUpdate()
-      return
+    private getSymbol(): string | undefined {
+        const symbol = this.typedSymbol.trim().toUpperCase();
+        if (!symbol) {
+            this.error = 'Enter a symbol';
+            return undefined;
+        }
+        return symbol;
     }
-    this.qty = qty
-    this.error = undefined
-    this.requestUpdate()
-  }
 
-  private applyCashMax(): void {
-    const price = this.sizingPrice()
-    if (price === undefined) {
-      this.error = 'Select a symbol to size a max buy'
-      this.requestUpdate()
-      return
+    private getValidatedQty(): number | undefined {
+        if (!Number.isInteger(this.qty) || this.qty <= 0) {
+            this.error = 'Enter a positive whole number of shares';
+            return undefined;
+        }
+        return this.qty;
     }
-    const qty = maxQtyForSide(this.side, this.cashCents, price, this.commissionCents, this.heldQty)
-    if (qty < 1) {
-      this.error = this.side === 'cover' && this.heldQty >= 0 ? 'No shares held' : 'Not enough cash'
-      this.requestUpdate()
-      return
+
+    private getValidatedTime(): number | undefined {
+        const ms = Date.parse(this.when);
+        if (Number.isNaN(ms)) {
+            this.error = 'Enter a valid date and time';
+            return undefined;
+        }
+        return ms;
     }
-    this.qty = qty
-    this.error = undefined
-    this.requestUpdate()
-  }
 
-  private onMaxQty(): void {
-    if (this.side === 'sell') this.applySellMax()
-    else this.applyCashMax()
-  }
+    private buildBackdatedPayload(symbol: string, qty: number, ms: number): Record<string, unknown> {
+        const payload: Record<string, unknown> = { symbol, side: this.side, qty, at: ms, orderType: this.orderType };
+        if (this.limitPrice !== undefined) payload['limitPrice'] = this.limitPrice;
+        if (this.stopPrice !== undefined) payload['stopPrice'] = this.stopPrice;
+        return payload;
+    }
 
-  private get estimatedCostCents(): number | undefined {
-    if (!this.quote) return undefined
-    const price = this.mode === 'scheduled' ? quoteFillPriceClient(this.quote, this.fillPriceSource) : this.quote.price
-    const base = Math.round(this.qty * price * 100)
-    if (this.side === 'buy' || this.side === 'cover') return base + this.commissionCents
-    return base
-  }
+    private isValidTradePayload(payload: Record<string, unknown>): boolean {
+        if (typeof payload['symbol'] !== 'string' || !payload['symbol'] || (payload['symbol'] as string).length > 16)
+            return false;
+        if (typeof payload['qty'] !== 'number' || !Number.isInteger(payload['qty']) || payload['qty'] <= 0)
+            return false;
+        if (typeof payload['at'] !== 'number' || !Number.isInteger(payload['at'])) return false;
+        return this.hasValidOrderPrices(
+            payload['orderType'] as OrderType,
+            payload['limitPrice'] as number | undefined,
+            payload['stopPrice'] as number | undefined,
+        );
+    }
 
-  private renderSymbolField(): TemplateResult {
-    return html`<div class="field">
+    private hasValidOrderPrices(
+        orderType: OrderType,
+        limitPrice: number | undefined,
+        stopPrice: number | undefined,
+    ): boolean {
+        if (!this.isValidPrice(limitPrice) || !this.isValidPrice(stopPrice)) return false;
+        const needsLimit = orderType === 'limit' || orderType === 'stopLimit';
+        const needsStop = orderType === 'stop' || orderType === 'stopLimit';
+        if (needsLimit && limitPrice === undefined) return false;
+        if (needsStop && stopPrice === undefined) return false;
+        return true;
+    }
+
+    private isValidPrice(value: number | undefined): boolean {
+        return value === undefined || value > 0;
+    }
+
+    private submitBackdated(symbol: string, qty: number, ms: number): void {
+        const payload = this.buildBackdatedPayload(symbol, qty, ms);
+        if (!this.isValidTradePayload(payload)) {
+            this.error = 'Invalid trade details';
+            return;
+        }
+        this.emit({ mode: 'backdated', data: payload as unknown as PlaceTradeRequest });
+    }
+
+    private buildScheduledPayload(symbol: string, qty: number, ms: number | undefined): Record<string, unknown> {
+        const payload: Record<string, unknown> = {
+            symbol,
+            side: this.side,
+            qty,
+            orderType: this.orderType,
+            tif: this.tif,
+            fillPriceSource: this.fillPriceSource,
+        };
+        if (ms !== undefined) payload['executeAt'] = ms;
+        if (this.limitPrice !== undefined) payload['limitPrice'] = this.limitPrice;
+        if (this.stopPrice !== undefined) payload['stopPrice'] = this.stopPrice;
+        return payload;
+    }
+
+    private isValidOrderPayload(payload: Record<string, unknown>): boolean {
+        if (typeof payload['symbol'] !== 'string' || !payload['symbol'] || (payload['symbol'] as string).length > 16)
+            return false;
+        if (typeof payload['qty'] !== 'number' || !Number.isInteger(payload['qty']) || payload['qty'] <= 0)
+            return false;
+        const executeAt = payload['executeAt'] as number | undefined;
+        if (executeAt !== undefined && !Number.isInteger(executeAt)) return false;
+        return this.hasValidOrderPrices(
+            payload['orderType'] as OrderType,
+            payload['limitPrice'] as number | undefined,
+            payload['stopPrice'] as number | undefined,
+        );
+    }
+
+    private submitScheduled(symbol: string, qty: number, ms: number | undefined): void {
+        if (ms !== undefined && ms <= Date.now()) {
+            this.error = 'Scheduled execution time must be in the future';
+            return;
+        }
+        const payload = this.buildScheduledPayload(symbol, qty, ms);
+        if (!this.isValidOrderPayload(payload)) {
+            this.error = 'Invalid order details';
+            return;
+        }
+        this.emit({ mode: 'scheduled', data: payload as unknown as PlaceOrderRequest });
+    }
+
+    private onSubmit(): void {
+        this.error = undefined;
+        const symbol = this.getSymbol();
+        if (symbol === undefined) return;
+        const qty = this.getValidatedQty();
+        if (qty === undefined) return;
+        if (!this.useCalendar || this.mode !== 'backdated') this.handleScheduledSubmit(symbol, qty);
+        else this.handleBackdatedSubmit(symbol, qty);
+    }
+
+    private handleBackdatedSubmit(symbol: string, qty: number): void {
+        const ms = this.getValidatedTime();
+        if (ms === undefined) return;
+        this.submitBackdated(symbol, qty, ms);
+    }
+
+    private handleScheduledSubmit(symbol: string, qty: number): void {
+        if (!this.useCalendar || this.when.trim() === '') {
+            this.submitScheduled(symbol, qty, undefined);
+            return;
+        }
+        const ms = this.getValidatedTime();
+        if (ms === undefined) return;
+        this.submitScheduled(symbol, qty, ms);
+    }
+
+    private emit(detail: SubmitDetail): void {
+        this.dispatchEvent(new CustomEvent('sg-trade-submit', { detail, bubbles: true, composed: true }));
+    }
+
+    private get heldQty(): number {
+        const symbol = this.typedSymbol.trim().toUpperCase();
+        if (!symbol) return 0;
+        return this.holdings.find((holding) => holding.symbol === symbol)?.qty ?? 0;
+    }
+
+    private sizingPrice(): number | undefined {
+        if (
+            (this.orderType === 'limit' || this.orderType === 'stopLimit') &&
+            this.limitPrice !== undefined &&
+            this.limitPrice > 0
+        )
+            return this.limitPrice;
+        if (this.quote === null) return undefined;
+        if (this.mode === 'scheduled') return quoteFillPriceClient(this.quote, this.fillPriceSource);
+        return this.quote.price;
+    }
+
+    private applySellMax(): void {
+        const qty = maxQtyForSide('sell', 0, 0, 0, this.heldQty);
+        if (qty < 1) {
+            this.error = 'No shares held';
+            this.requestUpdate();
+            return;
+        }
+        this.qty = qty;
+        this.error = undefined;
+        this.requestUpdate();
+    }
+
+    private applyCashMax(): void {
+        const price = this.sizingPrice();
+        if (price === undefined) {
+            this.error = 'Select a symbol to size a max buy';
+            this.requestUpdate();
+            return;
+        }
+        const qty = maxQtyForSide(this.side, this.cashCents, price, this.commissionCents, this.heldQty);
+        if (qty < 1) {
+            this.error = this.side === 'cover' && this.heldQty >= 0 ? 'No shares held' : 'Not enough cash';
+            this.requestUpdate();
+            return;
+        }
+        this.qty = qty;
+        this.error = undefined;
+        this.requestUpdate();
+    }
+
+    private onMaxQty(): void {
+        if (this.side === 'sell') this.applySellMax();
+        else this.applyCashMax();
+    }
+
+    private get estimatedCostCents(): number | undefined {
+        if (!this.quote) return undefined;
+        const price =
+            this.mode === 'scheduled' ? quoteFillPriceClient(this.quote, this.fillPriceSource) : this.quote.price;
+        const base = Math.round(this.qty * price * 100);
+        if (this.side === 'buy' || this.side === 'cover') return base + this.commissionCents;
+        return base;
+    }
+
+    private renderSymbolField(): TemplateResult {
+        return html`<div class="field">
       <label>Symbol</label>
       <sg-symbol-search
         .results=${this.results}
@@ -314,16 +334,16 @@ export class SgTradeForm extends LitElement {
         @sg-symbol-input=${(event: CustomEvent<{ value: string }>) => this.onSymbolTyped(event)}
         @sg-symbol-select=${(event: CustomEvent<SymbolSearchResult>) => this.onSymbolSelected(event)}
       ></sg-symbol-search>
-    </div>`
-  }
+    </div>`;
+    }
 
-  private sideClass(side: Side): string {
-    if (side === 'buy' || side === 'cover') return 'active-buy'
-    return 'active-sell'
-  }
+    private sideClass(side: Side): string {
+        if (side === 'buy' || side === 'cover') return 'active-buy';
+        return 'active-sell';
+    }
 
-  private renderSideField(): TemplateResult {
-    return html`<div class="field">
+    private renderSideField(): TemplateResult {
+        return html`<div class="field">
       <label>Side</label>
       <div class="segmented">
         <button type="button" class=${this.side === 'buy' ? this.sideClass('buy') : ''} @click=${() => this.selectSide('buy')}>Buy</button>
@@ -331,35 +351,44 @@ export class SgTradeForm extends LitElement {
         <button type="button" class=${this.side === 'short' ? this.sideClass('short') : ''} @click=${() => this.selectSide('short')}>Short</button>
         <button type="button" class=${this.side === 'cover' ? this.sideClass('cover') : ''} @click=${() => this.selectSide('cover')}>Cover</button>
       </div>
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderOrderTypeField(): TemplateResult {
-    return html`<div class="field">
+    private renderOrderTypeField(): TemplateResult {
+        return html`<div class="field">
       <label>Order type</label>
-      <select .value=${this.orderType} @change=${(e: Event) => { this.orderType = (e.target as HTMLSelectElement).value as OrderType; this.requestUpdate() }}>
+      <select .value=${this.orderType} @change=${(e: Event) => {
+          this.orderType = (e.target as HTMLSelectElement).value as OrderType;
+          this.requestUpdate();
+      }}>
         <option value="market">Market</option>
         <option value="limit">Limit</option>
         <option value="stop">Stop</option>
         <option value="stopLimit">Stop-limit</option>
       </select>
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderTifField(): TemplateResult {
-    if (this.mode !== 'scheduled') return html``
-    return html`<div class="field">
+    private renderTifField(): TemplateResult {
+        if (this.mode !== 'scheduled') return html``;
+        return html`<div class="field">
       <label>Time in force</label>
       <div class="segmented">
-        <button type="button" class=${this.tif === 'DAY' ? 'active-mode' : ''} @click=${() => { this.tif = 'DAY'; this.requestUpdate() }}>Day</button>
-        <button type="button" class=${this.tif === 'GTC' ? 'active-mode' : ''} @click=${() => { this.tif = 'GTC'; this.requestUpdate() }}>GTC</button>
+        <button type="button" class=${this.tif === 'DAY' ? 'active-mode' : ''} @click=${() => {
+            this.tif = 'DAY';
+            this.requestUpdate();
+        }}>Day</button>
+        <button type="button" class=${this.tif === 'GTC' ? 'active-mode' : ''} @click=${() => {
+            this.tif = 'GTC';
+            this.requestUpdate();
+        }}>GTC</button>
       </div>
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderFillSourceField(): TemplateResult {
-    if (this.mode !== 'scheduled') return html``
-    return html`<div class="field">
+    private renderFillSourceField(): TemplateResult {
+        if (this.mode !== 'scheduled') return html``;
+        return html`<div class="field">
       <label>Fill price</label>
       <div class="segmented">
         <button type="button" class=${this.fillPriceSource === 'last' ? 'active-mode' : ''} @click=${() => this.selectFillSource('last')}>Last</button>
@@ -367,117 +396,137 @@ export class SgTradeForm extends LitElement {
         <button type="button" class=${this.fillPriceSource === 'ask' ? 'active-mode' : ''} @click=${() => this.selectFillSource('ask')}>Ask</button>
         <button type="button" class=${this.fillPriceSource === 'mid' ? 'active-mode' : ''} @click=${() => this.selectFillSource('mid')}>Mid</button>
       </div>
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderPriceFields(): TemplateResult {
-    const showLimit = this.orderType === 'limit' || this.orderType === 'stopLimit'
-    const showStop = this.orderType === 'stop' || this.orderType === 'stopLimit'
-    return html`${showLimit
-      ? html`<div class="field"><label>Limit price</label><input type="number" min="0" step="0.01" .value=${this.limitPrice !== undefined ? String(this.limitPrice) : ''} @input=${(e: Event) => { const v = (e.target as HTMLInputElement).value; this.limitPrice = v ? Number(v) : undefined }} /></div>`
-      : ''}${showStop
-      ? html`<div class="field"><label>Stop price</label><input type="number" min="0" step="0.01" .value=${this.stopPrice !== undefined ? String(this.stopPrice) : ''} @input=${(e: Event) => { const v = (e.target as HTMLInputElement).value; this.stopPrice = v ? Number(v) : undefined }} /></div>`
-      : ''}`
-  }
+    private renderPriceFields(): TemplateResult {
+        const showLimit = this.orderType === 'limit' || this.orderType === 'stopLimit';
+        const showStop = this.orderType === 'stop' || this.orderType === 'stopLimit';
+        return html`${
+            showLimit
+                ? html`<div class="field"><label>Limit price</label><input type="number" min="0" step="0.01" .value=${this.limitPrice !== undefined ? String(this.limitPrice) : ''} @input=${(
+                      e: Event,
+                  ) => {
+                      const v = (e.target as HTMLInputElement).value;
+                      this.limitPrice = v ? Number(v) : undefined;
+                  }} /></div>`
+                : ''
+        }${
+            showStop
+                ? html`<div class="field"><label>Stop price</label><input type="number" min="0" step="0.01" .value=${this.stopPrice !== undefined ? String(this.stopPrice) : ''} @input=${(
+                      e: Event,
+                  ) => {
+                      const v = (e.target as HTMLInputElement).value;
+                      this.stopPrice = v ? Number(v) : undefined;
+                  }} /></div>`
+                : ''
+        }`;
+    }
 
-  private renderModeField(): TemplateResult {
-    return html`<div class="field">
+    private renderModeField(): TemplateResult {
+        return html`<div class="field">
       <label>Mode</label>
       <div class="segmented">
         <button type="button" class=${this.mode === 'backdated' ? 'active-mode' : ''} @click=${() => this.selectMode('backdated')}>Backdated</button>
         <button type="button" class=${this.mode === 'scheduled' ? 'active-mode' : ''} @click=${() => this.selectMode('scheduled')}>Scheduled</button>
       </div>
       <p class="muted" style="font-size:12px;margin:6px 0 0;color:var(--text-muted,#9aa4b2)">
-        ${this.mode === 'backdated'
-          ? 'Fills at the close of the trading day on/after the chosen date.'
-          : `Fills now (next NYSE open after a ${this.quoteDelayMinutes} minute delay). Check Choose date/time only to pick another moment.`}
+        ${
+            this.mode === 'backdated'
+                ? 'Fills at the close of the trading day on/after the chosen date.'
+                : `Fills now (next NYSE open after a ${this.quoteDelayMinutes} minute delay). Check Choose date/time only to pick another moment.`
+        }
       </p>
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderSharesField(): TemplateResult {
-    return html`<div class="field">
+    private renderSharesField(): TemplateResult {
+        return html`<div class="field">
       <label>Shares</label>
       <div class="shares-row">
-        <input type="number" min="1" step="1" .value=${String(this.qty)} @input=${(event: Event) => { this.qty = Number((event.target as HTMLInputElement).value) }} />
+        <input type="number" min="1" step="1" .value=${String(this.qty)} @input=${(event: Event) => {
+            this.qty = Number((event.target as HTMLInputElement).value);
+        }} />
         <button type="button" class="max" ?disabled=${this.busy} @click=${() => this.onMaxQty()}>Max</button>
       </div>
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderWhenField(): TemplateResult {
-    return html`<div class="field">
+    private renderWhenField(): TemplateResult {
+        return html`<div class="field">
       <label class="when-toggle">
         <input type="checkbox" .checked=${this.useCalendar} @change=${(event: Event) => this.setUseCalendar((event.target as HTMLInputElement).checked)} />
         Choose date/time
       </label>
       ${this.useCalendar ? this.renderWhenInput() : html`<p class="muted hint">Uses right now.</p>`}
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderWhenInput(): TemplateResult {
-    const label = this.mode === 'backdated' ? 'Trade date/time' : 'Execute at'
-    return html`
+    private renderWhenInput(): TemplateResult {
+        const label = this.mode === 'backdated' ? 'Trade date/time' : 'Execute at';
+        return html`
       <label>${label}</label>
-      <input type="datetime-local" .value=${this.when} @input=${(event: Event) => { this.when = (event.target as HTMLInputElement).value }} />
-    `
-  }
+      <input type="datetime-local" .value=${this.when} @input=${(event: Event) => {
+          this.when = (event.target as HTMLInputElement).value;
+      }} />
+    `;
+    }
 
-  private renderQuoteContent(cost: number | undefined): TemplateResult {
-    if (this.quote) return this.renderQuoteDetails(cost)
-    if (this.quoteError !== null) return html`<span class="error">${this.quoteError}</span>`
-    if (this.quoteLoading) return html`<span class="muted">Loading quote…</span>`
-    return html`<span class="muted">Select a symbol to see the current price.</span>`
-  }
+    private renderQuoteContent(cost: number | undefined): TemplateResult {
+        if (this.quote) return this.renderQuoteDetails(cost);
+        if (this.quoteError !== null) return html`<span class="error">${this.quoteError}</span>`;
+        if (this.quoteLoading) return html`<span class="muted">Loading quote…</span>`;
+        return html`<span class="muted">Select a symbol to see the current price.</span>`;
+    }
 
-  private renderQuoteDetails(cost: number | undefined): TemplateResult {
-    const q = this.quote
-    if (q === null) return html`<span class="muted">Select a symbol to see the current price.</span>`
-    const hasBidAsk = q.bid !== undefined || q.ask !== undefined
-    const priceLine = hasBidAsk ? this.renderBidAskLine(q) : html`${fmtPrice(q.price)}`
-    return html`<div>
+    private renderQuoteDetails(cost: number | undefined): TemplateResult {
+        const q = this.quote;
+        if (q === null) return html`<span class="muted">Select a symbol to see the current price.</span>`;
+        const hasBidAsk = q.bid !== undefined || q.ask !== undefined;
+        const priceLine = hasBidAsk ? this.renderBidAskLine(q) : html`${fmtPrice(q.price)}`;
+        return html`<div>
       ${q.name} — ${priceLine}
       ${cost !== undefined ? html` · Est. ${fmtMoney(cost)}` : ''}
-    </div>`
-  }
+    </div>`;
+    }
 
-  private renderBidAskLine(q: Quote): TemplateResult {
-    const parts: string[] = []
-    parts.push(`Last ${fmtPrice(q.price)}`)
-    if (q.bid !== undefined) parts.push(`Bid ${fmtPrice(q.bid)}`)
-    if (q.ask !== undefined) parts.push(`Ask ${fmtPrice(q.ask)}`)
-    return html`${parts.join(' · ')}`
-  }
+    private renderBidAskLine(q: Quote): TemplateResult {
+        const parts: string[] = [];
+        parts.push(`Last ${fmtPrice(q.price)}`);
+        if (q.bid !== undefined) parts.push(`Bid ${fmtPrice(q.bid)}`);
+        if (q.ask !== undefined) parts.push(`Ask ${fmtPrice(q.ask)}`);
+        return html`${parts.join(' · ')}`;
+    }
 
-  private renderInfo(cost: number | undefined): TemplateResult {
-    return html`<div class="info">
+    private renderInfo(cost: number | undefined): TemplateResult {
+        return html`<div class="info">
       ${this.renderQuoteContent(cost)}
       <div class="muted">Cash available: ${fmtMoney(this.cashCents)}</div>
-    </div>`
-  }
-
-  private getWarning(cost: number | undefined): string | undefined {
-    if (cost === undefined) return undefined
-    if (this.side === 'buy' || this.side === 'cover') {
-      if (cost > this.cashCents) return 'Not enough cash for this order'
-      return undefined
+    </div>`;
     }
-    if (this.side !== 'sell') return undefined
-    const held = Math.max(0, this.heldQty)
-    if (held < this.qty) return `Only ${held} share(s) held`
-    return undefined
-  }
 
-  private get submitLabel(): string {
-    if (!this.useCalendar) return 'Place order'
-    if (this.mode === 'backdated') return 'Place trade'
-    return 'Schedule order'
-  }
+    private getWarning(cost: number | undefined): string | undefined {
+        if (cost === undefined) return undefined;
+        if (this.side === 'buy' || this.side === 'cover') {
+            if (cost > this.cashCents) return 'Not enough cash for this order';
+            return undefined;
+        }
+        if (this.side !== 'sell') return undefined;
+        const held = Math.max(0, this.heldQty);
+        if (held < this.qty) return `Only ${held} share(s) held`;
+        return undefined;
+    }
 
-  override render(): TemplateResult {
-    const cost = this.estimatedCostCents
-    const warn = this.getWarning(cost)
-    return html`
+    private get submitLabel(): string {
+        if (!this.useCalendar) return 'Place order';
+        if (this.mode === 'backdated') return 'Place trade';
+        return 'Schedule order';
+    }
+
+    override render(): TemplateResult {
+        const cost = this.estimatedCostCents;
+        const warn = this.getWarning(cost);
+        return html`
       ${this.renderSymbolField()} ${this.renderSideField()} ${this.renderOrderTypeField()} ${this.renderTifField()} ${this.renderFillSourceField()} ${this.renderPriceFields()} ${this.renderModeField()}
       ${this.renderSharesField()} ${this.renderWhenField()} ${this.renderInfo(cost)}
       ${warn ? html`<div class="warning">${warn}</div>` : ''}
@@ -485,8 +534,8 @@ export class SgTradeForm extends LitElement {
       <button class="submit" type="button" ?disabled=${this.busy} @click=${() => this.onSubmit()}>
         ${this.submitLabel}
       </button>
-    `
-  }
+    `;
+    }
 }
 
-defineElement('sg-trade-form', SgTradeForm)
+defineElement('sg-trade-form', SgTradeForm);

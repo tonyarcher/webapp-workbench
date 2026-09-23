@@ -1,12 +1,12 @@
 package userapi.crypto
 
+import org.apache.commons.codec.binary.Base32
+import userapi.domain.hashBackupCode
+import userapi.domain.newBackupCodes
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.apache.commons.codec.binary.Base32
-import userapi.domain.hashBackupCode
-import userapi.domain.newBackupCodes
 
 class Rfc6238TotpTest {
     @Test

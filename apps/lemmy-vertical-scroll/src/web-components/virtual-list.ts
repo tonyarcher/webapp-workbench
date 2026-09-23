@@ -1,26 +1,21 @@
-import {
-    elementScroll,
-    observeElementOffset,
-    observeElementRect,
-    Virtualizer,
-} from '@tanstack/virtual-core'
-import type {VirtualItem, VirtualizerOptions} from '@tanstack/virtual-core'
-import type {ReactiveController, ReactiveControllerHost} from 'lit'
+import { elementScroll, observeElementOffset, observeElementRect, Virtualizer } from '@tanstack/virtual-core';
+import type { VirtualItem, VirtualizerOptions } from '@tanstack/virtual-core';
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
-const NEAR_END_THRESHOLD = 400
+const NEAR_END_THRESHOLD = 400;
 
 /**
  * Lit adapter over @tanstack/virtual-core for vertical lists inside a
  * component-owned scroll element. Re-syncs count/keys on every host update,
  * auto-fetches via onNearEnd when the viewport approaches the bottom.
  */
-export class VirtualizerController<TItem extends {id: number}> implements ReactiveController {
-    private virtualizer: Virtualizer<HTMLElement, HTMLElement> | null = null
-    private items: TItem[] = []
-    private readonly host: ReactiveControllerHost & Element
-    private readonly getScrollEl: () => HTMLElement | null
-    private readonly getItems: () => TItem[]
-    private readonly onNearEnd: () => void
+export class VirtualizerController<TItem extends { id: number }> implements ReactiveController {
+    private virtualizer: Virtualizer<HTMLElement, HTMLElement> | null = null;
+    private items: TItem[] = [];
+    private readonly host: ReactiveControllerHost & Element;
+    private readonly getScrollEl: () => HTMLElement | null;
+    private readonly getItems: () => TItem[];
+    private readonly onNearEnd: () => void;
 
     constructor(
         host: ReactiveControllerHost & Element,
@@ -28,11 +23,11 @@ export class VirtualizerController<TItem extends {id: number}> implements Reacti
         getItems: () => TItem[],
         onNearEnd: () => void,
     ) {
-        this.host = host
-        this.getScrollEl = getScrollEl
-        this.getItems = getItems
-        this.onNearEnd = onNearEnd
-        host.addController(this)
+        this.host = host;
+        this.getScrollEl = getScrollEl;
+        this.getItems = getItems;
+        this.onNearEnd = onNearEnd;
+        host.addController(this);
     }
 
     private buildOptions(count: number): VirtualizerOptions<HTMLElement, HTMLElement> {
@@ -48,26 +43,26 @@ export class VirtualizerController<TItem extends {id: number}> implements Reacti
             observeElementRect,
             observeElementOffset,
             onChange: (instance) => {
-                this.host.requestUpdate()
-                if (instance.getDistanceFromEnd() < NEAR_END_THRESHOLD) this.onNearEnd()
+                this.host.requestUpdate();
+                if (instance.getDistanceFromEnd() < NEAR_END_THRESHOLD) this.onNearEnd();
             },
-        }
+        };
     }
 
     hostConnected(): void {
-        this.sync()
+        this.sync();
     }
 
     hostUpdate(): void {
-        this.sync()
+        this.sync();
     }
 
     hostUpdated(): void {
-        this.sync()
+        this.sync();
     }
 
     hostDisconnected(): void {
-        this.virtualizer = null
+        this.virtualizer = null;
     }
 
     /**
@@ -76,26 +71,26 @@ export class VirtualizerController<TItem extends {id: number}> implements Reacti
      * invoked after every option change and once on creation.
      */
     private sync(): void {
-        this.items = this.getItems()
+        this.items = this.getItems();
         if (!this.virtualizer) {
-            if (!this.getScrollEl()?.isConnected) return
-            this.virtualizer = new Virtualizer<HTMLElement, HTMLElement>(this.buildOptions(this.items.length))
+            if (!this.getScrollEl()?.isConnected) return;
+            this.virtualizer = new Virtualizer<HTMLElement, HTMLElement>(this.buildOptions(this.items.length));
             // never let measurement reflows move the user's scroll position
-            this.virtualizer.shouldAdjustScrollPositionOnItemSizeChange = () => false
+            this.virtualizer.shouldAdjustScrollPositionOnItemSizeChange = () => false;
         }
-        this.virtualizer.setOptions(this.buildOptions(this.items.length))
-        this.virtualizer._willUpdate()
+        this.virtualizer.setOptions(this.buildOptions(this.items.length));
+        this.virtualizer._willUpdate();
     }
 
     get virtualItems(): VirtualItem[] {
-        return this.virtualizer?.getVirtualItems() ?? []
+        return this.virtualizer?.getVirtualItems() ?? [];
     }
 
     get totalSize(): number {
-        return this.virtualizer?.getTotalSize() ?? 0
+        return this.virtualizer?.getTotalSize() ?? 0;
     }
 
     measureElement(el: HTMLElement | null): void {
-        this.virtualizer?.measureElement(el)
+        this.virtualizer?.measureElement(el);
     }
 }

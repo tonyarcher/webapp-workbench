@@ -1,16 +1,17 @@
 package fitnessapi.http
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.put
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @WebMvcTest
 @Import(TestStoresConfig::class)
@@ -32,7 +33,7 @@ class SampleErrorTest {
             "/samples",
             """{"metric":"waist","originId":"missing","hidden":true}""",
         )
-        assertEquals(404, res.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), res.response.status)
         assertTrue(res.response.contentAsString.contains("sample not found"))
     }
 
@@ -43,14 +44,14 @@ class SampleErrorTest {
             "/samples",
             """{"metric":"waist","originId":"manual:waist:1","valueSi":1e999}""",
         )
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
         assertTrue(res.response.contentAsString.contains("valueSi must be finite"))
     }
 
     @Test
     fun invalidJson() {
         val res = mvc.postJson("/imports", "{not json")
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
         assertTrue(res.response.contentAsString.contains("Invalid JSON"))
     }
 
@@ -62,7 +63,7 @@ class SampleErrorTest {
             contentType = MediaType.APPLICATION_JSON
             content = payload
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
         assertTrue(res.response.contentAsString.contains("Request body too large"))
     }
 
@@ -72,7 +73,7 @@ class SampleErrorTest {
             header("X-Api-Version", "1")
             contentType = MediaType.APPLICATION_JSON
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
         assertTrue(res.response.contentAsString.contains("missing body"))
     }
 }

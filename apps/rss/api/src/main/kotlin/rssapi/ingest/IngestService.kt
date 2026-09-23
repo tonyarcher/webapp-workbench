@@ -1,7 +1,4 @@
 package rssapi.ingest
-
-import java.time.Instant
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.xml.sax.SAXException
@@ -22,6 +19,11 @@ import rssapi.persist.ArticleMaintenanceRepo
 import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
+import java.time.Instant
+import java.util.UUID
+
+/** 304 Not Modified: the feed is unchanged since the stored validators. */
+private const val NOT_MODIFIED = 304
 
 @Service
 class IngestService(
@@ -67,14 +69,8 @@ class IngestService(
         pending.applyForFeed(feed.id!!)
     }
 
-    private fun applyResult(
-        feed: FeedEntity,
-        status: Int,
-        text: String?,
-        etag: String?,
-        lastModified: String?,
-    ) {
-        if (status == 304) {
+    private fun applyResult(feed: FeedEntity, status: Int, text: String?, etag: String?, lastModified: String?) {
+        if (status == NOT_MODIFIED) {
             sync.saveNotModified(feed.id!!, etag, lastModified)
             return
         }

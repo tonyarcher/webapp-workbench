@@ -19,12 +19,11 @@ class OpenCodeBackendBranchTest {
             url.endsWith("/provider") -> HttpResult(200, providers)
             else -> HttpResult(404, "{}")
         }
-        override fun post(url: String, headers: Map<String, String>, body: String, timeoutMs: Long): HttpResult =
-            when {
-                url.endsWith("/session") -> HttpResult(200, session)
-                url.contains("/message") -> HttpResult(200, message)
-                else -> HttpResult(404, "{}")
-            }
+        override fun post(url: String, headers: Map<String, String>, body: String, timeoutMs: Long): HttpResult = when {
+            url.endsWith("/session") -> HttpResult(200, session)
+            url.contains("/message") -> HttpResult(200, message)
+            else -> HttpResult(404, "{}")
+        }
         override fun delete(url: String, headers: Map<String, String>, timeoutMs: Long): HttpResult {
             if (failDelete) throw AiException("gone")
             return HttpResult(200, "")

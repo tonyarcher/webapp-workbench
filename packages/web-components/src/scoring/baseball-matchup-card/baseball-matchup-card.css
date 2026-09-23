@@ -9,7 +9,9 @@
     border: 1.5px solid rgba(74, 222, 128, 0.35);
     border-radius: 14px;
     padding: 1.25rem 1.5rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 25px rgba(0, 176, 80, 0.15);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 25px rgba(0, 176, 80, 0.15);
     box-sizing: border-box;
     color: #ffffff;
 }

@@ -1,11 +1,6 @@
-import {
-    elementScroll,
-    observeElementOffset,
-    observeElementRect,
-    Virtualizer,
-} from '@tanstack/virtual-core';
-import type {VirtualItem, VirtualizerOptions} from '@tanstack/virtual-core';
-import type {ReactiveController, ReactiveControllerHost} from 'lit';
+import { elementScroll, observeElementOffset, observeElementRect, Virtualizer } from '@tanstack/virtual-core';
+import type { VirtualItem, VirtualizerOptions } from '@tanstack/virtual-core';
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
 export class VirtualizerController<T> implements ReactiveController {
     private virtualizer: Virtualizer<HTMLElement, HTMLElement> | null = null;
@@ -83,6 +78,6 @@ export class VirtualizerController<T> implements ReactiveController {
     }
 
     scrollToIndex(index: number): void {
-        this.virtualizer?.scrollToIndex(index, {align: 'center'});
+        this.virtualizer?.scrollToIndex(index, { align: 'center' });
     }
 }

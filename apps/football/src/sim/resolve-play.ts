@@ -1,6 +1,6 @@
-import type {GameState, PlayInput, ScoringEvent} from 'football-core';
-import {chooseCall} from './coach';
-import {between, chance, clamp, mixSeed, mulberry32} from './rng';
+import type { GameState, PlayInput, ScoringEvent } from 'football-core';
+import { chooseCall } from './coach';
+import { between, chance, clamp, mixSeed, mulberry32 } from './rng';
 
 export function rngForEngine(seed: number, game: GameState, eventCount: number): () => number {
     return mulberry32(
@@ -21,11 +21,11 @@ export function rngForEngine(seed: number, game: GameState, eventCount: number):
 }
 
 export function nextEvent(game: GameState, random: () => number): ScoringEvent {
-    if (clockExpired(game)) return {type: 'period_end'};
+    if (clockExpired(game)) return { type: 'period_end' };
     const call = chooseCall(game, random);
     const snap = game.clock.gameClockSeconds;
     const input = fillPlay(game, call.family, call.concept, call.hash, snap, random);
-    return {type: 'play', input};
+    return { type: 'play', input };
 }
 
 function clockExpired(game: GameState): boolean {
@@ -43,12 +43,12 @@ function fillPlay(
 ): PlayInput {
     const burn = clockBurn(family, random);
     const dead = game.clock.untimed ? snap : Math.max(0, snap - burn);
-    const base: PlayInput = {family, snapClock: snap, deadClock: dead};
+    const base: PlayInput = { family, snapClock: snap, deadClock: dead };
     if (concept !== undefined) base.concept = concept;
     if (hash !== undefined) base.hash = hash;
     if (family === 'kickoff') return kickoffInput(base, random);
-    if (family === 'extra_point') return {...base, extraPointMade: chance(random, 0.93)};
-    if (family === 'two_point') return {...base, twoPointMade: chance(random, 0.48)};
+    if (family === 'extra_point') return { ...base, extraPointMade: chance(random, 0.93) };
+    if (family === 'two_point') return { ...base, twoPointMade: chance(random, 0.48) };
     if (family === 'punt') return puntInput(game, base, random);
     if (family === 'field_goal') return fgInput(game, base, random);
     return scrimmageInput(game, base, random);
@@ -61,21 +61,21 @@ function clockBurn(family: PlayInput['family'], random: () => number): number {
 }
 
 function kickoffInput(base: PlayInput, random: () => number): PlayInput {
-    if (chance(random, 0.62)) return {...base, touchback: true, yards: 25};
-    if (chance(random, 0.08)) return {...base, touchback: false, outOfBounds: true, yards: 35};
-    return {...base, touchback: false, yards: between(random, 15, 40)};
+    if (chance(random, 0.62)) return { ...base, touchback: true, yards: 25 };
+    if (chance(random, 0.08)) return { ...base, touchback: false, outOfBounds: true, yards: 35 };
+    return { ...base, touchback: false, yards: between(random, 15, 40) };
 }
 
 function puntInput(game: GameState, base: PlayInput, random: () => number): PlayInput {
     const yards = between(random, 32, 52);
     const touchback = game.situation.yardline100 - yards <= 0;
-    return {...base, yards, touchback};
+    return { ...base, yards, touchback };
 }
 
 function fgInput(game: GameState, base: PlayInput, random: () => number): PlayInput {
     const dist = game.situation.yardline100 + 17;
     const make = dist <= 30 ? 0.96 : dist <= 40 ? 0.88 : dist <= 50 ? 0.72 : 0.48;
-    return {...base, fieldGoalMade: chance(random, make)};
+    return { ...base, fieldGoalMade: chance(random, make) };
 }
 
 function scrimmageInput(game: GameState, base: PlayInput, random: () => number): PlayInput {
@@ -87,22 +87,22 @@ function scrimmageInput(game: GameState, base: PlayInput, random: () => number):
 function runInput(game: GameState, base: PlayInput, random: () => number): PlayInput {
     const toGoal = game.situation.yardline100;
     let yards = clamp(between(random, -3, 18) + (chance(random, 0.12) ? between(random, 8, 28) : 0), -8, toGoal);
-    if (chance(random, 0.015)) return {...base, yards: Math.min(yards, toGoal - 1), fumbleLost: true};
+    if (chance(random, 0.015)) return { ...base, yards: Math.min(yards, toGoal - 1), fumbleLost: true };
     const touchdown = yards >= toGoal;
     if (touchdown) yards = toGoal;
     const safety = !touchdown && toGoal - yards >= 100;
-    return {...base, yards, touchdown, safety};
+    return { ...base, yards, touchdown, safety };
 }
 
 function passInput(game: GameState, base: PlayInput, random: () => number): PlayInput {
     const toGoal = game.situation.yardline100;
     if (chance(random, 0.07)) {
-        return {...base, sack: true, yards: -between(random, 4, 12)};
+        return { ...base, sack: true, yards: -between(random, 4, 12) };
     }
-    if (chance(random, 0.03)) return {...base, interception: true, yards: between(random, 0, 12)};
-    if (chance(random, 0.32)) return {...base, incomplete: true, yards: 0};
+    if (chance(random, 0.03)) return { ...base, interception: true, yards: between(random, 0, 12) };
+    if (chance(random, 0.32)) return { ...base, incomplete: true, yards: 0 };
     let yards = clamp(between(random, 3, 22), 0, toGoal);
     const touchdown = yards >= toGoal;
     if (touchdown) yards = toGoal;
-    return {...base, yards, touchdown};
+    return { ...base, yards, touchdown };
 }

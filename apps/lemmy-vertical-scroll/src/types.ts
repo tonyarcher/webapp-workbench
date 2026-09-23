@@ -1,11 +1,11 @@
 // ---- api enums ----
 
-export type FeedType = 'All' | 'Local' | 'Subscribed' | 'ModeratorView'
+export type FeedType = 'All' | 'Local' | 'Subscribed' | 'ModeratorView';
 /** Post feeds additionally accept Lemmy's newest Suggested listing (posts only). */
-export type PostFeedType = FeedType | 'Suggested'
-export type ViewMode = 'list' | 'scroll'
-export type NsfwFilter = 'Include' | 'Exclude' | 'Only'
-export const NSFW_FILTERS: NsfwFilter[] = ['Include', 'Exclude', 'Only']
+export type PostFeedType = FeedType | 'Suggested';
+export type ViewMode = 'list' | 'scroll';
+export type NsfwFilter = 'Include' | 'Exclude' | 'Only';
+export const NSFW_FILTERS: NsfwFilter[] = ['Include', 'Exclude', 'Only'];
 export type PostSort =
     | 'Active'
     | 'Hot'
@@ -25,7 +25,7 @@ export type PostSort =
     | 'TopYear'
     | 'TopAll'
     | 'Controversial'
-    | 'Scaled'
+    | 'Scaled';
 export type CommunitySort =
     | 'Active'
     | 'Hot'
@@ -45,149 +45,146 @@ export type CommunitySort =
     | 'TopYear'
     | 'TopAll'
     | 'Controversial'
-    | 'Scaled'
+    | 'Scaled';
 
 // ---- adapted domain models (subset of Lemmy's API shapes we actually render) ----
 
 export interface LemmyCommunity {
-    id: number
-    name: string
-    title: string
-    actorId: string
-    local: boolean
-    icon: string | null
-    banner: string | null
-    description: string | null
-    published: string
-    subscribers: number
-    posts: number
-    comments: number
-    subscribed: boolean
-    blocked: boolean
+    id: number;
+    name: string;
+    title: string;
+    actorId: string;
+    local: boolean;
+    icon: string | null;
+    banner: string | null;
+    description: string | null;
+    published: string;
+    subscribers: number;
+    posts: number;
+    comments: number;
+    subscribed: boolean;
+    blocked: boolean;
 }
 
-export type PostContentType = 'Image' | 'Video' | 'Link' | 'Discussion'
+export type PostContentType = 'Image' | 'Video' | 'Link' | 'Discussion';
 
 export interface LemmyPost {
-    id: number
-    name: string
-    url: string | null
-    body: string | null
-    thumbnailUrl: string | null
-    nsfw: boolean
-    pinnedLocal: boolean
-    pinnedCommunity: boolean
-    published: string
-    communityId: number
-    communityName: string
-    communityActorId: string
-    communityTitle: string
-    communityIcon: string | null
-    creatorActorId: string
-    creatorName: string
-    creatorDisplayName: string | null
-    creatorAvatar: string | null
-    score: number
-    upvotes: number
-    downvotes: number
-    comments: number
-    myVote: number | null
+    id: number;
+    name: string;
+    url: string | null;
+    body: string | null;
+    thumbnailUrl: string | null;
+    nsfw: boolean;
+    pinnedLocal: boolean;
+    pinnedCommunity: boolean;
+    published: string;
+    communityId: number;
+    communityName: string;
+    communityActorId: string;
+    communityTitle: string;
+    communityIcon: string | null;
+    creatorActorId: string;
+    creatorName: string;
+    creatorDisplayName: string | null;
+    creatorAvatar: string | null;
+    score: number;
+    upvotes: number;
+    downvotes: number;
+    comments: number;
+    myVote: number | null;
     /** Canonical link on the source instance (ap_id), used to open the original post. */
-    postUrl: string
+    postUrl: string;
     /** Detected content kind, drives the scroll view rendering. */
-    postType: PostContentType | null
+    postType: PostContentType | null;
     /** Image(s) for the scroll view; more than one renders a carousel. */
-    imageUrls: string[]
-    videoUrl: string | null
-    linkUrl: string | null
+    imageUrls: string[];
+    videoUrl: string | null;
+    linkUrl: string | null;
 }
 
 export interface LemmySite {
-    name: string
-    actorId: string
-    version: string
-    icon: string | null
-    description: string | null
+    name: string;
+    actorId: string;
+    version: string;
+    icon: string | null;
+    description: string | null;
 }
 
 /** Which fediverse software an instance runs, determined by probing its API. */
-export type Software = 'lemmy' | 'piefed' | 'unknown'
+export type Software = 'lemmy' | 'piefed' | 'unknown';
 
 export interface SiteResult {
-    site: LemmySite
-    software: Software
+    site: LemmySite;
+    software: Software;
 }
 
 // ---- api responses ----
 
 export interface PostPage {
-    posts: LemmyPost[]
-    page: number
+    posts: LemmyPost[];
+    page: number;
 }
 
 export interface CommunityPage {
-    communities: LemmyCommunity[]
-    page: number
+    communities: LemmyCommunity[];
+    page: number;
 }
 
 // ---- app settings ----
 
 export interface Settings {
-    instance: string
-    feedType: PostFeedType
-    communityType: FeedType
-    postSort: PostSort
-    communitySort: CommunitySort
-    nsfwFilter: NsfwFilter
-    viewMode: ViewMode
+    instance: string;
+    feedType: PostFeedType;
+    communityType: FeedType;
+    postSort: PostSort;
+    communitySort: CommunitySort;
+    nsfwFilter: NsfwFilter;
+    viewMode: ViewMode;
 }
 
 // ---- auth ----
 
 /** Per-instance login session; the jwt is the only credential kept (never the password). */
 export interface AuthSession {
-    jwt: string
-    username: string
+    jwt: string;
+    username: string;
 }
 
 // ---- servers ----
 
 /** A server the user has connected to; persisted per host. */
 export interface ServerRecord {
-    host: string
-    name: string
-    software: Software
-    addedAt: number
-    lastUsedAt: number
+    host: string;
+    name: string;
+    software: Software;
+    addedAt: number;
+    lastUsedAt: number;
 }
 
 /** A suggested server shown in the popular picker (bundled + live registry). */
 export interface PopularServer {
-    host: string
-    name: string
-    nsfw: boolean
+    host: string;
+    name: string;
+    nsfw: boolean;
 }
 
 // ---- routing ----
 
 export type View =
-    | {kind: 'feed'}
-    | {kind: 'communities'}
-    | {kind: 'community'; communityId: number}
-    | {kind: 'settings'}
+    { kind: 'feed' } | { kind: 'communities' } | { kind: 'community'; communityId: number } | { kind: 'settings' };
 
 // ---- persistence ----
 
 export interface PostsCacheEntry {
-    key: string
-    posts: LemmyPost[]
-    fetchedAt: number
+    key: string;
+    posts: LemmyPost[];
+    fetchedAt: number;
 }
 
 export interface CommunitiesCacheEntry {
-    key: string
-    communities: LemmyCommunity[]
-    fetchedAt: number
+    key: string;
+    communities: LemmyCommunity[];
+    fetchedAt: number;
 }
 
 // ---- misc ----
@@ -212,9 +209,9 @@ export const POST_SORTS: PostSort[] = [
     'TopAll',
     'Controversial',
     'Scaled',
-]
+];
 
-export const COMMUNITY_SORTS: CommunitySort[] = POST_SORTS
+export const COMMUNITY_SORTS: CommunitySort[] = POST_SORTS;
 
 /** PieFed supports a subset of the Lemmy post sorts. */
 export const PIEFED_POST_SORTS: PostSort[] = [
@@ -234,17 +231,17 @@ export const PIEFED_POST_SORTS: PostSort[] = [
     'TopYear',
     'TopAll',
     'Scaled',
-]
+];
 
 /** PieFed supports a much smaller community sort set. */
-export const PIEFED_COMMUNITY_SORTS: CommunitySort[] = ['Active', 'Hot', 'New', 'Old', 'TopAll']
+export const PIEFED_COMMUNITY_SORTS: CommunitySort[] = ['Active', 'Hot', 'New', 'Old', 'TopAll'];
 
 export function postSortsFor(software: Software): PostSort[] {
-    return software === 'piefed' ? PIEFED_POST_SORTS : POST_SORTS
+    return software === 'piefed' ? PIEFED_POST_SORTS : POST_SORTS;
 }
 
 export function communitySortsFor(software: Software): CommunitySort[] {
-    return software === 'piefed' ? PIEFED_COMMUNITY_SORTS : COMMUNITY_SORTS
+    return software === 'piefed' ? PIEFED_COMMUNITY_SORTS : COMMUNITY_SORTS;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -255,7 +252,7 @@ export const DEFAULT_SETTINGS: Settings = {
     communitySort: 'Hot',
     nsfwFilter: 'Include',
     viewMode: 'list',
-}
+};
 
-export const PAGE_SIZE = 20
-export const CACHE_TTL_MS = 10 * 60_000
+export const PAGE_SIZE = 20;
+export const CACHE_TTL_MS = 10 * 60_000;

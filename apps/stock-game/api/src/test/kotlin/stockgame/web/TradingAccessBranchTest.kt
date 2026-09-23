@@ -1,13 +1,13 @@
 package stockgame.web
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.ObjectProvider
 import stockgame.trading.AccountService
 import stockgame.trading.TradingService
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class TradingAccessBranchTest {
     @Test

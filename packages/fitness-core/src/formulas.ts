@@ -1,5 +1,5 @@
-import type {FormulaDef, MetricId, Sample, Sex} from './types';
-import {DAY_MS, mToIn} from './units';
+import type { FormulaDef, MetricId, Sample, Sex } from './types';
+import { DAY_MS, mToIn } from './units';
 
 /**
  * Hodgdon / Beckett Navy circumference method (1984). Inputs in metres;
@@ -175,7 +175,7 @@ export function dueMeasurements(
     for (const [metric, ids] of needed) {
         const last = latestByMetric[metric]?.t ?? null;
         const cadence = Math.min(...FORMULAS.filter((f) => ids.has(f.id)).map((f) => f.cadenceDays));
-        out.push({metric, formulaIds: [...ids], lastT: last, stale: last == null || nowMs - last > cadence * DAY_MS});
+        out.push({ metric, formulaIds: [...ids], lastT: last, stale: last == null || nowMs - last > cadence * DAY_MS });
     }
     return out.sort((a, b) => Number(b.stale) - Number(a.stale) || a.metric.localeCompare(b.metric));
 }

@@ -32,8 +32,7 @@ body {
     font-family: Outfit, sans-serif;
     background:
         radial-gradient(1200px 500px at 80% -10%, rgba(59, 130, 246, 0.16), transparent 55%),
-        radial-gradient(900px 420px at 10% 0%, rgba(249, 115, 22, 0.12), transparent 50%),
-        var(--bg);
+        radial-gradient(900px 420px at 10% 0%, rgba(249, 115, 22, 0.12), transparent 50%), var(--bg);
     color: var(--text);
 }
 

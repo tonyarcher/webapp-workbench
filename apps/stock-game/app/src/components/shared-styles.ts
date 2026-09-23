@@ -1,4 +1,4 @@
-import { css } from 'lit'
+import { css } from 'lit';
 
 export const tableStyles = css`
   :host {
@@ -53,4 +53,4 @@ export const tableStyles = css`
   .muted {
     color: var(--text-muted, #9aa4b2);
   }
-`
+`;

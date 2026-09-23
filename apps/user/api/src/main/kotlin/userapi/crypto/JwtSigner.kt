@@ -8,10 +8,10 @@ import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import userapi.accounts.OAuthStore
 import java.time.Instant
 import java.util.Date
 import java.util.UUID
-import userapi.accounts.OAuthStore
 
 const val ACCESS_TTL_SEC: Int = 15 * 60
 const val REFRESH_TTL_SEC: Int = 7 * 24 * 60 * 60

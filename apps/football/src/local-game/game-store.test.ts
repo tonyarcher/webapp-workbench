@@ -1,8 +1,8 @@
-import {beforeEach, describe, expect, it} from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import 'fake-indexeddb/auto';
-import {clearGameState, loadGameState} from './save-state';
-import {DEFAULT_GAME_SETUP} from './game-types';
-import {GameStore} from './game-store';
+import { clearGameState, loadGameState } from './save-state';
+import { DEFAULT_GAME_SETUP } from './game-types';
+import { GameStore } from './game-store';
 
 beforeEach(async () => {
     await clearGameState();
@@ -15,7 +15,7 @@ describe('GameStore', () => {
         expect(store.current()?.engine.kickoffPending).toBe(true);
         store.recordEvent({
             type: 'play',
-            input: {family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720},
+            input: { family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720 },
         });
         const game = store.current();
         expect(game?.engine.kickoffPending).toBe(false);
@@ -28,11 +28,11 @@ describe('GameStore', () => {
         store.startGame(DEFAULT_GAME_SETUP);
         store.recordEvent({
             type: 'play',
-            input: {family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720},
+            input: { family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720 },
         });
         store.recordEvent({
             type: 'play',
-            input: {family: 'scrimmage', yards: 4, snapClock: 720, deadClock: 710},
+            input: { family: 'scrimmage', yards: 4, snapClock: 720, deadClock: 710 },
         });
         expect(store.current()?.engine.situation.down).toBe(2);
         store.undo();
@@ -44,14 +44,14 @@ describe('GameStore', () => {
 
     it('persists and hydrates', async () => {
         const store = new GameStore();
-        store.startGame({...DEFAULT_GAME_SETUP, homeName: 'Eagles'});
+        store.startGame({ ...DEFAULT_GAME_SETUP, homeName: 'Eagles' });
         store.recordEvent({
             type: 'play',
-            input: {family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720},
+            input: { family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720 },
         });
         await store.flushPersist();
         await expect(loadGameState()).resolves.toMatchObject({
-            setup: {homeName: 'Eagles'},
+            setup: { homeName: 'Eagles' },
             historyIndex: 1,
         });
         const restored = new GameStore();
@@ -62,27 +62,27 @@ describe('GameStore', () => {
 
     it('defers watch-mode persist until flushPersist', async () => {
         const store = new GameStore();
-        store.startGame({...DEFAULT_GAME_SETUP, mode: 'watch', simSeed: 1, homeName: 'Watch'});
+        store.startGame({ ...DEFAULT_GAME_SETUP, mode: 'watch', simSeed: 1, homeName: 'Watch' });
         await store.flushPersist();
         store.recordEvent({
             type: 'play',
-            input: {family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720},
+            input: { family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720 },
         });
-        await expect(loadGameState()).resolves.toMatchObject({historyIndex: 0});
+        await expect(loadGameState()).resolves.toMatchObject({ historyIndex: 0 });
         await store.flushPersist();
         await expect(loadGameState()).resolves.toMatchObject({
-            setup: {homeName: 'Watch', mode: 'watch'},
+            setup: { homeName: 'Watch', mode: 'watch' },
             historyIndex: 1,
         });
     });
 
     it('newGame drops a pending watch persist', async () => {
         const store = new GameStore();
-        store.startGame({...DEFAULT_GAME_SETUP, mode: 'watch', simSeed: 1});
+        store.startGame({ ...DEFAULT_GAME_SETUP, mode: 'watch', simSeed: 1 });
         await store.flushPersist();
         store.recordEvent({
             type: 'play',
-            input: {family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720},
+            input: { family: 'kickoff', touchback: true, snapClock: 720, deadClock: 720 },
         });
         store.newGame();
         await store.flushPersist();

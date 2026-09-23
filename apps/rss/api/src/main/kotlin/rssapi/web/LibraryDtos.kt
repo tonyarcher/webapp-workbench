@@ -1,11 +1,6 @@
 package rssapi.web
 
-data class FolderJson(
-    val id: String,
-    val title: String,
-    val createdAt: Long,
-    val sortOrder: Int,
-)
+data class FolderJson(val id: String, val title: String, val createdAt: Long, val sortOrder: Int)
 
 data class FeedJson(
     val id: String,

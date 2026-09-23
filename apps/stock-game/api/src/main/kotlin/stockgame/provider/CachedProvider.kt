@@ -8,11 +8,8 @@ import stockgame.store.BarCache
 private const val MINUTE_MS = 60_000L
 private const val EMPTY_TTL = 10 * MINUTE_MS
 
-class CachedProvider(
-    private val inner: PriceProvider,
-    private val cache: BarCache,
-    private val quoteTtlMs: Long,
-) : PriceProvider {
+class CachedProvider(private val inner: PriceProvider, private val cache: BarCache, private val quoteTtlMs: Long) :
+    PriceProvider {
     override val id: String = inner.id
     private val quotes = HashMap<String, Pair<Long, Quote>>()
     private val emptyUntil = HashMap<String, Long>()

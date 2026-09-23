@@ -1,7 +1,7 @@
-import {html, LitElement} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
-import {asHand, parsePlatePlay} from './plate-play';
-import {renderPlateScene} from './plate-scene';
+import { html, LitElement } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import { asHand, parsePlatePlay } from './plate-play';
+import { renderPlateScene } from './plate-scene';
 import scoreboardCssText from './baseball-scoreboard.css?inline';
 
 const scoreboardStyleSheet = new CSSStyleSheet();
@@ -11,30 +11,30 @@ scoreboardStyleSheet.replaceSync(scoreboardCssText);
 export class BaseballScoreboard extends LitElement {
     static override styles = scoreboardStyleSheet;
 
-    @property({type: String, attribute: 'away-name'}) awayName = 'AWAY';
-    @property({type: String, attribute: 'home-name'}) homeName = 'HOME';
-    @property({type: Number, attribute: 'away-score'}) awayScore = 0;
-    @property({type: Number, attribute: 'home-score'}) homeScore = 0;
-    @property({type: Number, attribute: 'away-hits'}) awayHits = 0;
-    @property({type: Number, attribute: 'home-hits'}) homeHits = 0;
-    @property({type: Number, attribute: 'away-errors'}) awayErrors = 0;
-    @property({type: Number, attribute: 'home-errors'}) homeErrors = 0;
+    @property({ type: String, attribute: 'away-name' }) awayName = 'AWAY';
+    @property({ type: String, attribute: 'home-name' }) homeName = 'HOME';
+    @property({ type: Number, attribute: 'away-score' }) awayScore = 0;
+    @property({ type: Number, attribute: 'home-score' }) homeScore = 0;
+    @property({ type: Number, attribute: 'away-hits' }) awayHits = 0;
+    @property({ type: Number, attribute: 'home-hits' }) homeHits = 0;
+    @property({ type: Number, attribute: 'away-errors' }) awayErrors = 0;
+    @property({ type: Number, attribute: 'home-errors' }) homeErrors = 0;
 
-    @property({type: Number}) inning = 1;
-    @property({type: String}) half = 'TOP';
-    @property({type: Number}) balls = 0;
-    @property({type: Number}) strikes = 0;
-    @property({type: Number}) outs = 0;
+    @property({ type: Number }) inning = 1;
+    @property({ type: String }) half = 'TOP';
+    @property({ type: Number }) balls = 0;
+    @property({ type: Number }) strikes = 0;
+    @property({ type: Number }) outs = 0;
 
-    @property({type: Boolean, attribute: 'runner-first'}) runnerFirst = false;
-    @property({type: Boolean, attribute: 'runner-second'}) runnerSecond = false;
-    @property({type: Boolean, attribute: 'runner-third'}) runnerThird = false;
+    @property({ type: Boolean, attribute: 'runner-first' }) runnerFirst = false;
+    @property({ type: Boolean, attribute: 'runner-second' }) runnerSecond = false;
+    @property({ type: Boolean, attribute: 'runner-third' }) runnerThird = false;
 
-    @property({type: String, attribute: 'runner-first-name'}) runnerFirstName = '';
-    @property({type: String, attribute: 'runner-second-name'}) runnerSecondName = '';
-    @property({type: String, attribute: 'runner-third-name'}) runnerThirdName = '';
+    @property({ type: String, attribute: 'runner-first-name' }) runnerFirstName = '';
+    @property({ type: String, attribute: 'runner-second-name' }) runnerSecondName = '';
+    @property({ type: String, attribute: 'runner-third-name' }) runnerThirdName = '';
 
-    @property({type: String, attribute: 'last-play'}) lastPlay = '';
+    @property({ type: String, attribute: 'last-play' }) lastPlay = '';
     @property({
         attribute: 'sim-playing',
         converter: {
@@ -53,8 +53,8 @@ export class BaseballScoreboard extends LitElement {
         reflect: true,
     })
     animations = true;
-    @property({type: String, attribute: 'away-color'}) awayColor = '';
-    @property({type: String, attribute: 'home-color'}) homeColor = '';
+    @property({ type: String, attribute: 'away-color' }) awayColor = '';
+    @property({ type: String, attribute: 'home-color' }) homeColor = '';
     @property({
         attribute: 'interactive',
         converter: {
@@ -63,18 +63,22 @@ export class BaseballScoreboard extends LitElement {
         },
     })
     interactive = false;
-    @property({type: Number, attribute: 'armed-location'}) armedLocation = 0;
-    @property({type: String, attribute: 'active-play-json'}) activePlayJson = '';
-    @property({type: Number, attribute: 'play-seq'}) playSeq = 0;
-    @property({type: Number, attribute: 'play-duration-ms'}) playDurationMs = 4000;
+    @property({ type: Number, attribute: 'armed-location' }) armedLocation = 0;
+    @property({ type: String, attribute: 'active-play-json' }) activePlayJson = '';
+    @property({ type: Number, attribute: 'play-seq' }) playSeq = 0;
+    @property({ type: Number, attribute: 'play-duration-ms' }) playDurationMs = 4000;
 
     @property({
         type: String,
         attribute: 'game-json',
         converter: (val) => {
             if (!val) return null;
-            try { return JSON.parse(val); } catch { return null; }
-        }
+            try {
+                return JSON.parse(val);
+            } catch {
+                return null;
+            }
+        },
     })
     gameData: any = null;
 
@@ -83,8 +87,12 @@ export class BaseballScoreboard extends LitElement {
         attribute: 'box-score-json',
         converter: (val) => {
             if (!val) return null;
-            try { return JSON.parse(val); } catch { return null; }
-        }
+            try {
+                return JSON.parse(val);
+            } catch {
+                return null;
+            }
+        },
     })
     boxScoreData: any = null;
 
@@ -157,41 +165,101 @@ export class BaseballScoreboard extends LitElement {
             runnerFirst,
             runnerSecond,
             runnerThird,
-            runnerFirstName: this.resolveRunnerName(g?.gameState?.runnerFirstName, this.runnerFirstName, runnerFirst, 'Runner on 1B'),
-            runnerSecondName: this.resolveRunnerName(g?.gameState?.runnerSecondName, this.runnerSecondName, runnerSecond, 'Runner on 2B'),
-            runnerThirdName: this.resolveRunnerName(g?.gameState?.runnerThirdName, this.runnerThirdName, runnerThird, 'Runner on 3B'),
+            runnerFirstName: this.resolveRunnerName(
+                g?.gameState?.runnerFirstName,
+                this.runnerFirstName,
+                runnerFirst,
+                'Runner on 1B',
+            ),
+            runnerSecondName: this.resolveRunnerName(
+                g?.gameState?.runnerSecondName,
+                this.runnerSecondName,
+                runnerSecond,
+                'Runner on 2B',
+            ),
+            runnerThirdName: this.resolveRunnerName(
+                g?.gameState?.runnerThirdName,
+                this.runnerThirdName,
+                runnerThird,
+                'Runner on 3B',
+            ),
         };
     }
 
-    private resolveRunnerFirst(g: any): boolean { return g ? !!g.gameState?.runnerFirstId : this.runnerFirst; }
-    private resolveRunnerSecond(g: any): boolean { return g ? !!g.gameState?.runnerSecondId : this.runnerSecond; }
-    private resolveRunnerThird(g: any): boolean { return g ? !!g.gameState?.runnerThirdId : this.runnerThird; }
+    private resolveRunnerFirst(g: any): boolean {
+        return g ? !!g.gameState?.runnerFirstId : this.runnerFirst;
+    }
+    private resolveRunnerSecond(g: any): boolean {
+        return g ? !!g.gameState?.runnerSecondId : this.runnerSecond;
+    }
+    private resolveRunnerThird(g: any): boolean {
+        return g ? !!g.gameState?.runnerThirdId : this.runnerThird;
+    }
 
-    private resolveAwayName(g: any) { return g?.awayTeam?.name ?? this.awayName; }
-    private resolveHomeName(g: any) { return g?.homeTeam?.name ?? this.homeName; }
+    private resolveAwayName(g: any) {
+        return g?.awayTeam?.name ?? this.awayName;
+    }
+    private resolveHomeName(g: any) {
+        return g?.homeTeam?.name ?? this.homeName;
+    }
     private resolveColors(g: any) {
         return {
             awayColor: g?.awayTeam?.primaryColor ?? this.awayColor,
             homeColor: g?.homeTeam?.primaryColor ?? this.homeColor,
         };
     }
-    private resolveAwayScore(g: any) { return g?.awayScore ?? this.awayScore; }
-    private resolveHomeScore(g: any) { return g?.homeScore ?? this.homeScore; }
-    private resolveAwayHits(bs: any) { return bs?.lineScore?.awayHits ?? this.awayHits; }
-    private resolveHomeHits(bs: any) { return bs?.lineScore?.homeHits ?? this.homeHits; }
-    private resolveAwayErrors(bs: any) { return bs?.lineScore?.awayErrors ?? this.awayErrors; }
-    private resolveHomeErrors(bs: any) { return bs?.lineScore?.homeErrors ?? this.homeErrors; }
-    private resolveInning(g: any) { return g?.gameState?.inning ?? this.inning; }
-    private resolveHalf(g: any) { return g?.gameState?.half ?? this.half; }
-    private resolveBalls(g: any) { return g?.gameState?.balls ?? this.balls; }
-    private resolveStrikes(g: any) { return g?.gameState?.strikes ?? this.strikes; }
-    private resolveOuts(g: any) { return g?.gameState?.outs ?? this.outs; }
-    private resolveLastPlay(g: any) { return g?.gameState?.lastPlay ?? this.lastPlay; }
-    private resolveBatterName(g: any) { return g?.gameState?.currentBatterName ?? ''; }
-    private resolvePitcherName(g: any) { return g?.gameState?.currentPitcherName ?? ''; }
-    private resolveInningSymbol(g: any) { return (g?.gameState?.half ?? this.half) === 'TOP' ? '▲' : '▼'; }
+    private resolveAwayScore(g: any) {
+        return g?.awayScore ?? this.awayScore;
+    }
+    private resolveHomeScore(g: any) {
+        return g?.homeScore ?? this.homeScore;
+    }
+    private resolveAwayHits(bs: any) {
+        return bs?.lineScore?.awayHits ?? this.awayHits;
+    }
+    private resolveHomeHits(bs: any) {
+        return bs?.lineScore?.homeHits ?? this.homeHits;
+    }
+    private resolveAwayErrors(bs: any) {
+        return bs?.lineScore?.awayErrors ?? this.awayErrors;
+    }
+    private resolveHomeErrors(bs: any) {
+        return bs?.lineScore?.homeErrors ?? this.homeErrors;
+    }
+    private resolveInning(g: any) {
+        return g?.gameState?.inning ?? this.inning;
+    }
+    private resolveHalf(g: any) {
+        return g?.gameState?.half ?? this.half;
+    }
+    private resolveBalls(g: any) {
+        return g?.gameState?.balls ?? this.balls;
+    }
+    private resolveStrikes(g: any) {
+        return g?.gameState?.strikes ?? this.strikes;
+    }
+    private resolveOuts(g: any) {
+        return g?.gameState?.outs ?? this.outs;
+    }
+    private resolveLastPlay(g: any) {
+        return g?.gameState?.lastPlay ?? this.lastPlay;
+    }
+    private resolveBatterName(g: any) {
+        return g?.gameState?.currentBatterName ?? '';
+    }
+    private resolvePitcherName(g: any) {
+        return g?.gameState?.currentPitcherName ?? '';
+    }
+    private resolveInningSymbol(g: any) {
+        return (g?.gameState?.half ?? this.half) === 'TOP' ? '▲' : '▼';
+    }
 
-    private resolveRunnerName(gameName: string | undefined, propName: string, hasRunner: boolean, fallback: string): string {
+    private resolveRunnerName(
+        gameName: string | undefined,
+        propName: string,
+        hasRunner: boolean,
+        fallback: string,
+    ): string {
         if (gameName) return gameName;
         if (propName) return propName;
         return hasRunner ? fallback : '';
@@ -249,11 +317,13 @@ export class BaseballScoreboard extends LitElement {
     }
 
     private readonly onZonePick = (zone: number | null): void => {
-        this.dispatchEvent(new CustomEvent('pitch-location-selected', {
-            detail: {zone},
-            bubbles: true,
-            composed: true,
-        }));
+        this.dispatchEvent(
+            new CustomEvent('pitch-location-selected', {
+                detail: { zone },
+                bubbles: true,
+                composed: true,
+            }),
+        );
     };
 
     private renderDiamond(vm: ReturnType<BaseballScoreboard['buildViewModel']>) {

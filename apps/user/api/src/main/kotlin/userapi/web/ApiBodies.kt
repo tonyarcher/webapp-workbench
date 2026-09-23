@@ -7,12 +7,7 @@ data class PasswordBody(val username: String, val password: String)
 
 data class CsrfBody(val csrf: String)
 
-data class MeBody(
-    val id: String,
-    val username: String,
-    val totpEnabled: Boolean = false,
-    val passkeyCount: Int = 0,
-)
+data class MeBody(val id: String, val username: String, val totpEnabled: Boolean = false, val passkeyCount: Int = 0)
 
 data class OkBody(val ok: Boolean)
 

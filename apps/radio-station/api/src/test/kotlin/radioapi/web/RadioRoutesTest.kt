@@ -1,14 +1,11 @@
 package radioapi.web
 
-import java.util.UUID
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
@@ -18,6 +15,10 @@ import radioapi.service.GeneratedWeek
 import radioapi.service.PlaylistRow
 import radioapi.service.PlaylistWriter
 import radioapi.service.StationRow
+import java.util.UUID
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @WebMvcTest(StationController::class, PlaylistController::class, HealthController::class)
 @Import(FakeWriterConfig::class)
@@ -28,7 +29,7 @@ class RadioRoutesTest {
     @Test
     fun healthAndStations() {
         assertEquals(200, mvc.get("/healthz").andReturn().response.status)
-        assertEquals(503, mvc.get("/readyz").andReturn().response.status)
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), mvc.get("/readyz").andReturn().response.status)
         val stations = mvc.get("/stations") { header("X-Api-Version", "1") }.andReturn()
         assertEquals(200, stations.response.status)
         assertTrue(stations.response.contentAsString.contains("Pulse 101"))
@@ -36,7 +37,7 @@ class RadioRoutesTest {
 
     @Test
     fun missingVersionIs404() {
-        assertEquals(404, mvc.get("/stations").andReturn().response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), mvc.get("/stations").andReturn().response.status)
     }
 
     @Test
@@ -60,11 +61,11 @@ class RadioRoutesTest {
         val missing = mvc.get("/playlists/00000000-0000-4000-8000-000000000001") {
             header("X-Api-Version", "1")
         }.andReturn()
-        assertEquals(404, missing.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), missing.response.status)
         val entries = mvc.get("/playlists/00000000-0000-4000-8000-000000000001/entries") {
             header("X-Api-Version", "1")
         }.andReturn()
-        assertEquals(404, entries.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), entries.response.status)
         val txt = mvc.get("/playlists/$PLAYLIST/txt") { header("X-Api-Version", "1") }.andReturn()
         assertEquals(200, txt.response.status)
         val created = mvc.post("/playlists") {
@@ -78,12 +79,12 @@ class RadioRoutesTest {
     @Test
     fun badIdAndZone() {
         val bad = mvc.get("/playlists/nope") { header("X-Api-Version", "1") }.andReturn()
-        assertEquals(400, bad.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), bad.response.status)
         val zone = mvc.get("/playlists/$PLAYLIST/txt") {
             header("X-Api-Version", "1")
             param("tz", "Not/AZone")
         }.andReturn()
-        assertEquals(400, zone.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), zone.response.status)
     }
 }
 

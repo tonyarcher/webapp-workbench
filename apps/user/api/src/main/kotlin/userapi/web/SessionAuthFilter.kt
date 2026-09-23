@@ -11,11 +11,7 @@ import userapi.accounts.AccountServices
 import userapi.domain.sha256Hex
 
 class SessionAuthFilter(private val accounts: AccountServices) : OncePerRequestFilter() {
-    override fun doFilterInternal(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-        chain: FilterChain,
-    ) {
+    override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
         loadSession(request)?.let { session ->
             request.setAttribute(SESSION_ATTR, session)
             SecurityContextHolder.getContext().authentication =

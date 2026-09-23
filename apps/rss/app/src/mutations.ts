@@ -12,12 +12,21 @@ import {
     setFeedFolders as apiSetFeedFolders,
     updateArticleState,
 } from './services/api';
-import {createCoalescer} from './services/coalesce';
-import {allSyncKey} from './services/sync-keys';
-import {invalidateArticles, invalidateFrontPage, invalidateLibrary, updateArticlesInCache, libraryKey, queryClient, bustCounts, type LibraryData} from './query';
-import type {Article, Feed} from './types';
-import {adjustWordMap} from './services/interesting-settings';
-import {STAR_WORD_WEIGHT} from './services/interesting-words';
+import { createCoalescer } from './services/coalesce';
+import { allSyncKey } from './services/sync-keys';
+import {
+    invalidateArticles,
+    invalidateFrontPage,
+    invalidateLibrary,
+    updateArticlesInCache,
+    libraryKey,
+    queryClient,
+    bustCounts,
+    type LibraryData,
+} from './query';
+import type { Article, Feed } from './types';
+import { adjustWordMap } from './services/interesting-settings';
+import { STAR_WORD_WEIGHT } from './services/interesting-words';
 
 // Elevator-button coalescing for refreshes: mashing Refresh joins the
 // in-flight job rather than spawning a second sync.
@@ -33,7 +42,7 @@ export async function addFeed(url: string): Promise<Feed> {
 
 export async function refreshFeed(feedId: string) {
     return feedSyncs.run(feedId, async () => {
-        const result = await requestSync({feedIds: [feedId]});
+        const result = await requestSync({ feedIds: [feedId] });
         await invalidateLibrary();
         await invalidateArticles();
         return result;
@@ -47,7 +56,7 @@ export async function syncAllFeeds(
     const key = allSyncKey(feedIds);
     if (key === null) return 0;
     onProgress?.(0, 0, '');
-    const result = await allSyncs.run(key, () => requestSync(feedIds ? {feedIds} : undefined));
+    const result = await allSyncs.run(key, () => requestSync(feedIds ? { feedIds } : undefined));
     await invalidateLibrary();
     await invalidateArticles();
     onProgress?.(1, 1, '');
@@ -56,9 +65,7 @@ export async function syncAllFeeds(
 
 export async function refreshFolder(folderId: string) {
     const lib = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
-    const feedIds = lib?.feeds
-        .filter((f) => f.folderIds.includes(folderId))
-        .map((f) => f.id) ?? [];
+    const feedIds = lib?.feeds.filter((f) => f.folderIds.includes(folderId)).map((f) => f.id) ?? [];
     if (!feedIds.length) return;
     await syncAllFeeds(undefined, feedIds);
 }
@@ -66,7 +73,7 @@ export async function refreshFolder(folderId: string) {
 export async function importOpmlFile(xml: string) {
     const result = await apiImportOpml(xml);
     queryClient.setQueryData(libraryKey, (prev) => {
-        const prior = (prev ?? {folders: [], feeds: []}) as LibraryData;
+        const prior = (prev ?? { folders: [], feeds: [] }) as LibraryData;
         const folders = [...prior.folders];
         for (const folder of result.folders) {
             if (!folders.some((f) => f.id === folder.id)) folders.push(folder);
@@ -75,7 +82,7 @@ export async function importOpmlFile(xml: string) {
         for (const feed of result.feeds) {
             if (!feeds.some((f) => f.id === feed.id)) feeds.push(feed);
         }
-        return {folders, feeds};
+        return { folders, feeds };
     });
     await invalidateLibrary();
     return result;
@@ -103,7 +110,7 @@ export async function moveFeed(feedId: string, folderId: string | null) {
     if (prev) {
         queryClient.setQueryData(libraryKey, {
             ...prev,
-            feeds: prev.feeds.map((f) => (f.id === feedId ? {...f, folderIds: folderId ? [folderId] : []} : f)),
+            feeds: prev.feeds.map((f) => (f.id === feedId ? { ...f, folderIds: folderId ? [folderId] : [] } : f)),
         });
     }
     try {
@@ -138,11 +145,11 @@ export async function reorderFolders(folderIds: string[]) {
 }
 
 export async function markArticleRead(articleId: string): Promise<boolean> {
-    updateArticlesInCache(articleId, {read: 1});
+    updateArticlesInCache(articleId, { read: 1 });
     void recordAffinity(articleId, 1).catch(() => {});
     // Awaited so a subsequent unread-only refetch can't race this write.
     try {
-        await updateArticleState([{id: articleId, read: true}]);
+        await updateArticleState([{ id: articleId, read: true }]);
     } catch (err) {
         console.error('markArticleRead failed', err);
         // Revert the optimistic paint: refetch truth instead of leaving a
@@ -164,9 +171,9 @@ export async function markArticleRead(articleId: string): Promise<boolean> {
  *  The write is awaited: today-view chains its refetch on this resolving,
  *  so a fire-and-forget would let the GET re-show the old star state. */
 export async function toggleStar(articleId: string, nowStarred: boolean): Promise<boolean> {
-    updateArticlesInCache(articleId, {starred: nowStarred});
+    updateArticlesInCache(articleId, { starred: nowStarred });
     try {
-        await updateArticleState([{id: articleId, starred: nowStarred}]);
+        await updateArticleState([{ id: articleId, starred: nowStarred }]);
     } catch (err) {
         console.error('toggleStar failed', err);
         await invalidateArticles();
@@ -185,12 +192,12 @@ export async function toggleStar(articleId: string, nowStarred: boolean): Promis
 
 /** Title lookup across cached article pages (articles + front-page lists). */
 function findCachedArticleTitle(articleId: string): string | undefined {
-    for (const query of queryClient.getQueryCache().findAll({queryKey: ['articles']})) {
+    for (const query of queryClient.getQueryCache().findAll({ queryKey: ['articles'] })) {
         const data = query.state.data as { items: Article[] } | undefined;
         const found = data?.items.find((a) => a.id === articleId);
         if (found) return found.title;
     }
-    for (const query of queryClient.getQueryCache().findAll({queryKey: ['front-page']})) {
+    for (const query of queryClient.getQueryCache().findAll({ queryKey: ['front-page'] })) {
         const data = query.state.data as Article[] | undefined;
         const found = data?.find((a) => a.id === articleId);
         if (found) return found.title;
@@ -207,11 +214,11 @@ export async function markAllRead(feedId?: string) {
 }
 
 export async function markShownRead(articleIds: string[]) {
-    for (const id of articleIds) updateArticlesInCache(id, {read: 1});
+    for (const id of articleIds) updateArticlesInCache(id, { read: 1 });
     // Awaited: callers refetch unread-only lists right after this returns,
     // and firing blind would let just-read articles reappear.
     try {
-        await updateArticleState(articleIds.map((id) => ({id, read: true})));
+        await updateArticleState(articleIds.map((id) => ({ id, read: true })));
     } catch (err) {
         console.error('markShownRead failed', err);
         await invalidateArticles();

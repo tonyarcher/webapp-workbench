@@ -1,20 +1,13 @@
 package userapi.web
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import java.util.UUID
-import javax.sql.DataSource
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.mockito.kotlin.mock
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
 import userapi.Settings
 import userapi.accounts.AccountServices
@@ -28,6 +21,14 @@ import userapi.http.bodyText
 import userapi.http.expectStatus
 import userapi.http.getWithCookies
 import userapi.http.postJson
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import java.util.UUID
+import javax.sql.DataSource
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @WebMvcTest(AccountController::class)
 @Import(
@@ -107,7 +108,7 @@ class AccountTotpTest {
             csrf = true,
             json = mapper.writeValueAsString(mapOf("code" to "000000")),
         )
-        assertEquals(401, bad.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), bad.response.status)
     }
 
     @Test
@@ -121,7 +122,7 @@ class AccountTotpTest {
             csrf = true,
             json = mapper.writeValueAsString(mapOf("code" to "123456")),
         )
-        assertEquals(401, res.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), res.response.status)
     }
 
     @Test
@@ -139,7 +140,7 @@ class AccountTotpTest {
             csrf = true,
             json = mapper.writeValueAsString(mapOf("code" to "123456")),
         )
-        assertEquals(401, res.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), res.response.status)
     }
 
     @Test
@@ -159,6 +160,6 @@ class AccountTotpTest {
             csrf = true,
             json = mapper.writeValueAsString(mapOf("code" to "123456")),
         )
-        assertEquals(401, finish.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), finish.response.status)
     }
 }

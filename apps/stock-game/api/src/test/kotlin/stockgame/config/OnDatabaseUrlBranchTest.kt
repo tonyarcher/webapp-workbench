@@ -1,8 +1,8 @@
 package stockgame.config
 
+import org.mockito.kotlin.mock
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import org.mockito.kotlin.mock
 
 class OnDatabaseUrlBranchTest {
     @Test

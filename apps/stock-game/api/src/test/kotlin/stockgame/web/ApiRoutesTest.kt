@@ -1,9 +1,5 @@
 package stockgame.web
 
-import java.util.UUID
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.never
@@ -12,6 +8,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
@@ -22,6 +19,10 @@ import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.put
 import stockgame.persist.UserEntity
 import stockgame.persist.UserRepo
+import java.util.UUID
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 private const val ALICE_SUB = "alice-sub"
 private const val BOB_SUB = "bob-sub"
@@ -63,7 +64,7 @@ class ApiRoutesTest {
         val res = mvc.get("/portfolio") {
             header("Authorization", "Bearer good")
         }.andReturn()
-        assertEquals(404, res.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), res.response.status)
     }
 
     @Test
@@ -71,7 +72,7 @@ class ApiRoutesTest {
         val res = mvc.get("/config") {
             header("X-Api-Version", "1")
         }.andReturn()
-        assertEquals(401, res.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), res.response.status)
         assertEquals("""{"error":"unauthorized"}""", res.response.contentAsString)
     }
 
@@ -139,7 +140,7 @@ class ApiRoutesTest {
             contentType = MediaType.APPLICATION_JSON
             content = """{"symbol":"","side":"buy","qty":0,"at":1704067200000}"""
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test
@@ -176,9 +177,9 @@ class ApiRoutesTest {
             contentType = MediaType.APPLICATION_JSON
             content = body
         }.andReturn().response.status
-        assertEquals(400, placeOrder("""{"symbol":"","side":"buy","qty":1}"""))
-        assertEquals(400, placeOrder("""{"symbol":"AAPL","side":"buy","qty":0}"""))
-        assertEquals(400, placeOrder("""{"symbol":"AAPL","side":"BUY","qty":1}"""))
+        assertEquals(HttpStatus.BAD_REQUEST.value(), placeOrder("""{"symbol":"","side":"buy","qty":1}"""))
+        assertEquals(HttpStatus.BAD_REQUEST.value(), placeOrder("""{"symbol":"AAPL","side":"buy","qty":0}"""))
+        assertEquals(HttpStatus.BAD_REQUEST.value(), placeOrder("""{"symbol":"AAPL","side":"BUY","qty":1}"""))
     }
 
     @Test
@@ -198,14 +199,14 @@ class ApiRoutesTest {
             contentType = MediaType.APPLICATION_JSON
             content = """$base,"tif":"WEEK"}"""
         }.andReturn()
-        assertEquals(400, badTif.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), badTif.response.status)
         val badSource = mvc.post("/orders") {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer alice-token")
             contentType = MediaType.APPLICATION_JSON
             content = """$base,"fillPriceSource":"close"}"""
         }.andReturn()
-        assertEquals(400, badSource.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), badSource.response.status)
     }
 
     @Test
@@ -222,21 +223,21 @@ class ApiRoutesTest {
     fun quoteRequiresSymbol() {
         asUser(ALICE_SUB, ALICE_ID)
         val res = authedGet("/quote?symbol=", "alice-token")
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test
     fun searchRequiresQuery() {
         asUser(ALICE_SUB, ALICE_ID)
         val res = authedGet("/search?q=", "alice-token")
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test
     fun unknownPath404() {
         asUser(ALICE_SUB, ALICE_ID)
         val res = authedGet("/nope", "alice-token")
-        assertEquals(404, res.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), res.response.status)
         assertEquals("""{"error":"not found"}""", res.response.contentAsString)
     }
 
@@ -249,7 +250,7 @@ class ApiRoutesTest {
             contentType = MediaType.APPLICATION_JSON
             content = """{"symbol":"AAPL","side":"BUY","qty":1,"at":1704067200000}"""
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test
@@ -261,7 +262,7 @@ class ApiRoutesTest {
             contentType = MediaType.APPLICATION_JSON
             content = """{"symbol":"AAPL","side":"buy","qty":1,"executeAt":4102444800000,"orderType":"limit"}"""
         }.andReturn()
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
         assertTrue(res.response.contentAsString.contains("limitPrice"))
     }
 
@@ -269,6 +270,6 @@ class ApiRoutesTest {
     fun badQueryParamIs400() {
         asUser(ALICE_SUB, ALICE_ID)
         val res = authedGet("/bars?symbol=AAPL&interval=1d&from=abc&to=9", "alice-token")
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 }

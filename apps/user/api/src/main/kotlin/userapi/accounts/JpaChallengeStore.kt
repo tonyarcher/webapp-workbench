@@ -1,13 +1,11 @@
 package userapi.accounts
 
-import java.time.Instant
 import org.springframework.transaction.annotation.Transactional
 import userapi.persist.WebauthnChallengeEntity
 import userapi.persist.WebauthnChallengeRepo
+import java.time.Instant
 
-open class JpaChallengeStore(
-    private val challenges: WebauthnChallengeRepo,
-) : WebauthnChallengeStore {
+open class JpaChallengeStore(private val challenges: WebauthnChallengeRepo) : WebauthnChallengeStore {
     override fun putChallenge(row: WebauthnChallenge, expiresAt: Instant) {
         challenges.save(
             WebauthnChallengeEntity(

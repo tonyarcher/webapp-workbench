@@ -8,10 +8,7 @@ package rssapi.ai
  * additionally lock the service config down. Credentials stay in the
  * untracked .env as basic-auth pairs.
  */
-class OpenCodeBackend(
-    private val config: AiConfig,
-    private val http: HttpPoster = JdkHttpPoster(),
-) : AiBackend {
+class OpenCodeBackend(private val config: AiConfig, private val http: HttpPoster = JdkHttpPoster()) : AiBackend {
     override fun probe(): Boolean {
         if (config.baseUrl.isEmpty() || config.model.isEmpty()) return false
         return try {

@@ -1,14 +1,13 @@
-import type {PlaylistEntry} from '../types';
+import type { PlaylistEntry } from '../types';
 
 export type NowPlaying =
-    | {kind: 'track'; entry: PlaylistEntry; elapsedMs: number; progress: number}
-    | {kind: 'outside'};
+    { kind: 'track'; entry: PlaylistEntry; elapsedMs: number; progress: number } | { kind: 'outside' };
 
-function weekBounds(entries: PlaylistEntry[]): {start: number; end: number} | null {
+function weekBounds(entries: PlaylistEntry[]): { start: number; end: number } | null {
     const first = entries[0];
     const last = entries[entries.length - 1];
     if (!first || !last) return null;
-    return {start: first.startsAt, end: last.startsAt + last.durationMs};
+    return { start: first.startsAt, end: last.startsAt + last.durationMs };
 }
 
 function contains(entry: PlaylistEntry, now: number): boolean {
@@ -31,9 +30,9 @@ function binaryFind(entries: PlaylistEntry[], now: number): PlaylistEntry | null
 
 export function findNowPlaying(entries: PlaylistEntry[], now: number): NowPlaying {
     const bounds = weekBounds(entries);
-    if (!bounds || now < bounds.start || now >= bounds.end) return {kind: 'outside'};
+    if (!bounds || now < bounds.start || now >= bounds.end) return { kind: 'outside' };
     const entry = binaryFind(entries, now);
-    if (!entry) return {kind: 'outside'};
+    if (!entry) return { kind: 'outside' };
     const elapsedMs = now - entry.startsAt;
     return {
         kind: 'track',

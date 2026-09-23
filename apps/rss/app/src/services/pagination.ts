@@ -1,4 +1,4 @@
-import type {Feed} from '../types';
+import type { Feed } from '../types';
 
 export const MAX_LIST_ITEMS = 1000;
 

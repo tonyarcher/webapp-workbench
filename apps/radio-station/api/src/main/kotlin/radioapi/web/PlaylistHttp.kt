@@ -1,17 +1,18 @@
 package radioapi.web
 
-import java.time.DateTimeException
-import java.time.ZoneId
-import java.util.UUID
+import org.springframework.http.HttpStatus
 import radioapi.domain.TxtEntry
 import radioapi.domain.TxtInput
 import radioapi.service.EntryRow
 import radioapi.service.PlaylistRow
+import java.time.DateTimeException
+import java.time.ZoneId
+import java.util.UUID
 
 fun parsePlaylistId(id: String): UUID = try {
     UUID.fromString(id)
 } catch (_: IllegalArgumentException) {
-    throw ApiException(400, "invalid playlist id")
+    throw ApiException(HttpStatus.BAD_REQUEST, "invalid playlist id")
 }
 
 fun requireTimeZone(raw: String?): String {
@@ -19,7 +20,7 @@ fun requireTimeZone(raw: String?): String {
     try {
         ZoneId.of(zone)
     } catch (_: DateTimeException) {
-        throw ApiException(400, "invalid time zone")
+        throw ApiException(HttpStatus.BAD_REQUEST, "invalid time zone")
     }
     return zone
 }

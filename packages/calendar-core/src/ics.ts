@@ -1,5 +1,5 @@
-import type {CalEvent} from './types';
-import {pad2, utf8ByteLength} from './util';
+import type { CalEvent } from './types';
+import { pad2, utf8ByteLength } from './util';
 
 const CRLF = '\r\n';
 const FOLD_LIMIT = 75;
@@ -52,11 +52,7 @@ function line(name: string, value: string): string {
 }
 
 function eventBlock(event: CalEvent, now: number): string {
-    const rows = [
-        'BEGIN:VEVENT',
-        line('UID', event.uid),
-        line('DTSTAMP', formatUtcStamp(now)),
-    ];
+    const rows = ['BEGIN:VEVENT', line('UID', event.uid), line('DTSTAMP', formatUtcStamp(now))];
     if (event.allDay) {
         rows.push(line('DTSTART;VALUE=DATE', formatUtcDate(event.start)));
         rows.push(line('DTEND;VALUE=DATE', formatUtcDate(event.end)));
@@ -73,11 +69,7 @@ function eventBlock(event: CalEvent, now: number): string {
     return rows.join(CRLF);
 }
 
-export function eventsToIcs(
-    events: readonly CalEvent[],
-    calendarName = 'Calendar Sync',
-    now = Date.now(),
-): string {
+export function eventsToIcs(events: readonly CalEvent[], calendarName = 'Calendar Sync', now = Date.now()): string {
     const blocks = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',

@@ -17,8 +17,7 @@ fun parseXml(xml: String): Document {
 
 fun Element.local(): String = localName?.lowercase() ?: tagName.substringAfter(':').lowercase()
 
-fun Element.childText(name: String): String =
-    firstDesc(name)?.textContent?.trim().orEmpty()
+fun Element.childText(name: String): String = firstDesc(name)?.textContent?.trim().orEmpty()
 
 fun Element.descendants(name: String): List<Element> {
     val out = mutableListOf<Element>()

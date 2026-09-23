@@ -1,5 +1,5 @@
-import type {Point, Sex} from './types';
-import {bmi, navyBodyFat, waistToHeight, waistToHip} from './formulas';
+import type { Point, Sex } from './types';
+import { bmi, navyBodyFat, waistToHeight, waistToHip } from './formulas';
 
 function byDay(points: Point[]): Map<string, number> {
     const map = new Map<string, number>();
@@ -16,7 +16,10 @@ function joinDays(maps: Map<string, number>[]): string[] {
         for (const day of m.keys()) counts.set(day, (counts.get(day) ?? 0) + 1);
     }
     const need = maps.length;
-    return [...counts.entries()].filter(([, n]) => n === need).map(([d]) => d).sort();
+    return [...counts.entries()]
+        .filter(([, n]) => n === need)
+        .map(([d]) => d)
+        .sort();
 }
 
 function dayMs(day: string): number {
@@ -28,7 +31,7 @@ export function bmiSeries(mass: Point[], height: Point[]): Point[] {
     const h = byDay(height);
     return joinDays([m, h]).flatMap((day) => {
         const v = bmi(m.get(day) ?? 0, h.get(day) ?? 0);
-        return v == null ? [] : [{t: dayMs(day), v}];
+        return v == null ? [] : [{ t: dayMs(day), v }];
     });
 }
 
@@ -37,7 +40,7 @@ export function whtrSeries(waist: Point[], height: Point[]): Point[] {
     const h = byDay(height);
     return joinDays([w, h]).flatMap((day) => {
         const v = waistToHeight(w.get(day) ?? 0, h.get(day) ?? 0);
-        return v == null ? [] : [{t: dayMs(day), v}];
+        return v == null ? [] : [{ t: dayMs(day), v }];
     });
 }
 
@@ -46,17 +49,11 @@ export function whrSeries(waist: Point[], hip: Point[]): Point[] {
     const h = byDay(hip);
     return joinDays([w, h]).flatMap((day) => {
         const v = waistToHip(w.get(day) ?? 0, h.get(day) ?? 0);
-        return v == null ? [] : [{t: dayMs(day), v}];
+        return v == null ? [] : [{ t: dayMs(day), v }];
     });
 }
 
-export function navyBfSeries(
-    sex: Sex,
-    height: Point[],
-    neck: Point[],
-    waist: Point[],
-    hip: Point[],
-): Point[] {
+export function navyBfSeries(sex: Sex, height: Point[], neck: Point[], waist: Point[], hip: Point[]): Point[] {
     const h = byDay(height);
     const n = byDay(neck);
     const w = byDay(waist);
@@ -69,8 +66,8 @@ export function navyBfSeries(
             heightM: h.get(day) ?? 0,
             neckM: n.get(day) ?? 0,
             waistM: w.get(day) ?? 0,
-            ...(hip === undefined ? {} : {hipM: hip}),
+            ...(hip === undefined ? {} : { hipM: hip }),
         });
-        return v == null ? [] : [{t: dayMs(day), v}];
+        return v == null ? [] : [{ t: dayMs(day), v }];
     });
 }

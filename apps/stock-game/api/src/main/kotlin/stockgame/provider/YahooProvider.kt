@@ -1,10 +1,10 @@
 package stockgame.provider
 
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import stockgame.domain.Bar
 import stockgame.domain.Quote
 import stockgame.domain.SymbolHit
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 private const val YAHOO = "https://query1.finance.yahoo.com"
 private const val UA = "Mozilla/5.0 (stock-game; like Gecko) stock-game"

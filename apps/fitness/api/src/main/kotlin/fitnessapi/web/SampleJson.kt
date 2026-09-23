@@ -39,23 +39,13 @@ data class RollupJson(
     val n: Int,
 )
 
-data class SeriesJson(
-    val metric: String,
-    val points: List<PointJson>,
-    val n: Int,
-    val origins: List<OriginJson>,
-)
+data class SeriesJson(val metric: String, val points: List<PointJson>, val n: Int, val origins: List<OriginJson>)
 
 data class PointJson(val t: Long, val v: Double)
 
 data class OriginJson(val t: Long, val valueSi: Double, val originId: String, val source: String)
 
-data class ImportJson(
-    val importId: String? = null,
-    val stored: Int,
-    val skipped: Int,
-    val errors: List<String>,
-)
+data class ImportJson(val importId: String? = null, val stored: Int, val skipped: Int, val errors: List<String>)
 
 data class OkOverridden(val ok: Boolean, val overridden: Boolean)
 
@@ -65,8 +55,7 @@ fun MetricStats.toJson(): MetricStatJson = MetricStatJson(metric, n, firstT, las
 
 fun LatestPoint.toJson(): LatestSampleJson = LatestSampleJson(metric, t, valueSi)
 
-fun StoredSample.toJson(): SampleRowJson =
-    SampleRowJson(metric, t, valueSi, source, originId, hidden, note)
+fun StoredSample.toJson(): SampleRowJson = SampleRowJson(metric, t, valueSi, source, originId, hidden, note)
 
 fun RollupRow.toJson(): RollupJson = RollupJson(metric, day, minSi, maxSi, avgSi, sumSi, n)
 

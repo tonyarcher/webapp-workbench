@@ -1,4 +1,4 @@
-import type {MetricId, Point} from './types';
+import type { MetricId, Point } from './types';
 
 export function linearSlope(points: Point[]): number | null {
     if (points.length < 2) return null;
@@ -30,22 +30,9 @@ export function pctChange(points: Point[]): number | null {
     return (last - first) / first;
 }
 
-const DOWN_GOOD = new Set<MetricId>([
-    'body_mass',
-    'waist',
-    'hip',
-    'resting_heart_rate',
-    'body_fat',
-]);
+const DOWN_GOOD = new Set<MetricId>(['body_mass', 'waist', 'hip', 'resting_heart_rate', 'body_fat']);
 
-const UP_GOOD = new Set<MetricId>([
-    'lean_mass',
-    'hrv_rmssd',
-    'vo2max',
-    'steps',
-    'sleep',
-    'distance',
-]);
+const UP_GOOD = new Set<MetricId>(['lean_mass', 'hrv_rmssd', 'vo2max', 'steps', 'sleep', 'distance']);
 
 function goalHint(metric: MetricId, slope: number): string {
     if (DOWN_GOOD.has(metric)) return slope < 0 ? ' (down is typically the goal)' : ' (trending up)';

@@ -3,12 +3,7 @@ package radioapi.domain
 import java.time.Instant
 import java.time.ZoneOffset
 
-data class GenerateCommand(
-    val stationId: String,
-    val seed: String,
-    val startsAtMs: Long,
-    val weights: Weights,
-)
+data class GenerateCommand(val stationId: String, val seed: String, val startsAtMs: Long, val weights: Weights)
 
 class BadInput(message: String) : RuntimeException(message)
 

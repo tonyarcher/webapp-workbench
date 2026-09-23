@@ -1,8 +1,8 @@
 package rssapi.web
 
+import rssapi.domain.ArticleSort
 import rssapi.domain.encodeCursor
 import rssapi.domain.firstImageUrl
-import rssapi.domain.ArticleSort
 import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleScoreEntity
 import rssapi.persist.ArticleStateEntity
@@ -42,6 +42,9 @@ private fun ArticleScoreEntity.toScoresJson(): ArticleScoresJson = ArticleScores
 fun nextCursor(items: List<ArticleEntity>, hasMore: Boolean, sort: ArticleSort): String? {
     if (!hasMore || items.isEmpty()) return null
     val last = items.last()
-    return if (sort == ArticleSort.HOT) encodeCursor(last.hot.toDouble(), last.id)
-    else encodeCursor(last.publishedAt.toEpochMilli().toDouble(), last.id)
+    return if (sort == ArticleSort.HOT) {
+        encodeCursor(last.hot.toDouble(), last.id)
+    } else {
+        encodeCursor(last.publishedAt.toEpochMilli().toDouble(), last.id)
+    }
 }

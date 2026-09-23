@@ -1,18 +1,15 @@
 package rssapi.persist
 
-import java.io.Serializable
-import java.time.Instant
-import java.util.UUID
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.IdClass
 import jakarta.persistence.Table
+import java.io.Serializable
+import java.time.Instant
+import java.util.UUID
 
-data class ArticleStateId(
-    var userId: UUID = UUID(0, 0),
-    var articleId: String = "",
-) : Serializable {
+data class ArticleStateId(var userId: UUID = UUID(0, 0), var articleId: String = "") : Serializable {
     companion object {
         private const val serialVersionUID: Long = 1
     }

@@ -1,7 +1,7 @@
-import type {PlayFamily, PlayInput, ScoringEvent} from 'football-core';
-import type {LiveLocalGameState} from '../local-game/game-state';
-import {delayForPlay, PlaybackClock} from './playback';
-import {nextEvent, rngForEngine} from './resolve-play';
+import type { PlayFamily, PlayInput, ScoringEvent } from 'football-core';
+import type { LiveLocalGameState } from '../local-game/game-state';
+import { delayForPlay, PlaybackClock } from './playback';
+import { nextEvent, rngForEngine } from './resolve-play';
 
 /** Matches simulateGame: a long game can need more than 400 events to finish. */
 const MAX_EVENTS = 450;
@@ -47,7 +47,7 @@ export class WatchRunner {
         if (game.historyIndex < MAX_EVENTS) {
             return nextEvent(game.engine, rngForEngine(game.setup.simSeed ?? 1, game.engine, game.historyIndex));
         }
-        return game.historyIndex < MAX_EVENTS + MAX_WIND_DOWN ? {type: 'period_end'} : null;
+        return game.historyIndex < MAX_EVENTS + MAX_WIND_DOWN ? { type: 'period_end' } : null;
     }
 }
 

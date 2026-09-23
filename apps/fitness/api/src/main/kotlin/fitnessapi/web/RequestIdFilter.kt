@@ -1,20 +1,16 @@
 package fitnessapi.web
 
-import org.springframework.stereotype.Component
-import org.springframework.web.filter.OncePerRequestFilter
 import fitnessapi.http.requestIdsFrom
 import fitnessapi.log.log
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.stereotype.Component
+import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 class RequestIdFilter : OncePerRequestFilter() {
-    override fun doFilterInternal(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-        chain: FilterChain,
-    ) {
+    override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
         val ids = requestIdsFrom(request.getHeader("X-Request-ID"), request.getHeader("traceparent"))
         response.setHeader("X-Request-ID", ids.requestId)
         val started = System.nanoTime()

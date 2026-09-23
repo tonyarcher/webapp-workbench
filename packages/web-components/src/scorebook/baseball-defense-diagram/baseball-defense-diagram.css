@@ -10,7 +10,9 @@
     border: 2px solid var(--border-color, rgba(229, 30, 43, 0.15));
     border-radius: 16px;
     padding: 1rem 1.25rem 1.25rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(0, 0, 0, 0.6);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        inset 0 0 15px rgba(0, 0, 0, 0.6);
     color: var(--text-primary, #f5f7fa);
     box-sizing: border-box;
     margin-top: 1rem;

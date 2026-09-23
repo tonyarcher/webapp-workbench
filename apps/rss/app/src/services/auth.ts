@@ -1,4 +1,4 @@
-import {authorizeUrl, challengeS256, parseJwtPayload, randomVerifier} from 'user-client';
+import { authorizeUrl, challengeS256, parseJwtPayload, randomVerifier } from 'user-client';
 
 const CLIENT_ID = 'rss-reader';
 const TOKENS_KEY = 'rss.auth.tokens';
@@ -40,7 +40,7 @@ function loadTokens(): AuthTokens | null {
         const parsed = JSON.parse(raw) as Partial<AuthTokens>;
         if (typeof parsed.access !== 'string' || typeof parsed.refresh !== 'string') return null;
         if (typeof parsed.exp !== 'number') return null;
-        return {access: parsed.access, refresh: parsed.refresh, exp: parsed.exp};
+        return { access: parsed.access, refresh: parsed.refresh, exp: parsed.exp };
     } catch {
         return null;
     }
@@ -56,16 +56,16 @@ function clearTokens(): void {
 
 function toTokens(body: unknown): AuthTokens | null {
     if (typeof body !== 'object' || body === null) return null;
-    const {access_token: access, refresh_token: refresh, expires_in: expiresIn} = body as Record<string, unknown>;
+    const { access_token: access, refresh_token: refresh, expires_in: expiresIn } = body as Record<string, unknown>;
     if (typeof access !== 'string' || typeof refresh !== 'string') return null;
     if (typeof expiresIn !== 'number') return null;
-    return {access, refresh, exp: Math.floor(Date.now() / 1000) + expiresIn};
+    return { access, refresh, exp: Math.floor(Date.now() / 1000) + expiresIn };
 }
 
 async function postToken(form: Record<string, string>): Promise<AuthTokens | null> {
     const res = await fetch(tokenEndpoint(), {
         method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams(form),
     });
     if (!res.ok) return null;
@@ -105,7 +105,7 @@ function takeCallbackParams(): { code: string; state: string } | null {
     const state = params.get('state');
     if (!code || !state) return null;
     history.replaceState(null, '', redirectUri());
-    return {code, state};
+    return { code, state };
 }
 
 /** Exchange an OAuth callback code for tokens. True when a session starts. */
@@ -144,7 +144,7 @@ async function doRefresh(): Promise<AuthTokens | null> {
     const current = loadTokens();
     if (!current) return null;
     const epoch = sessionEpoch;
-    const next = await postToken({grant_type: 'refresh_token', refresh_token: current.refresh});
+    const next = await postToken({ grant_type: 'refresh_token', refresh_token: current.refresh });
     if (epoch !== sessionEpoch) return null;
     if (!next) {
         // Another in-flight refresh may have rotated already; only drop the

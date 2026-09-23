@@ -1,8 +1,5 @@
 package radioapi.store
 
-import java.time.Instant
-import java.util.UUID
-import javax.sql.DataSource
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
@@ -18,6 +15,9 @@ import radioapi.service.EntryRow
 import radioapi.service.PlaylistRecords
 import radioapi.service.PlaylistRow
 import radioapi.service.StationRow
+import java.time.Instant
+import java.util.UUID
+import javax.sql.DataSource
 
 @Component
 @ConditionalOnBean(DataSource::class)
@@ -62,15 +62,13 @@ class JpaPlaylistRecords(
         startsAtMs: Long,
         weights: Weights,
         rows: List<EntryRow>,
-    ): PlaylistRow {
-        return try {
-            val saved = playlists.save(newPlaylist(stationId, seed, startsAtMs, weights))
-            entries.saveAll(rows.map { row -> newEntry(saved.getId(), row) })
-            playlists.flush()
-            saved.toRow(stationName(stationId))
-        } catch (_: DataIntegrityViolationException) {
-            throw DuplicatePlaylist()
-        }
+    ): PlaylistRow = try {
+        val saved = playlists.save(newPlaylist(stationId, seed, startsAtMs, weights))
+        entries.saveAll(rows.map { row -> newEntry(saved.getId(), row) })
+        playlists.flush()
+        saved.toRow(stationName(stationId))
+    } catch (_: DataIntegrityViolationException) {
+        throw DuplicatePlaylist()
     }
 
     private fun stationName(stationId: String): String = stations.findById(stationId).orElse(null)?.name ?: stationId

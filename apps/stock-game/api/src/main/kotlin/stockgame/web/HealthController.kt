@@ -1,11 +1,12 @@
 package stockgame.web
 
-import java.sql.SQLException
-import javax.sql.DataSource
 import org.springframework.beans.factory.ObjectProvider
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
+import java.sql.SQLException
+import javax.sql.DataSource
 
 data class HealthBody(val ok: Boolean)
 
@@ -18,18 +19,16 @@ class HealthController(private val dataSource: ObjectProvider<DataSource>) {
     fun readyz(): ResponseEntity<HealthBody> {
         val ds = dataSource.ifAvailable
         if (ds == null || !probe(ds)) {
-            return ResponseEntity.status(503).body(HealthBody(ok = false))
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(HealthBody(ok = false))
         }
         return ResponseEntity.ok(HealthBody(ok = true))
     }
 }
 
-private fun probe(dataSource: DataSource): Boolean {
-    return try {
-        probeOnce(dataSource)
-    } catch (_: SQLException) {
-        false
-    }
+private fun probe(dataSource: DataSource): Boolean = try {
+    probeOnce(dataSource)
+} catch (_: SQLException) {
+    false
 }
 
 private fun probeOnce(dataSource: DataSource): Boolean {

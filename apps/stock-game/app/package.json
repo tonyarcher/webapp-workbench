@@ -1,28 +1,28 @@
 {
-  "name": "@stock-game/app",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
-  },
-  "dependencies": {
-    "@tanstack/history": "^1.103.4",
-    "@tanstack/query-core": "^5.101.4",
-    "lightweight-charts": "^5.2.0",
-    "lit": "^3.3.3",
-    "user-client": "*"
-  },
-  "devDependencies": {
-    "@types/node": "^26.1.2",
-    "@vitest/coverage-v8": "^4.1.11",
-    "jsdom": "^29.1.1",
-    "typescript": "7.0.2",
-    "vite": "^8.2.0",
-    "vitest": "^4.1.11"
-  }
+    "name": "@stock-game/app",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run",
+        "test:coverage": "vitest run --coverage"
+    },
+    "dependencies": {
+        "@tanstack/history": "^1.103.4",
+        "@tanstack/query-core": "^5.101.4",
+        "lightweight-charts": "^5.2.0",
+        "lit": "^3.3.3",
+        "user-client": "*"
+    },
+    "devDependencies": {
+        "@types/node": "^26.1.2",
+        "@vitest/coverage-v8": "^4.1.11",
+        "jsdom": "^29.1.1",
+        "typescript": "7.0.2",
+        "vite": "^8.2.0",
+        "vitest": "^4.1.11"
+    }
 }

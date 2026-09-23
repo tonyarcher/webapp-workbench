@@ -1,12 +1,12 @@
-import {stampFromClock} from './clock';
-import {defaultOnCourt, generateRoster} from './default-roster';
-import {isValidOnCourt} from './lineup';
-import {getRulebook} from './rulebook';
-import {emptyStat, startStint} from './reduce-helpers';
-import {applyPeriodEnd, applyFoul, applySetClock, applyTimeout, applyTurnover} from './reduce-clock';
-import {applySetLineup, applySubstitution} from './reduce-lineup';
-import {applyFreeThrow, applyRebound, applyShot} from './reduce-shots';
-import type {GameSetup, GameState, Player, PlayerStatLine, ScoringEvent, TeamId} from './types';
+import { stampFromClock } from './clock';
+import { defaultOnCourt, generateRoster } from './default-roster';
+import { isValidOnCourt } from './lineup';
+import { getRulebook } from './rulebook';
+import { emptyStat, startStint } from './reduce-helpers';
+import { applyPeriodEnd, applyFoul, applySetClock, applyTimeout, applyTurnover } from './reduce-clock';
+import { applySetLineup, applySubstitution } from './reduce-lineup';
+import { applyFreeThrow, applyRebound, applyShot } from './reduce-shots';
+import type { GameSetup, GameState, Player, PlayerStatLine, ScoringEvent, TeamId } from './types';
 
 export function createGame(setup: GameSetup): GameState {
     const rb = getRulebook(setup.rulebookId);
@@ -38,8 +38,8 @@ function blankGame(
         possession: setup.openingPossession,
         openingPossession: setup.openingPossession,
         homeAttacksLeft: false,
-        score: {home: 0, away: 0},
-        teamFouls: {home: 0, away: 0},
+        score: { home: 0, away: 0 },
+        teamFouls: { home: 0, away: 0 },
         pendingFt: null,
         shots: [],
         stats: statsFor(players),
@@ -58,14 +58,8 @@ function openingClock(rb: ReturnType<typeof getRulebook>): GameState['clock'] {
     };
 }
 
-function team(
-    id: TeamId,
-    name: string,
-    roster: Player[],
-    onCourt: string[],
-    timeouts: number,
-): GameState['home'] {
-    return {id, name, roster, onCourt, timeouts};
+function team(id: TeamId, name: string, roster: Player[], onCourt: string[], timeouts: number): GameState['home'] {
+    return { id, name, roster, onCourt, timeouts };
 }
 
 function resolveOnCourt(roster: Player[], requested: string[] | undefined): string[] {

@@ -1,10 +1,5 @@
 package rssapi.ingest
 
-import java.time.Instant
-import java.util.Optional
-import java.util.UUID
-import kotlin.test.Test
-import kotlin.test.assertEquals
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -15,6 +10,11 @@ import rssapi.persist.ArticleStateEntity
 import rssapi.persist.ArticleStateRepo
 import rssapi.persist.PendingStateEntity
 import rssapi.persist.PendingStateRepo
+import java.time.Instant
+import java.util.Optional
+import java.util.UUID
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class PendingApplyTest {
     private val pending: PendingStateRepo = mock()

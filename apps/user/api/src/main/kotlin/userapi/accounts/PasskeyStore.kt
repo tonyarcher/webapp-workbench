@@ -11,12 +11,7 @@ data class StoredPasskey(
     val signCount: Long,
 )
 
-data class WebauthnChallenge(
-    val id: String,
-    val kind: String,
-    val userId: UUID?,
-    val payload: String,
-)
+data class WebauthnChallenge(val id: String, val kind: String, val userId: UUID?, val payload: String)
 
 interface PasskeyStore {
     fun ensureUserHandle(userId: UUID): ByteArray

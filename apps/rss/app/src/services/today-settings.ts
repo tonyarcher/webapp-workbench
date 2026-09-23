@@ -43,8 +43,7 @@ export function loadTodaySettings(): TodaySettings {
                     : DEFAULT_PER_FOLDER,
             unreadOnly: parsed.unreadOnly === true,
             listView:
-                typeof parsed.listView === 'string' &&
-                (TODAY_LIST_VIEWS as readonly string[]).includes(parsed.listView)
+                typeof parsed.listView === 'string' && (TODAY_LIST_VIEWS as readonly string[]).includes(parsed.listView)
                     ? parsed.listView
                     : 'detailed',
         };
@@ -65,13 +64,10 @@ export function saveTodaySettings(settings: TodaySettings): void {
  * Drop excluded ids that no longer exist as folders (deleted or imported
  * away), so settings never reference dead folders.
  */
-export function pruneTodaySettings(
-    settings: TodaySettings,
-    existingFolderIds: string[],
-): TodaySettings {
+export function pruneTodaySettings(settings: TodaySettings, existingFolderIds: string[]): TodaySettings {
     const valid = new Set(existingFolderIds);
     const excluded = settings.excludedFolderIds.filter((id) => valid.has(id));
     return excluded.length === settings.excludedFolderIds.length
         ? settings
-        : {...settings, excludedFolderIds: excluded};
+        : { ...settings, excludedFolderIds: excluded };
 }

@@ -1,15 +1,15 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import styles from './progress-bar.css?inline';
 
 @customElement('cal-progress-bar')
 export class ProgressBar extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({type: Number}) done = 0;
-    @property({type: Number}) total = 0;
-    @property({type: Number}) failed = 0;
+    @property({ type: Number }) done = 0;
+    @property({ type: Number }) total = 0;
+    @property({ type: Number }) failed = 0;
     @property() label = '';
 
     override render(): TemplateResult {

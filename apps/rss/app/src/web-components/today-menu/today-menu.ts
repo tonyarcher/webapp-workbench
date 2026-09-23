@@ -1,18 +1,23 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, property, state} from 'lit/decorators.js';
-import type {Folder} from '../../types';
-import {DEFAULT_PER_FOLDER, defaultTodaySettings, PER_FOLDER_OPTIONS, type TodaySettings} from '../../services/today-settings';
-import type {MenuAnchor} from '../feed-menu/feed-menu';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import type { Folder } from '../../types';
+import {
+    DEFAULT_PER_FOLDER,
+    defaultTodaySettings,
+    PER_FOLDER_OPTIONS,
+    type TodaySettings,
+} from '../../services/today-settings';
+import type { MenuAnchor } from '../feed-menu/feed-menu';
 import styles from './today-menu.css?inline';
 
 @customElement('today-menu')
 export class TodayMenu extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) open = false;
-    @property({attribute: false}) anchor: MenuAnchor | null = null;
-    @property({attribute: false}) folders: Folder[] = [];
-    @property({attribute: false}) settings: TodaySettings = defaultTodaySettings();
+    @property({ attribute: false }) open = false;
+    @property({ attribute: false }) anchor: MenuAnchor | null = null;
+    @property({ attribute: false }) folders: Folder[] = [];
+    @property({ attribute: false }) settings: TodaySettings = defaultTodaySettings();
 
     @state() private excluded = new Set<string>();
     @state() private perFolder = DEFAULT_PER_FOLDER;
@@ -72,7 +77,8 @@ export class TodayMenu extends LitElement {
     }
 
     private renderFolderSection() {
-        if (!this.folders.length) return html`<div class="hint">No folders yet. Import an OPML file to create some.</div>`;
+        if (!this.folders.length)
+            return html`<div class="hint">No folders yet. Import an OPML file to create some.</div>`;
         return html`<div class="folder-list">${this.folders.map((f) => this.renderFolderOpt(f))}</div>`;
     }
 
@@ -98,7 +104,7 @@ export class TodayMenu extends LitElement {
         if (!el) return;
         const margin = 8;
         const rect = el.getBoundingClientRect();
-        let {left, top} = rect;
+        let { left, top } = rect;
         if (rect.right > window.innerWidth - margin) {
             left = Math.max(margin, window.innerWidth - rect.width - margin);
         }
@@ -121,7 +127,7 @@ export class TodayMenu extends LitElement {
     };
 
     private emitClose() {
-        this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     }
 
     private toggleFolder(id: string, checked: boolean) {

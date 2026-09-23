@@ -1,4 +1,4 @@
-import {sha256Bytes} from './sha256.ts';
+import { sha256Bytes } from './sha256.ts';
 
 const UNRESERVED = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
 

@@ -1,11 +1,11 @@
 package stockgame.config
 
-import javax.sql.DataSource
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Conditional
 import org.springframework.context.annotation.Configuration
-import stockgame.db.dataSource as hikariDataSource
 import stockgame.db.ensureDatabase
+import javax.sql.DataSource
+import stockgame.db.dataSource as hikariDataSource
 
 @Configuration
 class DataSourceConfig {

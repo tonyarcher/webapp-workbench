@@ -32,9 +32,20 @@ export type {
     TurnoverEvent,
 } from './types';
 
-export {SCORING_EVENT_TYPES} from './types';
+export { SCORING_EVENT_TYPES } from './types';
 
-export {NBA, NCAA, NFHS, RULEBOOKS, WNBA, bonusKind, getRulebook, isHalfTime, oppositeTeam, periodLabel} from './rulebook';
+export {
+    NBA,
+    NCAA,
+    NFHS,
+    RULEBOOKS,
+    WNBA,
+    bonusKind,
+    getRulebook,
+    isHalfTime,
+    oppositeTeam,
+    periodLabel,
+} from './rulebook';
 
 export {
     inBounds,
@@ -61,14 +72,14 @@ export {
     stepSeconds,
 } from './clock';
 
-export {ON_COURT, applySub, findPlayer, isOnCourt, isValidOnCourt, rosterIds, startersOf} from './lineup';
+export { ON_COURT, applySub, findPlayer, isOnCourt, isValidOnCourt, rosterIds, startersOf } from './lineup';
 
-export {defaultOnCourt, generateRoster, makePlayer} from './default-roster';
+export { defaultOnCourt, generateRoster, makePlayer } from './default-roster';
 
-export {createGame, currentStamp, reduce, replay} from './reduce';
+export { createGame, currentStamp, reduce, replay } from './reduce';
 
-export {emptyStat, teamSide} from './reduce-helpers';
+export { emptyStat, teamSide } from './reduce-helpers';
 
-export {boxRows, formatMinutes} from './box-score';
+export { boxRows, formatMinutes } from './box-score';
 
-export {describeEvent} from './notation';
+export { describeEvent } from './notation';

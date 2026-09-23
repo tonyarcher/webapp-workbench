@@ -1,9 +1,5 @@
 package stockgame.scheduler
 
-import java.time.Clock
-import java.util.UUID
-import kotlin.test.Test
-import kotlin.test.assertEquals
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
@@ -13,6 +9,10 @@ import stockgame.store.GameStore
 import stockgame.trading.FakeGameStore
 import stockgame.trading.FakeProvider
 import stockgame.trading.TradingService
+import java.time.Clock
+import java.util.UUID
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class OrderSchedulerBranchTest {
     private fun providers(
@@ -26,8 +26,12 @@ class OrderSchedulerBranchTest {
         return trading to games
     }
 
-    private fun realService(store: GameStore): TradingService =
-        TradingService(store, FakeProvider(), Clock.systemUTC(), "fake")
+    private fun realService(store: GameStore): TradingService = TradingService(
+        store,
+        FakeProvider(),
+        Clock.systemUTC(),
+        "fake",
+    )
 
     @Test
     fun skipsWhenOffline() {

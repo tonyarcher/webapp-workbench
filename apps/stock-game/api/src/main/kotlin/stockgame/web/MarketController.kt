@@ -1,5 +1,6 @@
 package stockgame.web
 
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -13,7 +14,7 @@ class MarketController(private val provider: PriceProvider) {
     @GetMapping("/quote", headers = ["X-Api-Version=1"])
     fun quote(@RequestParam symbol: String): Quote {
         val s = symbol.trim().uppercase()
-        if (s.isEmpty()) throw ApiException(400, "symbol required")
+        if (s.isEmpty()) throw ApiException(HttpStatus.BAD_REQUEST, "symbol required")
         return provider.getQuote(s)
     }
 
@@ -25,14 +26,14 @@ class MarketController(private val provider: PriceProvider) {
         @RequestParam to: Long,
     ): List<Bar> {
         val s = symbol.trim().uppercase()
-        if (s.isEmpty()) throw ApiException(400, "symbol required")
+        if (s.isEmpty()) throw ApiException(HttpStatus.BAD_REQUEST, "symbol required")
         return provider.getBars(s, interval, from, to)
     }
 
     @GetMapping("/search", headers = ["X-Api-Version=1"])
     fun search(@RequestParam q: String): List<SymbolHit> {
         val query = q.trim()
-        if (query.isEmpty()) throw ApiException(400, "q required")
+        if (query.isEmpty()) throw ApiException(HttpStatus.BAD_REQUEST, "q required")
         return provider.search(query)
     }
 }

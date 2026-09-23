@@ -3,15 +3,15 @@ package rssapi.web
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Root
-import java.util.UUID
-import kotlin.test.Test
-import kotlin.test.assertNotNull
 import org.mockito.Answers
 import org.mockito.kotlin.mock
 import rssapi.domain.ArticleScope
 import rssapi.domain.ArticleSort
 import rssapi.domain.CursorPayload
 import rssapi.persist.ArticleEntity
+import java.util.UUID
+import kotlin.test.Test
+import kotlin.test.assertNotNull
 
 class ArticleSpecsTest {
     private val cb: CriteriaBuilder = mock(defaultAnswer = Answers.RETURNS_DEEP_STUBS)

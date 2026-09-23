@@ -12,10 +12,7 @@ const val JEV_DEFAULT_MODEL: String = "jev-latest"
  * surfaces as [AiException] with the status in the message; there are no
  * retries here because the front-page caller falls back to signals.
  */
-class JevBackend(
-    private val config: AiConfig,
-    private val http: HttpPoster = JdkHttpPoster(),
-) {
+class JevBackend(private val config: AiConfig, private val http: HttpPoster = JdkHttpPoster()) {
     fun probe(): Boolean {
         if (config.jevApiKey.isBlank()) return false
         return try {

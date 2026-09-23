@@ -1,14 +1,15 @@
 package fitnessapi.web
 
-import tools.jackson.databind.JsonNode
+import fitnessapi.LOCAL_USER_ID
+import fitnessapi.domain.parseProfile
+import fitnessapi.store.ProfileStore
 import org.springframework.beans.factory.ObjectProvider
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-import fitnessapi.LOCAL_USER_ID
-import fitnessapi.domain.parseProfile
-import fitnessapi.store.ProfileStore
+import tools.jackson.databind.JsonNode
 
 @RestController
 class ProfileController(private val profiles: ObjectProvider<ProfileStore>) {
@@ -17,7 +18,11 @@ class ProfileController(private val profiles: ObjectProvider<ProfileStore>) {
 
     @PutMapping("/profile", headers = ["X-Api-Version=1"])
     fun put(@RequestBody(required = false) body: JsonNode?): ProfileJson {
-        if (body == null || body.isNull || body.isMissingNode) throw ApiException(400, "missing body")
+        if (body == null || body.isNull ||
+            body.isMissingNode
+        ) {
+            throw ApiException(HttpStatus.BAD_REQUEST, "missing body")
+        }
         val tm = body.get("tm")
         val profile = parseProfile(
             sex = body.string("sex"),

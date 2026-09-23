@@ -1,5 +1,5 @@
-import {html, LitElement} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import { html, LitElement } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import scorerTabCssText from './baseball-scorer-tab.css?inline';
 
 const scorerTabSheet = new CSSStyleSheet();
@@ -9,10 +9,10 @@ scorerTabSheet.replaceSync(scorerTabCssText);
 export class BaseballScorerTab extends LitElement {
     static override styles = scorerTabSheet;
 
-    @property({type: String, attribute: 'away-name'}) awayName = '';
-    @property({type: String, attribute: 'home-name'}) homeName = '';
-    @property({type: Boolean, attribute: 'no-game'}) noGame = false;
-    @property({type: Boolean, attribute: 'watch'}) watch = false;
+    @property({ type: String, attribute: 'away-name' }) awayName = '';
+    @property({ type: String, attribute: 'home-name' }) homeName = '';
+    @property({ type: Boolean, attribute: 'no-game' }) noGame = false;
+    @property({ type: Boolean, attribute: 'watch' }) watch = false;
 
     override render() {
         if (this.noGame) {
@@ -40,11 +40,11 @@ export class BaseballScorerTab extends LitElement {
     }
 
     private onStartNewGame() {
-        this.dispatchEvent(new CustomEvent('start-new-game-click', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('start-new-game-click', { bubbles: true, composed: true }));
     }
 
     private onOpenLineupSetup() {
-        this.dispatchEvent(new CustomEvent('open-lineup-setup-click', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('open-lineup-setup-click', { bubbles: true, composed: true }));
     }
 }
 

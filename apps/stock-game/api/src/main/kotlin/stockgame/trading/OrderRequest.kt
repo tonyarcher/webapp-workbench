@@ -1,6 +1,5 @@
 package stockgame.trading
 
-import java.util.UUID
 import stockgame.domain.Order
 import stockgame.domain.TradingError
 import stockgame.domain.asapExecuteAt
@@ -8,6 +7,7 @@ import stockgame.domain.defaultFillPriceSource
 import stockgame.domain.expiresAtForOrder
 import stockgame.store.GameStore
 import stockgame.store.NewOrder
+import java.util.UUID
 
 data class OrderRequest(
     val symbol: String,

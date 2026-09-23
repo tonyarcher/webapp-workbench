@@ -1,8 +1,8 @@
-import type {Feed, Folder} from '../types';
-import {getDb} from './db-base';
+import type { Feed, Folder } from '../types';
+import { getDb } from './db-base';
 
-export {clearClientDb, closeDb, getDb, uid} from './db-base';
-export type {ReaderDB} from './db-base';
+export { clearClientDb, closeDb, getDb, uid } from './db-base';
+export type { ReaderDB } from './db-base';
 export * from './db-ingest';
 export * from './db-mutations';
 export * from './db-query';
@@ -19,7 +19,10 @@ export async function getFolders(): Promise<Folder[]> {
         await tx.done;
     }
     return folders.sort(
-        (a, b) => (a.sortOrder ?? Infinity) - (b.sortOrder ?? Infinity) || a.createdAt - b.createdAt || a.title.localeCompare(b.title),
+        (a, b) =>
+            (a.sortOrder ?? Infinity) - (b.sortOrder ?? Infinity) ||
+            a.createdAt - b.createdAt ||
+            a.title.localeCompare(b.title),
     );
 }
 
@@ -66,7 +69,7 @@ export async function getFeeds(): Promise<Feed[]> {
     const feeds = await (await getDb()).getAll('feeds');
     return feeds
         .map(normalizeFeed)
-        .sort((a, b) => a.title.localeCompare(b.title, undefined, {numeric: true, sensitivity: 'base'}));
+        .sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
 export async function getFeed(id: string): Promise<Feed | undefined> {
@@ -81,7 +84,7 @@ export async function putFeed(feed: Feed): Promise<void> {
 export function normalizeFeed(feed: Feed): Feed {
     if (Array.isArray(feed.folderIds)) return feed;
     const legacy = (feed as unknown as { folderId?: string | null }).folderId;
-    return {...feed, folderIds: legacy ? [legacy] : []};
+    return { ...feed, folderIds: legacy ? [legacy] : [] };
 }
 
 export async function deleteFeed(id: string): Promise<void> {
@@ -111,7 +114,7 @@ export async function getMeta(key: string): Promise<unknown> {
 }
 
 export async function setMeta(key: string, value: unknown): Promise<void> {
-    await (await getDb()).put('meta', {key, value});
+    await (await getDb()).put('meta', { key, value });
 }
 
 export async function getMetaMany(keys: string[]): Promise<Map<string, number>> {
@@ -132,6 +135,6 @@ export async function incrementMeta(key: string, delta: number, decay = 1): Prom
     const tx = db.transaction('meta', 'readwrite');
     const rec = await tx.store.get(key);
     const current = (rec?.value as number) ?? 0;
-    await tx.store.put({key, value: Math.round(current * decay + delta)});
+    await tx.store.put({ key, value: Math.round(current * decay + delta) });
     await tx.done;
 }

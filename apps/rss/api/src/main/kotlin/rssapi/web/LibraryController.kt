@@ -1,6 +1,6 @@
 package rssapi.web
 
-import java.util.UUID
+import org.springframework.http.HttpStatus
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController
 import rssapi.domain.isUuid
 import rssapi.persist.FolderEntity
 import rssapi.persist.FolderRepo
+import java.util.UUID
 
 @RestController
 class LibraryController(
@@ -34,8 +35,8 @@ class LibraryController(
 
     @PostMapping("/folders", headers = ["X-Api-Version=1"])
     fun createFolder(@RequestBody body: TitleBody): FolderJson {
-        val title = body.title?.trim() ?: throw ApiException(400, "title is required")
-        if (title.isEmpty()) throw ApiException(400, "title is required")
+        val title = body.title?.trim() ?: throw ApiException(HttpStatus.BAD_REQUEST, "title is required")
+        if (title.isEmpty()) throw ApiException(HttpStatus.BAD_REQUEST, "title is required")
         val existing = folders.findByUserIdAndTitle(user.id, title)
         val row = existing ?: folders.save(FolderEntity(userId = user.id, title = title))
         return row.toJson()
@@ -43,7 +44,7 @@ class LibraryController(
 
     @DeleteMapping("/folders/{id}", headers = ["X-Api-Version=1"])
     fun deleteFolder(@PathVariable id: String): OkBody {
-        if (!isUuid(id)) throw ApiException(400, "invalid folder id")
+        if (!isUuid(id)) throw ApiException(HttpStatus.BAD_REQUEST, "invalid folder id")
         folders.findById(UUID.fromString(id)).filter { it.userId == user.id }.ifPresent { folders.delete(it) }
         return OkBody()
     }
@@ -51,7 +52,7 @@ class LibraryController(
     @PostMapping("/folders/reorder", headers = ["X-Api-Version=1"])
     @Transactional
     fun reorder(@RequestBody body: IdsBody): OkBody {
-        val ids = body.ids ?: throw ApiException(400, "ids array is required")
+        val ids = body.ids ?: throw ApiException(HttpStatus.BAD_REQUEST, "ids array is required")
         val uuids = ids.filter { isUuid(it) }.map { UUID.fromString(it) }
         if (uuids.isEmpty()) return OkBody()
         val rows = folders.findAllById(uuids).filter { it.userId == user.id }

@@ -1,5 +1,5 @@
-import type {MetricId, ParseResult, ParseSkip, Sample} from './types';
-import {asNumber, asString, isRecord, toSi} from './units';
+import type { MetricId, ParseResult, ParseSkip, Sample } from './types';
+import { asNumber, asString, isRecord, toSi } from './units';
 
 interface Extractor {
     metric: MetricId;
@@ -27,7 +27,7 @@ function innerNumber(node: unknown, inner: string[]): number | null {
     return null;
 }
 
-const EXTRACTORS: Array<{match: RegExp; ext: Extractor}> = [
+const EXTRACTORS: Array<{ match: RegExp; ext: Extractor }> = [
     {
         match: /weight/i,
         ext: {
@@ -65,7 +65,8 @@ const EXTRACTORS: Array<{match: RegExp; ext: Extractor}> = [
         ext: {
             metric: 'heart_rate',
             unit: 'bpm',
-            pick: (rec) => nestedNumber(rec, ['beatsPerMinute', 'bpm', 'samples', 'value'], ['value', 'bpm', 'beatsPerMinute']),
+            pick: (rec) =>
+                nestedNumber(rec, ['beatsPerMinute', 'bpm', 'samples', 'value'], ['value', 'bpm', 'beatsPerMinute']),
         },
     },
     {
@@ -130,7 +131,9 @@ const EXTRACTORS: Array<{match: RegExp; ext: Extractor}> = [
 ];
 
 function recordType(rec: Record<string, unknown>): string {
-    return asString(rec['recordType']) ?? asString(rec['type']) ?? asString(rec['dataType']) ?? asString(rec['name']) ?? '';
+    return (
+        asString(rec['recordType']) ?? asString(rec['type']) ?? asString(rec['dataType']) ?? asString(rec['name']) ?? ''
+    );
 }
 
 function firstString(rec: Record<string, unknown>, keys: string[]): string | undefined {
@@ -177,7 +180,7 @@ function collectKeyedRecords(payload: Record<string, unknown>): unknown[] {
     for (const [key, value] of Object.entries(payload)) {
         if (!Array.isArray(value)) continue;
         for (const item of value) {
-            if (isRecord(item) && !item['recordType'] && !item['type']) out.push({...item, recordType: key});
+            if (isRecord(item) && !item['recordType'] && !item['type']) out.push({ ...item, recordType: key });
             else out.push(item);
         }
     }
@@ -206,36 +209,46 @@ function extractorFor(typeName: string): Extractor | null {
 }
 
 function recordToSample(item: unknown): Sample | ParseSkip {
-    if (!isRecord(item)) return {line: String(item), reason: 'not an object'};
+    if (!isRecord(item)) return { line: String(item), reason: 'not an object' };
     const typeName = recordType(item);
     const ext = extractorFor(typeName);
-    if (!ext) return {line: typeName || JSON.stringify(item).slice(0, 80), reason: 'unknown record type'};
+    if (!ext) return { line: typeName || JSON.stringify(item).slice(0, 80), reason: 'unknown record type' };
     const t = parseTime(item);
-    if (t == null) return {line: typeName, reason: 'missing time'};
+    if (t == null) return { line: typeName, reason: 'missing time' };
     const raw = ext.pick(item);
-    if (raw == null) return {line: typeName, reason: 'missing value'};
+    if (raw == null) return { line: typeName, reason: 'missing value' };
     const valueSi = ext.metric === 'body_fat' ? raw : toSi(ext.metric, raw, ext.unit);
-    if (valueSi == null) return {line: typeName, reason: 'unit conversion failed'};
-    return {metric: ext.metric, t, valueSi, source: 'health-connect', originId: originId(item, ext.metric, t, valueSi)};
+    if (valueSi == null) return { line: typeName, reason: 'unit conversion failed' };
+    return {
+        metric: ext.metric,
+        t,
+        valueSi,
+        source: 'health-connect',
+        originId: originId(item, ext.metric, t, valueSi),
+    };
 }
 
 export function parseHealthConnectJson(payload: unknown): ParseResult {
     const skipped: ParseSkip[] = [];
     const samples: Sample[] = [];
     const records = recordsFrom(payload);
-    if (!records.length) return {samples, skipped: [{line: '', reason: 'no records'}], format: 'health-connect'};
+    if (!records.length) return { samples, skipped: [{ line: '', reason: 'no records' }], format: 'health-connect' };
     for (const item of records) {
         const parsed = recordToSample(item);
         if ('reason' in parsed) skipped.push(parsed);
         else samples.push(parsed);
     }
-    return {samples, skipped, format: 'health-connect'};
+    return { samples, skipped, format: 'health-connect' };
 }
 
 export function looksLikeHealthConnect(text: string): boolean {
     const head = text.trimStart().slice(0, 400);
     if (head.startsWith('{') || head.startsWith('[')) {
-        return /recordType|WeightRecord|HeartRate|startTime|inKilograms/i.test(head) || head.startsWith('[') || head.startsWith('{');
+        return (
+            /recordType|WeightRecord|HeartRate|startTime|inKilograms/i.test(head) ||
+            head.startsWith('[') ||
+            head.startsWith('{')
+        );
     }
     return false;
 }

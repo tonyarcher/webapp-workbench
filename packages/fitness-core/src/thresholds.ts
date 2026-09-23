@@ -1,10 +1,6 @@
-import type {ThresholdComparator} from './types';
+import type { ThresholdComparator } from './types';
 
-export function evaluateThreshold(
-    value: number,
-    comparator: ThresholdComparator,
-    threshold: number,
-): boolean {
+export function evaluateThreshold(value: number, comparator: ThresholdComparator, threshold: number): boolean {
     switch (comparator) {
         case 'lt':
             return value < threshold;

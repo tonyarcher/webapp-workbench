@@ -1,5 +1,16 @@
-import {describe, expect, it} from 'vitest';
-import {NBA, NCAA, NFHS, RULEBOOKS, WNBA, bonusKind, getRulebook, isHalfTime, oppositeTeam, periodLabel} from './rulebook';
+import { describe, expect, it } from 'vitest';
+import {
+    NBA,
+    NCAA,
+    NFHS,
+    RULEBOOKS,
+    WNBA,
+    bonusKind,
+    getRulebook,
+    isHalfTime,
+    oppositeTeam,
+    periodLabel,
+} from './rulebook';
 
 describe('rulebooks', () => {
     it('exposes four levels', () => {

@@ -1,9 +1,10 @@
 package rssapi.ai
 
-import java.util.UUID
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import rssapi.log.log
 import rssapi.web.ApiException
+import java.util.UUID
 
 data class AiStatus(val provider: String, val model: String, val available: Boolean)
 
@@ -22,7 +23,7 @@ enum class SummaryLength {
             "brief" -> BRIEF
             "standard" -> STANDARD
             "deep" -> DEEP
-            else -> throw ApiException(400, "invalid length")
+            else -> throw ApiException(HttpStatus.BAD_REQUEST, "invalid length")
         }
     }
 }
@@ -61,7 +62,7 @@ class AiService(
             throw err
         } catch (err: AiException) {
             logAi("summarize failed", input.length, elapsed(started))
-            throw ApiException(502, "server AI failed", err)
+            throw ApiException(HttpStatus.BAD_GATEWAY, "server AI failed", err)
         }
     }
 
@@ -72,12 +73,12 @@ class AiService(
 
     private fun cleanInput(text: String): String {
         val input = text.trim().take(config.maxInputChars).trim()
-        if (input.isEmpty()) throw ApiException(400, "text is required")
+        if (input.isEmpty()) throw ApiException(HttpStatus.BAD_REQUEST, "text is required")
         return input
     }
 
     private fun requiredBackend(): AiBackend =
-        backend() ?: throw ApiException(503, "server AI is not configured")
+        backend() ?: throw ApiException(HttpStatus.SERVICE_UNAVAILABLE, "server AI is not configured")
 
     private fun backend(): AiBackend? = when (config.provider) {
         "ollama" -> OllamaBackend(config, poster)

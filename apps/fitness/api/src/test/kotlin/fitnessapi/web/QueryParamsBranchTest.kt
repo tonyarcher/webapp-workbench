@@ -1,13 +1,13 @@
 package fitnessapi.web
 
+import fitnessapi.store.ProfileStore
+import fitnessapi.store.SampleStore
+import org.mockito.kotlin.mock
+import org.springframework.beans.factory.ObjectProvider
 import java.time.Clock
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import org.mockito.kotlin.mock
-import org.springframework.beans.factory.ObjectProvider
-import fitnessapi.store.ProfileStore
-import fitnessapi.store.SampleStore
 
 class QueryParamsBranchTest {
     @Test

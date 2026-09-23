@@ -10,7 +10,7 @@ export interface GoogleAccess {
 }
 
 interface TokenClient {
-    requestAccessToken: (opts?: {prompt?: string}) => void;
+    requestAccessToken: (opts?: { prompt?: string }) => void;
 }
 
 interface TokenResponse {
@@ -28,7 +28,7 @@ interface GisOauth {
 }
 
 function gisOauth(): GisOauth | undefined {
-    const google = (globalThis as {google?: {accounts?: {oauth2?: GisOauth}}}).google;
+    const google = (globalThis as { google?: { accounts?: { oauth2?: GisOauth } } }).google;
     return google?.accounts?.oauth2;
 }
 
@@ -37,8 +37,10 @@ export function loadGis(): Promise<void> {
     return new Promise((resolve, reject) => {
         const existing = document.querySelector(`script[src="${GIS_SRC}"]`);
         if (existing) {
-            existing.addEventListener('load', () => resolve(), {once: true});
-            existing.addEventListener('error', () => reject(new Error('Failed to load Google Identity')), {once: true});
+            existing.addEventListener('load', () => resolve(), { once: true });
+            existing.addEventListener('error', () => reject(new Error('Failed to load Google Identity')), {
+                once: true,
+            });
             return;
         }
         const script = document.createElement('script');
@@ -70,6 +72,6 @@ export async function requestGoogleToken(clientId: string, prompt: '' | 'consent
                 });
             },
         });
-        client.requestAccessToken({prompt});
+        client.requestAccessToken({ prompt });
     });
 }

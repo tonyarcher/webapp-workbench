@@ -1,11 +1,11 @@
 package rssapi.persist
 
-import java.time.Instant
-import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.Instant
+import java.util.UUID
 
 interface ArticleStateRepo : JpaRepository<ArticleStateEntity, ArticleStateId> {
     fun findByUserIdAndArticleIdIn(userId: UUID, ids: Collection<String>): List<ArticleStateEntity>
@@ -46,8 +46,5 @@ interface ArticleStateRepo : JpaRepository<ArticleStateEntity, ArticleStateId> {
         """,
         nativeQuery = true,
     )
-    fun markReadAll(
-        @Param("userId") userId: UUID,
-        @Param("feedIds") feedIds: Collection<UUID>,
-    ): Int
+    fun markReadAll(@Param("userId") userId: UUID, @Param("feedIds") feedIds: Collection<UUID>): Int
 }

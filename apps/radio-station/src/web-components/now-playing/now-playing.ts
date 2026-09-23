@@ -1,23 +1,23 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
-import type {NowPlaying} from '../../services/now-playing';
-import {formatClock, formatHms} from '../../services/format';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import type { NowPlaying } from '../../services/now-playing';
+import { formatClock, formatHms } from '../../services/format';
 import styles from './now-playing.css?inline';
 
 @customElement('rs-now-playing')
 export class NowPlayingBar extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) nowPlaying: NowPlaying = {kind: 'outside'};
-    @property({type: Number}) now = Date.now();
+    @property({ attribute: false }) nowPlaying: NowPlaying = { kind: 'outside' };
+    @property({ type: Number }) now = Date.now();
 
     private emitJump(): void {
-        this.dispatchEvent(new CustomEvent('jump-now', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('jump-now', { bubbles: true, composed: true }));
     }
 
-    private renderTrack(state: Extract<NowPlaying, {kind: 'track'}>): TemplateResult {
-        const {entry, elapsedMs, progress} = state;
+    private renderTrack(state: Extract<NowPlaying, { kind: 'track' }>): TemplateResult {
+        const { entry, elapsedMs, progress } = state;
         return html`
             <div class="on-air" aria-hidden="true"></div>
             <div class="copy">

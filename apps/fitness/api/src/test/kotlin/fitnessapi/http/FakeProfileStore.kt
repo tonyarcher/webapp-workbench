@@ -1,10 +1,10 @@
 package fitnessapi.http
 
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 import fitnessapi.domain.ProfileData
 import fitnessapi.domain.emptyProfile
 import fitnessapi.store.ProfileStore
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class FakeProfileStore : ProfileStore {
     private val rows = ConcurrentHashMap<UUID, ProfileData>()

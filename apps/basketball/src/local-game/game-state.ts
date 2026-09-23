@@ -1,5 +1,5 @@
-import type {GameState} from 'basketball-core';
-import type {LocalGameEventRecord, LocalGameSetup} from './game-types';
+import type { GameState } from 'basketball-core';
+import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
 
 export interface LiveLocalGameState {
     setup: LocalGameSetup;

@@ -1,13 +1,5 @@
 package rssapi.frontpage
 
-import java.time.Instant
-import java.util.Optional
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
@@ -22,6 +14,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.domain.Specification
+import org.springframework.http.HttpStatus
 import rssapi.ai.AiConfig
 import rssapi.ai.AiException
 import rssapi.ai.AiQuotaService
@@ -38,6 +31,14 @@ import rssapi.persist.ArticleScoreEntity
 import rssapi.persist.ArticleScoreRepo
 import rssapi.persist.ArticleStateRepo
 import rssapi.web.ApiException
+import java.time.Instant
+import java.util.Optional
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @ExtendWith(MockitoExtension::class)
 class FrontPageServiceTest {
@@ -397,7 +398,7 @@ class FrontPageServiceTest {
             jevService(poster, quotas).frontPage(uid, 1_700_000_000_000L, false, 10)
         }
 
-        assertEquals(429, err.status)
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), err.status.value())
         verify(repo, never()).saveAndFlush(any<AiQuotaEntity>())
         assertTrue(poster.calls.isEmpty())
     }

@@ -24,21 +24,24 @@ class PositionFillsBranchTest {
     fun openingIncreasing() {
         val open = accumulatePositions(listOf(trade("AAPL", "buy", 10, 50.0)))
         assertEquals(10, open["AAPL"]?.qty)
-        val inc = accumulatePositions(
-            listOf(trade("AAPL", "buy", 10, 50.0), trade("AAPL", "buy", 5, 60.0)),
-        )
+        val inc =
+            accumulatePositions(
+                listOf(trade("AAPL", "buy", 10, 50.0), trade("AAPL", "buy", 5, 60.0)),
+            )
         assertEquals(15, inc["AAPL"]?.qty)
     }
 
     @Test
     fun reduceAndClose() {
-        val pos = accumulatePositions(
-            listOf(trade("AAPL", "buy", 10, 50.0), trade("AAPL", "sell", 4, 60.0)),
-        )
+        val pos =
+            accumulatePositions(
+                listOf(trade("AAPL", "buy", 10, 50.0), trade("AAPL", "sell", 4, 60.0)),
+            )
         assertEquals(6, pos["AAPL"]?.qty)
-        val flat = accumulatePositions(
-            listOf(trade("AAPL", "buy", 10, 50.0), trade("AAPL", "sell", 10, 60.0)),
-        )
+        val flat =
+            accumulatePositions(
+                listOf(trade("AAPL", "buy", 10, 50.0), trade("AAPL", "sell", 10, 60.0)),
+            )
         assertEquals(0, flat["AAPL"]?.qty)
     }
 

@@ -1,5 +1,5 @@
-import {html, LitElement} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import { html, LitElement } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import controlsCssText from './baseball-scoring-controls.css?inline';
 
 const controlsSheet = new CSSStyleSheet();
@@ -10,33 +10,33 @@ export class BaseballScoringControls extends LitElement {
     static override styles = controlsSheet;
 
     // Which top-level mode to show
-    @property({type: String, attribute: 'game-status'}) gameStatus: 'active' | 'completed' = 'active';
+    @property({ type: String, attribute: 'game-status' }) gameStatus: 'active' | 'completed' = 'active';
 
     // Completed state data
-    @property({type: String, attribute: 'away-name'}) awayName = '';
-    @property({type: String, attribute: 'home-name'}) homeName = '';
-    @property({type: String, attribute: 'away-score'}) awayScore = '0';
-    @property({type: String, attribute: 'home-score'}) homeScore = '0';
+    @property({ type: String, attribute: 'away-name' }) awayName = '';
+    @property({ type: String, attribute: 'home-name' }) homeName = '';
+    @property({ type: String, attribute: 'away-score' }) awayScore = '0';
+    @property({ type: String, attribute: 'home-score' }) homeScore = '0';
 
     // Active state — matchup card data
-    @property({type: String, attribute: 'batter-name'}) batterName = '';
-    @property({type: String, attribute: 'batter-stats'}) batterStats = '';
-    @property({type: String, attribute: 'pitcher-name'}) pitcherName = '';
-    @property({type: String, attribute: 'pitcher-stats'}) pitcherStats = '';
+    @property({ type: String, attribute: 'batter-name' }) batterName = '';
+    @property({ type: String, attribute: 'batter-stats' }) batterStats = '';
+    @property({ type: String, attribute: 'pitcher-name' }) pitcherName = '';
+    @property({ type: String, attribute: 'pitcher-stats' }) pitcherStats = '';
 
     // Active state — live game situation
-    @property({type: Number, attribute: 'balls'}) balls = 0;
-    @property({type: Number, attribute: 'strikes'}) strikes = 0;
-    @property({type: Number, attribute: 'outs'}) outs = 0;
-    @property({type: String, attribute: 'live-inning-text'}) liveInningText = '';
+    @property({ type: Number, attribute: 'balls' }) balls = 0;
+    @property({ type: Number, attribute: 'strikes' }) strikes = 0;
+    @property({ type: Number, attribute: 'outs' }) outs = 0;
+    @property({ type: String, attribute: 'live-inning-text' }) liveInningText = '';
 
     // Active state — action panel mode ('action-grid' | 'step2')
-    @property({type: String, attribute: 'current-pitch-type'}) currentPitchType = '';
-    @property({type: String, attribute: 'panel-mode'}) panelMode: 'action-grid' | 'step2' = 'action-grid';
-    @property({type: String, attribute: 'step2-label'}) step2Label = '';
-    @property({type: Boolean, attribute: 'step2-is-hit'}) step2IsHit = false;
-    @property({type: Boolean, attribute: 'step2-double-play-available'}) step2DoublePlayAvailable = false;
-    @property({type: String, attribute: 'active-play-json'}) activePlayJson = '';
+    @property({ type: String, attribute: 'current-pitch-type' }) currentPitchType = '';
+    @property({ type: String, attribute: 'panel-mode' }) panelMode: 'action-grid' | 'step2' = 'action-grid';
+    @property({ type: String, attribute: 'step2-label' }) step2Label = '';
+    @property({ type: Boolean, attribute: 'step2-is-hit' }) step2IsHit = false;
+    @property({ type: Boolean, attribute: 'step2-double-play-available' }) step2DoublePlayAvailable = false;
+    @property({ type: String, attribute: 'active-play-json' }) activePlayJson = '';
     @property({
         attribute: 'interactive',
         converter: {
@@ -55,9 +55,7 @@ export class BaseballScoringControls extends LitElement {
     animations = true;
 
     override render() {
-        return this.gameStatus === 'completed'
-            ? this.renderCompleted()
-            : this.renderActive();
+        return this.gameStatus === 'completed' ? this.renderCompleted() : this.renderActive();
     }
 
     private renderCompleted() {
@@ -130,11 +128,13 @@ export class BaseballScoringControls extends LitElement {
     }
 
     private emit(eventName: string, detail: Record<string, unknown>) {
-        this.dispatchEvent(new CustomEvent(eventName, {
-            detail,
-            bubbles: true,
-            composed: true,
-        }));
+        this.dispatchEvent(
+            new CustomEvent(eventName, {
+                detail,
+                bubbles: true,
+                composed: true,
+            }),
+        );
     }
 }
 

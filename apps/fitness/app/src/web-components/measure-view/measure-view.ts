@@ -1,6 +1,6 @@
-import {LitElement, html, unsafeCSS} from 'lit';
-import type {TemplateResult} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
+import { LitElement, html, unsafeCSS } from 'lit';
+import type { TemplateResult } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
 import {
     MEASURE_METRICS,
     formatSi,
@@ -12,8 +12,8 @@ import {
     type Sample,
     type Sex,
 } from 'fitness-core';
-import {fetchLatest, fetchProfile, postImport, saveProfile} from '../../services/api';
-import type {LatestSample, Profile} from '../../types';
+import { fetchLatest, fetchProfile, postImport, saveProfile } from '../../services/api';
+import type { LatestSample, Profile } from '../../types';
 import styles from './measure-view.css?inline';
 
 @customElement('ft-measure-view')
@@ -70,10 +70,10 @@ export class MeasureView extends LitElement {
             birthYear: null,
             heightM: null,
             displayUnit: 'kg',
-            tm: {squat: null, bench: null, deadlift: null, press: null},
+            tm: { squat: null, bench: null, deadlift: null, press: null },
         };
         try {
-            this.profile = await saveProfile({...profile, sex: sex === 'male' || sex === 'female' ? sex : null});
+            this.profile = await saveProfile({ ...profile, sex: sex === 'male' || sex === 'female' ? sex : null });
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         }
@@ -98,7 +98,7 @@ export class MeasureView extends LitElement {
             return;
         }
         try {
-            this.profile = await saveProfile({...this.profile, heightM});
+            this.profile = await saveProfile({ ...this.profile, heightM });
             await postImport([this.heightSample(heightM)], 'manual');
             this.saved = true;
             await this.reload();

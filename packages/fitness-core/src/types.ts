@@ -9,15 +9,7 @@ export type WeekKind = '5s' | '3s' | '531' | 'deload';
 export type SetSlot = 'warmup' | 'main' | 'joker' | 'fsl' | 'ssl' | 'bbb' | 'widowmaker' | 'assistance';
 
 export type TemplateId =
-    | 'bbb'
-    | 'fsl'
-    | 'ssl'
-    | '5s-pro'
-    | 'widowmaker'
-    | 'triumvirate'
-    | 'bbb-beefcake'
-    | 'bbs'
-    | 'bodyweight';
+    'bbb' | 'fsl' | 'ssl' | '5s-pro' | 'widowmaker' | 'triumvirate' | 'bbb-beefcake' | 'bbs' | 'bodyweight';
 
 export type PhaseKind = 'training' | 'nutrition' | 'diet' | 'custom';
 

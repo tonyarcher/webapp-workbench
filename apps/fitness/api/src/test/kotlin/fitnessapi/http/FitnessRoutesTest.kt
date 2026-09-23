@@ -1,8 +1,5 @@
 package fitnessapi.http
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
@@ -13,9 +10,13 @@ import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @WebMvcTest
 @Import(TestStoresConfig::class)
@@ -112,14 +113,14 @@ class FitnessRoutesTest {
     @Test
     fun seriesRequiresMetric() {
         val res = mvc.getPath("/series")
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
         assertTrue(res.response.contentAsString.contains("metric required"))
     }
 
     @Test
     fun unknownPath404() {
         val res = mvc.getPath("/nope")
-        assertEquals(404, res.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), res.response.status)
         assertEquals("""{"error":"not found"}""", res.response.contentAsString)
     }
 
@@ -129,20 +130,20 @@ class FitnessRoutesTest {
             contentType = MediaType.APPLICATION_JSON
             content = BODY_MASS
         }.andReturn()
-        assertEquals(404, res.response.status)
+        assertEquals(HttpStatus.NOT_FOUND.value(), res.response.status)
     }
 
     @Test
     fun patchRequiresFields() {
         val res = mvc.patchJson("/samples", """{"metric":"waist"}""")
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
     }
 
     @Test
     fun importRejectsTooMany() {
         val samplesJson = List(2_001) { """{"metric":"body_mass","t":1,"valueSi":1,"originId":"x$it"}""" }
         val res = mvc.postJson("/imports", """{"samples":[${samplesJson.joinToString()}]}""")
-        assertEquals(400, res.response.status)
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
         assertTrue(res.response.contentAsString.contains("at most 2000"))
     }
 }

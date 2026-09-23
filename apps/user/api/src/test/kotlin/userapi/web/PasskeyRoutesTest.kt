@@ -1,37 +1,37 @@
 package userapi.web
-import userapi.http.FakeAccountStore
-import userapi.http.FakeChallengeStore
-import userapi.http.FakePasskeyStore
-import userapi.http.PlainHasher
-import userapi.http.RateLimiter
-import userapi.http.TestCookies
-
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import javax.sql.DataSource
 import org.mockito.kotlin.mock
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
 import userapi.Settings
 import userapi.accounts.AccountServices
 import userapi.accounts.PasskeyService
 import userapi.accounts.buildRelyingParty
-import userapi.web.AccountController
-import userapi.web.RequestIdFilter
-import userapi.web.SecurityConfig
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import userapi.http.FakeAccountStore
+import userapi.http.FakeChallengeStore
+import userapi.http.FakePasskeyStore
+import userapi.http.PlainHasher
+import userapi.http.RateLimiter
+import userapi.http.TestCookies
 import userapi.http.bodyText
 import userapi.http.expectStatus
 import userapi.http.getWithCookies
 import userapi.http.postJson
+import userapi.web.AccountController
+import userapi.web.RequestIdFilter
+import userapi.web.SecurityConfig
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import javax.sql.DataSource
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @WebMvcTest(AccountController::class, PasskeyController::class)
 @Import(
@@ -78,7 +78,7 @@ class PasskeyRoutesTest {
         val cookies = TestCookies()
         mvc.getWithCookies(cookies, "/csrf").expectStatus(200)
         val anon = mvc.postJson(cookies, "/passkey/register/begin", csrf = true, json = null)
-        assertEquals(401, anon.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), anon.response.status)
         mvc.postJson(
             cookies,
             "/register",

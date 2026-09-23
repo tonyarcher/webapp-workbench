@@ -1,5 +1,7 @@
 package radioapi.web
 
+import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatusCode
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -11,37 +13,37 @@ import radioapi.service.UnknownStation
 
 data class ErrorBody(val error: String)
 
-class ApiException(val status: Int, message: String) : RuntimeException(message)
+class ApiException(val status: HttpStatusCode, message: String) : RuntimeException(message)
 
 @RestControllerAdvice
 class ErrorAdvice {
     @ExceptionHandler(ApiException::class)
     fun handleApi(ex: ApiException): ResponseEntity<ErrorBody> {
-        if (ex.status >= 500) logUnhandled(ex)
-        val message = if (ex.status >= 500) "internal error" else ex.message ?: "error"
+        if (ex.status.is5xxServerError) logUnhandled(ex)
+        val message = if (ex.status.is5xxServerError) "internal error" else ex.message ?: "error"
         return ResponseEntity.status(ex.status).body(ErrorBody(message))
     }
 
     @ExceptionHandler(BadInput::class)
     fun handleBad(ex: BadInput): ResponseEntity<ErrorBody> =
-        ResponseEntity.status(400).body(ErrorBody(ex.message ?: "bad request"))
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorBody(ex.message ?: "bad request"))
 
     @ExceptionHandler(UnknownStation::class)
     fun handleStation(): ResponseEntity<ErrorBody> =
-        ResponseEntity.status(400).body(ErrorBody("unknown station"))
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorBody("unknown station"))
 
     @ExceptionHandler(NoHandlerFoundException::class)
     fun handleNoHandler(): ResponseEntity<ErrorBody> =
-        ResponseEntity.status(404).body(ErrorBody("not found"))
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorBody("not found"))
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleBadJson(): ResponseEntity<ErrorBody> =
-        ResponseEntity.status(400).body(ErrorBody("Invalid JSON"))
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorBody("Invalid JSON"))
 
     @ExceptionHandler(Exception::class)
     fun handleOther(ex: Exception): ResponseEntity<ErrorBody> {
         logUnhandled(ex)
-        return ResponseEntity.status(500).body(ErrorBody("internal error"))
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorBody("internal error"))
     }
 }
 

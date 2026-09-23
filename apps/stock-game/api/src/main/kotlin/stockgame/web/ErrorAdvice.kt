@@ -1,5 +1,7 @@
 package stockgame.web
 
+import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatusCode
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MissingServletRequestParameterException
@@ -13,7 +15,7 @@ import stockgame.log.log
 
 data class ErrorBody(val error: String)
 
-class ApiException(val status: Int, message: String) : RuntimeException(message)
+class ApiException(val status: HttpStatusCode, message: String) : RuntimeException(message)
 
 @RestControllerAdvice
 class ErrorAdvice {
@@ -23,26 +25,26 @@ class ErrorAdvice {
 
     @ExceptionHandler(TradingError::class)
     fun handleTrade(ex: TradingError): ResponseEntity<ErrorBody> =
-        ResponseEntity.status(400).body(ErrorBody(ex.message ?: "error"))
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorBody(ex.message ?: "error"))
 
     @ExceptionHandler(ProviderError::class)
     fun handleProvider(ex: ProviderError): ResponseEntity<ErrorBody> =
-        ResponseEntity.status(502).body(ErrorBody(ex.message ?: "error"))
+        ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ErrorBody(ex.message ?: "error"))
 
     @ExceptionHandler(NoHandlerFoundException::class)
     fun handleNoHandler(): ResponseEntity<ErrorBody> =
-        ResponseEntity.status(404).body(ErrorBody("not found"))
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorBody("not found"))
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleBadJson(): ResponseEntity<ErrorBody> =
-        ResponseEntity.status(400).body(ErrorBody("Invalid JSON"))
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorBody("Invalid JSON"))
 
     @ExceptionHandler(
         MissingServletRequestParameterException::class,
         MethodArgumentTypeMismatchException::class,
     )
     fun handleBadParam(): ResponseEntity<ErrorBody> =
-        ResponseEntity.status(400).body(ErrorBody("invalid request"))
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorBody("invalid request"))
 
     @ExceptionHandler(Exception::class)
     fun handleOther(ex: Exception): ResponseEntity<ErrorBody> {
@@ -52,6 +54,6 @@ class ErrorAdvice {
             "unhandled",
             mapOf("err" to mapOf("type" to (ex::class.simpleName ?: "Error"), "message" to (ex.message ?: ""))),
         )
-        return ResponseEntity.status(500).body(ErrorBody("internal error"))
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorBody("internal error"))
     }
 }

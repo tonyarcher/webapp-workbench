@@ -1,35 +1,35 @@
 package userapi.web
-import userapi.http.FakeAccountStore
-import userapi.http.PlainHasher
-import userapi.http.RateLimiter
-import userapi.http.TestCookies
-
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
+import org.mockito.kotlin.mock
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.web.servlet.MockMvc
 import userapi.Settings
 import userapi.accounts.AccountServices
-import userapi.web.AccountController
-import userapi.web.RequestIdFilter
-import userapi.web.SecurityConfig
-import javax.sql.DataSource
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-import org.mockito.kotlin.mock
+import userapi.http.FakeAccountStore
+import userapi.http.PlainHasher
+import userapi.http.RateLimiter
+import userapi.http.TestCookies
 import userapi.http.bodyText
 import userapi.http.csrfToken
 import userapi.http.expectStatus
 import userapi.http.getWithCookies
 import userapi.http.postJson
+import userapi.web.AccountController
+import userapi.web.RequestIdFilter
+import userapi.web.SecurityConfig
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import javax.sql.DataSource
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @WebMvcTest(AccountController::class, TotpController::class, PasskeyController::class)
 @Import(
@@ -85,14 +85,14 @@ class AccountRoutesTest {
         fetchCsrf(cookies)
         registerAlice(cookies)
         val missing = mvc.postJson(cookies, "/login", csrf = false, json = loginJson())
-        assertEquals(403, missing.response.status)
+        assertEquals(HttpStatus.FORBIDDEN.value(), missing.response.status)
         val wrong = mvc.postJson(
             cookies,
             "/login",
             csrf = true,
             json = mapper.writeValueAsString(mapOf("username" to "alice", "password" to "wrong-password-long")),
         )
-        assertEquals(401, wrong.response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), wrong.response.status)
         assertTrue(wrong.bodyText().contains("invalid credentials"))
     }
 
@@ -102,7 +102,7 @@ class AccountRoutesTest {
         fetchCsrf(cookies)
         registerAlice(cookies)
         val dup = mvc.postJson(cookies, "/register", csrf = true, json = registerJson("otherpassword1"))
-        assertEquals(409, dup.response.status)
+        assertEquals(HttpStatus.CONFLICT.value(), dup.response.status)
     }
 
     private fun fetchCsrf(cookies: TestCookies): String {
@@ -130,7 +130,7 @@ class AccountRoutesTest {
     private fun logoutAndAssertUnauthorized(cookies: TestCookies) {
         val loggedOut = mvc.postJson(cookies, "/logout", csrf = true, json = null)
         assertEquals(200, loggedOut.response.status)
-        assertEquals(401, mvc.getWithCookies(cookies, "/me").response.status)
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), mvc.getWithCookies(cookies, "/me").response.status)
     }
 
     private fun loginAlice(cookies: TestCookies) {

@@ -1,6 +1,6 @@
-import {getRulebook, offensiveHoop, stampFromClock} from 'basketball-core';
-import type {ClockStamp, GameState, Point, ScoringEvent, ShotEvent, TeamId} from 'basketball-core';
-import {between, chance, mixSeed, mulberry32} from './rng';
+import { getRulebook, offensiveHoop, stampFromClock } from 'basketball-core';
+import type { ClockStamp, GameState, Point, ScoringEvent, ShotEvent, TeamId } from 'basketball-core';
+import { between, chance, mixSeed, mulberry32 } from './rng';
 import {
     pickOnCourt,
     pickPasser,
@@ -11,32 +11,23 @@ import {
     shouldSub,
     type ShotZone,
 } from './coach';
-import type {SimRatings} from './types';
+import type { SimRatings } from './types';
 
 export function rngForEngine(seed: number, game: GameState, eventCount: number): () => number {
-    return mulberry32(mixSeed(
-        seed,
-        eventCount,
-        game.clock.period,
-        game.clock.gameClockSeconds,
-        game.score.home,
-        game.score.away,
-    ));
+    return mulberry32(
+        mixSeed(seed, eventCount, game.clock.period, game.clock.gameClockSeconds, game.score.home, game.score.away),
+    );
 }
 
-export function nextEvent(
-    game: GameState,
-    random: () => number,
-    ratings?: Record<string, SimRatings>,
-): ScoringEvent {
-    if (game.clock.gameClockSeconds <= 0) return {type: 'period_end'};
+export function nextEvent(game: GameState, random: () => number, ratings?: Record<string, SimRatings>): ScoringEvent {
+    if (game.clock.gameClockSeconds <= 0) return { type: 'period_end' };
     if (game.pendingFt) return freeThrow(game, random, ratings);
     const reboundEvent = followRebound(game, random, ratings);
     if (reboundEvent) return reboundEvent;
     const sub = shouldSub(game, game.possession, random);
-    if (sub) return {type: 'substitution', team: game.possession, outId: sub.outId, inId: sub.inId};
+    if (sub) return { type: 'substitution', team: game.possession, outId: sub.outId, inId: sub.inId };
     if (chance(random, 0.03) && teamTimeouts(game, game.possession) > 0) {
-        return {type: 'timeout', team: game.possession};
+        return { type: 'timeout', team: game.possession };
     }
     if (chance(random, 0.08)) return turnover(game, random, ratings);
     if (chance(random, 0.07)) return foul(game, random, ratings);
@@ -51,7 +42,7 @@ function followRebound(
     const last = game.shots[game.shots.length - 1];
     if (!last || last.made || last.team !== game.possession) return null;
     const offensive = chance(random, 0.32);
-    const team = offensive ? last.team : (last.team === 'home' ? 'away' : 'home');
+    const team = offensive ? last.team : last.team === 'home' ? 'away' : 'home';
     return {
         type: 'rebound',
         team,
@@ -67,7 +58,7 @@ function teamTimeouts(game: GameState, team: TeamId): number {
 
 function freeThrow(game: GameState, random: () => number, ratings?: Record<string, SimRatings>): ScoringEvent {
     const pending = game.pendingFt;
-    if (!pending) return {type: 'period_end'};
+    if (!pending) return { type: 'period_end' };
     const skill = ratingsFor(pending.shooterId, ratings).shooting;
     return {
         type: 'free_throw',
@@ -83,8 +74,8 @@ function turnover(game: GameState, random: () => number, ratings?: Record<string
     const defense = team === 'home' ? 'away' : 'home';
     const thief = chance(random, 0.45) ? pickOnCourt(game, defense, random, ratings, 'defense') : undefined;
     const clock = burnClock(game, random, 6, 16);
-    const event: ScoringEvent = {type: 'turnover', team, playerId, clock};
-    if (thief) return {...event, stealPlayerId: thief};
+    const event: ScoringEvent = { type: 'turnover', team, playerId, clock };
+    if (thief) return { ...event, stealPlayerId: thief };
     return event;
 }
 
@@ -142,7 +133,7 @@ function shotLocation(game: GameState, zone: ShotZone, random: () => number): Po
     const spread = zone === 'paint' ? 4 : 10;
     const y = clampCourt(hoop.y + between(random, -spread, spread), 1, spec.width - 1);
     const x = clampCourt(hoop.x + dir * dist, 1, spec.length - 1);
-    return {x, y};
+    return { x, y };
 }
 
 function zoneDist(zone: ShotZone, arc: number, random: () => number): number {

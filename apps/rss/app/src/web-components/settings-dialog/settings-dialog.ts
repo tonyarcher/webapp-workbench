@@ -1,11 +1,11 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, property, state} from 'lit/decorators.js';
-import {applyTheme, getTheme, type Theme} from '../../theme';
-import {addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds} from '../../mutations';
-import {migrateLibrary} from '../../services/api';
-import {buildMigratePayload, readIdbForMigration} from '../../services/migrate-export';
-import {invalidateArticles, invalidateLibrary} from '../../query';
-import {navigate} from '../../router';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { applyTheme, getTheme, type Theme } from '../../theme';
+import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
+import { migrateLibrary } from '../../services/api';
+import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
+import { invalidateArticles, invalidateLibrary } from '../../query';
+import { navigate } from '../../router';
 import styles from './settings-dialog.css?inline';
 
 const MIGRATE_SIZE_LIMIT = 1_800_000;
@@ -14,7 +14,7 @@ const MIGRATE_SIZE_LIMIT = 1_800_000;
 export class SettingsDialog extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) open = false;
+    @property({ attribute: false }) open = false;
 
     @state() private theme: Theme = 'light';
     @state() private adding = false;
@@ -62,7 +62,9 @@ export class SettingsDialog extends LitElement {
         if (!this.adding) return html``;
         return html`
       <div class="add-row">
-        <input data-add-url type="url" placeholder="https://example.com/feed.xml" @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter') void this.submitAdd(); }} />
+        <input data-add-url type="url" placeholder="https://example.com/feed.xml" @keydown=${(e: KeyboardEvent) => {
+            if (e.key === 'Enter') void this.submitAdd();
+        }} />
         <button class="btn primary" @click=${this.submitAdd} ?disabled=${this.busy}>Add</button>
         <button class="btn" @click=${this.cancelAdd}>Cancel</button>
       </div>
@@ -96,7 +98,10 @@ export class SettingsDialog extends LitElement {
 
     override render() {
         return html`
-      <dialog @click=${this.onDialogClick} @cancel=${(e: Event) => { e.preventDefault(); this.close(); }}>
+      <dialog @click=${this.onDialogClick} @cancel=${(e: Event) => {
+          e.preventDefault();
+          this.close();
+      }}>
         <div class="head">
           <h2>Settings</h2>
           <button class="close" title="Close" @click=${this.close}>✕</button>
@@ -115,7 +120,7 @@ export class SettingsDialog extends LitElement {
 
     private onDialogClick(e: MouseEvent) {
         if (e.target === this.dialogEl) {
-            this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+            this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
         }
     }
 
@@ -141,9 +146,7 @@ export class SettingsDialog extends LitElement {
         this.adding = true;
         this.status = '';
         this.statusError = false;
-        this.shadowRoot
-            ?.querySelector<HTMLInputElement>('input[data-add-url]')
-            ?.focus();
+        this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]')?.focus();
     }
 
     private async submitAdd() {
@@ -156,7 +159,7 @@ export class SettingsDialog extends LitElement {
             if (input) input.value = '';
             this.adding = false;
             this.close();
-            navigate({kind: 'feed', id: feed.id});
+            navigate({ kind: 'feed', id: feed.id });
         } catch (err) {
             this.status = err instanceof Error ? err.message : 'Could not add feed';
             this.statusError = true;
@@ -194,7 +197,7 @@ export class SettingsDialog extends LitElement {
         this.busy = true;
         try {
             const xml = await exportOpmlFile();
-            const blob = new Blob([xml], {type: 'text/xml'});
+            const blob = new Blob([xml], { type: 'text/xml' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -212,11 +215,12 @@ export class SettingsDialog extends LitElement {
     }
 
     private async prepareMigratePayload() {
-        const {folders, feeds, articles, metaEntries} = await readIdbForMigration();
+        const { folders, feeds, articles, metaEntries } = await readIdbForMigration();
         if (!feeds.length && !folders.length) return null;
         const payload = buildMigratePayload(folders, feeds, articles, metaEntries);
         const json = JSON.stringify(payload);
-        if (json.length > MIGRATE_SIZE_LIMIT) throw new Error(`Payload too large (${Math.round(json.length / 1024)} KB). Use OPML import instead.`);
+        if (json.length > MIGRATE_SIZE_LIMIT)
+            throw new Error(`Payload too large (${Math.round(json.length / 1024)} KB). Use OPML import instead.`);
         return payload;
     }
 
@@ -236,7 +240,10 @@ export class SettingsDialog extends LitElement {
         this.statusError = false;
         try {
             const payload = await this.prepareMigratePayload();
-            if (!payload) { this.status = 'No local data to migrate.'; return; }
+            if (!payload) {
+                this.status = 'No local data to migrate.';
+                return;
+            }
             await this.runMigrateWithPayload(payload);
         } catch (err) {
             this.status = err instanceof Error ? `Migration failed: ${err.message}` : 'Migration failed';
@@ -247,7 +254,7 @@ export class SettingsDialog extends LitElement {
     }
 
     private close() {
-        this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     }
 }
 

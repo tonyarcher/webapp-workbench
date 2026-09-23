@@ -1,7 +1,5 @@
 package stockgame.trading
 
-import java.time.Instant
-import java.util.UUID
 import stockgame.domain.Bar
 import stockgame.domain.GameConfig
 import stockgame.domain.Trade
@@ -13,6 +11,8 @@ import stockgame.domain.round2
 import stockgame.provider.PriceProvider
 import stockgame.store.GameStore
 import stockgame.store.NewTrade
+import java.time.Instant
+import java.util.UUID
 
 private const val DAY_MS = 24 * 60 * 60 * 1000L
 
@@ -49,8 +49,9 @@ data class BackdatedRequest(
 )
 
 private fun fillPrice(bar: Bar, req: BackdatedRequest): Double {
-    val maybe = fillPriceForBar(bar, req.side, req.orderType, req.limitPrice, req.stopPrice)
-        ?: throw TradingError("Order did not fill")
+    val maybe =
+        fillPriceForBar(bar, req.side, req.orderType, req.limitPrice, req.stopPrice)
+            ?: throw TradingError("Order did not fill")
     return round2(maybe)
 }
 
@@ -62,7 +63,11 @@ private fun findBar(provider: PriceProvider, symbol: String, at: Long): Bar {
 
 private fun validateSide(config: GameConfig, trades: List<Trade>, req: BackdatedRequest, price: Double, at: Long) {
     val delta = applyCommission(cashDelta(req.side, req.qty, price), config.commissionCentsPerTrade)
-    if (req.side == "buy") requireBuyCash(config, trades, at, delta)
-    else if (req.side == "sell") requireSellShares(trades, req.symbol, at, req.qty)
-    else if (req.side == "cover") requireCover(config, trades, req.symbol, at, req.qty, delta)
+    if (req.side == "buy") {
+        requireBuyCash(config, trades, at, delta)
+    } else if (req.side == "sell") {
+        requireSellShares(trades, req.symbol, at, req.qty)
+    } else if (req.side == "cover") {
+        requireCover(config, trades, req.symbol, at, req.qty, delta)
+    }
 }

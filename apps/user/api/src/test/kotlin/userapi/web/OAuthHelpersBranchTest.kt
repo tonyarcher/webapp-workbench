@@ -1,12 +1,12 @@
 package userapi.web
 
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import userapi.accounts.OAuthService
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
-import userapi.accounts.OAuthService
 
 class OAuthHelpersBranchTest {
     private fun oauth(allowed: Boolean): OAuthService {

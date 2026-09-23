@@ -1,9 +1,5 @@
 package rssapi.web
 
-import java.util.Optional
-import java.util.UUID
-import kotlin.test.Test
-import kotlin.test.assertEquals
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -15,6 +11,10 @@ import rssapi.persist.FolderEntity
 import rssapi.persist.FolderRepo
 import rssapi.persist.PendingStateRepo
 import rssapi.persist.SubscriptionRepo
+import java.util.Optional
+import java.util.UUID
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class MigrateServiceTest {
     private val folders: FolderRepo = mock()

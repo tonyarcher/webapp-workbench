@@ -1,7 +1,9 @@
 package rssapi.web
 
-import java.time.Instant
-import java.util.UUID
+import jakarta.persistence.criteria.CriteriaBuilder
+import jakarta.persistence.criteria.CriteriaQuery
+import jakarta.persistence.criteria.Root
+import jakarta.persistence.criteria.Subquery
 import org.springframework.data.jpa.domain.Specification
 import rssapi.domain.ArticleScope
 import rssapi.domain.ArticleSort
@@ -10,10 +12,8 @@ import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleStateEntity
 import rssapi.persist.FolderFeedEntity
 import rssapi.persist.SubscriptionEntity
-import jakarta.persistence.criteria.CriteriaBuilder
-import jakarta.persistence.criteria.CriteriaQuery
-import jakarta.persistence.criteria.Root
-import jakarta.persistence.criteria.Subquery
+import java.time.Instant
+import java.util.UUID
 
 fun articleSpec(
     userId: UUID,
@@ -42,18 +42,16 @@ private fun scopePredicate(
     cb: CriteriaBuilder,
 ) = when (scope) {
     is ArticleScope.All -> root.get<UUID>("feedId").`in`(userFeedSub(userId, query, cb))
+
     is ArticleScope.Feed -> cb.and(
         cb.equal(root.get<UUID>("feedId"), scope.id),
         root.get<UUID>("feedId").`in`(userFeedSub(userId, query, cb)),
     )
+
     is ArticleScope.Folder -> root.get<UUID>("feedId").`in`(folderFeedSub(userId, scope.id, query, cb))
 }
 
-private fun userFeedSub(
-    userId: UUID,
-    query: CriteriaQuery<*>,
-    cb: CriteriaBuilder,
-): Subquery<UUID> {
+private fun userFeedSub(userId: UUID, query: CriteriaQuery<*>, cb: CriteriaBuilder): Subquery<UUID> {
     val sub = query.subquery(UUID::class.java)
     val subscription = sub.from(SubscriptionEntity::class.java)
     sub.select(subscription.get("feedId"))
@@ -61,12 +59,7 @@ private fun userFeedSub(
     return sub
 }
 
-private fun folderFeedSub(
-    userId: UUID,
-    folderId: UUID,
-    query: CriteriaQuery<*>,
-    cb: CriteriaBuilder,
-): Subquery<UUID> {
+private fun folderFeedSub(userId: UUID, folderId: UUID, query: CriteriaQuery<*>, cb: CriteriaBuilder): Subquery<UUID> {
     val sub = query.subquery(UUID::class.java)
     val ff = sub.from(FolderFeedEntity::class.java)
     val folder = sub.from(rssapi.persist.FolderEntity::class.java)

@@ -2,6 +2,9 @@ package userapi.domain
 
 import java.time.Instant
 
+/** TOTP codes are a fixed 6 digits. */
+private const val OTP_DIGITS = 6
+
 const val TOTP_ISSUER: String = "Workbench"
 const val PENDING_MAX_AGE_SEC: Int = 5 * 60
 const val BACKUP_CODE_COUNT: Int = 10
@@ -14,4 +17,5 @@ interface TotpEngine {
 
 fun normalizeOtp(code: String): String = code.filter { it.isLetterOrDigit() }.uppercase()
 
-fun otpLooksLikeTotp(code: String): Boolean = normalizeOtp(code).length == 6 && normalizeOtp(code).all { it.isDigit() }
+fun otpLooksLikeTotp(code: String): Boolean =
+    normalizeOtp(code).length == OTP_DIGITS && normalizeOtp(code).all { it.isDigit() }

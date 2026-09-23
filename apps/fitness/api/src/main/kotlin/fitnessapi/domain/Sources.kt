@@ -9,5 +9,4 @@ private val ALLOWED = setOf(
     "override",
 )
 
-fun sampleSource(raw: String?): String =
-    if (raw != null && raw in ALLOWED) raw else "csv"
+fun sampleSource(raw: String?): String = if (raw != null && raw in ALLOWED) raw else "csv"

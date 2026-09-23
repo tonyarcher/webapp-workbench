@@ -18,6 +18,7 @@ class PlaylistEntryKey : Serializable {
     companion object {
         private const val serialVersionUID: Long = 1L
     }
+
     @Column(name = "playlist_id")
     var playlistId: UUID = UUID(0, 0)
 
