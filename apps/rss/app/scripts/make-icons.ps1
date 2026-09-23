@@ -12,7 +12,8 @@ New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
 $bg = [System.Drawing.Color]::FromArgb(255, 37, 99, 235)  # --accent
 
-function Draw-RssIcon {
+function New-RssIcon {
+    [CmdletBinding(SupportsShouldProcess)]
     param([int]$Size, [string]$OutPath)
 
     $bmp = [System.Drawing.Bitmap]::new($Size, $Size, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
@@ -50,16 +51,18 @@ function Draw-RssIcon {
     )
 
     # arcs open toward the bottom-left (bowl shape): from 12 o'clock to 3 o'clock
-    $g.DrawArc($pen, -$Size * 12 / 24, $Size * 4 / 24, $Size * 32 / 24, $Size * 32 / 24, 270, 90)
-    $g.DrawArc($pen, -$Size * 5 / 24, $Size * 2 / 24, $Size * 18 / 24, $Size * 18 / 24, 270, 90)
+    $g.DrawArc($pen, - $Size * 12 / 24, $Size * 4 / 24, $Size * 32 / 24, $Size * 32 / 24, 270, 90)
+    $g.DrawArc($pen, - $Size * 5 / 24, $Size * 2 / 24, $Size * 18 / 24, $Size * 18 / 24, 270, 90)
 
     $g.Dispose()
-    $bmp.Save($OutPath, [System.Drawing.Imaging.ImageFormat]::Png)
+    if ($PSCmdlet.ShouldProcess($OutPath, 'Write PNG icon')) {
+        $bmp.Save($OutPath, [System.Drawing.Imaging.ImageFormat]::Png)
+    }
     $bmp.Dispose()
 }
 
 foreach ($size in $Sizes) {
     $out = Join-Path $outDir "icon-$size.png"
-    Draw-RssIcon -Size $size -OutPath $out
-    Write-Host "wrote $out"
+    New-RssIcon -Size $size -OutPath $out
+    Write-Output "wrote $out"
 }

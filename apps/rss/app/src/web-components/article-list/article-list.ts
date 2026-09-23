@@ -1,51 +1,52 @@
-import {html, LitElement, unsafeCSS} from 'lit';
-import {customElement, property, state} from 'lit/decorators.js';
-import {createRef, ref, type Ref} from 'lit/directives/ref.js';
-import {Virtualizer} from '@tanstack/virtual-core';
-import {libraryKey, queryClient, QueryController, fetchLibrary} from '../../query';
-import {fetchArticlesPage} from '../../services/api';
-import {buildWordMap, rankInteresting, topWords} from '../../services/interesting-words';
-import {loadInterestingShadow, loadWordMap, loadWordMapIds} from '../../services/interesting-settings';
-import {markBeforeAction, markShownReadAction, openArticleAction, toggleStarAction} from './article-list-actions';
-import {refreshFeed, refreshFolder, syncAllFeeds} from '../../mutations';
-import type {Article, ArticleSort, Feed, Folder, ListViewType, View} from '../../types';
-import type {MenuAnchor} from '../feed-menu/feed-menu';
+import { html, LitElement, unsafeCSS } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { createRef, type Ref } from 'lit/directives/ref.js';
+import { Virtualizer } from '@tanstack/virtual-core';
+import { libraryKey, queryClient, QueryController, fetchLibrary } from '../../query';
+import {
+    applyResumeAction,
+    handleCursorKey,
+    markBeforeAction,
+    markShownReadAction,
+    openArticleAction,
+    refreshViewAction,
+    toggleStarAction,
+} from './article-list-actions';
+import { loadFolderPageAction, loadSinglePageAction } from './article-list-paging';
+import { interestingActiveFor, loadInterestingBatchAction, shadowEnabledFor } from './article-list-interesting';
+import {
+    CARD_MIN_WIDTH,
+    DEFAULT_PAGE_SIZE,
+    feedTitleOf,
+    folderFeedsOf,
+    loadViewSettingsFor,
+    saveViewSettingsFor,
+    scopeLabelOf,
+    viewRefreshKeyOf,
+    viewTitleOf,
+    virtualizerOptionsFor,
+} from './article-list-helpers';
+import { renderAdvancedMenu, renderInterestingHint, renderScroll, renderToolbar } from './article-list-render';
+import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
+import type { MenuAnchor } from '../feed-menu/feed-menu';
 import '../advanced-menu/advanced-menu';
 import '../lazy-img/lazy-img';
 import styles from './article-list.css?inline';
-import {cardRowTemplate, detailRowTemplate, headlineRowTemplate} from './article-list-render';
-import {fetchFolderPage, fetchSinglePage, fetchFeedSetWindow, getActiveFeeds, nextWindow} from './article-list-paging';
 
 interface Library {
     folders: Folder[];
     feeds: Feed[];
 }
 
-import {
-    CARD_MIN_WIDTH,
-    clampPageSize,
-    DEFAULT_PAGE_SIZE,
-    feedTitleOf,
-    folderFeedsOf,
-    readViewSettings,
-    scopeLabelOf,
-    viewKeyOf,
-    viewRefreshKeyOf,
-    viewTitleOf,
-    VIEW_SETTINGS_KEY,
-    virtualizerOptionsFor,
-} from './article-list-helpers';
-
-/** Bounded newest batch the ✨ Interesting folder filter ranks at once. */
-export const INTERESTING_BATCH = 200;
+export { INTERESTING_BATCH } from './article-list-interesting';
 
 @customElement('article-list')
 export class ArticleList extends LitElement {
     static override styles = unsafeCSS(styles);
 
-    @property({attribute: false}) view: View = {kind: 'all'};
-    @property({attribute: false}) resumeArticleId: string | null = null;
-    @property({attribute: false}) active = true;
+    @property({ attribute: false }) view: View = { kind: 'all' };
+    @property({ attribute: false }) resumeArticleId: string | null = null;
+    @property({ attribute: false }) active = true;
 
     @state() private items: Article[] = [];
     @state() private loading = false;
@@ -78,7 +79,7 @@ export class ArticleList extends LitElement {
     private feedWindowOffset = 0;
     private refreshJob: Promise<void> | null = null;
     private refreshJobKey: string | null = null;
-    private refreshGen = 0;
+    private refreshGenRef: { value: number } = { value: 0 };
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
@@ -128,12 +129,12 @@ export class ArticleList extends LitElement {
     }
 
     private onArticleStarred = (e: Event) => {
-        const {id, starred} = (e as CustomEvent<{ id: string; starred: boolean }>).detail;
+        const { id, starred } = (e as CustomEvent<{ id: string; starred: boolean }>).detail;
         let changed = false;
         this.items = this.items.map((a) => {
             if (a.id === id && a.starred !== starred) {
                 changed = true;
-                return {...a, starred};
+                return { ...a, starred };
             }
             return a;
         });
@@ -146,7 +147,7 @@ export class ArticleList extends LitElement {
         this.items = this.items.map((a) => {
             if (a.id === id && a.read === 0) {
                 changed = true;
-                return {...a, read: 1};
+                return { ...a, read: 1 };
             }
             return a;
         });
@@ -191,7 +192,9 @@ export class ArticleList extends LitElement {
             return;
         }
         if (this.view.kind !== 'folder') return;
-        const folderKey = this.folderFeeds().map((f) => f.id).join(',');
+        const folderKey = this.folderFeeds()
+            .map((f) => f.id)
+            .join(',');
         if (folderKey === this.lastFolderKey) return;
         this.lastFolderKey = folderKey;
         void this.reset();
@@ -202,118 +205,27 @@ export class ArticleList extends LitElement {
     }
 
     override render() {
+        const host = this as never;
         const virtualItems = this.virtualizer?.getVirtualItems() ?? [];
         const showFeed = this.view.kind !== 'feed';
         return html`
-      ${this.renderToolbar()}
-      ${this.renderInterestingHint()}
-      ${this.renderAdvancedMenu()}
-      ${this.renderScroll(virtualItems, showFeed)}
+      ${renderToolbar(host)}
+      ${renderInterestingHint(host)}
+      ${renderAdvancedMenu(host)}
+      ${renderScroll(host, virtualItems, showFeed)}
     `;
     }
 
-    /** The ✨ filter is offered only on folders opted into the shadow setting. */
     private shadowEnabled(): boolean {
-        if (this.view.kind !== 'folder') return false;
-        return loadInterestingShadow()[this.view.id] === true;
+        return shadowEnabledFor(this.view);
     }
 
     private interestingActive(): boolean {
-        return this.interestingOnly && this.shadowEnabled();
-    }
-
-    private renderToolbar() {
-        return html`
-      <div class="toolbar">
-        <h2>${this.viewTitle()}</h2>
-        <div class="actions">
-          ${this.renderInterestingFilter()}${this.renderSortSelect()}${this.renderViewSelect()}${this.renderCardColsSelect()}${this.renderPageSizeSelect()}
-          <button class="btn" @click=${this.onMarkShownRead}>Mark shown as read</button>
-          <button class="btn" @click=${this.onToggleAdvanced}>Advanced</button>
-          <button class="btn" @click=${this.onRefresh}>${this.refreshing ? 'Refreshing…' : 'Refresh'}</button>
-        </div>
-      </div>
-    `;
-    }
-
-    private renderInterestingFilter() {
-        if (!this.shadowEnabled()) return html``;
-        return html`<div class="segmented" role="group" aria-label="Article filter"><button class="seg ${!this.interestingOnly ? 'on' : ''}" aria-pressed=${!this.interestingOnly} @click=${() => { this.interestingOnly = false; }}>All</button><button class="seg ${this.interestingOnly ? 'on' : ''}" aria-pressed=${this.interestingOnly} @click=${() => { this.interestingOnly = true; }}>✨ Interesting</button></div>`;
-    }
-
-    private renderInterestingHint() {
-        if (!this.shadowEnabled()) return html``;
-        const words = topWords(this.interestingWordMap(this.items), 3);
-        if (!words.length) return html`<div class="interesting-hint">Star articles to teach this filter.</div>`;
-        return html`<div class="interesting-hint" title="Top learned words">✨ ${words.map((w) => `${w.word} · ${w.score}`).join(', ')}</div>`;
-    }
-
-    private renderSortSelect() {
-        if (this.interestingActive()) return html``;
-        return html`<label class="sort"><select .value=${this.sort} @change=${(e: Event) => { this.sort = (e.target as HTMLSelectElement).value as ArticleSort; this.saveViewSettings(); }}><option value="hot">Hot</option><option value="newest">Newest</option><option value="oldest">Oldest</option></select></label>`;
-    }
-
-    private renderViewSelect() {
-        return html`<label class="view-mode"><select .value=${this.listView} @change=${(e: Event) => { this.listView = (e.target as HTMLSelectElement).value as ListViewType; this.saveViewSettings(); }}><option value="detailed">Detailed List</option><option value="headline">Headline View</option><option value="cards">Cards</option></select></label>`;
-    }
-
-    private renderCardColsSelect() {
-        if (this.listView !== 'cards') return html``;
-        return html`<label class="view-mode"><select .value=${this.maxCardCols} @change=${(e: Event) => { this.maxCardCols = Number((e.target as HTMLSelectElement).value); this.saveViewSettings(); this.updateCols(); }} title="Maximum card columns"><option value="2">2 cols</option><option value="3">3 cols</option><option value="4">4 cols</option><option value="5">5 cols</option><option value="6">6 cols</option></select></label>`;
-    }
-
-    private renderPageSizeSelect() {
-        return html`<label class="page-size"><select .value=${this.pageSize} @change=${(e: Event) => { this.pageSize = Number((e.target as HTMLSelectElement).value); this.saveViewSettings(); }} title="Articles shown at a time"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option></select></label>`;
-    }
-
-    private renderAdvancedMenu() {
-        return html`<advanced-menu .open=${this.advancedOpen} .anchor=${this.advancedAnchor} .unreadOnly=${this.unreadOnly} .scopeLabel=${this.scopeLabel()} @unread-change=${this.onAdvancedUnread} @mark-before=${this.onMarkBefore} @close=${() => (this.advancedOpen = false)}></advanced-menu>`;
-    }
-
-    private renderScroll(virtualItems: ReturnType<Virtualizer<HTMLDivElement, HTMLDivElement>['getVirtualItems']>, showFeed: boolean) {
-        return html`
-      <div class="scroll" style="--cols: ${this.cols}" ${ref(this.scrollElRef)} @scroll=${this.onScroll}>
-        <div class="viewport" style="height: ${this.virtualizer?.getTotalSize() ?? 0}px;">${this.renderVirtualRows(virtualItems, showFeed)}</div>
-        ${this.renderScrollFooter()}
-      </div>
-    `;
-    }
-
-    private renderVirtualRows(virtualItems: ReturnType<Virtualizer<HTMLDivElement, HTMLDivElement>['getVirtualItems']>, showFeed: boolean) {
-        if (this.listView === 'cards') return virtualItems.map((vi) => this.renderCardVirtualRow(vi, showFeed));
-        return virtualItems.map((vi) => this.renderListVirtualRow(vi, showFeed));
-    }
-
-    private renderCardVirtualRow(vi: { index: number; start: number }, showFeed: boolean) {
-        const start = vi.index * this.cols;
-        const rowItems = this.items.slice(start, start + this.cols);
-        if (!rowItems.length) return html``;
-        return html`<div class="row cards" data-row=${vi.index} style="transform: translateY(${vi.start}px)" ${ref((el) => this.virtualizer?.measureElement(el as HTMLDivElement))}>${rowItems.map((article, c) => this.renderCardRow(article, showFeed, start + c))}</div>`;
-    }
-
-    private renderListVirtualRow(vi: { index: number; start: number }, showFeed: boolean) {
-        const article = this.items[vi.index];
-        if (!article) return html``;
-        return html`<div class="row ${this.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''} ${vi.index === this.cursor ? 'selected' : ''}" data-index=${vi.index} style="transform: translateY(${vi.start}px)" role="button" tabindex="0" aria-label="Open ${article.title}" @click=${() => this.openArticle(article)} @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)} ${ref((el) => this.virtualizer?.measureElement(el as HTMLDivElement))}>${this.listView === 'headline' ? this.renderHeadlineRow(article, showFeed) : this.renderRow(article, showFeed)}</div>`;
-    }
-
-    private renderScrollFooter() {
-        return html`
-      ${this.loading ? html`<div class="end">Loading…</div>` : ''}
-      ${!this.loading && this.items.length ? html`<div class="mark-end"><button class="mark-end-btn" ?disabled=${!this.items.some((a) => a.read === 0)} @click=${this.onMarkShownRead}>Mark shown as read</button></div>` : ''}
-      ${!this.loading && !this.items.length ? html`<div class="empty">${this.emptyText()}</div>` : ''}
-      ${this.library.error && this.view.kind !== 'feed' ? html`<div class="empty">Could not load your feeds. <button class="btn" @click=${this.onRetryLibrary}>Retry</button></div>` : ''}
-    `;
-    }
-
-    private emptyText(): string {
-        if (this.unreadOnly || this.hideRead) return 'Nothing unread here — "Unread only" is filtering this view.';
-        if (this.interestingActive()) return 'Nothing here yet. Star articles to teach this filter what you like.';
-        return 'No articles yet. Hit Refresh to sync this view.';
+        return interestingActiveFor(this.view, this.interestingOnly);
     }
 
     private onRetryLibrary() {
-        void queryClient.invalidateQueries({queryKey: libraryKey});
+        void queryClient.invalidateQueries({ queryKey: libraryKey });
     }
 
     private onRowKey(e: KeyboardEvent, article: Article) {
@@ -352,37 +264,20 @@ export class ArticleList extends LitElement {
         void this.reset();
     };
 
-    private virtualizerOptions() { return virtualizerOptionsFor(this as never); }
+    private virtualizerOptions() {
+        return virtualizerOptionsFor(this as never);
+    }
 
-    private folderFeeds(): Feed[] { return folderFeedsOf(this.view, this.library.data); }
-
-    private viewKey(): string { return viewKeyOf(this.view); }
+    private folderFeeds(): Feed[] {
+        return folderFeedsOf(this.view, this.library.data);
+    }
 
     private loadViewSettings() {
-        const saved = readViewSettings()[this.viewKey()];
-        if (!saved) return;
-        this.listView = saved.listView ?? 'detailed';
-        this.sort = saved.sort ?? 'hot';
-        this.pageSize = clampPageSize(saved.pageSize);
-        this.maxCardCols = saved.maxCardCols ?? 4;
-        this.unreadOnly = saved.unreadOnly ?? false;
-        this.updateCols();
+        loadViewSettingsFor(this as never);
     }
 
     private saveViewSettings() {
-        const map = readViewSettings();
-        map[this.viewKey()] = {
-            listView: this.listView,
-            sort: this.sort,
-            pageSize: this.pageSize,
-            maxCardCols: this.maxCardCols,
-            unreadOnly: this.unreadOnly,
-        };
-        try {
-            localStorage.setItem(VIEW_SETTINGS_KEY, JSON.stringify(map));
-        } catch {
-            // ignore
-        }
+        saveViewSettingsFor(this as never);
     }
 
     private reinitVirtualizer() {
@@ -400,7 +295,9 @@ export class ArticleList extends LitElement {
         this.hasMoreSingle = true;
         this.cursor = -1;
         this.feedWindowOffset = 0;
-        this.lastFolderKey = this.folderFeeds().map((f) => f.id).join(',');
+        this.lastFolderKey = this.folderFeeds()
+            .map((f) => f.id)
+            .join(',');
         const el = this.scrollElRef.value;
         if (el) el.scrollTop = 0;
         this.reinitVirtualizer();
@@ -422,13 +319,13 @@ export class ArticleList extends LitElement {
         this.loading = true;
         try {
             if (this.interestingActive()) {
-                await this.loadInterestingBatch(gen);
+                await loadInterestingBatchAction(this as never, gen);
             } else if (this.view.kind === 'folder') {
-                await this.loadFolderPage(gen);
+                await loadFolderPageAction(this as never, gen);
             } else {
-                await this.loadSinglePage(gen);
+                await loadSinglePageAction(this as never, gen);
             }
-            this.applyResume();
+            applyResumeAction(this as never);
         } finally {
             this.loadingRef = false;
             this.loading = false;
@@ -439,126 +336,26 @@ export class ArticleList extends LitElement {
         }
     }
 
-    private applyResume() {
-        if (this.resumeApplied || this.resumeArticleId == null) return;
-        this.resumeApplied = true;
-        const index = this.items.findIndex((a) => a.id === this.resumeArticleId);
-        if (index >= 0) {
-            this.cursor = index;
-            const target =
-                this.listView === 'cards'
-                    ? Math.floor(index / Math.max(1, this.cols))
-                    : index;
-            this.virtualizer?.scrollToIndex(target, {align: 'center'});
-        }
+    private viewTitle(): string {
+        return viewTitleOf(this.view, this.library.data);
     }
 
-    private async loadSinglePage(gen: number) {
-        const feedId = this.view.kind === 'feed' ? this.view.id : undefined;
-        if (this.view.kind === 'all' && this.sort === 'hot') {
-            await this.loadFeedSetPage(this.library.data?.feeds ?? [], gen);
-            return;
-        }
-        const res = await fetchSinglePage(feedId, this.cursors, this.unreadOnly, this.hideRead, this.sort, this.pageSize, this.items);
-        if (gen !== this.gen) return;
-        this.hasMoreSingle = res.hasMore;
-        this.items = res.items;
-        if (res.nextCursor) this.cursors.set(feedId ?? 'all', res.nextCursor);
+    private feedTitle(feedId: string): string | undefined {
+        return feedTitleOf(feedId, this.library.data);
     }
 
-    private async loadFolderPage(gen: number) {
-        if (this.view.kind !== 'folder') return;
-        const key = `folder:${this.view.id}`;
-        const res = await fetchFolderPage(key, this.cursors, this.unreadOnly, this.hideRead, this.sort, this.pageSize, this.items);
-        if (gen !== this.gen) return;
-        this.hasMoreSingle = res.hasMore;
-        this.items = res.items;
-        if (res.nextCursor) this.cursors.set(key, res.nextCursor);
-    }
-
-    /**
-     * Interesting filter: one bounded newest batch for the folder, ranked by
-     * the learned word map. No cursors, no further paging — the batch is the
-     * whole list until the filter toggles off.
-     */
-    private async loadInterestingBatch(gen: number) {
-        if (this.view.kind !== 'folder') return;
-        const res = await fetchArticlesPage({scope: `folder:${this.view.id}`, sort: 'newest', limit: INTERESTING_BATCH, unreadOnly: this.unreadOnly});
-        if (gen !== this.gen) return;
-        const visible = this.hideRead ? res.items.filter((a) => a.read === 0) : res.items;
-        this.items = rankInteresting(visible, this.interestingWordMap(visible)).slice(0, this.pageSize);
-        this.hasMoreSingle = false;
-        this.cursors.clear();
-    }
-
-    /**
-     * Word map for ranking: the cache (every star toggle maintains it) plus
-     * fresh weights for batch-starred articles the cache has not counted yet
-     * (e.g. starred on another device). Counted ids are skipped so a star
-     * visible in the batch never counts twice.
-     */
-    private interestingWordMap(batch: Article[]): Record<string, number> {
-        const cached = loadWordMap();
-        const counted = new Set(loadWordMapIds());
-        const fresh = batch.filter((a) => a.starred && !counted.has(a.id));
-        if (!fresh.length) return cached;
-        const extra = buildWordMap(fresh, []);
-        const merged: Record<string, number> = {...cached};
-        for (const [word, weight] of Object.entries(extra)) merged[word] = (merged[word] ?? 0) + weight;
-        return merged;
-    }
-
-    private async loadFeedSetPage(feeds: Feed[], gen: number) {
-        while (true) {
-            const active = getActiveFeeds(feeds, this.feedHasMore);
-            if (!active.length) return;
-            const windowFeeds = nextWindow(active, this.feedWindowOffset, this.pageSize);
-            this.feedWindowOffset += windowFeeds.length;
-            const result = await fetchFeedSetWindow(windowFeeds, this.cursors, this.feedHasMore, this.unreadOnly, this.hideRead, this.sort, this.pageSize, this.items, gen, () => this.gen);
-            if (!result || gen !== this.gen) return;
-            for (const [id, hasMore] of result.hasMoreEntries) this.feedHasMore.set(id, hasMore);
-            if (result.kept.length) {
-                this.items = result.items;
-                return;
-            }
-        }
-    }
-
-    private viewTitle(): string { return viewTitleOf(this.view, this.library.data); }
-
-    private feedTitle(feedId: string): string | undefined { return feedTitleOf(feedId, this.library.data); }
-
-    private async openArticle(article: Article) { await openArticleAction(this as never, article); }
-
-    private isKeyHandlingIgnored(e: KeyboardEvent): boolean {
-        if (!this.active) return true;
-        if (e.key !== 'j' && e.key !== 'k') return true;
-        const tag = (e.target as HTMLElement | null)?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
-        if (document.querySelector('dialog[open]')) return true;
-        if (!this.items.length) return true;
-        return false;
-    }
-
-    private nextCursorIndex(key: string): number {
-        return Math.max(0, Math.min(this.cursor + (key === 'j' ? 1 : -1), this.items.length - 1));
+    private async openArticle(article: Article) {
+        await openArticleAction(this as never, article);
     }
 
     private onKeyDown = (e: KeyboardEvent) => {
-        if (this.isKeyHandlingIgnored(e)) return;
-        e.preventDefault();
-        const next = this.nextCursorIndex(e.key);
-        this.cursor = next;
-        const article = this.items[next];
-        if (article) void this.openArticle(article);
+        handleCursorKey(this as never, e);
     };
-
-    private async onMarkShownRead() { await markShownReadAction(this as never); }
 
     private onToggleAdvanced(e: Event) {
         e.stopPropagation();
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        this.advancedAnchor = {x: rect.right, y: rect.bottom + 6};
+        this.advancedAnchor = { x: rect.right, y: rect.bottom + 6 };
         this.advancedOpen = !this.advancedOpen;
     }
 
@@ -567,7 +364,9 @@ export class ArticleList extends LitElement {
         this.saveViewSettings();
     }
 
-    private scopeLabel(): string { return scopeLabelOf(this.view, this.library.data); }
+    private scopeLabel(): string {
+        return scopeLabelOf(this.view, this.library.data);
+    }
 
     private async onMarkBefore(e: Event) {
         const cutoff = (e as CustomEvent<number | null>).detail;
@@ -579,49 +378,8 @@ export class ArticleList extends LitElement {
         }
     }
 
-    private viewRefreshKey(): string { return viewRefreshKeyOf(this.view); }
-
     private async onRefresh() {
-        // Elevator button for the current view only. A different folder/feed
-        // starts its own job instead of waiting on an unrelated sync.
-        const key = this.viewRefreshKey();
-        if (this.refreshJob && this.refreshJobKey === key) {
-            await this.refreshJob;
-            return;
-        }
-        const job = this.runRefresh();
-        this.refreshJob = job;
-        this.refreshJobKey = key;
-        try {
-            await job;
-        } finally {
-            if (this.refreshJob === job) {
-                this.refreshJob = null;
-                this.refreshJobKey = null;
-            }
-        }
-    }
-
-    private async runRefresh() {
-        const mine = ++this.refreshGen;
-        this.refreshing = true;
-        try {
-            if (this.view.kind === 'feed') {
-                await refreshFeed(this.view.id);
-            } else if (this.view.kind === 'folder') {
-                await refreshFolder(this.view.id);
-            } else {
-                await syncAllFeeds();
-            }
-        } catch {
-            // feed sync errors are surfaced on the feed rows in the sidebar
-        } finally {
-            try {
-                await this.reset();
-            } finally {
-                if (mine === this.refreshGen) this.refreshing = false;
-            }
-        }
+        await refreshViewAction(this as never, viewRefreshKeyOf(this.view));
     }
 
     private async onStar(e: Event, article: Article) {
@@ -629,16 +387,8 @@ export class ArticleList extends LitElement {
         await toggleStarAction(this as never, article);
     }
 
-    private renderRow(article: Article, showFeed: boolean) {
-        return detailRowTemplate(article, showFeed, this.feedTitle(article.feedId), (e, a) => { void this.onStar(e, a); });
-    }
-
-    private renderHeadlineRow(article: Article, showFeed: boolean) {
-        return headlineRowTemplate(article, showFeed, this.feedTitle(article.feedId), (e, a) => { void this.onStar(e, a); });
-    }
-
-    private renderCardRow(article: Article, showFeed: boolean, index: number) {
-        return cardRowTemplate(article, showFeed, this.feedTitle(article.feedId), index === this.cursor, (e, a) => { void this.onStar(e, a); }, (a) => { void this.openArticle(a); }, (e, a) => this.onRowKey(e, a));
+    private async onMarkShownRead() {
+        await markShownReadAction(this as never);
     }
 }
 

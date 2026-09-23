@@ -1,5 +1,5 @@
-import type {Situation} from './types';
-import {oppositeTeam} from './rulebook';
+import type { Situation } from './types';
+import { oppositeTeam } from './rulebook';
 
 export interface SpotResult {
     yardline100: number;
@@ -9,9 +9,9 @@ export interface SpotResult {
 
 export function applyYards(yardline100: number, yards: number): SpotResult {
     const next = yardline100 - yards;
-    if (next <= 0) return {yardline100: 0, touchdown: true, safety: false};
-    if (next >= 100) return {yardline100: 100, touchdown: false, safety: true};
-    return {yardline100: next, touchdown: false, safety: false};
+    if (next <= 0) return { yardline100: 0, touchdown: true, safety: false };
+    if (next >= 100) return { yardline100: 100, touchdown: false, safety: true };
+    return { yardline100: next, touchdown: false, safety: false };
 }
 
 export function goalToGoDistance(yardline100: number): number {
@@ -65,7 +65,7 @@ function advanceResult(
 export function advanceDownDistance(
     situation: Situation,
     yards: number,
-    opts: {incomplete?: boolean; forceFirstDown?: boolean} = {},
+    opts: { incomplete?: boolean; forceFirstDown?: boolean } = {},
 ): DownAdvance {
     const gained = opts.incomplete === true ? 0 : yards;
     const spot = applyYards(situation.yardline100, gained);
@@ -79,7 +79,7 @@ export function advanceDownDistance(
         return advanceResult(1, goalToGoDistance(spot.yardline100), spot.yardline100, true);
     }
     if (situation.down === 4) {
-        return advanceResult(1, goalToGoDistance(spot.yardline100), spot.yardline100, false, {turnoverOnDowns: true});
+        return advanceResult(1, goalToGoDistance(spot.yardline100), spot.yardline100, false, { turnoverOnDowns: true });
     }
     return advanceResult((situation.down + 1) as 2 | 3 | 4, situation.distance - gained, spot.yardline100, false);
 }

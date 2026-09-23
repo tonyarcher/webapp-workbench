@@ -1,5 +1,59 @@
-import {html, svg} from 'lit';
-import type {Feed, Folder} from '../../types';
+import { html, svg } from 'lit';
+import type { Feed, Folder, View } from '../../types';
+import type { ActionHost } from './source-list-actions';
+import {
+    feedSortChangeAction,
+    folderMenuDeleteAction,
+    folderMenuRefreshAction,
+    folderMenuShadowAction,
+    folderMenuUnreadOnlyAction,
+    menuDeleteAction,
+    menuFoldersChangeAction,
+    menuRefreshAction,
+    refreshAllAction,
+    sortFoldersAction,
+    todaySettingsChangeAction,
+    toggleAutoHideAction,
+} from './source-list-actions';
+import {
+    closeFeedListMenuAction,
+    closeFolderMenuAction,
+    closeMenuAction,
+    openFeedListMenuAction,
+    openFeedMenuAction,
+    openFolderMenuAction,
+    openTodayMenuAction,
+} from './source-list-menus';
+
+/**
+ * State and handlers the sidebar templates read. The component passes
+ * itself (`this as never`, matching source-list-drag.ts) so the html
+ * strings stay identical to the ones the class used to render.
+ */
+export interface SourceListRenderHost extends ActionHost {
+    autoHide: boolean;
+    totalUnread: number;
+    library: { error: Error | undefined };
+    icon(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash'): unknown;
+    pinIcon(): unknown;
+    filterIcon(): unknown;
+    menuIcon(): unknown;
+    folderFeeds(folderId: string): Feed[];
+    folderUnread(folderId: string): number;
+    isActive(view: View): boolean;
+    select(view: View): void;
+    onItemKey(e: KeyboardEvent, view: View): void;
+    onDragStart(e: DragEvent, kind: 'folder' | 'feed', id: string): void;
+    onDragOver(e: DragEvent): void;
+    onDragLeave(e: DragEvent): void;
+    onDrop(e: DragEvent): Promise<void>;
+    onDragEnd(): void;
+    onResizeStart(e: PointerEvent): void;
+    onResizeMove(e: PointerEvent): void;
+    onResizeEnd(e: PointerEvent): void;
+    onRetryLibrary(): void;
+    toggleFolder(id: string): void;
+}
 
 export function iconTemplate(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash') {
     const paths: Record<string, ReturnType<typeof svg>> = {
@@ -59,7 +113,10 @@ function folderHeaderTemplate(
 ) {
     return html`
       <div class="item ${active ? 'active' : ''}" data-folder-id="${folder.id}" draggable="true" role="button" tabindex="0" aria-label="Open folder ${folder.title}" @dragstart=${(e: DragEvent) => onDragStart(e, folder)} @click=${() => onSelect(folder)} @keydown=${(e: KeyboardEvent) => onKey(e, folder)}>
-        <span class="icon" style="cursor:pointer" @click=${(e: Event) => { e.stopPropagation(); onToggle(folder.id); }}>${isCollapsed ? '▸' : '▾'}</span>
+        <span class="icon" style="cursor:pointer" @click=${(e: Event) => {
+            e.stopPropagation();
+            onToggle(folder.id);
+        }}>${isCollapsed ? '▸' : '▾'}</span>
         ${iconTemplate('folder')}
         <span class="label" title="${folder.title}">${folder.title}</span>
         ${shadow ? html`<span class="shadow-mark" title="Interesting filter available">✨</span>` : ''}
@@ -89,4 +146,111 @@ export function folderRowTemplate(
         ${isCollapsed ? '' : html`<div class="folder-children">${feeds.map((f) => feedRow(f))}</div>`}
       </div>
     `;
+}
+
+export function renderHead(host: SourceListRenderHost) {
+    return html`<div class="sidebar-head"><button class="pin-btn filter-btn" title="Feed list options" @click=${(e: MouseEvent) => openFeedListMenuAction(host, e)}>${host.filterIcon()}</button><button class="pin-btn" title=${host.autoHide ? 'Pin the feed list open' : 'Auto-hide the feed list'} @click=${() => toggleAutoHideAction(host)}>${host.pinIcon()}</button></div>`;
+}
+
+export function renderNav(host: SourceListRenderHost, folders: Folder[], uncategorized: Feed[]) {
+    return html`<nav class="nav" @dragover=${host.onDragOver} @dragleave=${host.onDragLeave} @drop=${host.onDrop} @dragend=${host.onDragEnd}>${renderNavError(host)}${renderStaticNav(host)}${folders.map((folder) => folderRow(host, folder))}${renderUncategorized(host, uncategorized)}<div class="drop-zone" data-no-folder>Drop here to move out of folders</div></nav>`;
+}
+
+function renderNavError(host: SourceListRenderHost) {
+    return host.library.error
+        ? html`<div class="nav-error">Could not load feeds. <button @click=${host.onRetryLibrary}>Retry</button></div>`
+        : '';
+}
+
+function renderStaticNav(host: SourceListRenderHost) {
+    return html`
+      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderAllNav(host)}
+    `;
+}
+
+function renderFrontPageNav(host: SourceListRenderHost) {
+    const active = host.isActive({ kind: 'frontpage' });
+    return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="Front Page" @click=${() => host.select({ kind: 'frontpage' })} @keydown=${(e: KeyboardEvent) => host.onItemKey(e, { kind: 'frontpage' })}><span class="icon">📰</span><span class="label">Front Page</span></div>`;
+}
+
+function renderBriefNav(host: SourceListRenderHost) {
+    const active = host.isActive({ kind: 'brief' });
+    return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="Daily Brief" @click=${() => host.select({ kind: 'brief' })} @keydown=${(e: KeyboardEvent) => host.onItemKey(e, { kind: 'brief' })}><span class="icon">✨</span><span class="label">Daily Brief</span></div>`;
+}
+
+function renderTodayNav(host: SourceListRenderHost) {
+    const active = host.isActive({ kind: 'today' });
+    return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="Today" @click=${() => host.select({ kind: 'today' })} @keydown=${(e: KeyboardEvent) => host.onItemKey(e, { kind: 'today' })}><span class="icon">🗓</span><span class="label">Today</span><button class="menu-btn" title="Today options" @click=${(e: MouseEvent) => openTodayMenuAction(host, e)}>${host.menuIcon()}</button></div>`;
+}
+
+function renderAllNav(host: SourceListRenderHost) {
+    const active = host.isActive({ kind: 'all' });
+    return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="All feeds" @click=${() => host.select({ kind: 'all' })} @keydown=${(e: KeyboardEvent) => host.onItemKey(e, { kind: 'all' })}>${host.icon('all')}<span class="label">All</span>${host.totalUnread > 0 ? html`<span class="badge">${host.totalUnread}</span>` : ''}</div>`;
+}
+
+function renderUncategorized(host: SourceListRenderHost, uncategorized: Feed[]) {
+    if (!uncategorized.length) return html``;
+    return html`<div class="section-label">No folder</div>${uncategorized.map((feed) => feedRow(host, feed))}`;
+}
+
+export function renderResizeHandle(host: SourceListRenderHost) {
+    return html`<div class="resize-handle" title="Drag to resize" @pointerdown=${host.onResizeStart} @pointermove=${host.onResizeMove} @pointerup=${host.onResizeEnd} @pointercancel=${host.onResizeEnd}></div>`;
+}
+
+export function renderMenus(
+    host: SourceListRenderHost,
+    folders: Folder[],
+    menuFeed: Feed | undefined,
+    folderMenuFolder: Folder | undefined,
+) {
+    return html`
+      <feed-menu .feed=${menuFeed ?? null} .folders=${folders} .open=${host.menuOpen && menuFeed !== undefined} .anchor=${host.menuAnchor} @close=${() => closeMenuAction(host)} @refresh=${() => menuRefreshAction(host)} @delete=${() => menuDeleteAction(host)} @folders-change=${(e: Event) => menuFoldersChangeAction(host, e)}></feed-menu>
+      <folder-menu .folder=${folderMenuFolder ?? null} .open=${host.folderMenuOpen && folderMenuFolder !== undefined} .anchor=${host.folderMenuAnchor} .unreadOnly=${folderMenuFolder ? Boolean(host.hideReadByFolder[folderMenuFolder.id]) : false} .shadow=${folderMenuFolder ? host.interestingShadow[folderMenuFolder.id] === true : false} @close=${() => closeFolderMenuAction(host)} @delete=${() => folderMenuDeleteAction(host)} @refresh=${() => folderMenuRefreshAction(host)} @unread-only-change=${(e: Event) => folderMenuUnreadOnlyAction(host, e)} @shadow-change=${(e: Event) => folderMenuShadowAction(host, e)}></folder-menu>
+      <feed-list-menu .open=${host.feedListMenuOpen} .anchor=${host.feedListMenuAnchor} .feedSort=${host.feedSort} @close=${() => closeFeedListMenuAction(host)} @sort-change=${(e: Event) => feedSortChangeAction(host, e)} @sort-folders=${() => sortFoldersAction(host)} @refresh-all=${() => refreshAllAction(host)}></feed-list-menu>
+      <today-menu .open=${host.todayMenuOpen} .anchor=${host.todayMenuAnchor} .folders=${folders} .settings=${host.todaySettings} @close=${() => (host.todayMenuOpen = false)} @settings-change=${(e: Event) => todaySettingsChangeAction(host, e)}></today-menu>
+    `;
+}
+
+function feedActions(host: SourceListRenderHost, feed: Feed) {
+    return html`
+      <button
+        class="menu-btn"
+        title="Feed options"
+        @click=${(e: MouseEvent) => openFeedMenuAction(host, feed, e)}
+      >⋯</button>
+    `;
+}
+
+function feedRow(host: SourceListRenderHost, feed: Feed) {
+    const active = host.isActive({ kind: 'feed', id: feed.id });
+    return feedRowTemplate(
+        feed,
+        active,
+        (f) => host.select({ kind: 'feed', id: f.id }),
+        (e, f) => host.onItemKey(e, { kind: 'feed', id: f.id }),
+        (e, f) => host.onDragStart(e, 'feed', f.id),
+        feedActions(host, feed),
+    );
+}
+
+function folderRow(host: SourceListRenderHost, folder: Folder) {
+    const feeds = host.folderFeeds(folder.id);
+    const isCollapsed = Boolean(host.collapsed[folder.id]);
+    const active = host.isActive({ kind: 'folder', id: folder.id });
+    const unread = host.folderUnread(folder.id);
+    const shadow = host.interestingShadow[folder.id] === true;
+    return html`${folderRowTemplate(
+        folder,
+        feeds,
+        isCollapsed,
+        active,
+        unread,
+        (f) => host.select({ kind: 'folder', id: f.id }),
+        (e, f) => host.onItemKey(e, { kind: 'folder', id: f.id }),
+        (e, f) => host.onDragStart(e, 'folder', f.id),
+        (id) => host.toggleFolder(id),
+        (e, f) => openFolderMenuAction(host, f, e),
+        (feed) => feedRow(host, feed),
+        shadow,
+    )}`;
 }

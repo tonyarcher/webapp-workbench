@@ -1,5 +1,5 @@
-import {getRulebook} from './rulebook';
-import type {ClockState, ClockStopReason, GameState, Rulebook} from './types';
+import { getRulebook } from './rulebook';
+import type { ClockState, ClockStopReason, GameState, Rulebook } from './types';
 
 export interface PlayClockFacts {
     incomplete: boolean;
@@ -41,23 +41,26 @@ function stopOnFirstDown(rulebook: Rulebook, period: number, deadClock: number):
  * After a live play, decide whether the game clock is stopped for the next snap.
  * Scorer-entered snap/dead times remain source of truth for elapsed time.
  */
-function liveClockStop(rulebook: Rulebook, facts: PlayClockFacts): {stops: boolean; reason: ClockStopReason} {
-    if (facts.incomplete) return {stops: true, reason: 'incomplete'};
-    if (facts.outOfBounds) return {stops: true, reason: 'out_of_bounds'};
-    if (facts.turnover) return {stops: true, reason: 'change_of_possession'};
+function liveClockStop(rulebook: Rulebook, facts: PlayClockFacts): { stops: boolean; reason: ClockStopReason } {
+    if (facts.incomplete) return { stops: true, reason: 'incomplete' };
+    if (facts.outOfBounds) return { stops: true, reason: 'out_of_bounds' };
+    if (facts.turnover) return { stops: true, reason: 'change_of_possession' };
     if (facts.firstDown && stopOnFirstDown(rulebook, facts.period, facts.deadClock)) {
-        return {stops: true, reason: 'first_down'};
+        return { stops: true, reason: 'first_down' };
     }
     if (rulebook.clockStopsOnFourthDown && facts.downBefore === 4) {
-        return {stops: true, reason: 'fourth_down'};
+        return { stops: true, reason: 'fourth_down' };
     }
-    return {stops: false, reason: 'none'};
+    return { stops: false, reason: 'none' };
 }
 
-export function clockStopsAfterPlay(rulebook: Rulebook, facts: PlayClockFacts): {stops: boolean; reason: ClockStopReason} {
-    if (facts.isTry) return {stops: true, reason: 'try'};
-    if (facts.scored) return {stops: true, reason: 'score'};
-    if (facts.mercyActive && rulebook.mercy) return {stops: false, reason: 'none'};
+export function clockStopsAfterPlay(
+    rulebook: Rulebook,
+    facts: PlayClockFacts,
+): { stops: boolean; reason: ClockStopReason } {
+    if (facts.isTry) return { stops: true, reason: 'try' };
+    if (facts.scored) return { stops: true, reason: 'score' };
+    if (facts.mercyActive && rulebook.mercy) return { stops: false, reason: 'none' };
     return liveClockStop(rulebook, facts);
 }
 

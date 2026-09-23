@@ -1,10 +1,10 @@
-import type {MercyRule, OvertimeRules, Rulebook, RulebookId} from './types';
+import type { MercyRule, OvertimeRules, Rulebook, RulebookId } from './types';
 
 const NFHS_MERCY_STOP = ['timeout', 'injury', 'penalty', 'score'] as MercyRule['stopReasons'];
 
-const NFL_OT: OvertimeRules = {kind: 'nfl-2024', startYardline100: 25, periodSeconds: 600};
-const NCAA_OT: OvertimeRules = {kind: 'ncaa', startYardline100: 25, periodSeconds: 0};
-const KANSAS_OT: OvertimeRules = {kind: 'kansas-10', startYardline100: 10, periodSeconds: 0};
+const NFL_OT: OvertimeRules = { kind: 'nfl-2024', startYardline100: 25, periodSeconds: 600 };
+const NCAA_OT: OvertimeRules = { kind: 'ncaa', startYardline100: 25, periodSeconds: 0 };
+const KANSAS_OT: OvertimeRules = { kind: 'kansas-10', startYardline100: 10, periodSeconds: 0 };
 
 export const NFL: Rulebook = {
     id: 'nfl',

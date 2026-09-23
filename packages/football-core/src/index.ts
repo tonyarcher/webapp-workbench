@@ -37,9 +37,9 @@ export type {
     TurnoverKind,
 } from './types';
 
-export {SCORING_EVENT_TYPES} from './types';
+export { SCORING_EVENT_TYPES } from './types';
 
-export {NCAA, NFL, NFHS_CO, NFHS_MN, RULEBOOKS, getRulebook, oppositeTeam} from './rulebook';
+export { NCAA, NFL, NFHS_CO, NFHS_MN, RULEBOOKS, getRulebook, oppositeTeam } from './rulebook';
 
 export {
     clockStopsAfterPlay,
@@ -50,10 +50,10 @@ export {
     updateMercy,
 } from './clock';
 
-export {advanceDownDistance, applyYards, flipPossession, flipSpot, goalToGoDistance} from './down-distance';
+export { advanceDownDistance, applyYards, flipPossession, flipSpot, goalToGoDistance } from './down-distance';
 
-export {describePlay, formatDownDistance, formatYardline} from './notation';
+export { describePlay, formatDownDistance, formatYardline } from './notation';
 
-export {generateRoster, isValidPersonnel, personnelFromRosters} from './default-roster';
+export { generateRoster, isValidPersonnel, personnelFromRosters } from './default-roster';
 
-export {createGame, reduce, replay} from './reduce';
+export { createGame, reduce, replay } from './reduce';
