@@ -71,12 +71,7 @@ export class AccountButton extends LitElement {
         this.totp = (event.target as HTMLInputElement).value;
     }
 
-    private async onSubmit(): Promise<void> {
-        const username = this.username.trim();
-        if (!username || !this.password) {
-            this.error = 'Enter your username and password.';
-            return;
-        }
+    private async performLogin(username: string): Promise<void> {
         this.busy = true;
         this.error = '';
         try {
@@ -97,6 +92,15 @@ export class AccountButton extends LitElement {
         } finally {
             this.busy = false;
         }
+    }
+
+    private async onSubmit(): Promise<void> {
+        const username = this.username.trim();
+        if (!username || !this.password) {
+            this.error = 'Enter your username and password.';
+            return;
+        }
+        await this.performLogin(username);
     }
 
     private onLogout(): void {

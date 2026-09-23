@@ -122,12 +122,15 @@ function puntSituation(game: GameState, yards: number, touchback: boolean) {
     return { receiving, deadAt, situation };
 }
 
-export function applyPunt(game: GameState, input: PlayInput): GameState {
-    const yards = input.yards ?? 40;
-    const touchback = game.situation.yardline100 - yards <= 0 || input.touchback === true;
-    const { receiving, deadAt, situation } = puntSituation(game, yards, touchback);
-    const playId = `play-${game.nextPlayId}`;
-    const play = buildPlay(
+function puntPlay(
+    game: GameState,
+    input: PlayInput,
+    playId: string,
+    yards: number,
+    deadAt: number,
+    touchback: boolean,
+): Play {
+    return buildPlay(
         game,
         input,
         playId,
@@ -139,6 +142,14 @@ export function applyPunt(game: GameState, input: PlayInput): GameState {
         }),
         'change_of_possession',
     );
+}
+
+export function applyPunt(game: GameState, input: PlayInput): GameState {
+    const yards = input.yards ?? 40;
+    const touchback = game.situation.yardline100 - yards <= 0 || input.touchback === true;
+    const { receiving, deadAt, situation } = puntSituation(game, yards, touchback);
+    const playId = `play-${game.nextPlayId}`;
+    const play = puntPlay(game, input, playId, yards, deadAt, touchback);
     const drive = openDrive({ ...game, situation }, receiving, playId);
     return finishPlay(
         {
@@ -201,11 +212,8 @@ function fieldGoalClock(game: GameState, input: PlayInput): GameState['clock'] {
     };
 }
 
-export function applyFieldGoal(game: GameState, input: PlayInput): GameState {
-    if (input.fieldGoalMade === true) return applyMadeFieldGoal(game, input);
-    const situation = flipPossession(game.situation, game.situation.yardline100);
-    const playId = `play-${game.nextPlayId}`;
-    const play = buildPlay(
+function missedFieldGoalPlay(game: GameState, input: PlayInput, playId: string): Play {
+    return buildPlay(
         game,
         input,
         playId,
@@ -220,6 +228,13 @@ export function applyFieldGoal(game: GameState, input: PlayInput): GameState {
         },
         'change_of_possession',
     );
+}
+
+export function applyFieldGoal(game: GameState, input: PlayInput): GameState {
+    if (input.fieldGoalMade === true) return applyMadeFieldGoal(game, input);
+    const situation = flipPossession(game.situation, game.situation.yardline100);
+    const playId = `play-${game.nextPlayId}`;
+    const play = missedFieldGoalPlay(game, input, playId);
     const drive = openDrive({ ...game, situation }, situation.possession, playId);
     return finishPlay(
         {

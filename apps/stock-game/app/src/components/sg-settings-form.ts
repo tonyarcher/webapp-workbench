@@ -162,12 +162,23 @@ export class SgSettingsForm extends LitElement {
             this.error = 'Check the starting cash and start date values';
             return false;
         }
+        this.emitSubmit(cashCents, dateMs, provider as string, quoteDelayMinutes, commissionCentsPerTrade);
+        return true;
+    }
+
+    private emitSubmit(
+        cashCents: number,
+        dateMs: number,
+        provider: string,
+        quoteDelayMinutes: number,
+        commissionCentsPerTrade: number,
+    ): void {
         this.dispatchEvent(
             new CustomEvent<SettingsSubmitDetail>('sg-config-submit', {
                 detail: {
                     startingCashCents: cashCents,
                     startDate: dateMs,
-                    provider: provider as string,
+                    provider,
                     quoteDelayMinutes,
                     commissionCentsPerTrade,
                 },
@@ -175,7 +186,6 @@ export class SgSettingsForm extends LitElement {
                 composed: true,
             }),
         );
-        return true;
     }
 
     private onSubmit(): void {

@@ -37,6 +37,18 @@ export class LoginForm extends LitElement {
         );
     };
 
+    private renderSwitch(register: boolean): TemplateResult {
+        return html`
+            <p class="switch">
+                ${
+                    register
+                        ? html`<button type="button" class="link" @click=${() => this.switchMode('login')}>Have an account? Sign in</button>`
+                        : html`<button type="button" class="link" @click=${() => this.switchMode('register')}>Need an account? Register</button>`
+                }
+            </p>
+        `;
+    }
+
     override render(): TemplateResult {
         const register = this.mode === 'register';
         return html`
@@ -54,13 +66,7 @@ export class LoginForm extends LitElement {
                     ${register ? 'Create account' : 'Sign in'}
                 </button>
             </form>
-            <p class="switch">
-                ${
-                    register
-                        ? html`<button type="button" class="link" @click=${() => this.switchMode('login')}>Have an account? Sign in</button>`
-                        : html`<button type="button" class="link" @click=${() => this.switchMode('register')}>Need an account? Register</button>`
-                }
-            </p>
+            ${this.renderSwitch(register)}
         `;
     }
 }

@@ -26,6 +26,22 @@ function pickLargest(pointA: Point, range: Point[], avg: Point, rangeStart: numb
     return nextA;
 }
 
+function selectNext(points: Point[], a: number, i: number, bucketSize: number, last: Point): number | null {
+    const rangeStart = Math.floor((i + 1) * bucketSize) + 1;
+    const rangeEnd = Math.min(Math.floor((i + 2) * bucketSize) + 1, points.length);
+    const avgStart = Math.floor((i + 2) * bucketSize) + 1;
+    const avgEnd = Math.min(Math.floor((i + 3) * bucketSize) + 1, points.length);
+    const pointA = points[a];
+    if (!pointA) return null;
+    const avgPts = points.slice(avgStart, avgEnd);
+    return pickLargest(
+        pointA,
+        points.slice(rangeStart, rangeEnd),
+        average(avgPts.length ? avgPts : [last]),
+        rangeStart,
+    );
+}
+
 /**
  * Largest-Triangle-Three-Buckets. First and last points are kept.
  * If `limit` >= data length, returns a copy.
@@ -39,19 +55,8 @@ export function downsampleLttb(points: Point[], limit: number): Point[] {
     const bucketSize = (points.length - 2) / (limit - 2);
     let a = 0;
     for (let i = 0; i < limit - 2; i++) {
-        const rangeStart = Math.floor((i + 1) * bucketSize) + 1;
-        const rangeEnd = Math.min(Math.floor((i + 2) * bucketSize) + 1, points.length);
-        const avgStart = Math.floor((i + 2) * bucketSize) + 1;
-        const avgEnd = Math.min(Math.floor((i + 3) * bucketSize) + 1, points.length);
-        const pointA = points[a];
-        if (!pointA) break;
-        const avgPts = points.slice(avgStart, avgEnd);
-        const nextA = pickLargest(
-            pointA,
-            points.slice(rangeStart, rangeEnd),
-            average(avgPts.length ? avgPts : [last]),
-            rangeStart,
-        );
+        const nextA = selectNext(points, a, i, bucketSize, last);
+        if (nextA == null) break;
         const chosen = points[nextA];
         if (chosen && chosen !== last) sampled.push(chosen);
         a = nextA;

@@ -7,6 +7,7 @@ import {
     authSessionsQuery,
     communitiesKey,
     communityKey,
+    communityPostsInfiniteQuery,
     communityPostsKey,
     hydrateCommunities,
     hydratePosts,
@@ -96,6 +97,14 @@ void (async () => {
     assert(
         communityPostsKey('lemmy.ml', 7, 'Hot', 'Include', 'piefed', '').includes('piefed'),
         'communityPostsKey carries software',
+    );
+    // Regression guard: the options builder must map software/nsfwFilter to
+    // the same key positions (a swapped parameter order passes tsc callers
+    // positionally but silently mis-keys the cache).
+    const communityOptions = communityPostsInfiniteQuery('lemmy.ml', 7, 'Hot', 'piefed', 'Include', '');
+    assert(
+        communityOptions.queryKey[4] === 'Include' && communityOptions.queryKey[5] === 'piefed',
+        'communityPostsInfiniteQuery keeps nsfwFilter/software key positions',
     );
     assert(
         communitiesKey('lemmy.ml', 'All', 'Hot', '', 'Include', 'piefed', '').includes('piefed'),

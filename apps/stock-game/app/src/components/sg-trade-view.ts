@@ -110,32 +110,39 @@ export class SgTradeView extends LitElement {
         return err instanceof Error ? err.message : String(err);
     }
 
-    private loadBase(): void {
+    private fetchInto<T>(
+        key: string[],
+        queryFn: () => Promise<T>,
+        apply: (value: T) => void,
+        onError?: (err: unknown) => void,
+    ): void {
         const client = getQueryClient();
-        void client.fetchQuery({ queryKey: ['config'], queryFn: () => fetchConfig() }).then(
-            (config) => {
-                if (this.isConnected) this.config = config;
+        void client.fetchQuery({ queryKey: key, queryFn }).then(
+            (value) => {
+                if (this.isConnected) apply(value);
             },
-            () => undefined,
-        );
-        void client.fetchQuery({ queryKey: ['holdings'], queryFn: () => fetchHoldings() }).then(
-            (holdings) => {
-                if (this.isConnected) this.holdings = holdings;
+            (err: unknown) => {
+                if (onError !== undefined) onError(err);
             },
-            () => undefined,
         );
-        void client.fetchQuery({ queryKey: ['cash'], queryFn: () => fetchCash() }).then(
-            (cash) => {
-                if (this.isConnected) this.cashCents = cash;
-            },
-            () => undefined,
-        );
-        void client.fetchQuery({ queryKey: ['trades'], queryFn: () => listTrades() }).then(
+    }
+
+    private loadBase(): void {
+        this.fetchInto(['config'], fetchConfig, (config) => {
+            this.config = config;
+        });
+        this.fetchInto(['holdings'], fetchHoldings, (holdings) => {
+            this.holdings = holdings;
+        });
+        this.fetchInto(['cash'], fetchCash, (cash) => {
+            this.cashCents = cash;
+        });
+        this.fetchInto(
+            ['trades'],
+            listTrades,
             (trades) => {
-                if (this.isConnected) {
-                    this.trades = trades;
-                    this.tradesError = null;
-                }
+                this.trades = trades;
+                this.tradesError = null;
             },
             (err: unknown) => {
                 if (this.isConnected) this.tradesError = `Failed to load trades: ${this.setError(err)}`;

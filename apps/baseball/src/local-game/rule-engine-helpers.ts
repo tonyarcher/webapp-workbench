@@ -169,6 +169,18 @@ export function applyRunnerAdvancements(
     return result;
 }
 
+function withAppendedCell(row: EngineScorebookRow, key: string, advancement: Advancement): EngineScorebookRow {
+    const cell = row.innings[key];
+    if (!cell) return row;
+    return {
+        ...row,
+        innings: {
+            ...row.innings,
+            [key]: { ...cell, advancements: [...(cell.advancements ?? []), advancement] },
+        },
+    };
+}
+
 export function appendAdvancement(
     game: EngineGameState,
     slot: number,
@@ -181,15 +193,7 @@ export function appendAdvancement(
     const key = String(inning);
     const rows = lineup.rows.map((row, index) => {
         if (index !== rowIndex) return row;
-        const cell = row.innings[key];
-        if (!cell) return row;
-        return {
-            ...row,
-            innings: {
-                ...row.innings,
-                [key]: { ...cell, advancements: [...(cell.advancements ?? []), advancement] },
-            },
-        };
+        return withAppendedCell(row, key, advancement);
     });
     const updatedLineup = { ...lineup, rows };
     if (game.half === 'TOP') return { ...game, awayLineup: updatedLineup };

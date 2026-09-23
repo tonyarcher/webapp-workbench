@@ -108,6 +108,16 @@ export class ChartView extends LitElement {
         </table>`;
     }
 
+    private renderEditRow(): TemplateResult {
+        if (!this.editOrigin) return html``;
+        return html`<div class="row">
+            <input type="number" .value=${this.editValue} @input=${(e: Event) => {
+                this.editValue = (e.target as HTMLInputElement).value;
+            }}>
+            <button class="btn primary" @click=${() => void this.saveEdit()}>Save override</button>
+        </div>`;
+    }
+
     override render(): TemplateResult {
         const id = this.metricId();
         const points = this.series?.points ?? [];
@@ -121,16 +131,7 @@ export class ChartView extends LitElement {
                 ${advice ? html`<p class="advice">${advice}</p>` : html``}
                 <ft-chart .xs=${series.xs} .ys=${series.ys} title=${metricLabel(this.metric)} fmt=${series.fmt}></ft-chart>
                 <p class="help">Hover the chart for exact values. Edit/hide overrides imported points without deleting them.</p>
-                ${
-                    this.editOrigin
-                        ? html`<div class="row">
-                        <input type="number" .value=${this.editValue} @input=${(e: Event) => {
-                            this.editValue = (e.target as HTMLInputElement).value;
-                        }}>
-                        <button class="btn primary" @click=${() => void this.saveEdit()}>Save override</button>
-                    </div>`
-                        : html``
-                }
+                ${this.renderEditRow()}
                 ${this.renderRows()}
             </div>
         `;

@@ -237,6 +237,22 @@ export class GameShell extends LitElement {
         return [primary ? 'primary' : '', pressed ? 'sim-press' : ''].filter(Boolean).join(' ');
     }
 
+    private renderPadActions(possession: GameState['situation']['possession'], watch: boolean): TemplateResult {
+        return html`
+            <button class=${this.padClass('Timeout away')} ?disabled=${watch} @click=${() => this.record({ type: 'timeout', team: 'away' })}>Timeout away</button>
+            <button class=${this.padClass('Timeout home')} ?disabled=${watch} @click=${() => this.record({ type: 'timeout', team: 'home' })}>Timeout home</button>
+            <button ?disabled=${watch} @click=${() =>
+                this.record({
+                    type: 'penalty',
+                    team: possession,
+                    yards: Math.abs(this.yards) || 5,
+                    accepted: true,
+                    foul: 'generic',
+                })}>Penalty vs offense</button>
+            <button class=${this.padClass('Period end')} ?disabled=${watch} @click=${() => this.record({ type: 'period_end' })}>Period end</button>
+        `;
+    }
+
     private renderPad(): TemplateResult {
         const possession = this.game.engine.situation.possession;
         const watch = this.isWatch();
@@ -249,17 +265,7 @@ export class GameShell extends LitElement {
                         @click=${() => this.recordPlay({ family: btn.family, ...btn.extra })}
                     >${btn.label}</button>`,
                 )}
-                <button class=${this.padClass('Timeout away')} ?disabled=${watch} @click=${() => this.record({ type: 'timeout', team: 'away' })}>Timeout away</button>
-                <button class=${this.padClass('Timeout home')} ?disabled=${watch} @click=${() => this.record({ type: 'timeout', team: 'home' })}>Timeout home</button>
-                <button ?disabled=${watch} @click=${() =>
-                    this.record({
-                        type: 'penalty',
-                        team: possession,
-                        yards: Math.abs(this.yards) || 5,
-                        accepted: true,
-                        foul: 'generic',
-                    })}>Penalty vs offense</button>
-                <button class=${this.padClass('Period end')} ?disabled=${watch} @click=${() => this.record({ type: 'period_end' })}>Period end</button>
+                ${this.renderPadActions(possession, watch)}
             </div>
         `;
     }

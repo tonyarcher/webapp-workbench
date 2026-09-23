@@ -99,6 +99,13 @@ export function feedRowTemplate(
     `;
 }
 
+function folderToggleTemplate(isCollapsed: boolean, onToggle: (id: string) => void, folderId: string) {
+    return html`<span class="icon" style="cursor:pointer" @click=${(e: Event) => {
+        e.stopPropagation();
+        onToggle(folderId);
+    }}>${isCollapsed ? '▸' : '▾'}</span>`;
+}
+
 function folderHeaderTemplate(
     folder: Folder,
     active: boolean,
@@ -113,10 +120,7 @@ function folderHeaderTemplate(
 ) {
     return html`
       <div class="item ${active ? 'active' : ''}" data-folder-id="${folder.id}" draggable="true" role="button" tabindex="0" aria-label="Open folder ${folder.title}" @dragstart=${(e: DragEvent) => onDragStart(e, folder)} @click=${() => onSelect(folder)} @keydown=${(e: KeyboardEvent) => onKey(e, folder)}>
-        <span class="icon" style="cursor:pointer" @click=${(e: Event) => {
-            e.stopPropagation();
-            onToggle(folder.id);
-        }}>${isCollapsed ? '▸' : '▾'}</span>
+        ${folderToggleTemplate(isCollapsed, onToggle, folder.id)}
         ${iconTemplate('folder')}
         <span class="label" title="${folder.title}">${folder.title}</span>
         ${shadow ? html`<span class="shadow-mark" title="Interesting filter available">✨</span>` : ''}

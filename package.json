@@ -40,10 +40,11 @@
         "test:scripts": "python3 -m unittest discover -s . -t . -p \"*_test.py\""
     },
     "devDependencies": {
-        "oxlint": "^1.75.0",
-        "oxlint-tsgolint": "^7.0.2001",
-        "prettier": "^3.0.0",
-        "ttsc": "^0.30.0",
-        "typescript": "~6.0.2"
+        "oxlint": "^1.85.0",
+        "oxlint-tsgolint": "^7.0.2002",
+        "prettier": "^3.9.9",
+        "ttsc": "^0.30.4",
+        "typescript": "~7.0.2",
+        "vite": "^8.3.0"
     }
 }

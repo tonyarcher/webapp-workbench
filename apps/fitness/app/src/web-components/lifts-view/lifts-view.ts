@@ -105,6 +105,18 @@ export class LiftsView extends LitElement {
         this.tmInput = this.display === 'lb' ? String(Math.round(kgToLb(n))) : String(Math.round(lbToKg(n) * 10) / 10);
     };
 
+    private renderSetRow(s: ReturnType<typeof planLift>[number]): TemplateResult {
+        const plates = platesForLoad(s.weightKg, this.display);
+        const load = this.display === 'lb' ? `${Math.round(kgToLb(s.weightKg))} lb` : `${s.weightKg} kg`;
+        return html`<tr>
+            <td>${s.slot}</td>
+            <td>${Math.round(s.pct * 100)}</td>
+            <td>${s.reps}${s.amrap ? '+' : ''}</td>
+            <td>${load}</td>
+            <td>${plates.plates.join(' + ') || 'bar'}</td>
+        </tr>`;
+    }
+
     private renderSets(): TemplateResult {
         const tmKg = this.tmKg();
         if (tmKg <= 0) return html`<p class="help">Enter a training max to see the wave.</p>`;
@@ -118,17 +130,7 @@ export class LiftsView extends LitElement {
         return html`<table class="table">
             <thead><tr><th>Slot</th><th>%</th><th>Reps</th><th>Load</th><th>Plates / side</th></tr></thead>
             <tbody>
-                ${sets.map((s) => {
-                    const plates = platesForLoad(s.weightKg, this.display);
-                    const load = this.display === 'lb' ? `${Math.round(kgToLb(s.weightKg))} lb` : `${s.weightKg} kg`;
-                    return html`<tr>
-                        <td>${s.slot}</td>
-                        <td>${Math.round(s.pct * 100)}</td>
-                        <td>${s.reps}${s.amrap ? '+' : ''}</td>
-                        <td>${load}</td>
-                        <td>${plates.plates.join(' + ') || 'bar'}</td>
-                    </tr>`;
-                })}
+                ${sets.map((s) => this.renderSetRow(s))}
             </tbody>
         </table>`;
     }

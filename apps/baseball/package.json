@@ -16,20 +16,20 @@
     },
     "dependencies": {
         "@baseball/web-components": "*",
-        "@tanstack/history": "^1.103.4",
-        "@tanstack/query-core": "^5.80.0",
-        "@tanstack/virtual-core": "^3.13.0",
-        "idb": "^8.0.0",
-        "lit": "^3.2.0"
+        "@tanstack/history": "1.162.4",
+        "@tanstack/query-core": "^5.103.2",
+        "@tanstack/virtual-core": "^3.17.11",
+        "idb": "^8.0.3",
+        "lit": "^3.3.3"
     },
     "devDependencies": {
-        "@playwright/test": "^1.62.1",
-        "@types/node": "^26.1.2",
-        "@vitest/coverage-v8": "^4.1.11",
+        "@playwright/test": "^1.63.0",
+        "@types/node": "^26.6.2",
+        "@vitest/coverage-v8": "^5.0.1",
         "fake-indexeddb": "^6.2.5",
-        "oxlint": "^1.75.0",
+        "oxlint": "^1.85.0",
         "typescript": "7.0.2",
-        "vite": "^8.2.0",
-        "vitest": "^4.1.11"
+        "vite": "^8.3.0",
+        "vitest": "^5.0.1"
     }
 }

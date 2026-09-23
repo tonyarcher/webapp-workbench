@@ -59,6 +59,39 @@ export async function fetchPostPage(params: PostsQueryParams, pageParam: number)
     return { posts: filtered, page: page.page, rawCount: page.posts.length };
 }
 
+interface CommunityPostsLoad {
+    instance: string;
+    communityId: number;
+    sort: PostSort;
+    software: Software;
+    nsfwFilter: NsfwFilter;
+    auth: string;
+    pageParam: number;
+}
+
+async function loadCommunityPosts(args: CommunityPostsLoad): Promise<PostPage> {
+    const { instance, communityId, sort, software, nsfwFilter, auth, pageParam } = args;
+    return software === 'piefed'
+        ? await fetchPiefedCommunityPosts({
+              instance,
+              communityId,
+              sort,
+              page: pageParam,
+              limit: PAGE_SIZE,
+              nsfwFilter,
+              auth,
+          })
+        : await fetchCommunityPosts({
+              instance,
+              communityId,
+              sort,
+              page: pageParam,
+              limit: PAGE_SIZE,
+              nsfwFilter,
+              auth,
+          });
+}
+
 export async function fetchCommunityPostsPage(
     instance: string,
     communityId: number,
@@ -68,26 +101,8 @@ export async function fetchCommunityPostsPage(
     auth: string,
     pageParam: number,
 ): Promise<FilteredPostPage> {
-    const page =
-        software === 'piefed'
-            ? await fetchPiefedCommunityPosts({
-                  instance,
-                  communityId,
-                  sort,
-                  page: pageParam,
-                  limit: PAGE_SIZE,
-                  nsfwFilter,
-                  auth,
-              })
-            : await fetchCommunityPosts({
-                  instance,
-                  communityId,
-                  sort,
-                  page: pageParam,
-                  limit: PAGE_SIZE,
-                  nsfwFilter,
-                  auth,
-              });
+    const load = { instance, communityId, sort, software, nsfwFilter, auth, pageParam };
+    const page = await loadCommunityPosts(load);
     const filtered = clientFilterPosts(page.posts, nsfwFilter);
     void putPostsCache(
         communityPostsCacheKey(instance, communityId, sort, nsfwFilter, software, auth, pageParam),
@@ -101,18 +116,19 @@ export function nextPostPage(lastPage: PostPage): number | undefined {
     return rawCount > 0 ? lastPage.page + 1 : undefined;
 }
 
-export async function fetchCommunitiesPage(
-    instance: string,
-    type: FeedType,
-    sort: CommunitySort,
-    search: string,
-    software: Software,
-    nsfwFilter: NsfwFilter,
-    auth: string,
-    pageParam: number,
-): Promise<CommunityPage> {
-    if (software === 'piefed')
-        return fetchPiefedCommunitiesPage(instance, type, sort, search, nsfwFilter, auth, pageParam);
+interface CommunitiesLoad {
+    instance: string;
+    type: FeedType;
+    sort: CommunitySort;
+    search: string;
+    software: Software;
+    nsfwFilter: NsfwFilter;
+    auth: string;
+    pageParam: number;
+}
+
+async function loadLemmyCommunities(args: CommunitiesLoad): Promise<CommunityPage> {
+    const { instance, type, sort, search, software, nsfwFilter, auth, pageParam } = args;
     const page = await fetchCommunities({
         instance,
         type,
@@ -123,30 +139,43 @@ export async function fetchCommunitiesPage(
         nsfwFilter,
         auth,
     });
-    if (!search)
+    if (!search) {
         void putCommunitiesCache(
             communitiesCacheKey(instance, type, sort, nsfwFilter, software, auth, pageParam),
             page.communities,
         ).catch(() => {});
+    }
     return page;
 }
 
-async function fetchPiefedCommunitiesPage(
+export async function fetchCommunitiesPage(
     instance: string,
     type: FeedType,
     sort: CommunitySort,
     search: string,
+    software: Software,
     nsfwFilter: NsfwFilter,
     auth: string,
     pageParam: number,
 ): Promise<CommunityPage> {
-    if (search) {
-        const communities =
-            pageParam === 1
-                ? await fetchPiefedCommunitySearch(instance, search, PAGE_SIZE, fetch, nsfwFilter, type, auth)
-                : [];
-        return { communities, page: pageParam };
+    const load = { instance, type, sort, search, software, nsfwFilter, auth, pageParam };
+    if (software === 'piefed') {
+        return fetchPiefedCommunitiesPage(load);
     }
+    return loadLemmyCommunities(load);
+}
+
+async function searchPiefedCommunities(args: CommunitiesLoad): Promise<CommunityPage> {
+    const { instance, search, nsfwFilter, type, auth, pageParam } = args;
+    const communities =
+        pageParam === 1
+            ? await fetchPiefedCommunitySearch(instance, search, PAGE_SIZE, fetch, nsfwFilter, type, auth)
+            : [];
+    return { communities, page: pageParam };
+}
+
+async function listPiefedCommunities(args: CommunitiesLoad): Promise<CommunityPage> {
+    const { instance, type, sort, nsfwFilter, auth, pageParam } = args;
     const page = await fetchPiefedCommunities({
         instance,
         type,
@@ -161,4 +190,11 @@ async function fetchPiefedCommunitiesPage(
         page.communities,
     ).catch(() => {});
     return page;
+}
+
+async function fetchPiefedCommunitiesPage(args: CommunitiesLoad): Promise<CommunityPage> {
+    if (args.search) {
+        return searchPiefedCommunities(args);
+    }
+    return listPiefedCommunities(args);
 }

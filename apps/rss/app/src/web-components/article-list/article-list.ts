@@ -49,18 +49,18 @@ export class ArticleList extends LitElement {
     @property({ attribute: false }) active = true;
 
     @state() private items: Article[] = [];
-    @state() private loading = false;
+    @state() loading = false;
     @state() private unreadOnly = false;
-    @state() private hideRead = false;
+    @state() hideRead = false;
     @state() private sort: ArticleSort = 'hot';
-    @state() private cursor = -1;
+    @state() cursor = -1;
     @state() private listView: ListViewType = 'detailed';
     @state() private maxCardCols = 4;
     @state() private cols = 3;
     @state() private pageSize = DEFAULT_PAGE_SIZE;
     @state() private advancedOpen = false;
-    @state() private advancedAnchor: MenuAnchor | null = null;
-    @state() private refreshing = false;
+    @state() advancedAnchor: MenuAnchor | null = null;
+    @state() refreshing = false;
     @state() private interestingOnly = false;
 
     private scrollElRef: Ref<HTMLDivElement> = createRef();
@@ -73,13 +73,13 @@ export class ArticleList extends LitElement {
     private loadingRef = false;
     private lastViewKey = '';
     private lastFolderKey = '';
-    private resumeApplied = false;
+    resumeApplied = false;
     private pendingReset = false;
     private resizeObserver: ResizeObserver | undefined;
-    private feedWindowOffset = 0;
-    private refreshJob: Promise<void> | null = null;
-    private refreshJobKey: string | null = null;
-    private refreshGenRef: { value: number } = { value: 0 };
+    feedWindowOffset = 0;
+    refreshJob: Promise<void> | null = null;
+    refreshJobKey: string | null = null;
+    refreshGenRef: { value: number } = { value: 0 };
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
@@ -191,6 +191,10 @@ export class ArticleList extends LitElement {
             void this.reset();
             return;
         }
+        this.refreshFolderKey();
+    }
+
+    private refreshFolderKey(): void {
         if (this.view.kind !== 'folder') return;
         const folderKey = this.folderFeeds()
             .map((f) => f.id)
@@ -216,7 +220,7 @@ export class ArticleList extends LitElement {
     `;
     }
 
-    private shadowEnabled(): boolean {
+    shadowEnabled(): boolean {
         return shadowEnabledFor(this.view);
     }
 
@@ -224,11 +228,11 @@ export class ArticleList extends LitElement {
         return interestingActiveFor(this.view, this.interestingOnly);
     }
 
-    private onRetryLibrary() {
+    onRetryLibrary() {
         void queryClient.invalidateQueries({ queryKey: libraryKey });
     }
 
-    private onRowKey(e: KeyboardEvent, article: Article) {
+    onRowKey(e: KeyboardEvent, article: Article) {
         if (e.key !== 'Enter' && e.key !== ' ') return;
         // Let child links/buttons handle their own keys.
         const tag = (e.target as HTMLElement | null)?.tagName;
@@ -237,7 +241,7 @@ export class ArticleList extends LitElement {
         void this.openArticle(article);
     }
 
-    private onScroll = () => {
+    onScroll = () => {
         if (this.loadingRef || !this.canLoadMore()) return;
         const el = this.scrollElRef.value;
         if (!el) return;
@@ -318,13 +322,7 @@ export class ArticleList extends LitElement {
         this.loadingRef = true;
         this.loading = true;
         try {
-            if (this.interestingActive()) {
-                await loadInterestingBatchAction(this as never, gen);
-            } else if (this.view.kind === 'folder') {
-                await loadFolderPageAction(this as never, gen);
-            } else {
-                await loadSinglePageAction(this as never, gen);
-            }
+            await this.loadPageSource(gen);
             applyResumeAction(this as never);
         } finally {
             this.loadingRef = false;
@@ -336,11 +334,21 @@ export class ArticleList extends LitElement {
         }
     }
 
-    private viewTitle(): string {
+    private loadPageSource(gen: number): Promise<void> {
+        if (this.interestingActive()) {
+            return loadInterestingBatchAction(this as never, gen);
+        }
+        if (this.view.kind === 'folder') {
+            return loadFolderPageAction(this as never, gen);
+        }
+        return loadSinglePageAction(this as never, gen);
+    }
+
+    viewTitle(): string {
         return viewTitleOf(this.view, this.library.data);
     }
 
-    private feedTitle(feedId: string): string | undefined {
+    feedTitle(feedId: string): string | undefined {
         return feedTitleOf(feedId, this.library.data);
     }
 
@@ -352,23 +360,23 @@ export class ArticleList extends LitElement {
         handleCursorKey(this as never, e);
     };
 
-    private onToggleAdvanced(e: Event) {
+    onToggleAdvanced(e: Event) {
         e.stopPropagation();
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         this.advancedAnchor = { x: rect.right, y: rect.bottom + 6 };
         this.advancedOpen = !this.advancedOpen;
     }
 
-    private onAdvancedUnread(e: Event) {
+    onAdvancedUnread(e: Event) {
         this.unreadOnly = (e as CustomEvent<boolean>).detail;
         this.saveViewSettings();
     }
 
-    private scopeLabel(): string {
+    scopeLabel(): string {
         return scopeLabelOf(this.view, this.library.data);
     }
 
-    private async onMarkBefore(e: Event) {
+    async onMarkBefore(e: Event) {
         const cutoff = (e as CustomEvent<number | null>).detail;
         this.advancedOpen = false;
         try {
@@ -378,16 +386,16 @@ export class ArticleList extends LitElement {
         }
     }
 
-    private async onRefresh() {
+    async onRefresh() {
         await refreshViewAction(this as never, viewRefreshKeyOf(this.view));
     }
 
-    private async onStar(e: Event, article: Article) {
+    async onStar(e: Event, article: Article) {
         e.stopPropagation();
         await toggleStarAction(this as never, article);
     }
 
-    private async onMarkShownRead() {
+    async onMarkShownRead() {
         await markShownReadAction(this as never);
     }
 }

@@ -74,31 +74,29 @@ export function pruneEditionOptions(options: EditionOptions): EditionOptions {
     };
 }
 
+function numberField(value: unknown, fallback: number): number {
+    return typeof value === 'number' ? value : fallback;
+}
+
+function editionOptionsFromPartial(parsed: Partial<EditionOptions>): EditionOptions {
+    return {
+        windowHours: numberField(parsed.windowHours, DEFAULT_EDITION_OPTIONS.windowHours),
+        sectionCount: numberField(parsed.sectionCount, DEFAULT_EDITION_OPTIONS.sectionCount),
+        weightGeneral: numberField(parsed.weightGeneral, DEFAULT_EDITION_OPTIONS.weightGeneral),
+        weightPersonal: numberField(parsed.weightPersonal, DEFAULT_EDITION_OPTIONS.weightPersonal),
+        weightNewness: numberField(parsed.weightNewness, DEFAULT_EDITION_OPTIONS.weightNewness),
+        weightPopularity: numberField(parsed.weightPopularity, DEFAULT_EDITION_OPTIONS.weightPopularity),
+        showOpinion: parsed.showOpinion === true,
+        showFactCheck: parsed.showFactCheck === true,
+    };
+}
+
 export function loadEditionOptions(): EditionOptions {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return defaultEditionOptions();
         const parsed = JSON.parse(raw) as Partial<EditionOptions>;
-        return pruneEditionOptions({
-            windowHours:
-                typeof parsed.windowHours === 'number' ? parsed.windowHours : DEFAULT_EDITION_OPTIONS.windowHours,
-            sectionCount:
-                typeof parsed.sectionCount === 'number' ? parsed.sectionCount : DEFAULT_EDITION_OPTIONS.sectionCount,
-            weightGeneral:
-                typeof parsed.weightGeneral === 'number' ? parsed.weightGeneral : DEFAULT_EDITION_OPTIONS.weightGeneral,
-            weightPersonal:
-                typeof parsed.weightPersonal === 'number'
-                    ? parsed.weightPersonal
-                    : DEFAULT_EDITION_OPTIONS.weightPersonal,
-            weightNewness:
-                typeof parsed.weightNewness === 'number' ? parsed.weightNewness : DEFAULT_EDITION_OPTIONS.weightNewness,
-            weightPopularity:
-                typeof parsed.weightPopularity === 'number'
-                    ? parsed.weightPopularity
-                    : DEFAULT_EDITION_OPTIONS.weightPopularity,
-            showOpinion: parsed.showOpinion === true,
-            showFactCheck: parsed.showFactCheck === true,
-        });
+        return pruneEditionOptions(editionOptionsFromPartial(parsed));
     } catch {
         return defaultEditionOptions();
     }

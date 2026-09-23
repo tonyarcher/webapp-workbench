@@ -171,6 +171,45 @@ function parseUrlEntry(
     return null;
 }
 
+function appendClipLink(
+    items: ClipLink[],
+    seenIds: Set<string>,
+    entry: { provider: ClipProvider; id: string; author: string | null },
+    safe: string,
+    date: string | undefined,
+): void {
+    const dedupe = `${entry.provider}:${entry.id}`;
+    if (seenIds.has(dedupe)) return;
+    seenIds.add(dedupe);
+    const link: ClipLink = { id: entry.id, url: safe, provider: entry.provider };
+    if (entry.author) link.author = entry.author;
+    if (date) link.date = date;
+    items.push(link);
+}
+
+function processRawUrl(
+    raw: string,
+    pending: { date: string | undefined },
+    items: ClipLink[],
+    skipped: SkippedLink[],
+    seenIds: Set<string>,
+    seenSkipped: Set<string>,
+): void {
+    const safe = safeUrl(raw);
+    if (!safe) return;
+    const date = pending.date;
+    pending.date = undefined;
+    let parsed: URL;
+    try {
+        parsed = new URL(safe);
+    } catch {
+        return;
+    }
+    const entry = parseUrlEntry(parsed, safe, skipped, seenSkipped);
+    if (!entry) return;
+    appendClipLink(items, seenIds, entry, safe, date);
+}
+
 function processLine(
     line: string,
     pending: { date: string | undefined },
@@ -180,25 +219,7 @@ function processLine(
     seenSkipped: Set<string>,
 ): void {
     for (const raw of extractUrls(line)) {
-        const safe = safeUrl(raw);
-        if (!safe) continue;
-        const date = pending.date;
-        pending.date = undefined;
-        let parsed: URL;
-        try {
-            parsed = new URL(safe);
-        } catch {
-            continue;
-        }
-        const entry = parseUrlEntry(parsed, safe, skipped, seenSkipped);
-        if (!entry) continue;
-        const dedupe = `${entry.provider}:${entry.id}`;
-        if (seenIds.has(dedupe)) continue;
-        seenIds.add(dedupe);
-        const link: ClipLink = { id: entry.id, url: safe, provider: entry.provider };
-        if (entry.author) link.author = entry.author;
-        if (date) link.date = date;
-        items.push(link);
+        processRawUrl(raw, pending, items, skipped, seenIds, seenSkipped);
     }
 }
 

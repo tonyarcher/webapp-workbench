@@ -12,15 +12,15 @@
     },
     "dependencies": {
         "basketball-core": "*",
-        "idb": "^8.0.0",
+        "idb": "^8.0.3",
         "lit": "^3.3.3"
     },
     "devDependencies": {
-        "@types/node": "^26.1.2",
-        "@vitest/coverage-v8": "^4.1.11",
+        "@types/node": "^26.6.2",
+        "@vitest/coverage-v8": "^5.0.1",
         "fake-indexeddb": "^6.2.5",
         "typescript": "7.0.2",
-        "vite": "^8.2.0",
-        "vitest": "^4.1.11"
+        "vite": "^8.3.0",
+        "vitest": "^5.0.1"
     }
 }

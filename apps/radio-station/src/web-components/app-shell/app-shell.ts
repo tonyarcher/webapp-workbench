@@ -181,6 +181,13 @@ export class AppShell extends LitElement {
         `;
     }
 
+    private renderEmpty(): TemplateResult {
+        return html`<div class="empty">
+            <p class="empty-title">Generate a week of Pulse 101</p>
+            <p class="empty-copy">Seven days of Top 40, no commercials. Tweak the gravity knobs, then export a log.</p>
+        </div>`;
+    }
+
     override render(): TemplateResult {
         return html`
             <rs-toolbar
@@ -198,14 +205,7 @@ export class AppShell extends LitElement {
                 @jump-now=${this.onJumpNow}
             ></rs-now-playing>
             ${this.error ? html`<p class="error">${this.error}</p>` : ''}
-            ${
-                this.result
-                    ? this.renderWeek()
-                    : html`<div class="empty">
-                <p class="empty-title">Generate a week of Pulse 101</p>
-                <p class="empty-copy">Seven days of Top 40, no commercials. Tweak the gravity knobs, then export a log.</p>
-            </div>`
-            }
+            ${this.result ? this.renderWeek() : this.renderEmpty()}
         `;
     }
 }
