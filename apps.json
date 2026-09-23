@@ -1,0 +1,117 @@
+{
+    "composeFile": "deploy/docker-compose.yml",
+    "dockerOnly": {
+        "git": "gitea",
+        "hello": "gateway"
+    },
+    "apiJars": {
+        "user-api": "apps/user/api/build/libs/user-api-0.1.0.jar",
+        "fitness-api": "apps/fitness/api/build/libs/fitness-api-0.1.0.jar",
+        "rss-api": "apps/rss/api/build/libs/rss-api-0.1.0.jar",
+        "stock-game-api": "apps/stock-game/api/build/libs/stock-game-api-0.1.0.jar",
+        "radio-api": "apps/radio-station/api/build/libs/radio-api-0.1.0.jar"
+    },
+    "apps": [
+        {
+            "id": "baseball",
+            "workspaces": ["@baseball/web-components", "baseball-tracker"],
+            "services": ["baseball"],
+            "basePath": "/baseball/",
+            "aliases": ["baseball-tracker", "tracker", "apps/baseball"]
+        },
+        {
+            "id": "rss-reader",
+            "workspaces": ["rss-reader"],
+            "services": ["rss-reader"],
+            "basePath": "/rss-reader/",
+            "aliases": ["rss", "apps/rss/app"]
+        },
+        {
+            "id": "rss-api",
+            "workspaces": ["rss-api"],
+            "services": ["rss-api"],
+            "aliases": ["apps/rss/api"]
+        },
+        {
+            "id": "stock-game",
+            "workspaces": ["@stock-game/app"],
+            "services": ["stock-game"],
+            "basePath": "/stock-game/",
+            "aliases": ["stock", "@stock-game/app", "apps/stock-game", "apps/stock-game/app"]
+        },
+        {
+            "id": "stock-game-api",
+            "workspaces": ["stock-game-api"],
+            "services": ["stock-game-api"],
+            "aliases": ["apps/stock-game/api"]
+        },
+        {
+            "id": "lemmy-vertical-scroll",
+            "workspaces": ["vertical-scroll-core", "lemmy-vertical-scroll"],
+            "services": ["lemmy-vertical-scroll"],
+            "aliases": ["lemmy", "apps/lemmy-vertical-scroll"]
+        },
+        {
+            "id": "clipstack",
+            "workspaces": ["vertical-scroll-core", "clipstack"],
+            "services": ["clipstack"],
+            "aliases": ["tiktok", "apps/clipstack"]
+        },
+        {
+            "id": "calendar-sync",
+            "workspaces": ["calendar-core", "calendar-sync"],
+            "services": ["calendar-sync"],
+            "aliases": ["calendar", "cal", "apps/calendar-sync"]
+        },
+        {
+            "id": "radio-station",
+            "workspaces": ["radio-station"],
+            "services": ["radio-station"],
+            "aliases": ["radio", "apps/radio-station"]
+        },
+        {
+            "id": "radio-api",
+            "workspaces": ["radio-api"],
+            "services": ["radio-api"],
+            "aliases": ["apps/radio-station/api"]
+        },
+        {
+            "id": "football",
+            "workspaces": ["football-core", "football"],
+            "services": ["football"],
+            "basePath": "/football/",
+            "aliases": ["apps/football"]
+        },
+        {
+            "id": "basketball",
+            "workspaces": ["basketball-core", "basketball-tracker"],
+            "services": ["basketball"],
+            "basePath": "/basketball/",
+            "aliases": ["apps/basketball"]
+        },
+        {
+            "id": "fitness",
+            "workspaces": ["fitness-core", "fitness"],
+            "services": ["fitness"],
+            "aliases": ["apps/fitness/app"]
+        },
+        {
+            "id": "fitness-api",
+            "workspaces": ["fitness-api"],
+            "services": ["fitness-api"],
+            "aliases": ["apps/fitness/api"]
+        },
+        {
+            "id": "user-web",
+            "workspaces": ["user-web"],
+            "services": ["user-web"],
+            "aliases": ["auth", "accounts", "apps/user/app"]
+        },
+        {
+            "id": "user-api",
+            "workspaces": ["user-api"],
+            "services": ["user-api"],
+            "aliases": ["apps/user/api"]
+        }
+    ]
+}
