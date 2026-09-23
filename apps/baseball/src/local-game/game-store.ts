@@ -5,12 +5,12 @@ import { createGame, reduceGame } from './rule-engine';
 import type { EngineGameState, EngineInitOptions, ScoringEvent, ScoringEventType } from './rule-engine';
 import { clearGameState, loadGameState, saveGameState } from './save-state';
 import {
-  DEFAULT_AWAY_LINEUP,
-  DEFAULT_AWAY_PITCHER,
-  DEFAULT_HOME_LINEUP,
-  DEFAULT_HOME_PITCHER,
-  lineupPlayersFromUnknown,
-  toLineupPlayers,
+    DEFAULT_AWAY_LINEUP,
+    DEFAULT_AWAY_PITCHER,
+    DEFAULT_HOME_LINEUP,
+    DEFAULT_HOME_PITCHER,
+    lineupPlayersFromUnknown,
+    toLineupPlayers,
 } from './default-lineups';
 
 export const GAME_QUERY_KEY = ['game'] as const;
@@ -18,204 +18,202 @@ export const GAME_QUERY_KEY = ['game'] as const;
 export type GameQueryResult = LiveLocalGameState | null | undefined;
 
 const ALL_ENGINE_EVENT_TYPES: ScoringEventType[] = [
-  'BALL',
-  'STRIKE',
-  'FOUL',
-  'STRIKEOUT',
-  'WALK',
-  'HIT_BY_PITCH',
-  'SINGLE',
-  'DOUBLE',
-  'TRIPLE',
-  'HOME_RUN',
-  'GROUNDOUT',
-  'FLYOUT',
-  'LINE_OUT',
-  'POP_OUT',
-  'SACRIFICE_FLY',
-  'SACRIFICE_BUNT',
-  'ERROR',
-  'FIELDER_CHOICE',
-  'STOLEN_BASE',
-  'CAUGHT_STEALING',
-  'WILD_PITCH',
-  'PASSED_BALL',
-  'BALK',
-  'SET_LINEUP',
+    'BALL',
+    'STRIKE',
+    'FOUL',
+    'STRIKEOUT',
+    'WALK',
+    'HIT_BY_PITCH',
+    'SINGLE',
+    'DOUBLE',
+    'TRIPLE',
+    'HOME_RUN',
+    'GROUNDOUT',
+    'FLYOUT',
+    'LINE_OUT',
+    'POP_OUT',
+    'SACRIFICE_FLY',
+    'SACRIFICE_BUNT',
+    'ERROR',
+    'FIELDER_CHOICE',
+    'STOLEN_BASE',
+    'CAUGHT_STEALING',
+    'WILD_PITCH',
+    'PASSED_BALL',
+    'BALK',
+    'SET_LINEUP',
 ];
 
 export class GameStore {
-  readonly queryClient: QueryClient;
-  private observer: QueryObserver<GameQueryResult, Error>;
-  private persistTimer: ReturnType<typeof setTimeout> | null = null;
+    readonly queryClient: QueryClient;
+    private observer: QueryObserver<GameQueryResult, Error>;
+    private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(queryClient = new QueryClient()) {
-    this.queryClient = queryClient;
-    this.observer = new QueryObserver<GameQueryResult, Error>(this.queryClient, {
-      queryKey: GAME_QUERY_KEY,
-    });
-  }
-
-  get hasPendingPersist(): boolean {
-    return this.persistTimer != null;
-  }
-
-  subscribe(callback: (game: GameQueryResult) => void): () => void {
-    callback(this.observer.getCurrentResult().data);
-    return this.observer.subscribe((result) => callback(result.data));
-  }
-
-  async hydrate(): Promise<void> {
-    const saved = await loadGameState();
-    this.queryClient.setQueryData(GAME_QUERY_KEY, saved);
-  }
-
-  current(): LiveLocalGameState | null {
-    return this.queryClient.getQueryData<GameQueryResult>(GAME_QUERY_KEY) ?? null;
-  }
-
-  get canUndo(): boolean {
-    const state = this.current();
-    return state ? state.historyIndex > 0 : false;
-  }
-
-  get canRedo(): boolean {
-    const state = this.current();
-    return state ? state.historyIndex < state.events.length : false;
-  }
-
-  startGame(setup: LocalGameSetup): void {
-    this.commit({
-      setup,
-      engine: createGame(buildEngineOptions(setup)),
-      historyIndex: 0,
-      events: [],
-    });
-  }
-
-  recordEvent(record: LocalGameEventRecord): void {
-    const previous = this.current();
-    if (!previous) return;
-    const nextEngine = reduceEngineState(previous.engine, record);
-    const next = {
-      ...previous,
-      engine: nextEngine,
-      historyIndex: previous.historyIndex + 1,
-      events: [...previous.events.slice(0, previous.historyIndex), record],
-    };
-    const debounce = previous.setup.mode === 'watch' && !nextEngine.over;
-    this.commit(next, debounce ? 'later' : 'now');
-  }
-
-  undo(): void {
-    this.applyHistory((this.current()?.historyIndex ?? 0) - 1);
-  }
-
-  redo(): void {
-    this.applyHistory((this.current()?.historyIndex ?? 0) + 1);
-  }
-
-  newGame(): void {
-    this.clearPersistTimer();
-    this.queryClient.setQueryData(GAME_QUERY_KEY, null);
-    void clearGameState();
-  }
-
-  flushPersist(): Promise<void> {
-    this.clearPersistTimer();
-    const current = this.current();
-    if (!current) return Promise.resolve();
-    return saveGameState(current);
-  }
-
-  private applyHistory(historyIndex: number): void {
-    const state = this.current();
-    if (!state) return;
-    if (historyIndex < 0 || historyIndex > state.events.length) return;
-    const base = createGame(buildEngineOptions(state.setup));
-    let engine = base;
-    for (const record of state.events.slice(0, historyIndex)) {
-      engine = reduceEngineState(engine, record);
+    constructor(queryClient = new QueryClient()) {
+        this.queryClient = queryClient;
+        this.observer = new QueryObserver<GameQueryResult, Error>(this.queryClient, {
+            queryKey: GAME_QUERY_KEY,
+        });
     }
-    this.commit({ ...state, engine, historyIndex });
-  }
 
-  private commit(state: LiveLocalGameState, persist: 'now' | 'later' = 'now'): void {
-    this.queryClient.setQueryData(GAME_QUERY_KEY, state);
-    if (persist === 'later') {
-      this.schedulePersist();
-      return;
+    get hasPendingPersist(): boolean {
+        return this.persistTimer != null;
     }
-    this.clearPersistTimer();
-    void saveGameState(state);
-  }
 
-  private schedulePersist(): void {
-    if (this.persistTimer != null) return;
-    this.persistTimer = setTimeout(() => {
-      this.persistTimer = null;
-      const current = this.current();
-      if (current) void saveGameState(current);
-    }, 400);
-  }
+    subscribe(callback: (game: GameQueryResult) => void): () => void {
+        callback(this.observer.getCurrentResult().data);
+        return this.observer.subscribe((result) => callback(result.data));
+    }
 
-  private clearPersistTimer(): void {
-    if (this.persistTimer == null) return;
-    clearTimeout(this.persistTimer);
-    this.persistTimer = null;
-  }
+    async hydrate(): Promise<void> {
+        const saved = await loadGameState();
+        this.queryClient.setQueryData(GAME_QUERY_KEY, saved);
+    }
+
+    current(): LiveLocalGameState | null {
+        return this.queryClient.getQueryData<GameQueryResult>(GAME_QUERY_KEY) ?? null;
+    }
+
+    get canUndo(): boolean {
+        const state = this.current();
+        return state ? state.historyIndex > 0 : false;
+    }
+
+    get canRedo(): boolean {
+        const state = this.current();
+        return state ? state.historyIndex < state.events.length : false;
+    }
+
+    startGame(setup: LocalGameSetup): void {
+        this.commit({
+            setup,
+            engine: createGame(buildEngineOptions(setup)),
+            historyIndex: 0,
+            events: [],
+        });
+    }
+
+    recordEvent(record: LocalGameEventRecord): void {
+        const previous = this.current();
+        if (!previous) return;
+        const nextEngine = reduceEngineState(previous.engine, record);
+        const next = {
+            ...previous,
+            engine: nextEngine,
+            historyIndex: previous.historyIndex + 1,
+            events: [...previous.events.slice(0, previous.historyIndex), record],
+        };
+        const debounce = previous.setup.mode === 'watch' && !nextEngine.over;
+        this.commit(next, debounce ? 'later' : 'now');
+    }
+
+    undo(): void {
+        this.applyHistory((this.current()?.historyIndex ?? 0) - 1);
+    }
+
+    redo(): void {
+        this.applyHistory((this.current()?.historyIndex ?? 0) + 1);
+    }
+
+    newGame(): void {
+        this.clearPersistTimer();
+        this.queryClient.setQueryData(GAME_QUERY_KEY, null);
+        void clearGameState();
+    }
+
+    flushPersist(): Promise<void> {
+        this.clearPersistTimer();
+        const current = this.current();
+        if (!current) return Promise.resolve();
+        return saveGameState(current);
+    }
+
+    private applyHistory(historyIndex: number): void {
+        const state = this.current();
+        if (!state) return;
+        if (historyIndex < 0 || historyIndex > state.events.length) return;
+        const base = createGame(buildEngineOptions(state.setup));
+        let engine = base;
+        for (const record of state.events.slice(0, historyIndex)) {
+            engine = reduceEngineState(engine, record);
+        }
+        this.commit({ ...state, engine, historyIndex });
+    }
+
+    private commit(state: LiveLocalGameState, persist: 'now' | 'later' = 'now'): void {
+        this.queryClient.setQueryData(GAME_QUERY_KEY, state);
+        if (persist === 'later') {
+            this.schedulePersist();
+            return;
+        }
+        this.clearPersistTimer();
+        void saveGameState(state);
+    }
+
+    private schedulePersist(): void {
+        if (this.persistTimer != null) return;
+        this.persistTimer = setTimeout(() => {
+            this.persistTimer = null;
+            const current = this.current();
+            if (current) void saveGameState(current);
+        }, 400);
+    }
+
+    private clearPersistTimer(): void {
+        if (this.persistTimer == null) return;
+        clearTimeout(this.persistTimer);
+        this.persistTimer = null;
+    }
 }
 
 function buildEngineOptions(setup: LocalGameSetup): EngineInitOptions {
-  const homeLineup = setup.homeLineup?.length ? setup.homeLineup : toLineupPlayers(DEFAULT_HOME_LINEUP);
-  const awayLineup = setup.awayLineup?.length ? setup.awayLineup : toLineupPlayers(DEFAULT_AWAY_LINEUP);
-  return {
-    homeName: setup.homeTeamName,
-    awayName: setup.awayTeamName,
-    homeLineup,
-    awayLineup,
-    totalInnings: setup.innings,
-    homePitcherName: setup.homePitcherName ?? DEFAULT_HOME_PITCHER,
-    awayPitcherName: setup.awayPitcherName ?? DEFAULT_AWAY_PITCHER,
-  };
+    const homeLineup = setup.homeLineup?.length ? setup.homeLineup : toLineupPlayers(DEFAULT_HOME_LINEUP);
+    const awayLineup = setup.awayLineup?.length ? setup.awayLineup : toLineupPlayers(DEFAULT_AWAY_LINEUP);
+    return {
+        homeName: setup.homeTeamName,
+        awayName: setup.awayTeamName,
+        homeLineup,
+        awayLineup,
+        totalInnings: setup.innings,
+        homePitcherName: setup.homePitcherName ?? DEFAULT_HOME_PITCHER,
+        awayPitcherName: setup.awayPitcherName ?? DEFAULT_AWAY_PITCHER,
+    };
 }
 
 function reduceEngineState(engine: EngineGameState, record: LocalGameEventRecord): EngineGameState {
-  const scoringEvent = toScoringEvent(record);
-  if (!scoringEvent) return engine;
-  return reduceGame(engine, scoringEvent);
+    const scoringEvent = toScoringEvent(record);
+    if (!scoringEvent) return engine;
+    return reduceGame(engine, scoringEvent);
 }
 
 function boundedInt(value: unknown, min: number, max: number): number | undefined {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < min || parsed > max) return undefined;
-  return parsed;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < min || parsed > max) return undefined;
+    return parsed;
 }
 
 function applyLineupDetail(event: ScoringEvent, detail: Record<string, unknown>): void {
-  event.homeLineup = lineupPlayersFromUnknown(detail['homeLineup']);
-  event.awayLineup = lineupPlayersFromUnknown(detail['awayLineup']);
-  event.homePitcherName = optionalString(detail['homePitcherName']);
-  event.awayPitcherName = optionalString(detail['awayPitcherName']);
+    event.homeLineup = lineupPlayersFromUnknown(detail['homeLineup']);
+    event.awayLineup = lineupPlayersFromUnknown(detail['awayLineup']);
+    event.homePitcherName = optionalString(detail['homePitcherName']);
+    event.awayPitcherName = optionalString(detail['awayPitcherName']);
 }
 
 function toScoringEvent(record: LocalGameEventRecord): ScoringEvent | null {
-  const eventType = record.eventType as ScoringEventType;
-  if (!ALL_ENGINE_EVENT_TYPES.includes(eventType)) return null;
-  const event: ScoringEvent = { type: eventType };
-  const fieldPos = boundedInt(record.detail?.['fieldPos'], 1, 9);
-  const base = boundedInt(record.detail?.['base'], 1, 4);
-  if (fieldPos !== undefined) event.fieldPos = fieldPos;
-  if (base !== undefined) event.base = base;
-  if (record.detail?.['doublePlay'] === true) event.doublePlay = true;
-  if (eventType === 'SET_LINEUP') applyLineupDetail(event, record.detail);
-  return event;
+    const eventType = record.eventType as ScoringEventType;
+    if (!ALL_ENGINE_EVENT_TYPES.includes(eventType)) return null;
+    const event: ScoringEvent = { type: eventType };
+    const fieldPos = boundedInt(record.detail?.['fieldPos'], 1, 9);
+    const base = boundedInt(record.detail?.['base'], 1, 4);
+    if (fieldPos !== undefined) event.fieldPos = fieldPos;
+    if (base !== undefined) event.base = base;
+    if (record.detail?.['doublePlay'] === true) event.doublePlay = true;
+    if (eventType === 'SET_LINEUP') applyLineupDetail(event, record.detail);
+    return event;
 }
 
 function optionalString(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    return trimmed ? trimmed : undefined;
 }
-
-

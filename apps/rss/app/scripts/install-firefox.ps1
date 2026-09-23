@@ -17,7 +17,8 @@ try {
     if (-not $uri.IsAbsoluteUri -or ($uri.Scheme -ne 'http' -and $uri.Scheme -ne 'https')) {
         throw "scheme $($uri.Scheme)"
     }
-} catch {
+}
+catch {
     Write-Error "Invalid -Url '$Url' - must be an absolute http(s) URL."
     exit 1
 }
@@ -26,7 +27,8 @@ $firefox = $null
 $cmd = Get-Command firefox -ErrorAction SilentlyContinue
 if ($cmd) {
     $firefox = $cmd.Source
-} else {
+}
+else {
     foreach ($path in @(
             'C:\Program Files\Mozilla Firefox\firefox.exe',
             'C:\Program Files (x86)\Mozilla Firefox\firefox.exe'
@@ -51,4 +53,4 @@ $shortcut.IconLocation = "$firefox,0"
 $shortcut.Description = 'Open RSS Reader in a dedicated Firefox window'
 $shortcut.Save()
 
-Write-Host "Created $shortcutPath"
+Write-Output "Created $shortcutPath"

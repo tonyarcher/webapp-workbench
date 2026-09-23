@@ -3,25 +3,25 @@ import type { LiveLocalGameState } from './game-state';
 import { defendingTeamName, defenseFielders } from './game-shell-helpers';
 
 export function renderScoreboardSlot(model: {
-  game: LiveLocalGameState;
-  gameJson: unknown;
-  boxScoreJson: unknown;
-  playing: boolean;
-  animations: boolean;
-  activePlayJson: string;
-  playSeq: number;
-  playDurationMs: number;
-  interactive: boolean;
-  armedLocation: number;
+    game: LiveLocalGameState;
+    gameJson: unknown;
+    boxScoreJson: unknown;
+    playing: boolean;
+    animations: boolean;
+    activePlayJson: string;
+    playSeq: number;
+    playDurationMs: number;
+    interactive: boolean;
+    armedLocation: number;
 }) {
-  return html`
+    return html`
     ${renderScoreboard(model)}
     ${renderDefense(model)}
   `;
 }
 
 function renderScoreboard(model: Parameters<typeof renderScoreboardSlot>[0]) {
-  return html`
+    return html`
     <baseball-scoreboard
       game-json=${JSON.stringify(model.gameJson)}
       box-score-json=${JSON.stringify(model.boxScoreJson)}
@@ -37,7 +37,7 @@ function renderScoreboard(model: Parameters<typeof renderScoreboardSlot>[0]) {
 }
 
 function renderDefense(model: Parameters<typeof renderScoreboardSlot>[0]) {
-  return html`
+    return html`
     <baseball-defense-diagram
       defending-team=${defendingTeamName(model.game.engine)}
       fielders-json=${JSON.stringify(defenseFielders(model.game.engine))}

@@ -42,6 +42,8 @@ gradlew.bat
 gradle/wrapper/gradle-wrapper.jar
 # Root Gradle report dir (root build.gradle.kts only; nested apps/*/api/build/ ignored below)
 /build/
+buildSrc/build/
+buildSrc/.gradle/
 apps/user/api/build/
 apps/user/api/.kotlin/
 apps/fitness/api/build/

@@ -1,5 +1,5 @@
-import {elementScroll, observeElementOffset, observeElementRect, type Virtualizer} from '@tanstack/virtual-core';
-import type {ArticleSort, Feed, Folder, ListViewType, View} from '../../types';
+import { elementScroll, observeElementOffset, observeElementRect, type Virtualizer } from '@tanstack/virtual-core';
+import type { ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 
 export const DEFAULT_PAGE_SIZE = 50;
 export const PAGE_SIZES = [20, 50, 100, 500] as const;
@@ -66,6 +66,43 @@ export function viewRefreshKeyOf(view: View): string {
     if (view.kind === 'feed') return `feed:${view.id}`;
     if (view.kind === 'folder') return `folder:${view.id}`;
     return 'all';
+}
+
+interface SettingsHost {
+    view: View;
+    listView: ListViewType;
+    sort: ArticleSort;
+    pageSize: number;
+    maxCardCols: number;
+    unreadOnly: boolean;
+    updateCols(): void;
+}
+
+export function loadViewSettingsFor(host: SettingsHost): void {
+    const saved = readViewSettings()[viewKeyOf(host.view)];
+    if (!saved) return;
+    host.listView = saved.listView ?? 'detailed';
+    host.sort = saved.sort ?? 'hot';
+    host.pageSize = clampPageSize(saved.pageSize);
+    host.maxCardCols = saved.maxCardCols ?? 4;
+    host.unreadOnly = saved.unreadOnly ?? false;
+    host.updateCols();
+}
+
+export function saveViewSettingsFor(host: SettingsHost): void {
+    const map = readViewSettings();
+    map[viewKeyOf(host.view)] = {
+        listView: host.listView,
+        sort: host.sort,
+        pageSize: host.pageSize,
+        maxCardCols: host.maxCardCols,
+        unreadOnly: host.unreadOnly,
+    };
+    try {
+        localStorage.setItem(VIEW_SETTINGS_KEY, JSON.stringify(map));
+    } catch {
+        // ignore
+    }
 }
 
 export function virtualizerOptionsFor(host: {

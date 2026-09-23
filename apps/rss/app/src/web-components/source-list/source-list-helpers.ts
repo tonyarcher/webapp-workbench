@@ -1,9 +1,11 @@
-import type {Feed, FeedSort} from '../../types';
+import type { Feed, FeedSort } from '../../types';
 
 export function sortedFeeds(feeds: Feed[], feedSort: FeedSort): Feed[] {
     if (feedSort !== 'unread') return feeds;
     return [...feeds].sort(
-        (a, b) => Number(b.unread > 0) - Number(a.unread > 0) || a.title.localeCompare(b.title, undefined, {numeric: true, sensitivity: 'base'}),
+        (a, b) =>
+            Number(b.unread > 0) - Number(a.unread > 0) ||
+            a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }),
     );
 }
 
@@ -23,7 +25,10 @@ export function folderFeedsFor(
 }
 
 export function uncategorizedFor(allFeeds: Feed[], feedSort: FeedSort): Feed[] {
-    return sortedFeeds(allFeeds.filter((f) => f.folderIds.length === 0), feedSort);
+    return sortedFeeds(
+        allFeeds.filter((f) => f.folderIds.length === 0),
+        feedSort,
+    );
 }
 
 export function folderUnreadFor(allFeeds: Feed[], folderId: string): number {

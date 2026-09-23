@@ -1,5 +1,5 @@
-import {formatClock} from './clock';
-import type {Play, PlayFamily, Situation, TeamId} from './types';
+import { formatClock } from './clock';
+import type { Play, PlayFamily, Situation, TeamId } from './types';
 
 const DOWN_ORD = ['1st', '2nd', '3rd', '4th'] as const;
 

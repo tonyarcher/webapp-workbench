@@ -289,11 +289,11 @@ export interface PlayInput {
 }
 
 export type ScoringEvent =
-    | {type: 'set_personnel'; personnel: Personnel}
-    | {type: 'timeout'; team: TeamId}
-    | {type: 'play'; input: PlayInput}
-    | {type: 'period_end'}
-    | {type: 'penalty'; team: TeamId; yards: number; accepted: boolean; foul: string};
+    | { type: 'set_personnel'; personnel: Personnel }
+    | { type: 'timeout'; team: TeamId }
+    | { type: 'play'; input: PlayInput }
+    | { type: 'period_end' }
+    | { type: 'penalty'; team: TeamId; yards: number; accepted: boolean; foul: string };
 
 export const SCORING_EVENT_TYPES = ['set_personnel', 'timeout', 'play', 'period_end', 'penalty'] as const;
 

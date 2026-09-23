@@ -2,9 +2,9 @@
 // the hashed bundle filenames (so a fresh install works fully offline) and a
 // content-derived cache name (so updates never serve stale bundles and no one
 // has to bump a cache constant by hand).
-import {readFile, readdir, writeFile} from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const dist = path.join(root, 'dist');
@@ -41,9 +41,7 @@ const hashInput = Buffer.concat(
         assets
             .filter((url) => url !== baseOf('/'))
             .map(async (url) => {
-                const rel = url.startsWith(base)
-                    ? url.slice(base.length).replace(/^\//, '')
-                    : url.replace(/^\//, '');
+                const rel = url.startsWith(base) ? url.slice(base.length).replace(/^\//, '') : url.replace(/^\//, '');
                 try {
                     return await readFile(path.join(dist, rel));
                 } catch {

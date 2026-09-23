@@ -1,16 +1,7 @@
-import {clockStopsAfterPlay, shouldIssueTwoMinuteWarning, updateMercy} from './clock';
-import {personnelFromRosters} from './default-roster';
-import {getRulebook, oppositeTeam} from './rulebook';
-import type {
-    Drive,
-    DriveResult,
-    GameState,
-    Play,
-    PlayEvent,
-    PlayInput,
-    Situation,
-    TeamId,
-} from './types';
+import { clockStopsAfterPlay, shouldIssueTwoMinuteWarning, updateMercy } from './clock';
+import { personnelFromRosters } from './default-roster';
+import { getRulebook, oppositeTeam } from './rulebook';
+import type { Drive, DriveResult, GameState, Play, PlayEvent, PlayInput, Situation, TeamId } from './types';
 
 export function rosterFor(game: GameState, team: TeamId) {
     return team === 'home' ? game.home.roster : game.away.roster;
@@ -23,13 +14,13 @@ export function personnelForPossession(game: GameState, possession: TeamId) {
 export function closeDrive(drives: Drive[], result: DriveResult): Drive[] {
     const last = drives.at(-1);
     if (last === undefined || last.result) return drives;
-    return [...drives.slice(0, -1), {...last, result}];
+    return [...drives.slice(0, -1), { ...last, result }];
 }
 
 export function appendPlayToDrive(drives: Drive[], playId: string): Drive[] {
     const last = drives.at(-1);
     if (last === undefined || last.result) return drives;
-    return [...drives.slice(0, -1), {...last, playIds: [...last.playIds, playId]}];
+    return [...drives.slice(0, -1), { ...last, playIds: [...last.playIds, playId] }];
 }
 
 export function openDrive(game: GameState, team: TeamId, playId: string): Drive {
@@ -49,33 +40,39 @@ export function currentDriveId(game: GameState): string {
     return last.id;
 }
 
-function withPlayerId(playerId: string | undefined): {playerId?: string} {
-    return playerId === undefined ? {} : {playerId};
+function withPlayerId(playerId: string | undefined): { playerId?: string } {
+    return playerId === undefined ? {} : { playerId };
 }
 
 function fumbleEvents(input: PlayInput): PlayEvent[] {
     const events: PlayEvent[] = [
-        {kind: 'run', ...withPlayerId(input.rusherId), yards: input.yards ?? 0},
-        {kind: 'fumble'},
+        { kind: 'run', ...withPlayerId(input.rusherId), yards: input.yards ?? 0 },
+        { kind: 'fumble' },
     ];
-    if (input.fumbleOwn) events.push({kind: 'recovery'});
+    if (input.fumbleOwn) events.push({ kind: 'recovery' });
     return events;
 }
 
 function scrimmageEvents(input: PlayInput): PlayEvent[] {
     if (input.passerId || input.receiverId) {
-        return [{kind: 'pass', ...withPlayerId(input.passerId)}, {kind: 'catch', ...withPlayerId(input.receiverId)}];
+        return [
+            { kind: 'pass', ...withPlayerId(input.passerId) },
+            { kind: 'catch', ...withPlayerId(input.receiverId) },
+        ];
     }
-    return [{kind: 'run', ...withPlayerId(input.rusherId), yards: input.yards ?? 0}];
+    return [{ kind: 'run', ...withPlayerId(input.rusherId), yards: input.yards ?? 0 }];
 }
 
 function passEvents(kind: 'incomplete' | 'interception', input: PlayInput): PlayEvent[] {
-    return [{kind: 'pass', ...withPlayerId(input.passerId)}, {kind, ...withPlayerId(input.intendedId)}];
+    return [
+        { kind: 'pass', ...withPlayerId(input.passerId) },
+        { kind, ...withPlayerId(input.intendedId) },
+    ];
 }
 
 function specialOutcome(input: PlayInput): PlayEvent[] | null {
-    if (input.family === 'spike') return [{kind: 'spike'}];
-    if (input.family === 'kneel') return [{kind: 'kneel', yards: input.yards ?? -1}];
+    if (input.family === 'spike') return [{ kind: 'spike' }];
+    if (input.family === 'kneel') return [{ kind: 'kneel', yards: input.yards ?? -1 }];
     if (input.incomplete) return passEvents('incomplete', input);
     if (input.interception) return passEvents('interception', input);
     return null;
@@ -84,17 +81,17 @@ function specialOutcome(input: PlayInput): PlayEvent[] | null {
 function outcomeEvents(input: PlayInput): PlayEvent[] {
     const special = specialOutcome(input);
     if (special) return special;
-    if (input.sack) return [{kind: 'sack', yards: input.yards ?? 0}];
+    if (input.sack) return [{ kind: 'sack', yards: input.yards ?? 0 }];
     if (input.fumbleLost || input.fumbleOwn) return fumbleEvents(input);
     return input.family === 'scrimmage' ? scrimmageEvents(input) : [];
 }
 
 export function synthesizeEvents(input: PlayInput): PlayEvent[] {
     if (input.events?.length) return input.events;
-    const events: PlayEvent[] = [{kind: 'snap'}, ...outcomeEvents(input)];
-    if (input.touchdown) events.push({kind: 'score'});
+    const events: PlayEvent[] = [{ kind: 'snap' }, ...outcomeEvents(input)];
+    if (input.touchdown) events.push({ kind: 'score' });
     const tackler = input.tacklers?.find((row) => row.role !== 'missed');
-    if (tackler) events.push({kind: 'tackle', playerId: tackler.playerId});
+    if (tackler) events.push({ kind: 'tackle', playerId: tackler.playerId });
     return events;
 }
 
@@ -105,8 +102,8 @@ export interface ScorePair {
 
 export function addScore(game: GameState, team: TeamId, points: number): ScorePair {
     return team === 'home'
-        ? {home: game.score.home + points, away: game.score.away}
-        : {home: game.score.home, away: game.score.away + points};
+        ? { home: game.score.home + points, away: game.score.away }
+        : { home: game.score.home, away: game.score.away + points };
 }
 
 export function trySituation(game: GameState, team: TeamId): Situation {
@@ -140,7 +137,7 @@ export function afterScore(game: GameState, scoringTeam: TeamId, score: ScorePai
         kickoffPending: !pendingTry,
         situation: pendingTry ? trySituation(game, scoringTeam) : game.situation,
         personnel: personnelForPossession(game, pendingTry ? scoringTeam : oppositeTeam(scoringTeam)),
-        clock: {...game.clock, running: false},
+        clock: { ...game.clock, running: false },
     };
     next.clock.mercyActive = updateMercy(next);
     return next;
@@ -159,7 +156,7 @@ export function buildPlay(
         driveId,
         period: game.clock.period,
         clock: playClock(input, stopReason),
-        situation: {...game.situation},
+        situation: { ...game.situation },
         personnel: game.personnel,
         call: playCall(input),
         events: synthesizeEvents(input),
@@ -195,11 +192,16 @@ export interface ClockFactsInput {
 }
 
 function withTwoMinute(
-    stop: {stops: boolean; reason: Play['clock']['stopReason']},
+    stop: { stops: boolean; reason: Play['clock']['stopReason'] },
     clockSeconds: number,
-): {clockSeconds: number; warned: boolean; stopReason: Play['clock']['stopReason']; running: boolean} {
-    if (stop.stops) return {clockSeconds, warned: true, stopReason: stop.reason, running: false};
-    return {clockSeconds: Math.min(clockSeconds, 120), warned: true, stopReason: 'two_minute_warning', running: false};
+): { clockSeconds: number; warned: boolean; stopReason: Play['clock']['stopReason']; running: boolean } {
+    if (stop.stops) return { clockSeconds, warned: true, stopReason: stop.reason, running: false };
+    return {
+        clockSeconds: Math.min(clockSeconds, 120),
+        warned: true,
+        stopReason: 'two_minute_warning',
+        running: false,
+    };
 }
 
 function playClockFacts(game: GameState, input: PlayInput, facts: ClockFactsInput, isTry: boolean) {
@@ -221,7 +223,7 @@ function clockAfterPlay(
     game: GameState,
     input: PlayInput,
     facts: ClockFactsInput | undefined,
-): {clockSeconds: number; warned: boolean; stopReason: Play['clock']['stopReason']; running: boolean} {
+): { clockSeconds: number; warned: boolean; stopReason: Play['clock']['stopReason']; running: boolean } {
     const isTry = input.family === 'extra_point' || input.family === 'two_point';
     const clockSeconds = isTry || game.clock.untimed ? game.clock.gameClockSeconds : input.deadClock;
     if (!facts) {
@@ -234,16 +236,18 @@ function clockAfterPlay(
     }
     const stop = playClockFacts(game, input, facts, isTry);
     const rb = getRulebook(game.rulebookId);
-    if (shouldIssueTwoMinuteWarning(rb, game.clock, input.snapClock, input.deadClock)) return withTwoMinute(stop, clockSeconds);
-    return {clockSeconds, warned: game.clock.twoMinuteWarnedThisHalf, stopReason: stop.reason, running: !stop.stops};
+    if (shouldIssueTwoMinuteWarning(rb, game.clock, input.snapClock, input.deadClock))
+        return withTwoMinute(stop, clockSeconds);
+    return { clockSeconds, warned: game.clock.twoMinuteWarnedThisHalf, stopReason: stop.reason, running: !stop.stops };
 }
 
 export function finishPlay(game: GameState, input: PlayInput, facts?: ClockFactsInput): GameState {
-    const {clockSeconds, warned, stopReason, running} = clockAfterPlay(game, input, facts);
+    const { clockSeconds, warned, stopReason, running } = clockAfterPlay(game, input, facts);
     const prev = game.plays.at(-1);
-    const plays = prev === undefined
-        ? game.plays
-        : [...game.plays.slice(0, -1), {...prev, clock: {...prev.clock, stopReason}}];
+    const plays =
+        prev === undefined
+            ? game.plays
+            : [...game.plays.slice(0, -1), { ...prev, clock: { ...prev.clock, stopReason } }];
     const next: GameState = {
         ...game,
         plays,

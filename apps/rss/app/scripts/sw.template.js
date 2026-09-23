@@ -40,7 +40,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    const {request} = event;
+    const { request } = event;
     if (request.method !== 'GET') return;
     if (new URL(request.url).origin !== self.location.origin) return;
 

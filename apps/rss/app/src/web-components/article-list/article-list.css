@@ -46,7 +46,9 @@
     background: var(--hover);
 }
 
-.sort select, .view-mode select, .page-size select {
+.sort select,
+.view-mode select,
+.page-size select {
     font: inherit;
     font-size: 13px;
     padding: 4px 8px;

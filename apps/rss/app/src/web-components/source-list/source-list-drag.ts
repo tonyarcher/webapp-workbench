@@ -1,5 +1,5 @@
-import {moveFeed, reorderFolders} from '../../mutations';
-import type {Feed} from '../../types';
+import { moveFeed, reorderFolders } from '../../mutations';
+import type { Feed } from '../../types';
 
 interface DragHost {
     dragging: { kind: 'folder' | 'feed'; id: string } | null;
@@ -12,10 +12,10 @@ interface DragHost {
 }
 
 export function handleDragStart(host: DragHost, e: DragEvent, kind: 'folder' | 'feed', id: string) {
-    host.dragging = {kind, id};
+    host.dragging = { kind, id };
     if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', JSON.stringify({kind, id}));
+        e.dataTransfer.setData('text/plain', JSON.stringify({ kind, id }));
     }
     (e.target as HTMLElement).closest('.item, .feed-row')?.classList.add('dragging');
     if (kind === 'feed') host.shadowRoot?.querySelector('[data-no-folder]')?.classList.add('visible');
@@ -25,8 +25,11 @@ export function handleDragOver(host: DragHost & { shadowRoot: ShadowRoot | null 
     if (!host.dragging) return;
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-    const selector = host.dragging.kind === 'feed' ? '[data-folder-id], [data-feed-id], [data-no-folder]' : '[data-folder-id]';
-    const target = (e.target as HTMLElement).closest<HTMLElement>(selector) ?? (host.shadowRoot?.querySelector('.nav') as HTMLElement | null);
+    const selector =
+        host.dragging.kind === 'feed' ? '[data-folder-id], [data-feed-id], [data-no-folder]' : '[data-folder-id]';
+    const target =
+        (e.target as HTMLElement).closest<HTMLElement>(selector) ??
+        (host.shadowRoot?.querySelector('.nav') as HTMLElement | null);
     if (host.dragTargetEl !== target) {
         host.dragTargetEl?.classList.remove('drag-over');
         host.dragTargetEl = target;
@@ -34,7 +37,10 @@ export function handleDragOver(host: DragHost & { shadowRoot: ShadowRoot | null 
     }
 }
 
-export function handleDragLeave(host: DragHost & { shadowRoot: ShadowRoot | null; dragTargetEl: HTMLElement | null }, e: DragEvent) {
+export function handleDragLeave(
+    host: DragHost & { shadowRoot: ShadowRoot | null; dragTargetEl: HTMLElement | null },
+    e: DragEvent,
+) {
     const nav = host.shadowRoot?.querySelector('.nav');
     const related = e.relatedTarget as Node | null;
     if (!nav || !nav.contains(related)) {
@@ -55,7 +61,11 @@ export function handleEndDrag(host: DragHost) {
     handleClearDragOver(host);
 }
 
-export async function handleFolderReorder(host: DragHost & { libraryData: { folders: { id: string }[] } }, folderId: string, target: { folderId: string | null }) {
+export async function handleFolderReorder(
+    host: DragHost & { libraryData: { folders: { id: string }[] } },
+    folderId: string,
+    target: { folderId: string | null },
+) {
     const ids = host.libraryData.folders.map((f) => f.id);
     const from = ids.indexOf(folderId);
     if (from < 0) return;
@@ -70,7 +80,15 @@ export async function handleFolderReorder(host: DragHost & { libraryData: { fold
     await reorderFolders(ids);
 }
 
-export async function handleFeedMove(host: DragHost & { libraryData: { feeds: Feed[] }; collapsed: Record<string, boolean>; toggleFolder(id: string): void }, feedId: string, target: { folderId: string | null }) {
+export async function handleFeedMove(
+    host: DragHost & {
+        libraryData: { feeds: Feed[] };
+        collapsed: Record<string, boolean>;
+        toggleFolder(id: string): void;
+    },
+    feedId: string,
+    target: { folderId: string | null },
+) {
     const feed = host.libraryData.feeds.find((f) => f.id === feedId);
     if (!feed) return;
     const next = target.folderId ? [target.folderId] : [];

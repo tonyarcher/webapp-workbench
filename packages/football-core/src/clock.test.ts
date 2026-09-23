@@ -1,7 +1,7 @@
-import {describe, expect, it} from 'vitest';
-import {clockStopsAfterPlay, formatClock, parseClock, shouldIssueTwoMinuteWarning} from './clock';
-import {NFL, NFHS_CO, NFHS_MN} from './rulebook';
-import type {ClockState} from './types';
+import { describe, expect, it } from 'vitest';
+import { clockStopsAfterPlay, formatClock, parseClock, shouldIssueTwoMinuteWarning } from './clock';
+import { NFL, NFHS_CO, NFHS_MN } from './rulebook';
+import type { ClockState } from './types';
 
 function facts(overrides: Partial<Parameters<typeof clockStopsAfterPlay>[1]> = {}) {
     return {
@@ -30,38 +30,38 @@ describe('formatClock / parseClock', () => {
 
 describe('clockStopsAfterPlay', () => {
     it('NFL incomplete stops the clock', () => {
-        const stop = clockStopsAfterPlay(NFL, facts({incomplete: true}));
-        expect(stop).toEqual({stops: true, reason: 'incomplete'});
+        const stop = clockStopsAfterPlay(NFL, facts({ incomplete: true }));
+        expect(stop).toEqual({ stops: true, reason: 'incomplete' });
     });
 
     it('NFHS first down always stops the clock', () => {
-        const stop = clockStopsAfterPlay(NFHS_MN, facts({firstDown: true, period: 1, deadClock: 700}));
-        expect(stop).toEqual({stops: true, reason: 'first_down'});
+        const stop = clockStopsAfterPlay(NFHS_MN, facts({ firstDown: true, period: 1, deadClock: 700 }));
+        expect(stop).toEqual({ stops: true, reason: 'first_down' });
     });
 
     it('NFL first down in Q1 does not stop the clock', () => {
-        const stop = clockStopsAfterPlay(NFL, facts({firstDown: true, period: 1, deadClock: 800}));
-        expect(stop).toEqual({stops: false, reason: 'none'});
+        const stop = clockStopsAfterPlay(NFL, facts({ firstDown: true, period: 1, deadClock: 800 }));
+        expect(stop).toEqual({ stops: false, reason: 'none' });
     });
 
     it('NFL first down inside two minutes stops the clock', () => {
-        const stop = clockStopsAfterPlay(NFL, facts({firstDown: true, period: 2, deadClock: 90}));
-        expect(stop).toEqual({stops: true, reason: 'first_down'});
+        const stop = clockStopsAfterPlay(NFL, facts({ firstDown: true, period: 2, deadClock: 90 }));
+        expect(stop).toEqual({ stops: true, reason: 'first_down' });
     });
 
     it('MN mercy running clock ignores incomplete', () => {
-        const stop = clockStopsAfterPlay(NFHS_MN, facts({incomplete: true, mercyActive: true, period: 4}));
-        expect(stop).toEqual({stops: false, reason: 'none'});
+        const stop = clockStopsAfterPlay(NFHS_MN, facts({ incomplete: true, mercyActive: true, period: 4 }));
+        expect(stop).toEqual({ stops: false, reason: 'none' });
     });
 
     it('CO mercy running clock ignores out of bounds', () => {
-        const stop = clockStopsAfterPlay(NFHS_CO, facts({outOfBounds: true, mercyActive: true, period: 2}));
-        expect(stop).toEqual({stops: false, reason: 'none'});
+        const stop = clockStopsAfterPlay(NFHS_CO, facts({ outOfBounds: true, mercyActive: true, period: 2 }));
+        expect(stop).toEqual({ stops: false, reason: 'none' });
     });
 
     it('try always stops (untimed down)', () => {
-        const stop = clockStopsAfterPlay(NFL, facts({isTry: true}));
-        expect(stop).toEqual({stops: true, reason: 'try'});
+        const stop = clockStopsAfterPlay(NFL, facts({ isTry: true }));
+        expect(stop).toEqual({ stops: true, reason: 'try' });
     });
 });
 
@@ -81,7 +81,7 @@ describe('shouldIssueTwoMinuteWarning', () => {
     });
 
     it('does not fire twice in the same half', () => {
-        expect(shouldIssueTwoMinuteWarning(NFL, {...clock, twoMinuteWarnedThisHalf: true}, 125, 118)).toBe(false);
+        expect(shouldIssueTwoMinuteWarning(NFL, { ...clock, twoMinuteWarnedThisHalf: true }, 125, 118)).toBe(false);
     });
 
     it('does not fire under NFHS', () => {
