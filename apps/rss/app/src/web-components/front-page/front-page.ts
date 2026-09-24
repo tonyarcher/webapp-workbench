@@ -147,6 +147,9 @@ export class FrontPage extends LitElement {
 
     override connectedCallback() {
         super.connectedCallback();
+        // A disconnect mid-build leaves building=true (finally skips reset
+        // on a detached node); clear it so a reconnected view can rebuild.
+        this.building = false;
         this.now = Date.now();
         window.addEventListener('feeds-refreshed', this.onFeedsRefreshed);
         window.addEventListener('article-read', this.onArticleEvent);
@@ -349,16 +352,19 @@ export class FrontPage extends LitElement {
         this.buildError = '';
         try {
             const res = await buildEdition(this.options.windowHours, this.options.sectionCount);
+            if (!this.isConnected) return;
             this.buildStartedAt = Date.now();
             this.now = Date.now();
             this.selectedId = res.id ? res.id : null;
             this.expandedIds = [];
             await invalidateEdition();
+            if (!this.isConnected) return;
         } catch (err) {
+            if (!this.isConnected) return;
             this.buildError =
                 err instanceof QuotaError || err instanceof Error ? err.message : 'Could not build the edition.';
         } finally {
-            this.building = false;
+            if (this.isConnected) this.building = false;
         }
     }
 
@@ -392,9 +398,10 @@ export class FrontPage extends LitElement {
 
     private renderEditionContent(edition: Edition, sections: EditionSection[]) {
         const feeds = this.library.data?.feeds ?? [];
+        const byId = this.articleById();
         return html`${edition.status === 'building' ? html`<p class="building-note">Edition still building — showing the latest draft.</p>` : ''}
       ${this.options.showOpinion && edition.opinion ? this.renderEditorial(edition.opinion) : ''}
-      ${sections.map((s) => this.renderSection(s, feeds))}`;
+      ${sections.map((s) => this.renderSection(s, feeds, byId))}`;
     }
 
     private renderEditorial(opinion: string) {
@@ -405,7 +412,7 @@ export class FrontPage extends LitElement {
       </article>`;
     }
 
-    private renderSection(section: EditionSection, feeds: Feed[]) {
+    private renderSection(section: EditionSection, feeds: Feed[], byId: Map<string, Article>) {
         const expanded = this.expandedIds.includes(section.id);
         const count = section.articleIds.length;
         return html`
@@ -419,7 +426,7 @@ export class FrontPage extends LitElement {
           <span>${count === 1 ? '1 source' : `${count} sources`}</span>
           ${count > 0 ? html`<button class="more-btn" @click=${() => this.toggleExpanded(section.id)} aria-expanded=${expanded}>${expanded ? 'Fewer' : 'More'}</button>` : ''}
         </div>
-        ${expanded ? html`<div class="members">${section.articleIds.map((id) => this.renderMember(id, feeds))}</div>` : ''}
+        ${expanded ? html`<div class="members">${section.articleIds.map((id) => this.renderMember(id, feeds, byId))}</div>` : ''}
       </article>`;
     }
 
@@ -428,8 +435,8 @@ export class FrontPage extends LitElement {
         return html`<span class="badge ok">✓ Verified</span>`;
     }
 
-    private renderMember(id: string, feeds: Feed[]) {
-        const article = this.articleById().get(id);
+    private renderMember(id: string, feeds: Feed[], byId: Map<string, Article>) {
+        const article = byId.get(id);
         if (!article) return html`<div class="member-row missing"><span class="title">Story unavailable</span></div>`;
         const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
         return html`

@@ -33,12 +33,18 @@ export class AppShell extends LitElement {
 
     private timer: number | null = null;
     private listKey = '';
+    private requestGen = 0;
 
     override connectedCallback(): void {
         super.connectedCallback();
+        // A disconnect mid-generate leaves busy=true (finally skips reset
+        // on a detached node); clear it so a reconnected shell is usable.
+        this.busy = false;
         this.timer = window.setInterval(() => {
+            if (document.hidden) return;
             this.now = Date.now();
         }, 1_000);
+        window.addEventListener('visibilitychange', this.onVisibility);
         const saved = loadSession();
         if (saved) {
             this.seed = saved.seed;
@@ -51,7 +57,13 @@ export class AppShell extends LitElement {
         super.disconnectedCallback();
         if (this.timer != null) window.clearInterval(this.timer);
         this.timer = null;
+        window.removeEventListener('visibilitychange', this.onVisibility);
+        this.requestGen += 1;
     }
+
+    private readonly onVisibility = (): void => {
+        if (!document.hidden && this.isConnected) this.now = Date.now();
+    };
 
     private get entries(): PlaylistEntry[] {
         return this.result?.entries ?? [];
@@ -78,12 +90,16 @@ export class AppShell extends LitElement {
     }
 
     private async restore(id: string): Promise<void> {
+        const gen = ++this.requestGen;
         try {
-            this.result = await restorePlaylist(id);
-            this.seed = this.result.playlist.seed;
-            this.weights = this.result.playlist.weights;
+            const result = await restorePlaylist(id);
+            if (gen !== this.requestGen || !this.isConnected) return;
+            this.result = result;
+            this.seed = result.playlist.seed;
+            this.weights = result.playlist.weights;
             this.error = '';
         } catch (err) {
+            if (gen !== this.requestGen || !this.isConnected) return;
             clearSession();
             this.result = null;
             this.error = err instanceof Error ? err.message : String(err);
@@ -91,6 +107,7 @@ export class AppShell extends LitElement {
     }
 
     private async generate(): Promise<void> {
+        const gen = ++this.requestGen;
         this.busy = true;
         this.error = '';
         try {
@@ -100,11 +117,13 @@ export class AppShell extends LitElement {
                 startsAt: localMidnightMs(this.now),
                 weights: this.weights,
             });
+            if (gen !== this.requestGen || !this.isConnected) return;
             this.applyResult(result);
         } catch (err) {
+            if (gen !== this.requestGen || !this.isConnected) return;
             this.error = err instanceof Error ? err.message : String(err);
         } finally {
-            this.busy = false;
+            if (gen === this.requestGen && this.isConnected) this.busy = false;
         }
     }
 

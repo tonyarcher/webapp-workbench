@@ -56,12 +56,20 @@ export class LazyImg extends LitElement {
         const img = document.createElement('img');
         img.alt = '';
         img.decoding = 'async';
-        img.addEventListener('load', () => {
-            this.state = 'loaded';
-        });
-        img.addEventListener('error', () => {
-            this.state = 'error';
-        });
+        img.addEventListener(
+            'load',
+            () => {
+                this.state = 'loaded';
+            },
+            { once: true },
+        );
+        img.addEventListener(
+            'error',
+            () => {
+                this.state = 'error';
+            },
+            { once: true },
+        );
         img.src = src;
         this.img = img;
     }

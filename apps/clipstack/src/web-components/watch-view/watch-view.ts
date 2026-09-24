@@ -4,6 +4,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { toScrollItem } from '../../services/to-scroll-item';
 import { resolveTiktokOEmbed, watchedOEmbedIndex } from '../../services/resolve-oembed';
+import { saveProgress, saveSessionItems } from '../../services/session-store';
 import type { ClipLink } from '../../types';
 import type { ScrollItem, ScrollViewport } from 'vertical-scroll-core';
 import 'vertical-scroll-core';
@@ -90,16 +91,18 @@ export class WatchView extends LitElement {
         this.scheduleLinksSave();
     }
 
-    private resolveOne(link: ClipLink, signal: AbortSignal | undefined): void {
+    private resolveOne(link: ClipLink, signal: AbortSignal | undefined, gen: number): void {
         this.resolving.add(link.id);
         void resolveTiktokOEmbed(link.id, signal)
             .then((info) => {
                 this.resolving.delete(link.id);
+                if (gen !== this.listGen || !this.isConnected) return;
                 if (signal?.aborted) return;
                 this.applyOEmbed(link.id, info);
             })
             .catch((err: unknown) => {
                 this.resolving.delete(link.id);
+                if (gen !== this.listGen || !this.isConnected) return;
                 if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
                 this.resolveAttempts.set(link.id, (this.resolveAttempts.get(link.id) ?? 0) + 1);
             });
@@ -113,7 +116,7 @@ export class WatchView extends LitElement {
         if (target === null) return;
         const link = this.links[target];
         if (link === undefined || !this.shouldResolve(link)) return;
-        this.resolveOne(link, this.resolveAbort.signal);
+        this.resolveOne(link, this.resolveAbort.signal, this.listGen);
     }
 
     /** Stable identity so the ref directive only fires on attach/detach. */
@@ -129,9 +132,11 @@ export class WatchView extends LitElement {
     }
 
     private scheduleLinksSave(): void {
+        if (!this.isConnected) return;
         if (this.linksSaveTimer !== null) clearTimeout(this.linksSaveTimer);
         this.linksSaveTimer = setTimeout(() => {
             this.linksSaveTimer = null;
+            if (!this.isConnected) return;
             this.dispatchEvent(
                 new CustomEvent('links-enriched', {
                     detail: { items: this.links },
@@ -143,9 +148,11 @@ export class WatchView extends LitElement {
     }
 
     private scheduleProgress(): void {
+        if (!this.isConnected) return;
         if (this.progressTimer !== null) clearTimeout(this.progressTimer);
         this.progressTimer = setTimeout(() => {
             this.progressTimer = null;
+            if (!this.isConnected) return;
             this.dispatchEvent(
                 new CustomEvent('progress', {
                     detail: { index: this.activeIndex, maxSeen: this.maxSeen },
@@ -184,11 +191,20 @@ export class WatchView extends LitElement {
         window.removeEventListener('pagehide', this.flushProgress);
         this.resolveAbort?.abort();
         this.resolveAbort = null;
+        // Teardown flush writes straight to localStorage: dispatching a
+        // bubbling event from a detached node reaches no parent listener,
+        // so persist the pending cursor/items directly instead of dropping
+        // the last debounced update (max 300-400ms stale otherwise).
         if (this.linksSaveTimer !== null) {
             clearTimeout(this.linksSaveTimer);
             this.linksSaveTimer = null;
+            if (this.links.length > 0) saveSessionItems(this.links);
         }
-        this.flushProgress();
+        if (this.progressTimer !== null) {
+            clearTimeout(this.progressTimer);
+            this.progressTimer = null;
+            saveProgress(this.activeIndex, this.maxSeen);
+        }
     }
 
     private readonly flushProgress = (): void => {
@@ -196,6 +212,7 @@ export class WatchView extends LitElement {
             clearTimeout(this.progressTimer);
             this.progressTimer = null;
         }
+        if (!this.isConnected) return;
         this.dispatchEvent(
             new CustomEvent('progress', {
                 detail: { index: this.activeIndex, maxSeen: this.maxSeen },
