@@ -76,6 +76,7 @@ export async function queryArticles({
         unreadOnly ? (a: Article) => a.read === 0 : undefined,
     );
     const hasMore = raw.length >= limit;
+    await tx.done;
     return { items: raw, hasMore };
 }
 
@@ -102,7 +103,9 @@ export async function queryRecentArticles(since: number, limit = 60): Promise<Ar
     const db = await getDb();
     const tx = db.transaction('articles', 'readonly');
     const range = IDBKeyRange.lowerBound([since, ''], true);
-    return takeFromCursor(tx.objectStore('articles').index('byPublished').openCursor(range, 'prev'), limit);
+    const out = await takeFromCursor(tx.objectStore('articles').index('byPublished').openCursor(range, 'prev'), limit);
+    await tx.done;
+    return out;
 }
 
 export async function queryTodayArticles(since: number, maxScan = 10_000): Promise<Article[]> {

@@ -29,6 +29,7 @@ export class ScrollMediaVideo extends LitElement {
     @state() private embedDuration = 0;
 
     private video: HTMLVideoElement | null = null;
+    private videoSync: (() => void) | null = null;
     private iframe: HTMLIFrameElement | null = null;
     private stage: HTMLElement | null = null;
     private embedReady = false;
@@ -74,6 +75,20 @@ export class ScrollMediaVideo extends LitElement {
             this.syncEmbedPlayback();
         });
         window.addEventListener('message', this.onEmbedMessage);
+        // The ref directive does not re-fire when the same node is moved
+        // and reconnected without a template-part change; rebind live
+        // media so toggle/sound/updated keep working after a DOM move.
+        const live = this.shadowRoot?.querySelector('video');
+        if (live && !this.video) this.onVideoRef(live);
+        const liveFrame = this.shadowRoot?.querySelector('iframe.media-iframe');
+        if (liveFrame && !this.iframe) {
+            this.onIframeRef(liveFrame);
+            // The iframe is already loaded (its content persists across the
+            // move), so treat it as ready; otherwise embed commands stay
+            // blocked behind embedReady=false until a ready event that may
+            // never resend.
+            this.onIframeLoad();
+        }
     }
 
     override disconnectedCallback(): void {
@@ -81,6 +96,12 @@ export class ScrollMediaVideo extends LitElement {
         this.unsubscribeSound?.();
         this.unsubscribeSound = null;
         window.removeEventListener('message', this.onEmbedMessage);
+        if (this.video && this.videoSync) {
+            this.video.removeEventListener('play', this.videoSync);
+            this.video.removeEventListener('pause', this.videoSync);
+        }
+        this.video = null;
+        this.videoSync = null;
         this.iframe = null;
         this.embedReady = false;
         this.resolveToken++;
@@ -133,6 +154,7 @@ export class ScrollMediaVideo extends LitElement {
     }
 
     override updated(changed: Map<string, unknown>): void {
+        if (!this.isConnected) return;
         if (changed.has('active') || changed.has('src') || changed.has('soundOn')) {
             if (this.active) {
                 void this.video?.play().catch(() => {});
@@ -268,17 +290,24 @@ export class ScrollMediaVideo extends LitElement {
 
     /** Stable identity so the ref directive only fires on attach/detach. */
     private readonly onVideoRef = (el: Element | undefined): void => {
-        const video = el as HTMLVideoElement | null;
+        if (this.video && this.videoSync) {
+            this.video.removeEventListener('play', this.videoSync);
+            this.video.removeEventListener('pause', this.videoSync);
+        }
+        const video = (el as HTMLVideoElement | null) ?? null;
         this.video = video;
+        this.videoSync = null;
         if (video) {
             video.muted = !this.soundOn;
             const sync = (): void => {
+                if (!this.isConnected) return;
                 this.setPlaying(!video.paused);
             };
+            this.videoSync = sync;
             video.addEventListener('play', sync);
             video.addEventListener('pause', sync);
             sync();
-            if (this.active) void video.play().catch(() => {});
+            if (this.active && this.isConnected) void video.play().catch(() => {});
         }
     };
 
@@ -373,10 +402,8 @@ export class ScrollMediaVideo extends LitElement {
         return html`<div class="embed-placeholder">${poster ? html`<img class="embed-poster" src=${poster} alt="" loading="lazy">` : html``}</div>`;
     }
 
-    private renderEmbed(): TemplateResult {
+    private renderEmbed(embedUrl: string): TemplateResult {
         const videoUrl = this.embedSource();
-        const embedUrl = embedUrlFor(videoUrl);
-        if (!embedUrl) return html``;
         const provider = embedProviderForUrl(videoUrl);
         const poster = this.item?.thumbnailUrl ?? embedPosterFor(videoUrl);
         return html`<div class="media-stage embed" ${ref(this.onStageRef)}>
@@ -403,7 +430,8 @@ export class ScrollMediaVideo extends LitElement {
     }
 
     override render(): TemplateResult {
-        return embedUrlFor(this.embedSource()) ? this.renderEmbed() : this.renderNative();
+        const embedUrl = embedUrlFor(this.embedSource());
+        return embedUrl ? this.renderEmbed(embedUrl) : this.renderNative();
     }
 }
 

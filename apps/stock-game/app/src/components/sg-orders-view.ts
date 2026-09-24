@@ -56,19 +56,28 @@ export class SgOrdersView extends LitElement {
 
     override connectedCallback(): void {
         super.connectedCallback();
+        // A disconnect mid-cancel leaves busy=true; clear it on reconnect.
+        this.busy = false;
         void this.load();
         this.timer = window.setInterval(() => {
+            if (document.hidden) return;
             void this.load(true);
         }, POLL_MS);
+        window.addEventListener('visibilitychange', this.onVisibility);
     }
 
     override disconnectedCallback(): void {
+        window.removeEventListener('visibilitychange', this.onVisibility);
         if (this.timer !== undefined) {
             window.clearInterval(this.timer);
             this.timer = undefined;
         }
         super.disconnectedCallback();
     }
+
+    private readonly onVisibility = (): void => {
+        if (!document.hidden && this.isConnected) void this.load(true);
+    };
 
     private setError(err: unknown): void {
         this.error = err instanceof Error ? err.message : String(err);

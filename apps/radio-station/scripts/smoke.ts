@@ -52,6 +52,8 @@ assert(findNowPlaying(npEntries, START - 1).kind === 'outside', 'now-playing bef
 const mid = findNowPlaying(npEntries, START + 60_000);
 assert(mid.kind === 'track' && mid.entry.trackId === 'a', 'now-playing during first');
 assert(findNowPlaying(npEntries, START + 180_000).kind === 'track', 'now-playing at boundary is next');
+assert(findNowPlaying([], START).kind === 'outside', 'now-playing empty is outside');
+assert(findNowPlaying(npEntries, START + 360_000 + 1_000).kind === 'outside', 'now-playing after week is outside');
 
 const listEntries = [
     entry({ idx: 0, startsAt: START, artist: 'A', title: 'One' }),

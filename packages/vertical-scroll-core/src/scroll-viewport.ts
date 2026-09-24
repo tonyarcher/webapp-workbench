@@ -126,12 +126,22 @@ export class ScrollViewport extends LitElement {
      * guarantees arrival even when the tab throttles rAF.
      */
     private makeFinish(viewport: HTMLElement, to: number): () => void {
+        let done = false;
         return () => {
+            if (done) return;
+            done = true;
+            if (this.scrollRaf !== null) {
+                cancelAnimationFrame(this.scrollRaf);
+                this.scrollRaf = null;
+            }
+            if (this.scrollTimer !== null) {
+                clearTimeout(this.scrollTimer);
+                this.scrollTimer = null;
+            }
+            if (!this.isConnected) return;
             viewport.scrollTop = to;
             this.onScroll();
             viewport.classList.remove('no-snap');
-            this.scrollRaf = null;
-            this.scrollTimer = null;
         };
     }
 

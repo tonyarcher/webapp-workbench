@@ -165,6 +165,15 @@ assert(
 );
 assert(stripImageProxy('https://x/plain.png') === 'https://x/plain.png', 'plain url unchanged');
 
+// safeUrl edge cases (security: only http/https, no credentials tricks)
+assert(safeUrl('data:text/html,<h1>x</h1>') === null, 'data url rejected');
+assert(safeUrl('ftp://example.com/x') === null, 'ftp rejected');
+assert(safeUrl('/relative/path') === null, 'relative rejected');
+assert(safeUrl('') === null, 'empty rejected');
+assert(safeUrl(null) === null, 'null rejected');
+assert(safeUrl('HTTPS://example.com/x') === 'HTTPS://example.com/x', 'uppercase scheme ok');
+assert(embedUrlFor(null) === null, 'embed null safe');
+
 // aspectRatioFromUrl
 assert(aspectRatioFromUrl('https://x/pictrs/img_1280x720.png') === 1280 / 720, 'aspect ratio');
 

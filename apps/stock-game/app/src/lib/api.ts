@@ -73,7 +73,9 @@ async function apiFetch(path: string, init?: RequestInit, retried = false): Prom
         emitAuthRequired();
         throw new AuthError();
     }
-    const res = await fetch(apiUrl(path), withAuth(init, token));
+    const timeout = AbortSignal.timeout(20_000);
+    const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
+    const res = await fetch(apiUrl(path), withAuth({ ...init, signal }, token));
     if (res.status === 401 && !retried) {
         const next = await refreshTokens();
         if (next) return apiFetch(path, init, true);
@@ -119,8 +121,8 @@ export async function placeTrade(input: unknown): Promise<Trade> {
     );
 }
 
-export async function listOrders(): Promise<Order[]> {
-    return parseArray(await apiFetch('/orders'), parseOrder);
+export async function listOrders(opts?: { signal?: AbortSignal }): Promise<Order[]> {
+    return parseArray(await apiFetch('/orders', opts?.signal ? { signal: opts.signal } : undefined), parseOrder);
 }
 
 export async function placeOrder(input: unknown): Promise<Order> {
@@ -133,8 +135,9 @@ export async function placeOrder(input: unknown): Promise<Order> {
     );
 }
 
-export async function cancelOrder(id: number): Promise<{ ok: boolean }> {
-    const raw = (await apiFetch(`/orders/${id}/cancel`, { method: 'POST' })) as Record<string, unknown>;
+export async function cancelOrder(id: number, opts?: { signal?: AbortSignal }): Promise<{ ok: boolean }> {
+    const init: RequestInit | undefined = opts?.signal ? { method: 'POST', signal: opts.signal } : { method: 'POST' };
+    const raw = (await apiFetch(`/orders/${id}/cancel`, init)) as Record<string, unknown>;
     if (typeof raw['ok'] !== 'boolean') throw new Error('invalid cancel response');
     return { ok: raw['ok'] };
 }
