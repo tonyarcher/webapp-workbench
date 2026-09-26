@@ -37,6 +37,25 @@ class SettingsTest {
     }
 
     @Test
+    fun swaggerEnabledFromEnv() {
+        assertEquals(false, settingsFromEnv(emptyMap()).swaggerEnabled)
+        for (value in listOf("1", "true", "TRUE", "yes", "on")) {
+            assertEquals(
+                true,
+                settingsFromEnv(mapOf("SWAGGER_ENABLED" to value)).swaggerEnabled,
+                "SWAGGER_ENABLED=$value must be truthy, or springdoc and the gate disagree",
+            )
+        }
+        for (value in listOf("0", "false", "no", "off", "banana")) {
+            assertEquals(
+                false,
+                settingsFromEnv(mapOf("SWAGGER_ENABLED" to value)).swaggerEnabled,
+                "SWAGGER_ENABLED=$value must be falsy",
+            )
+        }
+    }
+
+    @Test
     fun badLogLevelBecomesInfo() {
         val s = settingsFromEnv(mapOf("LOG_LEVEL" to "verbose"))
         assertEquals("info", s.logLevel)

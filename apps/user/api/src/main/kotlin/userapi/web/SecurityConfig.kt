@@ -14,6 +14,7 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.access.intercept.AuthorizationFilter
+import userapi.Settings
 import userapi.accounts.AccountServices
 
 /** Unauthenticated request handling for the resource server. */
@@ -21,7 +22,11 @@ private const val HTTP_UNAUTHORIZED = 401
 
 @Configuration
 @EnableWebSecurity
-class SecurityConfig(private val mapper: ObjectMapper, private val accounts: AccountServices) {
+class SecurityConfig(
+    private val mapper: ObjectMapper,
+    private val accounts: AccountServices,
+    private val settings: Settings,
+) {
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http.csrf { it.disable() }
@@ -41,10 +46,18 @@ class SecurityConfig(private val mapper: ObjectMapper, private val accounts: Acc
         reg.requestMatchers(HttpMethod.GET, "/readyz").permitAll()
         reg.requestMatchers(HttpMethod.GET, "/").permitAll()
         reg.requestMatchers(HttpMethod.GET, "/csrf").permitAll()
-        reg.requestMatchers(HttpMethod.GET, "/v3/api-docs/**").permitAll()
-        reg.requestMatchers(HttpMethod.GET, "/swagger-ui.html").permitAll()
-        reg.requestMatchers(HttpMethod.GET, "/swagger-ui/**").permitAll()
-        reg.requestMatchers(HttpMethod.GET, "/webjars/**").permitAll()
+        // The API schema and UI are published only when SWAGGER_ENABLED is set,
+        // and this is the same switch springdoc reads. Permitting them
+        // unconditionally meant the security surface disagreed with the feature
+        // flag: nothing but a default in application.yml kept the schema from
+        // being public, and flipping that default in production published the
+        // whole API surface without anyone touching this file.
+        if (settings.swaggerEnabled) {
+            reg.requestMatchers(HttpMethod.GET, "/v3/api-docs/**").permitAll()
+            reg.requestMatchers(HttpMethod.GET, "/swagger-ui.html").permitAll()
+            reg.requestMatchers(HttpMethod.GET, "/swagger-ui/**").permitAll()
+            reg.requestMatchers(HttpMethod.GET, "/webjars/**").permitAll()
+        }
         reg.requestMatchers(HttpMethod.POST, "/register").permitAll()
         reg.requestMatchers(HttpMethod.POST, "/login").permitAll()
         reg.requestMatchers(HttpMethod.POST, "/login/totp").permitAll()

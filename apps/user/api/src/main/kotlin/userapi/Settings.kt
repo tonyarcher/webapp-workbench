@@ -14,6 +14,22 @@ data class Settings(
     val origins: Set<String> = setOf("http://localhost", "http://127.0.0.1"),
     val issuer: String = "http://localhost/user-api",
     val loginPath: String = "/auth/",
+    /**
+     * Whether springdoc publishes the API schema and UI. SecurityConfig reads
+     * the same flag, so the security surface cannot disagree with the feature.
+     *
+     * The truthy set matches Spring's relaxed Boolean binding (true, on, yes,
+     * 1), because a mismatch would let the two sides resolve differently.
+     * `on` in particular was missing at first, and it fails closed: docs are
+     * reachable but answer 401 rather than being public.
+     *
+     * This is a convenience alias, not the only route to enabled docs. Setting
+     * `springdoc.api-docs.enabled` directly also turns them on, and then the
+     * endpoints exist but answer 401 here. That is the safe direction.
+     *
+     * Defaults to false: the schema is not public.
+     */
+    val swaggerEnabled: Boolean = false,
 )
 
 fun settingsFromEnv(env: Map<String, String>): Settings {
@@ -27,5 +43,17 @@ fun settingsFromEnv(env: Map<String, String>): Settings {
         .ifEmpty { setOf("http://localhost") }
     val issuer = env["OAUTH_ISSUER"] ?: "http://localhost/user-api"
     val loginPath = env["LOGIN_PATH"] ?: "/auth/"
-    return Settings(port, databaseUrl, logLevel, service, cookieSecure, rpId, origins, issuer, loginPath)
+    val swaggerEnabled = env["SWAGGER_ENABLED"]?.trim()?.lowercase() in setOf("1", "true", "yes", "on")
+    return Settings(
+        port,
+        databaseUrl,
+        logLevel,
+        service,
+        cookieSecure,
+        rpId,
+        origins,
+        issuer,
+        loginPath,
+        swaggerEnabled,
+    )
 }
