@@ -62,6 +62,10 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     if (System.getenv("PORT") == null) {
         environment("PORT", "3004")
     }
+    // OpenAPI docs are off by default (they are reachable through the gateway
+    // otherwise), so opt back in for local work.
+    environment("SWAGGER_ENABLED", "true")
+    environment("SPRING_PROFILES_ACTIVE", "dev")
 }
 
 detekt {

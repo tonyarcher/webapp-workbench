@@ -1,0 +1,27 @@
+server:
+    port: ${PORT:3000}
+
+spring:
+    application:
+        name: user-api
+    jackson:
+        default-property-inclusion: non_null
+    jpa:
+        hibernate:
+            ddl-auto: validate
+        open-in-view: false
+    mvc:
+        throw-exception-if-no-handler-found: true
+    web:
+        resources:
+            add-mappings: false
+
+# Off unless SWAGGER_ENABLED is set, so the docs are not published through the
+# gateway. Local `gradle bootRun` sets it.
+springdoc:
+    api-docs:
+        path: /v3/api-docs
+        enabled: ${SWAGGER_ENABLED:false}
+    swagger-ui:
+        path: /swagger-ui.html
+        enabled: ${SWAGGER_ENABLED:false}

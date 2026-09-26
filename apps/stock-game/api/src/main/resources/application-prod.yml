@@ -1,0 +1,24 @@
+# Production profile. Framework logs stay quiet so they do not drown the API's
+# own output.
+#
+# The API's own JSON lines are unaffected: JsonLog reads LOG_LEVEL (default
+# info), so the one-object-per-line rule still holds at info.
+logging:
+    level:
+        root: WARN
+        org.springframework: WARN
+        org.hibernate: WARN
+
+server:
+    compression:
+        # JSON compresses well. The default mime types already include
+        # application/json, so this needs no mime-types list.
+        enabled: true
+        min-response-size: 1024
+    # Let in-flight requests finish when compose replaces the container, instead
+    # of dropping them mid-response.
+    shutdown: graceful
+
+spring:
+    lifecycle:
+        timeout-per-shutdown-phase: 20s

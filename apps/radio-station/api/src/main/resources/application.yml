@@ -1,0 +1,18 @@
+server:
+    port: ${PORT:3002}
+
+spring:
+    application:
+        name: radio-api
+    flyway:
+        # The database predates Flyway; baseline it instead of wiping pgdata.
+        baseline-on-migrate: true
+    jpa:
+        hibernate:
+            ddl-auto: validate
+        open-in-view: false
+    mvc:
+        throw-exception-if-no-handler-found: true
+    web:
+        resources:
+            add-mappings: false

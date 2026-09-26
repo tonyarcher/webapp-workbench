@@ -88,7 +88,15 @@ services:
         build:
             context: ..
             dockerfile: deploy/rss-api/Dockerfile
+        # Must exceed the 20s graceful shutdown phase in
+        # application-prod.yml, or compose SIGKILLs mid-request.
+        stop_grace_period: 30s
         environment:
+            # application-prod.yml: quiet framework logs, gzip, graceful shutdown.
+            SPRING_PROFILES_ACTIVE: prod
+            # JsonLog reads this; the app JSON lines are separate from the
+            # framework levels the prod profile sets.
+            LOG_LEVEL: ${LOG_LEVEL:-info}
             PORT: 3000
             DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/${POSTGRES_DB:-rss}
             OAUTH_JWKS_URI: http://user-api:3000/oauth/jwks
@@ -142,7 +150,15 @@ services:
         build:
             context: ..
             dockerfile: deploy/stock-game-api/Dockerfile
+        # Must exceed the 20s graceful shutdown phase in
+        # application-prod.yml, or compose SIGKILLs mid-request.
+        stop_grace_period: 30s
         environment:
+            # application-prod.yml: quiet framework logs, gzip, graceful shutdown.
+            SPRING_PROFILES_ACTIVE: prod
+            # JsonLog reads this; the app JSON lines are separate from the
+            # framework levels the prod profile sets.
+            LOG_LEVEL: ${LOG_LEVEL:-info}
             PORT: 3000
             DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/stock
             PRICE_PROVIDER: ${PRICE_PROVIDER:-yahoo}
@@ -183,7 +199,15 @@ services:
         build:
             context: ..
             dockerfile: deploy/radio-api/Dockerfile
+        # Must exceed the 20s graceful shutdown phase in
+        # application-prod.yml, or compose SIGKILLs mid-request.
+        stop_grace_period: 30s
         environment:
+            # application-prod.yml: quiet framework logs, gzip, graceful shutdown.
+            SPRING_PROFILES_ACTIVE: prod
+            # JsonLog reads this; the app JSON lines are separate from the
+            # framework levels the prod profile sets.
+            LOG_LEVEL: ${LOG_LEVEL:-info}
             PORT: 3000
             DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/radio
         depends_on:
@@ -221,7 +245,15 @@ services:
         build:
             context: ..
             dockerfile: deploy/fitness-api/Dockerfile
+        # Must exceed the 20s graceful shutdown phase in
+        # application-prod.yml, or compose SIGKILLs mid-request.
+        stop_grace_period: 30s
         environment:
+            # application-prod.yml: quiet framework logs, gzip, graceful shutdown.
+            SPRING_PROFILES_ACTIVE: prod
+            # JsonLog reads this; the app JSON lines are separate from the
+            # framework levels the prod profile sets.
+            LOG_LEVEL: ${LOG_LEVEL:-info}
             PORT: 3000
             DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/fitness
         depends_on:
@@ -243,7 +275,15 @@ services:
         build:
             context: ..
             dockerfile: deploy/user-api/Dockerfile
+        # Must exceed the 20s graceful shutdown phase in
+        # application-prod.yml, or compose SIGKILLs mid-request.
+        stop_grace_period: 30s
         environment:
+            # application-prod.yml: quiet framework logs, gzip, graceful shutdown.
+            SPRING_PROFILES_ACTIVE: prod
+            # JsonLog reads this; the app JSON lines are separate from the
+            # framework levels the prod profile sets.
+            LOG_LEVEL: ${LOG_LEVEL:-info}
             PORT: 3000
             DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/users
             SERVICE: user-api
