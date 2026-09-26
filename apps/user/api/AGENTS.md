@@ -20,8 +20,10 @@ Register those apps as OAuth clients in `oauth_clients` /
 - CSRF: cookie `wb_csrf` + header `X-CSRF-Token` on POSTs.
 - Postgres database `users`. Flyway under `src/main/resources/db/migration/`.
 - JSON stdout logs (`service` = `user-api`). Do not log passwords or session tokens.
-- Detekt 2 floors: LongMethod 25, TooManyFunctions 10, cyclomatic 10, nested
-  depth 3, ComplexCondition 3, line length 120. Split rather than suppress.
+- Detekt floors live in `detekt.yml`: LongMethod 25, TooManyFunctions 10, cyclomatic 10,
+  nested depth 3, ComplexCondition 3. Line length is not one of them — ktlint owns 120
+  from `.editorconfig`, and detekt's `MaxLineLength` is inactive so the two cannot
+  disagree. Split rather than suppress.
 
 ## Commands
 
