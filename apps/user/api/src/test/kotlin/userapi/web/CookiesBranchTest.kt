@@ -1,18 +1,18 @@
 package userapi.web
-
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import userapi.Settings
+import userapi.settingsForTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CookiesBranchTest {
-    private val settings = Settings(3000, "", "error", "user-api", cookieSecure = false)
+    private val settings = settingsForTest(cookieSecure = false)
 
     private fun request(vararg cookies: Cookie?): HttpServletRequest {
         val req = mock<HttpServletRequest>()

@@ -68,6 +68,18 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     // otherwise), so opt back in for local work.
     environment("SWAGGER_ENABLED", "true")
     environment("SPRING_PROFILES_ACTIVE", "dev")
+    // Dev defaults for values that are now required and deployment-specific.
+    // These live here, not in Settings, so the application source carries no
+    // localhost default that could silently reach production.
+    if (System.getenv("OAUTH_ISSUER") == null) {
+        environment("OAUTH_ISSUER", "http://localhost/user-api")
+    }
+    if (System.getenv("WEBAUTHN_RP_ID") == null) {
+        environment("WEBAUTHN_RP_ID", "localhost")
+    }
+    if (System.getenv("WEBAUTHN_ORIGINS") == null) {
+        environment("WEBAUTHN_ORIGINS", "http://localhost,http://127.0.0.1")
+    }
 }
 
 detekt {

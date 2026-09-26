@@ -1,5 +1,4 @@
 package userapi.web
-
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
@@ -12,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import userapi.Settings
 import userapi.accounts.AccountServices
+import userapi.settingsForTest
 import javax.sql.DataSource
 import kotlin.test.assertEquals
 
@@ -31,7 +31,7 @@ class SwaggerDocsEnabledTest {
     @Configuration
     class TestBeans {
         @Bean
-        fun settings(): Settings = Settings(3000, "", "error", "user-api", swaggerEnabled = true)
+        fun settings(): Settings = settingsForTest(swaggerEnabled = true)
     }
 
     @Autowired
@@ -66,7 +66,7 @@ class SwaggerDocsDisabledTest {
     @Configuration
     class TestBeans {
         @Bean
-        fun settings(): Settings = Settings(3000, "", "error", "user-api", swaggerEnabled = false)
+        fun settings(): Settings = settingsForTest(swaggerEnabled = false)
     }
 
     @Autowired

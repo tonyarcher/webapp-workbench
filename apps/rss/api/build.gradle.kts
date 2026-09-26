@@ -25,6 +25,8 @@ kotlin {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-security-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-hateoas")
@@ -52,6 +54,14 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     // otherwise), so opt back in for local work.
     environment("SWAGGER_ENABLED", "true")
     environment("SPRING_PROFILES_ACTIVE", "dev")
+    // Dev defaults for values SecurityConfig now requires. These live here, not
+    // in the application source, so no localhost literal reaches a non-test .kt.
+    if (System.getenv("OAUTH_JWKS_URI") == null) {
+        environment("OAUTH_JWKS_URI", "http://localhost:3004/oauth/jwks")
+    }
+    if (System.getenv("OAUTH_ISSUER") == null) {
+        environment("OAUTH_ISSUER", "http://localhost/user-api")
+    }
 }
 
 detekt {

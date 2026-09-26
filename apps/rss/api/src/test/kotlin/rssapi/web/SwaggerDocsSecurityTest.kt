@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.mock.env.MockEnvironment
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
@@ -17,22 +18,22 @@ class SwaggerDocsParsingTest {
     fun truthyValuesMatchSpring() {
         for (value in listOf("1", "true", "TRUE", "yes", "on")) {
             assertTrue(
-                swaggerEnabledFromEnv(mapOf("SWAGGER_ENABLED" to value)),
+                swaggerEnabledFromEnv(MockEnvironment().withProperty("SWAGGER_ENABLED", value)),
                 "SWAGGER_ENABLED=$value must be truthy, or the gate and springdoc disagree",
             )
         }
         for (value in listOf("0", "false", "no", "off", "banana")) {
             assertFalse(
-                swaggerEnabledFromEnv(mapOf("SWAGGER_ENABLED" to value)),
+                swaggerEnabledFromEnv(MockEnvironment().withProperty("SWAGGER_ENABLED", value)),
                 "SWAGGER_ENABLED=$value must be falsy",
             )
         }
-        assertFalse(swaggerEnabledFromEnv(emptyMap()), "unset must be falsy")
+        assertFalse(swaggerEnabledFromEnv(MockEnvironment()), "unset must be falsy")
     }
 
     @Test
     fun whitespaceIsTrimmed() {
-        assertTrue(swaggerEnabledFromEnv(mapOf("SWAGGER_ENABLED" to " true ")))
+        assertTrue(swaggerEnabledFromEnv(MockEnvironment().withProperty("SWAGGER_ENABLED", " true ")))
     }
 }
 

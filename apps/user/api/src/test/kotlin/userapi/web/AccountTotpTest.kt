@@ -1,5 +1,4 @@
 package userapi.web
-
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.mockito.kotlin.mock
 import org.springframework.beans.factory.annotation.Autowired
@@ -21,6 +20,7 @@ import userapi.http.bodyText
 import userapi.http.expectStatus
 import userapi.http.getWithCookies
 import userapi.http.postJson
+import userapi.settingsForTest
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -41,7 +41,7 @@ class AccountTotpTest {
     @Configuration
     class TestBeans {
         @Bean
-        fun settings(): Settings = Settings(3000, "", "error", "user-api", cookieSecure = false)
+        fun settings(): Settings = settingsForTest(cookieSecure = false)
 
         @Bean
         fun clock(): Clock = Clock.fixed(Instant.parse("2026-09-11T17:00:00Z"), ZoneOffset.UTC)

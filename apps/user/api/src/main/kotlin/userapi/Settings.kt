@@ -10,9 +10,12 @@ data class Settings(
     val logLevel: String,
     val service: String,
     val cookieSecure: Boolean = false,
-    val rpId: String = "localhost",
-    val origins: Set<String> = setOf("http://localhost", "http://127.0.0.1"),
-    val issuer: String = "http://localhost/user-api",
+    // No localhost defaults. These are deployment-specific, and a localhost
+    // value in production breaks WebAuthn and token validation silently. They
+    // are required instead: bootRun provides them for dev, compose for prod.
+    val rpId: String,
+    val origins: Set<String>,
+    val issuer: String,
     val loginPath: String = "/auth/",
     /**
      * Whether springdoc publishes the API schema and UI. SecurityConfig reads
@@ -38,10 +41,9 @@ fun settingsFromEnv(env: Map<String, String>): Settings {
     val logLevel = parseLogLevel(env["LOG_LEVEL"] ?: "info")
     val service = env["SERVICE"]?.ifBlank { null } ?: "user-api"
     val cookieSecure = env["COOKIE_SECURE"]?.trim()?.lowercase() in setOf("1", "true", "yes", "on")
-    val rpId = validRpId(env["WEBAUTHN_RP_ID"] ?: "localhost")
-    val origins = parseOrigins(env["WEBAUTHN_ORIGINS"] ?: "http://localhost,http://127.0.0.1")
-        .ifEmpty { setOf("http://localhost") }
-    val issuer = env["OAUTH_ISSUER"] ?: "http://localhost/user-api"
+    val rpId = validRpId(env["WEBAUTHN_RP_ID"] ?: error("WEBAUTHN_RP_ID required"))
+    val origins = parseOrigins(env["WEBAUTHN_ORIGINS"] ?: error("WEBAUTHN_ORIGINS required"))
+    val issuer = env["OAUTH_ISSUER"] ?: error("OAUTH_ISSUER required")
     val loginPath = env["LOGIN_PATH"] ?: "/auth/"
     val swaggerEnabled = env["SWAGGER_ENABLED"]?.trim()?.lowercase() in setOf("1", "true", "yes", "on")
     return Settings(

@@ -1,5 +1,4 @@
 package userapi.web
-
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.mockito.kotlin.mock
@@ -15,6 +14,7 @@ import userapi.http.FakeChallengeStore
 import userapi.http.FakePasskeyStore
 import userapi.http.PlainHasher
 import userapi.http.RateLimiter
+import userapi.settingsForTest
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -25,7 +25,7 @@ import kotlin.test.assertFailsWith
 
 class PasskeyControllerBranchTest {
     private val clock = Clock.fixed(Instant.parse("2026-09-11T17:00:00Z"), ZoneOffset.UTC)
-    private val settings = Settings(3000, "", "error", "user-api", cookieSecure = false)
+    private val settings = settingsForTest(cookieSecure = false)
     private val mapper = JsonMapper()
     private val userId = UUID.randomUUID()
 

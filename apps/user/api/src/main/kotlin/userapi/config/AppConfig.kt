@@ -43,6 +43,10 @@ class AppConfig {
     @Bean
     fun settings(): Settings = settingsFromEnv(System.getenv())
 
+    /** Testable overload: the bean reads the process environment, which tests
+     *  cannot set, so this lets them pass an explicit map. */
+    internal fun settingsFor(env: Map<String, String>): Settings = settingsFromEnv(env)
+
     @Bean
     fun clock(): Clock = Clock.systemUTC()
 

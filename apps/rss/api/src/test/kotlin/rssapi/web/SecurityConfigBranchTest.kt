@@ -2,6 +2,7 @@ package rssapi.web
 
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import org.springframework.mock.env.MockEnvironment
 import org.springframework.security.oauth2.jwt.Jwt
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -10,7 +11,10 @@ import kotlin.test.assertTrue
 class SecurityConfigBranchTest {
     @Test
     fun decoderBuilds() {
-        assertNotNull(SecurityConfig().jwtDecoder())
+        val env = MockEnvironment()
+            .withProperty("OAUTH_JWKS_URI", "http://localhost:3004/oauth/jwks")
+            .withProperty("OAUTH_ISSUER", "http://localhost/user-api")
+        assertNotNull(SecurityConfig(env).jwtDecoder())
     }
 
     @Test

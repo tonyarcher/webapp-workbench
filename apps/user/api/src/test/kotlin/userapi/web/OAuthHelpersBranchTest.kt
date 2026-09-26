@@ -1,8 +1,8 @@
 package userapi.web
-
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import userapi.accounts.OAuthService
+import userapi.settingsForTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -35,7 +35,7 @@ class OAuthHelpersBranchTest {
 
     @Test
     fun loginRedirectPaths() {
-        val settings = userapi.Settings(3000, "", "error", "user-api", cookieSecure = false)
+        val settings = userapi.settingsForTest(cookieSecure = false)
         assertTrue(loginRedirect(settings, "a=1").contains("return="))
         assertTrue(loginRedirect(settings, null).endsWith("authorize"))
         assertTrue(loginRedirect(settings, "").endsWith("authorize"))

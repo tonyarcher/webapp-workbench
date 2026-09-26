@@ -1,8 +1,8 @@
 package userapi.accounts
-
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import userapi.Settings
+import userapi.settingsForTest
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 
 class PasskeyServiceBranchTest {
     private val clock = Clock.fixed(Instant.parse("2026-09-11T17:00:00Z"), ZoneOffset.UTC)
-    private val settings = Settings(3000, "", "error", "user-api", cookieSecure = false)
+    private val settings = settingsForTest(cookieSecure = false)
     private val userId = UUID.randomUUID()
 
     private fun service(store: PasskeyStore = mock(), challenges: WebauthnChallengeStore = mock()): PasskeyService {

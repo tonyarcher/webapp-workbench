@@ -1,8 +1,10 @@
 package stockgame.web
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.env.Environment
 import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -29,12 +31,12 @@ private const val HTTP_UNAUTHORIZED = 401
  * Spring's relaxed Boolean binding, so the gate and springdoc cannot disagree
  * about a value like `on`.
  */
-internal fun swaggerEnabledFromEnv(env: Map<String, String>): Boolean =
-    env["SWAGGER_ENABLED"]?.trim()?.lowercase() in setOf("1", "true", "yes", "on")
+internal fun swaggerEnabledFromEnv(env: Environment): Boolean =
+    env.getProperty("SWAGGER_ENABLED")?.trim()?.lowercase() in setOf("1", "true", "yes", "on")
 
 @Configuration
 @EnableWebSecurity
-class SecurityConfig {
+class SecurityConfig(private val env: Environment) {
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http {
@@ -44,9 +46,12 @@ class SecurityConfig {
                 authorize(HttpMethod.GET, "/healthz", permitAll)
                 authorize(HttpMethod.GET, "/readyz", permitAll)
                 authorize(HttpMethod.GET, "/", permitAll)
-                if (swaggerEnabledFromEnv(System.getenv())) {
+                if (swaggerEnabledFromEnv(env)) {
                     swaggerDocPaths().forEach { authorize(HttpMethod.GET, it, permitAll) }
                 }
+                // Actuator stays internal: the gateway does not route /actuator/**,
+                // and only health, info, metrics, and prometheus are exposed.
+                authorize(HttpMethod.GET, "/actuator/**", permitAll)
                 authorize(anyRequest, authenticated)
             }
             oauth2ResourceServer {
@@ -72,9 +77,9 @@ class SecurityConfig {
 
     @Bean
     fun jwtDecoder(): JwtDecoder {
-        val jwksUri = System.getenv("OAUTH_JWKS_URI") ?: "http://localhost:3004/oauth/jwks"
-        val issuer = System.getenv("OAUTH_ISSUER") ?: "http://localhost/user-api"
-        val audience = System.getenv("STOCK_CLIENT_ID") ?: "stock-game"
+        val jwksUri = env.getRequiredProperty("OAUTH_JWKS_URI")
+        val issuer = env.getRequiredProperty("OAUTH_ISSUER")
+        val audience = env.getProperty("STOCK_CLIENT_ID") ?: "stock-game"
         val decoder = NimbusJwtDecoder.withJwkSetUri(jwksUri).build()
         decoder.setJwtValidator(
             DelegatingOAuth2TokenValidator(
@@ -85,6 +90,11 @@ class SecurityConfig {
         )
         return decoder
     }
+
+    /** Health contributor: probe the JWKS endpoint so a down user-api is visible. */
+    @Bean
+    @ConditionalOnProperty("OAUTH_JWKS_URI")
+    fun jwksHealthIndicator(): JwksHealthIndicator = JwksHealthIndicator(env.getRequiredProperty("OAUTH_JWKS_URI"))
 }
 
 internal fun audienceValidator(audience: String): OAuth2TokenValidator<Jwt> = OAuth2TokenValidator { token: Jwt ->

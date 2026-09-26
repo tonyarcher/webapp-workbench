@@ -1,12 +1,12 @@
 package userapi.web
-
 import org.springframework.http.HttpStatus
 import userapi.Settings
+import userapi.settingsForTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class ErrorAdviceBranchTest {
-    private val advice = ErrorAdvice(Settings(3000, "", "error", "user-api", cookieSecure = false))
+    private val advice = ErrorAdvice(settingsForTest(cookieSecure = false))
 
     @Test
     fun apiMapsStatus() {

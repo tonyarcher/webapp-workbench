@@ -1,7 +1,7 @@
 package userapi.config
-
 import org.mockito.kotlin.mock
 import userapi.accounts.OAuthStore
+import userapi.requiredEnv
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -9,7 +9,7 @@ import kotlin.test.assertNotNull
 class AppConfigBranchTest {
     @Test
     fun settingsAndClock() {
-        assertNotNull(AppConfig().settings())
+        assertNotNull(AppConfig().settingsFor(requiredEnv()))
         assertNotNull(AppConfig().clock())
     }
 
@@ -29,7 +29,7 @@ class AppConfigBranchTest {
 
     @Test
     fun jwtSignerBuilds() {
-        val signer = AppConfig().jwtSigner(mock<OAuthStore>(), userapi.settingsFromEnv(emptyMap()))
+        val signer = AppConfig().jwtSigner(mock<OAuthStore>(), userapi.settingsFromEnv(requiredEnv() + emptyMap()))
         assertNotNull(signer)
     }
 }

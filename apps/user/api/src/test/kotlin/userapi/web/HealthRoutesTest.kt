@@ -1,5 +1,4 @@
 package userapi.web
-
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
@@ -15,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import userapi.Settings
 import userapi.accounts.AccountServices
+import userapi.settingsForTest
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.SQLException
@@ -34,7 +34,7 @@ class HealthRoutesTest {
     @Configuration
     class TestBeans {
         @Bean
-        fun settings(): Settings = Settings(3000, "", "error", "user-api", cookieSecure = false)
+        fun settings(): Settings = settingsForTest(cookieSecure = false)
     }
 
     @Autowired

@@ -24,6 +24,7 @@ import userapi.http.getWithCookies
 import userapi.http.location
 import userapi.http.postForm
 import userapi.http.postJson
+import userapi.settingsForTest
 import userapi.web.AccountController
 import userapi.web.OAuthController
 import userapi.web.RequestIdFilter
@@ -47,7 +48,7 @@ class OAuthRoutesTest {
     @Configuration
     class TestBeans {
         @Bean
-        fun settings(): Settings = Settings(3000, "", "error", "user-api", cookieSecure = false)
+        fun settings(): Settings = settingsForTest(cookieSecure = false)
 
         @Bean
         fun clock(): Clock = Clock.fixed(Instant.parse("2026-09-11T17:00:00Z"), ZoneOffset.UTC)
