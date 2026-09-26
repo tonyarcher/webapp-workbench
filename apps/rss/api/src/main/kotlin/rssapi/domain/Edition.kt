@@ -7,7 +7,7 @@ private const val SATURATION_SCALE = 10.0
 private const val MS_PER_HOUR = 3_600_000.0
 
 /*
- * Pure edition ranking (Phase A). Deterministic: same inputs always give the
+ * Pure edition ranking. Deterministic: same inputs always give the
  * same clusters and scores, so builds are reproducible and unit-testable.
  * No Spring, no persistence, no logging here.
  */

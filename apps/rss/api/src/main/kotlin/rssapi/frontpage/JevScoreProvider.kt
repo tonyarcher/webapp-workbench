@@ -18,7 +18,7 @@ private val INTEREST_LEVELS = listOf("Not interesting to this reader", "Worth a 
 private val TOPIC_CHOICES = listOf("news", "tech", "sports", "culture", "science", "business", "other")
 
 /**
- * Phase 2 batch scorer. Single-shot [score] stays on signals (Jev cannot
+ * Jev-backed scorer. Single-shot [score] stays on signals (Jev cannot
  * rank one article in isolation); per-serve ranking goes through
  * [scoreBatch], which asks one narrow judgment per question over shared
  * state and maps answers back to 0..1 scores. Thresholds and caps live
