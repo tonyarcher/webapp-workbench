@@ -58,6 +58,10 @@ class SecurityConfig(
             reg.requestMatchers(HttpMethod.GET, "/swagger-ui/**").permitAll()
             reg.requestMatchers(HttpMethod.GET, "/webjars/**").permitAll()
         }
+        // Actuator stays internal: the gateway does not route /actuator/**, and
+        // only health, info, metrics, and prometheus are exposed. The exposure
+        // list is the real control over what is reachable.
+        reg.requestMatchers(HttpMethod.GET, "/actuator/**").permitAll()
         reg.requestMatchers(HttpMethod.POST, "/register").permitAll()
         reg.requestMatchers(HttpMethod.POST, "/login").permitAll()
         reg.requestMatchers(HttpMethod.POST, "/login/totp").permitAll()

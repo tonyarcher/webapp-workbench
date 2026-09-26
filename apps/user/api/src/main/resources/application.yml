@@ -25,3 +25,19 @@ springdoc:
     swagger-ui:
         path: /swagger-ui.html
         enabled: ${SWAGGER_ENABLED:false}
+
+# Actuator: a health check that actually verifies the database, plus metrics.
+# The gateway does not route /actuator/**, so these stay internal.
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,metrics,prometheus
+    endpoint:
+        health:
+            show-details: always
+            probes:
+                enabled: true
+    metrics:
+        tags:
+            application: ${spring.application.name}
