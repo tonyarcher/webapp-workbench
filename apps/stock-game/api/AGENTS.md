@@ -14,8 +14,9 @@ lives in `apps/stock-game` — see its `AGENTS.md`. Do not add Node `pg` here.
 - `DATABASE_URL` is required for data routes. Without it the data routes
   answer `503`, and only the probes stay healthy.
 - Portfolios are per user. `Authorization: Bearer <user-api JWT>` is required
-  on everything except `/healthz` and `/readyz`, and a missing token answers
-  `401 {"error":"unauthorized"}`. Errors use the envelope `{error: string}`.
+  on everything except `/healthz`, `/readyz`, and the root discovery endpoint
+  at `/`, and a missing token answers `401 {"error":"unauthorized"}`. Errors use
+  the envelope `{error: string}`.
 - The `X-Api-Version: 1` header is required on data routes; the probes stay
   unversioned.
 

@@ -27,8 +27,8 @@ Do not put RSS tables in `user-api`. Do not add Node `pg` here.
 - Errors use the envelope `{error: string}` (see `ErrorAdvice.kt`).
 - `GET /opml` returns `text/xml`, not JSON.
 - `Authorization: Bearer <user-api JWT>` is required on everything except
-  `/healthz` and `/readyz`; a missing token answers
-  `401 {"error":"unauthorized"}`.
+  `/healthz`, `/readyz`, and the root discovery endpoint at `/`; a missing
+  token answers `401 {"error":"unauthorized"}`.
 - Data routes require `X-Api-Version: 1`. The probes stay unversioned.
 
 ## Verification
