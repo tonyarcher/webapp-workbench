@@ -34,6 +34,14 @@ class SettingsTest {
     @Test
     fun cookieSecureFromEnv() {
         assertEquals(true, settingsFromEnv(mapOf("COOKIE_SECURE" to "true")).cookieSecure)
+        for (value in listOf("1", "yes", "on")) {
+            assertEquals(
+                true,
+                settingsFromEnv(mapOf("COOKIE_SECURE" to value)).cookieSecure,
+                "COOKIE_SECURE=$value must be truthy, matching Spring's Boolean binding",
+            )
+        }
+        assertEquals(false, settingsFromEnv(mapOf("COOKIE_SECURE" to "off")).cookieSecure)
     }
 
     @Test

@@ -37,7 +37,7 @@ fun settingsFromEnv(env: Map<String, String>): Settings {
     val databaseUrl = env["DATABASE_URL"].orEmpty()
     val logLevel = parseLogLevel(env["LOG_LEVEL"] ?: "info")
     val service = env["SERVICE"]?.ifBlank { null } ?: "user-api"
-    val cookieSecure = env["COOKIE_SECURE"]?.lowercase() in setOf("1", "true", "yes")
+    val cookieSecure = env["COOKIE_SECURE"]?.trim()?.lowercase() in setOf("1", "true", "yes", "on")
     val rpId = validRpId(env["WEBAUTHN_RP_ID"] ?: "localhost")
     val origins = parseOrigins(env["WEBAUTHN_ORIGINS"] ?: "http://localhost,http://127.0.0.1")
         .ifEmpty { setOf("http://localhost") }
