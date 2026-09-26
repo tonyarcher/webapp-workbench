@@ -56,50 +56,90 @@ tasks.register<Exec>("npmInstall") {
     commandLine(npmCommand, "install")
 }
 
-// One Exec per workspace so each build can carry its own APP_BASE_PATH.
-// Chained in build order: packages finish before the apps that load their
-// dist/. The Kotlin APIs are npm workspaces too, but their `build` is
-// `gradle bootJar` (buildJvm owns them), so they are not part of this chain.
+// One Exec per JavaScript workspace, named for the workspace rather than the
+// app, so a workspace used by two apps is built once. vertical-scroll-core is a
+// workspace of both lemmy-vertical-scroll and clipstack, and two `vite build`
+// runs writing one dist/ would corrupt it.
+//
+// Within an app the chain is ordered, because a package's dist/ must exist
+// before the app that bundles it. Across apps there is no ordering requirement,
+// but Gradle will not exploit that: `org.gradle.parallel` parallelizes across
+// *projects*, and every one of these tasks is in this single project, so they
+// run one at a time. Running them concurrently needs a task that forks the npm
+// processes itself, which measured 4s faster and then ran the machine out of
+// memory, so the serial chain stands.
+//
+// The Kotlin APIs are npm workspaces too, but their `build` is `gradle bootJar`
+// (buildJvm owns them), so they are not part of this chain.
 val appsToBuild = selectedApps().filter { app ->
     appMappings.getValue(app).workspaces.any { workspace ->
         packageJsonBuild(workspace)?.contains("gradle") != true
     }
 }
-var previousNodeTask: TaskProvider<Exec>? = null
+
+/** Task names cannot hold `@` or the `/` path separator, so flatten them. */
+fun nodeTaskName(workspace: String): String = "buildNode-" + workspace.replace("@", "").replace("/", "-")
+
+val nodeTasks = LinkedHashMap<String, TaskProvider<Exec>>()
+val nodeChains = mutableListOf<TaskProvider<Exec>>()
 appsToBuild.forEach { app ->
     val mapping = appMappings.getValue(app)
-    mapping.workspaces.forEachIndexed { index, workspace ->
-        val isLast = index == mapping.workspaces.lastIndex
-        val previous = previousNodeTask
-        val task = tasks.register<Exec>("buildNode-$app-$index") {
-            group = "build"
-            description = "Build $workspace for $app"
-            dependsOn("npmInstall")
-            if (previous != null) {
-                dependsOn(previous)
-            }
-            workingDir = rootDir
-            // Only the app workspace carries the subpath base; libraries do not.
-            if (isLast && mapping.basePath.isNotEmpty()) {
-                environment("APP_BASE_PATH", mapping.basePath)
-            } else {
-                // Never inherit a stray value (Vite would bake it in).
-                environment("APP_BASE_PATH", "")
-            }
-            commandLine(npmCommand, "run", if (isLast) mapping.buildScript else "build", "-w", workspace)
+    var previous: TaskProvider<Exec>? = null
+    // Index within the JavaScript workspaces only, so the last one is the app
+    // itself even when a trailing Gradle-build workspace sits in the list.
+    val jsWorkspaces = mapping.workspaces.filter { packageJsonBuild(it)?.contains("gradle") != true }
+    jsWorkspaces.forEachIndexed { index, workspace ->
+        val isLast = index == jsWorkspaces.lastIndex
+        if (isLast && workspace in nodeTasks) {
+            // Two apps cannot share the workspace that carries their subpath
+            // base: the baked APP_BASE_PATH would differ, so one build cannot
+            // serve both. Fail here rather than silently bake the first app's
+            // base into the second app's assets.
+            error(
+                "$workspace is the app workspace of more than one app, so each " +
+                    "needs its own APP_BASE_PATH; it cannot be built once for both",
+            )
         }
-        previousNodeTask = task
+        // Snapshot the chain tail into a val: the configuration closure below
+        // captures it, and Kotlin cannot smart-cast a captured `var`.
+        val prior = previous
+        val task = nodeTasks[workspace] ?: tasks
+            .register<Exec>(nodeTaskName(workspace)) {
+                group = "build"
+                description = "Build $workspace"
+                dependsOn("npmInstall")
+                if (prior != null) {
+                    dependsOn(prior)
+                }
+                workingDir = rootDir
+                // Only the app workspace carries the subpath base; libraries do not.
+                if (isLast && mapping.basePath.isNotEmpty()) {
+                    environment("APP_BASE_PATH", mapping.basePath)
+                } else {
+                    // Never inherit a stray value (Vite would bake it in).
+                    environment("APP_BASE_PATH", "")
+                }
+                commandLine(
+                    npmCommand,
+                    "run",
+                    if (isLast) mapping.buildScript else "build",
+                    "-w",
+                    workspace,
+                )
+            }
+            .also { nodeTasks[workspace] = it }
+        previous = task
     }
+    previous?.let { nodeChains.add(it) }
 }
 
 tasks.register("buildNode") {
     group = "build"
     description = "Build the selected JS workspaces (per-app APP_BASE_PATH)"
-    dependsOn("npmInstall")
-    val last = previousNodeTask
-    if (last != null) {
-        dependsOn(last)
-    }
+    // Every workspace task declares npmInstall, so an empty nodeChains (an
+    // API-only selection like -Papps=rss-api) reaches no npm at all rather than
+    // running the six package `prepare` builds for artifacts no service ships.
+    dependsOn(nodeChains)
 }
 
 tasks.register("buildJvm") {
