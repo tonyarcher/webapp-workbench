@@ -1,33 +1,25 @@
 # AGENTS.md
 
-Accounts landing page (`/auth/`). Shared TypeScript / Lit / CSS / workflow:
-repo-root `AGENTS.md`. Phase 3: register, login, TOTP, passkeys.
+Accounts landing page, served at `/auth/`. Shared TypeScript / Lit / CSS /
+workflow: repo-root `AGENTS.md`. Covers register, login, TOTP, and passkeys.
+The API is `apps/user/api` — see its `AGENTS.md`.
 
-## Stack
+## Rules
 
-- Vite + Lit. Custom elements `uw-*`.
-- Talks to `user-api` at origin-absolute `/user-api/` (gateway). Vite proxies
-  that prefix to `:3004` in dev. `credentials: 'include'` for the session cookie.
-- CSRF: `GET /csrf` then `X-CSRF-Token` on POSTs.
-- API version: `X-Api-Version: 1` on every `user-api` fetch.
-- Landing redirect: `?return=/fitness/` (same-origin path only).
-- No PWA. No OAuth UI yet.
+- The `uw-*` elements are this app's local UI. Do not move them into a package.
+- Every `user-api` call goes to the origin-absolute `/user-api/` prefix, which
+  the gateway routes. Do not build an absolute origin in code; the Vite dev
+  proxy maps the same prefix, so both environments agree.
+- Send `credentials: 'include'` on those calls; the session is a cookie.
+- CSRF is two steps: `GET /csrf` first, then send the returned `X-CSRF-Token`
+  on the POST.
+- Every `user-api` fetch carries `X-Api-Version: 1`.
+- `?return=` is an allow-list of same-origin paths (`src/services/return-path.ts`).
+  Never redirect to a value that is not on the list.
+- Abort in-flight fetches on disconnect. `app-shell` bootstraps the session and
+  must not resolve into a torn-down element.
+- No PWA, and no OAuth UI. Do not add either without being asked.
 
-## Commands
-
-```bash
-npm run dev -w user-web
-npm test -w user-web
-npm run build -w user-web
-```
-
-## Architecture
-
-- `src/services/api.ts` — URLs and JSON parsers. No DOM.
-- `src/services/return-path.ts` — allow-list `return` query values.
-- `src/web-components/app-shell/` — session bootstrap. Abort fetch on disconnect.
-- `src/web-components/login-form/` — register/login form.
-
-## Blocking
+## Verification
 
 - Service changes need assertions in `scripts/smoke.ts`.
