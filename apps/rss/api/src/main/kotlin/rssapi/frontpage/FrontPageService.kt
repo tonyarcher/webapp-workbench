@@ -42,11 +42,11 @@ data class ScoredArticle(
 )
 
 /**
- * Phase 1 front page: scores the reader's candidate window with [ScoreProvider]
+ * Front page: scores the reader's candidate window with [ScoreProvider]
  * and caches results in `article_scores` for [SCORE_TTL_HOURS]. Never logs
  * article text; only ids and counts leave this service.
  *
- * Phase 2: when [AiConfig.provider] is `"jev"` and a TypeSafe key is present,
+ * When [AiConfig.provider] is `"jev"` and a TypeSafe key is present,
  * stale rows are refreshed through [JevScoreProvider] behind the per-user AI
  * quota instead. Quota exhaustion answers 429; any Jev failure falls back to
  * signals for the whole batch, so the page never 500s because Jev is down.

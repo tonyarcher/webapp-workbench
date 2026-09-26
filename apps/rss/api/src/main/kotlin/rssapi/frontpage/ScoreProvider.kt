@@ -33,7 +33,7 @@ interface ScoreProvider {
     fun score(input: SignalInput): SignalScores
 }
 
-/** Phase 1 provider: deterministic blends from `domain/FrontPage.kt`. */
+/** Deterministic blends from `domain/FrontPage.kt`. Sibling: [JevScoreProvider]. */
 @Component
 class SignalScoreProvider : ScoreProvider {
     override fun score(input: SignalInput): SignalScores = SignalScores(

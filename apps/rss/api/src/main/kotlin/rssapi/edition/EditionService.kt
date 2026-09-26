@@ -66,7 +66,7 @@ private data class Ranked(
 private data class SectionDraft(val item: Ranked, val summary: String?)
 
 /**
- * Phase A generated newspaper. Clusters the reader's window by syndication
+ * Generated newspaper. Clusters the reader's window by syndication
  * key, summarizes each cluster once through [AiService], writes one labeled
  * editorial opinion over the top-3 summaries, ranks, and persists the edition
  * JSON. Quota is consumed once up front as a fail-fast gate (per-summary

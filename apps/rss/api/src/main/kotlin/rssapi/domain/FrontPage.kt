@@ -1,9 +1,9 @@
 package rssapi.domain
 
 /**
- * Phase 1 front-page signals. Pure and deterministic: the same inputs always
- * produce the same outputs, so scores are cacheable in `article_scores` and
- * Phase 2 (Jev) can replace the blend without changing callers.
+ * Deterministic front-page signals. Pure: the same inputs always produce the
+ * same outputs, so scores are cacheable in `article_scores` and a Jev-backed
+ * blend can replace this one without changing callers.
  *
  * Every function returns a value clamped to 0..1 (non-finite inputs map to an
  * endpoint, never NaN). `hot` is an absolute Reddit-style score centered near

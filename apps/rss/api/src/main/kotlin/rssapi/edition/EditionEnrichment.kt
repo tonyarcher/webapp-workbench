@@ -3,9 +3,9 @@ package rssapi.edition
 import org.springframework.stereotype.Component
 
 /**
- * Phase B attach point for Jev enrichment. Phase A wires [SignalEnrichment]
- * (honest no-ops); Phase B adds a Jev-backed implementation behind this same
- * interface without touching [EditionService]. No Jev code lives here.
+ * Attach point for Jev enrichment. [SignalEnrichment] is the current
+ * implementation (honest no-ops); a Jev-backed one can be added behind this
+ * same interface without touching [EditionService]. No Jev code lives here.
  */
 interface EditionEnrichment {
     /** A topic label for one cluster, or null when the provider abstains. */
@@ -18,7 +18,7 @@ interface EditionEnrichment {
     fun verifyClaims(clusterId: String, claims: List<String>, evidence: List<String>): Map<String, Boolean>
 }
 
-/** Phase A provider: abstains everywhere so the edition stays purely signal-driven. */
+/** Abstains everywhere, so the edition stays purely signal-driven. */
 @Component
 class SignalEnrichment : EditionEnrichment {
     override fun topic(clusterTitles: List<String>): String? = null
