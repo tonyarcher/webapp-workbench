@@ -1,6 +1,9 @@
 package fitnessapi.db
 
+import org.springframework.boot.env.YamlPropertySourceLoader
+import org.springframework.core.io.ClassPathResource
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -17,9 +20,12 @@ class MigrationResourceTest {
 
     @Test
     fun flywayBaselinesExistingSchema() {
-        val url = Thread.currentThread().contextClassLoader.getResource("application.properties")
-        assertNotNull(url)
-        assertTrue(url.readText().contains("spring.flyway.baseline-on-migrate=true"))
+        // Read the parsed property, not a line of the file, so this keeps
+        // testing the setting rather than the syntax it happens to be written in.
+        val properties = YamlPropertySourceLoader()
+            .load("application", ClassPathResource("application.yml"))
+            .first()
+        assertEquals(true, properties.getProperty("spring.flyway.baseline-on-migrate"))
     }
 
     @Test

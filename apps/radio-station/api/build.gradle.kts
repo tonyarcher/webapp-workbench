@@ -40,6 +40,7 @@ dependencies {
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     if (System.getenv("PORT") == null) environment("PORT", "3002")
+    environment("SPRING_PROFILES_ACTIVE", "dev")
 }
 
 detekt {
