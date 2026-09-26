@@ -3,6 +3,25 @@
 Instructions for AI agents working in this monorepo.
 Read the workspace `AGENTS.md` before touching that app or package.
 
+## How to maintain this file
+
+This file holds **rules, not inventories**. Apply one test to every sentence: if it
+became false, would a build, test, typecheck, or lint fail? If yes, it is a rule and the
+repo polices it. If no, it is a copy of something the code already records, and it will
+rot silently.
+
+So do not add lists of apps, packages, files, scripts, endpoints, exports, or services
+here, and do not restate a count. Put those where they are derived — `apps.json`,
+`package.json`, a Gradle or Vite config, or the filesystem — and point at it. When a fact
+is only knowable by reading the code, say where to read it instead of copying it.
+
+Two things are exempt, because they are decisions rather than listings: naming a
+convention that differs from the norm (stock-game's decorator-free Lit), and stating a
+prohibition with its reason. Named gotchas and "do not do X because Y" warnings are the
+reason this file exists. Keep them.
+
+Prefer a rule that generalizes over an example that needs updating.
+
 ## Project
 
 npm-workspaces monorepo of small TypeScript web apps plus Kotlin APIs.
@@ -20,52 +39,51 @@ database rows, not a hardcoded app list.
 
 ## Layout
 
-- `apps/baseball/` — baseball scorekeeping (`baseball-tracker`), client-side only. Depends on `@baseball/web-components`.
-- `apps/rss/` — reader UI (`app`) plus JSON API + poller (`api`, Kotlin, Spring Data JPA, Postgres `rss`). See `apps/rss/AGENTS.md`.
-- `apps/stock-game/` — paper-trading simulator; nested workspaces `app/` (`@stock-game/app`, static Vite SPA), `shared/` (`@stock-game/shared` contract), and `api/` (Kotlin, Postgres `stock`). See `apps/stock-game/AGENTS.md`.
-- `apps/lemmy-vertical-scroll/` — vertical feed scroller. Depends on `vertical-scroll-core`.
-- `apps/clipstack/` — short-video list scroller. Depends on `vertical-scroll-core`.
-- `apps/calendar-sync/` — Trakt + Netflix → ICS / Google Calendar. Depends on `calendar-core`.
-- `apps/radio-station/` — radio-station simulator. UI plus Kotlin API (`api`). Postgres database `radio`.
-- `apps/football/` — football live scorekeeping. Pluggable NFL/NCAA/MN/CO rulebooks; IndexedDB. Depends on `football-core`.
-- `apps/basketball/` — basketball live scorekeeping (`basketball-tracker`). Pluggable HS/College/NBA/WNBA rulebooks, shot chart, sim; IndexedDB. Depends on `basketball-core`.
-- `apps/fitness/` — tracker UI (`app`) plus JSON API (`api`, Kotlin, Spring Data JPA, Postgres `fitness`). See `apps/fitness/AGENTS.md`.
-- `apps/user/` — accounts landing page (`app`, served at `/auth/`) plus identity API (`api`, Kotlin, Spring Boot, Postgres `users`). See `apps/user/AGENTS.md`.
-- `packages/web-components/` — `@baseball/web-components` Lit library.
-- `packages/vertical-scroll-core/` — Lit scroller + embed players.
-- `packages/calendar-core/` — ICS / Trakt / Netflix / Google Calendar helpers.
-- `packages/football-core/` — rulebooks, play-by-play reducer, clock, notation.
-- `packages/basketball-core/` — rulebooks, court geometry, shot clock, play reducer.
-- `packages/fitness-core/` — units, 5/3/1, body formulas, importers.
-- `packages/user-client/` — headless PKCE + JWT payload parse for identity.
-- `deploy/` — Docker Compose reverse-proxy gateway (`/` hello page; apps under `/baseball/`, `/rss-reader/`, `/stock-game/`, `/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/basketball/`, `/fitness/`, `/auth/`, `/user-api/`).
+Apps live in `apps/<app>/`, shared libraries in `packages/<name>/`, and the Docker
+Compose reverse-proxy gateway in `deploy/`. **Do not read an app inventory from this
+file.** The app list, npm workspaces, compose services, aliases, `basePath`, build
+scripts, boot jar paths, the compose file, and the Docker-only service aliases all live
+in `apps.json` at the repo root; `settings.gradle.kts` and `build.gradle.kts` both derive
+from it, so adding an app means editing `apps.json`.
+
+Adding an app also means adding its routes to `deploy/nginx/default.conf.template`, which
+is hand-authored and renders to `deploy/nginx/default.conf` on every deploy. Only some
+apps carry a `basePath` in `apps.json`; the gateway's location blocks are not derived
+from it, so the template is where a new subpath gets wired.
+
+Do not assume a uniform app shape. Some apps put the UI at `apps/<app>/src`, others in
+`apps/<app>/app/`, and an app with server data adds `apps/<app>/api/` for the Kotlin API.
+Read the app's own `AGENTS.md` for its shape. App-specific facts belong there, not here.
 
 Library `prepare` scripts build `dist/` on install. After changing a package, rebuild it
 (`npm run build -w <name>`) or reinstall before consumers pick up the change.
 
 ## Commands (run from the repo root)
 
-| Task                          | Command                                                                                                                                                                                                                                                                              |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Install all workspaces        | `npm install`                                                                                                                                                                                                                                                                        |
-| Build all                     | `npm run build` (delegates `--workspaces --if-present`)                                                                                                                                                                                                                              |
-| Test all                      | `npm test`                                                                                                                                                                                                                                                                           |
-| Typecheck all                 | `npm run typecheck`                                                                                                                                                                                                                                                                  |
-| Lint all                      | `npm run lint`                                                                                                                                                                                                                                                                       |
-| Dev server (one app)          | `npm run dev:baseball` / `dev:rss-reader` / `dev:rss-api` / `dev:stock-game` / `dev:lemmy` / `dev:clipstack` / `dev:calendar-sync` / `dev:radio-station` / `dev:radio-api` / `dev:football` / `dev:basketball` / `dev:fitness` / `dev:fitness-api` / `dev:user-web` / `dev:user-api` |
-| Build (entry point)           | `python build.py [app...]` (or `python3`); calls `./gradlew buildAll`                                                                                                                                                                                                                |
-| Build everything, one command | `./gradlew buildAll` (root; JS workspaces + all Kotlin APIs). `./gradlew buildJvm` = APIs only, `./gradlew buildNode` = JS only, `./gradlew checkAll` = API tests/detekt/Jacoco. Add `-Papps=rss` (or `apps/rss`) to build one app                                                   |
-| Deploy compose stack          | `python deploy.py [options] [app...]` (or `python3`); calls `./gradlew deploy`, which builds, renders the gateway, mints certs, then runs compose. Tab completion: `source scripts/complete-deploy.bash`.                                                                            |
-| Format everything             | `npm run format` (prettier --write). Check only: `npm run format:check`.                                                                                                                                                                                                             |
-| Verify format + lint          | `python verify.py` (check mode) or `python verify.py --fix` (apply the formatters). It owns the tool list.                                                                                                                                                                           |
+| Task                          | Command                                                                                                                                                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install all workspaces        | `npm install`                                                                                                                                                                                                                      |
+| Build all                     | `npm run build` (delegates `--workspaces --if-present`)                                                                                                                                                                            |
+| Test all                      | `npm test`                                                                                                                                                                                                                         |
+| Typecheck all                 | `npm run typecheck`                                                                                                                                                                                                                |
+| Lint all                      | `npm run lint`                                                                                                                                                                                                                     |
+| Dev server (one app)          | `npm run dev:<app>` for any app with a UI or an API (for example `dev:baseball`, `dev:rss-reader`, `dev:rss-api`). The full set is the `dev:*` scripts in the root `package.json`.                                                 |
+| Build (entry point)           | `python build.py [app...]` (or `python3`); calls `./gradlew buildAll`                                                                                                                                                              |
+| Build everything, one command | `./gradlew buildAll` (root; JS workspaces + all Kotlin APIs). `./gradlew buildJvm` = APIs only, `./gradlew buildNode` = JS only, `./gradlew checkAll` = API tests/detekt/Jacoco. Add `-Papps=rss` (or `apps/rss`) to build one app |
+| Deploy compose stack          | `python deploy.py [options] [app...]` (or `python3`); calls `./gradlew deploy`, which builds, renders the gateway, mints certs, then runs compose. Tab completion: `source scripts/complete-deploy.bash`.                          |
+| Format everything             | `npm run format` (prettier --write). Check only: `npm run format:check`.                                                                                                                                                           |
+| Verify format + lint          | `python verify.py` (check mode) or `python verify.py --fix` (apply the formatters). It owns the tool list.                                                                                                                         |
 
 Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm test`).
 
-The root `settings.gradle.kts` includes the Kotlin APIs and `build.gradle.kts` owns the
-app map; `./gradlew buildAll` builds both sides on the host and `./gradlew deploy` does
-the deploy. `-Papps` limits either half to one app. Keep the app map in `build.gradle.kts`
-in sync when an app changes. The wrapper is local-only (`gradle wrapper` generates it);
-the entry points fall back to `gradle` on PATH when it is absent.
+`./gradlew buildAll` builds both sides on the host and `./gradlew deploy` does the deploy.
+`-Papps` limits either half to one app. The wrapper is local-only (`gradle wrapper`
+generates it); the entry points fall back to `gradle` on PATH when it is absent.
+
+An API-only `-Papps` (`rss-api`) runs no `npm install` and no JS build. `buildNode` reaches
+`npmInstall` only through a real per-workspace task, so a selection with no JS workspace
+never pays for the package `prepare` builds. `gradle_test.py` asserts both directions and
+skips when Gradle is absent.
 
 `packages/web-components` tests use @web/test-runner in real Chromium; `apps/baseball` e2e
 uses Playwright on `:5199` (`headless: true`). Fresh machine: `npx playwright install`.
@@ -167,7 +185,7 @@ comments, and workflow only — not Lit/CSS/PWA.
 
 ### Lit
 
-- `@customElement('prefix-name')`, `@property()` for public API, `@property({attribute: false})` for object/boolean props, `@state() private` for internal state. A plain field is not reactive — anything the template reads must be `@state()` or a property. Drop `private` (keep `@state()` on reactive fields) only for members shared with sibling modules through a host interface — Lit reactivity requires the declarations to stay on the element, and `noUnusedLocals` flags class-unread privates.
+- `@customElement('prefix-name')`, `@property()` for public API, `@property({attribute: false})` for object/boolean props, `@state() private` for internal state. Two apps deliberately do not use the decorator: stock-game is decorator-free throughout, and baseball registers with `customElements.define`. Check the app's own `AGENTS.md` before adding one. A plain field is not reactive - anything the template reads must be `@state()` or a property. Drop `private` (keep `@state()` on reactive fields) only for members shared with sibling modules through a host interface - Lit reactivity requires the declarations to stay on the element, and `noUnusedLocals` flags class-unread privates.
 - `static override styles = unsafeCSS(styles)` with `import styles from './x.css?inline'`.
 - Private fields after decorators, typed explicitly.
 - Lifecycle: `willUpdate` for prop changes, `updated` for DOM side effects, `connectedCallback` / `disconnectedCallback` for listeners (always remove on disconnect). Abort in-flight timers and loops on disconnect. Do not close over the app store from a helper that can outlive the element.
@@ -193,10 +211,11 @@ comments, and workflow only — not Lit/CSS/PWA.
   lives in a `*-core` package stays there — do not copy it into the app. New packages follow
   **Shared package vs app module** (second consumer, or headless domain — not the first screen).
 - Persistence goes through `src/db/` (or the app’s store module), never raw IndexedDB in components.
-- **Postgres is Kotlin JPA (or Python), not TypeScript.** Database per service:
-  `user-api` → `users`, fitness API → `fitness`, rss-api → `rss`. New tables
-  are Spring Data `JpaRepository` + Flyway. Do not grow Node `pg`. Do not
-  merge product schemas into `user-api`. IndexedDB in the browser is fine.
+- **Postgres is Kotlin JPA (or Python), not TypeScript.** One database per service, and
+  the `DATABASE_URL` each API receives at run time is the record of which database it
+  owns — read it there, since a database name need not match its service name. New tables
+  are Spring Data `JpaRepository` + Flyway. Do not grow Node `pg`. Do not merge product
+  schemas into `user-api`. IndexedDB in the browser is fine.
 - Floating promises: `void` plus `.catch(...)`. IndexedDB writes await `tx.done`. Multi-store writes use one transaction.
 - Async work is owned by the UI object that started it (`AbortSignal` + `isConnected`). Headless helpers must not run a loop against the shared game/store. After every `await`, recheck mode and that the element is still connected.
 - Untrusted URLs (`href` / `src`) pass through `safeUrl()` (app or `vertical-scroll-core`).
@@ -204,8 +223,8 @@ comments, and workflow only — not Lit/CSS/PWA.
 
 ### Logging
 
-User-wide JSON-stdout rules apply to **APIs** (`rss-api`, `radio-api`, `fitness-api`,
-`user-api`, stock-game server). One line per event; `service` is the compose/process name.
+User-wide JSON-stdout rules apply to every API service — that is, every compose service
+that serves JSON. One line per event; `service` is the compose/process name.
 
 - Honor inbound `X-Request-ID` (or `traceparent`); generate a UUID if missing; echo it
   on the response. Pass that id through poller/scheduler work derived from the request.
@@ -234,10 +253,11 @@ or a `packages/log` workspace until a second language needs the same code.
   `check` enforces both (`jacocoTestCoverageVerification` for lines,
   `jacocoBranchCoverageVerification` for branches, each with the same
   class filters); `test:coverage` renders the HTML/XML report without the gate.
-  Excluded because they need a database or a booted server, not unit-coverable:
-  `persist/*`, `db/*`, `DataSourceConfig`/`StoreConfig`, JPA store impls (`Jpa*`,
-  `EntityMapKt`, `SampleWrites`), and the `*ApplicationKt` `main()` entry point.
-  Slice tests cover those paths through fakes.
+  Each API declares its own `jacocoExcludes` in its `build.gradle.kts`, and the sets
+  differ, so read that list rather than assuming one. They cover the code that needs a
+  database or a booted server and is not unit-coverable: the JPA `persist` and `db`
+  layers, the data-source and store config, the JPA store implementations, and the
+  `main()` entry point. Slice tests cover those paths through fakes.
 
 ## API versioning
 
@@ -258,22 +278,20 @@ fetchers cannot send custom headers.
 - Workspace `npm test` then `npm run build` must pass before finishing.
 - `python verify.py` passes. It owns the full tool list; `--fix` applies the formatters.
   Tools come from the `ops-scripts` installers.
-- Coverage floor is **90% lines/branches/functions/statements** on measured workspaces:
-  Jacoco on the four Kotlin APIs (`rss-api`, `fitness-api`, `stock-game-api`,
-  `user-api`); `vitest --coverage` (v8) on `football-core`, `football`,
-  `basketball-core`, `basketball-tracker`, `@stock-game/app`, `baseball-tracker`;
-  `wtr --coverage` on
-  `@baseball/web-components` (thresholds 90/90/90/90 in
-  `web-test-runner.config.js`). Several workspaces sit below the floor today
+- Coverage floor is **90% lines/branches/functions/statements** on every measured
+  workspace, and each one owns its own gate: Jacoco line and branch verification in a
+  Kotlin API's `build.gradle.kts`, coverage thresholds in that workspace's Vite or vitest
+  config, and `wtr` thresholds in `packages/web-components/web-test-runner.config.js`.
+  Read the gate where it is configured rather than trusting a list here. Several
+  workspaces sit below the floor today
   (untested entry points, Lit shells, branch tails) — raise uncovered areas to
   meet it; exclude only harness-mismatched entry files with a comment saying why.
   Kotlin `npm test` (`gradle check`) enforces its gate. JS `npm test` runs unit
   tests without coverage; run `test:coverage` in the JS workspace you touched
   when changing covered logic.
 - Smoke tests (`scripts/smoke.ts`, `db-smoke.ts`, …) cover pure logic — extend them when touching those modules.
-- API/schema changes that boot Postgres need assertions in that service’s tests
-  (`user-api` / `fitness-api` / `rss-api` / `radio-api` JUnit / Flyway; do not grow Node
-  `scripts/integration.ts` for new Postgres).
+- API/schema changes that boot Postgres need assertions in that service's own JUnit and
+  Flyway tests. Do not grow Node `scripts/integration.ts` for new Postgres.
 - Library changes need tests in that package (`scripts/smoke.ts` or co-located `*.test.ts`).
 - Secrets: `gitleaks detect` when touching auth, env, or API code.
 - Dependencies: `osv-scanner -r .` or `npm audit` on lockfile changes.

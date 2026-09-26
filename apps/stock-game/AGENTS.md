@@ -23,7 +23,7 @@ stock charts are out of scope — link out to Yahoo Finance (TradingView embeds 
 - **Hash router** (`src/router.ts`: `View` union, `parsePath`/`viewToPath`) over
   `@tanstack/history`. **QueryClient** from `@tanstack/query-core`, shared by all views.
 - **Lit** UI (views, forms, tables, chart, search). Views own their queries and bind
-  `sg-*` events with `@event`.
+  `sg-*` events in the lit-html template (`@sg-order-cancel=${this.onCancel}`).
 - **Auth**: `user-api` OAuth2 Code+PKCE via `user-client` (`lib/auth.ts`). Every player
   signs in; API calls carry `Authorization: Bearer` with one 401 refresh retry.
 - **Charting**: TradingView `lightweight-charts` in `sg-portfolio-chart`.
@@ -68,7 +68,7 @@ Dev sign-in needs two local rows the gateway seed does not cover: an
 - Register via `defineElement` (guarded, SSR-safe). Side-effect import every element from
   `app/src/components/index.ts`, imported once in `main.ts`. Type-only imports get tree-shaken
   and the element never registers.
-- Views bind `sg-*` events with `@event`; `sg-auth-*` window listeners live in `sg-app-shell`.
+- Views bind `sg-*` events in the template; `sg-auth-*` window listeners live in `sg-app-shell`.
 - Custom elements must render standalone.
 - **Do not add code comments unless asked.**
 - TypeScript: root strict set via `tsconfig.base.json` (strictest flags plus

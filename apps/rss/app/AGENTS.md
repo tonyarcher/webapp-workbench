@@ -43,7 +43,7 @@ Identity: `npm run dev -w user-api` (`:3004`, same port the Vite proxy uses).
 
 - `src/types.ts` — shared domain types.
 - `src/db/` — IndexedDB via `idb`. All client reads/writes go through here.
-- `src/services/` — parser, ranking, sync, opml, proxy; no DOM.
+- `src/services/` — pure logic, no DOM or component imports; read the directory for what is there.
 - `src/web-components/<name>/` — local unprefixed UI (`app-shell`, `today-view`, …). Not a shared library.
 - `src/query.ts` / `src/mutations.ts` — query keys and mutations.
 - `src/router.ts` — hash router; a `View` union drives the app.

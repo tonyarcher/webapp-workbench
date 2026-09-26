@@ -34,7 +34,7 @@ Flyway `baselineOnMigrate` for a Node-era `rss` schema. Do not wipe `pgdata`.
 
 ## Contract
 
-Same JSON routes as the former Node server. Error envelope `{error:string}`.
+Error envelope `{error:string}` (see `ErrorAdvice.kt`).
 `GET /opml` is `text/xml`. `Authorization: Bearer <user-api JWT>` is required
 except `/healthz` and `/readyz`; without it the API answers
 `401 {"error":"unauthorized"}`. Env: `OAUTH_JWKS_URI`, `OAUTH_ISSUER`,
