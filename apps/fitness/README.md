@@ -1,26 +1,13 @@
 # Fitness
 
-Fitness tracker product: a Vite + Lit tracker UI (`app/`) backed by a Kotlin
-JSON API (`api/`, Spring Data JPA, Postgres `fitness`).
+Fitness tracker: a Vite + Lit UI (`app/`) backed by a Kotlin JSON API (`api/`).
+`AGENTS.md` has the product notes; `app/AGENTS.md` and `api/AGENTS.md` have the
+halves.
 
-## Layout
+- Shared math and parsers live in `packages/fitness-core` and are **not copied
+  into the app**. That package stays units, 5/3/1, formulas, and importers.
+- SI is stored and computed server-side. The UI toggles kg and lb for display.
+- Samples are health data: never log a sample payload.
 
-```
-app/                     tracker UI (Health Connect/CSV import, 5/3/1)
-api/                     JSON API (Flyway migrations in api/src/main/resources/db/migration/)
-```
-
-Shared math and parsers live in `packages/fitness-core`, not copied here.
-
-## Commands
-
-```
-npm run dev -w fitness        # Vite (proxies /api → :3003)
-npm run dev -w fitness-api    # :3003, DATABASE_URL required
-python deploy.py apps/fitness  # both halves together
-```
-
-## More
-
-See `AGENTS.md` for the shared product notes, `app/AGENTS.md` and
-`api/AGENTS.md` for the halves.
+Run both halves with `python deploy.py apps/fitness`. The per-workspace dev and
+test scripts are in each half's `package.json`.

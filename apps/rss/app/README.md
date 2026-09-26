@@ -1,22 +1,15 @@
 # rss-reader
 
-A client-side RSS reader. Subscriptions, folders, articles, and read state live in IndexedDB; feeds are fetched through
-a public CORS proxy and parsed in the browser.
-
-## Stack
-
-- [Lit](https://lit.dev) web components in `src/web-components/`
-- [TanStack Query](https://tanstack.com/query) (`@tanstack/query-core`) as the data layer glue
-- [TanStack Virtual](https://tanstack.com/virtual) (`@tanstack/virtual-core`) for the article list
-- [TanStack History](https://tanstack.com/router) for hash-based routing
-- [idb](https://github.com/jakearchibald/idb) for IndexedDB
+A client-side RSS reader. Subscriptions, folders, articles, and read state live
+in IndexedDB; feeds are fetched through a public CORS proxy and parsed in the
+browser. `AGENTS.md` has the engineering rules.
 
 ## Getting started
 
 ```bash
 npm install
-npm run dev        # start Vite dev server
-npm run test       # parser + IndexedDB smoke tests
+npm run dev        # Vite dev server
+npm test           # smoke tests
 npm run build      # typecheck + production build
 ```
 
@@ -56,23 +49,24 @@ Notes:
 
 ## Features
 
-- Left sidebar: folders with collapsible sources and unread counts
-- Right pane: headline list sorted by hot/newest/oldest, infinite scroll, unread-only filter, mark all as read, star
-- Click a headline to read the article inline
-- Settings (gear icon): theme (light / dark grey / lights-out OLED), add feed, OPML import/export
-- Daily Brief (sidebar): summarizes today's articles with Chrome's on-device Prompt API (Gemma / Gemini Nano)
-- Per-article "Summarize" button using the same on-device AI
-- Local popularity ranking: syndication across your feeds + feed-reported comment counts feed a Reddit-style hot sort —
-  no external APIs
+A sidebar of folders with collapsible sources and unread counts; a headline list
+sorted by hot, newest, or oldest with infinite scroll, an unread-only filter,
+mark-all-read, and starring; inline article reading; a settings dialog for theme
+(light, dark grey, lights-out OLED), adding a feed, and OPML import and export;
+a Daily Brief in the sidebar; and a per-article summarize button. Ranking is
+local — syndication and feed-reported comment counts drive a hot sort, with no
+external ranking API.
 
 ## AI summaries
 
-The Daily Brief and per-article summaries use Chrome's on-device Prompt API (`LanguageModel`, with a fallback to the
-older `window.model` / `window.ai` APIs). No network calls are made; the model runs on-device. This is not the cloud
-"Ask Gemini" button, and downloading Gemma in `chrome://components` is not enough by itself.
+The Daily Brief and per-article summaries use Chrome's on-device Prompt API
+(`LanguageModel`, with a fallback to the older `window.model` / `window.ai`
+APIs). No network calls are made; the model runs on-device. This is not the cloud
+"Ask Gemini" button, and downloading Gemma in `chrome://components` is not enough
+by itself.
 
-Requirements: Chrome 138+ on https:// or http://localhost, with
-`chrome://flags/#optimization-guide-on-device-model` and `chrome://flags/#prompt-api-for-gemini-nano` enabled. Confirm
-with `await LanguageModel.availability()` in DevTools. If unavailable, the UI shows diagnostics.
-
-Note: because this is a purely client-side app, feed fetching relies on a CORS proxy (see `src/services/proxy.ts`).
+This needs a recent Chrome on `https://` or `http://localhost`, with the
+on-device-model and prompt-api flags enabled. Confirm with
+`await LanguageModel.availability()` in DevTools; if it is unavailable the UI
+shows diagnostics. Because the app is purely client-side, feed fetching relies on
+a CORS proxy (see `src/services/proxy.ts`).

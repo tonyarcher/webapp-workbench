@@ -1,25 +1,16 @@
 # User
 
-Identity product: the accounts landing page (`app/`, served at `/auth/`) plus
-the shared identity API (`api/`, Kotlin, Spring Boot Web + Security + JPA,
-Postgres `users`).
+Identity: the accounts landing page (`app/`) plus the shared identity API
+(`api/`). `AGENTS.md` has the product notes; `app/AGENTS.md` and `api/AGENTS.md`
+have the halves.
 
-## Layout
+- The app is served at `/auth/` and calls the API at the origin-absolute
+  `/user-api/` prefix, so one code path works behind the gateway and under the
+  Vite dev proxy.
+- The API is the IdP every other app authenticates against. It stores accounts
+  and auth only and **must stay cloneable to its own repo** — never add another
+  product's tables to it.
+- Register other apps as OAuth clients in database rows, not in Kotlin.
 
-```
-app/                     Vite + Lit shell (uw-*); talks to api at /user-api/
-api/                     OAuth2 Authorization Code + PKCE, JWKS, JWT, passkeys, TOTP
-```
-
-## Commands
-
-```
-npm run dev -w user-web    # Vite (proxies /user-api → :3004)
-npm run dev -w user-api    # :3004, DATABASE_URL required
-python deploy.py apps/user  # both halves together
-```
-
-## More
-
-See `AGENTS.md` for the shared product notes, `app/AGENTS.md` and
-`api/AGENTS.md` for the halves.
+Run both halves with `python deploy.py apps/user`. The per-workspace dev and test
+scripts are in each half's `package.json`.
