@@ -24,6 +24,14 @@ import org.springframework.security.web.SecurityFilterChain
 /** Unauthenticated request handling for the resource server. */
 private const val HTTP_UNAUTHORIZED = 401
 
+/**
+ * Whether springdoc publishes the API schema and UI. The truthy set matches
+ * Spring's relaxed Boolean binding, so the gate and springdoc cannot disagree
+ * about a value like `on`.
+ */
+internal fun swaggerEnabledFromEnv(env: Map<String, String>): Boolean =
+    env["SWAGGER_ENABLED"]?.trim()?.lowercase() in setOf("1", "true", "yes", "on")
+
 @Configuration
 @EnableWebSecurity
 class SecurityConfig {
@@ -36,10 +44,9 @@ class SecurityConfig {
                 authorize(HttpMethod.GET, "/healthz", permitAll)
                 authorize(HttpMethod.GET, "/readyz", permitAll)
                 authorize(HttpMethod.GET, "/", permitAll)
-                authorize(HttpMethod.GET, "/v3/api-docs/**", permitAll)
-                authorize(HttpMethod.GET, "/swagger-ui.html", permitAll)
-                authorize(HttpMethod.GET, "/swagger-ui/**", permitAll)
-                authorize(HttpMethod.GET, "/webjars/**", permitAll)
+                if (swaggerEnabledFromEnv(System.getenv())) {
+                    swaggerDocPaths().forEach { authorize(HttpMethod.GET, it, permitAll) }
+                }
                 authorize(anyRequest, authenticated)
             }
             oauth2ResourceServer {
@@ -51,6 +58,10 @@ class SecurityConfig {
         }
         return http.build()
     }
+
+    /** Doc paths, permitted only when springdoc is switched on. */
+    private fun swaggerDocPaths(): List<String> =
+        listOf("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**", "/webjars/**")
 
     private fun unauthorizedEntryPoint(): AuthenticationEntryPoint =
         AuthenticationEntryPoint { _: HttpServletRequest, response: HttpServletResponse, _: AuthenticationException? ->
