@@ -1,44 +1,27 @@
 # AGENTS.md
 
-Fitness **API microservice**. Own process, own image, own Postgres database
-`fitness`. The Lit UI lives in `apps/fitness/app`. Identity is `user-api` (JWT `sub`).
+Fitness **API microservice**. Own process, own image, own database. The UI lives
+in `apps/fitness/app`. Identity is `user-api` (JWT `sub`).
 
 Do not put fitness tables in `user-api`. Do not add Node `pg` here.
 
-## Stack
+## Rules
 
-- Kotlin 2.2+ / JVM 21. Spring Boot Web + Spring Data JPA + Flyway.
-- `@Entity` + `JpaRepository` for tables. Do not write JDBC DAOs.
-- Domain (`domain/`): metric aliases, import collect, LTTB, profile normalize.
-- Without a Bearer token, uses the legacy local user id so the existing UI works.
+- `@Entity` plus `JpaRepository` for tables. Do not write JDBC DAOs.
+- `domain/` holds metric aliases, import collection, LTTB downsampling, and
+  profile normalisation. It holds no entities and no Spring types.
+- **Without a Bearer token, requests fall back to a legacy local user id** so the
+  existing UI keeps working. Do not remove that path until the UI sends a
+  `user-api` JWT.
+- `DATABASE_URL` is required for data routes. Without it `/healthz` is still 200
+  and every data route answers `503 {"error":"database offline"}`.
+- Flyway `baselineOnMigrate` records an existing Node-era `fitness` schema (tables
+  with no `flyway_schema_history`) and keeps it. **Do not wipe `pgdata` to cut
+  over** — that is the only copy of the data.
+- Errors use the envelope `{error: string}`.
 
-## Commands
+## Verification
 
-```bash
-npm test -w fitness-api
-npm run dev -w fitness-api   # :3003 (same port the Vite proxy uses)
-```
-
-`DATABASE_URL` is required for data routes (otherwise `/healthz` is 200 and
-the rest is `503 {"error":"database offline"}`). Example:
-`postgres://rss:rss@localhost:5432/fitness`.
-
-Host JDK + Gradle on PATH. npm scripts call `gradle` directly. Do not commit
-`gradle-wrapper.jar`. JRE image copies the boot jar. Do not run Gradle inside
-Docker.
-
-Flyway `baselineOnMigrate` so an existing Node-era `fitness` schema
-(tables, no `flyway_schema_history`) is recorded and kept; do not wipe
-`pgdata` to cut over.
-
-## Contract
-
-Same JSON routes as the former Node server: `/healthz`, `/profile`, `/stats`,
-`/samples`, `/samples/latest`, `/series`, `/rollups`, `/imports`.
-Error envelope `{error:string}`.
-
-## Blocking
-
-- Domain (metric aliases, import collect, LTTB, profile normalize) needs unit tests.
-- HTTP routes need MockMvc assertions with a fake store (import upsert,
-  hide/override, profile round-trip, invalid `limit`).
+- Domain logic needs unit tests.
+- HTTP routes need MockMvc assertions with a fake store. Cover import upsert,
+  hide and override, a profile round trip, and an invalid `limit`.

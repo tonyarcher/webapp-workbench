@@ -1,53 +1,42 @@
 # AGENTS.md
 
 Standalone identity provider (IdP). OAuth2 Authorization Code + PKCE, JWKS,
-JWT, passkeys, TOTP, passwords. Do not invent OAuth.
+JWT, passkeys, TOTP, passwords.
 
-This service must stay cloneable to another repo. It stores accounts and
-auth only. No fitness, RSS, or radio tables. Other apps are HTTP clients.
-Register those apps as OAuth clients in `oauth_clients` /
-`oauth_redirect_uris` (and later scopes), not in Kotlin.
+**This service must stay cloneable to another repo.** It stores accounts and
+auth only — never fitness, RSS, radio, or any other product's tables. Other apps
+are HTTP clients of it, not tables inside it. Register those apps as OAuth
+clients in `oauth_clients` and `oauth_redirect_uris` (and later, scopes), not in
+Kotlin.
 
-## Stack
+## Rules
 
-- Kotlin 2.2+ on JVM 21. Spring Boot Web + Spring Security + Spring Data JPA + Flyway.
-- Domain is pure Kotlin (`domain/`): usernames, password rules, lockout, tokens,
-  return paths. No Spring/`@Entity` there.
-- Passwords: Argon2id via password4j. Do not invent a hasher.
-- Session cookie `wb_session`: HttpOnly, SameSite=Lax, Path=/. `Secure` only when
-  `COOKIE_SECURE=true` (HTTP gateway is not Secure). Spring Security runs a
-  session-cookie filter plus the `wb_csrf` equality filter in its chain.
-- CSRF: cookie `wb_csrf` + header `X-CSRF-Token` on POSTs.
-- Postgres database `users`. Flyway under `src/main/resources/db/migration/`.
-- JSON stdout logs (`service` = `user-api`). Do not log passwords or session tokens.
-- Detekt floors live in `detekt.yml`: LongMethod 25, TooManyFunctions 10, cyclomatic 10,
-  nested depth 3, ComplexCondition 3. Line length is not one of them — ktlint owns 120
-  from `.editorconfig`, and detekt's `MaxLineLength` is inactive so the two cannot
-  disagree. Split rather than suppress.
+- **Do not invent OAuth.** Use what the framework gives you.
+- **Do not invent a hasher.** Passwords are Argon2id via password4j.
+- `domain/` is pure Kotlin — usernames, password rules, lockout, tokens, return
+  paths. No Spring types and no `@Entity` there.
+- `persist/` holds `@Entity` rows and their `JpaRepository` stores. Keep the
+  boundary: a rule belongs in `domain/`, a query belongs in `persist/`.
+- Session cookie `wb_session` is HttpOnly, SameSite=Lax, Path=/, and `Secure`
+  only when `COOKIE_SECURE=true` — the HTTP gateway is not Secure, so forcing it
+  breaks local and LAN use.
+- CSRF is the `wb_csrf` cookie plus an `X-CSRF-Token` header on POSTs, enforced by
+  a Spring Security filter chain. Do not bypass the chain per route.
+- JSON stdout logs carry `service` = `user-api`. **Never log a password or a
+  session token.**
+- Detekt floors live in `detekt.yml`. Line length is deliberately not one of
+  them: ktlint owns 120 from `.editorconfig`, and detekt's `MaxLineLength` is
+  inactive so the two cannot disagree. Split a method rather than suppress.
 
-## Commands
+## Build
 
-```bash
-npm test -w user-api          # gradle check (detekt + tests)
-npm run build -w user-api     # gradle bootJar
-npm run dev -w user-api       # :3004 (PORT=3004). DATABASE_URL required.
-```
+Compiles on the **host JDK**; the deploy copies the boot jar into a **JRE**
+image. Do not run Gradle inside Docker, and do not use a JDK base image at
+runtime.
 
-JDK 21+ on PATH (toolchain 21). npm scripts call `gradle` directly.
-Deploy compiles here on the **host JDK**, then copies the boot jar into a **JRE** image.
-Do not run Gradle inside Docker. Do not use a JDK base image for runtime.
+## Verification
 
-## Layout
-
-- `src/main/kotlin/userapi/domain/` — pure rules.
-- `src/main/kotlin/userapi/persist/` — `@Entity` rows + `JpaRepository` stores.
-- `src/main/kotlin/userapi/accounts/` — store interfaces + services (OAuth, passkeys).
-- `src/main/kotlin/userapi/crypto/` — Argon2id wrapper.
-- `src/main/kotlin/userapi/web/` — controllers, security filters, cookies, rate limit.
-- `src/test/kotlin/` — JUnit 5. HTTP slice tests are `@WebMvcTest` with fakes, not Postgres.
-
-## Blocking
-
-- Username, password, lockout, token, return-path, and hasher changes need unit tests.
-- HTTP routes need `@WebMvcTest` assertions (CSRF, register, login, me, logout).
-- Do not invent OAuth in this phase.
+- Changes to usernames, passwords, lockout, tokens, return paths, or the hasher
+  need unit tests.
+- HTTP routes need `@WebMvcTest` assertions with fakes, not Postgres. Cover CSRF,
+  register, login, me, and logout.

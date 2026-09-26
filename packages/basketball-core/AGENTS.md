@@ -1,23 +1,18 @@
 # AGENTS.md
 
-`basketball-core` — types, pluggable rulebooks, court geometry, shot clock, reducer.
-Shared TypeScript / formatting / workflow: repo-root `AGENTS.md`.
-
-Consumed by `apps/basketball`.
-
-## Commands
-
-```bash
-npm run build       # vite build → dist/
-npm test            # vitest run
-npm run typecheck   # tsc --noEmit
-```
-
-`prepare` builds `dist/` on install. Rebuild after changes before the app picks them up.
+`basketball-core` — types, pluggable rulebooks, court geometry, shot clock, and
+the play reducer. Shared TypeScript / formatting / workflow: repo-root
+`AGENTS.md`.
 
 ## Rules
 
-- Pure library: no DOM, no Lit. Rulebooks (NFHS / NCAA / NBA / WNBA) stay data + reducer, not UI.
-  Do not absorb `bball-*` shells from the app.
-- Co-located `src/*.test.ts`. Engine, clock, court, and rulebook changes need tests here.
-- Do not copy reducer/clock/court math into `apps/basketball`.
+- Pure library: no DOM, no Lit. Rulebooks (NFHS, NCAA, NBA, WNBA) stay data
+  plus reducer, never UI. Do not absorb the app's `bball-*` shells here.
+- Do not copy reducer, clock, or court math into the app.
+- `prepare` builds `dist/` on install, and the consumer app needs a rebuild to
+  pick up a change.
+
+## Verification
+
+- Engine, clock, court, and rulebook changes need tests in the co-located
+  `src/*.test.ts` files here.

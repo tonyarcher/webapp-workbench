@@ -1,37 +1,24 @@
 # AGENTS.md
 
-Football live scorekeeping. Shared TypeScript / Lit / CSS / workflow: repo-root `AGENTS.md`.
+Football live scorekeeping. Shared TypeScript / Lit / CSS / workflow:
+repo-root `AGENTS.md`. Domain math is in `football-core`.
 
-## Stack
+## Rules
 
-- Vite + Lit. `football-core` for rulebooks, play-by-play reducer, clock, and notation.
-- Client-side IndexedDB; no PWA service worker yet.
-- Unit tests: vitest, co-located `*.test.ts`.
+- Persistence is the **event log** plus the current game in IndexedDB. Undo and
+  redo replay the store — **do not mutate history in place.**
+- No raw IndexedDB in components. Go through `src/local-game/`.
+- Pluggable rulebooks (NFL, NCAA, MN, CO) come from `football-core`. **The app
+  selects a rulebook, it does not fork rules.** A forked rulebook silently
+  diverges from the package's.
+- Domain math lives in `football-core` and is not copied into the app.
+- The `fb-*` shells in `src/web-components/` are local UI, not package
+  material. `football-core` stays headless.
+- Honour `prefers-reduced-motion` for all motion.
 
-## Commands
+## Verification
 
-```bash
-npm run dev      # Vite
-npm run build    # tsc --noEmit && vite build
-npm run test     # vitest run
-```
-
-After editing `packages/football-core`, rebuild it before the app.
-
-## Architecture
-
-- `src/local-game/` — GameStore (event-sourced undo/redo) and IndexedDB save-state. No raw IDB in components.
-- `src/web-components/<name>/` — local `fb-*` shells (setup, game). Not package material; `football-core` stays headless.
-- Domain math lives in `football-core`, not copied into the app.
-- Global motion: honor `prefers-reduced-motion` via `src/styles`.
-
-## Data & state
-
-- Persistence is the event log + current game in IndexedDB. Undo/redo replays the store; do not mutate history in place.
-- Pluggable rulebooks (NFL / NCAA / MN / CO) come from `football-core`; the app selects, it does not fork rules.
-
-## Blocking
-
-- Engine/rulebook changes need tests in `packages/football-core/src/*.test.ts`.
-- Store/persist changes need tests in `src/local-game/*.test.ts`.
-- Watch playback looping outside `fb-game-shell` or writing into a score-mode game.
+- Engine, rulebook, or clock changes need tests in `packages/football-core`.
+- Store or persist changes need tests in `src/local-game/`.
+- Watch playback must not loop outside `fb-game-shell`, and must not write into a
+  score-mode game.

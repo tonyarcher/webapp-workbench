@@ -1,106 +1,64 @@
 # AGENTS.md
 
-Paper-trading simulator: static SPA (`app`), shared contract (`shared/`), and
-JSON API (`api`, Kotlin, Postgres `stock`). Root `AGENTS.md` covers workflow, git, and monorepo rules.
-This app **does not** follow the shared Vite+Lit decorator conventions — see exceptions below.
+Paper-trading simulator: a static SPA (`app/`), a shared contract (`shared/`),
+and a JSON API (`api/`, see its `AGENTS.md`). Root `AGENTS.md` covers workflow,
+git, and monorepo rules.
 
-Work on the whole product together: `python deploy.py apps/stock-game`, `python build.py apps/stock-game`.
+**This app does not follow the shared Vite + Lit decorator conventions.** Read
+"Exceptions" below before writing any component.
 
-## Project
+## Product
 
-One-user “what-if” game for fewer than 20 stocks. Starting cash + start date, then:
+A one-user "what-if" game over fewer than 20 stocks. Set starting cash and a
+start date, then:
 
-- **Backdated**: trade dated in the past; fills at that trading day’s close.
-- **Scheduled**: future timestamp; the API scheduler executes it at the then-current quote.
+- **Backdated** trades fill at that trading day's close.
+- **Scheduled** trades are executed by the API scheduler at the then-current quote.
 
-Graphs **portfolio performance over time** (cash + holdings at each day’s close). Individual
-stock charts are out of scope — link out to Yahoo Finance (TradingView embeds later).
+The graph is portfolio performance over time (cash plus holdings at each day's
+close). Individual stock charts are out of scope — link out to Yahoo Finance.
 
-## Stack
+## Exceptions to the root Lit conventions
 
-- **Vite static SPA** (Lit UI). No server runtime: the JSON API is
-  `apps/stock-game/api` (Kotlin, Postgres `stock`). Do not add Node `pg` here.
-- **Hash router** (`src/router.ts`: `View` union, `parsePath`/`viewToPath`) over
-  `@tanstack/history`. **QueryClient** from `@tanstack/query-core`, shared by all views.
-- **Lit** UI (views, forms, tables, chart, search). Views own their queries and bind
-  `sg-*` events in the lit-html template (`@sg-order-cancel=${this.onCancel}`).
-- **Auth**: `user-api` OAuth2 Code+PKCE via `user-client` (`lib/auth.ts`). Every player
-  signs in; API calls carry `Authorization: Bearer` with one 401 refresh retry.
-- **Charting**: TradingView `lightweight-charts` in `sg-portfolio-chart`.
-- **Lint**: oxlint with local `.oxlintrc.json` (size, complexity, and type-aware rules).
-
-## Layout
-
-```
-shared/                  TS types plus hand validators (the API contract)
-app/                     Vite SPA (static build served by nginx)
-  src/
-    router.ts                hash router (View union, path parse/emit)
-    components/          local Lit UI (sg-*); not a monorepo package
-    lib/                 query client, API client, auth, formatters
-    main.ts              boot (auth callback, mounts `sg-app-shell`)
-api/                     JSON API (Kotlin, Spring Data JPA, Postgres `stock`)
-```
-
-## Commands
-
-```
-npm install        # all workspaces
-npm run dev        # Vite on :3000 (proxies /api → :3005, /user-api → :3004)
-npm run build      # static dist/
-npm run typecheck  # strict tsc across workspaces
-npm run lint       # oxlint
-npm test           # vitest (component + lib tests, network-free)
-```
-
-API: `npm run dev -w stock-game-api` (`:3005`; `:3004` is user-api).
-Identity: `npm run dev -w user-web` plus `npm run dev -w user-api` (`:3004`).
-
-Dev sign-in needs two local rows the gateway seed does not cover: an
-`oauth_redirect_uris` row for `http://localhost:3000/`, and user-web served at
-`/auth/` (run it and proxy `/auth` to its dev port).
-
-## Exceptions vs root Lit conventions
-
-- **No Lit decorators.** Use `static properties = { ... }` + plain class fields. Decorators
-  broke reactivity (blank elements). Requires `useDefineForClassFields: false` in
-  `app/tsconfig.json` — do not remove it, and do not “fix” blank elements by adding decorators.
-- Register via `defineElement` (guarded, SSR-safe). Side-effect import every element from
-  `app/src/components/index.ts`, imported once in `main.ts`. Type-only imports get tree-shaken
-  and the element never registers.
-- Views bind `sg-*` events in the template; `sg-auth-*` window listeners live in `sg-app-shell`.
+- **No Lit decorators.** Use `static properties = { ... }` with plain class
+  fields. Decorators broke reactivity and rendered elements blank. This requires
+  `useDefineForClassFields: false` in `app/tsconfig.json` — **do not remove it,
+  and do not "fix" a blank element by adding decorators.**
+- Register elements through `defineElement`, which is guarded and SSR-safe.
+- **Side-effect import every element from `app/src/components/index.ts`, imported
+  once in `main.ts`.** A type-only import gets tree-shaken and the element never
+  registers.
+- Views bind `sg-*` events in the lit-html template. `sg-auth-*` window listeners
+  live in `sg-app-shell`, not in the views.
 - Custom elements must render standalone.
 - **Do not add code comments unless asked.**
-- TypeScript: root strict set via `tsconfig.base.json` (strictest flags plus
-  `erasableSyntaxOnly`; TypeScript 7). No `any`. No `!`
-  except tests accessing fixtures.
+- No `any`, and no `!` outside tests reaching for fixtures.
 - Every route search param is hand-validated.
-
-## Phases
-
-- Phase 1 (done): tables are hand-rolled Lit; `@tanstack/table-core` removed.
-- Phase 2: Lit route shells behind the house hash router — settings (done), orders (done),
-  portfolio (done), trade (done), dashboard (done), root (done).
-- Phase 3: hand validation replacing zod — components (done), `shared/` and the API client (done).
-- Keeps: decorator-free Lit, lightweight-charts (no house equivalent for price
-  series), money/time domain rules.
 
 ## Money, time, prices
 
-- Money: integer cents where exact, or rounded 2-dp floats (documented in `shared`). Never
-  accumulate ledger floats across trades without rounding to cents.
-- Timestamps: epoch milliseconds (integer) over the wire. Trading-day rules live
-  in the API, not the client.
-- Price data comes from `apps/stock-game/api` (`/quote`, `/bars`, `/search`).
-  Rate limits surface as a user error, not a crash.
-
-## Testing
-
-- `app/src/**/*.test.ts` via vitest (component render + lib unit tests, network-free).
-- `src/components/render.test.ts` (jsdom): each `sg-*` renders and reacts to property changes.
+- Money is integer cents where exact, otherwise floats rounded to two decimal
+  places (documented in `shared/`). **Never accumulate ledger floats across
+  trades without rounding to cents.**
+- Timestamps cross the wire as integer epoch milliseconds.
+- Trading-day rules live in the API, not the client. Do not re-derive them in the UI.
+- Rate limits from the price provider surface as a user-visible error, never as
+  an unhandled crash.
+- `shared/` holds the TS types and hand validators that form the API contract.
+  Keep app screens out of it.
 
 ## Gotchas
 
-- Hash history keeps routes working under the gateway subpath (`/stock-game/#/trade`).
-  Do not switch back to browser history without also changing the gateway strip.
-- Blank `sg-*`: class-field shadowing. Restore `useDefineForClassFields: false` / `static properties`, cover in `render.test.ts`.
+- Hash history is what keeps routes working under the gateway subpath
+  (`/stock-game/#/trade`). Do not switch to browser history without also changing
+  the gateway's prefix strip.
+- **A blank `sg-*` element means class-field shadowing.** Restore
+  `useDefineForClassFields: false` and the `static properties` map, then cover it
+  in `render.test.ts`.
+- Dev sign-in needs two local rows the gateway seed does not provide: an
+  `oauth_redirect_uris` row for `http://localhost:3000/`, and `user-web` served
+  at `/auth/` with a dev proxy.
+- Every player signs in through `user-api` (Code + PKCE via `user-client`).
+  There is no anonymous mode, and there is one 401 refresh retry per call.
+- Charting uses TradingView `lightweight-charts`, which has no house equivalent.
+  It stays in `sg-portfolio-chart`.

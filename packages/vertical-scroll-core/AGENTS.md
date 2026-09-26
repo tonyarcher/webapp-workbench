@@ -3,22 +3,21 @@
 `vertical-scroll-core` — Lit vertical scroller, media slides, and embed players.
 Shared TypeScript / Lit / CSS / workflow: repo-root `AGENTS.md`.
 
-Consumed by `apps/lemmy-vertical-scroll` and `apps/clipstack`.
-
-## Commands
-
-```bash
-npm run build   # vite build → dist/
-npm test        # tsx scripts/smoke.ts
-```
-
-`prepare` builds `dist/` on install. Rebuild after changes before consumer apps pick them up.
-
 ## Rules
 
-- Scroller primitive shared by lemmy **and** clipstack. No app-specific feed/import/account UI.
-  Consumers map their types onto `ScrollItem`. Do not absorb app screens into this package.
-- Importing the package must register the custom elements (side-effect imports in `src/index.ts`).
-- Untrusted URLs go through `safeUrl()` in `src/url.ts` (`http:` / `https:` only).
-- Embed providers stay in `src/embeds/`; add a provider there rather than in an app.
-- Service/URL/media changes need assertions in `scripts/smoke.ts`.
+- This is a scroller primitive shared by more than one app. It carries no
+  app-specific feed, import, or account UI. Consumers map their own types onto
+  `ScrollItem`; do not absorb an app screen here.
+- Importing the package must register the custom elements, via the side-effect
+  imports in `src/index.ts`. A type-only import gets tree-shaken and nothing
+  renders.
+- Untrusted URLs go through `safeUrl()` in `src/url.ts`, which allows `http:`
+  and `https:` only. Do not bypass it.
+- Embed providers belong in `src/embeds/`. Add a provider there rather than in
+  an app.
+- `prepare` builds `dist/` on install, and consumer apps need a rebuild to pick
+  up a change.
+
+## Verification
+
+- Service, URL, and media changes need assertions in `scripts/smoke.ts`.

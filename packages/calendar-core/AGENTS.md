@@ -1,21 +1,17 @@
 # AGENTS.md
 
-`calendar-core` — calendar event types, ICS emit, Trakt/Netflix mappers, Google Calendar helpers.
-Shared TypeScript / formatting / workflow: repo-root `AGENTS.md`.
-
-Consumed by `apps/calendar-sync`.
-
-## Commands
-
-```bash
-npm run build   # vite build → dist/
-npm test        # tsx scripts/smoke.ts
-```
-
-`prepare` builds `dist/` on install. Rebuild after changes before the app picks them up.
+`calendar-core` — calendar event types, ICS emit, the Trakt and Netflix mappers,
+and Google Calendar helpers. Shared TypeScript / formatting / workflow:
+repo-root `AGENTS.md`.
 
 ## Rules
 
-- Pure library: no DOM, no Lit, no tokens or secrets. Do not absorb app shells or OAuth UI.
-- ICS/Trakt/Netflix/Google mapping lives here, not in the app.
+- Pure library: no DOM, no Lit, and **no tokens or secrets**. Do not absorb app
+  shells or OAuth UI here — the provider credentials stay in the app.
+- ICS, Trakt, Netflix, and Google mapping lives here, not in the app.
+- `prepare` builds `dist/` on install, and the consumer app needs a rebuild to
+  pick up a change.
+
+## Verification
+
 - Changes need assertions in `scripts/smoke.ts`.
