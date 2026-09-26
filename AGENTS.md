@@ -278,6 +278,13 @@ fetchers cannot send custom headers.
 - Workspace `npm test` then `npm run build` must pass before finishing.
 - `python verify.py` passes. It owns the full tool list; `--fix` applies the formatters.
   Tools come from the `ops-scripts` installers.
+- A doc-rot guard runs with the script tests. It checks the claim shapes that rot most
+  often here — a backticked path, an `npm run` script, a Gradle task, and an app or
+  package count — against whatever derives each one, so a stale claim fails instead of
+  misleading. Git decides which paths are generated, so build output and a clean clone
+  both pass. Bare filenames, directories, and extensionless files are not checked. When
+  it fails on a claim you just wrote, the claim is wrong: fix the doc or the code, but
+  never widen the check to make it pass.
 - Coverage floor is **90% lines/branches/functions/statements** on every measured
   workspace, and each one owns its own gate: Jacoco line and branch verification in a
   Kotlin API's `build.gradle.kts`, coverage thresholds in that workspace's Vite or vitest
@@ -291,7 +298,9 @@ fetchers cannot send custom headers.
   when changing covered logic.
 - Smoke tests (`scripts/smoke.ts`, `db-smoke.ts`, …) cover pure logic — extend them when touching those modules.
 - API/schema changes that boot Postgres need assertions in that service's own JUnit and
-  Flyway tests. Do not grow Node `scripts/integration.ts` for new Postgres.
+  Flyway tests. Do not add a Node integration script for new server data: the Node
+  servers were replaced by Kotlin APIs, and each API's database is exercised through
+  that service's own tests.
 - Library changes need tests in that package (`scripts/smoke.ts` or co-located `*.test.ts`).
 - Secrets: `gitleaks detect` when touching auth, env, or API code.
 - Dependencies: `osv-scanner -r .` or `npm audit` on lockfile changes.
