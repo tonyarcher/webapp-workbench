@@ -1,11 +1,8 @@
 # Deployment
 
-Docker Compose stack that runs a reverse-proxy gateway in front of the
-static SPAs (Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll,
-Clipstack, Calendar Sync, Radio Station, Football, Basketball, Fitness,
-Accounts). It is
-designed to run on a remote Ubuntu host with Docker (or K3s / a
-Docker-compatible container runtime) already installed.
+Docker Compose stack that runs a reverse-proxy gateway in front of the static
+SPAs and their APIs. It is designed to run on a remote Ubuntu host with Docker
+(or any Docker-compatible container runtime) already installed.
 
 ## Layout
 
@@ -13,59 +10,40 @@ Docker-compatible container runtime) already installed.
   host ports `80` and `443`; with TLS off nothing listens on 443, but Docker
   still binds the host port — if yours is taken, comment out the `443:443`
   mapping (or stop the other listener) before `up`.
-- `nginx/default.conf.template` — gateway config template. `./gradlew deploy`
-  renders it to `nginx/default.conf` (gitignored, never edit it) on every run;
-  a direct `docker compose` needs a `./gradlew deploy -Pargs="status"` first.
-- `hello/index.html` — static hello-world page copied into the `gateway` image and served at the root `/`.
-- `gateway/` — Dockerfile that builds the `gateway` image from the `deploy/` context.
-- `baseball/`, `rss-reader/`, `lemmy-vertical-scroll/`, `clipstack/`, `calendar-sync/`, `radio-station/`, `football/`, `basketball/`, `fitness/`, `user-web/` — Dockerfiles + nginx configs for the static apps. Calendar Sync also proxies `/api/trakt/` to api.trakt.tv.
-- `radio-api/` — Dockerfile for the Radio Station Kotlin API. On startup it creates the `radio` Postgres database if the volume predates this service.
-- `fitness-api/` — JRE image for the Fitness Kotlin API. Compile on the host JDK (`gradle bootJar`); the image copies the jar. Creates the `fitness` Postgres database on startup.
-- `stock-game-api/` — JRE image for the Stock Game Kotlin API. Compile on the host JDK (`gradle bootJar`); the image copies the jar. Creates the `stock` Postgres database on startup.
-- `stock-game/` — Dockerfile + `nginx.conf`, a static Vite SPA build served
-  under `/stock-game/` (prefix stripped by the gateway). The JSON API is
-  `stock-game-api` (Kotlin, Postgres `stock`).
+- `nginx/default.conf.template` — **the gateway config, and the only place
+  routes are defined.** `./gradlew deploy` renders it to `nginx/default.conf`
+  (gitignored, never edit it) on every run; a direct `docker compose` needs a
+  `./gradlew deploy -Pargs="status"` first.
+- `hello/index.html` — static hello-world page copied into the `gateway` image
+  and served at the root `/`.
+- `gateway/` — Dockerfile for the gateway image, built from the `deploy/`
+  context.
+- One directory per app holding its Dockerfile, and for static apps its
+  `nginx.conf`. `ls deploy/` is the list; it is not written down here.
 
 All app Dockerfiles use the repo root as the build context (`context: ..` in
 compose). TypeScript and Kotlin compile on the host through Gradle
-(`./gradlew buildAll`; `./gradlew deploy` runs it first) and the gateway config
-is rendered by the same `./gradlew deploy`; images copy `dist/` or jars. Each
-app container listens on port `3000` internally; the gateway strips the prefix
-for the static apps. The `gateway` image is built from the `deploy/` context.
+(`./gradlew buildAll`; `./gradlew deploy` runs it first), and the images copy
+`dist/` or boot jars. Each app container listens on port `3000` internally and
+the gateway strips the prefix. Never run `tsc`, Vite, or Gradle inside Docker.
 
 ## Routes
 
-| Route                     | Target                                                                                               |
-| ------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `/`                       | hello-world page                                                                                     |
-| `/baseball/`              | Baseball app (nginx static, prefix stripped)                                                         |
-| `/rss-reader/`            | RSS Reader (nginx static, prefix stripped)                                                           |
-| `/stock-game/`            | Stock Game (nginx static, prefix stripped; hash routes)                                              |
-| `/lemmy-vertical-scroll/` | Lemmy Vertical Scroll (nginx static, prefix stripped)                                                |
-| `/clipstack/`             | Clipstack (nginx static, prefix stripped)                                                            |
-| `/calendar-sync/`         | Calendar Sync (nginx static + Trakt proxy, prefix stripped)                                          |
-| `/radio-station/`         | Radio Station (nginx static, prefix stripped)                                                        |
-| `/radio-station/api/`     | Radio Station API (Kotlin, prefix stripped). Creates Postgres database `radio` on startup.           |
-| `/football/`              | Football tracker (nginx static, prefix stripped)                                                     |
-| `/basketball/`            | Basketball tracker (nginx static, prefix stripped)                                                   |
-| `/fitness/`               | Fitness (nginx static, prefix stripped)                                                              |
-| `/auth/`                  | Accounts landing page (nginx static, prefix stripped)                                                |
-| `/fitness/api/`           | Fitness API (Kotlin, prefix stripped). Creates Postgres database `fitness` on startup.               |
-| `/git/`                   | Gitea git + wiki (prefix stripped, `ROOT_URL` carries `/git/`). SSH on the mapped host port via VPN. |
+**Routes are not listed here.** They are the `location` blocks in
+`nginx/default.conf.template`, which is hand-authored. Read it — it is the
+source of truth, and a table in this file could only ever be a stale copy of it.
 
-The bare paths (e.g. `/stock-game`) redirect to their trailing-slash forms.
-Each app is served under its own subpath with the base baked in at host Vite
-build (`APP_BASE_PATH`), so relative assets, manifests, and service workers
-resolve correctly behind the gateway.
+Two things worth knowing without reading every block: the gateway serves a hello
+page at `/` and one subpath per UI _and_ per API, so a product API normally sits
+under its own app's path — the identity API is the exception, top-level at
+`/user-api/`, because every app authenticates against it. A bare path such as
+`/stock-game` redirects to its trailing-slash form. Each static app's subpath
+has its base baked in at the host Vite build via `APP_BASE_PATH`, so relative
+assets, manifests, and service workers resolve correctly behind the gateway.
 
-## How each app is served
-
-- **Baseball, RSS Reader, Stock Game, Lemmy Vertical Scroll, Clipstack, Calendar Sync, Radio Station, Football, Basketball, Fitness, Accounts** are static Vite builds served
-  by an nginx container. The gateway strips the app's prefix and nginx serves
-  the built `dist/` at the root, with gzip, an SPA fallback to `index.html`,
-  no-cache for the shell/service worker, and long-lived immutable caching for
-  hashed `/assets/`. Calendar Sync's nginx also reverse-proxies `/api/trakt/`
-  to `https://api.trakt.tv` (Trakt has no CORS).
+Static apps are nginx containers serving the built `dist/` at the root after the
+strip, with gzip, an SPA fallback to `index.html`, no-cache for the shell and
+service worker, and long-lived immutable caching for hashed `/assets/`.
 
 ## Build and run
 
@@ -103,7 +81,8 @@ python deploy.py --remote rss
 python deploy.py --build-only lemmy
 ```
 
-Short names: `baseball`, `rss`, `stock`, `lemmy`, `clipstack`, `calendar`, `gateway`, `git`, `gitea`.
+App names, short aliases, and folder forms are resolved from `apps.json`; an
+unknown name fails with the list of valid ones.
 
 `python deploy.py` compiles TypeScript on the host (Vite / tsc, with
 `APP_BASE_PATH` for subpath SPAs) then copies `dist/` into nginx images.
@@ -111,10 +90,8 @@ Short names: `baseball`, `rss`, `stock`, `lemmy`, `clipstack`, `calendar`, `gate
 typecheck before a tunnel upload. Images do not run `tsc` or Vite.
 
 The gateway listens on port `80` (plus `443` when `TLS_HOSTS` is set — see
-HTTPS below). Visit `http://<host>/` for the hello page and
-`http://<host>/baseball/` (plus `/rss-reader/`, `/stock-game/`,
-`/lemmy-vertical-scroll/`, `/clipstack/`, `/calendar-sync/`, `/radio-station/`,
-`/football/`, `/basketball/`, `/fitness/`, `/auth/`) for the apps.
+HTTPS below). Visit `http://<host>/` for the hello page; the app subpaths are
+the `location` blocks in `nginx/default.conf.template`.
 
 ## HTTPS: LAN deploy vs cloud deploy
 

@@ -1,27 +1,14 @@
 # RSS
 
-Feed reader product: a Vite + Lit reader UI (`app/`) backed by a Kotlin JSON
-API + poller (`api/`, Spring Data JPA, Postgres `rss`).
+Feed reader: a Vite + Lit UI (`app/`) backed by a Kotlin JSON API and feed
+poller (`api/`). `AGENTS.md` has the product notes; `app/AGENTS.md` and
+`api/AGENTS.md` have the halves.
 
-## Layout
+- Readers sign in through `user-api` (OAuth2 Code + PKCE). There is no
+  anonymous access, and the API identifies a user from the JWT `sub`.
+- The API owns the feed pool: one row per URL, fetched once. Per-user reading
+  state lives in subscriptions and folders, not in a per-reader fetch.
+- The poller must stop on application dispose.
 
-```
-app/                     reader UI (TanStack core, hash router, PWA)
-api/                     JSON API + poller (Flyway migrations in api/src/main/resources/db/migration/)
-```
-
-## Commands
-
-```
-npm run dev -w rss-reader    # Vite (proxies /api → :3001, /user-api → :3004)
-npm run dev -w rss-api       # :3001, DATABASE_URL required
-python deploy.py apps/rss    # both halves together
-```
-
-Readers sign in through `user-api` (OAuth2 Code + PKCE); API calls carry
-`Authorization: Bearer` plus `X-Api-Version: 1`.
-
-## More
-
-See `AGENTS.md` for the shared product notes, `app/AGENTS.md` and
-`api/AGENTS.md` for the halves.
+Run both halves with `python deploy.py apps/rss`. The per-workspace dev and test
+scripts are in each half's `package.json`.
