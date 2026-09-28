@@ -126,3 +126,12 @@ deploy/fitness/**
 deploy/user-web/**
 !deploy/user-web/nginx.conf
 !deploy/user-api
+!deploy/alloy
+deploy/alloy/**
+!deploy/alloy/Dockerfile
+!deploy/alloy/config.alloy
+!deploy/grafana
+deploy/grafana/**
+!deploy/grafana/Dockerfile
+!deploy/grafana/provisioning
+!deploy/grafana/provisioning/**

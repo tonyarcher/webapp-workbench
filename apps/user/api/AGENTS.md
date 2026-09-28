@@ -20,6 +20,11 @@ Kotlin.
 - Session cookie `wb_session` is HttpOnly, SameSite=Lax, Path=/, and `Secure`
   only when `COOKIE_SECURE=true` — the HTTP gateway is not Secure, so forcing it
   breaks local and LAN use.
+- The attempt limiter is **Postgres-backed** (`rate_limit_buckets`), not a
+  `ConcurrentHashMap`. A per-replica counter silently multiplies the limit by
+  the replica count, so two containers would allow twice the attempts before
+  blocking. The increment and the window reset must stay in one statement, or
+  two replicas interleave a read and a write and each allow a request.
 - CSRF is the `wb_csrf` cookie plus an `X-CSRF-Token` header on POSTs, enforced by
   a Spring Security filter chain. Do not bypass the chain per route.
 - JSON stdout logs carry `service` = `user-api`. **Never log a password or a

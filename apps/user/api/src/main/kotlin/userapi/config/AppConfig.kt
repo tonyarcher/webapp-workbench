@@ -22,12 +22,15 @@ import userapi.crypto.JwtSigner
 import userapi.crypto.Rfc6238Totp
 import userapi.db.dataSource
 import userapi.db.ensureDatabase
+import userapi.http.RateLimitCounter
 import userapi.http.RateLimiter
 import userapi.persist.AuthCodeRepo
 import userapi.persist.BackupCodeRepo
+import userapi.persist.JpaRateLimitStore
 import userapi.persist.LoginChallengeRepo
 import userapi.persist.OAuthClientRepo
 import userapi.persist.PasskeyRepo
+import userapi.persist.RateLimitRepo
 import userapi.persist.RedirectUriRepo
 import userapi.persist.RefreshTokenRepo
 import userapi.persist.SessionRepo
@@ -82,6 +85,9 @@ class StoreConfig {
     fun challengeStore(challengeRepo: WebauthnChallengeRepo): WebauthnChallengeStore = JpaChallengeStore(challengeRepo)
 
     @Bean
+    fun rateLimitCounter(rateLimitRepo: RateLimitRepo): RateLimitCounter = JpaRateLimitStore(rateLimitRepo)
+
+    @Bean
     fun oauthStore(
         clientRepo: OAuthClientRepo,
         redirectRepo: RedirectUriRepo,
@@ -108,11 +114,12 @@ class StoreConfig {
         totpStore: TotpStore,
         passkeyService: PasskeyService,
         oauthService: OAuthService,
+        rateLimitCounter: RateLimitCounter,
         clock: Clock,
     ): AccountServices = AccountServices(
         store = accountStore,
         hasher = Argon2Hasher(),
-        limiter = RateLimiter(),
+        limiter = RateLimiter(rateLimitCounter),
         clock = clock,
         totpStore = totpStore,
         totp = Rfc6238Totp(),

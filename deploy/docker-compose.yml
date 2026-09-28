@@ -31,8 +31,24 @@
 # Each app listens on port 3000 internally; the gateway strips the prefix for
 # the static apps.
 
+# Bounded container logs. Without this every service writes an unbounded
+# json-file, and a busy day fills the disk that Postgres and every app's data
+# share -- which takes the stack down rather than just the logging.
+# Top level on purpose: inside `services:` the anchor would nest under the
+# service map and every reference below would be a cycle.
+x-logging: &bounded-logs
+    driver: json-file
+    options:
+        max-size: '10m'
+        max-file: '3'
+        # Stamp the container name into every line. Without it a log viewer can
+        # only show a container id, which says nothing about which service
+        # emitted the line. Alloy lifts it into a `container` label.
+        tag: '{{.Name}}'
+
 services:
     gateway:
+        logging: *bounded-logs
         build:
             context: .
             dockerfile: gateway/Dockerfile
@@ -62,6 +78,7 @@ services:
             - baseball
 
     postgres:
+        logging: *bounded-logs
         # Built from deploy/ so the init scripts bake into the image. Remote
         # daemons cannot use host bind mounts, so COPY (like the gateway).
         build:
@@ -85,6 +102,7 @@ services:
             - baseball
 
     rss-api:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/rss-api/Dockerfile
@@ -123,6 +141,7 @@ services:
             - baseball
 
     baseball:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/baseball/Dockerfile
@@ -131,6 +150,7 @@ services:
             - baseball
 
     rss-reader:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/rss-reader/Dockerfile
@@ -139,6 +159,7 @@ services:
             - baseball
 
     stock-game:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/stock-game/Dockerfile
@@ -147,6 +168,7 @@ services:
             - baseball
 
     stock-game-api:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/stock-game-api/Dockerfile
@@ -172,6 +194,7 @@ services:
             - baseball
 
     lemmy-vertical-scroll:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/lemmy-vertical-scroll/Dockerfile
@@ -180,6 +203,7 @@ services:
             - baseball
 
     clipstack:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/clipstack/Dockerfile
@@ -188,6 +212,7 @@ services:
             - baseball
 
     calendar-sync:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/calendar-sync/Dockerfile
@@ -196,6 +221,7 @@ services:
             - baseball
 
     radio-api:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/radio-api/Dockerfile
@@ -218,6 +244,7 @@ services:
             - baseball
 
     radio-station:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/radio-station/Dockerfile
@@ -226,6 +253,7 @@ services:
             - baseball
 
     football:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/football/Dockerfile
@@ -234,6 +262,7 @@ services:
             - baseball
 
     basketball:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/basketball/Dockerfile
@@ -242,6 +271,7 @@ services:
             - baseball
 
     fitness-api:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/fitness-api/Dockerfile
@@ -264,6 +294,7 @@ services:
             - baseball
 
     fitness:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/fitness/Dockerfile
@@ -272,6 +303,7 @@ services:
             - baseball
 
     user-api:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/user-api/Dockerfile
@@ -298,6 +330,7 @@ services:
             - baseball
 
     user-web:
+        logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/user-web/Dockerfile
@@ -306,6 +339,7 @@ services:
             - baseball
 
     gitea:
+        logging: *bounded-logs
         # Pinned upstream forge. 1.27.x is a supported line; do not float to :latest.
         image: gitea/gitea:1.27.3
         environment:
@@ -338,6 +372,119 @@ services:
         networks:
             - baseball
 
+    # Log pipeline. stdout is the contract: apps and the gateway write one JSON
+    # object per line, Alloy reads the Docker log files, VictoriaLogs indexes.
+    # Grafana reads VictoriaLogs and signs in through user-api like every other
+    # surface, so there is no second set of credentials.
+    victoria-logs:
+        image: victoriametrics/victoria-logs:v1.52.0
+        # Pinned, not :latest -- a deploy must not silently change versions.
+        command:
+            - -storageDataPath=/vlogs
+            - -retentionPeriod=${LOG_RETENTION:-30d}
+        volumes:
+            - victoria-logs-data:/vlogs
+        # Not published on the host. Only Grafana and Alloy need to reach it,
+        # and an open log-ingest port is an unauthenticated write hole.
+        expose:
+            - '9428'
+        restart: unless-stopped
+        logging: *bounded-logs
+        networks:
+            - baseball
+
+    alloy:
+        build:
+            context: ..
+            dockerfile: deploy/alloy/Dockerfile
+        command:
+            - run
+            - --server.http.listen-addr=0.0.0.0:12345
+            - --storage.path=/var/lib/alloy/data
+            - /etc/alloy/config.alloy
+        volumes:
+            # Read-only. Alloy only reads; the Docker socket is not mounted,
+            # which is the whole reason this is a bind of the log directory.
+            - /var/lib/docker/containers:/var/lib/docker/containers:ro
+            # Alloy's read positions have to outlive the container. Without this
+            # they sit in the writable layer and are lost on every recreate, and
+            # tail_from_end then treats a file it has already seen as finished:
+            # each deploy would silently drop whatever was logged while Alloy was
+            # down, which is exactly the window you most want to read.
+            - alloy-data:/var/lib/alloy/data
+        restart: unless-stopped
+        logging: *bounded-logs
+        networks:
+            - baseball
+        depends_on:
+            victoria-logs:
+                condition: service_started
+
+    grafana:
+        build:
+            context: ..
+            dockerfile: deploy/grafana/Dockerfile
+        environment:
+            # Installed at boot rather than clicked into the UI, so a rebuild
+            # comes back wired and nothing depends on one session. NOT version
+            # pinned: this plugin's releases are not published under the
+            # `id:version` tag form that Grafana's installer accepts, so a pin
+            # makes the install 404 and the viewer comes up with no datasource.
+            # The datasource's JSON plugin id is recorded in the provisioning
+            # file instead, which is the part that has to agree.
+            GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
+            # Sign in with the same identity as every other app. auth_url is
+            # fetched by the BROWSER, so it names the public origin;
+            # token_url is server-to-server and stays internal.
+            GF_AUTH_GENERIC_OAUTH_ENABLED: 'true'
+            GF_AUTH_GENERIC_OAUTH_CLIENT_ID: grafana
+            GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: ${GRAFANA_OAUTH_SECRET:?set GRAFANA_OAUTH_SECRET in deploy/.env}
+            # Deliberately NOT ${OAUTH_ISSUER}: that is the value user-api SIGNS
+            # into tokens, which stays origin-independent, and its default is
+            # localhost. This URL is fetched by the BROWSER, so it has to be the
+            # origin the viewer actually uses. Keep the two separate.
+            GF_AUTH_GENERIC_OAUTH_AUTH_URL: ${GRAFANA_OAUTH_ISSUER:-http://localhost/user-api}/oauth/authorize
+            GF_AUTH_GENERIC_OAUTH_TOKEN_URL: http://user-api:3000/oauth/token
+            # user-api is PKCE-only, so this is not optional: without it Grafana
+            # sends a plain authorization_code request the authorize endpoint
+            # rejects.
+            GF_AUTH_GENERIC_OAUTH_USE_PKCE: 'true'
+            GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: preferred_username
+            GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_VALUE: Admin
+            # user-api is OAuth2 without an id_token and without /oauth/userinfo,
+            # so Grafana reads the claims from the access token, which is a JWT
+            # carrying sub and preferred_username. Both paths below must be set
+            # or sign-in fails: Grafana requires a login, and it refuses a
+            # generic-OAuth user with no email. The username stands in for the
+            # email because accounts have no address; revisit if they gain one.
+            GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH: preferred_username
+            GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_PATH: preferred_username
+            # There is no id_token to validate: user-api returns an access token
+            # and a refresh token only. Leaving this on makes Grafana reject the
+            # response for want of a token it will never be given.
+            GF_AUTH_GENERIC_OAUTH_VALIDATE_ID_TOKEN: 'false'
+            GF_AUTH_ANONYMOUS_ENABLED: 'false'
+            GF_AUTH_BASIC_ENABLED: 'false'
+            GF_SECURITY_ALLOW_EMBEDDING: 'true'
+            # Grafana builds its own asset URLs from root_url. Behind the gateway
+            # at /logs/ it must be told that prefix or every asset 404s.
+            GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost/logs/}
+            GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
+        volumes:
+            # Provisioning is baked into the image (see deploy/grafana/Dockerfile);
+            # only the data dir is a volume, because Grafana must persist state.
+            - grafana-data:/var/lib/grafana
+        # Reachable only through the gateway at /logs/, like every other app.
+        expose:
+            - '3000'
+        restart: unless-stopped
+        logging: *bounded-logs
+        networks:
+            - baseball
+        depends_on:
+            victoria-logs:
+                condition: service_started
+
 networks:
     baseball:
         driver: bridge
@@ -345,3 +492,6 @@ networks:
 volumes:
     pgdata:
     gitea-data:
+    victoria-logs-data:
+    grafana-data:
+    alloy-data:

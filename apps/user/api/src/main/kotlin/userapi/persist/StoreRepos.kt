@@ -56,3 +56,51 @@ interface OAuthClientRepo : JpaRepository<OAuthClientEntity, String>
 interface RedirectUriRepo : JpaRepository<RedirectUriEntity, RedirectUriId> {
     fun findByClientId(clientId: String): List<RedirectUriEntity>
 }
+
+interface RateLimitRepo : JpaRepository<RateLimitBucketEntity, String> {
+    /**
+     * Count one attempt against [key] and return the count in the current window.
+     *
+     * One statement on purpose: a read-then-write would let two replicas
+     * interleave and both see the same count, which is the bug this table
+     * exists to remove. A window that has already elapsed restarts at 1, and
+     * the comparison matches the in-memory rule this replaced
+     * (`start <= now - window`), so the threshold does not drift.
+     *
+     * RETURNING the scalar, not the row. Mapping the row to the entity hands back
+     * the already-managed instance when one is in the persistence context, so a
+     * second call in the same transaction reads the *previous* count and the
+     * limiter would allow everything. That only stayed hidden because each HTTP
+     * request opens its own persistence context; a security threshold should not
+     * depend on that.
+     */
+    @Query(
+        value = """
+            INSERT INTO rate_limit_buckets (bucket_key, window_started_at, hits)
+            VALUES (:key, :now, 1)
+            ON CONFLICT (bucket_key) DO UPDATE SET
+                hits = CASE
+                    WHEN rate_limit_buckets.window_started_at <= :cutoff THEN 1
+                    ELSE rate_limit_buckets.hits + 1
+                END,
+                window_started_at = CASE
+                    WHEN rate_limit_buckets.window_started_at <= :cutoff THEN :now
+                    ELSE rate_limit_buckets.window_started_at
+                END
+            RETURNING hits
+        """,
+        nativeQuery = true,
+    )
+    fun recordHit(key: String, now: Instant, cutoff: Instant): Int
+
+    /**
+     * Drop buckets whose window closed, so the table cannot grow without bound.
+     *
+     * clearAutomatically matters here: a bulk delete bypasses the persistence
+     * context, so without it a caller that had already loaded a bucket would keep
+     * reading a row that no longer exists.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM RateLimitBucketEntity b WHERE b.windowStartedAt <= :cutoff")
+    fun trimStaleWindows(cutoff: Instant): Int
+}

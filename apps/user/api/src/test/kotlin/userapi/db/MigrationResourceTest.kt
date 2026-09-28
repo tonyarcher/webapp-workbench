@@ -71,4 +71,15 @@ class MigrationResourceTest {
         assertTrue(sql.contains("stock-game"))
         assertTrue(sql.contains("http://localhost/stock-game/"))
     }
+
+    @Test
+    fun rateLimitMigrationIsOnClasspath() {
+        val url = Thread.currentThread().contextClassLoader
+            .getResource("db/migration/V8__rate_limits.sql")
+        assertNotNull(url)
+        val sql = url.readText()
+        assertTrue(sql.contains("CREATE TABLE rate_limit_buckets"))
+        assertTrue(sql.contains("window_started_at"))
+        assertTrue(sql.contains("hits"))
+    }
 }

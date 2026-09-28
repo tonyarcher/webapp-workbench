@@ -23,12 +23,50 @@ map $http_upgrade $connection_upgrade {
     ''      close;
 }
 
+# One JSON object per line, so a shipper parses it without a regex and a
+# log query can filter on fields instead of substring-matching a line.
+#
+# The upstream timings are the point. A 502 only ever raises one question -- was
+# the connect refused, or was the upstream slow -- and the stock `combined`
+# format cannot answer it. `upstream_status` and the two timings can, and
+# `request_id` joins the line to the API's own JSON log for the same call.
+log_format app_json escape=json
+    '{'
+    '"ts":"$time_iso8601",'
+    # VictoriaLogs and the Grafana logs panel both read msg as the line to show.
+    # Without it every gateway row renders as "missing _msg field", and `service`
+    # is what makes the gateway line comparable with an API's own JSON log.
+    '"msg":"request",'
+    '"service":"gateway",'
+    '"remote_addr":"$remote_addr",'
+    '"method":"$request_method",'
+    '"path":"$uri",'
+    '"query":"$query_string",'
+    '"status":$status,'
+    '"bytes_sent":$body_bytes_sent,'
+    '"request_time":$request_time,'
+    '"upstream":"$upstream_addr",'
+    '"upstream_status":"$upstream_status",'
+    '"upstream_connect_time":"$upstream_connect_time",'
+    '"upstream_header_time":"$upstream_header_time",'
+    '"upstream_response_time":"$upstream_response_time",'
+    '"request_id":"$request_id",'
+    '"referer":"$http_referer",'
+    '"ua":"$http_user_agent"'
+    '}';
+
 @@TLS_REDIRECT@@
 server {
 @@HTTP_LISTEN@@
 @@TLS_LISTEN@@
     server_name _;
     server_tokens off;
+
+    # stdout/stderr, not a file in the image. A file is destroyed the moment the
+    # container is recreated, which is exactly when you need the log: during the
+    # deploy that caused the outage.
+    access_log /dev/stdout app_json;
+    error_log /dev/stderr warn;
 
     # Defense-in-depth security headers
     add_header X-Content-Type-Options "nosniff" always;
@@ -72,6 +110,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     # Redirect the bare paths to their trailing-slash forms so relative assets
@@ -137,6 +176,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location /stock-game/ {
@@ -150,6 +190,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location ^~ /stock-game/api/ {
@@ -161,6 +202,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location /lemmy-vertical-scroll/ {
@@ -174,6 +216,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location /tiktok-scroll/ {
@@ -191,6 +234,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location /calendar-sync/ {
@@ -204,6 +248,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location ^~ /radio-station/api/ {
@@ -215,6 +260,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location ^~ /fitness/api/ {
@@ -226,6 +272,25 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
+    }
+
+    # Log viewer (Grafana over VictoriaLogs). Same shape as the other apps:
+    # prefix stripped, resolved through Docker DNS. Grafana is told its root_url
+    # in compose so its own asset URLs match this prefix.
+    location ^~ /logs/ {
+        set $upstream_logs http://grafana:3000;
+        # No prefix rewrite, unlike every other app here. Grafana runs with
+        # serve_from_sub_path, so it expects the full /logs/... path and strips
+        # the prefix itself. Stripping it here makes Grafana answer a redirect
+        # to /logs/, which the gateway maps back to / -- an endless 301 loop.
+        proxy_pass $upstream_logs;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location ^~ /user-api/ {
@@ -237,6 +302,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location /fitness/ {
@@ -250,6 +316,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location /football/ {
@@ -263,6 +330,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location /basketball/ {
@@ -276,6 +344,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location /radio-station/ {
@@ -289,6 +358,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location /rss-reader/ {
@@ -302,6 +372,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     location /auth/ {
@@ -315,6 +386,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
     }
 
     # Gitea git + wiki (prefix stripped, like the other apps). Per the Gitea
@@ -332,6 +404,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
         client_max_body_size 512m;
     }
 }

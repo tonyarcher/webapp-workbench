@@ -134,3 +134,15 @@ class RedirectUriEntity(
     @Column(name = "redirect_uri")
     var redirectUri: String = "",
 )
+
+@Entity
+@Table(name = "rate_limit_buckets")
+class RateLimitBucketEntity(
+    @Id
+    @Column(name = "bucket_key")
+    var bucketKey: String = "",
+    @Column(name = "window_started_at", nullable = false)
+    var windowStartedAt: Instant = Instant.EPOCH,
+    @Column(name = "hits", nullable = false)
+    var hits: Int = 0,
+)

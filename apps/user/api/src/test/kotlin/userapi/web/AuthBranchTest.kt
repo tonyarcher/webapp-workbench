@@ -25,7 +25,7 @@ class AuthBranchTest {
     private fun services(store: userapi.accounts.AccountStore? = FakeAccountStore()): AccountServices = AccountServices(
         store = store,
         hasher = PlainHasher(),
-        limiter = RateLimiter(limit = 100, windowMs = 60_000L),
+        limiter = testLimiter(limit = 100),
         clock = clock,
     )
 
@@ -59,7 +59,7 @@ class AuthBranchTest {
         val tight = AccountServices(
             store = FakeAccountStore(),
             hasher = PlainHasher(),
-            limiter = RateLimiter(limit = 0, windowMs = 60_000L),
+            limiter = testLimiter(limit = 0),
             clock = clock,
         )
         assertFailsWith<ApiException> { checkRate(tight, "k", request) }

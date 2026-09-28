@@ -53,7 +53,7 @@ class AccountTotpTest {
         fun services(clock: Clock): AccountServices = AccountServices(
             store = FakeAccountStore(),
             hasher = PlainHasher(),
-            limiter = RateLimiter(limit = 100, windowMs = 60_000L),
+            limiter = testLimiter(limit = 100),
             clock = clock,
             totpStore = FakeTotpStore(),
             totp = AcceptingTotp(),

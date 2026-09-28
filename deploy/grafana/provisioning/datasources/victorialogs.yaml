@@ -1,0 +1,18 @@
+# Grafana provisions its datasources from here at boot. Provisioned rather than
+# clicked in the UI so a rebuild comes back with the same wiring and nothing
+# depends on one person's session.
+apiVersion: 1
+
+datasources:
+    - name: VictoriaLogs
+      type: victoriametrics-logs-datasource
+      # The plugin is vendored into this image via GF_INSTALL_PLUGINS rather
+      # than fetched at runtime, so a deploy cannot be broken by Grafana.com
+      # being unreachable.
+      access: proxy
+      url: http://victoria-logs:9428
+      isDefault: true
+      jsonData:
+          # Query the stored logs directly; no Loki query layer in between.
+          derivedFields: []
+      editable: false

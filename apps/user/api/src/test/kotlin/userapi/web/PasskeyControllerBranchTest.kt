@@ -44,7 +44,7 @@ class PasskeyControllerBranchTest {
         return AccountServices(
             store = FakeAccountStore(),
             hasher = PlainHasher(),
-            limiter = RateLimiter(limit = 100, windowMs = 60_000L),
+            limiter = testLimiter(limit = 100),
             clock = clock,
             passkeys = svc,
         )
@@ -61,7 +61,7 @@ class PasskeyControllerBranchTest {
         val noPasskeys = AccountServices(
             store = FakeAccountStore(),
             hasher = PlainHasher(),
-            limiter = RateLimiter(limit = 100, windowMs = 60_000L),
+            limiter = testLimiter(limit = 100),
             clock = clock,
         )
         val controller = PasskeyController(noPasskeys, settings, mapper)
@@ -94,7 +94,7 @@ class PasskeyControllerBranchTest {
         val tight = AccountServices(
             store = FakeAccountStore(),
             hasher = PlainHasher(),
-            limiter = RateLimiter(limit = 0, windowMs = 60_000L),
+            limiter = testLimiter(limit = 0),
             clock = clock,
             passkeys = PasskeyService(
                 buildRelyingParty(settings, FakePasskeyStore()),

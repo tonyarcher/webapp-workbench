@@ -1,0 +1,66 @@
+// Ships container logs to VictoriaLogs.
+//
+// Reads Docker's json-file driver output directly rather than going through the
+// Docker socket: the socket is effectively root on the host, and this only ever
+// needs to read. Promtail is the tool this replaces and is EOL as of March 2026,
+// so Alloy is the supported path.
+//
+// Docker writes each line as {"log":"...","stream":"stdout","time":"..."}, so
+// the envelope has to come off before the message is searchable -- otherwise
+// every line is one opaque JSON blob and nothing can filter on it.
+
+loki.source.file "docker" {
+  targets = [
+    {__path__ = "/var/lib/docker/containers/*/*.log"},
+  ]
+  // Start at the end of files that already exist. Without this, every Alloy
+  // restart re-ingests everything already in VictoriaLogs as duplicates.
+  tail_from_end = true
+  file_match {
+    enabled     = true
+    sync_period = "10s"
+  }
+  forward_to = [loki.process.docker.receiver]
+}
+
+loki.process "docker" {
+  // stage.docker is the built-in for Docker's json-file format. It rewrites the
+  // log line to the value of `log`, which is what makes the line searchable:
+  // VictoriaLogs builds _msg from the Loki line, so a hand-rolled stage.json
+  // that only extracted fields stored every line as "missing _msg field" and
+  // matched no full-text query.
+  //
+  // stage.docker drops attrs, so the driver `tag` (the container name, set in
+  // the compose logging anchor) has to be lifted out first and labelled after.
+  // Without this the only identity on a line is a container id.
+  stage.json {
+    expressions = {
+      attrs = "",
+    }
+  }
+
+  stage.docker {}
+
+  stage.json {
+    source      = "attrs"
+    expressions = {
+      container = "tag",
+    }
+  }
+
+  stage.labels {
+    values = {
+      container = "",
+    }
+  }
+
+  forward_to = [loki.write.victorialogs.receiver]
+}
+
+loki.write "victorialogs" {
+  endpoint {
+    // VictoriaLogs serves the Loki push API under /insert/, not at the root:
+    // posting to /loki/api/v1/push returns 400 "unsupported path requested".
+    url = "http://victoria-logs:9428/insert/loki/api/v1/push"
+  }
+}
