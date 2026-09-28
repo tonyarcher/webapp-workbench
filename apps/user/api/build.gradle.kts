@@ -17,7 +17,7 @@ repositories {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(25)
     compilerOptions {
         allWarningsAsErrors.set(true)
         freeCompilerArgs.add("-Xjsr305=strict")

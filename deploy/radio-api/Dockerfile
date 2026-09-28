@@ -1,7 +1,7 @@
 # radio-api runtime. Compile on the host (`gradle :radio-api:bootJar`).
 # The image copies the boot jar. No npm install.
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-noble
 WORKDIR /app
 ENV PORT=3000
 COPY apps/radio-station/api/build/libs/radio-api-0.1.0.jar /app/app.jar

@@ -15,7 +15,7 @@ version = "0.1.0"
 repositories { mavenCentral() }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(25)
     compilerOptions {
         allWarningsAsErrors.set(true)
         freeCompilerArgs.add("-Xjsr305=strict")

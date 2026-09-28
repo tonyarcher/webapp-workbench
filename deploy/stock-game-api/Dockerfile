@@ -2,7 +2,7 @@
 # gradle bootJar), then copy the Spring Boot jar. deploy runs that host
 # build unless --no-build.
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-noble
 WORKDIR /app
 ENV PORT=3000
 COPY apps/stock-game/api/build/libs/stock-game-api-0.1.0.jar /app/app.jar

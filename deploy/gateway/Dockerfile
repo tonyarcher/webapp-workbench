@@ -3,7 +3,7 @@
 # into the image rather than bind-mounted, which is required when Compose runs
 # against a remote Docker daemon (host paths don't exist on the remote server).
 
-FROM nginx:alpine
+FROM nginx:1.30.5-alpine
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY gateway/certs/ /etc/nginx/certs/
 COPY hello/ /usr/share/nginx/hello/

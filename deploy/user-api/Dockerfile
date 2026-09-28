@@ -1,7 +1,7 @@
 # user-api runtime. Compile on the host (`npm run build -w user-api` / gradle bootJar),
 # then copy the Spring Boot jar. gradle buildJvm (deploy runs it) builds that.
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-noble
 WORKDIR /app
 ENV PORT=3000
 COPY apps/user/api/build/libs/user-api-0.1.0.jar /app/app.jar
