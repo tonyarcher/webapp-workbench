@@ -31,6 +31,10 @@ deploy/gateway/certs/*
 !deploy/gateway/certs/.gitkeep
 # Gateway nginx: rendered from default.conf.template on every deploy.
 deploy/nginx/default.conf
+# Database dumps taken before a major-version upgrade. These are local backups
+# of real data, hundreds of megabytes, and must never reach the repository.
+deploy/*.dump
+deploy/*.dump.*
 
 # Gradle / Kotlin
 .gradle/
