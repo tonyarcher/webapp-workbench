@@ -286,6 +286,14 @@ server {
         # to /logs/, which the gateway maps back to / -- an endless 301 loop.
         proxy_pass $upstream_logs;
         proxy_http_version 1.1;
+        # Grafana's live channel is a websocket at /api/live/ws. Without these
+        # two headers nginx forwards a plain GET, Grafana answers 400, and every
+        # panel silently stops receiving updates while still rendering. 1.1 above
+        # is necessary but not sufficient: the Upgrade hop must be passed through.
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
