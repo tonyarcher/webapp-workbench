@@ -26,14 +26,36 @@ data class AppCatalog(
     val dockerOnlyApps: Set<String>,
 )
 
-private val appCatalogCache: MutableMap<Project, AppCatalog> =
-    java.util.Collections.synchronizedMap(java.util.WeakHashMap())
+/*
+ * One cached catalog, paired with the mtime it was parsed from.
+ *
+ * Keying a map on Project alone is not enough, and the obvious "fix" of adding
+ * the mtime to the key is worse: a key holding a strong Project reference
+ * defeats the WeakHashMap and leaks an entry per build inside a long-lived
+ * daemon. buildSrc's classes outlive a single build in a warm daemon, so the old
+ * cache returned the catalog parsed by whichever build started it, and editing
+ * apps.json did nothing at all -- no error, just the old app list, until the
+ * daemon was stopped by hand. That contradicts the contract at the top of this
+ * file, and silently, which is the worst way for it to fail.
+ *
+ * So: hold the last parse beside its mtime, and re-parse when the file changes.
+ * The catalog is one small JSON read a handful of times per build, so the stat
+ * per access is cheaper than a parse and the stale read is gone.
+ */
+private var cachedCatalog: Pair<Long, AppCatalog>? = null
 
 private val appEntryKeys: Set<String> =
     setOf("id", "workspaces", "services", "basePath", "buildScript", "aliases")
 
 val Project.appCatalog: AppCatalog
-    get() = appCatalogCache.getOrPut(this) { loadAppCatalog(rootDir) }
+    get() {
+        val modified = java.io.File(rootDir, "apps.json").lastModified()
+        val cached = cachedCatalog
+        if (cached != null && cached.first == modified) return cached.second
+        val loaded = loadAppCatalog(rootDir)
+        cachedCatalog = modified to loaded
+        return loaded
+    }
 
 val Project.appMappings: Map<String, HostApp>
     get() = appCatalog.apps
