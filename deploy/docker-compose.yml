@@ -320,6 +320,19 @@ services:
             DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/users
             SERVICE: user-api
             OAUTH_ISSUER: ${OAUTH_ISSUER:-http://localhost/user-api}
+            # Two bases, because the OIDC discovery document publishes both.
+            # OAUTH_PUBLIC_BASE is followed by a BROWSER to the authorize
+            # endpoint, so it carries the gateway prefix. The other endpoints
+            # are called by client processes inside the compose network, where
+            # the gateway has already stripped that prefix and the public origin
+            # is not the way in. Publishing one base for all of them breaks
+            # exactly the server-to-server calls.
+            OAUTH_PUBLIC_BASE: ${OAUTH_PUBLIC_BASE:-http://localhost/user-api}
+            OAUTH_INTERNAL_BASE: ${OAUTH_INTERNAL_BASE:-http://user-api:3000}
+            # Clients listed here are confidential: they may complete a flow
+            # without PKCE, and must then authenticate at the token endpoint.
+            # Digests, not secrets, so this is safe to read in a Settings dump.
+            OAUTH_CLIENT_SECRETS: ${OAUTH_CLIENT_SECRETS:-}
             WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
             WEBAUTHN_ORIGINS: ${WEBAUTHN_ORIGINS:-http://localhost,http://127.0.0.1}
         depends_on:
@@ -359,6 +372,13 @@ services:
             # Headless install: env seeds app.ini, Gitea migrates on boot, and the
             # first registered user becomes admin. No web-installer step needed.
             GITEA__security__INSTALL_LOCK: 'true'
+            # Gitea refuses to auto-create an account with an empty email, and
+            # user-api deliberately issues no email claim: accounts have no
+            # address, and inventing one from the username would put a value in
+            # front of Gitea that looks deliverable and is not. Skipping the check
+            # is the honest way to say this identity is verified by the provider
+            # and simply has no address attached.
+            GITEA__oauth2_client__SKIP_EMAIL_VERIFY: 'true'
         volumes:
             - gitea-data:/data
         # SSH bypasses the gateway. Bind defaults to localhost; set GITEA_SSH_BIND

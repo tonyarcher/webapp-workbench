@@ -65,7 +65,15 @@ open class JpaOAuthStore(
         clientId: String,
         redirectUri: String,
         codeChallenge: String,
-    ): StoredAuthCode? = authCodes.takeAuthCode(codeHash, now, clientId, redirectUri, codeChallenge)?.toStored()
+        allowMissingChallenge: Boolean,
+    ): StoredAuthCode? = authCodes.takeAuthCode(
+        codeHash,
+        now,
+        clientId,
+        redirectUri,
+        codeChallenge,
+        allowMissingChallenge,
+    )?.toStored()
 
     override fun insertRefresh(tokenHash: String, familyId: UUID, userId: UUID, clientId: String, expiresAt: Instant) {
         refreshTokens.save(

@@ -1,5 +1,6 @@
 package userapi.web
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -12,22 +13,33 @@ import userapi.Settings
 import userapi.accounts.AccountServices
 import userapi.accounts.OAuthService
 import userapi.accounts.TokenPair
+import userapi.crypto.AccessClaims
+import userapi.domain.ClientSecrets
 import userapi.log.log
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 private const val SERVICE = "user-api"
 
+private const val BEARER_PREFIX = "Bearer "
+
+/** Authorization Code only. There is no implicit or hybrid flow to advertise. */
+private const val RESPONSE_TYPE_CODE = "code"
+
 /** RFC 7636: a PKCE S256 challenge is a base64url SHA-256 digest (43 chars min). */
 private const val MIN_CODE_CHALLENGE_CHARS = 43
 
 @RestController
-class OAuthController(private val accounts: AccountServices, private val settings: Settings) {
+class OAuthController(
+    private val accounts: AccountServices,
+    private val settings: Settings,
+    private val mapper: ObjectMapper,
+) {
     @GetMapping("/oauth/authorize")
     fun authorize(@RequestParam params: Map<String, String>, request: HttpServletRequest): ResponseEntity<Void> {
         val oauth = requireOauth()
         val store = requireStore(accounts)
-        if (!authorizeParamsOk(oauth, params)) {
+        if (!authorizeParamsOk(oauth, params, ClientSecrets(settings.clientSecretDigests))) {
             throw ApiException(HttpStatus.BAD_REQUEST, "oauth", "invalid authorize request")
         }
         val session = peekSession(request)
@@ -38,7 +50,9 @@ class OAuthController(private val accounts: AccountServices, private val setting
             session.userId,
             params["client_id"].orEmpty(),
             params["redirect_uri"].orEmpty(),
-            params["code_challenge"].orEmpty(),
+            // Empty for a confidential client that omitted PKCE, which the token
+            // endpoint reads as "this code needs a secret, not a verifier".
+            if (hasPkce(params)) params["code_challenge"].orEmpty() else "",
         )
         return redirect(redirectWithCode(params["redirect_uri"].orEmpty(), code, params["state"]))
     }
@@ -98,11 +112,23 @@ class OAuthController(private val accounts: AccountServices, private val setting
 
     private fun tokenFromCode(oauth: OAuthService, form: Map<String, String>): TokenPair {
         val store = requireStore(accounts)
+        val clientId = form["client_id"].orEmpty()
+        val secrets = ClientSecrets(settings.clientSecretDigests)
+        // A code issued to a client that skipped PKCE is bound to that client by
+        // its secret instead. Verifying it HERE is what keeps permitting a
+        // non-PKCE flow from being a straight loss of the code-interception
+        // defence: without this branch an intercepted no-PKCE code would be
+        // redeemable by anyone who knew the client id.
+        val confidential = secrets.isConfidential(clientId)
+        if (confidential && !secrets.verify(clientId, form["client_secret"])) {
+            throw OAuthTokenException("invalid_client")
+        }
         return oauth.exchangeCode(
             code = form["code"].orEmpty(),
-            clientId = form["client_id"].orEmpty(),
+            clientId = clientId,
             redirectUri = form["redirect_uri"].orEmpty(),
             verifier = form["code_verifier"].orEmpty(),
+            allowMissingChallenge = confidential,
         ) { id -> store.findById(id)?.username } ?: throw OAuthTokenException("invalid_grant")
     }
 
@@ -118,14 +144,27 @@ class OAuthController(private val accounts: AccountServices, private val setting
     private fun rawQuery(request: HttpServletRequest): String? = request.queryString
 }
 
-internal fun authorizeParamsOk(oauth: OAuthService, params: Map<String, String>): Boolean {
+internal fun authorizeParamsOk(oauth: OAuthService, params: Map<String, String>, secrets: ClientSecrets): Boolean {
     val clientId = params["client_id"].orEmpty()
     val redirect = params["redirect_uri"].orEmpty()
     if (!oauth.allowedRedirect(clientId, redirect)) return false
     if (params["response_type"] != "code") return false
+    if (secrets.isConfidential(clientId)) return true
     if (params["code_challenge_method"] != "S256") return false
     return params["code_challenge"].orEmpty().length >= MIN_CODE_CHALLENGE_CHARS
 }
+
+/**
+ * Whether the authorize request carried a usable PKCE challenge.
+ *
+ * A property of the request, not of the client: a confidential client MAY omit
+ * it and a public client may not. The empty challenge is what gets stored for
+ * the first case, because the token endpoint has to be able to tell the two
+ * kinds of code apart -- a code with no challenge is only redeemable by a client
+ * that can present its secret.
+ */
+internal fun hasPkce(params: Map<String, String>): Boolean = params["code_challenge_method"] == "S256" &&
+    params["code_challenge"].orEmpty().length >= MIN_CODE_CHALLENGE_CHARS
 
 internal fun loginRedirect(settings: Settings, query: String?): String {
     val path = "/user-api/oauth/authorize" + if (query.isNullOrBlank()) "" else "?$query"

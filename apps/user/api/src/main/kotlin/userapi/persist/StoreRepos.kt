@@ -40,7 +40,10 @@ interface AuthCodeRepo : JpaRepository<AuthCodeEntity, String> {
               AND expires_at > :now
               AND client_id = :clientId
               AND redirect_uri = :redirectUri
-              AND code_challenge = :codeChallenge
+              AND (
+                    code_challenge = :codeChallenge
+                    OR (:allowMissingChallenge AND code_challenge = '')
+              )
             RETURNING *
         """,
         nativeQuery = true,
@@ -51,6 +54,7 @@ interface AuthCodeRepo : JpaRepository<AuthCodeEntity, String> {
         clientId: String,
         redirectUri: String,
         codeChallenge: String,
+        allowMissingChallenge: Boolean,
     ): AuthCodeEntity?
 }
 

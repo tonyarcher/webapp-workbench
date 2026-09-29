@@ -71,6 +71,12 @@ class SecurityConfig(
         reg.requestMatchers(HttpMethod.GET, "/oauth/authorize").permitAll()
         reg.requestMatchers(HttpMethod.POST, "/oauth/token").permitAll()
         reg.requestMatchers(HttpMethod.GET, "/oauth/jwks").permitAll()
+        // OIDC discovery is public by design: a client fetches it before it has
+        // any credential. userinfo authenticates itself per request with the
+        // bearer access token, so permitting the route does not publish it --
+        // an absent or invalid token still answers 401 from the handler.
+        reg.requestMatchers(HttpMethod.GET, "/.well-known/openid-configuration").permitAll()
+        reg.requestMatchers(HttpMethod.GET, "/oauth/userinfo").permitAll()
         reg.anyRequest().authenticated()
     }
 

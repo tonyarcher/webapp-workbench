@@ -53,13 +53,16 @@ class FakeOAuthStore : OAuthStore {
         clientId: String,
         redirectUri: String,
         codeChallenge: String,
+        allowMissingChallenge: Boolean,
     ): StoredAuthCode? {
         val pair = codes[codeHash] ?: return null
         val row = pair.first
         if (!pair.second.isAfter(now)) return null
         if (row.clientId != clientId) return null
         if (row.redirectUri != redirectUri) return null
-        if (row.codeChallenge != codeChallenge) return null
+        val challengeOk = row.codeChallenge == codeChallenge ||
+            (allowMissingChallenge && row.codeChallenge.isEmpty())
+        if (!challengeOk) return null
         return codes.remove(codeHash)?.first
     }
 

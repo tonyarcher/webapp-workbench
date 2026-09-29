@@ -37,6 +37,7 @@ interface OAuthStore {
         clientId: String,
         redirectUri: String,
         codeChallenge: String,
+        allowMissingChallenge: Boolean = false,
     ): StoredAuthCode?
     fun insertRefresh(tokenHash: String, familyId: UUID, userId: UUID, clientId: String, expiresAt: Instant)
     fun takeRefresh(tokenHash: String, now: Instant): StoredRefresh?

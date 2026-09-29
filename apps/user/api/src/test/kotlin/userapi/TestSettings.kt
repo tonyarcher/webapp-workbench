@@ -15,6 +15,8 @@ fun settingsForTest(
     service: String = "user-api",
     cookieSecure: Boolean = false,
     swaggerEnabled: Boolean = false,
+    publicBase: String = "http://localhost:3000",
+    internalBase: String = publicBase,
 ): Settings = Settings(
     port,
     databaseUrl,
@@ -24,6 +26,8 @@ fun settingsForTest(
     rpId = "localhost",
     origins = setOf("http://localhost", "http://127.0.0.1"),
     issuer = "http://localhost/user-api",
+    publicBase = publicBase,
+    internalBase = internalBase,
     swaggerEnabled = swaggerEnabled,
 )
 
@@ -32,4 +36,5 @@ fun requiredEnv(): Map<String, String> = mapOf(
     "WEBAUTHN_RP_ID" to "localhost",
     "WEBAUTHN_ORIGINS" to "http://localhost,http://127.0.0.1",
     "OAUTH_ISSUER" to "http://localhost/user-api",
+    "OAUTH_PUBLIC_BASE" to "http://localhost:3000",
 )

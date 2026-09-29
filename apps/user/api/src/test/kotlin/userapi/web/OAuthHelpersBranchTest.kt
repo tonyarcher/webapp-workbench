@@ -2,6 +2,7 @@ package userapi.web
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import userapi.accounts.OAuthService
+import userapi.domain.ClientSecrets
 import userapi.settingsForTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,14 +24,64 @@ class OAuthHelpersBranchTest {
         "code_challenge" to "x".repeat(43),
     )
 
+    /** No client in this map is confidential, so every one must use PKCE. */
+    private val public: ClientSecrets = ClientSecrets(emptyMap())
+
+    /** A digest of anything; only its presence makes a client confidential here. */
+    private val confidential: ClientSecrets = ClientSecrets(mapOf("c1" to "0".repeat(64)))
+
     @Test
     fun authorizeChecks() {
-        assertTrue(authorizeParamsOk(oauth(true), params()))
-        assertFalse(authorizeParamsOk(oauth(false), params()))
-        assertFalse(authorizeParamsOk(oauth(true), params() + ("response_type" to "token")))
-        assertFalse(authorizeParamsOk(oauth(true), params() + ("code_challenge_method" to "plain")))
-        assertFalse(authorizeParamsOk(oauth(true), params() + ("code_challenge" to "short")))
-        assertFalse(authorizeParamsOk(oauth(true), params() - "code_challenge"))
+        assertTrue(authorizeParamsOk(oauth(true), params(), public))
+        assertFalse(authorizeParamsOk(oauth(false), params(), public))
+        assertFalse(authorizeParamsOk(oauth(true), params() + ("response_type" to "token"), public))
+        assertFalse(authorizeParamsOk(oauth(true), params() + ("code_challenge_method" to "plain"), public))
+        assertFalse(authorizeParamsOk(oauth(true), params() + ("code_challenge" to "short"), public))
+        assertFalse(authorizeParamsOk(oauth(true), params() - "code_challenge", public))
+    }
+
+    /**
+     * A confidential client may omit PKCE -- Gitea cannot send it, and its fix is
+     * an unmerged PR. This is the only way a non-PKCE authorize is accepted.
+     */
+    @Test
+    fun aConfidentialClientMayOmitPkce() {
+        assertTrue(
+            authorizeParamsOk(
+                oauth(true),
+                params() - "code_challenge" -
+                    "code_challenge_method",
+                confidential,
+            ),
+        )
+    }
+
+    /** A public client may not, however it asks. */
+    @Test
+    fun aPublicClientStillMayNotOmitPkce() {
+        assertFalse(
+            authorizeParamsOk(
+                oauth(true),
+                params() - "code_challenge" -
+                    "code_challenge_method",
+                public,
+            ),
+        )
+    }
+
+    /** Confidentiality does not waive the redirect or response_type checks. */
+    @Test
+    fun aConfidentialClientIsStillBoundByRedirectAndResponseType() {
+        assertFalse(authorizeParamsOk(oauth(false), params(), confidential))
+        assertFalse(authorizeParamsOk(oauth(true), params() + ("response_type" to "token"), confidential))
+    }
+
+    @Test
+    fun hasPkceDependsOnlyOnTheRequest() {
+        assertTrue(hasPkce(params()))
+        assertFalse(hasPkce(params() - "code_challenge"))
+        assertFalse(hasPkce(params() - "code_challenge_method"))
+        assertFalse(hasPkce(params() + ("code_challenge" to "short")))
     }
 
     @Test
@@ -52,6 +103,6 @@ class OAuthHelpersBranchTest {
 
     @Test
     fun authorizeEmptyParams() {
-        assertFalse(authorizeParamsOk(oauth(true), emptyMap()))
+        assertFalse(authorizeParamsOk(oauth(true), emptyMap(), public))
     }
 }
