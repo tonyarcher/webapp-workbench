@@ -2,7 +2,10 @@
     "composeFile": "deploy/docker-compose.yml",
     "dockerOnly": {
         "git": "gitea",
-        "hello": "gateway"
+        "hello": "gateway",
+        "logs": "grafana",
+        "logstore": "victoria-logs",
+        "logship": "alloy"
     },
     "apiJars": {
         "user-api": "apps/user/api/build/libs/user-api-0.1.0.jar",
