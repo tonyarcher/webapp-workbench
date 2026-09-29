@@ -189,11 +189,12 @@ class OidcDiscoveryTest {
     /**
      * The nonce round trip, which is the second thing that stops an OIDC login.
      *
-     * Wiki.js passes the nonce it sent to /oauth/authorize as `expectedNonce`
-     * when it verifies the id_token, and refuses a token that does not carry the
-     * same value. user-api used to drop the parameter entirely, so the token
-     * could not possibly match. The id_token is read here rather than the signer
-     * being called directly, because the claim has to survive the code store.
+     * A conforming client passes the nonce it sent to /oauth/authorize as
+     * `expectedNonce` when it verifies the id_token, and refuses a token that
+     * does not carry the same value. user-api used to drop the parameter
+     * entirely, so the token could not possibly match. The id_token is read
+     * here rather than the signer being called directly, because the claim has
+     * to survive the code store.
      */
     @Test
     fun `a redeemed code echoes the nonce into the id_token`() {

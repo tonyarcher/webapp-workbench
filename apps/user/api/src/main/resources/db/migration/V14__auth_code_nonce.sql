@@ -1,10 +1,10 @@
 -- Carry the OIDC `nonce` from /oauth/authorize through to the id_token.
 --
 -- OIDC Core 3.1.3.7 requires the id_token to repeat the nonce the authorization
--- request carried, unchanged. Wiki.js sends one on every login and passes it to
--- its client as `expectedNonce`, so a token without it is refused -- the same
--- shape of failure as the missing id_token, and found the same way: by reading
--- what the client actually validates.
+-- request carried, unchanged, and a conforming client passes what it sent to its
+-- library as `expectedNonce`, so a token without it is refused -- the same shape
+-- of failure as the missing id_token, and found the same way: by reading what a
+-- client actually validates.
 --
 -- Nullable with no default, so a row written before this migration reads back as
 -- no nonce rather than as an empty one. That matters: the signer adds the claim

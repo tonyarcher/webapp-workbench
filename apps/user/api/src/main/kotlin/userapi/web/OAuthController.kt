@@ -54,8 +54,8 @@ class OAuthController(
             // endpoint reads as "this code needs a secret, not a verifier".
             if (hasPkce(params)) params["code_challenge"].orEmpty() else "",
             // OIDC Core 3.1.3.7: a nonce is echoed into the id_token, and a
-            // client that sent one refuses a token without it. Wiki.js sends one
-            // on every login, so dropping it here breaks wiki sign-in.
+            // client that sent one refuses a token without it. Dropping it here
+            // breaks every conforming OIDC client.
             params["nonce"].orEmpty(),
         )
         return redirect(redirectWithCode(params["redirect_uri"].orEmpty(), code, params["state"]))

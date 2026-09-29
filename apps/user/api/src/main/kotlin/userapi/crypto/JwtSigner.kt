@@ -51,9 +51,9 @@ class JwtSigner(store: OAuthStore, private val issuer: String) {
      *
      * [nonce] is echoed only when the authorization request carried one. OIDC
      * Core 3.1.3.7 requires the token to repeat it unchanged, and a client that
-     * sent a nonce refuses a token without it -- Wiki.js sends one on every
-     * login and checks it. An empty nonce adds no claim, so a client that sent
-     * none sees an id_token of exactly the shape it expects.
+     * sent a nonce refuses a token without it, so a provider that drops the
+     * parameter fails every conforming client. An empty nonce adds no claim, so
+     * a client that sent none sees an id_token of exactly the shape it expects.
      */
     @Suppress("LongParameterList")
     fun identityToken(userId: UUID, username: String, clientId: String, now: Instant, nonce: String = ""): String {
