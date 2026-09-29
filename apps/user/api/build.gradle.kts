@@ -25,6 +25,29 @@ kotlin {
     }
 }
 
+// Dependency locking, so the resolved tree is recorded rather than re-resolved
+// on every build. Without a lockfile Dependabot infers versions by parsing the
+// build files, which reported 17 findings of which 6 had no advisory against
+// what actually runs here.
+//
+// Only the four dependency-bearing configurations are locked. lockAllConfigurations
+// would also pin the buildscript, Detekt and JaCoCo trees, so an unrelated
+// plugin bump would fail the build for no security reason. The lockfile lives
+// beside this file so it travels with the module when the API is cloned out.
+//
+// Regenerate after an intentional dependency change:
+//   ./gradlew dependencies --write-locks
+configurations.matching {
+    it.name in setOf(
+        "compileClasspath",
+        "runtimeClasspath",
+        "testCompileClasspath",
+        "testRuntimeClasspath",
+    )
+}.configureEach {
+    resolutionStrategy.activateDependencyLocking()
+}
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
