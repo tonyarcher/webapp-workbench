@@ -38,9 +38,29 @@ class FakeOAuthStore : OAuthStore {
         codes[codeHash] = StoredAuthCode(userId, clientId, redirectUri, codeChallenge) to expiresAt
     }
 
-    override fun takeAuthCode(codeHash: String, now: Instant): StoredAuthCode? {
-        val pair = codes.remove(codeHash) ?: return null
-        return if (pair.second.isAfter(now)) pair.first else null
+    /**
+     * Mirrors the store's conditional DELETE: a mismatch must leave the code in
+     * place. Removing first and checking after would make a rejected attempt
+     * destroy the code, which is the bug this fake exists to model.
+     */
+
+    // Mirrors the store's conditional DELETE: a mismatch must leave the code in
+    // place. Removing first and checking after would make a rejected attempt
+    // destroy the code, which is the bug this fake exists to model.
+    override fun takeAuthCode(
+        codeHash: String,
+        now: Instant,
+        clientId: String,
+        redirectUri: String,
+        codeChallenge: String,
+    ): StoredAuthCode? {
+        val pair = codes[codeHash] ?: return null
+        val row = pair.first
+        if (!pair.second.isAfter(now)) return null
+        if (row.clientId != clientId) return null
+        if (row.redirectUri != redirectUri) return null
+        if (row.codeChallenge != codeChallenge) return null
+        return codes.remove(codeHash)?.first
     }
 
     override fun insertRefresh(tokenHash: String, familyId: UUID, userId: UUID, clientId: String, expiresAt: Instant) {

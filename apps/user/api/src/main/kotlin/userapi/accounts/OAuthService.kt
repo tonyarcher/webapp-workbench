@@ -5,9 +5,10 @@ import userapi.crypto.JwtSigner
 import userapi.crypto.REFRESH_TTL_SEC
 import userapi.domain.OAuthClient
 import userapi.domain.newToken
-import userapi.domain.pkceMatches
+import userapi.domain.pkceS256
 import userapi.domain.redirectAllowed
 import userapi.domain.sha256Hex
+import userapi.domain.validCodeVerifier
 import java.time.Clock
 import java.time.Duration
 import java.util.UUID
@@ -36,9 +37,18 @@ class OAuthService(val store: OAuthStore, val signer: JwtSigner, val clock: Cloc
         verifier: String,
         usernameLookup: (UUID) -> String?,
     ): TokenPair? {
-        val row = store.takeAuthCode(sha256Hex(code), clock.instant()) ?: return null
-        if (row.clientId != clientId || row.redirectUri != redirectUri) return null
-        if (!pkceMatches(verifier, row.codeChallenge)) return null
+        // Every check is part of the take, so a rejected attempt leaves the code
+        // usable. Verifying afterwards deleted the code first, and a client that
+        // omits client_id on its first exchange -- which Go's x/oauth2 does while
+        // probing Basic auth -- then had nothing left to retry with.
+        if (!validCodeVerifier(verifier)) return null
+        val row = store.takeAuthCode(
+            codeHash = sha256Hex(code),
+            now = clock.instant(),
+            clientId = clientId,
+            redirectUri = redirectUri,
+            codeChallenge = pkceS256(verifier),
+        ) ?: return null
         val username = usernameLookup(row.userId) ?: return null
         return issueTokens(row.userId, username, clientId, UUID.randomUUID())
     }

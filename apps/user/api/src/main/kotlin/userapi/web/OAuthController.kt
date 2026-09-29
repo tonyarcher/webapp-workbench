@@ -12,8 +12,11 @@ import userapi.Settings
 import userapi.accounts.AccountServices
 import userapi.accounts.OAuthService
 import userapi.accounts.TokenPair
+import userapi.log.log
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+
+private const val SERVICE = "user-api"
 
 /** RFC 7636: a PKCE S256 challenge is a base64url SHA-256 digest (43 chars min). */
 private const val MIN_CODE_CHALLENGE_CHARS = 43
@@ -44,15 +47,46 @@ class OAuthController(private val accounts: AccountServices, private val setting
     fun token(@RequestParam form: Map<String, String>, request: HttpServletRequest): TokenResponseBody {
         val oauth = requireOauth()
         checkRate(accounts, "oauth", request)
-        val pair = when (form["grant_type"]) {
-            "authorization_code" -> tokenFromCode(oauth, form)
-            "refresh_token" -> tokenFromRefresh(oauth, form)
-            else -> throw OAuthTokenException("unsupported_grant_type")
+        val pair = try {
+            when (form["grant_type"]) {
+                "authorization_code" -> tokenFromCode(oauth, form)
+                "refresh_token" -> tokenFromRefresh(oauth, form)
+                else -> throw OAuthTokenException("unsupported_grant_type")
+            }
+        } catch (rejected: OAuthTokenException) {
+            logTokenRejection(form, rejected)
+            throw rejected
         }
         return TokenResponseBody(
             accessToken = pair.accessToken,
             expiresIn = pair.expiresIn,
             refreshToken = pair.refreshToken,
+        )
+    }
+
+    /**
+     * Which field was wrong is invisible from the outside: every failure is the
+     * same invalid_grant, and the client cannot tell a stale code from a
+     * mismatched redirect or a missing PKCE verifier. Record the shape of the
+     * request instead, on failure only.
+     *
+     * The verifier's value is never logged. Its presence and length are enough to
+     * diagnose, and the value is a credential.
+     */
+    private fun logTokenRejection(form: Map<String, String>, rejected: OAuthTokenException) {
+        log(
+            service = SERVICE,
+            level = "warn",
+            msg = "token_rejected",
+            extra = mapOf(
+                "grant_type" to form["grant_type"],
+                "client_id" to form["client_id"],
+                "fields" to form.keys.sorted().joinToString(","),
+                "verifier_len" to form["code_verifier"]?.length,
+                "verifier_present" to form.containsKey("code_verifier"),
+                "redirect_uri" to form["redirect_uri"],
+                "err" to mapOf("type" to "oauth", "message" to rejected.error),
+            ),
         )
     }
 

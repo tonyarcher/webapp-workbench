@@ -59,8 +59,13 @@ open class JpaOAuthStore(
     }
 
     @Transactional
-    override fun takeAuthCode(codeHash: String, now: Instant): StoredAuthCode? =
-        authCodes.takeAuthCode(codeHash, now)?.toStored()
+    override fun takeAuthCode(
+        codeHash: String,
+        now: Instant,
+        clientId: String,
+        redirectUri: String,
+        codeChallenge: String,
+    ): StoredAuthCode? = authCodes.takeAuthCode(codeHash, now, clientId, redirectUri, codeChallenge)?.toStored()
 
     override fun insertRefresh(tokenHash: String, familyId: UUID, userId: UUID, clientId: String, expiresAt: Instant) {
         refreshTokens.save(

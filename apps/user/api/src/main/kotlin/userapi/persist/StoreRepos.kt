@@ -26,11 +26,32 @@ interface SigningKeyRepo : JpaRepository<SigningKeyEntity, String> {
 }
 
 interface AuthCodeRepo : JpaRepository<AuthCodeEntity, String> {
+    /**
+     * Consume an auth code only if every caller-supplied field matches.
+     *
+     * The conditions are part of the DELETE, not a check after it. A code deleted
+     * before it is validated cannot be retried, and a client whose first attempt
+     * omits a field then finds the code gone on the corrected attempt.
+     */
     @Query(
-        value = "DELETE FROM oauth_auth_codes WHERE code_hash = :hash AND expires_at > :now RETURNING *",
+        value = """
+            DELETE FROM oauth_auth_codes
+            WHERE code_hash = :hash
+              AND expires_at > :now
+              AND client_id = :clientId
+              AND redirect_uri = :redirectUri
+              AND code_challenge = :codeChallenge
+            RETURNING *
+        """,
         nativeQuery = true,
     )
-    fun takeAuthCode(hash: String, now: Instant): AuthCodeEntity?
+    fun takeAuthCode(
+        hash: String,
+        now: Instant,
+        clientId: String,
+        redirectUri: String,
+        codeChallenge: String,
+    ): AuthCodeEntity?
 }
 
 interface RefreshTokenRepo : JpaRepository<RefreshTokenEntity, String> {
