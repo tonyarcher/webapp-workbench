@@ -36,4 +36,15 @@ data class TokenResponseBody(
     @param:JsonProperty("token_type") val tokenType: String = "Bearer",
     @param:JsonProperty("expires_in") val expiresIn: Int,
     @param:JsonProperty("refresh_token") val refreshToken: String,
+    /**
+     * The OIDC identity token, same claims and same audience as the access
+     * token but a separate signed JWT.
+     *
+     * Optional in OAuth2 and optional in OIDC, so this was left out until
+     * something needed it. goth's openidConnect provider does: its FetchUser
+     * returns "cannot get user information without id_token" before it will
+     * look at anything else, including the userinfo endpoint, so a Gitea login
+     * could not complete without one.
+     */
+    @param:JsonProperty("id_token") val idToken: String? = null,
 )

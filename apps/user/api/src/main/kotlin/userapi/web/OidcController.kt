@@ -72,10 +72,12 @@ class OidcController(
 /**
  * The discovery document, as a map so the mapper owns the JSON.
  *
- * No id_token is issued anywhere in this service, so `id_token_signing_alg_
- * values_supported` and `scopes_supported` are absent rather than advertising
- * something untrue. A client that insists on an id_token should be refused here
- * rather than after the user has typed a password.
+ * `id_token_signing_alg_values_supported` was absent while no id_token was
+ * issued, rather than claiming one that did not exist. It is present now because
+ * one is issued, and goth's openidConnect client refuses to complete a login
+ * without it. `scopes_supported` stays absent: this service issues no
+ * scope-specific claims, so naming scopes would describe a feature that is not
+ * there.
  */
 internal fun discoveryDocument(mapper: ObjectMapper, settings: Settings): String {
     val public = settings.publicBase
@@ -91,6 +93,7 @@ internal fun discoveryDocument(mapper: ObjectMapper, settings: Settings): String
             "grant_types_supported" to listOf("authorization_code", "refresh_token"),
             "code_challenge_methods_supported" to listOf("S256"),
             "subject_types_supported" to listOf("public"),
+            "id_token_signing_alg_values_supported" to listOf("RS256"),
             "token_endpoint_auth_methods_supported" to listOf("client_secret_post"),
         ),
     )

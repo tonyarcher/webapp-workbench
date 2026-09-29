@@ -53,6 +53,10 @@ class OAuthController(
             // Empty for a confidential client that omitted PKCE, which the token
             // endpoint reads as "this code needs a secret, not a verifier".
             if (hasPkce(params)) params["code_challenge"].orEmpty() else "",
+            // OIDC Core 3.1.3.7: a nonce is echoed into the id_token, and a
+            // client that sent one refuses a token without it. Wiki.js sends one
+            // on every login, so dropping it here breaks wiki sign-in.
+            params["nonce"].orEmpty(),
         )
         return redirect(redirectWithCode(params["redirect_uri"].orEmpty(), code, params["state"]))
     }
@@ -75,6 +79,10 @@ class OAuthController(
             accessToken = pair.accessToken,
             expiresIn = pair.expiresIn,
             refreshToken = pair.refreshToken,
+            // goth's OpenID Connect client refuses to complete a login without
+            // one, so it is issued alongside every access token rather than on
+            // request.
+            idToken = pair.idToken,
         )
     }
 

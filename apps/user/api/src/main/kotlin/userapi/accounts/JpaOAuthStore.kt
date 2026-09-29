@@ -45,6 +45,7 @@ open class JpaOAuthStore(
         redirectUri: String,
         codeChallenge: String,
         expiresAt: Instant,
+        nonce: String,
     ) {
         authCodes.save(
             AuthCodeEntity(
@@ -54,6 +55,7 @@ open class JpaOAuthStore(
                 redirectUri = redirectUri,
                 codeChallenge = codeChallenge,
                 expiresAt = expiresAt,
+                nonce = nonce,
             ),
         )
     }
@@ -107,6 +109,7 @@ private fun AuthCodeEntity.toStored(): StoredAuthCode? {
         clientId = clientId,
         redirectUri = redirectUri,
         codeChallenge = codeChallenge,
+        nonce = nonce.orEmpty(),
     )
 }
 

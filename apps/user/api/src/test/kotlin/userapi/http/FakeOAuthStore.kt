@@ -34,8 +34,9 @@ class FakeOAuthStore : OAuthStore {
         redirectUri: String,
         codeChallenge: String,
         expiresAt: Instant,
+        nonce: String,
     ) {
-        codes[codeHash] = StoredAuthCode(userId, clientId, redirectUri, codeChallenge) to expiresAt
+        codes[codeHash] = StoredAuthCode(userId, clientId, redirectUri, codeChallenge, nonce) to expiresAt
     }
 
     /**

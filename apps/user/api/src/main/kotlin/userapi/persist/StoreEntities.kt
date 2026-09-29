@@ -85,6 +85,9 @@ class AuthCodeEntity(
     var redirectUri: String = "",
     @Column(name = "code_challenge", nullable = false)
     var codeChallenge: String = "",
+    /** The `nonce` from the authorization request, echoed into the id_token. */
+    @Column(name = "nonce")
+    var nonce: String? = null,
     @Column(name = "expires_at", nullable = false)
     var expiresAt: Instant = Instant.now(),
 )

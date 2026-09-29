@@ -3,7 +3,19 @@ package userapi.accounts
 import java.time.Instant
 import java.util.UUID
 
-data class StoredAuthCode(val userId: UUID, val clientId: String, val redirectUri: String, val codeChallenge: String)
+/**
+ * @property nonce the `nonce` the client sent on /oauth/authorize, or empty when
+ *   it sent none. OIDC Core 3.1.3.7 requires the id_token to carry it back
+ *   unchanged, and a client that sent one refuses a token without it, so it has
+ *   to survive the code exchange rather than be read from the callback.
+ */
+data class StoredAuthCode(
+    val userId: UUID,
+    val clientId: String,
+    val redirectUri: String,
+    val codeChallenge: String,
+    val nonce: String = "",
+)
 
 interface OAuthStore {
     fun findClient(clientId: String): userapi.domain.OAuthClient?
@@ -16,6 +28,7 @@ interface OAuthStore {
         redirectUri: String,
         codeChallenge: String,
         expiresAt: Instant,
+        nonce: String = "",
     )
 
     /**

@@ -36,7 +36,27 @@ class JwtSigner(store: OAuthStore, private val issuer: String) {
 
     fun jwksJson(): String = JWKSet(key.toPublicJWK()).toString()
 
-    fun accessToken(userId: UUID, username: String, clientId: String, now: Instant): String {
+    fun accessToken(userId: UUID, username: String, clientId: String, now: Instant): String =
+        identityToken(userId, username, clientId, now)
+
+    /**
+     * The OIDC identity token.
+     *
+     * Same claims and same audience as the access token, and a separate
+     * signature, because the two answer different questions: one says "you may
+     * call the API", the other "this is who you are". goth's openidConnect
+     * provider will not complete a login without one, and it validates `aud`
+     * against the client id and `iss` against the discovery issuer, so both are
+     * set to the same values the access token carries.
+     *
+     * [nonce] is echoed only when the authorization request carried one. OIDC
+     * Core 3.1.3.7 requires the token to repeat it unchanged, and a client that
+     * sent a nonce refuses a token without it -- Wiki.js sends one on every
+     * login and checks it. An empty nonce adds no claim, so a client that sent
+     * none sees an id_token of exactly the shape it expects.
+     */
+    @Suppress("LongParameterList")
+    fun identityToken(userId: UUID, username: String, clientId: String, now: Instant, nonce: String = ""): String {
         val claims = JWTClaimsSet.Builder()
             .issuer(issuer)
             .subject(userId.toString())
@@ -45,6 +65,8 @@ class JwtSigner(store: OAuthStore, private val issuer: String) {
             .expirationTime(Date.from(now.plusSeconds(ACCESS_TTL_SEC.toLong())))
             .jwtID(UUID.randomUUID().toString())
             .claim("preferred_username", username)
+            .claim("name", username)
+            .apply { if (nonce.isNotEmpty()) claim("nonce", nonce) }
             .build()
         val jwt = SignedJWT(JWSHeader.Builder(JWSAlgorithm.RS256).keyID(key.keyID).build(), claims)
         jwt.sign(signer)

@@ -13,7 +13,18 @@ import java.time.Clock
 import java.time.Duration
 import java.util.UUID
 
-data class TokenPair(val accessToken: String, val refreshToken: String, val expiresIn: Int)
+data class TokenPair(
+    val accessToken: String,
+    val refreshToken: String,
+    val expiresIn: Int,
+    /**
+     * The OIDC identity token, issued next to the access token. goth's
+     * openidConnect provider will not complete a login without one -- its
+     * FetchUser returns "cannot get user information without id_token" before it
+     * consults anything, including the userinfo endpoint.
+     */
+    val idToken: String,
+)
 
 class OAuthService(val store: OAuthStore, val signer: JwtSigner, val clock: Clock) {
     fun client(id: String): OAuthClient? = store.findClient(id)
@@ -23,10 +34,24 @@ class OAuthService(val store: OAuthStore, val signer: JwtSigner, val clock: Cloc
         return redirectAllowed(found, redirectUri)
     }
 
-    fun issueCode(userId: UUID, clientId: String, redirectUri: String, codeChallenge: String): String {
+    fun issueCode(
+        userId: UUID,
+        clientId: String,
+        redirectUri: String,
+        codeChallenge: String,
+        nonce: String = "",
+    ): String {
         val raw = newToken()
         val expires = clock.instant().plus(Duration.ofSeconds(AUTH_CODE_TTL_SEC.toLong()))
-        store.insertAuthCode(sha256Hex(raw), userId, clientId, redirectUri, codeChallenge, expires)
+        store.insertAuthCode(
+            sha256Hex(raw),
+            userId,
+            clientId,
+            redirectUri,
+            codeChallenge,
+            expires,
+            nonce,
+        )
         return raw
     }
 
@@ -52,7 +77,7 @@ class OAuthService(val store: OAuthStore, val signer: JwtSigner, val clock: Cloc
             allowMissingChallenge = allowMissingChallenge,
         ) ?: return null
         val username = usernameLookup(row.userId) ?: return null
-        return issueTokens(row.userId, username, clientId, UUID.randomUUID())
+        return issueTokens(row.userId, username, clientId, UUID.randomUUID(), row.nonce)
     }
 
     fun rotateRefresh(refreshRaw: String, usernameLookup: (UUID) -> String?): TokenPair? {
@@ -62,15 +87,25 @@ class OAuthService(val store: OAuthStore, val signer: JwtSigner, val clock: Cloc
             return null
         }
         val username = usernameLookup(row.userId) ?: return null
+        // A refresh has no authorization request behind it, so there is no nonce
+        // to carry. A client that asked for one only ever checks it on the
+        // original exchange.
         return issueTokens(row.userId, username, row.clientId, row.familyId)
     }
 
-    private fun issueTokens(userId: UUID, username: String, clientId: String, familyId: UUID): TokenPair {
+    private fun issueTokens(
+        userId: UUID,
+        username: String,
+        clientId: String,
+        familyId: UUID,
+        nonce: String = "",
+    ): TokenPair {
         val now = clock.instant()
         val access = signer.accessToken(userId, username, clientId, now)
+        val identity = signer.identityToken(userId, username, clientId, now, nonce)
         val refresh = newToken()
         val expires = now.plus(Duration.ofSeconds(REFRESH_TTL_SEC.toLong()))
         store.insertRefresh(sha256Hex(refresh), familyId, userId, clientId, expires)
-        return TokenPair(access, refresh, userapi.crypto.ACCESS_TTL_SEC)
+        return TokenPair(access, refresh, userapi.crypto.ACCESS_TTL_SEC, identity)
     }
 }
