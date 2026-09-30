@@ -7,7 +7,7 @@ import type { LiveLocalGameState } from './game-state';
 import type { GameStore } from './game-store';
 import type { LocalGameEventRecord } from './game-types';
 import { buildBoxScore } from './box-score';
-import { boxScoreOverlay } from './box-score-view';
+import { BoxScoreDialog, boxScoreOverlay } from './box-score-view';
 import { ManualPlayTracker } from './manual-play';
 import {
     battingBatterName,
@@ -58,7 +58,7 @@ export class BaseballGameShell extends LitElement {
     private step2IsHit = false;
     private step2DoublePlayAvailable = false;
     private lineupOpen = false;
-    private boxScoreOpen = false;
+    private boxScore = new BoxScoreDialog(() => this.requestUpdate());
     private pendingEventType = '';
     private pendingBaseLabel = '';
     private lastEventKey = '';
@@ -94,6 +94,7 @@ export class BaseballGameShell extends LitElement {
 
     override disconnectedCallback() {
         this.stopWatchLoop();
+        this.boxScore.dispose();
         const root = this.containerRef.value;
         if (root) this.removeAllListeners(root);
         this.virtualizerCleanup?.();
@@ -126,6 +127,7 @@ export class BaseballGameShell extends LitElement {
             this.virtualizer.setOptions(this.buildVirtualizerOptions(count));
         }
         this.virtualizer?.measure();
+        this.boxScore.focusIfNeeded(this.renderRoot);
     }
 
     private visibleEvents(): LocalGameEventRecord[] {
@@ -306,18 +308,11 @@ export class BaseballGameShell extends LitElement {
     };
 
     private handleViewBoxScore = () => {
-        this.boxScoreOpen = true;
-        this.requestUpdate();
+        this.boxScore.show();
     };
 
     private onBoxScore = () => {
-        this.boxScoreOpen = !this.boxScoreOpen;
-        this.requestUpdate();
-    };
-
-    private closeBoxScore = () => {
-        this.boxScoreOpen = false;
-        this.requestUpdate();
+        this.boxScore.toggle();
     };
 
     private recordOnce(event: Event, eventType: string, detail: Record<string, unknown>) {
@@ -519,8 +514,8 @@ export class BaseballGameShell extends LitElement {
     }
 
     private renderBoxScoreSection(boxScore: ReturnType<typeof buildBoxScore>) {
-        if (!this.boxScoreOpen) return nothing;
-        return boxScoreOverlay(boxScore, boxScore.innings, this.closeBoxScore);
+        if (!this.boxScore.open) return nothing;
+        return boxScoreOverlay(boxScore, boxScore.innings, this.boxScore.close);
     }
 
     private renderLogItems(events: LocalGameEventRecord[]): TemplateResult[] {

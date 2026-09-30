@@ -128,3 +128,25 @@ test('opens the box score from the completed controls', async ({ page }) => {
     await page.getByRole('button', { name: 'View Final Box Score' }).click();
     await expect(page.getByTestId('box-score-modal')).toBeVisible();
 });
+
+test('the box score is a labelled modal dialog that takes focus', async ({ page }) => {
+    await openSeededGame(page);
+    await page.getByRole('button', { name: 'View Final Box Score' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveAttribute('aria-modal', 'true');
+    await expect(dialog).toHaveAccessibleName('Box Score');
+    await expect(dialog).toBeFocused();
+});
+
+test('Escape closes the box score and returns focus to the trigger', async ({ page }) => {
+    await openSeededGame(page);
+    const trigger = page.getByRole('button', { name: 'View Final Box Score' });
+    await trigger.click();
+    await expect(page.getByTestId('box-score-modal')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('box-score-modal')).toBeHidden();
+    await expect(trigger).toBeFocused();
+});
