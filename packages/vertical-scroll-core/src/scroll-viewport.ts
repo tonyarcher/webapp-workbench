@@ -2,6 +2,7 @@ import { LitElement, html, nothing, svg, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
 import type { ScrollItem } from './types';
 import { classifyScrollItem } from './media';
 import { embedProviderForUrl } from './embeds';
@@ -27,6 +28,12 @@ export class ScrollViewport extends LitElement {
     @property({ attribute: false }) resetKey = '';
     /** Slide to land on after mount / resetKey. Used to restore a saved position. */
     @property({ attribute: false }) startIndex = 0;
+    /**
+     * Accessible name for the scroll region. The package names no screen, so
+     * the consumer supplies this; omitting it leaves the group unnamed, which a
+     * group may be.
+     */
+    @property() label = '';
 
     @state() private activeIndex = 0;
     @state() private dragging = false;
@@ -361,7 +368,7 @@ export class ScrollViewport extends LitElement {
         const count = this.items.length;
         const from = Math.max(0, this.activeIndex - SLIDE_WINDOW);
         const to = Math.min(count - 1, this.activeIndex + SLIDE_WINDOW);
-        return html`<div class="scroll-viewport${this.dragging ? ' dragging' : ''}" ${ref(this.onViewportRef)} @scroll=${this.onScroll} @pointerdown=${this.onPointerDown} @playback-change=${this.onPlaybackChange}>
+        return html`<div class="scroll-viewport${this.dragging ? ' dragging' : ''}" tabindex="0" role="group" aria-label=${ifDefined(this.label || undefined)} ${ref(this.onViewportRef)} @scroll=${this.onScroll} @pointerdown=${this.onPointerDown} @playback-change=${this.onPlaybackChange}>
                 <div class="slides" style="height: ${count * 100}%">${this.items.map((item, index) => this.renderSlideItem(item, index, from, to, count))}</div>
             </div>${this.renderChrome()}`;
     }

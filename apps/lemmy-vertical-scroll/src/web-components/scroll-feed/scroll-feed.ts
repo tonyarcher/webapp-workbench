@@ -110,6 +110,7 @@ export class ScrollFeed extends LitElement {
             .loading=${this.loading}
             .error=${this.error}
             .resetKey=${this.resetKey}
+            label="Community feed"
             @near-end=${this.onNearEnd}
             @retry=${this.onRetry}
         ></vsc-scroll-viewport>`;

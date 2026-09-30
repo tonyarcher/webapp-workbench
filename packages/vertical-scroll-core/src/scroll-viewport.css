@@ -29,6 +29,26 @@
     cursor: grabbing;
 }
 
+/* The scrollbar is hidden, so this ring is the only cue that the viewport holds
+   the keyboard. The negative offset draws it inside the element, where the
+   host's overflow: hidden cannot clip it, and an outline paints above content
+   so the slides never cover it.
+
+   A second tone inside the ring is not possible here. An inset box-shadow
+   belongs to the background phase and is painted before descendants, and the
+   slides are position: absolute with opaque media edge to edge, so it would be
+   covered completely. An overlay pseudo-element does not help either: an
+   absolutely positioned child of a scroll container scrolls away with the
+   content.
+
+   The consequence, stated rather than hidden: on a bright frame a light ring
+   has little contrast against it. That is a limit of drawing a ring inside
+   full-bleed media, not something this rule can engineer away. */
+.scroll-viewport:focus-visible {
+    outline: 3px solid var(--focus-ring, rgb(255 255 255));
+    outline-offset: -3px;
+}
+
 .slides {
     position: relative;
     display: block;

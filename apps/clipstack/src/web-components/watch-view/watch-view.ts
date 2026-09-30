@@ -268,6 +268,7 @@ export class WatchView extends LitElement {
                 .items=${this.scrollItems}
                 .resetKey=${this.resetKey}
                 .startIndex=${this.startIndex}
+                label="Clips"
                 @active-index-change=${this.onActive}
                 ${ref(this.onViewportRef)}
             ></vsc-scroll-viewport>
