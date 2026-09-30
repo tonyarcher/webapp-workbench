@@ -17,17 +17,35 @@ export class ArticleView extends LitElement {
     static override styles = unsafeCSS(styles);
 
     @property({ attribute: false }) article: Article | null = null;
+    private focused = false;
 
     @state() private summarizing = false;
     @state() private aiSummary: string | null = null;
     @state() private aiError = '';
     @state() private summaryLength: SummaryLength = loadSummaryLength();
 
+    override connectedCallback() {
+        super.connectedCallback();
+        // This element is only created while an article is open, so
+        // connectedCallback is exactly "the dialog opened". The host is the
+        // modal container, so the dialog semantics go on it rather than on a
+        // wrapper, which would have meant restructuring the toolbar and body.
+        this.setAttribute('role', 'dialog');
+        this.setAttribute('aria-modal', 'true');
+        this.setAttribute('tabindex', '-1');
+    }
+
     override updated(changed: Map<string, unknown>) {
         if (changed.has('article')) {
             this.aiSummary = null;
             this.aiError = '';
         }
+        const a = this.article;
+        if (!a) return;
+        this.setAttribute('aria-label', a.title);
+        if (this.focused) return;
+        this.focused = true;
+        this.focus();
     }
 
     override render() {
