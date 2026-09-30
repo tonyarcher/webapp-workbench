@@ -1,8 +1,16 @@
 import { html, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { asHand, parsePlatePlay } from './plate-play';
-import { renderPlateScene } from './plate-scene';
+import { moveZone, renderPlateScene } from './plate-scene';
 import scoreboardCssText from './baseball-scoreboard.css?inline';
+
+/** Arrow keys as [row delta, column delta] for the 3x3 zone grid. */
+const ZONE_KEY_STEPS: Record<string, [number, number]> = {
+    ArrowUp: [-1, 0],
+    ArrowDown: [1, 0],
+    ArrowLeft: [0, -1],
+    ArrowRight: [0, 1],
+};
 
 const scoreboardStyleSheet = new CSSStyleSheet();
 scoreboardStyleSheet.replaceSync(scoreboardCssText);
@@ -319,8 +327,43 @@ export class BaseballScoreboard extends LitElement {
             interactive: this.interactive,
             armedZone: this.armedLocation,
             onZonePick: this.onZonePick,
+            zoneRoving: this.zoneRoving,
+            onZoneKey: this.onZoneKey,
         });
     }
+
+    /**
+     * Roving tabindex over the nine cells, so the whole grid is one tab stop
+     * rather than nine. Arrow keys move it, Enter and Space pick. Cells are
+     * pointer-events: none, so the mouse keeps the existing coordinate
+     * hit-test and this path never changes what a click means.
+     *
+     * zoneRoving is only which cell renders tabindex 0. Movement is relative to
+     * the cell the key arrived on, so the handler never assumes the roving cell
+     * and the focused cell still agree.
+     */
+    @state() private zoneRoving = 5;
+
+    private readonly onZoneKey = (zone: number, event: KeyboardEvent): void => {
+        if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+            event.preventDefault();
+            // Toggle, matching the mouse: clicking the already-armed cell sends
+            // null. Without this the cell is announced as a toggle by
+            // aria-pressed but can never be un-pressed, and a keyboard user
+            // cannot clear a pick at all.
+            this.onZonePick(this.armedLocation === zone ? null : zone);
+            return;
+        }
+        const step = ZONE_KEY_STEPS[event.key];
+        if (!step) return;
+        event.preventDefault();
+        const next = moveZone(zone, step[0], step[1]);
+        if (next === zone) return;
+        this.zoneRoving = next;
+        void this.updateComplete.then(() => {
+            this.renderRoot.querySelector<HTMLElement>(`.zone-cell[data-zone="${next}"]`)?.focus();
+        });
+    };
 
     private readonly onZonePick = (zone: number | null): void => {
         this.dispatchEvent(

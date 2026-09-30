@@ -14,6 +14,12 @@ function clickZonePadding(zoneEl: HTMLElement, padX: number, padY: number) {
     );
 }
 
+/** Dispatch a key and wait for the re-render that moves focus. */
+async function keydown(el: HTMLElement, key: string): Promise<void> {
+    el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    await (el.getRootNode() as ShadowRoot).host.updateComplete;
+}
+
 describe('BaseballScoreboard', () => {
     let element: BaseballScoreboard;
 
@@ -265,6 +271,96 @@ describe('BaseballScoreboard', () => {
         const zoneEl = element.shadowRoot!.querySelector('.zone') as HTMLElement;
         clickZonePadding(zoneEl, zoneEl.clientWidth / 2, zoneEl.clientHeight / 2);
         expect(zone).to.equal(5);
+    });
+
+    it('exposes the nine cells as a keyboard-reachable grid', async () => {
+        element.setAttribute('interactive', 'true');
+        await element.updateComplete;
+        const group = element.shadowRoot!.querySelector('.zone-cells');
+        expect(group).to.not.equal(null);
+        expect(group!.getAttribute('role')).to.equal('group');
+        const cells = element.shadowRoot!.querySelectorAll('.zone-cell');
+        expect(cells.length).to.equal(9);
+        // Roving tabindex: the grid is one tab stop, not nine.
+        const tabbable = Array.from(cells).filter((c) => c.getAttribute('tabindex') === '0');
+        expect(tabbable.length).to.equal(1);
+        expect(cells[0].getAttribute('aria-label')).to.equal('Top left');
+        expect(cells[8].getAttribute('aria-label')).to.equal('Bottom right');
+        // The cells must never intercept the mouse; the existing coordinate
+        // hit-test on .zone is what a click uses.
+        expect(getComputedStyle(cells[4]).pointerEvents).to.equal('none');
+    });
+
+    it('picks a cell with Enter and moves the roving cell with arrows', async () => {
+        element.setAttribute('interactive', 'true');
+        await element.updateComplete;
+        let zone: number | null | undefined;
+        element.addEventListener('pitch-location-selected', (event) => {
+            zone = (event as CustomEvent).detail.zone;
+        });
+        const cell = (z: number) => element.shadowRoot!.querySelector(`.zone-cell[data-zone="${z}"]`) as HTMLElement;
+
+        // Tab lands on the roving cell, which starts in the middle, so this is
+        // the only cell a keyboard user reaches without arrowing first.
+        const start = element.shadowRoot!.querySelector('.zone-cell[tabindex="0"]') as HTMLElement;
+        expect(start.getAttribute('data-zone')).to.equal('5');
+
+        start.focus();
+        start.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        expect(zone).to.equal(5);
+
+        // Arrows move the roving cell and focus follows, so a key repeat walks
+        // the grid instead of re-picking the same cell.
+        await keydown(start, 'ArrowRight');
+        expect(element.shadowRoot!.activeElement).to.equal(cell(6));
+        await keydown(cell(6), 'ArrowDown');
+        expect(element.shadowRoot!.activeElement).to.equal(cell(9));
+
+        // Clamped at the edge rather than wrapping.
+        await keydown(cell(9), 'ArrowDown');
+        expect(element.shadowRoot!.activeElement).to.equal(cell(9));
+        await keydown(cell(6), 'ArrowLeft');
+        expect(element.shadowRoot!.activeElement).to.equal(cell(5));
+        await keydown(cell(5), 'ArrowUp');
+        expect(element.shadowRoot!.activeElement).to.equal(cell(2));
+    });
+
+    it('toggles the armed cell off with Enter, the way the mouse does', async () => {
+        element.setAttribute('interactive', 'true');
+        await element.updateComplete;
+        const zones: (number | null)[] = [];
+        // Echo the pick back as armedLocation, the way the app does. That round
+        // trip is what makes aria-pressed truthful, so the test drives it
+        // rather than setting the property and asserting on the result.
+        element.addEventListener('pitch-location-selected', (event) => {
+            const picked = (event as CustomEvent).detail.zone as number | null;
+            zones.push(picked);
+            // The event carries null to clear; the app stores 0 for nothing
+            // armed, which is what armedLocation is typed as.
+            element.armedLocation = picked ?? 0;
+        });
+        const press = async (z: number) => {
+            const el = element.shadowRoot!.querySelector(`.zone-cell[data-zone="${z}"]`) as HTMLElement;
+            el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            await element.updateComplete;
+        };
+        const pressed = (z: number) =>
+            element.shadowRoot!.querySelector(`.zone-cell[data-zone="${z}"]`)!.getAttribute('aria-pressed');
+
+        element.armedLocation = 4;
+        await element.updateComplete;
+        expect(pressed(4)).to.equal('true');
+
+        // Enter on the already-armed cell clears it, and aria-pressed follows.
+        await press(4);
+        expect(zones).to.deep.equal([null]);
+        expect(pressed(4)).to.equal('false');
+
+        // A different cell arms rather than clears.
+        await press(7);
+        expect(zones).to.deep.equal([null, 7]);
+        expect(pressed(7)).to.equal('true');
+        expect(pressed(4)).to.equal('false');
     });
 
     it('arms the visual cell for clicks near a grid line', async () => {

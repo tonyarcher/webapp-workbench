@@ -301,6 +301,33 @@
     pointer-events: none;
 }
 
+/* Keyboard-only cells over the grid. pointer-events: none is the point: the
+   mouse keeps hitting .zone and its coordinate hit-test, so this path adds a
+   keyboard route without changing what a click already meant. The group is laid
+   out as a 3x3 grid and the cells are placed by the grid, not by coordinates. */
+.zone-cells {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    pointer-events: none;
+}
+
+.zone-cell {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    pointer-events: none;
+}
+
+.zone-cell:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: -2px;
+    background: rgba(255, 255, 255, 0.22);
+}
+
 .zone-result {
     position: absolute;
     inset: 0;

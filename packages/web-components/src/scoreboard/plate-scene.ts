@@ -18,6 +18,10 @@ export interface PlateSceneInput {
     interactive: boolean;
     armedZone: number;
     onZonePick: (zone: number | null) => void;
+    /** Which cell carries tabindex 0, 1..9. Roving, so the grid is one tab stop. */
+    zoneRoving: number;
+    /** Arrow keys move the roving cell; Enter and Space pick it. */
+    onZoneKey: (zone: number, event: KeyboardEvent) => void;
 }
 
 export function plateSceneClass(
@@ -50,6 +54,37 @@ const OUTSIDE_OFFSETS: Record<number, { dx: number; dy: number }> = {
     16: { dx: -24, dy: 163 },
     17: { dx: 24, dy: 163 },
 };
+
+/**
+ * Row and column names for the nine cells, in zone order 1..9. Plain position
+ * rather than baseball jargon: a screen reader has to convey where the cell is,
+ * and "top center" is unambiguous where "inside" is not without the count.
+ */
+const ZONE_ROWS = ['Top', 'Middle', 'Bottom'] as const;
+const ZONE_COLS = ['left', 'center', 'right'] as const;
+
+/** The nine cells, 1..9, read left to right and top to bottom. */
+export const ZONE_CELLS: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/** Accessible name for one cell. */
+export function zoneLabel(zone: number): string {
+    const z = Math.min(9, Math.max(1, Math.round(zone)));
+    const row = ZONE_ROWS[Math.floor((z - 1) / 3)] ?? 'Middle';
+    const col = ZONE_COLS[(z - 1) % 3] ?? 'center';
+    return `${row} ${col}`;
+}
+
+/**
+ * Move a roving tabindex within the 3x3 grid, clamping at the edges rather than
+ * wrapping. Clamping is the predictable behaviour for a small fixed grid, and it
+ * keeps a key repeat from silently jumping to the opposite edge.
+ */
+export function moveZone(zone: number, dr: number, dc: number): number {
+    const z = Math.min(9, Math.max(1, Math.round(zone)));
+    const col = Math.min(2, Math.max(0, ((z - 1) % 3) + dc));
+    const row = Math.min(2, Math.max(0, Math.floor((z - 1) / 3) + dr));
+    return row * 3 + col + 1;
+}
 
 /** Ball flight offset from the release point to the target zone cell. */
 export function zoneOffsets(zone: number | null): { dx: number; dy: number } {
@@ -159,6 +194,23 @@ function plateZone(result: PlateResult | '', input: PlateSceneInput) {
     return html`
       <div class="zone" @click=${(event: MouseEvent) => onZoneClick(event, input)}>
         <div class="zone-grid"></div>
+        ${
+            input.interactive
+                ? html`<div class="zone-cells" role="group" aria-label="Strike zone">
+                      ${ZONE_CELLS.map(
+                          (zone) => html`<div
+                              class="zone-cell"
+                              role="button"
+                              data-zone=${zone}
+                              aria-label=${zoneLabel(zone)}
+                              aria-pressed=${armed === zone ? 'true' : 'false'}
+                              tabindex=${input.zoneRoving === zone ? 0 : -1}
+                              @keydown=${(event: KeyboardEvent) => input.onZoneKey(zone, event)}
+                          ></div>`,
+                      )}
+                  </div>`
+                : ''
+        }
         <div class="zone-result" data-testid="plate-result" aria-live="polite">${result}</div>
         ${
             col >= 0
