@@ -46,6 +46,33 @@ configurations.matching {
     resolutionStrategy.activateDependencyLocking()
 }
 
+// The three managed versions below are held ahead of the Spring Boot BOM.
+// Boot 4.1.1 is the newest release and its BOM still names vulnerable
+// versions of these, while upstream shipped the fixes in patch releases the
+// BOM has not picked up: osv-scanner -r . reports GHSA-9xv2-5v5q-p794,
+// GHSA-gcx9-497g-6cp6 and GHSA-h3x4-894j-xpx5 (critical) on tomcat-embed-core,
+// and GHSA-q4xh-88c3-wmh7, GHSA-wjgm-6hv5-3cvf and GHSA-gx83-3vf8-gh7j on the
+// Jackson 2 and Jackson 3 databind.
+//
+// This has to be eachDependency, registered after the plugin's own rule.
+// resolutionStrategy.force, a lockfile edit, and the plugin's overrides map
+// are each substituted back to the managed BOM version. eachDependency is the
+// same kind of rule the plugin installs, and being registered later it wins.
+configurations.all {
+    resolutionStrategy.eachDependency {
+        when {
+            requested.group == "org.apache.tomcat.embed" &&
+                requested.name == "tomcat-embed-core" -> useVersion("11.0.25")
+
+            requested.group == "com.fasterxml.jackson.core" &&
+                requested.name == "jackson-databind" -> useVersion("2.21.6")
+
+            requested.group == "tools.jackson.core" &&
+                requested.name == "jackson-databind" -> useVersion("3.1.6")
+        }
+    }
+}
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
