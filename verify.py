@@ -27,8 +27,9 @@ Also:
   python verify.py --fix     apply the formatters instead of checking
   python verify.py --strict  a missing tool is a failure, not a skip
 
-Tools: prettier, ruff, mypy, ktlint, shfmt, shellcheck, sqlfluff, hadolint,
-taplo, pwsh (PSScriptAnalyzer). Installed by the ops-scripts installers.
+Tools: prettier, tsc (via npm), ruff, mypy, ktlint, shfmt, shellcheck,
+sqlfluff, hadolint, taplo, pwsh (PSScriptAnalyzer). Installed by the
+ops-scripts installers.
 """.strip()
 
 # Generated and vendored trees. Anything with one of these path parts is
@@ -176,6 +177,10 @@ def specs(root: Path, files: list[Path], fix: bool) -> list[Check]:
     edit = ["-w"] if fix else ["-d"]
     entries: list[Check] = [
         ("prettier", "prettier", ["prettier", "--write" if fix else "--check", "."]),
+        # tsc, because the bundler strips types instead of checking them, so a
+        # type error in TypeScript can pass prettier, the unit tests and the
+        # build. It has no fix mode, so it reports in both.
+        ("tsc", "npm", ["npm", "run", "typecheck"]),
         ("ruff-check", "ruff", ["ruff", "check", *(["--fix"] if fix else []), "."]),
         ("ruff-format", "ruff", ["ruff", "format", *([] if fix else ["--check"]), "."]),
     ]
