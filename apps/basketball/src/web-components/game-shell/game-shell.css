@@ -137,7 +137,7 @@
     padding: 24px;
 }
 
-.overlay pre {
+.box {
     max-width: 900px;
     max-height: 80vh;
     overflow: auto;
@@ -145,6 +145,23 @@
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 16px;
+}
+
+.box-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.box-head h2 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.overlay pre {
+    margin: 0;
     font-family: 'Share Tech Mono', monospace;
     font-size: 13px;
 }

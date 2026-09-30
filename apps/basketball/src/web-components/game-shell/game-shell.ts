@@ -12,6 +12,19 @@ import '../scorebug/scorebug';
 import '../court/court';
 import styles from './game-shell.css?inline';
 
+/**
+ * The element that really has focus. `document.activeElement` stops at the
+ * shadow host, so the trigger button is unreachable from it and calling focus
+ * on the host, which has no tabindex, silently does nothing.
+ */
+function deepActiveElement(): HTMLElement | null {
+    let element: Element | null = document.activeElement;
+    while (element?.shadowRoot?.activeElement) {
+        element = element.shadowRoot.activeElement;
+    }
+    return element instanceof HTMLElement ? element : null;
+}
+
 @customElement('bball-game-shell')
 export class GameShell extends LitElement {
     static override styles = unsafeCSS(styles);
@@ -25,6 +38,8 @@ export class GameShell extends LitElement {
     @state() private actorId = '';
     @state() private shootingFoul = false;
     @state() private boxOpen = false;
+    private boxReturnFocus: HTMLElement | null = null;
+    private boxFocused = false;
     @state() private subOut = '';
 
     private readonly watch = new WatchRunner();
@@ -33,9 +48,11 @@ export class GameShell extends LitElement {
     override disconnectedCallback(): void {
         super.disconnectedCallback();
         this.stopWatch();
+        window.removeEventListener('keydown', this.boxKeyHandler);
     }
 
     override updated(): void {
+        if (this.boxOpen) this.focusBoxDialog();
         if (!this.isWatch()) {
             if (this.watchAutoStarted || this.watch.playing) this.stopWatch();
             return;
@@ -306,9 +323,7 @@ export class GameShell extends LitElement {
             <footer class="bar">
                 <button ?disabled=${!this.store?.canUndo || this.isWatch()} @click=${() => this.store?.undo()}>Undo</button>
                 <button ?disabled=${!this.store?.canRedo || this.isWatch()} @click=${() => this.store?.redo()}>Redo</button>
-                <button @click=${() => {
-                    this.boxOpen = true;
-                }}>Box score</button>
+                <button @click=${this.openBox}>Box score</button>
                 <button @click=${() => this.store?.newGame()}>New game</button>
             </footer>
             <ul class="log">
@@ -353,12 +368,64 @@ export class GameShell extends LitElement {
         const { engine, setup } = game;
         const text = `${boxScoreText(engine, 'away', setup.awayName)}\n\n${boxScoreText(engine, 'home', setup.homeName)}`;
         return html`
-            <div class="overlay" @click=${() => {
-                this.boxOpen = false;
-            }}>
-                <pre>${text}</pre>
+            <div class="overlay" @click=${this.closeBox}>
+                <div
+                    class="box"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Box score"
+                    tabindex="-1"
+                    @click=${(event: Event) => event.stopPropagation()}
+                >
+                    <div class="box-head">
+                        <h2>Box score</h2>
+                        <button type="button" @click=${this.closeBox}>Close</button>
+                    </div>
+                    <pre>${text}</pre>
+                </div>
             </div>
         `;
+    }
+
+    /**
+     * Focus into the dialog on open and back to the trigger on close, and let
+     * Escape close it. Before this the only way out was clicking the overlay,
+     * so a keyboard user could not dismiss it at all. The key listener lives
+     * only while the box is open and is removed on close and on disconnect.
+     *
+     * This mirrors BoxScoreDialog in the baseball app, including its
+     * deepActiveElement, which is the part that actually makes focus restore
+     * work: the trigger lives in this element's shadow root, so
+     * document.activeElement returns the host. A shared home for both copies
+     * is warranted once a third app needs it, which the rss article overlay
+     * probably does.
+     */
+    private openBox = () => {
+        this.boxReturnFocus = deepActiveElement();
+        this.boxFocused = false;
+        this.boxOpen = true;
+        window.addEventListener('keydown', this.boxKeyHandler);
+    };
+
+    private closeBox = () => {
+        if (!this.boxOpen) return;
+        this.boxOpen = false;
+        window.removeEventListener('keydown', this.boxKeyHandler);
+        const target = this.boxReturnFocus;
+        this.boxReturnFocus = null;
+        target?.focus();
+    };
+
+    private boxKeyHandler = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') this.closeBox();
+    };
+
+    private focusBoxDialog() {
+        if (this.boxFocused) return;
+        const dialog = this.renderRoot?.querySelector('.box');
+        if (!dialog) return;
+        this.boxFocused = true;
+        (dialog as HTMLElement).focus();
     }
 }
 
