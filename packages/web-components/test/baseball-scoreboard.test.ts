@@ -15,9 +15,9 @@ function clickZonePadding(zoneEl: HTMLElement, padX: number, padY: number) {
 }
 
 /** Dispatch a key and wait for the re-render that moves focus. */
-async function keydown(el: HTMLElement, key: string): Promise<void> {
+async function keydown(element: BaseballScoreboard, el: HTMLElement, key: string): Promise<void> {
     el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
-    await (el.getRootNode() as ShadowRoot).host.updateComplete;
+    await element.updateComplete;
 }
 
 describe('BaseballScoreboard', () => {
@@ -284,11 +284,11 @@ describe('BaseballScoreboard', () => {
         // Roving tabindex: the grid is one tab stop, not nine.
         const tabbable = Array.from(cells).filter((c) => c.getAttribute('tabindex') === '0');
         expect(tabbable.length).to.equal(1);
-        expect(cells[0].getAttribute('aria-label')).to.equal('Top left');
-        expect(cells[8].getAttribute('aria-label')).to.equal('Bottom right');
+        expect(cells[0]!.getAttribute('aria-label')).to.equal('Top left');
+        expect(cells[8]!.getAttribute('aria-label')).to.equal('Bottom right');
         // The cells must never intercept the mouse; the existing coordinate
         // hit-test on .zone is what a click uses.
-        expect(getComputedStyle(cells[4]).pointerEvents).to.equal('none');
+        expect(getComputedStyle(cells[4]!).pointerEvents).to.equal('none');
     });
 
     it('picks a cell with Enter and moves the roving cell with arrows', async () => {
@@ -311,17 +311,17 @@ describe('BaseballScoreboard', () => {
 
         // Arrows move the roving cell and focus follows, so a key repeat walks
         // the grid instead of re-picking the same cell.
-        await keydown(start, 'ArrowRight');
+        await keydown(element, start, 'ArrowRight');
         expect(element.shadowRoot!.activeElement).to.equal(cell(6));
-        await keydown(cell(6), 'ArrowDown');
+        await keydown(element, cell(6), 'ArrowDown');
         expect(element.shadowRoot!.activeElement).to.equal(cell(9));
 
         // Clamped at the edge rather than wrapping.
-        await keydown(cell(9), 'ArrowDown');
+        await keydown(element, cell(9), 'ArrowDown');
         expect(element.shadowRoot!.activeElement).to.equal(cell(9));
-        await keydown(cell(6), 'ArrowLeft');
+        await keydown(element, cell(6), 'ArrowLeft');
         expect(element.shadowRoot!.activeElement).to.equal(cell(5));
-        await keydown(cell(5), 'ArrowUp');
+        await keydown(element, cell(5), 'ArrowUp');
         expect(element.shadowRoot!.activeElement).to.equal(cell(2));
     });
 

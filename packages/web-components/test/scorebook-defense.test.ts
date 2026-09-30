@@ -225,46 +225,46 @@ describe('Scorebook Components', () => {
             it('draws only the home-to-first edge for a single', async () => {
                 const diamond = await renderCell({ notation: '1B', base: 1 });
                 const colors = borderColors(getComputedStyle(diamond, '::before'));
-                expect(colors.right).to.equal(RED);
-                expect(colors.top).to.equal(GRAY);
-                expect(colors.bottom).to.equal(GRAY);
-                expect(colors.left).to.equal(GRAY);
+                expect(colors['right']).to.equal(RED);
+                expect(colors['top']).to.equal(GRAY);
+                expect(colors['bottom']).to.equal(GRAY);
+                expect(colors['left']).to.equal(GRAY);
             });
 
             it('draws the home-to-second path for a double', async () => {
                 const diamond = await renderCell({ notation: '2B', base: 2 });
                 const colors = borderColors(getComputedStyle(diamond, '::before'));
-                expect(colors.right).to.equal(RED);
-                expect(colors.top).to.equal(RED);
-                expect(colors.bottom).to.equal(GRAY);
-                expect(colors.left).to.equal(GRAY);
+                expect(colors['right']).to.equal(RED);
+                expect(colors['top']).to.equal(RED);
+                expect(colors['bottom']).to.equal(GRAY);
+                expect(colors['left']).to.equal(GRAY);
             });
 
             it('draws the home-to-third path for a triple', async () => {
                 const diamond = await renderCell({ notation: '3B', base: 3 });
                 const colors = borderColors(getComputedStyle(diamond, '::before'));
-                expect(colors.right).to.equal(RED);
-                expect(colors.top).to.equal(RED);
-                expect(colors.left).to.equal(RED);
-                expect(colors.bottom).to.equal(GRAY);
+                expect(colors['right']).to.equal(RED);
+                expect(colors['top']).to.equal(RED);
+                expect(colors['left']).to.equal(RED);
+                expect(colors['bottom']).to.equal(GRAY);
             });
 
             it('fills the full diamond for a home run', async () => {
                 const diamond = await renderCell({ notation: 'HR', base: 4, run: true });
                 const colors = borderColors(getComputedStyle(diamond, '::before'));
-                expect(colors.right).to.equal(RED);
-                expect(colors.top).to.equal(RED);
-                expect(colors.left).to.equal(RED);
-                expect(colors.bottom).to.equal(RED);
+                expect(colors['right']).to.equal(RED);
+                expect(colors['top']).to.equal(RED);
+                expect(colors['left']).to.equal(RED);
+                expect(colors['bottom']).to.equal(RED);
             });
 
             it('leaves the diamond unhighlighted for an out', async () => {
                 const diamond = await renderCell({ notation: 'K', base: 0 });
                 const colors = borderColors(getComputedStyle(diamond, '::before'));
-                expect(colors.top).to.equal(GRAY);
-                expect(colors.right).to.equal(GRAY);
-                expect(colors.bottom).to.equal(GRAY);
-                expect(colors.left).to.equal(GRAY);
+                expect(colors['top']).to.equal(GRAY);
+                expect(colors['right']).to.equal(GRAY);
+                expect(colors['bottom']).to.equal(GRAY);
+                expect(colors['left']).to.equal(GRAY);
             });
 
             it('draws a small forward-slash inning-end mark through the cell corner', async () => {
@@ -313,7 +313,7 @@ describe('Scorebook Components', () => {
                 element.setAttribute('slots-json', JSON.stringify(slots));
                 await element.updateComplete;
 
-                const lines = Array.from(element.shadowRoot!.querySelectorAll('line.advancement-line'));
+                const lines = Array.from(element.shadowRoot!.querySelectorAll<SVGLineElement>('line.advancement-line'));
                 expect(lines).to.have.length(2);
 
                 for (const line of lines) {
@@ -323,13 +323,13 @@ describe('Scorebook Components', () => {
                     expect(line.getBBox, 'advancement lines must be real SVG elements').to.be.a('function');
                 }
 
-                const firstToThird = lines[0];
+                const firstToThird = lines[0]!;
                 expect(firstToThird.getAttribute('x1')).to.equal('46');
                 expect(firstToThird.getAttribute('y1')).to.equal('26');
                 expect(firstToThird.getAttribute('x2')).to.equal('6');
                 expect(firstToThird.getAttribute('y2')).to.equal('26');
 
-                const scoring = lines[1];
+                const scoring = lines[1]!;
                 expect(scoring.classList.contains('scored')).to.be.true;
                 expect(scoring.getAttribute('x1')).to.equal('26');
                 expect(scoring.getAttribute('y1')).to.equal('6');
