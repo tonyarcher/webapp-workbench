@@ -1,0 +1,15 @@
+// Typechecks the browser component tests, which the build tsconfig leaves out.
+// Its include is src only, so tsc never looked at test/ and the test runner,
+// which transforms without checking, never looked either. A type error there
+// would reach a commit with every gate green.
+//
+// Extends the build config so the strict flags stay identical. The component
+// uses Lit decorators, which experimentalDecorators in the base already covers;
+// only the mocha globals and the test tree need adding.
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "types": ["node", "mocha"]
+    },
+    "include": ["src/**/*", "test/**/*"]
+}

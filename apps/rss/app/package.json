@@ -7,7 +7,9 @@
         "dev": "vite",
         "build": "tsc --noEmit && vite build && node scripts/write-sw.mjs",
         "preview": "vite preview",
-        "test": "tsx scripts/smoke.ts && tsx scripts/db-smoke.ts"
+        "test": "tsx scripts/smoke.ts && tsx scripts/db-smoke.ts && npm run test:browser",
+        "test:browser": "wtr",
+        "typecheck": "tsc --noEmit -p tsconfig.test.json"
     },
     "dependencies": {
         "@tanstack/history": "1.162.4",
@@ -19,7 +21,11 @@
         "user-client": "*"
     },
     "devDependencies": {
+        "@esm-bundle/chai": "^4.3.4-fix.0",
         "@types/node": "^26.6.2",
+        "@web/dev-server-esbuild": "^2.0.0",
+        "@web/test-runner": "^1.0.0",
+        "@web/test-runner-playwright": "^1.0.0",
         "@xmldom/xmldom": "^0.9.12",
         "fake-indexeddb": "^6.2.5",
         "tsx": "^4.23.15",
