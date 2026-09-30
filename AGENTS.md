@@ -214,6 +214,17 @@ No other app has an audit, so the rules below are on you until one does.
   template literal, or it becomes visible text.
 - A click handler on a `div`, `span`, `li`, or `tr` is not reachable by keyboard. Use a
   `<button>` or `<a>`, or give it a role, a `tabindex`, and a keydown path.
+- The axe audits cannot catch that rule. `click-events-have-key-events` reads the
+  `onclick` property, and a Lit `@click` binding compiles to `addEventListener`, so an
+  audit is blind to every handler written the Lit way. A reachability check runs with
+  the script tests and warns about the rest; it warns rather than fails, because a
+  hard failure over a standing backlog just moves the backlog into an allowlist.
+- When a handler really is pointer-only, say so next to it: a `pointer-only:` comment
+  on the line or directly above, in whichever comment syntax reaches the markup — `//`
+  in script, or an HTML comment inside a Lit template. A bare marker with no reason does
+  not suppress, and an explanation separated from the handler by intervening code does
+  not reach it. `role` and `tabindex` are necessary but not sufficient; the key path is
+  the actual fix, so a pointer-only affordance needs its alternative stated too.
 - A scrollable region needs `tabindex="0"`, or it cannot be scrolled from the keyboard.
 - Every control has an accessible name: visible text, `aria-label`, or `aria-labelledby`.
   Icon-only buttons need the label, since the icon is not a name. A dense grid is not an

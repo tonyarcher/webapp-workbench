@@ -156,6 +156,9 @@ export class AppShell extends LitElement {
 
     private renderOverlay() {
         if (!this.article) return '';
+        // pointer-only: the backdrop is a click-outside affordance, not the way
+        // out. article-view has a visible Back button and Escape closes it, so
+        // a keyboard user is not trapped here.
         return html`<div class="article-overlay"><div class="article-backdrop" @click=${this.closeArticle}></div><article-view .article=${this.article} @close=${this.closeArticle}></article-view></div>`;
     }
 

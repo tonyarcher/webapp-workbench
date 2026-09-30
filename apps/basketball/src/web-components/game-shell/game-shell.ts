@@ -368,6 +368,8 @@ export class GameShell extends LitElement {
         const { engine, setup } = game;
         const text = `${boxScoreText(engine, 'away', setup.awayName)}\n\n${boxScoreText(engine, 'home', setup.homeName)}`;
         return html`
+            <!-- pointer-only: click-outside affordance. The dialog has a Close
+                 button, aria-modal, and Escape, so the keyboard path exists. -->
             <div class="overlay" @click=${this.closeBox}>
                 <div
                     class="box"

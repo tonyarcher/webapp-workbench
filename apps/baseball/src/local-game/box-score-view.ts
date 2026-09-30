@@ -119,6 +119,8 @@ function battingRow(line: BoxScoreTeam['batting'][number]): TemplateResult {
 
 export function boxScoreOverlay(boxScore: BoxScore, innings: number, onClose: () => void): TemplateResult {
     return html`
+    <!-- pointer-only: click-outside affordance. The dialog has a Close button,
+         aria-modal, and Escape, so the keyboard path exists. -->
     <div class="box-score-overlay" data-testid="box-score-modal" @click=${onClose}>
       <div
         class="box-score-modal"
