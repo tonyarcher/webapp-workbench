@@ -192,6 +192,12 @@ function plateZone(result: PlateResult | '', input: PlateSceneInput) {
     const col = armed >= 1 && armed <= 9 ? (armed - 1) % 3 : -1;
     const row = armed >= 1 && armed <= 9 ? Math.floor((armed - 1) / 3) : -1;
     return html`
+      <!-- pointer-only: this container hit-tests a click onto one of the nine
+           cells, and only those nine. zoneFromPoint clamps both indices to 0-2,
+           so every pick it can produce is a cell, including one from a click
+           outside the padding box, and each of those cells has a
+           keyboard-operable counterpart below. The zones numbered 10-17 are
+           ball-flight offsets in zoneOffsets and cannot be picked by clicking. -->
       <div class="zone" @click=${(event: MouseEvent) => onZoneClick(event, input)}>
         <div class="zone-grid"></div>
         ${

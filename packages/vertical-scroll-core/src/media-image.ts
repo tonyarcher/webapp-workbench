@@ -95,6 +95,11 @@ export class ScrollMediaImage extends LitElement {
         if (count === 0) return html``;
         const single = count === 1;
         return html`
+            <!-- pointer-only: the stage is a drag surface for panning, and its
+                 click handler only cancels a click that followed a drag. Neither
+                 is an action of its own. The two actions a drag performs, next
+                 and previous, already exist as labelled .carousel-arrow buttons
+                 below, so a keyboard user is not locked out of anything. -->
             <div
                 class="media-stage${this.dragged ? ' dragging' : ''}"
                 @pointerdown=${this.onPointerDown}
