@@ -52,6 +52,18 @@ POINTER_HANDLER = re.compile(r"@(?:click|pointerdown)\s*=", re.IGNORECASE)
 # Focusability escape hatches, in either attribute order.
 HAS_SEMANTICS = re.compile(r"\b(?:role|tabindex)\s*=", re.IGNORECASE)
 
+# A pointer handler whose entire body is stopPropagation is an event guard, not a
+# user action. It exists so a tap on a child does not reach a parent's drag
+# handler; the element itself is not interactive, so there is nothing for a
+# keyboard to perform and no keyboard path to add. Flagging these was a false
+# positive, and a list carrying false positives is how a warning gets ignored.
+GUARD_BINDING = re.compile(
+    r"@(?:click|pointerdown)\s*=\s*\$\{\s*(?:\([^)]*\)|[\w$]+)\s*=>\s*"
+    r"[\w$]+\.stopPropagation\(\)\s*\}",
+    re.IGNORECASE,
+)
+HANDLER_ATTR = re.compile(r"@(?:click|pointerdown)\s*=", re.IGNORECASE)
+
 # Floors for the anti-vacuity test. A guard that scans nothing, or that
 # matches nothing, looks identical to a clean result.
 MIN_FILES = 40
@@ -83,6 +95,19 @@ def source_files() -> list[tuple[Path, str]]:
 def is_reachable(tag: str) -> bool:
     """True when the opening tag names a role or takes focus."""
     return HAS_SEMANTICS.search(tag) is not None
+
+
+def is_only_guards(tag: str) -> bool:
+    """True when every pointer handler on the tag merely stops propagation.
+
+    A tag can carry a guard and a real action at once, so this asks about all of
+    them rather than the first. A tag with no handler at all is not a guard, and
+    is not this function's business.
+    """
+    handlers = list(HANDLER_ATTR.finditer(tag))
+    if not handlers:
+        return False
+    return all(GUARD_BINDING.match(tag, m.start()) is not None for m in handlers)
 
 
 # An intentional case states why next to the handler, in whichever comment
@@ -208,6 +233,8 @@ def findings(files: list[tuple[Path, str]]) -> list[str]:
                 bounded = True
             if bounded and not POINTER_HANDLER.search(tag):
                 continue
+            if bounded and is_only_guards(tag):
+                continue
             if bounded and is_reachable(tag):
                 continue
             if is_suppressed(text, start.start()):
@@ -300,6 +327,33 @@ class PointerHandlerReachabilityTest(unittest.TestCase):
         # A handler on something that is not an element at all is out of scope.
         self.assertEqual(ELEMENT_START.findall("el.addEventListener('click')"), [])
 
+        # ---- event guards are not user actions ----
+        # A binding that only stops propagation shields a child from a parent's
+        # drag handler. The element is not interactive, so there is nothing for
+        # a keyboard to do. This shape is live in vertical-scroll-core.
+        self.assertFalse(
+            flagged(
+                '<div class="slide-meta"'
+                " @pointerdown=${(e: Event) => e.stopPropagation()}>"
+            )
+        )
+        self.assertFalse(flagged("<div @click=${(e) => e.stopPropagation()}></div>"))
+        # A guard alongside a real action is still a finding. The exclusion asks
+        # about every handler on the tag, not just the first.
+        self.assertTrue(
+            flagged(
+                "<div @pointerdown=${(e) => e.stopPropagation()}"
+                " @click=${this.onPick}></div>"
+            )
+        )
+        # A real action whose name merely reads like the guard is not a guard.
+        self.assertTrue(flagged("<div @click=${this.pickAndStop}></div>"))
+        self.assertTrue(
+            flagged("<div @click=${() => { e.stopPropagation(); go(); }}></div>")
+        )
+        # A tag with no pointer handler is not this function's business.
+        self.assertFalse(is_only_guards('<div class="plain"></div>'))
+
         # A ">" inside a binding before the handler must not hide it. This is
         # the miss that made "not listed" mean "not checked", and it took two
         # attempts to close: a regex cannot tell a tag's own ">" from one inside
@@ -353,8 +407,18 @@ class PointerHandlerReachabilityTest(unittest.TestCase):
         self.assertFalse(flagged('<div title="a > b" role="button" @click=${x}>'))
         # An unterminated tag has an unknown extent, so it is reported and the
         # reachability test is skipped rather than guessed from the file's tail.
-        self.assertTrue(flagged('<div class="a" @click=${x}\n<p>later</p>\n'))
+        # These carry no ">" after the element name, because a later ">" would
+        # close the tag and route it through the bounded path instead, which is
+        # what the first of these two used to do.
+        self.assertTrue(flagged('<div class="a" @click=${x}\n'))
         self.assertTrue(flagged('<div class="a" @click=${x} role="button"'))
+        # The guard exclusion is bypassed for the same reason: an unknown extent
+        # must not be read as a guard. Without this, dropping the bounded check
+        # at the call site would silence every unterminated tag unobserved.
+        self.assertTrue(flagged("<div @pointerdown=${(e) => e.stopPropagation()}\n"))
+        # And the bounded counterpart of that same guard IS skipped, so the pair
+        # pins that the bounded check is what makes the difference.
+        self.assertFalse(flagged("<div @pointerdown=${(e) => e.stopPropagation()}>"))
 
         # The suppression must work, and must not work by accident. An empty
         # reason is not a reason, so a bare marker does not suppress.
