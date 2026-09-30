@@ -116,9 +116,11 @@ export class SgSymbolSearch extends LitElement {
     private renderResultItems(): TemplateResult {
         return html`${this.results.map(
             (result) => html`
-        <li @click=${() => this.select(result)}>
-          <span class="sym">${result.symbol}</span>
-          <span class="name">${result.name}</span>
+        <li>
+          <button type="button" class="result" @click=${() => this.select(result)}>
+            <span class="sym">${result.symbol}</span>
+            <span class="name">${result.name}</span>
+          </button>
         </li>
       `,
         )}`;

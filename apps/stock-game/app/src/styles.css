@@ -133,6 +133,21 @@ button {
     padding: 8px 10px;
 }
 
+/* Search results are a button so they are reachable and activatable from the
+   keyboard. Reset the control chrome so the row still reads as a list item. */
+.results .result {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
 input:focus,
 select:focus {
     outline: none;
@@ -185,6 +200,32 @@ button.primary {
     letter-spacing: 0.04em;
     padding: 8px 10px;
     border-bottom: 1px solid var(--border);
+}
+
+/* The sort control is a button so it is reachable from the keyboard. It keeps
+   the th's own type treatment and drops the control chrome, and the th's
+   padding moves onto the button so the column still lines up with the cells. */
+.sg-table th button {
+    display: block;
+    width: 100%;
+    text-align: inherit;
+    background: none;
+    border: 0;
+    border-radius: 4px;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+}
+
+.sg-table th.num button {
+    text-align: right;
+}
+
+.sg-table tbody tr {
+    cursor: pointer;
 }
 
 .sg-table td {

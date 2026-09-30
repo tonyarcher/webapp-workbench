@@ -100,10 +100,19 @@ export function feedRowTemplate(
 }
 
 function folderToggleTemplate(isCollapsed: boolean, onToggle: (id: string) => void, folderId: string) {
-    return html`<span class="icon" style="cursor:pointer" @click=${(e: Event) => {
-        e.stopPropagation();
-        onToggle(folderId);
-    }}>${isCollapsed ? '▸' : '▾'}</span>`;
+    // A real button rather than a span with a click handler: this is the only
+    // way to collapse a folder, and the arrow glyph says nothing to a screen
+    // reader, so it carries the name and the expanded state too.
+    return html`<button
+        type="button"
+        class="icon"
+        aria-expanded=${!isCollapsed}
+        aria-label=${isCollapsed ? 'Expand folder' : 'Collapse folder'}
+        @click=${(e: Event) => {
+            e.stopPropagation();
+            onToggle(folderId);
+        }}
+    >${isCollapsed ? '▸' : '▾'}</button>`;
 }
 
 function folderHeaderTemplate(

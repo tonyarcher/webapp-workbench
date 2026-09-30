@@ -97,13 +97,23 @@ export class SgHoldingsTable extends LitElement {
         const sorted = this.sortKey === column.id ? this.sortDir : null;
         const indicator = sorted === 'asc' ? ' ▲' : sorted === 'desc' ? ' ▼' : '';
         const cls = column.id === 'symbol' ? '' : 'num';
-        return html`<th class=${cls} @click=${() => this.onSort(column.id)}>
-      ${column.label}${indicator}
+        const ariaSort = sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none';
+        return html`<th class=${cls} aria-sort=${ariaSort}>
+      <button type="button" @click=${() => this.onSort(column.id)}>${column.label}${indicator}</button>
     </th>`;
     }
 
     private renderRow(holding: HoldingsEntry): TemplateResult {
-        return html`<tr @click=${() => this.onRowClick(holding.symbol)}>
+        const select = (event: Event) => {
+            event.preventDefault();
+            this.onRowClick(holding.symbol);
+        };
+        return html`<tr tabindex="0" aria-label="Open ${holding.symbol}" @click=${select} @keydown=${(
+            event: KeyboardEvent,
+        ) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            select(event);
+        }}>
       ${COLUMNS.map((column) => this.renderCell(column.id, holding))}
     </tr>`;
     }

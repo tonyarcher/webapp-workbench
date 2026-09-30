@@ -155,7 +155,7 @@ describe('custom elements render and react to properties', () => {
         el.addEventListener('sg-symbol-select', (event) => {
             detail = (event as CustomEvent).detail;
         });
-        const item = el.shadowRoot?.querySelector('li');
+        const item = el.shadowRoot?.querySelector('li > button.result');
         expect(item).not.toBeNull();
         item?.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
         expect(detail).toEqual(RESULT);
@@ -192,6 +192,34 @@ describe('custom elements render and react to properties', () => {
         el.remove();
     });
 
+    it('sg-holdings-table rows are reachable and openable from the keyboard', async () => {
+        const el = mount<SgHoldingsTable>('sg-holdings-table', { holdings: [HOLDING] });
+        await tick();
+        const row = el.shadowRoot?.querySelector('tbody tr');
+        expect(row?.getAttribute('tabindex')).toBe('0');
+        expect(row?.getAttribute('aria-label')).toBe(`Open ${HOLDING.symbol}`);
+
+        let detail: unknown;
+        el.addEventListener('sg-trade-symbol', (event) => {
+            detail = (event as CustomEvent).detail;
+        });
+        row?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        expect(detail).toEqual({ symbol: HOLDING.symbol });
+        el.remove();
+    });
+
+    it('sg-holdings-table header buttons report their sort state', async () => {
+        const el = mount<SgHoldingsTable>('sg-holdings-table', { holdings: [HOLDING] });
+        await tick();
+        const first = el.shadowRoot?.querySelector('th');
+        expect(first?.getAttribute('aria-sort')).toBe('none');
+
+        first?.querySelector('button')?.click();
+        await tick();
+        expect(first?.getAttribute('aria-sort')).toBe('ascending');
+        el.remove();
+    });
+
     it('sg-holdings-table renders and re-renders rows from the holdings property', async () => {
         const el = mount<SgHoldingsTable>('sg-holdings-table', { holdings: [HOLDING] });
         await tick();
@@ -209,7 +237,7 @@ describe('custom elements render and react to properties', () => {
         const msft = { ...HOLDING, symbol: 'MSFT', name: 'Microsoft Corp.', qty: 20 };
         const el = mount<SgHoldingsTable>('sg-holdings-table', { holdings: [msft, HOLDING] });
         await tick();
-        const headers = [...(el.shadowRoot?.querySelectorAll('th') ?? [])];
+        const headers = [...(el.shadowRoot?.querySelectorAll<HTMLButtonElement>('th > button') ?? [])];
         const firstSymbols = () =>
             [...(el.shadowRoot?.querySelectorAll('tbody tr') ?? [])].map((row) =>
                 row.querySelector('td')?.textContent.trim(),
