@@ -50,7 +50,7 @@ export class BaseballDefenseDiagram extends LitElement {
     override render() {
         return html`
       <div class="field-diagram-card" data-testid="defense-diagram" style="--pitch-duration: ${this.playDurationMs}ms">
-        <h3>Defensive Alignment - ${this.defendingTeam}</h3>
+        <h2>Defensive Alignment - ${this.defendingTeam}</h2>
         <div class="field-diagram-wrapper">
           <div id="field-diamond-bg"></div>
           ${repeat(

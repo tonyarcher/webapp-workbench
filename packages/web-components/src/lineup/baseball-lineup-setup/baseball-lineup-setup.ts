@@ -280,11 +280,22 @@ export class BaseballLineupSetup extends LitElement {
         `;
     }
 
+    /**
+     * The lineup is a dense grid whose column headers ("Batter", "#", "Pos")
+     * are not labels, so each control needs its own accessible name. A visible
+     * label per cell would mean 27 of them per team and would break the layout,
+     * so name them for the screen reader instead.
+     */
+    private slotLabel(team: 'home' | 'away', index: number, field: string) {
+        return `${team === 'away' ? 'Away' : 'Home'} slot ${index + 1} ${field}`;
+    }
+
     private nameInput(team: 'home' | 'away', player: PlayerInfo, index: number) {
         return html`
             <input
                 class="form-control input-flex"
                 data-testid="${team}-slot-${index + 1}-name"
+                aria-label=${this.slotLabel(team, index, 'name')}
                 .value=${player.name}
                 @input=${(event: Event) => this.updatePlayer(team, index, 'name', (event.target as HTMLInputElement).value)}
             />
@@ -296,6 +307,7 @@ export class BaseballLineupSetup extends LitElement {
             <input
                 class="form-control input-num"
                 data-testid="${team}-slot-${index + 1}-jersey"
+                aria-label=${this.slotLabel(team, index, 'jersey number')}
                 type="number"
                 min="0"
                 max="99"
@@ -310,6 +322,7 @@ export class BaseballLineupSetup extends LitElement {
             <select
                 class="form-control select-pos"
                 data-testid="${team}-slot-${index + 1}-position"
+                aria-label=${this.slotLabel(team, index, 'position')}
                 .value=${player.position}
                 @change=${(event: Event) => this.updatePlayer(team, index, 'position', (event.target as HTMLSelectElement).value)}
             >

@@ -70,9 +70,11 @@ export class BaseballApp extends LitElement {
       ${
           import.meta.env.DEV
               ? html`
-            <div class="build-badge" data-testid="build-badge" title=${`build ${__BUILD_TIME__}`}>
-              DEV · v${__APP_VERSION__} · ${new Date(__BUILD_TIME__).toLocaleString()}
-            </div>
+            <footer>
+              <div class="build-badge" data-testid="build-badge" title=${`build ${__BUILD_TIME__}`}>
+                DEV · v${__APP_VERSION__} · ${new Date(__BUILD_TIME__).toLocaleString()}
+              </div>
+            </footer>
           `
               : ''
       }

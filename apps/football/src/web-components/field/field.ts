@@ -71,6 +71,7 @@ export class FieldView extends LitElement {
             fgKey: this.fgKey,
             animateFg: this.animateFg(),
         });
+        // generated: svg is paintFieldSvg output, no remote or user markup.
         return html`
             <div class="wrap">
                 ${unsafeHTML(svg)}

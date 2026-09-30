@@ -200,6 +200,35 @@ comments, and workflow only — not Lit/CSS/PWA.
 - Theme via CSS custom properties on `:root` / `[data-theme='...']`. Components use `var(--...)`, never hardcoded colors.
 - Honor `prefers-reduced-motion`.
 
+### Accessibility
+
+Target WCAG 2.1 AA. The baseball app audits both of its screens with `axe-core`
+through `@axe-core/playwright`, in `apps/baseball/e2e/accessibility.spec.ts`. An
+axe violation fails `npm run test:e2e`, in the real app against the real theme.
+No other app has an audit, so the rules below are on you until one does.
+
+- Every `<img>` carries `alt`. Use `alt=""` for decorative images, never omit it.
+- `target="_blank"` carries `rel="noopener noreferrer"`.
+- Every `unsafeHTML(...)` has a `// sanitized:` or `// generated:` note naming where its
+  markup came from. The note goes above the `return` when the call sits inside a
+  template literal, or it becomes visible text.
+- A click handler on a `div`, `span`, `li`, or `tr` is not reachable by keyboard. Use a
+  `<button>` or `<a>`, or give it a role, a `tabindex`, and a keydown path.
+- A scrollable region needs `tabindex="0"`, or it cannot be scrolled from the keyboard.
+- Every control has an accessible name: visible text, `aria-label`, or `aria-labelledby`.
+  Icon-only buttons need the label, since the icon is not a name. A dense grid is not an
+  excuse; a label per control reads better than a caption nobody associates.
+- Label every form control, with `<label for>` or `aria-label`.
+- Never remove a focus outline without replacing it with a visible `:focus-visible` style.
+- Dialogs and overlays: `role="dialog"`, `aria-modal="true"`, a labelled title, focus moved
+  in on open, and focus returned to the trigger on close.
+- Heading levels increase by one. A component that is the first thing on a screen starts at
+  `h2`, not `h3`.
+- A theme token that carries white text has to be dark enough for 4.5:1. No text colour
+  reaches 4.5:1 on a mid-bright brand colour, so a readable variant is a separate token
+  from the decorative one.
+- Page content sits in a landmark, and there is exactly one `main`.
+
 ### Comments
 
 - JSDoc (`/** */`) on non-obvious functions: the _why_ and tradeoffs, not the what.

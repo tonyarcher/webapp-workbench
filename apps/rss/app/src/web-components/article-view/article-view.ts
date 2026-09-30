@@ -73,6 +73,7 @@ export class ArticleView extends LitElement {
     }
 
     private renderBody(body: string, a: Article) {
+        // sanitized: body is sanitizeHtml(a.content), applied in render().
         if (body) return html`<div class="content">${unsafeHTML(body)}</div>`;
         if (a.summary) return html`<div class="content">${a.summary}</div>`;
         return html`<p class="content">No content available for this article.</p>`;

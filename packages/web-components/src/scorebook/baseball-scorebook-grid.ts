@@ -62,7 +62,7 @@ export class BaseballScorebookGrid extends LitElement {
         return html`
       <div class="card scorebook-container">
         <h2 class="scorebook-title">${this.teamName} - Scorebook Sheet</h2>
-        <div class="table-wrapper">
+        <div class="table-wrapper" tabindex="0">
           <table class="scorebook-table">
             ${this.renderTableHead(inningsArray)} ${this.renderTableBody(inningsArray)}
           </table>

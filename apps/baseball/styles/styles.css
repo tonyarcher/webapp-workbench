@@ -17,6 +17,12 @@
     --accent-green-glow: #00e676;
     --accent-red: #ff2a3b;
     --accent-red-glow: #ff5252;
+    /* Readable variant for white text. White on --accent-red is 3.7:1, under
+       the 4.5:1 floor, and no text colour reaches 4.5:1 on #ff2a3b, so a
+       button background has to darken. Kept separate so --accent-red stays
+       free for borders, glows and team colours. Checked by
+       e2e/accessibility.spec.ts. */
+    --accent-red-strong: #e02434;
     --accent-yellow: #ffcc00;
     --accent-blue: #0073e6;
     --glass-blur: blur(12px);
@@ -97,7 +103,7 @@ h3 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--accent-red);
+    background: var(--accent-red-strong, #e02434);
     color: #fff;
     font-weight: 700;
     padding: 0.75rem 1.5rem;
@@ -109,7 +115,8 @@ h3 {
 }
 
 .btn:hover {
-    background: var(--accent-red-glow);
+    background: var(--accent-red-strong, #e02434);
+    filter: brightness(0.9);
     box-shadow: 0 0 15px rgba(255, 82, 82, 0.4);
     transform: translateY(-1px);
 }
