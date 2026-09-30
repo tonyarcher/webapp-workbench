@@ -5,10 +5,12 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "tsc --noEmit && vite build",
+        "build": "tsc --noEmit \u0026\u0026 vite build",
         "test": "vitest run",
         "test:coverage": "vitest run --coverage",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "test:e2e": "npm run build:components \u0026\u0026 playwright test",
+        "build:components": "npm run build --prefix ../../packages/web-components"
     },
     "dependencies": {
         "basketball-core": "*",
@@ -16,6 +18,8 @@
         "lit": "^3.3.3"
     },
     "devDependencies": {
+        "@axe-core/playwright": "^4.13.0",
+        "@playwright/test": "^1.63.0",
         "@types/node": "^26.6.2",
         "@vitest/coverage-v8": "^5.0.1",
         "fake-indexeddb": "^6.2.5",

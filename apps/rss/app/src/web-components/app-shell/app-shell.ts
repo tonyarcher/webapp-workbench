@@ -8,6 +8,24 @@ import { currentUsername, hasSession, logout, startLogin } from '../../services/
 import type { Article, View } from '../../types';
 import styles from './app-shell.css?inline';
 
+/**
+ * The element that really has focus. `document.activeElement` stops at a
+ * shadow host, and the article list that opens this dialog lives inside a
+ * child component's shadow root, so without the descent focus would be
+ * restored to the host rather than to the article that was read.
+ *
+ * The same six lines exist in the baseball and basketball apps. Each app is
+ * its own workspace and there is no shared UI package to put one copy in, so
+ * they are kept identical here to keep a future extraction a mechanical grep.
+ */
+function deepActiveElement(): HTMLElement | null {
+    let element: Element | null = document.activeElement;
+    while (element?.shadowRoot?.activeElement) {
+        element = element.shadowRoot.activeElement;
+    }
+    return element instanceof HTMLElement ? element : null;
+}
+
 @customElement('app-shell')
 export class AppShell extends LitElement {
     static override styles = unsafeCSS(styles);
@@ -145,20 +163,6 @@ export class AppShell extends LitElement {
         return html`<settings-dialog .open=${this.settingsOpen} @close=${() => (this.settingsOpen = false)}></settings-dialog>`;
     }
 
-    /**
-     * The element that really has focus. `document.activeElement` stops at a
-     * shadow host, and the article list that opens this dialog lives inside a
-     * child component's shadow root, so without the descent focus would be
-     * restored to the host rather than to the article that was read.
-     */
-    private static deepActiveElement(): HTMLElement | null {
-        let element: Element | null = document.activeElement;
-        while (element?.shadowRoot?.activeElement) {
-            element = element.shadowRoot.activeElement;
-        }
-        return element instanceof HTMLElement ? element : null;
-    }
-
     private onKeyDown = (e: KeyboardEvent) => {
         // Before the nav keys, and before shouldIgnoreKey, so Escape closes the
         // article even with focus in a field or another dialog open.
@@ -228,7 +232,7 @@ export class AppShell extends LitElement {
     private onOpenArticle(e: Event) {
         const detail = (e as CustomEvent<{ article: Article; index: number; items: Article[] }>).detail;
         this.readContext = { items: detail.items, index: detail.index };
-        this.articleReturnFocus = AppShell.deepActiveElement();
+        this.articleReturnFocus = deepActiveElement();
         this.article = detail.article;
         this.resume = { view: JSON.stringify(this.route), id: detail.article.id };
     }

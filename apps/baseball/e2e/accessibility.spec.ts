@@ -19,6 +19,11 @@ function describe(violations: Awaited<ReturnType<AxeBuilder['analyze']>>['violat
 }
 
 async function audit(page: Page): Promise<string[]> {
+    // No withTags here on purpose. The default ruleset already includes the
+    // best-practice rules, which is how landmark-one-main, region and
+    // page-has-heading-one were found. Adding withTags narrows the run: against
+    // axe-core 4.13 it drops seven rules the default would run, including
+    // target-size (WCAG 2.2 AA) and duplicate-id.
     const results = await new AxeBuilder({ page }).analyze();
     return describe(results.violations);
 }
@@ -40,5 +45,20 @@ test('the setup screen has no automatic accessibility violations', async ({ page
 test('the scorekeeping screen has no automatic accessibility violations', async ({ page }) => {
     await page.goto('/');
     await startGame(page);
+    expect(await audit(page)).toEqual([]);
+});
+
+/**
+ * A third state, because the first two leave the game empty. The same
+ * components render in both, but with a play recorded the scoreboard, the
+ * scorebook grid, the play-by-play and the box-score button all take their
+ * populated paths, which is a different set of DOM for axe to read.
+ */
+test('a live at-bat has no automatic accessibility violations', async ({ page }) => {
+    await page.goto('/');
+    await startGame(page);
+    await page.getByRole('button', { name: 'SINGLE (1B)' }).click();
+    await page.getByRole('button', { name: 'Right Field' }).click();
+    await expect(page.locator('baseball-scoreboard').first()).toContainText('1B');
     expect(await audit(page)).toEqual([]);
 });

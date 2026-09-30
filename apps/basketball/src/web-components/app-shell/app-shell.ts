@@ -48,10 +48,19 @@ export class AppShell extends LitElement {
 
     override render(): TemplateResult {
         if (!this.ready) return html`<p class="loading">Loading…</p>`;
+        // One main, and a level-one heading, so the page has a landmark and a
+        // heading to navigate by. The audit in e2e/accessibility.spec.ts fails
+        // without both.
         if (!this.game) {
-            return html`<bball-setup-screen @start-game=${this.onStart}></bball-setup-screen>`;
+            return html`<main>
+        <h1 class="visually-hidden">Basketball local game</h1>
+        <bball-setup-screen @start-game=${this.onStart}></bball-setup-screen>
+      </main>`;
         }
-        return html`<bball-game-shell .store=${this.store} .game=${this.game}></bball-game-shell>`;
+        return html`<main>
+        <h1 class="visually-hidden">Basketball scorecard</h1>
+        <bball-game-shell .store=${this.store} .game=${this.game}></bball-game-shell>
+      </main>`;
     }
 }
 

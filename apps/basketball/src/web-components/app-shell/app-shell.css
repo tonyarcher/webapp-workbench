@@ -7,3 +7,18 @@
     padding: 32px;
     color: var(--text-soft);
 }
+
+/* For assistive tech, not the eye. This lives here rather than in the
+   global stylesheet because the h1 is inside this component's shadow root, and a
+   document-level rule does not reach shadow content. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
