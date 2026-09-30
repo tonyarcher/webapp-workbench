@@ -1,6 +1,7 @@
 import { html, svg } from 'lit';
 import type { Feed, Folder, View } from '../../types';
 import type { ActionHost } from './source-list-actions';
+import { MAX_SIDEBAR_WIDTH, MIN_SIDEBAR_WIDTH } from './source-list-settings';
 import {
     feedSortChangeAction,
     folderMenuDeleteAction,
@@ -51,6 +52,8 @@ export interface SourceListRenderHost extends ActionHost {
     onResizeStart(e: PointerEvent): void;
     onResizeMove(e: PointerEvent): void;
     onResizeEnd(e: PointerEvent): void;
+    onResizeKey(e: KeyboardEvent): void;
+    sidebarWidth: number;
     onRetryLibrary(): void;
     toggleFolder(id: string): void;
 }
@@ -207,7 +210,25 @@ function renderUncategorized(host: SourceListRenderHost, uncategorized: Feed[]) 
 }
 
 export function renderResizeHandle(host: SourceListRenderHost) {
-    return html`<div class="resize-handle" title="Drag to resize" @pointerdown=${host.onResizeStart} @pointermove=${host.onResizeMove} @pointerup=${host.onResizeEnd} @pointercancel=${host.onResizeEnd}></div>`;
+    // The WAI-ARIA window splitter: a separator the keyboard can move. Without
+    // role, tabindex and a key path the sidebar width is reachable by pointer
+    // only, and a keyboard user cannot set it at all.
+    return html`<div
+        class="resize-handle"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        aria-valuenow=${Math.round(host.sidebarWidth)}
+        aria-valuemin=${MIN_SIDEBAR_WIDTH}
+        aria-valuemax=${MAX_SIDEBAR_WIDTH}
+        tabindex="0"
+        title="Drag to resize"
+        @pointerdown=${host.onResizeStart}
+        @pointermove=${host.onResizeMove}
+        @pointerup=${host.onResizeEnd}
+        @pointercancel=${host.onResizeEnd}
+        @keydown=${host.onResizeKey}
+    ></div>`;
 }
 
 export function renderMenus(

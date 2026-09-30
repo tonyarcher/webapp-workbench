@@ -95,3 +95,30 @@ export function saveSidebarWidth(width: number): void {
         // storage unavailable; sidebar width just won't persist
     }
 }
+
+/** Arrow-key step for the sidebar splitter, and the coarse step with Shift. */
+export const SIDEBAR_KEY_STEP = 16;
+export const SIDEBAR_KEY_STEP_LARGE = 64;
+
+/** The width a drag or key press asks for, held inside the bounds. */
+export function clampSidebarWidth(raw: number): number {
+    return Math.round(Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, raw)));
+}
+
+/**
+ * The next sidebar width for a key press, per the WAI-ARIA window splitter:
+ * arrows step, Home and End jump to the bounds. Null means the caller should
+ * leave the key alone and not preventDefault.
+ *
+ * Extracted from the component so it is reachable without a DOM. The splitter is
+ * the only way to set the sidebar width by keyboard, and the stepping and
+ * clamping are exactly the part worth pinning.
+ */
+export function nextSidebarWidth(current: number, key: string, shiftKey: boolean): number | null {
+    const step = shiftKey ? SIDEBAR_KEY_STEP_LARGE : SIDEBAR_KEY_STEP;
+    if (key === 'ArrowRight') return clampSidebarWidth(current + step);
+    if (key === 'ArrowLeft') return clampSidebarWidth(current - step);
+    if (key === 'Home') return MIN_SIDEBAR_WIDTH;
+    if (key === 'End') return MAX_SIDEBAR_WIDTH;
+    return null;
+}

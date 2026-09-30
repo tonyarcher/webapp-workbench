@@ -34,8 +34,8 @@ import {
     loadFeedSort,
     loadHideReadByFolder,
     loadSidebarWidth,
-    MAX_SIDEBAR_WIDTH,
-    MIN_SIDEBAR_WIDTH,
+    clampSidebarWidth,
+    nextSidebarWidth,
     saveSidebarWidth,
 } from './source-list-settings';
 
@@ -59,6 +59,14 @@ export class SourceList extends LitElement {
     private hideTimer: number | null = null;
     private resizing = false;
     private resizeHandleEl: HTMLElement | null = null;
+    /**
+     * Current sidebar width, the source of truth for aria-valuenow. Kept as a
+     * plain field rather than reactive state: a drag calls applySidebarWidth on
+     * every pointermove, and re-rendering the whole list that often would fight
+     * the pointer capture. The template reads it on render and
+     * applySidebarWidth writes the attribute directly in between.
+     */
+    sidebarWidth = loadSidebarWidth();
     feedListMenuTriggerId: string | null = null;
     @state() feedListMenuOpen = false;
     @state() feedListMenuAnchor: MenuAnchor | null = null;
@@ -93,7 +101,7 @@ export class SourceList extends LitElement {
 
     override connectedCallback() {
         super.connectedCallback();
-        this.style.setProperty('--sidebar-width', `${loadSidebarWidth()}px`);
+        this.style.setProperty('--sidebar-width', `${this.sidebarWidth}px`);
         this.addEventListener('mouseenter', this.onHoverEnter);
         this.addEventListener('mouseleave', this.onHoverLeave);
     }
@@ -157,9 +165,47 @@ export class SourceList extends LitElement {
     onResizeMove(e: PointerEvent) {
         if (!this.resizing) return;
         const rect = this.getBoundingClientRect();
-        const width = Math.round(Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, e.clientX - rect.left)));
+        this.applySidebarWidth(e.clientX - rect.left);
+    }
+
+    /**
+     * The handle element, whether or not a drag is in progress.
+     *
+     * resizeHandleEl only exists between pointerdown and pointerup, because it
+     * exists to hold the pointer capture and the resizing class. A keyboard
+     * resize never sets it, so writing aria-valuenow through it alone left the
+     * attribute frozen at its rendered value for exactly the users this change
+     * exists for: the sidebar would widen while the announced width stayed put.
+     * Falling back to the shadow root keeps the two paths honest.
+     */
+    private get resizeHandle(): HTMLElement | null {
+        return this.resizeHandleEl ?? this.renderRoot?.querySelector<HTMLElement>('.resize-handle') ?? null;
+    }
+
+    /**
+     * The one place a sidebar width is applied, so the pointer and keyboard
+     * paths cannot drift apart. It also writes aria-valuenow, because a drag
+     * does not re-render and a stale value on a separator is a lie a screen
+     * reader will report.
+     */
+    private applySidebarWidth(raw: number) {
+        const width = clampSidebarWidth(raw);
         this.style.setProperty('--sidebar-width', `${width}px`);
+        this.sidebarWidth = width;
+        this.resizeHandle?.setAttribute('aria-valuenow', String(width));
         saveSidebarWidth(width);
+    }
+
+    /**
+     * Keyboard equivalent of the drag. The stepping and clamping live in
+     * nextSidebarWidth so they are testable without a DOM; this only decides
+     * whether the key is ours.
+     */
+    onResizeKey(e: KeyboardEvent) {
+        const next = nextSidebarWidth(this.sidebarWidth, e.key, e.shiftKey);
+        if (next === null) return;
+        e.preventDefault();
+        this.applySidebarWidth(next);
     }
 
     onResizeEnd(e: PointerEvent) {

@@ -27,5 +27,6 @@ await import('./smoke-summary.js');
 await import('./smoke-interesting.js');
 await import('./smoke-edition.js');
 await import('./smoke-router-guard.js');
+await import('./smoke-sidebar.js');
 
 console.log('\nAll parser smoke tests passed.');
