@@ -199,6 +199,7 @@ comments, and workflow only — not Lit/CSS/PWA.
 - Plain CSS, kebab-case classes, no nesting.
 - Theme via CSS custom properties on `:root` / `[data-theme='...']`. Components use `var(--...)`, never hardcoded colors.
 - Honor `prefers-reduced-motion`.
+- Styles live in a `.css` file imported with `?inline`, not in a `css` template inside the `.ts`. `unsafeCSS` takes a `string`, so neither `tsc` nor the bundler inspects it. `prettier` does parse it, so `verify.py` fails a malformed stylesheet before it ships — what nothing catches is a selector that matches nothing, or a property that does nothing.
 
 ### Accessibility
 
