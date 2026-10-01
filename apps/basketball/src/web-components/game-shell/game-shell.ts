@@ -370,21 +370,26 @@ export class GameShell extends LitElement {
         return html`
             <!-- pointer-only: click-outside affordance. The dialog has a Close
                  button, aria-modal, and Escape, so the keyboard path exists. -->
-            <div class="overlay" @click=${this.closeBox}>
-                <div
-                    class="box"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Box score"
-                    tabindex="-1"
-                    @click=${(event: Event) => event.stopPropagation()}
-                >
-                    <div class="box-head">
-                        <h2>Box score</h2>
-                        <button type="button" @click=${this.closeBox}>Close</button>
-                    </div>
-                    <pre>${text}</pre>
+            <div class="overlay" @click=${this.closeBox}>${this.renderBoxBody(text)}</div>
+        `;
+    }
+
+    /** The dialog itself, so renderBox stays inside the per-function line budget. */
+    private renderBoxBody(text: string): TemplateResult {
+        return html`
+            <div
+                class="box"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Box score"
+                tabindex="-1"
+                @click=${(event: Event) => event.stopPropagation()}
+            >
+                <div class="box-head">
+                    <h2>Box score</h2>
+                    <button type="button" @click=${this.closeBox}>Close</button>
                 </div>
+                <pre>${text}</pre>
             </div>
         `;
     }

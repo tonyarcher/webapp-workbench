@@ -76,7 +76,7 @@ export class AppShell extends LitElement {
     };
 
     private onAuthRequired = () => {
-        this.resetAccount();
+        this.signOut();
     };
 
     private onSignIn = () => {
@@ -87,9 +87,17 @@ export class AppShell extends LitElement {
     };
 
     private onSignOut = () => {
-        // endSession never rejects, but clearClientDb talks to IndexedDB and can.
-        // Without a catch that surfaces as an unhandled rejection and leaves the
-        // user signed in with no explanation.
+        this.signOut();
+    };
+
+    /**
+     * Sign out and report honestly, whether that was asked for or forced.
+     *
+     * endSession never rejects, but clearClientDb talks to IndexedDB and can.
+     * Without a catch that surfaces as an unhandled rejection and leaves the
+     * user signed in with no explanation.
+     */
+    private signOut = (): void => {
         void this.resetAccount().catch(() => {
             this.authError = 'Signed out on this device, but some local data could not be cleared.';
             this.authed = false;

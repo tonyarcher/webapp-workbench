@@ -161,13 +161,20 @@ def npm_scripts() -> set[str]:
 
 
 def catalog_counts() -> tuple[int, int]:
-    """(app count, package count) as the repo itself derives them."""
+    """(app count, package count) as the repo itself derives them.
+
+    A package is a directory with a package.json under packages/ or libs/. Both
+    roots count: shared code that has been relocated out of packages/ is still a
+    package, and dropping the root would make a doc claim about the count rot the
+    moment a module moves.
+    """
     catalog: Any = json.loads((ROOT / "apps.json").read_text(encoding="utf-8"))
     apps = catalog["apps"] if isinstance(catalog, dict) else []
-    packages = ROOT / "packages"
-    count = (
-        len([p for p in packages.iterdir() if p.is_dir()]) if packages.is_dir() else 0
-    )
+    count = 0
+    for root in ("packages", "libs"):
+        directory = ROOT / root
+        if directory.is_dir():
+            count += len([p for p in directory.iterdir() if p.is_dir()])
     return (len(apps) if isinstance(apps, list) else 0), count
 
 

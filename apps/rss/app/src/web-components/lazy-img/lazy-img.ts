@@ -53,6 +53,11 @@ export class LazyImg extends LitElement {
             return;
         }
         this.state = 'loading';
+        this.img = this.makeImage(src);
+    }
+
+    /** The probe image; its load and error events settle the state. */
+    private makeImage(src: string): HTMLImageElement {
         const img = document.createElement('img');
         img.alt = '';
         img.decoding = 'async';
@@ -71,7 +76,7 @@ export class LazyImg extends LitElement {
             { once: true },
         );
         img.src = src;
-        this.img = img;
+        return img;
     }
 
     override disconnectedCallback() {

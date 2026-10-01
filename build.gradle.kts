@@ -36,6 +36,7 @@ import workbench.deployServices
 import workbench.deployValidate
 import workbench.filteredServices
 import workbench.jsWorkspacesOf
+import workbench.packageJsonBuild
 import workbench.prepareGateway
 import workbench.resolveDockerHost
 import workbench.runProcess
@@ -117,13 +118,17 @@ appsToBuild.forEach { app ->
                     // Never inherit a stray value (Vite would bake it in).
                     environment("APP_BASE_PATH", "")
                 }
-                commandLine(
-                    npmCommand,
-                    "run",
-                    if (isLast) mapping.buildScript else "build",
-                    "-w",
-                    workspace,
-                )
+                // A library workspace may have no build step at all: user-client
+                // ships TypeScript sources and only needs its test and typecheck.
+                // Running a hardcoded `npm run build` there exits 1 with "Missing
+                // script", so use the workspace's own build script when it declares
+                // one, and skip the invocation when it does not. The task still
+                // exists, because it carries the dependsOn edges that order this
+                // workspace before the app that imports it.
+                val script = if (isLast) mapping.buildScript else packageJsonBuild(workspace)
+                if (script != null) {
+                    commandLine(npmCommand, "run", script, "-w", workspace)
+                }
             }
             .also { nodeTasks[workspace] = it }
         previous = task

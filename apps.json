@@ -24,7 +24,7 @@
         },
         {
             "id": "rss-reader",
-            "workspaces": ["rss-reader"],
+            "workspaces": ["user-client", "rss-reader"],
             "services": ["rss-reader"],
             "basePath": "/rss-reader/",
             "aliases": ["rss", "apps/rss/app"]
@@ -37,7 +37,7 @@
         },
         {
             "id": "stock-game",
-            "workspaces": ["@stock-game/app"],
+            "workspaces": ["user-client", "@stock-game/app"],
             "services": ["stock-game"],
             "basePath": "/stock-game/",
             "aliases": ["stock", "@stock-game/app", "apps/stock-game", "apps/stock-game/app"]

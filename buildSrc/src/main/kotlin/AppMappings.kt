@@ -18,10 +18,27 @@ fun packageJson(path: java.io.File): Map<String, Any?>? = groovy.json.JsonSlurpe
 private val workspaceDirCache: MutableMap<Project, Map<String, String>> =
     java.util.Collections.synchronizedMap(java.util.WeakHashMap())
 
+/**
+ * The workspace roots, read from the root package.json globs rather than listed
+ * here.
+ *
+ * This used to hardcode the apps and packages globs, which meant a workspace
+ * moved anywhere else was invisible to Gradle with no error: `-Papps=<app>` still
+ * resolved, because resolveAppName only fails when an app matches nothing, so the
+ * task graph just quietly stopped building that workspace. Deriving the roots
+ * from the same globs npm uses means the two cannot drift, and a new root is
+ * picked up by declaring it in package.json.
+ *
+ * Kotlin block comments nest, so a glob written inside one of these comments
+ * would open another comment and swallow the rest of the file. They are written
+ * out in prose above for that reason.
+ */
+private val WORKSPACE_ROOTS = listOf("apps/**", "packages/**", "libs/**")
+
 val Project.workspaceDirs: Map<String, String>
     get() = workspaceDirCache.getOrPut(this) {
         fileTree(rootDir) {
-            include("apps/**/package.json", "packages/**/package.json")
+            WORKSPACE_ROOTS.forEach { include("$it/package.json") }
             exclude("**/node_modules/**")
         }.files.mapNotNull { packageFile ->
             val name = packageJson(packageFile)?.get("name") as? String

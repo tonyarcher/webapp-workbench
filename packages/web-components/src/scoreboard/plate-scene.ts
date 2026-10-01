@@ -200,31 +200,37 @@ function plateZone(result: PlateResult | '', input: PlateSceneInput) {
            ball-flight offsets in zoneOffsets and cannot be picked by clicking. -->
       <div class="zone" @click=${(event: MouseEvent) => onZoneClick(event, input)}>
         <div class="zone-grid"></div>
-        ${
-            input.interactive
-                ? html`<div class="zone-cells" role="group" aria-label="Strike zone">
-                      ${ZONE_CELLS.map(
-                          (zone) => html`<div
-                              class="zone-cell"
-                              role="button"
-                              data-zone=${zone}
-                              aria-label=${zoneLabel(zone)}
-                              aria-pressed=${armed === zone ? 'true' : 'false'}
-                              tabindex=${input.zoneRoving === zone ? 0 : -1}
-                              @keydown=${(event: KeyboardEvent) => input.onZoneKey(zone, event)}
-                          ></div>`,
-                      )}
-                  </div>`
-                : ''
-        }
+        ${input.interactive ? zoneCells(input, armed) : ''}
         <div class="zone-result" data-testid="plate-result" aria-live="polite">${result}</div>
-        ${
-            col >= 0
-                ? html`<div class="zone-pick" data-testid="zone-pick" style="left: ${((col + 0.5) * 100) / 3}%; top: ${((row + 0.5) * 100) / 3}%"></div>`
-                : ''
-        }
+        ${col >= 0 ? zonePick(col, row) : ''}
       </div>
     `;
+}
+
+/** The nine keyboard-operable cells, mirroring what the click hit-test picks. */
+function zoneCells(input: PlateSceneInput, armed: number) {
+    return html`<div class="zone-cells" role="group" aria-label="Strike zone">
+        ${ZONE_CELLS.map(
+            (zone) => html`<div
+                class="zone-cell"
+                role="button"
+                data-zone=${zone}
+                aria-label=${zoneLabel(zone)}
+                aria-pressed=${armed === zone ? 'true' : 'false'}
+                tabindex=${input.zoneRoving === zone ? 0 : -1}
+                @keydown=${(event: KeyboardEvent) => input.onZoneKey(zone, event)}
+            ></div>`,
+        )}
+    </div>`;
+}
+
+/** The marker showing which cell is armed, positioned from its grid column and row. */
+function zonePick(col: number, row: number) {
+    return html`<div
+        class="zone-pick"
+        data-testid="zone-pick"
+        style="left: ${((col + 0.5) * 100) / 3}%; top: ${((row + 0.5) * 100) / 3}%"
+    ></div>`;
 }
 
 function onZoneClick(event: MouseEvent, input: PlateSceneInput): void {

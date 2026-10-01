@@ -41,8 +41,9 @@ SKIP_DIRS = frozenset(
 # so nothing that could carry a finding is excluded.
 SKIP_PARTS = frozenset({"e2e", "scripts", "stories", "test", "tests", "__tests__"})
 
-# Roots that hold component source.
-SOURCE_ROOTS = ("apps", "packages")
+# Roots that hold component source. Kept in step with the workspace globs in
+# package.json and the roots buildSrc scans; libs holds shared component source.
+SOURCE_ROOTS = ("apps", "packages", "libs")
 
 # A pointer handler on an element that carries no semantics of its own. Native
 # controls are absent on purpose: a <button> or <a> is already reachable.
