@@ -5,6 +5,8 @@
         "module": "esnext",
         "moduleResolution": "bundler",
         "moduleDetection": "force",
+        "experimentalDecorators": true,
+        "useDefineForClassFields": false,
         "allowImportingTsExtensions": true,
         "verbatimModuleSyntax": true,
         "erasableSyntaxOnly": true,

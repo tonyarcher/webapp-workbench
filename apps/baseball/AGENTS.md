@@ -13,8 +13,10 @@ workflow: repo-root `AGENTS.md`. Entirely client-side; there is no backend.
   in sync with `basePointX` and `basePointY` in
   `packages/web-components/src/scorebook/baseball-scorebook-grid.ts`.** Nothing
   enforces this, and drift shows up as a misdrawn base path, not a failure.
-- App shells register with `customElements.define('baseball-*', ...)`, **not**
-  `@customElement`. This app does not use Lit decorators.
+- Lit decorators are available here, as in every other app in this repo; they
+  are how the widget components declare their reactive surface. App shells also
+  register with `customElements.define('baseball-*', ...)`, which is equally
+  valid. Do not rewrite a working shell just to add decorators.
 - Library components take JSON through Lit converters on string attributes
   (`slots-json`, `game-json`) and install co-located CSS with
   `CSSStyleSheet.replaceSync`.
