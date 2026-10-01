@@ -119,12 +119,18 @@ jobs:
                   # to TOOL_DIR rather than /usr/local/bin because the runner user
                   # cannot write there without sudo, and a heredoc piped into sudo
                   # would not be worth the quoting.
+                  #
+                  # Matching is case-insensitive on purpose. The releases API reports
+                  # hadolint's asset as "hadolint-linux-x86_64" but the download URL
+                  # serves it as "hadolint-Linux-x86_64", so a case-sensitive glob
+                  # written from the URL succeeds locally and matches nothing on Linux.
+                  # Case folding removes that whole class of mismatch.
                   TOOL_DIR = pathlib.Path(os.environ["TOOL_DIR"])
                   TOOLS = [
                       ("mvdan/sh", "shfmt", "shfmt_*_linux_amd64"),
                       ("pinterest/ktlint", "ktlint", "ktlint"),
                       ("tamasfe/taplo", "taplo", "taplo-linux-x86_64*"),
-                      ("hadolint/hadolint", "hadolint", "hadolint-Linux-x86_64*"),
+                      ("hadolint/hadolint", "hadolint", "hadolint-linux-x86_64*"),
                   ]
 
                   USER_AGENT = "webapp-workbench-ci"
@@ -165,7 +171,7 @@ jobs:
                               a
                               for a in release["assets"]
                               if not a["name"].endswith(NOT_A_BINARY)
-                              and fnmatch.fnmatch(a["name"], pattern)
+                              and fnmatch.fnmatch(a["name"].lower(), pattern.lower())
                           ),
                           None,
                       )
