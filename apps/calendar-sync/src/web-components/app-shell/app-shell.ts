@@ -1,7 +1,7 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import type { CalEvent, SyncProgress } from 'calendar-core';
+import type { CalEvent, SyncProgress } from '../../core/index.js';
 import {
     TraktHttpError,
     dedupEvents,
@@ -12,7 +12,7 @@ import {
     eventToGoogleBody,
     parseNetflixExport,
     writeEvents,
-} from 'calendar-core';
+} from '../../core/index.js';
 import type { AppSettings, DeviceFlowView } from '../../types';
 import { loadSettings, saveSettings } from '../../services/settings';
 import { traktProxyUrl } from '../../services/url';

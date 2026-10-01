@@ -1,8 +1,8 @@
-import type { CalEvent, FetchLike, WriteResult } from '../src/types';
-import { escapeText, eventsToIcs, foldLine, formatUtcDate, formatUtcStamp } from '../src/ics';
-import { dedupEvents } from '../src/dedup';
-import { collectEvents, writeEvents } from '../src/sync';
-import { fnv1a, fnv1a64, joinUrl, utf8ByteLength } from '../src/util';
+import type { CalEvent, FetchLike, WriteResult } from '../src/core/types';
+import { escapeText, eventsToIcs, foldLine, formatUtcDate, formatUtcStamp } from '../src/core/ics';
+import { dedupEvents } from '../src/core/dedup';
+import { collectEvents, writeEvents } from '../src/core/sync';
+import { fnv1a, fnv1a64, joinUrl, utf8ByteLength } from '../src/core/util';
 import {
     TRAKT_VERIFICATION_URL,
     calendarShowsPath,
@@ -15,9 +15,9 @@ import {
     parseDevicePollResponse,
     parseTokenResponse,
     traktHeaders,
-} from '../src/trakt';
-import { parseCsv, parseFlexibleDate, parseNetflixExport } from '../src/netflix';
-import { eventToGoogleBody, googleInsertEvent } from '../src/google-calendar';
+} from '../src/core/trakt';
+import { parseCsv, parseFlexibleDate, parseNetflixExport } from '../src/core/netflix';
+import { eventToGoogleBody, googleInsertEvent } from '../src/core/google-calendar';
 
 function assert(cond: unknown, msg: string): void {
     if (!cond) throw new Error(`FAIL: ${msg}`);

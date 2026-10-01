@@ -6,11 +6,10 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc --noEmit && vite build && node scripts/stamp-sw.mjs",
-        "test": "tsx scripts/smoke.ts",
+        "test": "tsx scripts/calendar-core-smoke.ts && tsx scripts/smoke.ts",
         "verify": "npm run build && npm run test"
     },
     "dependencies": {
-        "calendar-core": "*",
         "lit": "^3.3.3"
     },
     "devDependencies": {

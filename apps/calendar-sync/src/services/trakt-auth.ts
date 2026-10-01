@@ -7,8 +7,8 @@ import {
     parseTokenResponse,
     refreshTokenPath,
     traktHeaders,
-} from 'calendar-core';
-import type { TraktDeviceCode, TraktToken } from 'calendar-core';
+} from '../core/index.js';
+import type { TraktDeviceCode, TraktToken } from '../core/index.js';
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     return new Promise((resolve, reject) => {

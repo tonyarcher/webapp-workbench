@@ -62,7 +62,7 @@
         },
         {
             "id": "calendar-sync",
-            "workspaces": ["calendar-core", "calendar-sync"],
+            "workspaces": ["calendar-sync"],
             "services": ["calendar-sync"],
             "aliases": ["calendar", "cal", "apps/calendar-sync"]
         },
