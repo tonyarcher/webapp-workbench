@@ -35,8 +35,8 @@ import workbench.deployHelp
 import workbench.deployServices
 import workbench.deployValidate
 import workbench.filteredServices
+import workbench.hasBuildScript
 import workbench.jsWorkspacesOf
-import workbench.packageJsonBuild
 import workbench.prepareGateway
 import workbench.resolveDockerHost
 import workbench.runProcess
@@ -120,13 +120,18 @@ appsToBuild.forEach { app ->
                 }
                 // A library workspace may have no build step at all: user-client
                 // ships TypeScript sources and only needs its test and typecheck.
-                // Running a hardcoded `npm run build` there exits 1 with "Missing
-                // script", so use the workspace's own build script when it declares
-                // one, and skip the invocation when it does not. The task still
-                // exists, because it carries the dependsOn edges that order this
-                // workspace before the app that imports it.
-                val script = if (isLast) mapping.buildScript else packageJsonBuild(workspace)
-                if (script != null) {
+                // A hardcoded `npm run build` there exits 1 with "Missing script".
+                //
+                // An Exec task cannot be left without a commandLine, so the no-op
+                // case runs a command that always succeeds. The task still exists
+                // because it carries the dependsOn edges that order this workspace
+                // before the app that imports it, and that ordering is the whole
+                // reason it is registered rather than skipped.
+                val script = if (isLast) mapping.buildScript else "build"
+                if (!isLast && !hasBuildScript(workspace)) {
+                    commandLine(npmCommand, "--version")
+                    doLast { logger.info("$workspace has no build script; nothing to build") }
+                } else {
                     commandLine(npmCommand, "run", script, "-w", workspace)
                 }
             }

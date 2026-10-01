@@ -124,9 +124,19 @@ fun Project.jsWorkspacesOf(app: String): List<String> =
 
 fun Project.filteredServices(): List<String> = selectedApps().flatMap { appMappings.getValue(it).services }.distinct()
 
-/** The `build` script of an npm workspace, or null when it has none. */
+/** The `build` script body of an npm workspace, or null when it has none. */
 fun Project.packageJsonBuild(workspace: String): String? {
     val dir = workspaceDirs[workspace] ?: return null
     val scripts = packageJson(file("$dir/package.json"))?.get("scripts") as? Map<*, *>
     return scripts?.get("build") as? String
 }
+
+/**
+ * True when an npm workspace declares a `build` script.
+ *
+ * The Gradle task graph needs presence, not the script body: a library with no
+ * build step must not be handed to `npm run build`, which exits 1 with "Missing
+ * script". Naming the script it would run is the job of [packageJsonBuild]'s
+ * caller, not this predicate.
+ */
+fun Project.hasBuildScript(workspace: String): Boolean = packageJsonBuild(workspace) != null

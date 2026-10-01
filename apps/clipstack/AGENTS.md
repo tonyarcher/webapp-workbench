@@ -15,7 +15,7 @@ Clipstack. Shared TypeScript / Lit / CSS / workflow: repo-root `AGENTS.md`.
 - Every `href` and `src` derived from user input goes through `safeUrl()` from
   `vertical-scroll-core`. Never pass a raw user URL to an attribute.
 - PWA paths in `public/` are base-relative, or the app breaks under a subpath.
-- After editing `packages/vertical-scroll-core`, rebuild it before this app
+- After editing `libs/vertical-scroll-core`, rebuild it before this app
   picks the change up.
 
 ## Verification
