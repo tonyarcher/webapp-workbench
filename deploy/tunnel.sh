@@ -79,7 +79,9 @@ clear_port() {
     else
         local pid
         pid=$(ss -tlnp 2>/dev/null | grep ":${LOCAL_PORT} " | grep -oP 'pid=\K[0-9]+' | head -1)
-        [[ -n "${pid:-}" ]] && kill "$pid" 2>/dev/null || true
+        if [[ -n "${pid:-}" ]]; then
+            kill "$pid" 2>/dev/null || true
+        fi
     fi
     sleep 1
 }
