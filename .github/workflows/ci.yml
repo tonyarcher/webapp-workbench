@@ -26,6 +26,12 @@ jobs:
                   node-version: 22
                   cache: npm
             - run: npm ci
+            # npm ci installs the Playwright package but not its browser binaries, and
+            # @web/test-runner launches real Chromium. Without this the web job failed
+            # with "Executable doesn't exist at .../chrome-headless-shell". --with-deps
+            # also installs the shared libraries the binary needs on a bare runner.
+            - name: Install Playwright Chromium
+              run: npx playwright install --with-deps chromium
             # npm test runs the workspace suites and then test:scripts, which is the
             # Flyway migration guard, the doc-rot guard, and the a11y and hygiene
             # checks. Those are Python and do not belong to any one workspace.
