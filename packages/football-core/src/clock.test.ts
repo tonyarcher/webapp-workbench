@@ -63,6 +63,37 @@ describe('clockStopsAfterPlay', () => {
         const stop = clockStopsAfterPlay(NFL, facts({ isTry: true }));
         expect(stop).toEqual({ stops: true, reason: 'try' });
     });
+
+    it('a score always stops, even when nothing else does', () => {
+        expect(clockStopsAfterPlay(NFL, facts({ scored: true }))).toEqual({
+            stops: true,
+            reason: 'score',
+        });
+    });
+
+    it('out of bounds stops before a turnover is considered', () => {
+        expect(clockStopsAfterPlay(NFL, facts({ outOfBounds: true }))).toEqual({
+            stops: true,
+            reason: 'out_of_bounds',
+        });
+        expect(clockStopsAfterPlay(NFL, facts({ outOfBounds: true, turnover: true }))).toEqual({
+            stops: true,
+            reason: 'out_of_bounds',
+        });
+    });
+
+    it('a turnover stops the clock', () => {
+        expect(clockStopsAfterPlay(NFL, facts({ turnover: true }))).toEqual({
+            stops: true,
+            reason: 'change_of_possession',
+        });
+    });
+
+    it('stops on fourth down only where the rulebook says so', () => {
+        const fourth = facts({ downBefore: 4 });
+        expect(clockStopsAfterPlay(NFHS_MN, fourth)).toEqual({ stops: true, reason: 'fourth_down' });
+        expect(clockStopsAfterPlay(NFL, fourth)).toEqual({ stops: false, reason: 'none' });
+    });
 });
 
 describe('shouldIssueTwoMinuteWarning', () => {

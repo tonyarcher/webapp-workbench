@@ -47,6 +47,46 @@ describe('field goals', () => {
         });
         expect(game.situation.possession).not.toBe(before);
     });
+
+    it('ends the drive on downs, not a turnover, and opens a fresh one', () => {
+        let game = kickoffTb(createGame(SETUP));
+        const clock = game.clock.gameClockSeconds;
+        game = reduce(game, {
+            type: 'play',
+            input: { family: 'field_goal', fieldGoalMade: false, snapClock: clock, deadClock: clock },
+        });
+
+        const closed = game.drives.filter((drive) => drive.result !== undefined).at(-1);
+        expect(closed?.result).toBe('downs');
+        expect(game.drives[game.drives.length - 1]?.playIds).toEqual([]);
+    });
+});
+
+describe('kickoff spots', () => {
+    function kick(game: GameState, input: Record<string, unknown>): GameState {
+        const clock = game.clock.gameClockSeconds;
+        return reduce(game, {
+            type: 'play',
+            input: { family: 'kickoff', snapClock: clock, deadClock: clock, ...input },
+        });
+    }
+
+    it('drops the ball at the 40 when the kick goes out of bounds', () => {
+        const game = kick(createGame(SETUP), { outOfBounds: true });
+
+        expect(game.situation.yardline100).toBe(60);
+        expect(game.situation.down).toBe(1);
+        expect(game.situation.distance).toBe(10);
+    });
+
+    it('defaults to a touchback on the receiving 30', () => {
+        expect(kick(createGame(SETUP), {}).situation.yardline100).toBe(70);
+    });
+
+    it('takes the yard line the receiving side is put on, not a return distance', () => {
+        expect(kick(createGame(SETUP), { touchback: false, yards: 15 }).situation.yardline100).toBe(85);
+        expect(kick(createGame(SETUP), { touchback: false, yards: 400 }).situation.yardline100).toBe(1);
+    });
 });
 
 describe('turnovers and safeties', () => {
