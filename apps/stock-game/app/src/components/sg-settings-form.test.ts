@@ -150,6 +150,12 @@ describe('validation', () => {
         return seen;
     };
 
+    it('refuses a start date that is not a real date after the epoch', async () => {
+        expect(await expectRefused({ startDate: 0 })).toEqual([]);
+        expect(await expectRefused({ startDate: -1 })).toEqual([]);
+        expect(await expectRefused({ startDate: Date.now() + 86_400_000 })).toHaveLength(1);
+    });
+
     it('refuses starting cash that is not a positive whole number of cents', async () => {
         expect(await expectRefused({ startingCashCents: 0 })).toEqual([]);
         expect(await expectRefused({ startingCashCents: -100 })).toEqual([]);

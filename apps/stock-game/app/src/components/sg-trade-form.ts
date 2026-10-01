@@ -507,7 +507,7 @@ export class SgTradeForm extends LitElement {
 
     private getWarning(cost: number | undefined): string | undefined {
         if (cost === undefined) return undefined;
-        if (this.side === 'buy' || this.side === 'cover') {
+        if (this.side === 'buy' || this.side === 'cover' || this.side === 'short') {
             if (cost > this.cashCents) return 'Not enough cash for this order';
             return undefined;
         }

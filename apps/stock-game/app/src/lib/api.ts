@@ -85,11 +85,12 @@ async function apiFetch(path: string, init?: RequestInit, retried = false): Prom
 }
 
 async function readError(res: Response): Promise<string> {
+    const fallback = res.statusText || `Request failed with status ${res.status}`;
     try {
         const body = (await res.json()) as { error?: string };
-        return body.error ?? res.statusText;
+        return body.error ?? fallback;
     } catch {
-        return res.statusText;
+        return fallback;
     }
 }
 

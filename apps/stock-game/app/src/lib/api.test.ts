@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     AuthError,
     cancelOrder,
@@ -92,6 +92,117 @@ describe('api client', () => {
     beforeEach(() => {
         installBrowserShims();
         vi.restoreAllMocks();
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it('cancels the request when the caller aborts', async () => {
+        seedTokens();
+        const controller = new AbortController();
+        const seen: Array<AbortSignal | undefined> = [];
+        vi.stubGlobal('fetch', async (_url: unknown, init?: { signal?: AbortSignal }) => {
+            seen.push(init?.signal);
+            return jsonResponse([]);
+        });
+
+        const pending = listOrders({ signal: controller.signal });
+        controller.abort();
+        await pending;
+
+        expect(seen[0]).toBeDefined();
+        expect(seen[0]).not.toBe(controller.signal);
+        expect(seen[0]?.aborted).toBe(true);
+        vi.unstubAllGlobals();
+    });
+
+    it('passes a live caller signal through a cancel', async () => {
+        seedTokens();
+        const controller = new AbortController();
+        const seen: Array<AbortSignal | undefined> = [];
+        vi.stubGlobal('fetch', async (_url: unknown, init?: { signal?: AbortSignal }) => {
+            seen.push(init?.signal);
+            return jsonResponse({ ok: true });
+        });
+
+        await cancelOrder(7, { signal: controller.signal });
+
+        expect(seen[0]).toBeDefined();
+        expect(seen[0]).not.toBe(controller.signal);
+        expect(seen[0]?.aborted).toBe(false);
+        vi.unstubAllGlobals();
+    });
+
+    it('falls back to the status text when the error body is json without a message', async () => {
+        seedTokens();
+        stubWindowEvents([]);
+        vi.stubGlobal(
+            'fetch',
+            async () =>
+                new Response(JSON.stringify({ detail: 'nope' }), {
+                    status: 500,
+                    statusText: 'Internal Server Error',
+                    headers: { 'Content-Type': 'application/json' },
+                }),
+        );
+
+        await expect(fetchHoldings()).rejects.toThrow('Internal Server Error');
+        vi.unstubAllGlobals();
+    });
+
+    it('names the status when the body has no error and the status has no text', async () => {
+        seedTokens();
+        stubWindowEvents([]);
+        vi.stubGlobal('fetch', async () => new Response('{}', { status: 500 }));
+
+        const thrown = await fetchHoldings().catch((err: unknown) => err as Error);
+
+        expect(thrown).toBeInstanceOf(Error);
+        expect((thrown as Error).message).toBe('Request failed with status 500');
+        vi.unstubAllGlobals();
+    });
+
+    it('names the status when the error body is not json and there is no status text', async () => {
+        seedTokens();
+        stubWindowEvents([]);
+        vi.stubGlobal('fetch', async () => new Response('<html>gateway</html>', { status: 502 }));
+
+        await expect(fetchHoldings()).rejects.toThrow('Request failed with status 502');
+        vi.unstubAllGlobals();
+    });
+
+    it('prefers the error field from the body over the status text', async () => {
+        seedTokens();
+        stubWindowEvents([]);
+        vi.stubGlobal('fetch', async () => jsonResponse({ error: 'rate limited' }, 500));
+
+        await expect(fetchHoldings()).rejects.toThrow('rate limited');
+        vi.unstubAllGlobals();
+    });
+
+    it('rejects a cancel reply that is not a boolean ok', async () => {
+        seedTokens();
+        vi.stubGlobal('fetch', async () => jsonResponse({ ok: 'yes' }));
+
+        await expect(cancelOrder(3)).rejects.toThrow('invalid cancel response');
+        vi.unstubAllGlobals();
+    });
+
+    it('rejects a cash balance that is not a whole number of cents', async () => {
+        seedTokens();
+        vi.stubGlobal('fetch', async () => jsonResponse({ cashCents: 12.5 }));
+
+        await expect(fetchCash()).rejects.toThrow('invalid cash');
+        vi.unstubAllGlobals();
+    });
+
+    it('rejects a cash balance that is not a number at all', async () => {
+        seedTokens();
+        vi.stubGlobal('fetch', async () => jsonResponse({ cashCents: 'lots' }));
+
+        await expect(fetchCash()).rejects.toThrow('invalid cash');
+        vi.unstubAllGlobals();
     });
 
     it('attaches a Bearer token and parses a quoteless quote', async () => {
