@@ -11,7 +11,7 @@ import {
     type MetricId,
     type Sample,
     type Sex,
-} from 'fitness-core';
+} from '../../core/index.js';
 import { fetchLatest, fetchProfile, postImport, saveProfile } from '../../services/api';
 import type { LatestSample, Profile } from '../../types';
 import styles from './measure-view.css?inline';

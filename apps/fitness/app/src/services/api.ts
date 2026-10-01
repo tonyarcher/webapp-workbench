@@ -1,5 +1,5 @@
 import type { LatestSample, MetricStat, Profile, RollupRow, SeriesResult } from '../types';
-import type { Sample } from 'fitness-core';
+import type { Sample } from '../core/index.js';
 
 function apiUrl(path: string): string {
     const base = import.meta.env.BASE_URL;

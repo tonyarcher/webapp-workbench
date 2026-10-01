@@ -26,8 +26,8 @@ import {
     trainingMax,
     waistToHeight,
     weekKindFromCycleWeek,
-} from '../src/index';
-import { parseHealthConnectJson } from '../src/health-connect';
+} from '../src/core/index';
+import { parseHealthConnectJson } from '../src/core/health-connect';
 
 function assert(cond: unknown, msg: string): asserts cond {
     if (!cond) throw new Error(`FAIL: ${msg}`);
@@ -231,4 +231,4 @@ assert(parseMetricId('kcal') === 'energy_total', 'kcal alias is total');
     assert(bmiPts.length === 1 && Math.abs(bmiPts[0]!.v - 25) < 0.01, 'bmi series join by day');
 }
 
-console.log('\nAll fitness-core smoke tests passed.');
+console.log('\nAll src/core smoke tests passed.');

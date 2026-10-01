@@ -6,11 +6,10 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc --noEmit && vite build && node scripts/stamp-sw.mjs",
-        "test": "tsx scripts/smoke.ts",
+        "test": "tsx scripts/core-smoke.ts && tsx scripts/smoke.ts",
         "verify": "npm run build && npm run test"
     },
     "dependencies": {
-        "fitness-core": "*",
         "lit": "^3.3.3",
         "sql.js": "^1.14.2",
         "uplot": "^1.6.32"

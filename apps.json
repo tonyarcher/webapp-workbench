@@ -94,7 +94,7 @@
         },
         {
             "id": "fitness",
-            "workspaces": ["fitness-core", "fitness"],
+            "workspaces": ["fitness"],
             "services": ["fitness"],
             "aliases": ["apps/fitness/app"]
         },

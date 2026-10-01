@@ -15,7 +15,7 @@ import {
     type DisplayUnit,
     type MetricId,
     type Point,
-} from 'fitness-core';
+} from '../../core/index.js';
 import { fetchHealth, fetchLatest, fetchProfile, fetchRollups } from '../../services/api';
 import { displaySeries, rollupPoints } from '../../services/chart-data';
 import type { LatestSample, Profile, RollupRow } from '../../types';

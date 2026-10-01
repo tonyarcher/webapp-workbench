@@ -13,7 +13,7 @@ import {
     type LiftId,
     type TemplateId,
     type WeekKind,
-} from 'fitness-core';
+} from '../../core/index.js';
 import { fetchProfile, saveProfile } from '../../services/api';
 import type { Profile } from '../../types';
 import styles from './lifts-view.css?inline';

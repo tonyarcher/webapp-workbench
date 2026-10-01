@@ -1,4 +1,4 @@
-import { parseImportText, parseHealthConnectSqliteTables, planLift, lbToKg } from 'fitness-core';
+import { parseImportText, parseHealthConnectSqliteTables, planLift, lbToKg } from '../src/core/index.js';
 import { rowObject, rowsFromExec } from '../src/services/sqlite-rows';
 import { displaySeries, rollupPoints } from '../src/services/chart-data';
 import { API_VERSION, API_VERSION_HEADER } from '../src/services/api.ts';
@@ -47,9 +47,9 @@ assert(sets.filter((s) => s.slot === 'fsl').length === 5, 'FSL 5 sets');
 
 {
     const row = rowObject(['uuid', 'time', 'weight'], [new Uint8Array([1, 2]), 1_000, 80_000]);
-    assert(row.time === 1_000 && row.weight === 80_000, 'sqlite rowObject');
+    assert(row['time'] === 1_000 && row['weight'] === 80_000, 'sqlite rowObject');
     const rows = rowsFromExec(() => [{ columns: ['count'], values: [[12]] }], 'steps_record_table');
-    assert(rows.length === 1 && rows[0]!.count === 12, 'sqlite rowsFromExec');
+    assert(rows.length === 1 && rows[0]!['count'] === 12, 'sqlite rowsFromExec');
     const empty = rowsFromExec(() => {
         throw new Error('no such table');
     }, 'missing');

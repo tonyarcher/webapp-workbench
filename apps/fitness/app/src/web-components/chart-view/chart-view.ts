@@ -11,7 +11,7 @@ import {
     trendAdvice,
     type DisplayUnit,
     type MetricId,
-} from 'fitness-core';
+} from '../../core/index.js';
 import { fetchProfile, fetchSeries, patchSample } from '../../services/api';
 import { displaySeries } from '../../services/chart-data';
 import type { SeriesOrigin, SeriesResult } from '../../types';

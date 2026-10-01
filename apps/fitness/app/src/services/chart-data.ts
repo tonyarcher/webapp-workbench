@@ -1,5 +1,5 @@
 import type { RollupRow } from '../types';
-import { formatSi, type DisplayUnit, type MetricId, type Point } from 'fitness-core';
+import { formatSi, type DisplayUnit, type MetricId, type Point } from '../core/index.js';
 
 export function rollupPoints(rows: RollupRow[], metric: string, kind: 'avg' | 'sum'): Point[] {
     const out: Point[] = [];
