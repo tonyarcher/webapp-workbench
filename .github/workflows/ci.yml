@@ -1,0 +1,119 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+# Cancels an in-progress run when the same ref is pushed again.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    web:
+        name: Web (typecheck and tests)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            # npm test runs the workspace suites and then test:scripts, which is the
+            # Flyway migration guard, the doc-rot guard, and the a11y and hygiene
+            # checks. Those are Python and do not belong to any one workspace.
+            - run: npm run typecheck
+            - run: npm test
+            - run: npm run build
+
+    jvm:
+        name: JVM (tests, detekt, coverage)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-java@v4
+              with:
+                  # Matches the toolchain the API modules compile against.
+                  distribution: temurin
+                  java-version: '25'
+            - uses: gradle/actions/setup-gradle@v4
+            # checkAll runs tests, detekt and the Jacoco line and branch gates for all
+            # five APIs. Several suites use Testcontainers, so a Docker daemon is
+            # required; ubuntu-latest provides one.
+            - run: ./gradlew checkAll --console=plain
+
+    verify:
+        name: Verify (formatters and linters)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: '3.12'
+            - uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: '25'
+
+            - name: Install npm tools
+              run: npm ci
+
+            - name: Install Python tools
+              run: python -m pip install --upgrade pip ruff mypy yamllint sqlfluff
+
+            - name: Install shell tools
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y shellcheck
+                  SHFMT=3.10.0
+                  curl -sSL "https://github.com/mvdan/sh/releases/download/v${SHFMT}/shfmt_v${SHFMT}_linux_amd64" -o /usr/local/bin/shfmt
+                  sudo chmod +x /usr/local/bin/shfmt
+
+            - name: Install ktlint
+              run: |
+                  KTLINT=1.5.0
+                  curl -sSL "https://github.com/pinterest/ktlint/releases/download/${KTLINT}/ktlint" -o /usr/local/bin/ktlint
+                  sudo chmod +x /usr/local/bin/ktlint
+
+            - name: Install taplo
+              run: |
+                  TAPLO=0.9.3
+                  curl -sSL "https://github.com/tamasfe/taplo/releases/download/${TAPLO}/taplo-linux-x86_64" -o /usr/local/bin/taplo
+                  sudo chmod +x /usr/local/bin/taplo
+
+            - name: Install hadolint
+              run: |
+                  HADOLINT=2.12.0
+                  curl -sSL "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT}/hadolint-Linux-x86_64" -o /usr/local/bin/hadolint
+                  sudo chmod +x /usr/local/bin/hadolint
+                  sudo chown root:root /usr/local/bin/hadolint
+
+            # Not strict: verify.py skips any tool missing from PATH, so a job that
+            # cannot install one reports SKIP in the log instead of failing outright.
+            # That keeps a missing optional tool visible without wedging every push.
+            - name: Run verify.py
+              run: python verify.py
+
+    powershell:
+        name: PowerShell (PSScriptAnalyzer)
+        # Windows-only tool, so it needs a Windows runner to actually run.
+        runs-on: windows-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: '3.12'
+            - run: python -m pip install --upgrade pip
+            - name: Install PSScriptAnalyzer
+              shell: pwsh
+              run: |
+                  Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+                  Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+            - name: Run verify.py
+              run: python verify.py
