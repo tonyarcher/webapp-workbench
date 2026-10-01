@@ -118,7 +118,10 @@ services:
             PORT: 3000
             DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/${POSTGRES_DB:-rss}
             OAUTH_JWKS_URI: http://user-api:3000/oauth/jwks
-            OAUTH_ISSUER: ${OAUTH_ISSUER:-http://localhost/user-api}
+            # Defaults derive from PUBLIC_ORIGIN so a deployment sets one public
+            # origin and cannot leave a service advertising a stale host. The
+            # fallback keeps plain-HTTP localhost working with no .env at all.
+            OAUTH_ISSUER: ${OAUTH_ISSUER:-${PUBLIC_ORIGIN:-http://localhost}/user-api}
             # Server AI summarization (optional). Empty AI_PROVIDER disables the
             # /ai backend. Secrets stay in the untracked deploy/.env; compose only
             # passes them through at run, never into the image.
@@ -185,7 +188,10 @@ services:
             DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/stock
             PRICE_PROVIDER: ${PRICE_PROVIDER:-yahoo}
             OAUTH_JWKS_URI: http://user-api:3000/oauth/jwks
-            OAUTH_ISSUER: ${OAUTH_ISSUER:-http://localhost/user-api}
+            # Defaults derive from PUBLIC_ORIGIN so a deployment sets one public
+            # origin and cannot leave a service advertising a stale host. The
+            # fallback keeps plain-HTTP localhost working with no .env at all.
+            OAUTH_ISSUER: ${OAUTH_ISSUER:-${PUBLIC_ORIGIN:-http://localhost}/user-api}
         depends_on:
             postgres:
                 condition: service_healthy
@@ -319,7 +325,10 @@ services:
             PORT: 3000
             DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/users
             SERVICE: user-api
-            OAUTH_ISSUER: ${OAUTH_ISSUER:-http://localhost/user-api}
+            # Defaults derive from PUBLIC_ORIGIN so a deployment sets one public
+            # origin and cannot leave a service advertising a stale host. The
+            # fallback keeps plain-HTTP localhost working with no .env at all.
+            OAUTH_ISSUER: ${OAUTH_ISSUER:-${PUBLIC_ORIGIN:-http://localhost}/user-api}
             # Two bases, because the OIDC discovery document publishes both.
             # OAUTH_PUBLIC_BASE is followed by a BROWSER to the authorize
             # endpoint, so it carries the gateway prefix. The other endpoints
@@ -327,7 +336,7 @@ services:
             # the gateway has already stripped that prefix and the public origin
             # is not the way in. Publishing one base for all of them breaks
             # exactly the server-to-server calls.
-            OAUTH_PUBLIC_BASE: ${OAUTH_PUBLIC_BASE:-http://localhost/user-api}
+            OAUTH_PUBLIC_BASE: ${OAUTH_PUBLIC_BASE:-${PUBLIC_ORIGIN:-http://localhost}/user-api}
             OAUTH_INTERNAL_BASE: ${OAUTH_INTERNAL_BASE:-http://user-api:3000}
             # Clients listed here are confidential: they may complete a flow
             # without PKCE, and must then authenticate at the token endpoint.
@@ -360,7 +369,7 @@ services:
             USER_GID: '1000'
             GITEA__server__HTTP_PORT: '3000'
             GITEA__server__SSH_LISTEN_PORT: '22'
-            GITEA__server__ROOT_URL: ${GITEA_ROOT_URL:-http://localhost/git/}
+            GITEA__server__ROOT_URL: ${GITEA_ROOT_URL:-${PUBLIC_ORIGIN:-http://localhost}/git/}
             GITEA__server__SSH_DOMAIN: ${GITEA_SSH_DOMAIN:-localhost}
             GITEA__server__SSH_PORT: ${GITEA_SSH_PORT:-2222}
             GITEA__database__DB_TYPE: postgres
@@ -463,7 +472,7 @@ services:
             # into tokens, which stays origin-independent, and its default is
             # localhost. This URL is fetched by the BROWSER, so it has to be the
             # origin the viewer actually uses. Keep the two separate.
-            GF_AUTH_GENERIC_OAUTH_AUTH_URL: ${GRAFANA_OAUTH_ISSUER:-http://localhost/user-api}/oauth/authorize
+            GF_AUTH_GENERIC_OAUTH_AUTH_URL: ${GRAFANA_OAUTH_ISSUER:-${OAUTH_PUBLIC_BASE:-${PUBLIC_ORIGIN:-http://localhost}/user-api}}/oauth/authorize
             GF_AUTH_GENERIC_OAUTH_TOKEN_URL: http://user-api:3000/oauth/token
             # user-api is PKCE-only, so this is not optional: without it Grafana
             # sends a plain authorization_code request the authorize endpoint
@@ -488,7 +497,7 @@ services:
             GF_SECURITY_ALLOW_EMBEDDING: 'true'
             # Grafana builds its own asset URLs from root_url. Behind the gateway
             # at /logs/ it must be told that prefix or every asset 404s.
-            GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost/logs/}
+            GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-${PUBLIC_ORIGIN:-http://localhost}/logs/}
             GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
         volumes:
             # Provisioning is baked into the image (see deploy/grafana/Dockerfile);
