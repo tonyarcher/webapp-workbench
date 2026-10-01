@@ -16,9 +16,9 @@
  *   gradle buildJvm -Papps=apps/rss        # the reader's API half
  *   gradle buildJvm -Papps=rss-api         # the API alone
  *
- * The Gradle wrapper is intentionally absent (repo rule: never commit the
- * wrapper jar). Use `gradle` from PATH; a `gradle wrapper` run here would
- * generate untracked wrapper files.
+ * The Gradle wrapper is committed so a fresh clone and CI use the same Gradle
+ * version. `gradle` from PATH also works and is what the Python entry points
+ * fall back to.
  *
  * App selection, deploy support, and compose driving live in buildSrc
  * (AppMappings.kt, DeploySupport.kt, ComposeSupport.kt); this file registers
@@ -35,7 +35,7 @@ import workbench.deployHelp
 import workbench.deployServices
 import workbench.deployValidate
 import workbench.filteredServices
-import workbench.packageJsonBuild
+import workbench.jsWorkspacesOf
 import workbench.prepareGateway
 import workbench.resolveDockerHost
 import workbench.runProcess
@@ -69,13 +69,11 @@ tasks.register<Exec>("npmInstall") {
 // processes itself, which measured 4s faster and then ran the machine out of
 // memory, so the serial chain stands.
 //
-// The Kotlin APIs are npm workspaces too, but their `build` is `gradle bootJar`
-// (buildJvm owns them), so they are not part of this chain.
-val appsToBuild = selectedApps().filter { app ->
-    appMappings.getValue(app).workspaces.any { workspace ->
-        packageJsonBuild(workspace)?.contains("gradle") != true
-    }
-}
+// The Kotlin APIs are npm workspaces too, but buildJvm owns them, so they are
+// not part of this chain. jsWorkspacesOf classifies by the catalog's `services`
+// list rather than by a workspace's npm `build` script, so it stays correct when
+// the APIs carry no npm build shim.
+val appsToBuild = selectedApps().filter { jsWorkspacesOf(it).isNotEmpty() }
 
 /** Task names cannot hold `@` or the `/` path separator, so flatten them. */
 fun nodeTaskName(workspace: String): String = "buildNode-" + workspace.replace("@", "").replace("/", "-")
@@ -86,8 +84,8 @@ appsToBuild.forEach { app ->
     val mapping = appMappings.getValue(app)
     var previous: TaskProvider<Exec>? = null
     // Index within the JavaScript workspaces only, so the last one is the app
-    // itself even when a trailing Gradle-build workspace sits in the list.
-    val jsWorkspaces = mapping.workspaces.filter { packageJsonBuild(it)?.contains("gradle") != true }
+    // itself even when the catalog also lists Kotlin services for that app.
+    val jsWorkspaces = jsWorkspacesOf(app)
     jsWorkspaces.forEachIndexed { index, workspace ->
         val isLast = index == jsWorkspaces.lastIndex
         if (isLast && workspace in nodeTasks) {

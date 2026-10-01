@@ -5,9 +5,6 @@
     "description": "Shared identity API (Kotlin / Spring Boot).",
     "scripts": {
         "dev": "gradle bootRun",
-        "build": "gradle bootJar",
-        "test": "gradle check",
-        "test:coverage": "gradle test jacocoTestReport",
-        "lint": "gradle detekt"
+        "test:coverage": "gradle test jacocoTestReport"
     }
 }

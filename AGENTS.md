@@ -63,7 +63,7 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 | Task                          | Command                                                                                                                                                                                                                            |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Install all workspaces        | `npm install`                                                                                                                                                                                                                      |
-| Build all                     | `npm run build` (delegates `--workspaces --if-present`)                                                                                                                                                                            |
+| Build all (JS)                | `npm run build` (delegates `--workspaces --if-present`; the Kotlin APIs build via Gradle, not npm)                                                                                                                                 |
 | Test all                      | `npm test`                                                                                                                                                                                                                         |
 | Typecheck all                 | `npm run typecheck`                                                                                                                                                                                                                |
 | Lint all                      | `npm run lint`                                                                                                                                                                                                                     |
@@ -335,7 +335,9 @@ fetchers cannot send custom headers.
   workspaces sit below the floor today
   (untested entry points, Lit shells, branch tails) — raise uncovered areas to
   meet it; exclude only harness-mismatched entry files with a comment saying why.
-  Kotlin `npm test` (`gradle check`) enforces its gate. JS `npm test` runs unit
+  Kotlin gates are enforced by `./gradlew checkAll`, not by npm: the API
+  workspaces are npm workspaces only so their scripts resolve, and `buildJvm`
+  builds their boot jars. JS `npm test` runs unit
   tests without coverage; run `test:coverage` in the JS workspace you touched
   when changing covered logic.
 - Smoke tests (`scripts/smoke.ts`, `db-smoke.ts`, …) cover pure logic — extend them when touching those modules.

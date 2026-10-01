@@ -86,8 +86,24 @@ fun Project.selectedApps(): List<String> =
     if (appFilter.isEmpty()) buildOrder else buildOrder.filter { it in filteredApps() }
 
 /** npm workspaces for the selected apps (APIs excluded; buildJvm owns them). */
-fun Project.selectedJsWorkspaces(): List<String> =
-    selectedApps().flatMap { appMappings.getValue(it).workspaces }.distinct()
+fun Project.selectedJsWorkspaces(): List<String> = selectedApps().flatMap { jsWorkspacesOf(it) }.distinct()
+
+/**
+ * True when an npm workspace is a Kotlin API module rather than a JavaScript one.
+ *
+ * Structural: the API workspaces are the ones Gradle builds, and each carries a
+ * build.gradle.kts. This used to be inferred from the workspace's npm `build`
+ * script containing "gradle", which quietly coupled the task graph to those
+ * shims existing; buildJvm builds the boot jars, so they no longer do.
+ */
+fun Project.isGradleWorkspace(workspace: String): Boolean {
+    val dir = workspaceDirs[workspace] ?: return false
+    return file("$dir/build.gradle.kts").exists()
+}
+
+/** The JavaScript workspaces of one app, in build order. */
+fun Project.jsWorkspacesOf(app: String): List<String> =
+    appMappings.getValue(app).workspaces.filterNot { isGradleWorkspace(it) }
 
 fun Project.filteredServices(): List<String> = selectedApps().flatMap { appMappings.getValue(it).services }.distinct()
 
