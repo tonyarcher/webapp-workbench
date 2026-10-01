@@ -38,7 +38,7 @@ function isValidSettingsForm(
 ): boolean {
     if (!isValidProvider(provider)) return false;
     if (!isValidCash(cashCents)) return false;
-    if (!Number.isInteger(dateMs) || dateMs <= 0) return false;
+    if (!Number.isInteger(dateMs) || dateMs <= 0 || dateMs > Date.now()) return false;
     if (!isValidDelay(quoteDelayMinutes)) return false;
     if (!Number.isInteger(commissionCentsPerTrade) || commissionCentsPerTrade < 0) return false;
     return true;

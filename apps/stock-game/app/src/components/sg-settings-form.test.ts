@@ -150,10 +150,16 @@ describe('validation', () => {
         return seen;
     };
 
-    it('refuses a start date that is not a real date after the epoch', async () => {
+    it('refuses a start date that is not a real, already-reached day', async () => {
         expect(await expectRefused({ startDate: 0 })).toEqual([]);
         expect(await expectRefused({ startDate: -1 })).toEqual([]);
-        expect(await expectRefused({ startDate: Date.now() + 86_400_000 })).toHaveLength(1);
+        expect(await expectRefused({ startDate: Date.now() + 86_400_000 })).toEqual([]);
+        expect(await expectRefused({ startDate: Date.now() + 3_600_000 })).toEqual([]);
+    });
+
+    it('accepts today and any past start date', async () => {
+        expect(await expectRefused({ startDate: Date.now() })).toHaveLength(1);
+        expect(await expectRefused({ startDate: Date.now() - 86_400_000 })).toHaveLength(1);
     });
 
     it('refuses starting cash that is not a positive whole number of cents', async () => {

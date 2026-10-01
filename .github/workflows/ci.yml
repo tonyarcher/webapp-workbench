@@ -43,7 +43,13 @@ jobs:
             # five APIs. Testcontainers is not optional here: the API modules have a
             # testPostgresStart task that starts a real Postgres container, so the
             # runner's Docker daemon is required rather than merely convenient.
-            - run: ./gradlew checkAll --console=plain
+            #
+            # `gradle` from PATH, not ./gradlew. .gitignore excludes gradlew and
+            # gradlew.bat because the wrapper is generated locally rather than
+            # committed, so a fresh clone has no wrapper to run and the first CI run
+            # failed for exactly that reason. The repo's own entry points document
+            # the same fallback to `gradle` on PATH.
+            - run: gradle checkAll --console=plain
 
     verify:
         name: Verify (formatters and linters)
