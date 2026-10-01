@@ -40,12 +40,19 @@ jobs:
                   java-version: '25'
             - uses: gradle/actions/setup-gradle@v4
             # checkAll runs tests, detekt and the Jacoco line and branch gates for all
-            # five APIs. Several suites use Testcontainers, so a Docker daemon is
-            # required; ubuntu-latest provides one.
+            # five APIs. Testcontainers is not optional here: the API modules have a
+            # testPostgresStart task that starts a real Postgres container, so the
+            # runner's Docker daemon is required rather than merely convenient.
             - run: ./gradlew checkAll --console=plain
 
     verify:
         name: Verify (formatters and linters)
+        # PSScriptAnalyzer runs here rather than in a separate windows-latest job.
+        # The ubuntu runner images ship PowerShell 7, so the one strict job below
+        # can cover every check verify.py knows about. Splitting PowerShell out
+        # would have forced that job to run without --strict, because the Unix-only
+        # tools are absent on Windows, and a non-strict job reports success when a
+        # check silently never ran.
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -62,58 +69,128 @@ jobs:
                   java-version: '25'
 
             - name: Install npm tools
-              run: npm ci
+              # prettier is only a devDependency, so `npm ci` puts it in
+              # node_modules/.bin, which GitHub Actions does not add to PATH.
+              # verify.py resolves tools with shutil.which, so prettier would be
+              # reported SKIP and --strict would fail the job on every run.
+              #
+              # Prepending the workspace bin directory fixes that and is preferable
+              # to `npm install -g prettier`: it puts the exact version
+              # package.json declares on PATH, so the `prettier --check` that gates
+              # the build cannot drift from the one the repo is formatted with.
+              run: |
+                  npm ci
+                  echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
 
             - name: Install Python tools
               run: python -m pip install --upgrade pip ruff mypy yamllint sqlfluff
 
-            - name: Install shell tools
+            - name: Install shellcheck
               run: |
                   sudo apt-get update
                   sudo apt-get install -y shellcheck
-                  SHFMT=3.10.0
-                  curl -sSL "https://github.com/mvdan/sh/releases/download/v${SHFMT}/shfmt_v${SHFMT}_linux_amd64" -o /usr/local/bin/shfmt
-                  sudo chmod +x /usr/local/bin/shfmt
 
-            - name: Install ktlint
+            # Each binary linter is fetched at whatever its newest published release
+            # is, rather than at a version pinned here. A pin that no one ever
+            # executes is the one failure this workflow could not report honestly: a
+            # stale or wrong version 404s, and --strict would then blame the linter
+            # for a missing binary instead of blaming the install. Resolving the tag
+            # from the releases API cannot drift out of date. The trade is that an
+            # upstream release can turn a green push red, which is visible and
+            # reviewable, where a stale pin is not.
+            - name: Install binary linters
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+                  TOOL_DIR: ${{ runner.temp }}/ci-tools
               run: |
-                  KTLINT=1.5.0
-                  curl -sSL "https://github.com/pinterest/ktlint/releases/download/${KTLINT}/ktlint" -o /usr/local/bin/ktlint
-                  sudo chmod +x /usr/local/bin/ktlint
+                  mkdir -p "$TOOL_DIR"
+                  python - <<'PY'
+                  import fnmatch, gzip, json, os, pathlib, sys, urllib.request
 
-            - name: Install taplo
-              run: |
-                  TAPLO=0.9.3
-                  curl -sSL "https://github.com/tamasfe/taplo/releases/download/${TAPLO}/taplo-linux-x86_64" -o /usr/local/bin/taplo
-                  sudo chmod +x /usr/local/bin/taplo
+                  # repo, binary name, asset-name glob. The glob rather than an exact
+                  # name because upstream renames them: taplo switched to .gz assets,
+                  # and an exact name that worked yesterday 404s today. The binaries go
+                  # to TOOL_DIR rather than /usr/local/bin because the runner user
+                  # cannot write there without sudo, and a heredoc piped into sudo
+                  # would not be worth the quoting.
+                  TOOL_DIR = pathlib.Path(os.environ["TOOL_DIR"])
+                  TOOLS = [
+                      ("mvdan/sh", "shfmt", "shfmt_*_linux_amd64"),
+                      ("pinterest/ktlint", "ktlint", "ktlint"),
+                      ("tamasfe/taplo", "taplo", "taplo-linux-x86_64*"),
+                      ("hadolint/hadolint", "hadolint", "hadolint-Linux-x86_64*"),
+                  ]
 
-            - name: Install hadolint
-              run: |
-                  HADOLINT=2.12.0
-                  curl -sSL "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT}/hadolint-Linux-x86_64" -o /usr/local/bin/hadolint
-                  sudo chmod +x /usr/local/bin/hadolint
-                  sudo chown root:root /usr/local/bin/hadolint
+                  USER_AGENT = "webapp-workbench-ci"
 
-            # Not strict: verify.py skips any tool missing from PATH, so a job that
-            # cannot install one reports SKIP in the log instead of failing outright.
-            # That keeps a missing optional tool visible without wedging every push.
-            - name: Run verify.py
-              run: python verify.py
+                  def api_fetch(url):
+                      """Authenticated call to api.github.com only.
 
-    powershell:
-        name: PowerShell (PSScriptAnalyzer)
-        # Windows-only tool, so it needs a Windows runner to actually run.
-        runs-on: windows-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-python@v5
-              with:
-                  python-version: '3.12'
-            - run: python -m pip install --upgrade pip
+                      urllib's redirect handler copies every header except
+                      content-length and content-type onto the redirected request, so
+                      one authenticated helper would forward the token to whichever
+                      host the release asset redirects to. Those are pre-signed
+                      storage URLs, and S3 rejects a signed URL that also carries
+                      Authorization with "Only one auth mechanism allowed".
+                      """
+                      headers = {"User-Agent": USER_AGENT}
+                      token = os.environ.get("GITHUB_TOKEN", "")
+                      if token:
+                          headers["Authorization"] = f"Bearer {token}"
+                      return urllib.request.urlopen(urllib.request.Request(url, headers=headers))
+
+                  def asset_fetch(url):
+                      """Unauthenticated download of a public release asset.
+
+                      Release assets are public, so no credential is needed, and the
+                      token has no business reaching a storage host.
+                      """
+                      request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+                      return urllib.request.urlopen(request)
+
+                  # Checksums and signatures are uploaded beside the binary and match
+                  # a loose glob, so they are never install candidates.
+                  NOT_A_BINARY = (".sha256", ".sha256sum", ".asc", ".sig", ".txt", ".pem", ".sbom")
+
+                  for repo, binary, pattern in TOOLS:
+                      release = json.load(api_fetch(f"https://api.github.com/repos/{repo}/releases/latest"))
+                      asset = next(
+                          (
+                              a
+                              for a in release["assets"]
+                              if not a["name"].endswith(NOT_A_BINARY)
+                              and fnmatch.fnmatch(a["name"], pattern)
+                          ),
+                          None,
+                      )
+                      if asset is None:
+                          shipped = ", ".join(a["name"] for a in release["assets"])
+                          sys.exit(
+                              f"{repo} {release['tag_name']} ships no asset matching"
+                              f" {pattern}. It has: {shipped}"
+                          )
+                      blob = asset_fetch(asset["browser_download_url"]).read()
+                      if asset["name"].endswith(".gz"):
+                          blob = gzip.decompress(blob)
+                      destination = TOOL_DIR / binary
+                      destination.write_bytes(blob)
+                      destination.chmod(0o755)
+                      print(f"{repo} {release['tag_name']} -> {destination}")
+                  PY
+                  echo "$TOOL_DIR" >> "$GITHUB_PATH"
+
+            # The two .ps1 files under apps/rss/app/scripts make verify.py generate this
+            # check, so the module has to be present or --strict turns into a failure.
             - name: Install PSScriptAnalyzer
               shell: pwsh
               run: |
                   Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-                  Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+                  Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser -AllowClobber
+
+            # Strict on purpose. Without it verify.py prints SKIP and still exits 0 when
+            # a tool is missing from PATH, so a broken install step above would show up
+            # as a green build that ran none of the linters it claims to enforce. With
+            # it, a missing tool fails the job and names itself. A developer running
+            # verify.py locally still gets the lenient default.
             - name: Run verify.py
-              run: python verify.py
+              run: python verify.py --strict
