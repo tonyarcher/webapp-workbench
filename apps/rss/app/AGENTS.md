@@ -23,10 +23,11 @@ Node `pg` here.
 
 - `src/services/` and `src/db/` are pure: no DOM, no component imports. All
   client reads and writes go through them, never raw IndexedDB in a component.
-- Client state flows through TanStack Query. Components do not hold shared data.
+- A component must not hold shared data in its own fields. Keep it in a service,
+  a store, or a cache the provider layer owns.
 - Query and idb keys must include every parameter the query function closes
   over. A missing one pins an observer to stale data.
-- Mutations write the database first, then `invalidateQueries`.
+- Writes go to the database first, then the cache is updated or invalidated.
 - Feed URLs are untrusted. Never pass one to `unsafeHTML`, `href`, or `img`
   without sanitising it.
 - Never edit `dist/sw.js`. This app generates it with `write-sw.mjs` from

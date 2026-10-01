@@ -5,12 +5,14 @@ Lemmy vertical scroll. Shared TypeScript / Lit / CSS / workflow: repo-root
 
 ## Rules
 
-- All shared state flows through TanStack Query. Components do not hold it.
-- Query and idb cache keys must include every closed-over parameter — instance,
-  feed type, sort, nsfw filter, and software version. Omitting one pins an
-  observer to a stale provider or filter, which reads as wrong data rather than
-  as a bug.
-- Mutations write the database first, then `setQueryData` or `invalidateQueries`.
+- A component must not hold shared state in its own fields. Keep it in a
+  service, a store, or a cache the provider layer owns.
+- Wherever state is cached, the cache key must include every closed-over
+  parameter — instance, feed type, sort, nsfw filter, and software version.
+  Omitting one pins an observer to a stale provider or filter, which reads as
+  wrong data rather than as a bug.
+- Writes go to the database first, then the cache is updated or invalidated.
+  Reversing that order shows stale data on failure.
 - Settings read-modify-write happens inside a single readwrite transaction.
   Splitting it loses a concurrent change.
 - No raw IndexedDB in components. Go through `src/db/`.
