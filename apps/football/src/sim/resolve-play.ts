@@ -1,4 +1,4 @@
-import type { GameState, PlayInput, ScoringEvent } from 'football-core';
+import type { GameState, PlayInput, ScoringEvent } from '../core/index.js';
 import { chooseCall } from './coach';
 import { between, chance, clamp, mixSeed, mulberry32 } from './rng';
 

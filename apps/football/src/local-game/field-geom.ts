@@ -1,4 +1,4 @@
-import type { Play, PlayFamily, TeamId } from 'football-core';
+import type { Play, PlayFamily, TeamId } from '../core/index.js';
 
 /** SVG units: 10 per yard. Home goal line at x=100, away at x=1100. */
 export const FIELD_SCALE = 10;

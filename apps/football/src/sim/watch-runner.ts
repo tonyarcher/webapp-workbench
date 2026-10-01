@@ -1,4 +1,4 @@
-import type { PlayFamily, PlayInput, ScoringEvent } from 'football-core';
+import type { PlayFamily, PlayInput, ScoringEvent } from '../core/index.js';
 import type { LiveLocalGameState } from '../local-game/game-state';
 import { delayForPlay, PlaybackClock } from './playback';
 import { nextEvent, rngForEngine } from './resolve-play';

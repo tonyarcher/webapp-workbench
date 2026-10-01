@@ -1,4 +1,4 @@
-import type { GameSetup, ScoringEvent } from 'football-core';
+import type { GameSetup, ScoringEvent } from '../core/index.js';
 
 export interface LocalGameEventRecord {
     id: number;

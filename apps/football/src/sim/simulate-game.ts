@@ -1,5 +1,5 @@
-import { createGame, reduce } from 'football-core';
-import type { GameSetup, GameState, ScoringEvent } from 'football-core';
+import { createGame, reduce } from '../core/index.js';
+import type { GameSetup, GameState, ScoringEvent } from '../core/index.js';
 import { nextEvent, rngForEngine } from './resolve-play';
 
 const MAX_EVENTS = 450;

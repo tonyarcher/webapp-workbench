@@ -1,4 +1,4 @@
-import type { GameState } from 'football-core';
+import type { GameState } from '../core/index.js';
 import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
 
 export interface LiveLocalGameState {

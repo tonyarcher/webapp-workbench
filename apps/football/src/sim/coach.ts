@@ -1,4 +1,4 @@
-import type { GameState, HashMark, PlayConcept, PlayFamily, Situation } from 'football-core';
+import type { GameState, HashMark, PlayConcept, PlayFamily, Situation } from '../core/index.js';
 import { chance } from './rng';
 
 export interface SimCall {

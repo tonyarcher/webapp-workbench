@@ -1,4 +1,4 @@
-import type { Situation } from 'football-core';
+import type { Situation } from '../core/index.js';
 import {
     AWAY_GOAL_X,
     ENDZONE_YARDS,

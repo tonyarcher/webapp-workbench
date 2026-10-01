@@ -1,5 +1,5 @@
-import { createGame, reduce, SCORING_EVENT_TYPES } from 'football-core';
-import type { ScoringEvent } from 'football-core';
+import { createGame, reduce, SCORING_EVENT_TYPES } from '../core/index.js';
+import type { ScoringEvent } from '../core/index.js';
 import type { LiveLocalGameState } from './game-state';
 import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
 import { clearGameState, loadGameState, saveGameState } from './save-state';

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import 'fake-indexeddb/auto';
-import { createGame } from 'football-core';
+import { createGame } from '../core/index.js';
 import type { LiveLocalGameState } from './game-state';
 import { DEFAULT_GAME_SETUP } from './game-types';
 import {

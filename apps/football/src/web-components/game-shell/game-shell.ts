@@ -1,8 +1,8 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { describePlay, formatClock, formatDownDistance, parseClock, RULEBOOKS } from 'football-core';
-import type { GameState, GameSetup, PlayFamily, PlayInput, ScoringEvent, Tackler } from 'football-core';
+import { describePlay, formatClock, formatDownDistance, parseClock, RULEBOOKS } from '../../core/index.js';
+import type { GameState, GameSetup, PlayFamily, PlayInput, ScoringEvent, Tackler } from '../../core/index.js';
 import type { GameStore } from '../../local-game/game-store';
 import type { LiveLocalGameState } from '../../local-game/game-state';
 import { SPEED_OPTIONS } from '../../sim/playback';

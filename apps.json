@@ -80,7 +80,7 @@
         },
         {
             "id": "football",
-            "workspaces": ["football-core", "football"],
+            "workspaces": ["football"],
             "services": ["football"],
             "basePath": "/football/",
             "aliases": ["apps/football"]

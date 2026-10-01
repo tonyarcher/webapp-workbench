@@ -1,8 +1,8 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import { customElement } from 'lit/decorators.js';
-import { RULEBOOKS } from 'football-core';
-import type { RulebookId, TeamId } from 'football-core';
+import { RULEBOOKS } from '../../core/index.js';
+import type { RulebookId, TeamId } from '../../core/index.js';
 import type { LocalGameMode, LocalGameSetup } from '../../local-game/game-types';
 import { DEFAULT_GAME_SETUP } from '../../local-game/game-types';
 import styles from './setup-screen.css?inline';

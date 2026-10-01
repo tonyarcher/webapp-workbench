@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, reduce } from 'football-core';
+import { createGame, reduce } from '../core/index.js';
 import { DEFAULT_GAME_SETUP } from '../local-game/game-types';
 import { nextEvent, rngForEngine } from './resolve-play';
 import { simulateGame } from './simulate-game';

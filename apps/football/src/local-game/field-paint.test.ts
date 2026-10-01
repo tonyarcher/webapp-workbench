@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Play, Situation } from 'football-core';
+import type { Play, Situation } from '../core/index.js';
 import { FIELD_HEIGHT, FIELD_WIDTH, fgTarget, kickAim, playFlight } from './field-geom';
 import { paintFieldSvg, playPath } from './field-paint';
 
