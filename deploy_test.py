@@ -80,8 +80,20 @@ class GradleArgvTest(unittest.TestCase):
 
 class GradleCommandTest(unittest.TestCase):
     def test_prefers_the_wrapper(self) -> None:
-        with patch("os.path.exists", return_value=True):
+        # sys.platform decides which wrapper name is returned, so patch it too.
+        # Without that this only passes on Windows.
+        with (
+            patch("sys.platform", "win32"),
+            patch("os.path.exists", return_value=True),
+        ):
             self.assertEqual(gradle_command(), ["gradlew.bat"])
+
+    def test_uses_gradlew_on_posix(self) -> None:
+        with (
+            patch("sys.platform", "linux"),
+            patch("os.path.exists", return_value=True),
+        ):
+            self.assertEqual(gradle_command(), ["./gradlew"])
 
     def test_falls_back_to_gradle_without_a_wrapper(self) -> None:
         with patch("os.path.exists", return_value=False):
