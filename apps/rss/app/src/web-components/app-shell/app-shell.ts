@@ -87,12 +87,26 @@ export class AppShell extends LitElement {
     };
 
     private onSignOut = () => {
-        this.resetAccount();
+        // endSession never rejects, but clearClientDb talks to IndexedDB and can.
+        // Without a catch that surfaces as an unhandled rejection and leaves the
+        // user signed in with no explanation.
+        void this.resetAccount().catch(() => {
+            this.authError = 'Signed out on this device, but some local data could not be cleared.';
+            this.authed = false;
+            this.username = null;
+        });
     };
 
-    /** Drop the session and every trace of the account on this browser. */
-    private resetAccount = () => {
-        logout();
+    /**
+     * Drop the session and every trace of the account on this browser.
+     *
+     * The identity call comes first and decides what the user is told. Local
+     * state is cleared either way -- leaving articles on the device after a sign
+     * out is the worse outcome -- but a server session that survived is reported
+     * rather than hidden, because the browser is still signed in until it ends.
+     */
+    private resetAccount = async (): Promise<void> => {
+        const ended = await logout();
         bustCounts();
         queryClient.clear();
         try {
@@ -101,10 +115,12 @@ export class AppShell extends LitElement {
         } catch {
             // storage unavailable; nothing to clear
         }
-        void clearClientDb().finally(() => {
-            this.authed = false;
-            this.username = null;
-        });
+        await clearClientDb();
+        this.authed = false;
+        this.username = null;
+        this.authError = ended
+            ? ''
+            : 'Signed out on this device, but the identity service did not confirm it. Reload before signing in again.';
     };
 
     override render() {

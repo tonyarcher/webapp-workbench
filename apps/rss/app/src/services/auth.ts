@@ -1,4 +1,4 @@
-import { authorizeUrl, challengeS256, parseJwtPayload, randomVerifier } from 'user-client';
+import { authorizeUrl, challengeS256, endSession, parseJwtPayload, randomVerifier } from 'user-client';
 
 const CLIENT_ID = 'rss-reader';
 const TOKENS_KEY = 'rss.auth.tokens';
@@ -165,9 +165,19 @@ export async function getAccessToken(): Promise<string | null> {
     return (await refreshTokens())?.access ?? null;
 }
 
-export function logout(): void {
+/**
+ * Drop local tokens and end the identity session.
+ *
+ * Both halves are needed. Clearing tokens alone leaves the wb_session cookie on
+ * the server, /oauth/authorize honours it, and the next sign-in returns straight
+ * to the reader without ever asking for credentials -- which reads as a sign-out
+ * that did nothing. Resolves false when the server call did not complete, so the
+ * caller can say the sign-out did not take rather than claim it did.
+ */
+export async function logout(): Promise<boolean> {
     clearTokens();
     sessionEpoch += 1;
+    return endSession({ base: identityBase() });
 }
 
 /** Bumps on logout; ingest paths skip writes from a previous session. */
