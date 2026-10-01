@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, reduce } from 'basketball-core';
+import { createGame, reduce } from '../core/index.js';
 import { DEFAULT_GAME_SETUP } from './game-types';
 import { boxScoreText } from './box-score-view';
 

@@ -1,5 +1,5 @@
-import { boxRows, findPlayer, formatMinutes } from 'basketball-core';
-import type { GameState, PlayerStatLine, TeamId } from 'basketball-core';
+import { boxRows, findPlayer, formatMinutes } from '../core/index.js';
+import type { GameState, PlayerStatLine, TeamId } from '../core/index.js';
 
 export function boxScoreText(engine: GameState, team: TeamId, teamName: string): string {
     const rows = boxRows(engine, team);

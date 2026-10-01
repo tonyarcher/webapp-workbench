@@ -1,5 +1,5 @@
-import { getRulebook, offensiveHoop, stampFromClock } from 'basketball-core';
-import type { ClockStamp, GameState, Point, ScoringEvent, ShotEvent, TeamId } from 'basketball-core';
+import { getRulebook, offensiveHoop, stampFromClock } from '../core/index.js';
+import type { ClockStamp, GameState, Point, ScoringEvent, ShotEvent, TeamId } from '../core/index.js';
 import { between, chance, mixSeed, mulberry32 } from './rng';
 import {
     pickOnCourt,

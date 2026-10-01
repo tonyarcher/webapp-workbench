@@ -10,8 +10,8 @@ import {
     parseShotClock,
     periodLabel,
     stepSeconds,
-} from 'basketball-core';
-import type { ClockStamp, GameState } from 'basketball-core';
+} from '../../core/index.js';
+import type { ClockStamp, GameState } from '../../core/index.js';
 import styles from './scorebug.css?inline';
 
 @customElement('bball-scorebug')

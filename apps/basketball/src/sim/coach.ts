@@ -1,5 +1,5 @@
-import { isOnCourt } from 'basketball-core';
-import type { GameState, TeamId } from 'basketball-core';
+import { isOnCourt } from '../core/index.js';
+import type { GameState, TeamId } from '../core/index.js';
 import { chance, pickIndex } from './rng';
 import type { SimRatings } from './types';
 

@@ -1,8 +1,8 @@
 import { LitElement, html, svg, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { getRulebook, laneRect, leftHoop, rightHoop } from 'basketball-core';
-import type { CourtSpec, Point, RulebookId, ShotMark } from 'basketball-core';
+import { getRulebook, laneRect, leftHoop, rightHoop } from '../../core/index.js';
+import type { CourtSpec, Point, RulebookId, ShotMark } from '../../core/index.js';
 import { PAD_X, PAD_Y, SCALE, clientToCourt, courtToSvg, viewSize } from '../../local-game/court-map';
 import { restrictedSvg, threePointSvg } from '../../local-game/court-paint';
 import styles from './court.css?inline';

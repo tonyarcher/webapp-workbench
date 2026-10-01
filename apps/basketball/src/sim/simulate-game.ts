@@ -1,5 +1,5 @@
-import { createGame, reduce } from 'basketball-core';
-import type { GameState, ScoringEvent } from 'basketball-core';
+import { createGame, reduce } from '../core/index.js';
+import type { GameState, ScoringEvent } from '../core/index.js';
 import type { LocalGameSetup } from '../local-game/game-types';
 import { nextEvent, rngForEngine } from './resolve-play';
 

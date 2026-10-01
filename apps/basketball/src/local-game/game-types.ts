@@ -1,4 +1,4 @@
-import type { GameSetup, ScoringEvent } from 'basketball-core';
+import type { GameSetup, ScoringEvent } from '../core/index.js';
 import type { SimRatings } from '../sim/types';
 
 export interface LocalGameEventRecord {

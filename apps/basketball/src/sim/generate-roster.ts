@@ -1,5 +1,5 @@
-import type { Player, Position, TeamId } from 'basketball-core';
-import { makePlayer } from 'basketball-core';
+import type { Player, Position, TeamId } from '../core/index.js';
+import { makePlayer } from '../core/index.js';
 import { between, clamp, pickIndex } from './rng';
 import type { SimRatings } from './types';
 

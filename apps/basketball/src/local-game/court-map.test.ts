@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NBA } from 'basketball-core';
+import { NBA } from '../core/index.js';
 import { clientToCourt, courtToSvg, svgToCourt, viewSize } from './court-map';
 
 describe('court-map', () => {

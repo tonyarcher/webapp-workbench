@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from 'basketball-core';
+import { createGame } from '../core/index.js';
 import { DEFAULT_GAME_SETUP } from '../local-game/game-types';
 import { pickShooter, pickZone, ratingsFor, shouldAssist, shouldSub } from './coach';
 import { mulberry32 } from './rng';

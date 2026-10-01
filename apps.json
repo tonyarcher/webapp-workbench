@@ -87,7 +87,7 @@
         },
         {
             "id": "basketball",
-            "workspaces": ["basketball-core", "basketball-tracker"],
+            "workspaces": ["basketball-tracker"],
             "services": ["basketball"],
             "basePath": "/basketball/",
             "aliases": ["apps/basketball"]

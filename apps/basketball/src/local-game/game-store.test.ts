@@ -101,7 +101,7 @@ describe('GameStore', () => {
         expect(empty.canRedo).toBe(false);
         empty.redo();
         expect(empty.current()?.historyIndex).toBe(1);
-        empty.recordEvent({ type: 'nope' } as unknown as import('basketball-core').ScoringEvent);
+        empty.recordEvent({ type: 'nope' } as unknown as import('../core/index.js').ScoringEvent);
         expect(empty.current()?.historyIndex).toBe(1);
     });
 

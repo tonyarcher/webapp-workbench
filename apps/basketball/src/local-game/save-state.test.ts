@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import 'fake-indexeddb/auto';
-import { createGame } from 'basketball-core';
+import { createGame } from '../core/index.js';
 import { DEFAULT_GAME_SETUP } from './game-types';
 import { clearGameState, isValidPersistedGameState, loadGameState, saveGameState } from './save-state';
 

@@ -1,5 +1,5 @@
-import { inBounds } from 'basketball-core';
-import type { CourtSpec, Point } from 'basketball-core';
+import { inBounds } from '../core/index.js';
+import type { CourtSpec, Point } from '../core/index.js';
 
 export const SCALE = 10;
 export const PAD_X = 48;

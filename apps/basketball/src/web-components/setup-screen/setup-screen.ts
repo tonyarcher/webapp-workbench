@@ -1,8 +1,8 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { RULEBOOKS, generateRoster } from 'basketball-core';
-import type { Player, RulebookId, TeamId } from 'basketball-core';
+import { RULEBOOKS, generateRoster } from '../../core/index.js';
+import type { Player, RulebookId, TeamId } from '../../core/index.js';
 import type { LocalGameMode, LocalGameSetup } from '../../local-game/game-types';
 import { DEFAULT_GAME_SETUP } from '../../local-game/game-types';
 import { generateMatchup } from '../../sim/generate-roster';

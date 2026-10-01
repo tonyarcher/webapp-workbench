@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 import type { DBSchema, IDBPDatabase } from 'idb';
-import { SCORING_EVENT_TYPES } from 'basketball-core';
-import type { GameState, ScoringEvent } from 'basketball-core';
+import { SCORING_EVENT_TYPES } from '../core/index.js';
+import type { GameState, ScoringEvent } from '../core/index.js';
 import type { LiveLocalGameState } from './game-state';
 import type { LocalGameEventRecord, LocalGameSetup } from './game-types';
 

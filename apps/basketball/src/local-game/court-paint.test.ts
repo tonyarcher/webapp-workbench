@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NBA, NFHS, leftHoop, rightHoop } from 'basketball-core';
+import { NBA, NFHS, leftHoop, rightHoop } from '../core/index.js';
 import { restrictedCommandsMatch, threePointCommandsMatch, threePointSvg } from './court-paint';
 
 describe('court-paint', () => {

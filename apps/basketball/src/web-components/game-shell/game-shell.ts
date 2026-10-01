@@ -1,8 +1,8 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { describeEvent, findPlayer, stampFromClock, teamSide } from 'basketball-core';
-import type { ClockStamp, Player, Point, ScoringEvent, TeamId } from 'basketball-core';
+import { describeEvent, findPlayer, stampFromClock, teamSide } from '../../core/index.js';
+import type { ClockStamp, Player, Point, ScoringEvent, TeamId } from '../../core/index.js';
 import type { LiveLocalGameState } from '../../local-game/game-state';
 import type { GameStore } from '../../local-game/game-store';
 import { boxScoreText } from '../../local-game/box-score-view';

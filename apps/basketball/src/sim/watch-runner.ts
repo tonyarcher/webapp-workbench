@@ -1,4 +1,4 @@
-import type { ScoringEvent } from 'basketball-core';
+import type { ScoringEvent } from '../core/index.js';
 import type { LiveLocalGameState } from '../local-game/game-state';
 import { delayForPlay, PlaybackClock } from './playback';
 import { nextEvent, rngForEngine } from './resolve-play';
