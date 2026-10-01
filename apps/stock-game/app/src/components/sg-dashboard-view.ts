@@ -1,4 +1,4 @@
-import { LitElement, css, html } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import type { GameConfig, HoldingsEntry, PortfolioSeries } from '@stock-game/shared';
 import { fetchConfig, fetchHoldings, fetchPortfolioSeries } from '../lib/api';
@@ -7,6 +7,7 @@ import { getQueryClient } from '../lib/queryClient';
 import './sg-portfolio-chart';
 import './sg-holdings-table';
 import { defineElement } from './define';
+import styles from './sg-dashboard-view.css?inline';
 
 type Settled<T> = PromiseSettledResult<T>;
 
@@ -27,67 +28,7 @@ function fulfilledValue<T>(result: Settled<T>): T {
 }
 
 export class SgDashboardView extends LitElement {
-    static override styles = css`
-    :host {
-      display: block;
-    }
-
-    h1 {
-      font-size: 22px;
-      margin: 0 0 16px;
-    }
-
-    h2 {
-      font-size: 17px;
-      margin: 0 0 12px;
-    }
-
-    .card {
-      background: var(--bg-elevated, #161b22);
-      border: 1px solid var(--border, #2a313c);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-
-    .row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .stat .label {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-muted, #9aa4b2);
-    }
-
-    .stat .value {
-      font-size: 20px;
-      font-weight: 600;
-      margin-top: 4px;
-    }
-
-    .positive {
-      color: var(--positive, #3fb950);
-    }
-
-    .negative {
-      color: var(--negative, #f85149);
-    }
-
-    .muted {
-      color: var(--text-muted, #9aa4b2);
-    }
-
-    .error {
-      color: var(--negative, #f85149);
-      font-size: 13px;
-      margin-top: 8px;
-    }
-  `;
+    static override styles = unsafeCSS(styles);
 
     static override properties = {
         config: { attribute: false },

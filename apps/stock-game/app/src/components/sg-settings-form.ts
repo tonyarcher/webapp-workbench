@@ -1,7 +1,8 @@
-import { LitElement, css, html } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import type { GameConfig } from '@stock-game/shared';
 import { defineElement } from './define';
+import styles from './sg-settings-form.css?inline';
 
 export interface SettingsSubmitDetail {
     startingCashCents: number;
@@ -44,68 +45,7 @@ function isValidSettingsForm(
 }
 
 export class SgSettingsForm extends LitElement {
-    static override styles = css`
-    :host {
-      display: block;
-      max-width: 480px;
-    }
-
-    .field {
-      margin-bottom: 14px;
-    }
-
-    label {
-      display: block;
-      color: var(--text-muted, #9aa4b2);
-      font-size: 13px;
-      margin-bottom: 6px;
-    }
-
-    input,
-    select {
-      width: 100%;
-      font: inherit;
-      color: var(--text, #e6edf3);
-      background: var(--bg, #0d1117);
-      border: 1px solid var(--border, #2a313c);
-      border-radius: 8px;
-      padding: 9px 12px;
-    }
-
-    input:focus,
-    select:focus {
-      outline: none;
-      border-color: var(--accent, #4f9cf9);
-    }
-
-    .hint {
-      color: var(--text-muted, #9aa4b2);
-      font-size: 12px;
-      margin: 6px 0 0;
-    }
-
-    .error {
-      color: var(--negative, #f85149);
-      font-size: 13px;
-      margin: 8px 0;
-    }
-
-    button.submit {
-      font: inherit;
-      color: #fff;
-      background: var(--accent, #4f9cf9);
-      border: 1px solid var(--accent, #4f9cf9);
-      border-radius: 8px;
-      padding: 9px 22px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    button.submit:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-  `;
+    static override styles = unsafeCSS(styles);
 
     static override properties = {
         config: { attribute: false },
@@ -196,6 +136,7 @@ export class SgSettingsForm extends LitElement {
         const quoteDelayMinutes = Math.round(Number(quoteDelayInput));
         const commissionCentsPerTrade = Math.round(Number(commissionInput) * 100);
         this.validateAndEmit(cashCents, dateMs, provider, quoteDelayMinutes, commissionCentsPerTrade);
+        this.requestUpdate();
     }
 
     private renderCashField(): TemplateResult {

@@ -1,4 +1,4 @@
-import { LitElement, css, html } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import type { GameConfig } from '@stock-game/shared';
 import { fetchConfig, saveConfig } from '../lib/api';
@@ -6,36 +6,10 @@ import { getQueryClient } from '../lib/queryClient';
 import type { SettingsSubmitDetail } from './sg-settings-form';
 import './sg-settings-form';
 import { defineElement } from './define';
+import styles from './sg-settings-view.css?inline';
 
 export class SgSettingsView extends LitElement {
-    static override styles = css`
-    :host {
-      display: block;
-    }
-
-    h1 {
-      font-size: 22px;
-      margin: 0 0 16px;
-    }
-
-    .card {
-      background: var(--bg-elevated, #161b22);
-      border: 1px solid var(--border, #2a313c);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-
-    .error {
-      color: var(--negative, #f85149);
-      font-size: 13px;
-      margin-top: 8px;
-    }
-
-    .positive {
-      color: var(--positive, #3fb950);
-    }
-  `;
+    static override styles = unsafeCSS(styles);
 
     static override properties = {
         config: { attribute: false },

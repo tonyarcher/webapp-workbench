@@ -1,10 +1,11 @@
-import { LitElement, css, html } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import type { Order } from '@stock-game/shared';
 import { cancelOrder, listOrders } from '../lib/api';
 import { getQueryClient } from '../lib/queryClient';
 import './sg-orders-table';
 import { defineElement } from './define';
+import styles from './sg-orders-view.css?inline';
 
 const POLL_MS = 30_000;
 
@@ -13,34 +14,7 @@ interface OrderCancelDetail {
 }
 
 export class SgOrdersView extends LitElement {
-    static override styles = css`
-    :host {
-      display: block;
-    }
-
-    h1 {
-      font-size: 22px;
-      margin: 0 0 16px;
-    }
-
-    .card {
-      background: var(--bg-elevated, #161b22);
-      border: 1px solid var(--border, #2a313c);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-
-    .error {
-      color: var(--negative, #f85149);
-      font-size: 13px;
-      margin-top: 8px;
-    }
-
-    .muted {
-      color: var(--text-muted, #9aa4b2);
-    }
-  `;
+    static override styles = unsafeCSS(styles);
 
     static override properties = {
         orders: { attribute: false },

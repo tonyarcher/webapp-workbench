@@ -1,4 +1,4 @@
-import { LitElement, css, html } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import type {
     GameConfig,
@@ -23,43 +23,12 @@ import { getQueryClient } from '../lib/queryClient';
 import './sg-trade-form';
 import './sg-trades-table';
 import { defineElement } from './define';
+import styles from './sg-trade-view.css?inline';
 
 type SubmitDetail = { mode: 'backdated'; data: PlaceTradeRequest } | { mode: 'scheduled'; data: PlaceOrderRequest };
 
 export class SgTradeView extends LitElement {
-    static override styles = css`
-    :host {
-      display: block;
-    }
-
-    h1 {
-      font-size: 22px;
-      margin: 0 0 16px;
-    }
-
-    h2 {
-      font-size: 17px;
-      margin: 0 0 12px;
-    }
-
-    .card {
-      background: var(--bg-elevated, #161b22);
-      border: 1px solid var(--border, #2a313c);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-
-    .error {
-      color: var(--negative, #f85149);
-      font-size: 13px;
-      margin-top: 8px;
-    }
-
-    .positive {
-      color: var(--positive, #3fb950);
-    }
-  `;
+    static override styles = unsafeCSS(styles);
 
     static override properties = {
         symbol: { attribute: false },

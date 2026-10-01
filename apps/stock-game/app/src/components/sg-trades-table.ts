@@ -1,12 +1,12 @@
-import { LitElement, html } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import type { Trade } from '@stock-game/shared';
 import { fmtDate, fmtMoney, fmtNumber, fmtPrice } from '../lib/format';
-import { tableStyles } from './shared-styles';
+import tableStyles from './shared-styles.css?inline';
 import { defineElement } from './define';
 
 export class SgTradesTable extends LitElement {
-    static override styles = tableStyles;
+    static override styles = unsafeCSS(tableStyles);
 
     static override properties = {
         trades: { attribute: false },

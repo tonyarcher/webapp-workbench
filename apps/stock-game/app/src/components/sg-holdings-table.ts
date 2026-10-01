@@ -1,8 +1,8 @@
-import { LitElement, html } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import type { HoldingsEntry } from '@stock-game/shared';
 import { fmtMoney, fmtMoneySigned, fmtNumber, fmtPct, fmtPrice } from '../lib/format';
-import { tableStyles } from './shared-styles';
+import tableStyles from './shared-styles.css?inline';
 import { defineElement } from './define';
 
 type SortKey =
@@ -52,7 +52,7 @@ function cellClassName(id: string, value: number): string {
 }
 
 export class SgHoldingsTable extends LitElement {
-    static override styles = tableStyles;
+    static override styles = unsafeCSS(tableStyles);
 
     static override properties = {
         holdings: { attribute: false },

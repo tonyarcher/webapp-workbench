@@ -1,10 +1,11 @@
-import { LitElement, css, html } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import { history, parsePath, viewToPath } from '../router';
 import type { View } from '../router';
 import { currentUsername, hasSession, logout, startLogin } from '../lib/auth';
 import { getQueryClient } from '../lib/queryClient';
 import { defineElement } from './define';
+import styles from './sg-app-shell.css?inline';
 
 const NAV_ITEMS: Array<{ view: View; label: string }> = [
     { view: { kind: 'dashboard' }, label: 'Dashboard' },
@@ -29,11 +30,7 @@ function viewKey(view: View): string {
 }
 
 export class SgAppShell extends LitElement {
-    static override styles = css`
-    :host {
-      display: block;
-    }
-  `;
+    static override styles = unsafeCSS(styles);
 
     static override properties = {
         route: { attribute: false },

@@ -1,17 +1,14 @@
-import { css } from 'lit';
-
-export const tableStyles = css`
-  :host {
+:host {
     display: block;
-  }
+}
 
-  table {
+table {
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
-  }
+}
 
-  th {
+th {
     text-align: left;
     color: var(--text-muted, #9aa4b2);
     font-weight: 500;
@@ -22,35 +19,34 @@ export const tableStyles = css`
     border-bottom: 1px solid var(--border, #2a313c);
     cursor: pointer;
     user-select: none;
-  }
+}
 
-  th:hover {
+th:hover {
     color: var(--text, #e6edf3);
-  }
+}
 
-  td {
+td {
     padding: 8px 10px;
     border-bottom: 1px solid var(--border, #2a313c);
-  }
+}
 
-  tr:hover td {
+tr:hover td {
     background: var(--bg-hover, #1f2430);
-  }
+}
 
-  .num {
+.num {
     text-align: right;
     font-variant-numeric: tabular-nums;
-  }
+}
 
-  .positive {
+.positive {
     color: var(--positive, #3fb950);
-  }
+}
 
-  .negative {
+.negative {
     color: var(--negative, #f85149);
-  }
+}
 
-  .muted {
+.muted {
     color: var(--text-muted, #9aa4b2);
-  }
-`;
+}

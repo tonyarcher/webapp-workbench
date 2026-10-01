@@ -1,4 +1,4 @@
-import { LitElement, html } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import type { PropertyValues, TemplateResult } from 'lit';
 import {
     defaultFillPriceSource,
@@ -18,12 +18,12 @@ import { maxQtyForSide } from '../lib/max-qty';
 import { quoteFillPriceClient } from '../lib/quote-fill';
 import { SgSymbolSearch } from './sg-symbol-search';
 import { defineElement } from './define';
-import { tradeFormStyles } from './sg-trade-form-styles';
+import tradeFormStyles from './sg-trade-form-styles.css?inline';
 
 type SubmitDetail = { mode: 'backdated'; data: PlaceTradeRequest } | { mode: 'scheduled'; data: PlaceOrderRequest };
 
 export class SgTradeForm extends LitElement {
-    static override styles = tradeFormStyles;
+    static override styles = unsafeCSS(tradeFormStyles);
 
     static override properties = {
         results: { attribute: false },

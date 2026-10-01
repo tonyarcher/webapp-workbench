@@ -1,4 +1,4 @@
-import { LitElement, css, html } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import {
     createChart,
     ColorType,
@@ -8,6 +8,7 @@ import {
     type UTCTimestamp,
 } from 'lightweight-charts';
 import { defineElement } from './define';
+import styles from './sg-portfolio-chart.css?inline';
 
 export interface PortfolioChartPoint {
     time: number;
@@ -15,17 +16,7 @@ export interface PortfolioChartPoint {
 }
 
 export class SgPortfolioChart extends LitElement {
-    static override styles = css`
-    :host {
-      display: block;
-      width: 100%;
-    }
-
-    .chart {
-      width: 100%;
-      height: 320px;
-    }
-  `;
+    static override styles = unsafeCSS(styles);
 
     static override properties = {
         points: { attribute: false },

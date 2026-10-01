@@ -1,80 +1,11 @@
-import { LitElement, css, html } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import type { SymbolSearchResult } from '@stock-game/shared';
 import { defineElement } from './define';
+import styles from './sg-symbol-search.css?inline';
 
 export class SgSymbolSearch extends LitElement {
-    static override styles = css`
-    :host {
-      display: block;
-      position: relative;
-    }
-
-    .input {
-      width: 100%;
-      font: inherit;
-      color: var(--text, #e6edf3);
-      background: var(--bg, #0d1117);
-      border: 1px solid var(--border, #2a313c);
-      border-radius: 8px;
-      padding: 9px 12px;
-    }
-
-    .input:focus {
-      outline: none;
-      border-color: var(--accent, #4f9cf9);
-    }
-
-    .results {
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0;
-      right: 0;
-      margin: 0;
-      padding: 4px;
-      list-style: none;
-      background: var(--bg-elevated, #161b22);
-      border: 1px solid var(--border, #2a313c);
-      border-radius: 8px;
-      max-height: 260px;
-      overflow-y: auto;
-      z-index: 10;
-    }
-
-    li {
-      display: flex;
-      gap: 12px;
-      align-items: baseline;
-      padding: 7px 8px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    li:hover {
-      background: var(--bg-hover, #1f2430);
-    }
-
-    li.status {
-      cursor: default;
-      color: var(--text-muted, #9aa4b2);
-    }
-
-    li.status.error {
-      color: var(--negative, #f85149);
-    }
-
-    .sym {
-      font-weight: 600;
-      min-width: 70px;
-    }
-
-    .name {
-      color: var(--text-muted, #9aa4b2);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  `;
+    static override styles = unsafeCSS(styles);
 
     static override properties = {
         placeholder: { type: String },
