@@ -124,4 +124,108 @@ describe('sg-settings-view', () => {
             getQueryClient().setDefaultOptions(priorDefaults);
         }
     });
+
+    it('shows the message when the config cannot be loaded', async () => {
+        const priorDefaults = getQueryClient().getDefaultOptions();
+        getQueryClient().setDefaultOptions({ queries: { retry: false } });
+        try {
+            vi.stubGlobal(
+                'fetch',
+                vi.fn(async () => new Response(JSON.stringify({ error: 'config unavailable' }), { status: 500 })),
+            );
+            const el = document.createElement('sg-settings-view') as SgSettingsView;
+            document.body.appendChild(el);
+            await settled();
+
+            expect(el.error).toBe('config unavailable');
+            el.remove();
+        } finally {
+            getQueryClient().setDefaultOptions(priorDefaults);
+        }
+    });
+
+    it('stringifies a load rejection that is not an Error', async () => {
+        const priorDefaults = getQueryClient().getDefaultOptions();
+        getQueryClient().setDefaultOptions({ queries: { retry: false } });
+        try {
+            vi.stubGlobal(
+                'fetch',
+                vi.fn(async () => {
+                    throw 'bare string';
+                }),
+            );
+            const el = document.createElement('sg-settings-view') as SgSettingsView;
+            document.body.appendChild(el);
+            await settled();
+
+            expect(el.error).toBe('bare string');
+            el.remove();
+        } finally {
+            getQueryClient().setDefaultOptions(priorDefaults);
+        }
+    });
+
+    it('keeps a save failure visible and unlocks the form', async () => {
+        const priorDefaults = getQueryClient().getDefaultOptions();
+        getQueryClient().setDefaultOptions({ queries: { retry: false } });
+        try {
+            vi.stubGlobal(
+                'fetch',
+                vi.fn(async (_url: string, init?: RequestInit) => {
+                    if (init?.method === 'PUT') {
+                        return new Response(JSON.stringify({ error: 'save rejected' }), { status: 422 });
+                    }
+                    return jsonResponse(CONFIG);
+                }),
+            );
+            const el = document.createElement('sg-settings-view') as SgSettingsView;
+            document.body.appendChild(el);
+            await settled();
+
+            el.shadowRoot
+                ?.querySelector('sg-settings-form')
+                ?.dispatchEvent(new CustomEvent('sg-config-submit', { detail: SUBMIT, bubbles: true, composed: true }));
+            await settled();
+
+            expect(el.error).toBe('save rejected');
+            expect(el.busy).toBe(false);
+            expect(el.saved).toBe(false);
+            el.remove();
+        } finally {
+            getQueryClient().setDefaultOptions(priorDefaults);
+        }
+    });
+
+    it('ignores a submit that arrives while a save is running', async () => {
+        const priorDefaults = getQueryClient().getDefaultOptions();
+        getQueryClient().setDefaultOptions({ queries: { retry: false } });
+        try {
+            let puts = 0;
+            vi.stubGlobal(
+                'fetch',
+                vi.fn(async (_url: string, init?: RequestInit) => {
+                    if (init?.method === 'PUT') {
+                        puts += 1;
+                        await new Promise((resolve) => setTimeout(resolve, 50));
+                        return jsonResponse(SUBMIT);
+                    }
+                    return jsonResponse(CONFIG);
+                }),
+            );
+            const el = document.createElement('sg-settings-view') as SgSettingsView;
+            document.body.appendChild(el);
+            await settled();
+
+            const form = el.shadowRoot?.querySelector('sg-settings-form');
+            form?.dispatchEvent(new CustomEvent('sg-config-submit', { detail: SUBMIT, bubbles: true, composed: true }));
+            el.busy = true;
+            form?.dispatchEvent(new CustomEvent('sg-config-submit', { detail: SUBMIT, bubbles: true, composed: true }));
+            await settled();
+
+            expect(puts).toBe(1);
+            el.remove();
+        } finally {
+            getQueryClient().setDefaultOptions(priorDefaults);
+        }
+    });
 });

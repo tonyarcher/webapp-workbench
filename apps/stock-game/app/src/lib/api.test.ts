@@ -271,4 +271,38 @@ describe('api client', () => {
         expect(bars[0]?.close).toBe(2);
         vi.unstubAllGlobals();
     });
+
+    it('asks for a sign-in rather than calling out with no token', async () => {
+        localStorage.removeItem('sg.auth.tokens');
+        const seen: string[] = [];
+        Object.defineProperty(globalThis, 'window', {
+            value: {
+                dispatchEvent: (e: Event): boolean => {
+                    seen.push(e.type);
+                    return true;
+                },
+                addEventListener: (): void => {},
+                removeEventListener: (): void => {},
+            },
+            configurable: true,
+        });
+        const fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+
+        await expect(fetchConfig()).rejects.toBeInstanceOf(AuthError);
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(seen).toContain('sg-auth-required');
+        vi.unstubAllGlobals();
+    });
+
+    it('falls back to the status text when an error body is not json', async () => {
+        seedTokens();
+        vi.stubGlobal(
+            'fetch',
+            async () => new Response('<html>gateway</html>', { status: 502, statusText: 'Bad Gateway' }),
+        );
+
+        await expect(fetchConfig()).rejects.toThrow('Bad Gateway');
+        vi.unstubAllGlobals();
+    });
 });

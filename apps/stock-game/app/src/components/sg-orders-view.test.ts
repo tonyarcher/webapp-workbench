@@ -144,4 +144,135 @@ describe('sg-orders-view', () => {
             clearSpy.mockRestore();
         }
     });
+
+    it('shows the message from a failed load', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => new Response(JSON.stringify({ error: 'orders unavailable' }), { status: 500 })),
+        );
+        vi.useFakeTimers();
+        let el: SgOrdersView | null = null;
+        try {
+            el = document.createElement('sg-orders-view') as SgOrdersView;
+            document.body.appendChild(el);
+            // The query client retries once with a backoff, so let it run out.
+            await vi.advanceTimersByTimeAsync(5_000);
+            expect(el.error).toBe('orders unavailable');
+        } finally {
+            el?.remove();
+            vi.useRealTimers();
+        }
+    });
+
+    it('stringifies a rejection that is not an Error', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => {
+                throw 'plain string failure';
+            }),
+        );
+        vi.useFakeTimers();
+        let el: SgOrdersView | null = null;
+        try {
+            el = document.createElement('sg-orders-view') as SgOrdersView;
+            document.body.appendChild(el);
+            await vi.advanceTimersByTimeAsync(5_000);
+            expect(el.error).toBe('plain string failure');
+        } finally {
+            el?.remove();
+            vi.useRealTimers();
+        }
+    });
+
+    it('keeps a cancel failure visible and unlocks the table', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (url: string) =>
+                url.includes('/cancel')
+                    ? new Response(JSON.stringify({ error: 'too late' }), { status: 409 })
+                    : jsonResponse([ORDER]),
+            ),
+        );
+        const el = document.createElement('sg-orders-view') as SgOrdersView;
+        document.body.appendChild(el);
+        await settled();
+
+        cancelButton(el)?.click();
+        await settled();
+
+        expect(el.error).toBe('too late');
+        expect(el.busy).toBe(false);
+        el.remove();
+    });
+
+    it('ignores a second cancel while one is already running', async () => {
+        let cancels = 0;
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (url: string) => {
+                if (url.includes('/cancel')) {
+                    cancels += 1;
+                    await new Promise((resolve) => setTimeout(resolve, 50));
+                    return jsonResponse({ ok: true });
+                }
+                return jsonResponse([ORDER]);
+            }),
+        );
+        const el = document.createElement('sg-orders-view') as SgOrdersView;
+        document.body.appendChild(el);
+        await settled();
+
+        const button = cancelButton(el);
+        button?.click();
+        el.busy = true;
+        button?.click();
+        await settled();
+
+        expect(cancels).toBe(1);
+        el.remove();
+    });
+
+    it('does not refresh while the tab is hidden', async () => {
+        const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+        let gets = 0;
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => {
+                gets += 1;
+                return jsonResponse([ORDER]);
+            }),
+        );
+        const el = document.createElement('sg-orders-view') as SgOrdersView;
+        document.body.appendChild(el);
+        await settled();
+        const afterLoad = gets;
+
+        window.dispatchEvent(new Event('visibilitychange'));
+        await settled();
+
+        expect(gets).toBe(afterLoad);
+        el.remove();
+        hidden.mockRestore();
+    });
+
+    it('refreshes when the tab comes back to the foreground', async () => {
+        let gets = 0;
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => {
+                gets += 1;
+                return jsonResponse([ORDER]);
+            }),
+        );
+        const el = document.createElement('sg-orders-view') as SgOrdersView;
+        document.body.appendChild(el);
+        await settled();
+        const afterLoad = gets;
+
+        window.dispatchEvent(new Event('visibilitychange'));
+        await settled();
+
+        expect(gets).toBeGreaterThan(afterLoad);
+        el.remove();
+    });
 });

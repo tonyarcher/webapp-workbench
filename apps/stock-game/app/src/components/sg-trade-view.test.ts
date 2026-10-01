@@ -290,4 +290,214 @@ describe('sg-trade-view', () => {
             window.history.replaceState(null, '', before);
         }
     });
+
+    it('clears the result list when the query is emptied', async () => {
+        stubTrading();
+        const el = document.createElement('sg-trade-view') as SgTradeView;
+        document.body.appendChild(el);
+        await settled();
+
+        const search = tradeForm(el);
+        search?.dispatchEvent(new CustomEvent('sg-symbol-search-input', { detail: { query: 'app' } }));
+        await settled();
+        expect(el.results).toHaveLength(1);
+
+        search?.dispatchEvent(new CustomEvent('sg-symbol-search-input', { detail: { query: '   ' } }));
+        await settled();
+
+        expect(el.results).toEqual([]);
+        expect(el.searching).toBe(false);
+        el.remove();
+    });
+
+    it('discards a search result that arrives after the query moved on', async () => {
+        const pending: Array<(res: Response) => void> = [];
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (url: string) => {
+                if (url.includes('/search?')) {
+                    return new Promise<Response>((resolve) => {
+                        pending.push(resolve);
+                    });
+                }
+                if (url.includes('/quote?')) return Promise.resolve(jsonResponse(QUOTE));
+                if (url.endsWith('/holdings')) return Promise.resolve(jsonResponse([HOLDING]));
+                if (url.endsWith('/trades')) return Promise.resolve(jsonResponse([TRADE]));
+                if (url.endsWith('/cash')) return Promise.resolve(jsonResponse({ cashCents: 50000 }));
+                if (url.endsWith('/config')) return Promise.resolve(jsonResponse(CONFIG));
+                throw new Error(`unexpected fetch ${url}`);
+            }),
+        );
+        const el = document.createElement('sg-trade-view') as SgTradeView;
+        document.body.appendChild(el);
+        await settled();
+
+        const search = tradeForm(el);
+        search?.dispatchEvent(new CustomEvent('sg-symbol-search-input', { detail: { query: 'app' } }));
+        await settled();
+        search?.dispatchEvent(new CustomEvent('sg-symbol-search-input', { detail: { query: 'msft' } }));
+        await settled();
+
+        pending[0]?.(jsonResponse([RESULT]));
+        await settled();
+
+        expect(el.results).toEqual([]);
+        el.remove();
+    });
+
+    it('does not show a search error for a query that has moved on', async () => {
+        const priorDefaults = getQueryClient().getDefaultOptions();
+        getQueryClient().setDefaultOptions({ queries: { retry: false } });
+        try {
+            vi.stubGlobal(
+                'fetch',
+                vi.fn(async (url: string) => {
+                    if (url.includes('/search?')) {
+                        // The abandoned query is the slow one, so its failure
+                        // lands after the query has already moved on.
+                        if (url.includes('q=app')) {
+                            await new Promise((resolve) => setTimeout(resolve, 30));
+                            return new Response(JSON.stringify({ error: 'rate limited' }), { status: 429 });
+                        }
+                        return jsonResponse([RESULT]);
+                    }
+                    if (url.includes('/quote?')) return jsonResponse(QUOTE);
+                    if (url.endsWith('/holdings')) return jsonResponse([HOLDING]);
+                    if (url.endsWith('/trades')) return jsonResponse([TRADE]);
+                    if (url.endsWith('/cash')) return jsonResponse({ cashCents: 50000 });
+                    if (url.endsWith('/config')) return jsonResponse(CONFIG);
+                    throw new Error(`unexpected fetch ${url}`);
+                }),
+            );
+            const el = document.createElement('sg-trade-view') as SgTradeView;
+            document.body.appendChild(el);
+            await settled();
+
+            const form = tradeForm(el);
+            form?.dispatchEvent(new CustomEvent('sg-symbol-search-input', { detail: { query: 'app' } }));
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            form?.dispatchEvent(new CustomEvent('sg-symbol-search-input', { detail: { query: 'msft' } }));
+            await settled();
+
+            expect(el.searchError).toBeNull();
+            expect(el.results).toHaveLength(1);
+            el.remove();
+        } finally {
+            getQueryClient().setDefaultOptions(priorDefaults);
+        }
+    });
+
+    it('places a scheduled order rather than a backdated trade', async () => {
+        const bodies: string[] = [];
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (url: string, init?: RequestInit) => {
+                if (url.endsWith('/orders') && init?.method === 'POST') {
+                    bodies.push(String(init.body));
+                    return jsonResponse({
+                        id: 9,
+                        symbol: 'AAPL',
+                        side: 'buy',
+                        qty: 1,
+                        executeAt: Date.now() + 60_000,
+                        status: 'pending',
+                        createdAt: Date.now(),
+                        tradeId: null,
+                        orderType: 'market',
+                        tif: 'GTC',
+                        limitPrice: null,
+                        stopPrice: null,
+                        expiresAt: null,
+                        fillPriceSource: 'ask',
+                    });
+                }
+                if (url.includes('/search?')) return jsonResponse([RESULT]);
+                if (url.includes('/quote?')) return jsonResponse(QUOTE);
+                if (url.endsWith('/holdings')) return jsonResponse([HOLDING]);
+                if (url.endsWith('/trades')) return jsonResponse([TRADE]);
+                if (url.endsWith('/cash')) return jsonResponse({ cashCents: 50000 });
+                if (url.endsWith('/config')) return jsonResponse(CONFIG);
+                throw new Error(`unexpected fetch ${url}`);
+            }),
+        );
+        const el = document.createElement('sg-trade-view') as SgTradeView;
+        el.symbol = 'AAPL';
+        document.body.appendChild(el);
+        await settled();
+
+        tradeForm(el)?.dispatchEvent(
+            new CustomEvent('sg-trade-submit', {
+                detail: {
+                    mode: 'scheduled',
+                    data: {
+                        symbol: 'AAPL',
+                        side: 'buy',
+                        qty: 1,
+                        orderType: 'market',
+                        tif: 'GTC',
+                        fillPriceSource: 'ask',
+                    },
+                },
+                bubbles: true,
+                composed: true,
+            }),
+        );
+        await settled();
+
+        expect(bodies).toHaveLength(1);
+        expect(bodies[0]).toContain('orderType');
+        expect(el.mutSuccess).toBe(true);
+        el.remove();
+    });
+
+    it('keeps a rejected order visible and unlocks the form', async () => {
+        const priorDefaults = getQueryClient().getDefaultOptions();
+        getQueryClient().setDefaultOptions({ queries: { retry: false } });
+        try {
+            vi.stubGlobal(
+                'fetch',
+                vi.fn(async (url: string, init?: RequestInit) => {
+                    if (url.endsWith('/orders') && init?.method === 'POST') {
+                        return new Response(JSON.stringify({ error: 'order rejected' }), { status: 422 });
+                    }
+                    if (url.includes('/search?')) return jsonResponse([RESULT]);
+                    if (url.includes('/quote?')) return jsonResponse(QUOTE);
+                    if (url.endsWith('/holdings')) return jsonResponse([HOLDING]);
+                    if (url.endsWith('/trades')) return jsonResponse([TRADE]);
+                    if (url.endsWith('/cash')) return jsonResponse({ cashCents: 50000 });
+                    if (url.endsWith('/config')) return jsonResponse(CONFIG);
+                    throw new Error(`unexpected fetch ${url}`);
+                }),
+            );
+            const el = document.createElement('sg-trade-view') as SgTradeView;
+            el.symbol = 'AAPL';
+            document.body.appendChild(el);
+            await settled();
+
+            tradeForm(el)?.dispatchEvent(
+                new CustomEvent('sg-trade-submit', {
+                    detail: {
+                        mode: 'scheduled',
+                        data: {
+                            symbol: 'AAPL',
+                            side: 'buy',
+                            qty: 1,
+                            orderType: 'market',
+                            tif: 'GTC',
+                            fillPriceSource: 'ask',
+                        },
+                    },
+                    bubbles: true,
+                    composed: true,
+                }),
+            );
+            await settled();
+
+            expect(el.mutError).toBe('order rejected');
+            expect(el.busy).toBe(false);
+            el.remove();
+        } finally {
+            getQueryClient().setDefaultOptions(priorDefaults);
+        }
+    });
 });
