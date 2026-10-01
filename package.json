@@ -10,7 +10,6 @@
         "apps/stock-game/*",
         "apps/user/*",
         "apps/radio-station/*",
-        "packages/*",
         "libs/*"
     ],
     "scripts": {

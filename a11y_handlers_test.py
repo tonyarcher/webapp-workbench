@@ -36,7 +36,7 @@ SKIP_DIRS = frozenset(
 )
 
 # Fixtures, not components. Verified rather than assumed: the skipped trees
-# (the e2e specs, each app's scripts/, packages/web-components/test) hold no
+# (the e2e specs, each app's scripts/, apps/baseball/test) hold no
 # @click or @pointerdown at all, and only one of them mentions a Lit template,
 # so nothing that could carry a finding is excluded.
 SKIP_PARTS = frozenset({"e2e", "scripts", "stories", "test", "tests", "__tests__"})

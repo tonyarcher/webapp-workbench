@@ -9,13 +9,13 @@
         "preview": "vite preview",
         "lint": "oxlint",
         "test:unit": "vitest run",
+        "test:browser": "wtr",
         "test:coverage": "vitest run --coverage",
-        "test:e2e": "npm run build:components && playwright test",
-        "build:components": "npm run build --prefix ../../packages/web-components",
-        "test": "npm run test:unit"
+        "test:e2e": "playwright test",
+        "typecheck": "tsc --noEmit -p tsconfig.test.json",
+        "test": "npm run test:unit && npm run test:browser"
     },
     "dependencies": {
-        "@baseball/web-components": "*",
         "@tanstack/history": "1.162.4",
         "@tanstack/query-core": "^5.103.2",
         "@tanstack/virtual-core": "^3.17.11",
@@ -24,9 +24,14 @@
     },
     "devDependencies": {
         "@axe-core/playwright": "^4.13.0",
+        "@esm-bundle/chai": "^4.3.4-fix.0",
         "@playwright/test": "^1.63.0",
+        "@types/mocha": "^10.0.10",
         "@types/node": "^26.6.2",
         "@vitest/coverage-v8": "^5.0.1",
+        "@web/dev-server-esbuild": "^2.0.0",
+        "@web/test-runner": "^1.0.0",
+        "@web/test-runner-playwright": "^1.0.0",
         "fake-indexeddb": "^6.2.5",
         "oxlint": "^1.85.0",
         "typescript": "7.0.2",

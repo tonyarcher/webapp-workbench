@@ -1,6 +1,6 @@
 import { expect } from '@esm-bundle/chai';
-import '../src/lineup/baseball-lineup-setup/baseball-lineup-setup.ts';
-import { BaseballLineupSetup } from '../src/lineup/baseball-lineup-setup/baseball-lineup-setup.ts';
+import '../src/widgets/lineup/baseball-lineup-setup/baseball-lineup-setup.ts';
+import { BaseballLineupSetup } from '../src/widgets/lineup/baseball-lineup-setup/baseball-lineup-setup.ts';
 
 describe('BaseballLineupSetup', () => {
     let element: BaseballLineupSetup;

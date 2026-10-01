@@ -7,7 +7,7 @@
 // lookup for the handle and the aria-valuenow write, and neither of those is
 // reachable without a real DOM.
 //
-// Mirrors packages/web-components, including its inline-CSS plugin, because the
+// Mirrors apps/baseball, including its inline-CSS plugin, because the
 // component imports its stylesheet with "?inline" and esbuild cannot resolve
 // that on its own.
 import { playwrightLauncher } from '@web/test-runner-playwright';

@@ -1,14 +1,14 @@
 import { expect } from '@esm-bundle/chai';
-import '../src/scoring/baseball-action-grid.ts';
-import '../src/scoring/baseball-matchup-card/baseball-matchup-card.ts';
-import '../src/scoring/baseball-scorer-tab/baseball-scorer-tab.ts';
-import '../src/scoring/baseball-scoring-controls/baseball-scoring-controls.ts';
-import '../src/scoring/baseball-step2-panel/baseball-step2-panel.ts';
-import { BaseballActionGrid } from '../src/scoring/baseball-action-grid.ts';
-import { BaseballMatchupCard } from '../src/scoring/baseball-matchup-card/baseball-matchup-card.ts';
-import { BaseballScorerTab } from '../src/scoring/baseball-scorer-tab/baseball-scorer-tab.ts';
-import { BaseballScoringControls } from '../src/scoring/baseball-scoring-controls/baseball-scoring-controls.ts';
-import { BaseballStep2Panel } from '../src/scoring/baseball-step2-panel/baseball-step2-panel.ts';
+import '../src/widgets/scoring/baseball-action-grid.ts';
+import '../src/widgets/scoring/baseball-matchup-card/baseball-matchup-card.ts';
+import '../src/widgets/scoring/baseball-scorer-tab/baseball-scorer-tab.ts';
+import '../src/widgets/scoring/baseball-scoring-controls/baseball-scoring-controls.ts';
+import '../src/widgets/scoring/baseball-step2-panel/baseball-step2-panel.ts';
+import { BaseballActionGrid } from '../src/widgets/scoring/baseball-action-grid.ts';
+import { BaseballMatchupCard } from '../src/widgets/scoring/baseball-matchup-card/baseball-matchup-card.ts';
+import { BaseballScorerTab } from '../src/widgets/scoring/baseball-scorer-tab/baseball-scorer-tab.ts';
+import { BaseballScoringControls } from '../src/widgets/scoring/baseball-scoring-controls/baseball-scoring-controls.ts';
+import { BaseballStep2Panel } from '../src/widgets/scoring/baseball-step2-panel/baseball-step2-panel.ts';
 
 describe('Scoring Components', () => {
     describe('BaseballActionGrid', () => {

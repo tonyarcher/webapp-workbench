@@ -1,7 +1,13 @@
 import { expect } from '@esm-bundle/chai';
-import { asHand, isBattedBall, parsePlatePlay, plateResultLabel, safeColor } from '../src/scoreboard/plate-play.ts';
-import { plateSceneClass, zoneFromClick, zoneFromPoint, zoneOffsets } from '../src/scoreboard/plate-scene.ts';
-import { hitEndpoint, HOME_POINT } from '../src/scorebook/baseball-defense-diagram/hit-line.ts';
+import {
+    asHand,
+    isBattedBall,
+    parsePlatePlay,
+    plateResultLabel,
+    safeColor,
+} from '../src/widgets/scoreboard/plate-play.ts';
+import { plateSceneClass, zoneFromClick, zoneFromPoint, zoneOffsets } from '../src/widgets/scoreboard/plate-scene.ts';
+import { hitEndpoint, HOME_POINT } from '../src/widgets/scorebook/baseball-defense-diagram/hit-line.ts';
 
 describe('plate-play', () => {
     it('maps events to ball/strike/foul/in play/out', () => {

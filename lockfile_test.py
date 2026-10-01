@@ -8,8 +8,8 @@ package per platform. npm resolves optional dependencies for the platform it is
 running on, so a lockfile generated on Windows records only the Windows
 packages. That lockfile then installs cleanly on Windows and fails on Linux,
 because `npm ci` finds no `@rollup/rollup-linux-x64-gnu` and rollup cannot load
-its native binding at import time. The first CI run failed exactly that way:
-packages/web-components' @web/test-runner could not import rollup at all.
+its native binding at import time. The first CI run failed exactly that way: the
+@web/test-runner Chromium suite could not import rollup at all.
 
 The lockfile therefore has to carry the bindings for every platform this repo
 runs on: linux-x64 for the GitHub runners and the Docker image builds, and

@@ -1,6 +1,6 @@
 import { expect } from '@esm-bundle/chai';
-import '../src/layout/baseball-tab-page-wrapper/baseball-tab-page-wrapper.ts';
-import { BaseballTabPageWrapper } from '../src/layout/baseball-tab-page-wrapper/baseball-tab-page-wrapper.ts';
+import '../src/widgets/layout/baseball-tab-page-wrapper/baseball-tab-page-wrapper.ts';
+import { BaseballTabPageWrapper } from '../src/widgets/layout/baseball-tab-page-wrapper/baseball-tab-page-wrapper.ts';
 
 describe('BaseballTabPageWrapper', () => {
     let element: BaseballTabPageWrapper;

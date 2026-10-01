@@ -1,0 +1,15 @@
+// Typechecks the browser test suite, which the build tsconfig deliberately leaves
+// out. Its include is src and e2e only, and wtr runs esbuild, which strips types
+// without checking them, so errors in test/ would reach a commit with every gate
+// green.
+//
+// Extends the build config so the strict flags stay identical. `types` carries
+// mocha because the wtr suite uses describe/it/beforeEach as globals; wtr does not
+// type-check, so this config is the only thing that sees them at all.
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "types": ["vite/client", "node", "mocha"]
+    },
+    "include": ["src", "test", "e2e", "vite.config.ts", "playwright.config.ts"]
+}

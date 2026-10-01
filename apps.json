@@ -17,7 +17,7 @@
     "apps": [
         {
             "id": "baseball",
-            "workspaces": ["@baseball/web-components", "baseball-tracker"],
+            "workspaces": ["baseball-tracker"],
             "services": ["baseball"],
             "basePath": "/baseball/",
             "aliases": ["baseball-tracker", "tracker", "apps/baseball"]

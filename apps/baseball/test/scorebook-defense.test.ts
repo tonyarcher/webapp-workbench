@@ -1,8 +1,8 @@
 import { expect } from '@esm-bundle/chai';
-import '../src/scorebook/baseball-defense-diagram/baseball-defense-diagram.ts';
-import '../src/scorebook/baseball-scorebook-grid.ts';
-import { BaseballDefenseDiagram } from '../src/scorebook/baseball-defense-diagram/baseball-defense-diagram.ts';
-import { BaseballScorebookGrid } from '../src/scorebook/baseball-scorebook-grid.ts';
+import '../src/widgets/scorebook/baseball-defense-diagram/baseball-defense-diagram.ts';
+import '../src/widgets/scorebook/baseball-scorebook-grid.ts';
+import { BaseballDefenseDiagram } from '../src/widgets/scorebook/baseball-defense-diagram/baseball-defense-diagram.ts';
+import { BaseballScorebookGrid } from '../src/widgets/scorebook/baseball-scorebook-grid.ts';
 
 describe('Scorebook Components', () => {
     describe('BaseballDefenseDiagram', () => {

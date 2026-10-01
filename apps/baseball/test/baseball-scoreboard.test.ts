@@ -1,6 +1,6 @@
 import { expect } from '@esm-bundle/chai';
-import '../src/scoreboard/baseball-scoreboard.ts';
-import { BaseballScoreboard } from '../src/scoreboard/baseball-scoreboard.ts';
+import '../src/widgets/scoreboard/baseball-scoreboard.ts';
+import { BaseballScoreboard } from '../src/widgets/scoreboard/baseball-scoreboard.ts';
 
 function clickZonePadding(zoneEl: HTMLElement, padX: number, padY: number) {
     const rect = zoneEl.getBoundingClientRect();

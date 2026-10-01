@@ -86,8 +86,8 @@ An API-only `-Papps` (`rss-api`) runs no `npm install` and no JS build. `buildNo
 never pays for the package `prepare` builds. `gradle_test.py` asserts both directions and
 skips when Gradle is absent.
 
-`packages/web-components` tests use @web/test-runner in real Chromium; `apps/baseball` e2e
-uses Playwright on `:5199` (`headless: true`). Fresh machine: `npx playwright install`.
+`apps/baseball` runs @web/test-runner in real Chromium for its widget tests and
+Playwright on `:5199` (`headless: true`) for e2e. Fresh machine: `npx playwright install`.
 A stale Vite process on 5199 hangs baseball e2e — kill it first.
 
 ## Workflow
@@ -126,11 +126,14 @@ because the folder is named `web-components`. Prefer a function in `src/services
 
 Existing split:
 
-- `*-core` packages — pure domain (no DOM except `vertical-scroll-core`, which is a scroller
-  primitive used by lemmy **and** clipstack).
-- `@baseball/web-components` — scorebook/scoreboard widgets only. App shells stay in
-  `apps/baseball`. Do not pour other apps’ UI into this package.
+- `libs/vertical-scroll-core` — pure domain, except for the scroller primitive itself, which is
+  DOM. Used by lemmy **and** clipstack, so it has the two consumers the rule requires.
+- `libs/user-client` — the OIDC/session client. Two or more apps authenticate with it.
 - `apps/stock-game/shared/` — contract for that app’s client/server, not a monorepo library.
+
+`packages/` is gone. Every single-consumer package was folded into its app, and the two
+genuinely shared ones moved to `libs/`. Scorebook and scoreboard widgets are `apps/baseball/
+src/widgets/`, scoped to that app.
 
 When starting a feature: implement it in the app. Extract on the second consumer, not the first.
 
@@ -330,7 +333,7 @@ fetchers cannot send custom headers.
 - Coverage floor is **90% lines/branches/functions/statements** on every measured
   workspace, and each one owns its own gate: Jacoco line and branch verification in a
   Kotlin API's `build.gradle.kts`, coverage thresholds in that workspace's Vite or vitest
-  config, and `wtr` thresholds in `packages/web-components/web-test-runner.config.js`.
+  config, and `wtr` thresholds in `apps/baseball/web-test-runner.config.js`.
   Read the gate where it is configured rather than trusting a list here. Several
   workspaces sit below the floor today
   (untested entry points, Lit shells, branch tails) — raise uncovered areas to

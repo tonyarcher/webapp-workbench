@@ -33,7 +33,7 @@ ROOT = pathlib.Path(__file__).resolve().parent
 
 # The roots buildSrc's `workspaceDirs` scans. A workspace outside these is
 # invisible to Gradle. Kept as data so the test can assert the two agree.
-WORKSPACE_ROOTS = ("apps", "packages", "libs")
+WORKSPACE_ROOTS = ("apps", "libs")
 
 # Workspaces that exist on disk but are deliberately not app workspaces.
 #
