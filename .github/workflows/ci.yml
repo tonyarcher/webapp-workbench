@@ -21,6 +21,14 @@ jobs:
         runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@v7
+              with:
+                  # test:scripts runs the Flyway immutability guard, which compares
+                  # each migration against every commit that touched it. On the
+                  # default shallow checkout every --diff-filter=A resolves to the
+                  # boundary commit, so an edit or deletion looks like an addition
+                  # and the guard passes without inspecting anything. Its own
+                  # test_history_is_complete asserts a shallow clone must fail.
+                  fetch-depth: 0
             - uses: actions/setup-node@v7
               with:
                   node-version: 22
