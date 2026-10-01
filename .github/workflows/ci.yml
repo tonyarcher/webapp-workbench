@@ -1,5 +1,10 @@
 name: CI
 
+# Pinned to ubuntu-24.04 rather than ubuntu-latest. The `latest` label is
+# scheduled to move to Ubuntu 26, and an OS change under a green workflow is
+# exactly the kind of surprise that should arrive as a commit rather than as a
+# surprise. Move to ubuntu-26.04 deliberately, once it has been exercised.
+
 on:
     push:
         branches: [main]
@@ -13,10 +18,10 @@ concurrency:
 jobs:
     web:
         name: Web (typecheck and tests)
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
               with:
                   node-version: 22
                   cache: npm
@@ -30,15 +35,15 @@ jobs:
 
     jvm:
         name: JVM (tests, detekt, coverage)
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-java@v4
+            - uses: actions/checkout@v7
+            - uses: actions/setup-java@v6
               with:
                   # Matches the toolchain the API modules compile against.
                   distribution: temurin
                   java-version: '25'
-            - uses: gradle/actions/setup-gradle@v4
+            - uses: gradle/actions/setup-gradle@v6
             # checkAll runs tests, detekt and the Jacoco line and branch gates for all
             # five APIs. Testcontainers is not optional here: the API modules have a
             # testPostgresStart task that starts a real Postgres container, so the
@@ -58,17 +63,17 @@ jobs:
         # would have forced that job to run without --strict, because the Unix-only
         # tools are absent on Windows, and a non-strict job reports success when a
         # check silently never ran.
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
               with:
                   node-version: 22
                   cache: npm
-            - uses: actions/setup-python@v5
+            - uses: actions/setup-python@v7
               with:
                   python-version: '3.12'
-            - uses: actions/setup-java@v4
+            - uses: actions/setup-java@v6
               with:
                   distribution: temurin
                   java-version: '25'
