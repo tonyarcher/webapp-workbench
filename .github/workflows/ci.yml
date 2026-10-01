@@ -44,12 +44,11 @@ jobs:
             # testPostgresStart task that starts a real Postgres container, so the
             # runner's Docker daemon is required rather than merely convenient.
             #
-            # `gradle` from PATH, not ./gradlew. .gitignore excludes gradlew and
-            # gradlew.bat because the wrapper is generated locally rather than
-            # committed, so a fresh clone has no wrapper to run and the first CI run
-            # failed for exactly that reason. The repo's own entry points document
-            # the same fallback to `gradle` on PATH.
-            - run: gradle checkAll --console=plain
+            # ./gradlew, so the build uses the Gradle version the wrapper pins
+            # rather than whichever Gradle the runner image ships. The wrapper is
+            # committed for that reason, and gradlew carries mode 100755 in git so
+            # it is executable on checkout.
+            - run: ./gradlew checkAll --console=plain
 
     verify:
         name: Verify (formatters and linters)

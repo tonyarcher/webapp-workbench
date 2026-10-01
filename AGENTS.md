@@ -77,8 +77,9 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm test`).
 
 `./gradlew buildAll` builds both sides on the host and `./gradlew deploy` does the deploy.
-`-Papps` limits either half to one app. The wrapper is local-only (`gradle wrapper`
-generates it); the entry points fall back to `gradle` on PATH when it is absent.
+`-Papps` limits either half to one app. The wrapper is committed, so a fresh clone and
+CI use the same Gradle version; `gradlew` carries mode 100755 in git so it is executable
+on checkout. The entry points still fall back to `gradle` on PATH when it is absent.
 
 An API-only `-Papps` (`rss-api`) runs no `npm install` and no JS build. `buildNode` reaches
 `npmInstall` only through a real per-workspace task, so a selection with no JS workspace
