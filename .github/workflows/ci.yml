@@ -223,4 +223,4 @@ jobs:
             # it, a missing tool fails the job and names itself. A developer running
             # verify.py locally still gets the lenient default.
             - name: Run verify.py
-              run: python verify.py --strict
+              run: python tools/verify.py --strict

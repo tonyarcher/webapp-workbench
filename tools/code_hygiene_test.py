@@ -11,7 +11,7 @@ an agent that respects the warning keeps the count from growing. A hard failure
 would only push the problem into an allowlist, which is the same rot in a
 different costume.
 
-Run: python3 -m unittest discover -s . -t . -p "*_test.py".
+Run: python3 -m unittest discover -s tools -t . -p "*_test.py".
 Only stdlib is used (pathlib, re, unittest).
 """
 
@@ -21,7 +21,7 @@ import pathlib
 import re
 import unittest
 
-ROOT = pathlib.Path(__file__).resolve().parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # Values that are deployment-specific and must not be hardcoded in source.
 # Matched as whole words so "localhost" in a comment or identifier is handled

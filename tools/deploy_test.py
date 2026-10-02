@@ -1,6 +1,6 @@
 """Unit tests for deploy.py's argument mapping.
 
-Run: python3 -m unittest discover -s . -t . -p "*_test.py".
+Run: python3 -m unittest discover -s tools -t . -p "*_test.py".
 Only stdlib is used (unittest).
 """
 

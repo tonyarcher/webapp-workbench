@@ -1,6 +1,6 @@
 """Guard the lockfile against losing a platform's native optional dependencies.
 
-Run: python3 -m unittest discover -s . -t . -p "*_test.py".
+Run: python3 -m unittest discover -s tools -t . -p "*_test.py".
 Only stdlib is used (json, pathlib, unittest).
 
 Rollup and esbuild ship prebuilt native bindings as optionalDependencies, one
@@ -30,7 +30,7 @@ from typing import Any
 # helpers below narrow what they use.
 LockEntry = dict[str, Any]
 
-LOCKFILE = Path(__file__).resolve().parent / "package-lock.json"
+LOCKFILE = Path(__file__).resolve().parent.parent / "package-lock.json"
 
 # The packages that ship one native binding per platform, and the binding each
 # platform needs from them.

@@ -1,6 +1,6 @@
 """Doc-rot guard: keep AGENTS.md and README.md from naming things that are gone.
 
-Run: python3 -m unittest discover -s . -t . -p "*_test.py".
+Run: python3 -m unittest discover -s tools -t . -p "*_test.py".
 Only stdlib is used (collections.abc, json, os, pathlib, re, subprocess, typing,
 unittest).
 
@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 from unittest import mock
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 # Directories pruned from the walk. This list is an optimisation, NOT the
 # definition of generated output: it keeps the walk fast, and nothing tracked

@@ -14,7 +14,7 @@ resolve to the directory the guard actually scans. The matching is on exact path
 parts, not a substring, because otherdb/migration and db/migrations both contain
 "db/migration" while the scan reads neither.
 
-Run: python3 -m unittest discover -s . -t . -p "*_test.py".
+Run: python3 -m unittest discover -s tools -t . -p "*_test.py".
 Only stdlib is used (pathlib, re, unittest).
 """
 
@@ -25,7 +25,7 @@ import re
 import unittest
 from collections.abc import Iterable, Mapping
 
-from flyway_migration_test import ROOT, SKIP_DIRS, in_migration_dir
+from tools.flyway_migration_test import ROOT, SKIP_DIRS, in_migration_dir
 
 # Where a module might declare a location, whatever syntax it uses.
 CONFIGS = ("*.kt", "*.java", "*.properties", "*.yml", "*.yaml")

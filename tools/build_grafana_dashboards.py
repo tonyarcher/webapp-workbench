@@ -22,7 +22,16 @@ import json
 import sys
 from pathlib import Path
 
-from grafana_dashboards import auth, errors, overview, services
+# This runs two ways: `python tools/build_grafana_dashboards.py`, where the repo
+# root is NOT on sys.path, and as `tools.build_grafana_dashboards` under mypy,
+# where it is. A plain relative import satisfies neither alone, and the mypy
+# error it replaced (Cannot find implementation for "grafana_dashboards") is why
+# the qualified name is preferred when the package is importable.
+if __package__:
+    from tools.grafana_dashboards import auth, errors, overview, services
+else:  # direct execution: put the repo root on the path first
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from tools.grafana_dashboards import auth, errors, overview, services
 
 OUT = (
     Path(__file__).resolve().parent.parent

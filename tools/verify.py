@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Verify entry point: run every formatter and linter in check mode.
 
-Run: `python3 verify.py [--fix] [--strict]` (usually `python verify.py` on
-Windows). Covers every format this repo owns: web (prettier), Python (ruff,
+Run: `python3 tools/verify.py [--fix] [--strict]` (usually
+`python tools/verify.py` on Windows). Covers every format this repo owns: web
+(prettier), Python (ruff,
 mypy), Kotlin (ktlint), shell (shfmt, shellcheck), SQL (sqlfluff), Dockerfile
 (hadolint), TOML (taplo) and PowerShell (PSScriptAnalyzer). `--fix` applies
 the formatters instead of checking. `--strict` treats a missing tool as a
@@ -13,6 +14,7 @@ Only stdlib is used (subprocess, sys, pathlib, shutil).
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import sys
@@ -21,11 +23,11 @@ from pathlib import Path
 HELP = """Run every formatter and linter in check mode.
 
 Usage:
-  python verify.py [--fix] [--strict]
+  python tools/verify.py [--fix] [--strict]
 
 Also:
-  python verify.py --fix     apply the formatters instead of checking
-  python verify.py --strict  a missing tool is a failure, not a skip
+  python tools/verify.py --fix     apply the formatters instead of checking
+  python tools/verify.py --strict  a missing tool is a failure, not a skip
 
 Tools: prettier, tsc (via npm), ruff, mypy, ktlint, shfmt, shellcheck,
 sqlfluff, hadolint, taplo, pwsh (PSScriptAnalyzer). Installed by the
@@ -62,11 +64,23 @@ SHELL = (".sh", ".bash")
 SQL = (".sql",)
 YAML = (".yml", ".yaml")
 POWERSHELL = (".ps1", ".psm1")
+# Config files that allow // comments, so they are JSONC rather than JSON and
+# json.loads rejects them. Named explicitly because the extension is .json.
+JSONC = (".oxlintrc.json", ".oxlintrc.jsonc")
 SOURCE_SUFFIXES = frozenset(
     {".kt", ".kts", ".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".pyi", ".sh", ".bash"}
 )
 
 Check = tuple[str, str, list[str]]
+
+# Config files carrying the repo's lint rules. Nothing else validated these:
+# prettier does not format .oxlintrc.json, and oxlint only reads a config when
+# some app happens to run its own lint. A malformed one therefore passed every
+# gate here and then failed confusingly, inside an unrelated app's lint run.
+#
+# This happened for real: a trailing comma left in apps/baseball/.oxlintrc.json
+# survived `verify.py --strict` reporting 0 failed.
+LINT_CONFIGS = (".oxlintrc.json",)
 
 # Shared file-length budget. Only oxlint (`max-lines`) and detekt
 # (`LargeClass`) can express it natively; ruff and ktlint cannot, so this
@@ -170,6 +184,121 @@ def multi(label: str, tool: str, head: list[str], paths: list[str]) -> list[Chec
     ]
 
 
+def _strip_jsonc(text: str) -> str:
+    """Blank out JSONC comments, keeping every line and column where it was.
+
+    Both comment forms are handled: `/* ... */` blocks, which may span lines, and
+    `//` to end of line. A later parse error therefore still points at the line
+    and column the author sees in their editor, which is why comment characters
+    are replaced by equal-length whitespace rather than removed, and why that
+    whitespace keeps any newlines inside it.
+
+    This scans the text rather than running two regexes, because a regex cannot
+    tell a comment marker from the same characters inside a JSON string, and
+    here that is not hypothetical. The root .oxlintrc.json carries the glob
+    "**/node_modules/**", and a naive block-comment regex reads its trailing `*/`
+    as closing a block that the leading `**/` never opened, blanking the whole
+    ignorePatterns list and turning a valid config into a parse error. Tracking
+    whether the scan is inside a string is what keeps that file readable, and it
+    also removes the earlier caveat about `//` inside strings for free.
+
+    Backslash escapes are honoured while inside a string, so a string holding an
+    escaped quote does not end early and turn the rest of the line into a
+    comment. Stated in prose rather than with a literal example on purpose: a
+    backslash inside a docstring needs doubling, and getting that count wrong
+    silently changes what the example claims.
+    """
+    out: list[str] = []
+    index = 0
+    length = len(text)
+    in_string = False
+    escaped = False
+
+    while index < length:
+        char = text[index]
+        nxt = text[index + 1] if index + 1 < length else ""
+
+        if in_string:
+            out.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            index += 1
+            continue
+
+        if char == '"':
+            in_string = True
+            out.append(char)
+            index += 1
+            continue
+
+        if char == "/" and nxt == "/":
+            while index < length and text[index] != "\n":
+                out.append(" ")
+                index += 1
+            continue
+
+        if char == "/" and nxt == "*":
+            while index < length:
+                if text[index] == "*" and index + 1 < length and text[index + 1] == "/":
+                    out.append("  ")
+                    index += 2
+                    break
+                out.append("\n" if text[index] == "\n" else " ")
+                index += 1
+            continue
+
+        out.append(char)
+        index += 1
+
+    return "".join(out)
+
+
+def lint_config_errors(root: Path, files: list[Path]) -> list[tuple[str, str]]:
+    """Parse every oxlint config and report the ones that are not valid.
+
+    Nothing else validated these. Prettier does not format .oxlintrc.json, and
+    oxlint only reads a config when some app happens to run its own lint, so a
+    malformed one passed every other gate here and then failed confusingly much
+    later, inside an unrelated app's lint run. That happened for real: a trailing
+    comma in apps/baseball/.oxlintrc.json survived `verify.py --strict`
+    reporting 0 failed.
+
+    These files are JSONC, not JSON. The repo's own carry `//` comments saying
+    why a rule is off, which json.loads rejects outright, so comments are removed
+    before parsing rather than reaching for a permissive parser.
+
+    Comments are replaced with equivalent blank space rather than deleted, so a
+    parse error still reports the line and column the author sees in their editor.
+    See _strip_jsonc, which does the stripping; it tracks string context, so a
+    config may hold a URL or a glob containing "//" or "*/" without either being
+    read as a comment.
+    """
+    errors: list[tuple[str, str]] = []
+    for path in files:
+        if path.name not in LINT_CONFIGS:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as exc:  # unreadable is a failure, not a skip
+            errors.append((str(path.relative_to(root)), str(exc)))
+            continue
+        stripped = _strip_jsonc(text)
+        try:
+            json.loads(stripped)
+        except json.JSONDecodeError as exc:
+            errors.append(
+                (
+                    str(path.relative_to(root)),
+                    f"line {exc.lineno} column {exc.colno}: {exc.msg}",
+                )
+            )
+    return errors
+
+
 def specs(root: Path, files: list[Path], fix: bool) -> list[Check]:
     """Label, executable and argv for each check, in run order."""
     config = str(root / ".sqlfluff")
@@ -242,7 +371,7 @@ def main(argv: list[str]) -> int:
         return 0
     fix = "--fix" in argv
     strict = "--strict" in argv
-    root = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parent.parent
     missing: list[str] = []
     failed: list[str] = []
     sources = collect(root)
@@ -254,6 +383,14 @@ def main(argv: list[str]) -> int:
             print(f"  {lines:5d}  {path}")
     else:
         print(f"PASS max-lines (nothing over {MAX_FILE_LINES} lines)")
+    broken = lint_config_errors(root, sources)
+    if broken:
+        print("FAIL oxlint-config")
+        failed.append("oxlint-config")
+        for path, message in broken:
+            print(f"  {path}: {message}")
+    else:
+        print("PASS oxlint-config")
     for label, tool, command in specs(root, sources, fix):
         if shutil.which(tool) is None:
             print(f"SKIP {label} ({tool} not on PATH)")

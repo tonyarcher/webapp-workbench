@@ -1,6 +1,6 @@
 """Warn about pointer handlers on elements a keyboard cannot reach.
 
-Run: python3 -m unittest discover -s . -t . -p "*_test.py".
+Run: python3 -m unittest discover -s tools -t . -p "*_test.py".
 Only stdlib is used (pathlib, re, unittest).
 
 A `<div @click=...>` works with a mouse and nothing else. The element is not
@@ -28,7 +28,7 @@ import re
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 # Directories pruned from the walk. Mirrors code_hygiene_test.py.
 SKIP_DIRS = frozenset(

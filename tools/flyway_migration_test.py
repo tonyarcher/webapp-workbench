@@ -43,7 +43,7 @@ anything. That is asserted rather than assumed.
 
 Config parsing lives in flyway_location_test.py, which shares the constants here.
 
-Run: python3 -m unittest discover -s . -t . -p "*_test.py".
+Run: python3 -m unittest discover -s tools -t . -p "*_test.py".
 Only stdlib is used (pathlib, re, subprocess, tempfile, unittest).
 """
 
@@ -56,7 +56,7 @@ import tempfile
 import unittest
 from collections.abc import Mapping
 
-ROOT = pathlib.Path(__file__).resolve().parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # V14__auth_code_nonce.sql. A version, then the double underscore Flyway requires,
 # then a description that cannot be empty. Underscores separate version parts, so

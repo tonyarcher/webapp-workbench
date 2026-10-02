@@ -13,23 +13,45 @@ hanging up, not a server error. A default time range of one hour is deliberate
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Any
 
-from grafana_panels import (
-    ALL,
-    ERRORS,
-    GATEWAY,
-    USER_API,
-    barchart,
-    dashboard,
-    grid,
-    logs_panel,
-    row,
-    series_target,
-    stat,
-    table,
-    timeseries,
-)
+# Runs both as `python tools/grafana_dashboards.py` (repo root not on sys.path) and
+# as `tools.grafana_dashboards` under mypy (it is). See build_grafana_dashboards.py.
+if __package__:
+    from tools.grafana_panels import (
+        ALL,
+        ERRORS,
+        GATEWAY,
+        USER_API,
+        barchart,
+        dashboard,
+        grid,
+        logs_panel,
+        row,
+        series_target,
+        stat,
+        table,
+        timeseries,
+    )
+else:  # direct execution: put the repo root on the path first
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from tools.grafana_panels import (
+        ALL,
+        ERRORS,
+        GATEWAY,
+        USER_API,
+        barchart,
+        dashboard,
+        grid,
+        logs_panel,
+        row,
+        series_target,
+        stat,
+        table,
+        timeseries,
+    )
 
 
 def handler_quantile(q: str, alias: str) -> str:

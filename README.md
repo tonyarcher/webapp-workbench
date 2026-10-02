@@ -20,7 +20,7 @@ that apply to it.
 npm install        # installs all workspaces and builds the library dists
 npm run build      # builds every workspace
 npm test           # runs every workspace's tests
-python verify.py   # formatters and linters, in check mode
+python tools/verify.py   # formatters and linters, in check mode
 ```
 
 Everything that can build on a host, JS workspaces and Kotlin APIs together, in

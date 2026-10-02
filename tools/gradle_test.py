@@ -1,6 +1,6 @@
 """Task-graph tests for the root Gradle build in build.gradle.kts.
 
-Run: python3 -m unittest discover -s . -t . -p "*_test.py".
+Run: python3 -m unittest discover -s tools -t . -p "*_test.py".
 Only stdlib is used (json, pathlib, shutil, subprocess, unittest).
 
 Four things are asserted here. That every workspace apps.json declares is one
@@ -29,7 +29,7 @@ import unittest
 
 from build import gradle_command
 
-ROOT = pathlib.Path(__file__).resolve().parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # The roots buildSrc's `workspaceDirs` scans. A workspace outside these is
 # invisible to Gradle. Kept as data so the test can assert the two agree.

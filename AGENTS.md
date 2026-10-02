@@ -72,7 +72,7 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 | Build everything, one command | `./gradlew buildAll` (root; JS workspaces + all Kotlin APIs). `./gradlew buildJvm` = APIs only, `./gradlew buildNode` = JS only, `./gradlew checkAll` = API tests/detekt/Jacoco. Add `-Papps=rss` (or `apps/rss`) to build one app |
 | Deploy compose stack          | `python deploy.py [options] [app...]` (or `python3`); calls `./gradlew deploy`, which builds, renders the gateway, mints certs, then runs compose. Tab completion: `source scripts/complete-deploy.bash`.                          |
 | Format everything             | `npm run format` (prettier --write). Check only: `npm run format:check`.                                                                                                                                                           |
-| Verify format + lint          | `python verify.py` (check mode) or `python verify.py --fix` (apply the formatters). It owns the tool list.                                                                                                                         |
+| Verify format + lint          | `python tools/verify.py` (check mode) or `python tools/verify.py --fix` (apply the formatters). It owns the tool list.                                                                                                             |
 
 Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm test`).
 
@@ -83,7 +83,7 @@ on checkout. The entry points still fall back to `gradle` on PATH when it is abs
 
 An API-only `-Papps` (`rss-api`) runs no `npm install` and no JS build. `buildNode` reaches
 `npmInstall` only through a real per-workspace task, so a selection with no JS workspace
-never pays for the package `prepare` builds. `gradle_test.py` asserts both directions and
+never pays for the package `prepare` builds. `tools/gradle_test.py` asserts both directions and
 skips when Gradle is absent.
 
 `apps/baseball` runs @web/test-runner in real Chromium for its widget tests and
@@ -323,7 +323,7 @@ fetchers cannot send custom headers.
 ## Verification
 
 - Workspace `npm test` then `npm run build` must pass before finishing.
-- `python verify.py` passes. It owns the full tool list; `--fix` applies the formatters.
+- `python tools/verify.py` passes. It owns the full tool list; `--fix` applies the formatters.
   Tools come from the `ops-scripts` installers.
 - A doc-rot guard runs with the script tests. It checks the claim shapes that rot most
   often here — a backticked path, an `npm run` script, a Gradle task, and an app or

@@ -1,6 +1,6 @@
 """Contract tests for apps.json, the Gradle app catalog.
 
-Run: python3 -m unittest discover -s . -t . -p "*_test.py".
+Run: python3 -m unittest discover -s tools -t . -p "*_test.py".
 Only stdlib is used (json, pathlib, typing, unittest).
 """
 
@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 CATALOG = ROOT / "apps.json"
 
 
