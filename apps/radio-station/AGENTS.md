@@ -15,8 +15,6 @@ Radio Station (Pulse 101). Shared TypeScript / Lit / CSS / workflow: repo-root
   Do not compare or send fractional weights.
 - The last generate (playlist id, seed, weights, startsAt) persists in
   localStorage via `session-store.ts`, so a refresh resumes the same week.
-- After editing a `packages/*` dependency, rebuild it before this app picks the
-  change up.
 
 ## Verification
 

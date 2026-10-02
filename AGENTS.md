@@ -27,7 +27,8 @@ Prefer a rule that generalizes over an example that needs updating.
 npm-workspaces monorepo of small TypeScript web apps plus Kotlin APIs.
 Most apps are Vite + Lit custom elements (no UI framework). Stock-game is the
 exception: plain Vite static SPA with decorator-free Lit.
-Shared libraries live in `packages/*`. JVM APIs are Gradle / Kotlin, not Node.
+Shared code lives under `apps/` too, beside whatever serves it. JVM APIs are
+Gradle / Kotlin, not Node.
 
 **Services:** `user-api` is a standalone identity provider (OAuth/OIDC, JWKS).
 Other apps are clients. Each webapp that needs Postgres has **its own API**
@@ -39,7 +40,7 @@ database rows, not a hardcoded app list.
 
 ## Layout
 
-Apps live in `apps/<app>/`, shared libraries in `packages/<name>/`, and the Docker
+Everything lives under `apps/<app>/`, shared code included, and the Docker
 Compose reverse-proxy gateway in `deploy/`. **Do not read an app inventory from this
 file.** The app list, npm workspaces, compose services, aliases, `basePath`, build
 scripts, boot jar paths, the compose file, and the Docker-only service aliases all live
@@ -108,17 +109,20 @@ A stale Vite process on 5199 hangs baseball e2e — kill it first.
 7. Large research: dispatch `explore`. Large self-contained implementation: dispatch `general`
    with a precise spec, then read the diff yourself — do not blindly trust it.
 
-## Shared package vs app module
+## App module vs shared module
 
 Default to an **app-local module**. A Lit custom element is an implementation detail, not a
 sharing strategy. `apps/*/src/web-components/` and stock-game `app/src/components/` are that
-app’s UI — screens, shells, dialogs, lists — not a staging area for `packages/`.
+app’s UI — screens, shells, dialogs, lists — not a staging area for shared code.
 
-Put something in `packages/` only when **both** are true:
+Give a module its own directory **outside** the app only when **both** are true:
 
 1. Two or more apps already need it, **or** it is headless domain logic with a stable API
    (reducers, parsers, ICS, units) — not a screen.
 2. It has no app-specific routing, persistence, copy, or product rules.
+
+Even then it goes under `apps/`, beside the thing it serves. There is no top-level
+shared-code root, and creating one is the thing to avoid.
 
 Do **not** extract because it is a custom element, because it “might be reused later”, or
 because the folder is named `web-components`. Prefer a function in `src/services/` (or
@@ -134,8 +138,8 @@ Existing split:
 `packages/` and `libs/` are both gone. Every single-consumer package was folded into its app, and
 the genuinely shared ones sit under `apps/` beside what they serve: scorebook and scoreboard
 widgets are `apps/baseball/src/widgets/`, and the identity client is `apps/user/client/`. A
-shared directory is not a goal in itself — put code with the thing it serves, and extract to a
-new top-level directory only when nothing owns it.
+shared directory is not a goal in itself — put code with the thing it serves, and keep it
+under `apps/` when it outgrows one.
 
 When starting a feature: implement it in the app. Extract on the second consumer, not the first.
 
@@ -283,7 +287,7 @@ that serves JSON. One line per event; `service` is the compose/process name.
 
 When adding or changing API error paths, emit JSON lines as above instead of
 bare `console.error(err)`. A local 20-line helper is enough; do not add pino
-or a `packages/log` workspace until a second language needs the same code.
+or a shared logging workspace until a second language needs the same code.
 
 ### PWA
 

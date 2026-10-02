@@ -5,7 +5,7 @@ an SPA focused on one thing, served behind the same reverse-proxy gateway.
 
 ## What is in here
 
-Apps live in `apps/`, shared libraries in `packages/`, and the Compose gateway
+Apps and shared code live in `apps/`, and the Compose gateway
 stack in `deploy/`. **This file deliberately does not list them** — the app map,
 its workspaces, compose services, aliases, subpaths, and boot jar paths all live
 in `apps.json`, and the directories on disk are the truth for what exists. Read
