@@ -193,10 +193,17 @@ val testPostgresHost = providers.gradleProperty("testPostgresHost").getOrElse("1
  * false, so presence is read as true. Mapping the value alone made the flag a
  * no-op that still produced a green build, which is the worst shape a switch
  * like this can have.
+ *
+ * Anything that is not an explicit negative enables the profile, so
+ * `-Pintegration=1` and `-Pintegration=yes` work. `String.toBoolean()` accepts
+ * only "true", which would have made the two forms a reader is most likely to
+ * reach for silently skip the very test the flag exists to run.
  */
+val disabledFlagValues = setOf("false", "0", "no", "off")
+
 val integrationProfile = providers
     .gradleProperty("integration")
-    .map { it.isBlank() || it.toBoolean() }
+    .map { value -> value.isBlank() || value.lowercase() !in disabledFlagValues }
     .orElse(false)
 
 fun docker(vararg args: String): Int = runCatching {
