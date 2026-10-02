@@ -104,9 +104,10 @@ class GradleCommandTest(unittest.TestCase):
 
 class MainTest(unittest.TestCase):
     def test_help_prints_and_exits_zero(self) -> None:
-        # The help text is long, and argparse writes it to stdout. Captured here
-        # so it does not land in the middle of a passing run: on CI it buried the
-        # result line, which made a green suite look like a failure.
+        # The help text is long, and deploy.py prints its own HELP constant to
+        # stdout. Captured here so it does not land in the middle of a passing
+        # run: on CI it buried the result line, which made a green suite look like
+        # a failure.
         with contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(main(["--help"]), 0)
             self.assertEqual(main(["-h"]), 0)

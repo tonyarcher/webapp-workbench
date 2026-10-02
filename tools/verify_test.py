@@ -45,21 +45,27 @@ class StripJsoncTest(unittest.TestCase):
 
     def test_multi_line_block_does_not_shift_lines(self) -> None:
         # A block comment spanning lines must keep the lines below it where they
-        # were. The contract is that the line count is preserved, so the error
-        # still lands on the line that actually has the defect, which is the last
-        # line before the closing brace.
-        #
-        # The assertion is on that count rather than on a hardcoded line number,
-        # because where json reports a trailing comma differs between decoder
-        # versions: 3.12 anchors it at the closing brace and 3.14 at the comma.
-        # Both are one line off from each other and both are correct, so pinning
-        # a single number made this test pass only on the interpreter that wrote
-        # it. CI pins python 3.12 and this repo targets py312 in ruff.toml.
-        out = self.stripped('{\n    /* note\n       over lines */\n    "a": 1,\n}\n')
+        # were, so a later parse error still points at the line holding the
+        # defect. The trailing comma sits on line 4 of this fixture.
+        fixture = '{\n    /* note\n       over lines */\n    "a": 1,\n}\n'
+        out = self.stripped(fixture)
+
+        # The contract, checked directly: same number of lines, and the line
+        # carrying the defect is still that line. Counts alone are not enough --
+        # a scanner that deleted the newline inside the comment and appended one
+        # at the end would keep both the total length and the newline count while
+        # sliding every line above it up by one. Comparing line 4 to the input is
+        # what rules that out.
+        self.assertEqual(out.count("\n"), 5)
+        self.assertEqual(out.split("\n")[3], fixture.split("\n")[3])
+
+        # Which line json names is then a decoder detail, not the check's
+        # business: 3.12 anchors a trailing comma at the closing brace and 3.14
+        # at the comma, so the two disagree by one line and both are correct.
+        # Pinning either number made this test hold only on the interpreter that
+        # wrote it. CI pins python 3.12 and ruff.toml targets py312.
         with self.assertRaises(json.JSONDecodeError) as caught:
             json.loads(out)
-        # The trailing comma is on line 4 of 5; either decoder reports the
-        # closing token it blames, which is on line 4 or 5.
         self.assertIn(caught.exception.lineno, (4, 5))
 
     def test_glob_ending_in_star_slash_survives(self) -> None:
@@ -130,11 +136,14 @@ class LintConfigErrorsTest(unittest.TestCase):
     def call(self, text: str) -> list[tuple[str, str]]:
         """Run the check against a scratch file and return its errors.
 
-        newline="" stops pathlib translating the fixture's \\n into \\r\\n, which
-        it does on Windows and not on Linux. Without it the same test text is a
-        different number of lines on each platform, and json.loads reports a
-        different line number, so the assertion passed locally and failed on CI
-        for no reason to do with the code under test.
+        newline="" keeps the bytes on disk identical to the text passed in, which
+        is tidy but is NOT why the assertions here are shaped the way they are.
+        The original failures were blamed on this and that was wrong: the check
+        reads with read_text(encoding="utf-8"), whose universal-newline handling
+        returns any CRLF to \\n before json.loads sees it, and on Linux both forms
+        write identical bytes. The real cause was the two decoders disagreeing on
+        where a trailing-comma error is anchored, which is why the assertions
+        below match a position rather than pin a line.
         """
         with tempfile.TemporaryDirectory() as tmp:
             target = pathlib.Path(tmp) / ".oxlintrc.json"
