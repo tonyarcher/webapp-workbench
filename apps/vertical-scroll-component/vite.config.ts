@@ -11,7 +11,7 @@ export default defineConfig({
         lib: {
             entry: 'src/index.ts',
             formats: ['es'],
-            fileName: 'vertical-scroll-core',
+            fileName: 'vertical-scroll-component',
         },
         cssCodeSplit: false,
         minify: false,

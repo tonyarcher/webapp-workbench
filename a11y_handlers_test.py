@@ -331,7 +331,7 @@ class PointerHandlerReachabilityTest(unittest.TestCase):
         # ---- event guards are not user actions ----
         # A binding that only stops propagation shields a child from a parent's
         # drag handler. The element is not interactive, so there is nothing for
-        # a keyboard to do. This shape is live in vertical-scroll-core.
+        # a keyboard to do. This shape is live in vertical-scroll-component.
         self.assertFalse(
             flagged(
                 '<div class="slide-meta"'

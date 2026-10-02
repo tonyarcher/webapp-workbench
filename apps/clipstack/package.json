@@ -11,7 +11,7 @@
     },
     "dependencies": {
         "lit": "^3.3.3",
-        "vertical-scroll-core": "*"
+        "vertical-scroll-component": "*"
     },
     "devDependencies": {
         "tsx": "^4.23.15",

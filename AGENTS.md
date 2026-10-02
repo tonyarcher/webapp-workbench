@@ -126,14 +126,16 @@ because the folder is named `web-components`. Prefer a function in `src/services
 
 Existing split:
 
-- `libs/vertical-scroll-core` — pure domain, except for the scroller primitive itself, which is
-  DOM. Used by lemmy **and** clipstack, so it has the two consumers the rule requires.
-- `libs/user-client` — the OIDC/session client. Two or more apps authenticate with it.
+- `apps/user/client` — the OIDC/session client, beside the identity service that defines the
+  protocol. Two or more apps authenticate with it. Source-only; it exports `src/index.ts`
+  and has no build step.
 - `apps/stock-game/shared/` — contract for that app’s client/server, not a monorepo library.
 
-`packages/` is gone. Every single-consumer package was folded into its app, and the two
-genuinely shared ones moved to `libs/`. Scorebook and scoreboard widgets are `apps/baseball/
-src/widgets/`, scoped to that app.
+`packages/` and `libs/` are both gone. Every single-consumer package was folded into its app, and
+the genuinely shared ones sit under `apps/` beside what they serve: scorebook and scoreboard
+widgets are `apps/baseball/src/widgets/`, and the identity client is `apps/user/client/`. A
+shared directory is not a goal in itself — put code with the thing it serves, and extract to a
+new top-level directory only when nothing owns it.
 
 When starting a feature: implement it in the app. Extract on the second consumer, not the first.
 
@@ -150,7 +152,7 @@ an app runtime or a workspace dependency.
 
 ## Shared conventions (Vite + Lit)
 
-Applies to Vite + Lit apps and Lit packages (`web-components`, `vertical-scroll-core`).
+Applies to Vite + Lit apps and Lit packages (`web-components`, `vertical-scroll-component`).
 Stock-game documents its own exceptions (decorator-free Lit,
 “no comments unless asked”). Pure `*-core` packages follow TypeScript, formatting,
 comments, and workflow only — not Lit/CSS/PWA.
@@ -263,7 +265,7 @@ No other app has an audit, so the rules below are on you until one does.
   schemas into `user-api`. IndexedDB in the browser is fine.
 - Floating promises: `void` plus `.catch(...)`. IndexedDB writes await `tx.done`. Multi-store writes use one transaction.
 - Async work is owned by the UI object that started it (`AbortSignal` + `isConnected`). Headless helpers must not run a loop against the shared game/store. After every `await`, recheck mode and that the element is still connected.
-- Untrusted URLs (`href` / `src`) pass through `safeUrl()` (app or `vertical-scroll-core`).
+- Untrusted URLs (`href` / `src`) pass through `safeUrl()` (app or `vertical-scroll-component`).
 - Do not log tokens, secrets, or raw sample/PII payloads.
 
 ### Logging

@@ -33,7 +33,7 @@ private val workspaceDirCache: MutableMap<Project, Map<String, String>> =
  * would open another comment and swallow the rest of the file. They are written
  * out in prose above for that reason.
  */
-private val WORKSPACE_ROOTS = listOf("apps/**", "libs/**")
+private val WORKSPACE_ROOTS = listOf("apps/**")
 
 val Project.workspaceDirs: Map<String, String>
     get() = workspaceDirCache.getOrPut(this) {

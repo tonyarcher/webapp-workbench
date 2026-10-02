@@ -33,7 +33,7 @@ ROOT = pathlib.Path(__file__).resolve().parent
 
 # The roots buildSrc's `workspaceDirs` scans. A workspace outside these is
 # invisible to Gradle. Kept as data so the test can assert the two agree.
-WORKSPACE_ROOTS = ("apps", "libs")
+WORKSPACE_ROOTS = ("apps",)
 
 # Workspaces that exist on disk but are deliberately not app workspaces.
 #
@@ -176,18 +176,18 @@ class BuildNodeTaskGraphTest(unittest.TestCase):
         self.assertIn(":npmInstall", dry_run("buildNode"))
 
     def test_workspace_shared_by_two_apps_builds_once(self) -> None:
-        # vertical-scroll-core is a workspace of both lemmy and clipstack. Two
+        # vertical-scroll-component is a workspace of both lemmy and clipstack. Two
         # vite builds writing one dist/ would corrupt it, so the task must be
         # registered once, not once per app.
         plan = dry_run("buildNode", "-Papps=lemmy,clipstack")
-        self.assertEqual(plan.count(":buildNode-vertical-scroll-core"), 1)
+        self.assertEqual(plan.count(":buildNode-vertical-scroll-component"), 1)
 
     def test_package_builds_before_the_app_that_imports_it(self) -> None:
         # --dry-run lists tasks in topological order, so this pins the chain
         # that makes a package's dist/ exist before the app bundles it.
         plan = dry_run("buildNode", "-Papps=clipstack")
         self.assertLess(
-            plan.index(":buildNode-vertical-scroll-core"),
+            plan.index(":buildNode-vertical-scroll-component"),
             plan.index(":buildNode-clipstack"),
         )
 

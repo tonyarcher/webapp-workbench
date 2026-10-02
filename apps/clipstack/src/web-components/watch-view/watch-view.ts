@@ -6,8 +6,8 @@ import { toScrollItem } from '../../services/to-scroll-item';
 import { resolveTiktokOEmbed, watchedOEmbedIndex } from '../../services/resolve-oembed';
 import { saveProgress, saveSessionItems } from '../../services/session-store';
 import type { ClipLink } from '../../types';
-import type { ScrollItem, ScrollViewport } from 'vertical-scroll-core';
-import 'vertical-scroll-core';
+import type { ScrollItem, ScrollViewport } from 'vertical-scroll-component';
+import 'vertical-scroll-component';
 import '../progress-sidebar/progress-sidebar';
 import styles from './watch-view.css?inline';
 

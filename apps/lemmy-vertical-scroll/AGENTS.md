@@ -19,8 +19,8 @@ Lemmy vertical scroll. Shared TypeScript / Lit / CSS / workflow: repo-root
 - Every `href` and `src` derived from instance, post, or community data goes
   through `safeUrl()` in `src/services/url.ts`.
 - The `lvs-*` elements in `src/web-components/` are local UI. The shared piece is
-  `vertical-scroll-core`, not these screens; other apps must not import them.
-- After editing `libs/vertical-scroll-core`, rebuild it before this app
+  `vertical-scroll-component`, not these screens; other apps must not import them.
+- After editing `apps/vertical-scroll-component`, rebuild it before this app
   picks the change up.
 
 ## Verification

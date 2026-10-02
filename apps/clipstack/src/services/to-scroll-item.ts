@@ -1,4 +1,4 @@
-import type { ScrollItem } from 'vertical-scroll-core';
+import type { ScrollItem } from 'vertical-scroll-component';
 import type { ClipLink } from '../types';
 
 export function toScrollItem(link: ClipLink, index: number, total: number): ScrollItem {

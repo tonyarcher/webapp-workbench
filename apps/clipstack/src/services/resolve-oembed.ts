@@ -1,4 +1,4 @@
-import { safeUrl } from 'vertical-scroll-core';
+import { safeUrl } from 'vertical-scroll-component';
 
 export interface OEmbedInfo {
     author?: string;

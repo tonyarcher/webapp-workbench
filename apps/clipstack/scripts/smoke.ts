@@ -1,4 +1,4 @@
-// vertical-scroll-core registers its custom elements at import time; Node has
+// vertical-scroll-component registers its custom elements at import time; Node has
 // no DOM, so stub the bare minimum globals before importing the package.
 class StubHTMLElement {}
 Object.defineProperty(globalThis, 'HTMLElement', { value: StubHTMLElement, configurable: true });
@@ -11,7 +11,7 @@ Object.defineProperty(globalThis, 'document', {
     configurable: true,
 });
 
-const { classifyScrollItem } = await import('vertical-scroll-core');
+const { classifyScrollItem } = await import('vertical-scroll-component');
 const { parseLinkList } = await import('../src/services/parse-list');
 const { toScrollItem } = await import('../src/services/to-scroll-item');
 const { parseSession, serializeSession } = await import('../src/services/session-store');

@@ -50,13 +50,13 @@
         },
         {
             "id": "lemmy-vertical-scroll",
-            "workspaces": ["vertical-scroll-core", "lemmy-vertical-scroll"],
+            "workspaces": ["vertical-scroll-component", "lemmy-vertical-scroll"],
             "services": ["lemmy-vertical-scroll"],
             "aliases": ["lemmy", "apps/lemmy-vertical-scroll"]
         },
         {
             "id": "clipstack",
-            "workspaces": ["vertical-scroll-core", "clipstack"],
+            "workspaces": ["vertical-scroll-component", "clipstack"],
             "services": ["clipstack"],
             "aliases": ["tiktok", "apps/clipstack"]
         },

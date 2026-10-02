@@ -1,6 +1,6 @@
 # AGENTS.md
 
-`vertical-scroll-core` — Lit vertical scroller, media slides, and embed players.
+`vertical-scroll-component` — Lit vertical scroller, media slides, and embed players.
 Shared TypeScript / Lit / CSS / workflow: repo-root `AGENTS.md`.
 
 ## Rules

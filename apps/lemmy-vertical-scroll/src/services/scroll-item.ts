@@ -1,4 +1,4 @@
-import type { ScrollItem } from 'vertical-scroll-core';
+import type { ScrollItem } from 'vertical-scroll-component';
 import type { LemmyPost } from '../types';
 import { timeAgo } from './format';
 

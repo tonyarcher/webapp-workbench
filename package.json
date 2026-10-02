@@ -9,8 +9,7 @@
         "apps/fitness/*",
         "apps/stock-game/*",
         "apps/user/*",
-        "apps/radio-station/*",
-        "libs/*"
+        "apps/radio-station/*"
     ],
     "scripts": {
         "build": "npm run build --workspaces --if-present",

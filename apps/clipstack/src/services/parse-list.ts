@@ -1,4 +1,4 @@
-import { safeUrl } from 'vertical-scroll-core';
+import { safeUrl } from 'vertical-scroll-component';
 import type { ClipProvider, ParseResult, SkippedLink, ClipLink } from '../types';
 
 const URL_RE = /https?:\/\/[^\s<>"'`]+/gi;

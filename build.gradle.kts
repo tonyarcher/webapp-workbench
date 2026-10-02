@@ -58,7 +58,7 @@ tasks.register<Exec>("npmInstall") {
 }
 
 // One Exec per JavaScript workspace, named for the workspace rather than the
-// app, so a workspace used by two apps is built once. vertical-scroll-core is a
+// app, so a workspace used by two apps is built once. vertical-scroll-component is a
 // workspace of both lemmy-vertical-scroll and clipstack, and two `vite build`
 // runs writing one dist/ would corrupt it.
 //

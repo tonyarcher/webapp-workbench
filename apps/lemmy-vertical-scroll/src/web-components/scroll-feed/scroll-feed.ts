@@ -10,8 +10,8 @@ import {
     postsInfiniteQuery,
 } from '../../query';
 import type { NsfwFilter, PostFeedType, PostPage, PostSort, Software } from '../../types';
-import type { ScrollItem } from 'vertical-scroll-core';
-import 'vertical-scroll-core';
+import type { ScrollItem } from 'vertical-scroll-component';
+import 'vertical-scroll-component';
 import styles from './scroll-feed.css?inline';
 
 @customElement('lvs-scroll-feed')
