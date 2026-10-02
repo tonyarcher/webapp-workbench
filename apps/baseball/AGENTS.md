@@ -26,7 +26,7 @@ workflow: repo-root `AGENTS.md`. Entirely client-side; there is no backend.
 
 ## Testing
 
-- The 91 widget tests live in `test/` and run in real Chromium under
+- The widget tests live in `test/` and run in real Chromium under
   `npm run test:browser` (`@web/test-runner` with `@esm-bundle/chai`), not
   under vitest. `no-unused-expressions` warnings there are chai patterns — do
   not "fix" them.
@@ -34,6 +34,10 @@ workflow: repo-root `AGENTS.md`. Entirely client-side; there is no backend.
 typecheck` uses `tsconfig.test.json`, which is what type-checks `test/`; the
   build config deliberately leaves it out, and wtr strips types without checking
   them, so a test error can otherwise reach a commit with every gate green.
+- The widget coverage floor is checked on every widget run, because
+  `test:browser` passes `--coverage` and `npm test` runs it. `test:coverage` adds
+  the vitest half. A floor failure is a real failure, not a reporting artefact;
+  close the gap with tests rather than by lowering the number in the config.
 - The Playwright config starts Vite on port 5199 with `--strictPort`. A stale
   server on that port hangs the run — kill it first.
 

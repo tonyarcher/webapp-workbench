@@ -9,8 +9,8 @@
         "preview": "vite preview",
         "lint": "oxlint",
         "test:unit": "vitest run",
-        "test:browser": "wtr",
-        "test:coverage": "vitest run --coverage",
+        "test:browser": "wtr --coverage",
+        "test:coverage": "vitest run --coverage && npm run test:browser",
         "test:e2e": "playwright test",
         "typecheck": "tsc --noEmit -p tsconfig.test.json",
         "test": "npm run test:unit && npm run test:browser"
