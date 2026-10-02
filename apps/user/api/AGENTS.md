@@ -45,3 +45,8 @@ runtime.
   need unit tests.
 - HTTP routes need `@WebMvcTest` assertions with fakes, not Postgres. Cover CSRF,
   register, login, me, and logout.
+- The rate limiter's slice test needs Postgres and is excluded unless you pass
+  `-Pintegration`, which starts a throwaway container. Run it when you touch
+  `JpaRateLimitStore` or its repository. No in-process database can stand in: the
+  test exists for the single `ON CONFLICT ... DO UPDATE ... RETURNING`, and H2
+  rejects that statement.

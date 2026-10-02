@@ -175,6 +175,30 @@ val testPostgresName = "user-api-test-postgres"
  */
 val testPostgresHost = providers.gradleProperty("testPostgresHost").getOrElse("127.0.0.1")
 
+/**
+ * `-Pintegration` runs the Postgres slice test; without it the test is excluded
+ * and `check` needs no Docker daemon.
+ *
+ * The exclusion is deliberate rather than a conditional skip inside the test. A
+ * test that quietly skips when its database is missing reads as coverage and
+ * protects nothing, which is the reason the slice insists on a real server. So
+ * the default run omits the whole class, and running it without the flag still
+ * fails loudly rather than passing.
+ *
+ * CI passes the flag. It is the only place the upsert is exercised against
+ * Postgres, and a default that quietly dropped it would be a reduction in
+ * verification dressed as a speed-up.
+ *
+ * A bare `-Pintegration` supplies an empty string, and `"".toBoolean()` is
+ * false, so presence is read as true. Mapping the value alone made the flag a
+ * no-op that still produced a green build, which is the worst shape a switch
+ * like this can have.
+ */
+val integrationProfile = providers
+    .gradleProperty("integration")
+    .map { it.isBlank() || it.toBoolean() }
+    .orElse(false)
+
 fun docker(vararg args: String): Int = runCatching {
     providers.exec {
         commandLine(listOf("docker") + args)
@@ -232,16 +256,22 @@ tasks.register("testPostgresStop") {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    // Only the slice tests read these; the rest of the suite has no database.
-    systemProperty("userapi.test.db.url", "jdbc:postgresql://$testPostgresHost:$testPostgresPort/users")
-    systemProperty("userapi.test.db.user", "postgres")
-    systemProperty("userapi.test.db.password", "verify")
+    if (integrationProfile.get()) {
+        // Only the slice tests read these; the rest of the suite has no database.
+        systemProperty("userapi.test.db.url", "jdbc:postgresql://$testPostgresHost:$testPostgresPort/users")
+        systemProperty("userapi.test.db.user", "postgres")
+        systemProperty("userapi.test.db.password", "verify")
+    } else {
+        exclude("**/RateLimitStoreTest.class")
+    }
 }
 
-tasks.named<Test>("test") {
-    // The server is up before tests and torn down after, including on failure.
-    dependsOn("testPostgresStart")
-    finalizedBy("testPostgresStop")
+if (integrationProfile.get()) {
+    tasks.named<Test>("test") {
+        // The server is up before tests and torn down after, including on failure.
+        dependsOn("testPostgresStart")
+        finalizedBy("testPostgresStop")
+    }
 }
 
 // A build cancelled between the two, or one that dies in compileTestKotlin, runs

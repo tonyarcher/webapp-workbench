@@ -32,6 +32,11 @@ import kotlin.test.assertTrue
  * managed version (2.0.5) deprecates -- and this module compiles with
  * allWarningsAsErrors, so a deprecated call is a build failure, not a warning.
  *
+ * This class runs only under `-Pintegration`, which is what supplies the port.
+ * The default `test` run excludes it, so `check` needs no Docker daemon; a
+ * missing property is still a hard failure rather than a skip, because a skipped
+ * security test reads as coverage and protects nothing.
+ *
  * Flyway runs in this slice, so the V8 migration is exercised here too rather
  * than only asserted as migration text.
  */

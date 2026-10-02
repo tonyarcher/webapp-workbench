@@ -59,15 +59,29 @@ jobs:
                   java-version: '25'
             - uses: gradle/actions/setup-gradle@v6
             # checkAll runs tests, detekt and the Jacoco line and branch gates for all
-            # five APIs. Testcontainers is not optional here: the API modules have a
-            # testPostgresStart task that starts a real Postgres container, so the
-            # runner's Docker daemon is required rather than merely convenient.
+            # five APIs.
+            #
+            # -Pintegration is what makes the rate limiter's slice test run. Without
+            # it that test is excluded, so `check` needs no Docker daemon and a
+            # developer can run it locally; with it, the module starts a throwaway
+            # Postgres container and exercises the real
+            # `INSERT ... ON CONFLICT ... DO UPDATE ... RETURNING`. That statement
+            # is the limiter's whole correctness argument, and no in-process
+            # database can run it: H2 2.4.240 rejects the ON CONFLICT conflict
+            # target outright.
+            #
+            # The flag is passed as `-Pintegration=true` rather than bare. A bare
+            # `-Pintegration` supplies an empty string, which reads as false, and
+            # the job would go green having skipped the one test that matters.
+            #
+            # So the runner's Docker daemon is required here, deliberately: this is
+            # the only place the upsert is checked against Postgres.
             #
             # ./gradlew, so the build uses the Gradle version the wrapper pins
             # rather than whichever Gradle the runner image ships. The wrapper is
             # committed for that reason, and gradlew carries mode 100755 in git so
             # it is executable on checkout.
-            - run: ./gradlew checkAll --console=plain
+            - run: ./gradlew checkAll -Pintegration=true --console=plain
 
     verify:
         name: Verify (formatters and linters)
