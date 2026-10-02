@@ -37,6 +37,7 @@ from tools.doc_claims import (
     doc_files,
     glob_claims,
     ignored_paths,
+    ignored_prefix_candidates,
     missing_claims,
     npm_scripts,
     path_claims,
@@ -74,13 +75,16 @@ class DocRotTest(unittest.TestCase):
         )
         # repo_entries prunes dist, build and node_modules, so a doc globbing
         # generated output would fail the glob check while the equivalent path
-        # claim is exempted above. Both checks ask git, so they agree.
+        # claim is exempted above. Both checks ask git, so they agree. The
+        # trailing slash matters: a `dist/` ignore rule only matches a directory,
+        # and git infers that from disk, so the bare name matched on a machine
+        # that had built and missed on a fresh clone.
         cls.ignored_globs = ignored_paths(
             {
                 candidate
                 for doc in cls.docs
                 for prefix in glob_claims(doc)
-                for candidate in candidate_paths(doc, prefix)
+                for candidate in ignored_prefix_candidates(doc, prefix)
             }
         )
         cls.gradle = "\n".join(
@@ -120,7 +124,7 @@ class DocRotTest(unittest.TestCase):
                     continue
                 # A glob over generated output names something a fresh clone
                 # lacks on purpose, exactly as a path claim does.
-                if candidate_paths(doc, prefix) & self.ignored_globs:
+                if ignored_prefix_candidates(doc, prefix) & self.ignored_globs:
                     continue
                 if not resolves(doc, prefix, self.entries):
                     problems.append(f"{rel} globs {prefix}/*, which does not exist")
@@ -158,11 +162,32 @@ class DocRotTest(unittest.TestCase):
         """
         self.assertNotIn("dist", self.entries, "dist is pruned from the walk")
         self.assertFalse(resolves(ROOT / "AGENTS.md", "dist", self.entries))
-        self.assertIn("dist", ignored_paths({"dist"}), "git does not report dist")
+        self.assertIn("dist/", ignored_paths({"dist/"}), "git does not report dist/")
+
+        # The bare name is what this got wrong, and the difference is the
+        # filesystem: a `playwright-report/` rule matches only a directory, and
+        # that directory has never been created here, so the bare name gets no
+        # match while the slashed form does. CI has no dist/ either, which is
+        # how the unslashed version passed locally and failed on the runner.
+        self.assertFalse(
+            (ROOT / "playwright-report").exists(),
+            "this case needs a generated directory that does not exist",
+        )
+        self.assertNotIn(
+            "playwright-report",
+            ignored_paths({"playwright-report"}),
+            "the bare name should not match without the directory",
+        )
+        self.assertIn(
+            "playwright-report/",
+            ignored_paths({"playwright-report/"}),
+            "the slashed form must match whether or not the directory exists",
+        )
         with tempfile.TemporaryDirectory() as tmp:
             doc = Path(tmp) / "AGENTS.md"
             doc.write_text("Build output lands in `dist/*`.\n", encoding="utf-8")
             self.assertEqual({"dist"}, glob_claims(doc))
+            self.assertEqual({"dist/"}, ignored_prefix_candidates(doc, "dist"))
 
     def test_a_deleted_directory_fails_the_glob_check(self) -> None:
         """The regression this check exists for, proved on a planted claim."""

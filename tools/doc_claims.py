@@ -321,6 +321,22 @@ def candidate_paths(doc: Path, token: str) -> set[str]:
     return out
 
 
+def ignored_prefix_candidates(doc: Path, prefix: str) -> set[str]:
+    """The paths to ask git about when testing a glob's directory prefix.
+
+    A `.gitignore` rule written `dist/` matches directories only, and git
+    decides whether a path is a directory by looking at the filesystem. So
+    `git check-ignore dist` reports `dist` on a machine that has run a build and
+    reports nothing on a fresh clone, which is exactly where the guard matters
+    most. The trailing slash states the intent instead of inferring it, and
+    returns the same answer whether or not the directory has ever been built.
+
+    This bit CI: the guard passed locally and failed on the runner, where no
+    `dist/` exists.
+    """
+    return {f"{candidate}/" for candidate in candidate_paths(doc, prefix)}
+
+
 def missing_claims(
     docs: list[Path],
     pattern: re.Pattern[str],
