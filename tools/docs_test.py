@@ -58,7 +58,6 @@ class DocRotTest(unittest.TestCase):
     ignored_globs: ClassVar[set[str]] = set()
     gradle: ClassVar[str] = ""
     apps: ClassVar[int] = 0
-    packages: ClassVar[int] = 0
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -92,7 +91,7 @@ class DocRotTest(unittest.TestCase):
             for name in ("build.gradle.kts", "settings.gradle.kts")
             if (ROOT / name).is_file()
         )
-        cls.apps, cls.packages = catalog_counts()
+        cls.apps = catalog_counts()
 
     def dangling_paths(self) -> list[str]:
         """Doc path claims that name nothing a fresh clone would have."""
@@ -224,16 +223,18 @@ class DocRotTest(unittest.TestCase):
         self.assertEqual([], missing, "docs run gradle tasks that do not exist")
 
     def test_documented_counts_agree_with_the_repo(self) -> None:
-        """A doc may not state an app or package count the repo contradicts.
+        """A doc may not state an app count the repo contradicts.
 
-        Only a bare count is checked, and only for the two nouns the guard can
+        Only a bare count is checked, and only for the one noun the guard can
         derive. "2 of 16 apps use plain Vite" is accurate and stays allowed.
+        The other nouns in COUNT_NOUNS are recognised but not policed, because
+        nothing in the repo derives them.
         """
         problems: list[str] = []
         for doc in self.docs:
             rel = doc.relative_to(ROOT).as_posix()
             for number, noun in COUNT_BARE.findall(read(doc)):
-                actual = {"apps": self.apps, "packages": self.packages}.get(noun)
+                actual = {"apps": self.apps}.get(noun)
                 if actual is not None and int(number) != actual:
                     problems.append(
                         f"{rel} says {number} {noun}, but the repo has {actual}"

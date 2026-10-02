@@ -141,22 +141,24 @@ def npm_scripts() -> set[str]:
     return names
 
 
-def catalog_counts() -> tuple[int, int]:
-    """(app count, package count) as the repo itself derives them.
+def catalog_counts() -> int:
+    """The app count, as the repo itself derives it.
 
-    A package is a directory with a package.json under packages/ or libs/. Both
-    roots count: shared code that has been relocated out of packages/ is still a
-    package, and dropping the root would make a doc claim about the count rot the
-    moment a module moves.
+    This used to return a package count too, counting directories with a
+    package.json under packages/ or libs/. Both roots are gone, so it returned a
+    permanent zero and the check could never fail for that noun, which is worse
+    than not checking it: it looked covered.
+
+    The noun is not revived under a new definition. Every workspace now lives
+    under apps/, so a "package" is either an app or a module inside one, and
+    neither apps.json nor the workspace globs distinguish a count a doc might
+    plausibly state. COUNT_NOUNS still recognises the word so a doc saying
+    "7 packages" is seen to be making a count claim; only apps is derived, and
+    the rest are deliberately left unchecked.
     """
     catalog: Any = json.loads((ROOT / "apps.json").read_text(encoding="utf-8"))
     apps = catalog["apps"] if isinstance(catalog, dict) else []
-    count = 0
-    for root in ("packages", "libs"):
-        directory = ROOT / root
-        if directory.is_dir():
-            count += len([p for p in directory.iterdir() if p.is_dir()])
-    return (len(apps) if isinstance(apps, list) else 0), count
+    return len(apps) if isinstance(apps, list) else 0
 
 
 # A doc often writes a shell command rather than a bare path, as in
