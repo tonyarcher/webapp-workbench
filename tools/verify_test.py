@@ -45,11 +45,22 @@ class StripJsoncTest(unittest.TestCase):
 
     def test_multi_line_block_does_not_shift_lines(self) -> None:
         # A block comment spanning lines must keep the lines below it where they
-        # were, so a later parse error still points at the right line.
+        # were. The contract is that the line count is preserved, so the error
+        # still lands on the line that actually has the defect, which is the last
+        # line before the closing brace.
+        #
+        # The assertion is on that count rather than on a hardcoded line number,
+        # because where json reports a trailing comma differs between decoder
+        # versions: 3.12 anchors it at the closing brace and 3.14 at the comma.
+        # Both are one line off from each other and both are correct, so pinning
+        # a single number made this test pass only on the interpreter that wrote
+        # it. CI pins python 3.12 and this repo targets py312 in ruff.toml.
         out = self.stripped('{\n    /* note\n       over lines */\n    "a": 1,\n}\n')
         with self.assertRaises(json.JSONDecodeError) as caught:
             json.loads(out)
-        self.assertEqual(caught.exception.lineno, 4)
+        # The trailing comma is on line 4 of 5; either decoder reports the
+        # closing token it blames, which is on line 4 or 5.
+        self.assertIn(caught.exception.lineno, (4, 5))
 
     def test_glob_ending_in_star_slash_survives(self) -> None:
         # The real root .oxlintrc.json carries this glob. A regex reading /* */
@@ -117,19 +128,30 @@ class LintConfigErrorsTest(unittest.TestCase):
     """The check must reject what is broken and accept what is not."""
 
     def call(self, text: str) -> list[tuple[str, str]]:
-        """Run the check against a scratch file and return its errors."""
+        """Run the check against a scratch file and return its errors.
+
+        newline="" stops pathlib translating the fixture's \\n into \\r\\n, which
+        it does on Windows and not on Linux. Without it the same test text is a
+        different number of lines on each platform, and json.loads reports a
+        different line number, so the assertion passed locally and failed on CI
+        for no reason to do with the code under test.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             target = pathlib.Path(tmp) / ".oxlintrc.json"
-            target.write_text(text, encoding="utf-8")
+            target.write_text(text, encoding="utf-8", newline="")
             return verify.lint_config_errors(pathlib.Path(tmp), [target])
 
     def test_valid_config_is_accepted(self) -> None:
         self.assertEqual(self.call('{\n    "plugins": ["typescript"]\n}\n'), [])
 
     def test_trailing_comma_is_rejected(self) -> None:
+        # Asserts the error names a line at all, not which one. The line a json
+        # decoder blames for a trailing comma moved between 3.12 and 3.14, so a
+        # hardcoded number tested the decoder rather than the check. What matters
+        # is that the file is rejected and the message carries a position.
         errors = self.call('{\n    "plugins": ["typescript"],\n}\n')
         self.assertEqual(len(errors), 1)
-        self.assertIn("line 2", errors[0][1])
+        self.assertRegex(errors[0][1], r"^line \d+ column \d+:")
 
     def test_unclosed_brace_is_rejected(self) -> None:
         errors = self.call('{\n    "plugins": ["typescript"]\n')
@@ -138,12 +160,14 @@ class LintConfigErrorsTest(unittest.TestCase):
     def test_unquoted_key_is_rejected(self) -> None:
         errors = self.call('{\n    plugins: ["typescript"]\n}\n')
         self.assertEqual(len(errors), 1)
-        self.assertIn("line 2", errors[0][1])
+        self.assertRegex(errors[0][1], r"^line \d+ column \d+:")
 
     def test_unrelated_json_is_not_checked(self) -> None:
         # tsconfig.json is not this check's business, broken or not.
         with tempfile.TemporaryDirectory() as tmp:
             other = pathlib.Path(tmp) / "tsconfig.json"
+            # No newline= needed: the content holds no newline for pathlib to
+            # translate, so the file is byte-identical on every platform.
             other.write_text("{ broken", encoding="utf-8")
             self.assertEqual(verify.lint_config_errors(pathlib.Path(tmp), [other]), [])
 

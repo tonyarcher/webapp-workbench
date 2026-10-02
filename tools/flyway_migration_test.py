@@ -398,7 +398,7 @@ class FlywayMigrationImmutabilityTest(unittest.TestCase):
                 git("add", "-A", ".", cwd=repo)
                 git(*GIT_IDENTITY, "commit", "--quiet", "-m", message, cwd=repo)
 
-            target.write_text("-- original\nSELECT 1;\n", encoding="utf-8")
+            target.write_text("-- original\nSELECT 1;\n", encoding="utf-8", newline="")
             commit("add V1")
             self.assertEqual(
                 [],
@@ -412,7 +412,7 @@ class FlywayMigrationImmutabilityTest(unittest.TestCase):
             )
 
             # Comment-only, exactly the change that took production down.
-            target.write_text("-- reworded\nSELECT 1;\n", encoding="utf-8")
+            target.write_text("-- reworded\nSELECT 1;\n", encoding="utf-8", newline="")
             commit("reword V1")
             edited = edited_after_introduction(repo)
             self.assertEqual(1, len(edited), "a comment-only edit was not detected")
@@ -426,7 +426,9 @@ class FlywayMigrationImmutabilityTest(unittest.TestCase):
                 edited_after_introduction(repo, {rel: reworded}),
                 "a matching pin did not tolerate a known edit",
             )
-            target.write_text("-- reworded again\nSELECT 1;\n", encoding="utf-8")
+            target.write_text(
+                "-- reworded again\nSELECT 1;\n", encoding="utf-8", newline=""
+            )
             commit("reword V1 twice")
             self.assertEqual(
                 1,
@@ -436,7 +438,7 @@ class FlywayMigrationImmutabilityTest(unittest.TestCase):
 
             # Restoring the original bytes clears it, because production's
             # recorded checksum matches the original again.
-            target.write_text("-- original\nSELECT 1;\n", encoding="utf-8")
+            target.write_text("-- original\nSELECT 1;\n", encoding="utf-8", newline="")
             commit("revert V1")
             self.assertEqual(
                 [],
@@ -450,7 +452,7 @@ class FlywayMigrationImmutabilityTest(unittest.TestCase):
             moved = repo.joinpath("moved", "api", "resources", *MIGRATION_DIR)
             moved.mkdir(parents=True)
             (moved / "V1__thing.sql").write_text(
-                "-- original\nSELECT 1;\n", encoding="utf-8"
+                "-- original\nSELECT 1;\n", encoding="utf-8", newline=""
             )
             git("rm", "--quiet", rel, cwd=repo)
             commit("move V1")
@@ -479,7 +481,7 @@ class FlywayMigrationImmutabilityTest(unittest.TestCase):
             # it must not read as present. Reading the working tree instead of
             # what git tracks would pass this.
             (moved / "V1__thing.sql").write_text(
-                "-- original\nSELECT 1;\n", encoding="utf-8"
+                "-- original\nSELECT 1;\n", encoding="utf-8", newline=""
             )
             git("add", "-A", ".", cwd=repo)
             moved_rel = (moved / "V1__thing.sql").relative_to(repo).as_posix()

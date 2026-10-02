@@ -6,6 +6,8 @@ Only stdlib is used (unittest).
 
 from __future__ import annotations
 
+import contextlib
+import io
 import unittest
 from unittest.mock import patch
 
@@ -51,11 +53,19 @@ class GradleCommandTest(unittest.TestCase):
 
 class MainTest(unittest.TestCase):
     def test_help_prints_and_exits_zero(self) -> None:
-        self.assertEqual(main(["--help"]), 0)
-        self.assertEqual(main(["-h"]), 0)
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(main(["--help"]), 0)
+            self.assertEqual(main(["-h"]), 0)
+        self.assertIn("usage", out.getvalue().lower())
 
     def test_unknown_option_fails(self) -> None:
-        self.assertEqual(main(["--nope"]), 1)
+        # build.py hand-rolls its flag parsing and prints the complaint to stderr
+        # before returning 1. That message is the expected result here, not a
+        # failure, so it is captured rather than printed: on CI it landed in the
+        # middle of a passing run and read like something had gone wrong.
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(main(["--nope"]), 1)
+        self.assertIn("nope", err.getvalue())
 
 
 if __name__ == "__main__":

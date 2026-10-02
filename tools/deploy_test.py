@@ -6,6 +6,8 @@ Only stdlib is used (unittest).
 
 from __future__ import annotations
 
+import contextlib
+import io
 import unittest
 from unittest.mock import patch
 
@@ -102,8 +104,13 @@ class GradleCommandTest(unittest.TestCase):
 
 class MainTest(unittest.TestCase):
     def test_help_prints_and_exits_zero(self) -> None:
-        self.assertEqual(main(["--help"]), 0)
-        self.assertEqual(main(["-h"]), 0)
+        # The help text is long, and argparse writes it to stdout. Captured here
+        # so it does not land in the middle of a passing run: on CI it buried the
+        # result line, which made a green suite look like a failure.
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(main(["--help"]), 0)
+            self.assertEqual(main(["-h"]), 0)
+        self.assertIn("usage", out.getvalue().lower())
 
 
 if __name__ == "__main__":
