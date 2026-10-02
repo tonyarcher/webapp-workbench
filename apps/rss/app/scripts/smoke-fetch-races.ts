@@ -20,7 +20,10 @@ import { assert } from './smoke-assert';
     });
     let resolveStale!: (v: Response) => void;
     let firstCounts = true;
-    let countsCalls = 0;
+    // Annotated because the counter is incremented inside a fetch stub, which the
+    // control-flow analysis cannot see. Without the annotation it stays narrowed to
+    // the literal 0 and the later `=== 1` and `=== 3` comparisons read as impossible.
+    let countsCalls: number = 0;
     shims['fetch'] = async (url: unknown) => {
         const path = String(url);
         if (path.endsWith('/api/library/counts')) {
@@ -50,14 +53,19 @@ import { assert } from './smoke-assert';
         assert(countsCalls === 1, 'stale fetch reaches the counts gate');
         bustCounts();
         const mergedB = await fetchLibrary();
-        assert(mergedB.feeds[0].unread === 4, 'post-mark refetch paints exact badges');
+        assert(mergedB.feeds[0]!.unread === 4, 'post-mark refetch paints exact badges');
         resolveStale(json({ a: 5 }));
         await pendingA;
         const cached = queryClient.getQueryData(['library']) as { feeds: Array<{ unread: number }> };
-        assert(cached.feeds[0].unread === 4, 'late superseded fetch cannot overwrite badges');
+        assert(cached.feeds[0]!.unread === 4, 'late superseded fetch cannot overwrite badges');
         bustCounts();
         await fetchLibrary();
-        assert(countsCalls === 3, 'dropped fetch does not re-arm the throttle');
+        // Read through a number-typed local. `assert` is an assertion function, so the
+        // `=== 1` above narrows the counter to the literal 1, and nothing the
+        // compiler can see widens it again before this line -- the increment
+        // happens inside a fetch stub. The annotation restores the declared type.
+        const callsAfterBust: number = countsCalls;
+        assert(callsAfterBust === 3, 'dropped fetch does not re-arm the throttle');
     } finally {
         queryClient.clear();
         shims['fetch'] = realFetch;
@@ -117,11 +125,11 @@ import { assert } from './smoke-assert';
         assert(feedsCalls === 1, 'stale fetch reaches the feeds gate');
         bustCounts();
         const mergedB = await fetchLibrary();
-        assert(mergedB.feeds[0].unread === 4, 'post-mark refetch paints exact badges');
+        assert(mergedB.feeds[0]!.unread === 4, 'post-mark refetch paints exact badges');
         resolveStaleFeeds(new Response(feedA, { status: 200, headers: { 'Content-Type': 'application/json' } }));
         await pendingA;
         const cached = queryClient.getQueryData(['library']) as { feeds: Array<{ unread: number }> };
-        assert(cached.feeds[0].unread === 4, 'late superseded feeds paint cannot overwrite badges');
+        assert(cached.feeds[0]!.unread === 4, 'late superseded feeds paint cannot overwrite badges');
     } finally {
         queryClient.clear();
         shims['fetch'] = realFetch;
@@ -187,12 +195,12 @@ import { assert } from './smoke-assert';
         resolveParkedFolders(new Response(JSON.stringify({ folders: [] }), jsonHeaders));
         for (let i = 0; i < 200; i++) {
             const cur = queryClient.getQueryData(libraryKey) as { feeds: Array<{ unread: number }> } | undefined;
-            if (cur && cur.feeds.length === 1 && cur.feeds[0].unread === 9) break;
+            if (cur && cur.feeds.length === 1 && cur.feeds[0]!.unread === 9) break;
             await new Promise((r) => setTimeout(r, 0));
         }
         const cached = queryClient.getQueryData(libraryKey) as { feeds: Array<{ unread: number }> };
         assert(
-            cached.feeds.length === 1 && cached.feeds[0].unread === 9,
+            cached.feeds.length === 1 && cached.feeds[0]!.unread === 9,
             'busted cold fetch restarts and paints exact badges',
         );
     } finally {
@@ -244,11 +252,11 @@ import { assert } from './smoke-assert';
         const pendingA = fetchLibrary();
         for (let i = 0; i < 20 && firstFeeds; i++) await new Promise((r) => setTimeout(r, 0));
         const mergedB = await fetchLibrary();
-        assert(mergedB.feeds[0].title === 'B-new', 'newer fetch paints');
+        assert(mergedB.feeds[0]!.title === 'B-new', 'newer fetch paints');
         resolveStaleFeeds(new Response(feedAs('A-stale'), jsonHeaders));
         await pendingA;
         const cached = queryClient.getQueryData(['library']) as { feeds: Array<{ title: string }> };
-        assert(cached.feeds[0].title === 'B-new', 'older overlapping fetch paints nothing');
+        assert(cached.feeds[0]!.title === 'B-new', 'older overlapping fetch paints nothing');
     } finally {
         queryClient.clear();
         shims['fetch'] = realFetch;

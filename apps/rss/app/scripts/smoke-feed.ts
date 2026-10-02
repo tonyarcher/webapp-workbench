@@ -44,13 +44,13 @@ const parsed = parseFeedXml(rss, Date.now());
 assert(parsed.title === 'Example Blog', 'rss title parsed');
 assert(parsed.siteUrl === 'https://example.com', 'rss site url parsed');
 assert(parsed.items.length === 1, 'rss item count');
-assert(parsed.items[0].title === 'Hello World', 'item title');
-assert(parsed.items[0].author === 'Jane Doe', 'item dc:creator author');
-assert(parsed.items[0].comments === 42, 'item slash:comments parsed');
-assert(parsed.items[0].published === Date.parse('Wed, 30 Jul 2025 10:00:00 GMT'), 'item pubDate parsed');
-assert(parsed.items[0].summary === 'A short summary', 'item summary stripped to text');
-assert(parsed.items[0].content?.includes('<b>content</b>') ?? false, 'item content:encoded kept');
-assert(parsed.items[0].media === 'https://example.com/thumb.jpg', 'media:thumbnail parsed');
+assert(parsed.items[0]!.title === 'Hello World', 'item title');
+assert(parsed.items[0]!.author === 'Jane Doe', 'item dc:creator author');
+assert(parsed.items[0]!.comments === 42, 'item slash:comments parsed');
+assert(parsed.items[0]!.published === Date.parse('Wed, 30 Jul 2025 10:00:00 GMT'), 'item pubDate parsed');
+assert(parsed.items[0]!.summary === 'A short summary', 'item summary stripped to text');
+assert(parsed.items[0]!.content?.includes('<b>content</b>') ?? false, 'item content:encoded kept');
+assert(parsed.items[0]!.media === 'https://example.com/thumb.jpg', 'media:thumbnail parsed');
 
 const sanitized = sanitizeHtml('<p>ok</p><script>bad()</script><img src="x" onerror="bad()">');
 assert(!sanitized.includes('<script'), 'sanitize removes script');
@@ -105,9 +105,9 @@ const anon = parseFeedXml(
         `</channel></rss>`,
     0,
 );
-assert(anon.items[0].guid === anon.items[1].guid, 'identical anonymous items dedupe to the same guid');
+assert(anon.items[0]!.guid === anon.items[1]!.guid, 'identical anonymous items dedupe to the same guid');
 assert(
-    anon.items[0].guid === `${Date.parse('Wed, 30 Jul 2025 10:00:00 GMT')}-t`,
+    anon.items[0]!.guid === `${Date.parse('Wed, 30 Jul 2025 10:00:00 GMT')}-t`,
     'anonymous guid keeps the historic published-channelTitle format',
 );
 
@@ -116,7 +116,7 @@ const unsafeLink = parseFeedXml(
         '<item><title>x</title><link>javascript:alert(1)</link></item></channel></rss>',
     0,
 );
-assert(unsafeLink.items[0].link === undefined, 'unsafe item links are dropped at parse time');
+assert(unsafeLink.items[0]!.link === undefined, 'unsafe item links are dropped at parse time');
 
 const atom = `<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:thr="http://purl.org/syndication/thread/1.0">
@@ -136,11 +136,11 @@ const atom = `<?xml version="1.0"?>
 
 const atomParsed = parseFeedXml(atom, Date.now());
 assert(atomParsed.title === 'Atom Blog', 'atom title parsed');
-assert(atomParsed.items[0].guid === 'tag:atom.example,2025:1', 'atom entry id');
-assert(atomParsed.items[0].author === 'Bob', 'atom author');
-assert(atomParsed.items[0].comments === 7, 'atom thr:total parsed');
-assert(atomParsed.items[0].content?.includes('Atom content') ?? false, 'atom content');
-assert(atomParsed.items[0].published === Date.parse('2025-07-31T08:30:00Z'), 'atom updated parsed');
+assert(atomParsed.items[0]!.guid === 'tag:atom.example,2025:1', 'atom entry id');
+assert(atomParsed.items[0]!.author === 'Bob', 'atom author');
+assert(atomParsed.items[0]!.comments === 7, 'atom thr:total parsed');
+assert(atomParsed.items[0]!.content?.includes('Atom content') ?? false, 'atom content');
+assert(atomParsed.items[0]!.published === Date.parse('2025-07-31T08:30:00Z'), 'atom updated parsed');
 
 // ---- ranking ----
 assert(
@@ -193,10 +193,10 @@ const opml = `<?xml version="1.0"?>
 
 const opmlNodes = parseOpml(opml);
 assert(opmlNodes.length === 2, 'opml top-level count');
-const tech = opmlNodes[0];
+const tech = opmlNodes[0]!;
 assert(isFolder(tech) && tech.title === 'Tech', 'opml folder detected');
 assert(isFolder(tech) && tech.children.length === 2, 'opml folder children');
-const standalone = opmlNodes[1];
+const standalone = opmlNodes[1]!;
 assert(!isFolder(standalone) && standalone.xmlUrl === 'https://example.com/feed', 'opml top-level source');
 assert(stripHtml('<p>a&nbsp;b</p>') === 'a b', 'stripHtml collapses whitespace');
 assert(
@@ -234,7 +234,7 @@ const feedB = [hotArticle('b1', 20), hotArticle('b2', 8)];
 const feedC = [hotArticle('c1', 15)];
 const mixed = interleaveArticles([feedA, feedB, feedC], 4);
 assert(mixed.length === 4, 'interleave fills the page');
-assert(mixed[0].id === 'a1', 'interleave starts with the hottest story');
+assert(mixed[0]!.id === 'a1', 'interleave starts with the hottest story');
 assert(mixed.map((a) => a.id).join(',') === 'a1,b1,c1,a2', 'interleave alternates feeds (a1,b1,c1,a2)');
 assert(interleaveArticles([feedA, feedB, feedC], 10).length === 6, 'interleave returns everything when limit is large');
 assert(
@@ -243,5 +243,5 @@ assert(
         .join(',') === 'b1,b2',
     'interleave skips empty feeds',
 );
-assert(interleaveArticles([feedA], 1)[0].id === 'a1', 'interleave with one feed returns its top');
+assert(interleaveArticles([feedA], 1)[0]!.id === 'a1', 'interleave with one feed returns its top');
 assert(interleaveArticles([], 5).length === 0, 'interleave empty input returns empty');

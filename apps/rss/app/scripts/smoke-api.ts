@@ -53,12 +53,12 @@ const metaEntries = [
 const payload = buildMigratePayload(migrateFolders, migrateFeeds, migrateArticles, metaEntries);
 assert(payload.folders.length === 2, 'migrate payload has 2 folders');
 assert(payload.feeds.length === 2, 'migrate payload has 2 feeds');
-assert(payload.feeds[0].folderTitles?.join(',') === 'Tech', 'migrate payload maps folderIds to titles');
-assert(payload.feeds[1].folderTitles?.join(',') === 'Tech,News', 'migrate payload maps multi-folder feed');
+assert(payload.feeds[0]!.folderTitles?.join(',') === 'Tech', 'migrate payload maps folderIds to titles');
+assert(payload.feeds[1]!.folderTitles?.join(',') === 'Tech,News', 'migrate payload maps multi-folder feed');
 assert(payload.states.length === 2, 'migrate payload has 2 states');
-assert(payload.states[0].read === true, 'migrate payload read=1 maps to true');
-assert(payload.states[0].starred === true, 'migrate payload starred maps correctly');
-assert(payload.states[1].read === false, 'migrate payload read=0 maps to false');
+assert(payload.states[0]!.read === true, 'migrate payload read=1 maps to true');
+assert(payload.states[0]!.starred === true, 'migrate payload starred maps correctly');
+assert(payload.states[1]!.read === false, 'migrate payload read=0 maps to false');
 assert(payload.affinity.length === 2, 'migrate payload filters aff: keys only');
 assert(
     payload.affinity.every((a) => a.key.startsWith('aff:')),
@@ -113,7 +113,7 @@ assert(
             imported.feeds.length === 2 && imported.folders.length === 1,
             'OPML import returns names for instant paint',
         );
-        assert(imported.feeds[0].folderIds.join(',') === 'f1', 'OPML import returns folder membership');
+        assert(imported.feeds[0]!.folderIds.join(',') === 'f1', 'OPML import returns folder membership');
         assert(seen[0]?.auth === 'Bearer test-access', 'OPML import sends the Bearer token');
         assert(seen[0]?.body?.includes('<opml>') ?? false, 'OPML import posts the xml body');
         const exported = await exportOpml();

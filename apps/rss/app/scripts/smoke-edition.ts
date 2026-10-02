@@ -97,8 +97,8 @@ import { assert } from './smoke-assert';
         });
         const edSections = [edSection('b', 1, 1), edSection('a', 9, 9)];
         const ranked = applyWeights(edSections, DEFAULT_EDITION_OPTIONS);
-        assert(ranked[0].id === 'a' && ranked[1].id === 'b', 'applyWeights ranks higher scores first');
-        assert(edSections[0].id === 'b', 'applyWeights does not mutate the input');
+        assert(ranked[0]!.id === 'a' && ranked[1]!.id === 'b', 'applyWeights ranks higher scores first');
+        assert(edSections[0]!.id === 'b', 'applyWeights does not mutate the input');
         const zeroed = applyWeights(edSections, {
             ...DEFAULT_EDITION_OPTIONS,
             weightGeneral: 0,
@@ -106,9 +106,9 @@ import { assert } from './smoke-assert';
             weightNewness: 0,
             weightPopularity: 0,
         });
-        assert(zeroed[0].id === 'a' && zeroed[1].id === 'b', 'applyWeights with zero weights falls back to id order');
+        assert(zeroed[0]!.id === 'a' && zeroed[1]!.id === 'b', 'applyWeights with zero weights falls back to id order');
         const tied = applyWeights([edSection('t-b', 5, 5), edSection('t-a', 5, 5)], DEFAULT_EDITION_OPTIONS);
-        assert(tied[0].id === 't-a', 'applyWeights tiebreaks on section id');
+        assert(tied[0]!.id === 't-a', 'applyWeights tiebreaks on section id');
         const freshFirst = applyWeights([edSection('old', 9, 9, 0, 0), edSection('new', 1, 1, 1, 1)], {
             ...DEFAULT_EDITION_OPTIONS,
             weightGeneral: 0,
@@ -116,7 +116,7 @@ import { assert } from './smoke-assert';
             weightNewness: 0.5,
             weightPopularity: 0.5,
         });
-        assert(freshFirst[0].id === 'new', 'applyWeights honors newness and popularity weights');
+        assert(freshFirst[0]!.id === 'new', 'applyWeights honors newness and popularity weights');
         assert(
             JSON.stringify(applyWeights(edSections, DEFAULT_EDITION_OPTIONS)) ===
                 JSON.stringify(applyWeights(edSections, DEFAULT_EDITION_OPTIONS)),
@@ -168,12 +168,12 @@ import { assert } from './smoke-assert';
         ],
     });
     assert(full.sections.length === 2, 'edition guard keeps every section');
-    assert(full.sections[0].articleIds.join(',') === 'a,b', 'edition guard drops non-string article ids');
+    assert(full.sections[0]!.articleIds.join(',') === 'a,b', 'edition guard drops non-string article ids');
     assert(
-        full.sections[0].scores?.worthy === 1 && full.sections[0].verified === true,
+        full.sections[0]!.scores?.worthy === 1 && full.sections[0]!.verified === true,
         'edition guard keeps scores and verified',
     );
-    assert(full.sections[1].articleIds.length === 0, 'edition guard defaults a missing article list to []');
+    assert(full.sections[1]!.articleIds.length === 0, 'edition guard defaults a missing article list to []');
     assert(full.opinion === 'Our take.' && full.model === 'qwen3:8b', 'edition guard keeps opinion and model');
 
     const meta = normalizeEditionMeta({ id: 'e1', generatedAt: 5, windowHours: 24, status: 'building' });

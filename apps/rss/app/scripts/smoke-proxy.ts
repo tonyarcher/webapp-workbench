@@ -29,12 +29,12 @@ for (const [url, label] of invalidUrls) {
 }
 
 const g2 = globalThis as unknown as Record<string, unknown>;
-const realFetch = g2.fetch;
+const realFetch = g2['fetch'];
 try {
-    g2.fetch = async () => new Response('<rss/>', { status: 200 });
+    g2['fetch'] = async () => new Response('<rss/>', { status: 200 });
     assert((await fetchFeedText('https://ok.example/feed')) === '<rss/>', 'fetchFeedText returns the proxied body');
 
-    g2.fetch = async () => {
+    g2['fetch'] = async () => {
         const chunk = new Uint8Array(1024 * 1024);
         return new Response(
             new ReadableStream({
@@ -54,7 +54,7 @@ try {
     }
     assert(oversized, 'fetchFeedText rejects oversized responses');
 
-    g2.fetch = async () => {
+    g2['fetch'] = async () => {
         throw new DOMException('aborted', 'AbortError');
     };
     let timedOut = false;
@@ -65,5 +65,5 @@ try {
     }
     assert(timedOut, 'fetchFeedText maps aborts to a timeout FetchError');
 } finally {
-    g2.fetch = realFetch;
+    g2['fetch'] = realFetch;
 }

@@ -5,8 +5,8 @@ import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
 import { API_VERSION, API_VERSION_HEADER } from '../src/services/api';
 import { assert } from './smoke-assert';
 
-(globalThis as Record<string, unknown>).DOMParser = DOMParser;
-(globalThis as Record<string, unknown>).XMLSerializer = XMLSerializer;
+(globalThis as Record<string, unknown>)['DOMParser'] = DOMParser;
+(globalThis as Record<string, unknown>)['XMLSerializer'] = XMLSerializer;
 
 // src/query.ts gives cached queries a 5-minute gcTime. Disconnecting a
 // QueryController unsubscribes its observer, which arms that timer, and a module
@@ -33,7 +33,7 @@ const realSetTimeout = globalThis.setTimeout;
 const realClearTimeout = globalThis.clearTimeout;
 const uncancelled = new Map<unknown, number>();
 
-(globalThis as Record<string, unknown>).setTimeout = (
+(globalThis as Record<string, unknown>)['setTimeout'] = (
     fn: (...a: unknown[]) => void,
     delay = 0,
     ...rest: unknown[]
@@ -53,7 +53,7 @@ const uncancelled = new Map<unknown, number>();
     return handle;
 };
 
-(globalThis as Record<string, unknown>).clearTimeout = (handle: unknown): void => {
+(globalThis as Record<string, unknown>)['clearTimeout'] = (handle: unknown): void => {
     uncancelled.delete(handle);
     realClearTimeout(handle as Parameters<typeof realClearTimeout>[0]);
 };

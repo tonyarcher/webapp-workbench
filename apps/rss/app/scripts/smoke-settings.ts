@@ -29,7 +29,7 @@ assert(defaults.perFolder === DEFAULT_PER_FOLDER, 'today settings default per-fo
 
 const mem = new Map<string, string>();
 const gStorage = globalThis as Record<string, unknown>;
-gStorage.localStorage = {
+gStorage['localStorage'] = {
     getItem: (k: string) => mem.get(k) ?? null,
     setItem: (k: string, v: string) => void mem.set(k, String(v)),
     removeItem: (k: string) => void mem.delete(k),
@@ -80,21 +80,24 @@ const dayArticles = [
 const allSections = buildTodaySections(dayArticles, [tFeedA, tFeedB, tFeedC], [folder1, folder2], [], 2);
 assert(allSections.length === 2, 'today sections cover both folders');
 assert(
-    allSections[0].folder.id === 'f1' && allSections[1].folder.id === 'f2',
+    allSections[0]!.folder.id === 'f1' && allSections[1]!.folder.id === 'f2',
     'today sections keep sidebar folder order',
 );
-assert(allSections[0].articles.map((a) => a.id).join(',') === 'a1,c1', 'today section takes the hottest per folder');
+assert(allSections[0]!.articles.map((a) => a.id).join(',') === 'a1,c1', 'today section takes the hottest per folder');
 assert(
-    allSections[1].articles.map((a) => a.id).join(',') === 'c1,b1',
+    allSections[1]!.articles.map((a) => a.id).join(',') === 'c1,b1',
     'today section interleaves shared-feed articles by hot',
 );
 
 const excludedSections = buildTodaySections(dayArticles, [tFeedA, tFeedB, tFeedC], [folder1, folder2], ['f2'], 2);
-assert(excludedSections.length === 1 && excludedSections[0].folder.id === 'f1', 'today sections skip excluded folders');
+assert(
+    excludedSections.length === 1 && excludedSections[0]!.folder.id === 'f1',
+    'today sections skip excluded folders',
+);
 
 const oneEach = buildTodaySections(dayArticles, [tFeedA, tFeedB, tFeedC], [folder1, folder2], [], 1);
-assert(oneEach[0].articles.length === 1 && oneEach[0].articles[0].id === 'a1', 'today per-folder amount is honored');
-assert(oneEach[1].articles[0].id === 'c1', 'today per-folder amount applies to every folder');
+assert(oneEach[0]!.articles.length === 1 && oneEach[0]!.articles[0]!.id === 'a1', 'today per-folder amount is honored');
+assert(oneEach[1]!.articles[0]!.id === 'c1', 'today per-folder amount applies to every folder');
 
 const emptySections = buildTodaySections([], [tFeedA, tFeedB, tFeedC], [folder1, folder2], [], 5);
 assert(emptySections.length === 0, 'today sections omit folders with no articles today');
@@ -106,6 +109,6 @@ assert(
 const mixedRead = dayArticles.map((a) => (a.id === 'a1' ? { ...a, read: 1 as const } : a));
 const unreadOnly = buildTodaySections(mixedRead, [tFeedA, tFeedB, tFeedC], [folder1, folder2], [], 2, true);
 assert(
-    unreadOnly[0].articles.map((a) => a.id).join(',') === 'c1,a2',
+    unreadOnly[0]!.articles.map((a) => a.id).join(',') === 'c1,a2',
     'today unread-only skips read articles before taking the per-folder quota',
 );

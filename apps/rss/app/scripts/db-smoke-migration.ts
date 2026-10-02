@@ -40,7 +40,7 @@ export async function runLegacyUpgradePhase() {
     await closeDb();
     const migrated = await getFeeds();
     assert(
-        migrated.length === 1 && migrated[0].folderIds[0] === 'legacy-folder',
+        migrated.length === 1 && migrated[0]!.folderIds[0]! === 'legacy-folder',
         'upgrade preserves legacy feeds (folderId normalized)',
     );
     const legacyArticles = await (await getDb()).getAll('articles');

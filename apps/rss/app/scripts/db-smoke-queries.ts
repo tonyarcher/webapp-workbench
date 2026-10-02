@@ -25,14 +25,14 @@ export async function runUnreadPaginationPhase(feedA: Feed) {
         'unread query reports hasMore when more remain',
     );
     const unreadCursor: ArticleCursor = {
-        key: unreadPage1.items[unreadPage1.items.length - 1].published,
-        id: unreadPage1.items[unreadPage1.items.length - 1].id,
+        key: unreadPage1.items[unreadPage1.items.length - 1]!.published,
+        id: unreadPage1.items[unreadPage1.items.length - 1]!.id,
     };
     const unreadPage2 = await queryArticles({ unreadOnly: true, limit: 2, cursor: unreadCursor });
     assert(unreadPage2.items.length === 2 && unreadPage2.hasMore === true, 'unread pagination continues');
     const unreadCursor2: ArticleCursor = {
-        key: unreadPage2.items[unreadPage2.items.length - 1].published,
-        id: unreadPage2.items[unreadPage2.items.length - 1].id,
+        key: unreadPage2.items[unreadPage2.items.length - 1]!.published,
+        id: unreadPage2.items[unreadPage2.items.length - 1]!.id,
     };
     const unreadPage3 = await queryArticles({ unreadOnly: true, limit: 2, cursor: unreadCursor2 });
     assert(
@@ -52,7 +52,14 @@ export async function runEqualPublishedPhase(feedA: Feed) {
     let eqCursor: ArticleCursor | undefined;
     let eqHasMore = true;
     while (eqHasMore) {
-        const res = await queryArticles({ unreadOnly: true, limit: 7, cursor: eqCursor });
+        // `exactOptionalPropertyTypes` distinguishes an absent key from an explicit
+        // undefined, and ArticleQuery declares `cursor?: ArticleCursor`. The first
+        // pass means "no cursor", so the key is omitted rather than set to undefined.
+        const res = await queryArticles({
+            unreadOnly: true,
+            limit: 7,
+            ...(eqCursor ? { cursor: eqCursor } : {}),
+        });
         eqSeen.push(...res.items.map((a) => a.id));
         eqHasMore = res.hasMore;
         const last = res.items[res.items.length - 1];
@@ -78,7 +85,7 @@ export async function runRecentArticlesPhase(feedA: Feed) {
     const since = briefNow - 24 * 3_600_000;
     const recentList = await queryRecentArticles(since, 10);
     assert(recentList.length === 3, 'queryRecentArticles returns articles since cutoff');
-    assert(recentList[0].id === 'feed-e:today-new', 'queryRecentArticles newest first');
+    assert(recentList[0]!.id === 'feed-e:today-new', 'queryRecentArticles newest first');
     assert(!recentList.some((a) => a.id === 'feed-e:old'), 'queryRecentArticles excludes articles older than cutoff');
 }
 
@@ -103,11 +110,11 @@ export async function runLargeUnreadPhase(feedA: Feed) {
         u2Newest.items.every((a) => a.read === 0),
         'large unread query returns only unread',
     );
-    assert(u2Newest.items[0].id === 'feed-u2:u1198', 'newest unread query orders newest first (u1198)');
+    assert(u2Newest.items[0]!.id === 'feed-u2:u1198', 'newest unread query orders newest first (u1198)');
     const u2Oldest = await queryArticles({ feedId: 'feed-u2', unreadOnly: true, sort: 'oldest', limit: 100 });
-    assert(u2Oldest.items[0].id === 'feed-u2:u0', 'oldest unread query orders oldest first (u0)');
+    assert(u2Oldest.items[0]!.id === 'feed-u2:u0', 'oldest unread query orders oldest first (u0)');
     const u2Hot = await queryArticles({ feedId: 'feed-u2', unreadOnly: true, sort: 'hot', limit: 100 });
-    assert(u2Hot.items[0].id === 'feed-u2:u0', 'hot unread query orders hottest first (u0)');
+    assert(u2Hot.items[0]!.id === 'feed-u2:u0', 'hot unread query orders hottest first (u0)');
     assert(
         u2Hot.items.every((a) => a.read === 0),
         'hot unread query returns only unread',
@@ -124,7 +131,7 @@ export async function runLargeUnreadPhase(feedA: Feed) {
             unreadOnly: true,
             sort: 'newest',
             limit: 250,
-            cursor: u2Cursor,
+            ...(u2Cursor ? { cursor: u2Cursor } : {}),
         });
         u2Pages.push(res.items.map((a) => a.id));
         u2HasMore = res.hasMore;
@@ -136,7 +143,7 @@ export async function runLargeUnreadPhase(feedA: Feed) {
     assert(u2Flattened.length === U2_UNREAD, 'large unread pagination visits every unread exactly once');
     assert(new Set(u2Flattened).size === U2_UNREAD, 'large unread pagination has no duplicates');
     assert(
-        u2Pages[0].length === 250 && u2Pages[1].length === 250 && u2Pages[2].length === 100,
+        u2Pages[0]!.length === 250 && u2Pages[1]!.length === 250 && u2Pages[2]!.length === 100,
         'large unread pagination page sizes are correct (250/250/100)',
     );
     assert(u2HasMore === false, 'large unread pagination ends with hasMore false');

@@ -1,6 +1,7 @@
 // Mutation smoke: mark-before cutoff posting, open/star revert-on-failure,
 // and card thumbnail derivation from content.
 import { firstImageUrl } from '../src/services/parser';
+import type { Article } from '../src/types';
 import { assert } from './smoke-assert';
 
 // ---- mark-before posts the cutoff and resets the view ----
@@ -35,8 +36,11 @@ import { assert } from './smoke-assert';
             folderFeeds: () => [],
         };
         await markBeforeAction(host as never, 1_700_000_000_000);
-        assert(seen.length === 1 && seen[0].url.endsWith('/api/articles/read-before'), 'mark-before posts read-before');
-        assert(seen[0].body?.includes('1700000000000') ?? false, 'mark-before posts the cutoff');
+        assert(
+            seen.length === 1 && seen[0]!.url.endsWith('/api/articles/read-before'),
+            'mark-before posts read-before',
+        );
+        assert(seen[0]!.body?.includes('1700000000000') ?? false, 'mark-before posts the cutoff');
         assert(host.hideRead === true && resets === 1, 'mark-before hides read and resets the view');
     } finally {
         markQueryClient.clear();
@@ -78,7 +82,11 @@ import { assert } from './smoke-assert';
 
         const { openArticleAction, toggleStarAction } =
             await import('../src/web-components/article-list/article-list-actions');
-        const openHost = {
+        // Typed as Article[] so `read` is the `0 | 1` union the real type declares.
+        // Without the annotation it widens to `number`, which is not assignable, and
+        // an `as const` on the literal makes every later `read === 1` comparison read
+        // as impossible. The annotation fixes both.
+        const openHost: { items: Article[]; cursor: number; dispatchEvent(): boolean; library: object } = {
             items: [
                 {
                     id: 'a:1',
@@ -87,7 +95,7 @@ import { assert } from './smoke-assert';
                     title: 'A',
                     published: 0,
                     fetchedAt: 0,
-                    read: 0 as const,
+                    read: 0,
                     starred: false,
                     popularity: 1,
                     hot: 0,
@@ -100,21 +108,23 @@ import { assert } from './smoke-assert';
             library: {},
         };
         fail = false;
-        await openArticleAction(openHost as never, openHost.items[0]);
-        assert(openHost.items[0].read === 1, 'successful open leaves the row read');
+        await openArticleAction(openHost as never, openHost.items[0]!);
+        assert(openHost.items[0]!.read === 1, 'successful open leaves the row read');
         fail = true;
-        openHost.items[0].read = 0;
-        await openArticleAction(openHost as never, openHost.items[0]);
-        assert(openHost.items[0].read === 0, 'failed open reverts the row to unread');
+        openHost.items[0]!.read = 0;
+        await openArticleAction(openHost as never, openHost.items[0]!);
+        assert(openHost.items[0]!.read === 0, 'failed open reverts the row to unread');
 
-        const starHost = { items: [{ ...openHost.items[0], read: 1 as const, starred: false }] };
+        const starHost: { items: Article[] } = {
+            items: [{ ...openHost.items[0]!, read: 1, starred: false }],
+        };
         fail = false;
-        await toggleStarAction(starHost as never, starHost.items[0]);
-        assert(starHost.items[0].starred === true, 'successful star leaves the star on');
+        await toggleStarAction(starHost as never, starHost.items[0]!);
+        assert(starHost.items[0]!.starred === true, 'successful star leaves the star on');
         fail = true;
-        starHost.items[0].starred = false;
-        await toggleStarAction(starHost as never, starHost.items[0]);
-        assert(starHost.items[0].starred === false, 'failed star reverts to unstarred');
+        starHost.items[0]!.starred = false;
+        await toggleStarAction(starHost as never, starHost.items[0]!);
+        assert(starHost.items[0]!.starred === false, 'failed star reverts to unstarred');
     } finally {
         readQueryClient.clear();
         shims['fetch'] = realFetch;

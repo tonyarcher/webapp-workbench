@@ -64,18 +64,18 @@ import { assert } from './smoke-assert';
         const merged = await fetchLibrary();
         assert(order.join(',') === 'folders,feeds,counts', 'library fetches folders before names before counts');
         assert(paints.length === 3, 'library paints three stages');
-        assert(paints[0].folders === 1 && paints[0].unread.length === 2, 'folders paint before feed names');
+        assert(paints[0]!.folders === 1 && paints[0]!.unread.length === 2, 'folders paint before feed names');
         assert(
-            JSON.stringify(paints[1].unread) ===
+            JSON.stringify(paints[1]!.unread) ===
                 JSON.stringify([
                     ['a', 5],
                     ['b', 0],
                 ]),
             'names keep seen badges without flashing to zero',
         );
-        assert(merged.feeds[0].unread === 7, 'library merges counts into badges');
+        assert(merged.feeds[0]!.unread === 7, 'library merges counts into badges');
         const cached = queryClient.getQueryData(libraryKey) as { feeds: Array<{ unread: number }> };
-        assert(cached.feeds[0].unread === 7, 'merged library survives in cache');
+        assert(cached.feeds[0]!.unread === 7, 'merged library survives in cache');
 
         shims['fetch'] = async (url: unknown) => {
             if (String(url).endsWith('/api/library/counts')) {
@@ -104,7 +104,7 @@ import { assert } from './smoke-assert';
             bustCounts();
             return fetchLibrary();
         })();
-        assert(fallback.feeds.length === 2 && fallback.feeds[0].unread === 7, 'counts failure keeps seen badges');
+        assert(fallback.feeds.length === 2 && fallback.feeds[0]!.unread === 7, 'counts failure keeps seen badges');
 
         shims['fetch'] = async (url: unknown) => {
             if (String(url).endsWith('/api/library/folders')) {
@@ -135,7 +135,7 @@ import { assert } from './smoke-assert';
             feeds: [{ id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: [], unread: 4, addedAt: 0 }],
         });
         const warm = await fetchLibrary();
-        assert(warm.feeds.length === 1 && warm.feeds[0].unread === 4, 'warm feeds failure keeps painted feeds');
+        assert(warm.feeds.length === 1 && warm.feeds[0]!.unread === 4, 'warm feeds failure keeps painted feeds');
 
         shims['fetch'] = async () =>
             new Response(JSON.stringify({ error: 'internal error' }), {
@@ -144,7 +144,7 @@ import { assert } from './smoke-assert';
             });
         const warmFolders = await fetchLibrary();
         assert(
-            warmFolders.feeds.length === 1 && warmFolders.feeds[0].unread === 4,
+            warmFolders.feeds.length === 1 && warmFolders.feeds[0]!.unread === 4,
             'warm folders failure keeps painted library',
         );
     } finally {
@@ -192,7 +192,7 @@ import { assert } from './smoke-assert';
 
         await moveFeed('a', 'f2');
         const moved = queryClient.getQueryData(libraryKey) as { feeds: Array<{ folderIds: string[] }> };
-        assert(moved.feeds[0].folderIds.join(',') === 'f2', 'feed move paints the new folder immediately');
+        assert(moved.feeds[0]!.folderIds.join(',') === 'f2', 'feed move paints the new folder immediately');
         assert(seen[1]?.url.endsWith('/api/feeds/a/folders') ?? false, 'feed move posts membership');
     } finally {
         queryClient.clear();
@@ -213,7 +213,10 @@ import { assert } from './smoke-assert';
         'rss.auth.tokens',
         JSON.stringify({ access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900 }),
     );
-    let countsCalls = 0;
+    // Annotated because the counter is incremented inside a fetch stub, which the
+    // control-flow analysis cannot see, so it would otherwise stay narrowed to the
+    // literal 0 and the later comparisons would read as impossible.
+    let countsCalls: number = 0;
     shims['fetch'] = async (url: unknown) => {
         if (String(url).endsWith('/api/library/counts')) {
             countsCalls += 1;
@@ -240,7 +243,11 @@ import { assert } from './smoke-assert';
         assert(countsCalls === 1, 'background refetches reuse fresh counts');
         bustCounts();
         await fetchLibrary();
-        assert(countsCalls === 2, 'read mutations bust counts for exact badges');
+        // Read through a number-typed local: `assert` is an assertion function, so the
+        // `=== 1` above narrows the counter to the literal 1, and the increment that
+        // follows happens inside a fetch stub the compiler cannot see.
+        const callsAfterBust: number = countsCalls;
+        assert(callsAfterBust === 2, 'read mutations bust counts for exact badges');
     } finally {
         queryClient.clear();
         shims['fetch'] = realFetch;

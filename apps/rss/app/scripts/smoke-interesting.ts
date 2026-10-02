@@ -80,7 +80,7 @@ import { assert } from './smoke-assert';
     };
     assert(parsedFull.candidates.length === 3, 'toJevState keeps all candidates when under budget');
     assert(
-        parsedFull.candidates[0].feed === 'fa' && typeof parsedFull.candidates[0].hot === 'number',
+        parsedFull.candidates[0]!.feed === 'fa' && typeof parsedFull.candidates[0]!.hot === 'number',
         'toJevState candidates carry feed and hot',
     );
     const tight = toJevState(candidates, wordMap, { 'aff:feed:fa': 3 }, 200);
@@ -125,7 +125,7 @@ import { assert } from './smoke-assert';
         { id: 'a', title: 'Rust Performance' },
     ];
     rankInteresting(rankSrc, rankMap);
-    assert(rankSrc[0].id === 'b', 'rankInteresting does not mutate the input');
+    assert(rankSrc[0]!.id === 'b', 'rankInteresting does not mutate the input');
 
     const { parsePath } = await import('../src/router');
     assert(

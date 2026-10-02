@@ -17,7 +17,7 @@ resetAiAvailability();
 assert((await aiAvailability()) === 'unsupported', 'ai unavailable when no model API present');
 
 let capturedSystem: string | undefined;
-g.model = {
+g['model'] = {
     capabilities: async () => ({ available: 'readily' }),
     create: async ({ systemPrompt }: { systemPrompt?: string }) => {
         capturedSystem = systemPrompt;
@@ -38,7 +38,7 @@ assert(
 );
 assert(typeof capturedSystem === 'string' && capturedSystem.length > 0, 'summarizeArticle sends a system prompt');
 
-g.model = {
+g['model'] = {
     capabilities: async () => ({ available: 'readily' }),
     create: async () => {
         return {
@@ -57,7 +57,7 @@ g.model = {
 const streamed = await runAiPrompt('x');
 assert(streamed === 'streamed result', 'runAiPrompt consumes a streaming response');
 
-g.model = {
+g['model'] = {
     capabilities: async () => ({ available: 'after-download' }),
     create: async () => {
         throw new Error('should not be called');
@@ -65,15 +65,15 @@ g.model = {
 };
 resetAiAvailability();
 assert((await aiAvailability()) === 'after-download', 'ai availability reports after-download');
-delete g.model;
+delete g['model'];
 
 // capabilities reports readily but no create() exists -> must be treated as unsupported
-g.model = {
+g['model'] = {
     capabilities: async () => ({ available: 'readily' }),
 };
 resetAiAvailability();
 assert((await aiAvailability()) === 'unsupported', 'readily without a create() is reported as unsupported');
-delete g.model;
+delete g['model'];
 
 assert(
     aiStatusMessage('unsupported').includes('LanguageModel') && aiStatusMessage('unsupported').includes('localhost'),
@@ -83,7 +83,7 @@ assert(aiStatusMessage('after-download').includes('downloading'), 'aiStatusMessa
 assert(aiStatusMessage('readily') === '', 'aiStatusMessage empty when readily');
 
 // diagnostics surface what Chrome exposes
-g.model = {
+g['model'] = {
     capabilities: async () => ({ available: 'readily' }),
     create: async () => ({
         prompt: async (t: string) => t,
@@ -95,14 +95,14 @@ const diag = await aiDiagnostics();
 assert(diag.hasModelApi === true, 'diagnostics detect window.model');
 assert(diag.capabilitiesValue === 'readily', 'diagnostics report capabilities value');
 assert(diag.available === 'readily', 'diagnostics available is readily');
-delete g.model;
+delete g['model'];
 resetAiAvailability();
 const diag2 = await aiDiagnostics();
 assert(diag2.hasModelApi === false && diag2.hasAiApi === false, 'diagnostics report absent APIs');
 assert(diag2.hasLanguageModelGlobal === false, 'diagnostics report absent LanguageModel');
 
 // Chrome 138+ Prompt API: global LanguageModel.availability() / create()
-g.LanguageModel = {
+g['LanguageModel'] = {
     availability: async () => 'available',
     create: async ({ initialPrompts }: { initialPrompts?: Array<{ role: string; content: string }> } = {}) => {
         capturedSystem = initialPrompts?.[0]?.content;
@@ -120,7 +120,7 @@ assert(capturedSystem === 'be concise', 'LanguageModel.create receives system pr
 const lmDiag = await aiDiagnostics();
 assert(lmDiag.hasLanguageModelGlobal === true, 'diagnostics detect LanguageModel');
 assert(lmDiag.capabilitiesValue === 'available', 'diagnostics report LanguageModel availability');
-g.LanguageModel = {
+g['LanguageModel'] = {
     availability: async () => 'downloadable',
     create: async () => {
         throw new Error('should not be called');
@@ -128,7 +128,7 @@ g.LanguageModel = {
 };
 resetAiAvailability();
 assert((await aiAvailability()) === 'after-download', 'LanguageModel downloadable maps to after-download');
-g.LanguageModel = {
+g['LanguageModel'] = {
     availability: async () => 'unavailable',
     create: async () => {
         throw new Error('should not be called');
@@ -136,5 +136,5 @@ g.LanguageModel = {
 };
 resetAiAvailability();
 assert((await aiAvailability()) === 'no', 'LanguageModel unavailable maps to no');
-delete g.LanguageModel;
+delete g['LanguageModel'];
 resetAiAvailability();

@@ -23,25 +23,25 @@ export async function runCrudPhase(now: number) {
     const inserted = await upsertArticles(articles);
     assert(inserted === 7, 'upsert inserts 7 new articles');
 
-    const reinserted = await upsertArticles([articles[0]]);
+    const reinserted = await upsertArticles([articles[0]!]);
     assert(reinserted === 0, 're-upsert does not double count (existing preserved)');
 
     const all = await queryArticles({ limit: 100 });
     assert(all.items.length === 7, 'all view returns all articles');
-    assert(all.items[0].guid === 'b1', 'all view sorted newest first by default');
+    assert(all.items[0]!.guid === 'b1', 'all view sorted newest first by default');
     assert(all.hasMore === false, 'all view hasMore false with small set');
 
     const allPage1 = await queryArticles({ limit: 3 });
     assert(allPage1.items.length === 3, 'all view page 1 has 3');
     const cursor: ArticleCursor = {
-        key: allPage1.items[allPage1.items.length - 1].published,
-        id: allPage1.items[allPage1.items.length - 1].id,
+        key: allPage1.items[allPage1.items.length - 1]!.published,
+        id: allPage1.items[allPage1.items.length - 1]!.id,
     };
     const allPage2 = await queryArticles({ cursor, limit: 3 });
     assert(allPage2.items.length === 3, 'all view page 2 has 3');
     const cursor2: ArticleCursor = {
-        key: allPage2.items[allPage2.items.length - 1].published,
-        id: allPage2.items[allPage2.items.length - 1].id,
+        key: allPage2.items[allPage2.items.length - 1]!.published,
+        id: allPage2.items[allPage2.items.length - 1]!.id,
     };
     const allPage3 = await queryArticles({ cursor: cursor2, limit: 3 });
     assert(allPage3.items.length === 1, 'all view page 3 has 1 (no dupes skipped)');
@@ -90,19 +90,19 @@ export async function runSortPhase(now: number) {
             .join(',') === hotArticles.map((a) => a.id).join(','),
         'hot sort orders by hot desc',
     );
-    assert(hotSorted.items[0].popularity === 200, 'hot sort keeps high-popularity article on top');
+    assert(hotSorted.items[0]!.popularity === 200, 'hot sort keeps high-popularity article on top');
 
     const oldestSorted = await queryArticles({ sort: 'oldest', limit: 100 });
-    const oldestFirst = oldestSorted.items[0];
+    const oldestFirst = oldestSorted.items[0]!;
     const oldestExpected = [...oldestSorted.items].sort(
         (a, b) => a.published - b.published || a.id.localeCompare(b.id),
-    )[0];
+    )[0]!;
     assert(oldestFirst.id === oldestExpected.id, 'oldest sort returns oldest first');
 
     const hotPage = await queryArticles({ sort: 'hot', limit: 2 });
     const hotCursor: ArticleCursor = {
-        key: hotPage.items[hotPage.items.length - 1].hot,
-        id: hotPage.items[hotPage.items.length - 1].id,
+        key: hotPage.items[hotPage.items.length - 1]!.hot,
+        id: hotPage.items[hotPage.items.length - 1]!.id,
     };
     const hotPage2 = await queryArticles({ sort: 'hot', cursor: hotCursor, limit: 2 });
     assert(hotPage2.items.length === 2, 'hot sort paginates');
@@ -112,16 +112,16 @@ export async function runSortPhase(now: number) {
     );
 
     const feedHot = await queryArticles({ feedId: 'feed-a', sort: 'hot', limit: 100 });
-    assert(feedHot.items[0].id === 'feed-a:h-old', 'feed view hot sort uses byFeedHot index');
+    assert(feedHot.items[0]!.id === 'feed-a:h-old', 'feed view hot sort uses byFeedHot index');
     const feedOldest = await queryArticles({ feedId: 'feed-a', sort: 'oldest', limit: 100 });
-    assert(feedOldest.items[0].id === 'feed-a:h-old', 'feed view oldest sort uses byFeedDate asc');
+    assert(feedOldest.items[0]!.id === 'feed-a:h-old', 'feed view oldest sort uses byFeedDate asc');
     const feedHotCursor: ArticleCursor = {
-        key: feedHot.items[1].hot,
-        id: feedHot.items[1].id,
+        key: feedHot.items[1]!.hot,
+        id: feedHot.items[1]!.id,
     };
     const feedHotPage2 = await queryArticles({ feedId: 'feed-a', sort: 'hot', cursor: feedHotCursor, limit: 1 });
     assert(
-        feedHotPage2.items.length === 1 && feedHotPage2.items[0].id === 'feed-a:h-new',
+        feedHotPage2.items.length === 1 && feedHotPage2.items[0]!.id === 'feed-a:h-new',
         'feed hot pagination cursor works',
     );
 }

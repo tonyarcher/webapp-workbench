@@ -102,7 +102,7 @@ export async function runMarkReadReconcilePhase(feedA: Feed) {
     );
     const gUnread = await queryArticles({ feedId: 'feed-g', unreadOnly: true, limit: 100 });
     assert(
-        gUnread.items.length === 1 && gUnread.items[0].id === 'feed-g:g2',
+        gUnread.items.length === 1 && gUnread.items[0]!.id === 'feed-g:g2',
         'markArticlesRead keeps other articles unread',
     );
 
