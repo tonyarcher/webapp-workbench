@@ -67,6 +67,7 @@ await import('./smoke-pagination.js');
 await import('./smoke-coalesce.js');
 await import('./smoke-settings.js');
 await import('./smoke-api.js');
+await import('./smoke-bootstrap.js');
 await import('./smoke-server-ai.js');
 await import('./smoke-query.js');
 await import('./smoke-fetch-races.js');

@@ -22,6 +22,7 @@ import org.springframework.security.oauth2.jwt.JwtTimestampValidator
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.web.cors.CorsConfigurationSource
 
 /** Unauthenticated request handling for the resource server. */
 private const val HTTP_UNAUTHORIZED = 401
@@ -41,11 +42,13 @@ class SecurityConfig(private val env: Environment) {
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http {
             csrf { disable() }
+            cors { }
             sessionManagement { sessionCreationPolicy = SessionCreationPolicy.STATELESS }
             authorizeHttpRequests {
                 authorize(HttpMethod.GET, "/healthz", permitAll)
                 authorize(HttpMethod.GET, "/readyz", permitAll)
                 authorize(HttpMethod.GET, "/", permitAll)
+                authorize(HttpMethod.GET, "/app", permitAll)
                 if (swaggerEnabledFromEnv(env)) {
                     swaggerDocPaths().forEach { authorize(HttpMethod.GET, it, permitAll) }
                 }
@@ -95,6 +98,14 @@ class SecurityConfig(private val env: Environment) {
     @Bean
     @ConditionalOnProperty("OAUTH_JWKS_URI")
     fun jwksHealthIndicator(): JwksHealthIndicator = JwksHealthIndicator(env.getRequiredProperty("OAUTH_JWKS_URI"))
+
+    /**
+     * CORS for the CDN-hosted client. Empty `CORS_ALLOWED_ORIGINS` (the default)
+     * keeps the reader same-origin behind the gateway, exactly as before.
+     */
+    @Bean
+    fun corsConfigurationSource(): CorsConfigurationSource =
+        corsSourceFor(parseAllowedOrigins(env.getProperty("CORS_ALLOWED_ORIGINS")))
 }
 
 internal fun audienceValidator(audience: String): OAuth2TokenValidator<Jwt> = OAuth2TokenValidator { token: Jwt ->

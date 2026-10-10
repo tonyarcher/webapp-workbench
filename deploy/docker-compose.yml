@@ -136,6 +136,17 @@ services:
             # TypeSafe Jev key for front-page ranking (AI_PROVIDER=jev). Empty by
             # default; the real value stays in the untracked deploy/.env.
             TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+            # Cross-origin client (assets on their own S3-backed origin) calling
+            # the API. Empty = same-origin only, the current gateway deployment.
+            CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+            # The reader HTML shell (GET /app): OG/meta tags + client bootstrap.
+            # PUBLIC_API_BASE and ASSETS_BASE empty = same-origin relative.
+            # SHELL_ENTRY / SHELL_CSS name the hashed entry and stylesheets from
+            # the Vite manifest once static assets move to the asset origin.
+            PUBLIC_API_BASE: ${PUBLIC_API_BASE:-}
+            ASSETS_BASE: ${ASSETS_BASE:-}
+            SHELL_ENTRY: ${SHELL_ENTRY:-}
+            SHELL_CSS: ${SHELL_CSS:-}
         depends_on:
             postgres:
                 condition: service_healthy
@@ -514,6 +525,64 @@ services:
             victoria-logs:
                 condition: service_started
 
+    # Local S3-compatible object store (MinIO). The gateway's asset-origin
+    # server block fronts it for /assets/*, and the host's AWS CLI publishes to
+    # it over a loopback-only port (never the LAN). The reader's bucket is
+    # seeded below.
+    minio:
+        logging: *bounded-logs
+        # Pinned, not :latest -- a deploy must not silently change versions.
+        image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+        command: server /data --console-address ':9001'
+        environment:
+            MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+            # Must match the region the AWS CLI sends; both default to us-east-1.
+            MINIO_REGION: ${S3_REGION:-us-east-1}
+        volumes:
+            - minio-data:/data
+        # Loopback-only host port so the host's AWS CLI can `aws s3 sync` into the
+        # local store with S3_ENDPOINT=http://localhost:9000. Never the LAN: the
+        # store is guarded only by its root credentials. The gateway still reaches
+        # it on the compose network as http://minio:9000.
+        ports:
+            - '127.0.0.1:${MINIO_API_PORT:-9000}:9000'
+        healthcheck:
+            test: ['CMD', 'mc', 'ready', 'local']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        restart: unless-stopped
+        networks:
+            - baseball
+
+    # One-shot: create the reader's bucket so `aws s3 sync` has a target. The
+    # name is S3_BUCKET; skipped when unset (the same-origin nginx deploy). A
+    # retry loop waits for MinIO instead of depending on its healthcheck, so a
+    # slow first boot does not lose the seed.
+    minio-seed:
+        image: minio/mc:RELEASE.2025-03-12T17-29-24Z
+        depends_on:
+            - minio
+        environment:
+            S3_BUCKET: ${S3_BUCKET:-}
+            MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+        entrypoint: ['/bin/sh', '-c']
+        command:
+            - |
+                if [ -z "$$S3_BUCKET" ]; then
+                  echo "S3_BUCKET unset; no bucket to seed"
+                  exit 0
+                fi
+                until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null 2>&1; do
+                  echo "waiting for minio..."
+                  sleep 2
+                done
+                mc mb --ignore-existing "local/$$S3_BUCKET"
+        networks:
+            - baseball
+
 networks:
     baseball:
         driver: bridge
@@ -524,3 +593,4 @@ volumes:
     victoria-logs-data:
     grafana-data:
     alloy-data:
+    minio-data:

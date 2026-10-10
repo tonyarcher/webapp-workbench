@@ -44,6 +44,49 @@ origins come from `WEBAUTHN_ORIGINS`. If the origin is not localhost or
 127.0.0.1, add matching redirect rows for it — **do not expect the Kotlin to
 derive them from the environment.**
 
+## S3 object store (reader)
+
+The reader's static assets can move to their own browser origin (B1): one
+gateway nginx container fronts an S3-compatible object store and the JVM shell
+serves the document. The direction, not yet the default:
+
+- `rss-api` renders the HTML shell at `GET /app` (OG/meta tags + the
+  `#rss-bootstrap` JSON the client hydrates). It is `permitAll`, unversioned,
+  and `Cache-Control: no-cache`, like today's `index.html`.
+- One S3 seed drives it: `S3_ENDPOINT`, `S3_BUCKET`, `S3_PREFIX`, `S3_REGION`
+  (see `.env.example`). Empty `S3_BUCKET` keeps the same-origin compose deploy
+  untouched: no publish, no asset origin, no CSP.
+- `gradle deploy` mirrors `apps/rss/app/dist` into the bucket with
+  `aws s3 sync --delete`, adding `--endpoint-url $S3_ENDPOINT` only when it is
+  set (MinIO / an S3-compatible cloud); real AWS sends none. When the AWS CLI is
+  not on PATH it falls back to MinIO's `mc mirror --overwrite --remove`, reading
+  `S3_ACCESS_KEY`/`S3_SECRET_KEY` (else `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD`)
+  and handing them to `mc` in `MC_HOST_<alias>` rather than argv. See
+  `buildSrc/.../S3Support.kt`. Either path needs a live store and credentials, so
+  neither is exercised by a local check.
+- One nginx container serves both origins via `server_name`: the existing API
+  origin and the new asset origin. The asset-origin block (emitted only when
+  `ASSETS_HOST` and `S3_BUCKET` are both set) serves the app under its
+  `/rss-reader/` base path so
+  Vite's `base: '/rss-reader/'` output resolves unchanged: the hashed
+  `/assets/*` and the PWA files (`sw.js`, the web manifest, the icons) come
+  from the store, while the document and every SPA route proxy to `rss-api`
+  `GET /app` with no-cache, plus a CSP (`default-src 'self'`, `script-src` and
+  `style-src` the asset origin, `connect-src` the API origin). A local MinIO
+  store, reachable on a loopback-only host port so the host's AWS CLI can
+  publish to it, backs it, with the reader's bucket seeded on first boot.
+
+**Asset-origin account rows:** the asset origin is a new browser origin, so it
+needs an `oauth_redirect_uris` row for client `rss-reader` (the app root on that
+origin, `<asset origin>/rss-reader/`) and an entry in `WEBAUTHN_ORIGINS` — add
+both, as with any non-localhost origin. When TLS is on, `ASSETS_HOST` joins the
+minted leaf's SANs automatically; a provided cert (`TLS_CERT_FILE`) must cover
+it too, or the deploy warns.
+
+**Shell entry:** `SHELL_ENTRY` names the hashed module entry for the shell's
+`<script type="module">`. It is resolved from `dist/.vite/manifest.json` at
+deploy time by the deploy task, never hardcoded by hand.
+
 ## Secrets
 
 `deploy/.env` is created from `deploy/.env.example` and is gitignored. Compose
