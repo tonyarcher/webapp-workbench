@@ -5,6 +5,17 @@ import kotlin.test.assertEquals
 
 class DeploySupportTest {
     @Test
+    fun dotenvLineStripsABomSoTheFirstKeySurvives() {
+        // PowerShell's Set-Content writes a UTF-8 BOM. Without stripping it the
+        // first key parses as "\uFEFFPUBLIC_ORIGIN" and vanishes, which left
+        // `${PUBLIC_ORIGIN}` unexpanded in the rendered gateway config.
+        assertEquals(
+            "PUBLIC_ORIGIN" to "https://host.example",
+            dotenvLine("\uFEFFPUBLIC_ORIGIN=https://host.example"),
+        )
+    }
+
+    @Test
     fun certHostsOfAddsTheAssetHostWhenTlsIsOn() {
         val env = mapOf("ASSETS_HOST" to "assets.example")
         assertEquals(listOf("a.example", "assets.example"), certHostsOf(env, listOf("a.example")))
