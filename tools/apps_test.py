@@ -49,7 +49,15 @@ class AppCatalogTest(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))
 
     def test_app_entries_use_known_keys(self) -> None:
-        allowed = {"id", "workspaces", "services", "basePath", "buildScript", "aliases"}
+        allowed = {
+            "id",
+            "workspaces",
+            "services",
+            "basePath",
+            "buildScript",
+            "aliases",
+            "containerless",
+        }
         for entry in app_entries(load_catalog()):
             self.assertEqual(set(entry.keys()) - allowed, set())
 
@@ -71,6 +79,8 @@ class AppCatalogTest(unittest.TestCase):
             for key in ("basePath", "buildScript"):
                 if key in entry:
                     self.assertIsInstance(entry[key], str)
+            if "containerless" in entry:
+                self.assertIsInstance(entry["containerless"], bool)
 
     def test_aliases_resolve(self) -> None:
         catalog = load_catalog()

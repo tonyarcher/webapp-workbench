@@ -16,8 +16,10 @@ Docker Compose reverse-proxy stack. Workflow and monorepo rules: repo-root
 ## Rules
 
 - TypeScript and Kotlin compile on the **host** through Gradle, and the deploy
-  task runs that build first. Static images copy `dist/` into nginx; API images
-  copy the host-built boot jar into a JRE image.
+  task runs that build first. Static apps are published to the object store and
+  served by the gateway; the three apps that keep a container (`football`,
+  `calendar-sync`, `user-web`) copy `dist/` into nginx. API images copy the
+  host-built boot jar into a JRE image.
 - **JVM images are JRE only and copy jars.** Do not run `tsc`, Vite, or Gradle
   inside Docker, and do not use a JDK base image at runtime. Do not delete the
   lockfile.
@@ -46,9 +48,10 @@ derive them from the environment.**
 
 ## S3 object store (every static app)
 
-Every static app's assets can move to a shared browser origin (B1): one gateway
-nginx container fronts an S3-compatible object store, which serves each app's
-document and assets. The direction, not yet the default:
+Every static app's assets live in an S3-compatible object store that the gateway
+nginx fronts on **both** hosts: the subpaths on the API origin and the asset
+origin. The per-app UI containers are gone, so the store is **required** — an
+unset `S3_BUCKET` fails the deploy rather than falling back.
 
 - The document is the store's `index.html`, rendered by the publish step: the
   app's `#app-config` block is rewritten with its own API origin before upload,
@@ -56,14 +59,14 @@ document and assets. The direction, not yet the default:
   script, stylesheet, manifest and icon links resolve on the asset origin
   unchanged. The client resolves its API base at runtime from that block (then a
   dev `VITE_API_BASE`, then the relative `${BASE_URL}api`), so the built dist/
-  is host-independent. The reader's client reads the block today; `stock-game`,
-  `fitness` and `radio-station` still resolve their base from
-  `import.meta.env.BASE_URL` and gain the same read chain as they move.
+  is host-independent. Every app's entry point reads the block at boot and hands
+  it to `src/services/config.ts`, so the services stay free of DOM.
 - One S3 seed drives the whole store: `S3_ENDPOINT`, `S3_BUCKET`, `S3_PREFIX`,
   `S3_REGION`, and one API-origin key per API-backed app (`PUBLIC_API_BASE`,
   `STOCK_GAME_API_BASE`, `FITNESS_API_BASE`, `RADIO_API_BASE`; see
-  `.env.example`). Empty `S3_BUCKET` keeps the same-origin compose deploy
-  untouched: no publish, no asset origin, no CSP.
+  `.env.example`). `S3_BUCKET` is required: the gateway serves every static app
+  from the store, so an unset bucket fails the deploy rather than falling back
+  to a container that no longer exists.
 - `gradle deploy` creates the bucket first (`mc mb --ignore-existing`, or
   `aws s3 mb`), then mirrors each static app's `dist/` into it with
   `aws s3 sync --delete`, adding `--endpoint-url $S3_ENDPOINT` only when it is
@@ -86,9 +89,12 @@ document and assets. The direction, not yet the default:
   has no CORS), which does not exist on the asset origin. All three stay
   same-origin. The JVM APIs ship no `dist/` and are not published.
 - One nginx container serves both origins via `server_name`: the existing API
-  origin and the asset origin. The asset-origin block (emitted only when
-  `ASSETS_HOST` and `S3_BUCKET` are both set) serves each app under its own
-  base path so Vite's base-relative output resolves unchanged: the hashed
+  origin and the asset origin. The same generated per-app location set is
+  emitted into both server blocks, so a subpath on the API origin and the asset
+  origin serve an app identically from one definition. The asset-origin block
+  itself is emitted only when `ASSETS_HOST` is set; the API origin's subpaths
+  need only `S3_BUCKET`. Each app is served under its own base path so Vite's
+  base-relative output resolves unchanged: the hashed
   `/assets/*`, the document, and the PWA files (`sw.js`, the web manifest, the
   icons) all come from the store. The document location carries a CSP
   (`default-src 'self'`, `script-src` and `style-src` `'self'`, `img-src`

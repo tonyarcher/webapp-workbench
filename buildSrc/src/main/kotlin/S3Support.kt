@@ -309,7 +309,6 @@ fun assetServerBlock(apps: List<S3App>, env: Map<String, String>, tls: Boolean, 
     // The asset origin needs a store to front. Without a bucket there is nothing
     // to serve, and a half-configured block would rewrite to the wrong key.
     if (host.isEmpty() || bucket.isEmpty()) return ""
-    val prefix = env["S3_PREFIX"]?.trim().orEmpty()
     val lines = mutableListOf(
         "",
         "# Asset origin: every app's document and static assets on their own",
@@ -334,6 +333,33 @@ fun assetServerBlock(apps: List<S3App>, env: Map<String, String>, tls: Boolean, 
         lines.add("")
     }
     lines.add("    resolver 127.0.0.11 valid=30s ipv6=off;")
+
+    appendAppLocations(lines, apps, env)
+    lines.add("}")
+    return lines.joinToString("\n")
+}
+
+/**
+ * The per-app static locations for the gateway's own host, or "" when the store
+ * is unset. Once the per-app UI containers are gone this is the only thing that
+ * serves those apps, so an unset store is a deploy error rather than a fallback.
+ */
+internal fun appLocationsToken(apps: List<S3App>, env: Map<String, String>): String {
+    if (env["S3_BUCKET"]?.trim().isNullOrEmpty()) return ""
+    val lines = mutableListOf<String>()
+    appendAppLocations(lines, apps, env)
+    return lines.joinToString("\n")
+}
+
+/**
+ * Append the per-app static location set: the base-path 301, the hashed assets,
+ * the PWA files, and the document with its per-app CSP — all from the object
+ * store. Shared by the asset-origin server block and the gateway's own subpath
+ * locations, so both hosts serve an app identically from one definition.
+ */
+internal fun appendAppLocations(lines: MutableList<String>, apps: List<S3App>, env: Map<String, String>) {
+    val bucket = env["S3_BUCKET"]?.trim().orEmpty()
+    val prefix = env["S3_PREFIX"]?.trim().orEmpty()
 
     for (app in apps) {
         val basePath = app.basePath
@@ -422,6 +448,4 @@ fun assetServerBlock(apps: List<S3App>, env: Map<String, String>, tls: Boolean, 
             ),
         )
     }
-    lines.add("}")
-    return lines.joinToString("\n")
 }

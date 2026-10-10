@@ -19,6 +19,7 @@
             "id": "baseball",
             "workspaces": ["baseball-tracker"],
             "services": ["baseball"],
+            "containerless": true,
             "basePath": "/baseball/",
             "aliases": ["baseball-tracker", "tracker", "apps/baseball"]
         },
@@ -26,6 +27,7 @@
             "id": "rss-reader",
             "workspaces": ["user-client", "rss-reader"],
             "services": ["rss-reader"],
+            "containerless": true,
             "basePath": "/rss-reader/",
             "aliases": ["rss", "apps/rss/app"]
         },
@@ -39,6 +41,7 @@
             "id": "stock-game",
             "workspaces": ["user-client", "@stock-game/app"],
             "services": ["stock-game"],
+            "containerless": true,
             "basePath": "/stock-game/",
             "aliases": ["stock", "@stock-game/app", "apps/stock-game", "apps/stock-game/app"]
         },
@@ -52,6 +55,7 @@
             "id": "lemmy-vertical-scroll",
             "workspaces": ["vertical-scroll-component", "lemmy-vertical-scroll"],
             "services": ["lemmy-vertical-scroll"],
+            "containerless": true,
             "basePath": "/lemmy-vertical-scroll/",
             "aliases": ["lemmy", "apps/lemmy-vertical-scroll"]
         },
@@ -59,6 +63,7 @@
             "id": "clipstack",
             "workspaces": ["vertical-scroll-component", "clipstack"],
             "services": ["clipstack"],
+            "containerless": true,
             "basePath": "/clipstack/",
             "aliases": ["tiktok", "apps/clipstack"]
         },
@@ -73,6 +78,7 @@
             "id": "radio-station",
             "workspaces": ["radio-station"],
             "services": ["radio-station"],
+            "containerless": true,
             "basePath": "/radio-station/",
             "aliases": ["radio", "apps/radio-station"]
         },
@@ -93,6 +99,7 @@
             "id": "basketball",
             "workspaces": ["basketball-tracker"],
             "services": ["basketball"],
+            "containerless": true,
             "basePath": "/basketball/",
             "aliases": ["apps/basketball"]
         },
@@ -100,6 +107,7 @@
             "id": "fitness",
             "workspaces": ["fitness"],
             "services": ["fitness"],
+            "containerless": true,
             "basePath": "/fitness/",
             "aliases": ["apps/fitness/app"]
         },

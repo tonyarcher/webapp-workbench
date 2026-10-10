@@ -46,7 +46,10 @@ fun Project.deployServices(): List<String> {
         .filterNot { it.startsWith("-") }
     return names.flatMap { name ->
         resolveAppName(name).flatMap { app ->
-            appMappings[app]?.services ?: listOf(app)
+            val entry = appMappings[app]
+            // A containerless app is served by the gateway from the object store;
+            // its `services` entry is a leftover name, not a compose service.
+            if (entry != null && entry.containerless) emptyList() else entry?.services ?: listOf(app)
         }
     }.distinct()
 }
@@ -220,6 +223,11 @@ fun Project.gatewayTokens(hosts: List<String>): Map<String, String> {
             ""
         },
         "ASSET_SERVER" to assetServerBlock(s3Apps(env), env, tls, redirect),
+        // The same per-app location set, on the gateway's own host. One nginx
+        // serves every app from the store, so the per-app UI containers are
+        // gone; this is the only path that serves them, which is why an unset
+        // S3_BUCKET is a deploy error rather than a silent 404 (see deployValidate).
+        "APP_LOCATIONS" to appLocationsToken(s3Apps(env), env),
     )
 }
 
@@ -241,8 +249,19 @@ fun renderLines(template: String, values: Map<String, String>): List<String> = t
 
 /** Render deploy/nginx/default.conf from its template (idempotent). */
 fun Project.renderGateway() {
+    val env = gatewayEnv()
     val template = file("deploy/nginx/default.conf.template").readText()
-    val hosts = splitHosts(gatewayEnv()["TLS_HOSTS"] ?: "")
+    val hosts = splitHosts(env["TLS_HOSTS"] ?: "")
+    // The consolidated static apps have no per-app container: the gateway serves
+    // them from the object store, so an unset store leaves them with no serving
+    // path at all. Fail loudly rather than render a config that 404s them.
+    // `down` and `status` still render, so the stack can be stopped without it.
+    if (!deployHas("down") && !deployHas("status") && env["S3_BUCKET"].isNullOrBlank()) {
+        error(
+            "S3_BUCKET is required: the gateway serves every static app from the object " +
+                "store, and their per-app containers are gone",
+        )
+    }
     val output = renderLines(template, gatewayTokens(hosts))
     file("deploy/nginx/default.conf").writeText(output.joinToString("\n"))
     if (hosts.isNotEmpty()) {

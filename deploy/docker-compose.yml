@@ -56,19 +56,11 @@ services:
             - '80:80'
             - '443:443'
         depends_on:
-            - baseball
-            - rss-reader
             - rss-api
-            - stock-game
             - stock-game-api
-            - lemmy-vertical-scroll
-            - clipstack
             - calendar-sync
-            - radio-station
             - radio-api
             - football
-            - basketball
-            - fitness
             - fitness-api
             - user-web
             - user-api
@@ -146,33 +138,6 @@ services:
         networks:
             - baseball
 
-    baseball:
-        logging: *bounded-logs
-        build:
-            context: ..
-            dockerfile: deploy/baseball/Dockerfile
-        restart: unless-stopped
-        networks:
-            - baseball
-
-    rss-reader:
-        logging: *bounded-logs
-        build:
-            context: ..
-            dockerfile: deploy/rss-reader/Dockerfile
-        restart: unless-stopped
-        networks:
-            - baseball
-
-    stock-game:
-        logging: *bounded-logs
-        build:
-            context: ..
-            dockerfile: deploy/stock-game/Dockerfile
-        restart: unless-stopped
-        networks:
-            - baseball
-
     stock-game-api:
         logging: *bounded-logs
         build:
@@ -201,24 +166,6 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
-        restart: unless-stopped
-        networks:
-            - baseball
-
-    lemmy-vertical-scroll:
-        logging: *bounded-logs
-        build:
-            context: ..
-            dockerfile: deploy/lemmy-vertical-scroll/Dockerfile
-        restart: unless-stopped
-        networks:
-            - baseball
-
-    clipstack:
-        logging: *bounded-logs
-        build:
-            context: ..
-            dockerfile: deploy/clipstack/Dockerfile
         restart: unless-stopped
         networks:
             - baseball
@@ -258,29 +205,11 @@ services:
         networks:
             - baseball
 
-    radio-station:
-        logging: *bounded-logs
-        build:
-            context: ..
-            dockerfile: deploy/radio-station/Dockerfile
-        restart: unless-stopped
-        networks:
-            - baseball
-
     football:
         logging: *bounded-logs
         build:
             context: ..
             dockerfile: deploy/football/Dockerfile
-        restart: unless-stopped
-        networks:
-            - baseball
-
-    basketball:
-        logging: *bounded-logs
-        build:
-            context: ..
-            dockerfile: deploy/basketball/Dockerfile
         restart: unless-stopped
         networks:
             - baseball
@@ -307,15 +236,6 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
-        restart: unless-stopped
-        networks:
-            - baseball
-
-    fitness:
-        logging: *bounded-logs
-        build:
-            context: ..
-            dockerfile: deploy/fitness/Dockerfile
         restart: unless-stopped
         networks:
             - baseball

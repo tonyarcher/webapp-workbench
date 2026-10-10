@@ -15,6 +15,12 @@ data class HostApp(
     val services: List<String>,
     val basePath: String = "",
     val buildScript: String = "build",
+    /**
+     * True when the app ships no container of its own: the gateway serves it from
+     * the object store, so [services] names a compose service that no longer
+     * exists and the deploy must not try to start it.
+     */
+    val containerless: Boolean = false,
 )
 
 data class AppCatalog(
@@ -45,7 +51,7 @@ data class AppCatalog(
 private var cachedCatalog: Pair<Long, AppCatalog>? = null
 
 private val appEntryKeys: Set<String> =
-    setOf("id", "workspaces", "services", "basePath", "buildScript", "aliases")
+    setOf("id", "workspaces", "services", "basePath", "buildScript", "aliases", "containerless")
 
 val Project.appCatalog: AppCatalog
     get() {
@@ -145,12 +151,17 @@ fun loadAppCatalog(rootDir: java.io.File): AppCatalog {
         val basePath = catalogStringOr(obj["basePath"], "$where.basePath", "")
         val buildScript = catalogStringOr(obj["buildScript"], "$where.buildScript", "build")
         if (buildScript.isEmpty()) error("$where.buildScript must not be empty")
+        val containerless = when (val raw = obj["containerless"]) {
+            null -> false
+            is Boolean -> raw
+            else -> error("$where.containerless: expected a boolean")
+        }
         val entryAliases = if (obj.containsKey("aliases")) {
             catalogStringList(obj["aliases"], "$where.aliases")
         } else {
             emptyList()
         }
-        apps[id] = HostApp(workspaces, services, basePath, buildScript)
+        apps[id] = HostApp(workspaces, services, basePath, buildScript, containerless)
         entryAliases.forEach { alias ->
             val prev = aliases.putIfAbsent(alias, id)
             if (prev != null && prev != id) error("$where: duplicate alias \"$alias\" (already maps to \"$prev\")")

@@ -92,41 +92,6 @@ server {
         return 301 /favicon.svg;
     }
 
-    # Redirect `/baseball` to the trailing-slash form
-    location = /baseball {
-        return 301 /baseball/$is_args$args;
-    }
-
-    # Baseball SPA (prefix stripped). Resolved at runtime via Docker DNS so the
-    # gateway survives baseball container recreation without a reload.
-    location /baseball/ {
-        set $upstream_baseball http://baseball:3000;
-        rewrite ^/baseball/(.*)$ /$1 break;
-        proxy_pass $upstream_baseball;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Request-ID $request_id;
-    }
-
-    # Redirect the bare paths to their trailing-slash forms so relative assets
-    # and route links resolve under each subpath.
-    location = /stock-game {
-        return 301 /stock-game/$is_args$args;
-    }
-
-    location = /lemmy-vertical-scroll {
-        return 301 /lemmy-vertical-scroll/$is_args$args;
-    }
-
-    location = /clipstack {
-        return 301 /clipstack/$is_args$args;
-    }
-
     location = /calendar-sync {
         return 301 /calendar-sync/$is_args$args;
     }
@@ -135,24 +100,8 @@ server {
         return 301 /clipstack/$is_args$args;
     }
 
-    location = /rss-reader {
-        return 301 /rss-reader/$is_args$args;
-    }
-
-    location = /radio-station {
-        return 301 /radio-station/$is_args$args;
-    }
-
     location = /football {
         return 301 /football/$is_args$args;
-    }
-
-    location = /basketball {
-        return 301 /basketball/$is_args$args;
-    }
-
-    location = /fitness {
-        return 301 /fitness/$is_args$args;
     }
 
     location = /auth {
@@ -179,20 +128,6 @@ server {
         proxy_set_header X-Request-ID $request_id;
     }
 
-    location /stock-game/ {
-        set $upstream_stock_game http://stock-game:3000;
-        rewrite ^/stock-game/(.*)$ /$1 break;
-        proxy_pass $upstream_stock_game;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Request-ID $request_id;
-    }
-
     location ^~ /stock-game/api/ {
         set $upstream_stock_game_api http://stock-game-api:3000;
         rewrite ^/stock-game/api/(.*)$ /$1 break;
@@ -205,36 +140,8 @@ server {
         proxy_set_header X-Request-ID $request_id;
     }
 
-    location /lemmy-vertical-scroll/ {
-        set $upstream_lemmy_vertical_scroll http://lemmy-vertical-scroll:3000;
-        rewrite ^/lemmy-vertical-scroll/(.*)$ /$1 break;
-        proxy_pass $upstream_lemmy_vertical_scroll;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Request-ID $request_id;
-    }
-
     location /tiktok-scroll/ {
         rewrite ^/tiktok-scroll/(.*)$ /clipstack/$1 permanent;
-    }
-
-    location /clipstack/ {
-        set $upstream_clipstack http://clipstack:3000;
-        rewrite ^/clipstack/(.*)$ /$1 break;
-        proxy_pass $upstream_clipstack;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Request-ID $request_id;
     }
 
     location /calendar-sync/ {
@@ -313,66 +220,10 @@ server {
         proxy_set_header X-Request-ID $request_id;
     }
 
-    location /fitness/ {
-        set $upstream_fitness http://fitness:3000;
-        rewrite ^/fitness/(.*)$ /$1 break;
-        proxy_pass $upstream_fitness;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Request-ID $request_id;
-    }
-
     location /football/ {
         set $upstream_football http://football:3000;
         rewrite ^/football/(.*)$ /$1 break;
         proxy_pass $upstream_football;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Request-ID $request_id;
-    }
-
-    location /basketball/ {
-        set $upstream_basketball http://basketball:3000;
-        rewrite ^/basketball/(.*)$ /$1 break;
-        proxy_pass $upstream_basketball;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Request-ID $request_id;
-    }
-
-    location /radio-station/ {
-        set $upstream_radio_station http://radio-station:3000;
-        rewrite ^/radio-station/(.*)$ /$1 break;
-        proxy_pass $upstream_radio_station;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Request-ID $request_id;
-    }
-
-    location /rss-reader/ {
-        set $upstream_rss_reader http://rss-reader:3000;
-        rewrite ^/rss-reader/(.*)$ /$1 break;
-        proxy_pass $upstream_rss_reader;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
@@ -415,5 +266,6 @@ server {
         proxy_set_header X-Request-ID $request_id;
         client_max_body_size 512m;
     }
+    @@APP_LOCATIONS@@
 }
 @@ASSET_SERVER@@
