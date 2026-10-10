@@ -18,6 +18,12 @@ Node `pg` here.
   and must match an `oauth_redirect_uris` row for client `rss-reader`. Every
   origin needs its own row, including a different `npm run dev` port. Production
   adds rows, not code.
+- The API base resolves in `src/services/api.ts` `apiBase()`: the JVM shell's
+  `#rss-bootstrap` `apiBase` first, then `VITE_API_BASE`, then
+  `${BASE_URL}api`. The first two point the client at an absolute API origin
+  when assets move to their own object-store origin; the last keeps the
+  same-origin gateway deploy working. The parser lives in
+  `src/services/bootstrap.ts`.
 
 ## Rules
 

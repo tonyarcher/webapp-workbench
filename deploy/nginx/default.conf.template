@@ -416,3 +416,4 @@ server {
         client_max_body_size 512m;
     }
 }
+@@ASSET_SERVER@@

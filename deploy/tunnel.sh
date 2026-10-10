@@ -5,6 +5,11 @@
 # clearing out any stale tunnel on that port first, and retries on failure so a
 # transient SSH hiccup does not leave the deploy blocked.
 #
+# It also forwards the object store (default 127.0.0.1:9000 -> remote 9000) so a
+# host-side S3 publish can reach a store that only listens on the remote
+# loopback. The forward is skipped when the local port is already taken, so an
+# unrelated listener cannot stop the docker tunnel from coming up.
+#
 # Usage: bash deploy/tunnel.sh [up|down|status]
 #   up     (default) clear the port, start the tunnel, verify it answers
 #   down   stop the tunnel and clear the port
@@ -20,6 +25,9 @@ set -euo pipefail
 
 LOCAL_PORT="${DOCKER_TUNNEL_PORT:-2375}"
 REMOTE_SOCK="${REMOTE_DOCKER_SOCK:-/var/run/docker.sock}"
+# The object store forward: host loopback -> the store's loopback on the remote.
+STORE_LOCAL_PORT="${STORE_TUNNEL_PORT:-9000}"
+STORE_REMOTE_PORT="${STORE_REMOTE_PORT:-9000}"
 CONFIG="${VPN_CONFIG:-/mnt/c/Users/tony/projects/ops-scripts/sites/vpn/.env}"
 ACTION="${1:-up}"
 
@@ -64,8 +72,12 @@ if [[ "$KEY" == /mnt/c/* ]]; then
     KEY="$wsl_key"
 fi
 
+port_listening() {
+    ss -tln 2>/dev/null | grep -q ":${1} "
+}
+
 tunnel_listening() {
-    ss -tln 2>/dev/null | grep -q ":${LOCAL_PORT} "
+    port_listening "$LOCAL_PORT"
 }
 
 # Clear whatever currently holds the local port, so a stale or half-open tunnel
@@ -97,15 +109,34 @@ status)
     else
         echo "tunnel on :${LOCAL_PORT} is down"
     fi
+    if port_listening "$STORE_LOCAL_PORT"; then
+        echo "store forward on :${STORE_LOCAL_PORT} is up"
+    else
+        echo "store forward on :${STORE_LOCAL_PORT} is down"
+    fi
     ;;
 up)
     clear_port
+    # The store forward lets a host-side S3 publish reach a store that only
+    # listens on the remote loopback. Skipped when the local port is taken, so an
+    # unrelated listener cannot stop the docker tunnel from coming up. Killing the
+    # docker port clears the whole ssh process, and both forwards with it. The
+    # bind address is explicit: the store must never leave loopback, and relying
+    # on the default bind would leave that to ssh's configuration.
+    forwards=(-L "${LOCAL_PORT}:${REMOTE_SOCK}")
+    store_forwarded=0
+    if port_listening "$STORE_LOCAL_PORT"; then
+        echo "local port ${STORE_LOCAL_PORT} is busy; skipping the store forward"
+    else
+        forwards+=(-L "127.0.0.1:${STORE_LOCAL_PORT}:127.0.0.1:${STORE_REMOTE_PORT}")
+        store_forwarded=1
+    fi
     for attempt in 1 2 3; do
         echo "tunnel attempt ${attempt}/3 to ${USER_NAME}@${HOST}:${PORT} (key ${KEY}) ..."
         # setsid detaches ssh from this shell so it survives the script
         # exiting; without it the tunnel gets SIGHUP and dies with the
         # wsl -e invocation that started it.
-        setsid ssh -N -L "${LOCAL_PORT}:${REMOTE_SOCK}" -p "$PORT" -i "$KEY" \
+        setsid ssh -N "${forwards[@]}" -p "$PORT" -i "$KEY" \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
             -o ExitOnForwardFailure=yes \
             "${USER_NAME}@${HOST}" >/dev/null 2>&1 &
@@ -113,6 +144,9 @@ up)
         sleep 4
         if tunnel_listening; then
             echo "tunnel up (pid ${tunnel_pid}); remote docker engine at tcp://127.0.0.1:${LOCAL_PORT}"
+            if [[ "$store_forwarded" == 1 ]]; then
+                echo "  store forwarded: S3_ENDPOINT=http://127.0.0.1:${STORE_LOCAL_PORT}"
+            fi
             exit 0
         fi
         echo "  attempt ${attempt} did not come up; clearing and retrying"

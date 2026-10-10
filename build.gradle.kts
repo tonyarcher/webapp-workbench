@@ -24,6 +24,7 @@
  * (AppMappings.kt, DeploySupport.kt, ComposeSupport.kt); this file registers
  * the tasks.
  */
+import workbench.S3_SEED_KEYS
 import workbench.apiJars
 import workbench.appFilter
 import workbench.appMappings
@@ -35,10 +36,14 @@ import workbench.deployHelp
 import workbench.deployServices
 import workbench.deployValidate
 import workbench.filteredServices
+import workbench.gatewayEnv
 import workbench.hasBuildScript
 import workbench.jsWorkspacesOf
 import workbench.prepareGateway
+import workbench.publishAppAssets
 import workbench.resolveDockerHost
+import workbench.resolveShellCss
+import workbench.resolveShellEntry
 import workbench.runProcess
 import workbench.selectedApps
 
@@ -235,6 +240,14 @@ tasks.register("deploy") {
             }
         }
         prepareGateway(services)
+        val seedEnv = gatewayEnv()
+        // Publish the reader's static assets to the object store when configured.
+        // Gated on S3_BUCKET: absent means the same-origin nginx deploy. The dist
+        // path and base path are the reader's; a second app moving to S3 reuses
+        // publishAppAssets with its own pair.
+        if (!skipBuild && !deployHas("build-only")) {
+            publishAppAssets(seedEnv, "apps/rss/app/dist", "/rss-reader/")
+        }
         val dockerHost = resolveDockerHost()
         val env = mutableMapOf<String, String>()
         if (dockerHost.isNullOrEmpty()) {
@@ -248,6 +261,16 @@ tasks.register("deploy") {
         // One context upload for every service that shares the repo root.
         env["COMPOSE_BAKE"] = "true"
         env["BUILDKIT_PROGRESS"] = "plain"
+        // Thread the S3/asset-origin seed through to compose so the process
+        // environment overrides deploy/.env uniformly, and resolve the hashed
+        // module entry from the Vite manifest rather than hardcoding a hash.
+        for (key in S3_SEED_KEYS) seedEnv[key]?.let { env[key] = it }
+        if (!skipBuild && seedEnv["S3_BUCKET"]?.isNotBlank() == true) {
+            env["SHELL_ENTRY"] = resolveShellEntry("apps/rss/app/dist")
+            // The shell replaces Vite's index.html, so it must link the hashed
+            // stylesheets the manifest lists or the app renders unstyled.
+            env["SHELL_CSS"] = resolveShellCss("apps/rss/app/dist").joinToString(",")
+        }
         val args = composeArgsFor(services)
         val compose = composeCommand()
         val command = composeLine(compose, args)

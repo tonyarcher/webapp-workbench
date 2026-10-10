@@ -136,6 +136,17 @@ services:
             # TypeSafe Jev key for front-page ranking (AI_PROVIDER=jev). Empty by
             # default; the real value stays in the untracked deploy/.env.
             TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+            # Cross-origin client (assets on their own S3-backed origin) calling
+            # the API. Empty = same-origin only, the current gateway deployment.
+            CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+            # The reader HTML shell (GET /app): OG/meta tags + client bootstrap.
+            # PUBLIC_API_BASE and ASSETS_BASE empty = same-origin relative.
+            # SHELL_ENTRY / SHELL_CSS name the hashed entry and stylesheets from
+            # the Vite manifest once static assets move to the asset origin.
+            PUBLIC_API_BASE: ${PUBLIC_API_BASE:-}
+            ASSETS_BASE: ${ASSETS_BASE:-}
+            SHELL_ENTRY: ${SHELL_ENTRY:-}
+            SHELL_CSS: ${SHELL_CSS:-}
         depends_on:
             postgres:
                 condition: service_healthy
@@ -514,6 +525,42 @@ services:
             victoria-logs:
                 condition: service_started
 
+    # Local S3-compatible object store (SeaweedFS, replacing the dead MinIO --
+    # its images no longer pull). The gateway's asset-origin server block fronts
+    # it for /assets/*, and the host's AWS CLI publishes to it over a loopback-
+    # only port (never the LAN). The reader's bucket is created by the publish
+    # step (see S3Support), so there is no one-shot seeder service to keep in
+    # sync with the store image.
+    seaweedfs:
+        logging: *bounded-logs
+        # Built from deploy/ so the entrypoint (which renders the s3.json
+        # identity file at start) bakes into the image; remote daemons cannot use
+        # host bind mounts. The key/secret arrive via env at run, never an image.
+        build:
+            context: .
+            dockerfile: seaweedfs/Dockerfile
+        environment:
+            # The identity pair SeaweedFS renders into s3.json. Local-dev
+            # defaults; production overrides in deploy/.env. Must match what the
+            # S3 publish sends (S3_ACCESS_KEY/S3_SECRET_KEY).
+            S3_ACCESS_KEY: ${S3_ACCESS_KEY:-workbench}
+            S3_SECRET_KEY: ${S3_SECRET_KEY:-workbench-secret}
+        volumes:
+            - seaweedfs-data:/data
+        # Loopback-only host port so the host's AWS CLI can `aws s3 sync` into the
+        # local store with S3_ENDPOINT=http://127.0.0.1:9000. Never the LAN: the
+        # store is guarded only by its credentials. The S3 gateway listens on 8333
+        # in-container; the gateway still reaches it on the compose network as
+        # http://seaweedfs:8333. The host port is overridable because the deploy
+        # tunnel's store forward also claims 9000 for a remote deploy; the two
+        # cannot both hold it, so a local deploy needs it free (or STORE_HOST_PORT
+        # moved, with S3_ENDPOINT following it).
+        ports:
+            - '127.0.0.1:${STORE_HOST_PORT:-9000}:8333'
+        restart: unless-stopped
+        networks:
+            - baseball
+
 networks:
     baseball:
         driver: bridge
@@ -524,3 +571,4 @@ volumes:
     victoria-logs-data:
     grafana-data:
     alloy-data:
+    seaweedfs-data:

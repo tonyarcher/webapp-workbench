@@ -12,4 +12,9 @@ dependencies {
     // The root script parses package.json with groovy.json.JsonSlurper and that
     // code moved here unchanged; Groovy comes from the Gradle distribution.
     compileOnly(localGroovy())
+    testImplementation(kotlin("test-junit"))
+}
+
+tasks.test {
+    useJUnit()
 }

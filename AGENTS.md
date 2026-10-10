@@ -100,6 +100,11 @@ A stale Vite process on 5199 hangs baseball e2e — kill it first.
    when the app has it). Then `git diff --check`.
 4. Dispatch the `review` subagent on the **full uncommitted diff** (including untracked files).
    Fix blocking findings and re-dispatch until `APPROVE`. The reviewer does not edit or commit.
+   The reviewer has a small step budget, so a large diff exhausts it before it reaches a verdict.
+   When a change spans more than one area, break the review apart: one scoped dispatch per area
+   (build tooling, deploy config, each service, the client), each given the files it owns. A
+   review that returns no verdict is not an `APPROVE` — re-scope and re-dispatch, and never read
+   a step-limited report as consent.
 5. Do not commit or push unless the user explicitly asks. Conventional commits
    (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`). Stage files explicitly.
 6. `AGENTS.md` files may be

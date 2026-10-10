@@ -27,9 +27,16 @@ Do not put RSS tables in `user-api`. Do not add Node `pg` here.
 - Errors use the envelope `{error: string}` (see `ErrorAdvice.kt`).
 - `GET /opml` returns `text/xml`, not JSON.
 - `Authorization: Bearer <user-api JWT>` is required on everything except
-  `/healthz`, `/readyz`, and the root discovery endpoint at `/`; a missing
-  token answers `401 {"error":"unauthorized"}`.
-- Data routes require `X-Api-Version: 1`. The probes stay unversioned.
+  `/healthz`, `/readyz`, the root discovery endpoint at `/`, and the HTML shell
+  at `/app`; a missing token answers `401 {"error":"unauthorized"}`.
+- Data routes require `X-Api-Version: 1`. The probes and the shell stay
+  unversioned.
+- `GET /app` renders the reader HTML shell (`text/html`, `Cache-Control:
+no-cache`): OG/meta tags plus a `#rss-bootstrap` JSON blob the client
+  hydrates. Its config comes from `SHELL_TITLE`, `SHELL_DESCRIPTION`,
+  `PUBLIC_API_BASE`, `ASSETS_BASE`, and `SHELL_ENTRY` (see `AppShell.kt`).
+- CORS is off unless `CORS_ALLOWED_ORIGINS` names origins; the Bearer-JWT API
+  never sets `allowCredentials` (see `CorsConfig.kt`).
 
 ## Verification
 

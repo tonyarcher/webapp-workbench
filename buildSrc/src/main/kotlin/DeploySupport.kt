@@ -187,10 +187,23 @@ fun Project.gatewayEnv(): Map<String, String> {
 
 fun splitHosts(raw: String): List<String> = raw.replace(",", " ").split(Regex("\\s+")).filter { it.isNotEmpty() }
 
+/**
+ * TLS hosts plus the asset origin's host. The leaf must cover the asset host or
+ * the browser rejects the asset origin, so it joins the SANs automatically
+ * rather than depending on `TLS_HOSTS` carrying it by hand. Empty when TLS is
+ * off, so the asset host never turns TLS on by itself.
+ */
+fun certHostsOf(env: Map<String, String>, tlsHosts: List<String>): List<String> {
+    if (tlsHosts.isEmpty()) return tlsHosts
+    val assetsHost = env["ASSETS_HOST"]?.trim().orEmpty()
+    return (tlsHosts + assetsHost).filter { it.isNotEmpty() }.distinct()
+}
+
 /** Values for the @@TOKEN@@ placeholders in the gateway template. */
 fun Project.gatewayTokens(hosts: List<String>): Map<String, String> {
+    val env = gatewayEnv()
     val tls = hosts.isNotEmpty()
-    val redirect = tls && gatewayEnv()["TLS_REDIRECT"] == "1"
+    val redirect = tls && env["TLS_REDIRECT"] == "1"
     return mapOf(
         "HTTP_LISTEN" to if (redirect) "" else "    listen 80;",
         "TLS_LISTEN" to if (tls) "    listen 443 ssl;" else "",
@@ -206,6 +219,7 @@ fun Project.gatewayTokens(hosts: List<String>): Map<String, String> {
         } else {
             ""
         },
+        "ASSET_SERVER" to assetServerBlock(env, tls, redirect),
     )
 }
 
@@ -471,7 +485,7 @@ fun Project.mintLocalLeaf(env: Map<String, String>, hosts: List<String>, certs: 
 /** Mint or install the gateway certs; returns true when they changed. */
 fun Project.ensureGatewayCerts(): Boolean {
     val env = gatewayEnv()
-    val hosts = splitHosts(env["TLS_HOSTS"] ?: "")
+    val hosts = certHostsOf(env, splitHosts(env["TLS_HOSTS"] ?: ""))
     if (hosts.isEmpty()) {
         println("==> TLS_HOSTS empty, no certificates needed")
         return false
@@ -480,11 +494,19 @@ fun Project.ensureGatewayCerts(): Boolean {
     certs.dir.mkdirs()
     val providedCert = env["TLS_CERT_FILE"] ?: ""
     val providedKey = env["TLS_KEY_FILE"] ?: ""
-    return if (providedCert.isNotEmpty() || providedKey.isNotEmpty()) {
+    val provided = providedCert.isNotEmpty() || providedKey.isNotEmpty()
+    val changed = if (provided) {
         installProvidedCert(providedCert, providedKey, certs, hosts)
     } else {
         mintLocalLeaf(env, hosts, certs)
     }
+    // A provided cert is copied, not minted, so say plainly when it misses a host
+    // (a browser rejects the asset origin when its leaf does not cover it).
+    val openssl = if (provided) runCatching { findOpenssl() }.getOrNull() else null
+    if (openssl != null && !leafCovers(openssl, hosts, certs.leafCrt, certs.leafKey)) {
+        println("==> WARNING: the provided leaf does not cover ${hosts.joinToString(", ")}; browsers will reject it")
+    }
+    return changed
 }
 
 /** Render the gateway and refresh certs; warns when a rebuild would pick them up. */
@@ -493,7 +515,8 @@ fun Project.prepareGateway(services: List<String>) {
     // The gateway image copies this directory. Leftovers must not survive a matched pair.
     sweepCertLeftovers(file("deploy/gateway/certs"))
     if (deployHas("down") || deployHas("status")) return
-    val hosts = splitHosts(gatewayEnv()["TLS_HOSTS"] ?: "")
+    val env = gatewayEnv()
+    val hosts = certHostsOf(env, splitHosts(env["TLS_HOSTS"] ?: ""))
     if (hosts.isEmpty()) return
     val changed = ensureGatewayCerts()
     val gatewayStale = deployHas("no-build") || (services.isNotEmpty() && "gateway" !in services)
