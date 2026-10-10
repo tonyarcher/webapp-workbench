@@ -66,6 +66,34 @@ python deploy.py --status           # docker compose ps
 python deploy.py --down             # stop and remove the stack
 ```
 
+## The object store (required)
+
+Every static app is served by the gateway from an S3-compatible object store, so
+`S3_BUCKET` must be set in `deploy/.env` — without it the deploy fails before it
+renders the gateway config. The per-app UI containers are gone, so there is no
+same-origin fallback.
+
+`gradle deploy` creates the bucket, mirrors each app's `dist/` into it, then
+writes the rendered document over `index.html`. It needs the AWS CLI or `mc` on
+PATH, plus credentials (`S3_ACCESS_KEY`/`S3_SECRET_KEY`, or the standard AWS
+env/profile).
+
+The store must be reachable from the **host** running the deploy, because the
+publish runs there and not in a container:
+
+- **Local engine** — the bundled SeaweedFS publishes on `127.0.0.1:9000`, so
+  `S3_ENDPOINT=http://127.0.0.1:9000` reaches it. On a fresh stack, start the
+  store first, because the publish runs before `compose up`:
+  `docker compose -f deploy/docker-compose.yml up -d --build seaweedfs`
+- **Remote engine** — the store binds the remote's loopback, so forward it
+  through the same tunnel (`deploy/tunnel.sh` forwards it on `9000` by default)
+  and point `S3_ENDPOINT` at `http://127.0.0.1:9000`.
+
+The two contend for host port `9000`: a local deploy needs that port free, or
+`STORE_HOST_PORT` moved with `S3_ENDPOINT` following it. `deploy/tunnel.sh`
+skips its store forward when the port is already taken, so the Docker tunnel
+comes up either way.
+
 ## One app
 
 Pass an app name to rebuild that image and recreate only that service.
@@ -158,7 +186,9 @@ remote server from WSL or any machine.
 
 If an SSH tunnel is already exposing the remote daemon on `127.0.0.1:2375`,
 `python deploy.py` uses it. Otherwise it falls back to local Docker. Override
-with `--local`, `--remote`, `DEPLOY_TARGET`, or `DOCKER_HOST`.
+with `--local`, `--remote`, `DEPLOY_TARGET`, or `DOCKER_HOST`. The same tunnel
+must also carry the object store for a remote publish — see **The object store
+(required)** above.
 
 ```sh
 # Optional: expose the remote daemon yourself, then deploy.
