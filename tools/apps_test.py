@@ -82,6 +82,38 @@ class AppCatalogTest(unittest.TestCase):
             if "containerless" in entry:
                 self.assertIsInstance(entry["containerless"], bool)
 
+    def test_containerless_apps_have_no_compose_service(self) -> None:
+        """A containerless app is served from the store, so compose must not define it.
+
+        The compose network is named after one app, so a bare `    <name>:` match
+        would flag the network; the scan is scoped to the `services:` section.
+        """
+        catalog = load_catalog()
+        compose = (ROOT / str(catalog["composeFile"])).read_text(encoding="utf-8")
+        defined: set[str] = set()
+        in_services = False
+        for line in compose.splitlines():
+            if line == "services:":
+                in_services = True
+                continue
+            if in_services and line and not line.startswith(" "):
+                in_services = False
+            # A service header sits at exactly four spaces.
+            if in_services and line.startswith("    ") and not line.startswith("     "):
+                name = line.strip()
+                if name.endswith(":"):
+                    defined.add(name[:-1])
+        self.assertTrue(defined, "no compose services parsed; this scan is broken")
+        for entry in app_entries(catalog):
+            if not entry.get("containerless"):
+                continue
+            for service in entry["services"]:
+                self.assertNotIn(
+                    str(service),
+                    defined,
+                    f"{entry['id']}: compose still defines {service}",
+                )
+
     def test_aliases_resolve(self) -> None:
         catalog = load_catalog()
         ids = {str(entry["id"]) for entry in app_entries(catalog)}
