@@ -219,7 +219,7 @@ fun Project.gatewayTokens(hosts: List<String>): Map<String, String> {
         } else {
             ""
         },
-        "ASSET_SERVER" to assetServerBlock(env, tls, redirect),
+        "ASSET_SERVER" to assetServerBlock(s3Apps(env), env, tls, redirect),
     )
 }
 

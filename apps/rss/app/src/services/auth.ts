@@ -1,4 +1,5 @@
 import { authorizeUrl, challengeS256, endSession, parseJwtPayload, randomVerifier } from 'user-client';
+import { appConfig, resolveIdentityBase } from './config';
 
 const CLIENT_ID = 'rss-reader';
 const TOKENS_KEY = 'rss.auth.tokens';
@@ -12,7 +13,10 @@ export interface AuthTokens {
 }
 
 function identityBase(): string {
-    return `${location.origin}/user-api`;
+    // The asset origin must name the identity service: it runs on the gateway,
+    // so `location.origin` is only correct for the same-origin deploy. The
+    // config is set at boot by the entry point, which owns the DOM read.
+    return resolveIdentityBase(appConfig().identityBase, location.origin);
 }
 
 function tokenEndpoint(): string {

@@ -25,6 +25,7 @@ import type {
     UpdateConfigRequest,
 } from '@stock-game/shared';
 import { getAccessToken, refreshTokens } from './auth';
+import { appConfig, resolveApiBase } from './config';
 
 export class AuthError extends Error {
     constructor() {
@@ -37,10 +38,26 @@ function emitAuthRequired(): void {
     window.dispatchEvent(new CustomEvent('sg-auth-required'));
 }
 
+function viteApiBase(): string | undefined {
+    try {
+        return import.meta.env['VITE_API_BASE'];
+    } catch {
+        return undefined;
+    }
+}
+
+function baseUrl(): string {
+    try {
+        return import.meta.env.BASE_URL;
+    } catch {
+        return '/';
+    }
+}
+
 function apiBase(): string {
-    const base = import.meta.env.BASE_URL;
-    const root = base.endsWith('/') ? base : `${base}/`;
-    return `${root}api`;
+    const configApiBase = appConfig().apiBase;
+    if (configApiBase) return configApiBase;
+    return resolveApiBase('', viteApiBase(), baseUrl());
 }
 
 export function apiUrl(path: string): string {

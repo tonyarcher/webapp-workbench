@@ -18,10 +18,12 @@ Node `pg` here.
   and must match an `oauth_redirect_uris` row for client `rss-reader`. Every
   origin needs its own row, including a different `npm run dev` port. Production
   adds rows, not code.
-- The API base resolves in `src/services/api.ts` `apiBase()`: a build-time
-  `VITE_API_BASE`, then `${BASE_URL}api`. The first points the client at an
-  absolute API origin when assets move to their own object-store origin; the
-  second keeps the same-origin gateway deploy working.
+- The API base resolves in `src/services/config.ts` `resolveApiBase()`: the
+  `#app-config` block carried in `index.html`, then a build/dev `VITE_API_BASE`,
+  then the relative `${BASE_URL}api`. The publish step renders the block with the
+  app's API origin, so the same-origin gateway deploy ships the empty default
+  (no substitution) while the asset-origin deploy injects the origin at runtime
+  without rebuilding — the built `dist/` stays host-independent.
 
 ## Rules
 

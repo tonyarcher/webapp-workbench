@@ -1,9 +1,35 @@
 import type { GenerateBody, GenerateResult, Playlist, PlaylistEntry } from '../types';
+import { appConfig, resolveApiBase } from './config';
 
-function apiUrl(path: string): string {
-    const base = import.meta.env.BASE_URL;
-    const root = base.endsWith('/') ? base : `${base}/`;
-    return `${root}api${path}`;
+/** Build/dev `VITE_API_BASE`, or undefined where `import.meta.env` is unavailable. */
+function viteApiBase(): string | undefined {
+    try {
+        return import.meta.env['VITE_API_BASE'];
+    } catch {
+        return undefined;
+    }
+}
+
+/** Vite's `BASE_URL`, or '/' where `import.meta.env` is unavailable (tests). */
+function baseUrl(): string {
+    try {
+        return import.meta.env.BASE_URL;
+    } catch {
+        return '/';
+    }
+}
+
+function apiBase(): string {
+    // The runtime config block (rendered by the publish step for the
+    // asset-origin deploy) wins; empty means "same origin", which then falls
+    // through VITE_API_BASE to the relative `${BASE_URL}api`.
+    const configApiBase = appConfig().apiBase;
+    if (configApiBase) return configApiBase;
+    return resolveApiBase('', viteApiBase(), baseUrl());
+}
+
+export function apiUrl(path: string): string {
+    return `${apiBase()}${path}`;
 }
 
 const API_VERSION_HEADERS: Record<string, string> = { 'X-Api-Version': '1' };

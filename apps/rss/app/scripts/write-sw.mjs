@@ -2,6 +2,12 @@
 // the hashed bundle filenames (so a fresh install works fully offline) and a
 // content-derived cache name (so updates never serve stale bundles and no one
 // has to bump a cache constant by hand).
+//
+// The document (index.html and the app root) is deliberately NOT precached:
+// it carries the runtime config block (the API origin) that the publish step
+// renders per environment, so a precached copy could serve a stale origin.
+// Navigations are network-first and the document is cached on each successful
+// navigation only as the offline fallback.
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,8 +24,6 @@ const template = await readFile(path.join(root, 'scripts', 'sw.template.js'), 'u
 
 const baseOf = (p) => `${base.replace(/\/$/, '')}${p}`;
 const assets = [
-    baseOf('/'),
-    baseOf('/index.html'),
     baseOf('/manifest.webmanifest'),
     baseOf('/favicon.svg'),
     baseOf('/icon-192.png'),
@@ -38,16 +42,14 @@ try {
 // cache name too.
 const hashInput = Buffer.concat(
     await Promise.all(
-        assets
-            .filter((url) => url !== baseOf('/'))
-            .map(async (url) => {
-                const rel = url.startsWith(base) ? url.slice(base.length).replace(/^\//, '') : url.replace(/^\//, '');
-                try {
-                    return await readFile(path.join(dist, rel));
-                } catch {
-                    return Buffer.from(rel);
-                }
-            }),
+        assets.map(async (url) => {
+            const rel = url.startsWith(base) ? url.slice(base.length).replace(/^\//, '') : url.replace(/^\//, '');
+            try {
+                return await readFile(path.join(dist, rel));
+            } catch {
+                return Buffer.from(rel);
+            }
+        }),
     ),
 );
 

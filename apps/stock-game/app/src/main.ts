@@ -1,6 +1,9 @@
 import { finishLoginFromCallback } from './lib/auth';
+import { parseAppConfig, setAppConfig } from './lib/config';
 import './components/index';
 import './styles.css';
+
+setAppConfig(parseAppConfig(document.getElementById('app-config')?.textContent ?? ''));
 
 async function boot(): Promise<void> {
     const loggedIn = await finishLoginFromCallback().catch((err: unknown) => {

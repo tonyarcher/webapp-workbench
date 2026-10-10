@@ -43,6 +43,7 @@ import workbench.prepareGateway
 import workbench.publishAppAssets
 import workbench.resolveDockerHost
 import workbench.runProcess
+import workbench.s3Apps
 import workbench.selectedApps
 
 val npmCommand = if (System.getProperty("os.name").lowercase().contains("windows")) {
@@ -78,13 +79,6 @@ tasks.register<Exec>("npmInstall") {
 // list rather than by a workspace's npm `build` script, so it stays correct when
 // the APIs carry no npm build shim.
 val appsToBuild = selectedApps().filter { jsWorkspacesOf(it).isNotEmpty() }
-
-// The client's API base when assets move to their own object-store origin,
-// read from the deploy seed (deploy/.env + process env) so it tracks the same
-// source the gateway and compose use. Baking it into the JS build makes the
-// built dist/ host-specific — that is the accepted cost of dropping the JVM
-// HTML shell, whose #rss-bootstrap blob carried the API origin at runtime.
-val publicApiBase = gatewayEnv()["PUBLIC_API_BASE"]?.trim().orEmpty()
 
 /** Task names cannot hold `@` or the `/` path separator, so flatten them. */
 fun nodeTaskName(workspace: String): String = "buildNode-" + workspace.replace("@", "").replace("/", "-")
@@ -127,12 +121,6 @@ appsToBuild.forEach { app ->
                 } else {
                     // Never inherit a stray value (Vite would bake it in).
                     environment("APP_BASE_PATH", "")
-                }
-                // VITE_API_BASE pins the client to an absolute API origin when
-                // assets live on their own object-store origin; empty keeps the
-                // same-origin relative base. Set it only on the app workspace.
-                if (isLast) {
-                    environment("VITE_API_BASE", publicApiBase)
                 }
                 // A library workspace may have no build step at all: user-client
                 // ships TypeScript sources and only needs its test and typecheck.
@@ -252,12 +240,15 @@ tasks.register("deploy") {
         }
         prepareGateway(services)
         val seedEnv = gatewayEnv()
-        // Publish the reader's static assets to the object store when configured.
-        // Gated on S3_BUCKET: absent means the same-origin nginx deploy. The dist
-        // path and base path are the reader's; a second app moving to S3 reuses
-        // publishAppAssets with its own pair.
+        // Publish every static app's assets to the object store when configured.
+        // Gated on S3_BUCKET: absent means the same-origin nginx deploy. Each app
+        // uses its own base path as the key suffix and its own dist directory
+        // (both from the catalog), so a second app moving to S3 needs no change
+        // here beyond its apps.json entry.
         if (!skipBuild && !deployHas("build-only")) {
-            publishAppAssets(seedEnv, "apps/rss/app/dist", "/rss-reader/")
+            s3Apps(seedEnv).forEach { app ->
+                publishAppAssets(seedEnv, app)
+            }
         }
         val dockerHost = resolveDockerHost()
         val env = mutableMapOf<String, String>()

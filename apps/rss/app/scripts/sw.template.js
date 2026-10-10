@@ -4,14 +4,17 @@
 // (__CACHE_HASH__) so updated builds always get fresh caches without manual
 // version bumps.
 //
-// Strategy: precache the app shell and every hashed build asset on install
+// Strategy: precache every hashed build asset and the PWA files on install
 // (fresh installs work fully offline on the first relaunch), cache-first for
 // same-origin static assets, network-first for navigations with an offline
-// fallback to the cached index.html.
+// fallback to the cached index.html. The document itself is NOT precached:
+// it carries the runtime config block (the API origin) the publish renders
+// per environment, so it must never be served from a stale precached copy.
+// A successful navigation caches the document only as the offline fallback.
 const ASSETS = __ASSETS__;
 const CACHE = 'rss-reader-' + __CACHE_HASH__;
 const CACHE_PREFIX = 'rss-reader-';
-// Scope-relative shell URL so the offline fallback matches the precache keys
+// Scope-relative shell URL so the offline fallback matches the navigation URL
 // both at the app root and under a subpath like /rss-reader/.
 const INDEX = new URL('./index.html', self.registration.scope).href;
 

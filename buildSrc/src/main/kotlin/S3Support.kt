@@ -3,23 +3,24 @@ package workbench
 import org.gradle.api.Project
 
 /*
- * Optional S3 publish for an app's static assets, endpoint-based so one seed
- * (endpoint, bucket, region, credentials) works against SeaweedFS locally and
- * any S3-compatible cloud. Off by default: no S3_BUCKET means the same-origin
- * nginx deploy, exactly as today. When a bucket is set, `gradle deploy`
- * mirrors the app's dist/ into the bucket (`--delete` keeps it a mirror) over
- * the S3 protocol. The gateway's asset-origin server block (built from the
- * same seed by assetServerBlock) fronts the store for the document and the
- * assets, while the client points back at the API cross-origin (CORS) via a
- * build-time VITE_API_BASE.
+ * Optional S3 publish for every static app's assets, endpoint-based so one
+ * seed (endpoint, bucket, region, credentials) works against SeaweedFS locally
+ * and any S3-compatible cloud. Off by default: no S3_BUCKET means the
+ * same-origin nginx deploy, exactly as today. When a bucket is set,
+ * `gradle deploy` mirrors each static app's dist/ into the bucket (`--delete`
+ * keeps it a mirror) over the S3 protocol, renders each app's runtime config
+ * block with its own API origin, uploads that rendered document over the raw
+ * index.html, and the gateway's asset-origin server block (built from the same
+ * seed by assetServerBlock) fronts the store for each app's document and
+ * assets. The static layer stays pure: the API lives on its own origin with
+ * CORS, the client resolves its API base at runtime from the rendered block,
+ * so a built dist/ is host-independent and one seed works locally or in any
+ * cloud (a plain CDN or the raw endpoint fronts the store, never the API).
  *
  * Requires the AWS CLI on PATH and credentials in the standard AWS
  * env/profile. Runs only when S3_BUCKET is set, so a local deploy with no
  * credentials never touches this path.
  */
-
-/** The reader's base path: its S3 key suffix and gateway subpath. */
-const val READER_BASE_PATH: String = "/rss-reader/"
 
 /** The object store's compose service name the gateway proxies the assets location to. */
 const val STORE_UPSTREAM: String = "http://seaweedfs:8333"
@@ -32,6 +33,9 @@ val S3_SEED_KEYS: List<String> = listOf(
     "S3_REGION",
     "ASSETS_HOST",
     "PUBLIC_API_BASE",
+    "STOCK_GAME_API_BASE",
+    "FITNESS_API_BASE",
+    "RADIO_API_BASE",
 )
 
 /** S3 key prefix: S3_PREFIX + the app base path, slashes trimmed. */
@@ -118,49 +122,146 @@ fun alreadyOwnsBucket(output: String): Boolean =
     output.contains("BucketAlreadyOwnedByYou") || output.contains("BucketAlreadyExists")
 
 /**
- * Create the reader's bucket, then mirror an app's dist/ into it, gated on
- * S3_BUCKET. Prefers the AWS CLI and falls back to the `mc` S3 client, so a
- * host with either one can publish without the other. The bucket is created
- * here rather than by a compose seeder, so the publish and the store stay on
- * the same credentials and there is no second image to keep in sync.
+ * Create the store bucket, then mirror an app's dist/ into it, gated on
+ * S3_BUCKET. Before uploading, renders the document's `#app-config` block with
+ * the app's API origin and uploads that rendered document over Vite's raw
+ * index.html (which ships the same-origin `""` default), so the built dist/
+ * stays host-independent. Prefers the AWS CLI and falls back to the `mc` S3
+ * client, so a host with either one can publish without the other. The bucket
+ * is created here rather than by a compose seeder, so the publish and the
+ * store stay on the same credentials and there is no second image to keep in
+ * sync.
  */
-fun Project.publishAppAssets(env: Map<String, String>, distDir: String, basePath: String) {
+fun Project.publishAppAssets(env: Map<String, String>, app: S3App) {
     val bucket = env["S3_BUCKET"]?.trim().orEmpty()
     if (bucket.isEmpty()) {
         println("==> S3 publish skipped (S3_BUCKET not set)")
         return
     }
-    val key = s3KeyPrefix(env["S3_PREFIX"].orEmpty(), basePath)
+    val key = s3KeyPrefix(env["S3_PREFIX"].orEmpty(), app.basePath)
     val endpoint = env["S3_ENDPOINT"]?.trim().orEmpty()
-    when (publishTool(System.getenv("PATH"), System.getProperty("os.name"))) {
-        PublishTool.AWS -> {
-            // `aws s3 mb` is not idempotent: an existing bucket is "already
-            // owned", not an error worth failing the publish over.
-            val (mbCode, mbOut) = runProcess(s3MakeBucketCommand(bucket, endpoint))
-            if (mbCode != 0 && !alreadyOwnsBucket(mbOut)) {
-                error("S3 bucket create failed: ${mbOut.trim()}")
+    val rendered = renderAppConfig(file("${app.distDir}/index.html").readText(), app.apiBase, app.identityBase)
+    val renderedFile = java.io.File.createTempFile("app-config-", ".html").also { it.writeText(rendered) }
+    try {
+        when (publishTool(System.getenv("PATH"), System.getProperty("os.name"))) {
+            PublishTool.AWS -> {
+                // `aws s3 mb` is not idempotent: an existing bucket is "already
+                // owned", not an error worth failing the publish over.
+                val (mbCode, mbOut) = runProcess(s3MakeBucketCommand(bucket, endpoint))
+                if (mbCode != 0 && !alreadyOwnsBucket(mbOut)) {
+                    error("S3 bucket create failed: ${mbOut.trim()}")
+                }
+                val (code, out) = runProcess(s3SyncCommand(bucket, key, app.distDir, endpoint))
+                if (code != 0) error("S3 publish failed: ${out.trim()}")
+                val (cpCode, cpOut) = runProcess(s3CopyCommand(bucket, key, renderedFile.absolutePath, endpoint))
+                if (cpCode != 0) error("S3 document publish failed: ${cpOut.trim()}")
             }
-            val (code, out) = runProcess(s3SyncCommand(bucket, key, distDir, endpoint))
-            if (code != 0) error("S3 publish failed: ${out.trim()}")
-        }
 
-        PublishTool.MC -> {
-            val (access, secret) = storeCredentials(env)
-            if (endpoint.isEmpty() || access.isEmpty() || secret.isEmpty()) {
-                error("mc publish needs S3_ENDPOINT plus S3_ACCESS_KEY/S3_SECRET_KEY")
+            PublishTool.MC -> {
+                val (access, secret) = storeCredentials(env)
+                if (endpoint.isEmpty() || access.isEmpty() || secret.isEmpty()) {
+                    error("mc publish needs S3_ENDPOINT plus S3_ACCESS_KEY/S3_SECRET_KEY")
+                }
+                val hostEnv = mcHostEnv(MC_ALIAS, endpoint, access, secret)
+                val (mbCode, mbOut) = runProcess(mcMakeBucketCommand(MC_ALIAS, bucket), env = hostEnv)
+                if (mbCode != 0) error("S3 bucket create failed: ${mbOut.trim()}")
+                val (code, out) = runProcess(mcMirrorCommand(MC_ALIAS, bucket, key, app.distDir), env = hostEnv)
+                if (code != 0) error("S3 publish failed: ${out.trim()}")
+                val (cpCode, cpOut) = runProcess(
+                    mcCopyCommand(MC_ALIAS, bucket, key, renderedFile.absolutePath),
+                    env = hostEnv,
+                )
+                if (cpCode != 0) error("S3 document publish failed: ${cpOut.trim()}")
             }
-            val hostEnv = mcHostEnv(MC_ALIAS, endpoint, access, secret)
-            val (mbCode, mbOut) = runProcess(mcMakeBucketCommand(MC_ALIAS, bucket), env = hostEnv)
-            if (mbCode != 0) error("S3 bucket create failed: ${mbOut.trim()}")
-            val (code, out) = runProcess(mcMirrorCommand(MC_ALIAS, bucket, key, distDir), env = hostEnv)
-            if (code != 0) error("S3 publish failed: ${out.trim()}")
-        }
 
-        PublishTool.NONE ->
-            error("no S3 publish tool on PATH: install the AWS CLI (`aws`) or the `mc` S3 client")
+            PublishTool.NONE ->
+                error("no S3 publish tool on PATH: install the AWS CLI (`aws`) or the `mc` S3 client")
+        }
+    } finally {
+        renderedFile.delete()
     }
     val via = if (endpoint.isEmpty()) "" else " (endpoint $endpoint)"
-    println("==> published $distDir -> s3://$bucket/$key$via")
+    println("==> published ${app.distDir} -> s3://$bucket/$key$via")
+}
+
+/**
+ * Static apps the S3 asset origin does not serve, even though they ship a
+ * dist/. `football` has in-flight uncommitted work on this branch and stays
+ * out until that lands. `user-web` is the identity landing page: its session
+ * is a SameSite=Lax cookie and every API call is origin-absolute `/user-api/`,
+ * so serving it from a separate browser origin breaks sign-in — it stays
+ * same-origin. `calendar-sync` depends on its own nginx proxy for `/api/trakt/`
+ * (Trakt has no CORS), and that proxy does not exist on the asset origin, so
+ * the app stays same-origin.
+ */
+private val S3_EXCLUDED_APPS: Set<String> = setOf("football", "user-web", "calendar-sync")
+
+/**
+ * The env key holding an app's cross-origin API origin, or null when it has
+ * none (a client-only app). Each API-backed app names its own origin so the
+ * rendered config block and the emitted `connect-src` are both accurate.
+ */
+internal fun apiBaseEnvKey(appId: String): String? = when (appId) {
+    "rss-reader" -> "PUBLIC_API_BASE"
+    "stock-game" -> "STOCK_GAME_API_BASE"
+    "fitness" -> "FITNESS_API_BASE"
+    "radio-station" -> "RADIO_API_BASE"
+    else -> null
+}
+
+/**
+ * The env key holding an app's cross-origin identity origin, or null when the
+ * app never authenticates. It is `OAUTH_PUBLIC_BASE` — the browser-facing
+ * `/user-api` on the gateway — and an asset-origin app must be told it
+ * explicitly: the client otherwise resolves the identity base from
+ * `location.origin`, which on the asset origin is an origin where no identity
+ * service runs, so sign-in and token refresh would fail. Only the apps whose
+ * client actually carries the OAuth flow name it, so the CSP does not widen
+ * `connect-src` for an app that never calls the identity service.
+ */
+internal fun identityBaseEnvKey(appId: String): String? = when (appId) {
+    "rss-reader", "stock-game" -> "OAUTH_PUBLIC_BASE"
+    else -> null
+}
+
+/** The app's built dist/ directory, from its last JavaScript workspace. */
+private fun Project.staticDistDir(appId: String): String? {
+    val workspaces = jsWorkspacesOf(appId)
+    val last = workspaces.lastOrNull() ?: return null
+    val dir = workspaceDirs[last] ?: return null
+    return "$dir/dist"
+}
+
+/**
+ * Expand `${NAME}` references in a seed value against the same env map, the way
+ * compose expands `deploy/.env` at run time. `dotenvLine` does not expand, so a
+ * value written as `${PUBLIC_ORIGIN}/user-api` would otherwise reach the client
+ * as that literal string.
+ *
+ * Applied only to the origins that are rendered into the client config, not to
+ * every `deploy/.env` value: a password or secret containing `${...}` must stay
+ * exactly as written.
+ */
+internal fun expandEnv(value: String, env: Map<String, String>): String =
+    Regex("""\$\{([A-Za-z_][A-Za-z0-9_]*)\}""").replace(value) { match ->
+        env[match.groupValues[1]]?.trim().orEmpty().ifEmpty { match.value }
+    }
+
+/**
+ * The static apps the deploy can publish and serve: every app in the catalog
+ * with a non-empty base path and a JavaScript workspace, minus the exclusions.
+ * The JVM APIs carry no base path and no dist/ and so drop out here; the
+ * Docker-only services are not in the catalog at all.
+ */
+fun Project.s3Apps(env: Map<String, String>): List<S3App> = buildList {
+    for ((id, app) in appMappings) {
+        if (app.basePath.isEmpty() || id in S3_EXCLUDED_APPS) continue
+        val distDir = staticDistDir(id) ?: continue
+        val pwa = S3_PWA_FILES[id] ?: PwaFiles(null, false, emptyList())
+        val apiBase = apiBaseEnvKey(id)?.let { expandEnv(env[it].orEmpty(), env).trim() }.orEmpty()
+        val identityBase = identityBaseEnvKey(id)?.let { expandEnv(env[it].orEmpty(), env).trim() }.orEmpty()
+        add(S3App(id, app.basePath, distDir, apiBase, identityBase, pwa.manifest, pwa.swJs, pwa.icons))
+    }
 }
 
 /**
@@ -189,33 +290,33 @@ private fun proxyLocation(
 }
 
 /**
- * The reader's asset-origin server block, or "" when ASSETS_HOST is unset so
- * today's rendered config is unchanged. One gateway nginx container serves both
- * origins via `server_name`: this block is the asset origin, whose document is
- * Vite's static `index.html` from the store. The app is served under its
- * `/rss-reader/` base path so Vite's `base: '/rss-reader/'` output resolves
- * here unchanged: the hashed assets under `/assets/`, the document, and the
- * PWA files (`sw.js`, the web manifest, the icons) all come from the object
- * store, plus a CSP pinning scripts and styles to this origin and connects to
- * the API origin.
+ * The asset-origin server block, or "" when ASSETS_HOST or S3_BUCKET is unset
+ * so today's rendered config is unchanged. One gateway nginx container serves
+ * both origins via `server_name`: this block is the asset origin, whose
+ * document is the store's rendered `index.html` (the publish swaps the app's
+ * API origin into its `#app-config` block). Each static app is served under its
+ * own base path so Vite's base-relative output resolves unchanged: the hashed
+ * assets under `/assets/`, the document, and the PWA files (`sw.js`, the web
+ * manifest, the icons) all come from the object store. The document location
+ * pins its origin policy per app (see [S3_CSP]): the fixed script/style/img
+ * sources, widened where the app loads cross-origin fonts or scripts, plus its
+ * connect-src/media-src — or no CSP at all where the app's reachable origins
+ * cannot be stated accurately.
  */
-fun assetServerBlock(env: Map<String, String>, tls: Boolean, redirect: Boolean): String {
+fun assetServerBlock(apps: List<S3App>, env: Map<String, String>, tls: Boolean, redirect: Boolean): String {
     val host = env["ASSETS_HOST"]?.trim().orEmpty()
     val bucket = env["S3_BUCKET"]?.trim().orEmpty()
     // The asset origin needs a store to front. Without a bucket there is nothing
     // to serve, and a half-configured block would rewrite to the wrong key.
     if (host.isEmpty() || bucket.isEmpty()) return ""
-    val apiBase = env["PUBLIC_API_BASE"]?.trim().orEmpty()
-    val storePath = s3StorePath(bucket, env["S3_PREFIX"]?.trim().orEmpty(), READER_BASE_PATH)
-    // One rewrite maps any public /rss-reader/ path onto the mirrored store key.
-    val storeRewrite = "^$READER_BASE_PATH(.*)\$ /$storePath/\$1"
+    val prefix = env["S3_PREFIX"]?.trim().orEmpty()
     val lines = mutableListOf(
         "",
-        "# Asset origin: the reader's document and static assets on their own",
+        "# Asset origin: every app's document and static assets on their own",
         "# browser origin (B1), fronted by this nginx with the object store behind",
-        "# it. The app is served under its /rss-reader/ base path so Vite's",
-        "# base-relative output resolves, and every file routes to the store.",
-        "# Emitted only when ASSETS_HOST is set.",
+        "# it. Each app is served under its base path so Vite's base-relative",
+        "# output resolves, and every file routes to the store. Emitted only when",
+        "# ASSETS_HOST and S3_BUCKET are both set.",
         "server {",
     )
     if (!redirect) lines.add("    listen 80;")
@@ -233,77 +334,94 @@ fun assetServerBlock(env: Map<String, String>, tls: Boolean, redirect: Boolean):
         lines.add("")
     }
     lines.add("    resolver 127.0.0.11 valid=30s ipv6=off;")
-    lines.add("")
-    lines.add("    location = /rss-reader {")
-    lines.add("        return 301 /rss-reader/\$is_args\$args;")
-    lines.add("    }")
-    lines.add("")
-    lines.add("    # Hashed static assets: immutable cache, served from the object store.")
-    lines.addAll(
-        proxyLocation(
-            match = "^~ /rss-reader/assets/",
-            varName = "upstream_store",
-            upstream = STORE_UPSTREAM,
-            rewrite = storeRewrite,
-            headers = listOf(
-                "add_header Cache-Control \"public, max-age=31536000, immutable\";",
-                "add_header X-Content-Type-Options \"nosniff\" always;",
+
+    for (app in apps) {
+        val basePath = app.basePath
+        val storePath = s3StorePath(bucket, prefix, basePath)
+        // One rewrite maps any public base-path onto the mirrored store key.
+        val storeRewrite = "^$basePath(.*)\$ /$storePath/\$1"
+        lines.add("")
+        lines.add("    location = ${basePath.trimEnd('/')} {")
+        lines.add("        return 301 $basePath\$is_args\$args;")
+        lines.add("    }")
+        lines.add("")
+        lines.add("    # Hashed static assets: immutable cache, served from the object store.")
+        lines.addAll(
+            proxyLocation(
+                match = "^~ ${basePath}assets/",
+                varName = "upstream_store",
+                upstream = STORE_UPSTREAM,
+                rewrite = storeRewrite,
+                headers = listOf(
+                    "add_header Cache-Control \"public, max-age=31536000, immutable\";",
+                    "add_header X-Content-Type-Options \"nosniff\" always;",
+                ),
             ),
-        ),
-    )
-    lines.add("")
-    lines.add("    # PWA files. The service worker must revalidate (a stale sw.js pins a")
-    lines.add("    # stale precache); the web manifest and icons may cache briefly. All")
-    lines.add("    # three must come from the store: serving them as text/html would make")
-    lines.add("    # the service worker refuse to install.")
-    lines.addAll(
-        proxyLocation(
-            match = "= /rss-reader/sw.js",
-            varName = "upstream_store",
-            upstream = STORE_UPSTREAM,
-            rewrite = storeRewrite,
-            headers = listOf("add_header Cache-Control \"no-cache\";"),
-        ),
-    )
-    lines.addAll(
-        proxyLocation(
-            match = "= /rss-reader/manifest.webmanifest",
-            varName = "upstream_store",
-            upstream = STORE_UPSTREAM,
-            rewrite = storeRewrite,
-            headers = listOf("add_header Cache-Control \"no-cache\";"),
-        ),
-    )
-    lines.addAll(
-        proxyLocation(
-            match = "~ ^/rss-reader/(favicon\\.svg|icon-192\\.png|icon-512\\.png)\$",
-            varName = "upstream_store",
-            upstream = STORE_UPSTREAM,
-            rewrite = storeRewrite,
-            headers = listOf("add_header Cache-Control \"public, max-age=86400\";"),
-        ),
-    )
-    lines.add("")
-    lines.add("    # The document is Vite's static index.html from the store: never cache")
-    lines.add("    # it, and pin its origin policy to this origin (scripts, styles) and")
-    lines.add("    # the API origin (connect). The app is hash-routed, so only the base")
-    lines.add("    # path itself needs a document; deeper routes never reach the server.")
-    lines.addAll(
-        proxyLocation(
-            match = "= /rss-reader/",
-            varName = "upstream_store",
-            upstream = STORE_UPSTREAM,
-            rewrite = "^ /$storePath/index.html",
-            headers = listOf(
-                "add_header Cache-Control \"no-cache\";",
-                "add_header Content-Security-Policy \"default-src 'self'; script-src 'self'; " +
-                    "style-src 'self'; connect-src $apiBase; img-src 'self' data: https:\" always;",
-                "add_header X-Content-Type-Options \"nosniff\" always;",
-                "add_header X-Frame-Options \"SAMEORIGIN\" always;",
-                "add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;",
+        )
+        lines.add("")
+        if (app.swJs) {
+            lines.addAll(
+                proxyLocation(
+                    match = "= ${basePath}sw.js",
+                    varName = "upstream_store",
+                    upstream = STORE_UPSTREAM,
+                    rewrite = storeRewrite,
+                    headers = listOf("add_header Cache-Control \"no-cache\";"),
+                ),
+            )
+        }
+        if (app.manifest != null) {
+            lines.addAll(
+                proxyLocation(
+                    match = "= ${basePath}${app.manifest}",
+                    varName = "upstream_store",
+                    upstream = STORE_UPSTREAM,
+                    rewrite = storeRewrite,
+                    headers = listOf("add_header Cache-Control \"no-cache\";"),
+                ),
+            )
+        }
+        if (app.icons.isNotEmpty()) {
+            // Icon names carry dots, which the nginx regex must read as literal:
+            // escape each before joining the alternation.
+            val iconPattern = app.icons.joinToString("|") { it.replace(".", "\\.") }
+            lines.addAll(
+                proxyLocation(
+                    match = "~ ^$basePath($iconPattern)\$",
+                    varName = "upstream_store",
+                    upstream = STORE_UPSTREAM,
+                    rewrite = storeRewrite,
+                    headers = listOf("add_header Cache-Control \"public, max-age=86400\";"),
+                ),
+            )
+        }
+        lines.add("")
+        lines.add("    # The document is the store's rendered index.html (the publish swaps")
+        lines.add("    # the app's API origin into its #app-config block): never cache it,")
+        lines.add("    # and pin its origin policy per app (see S3_CSP): the fixed")
+        lines.add("    # script/style/img sources widened where the app loads cross-origin")
+        lines.add("    # fonts or scripts, plus the app's connect and media sources — or no")
+        lines.add("    # CSP where the app's reachable origins cannot be stated accurately.")
+        lines.add("    # Only the base path serves the document; there is no SPA fallback, so")
+        lines.add("    # a hash-routed app works here and a history-routed app needs a")
+        lines.add("    # fallback before it can move.")
+        val headers = buildList {
+            add("add_header Cache-Control \"no-cache\";")
+            cspHeader(app)?.let { add("add_header Content-Security-Policy \"$it\" always;") }
+            add("add_header X-Content-Type-Options \"nosniff\" always;")
+            add("add_header X-Frame-Options \"SAMEORIGIN\" always;")
+            add("add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;")
+        }
+        lines.addAll(
+            proxyLocation(
+                match = "= $basePath",
+                varName = "upstream_store",
+                upstream = STORE_UPSTREAM,
+                rewrite = "^ /$storePath/index.html",
+                headers = headers,
             ),
-        ),
-    )
+        )
+    }
     lines.add("}")
     return lines.joinToString("\n")
 }

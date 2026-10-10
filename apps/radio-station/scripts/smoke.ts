@@ -67,4 +67,6 @@ const firstDay = weekDays(listEntries)[0];
 assert(!!firstDay, 'weekDays has first day');
 assert(filterEntries(listEntries, firstDay.key).length >= 1, 'day filter matches weekDays key');
 
+await import('./smoke-config.js');
+
 console.log('\nAll smoke tests passed.');

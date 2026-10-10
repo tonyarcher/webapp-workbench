@@ -12,7 +12,13 @@ import './web-components/folder-menu/folder-menu';
 import './styles/global.css';
 import { initTheme } from './theme';
 import { finishLoginFromCallback } from './services/auth';
+import { parseAppConfig, setAppConfig } from './services/config';
 import { recomputeHotIfNeeded } from './db/db-query';
+
+// The runtime config must be in place before anything resolves an API or
+// identity URL — including the OAuth callback below. The entry point owns this
+// DOM read so `src/services/` stays free of DOM.
+setAppConfig(parseAppConfig(document.getElementById('app-config')?.textContent ?? ''));
 
 // An OAuth callback (?code&state) must become tokens before anything reads
 // auth state, so the exchange runs before the shell boots. The shell already

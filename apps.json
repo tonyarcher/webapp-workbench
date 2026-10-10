@@ -52,24 +52,28 @@
             "id": "lemmy-vertical-scroll",
             "workspaces": ["vertical-scroll-component", "lemmy-vertical-scroll"],
             "services": ["lemmy-vertical-scroll"],
+            "basePath": "/lemmy-vertical-scroll/",
             "aliases": ["lemmy", "apps/lemmy-vertical-scroll"]
         },
         {
             "id": "clipstack",
             "workspaces": ["vertical-scroll-component", "clipstack"],
             "services": ["clipstack"],
+            "basePath": "/clipstack/",
             "aliases": ["tiktok", "apps/clipstack"]
         },
         {
             "id": "calendar-sync",
             "workspaces": ["calendar-sync"],
             "services": ["calendar-sync"],
+            "basePath": "/calendar-sync/",
             "aliases": ["calendar", "cal", "apps/calendar-sync"]
         },
         {
             "id": "radio-station",
             "workspaces": ["radio-station"],
             "services": ["radio-station"],
+            "basePath": "/radio-station/",
             "aliases": ["radio", "apps/radio-station"]
         },
         {
@@ -96,6 +100,7 @@
             "id": "fitness",
             "workspaces": ["fitness"],
             "services": ["fitness"],
+            "basePath": "/fitness/",
             "aliases": ["apps/fitness/app"]
         },
         {

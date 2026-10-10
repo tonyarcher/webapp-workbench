@@ -1,6 +1,7 @@
 import type { Article, Edition, EditionMeta, EditionSection, EditionStatus, Feed, Folder } from '../types';
 import type { SummaryLength } from '../ai';
 import { getAccessToken, refreshTokens } from './auth';
+import { appConfig, resolveApiBase } from './config';
 
 // ---- base fetch ----
 
@@ -18,15 +19,32 @@ function emitAuthRequired(): void {
     window.dispatchEvent(new CustomEvent('rss-auth-required'));
 }
 
-function apiBase(): string {
+/** Build/dev `VITE_API_BASE`, or undefined where `import.meta.env` is unavailable. */
+function viteApiBase(): string | undefined {
     try {
-        // A build-time VITE_API_BASE names the absolute API origin when the
-        // client is served from the object-store asset origin; otherwise the
-        // same-origin relative base behind the gateway.
-        return import.meta.env.VITE_API_BASE || `${import.meta.env.BASE_URL}api`;
+        return import.meta.env.VITE_API_BASE;
     } catch {
-        return '/api';
+        return undefined;
     }
+}
+
+/** Vite's `BASE_URL`, or '/' where `import.meta.env` is unavailable (tests). */
+function baseUrl(): string {
+    try {
+        return import.meta.env.BASE_URL;
+    } catch {
+        return '/';
+    }
+}
+
+function apiBase(): string {
+    // The runtime config — set once at boot from the document's `#app-config`
+    // block, which the publish step renders for the asset-origin deploy — wins;
+    // empty means "same origin", which then falls through VITE_API_BASE to the
+    // relative `${BASE_URL}api`.
+    const configApiBase = appConfig().apiBase;
+    if (configApiBase) return configApiBase;
+    return resolveApiBase('', viteApiBase(), baseUrl());
 }
 
 export function apiUrl(path: string): string {

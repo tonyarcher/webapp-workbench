@@ -72,4 +72,6 @@ assert(sets.filter((s) => s.slot === 'fsl').length === 5, 'FSL 5 sets');
     assert(shown.ys.length === 2 && shown.fmt === 'cm', 'display series cm');
 }
 
+await import('./smoke-config.js');
+
 console.log('\nAll fitness smoke tests passed.');

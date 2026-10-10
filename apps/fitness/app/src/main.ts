@@ -1,5 +1,8 @@
 import './web-components/app-shell/app-shell';
 import './styles/global.css';
+import { parseAppConfig, setAppConfig } from './services/config';
+
+setAppConfig(parseAppConfig(document.getElementById('app-config')?.textContent ?? ''));
 
 const root = document.getElementById('app');
 if (root) root.appendChild(document.createElement('ft-app-shell'));

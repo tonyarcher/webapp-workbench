@@ -1,4 +1,5 @@
 import { authorizeUrl, challengeS256, parseJwtPayload, randomVerifier } from 'user-client';
+import { appConfig, resolveIdentityBase } from './config';
 
 const CLIENT_ID = 'stock-game';
 const TOKENS_KEY = 'sg.auth.tokens';
@@ -12,7 +13,7 @@ export interface AuthTokens {
 }
 
 function identityBase(): string {
-    return `${location.origin}/user-api`;
+    return resolveIdentityBase(appConfig().identityBase, location.origin);
 }
 
 function tokenEndpoint(): string {
