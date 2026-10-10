@@ -177,6 +177,18 @@ nginx.conf. Source, `node_modules/`, and `deploy/.env` stay off the tunnel.
 Stock Game state lives in the `stock` Postgres database owned by
 `stock-game-api`. The nginx-served apps are stateless.
 
+## Postgres major-version upgrades
+
+The image is pinned to a Postgres **major** in `deploy/postgres/Dockerfile`, and a
+major bump cannot read an existing data directory: postgres refuses to start with
+`FATAL: database files are incompatible with server` and the whole stack never
+comes up. `pgdata` is not migrated for you.
+
+- A **local** stack can just lose the volume: `docker volume rm deploy_pgdata`.
+  It is dev data, and the next deploy re-seeds it from `initdb/`.
+- A deployment holding **real data** must be migrated instead — `pg_upgrade` on
+  the host, or a dump and restore. Do not delete that volume.
+
 ## Gitea git + wiki
 
 Gitea runs at `/git/` behind the gateway and renders `README.md` and

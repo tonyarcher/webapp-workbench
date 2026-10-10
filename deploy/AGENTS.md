@@ -29,6 +29,10 @@ Docker Compose reverse-proxy stack. Workflow and monorepo rules: repo-root
 - App images listen on `3000` internally. The gateway publishes host `80`
   always, and `443` **even with TLS off** — free the host port or drop the
   mapping if something else holds 443.
+- `pgdata` is not migrated across a Postgres **major** bump: the stack will not
+  start, and postgres says so plainly (`database files are incompatible with
+server`). A local volume can be removed and re-seeded; one holding real data
+  needs `pg_upgrade` or a dump and restore. See `deploy/README.md`.
 - `APP_BASE_PATH` is public, not a secret. It is baked at the **host** Vite build
   so assets and service workers resolve under the subpath. Editing `dist/` by
   hand to fix paths does not survive the next build.
