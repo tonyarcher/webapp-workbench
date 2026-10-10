@@ -47,15 +47,16 @@ derive them from the environment.**
 ## S3 object store (reader)
 
 The reader's static assets can move to their own browser origin (B1): one
-gateway nginx container fronts an S3-compatible object store and the JVM shell
-serves the document. The direction, not yet the default:
+gateway nginx container fronts an S3-compatible object store, which serves both
+the document and the assets. The direction, not yet the default:
 
-- `rss-api` renders the HTML shell at `GET /app` (OG/meta tags + the
-  `#rss-bootstrap` JSON the client hydrates). It is `permitAll`, unversioned,
-  and `Cache-Control: no-cache`, like today's `index.html`.
-- One S3 seed drives it: `S3_ENDPOINT`, `S3_BUCKET`, `S3_PREFIX`, `S3_REGION`
-  (see `.env.example`). Empty `S3_BUCKET` keeps the same-origin compose deploy
-  untouched: no publish, no asset origin, no CSP.
+- The document is Vite's static `index.html` from the store. Its `base` is
+  `/rss-reader/`, so its script, stylesheet, manifest and icon links resolve on
+  the asset origin unchanged; the client takes its API origin from a build-time
+  `VITE_API_BASE` (baked from `PUBLIC_API_BASE`) instead of a JVM-rendered shell.
+- One S3 seed drives it: `S3_ENDPOINT`, `S3_BUCKET`, `S3_PREFIX`, `S3_REGION`,
+  `PUBLIC_API_BASE` (see `.env.example`). Empty `S3_BUCKET` keeps the
+  same-origin compose deploy untouched: no publish, no asset origin, no CSP.
 - `gradle deploy` creates the reader's bucket first (`mc mb --ignore-existing`,
   or `aws s3 mb`), then mirrors `apps/rss/app/dist` into it with
   `aws s3 sync --delete`, adding `--endpoint-url $S3_ENDPOINT` only when it is
@@ -71,12 +72,13 @@ serves the document. The direction, not yet the default:
   `ASSETS_HOST` and `S3_BUCKET` are both set) serves the app under its
   `/rss-reader/` base path so
   Vite's `base: '/rss-reader/'` output resolves unchanged: the hashed
-  `/assets/*` and the PWA files (`sw.js`, the web manifest, the icons) come
-  from the store, while the document and every SPA route proxy to `rss-api`
-  `GET /app` with no-cache, plus a CSP (`default-src 'self'`, `script-src` and
-  `style-src` the asset origin, `connect-src` the API origin). A local
-  SeaweedFS store (replacing MinIO, whose images no longer pull), reachable on
-  a loopback-only host port so the host's AWS CLI can publish to it, backs it.
+  `/assets/*`, the document, and the PWA files (`sw.js`, the web manifest, the
+  icons) all come from the store, plus a CSP (`default-src 'self'`, `script-src`
+  and `style-src` 'self', `connect-src` the API origin). The reader is
+  hash-routed, so only the base path serves the document and no SPA fallback is
+  needed. A local SeaweedFS store (replacing MinIO, whose images no longer
+  pull), reachable on a loopback-only host port so the host's AWS CLI can
+  publish to it, backs it.
 - The local store is SeaweedFS pinned at `chrislusf/seaweedfs:4.48`, built from
   `deploy/seaweedfs/`. Its S3 gateway rejects signed requests unless an identity
   is configured, so the image's entrypoint renders `/etc/seaweedfs/s3.json` at
@@ -99,10 +101,6 @@ origin, `<asset origin>/rss-reader/`) and an entry in `WEBAUTHN_ORIGINS` — add
 both, as with any non-localhost origin. When TLS is on, `ASSETS_HOST` joins the
 minted leaf's SANs automatically; a provided cert (`TLS_CERT_FILE`) must cover
 it too, or the deploy warns.
-
-**Shell entry:** `SHELL_ENTRY` names the hashed module entry for the shell's
-`<script type="module">`. It is resolved from `dist/.vite/manifest.json` at
-deploy time by the deploy task, never hardcoded by hand.
 
 ## Secrets
 

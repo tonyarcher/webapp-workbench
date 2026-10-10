@@ -50,28 +50,6 @@ class S3SupportTest {
     }
 
     @Test
-    fun shellEntryFromManifestReadsTheIndexEntry() {
-        assertEquals(
-            "assets/index-abc123.js",
-            shellEntryFromManifest(mapOf("index.html" to mapOf("file" to "assets/index-abc123.js"))),
-        )
-        assertEquals("", shellEntryFromManifest(null))
-        assertEquals("", shellEntryFromManifest(emptyMap()))
-        assertEquals("", shellEntryFromManifest(mapOf("index.html" to mapOf("name" to "index"))))
-    }
-
-    @Test
-    fun shellCssFromManifestReadsTheEntryStylesheets() {
-        assertEquals(
-            listOf("assets/index-abc.css"),
-            shellCssFromManifest(mapOf("index.html" to mapOf("css" to listOf("assets/index-abc.css")))),
-        )
-        assertEquals(emptyList(), shellCssFromManifest(null))
-        assertEquals(emptyList(), shellCssFromManifest(emptyMap()))
-        assertEquals(emptyList(), shellCssFromManifest(mapOf("index.html" to mapOf("file" to "x.js"))))
-    }
-
-    @Test
     fun assetServerBlockIsEmptyWithoutAssetsHost() {
         assertEquals("", assetServerBlock(emptyMap(), false, false))
     }
@@ -80,7 +58,6 @@ class S3SupportTest {
     fun assetServerBlockServesTheStoreUnderTheAppBasePath() {
         val env = mapOf(
             "ASSETS_HOST" to "assets.example.com",
-            "ASSETS_BASE" to "https://assets.example.com/rss-reader",
             "PUBLIC_API_BASE" to "https://api.example.com",
             "S3_BUCKET" to "workbench-assets",
             "S3_PREFIX" to "apps",
@@ -94,13 +71,13 @@ class S3SupportTest {
         assertTrue(block.contains("rewrite ^/rss-reader/(.*)\$ /workbench-assets/apps/rss-reader/\$1 break;"), block)
         assertTrue(block.contains("set \$upstream_store http://seaweedfs:8333;"), block)
         assertTrue(block.contains("proxy_pass \$upstream_store;"), block)
-        // The document and every SPA route are the shell.
-        assertTrue(block.contains("location /rss-reader/"), block)
-        assertTrue(block.contains("rewrite ^ /app break;"), block)
+        // The document is Vite's static index.html from the store.
+        assertTrue(block.contains("location = /rss-reader/"), block)
+        assertTrue(block.contains("rewrite ^ /workbench-assets/apps/rss-reader/index.html break;"), block)
         assertTrue(block.contains("Cache-Control \"public, max-age=31536000, immutable\";"), block)
         assertTrue(block.contains("Cache-Control \"no-cache\";"), block)
-        assertTrue(block.contains("script-src 'self' https://assets.example.com/rss-reader"), block)
-        assertTrue(block.contains("style-src 'self' https://assets.example.com/rss-reader"), block)
+        assertTrue(block.contains("script-src 'self';"), block)
+        assertTrue(block.contains("style-src 'self';"), block)
         assertTrue(block.contains("connect-src https://api.example.com"), block)
         assertFalse(block.contains("listen 443 ssl;"), block)
     }

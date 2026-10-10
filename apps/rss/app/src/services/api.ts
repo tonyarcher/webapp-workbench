@@ -1,7 +1,6 @@
 import type { Article, Edition, EditionMeta, EditionSection, EditionStatus, Feed, Folder } from '../types';
 import type { SummaryLength } from '../ai';
 import { getAccessToken, refreshTokens } from './auth';
-import { readBootstrap } from './bootstrap';
 
 // ---- base fetch ----
 
@@ -21,11 +20,9 @@ function emitAuthRequired(): void {
 
 function apiBase(): string {
     try {
-        // The shell's bootstrap blob wins: it names the absolute API origin when
-        // the client is served from a CDN. Then a build-time VITE_API_BASE, then
-        // the same-origin relative base behind the gateway.
-        const bootstrap = readBootstrap().apiBase;
-        if (bootstrap) return bootstrap;
+        // A build-time VITE_API_BASE names the absolute API origin when the
+        // client is served from the object-store asset origin; otherwise the
+        // same-origin relative base behind the gateway.
         return import.meta.env.VITE_API_BASE || `${import.meta.env.BASE_URL}api`;
     } catch {
         return '/api';

@@ -139,14 +139,6 @@ services:
             # Cross-origin client (assets on their own S3-backed origin) calling
             # the API. Empty = same-origin only, the current gateway deployment.
             CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
-            # The reader HTML shell (GET /app): OG/meta tags + client bootstrap.
-            # PUBLIC_API_BASE and ASSETS_BASE empty = same-origin relative.
-            # SHELL_ENTRY / SHELL_CSS name the hashed entry and stylesheets from
-            # the Vite manifest once static assets move to the asset origin.
-            PUBLIC_API_BASE: ${PUBLIC_API_BASE:-}
-            ASSETS_BASE: ${ASSETS_BASE:-}
-            SHELL_ENTRY: ${SHELL_ENTRY:-}
-            SHELL_CSS: ${SHELL_CSS:-}
         depends_on:
             postgres:
                 condition: service_healthy
