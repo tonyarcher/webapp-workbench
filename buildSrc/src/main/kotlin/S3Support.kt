@@ -4,8 +4,8 @@ import org.gradle.api.Project
 
 /*
  * Optional S3 publish for an app's static assets, endpoint-based so one seed
- * (endpoint, bucket, region, credentials) works against MinIO locally and any
- * S3-compatible cloud. Off by default: no S3_BUCKET means the same-origin
+ * (endpoint, bucket, region, credentials) works against SeaweedFS locally and
+ * any S3-compatible cloud. Off by default: no S3_BUCKET means the same-origin
  * nginx deploy, exactly as today. When a bucket is set, `gradle deploy`
  * mirrors the app's dist/ into the bucket (`--delete` keeps it a mirror) over
  * the S3 protocol. The gateway's asset-origin server block (built from the
@@ -22,7 +22,7 @@ import org.gradle.api.Project
 const val READER_BASE_PATH: String = "/rss-reader/"
 
 /** The object store's compose service name the gateway proxies the assets location to. */
-const val STORE_UPSTREAM: String = "http://minio:9000"
+const val STORE_UPSTREAM: String = "http://seaweedfs:8333"
 
 /** The S3/asset-origin seed values threaded through the deploy task to compose. */
 val S3_SEED_KEYS: List<String> = listOf(
@@ -43,8 +43,8 @@ fun s3KeyPrefix(prefix: String, basePath: String): String {
 
 /**
  * `aws s3 sync` that mirrors a dist/ directory into the bucket. `--endpoint-url`
- * is added only when an endpoint is set (MinIO / an S3-compatible cloud); real
- * AWS sends none.
+ * is added only when an endpoint is set (SeaweedFS / an S3-compatible cloud);
+ * real AWS sends none.
  */
 fun s3SyncCommand(bucket: String, key: String, distDir: String, endpoint: String = ""): List<String> {
     val command = mutableListOf("aws", "s3", "sync", distDir, "s3://${bucket.trimEnd('/')}/$key", "--delete")
@@ -59,7 +59,7 @@ fun s3SyncCommand(bucket: String, key: String, distDir: String, endpoint: String
 fun s3StorePath(bucket: String, prefix: String, basePath: String): String =
     listOf(bucket, s3KeyPrefix(prefix, basePath)).map { it.trim('/') }.filter { it.isNotEmpty() }.joinToString("/")
 
-/** The publish tool present on PATH: the AWS CLI, MinIO's `mc`, or neither. */
+/** The publish tool present on PATH: the AWS CLI, the `mc` S3 client, or neither. */
 enum class PublishTool { AWS, MC, NONE }
 
 /** First publish tool found on PATH. Takes PATH and the OS name so it is testable. */
@@ -90,20 +90,40 @@ fun mcHostEnv(alias: String, endpoint: String, accessKey: String, secretKey: Str
     return mapOf("MC_HOST_$alias" to "$scheme://$accessKey:$secretKey@$host")
 }
 
-/** The store credentials: S3_ACCESS_KEY/S3_SECRET_KEY, else the MinIO root pair. */
+/** The store credentials: S3_ACCESS_KEY/S3_SECRET_KEY. */
 private fun storeCredentials(env: Map<String, String>): Pair<String, String> {
-    val access = env["S3_ACCESS_KEY"]?.trim().orEmpty().ifEmpty { env["MINIO_ROOT_USER"]?.trim().orEmpty() }
-    val secret = env["S3_SECRET_KEY"]?.trim().orEmpty().ifEmpty { env["MINIO_ROOT_PASSWORD"]?.trim().orEmpty() }
+    val access = env["S3_ACCESS_KEY"]?.trim().orEmpty()
+    val secret = env["S3_SECRET_KEY"]?.trim().orEmpty()
     return access to secret
 }
 
 /** The alias `mc` is given the store under; the name is local to one publish run. */
 private const val MC_ALIAS: String = "workbench"
 
+/** `aws s3 mb` that creates the bucket, adding `--endpoint-url` only when set. */
+fun s3MakeBucketCommand(bucket: String, endpoint: String = ""): List<String> {
+    val command = mutableListOf("aws", "s3", "mb", "s3://${bucket.trimEnd('/')}")
+    if (endpoint.isNotBlank()) {
+        command.add("--endpoint-url")
+        command.add(endpoint.trim())
+    }
+    return command
+}
+
+/** `mc mb --ignore-existing` that creates the bucket idempotently. */
+fun mcMakeBucketCommand(alias: String, bucket: String): List<String> =
+    listOf("mc", "mb", "--ignore-existing", "$alias/${bucket.trimEnd('/')}")
+
+/** True when `aws s3 mb` failed only because the bucket already belongs to us. */
+fun alreadyOwnsBucket(output: String): Boolean =
+    output.contains("BucketAlreadyOwnedByYou") || output.contains("BucketAlreadyExists")
+
 /**
- * Mirror an app's dist/ into S3, gated on S3_BUCKET. Prefers the AWS CLI and
- * falls back to MinIO's `mc`, so a host with either one can publish without the
- * other.
+ * Create the reader's bucket, then mirror an app's dist/ into it, gated on
+ * S3_BUCKET. Prefers the AWS CLI and falls back to the `mc` S3 client, so a
+ * host with either one can publish without the other. The bucket is created
+ * here rather than by a compose seeder, so the publish and the store stay on
+ * the same credentials and there is no second image to keep in sync.
  */
 fun Project.publishAppAssets(env: Map<String, String>, distDir: String, basePath: String) {
     val bucket = env["S3_BUCKET"]?.trim().orEmpty()
@@ -113,24 +133,33 @@ fun Project.publishAppAssets(env: Map<String, String>, distDir: String, basePath
     }
     val key = s3KeyPrefix(env["S3_PREFIX"].orEmpty(), basePath)
     val endpoint = env["S3_ENDPOINT"]?.trim().orEmpty()
-    val (code, out) = when (publishTool(System.getenv("PATH"), System.getProperty("os.name"))) {
-        PublishTool.AWS -> runProcess(s3SyncCommand(bucket, key, distDir, endpoint))
+    when (publishTool(System.getenv("PATH"), System.getProperty("os.name"))) {
+        PublishTool.AWS -> {
+            // `aws s3 mb` is not idempotent: an existing bucket is "already
+            // owned", not an error worth failing the publish over.
+            val (mbCode, mbOut) = runProcess(s3MakeBucketCommand(bucket, endpoint))
+            if (mbCode != 0 && !alreadyOwnsBucket(mbOut)) {
+                error("S3 bucket create failed: ${mbOut.trim()}")
+            }
+            val (code, out) = runProcess(s3SyncCommand(bucket, key, distDir, endpoint))
+            if (code != 0) error("S3 publish failed: ${out.trim()}")
+        }
 
         PublishTool.MC -> {
             val (access, secret) = storeCredentials(env)
             if (endpoint.isEmpty() || access.isEmpty() || secret.isEmpty()) {
-                error("mc publish needs S3_ENDPOINT plus S3_ACCESS_KEY/S3_SECRET_KEY (or MINIO_ROOT_USER/PASSWORD)")
+                error("mc publish needs S3_ENDPOINT plus S3_ACCESS_KEY/S3_SECRET_KEY")
             }
-            runProcess(
-                mcMirrorCommand(MC_ALIAS, bucket, key, distDir),
-                env = mcHostEnv(MC_ALIAS, endpoint, access, secret),
-            )
+            val hostEnv = mcHostEnv(MC_ALIAS, endpoint, access, secret)
+            val (mbCode, mbOut) = runProcess(mcMakeBucketCommand(MC_ALIAS, bucket), env = hostEnv)
+            if (mbCode != 0) error("S3 bucket create failed: ${mbOut.trim()}")
+            val (code, out) = runProcess(mcMirrorCommand(MC_ALIAS, bucket, key, distDir), env = hostEnv)
+            if (code != 0) error("S3 publish failed: ${out.trim()}")
         }
 
         PublishTool.NONE ->
-            error("no S3 publish tool on PATH: install the AWS CLI (`aws`) or MinIO's client (`mc`)")
+            error("no S3 publish tool on PATH: install the AWS CLI (`aws`) or the `mc` S3 client")
     }
-    if (code != 0) error("S3 publish failed: ${out.trim()}")
     val via = if (endpoint.isEmpty()) "" else " (endpoint $endpoint)"
     println("==> published $distDir -> s3://$bucket/$key$via")
 }

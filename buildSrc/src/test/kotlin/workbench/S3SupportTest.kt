@@ -37,9 +37,9 @@ class S3SupportTest {
                 "s3://bucket/apps/rss-reader",
                 "--delete",
                 "--endpoint-url",
-                "http://minio:9000",
+                "http://seaweedfs:8333",
             ),
-            s3SyncCommand("bucket", "apps/rss-reader", "dist", "http://minio:9000"),
+            s3SyncCommand("bucket", "apps/rss-reader", "dist", "http://seaweedfs:8333"),
         )
     }
 
@@ -92,6 +92,7 @@ class S3SupportTest {
         assertTrue(block.contains("location = /rss-reader/sw.js"), block)
         assertTrue(block.contains("location = /rss-reader/manifest.webmanifest"), block)
         assertTrue(block.contains("rewrite ^/rss-reader/(.*)\$ /workbench-assets/apps/rss-reader/\$1 break;"), block)
+        assertTrue(block.contains("set \$upstream_store http://seaweedfs:8333;"), block)
         assertTrue(block.contains("proxy_pass \$upstream_store;"), block)
         // The document and every SPA route are the shell.
         assertTrue(block.contains("location /rss-reader/"), block)
@@ -171,8 +172,45 @@ class S3SupportTest {
             mcHostEnv("workbench", "http://localhost:9000", "key", "secret"),
         )
         assertEquals(
-            mapOf("MC_HOST_workbench" to "https://k:s@minio:9000"),
-            mcHostEnv("workbench", "https://minio:9000/", "k", "s"),
+            mapOf("MC_HOST_workbench" to "https://k:s@seaweedfs:8333"),
+            mcHostEnv("workbench", "https://seaweedfs:8333/", "k", "s"),
         )
+    }
+
+    @Test
+    fun s3MakeBucketCommandAddsEndpointUrlWhenSet() {
+        assertEquals(
+            listOf("aws", "s3", "mb", "s3://bucket"),
+            s3MakeBucketCommand("bucket"),
+        )
+        assertEquals(
+            listOf("aws", "s3", "mb", "s3://bucket", "--endpoint-url", "http://seaweedfs:8333"),
+            s3MakeBucketCommand("bucket", "http://seaweedfs:8333"),
+        )
+    }
+
+    @Test
+    fun mcMakeBucketCommandIgnoresExisting() {
+        assertEquals(
+            listOf("mc", "mb", "--ignore-existing", "workbench/bucket"),
+            mcMakeBucketCommand("workbench", "bucket"),
+        )
+        assertEquals(
+            listOf("mc", "mb", "--ignore-existing", "workbench/bucket"),
+            mcMakeBucketCommand("workbench", "bucket/"),
+        )
+    }
+
+    @Test
+    fun alreadyOwnsBucketRecognizesExistingBucket() {
+        assertFalse(alreadyOwnsBucket(""))
+        assertFalse(alreadyOwnsBucket("some other error"))
+        assertTrue(alreadyOwnsBucket("An error occurred (BucketAlreadyOwnedByYou)"))
+        assertTrue(alreadyOwnsBucket("An error occurred (BucketAlreadyExists)"))
+    }
+
+    @Test
+    fun storeUpstreamPointsAtTheSeaweedFsS3Port() {
+        assertEquals("http://seaweedfs:8333", STORE_UPSTREAM)
     }
 }

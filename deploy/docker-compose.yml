@@ -525,61 +525,39 @@ services:
             victoria-logs:
                 condition: service_started
 
-    # Local S3-compatible object store (MinIO). The gateway's asset-origin
-    # server block fronts it for /assets/*, and the host's AWS CLI publishes to
-    # it over a loopback-only port (never the LAN). The reader's bucket is
-    # seeded below.
-    minio:
+    # Local S3-compatible object store (SeaweedFS, replacing the dead MinIO --
+    # its images no longer pull). The gateway's asset-origin server block fronts
+    # it for /assets/*, and the host's AWS CLI publishes to it over a loopback-
+    # only port (never the LAN). The reader's bucket is created by the publish
+    # step (see S3Support), so there is no one-shot seeder service to keep in
+    # sync with the store image.
+    seaweedfs:
         logging: *bounded-logs
-        # Pinned, not :latest -- a deploy must not silently change versions.
-        image: minio/minio:RELEASE.2025-04-22T22-12-26Z
-        command: server /data --console-address ':9001'
+        # Built from deploy/ so the entrypoint (which renders the s3.json
+        # identity file at start) bakes into the image; remote daemons cannot use
+        # host bind mounts. The key/secret arrive via env at run, never an image.
+        build:
+            context: .
+            dockerfile: seaweedfs/Dockerfile
         environment:
-            MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-            # Must match the region the AWS CLI sends; both default to us-east-1.
-            MINIO_REGION: ${S3_REGION:-us-east-1}
+            # The identity pair SeaweedFS renders into s3.json. Local-dev
+            # defaults; production overrides in deploy/.env. Must match what the
+            # S3 publish sends (S3_ACCESS_KEY/S3_SECRET_KEY).
+            S3_ACCESS_KEY: ${S3_ACCESS_KEY:-workbench}
+            S3_SECRET_KEY: ${S3_SECRET_KEY:-workbench-secret}
         volumes:
-            - minio-data:/data
+            - seaweedfs-data:/data
         # Loopback-only host port so the host's AWS CLI can `aws s3 sync` into the
-        # local store with S3_ENDPOINT=http://localhost:9000. Never the LAN: the
-        # store is guarded only by its root credentials. The gateway still reaches
-        # it on the compose network as http://minio:9000.
+        # local store with S3_ENDPOINT=http://127.0.0.1:9000. Never the LAN: the
+        # store is guarded only by its credentials. The S3 gateway listens on 8333
+        # in-container; the gateway still reaches it on the compose network as
+        # http://seaweedfs:8333. The host port is overridable because the deploy
+        # tunnel's store forward also claims 9000 for a remote deploy; the two
+        # cannot both hold it, so a local deploy needs it free (or STORE_HOST_PORT
+        # moved, with S3_ENDPOINT following it).
         ports:
-            - '127.0.0.1:${MINIO_API_PORT:-9000}:9000'
-        healthcheck:
-            test: ['CMD', 'mc', 'ready', 'local']
-            interval: 10s
-            timeout: 5s
-            retries: 5
+            - '127.0.0.1:${STORE_HOST_PORT:-9000}:8333'
         restart: unless-stopped
-        networks:
-            - baseball
-
-    # One-shot: create the reader's bucket so `aws s3 sync` has a target. The
-    # name is S3_BUCKET; skipped when unset (the same-origin nginx deploy). A
-    # retry loop waits for MinIO instead of depending on its healthcheck, so a
-    # slow first boot does not lose the seed.
-    minio-seed:
-        image: minio/mc:RELEASE.2025-03-12T17-29-24Z
-        depends_on:
-            - minio
-        environment:
-            S3_BUCKET: ${S3_BUCKET:-}
-            MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-        entrypoint: ['/bin/sh', '-c']
-        command:
-            - |
-                if [ -z "$$S3_BUCKET" ]; then
-                  echo "S3_BUCKET unset; no bucket to seed"
-                  exit 0
-                fi
-                until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null 2>&1; do
-                  echo "waiting for minio..."
-                  sleep 2
-                done
-                mc mb --ignore-existing "local/$$S3_BUCKET"
         networks:
             - baseball
 
@@ -593,4 +571,4 @@ volumes:
     victoria-logs-data:
     grafana-data:
     alloy-data:
-    minio-data:
+    seaweedfs-data:
