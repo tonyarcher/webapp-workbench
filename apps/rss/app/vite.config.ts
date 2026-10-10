@@ -4,9 +4,6 @@ export default defineConfig({
     base: process.env.APP_BASE_PATH ?? '/',
     build: {
         target: 'es2022',
-        // Emit dist/.vite/manifest.json so the deploy task can resolve the
-        // hashed module entry (SHELL_ENTRY) for the JVM-rendered shell.
-        manifest: true,
     },
     server: {
         proxy: {

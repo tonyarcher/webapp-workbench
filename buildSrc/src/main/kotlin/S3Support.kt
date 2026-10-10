@@ -9,9 +9,9 @@ import org.gradle.api.Project
  * nginx deploy, exactly as today. When a bucket is set, `gradle deploy`
  * mirrors the app's dist/ into the bucket (`--delete` keeps it a mirror) over
  * the S3 protocol. The gateway's asset-origin server block (built from the
- * same seed by assetServerBlock) fronts the store for the assets location while the
- * JVM still renders the HTML shell and the client points back at the API
- * cross-origin (CORS).
+ * same seed by assetServerBlock) fronts the store for the document and the
+ * assets, while the client points back at the API cross-origin (CORS) via a
+ * build-time VITE_API_BASE.
  *
  * Requires the AWS CLI on PATH and credentials in the standard AWS
  * env/profile. Runs only when S3_BUCKET is set, so a local deploy with no
@@ -31,7 +31,6 @@ val S3_SEED_KEYS: List<String> = listOf(
     "S3_PREFIX",
     "S3_REGION",
     "ASSETS_HOST",
-    "ASSETS_BASE",
     "PUBLIC_API_BASE",
 )
 
@@ -164,33 +163,6 @@ fun Project.publishAppAssets(env: Map<String, String>, distDir: String, basePath
     println("==> published $distDir -> s3://$bucket/$key$via")
 }
 
-/** The hashed module entry (`assets/index-<hash>.js`) from a parsed Vite manifest. */
-fun shellEntryFromManifest(manifest: Map<String, Any?>?): String {
-    val entry = manifest?.get("index.html") as? Map<*, *> ?: return ""
-    return entry["file"] as? String ?: ""
-}
-
-/** Resolve the hashed module entry from the Vite manifest, or "" when absent. */
-fun Project.resolveShellEntry(distDir: String): String {
-    val manifest = file("$distDir/.vite/manifest.json")
-    if (!manifest.isFile) return ""
-    return shellEntryFromManifest(packageJson(manifest))
-}
-
-/** The hashed CSS files (`assets/index-<hash>.css`) from a parsed Vite manifest. */
-fun shellCssFromManifest(manifest: Map<String, Any?>?): List<String> {
-    val entry = manifest?.get("index.html") as? Map<*, *> ?: return emptyList()
-    val css = entry["css"] as? List<*> ?: return emptyList()
-    return css.filterIsInstance<String>()
-}
-
-/** Resolve the hashed CSS files from the Vite manifest, or [] when absent. */
-fun Project.resolveShellCss(distDir: String): List<String> {
-    val manifest = file("$distDir/.vite/manifest.json")
-    if (!manifest.isFile) return emptyList()
-    return shellCssFromManifest(packageJson(manifest))
-}
-
 /**
  * One proxying `location` block: the match pattern, the upstream, the rewrite
  * that maps the public path onto it, and any `add_header` lines.
@@ -220,12 +192,12 @@ private fun proxyLocation(
  * The reader's asset-origin server block, or "" when ASSETS_HOST is unset so
  * today's rendered config is unchanged. One gateway nginx container serves both
  * origins via `server_name`: this block is the asset origin, whose document is
- * the JVM shell. The app is served under its `/rss-reader/` base path so Vite's
- * `base: '/rss-reader/'` output resolves here unchanged: the hashed assets
- * under `/assets/` and the PWA files (`sw.js`, the web manifest, the icons)
- * come from the object store, while the document and every SPA route proxy to
- * `rss-api` `GET /app` with no-cache, plus a CSP pinning scripts and styles to
- * this origin and connects to the API origin.
+ * Vite's static `index.html` from the store. The app is served under its
+ * `/rss-reader/` base path so Vite's `base: '/rss-reader/'` output resolves
+ * here unchanged: the hashed assets under `/assets/`, the document, and the
+ * PWA files (`sw.js`, the web manifest, the icons) all come from the object
+ * store, plus a CSP pinning scripts and styles to this origin and connects to
+ * the API origin.
  */
 fun assetServerBlock(env: Map<String, String>, tls: Boolean, redirect: Boolean): String {
     val host = env["ASSETS_HOST"]?.trim().orEmpty()
@@ -233,18 +205,17 @@ fun assetServerBlock(env: Map<String, String>, tls: Boolean, redirect: Boolean):
     // The asset origin needs a store to front. Without a bucket there is nothing
     // to serve, and a half-configured block would rewrite to the wrong key.
     if (host.isEmpty() || bucket.isEmpty()) return ""
-    val assetsBase = env["ASSETS_BASE"]?.trim().orEmpty()
     val apiBase = env["PUBLIC_API_BASE"]?.trim().orEmpty()
     val storePath = s3StorePath(bucket, env["S3_PREFIX"]?.trim().orEmpty(), READER_BASE_PATH)
     // One rewrite maps any public /rss-reader/ path onto the mirrored store key.
     val storeRewrite = "^$READER_BASE_PATH(.*)\$ /$storePath/\$1"
     val lines = mutableListOf(
         "",
-        "# Asset origin: the reader's static assets on their own browser origin (B1),",
-        "# fronted by this nginx with the object store behind it. The app is served",
-        "# under its /rss-reader/ base path so Vite's base-relative output resolves,",
-        "# and the PWA files route to the store rather than the shell. Emitted only",
-        "# when ASSETS_HOST is set.",
+        "# Asset origin: the reader's document and static assets on their own",
+        "# browser origin (B1), fronted by this nginx with the object store behind",
+        "# it. The app is served under its /rss-reader/ base path so Vite's",
+        "# base-relative output resolves, and every file routes to the store.",
+        "# Emitted only when ASSETS_HOST is set.",
         "server {",
     )
     if (!redirect) lines.add("    listen 80;")
@@ -283,8 +254,8 @@ fun assetServerBlock(env: Map<String, String>, tls: Boolean, redirect: Boolean):
     lines.add("")
     lines.add("    # PWA files. The service worker must revalidate (a stale sw.js pins a")
     lines.add("    # stale precache); the web manifest and icons may cache briefly. All")
-    lines.add("    # three must come from the store: proxying them to the shell would")
-    lines.add("    # return text/html and the service worker would refuse to install.")
+    lines.add("    # three must come from the store: serving them as text/html would make")
+    lines.add("    # the service worker refuse to install.")
     lines.addAll(
         proxyLocation(
             match = "= /rss-reader/sw.js",
@@ -313,19 +284,20 @@ fun assetServerBlock(env: Map<String, String>, tls: Boolean, redirect: Boolean):
         ),
     )
     lines.add("")
-    lines.add("    # The document and every SPA route are the SSR shell (GET /app): never")
-    lines.add("    # cache it, and pin its origin policy to this origin (scripts, styles)")
-    lines.add("    # and the API origin (connect).")
+    lines.add("    # The document is Vite's static index.html from the store: never cache")
+    lines.add("    # it, and pin its origin policy to this origin (scripts, styles) and")
+    lines.add("    # the API origin (connect). The app is hash-routed, so only the base")
+    lines.add("    # path itself needs a document; deeper routes never reach the server.")
     lines.addAll(
         proxyLocation(
-            match = "/rss-reader/",
-            varName = "upstream_shell",
-            upstream = "http://rss-api:3000",
-            rewrite = "^ /app",
+            match = "= /rss-reader/",
+            varName = "upstream_store",
+            upstream = STORE_UPSTREAM,
+            rewrite = "^ /$storePath/index.html",
             headers = listOf(
                 "add_header Cache-Control \"no-cache\";",
-                "add_header Content-Security-Policy \"default-src 'self'; script-src 'self' $assetsBase; " +
-                    "style-src 'self' $assetsBase; connect-src $apiBase; img-src 'self' data: https:\" always;",
+                "add_header Content-Security-Policy \"default-src 'self'; script-src 'self'; " +
+                    "style-src 'self'; connect-src $apiBase; img-src 'self' data: https:\" always;",
                 "add_header X-Content-Type-Options \"nosniff\" always;",
                 "add_header X-Frame-Options \"SAMEORIGIN\" always;",
                 "add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;",
