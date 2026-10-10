@@ -8,13 +8,16 @@
         "build": "tsc --noEmit && vite build",
         "test": "vitest run",
         "test:coverage": "vitest run --coverage",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "test:e2e": "playwright test"
     },
     "dependencies": {
         "idb": "^8.0.3",
         "lit": "^3.3.3"
     },
     "devDependencies": {
+        "@axe-core/playwright": "^4.13.0",
+        "@playwright/test": "^1.63.0",
         "@types/node": "^26.6.2",
         "@vitest/coverage-v8": "^5.0.1",
         "fake-indexeddb": "^6.2.5",

@@ -46,11 +46,20 @@ export class AppShell extends LitElement {
     };
 
     override render(): TemplateResult {
-        if (!this.ready) return html`<p class="loading">Loading…</p>`;
+        if (!this.ready) return html`<main><p class="loading">Loading…</p></main>`;
+        // One main landmark, and a level-one heading on the game screen. The
+        // setup screen brings its own visible h1; the game screen gets a
+        // visually hidden one so the scorebug is not duplicated. The audit in
+        // e2e/accessibility.spec.ts fails without both.
         if (!this.game) {
-            return html`<fb-setup-screen @start-game=${this.onStart}></fb-setup-screen>`;
+            return html`<main>
+        <fb-setup-screen @start-game=${this.onStart}></fb-setup-screen>
+      </main>`;
         }
-        return html`<fb-game-shell .store=${this.store} .game=${this.game}></fb-game-shell>`;
+        return html`<main>
+        <h1 class="visually-hidden">Football scorekeeping</h1>
+        <fb-game-shell .store=${this.store} .game=${this.game}></fb-game-shell>
+      </main>`;
     }
 }
 

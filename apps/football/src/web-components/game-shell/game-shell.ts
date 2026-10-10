@@ -368,7 +368,7 @@ export class GameShell extends LitElement {
 
     private renderLog(engine: GameState, setup: GameSetup): TemplateResult {
         return html`
-            <ol class="log">
+            <ol class="log" tabindex="0" aria-label="Play log">
                 ${[...engine.plays]
                     .reverse()
                     .map((play) => html`<li>${describePlay(play, setup.homeName, setup.awayName)}</li>`)}
