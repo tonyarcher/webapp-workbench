@@ -142,14 +142,14 @@ export class AppShell extends LitElement {
                 <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2" fill="currentColor"/><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
                 <h1>RSS Reader</h1><span class="sub">your feeds, in one place</span>
             </header>
-            <div class="signin">
+            <main class="signin">
                 <div class="signin-card">
                     <h2>Sign in to read</h2>
                     <p class="muted">Your feeds live in your account. Sign in with the workbench identity service to continue.</p>
                     <button class="primary" @click=${this.onSignIn}>Sign in</button>
                     ${this.authError ? html`<p class="error">${this.authError}</p>` : ''}
                 </div>
-            </div>`;
+            </main>`;
     }
 
     private renderHeader() {
