@@ -47,6 +47,46 @@ jobs:
             - run: npm test
             - run: npm run build
 
+    a11y:
+        name: A11y (axe audits per app)
+        runs-on: ubuntu-24.04
+        strategy:
+            # One runner per app: each audit boots its own dev server on its
+            # own port, so legs never collide, and a red app reports without
+            # cancelling the rest before they finish.
+            fail-fast: false
+            matrix:
+                # Every directory holding a playwright.config.ts. A new audited
+                # app needs its entry here before CI covers it.
+                dir:
+                    - apps/baseball
+                    - apps/basketball
+                    - apps/football
+                    - apps/calendar-sync
+                    - apps/clipstack
+                    - apps/lemmy-vertical-scroll
+                    - apps/radio-station
+                    - apps/rss/app
+                    - apps/stock-game/app
+                    - apps/fitness/app
+                    - apps/user/app
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            # Same install as the web job: npm ci fetches the Playwright
+            # package but not its browser binaries.
+            - name: Install Playwright Chromium
+              run: npx playwright install --with-deps chromium
+            # Run from the app's own directory, where `playwright test` finds
+            # its config and `npm run dev` serves that app.
+            - name: Run axe audit
+              working-directory: ${{ matrix.dir }}
+              run: npm run test:e2e
+
     jvm:
         name: JVM (tests, detekt, coverage)
         runs-on: ubuntu-24.04
