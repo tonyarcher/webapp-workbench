@@ -184,11 +184,13 @@ mounts), and each app build uses a build context from the repo root. All of it
 is pushed through the Docker client to the remote daemon, so you can drive a
 remote server from WSL or any machine.
 
-If an SSH tunnel is already exposing the remote daemon on `127.0.0.1:2375`,
-`python deploy.py` uses it. Otherwise it falls back to local Docker. Override
-with `--local`, `--remote`, `DEPLOY_TARGET`, or `DOCKER_HOST`. The same tunnel
-must also carry the object store for a remote publish — see **The object store
-(required)** above.
+`python deploy.py` targets the remote engine by default: before Gradle boots it
+probes the tunnel on `127.0.0.1:2375` (and the object-store forward when a
+publish will run) and runs `bash deploy/tunnel.sh up` itself when either is
+down. When the tunnel cannot come up it stops before building — it never falls
+through to a surprise local deploy. Override with `--local`, `DEPLOY_TARGET`,
+or `DOCKER_HOST`. The same tunnel must also carry the object store for a remote
+publish — see **The object store (required)** above.
 
 ```sh
 # Optional: expose the remote daemon yourself, then deploy.

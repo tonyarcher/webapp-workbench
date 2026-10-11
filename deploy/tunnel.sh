@@ -135,8 +135,11 @@ up)
         echo "tunnel attempt ${attempt}/3 to ${USER_NAME}@${HOST}:${PORT} (key ${KEY}) ..."
         # setsid detaches ssh from this shell so it survives the script
         # exiting; without it the tunnel gets SIGHUP and dies with the
-        # wsl -e invocation that started it.
+        # wsl -e invocation that started it. ConnectTimeout bounds each
+        # attempt: without it a black-holed host hangs until TCP gives up,
+        # and three attempts take minutes instead of about a minute.
         setsid ssh -N "${forwards[@]}" -p "$PORT" -i "$KEY" \
+            -o ConnectTimeout=20 \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
             -o ExitOnForwardFailure=yes \
             "${USER_NAME}@${HOST}" >/dev/null 2>&1 &
