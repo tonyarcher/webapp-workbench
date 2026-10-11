@@ -55,6 +55,17 @@ log_format app_json escape=json
     '"ua":"$http_user_agent"'
     '}';
 
+# Compress text responses (JS, CSS, JSON, SVG) from every upstream and the
+# object store. The container apps each enable gzip locally, but nothing here
+# did, so browsers downloaded every static asset uncompressed. `proxied any`
+# because every byte here arrives via proxy_pass, and `vary` so a downstream
+# cache never serves gzipped bytes to a client that cannot decode them.
+gzip on;
+gzip_proxied any;
+gzip_vary on;
+gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
+gzip_min_length 1024;
+
 @@TLS_REDIRECT@@
 server {
 @@HTTP_LISTEN@@

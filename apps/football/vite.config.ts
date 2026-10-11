@@ -13,6 +13,8 @@ export default defineConfig({
     },
     build: {
         target: 'es2022',
-        sourcemap: true,
+        // No sourcemaps in the published bundle: nothing consumes them, and
+        // `true` embeds full source in the object store.
+        sourcemap: false,
     },
 });

@@ -1,3 +1,5 @@
+import { aiStatus, requestServerSummary } from './services/api';
+
 export type AiAvailability = 'readily' | 'after-download' | 'no' | 'unsupported';
 
 interface AiSession {
@@ -355,7 +357,6 @@ export async function serverSummaryAvailable(): Promise<boolean> {
         return cachedServerAvailable;
     }
     try {
-        const { aiStatus } = await import('./services/api');
         cachedServerAvailable = (await aiStatus()).available;
     } catch {
         cachedServerAvailable = false;
@@ -370,7 +371,6 @@ export async function summarizeWithServer(
     body: string,
     length: SummaryLength = 'standard',
 ): Promise<string> {
-    const { requestServerSummary } = await import('./services/api');
     return (await requestServerSummary(title, body, length)).summary;
 }
 
