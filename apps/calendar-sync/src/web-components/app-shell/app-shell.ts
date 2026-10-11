@@ -444,7 +444,7 @@ export class AppShell extends LitElement {
                 .syncDisabled=${this.busy !== null}
                 @sync=${this.onSyncNetflix}
             >
-                <input class="file" type="file" accept=".csv,.json,.txt,text/csv,application/json,text/plain" @change=${this.onNetflixFile}>
+                <input class="file" type="file" accept=".csv,.json,.txt,text/csv,application/json,text/plain" aria-label="Netflix viewing activity file" @change=${this.onNetflixFile}>
             </cal-source-card>`;
     }
 
@@ -495,14 +495,14 @@ export class AppShell extends LitElement {
     override render(): TemplateResult {
         const mergedCount = this.merged().length;
         return html`
-            <div class="page">
+            <main class="page">
                 <h1 class="title">Calendar Sync</h1>
                 <p class="lede">Pull upcoming airings and watch history from Trakt, import a Netflix viewing export, then download an .ics or push a dedicated Google Calendar (shows up in Gmail).</p>
                 ${this.renderBanners()} ${this.renderProgressBlock()}
                 <p class="section">Sources</p>
                 <div class="grid">${this.renderTraktCard()} ${this.renderNetflixCard()}</div>
                 ${this.renderDeviceFlowBlock()} ${this.renderDestinations(mergedCount)} ${this.renderLast()} ${this.renderSettingsPanel()}
-            </div>
+            </main>
         `;
     }
 }

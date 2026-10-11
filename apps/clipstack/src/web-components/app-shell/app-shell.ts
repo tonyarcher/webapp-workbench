@@ -67,7 +67,7 @@ export class AppShell extends LitElement {
     override render(): TemplateResult {
         const result = this.result;
         if (result && result.items.length > 0) {
-            return html`<cs-watch-view
+            return html`<main><cs-watch-view
                 .items=${result.items}
                 .skippedCount=${result.skipped.length}
                 .startIndex=${this.startIndex}
@@ -75,9 +75,9 @@ export class AppShell extends LitElement {
                 @new-list=${this.onNewList}
                 @progress=${this.onProgress}
                 @links-enriched=${this.onLinksEnriched}
-            ></cs-watch-view>`;
+            ></cs-watch-view></main>`;
         }
-        return html`<cs-import-view @import-parsed=${this.onImportParsed}></cs-import-view>`;
+        return html`<main><cs-import-view @import-parsed=${this.onImportParsed}></cs-import-view></main>`;
     }
 }
 

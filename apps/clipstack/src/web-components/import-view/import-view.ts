@@ -72,7 +72,7 @@ export class ImportView extends LitElement {
             <div class="import">
                 <h1 class="title">Clipstack</h1>
                 <p class="help">Paste TikTok or Instagram links, or drop a .txt / .csv / .json — including a TikTok Like List or an Instagram data-export JSON.</p>
-                <input class="file-input" type="file" accept=".txt,.csv,.json,text/plain,text/csv,application/json" @change=${this.onFileChange}>
+                <input class="file-input" type="file" accept=".txt,.csv,.json,text/plain,text/csv,application/json" aria-label="List file" @change=${this.onFileChange}>
                 ${this.pasteArea()}
                 ${this.actionsRow(playable)}
                 ${this.resultSummary(result, playable, skipped)}
@@ -86,6 +86,7 @@ export class ImportView extends LitElement {
             <textarea
                 class="paste"
                 placeholder="https://www.tiktok.com/@user/video/1234567890"
+                aria-label="Paste links"
                 .value=${this.text}
                 @input=${this.onTextInput}
             ></textarea>

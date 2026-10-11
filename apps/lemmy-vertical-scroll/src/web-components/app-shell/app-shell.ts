@@ -102,7 +102,7 @@ export class AppShell extends LitElement {
     }
 
     private renderViewModeSelect(value: ViewMode): TemplateResult {
-        return html`<select class="sort-select" title="Feed view" @change=${this.onViewModeChange}>
+        return html`<select class="sort-select" title="Feed view" aria-label="Feed view" @change=${this.onViewModeChange}>
             ${(['list', 'scroll'] as const).map(
                 (mode) =>
                     html`<option value=${mode} ?selected=${mode === value}>${mode === 'list' ? 'List' : 'Scroll'}</option>`,
@@ -116,7 +116,7 @@ export class AppShell extends LitElement {
             Exclude: 'NSFW: Hide',
             Only: 'NSFW: Only',
         };
-        return html`<select class="sort-select" title="NSFW content filter" @change=${this.onNsfwFilterChange}>
+        return html`<select class="sort-select" title="NSFW content filter" aria-label="NSFW content filter" @change=${this.onNsfwFilterChange}>
             ${(['Include', 'Exclude', 'Only'] as const).map(
                 (filter) => html`<option value=${filter} ?selected=${filter === value}>${labels[filter]}</option>`,
             )}
@@ -157,7 +157,7 @@ export class AppShell extends LitElement {
     }
 
     private renderFeedTypeSelect(value: PostFeedType, onchange: (e: Event) => void): TemplateResult {
-        return html`<select class="sort-select" title="Feed listing" @change=${onchange}>
+        return html`<select class="sort-select" title="Feed listing" aria-label="Feed listing" @change=${onchange}>
             ${this.postFeedTypes().map(
                 (type) => html`<option value=${type} ?selected=${type === value}>${type}</option>`,
             )}
@@ -165,7 +165,7 @@ export class AppShell extends LitElement {
     }
 
     private renderCommunityTypeSelect(value: FeedType, onchange: (e: Event) => void): TemplateResult {
-        return html`<select class="sort-select" title="Community listing" @change=${onchange}>
+        return html`<select class="sort-select" title="Community listing" aria-label="Community listing" @change=${onchange}>
             ${this.communityFeedTypes().map(
                 (type) => html`<option value=${type} ?selected=${type === value}>${type}</option>`,
             )}
@@ -177,7 +177,7 @@ export class AppShell extends LitElement {
         onchange: (e: Event) => void,
         sorts: readonly PostSort[],
     ): TemplateResult {
-        return html`<select class="sort-select" @change=${onchange}>
+        return html`<select class="sort-select" title="Sort" aria-label="Sort" @change=${onchange}>
             ${sorts.map((sort) => html`<option value=${sort} ?selected=${sort === value}>${sort}</option>`)}
         </select>`;
     }
@@ -287,7 +287,7 @@ export class AppShell extends LitElement {
                     <lvs-account-button .instance=${this.instance} .software=${this.software}></lvs-account-button>
                 </div>
             </header>
-            <main class="view">${this.renderView()}</main>
+            <main class="view"><h1 class="visually-hidden">Lemmy Scroll</h1>${this.renderView()}</main>
         `;
     }
 }

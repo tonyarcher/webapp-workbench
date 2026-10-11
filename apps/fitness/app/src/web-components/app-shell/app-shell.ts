@@ -58,17 +58,19 @@ export class AppShell extends LitElement {
                     >${v}</button>`,
                 )}
             </nav>
-            ${
-                view === 'dashboard'
-                    ? html`<ft-dashboard-view></ft-dashboard-view>`
-                    : view === 'import'
-                      ? html`<ft-import-view></ft-import-view>`
-                      : view === 'lifts'
-                        ? html`<ft-lifts-view></ft-lifts-view>`
-                        : view === 'chart'
-                          ? html`<ft-chart-view metric=${this.metric}></ft-chart-view>`
-                          : html`<ft-measure-view></ft-measure-view>`
-            }
+            <main>
+                ${
+                    view === 'dashboard'
+                        ? html`<ft-dashboard-view></ft-dashboard-view>`
+                        : view === 'import'
+                          ? html`<ft-import-view></ft-import-view>`
+                          : view === 'lifts'
+                            ? html`<ft-lifts-view></ft-lifts-view>`
+                            : view === 'chart'
+                              ? html`<ft-chart-view metric=${this.metric}></ft-chart-view>`
+                              : html`<ft-measure-view></ft-measure-view>`
+                }
+            </main>
         `;
     }
 }

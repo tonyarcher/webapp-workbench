@@ -209,22 +209,27 @@ export class AppShell extends LitElement {
 
     override render(): TemplateResult {
         return html`
-            <rs-toolbar
-                .seed=${this.seed}
-                .weights=${this.weights}
-                .busy=${this.busy}
-                .canExport=${!!this.result}
-                @clock-change=${this.onClockChange}
-                @generate=${this.onGenerate}
-                @export=${this.onExport}
-            ></rs-toolbar>
-            <rs-now-playing
-                .nowPlaying=${this.nowPlaying}
-                .now=${this.now}
-                @jump-now=${this.onJumpNow}
-            ></rs-now-playing>
-            ${this.error ? html`<p class="error">${this.error}</p>` : ''}
-            ${this.result ? this.renderWeek() : this.renderEmpty()}
+            <header>
+                <rs-toolbar
+                    .seed=${this.seed}
+                    .weights=${this.weights}
+                    .busy=${this.busy}
+                    .canExport=${!!this.result}
+                    @clock-change=${this.onClockChange}
+                    @generate=${this.onGenerate}
+                    @export=${this.onExport}
+                ></rs-toolbar>
+            </header>
+            <main>
+                <h1 class="visually-hidden">Radio Station</h1>
+                <rs-now-playing
+                    .nowPlaying=${this.nowPlaying}
+                    .now=${this.now}
+                    @jump-now=${this.onJumpNow}
+                ></rs-now-playing>
+                ${this.error ? html`<p class="error">${this.error}</p>` : ''}
+                ${this.result ? this.renderWeek() : this.renderEmpty()}
+            </main>
         `;
     }
 }

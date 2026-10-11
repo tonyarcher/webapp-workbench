@@ -15,6 +15,11 @@
     border-bottom: 1px solid var(--border);
 }
 
+main {
+    flex: 1;
+    min-height: 0;
+}
+
 .brand {
     margin-right: 8px;
     color: var(--accent);
