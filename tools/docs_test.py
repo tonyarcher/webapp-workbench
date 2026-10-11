@@ -32,8 +32,11 @@ from tools.doc_claims import (
     NEGATED,
     NPM_RUN,
     ROOT,
+    WORKFLOW,
+    audit_dirs,
     candidate_paths,
     catalog_counts,
+    ci_matrix_dirs,
     doc_files,
     glob_claims,
     ignored_paths,
@@ -349,6 +352,72 @@ class DocRotTest(unittest.TestCase):
         self.assertGreaterEqual(
             tasks, MIN_TASKS, f"gradle scan matched only {tasks} claims"
         )
+
+
+class CiAuditMatrixTest(unittest.TestCase):
+    """Every audited app runs in CI.
+
+    A playwright.config.ts without a matrix entry is an audit that only runs
+    by hand: the same rot class as a doc naming a deleted path, two listings
+    that must agree. The workflow side is read line-wise (see ci_matrix_dirs),
+    so the guard needs no YAML parser.
+    """
+
+    text: ClassVar[str] = ""
+    audited: ClassVar[set[str]] = set()
+    gated: ClassVar[set[str]] = set()
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.text = WORKFLOW.read_text(encoding="utf-8")
+        cls.audited = audit_dirs()
+        cls.gated = ci_matrix_dirs(cls.text)
+
+    def test_every_audit_runs_in_ci(self) -> None:
+        """An audited app missing from the matrix passes CI unexamined."""
+        missing = sorted(self.audited - self.gated)
+        self.assertEqual(
+            [],
+            missing,
+            "audited apps with no a11y matrix entry; their audits only run by hand",
+        )
+
+    def test_matrix_names_only_audits(self) -> None:
+        """A matrix entry with no config fails its leg instead of auditing."""
+        extra = sorted(self.gated - self.audited)
+        self.assertEqual(
+            [],
+            extra,
+            "a11y matrix entries with no playwright.config.ts behind them",
+        )
+
+    def test_scans_are_nonempty(self) -> None:
+        """Pin both yields, since an empty set agrees with everything."""
+        self.assertTrue(self.audited, "no playwright.config.ts found at all")
+        self.assertTrue(self.gated, "no a11y matrix entries parsed at all")
+
+    def test_matrix_extraction(self) -> None:
+        """Pin the line-wise parse, so a quiet mismatch cannot empty the set."""
+        synthetic = """jobs:
+    web:
+        steps:
+            - run: npm test
+    a11y:
+        strategy:
+            matrix:
+                # comment lines and blanks do not end the list
+
+                dir:
+                    - apps/baseball
+                    - "apps/rss/app"
+        steps:
+            - run: npm run test:e2e
+    jvm:
+        steps:
+            - run: ./gradlew checkAll
+"""
+        self.assertEqual({"apps/baseball", "apps/rss/app"}, ci_matrix_dirs(synthetic))
+        self.assertEqual(set(), ci_matrix_dirs("jobs:\n    web:\n      steps: []\n"))
 
 
 if __name__ == "__main__":

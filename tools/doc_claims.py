@@ -369,3 +369,68 @@ def script_claimed(name: str, scripts: set[str]) -> bool:
     if name in scripts:
         return True
     return name.endswith(":") and any(s.startswith(name) for s in scripts)
+
+
+WORKFLOW = ROOT / ".github/workflows/ci.yml"
+
+# The Playwright config filename. Every directory holding one runs its axe
+# audit in CI, so a config without a matrix entry is an audit that only runs
+# by hand.
+AUDIT_CONFIG = "playwright.config.ts"
+
+
+def audit_dirs(root: Path = ROOT) -> set[str]:
+    """Repo-relative posix dirs holding a Playwright audit config.
+
+    Uses the pruned walk, so generated trees never contribute. Assumes every
+    config is an audit config: a second Playwright use (component tests, say)
+    would need this check widened rather than a new exclusion.
+    """
+    out: set[str] = set()
+    for dirpath, _subdirs, files in walk(root):
+        if AUDIT_CONFIG not in files:
+            continue
+        rel = dirpath.relative_to(root).as_posix()
+        if rel != ".":
+            out.add(rel)
+    return out
+
+
+def ci_matrix_dirs(text: str, job: str = "a11y") -> set[str]:
+    """Values of the `dir:` matrix list in one workflow job.
+
+    Read line-wise, like ci_test.py's gradle scan, so the guard needs no YAML
+    parser to notice a missing entry. Only `- apps/...` items under the job's
+    `dir:` key count, so other lists in the file cannot pollute the set.
+    """
+    lines = text.splitlines()
+    start = next(
+        (
+            i
+            for i, line in enumerate(lines)
+            if re.match(rf"^    {re.escape(job)}:\s*$", line)
+        ),
+        None,
+    )
+    if start is None:
+        return set()
+    end = next(
+        (
+            i
+            for i in range(start + 1, len(lines))
+            if re.match(r"^    [A-Za-z]", lines[i])
+        ),
+        len(lines),
+    )
+    out: set[str] = set()
+    in_list = False
+    for line in lines[start:end]:
+        if re.match(r"^\s*dir:\s*$", line):
+            in_list = True
+        elif in_list:
+            item = re.match(r"""^\s*-\s+['"]?(apps/\S+?)['"]?\s*$""", line)
+            if item is not None:
+                out.add(item.group(1))
+            elif line.strip() and not line.strip().startswith("#"):
+                in_list = False
+    return out
