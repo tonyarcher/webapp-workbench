@@ -1,0 +1,16 @@
+# osv-scanner exceptions.
+#
+# Every entry needs a reason and an expiry. An advisory that ships to a browser
+# or a container does not belong here; fix it, or pin the dependency.
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2027-10-01
+reason = """
+braces 3.0.3, dev-only. It arrives through @web/test-runner -> globby, so it
+exists to run the baseball widget tests and never reaches a built artifact: no
+bundle, no image, no browser. OSV reports no fixed version in range, and the
+alternative is a breaking major bump of the test runner for a dependency the
+shipped code does not load. Remove this entry when a fixed braces lands, or when
+the test runner moves past it.
+"""

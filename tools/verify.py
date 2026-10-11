@@ -30,8 +30,8 @@ Also:
   python tools/verify.py --strict  a missing tool is a failure, not a skip
 
 Tools: prettier, tsc (via npm), ruff, mypy, ktlint, shfmt, shellcheck,
-sqlfluff, hadolint, taplo, pwsh (PSScriptAnalyzer). Installed by the
-ops-scripts installers.
+hadolint, yamllint, taplo, sqlfluff, psscriptanalyzer, gitleaks, osv-scanner,
+npm audit. Installed by the ops-scripts installers.
 """.strip()
 
 # Generated and vendored trees. Anything with one of these path parts is
@@ -344,6 +344,15 @@ def specs(root: Path, files: list[Path], fix: bool) -> list[Check]:
                 analyzer_argv(powershell, analyzer_settings(root)),
             )
         )
+    # Repo-wide scans, not per-file: secrets in the working tree and history, and
+    # known CVEs in every dependency tree. Check-only, in both modes. They run
+    # last because they are the slowest and the least likely to need a rerun
+    # after a formatting fix.
+    entries += [
+        ("gitleaks", "gitleaks", ["gitleaks", "detect", "--no-banner", "--redact"]),
+        ("osv-scanner", "osv-scanner", ["osv-scanner", "-r", "."]),
+        ("npm-audit", "npm", ["npm", "audit", "--omit=dev", "--audit-level=high"]),
+    ]
     return entries
 
 

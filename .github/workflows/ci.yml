@@ -94,6 +94,11 @@ jobs:
         runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@v7
+              with:
+                  # gitleaks scans the history, not only the working tree, so a
+                  # shallow clone would hide a secret that was committed and later
+                  # removed. That is the case the scan exists to catch.
+                  fetch-depth: 0
             - uses: actions/setup-node@v7
               with:
                   node-version: 22
@@ -143,7 +148,7 @@ jobs:
               run: |
                   mkdir -p "$TOOL_DIR"
                   python - <<'PY'
-                  import fnmatch, gzip, json, os, pathlib, sys, urllib.request
+                  import fnmatch, gzip, io, json, os, pathlib, sys, tarfile, urllib.request
 
                   # repo, binary name, asset-name glob. The glob rather than an exact
                   # name because upstream renames them: taplo switched to .gz assets,
@@ -163,6 +168,10 @@ jobs:
                       ("pinterest/ktlint", "ktlint", "ktlint"),
                       ("tamasfe/taplo", "taplo", "taplo-linux-x86_64*"),
                       ("hadolint/hadolint", "hadolint", "hadolint-linux-x86_64*"),
+                      # verify.py's repo-wide scans. gitleaks ships a tarball rather
+                      # than a bare binary; osv-scanner ships a bare binary.
+                      ("gitleaks/gitleaks", "gitleaks", "gitleaks_*_linux_x64.tar.gz"),
+                      ("google/osv-scanner", "osv-scanner", "osv-scanner_linux_amd64"),
                   ]
 
                   USER_AGENT = "webapp-workbench-ci"
@@ -214,7 +223,18 @@ jobs:
                               f" {pattern}. It has: {shipped}"
                           )
                       blob = asset_fetch(asset["browser_download_url"]).read()
-                      if asset["name"].endswith(".gz"):
+                      if asset["name"].endswith(".tar.gz"):
+                          # A tarball, not a bare binary: pull the named member out.
+                          # Checked before .gz, which would otherwise decompress the
+                          # archive into a tar that cannot be executed.
+                          with tarfile.open(fileobj=io.BytesIO(blob), mode="r:gz") as tar:
+                              member = next(
+                                  (m for m in tar.getmembers() if m.name == binary), None
+                              )
+                              if member is None:
+                                  sys.exit(f"{asset['name']} holds no {binary} member")
+                              blob = tar.extractfile(member).read()
+                      elif asset["name"].endswith(".gz"):
                           blob = gzip.decompress(blob)
                       destination = TOOL_DIR / binary
                       destination.write_bytes(blob)
