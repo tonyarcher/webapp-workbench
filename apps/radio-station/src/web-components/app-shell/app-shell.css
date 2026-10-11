@@ -39,7 +39,11 @@
     font-size: 13px;
 }
 
+/* Flex column, not block: .empty and rs-week-list carry flex: 1 and were
+   direct children of the flex host before the <main> wrapper. */
 main {
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 0;
 }

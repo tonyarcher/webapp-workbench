@@ -15,7 +15,11 @@
     border-bottom: 1px solid var(--border);
 }
 
+/* Flex column, not block: every ft-* view carries flex: 1 on its :host and
+   was a direct child of the flex host before the <main> wrapper. */
 main {
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 0;
 }
