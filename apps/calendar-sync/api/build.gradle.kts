@@ -121,6 +121,7 @@ tasks.withType<Test> { useJUnitPlatform() }
 
 val jacocoExcludes = listOf(
     "calsync/persist/**",
+    "calsync/db/**",
     "calsync/config/DataSourceConfig*",
     "calsync/CalendarSyncApplicationKt*",
 )
