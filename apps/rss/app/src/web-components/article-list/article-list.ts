@@ -28,6 +28,7 @@ import {
 } from './article-list-helpers';
 import { renderAdvancedMenu, renderInterestingHint, renderScroll, renderToolbar } from './article-list-render';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
+import { toastApiError } from '../../services/toast';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
 import '../advanced-menu/advanced-menu';
 import '../lazy-img/lazy-img';
@@ -383,6 +384,7 @@ export class ArticleList extends LitElement {
             await markBeforeAction(this as never, cutoff);
         } catch (err) {
             console.error('mark-before failed', err);
+            toastApiError(err, 'Could not mark articles as read. Check your connection and try again.');
         }
     }
 

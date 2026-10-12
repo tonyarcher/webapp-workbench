@@ -5,6 +5,7 @@ import { markArticleRead } from '../../mutations';
 import { bustCounts, queryClient } from '../../query';
 import { clearClientDb } from '../../db/db';
 import { currentUsername, hasSession, logout, startLogin } from '../../services/auth';
+import { clearToasts, dismissToast, onToast, type ToastNotice } from '../../services/toast';
 import type { Article, View } from '../../types';
 import styles from './app-shell.css?inline';
 
@@ -38,9 +39,13 @@ export class AppShell extends LitElement {
     @state() private authed = hasSession();
     @state() private username: string | null = currentUsername();
     @state() private authError = '';
+    @state() private toasts: ToastNotice[] = [];
+
+    private toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
     private readContext: { items: Article[]; index: number } | null = null;
     private unsubscribe?: () => void;
+    private unsubscribeToasts: (() => void) | null = null;
 
     override connectedCallback() {
         super.connectedCallback();
@@ -54,10 +59,18 @@ export class AppShell extends LitElement {
         window.addEventListener('rss-auth-required', this.onAuthRequired);
         window.addEventListener('rss-auth-changed', this.onAuthChanged);
         window.addEventListener('rss-auth-error', this.onAuthError);
+        this.unsubscribeToasts = onToast((notices) => {
+            this.toasts = notices;
+            this.syncToastTimers();
+        });
     }
 
     override disconnectedCallback() {
         super.disconnectedCallback();
+        this.unsubscribeToasts?.();
+        this.unsubscribeToasts = null;
+        for (const timer of this.toastTimers.values()) clearTimeout(timer);
+        this.toastTimers.clear();
         window.removeEventListener('keydown', this.onKeyDown);
         window.removeEventListener('rss-auth-required', this.onAuthRequired);
         window.removeEventListener('rss-auth-changed', this.onAuthChanged);
@@ -73,6 +86,7 @@ export class AppShell extends LitElement {
     private onAuthChanged = () => {
         this.authed = hasSession();
         this.username = currentUsername();
+        clearToasts();
     };
 
     private onAuthRequired = () => {
@@ -126,6 +140,7 @@ export class AppShell extends LitElement {
         await clearClientDb();
         this.authed = false;
         this.username = null;
+        clearToasts();
         this.authError = ended
             ? ''
             : 'Signed out on this device, but the identity service did not confirm it. Reload before signing in again.';
@@ -133,7 +148,39 @@ export class AppShell extends LitElement {
 
     override render() {
         if (!this.authed) return this.renderSignIn();
-        return html`${this.renderHeader()}<div class="layout"><source-list .view=${this.route}></source-list><main>${this.renderMain()}</main>${this.renderOverlay()}</div>${this.renderSettings()}`;
+        return html`${this.renderHeader()}<div class="layout"><source-list .view=${this.route}></source-list><main>${this.renderMain()}</main>${this.renderOverlay()}</div>${this.renderSettings()}${this.renderToasts()}`;
+    }
+
+    /**
+     * Error toasts from failed API actions. Buttons, not divs with handlers,
+     * so every notice is keyboard-reachable; the region announces politely.
+     */
+    private renderToasts() {
+        if (this.toasts.length === 0) return html``;
+        return html`<div class="toasts" role="status">${this.toasts.map(
+            (notice) => html`<button class="toast" @click=${() => dismissToast(notice.id)}>${notice.message}</button>`,
+        )}</div>`;
+    }
+
+    /** Timers follow the notices: new ones arm, gone ones clear. */
+    private syncToastTimers(): void {
+        for (const [id, timer] of this.toastTimers) {
+            if (!this.toasts.some((notice) => notice.id === id)) {
+                clearTimeout(timer);
+                this.toastTimers.delete(id);
+            }
+        }
+        for (const notice of this.toasts) {
+            if (this.toastTimers.has(notice.id)) continue;
+            const id = notice.id;
+            this.toastTimers.set(
+                id,
+                setTimeout(() => {
+                    this.toastTimers.delete(id);
+                    dismissToast(id);
+                }, 6000),
+            );
+        }
     }
 
     private renderSignIn() {

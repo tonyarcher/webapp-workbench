@@ -27,6 +27,7 @@ import {
 import type { Article, Feed } from './types';
 import { adjustWordMap } from './services/interesting-settings';
 import { STAR_WORD_WEIGHT } from './services/interesting-words';
+import { toastApiError } from './services/toast';
 
 // Elevator-button coalescing for refreshes: mashing Refresh joins the
 // in-flight job rather than spawning a second sync.
@@ -152,6 +153,7 @@ export async function markArticleRead(articleId: string): Promise<boolean> {
         await updateArticleState([{ id: articleId, read: true }]);
     } catch (err) {
         console.error('markArticleRead failed', err);
+        toastApiError(err, 'Could not mark the article as read. Check your connection and try again.');
         // Revert the optimistic paint: refetch truth instead of leaving a
         // read-looking row the server never recorded.
         await invalidateArticles();
@@ -176,6 +178,7 @@ export async function toggleStar(articleId: string, nowStarred: boolean): Promis
         await updateArticleState([{ id: articleId, starred: nowStarred }]);
     } catch (err) {
         console.error('toggleStar failed', err);
+        toastApiError(err, 'Could not save the star. Check your connection and try again.');
         await invalidateArticles();
         await invalidateFrontPage();
         return false;
@@ -221,6 +224,7 @@ export async function markShownRead(articleIds: string[]) {
         await updateArticleState(articleIds.map((id) => ({ id, read: true })));
     } catch (err) {
         console.error('markShownRead failed', err);
+        toastApiError(err, 'Could not mark articles as read. Check your connection and try again.');
         await invalidateArticles();
     }
     bustCounts();

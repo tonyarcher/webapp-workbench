@@ -73,6 +73,7 @@ await import('./smoke-query.js');
 await import('./smoke-fetch-races.js');
 await import('./smoke-mutations.js');
 await import('./smoke-auth.js');
+await import('./smoke-toast.js');
 await import('./smoke-router.js');
 await import('./smoke-summary.js');
 await import('./smoke-interesting.js');
