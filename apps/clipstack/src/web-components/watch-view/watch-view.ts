@@ -229,6 +229,7 @@ export class WatchView extends LitElement {
     override render(): TemplateResult {
         return html`
             <div class="watch">
+                <h1 class="visually-hidden">Watch clips</h1>
                 ${this.railToggle()}
                 ${this.sidebar()}
                 ${this.scrollViewport()}

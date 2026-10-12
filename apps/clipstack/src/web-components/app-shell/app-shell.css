@@ -2,3 +2,12 @@
     display: block;
     height: 100%;
 }
+
+/* The views are height:100% hosts, and percentage heights need a definite
+   parent height. Without this the <main> wrapper is height:auto, the chain
+   breaks here, and the watch view collapses to zero height (blank screen)
+   for anyone with a saved session. The import view survived only because
+   flow content has intrinsic height. */
+main {
+    height: 100%;
+}
