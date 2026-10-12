@@ -1,0 +1,15 @@
+# Local development profile. Framework logging is deliberately chatty.
+#
+# The API's own JSON lines are NOT controlled here: JsonLog reads the LOG_LEVEL
+# env var directly, so set LOG_LEVEL=debug to quiet or deepen those.
+logging:
+    level:
+        root: INFO
+        org.springframework.web: DEBUG
+        org.hibernate.SQL: DEBUG
+
+server:
+    error:
+        # Say what actually went wrong instead of a bare status code.
+        include-message: always
+        include-stacktrace: always

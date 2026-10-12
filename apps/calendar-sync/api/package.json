@@ -1,0 +1,10 @@
+{
+    "name": "calendar-sync-api",
+    "private": true,
+    "version": "0.1.0",
+    "description": "Calendar Sync microservice (Kotlin / Spring Data JPA).",
+    "scripts": {
+        "dev": "gradle bootRun",
+        "test:coverage": "gradle test jacocoTestReport"
+    }
+}
