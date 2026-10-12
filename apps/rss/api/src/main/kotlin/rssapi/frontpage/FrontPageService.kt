@@ -6,7 +6,7 @@ import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import rssapi.ai.AiConfig
 import rssapi.ai.AiQuotaService
-import rssapi.ai.JEV_DEFAULT_MODEL
+import rssapi.ai.DECISION_DEFAULT_MODEL
 import rssapi.ai.aiConfigFromEnv
 import rssapi.domain.ArticleScope
 import rssapi.domain.ArticleSort
@@ -46,10 +46,10 @@ data class ScoredArticle(
  * and caches results in `article_scores` for [SCORE_TTL_HOURS]. Never logs
  * article text; only ids and counts leave this service.
  *
- * When [AiConfig.provider] is `"jev"` and a TypeSafe key is present,
- * stale rows are refreshed through [JevScoreProvider] behind the per-user AI
- * quota instead. Quota exhaustion answers 429; any Jev failure falls back to
- * signals for the whole batch, so the page never 500s because Jev is down.
+ * When [AiConfig.provider] is `"decision"` and a TypeSafe key is present,
+ * stale rows are refreshed through [DecisionScoreProvider] behind the per-user AI
+ * quota instead. Quota exhaustion answers 429; any decision-model failure falls back to
+ * signals for the whole batch, so the page never 500s because the model is down.
  */
 @Service
 class FrontPageService(
@@ -60,12 +60,12 @@ class FrontPageService(
     private val scorer: SignalScoreProvider,
     private val aiConfig: AiConfig = aiConfigFromEnv(),
     private val quotas: AiQuotaService? = null,
-    private val jev: JevScoreProvider? = null,
+    private val decision: DecisionScoreProvider? = null,
 ) {
     /**
      * Reads run without a transaction (rows are flat, with no lazy
-     * relations); the Jev HTTP batch and quota consume also run outside any
-     * transaction so a 90s Jev call never holds a DB connection. Only the
+     * relations); the decision-model HTTP batch and quota consume also run outside any
+     * transaction so a 90s model call never holds a DB connection. Only the
      * final [persistScores] write is transactional.
      */
     fun frontPage(userId: UUID, sinceMs: Long?, unreadOnly: Boolean, limit: Int): List<ScoredArticle> {
@@ -116,28 +116,28 @@ class FrontPageService(
         stored: Map<String, ArticleScoreEntity>,
         now: Instant,
     ): List<ScoredArticle> {
-        val enabled = aiConfig.provider == "jev" && aiConfig.jevApiKey.isNotEmpty()
+        val enabled = aiConfig.provider == "decision" && aiConfig.decisionApiKey.isNotEmpty()
         val staleExists = candidates.any { stored[it.id]?.isStale(now) ?: true }
         if (enabled && staleExists) {
             val quotaService = quotas
-            val jevProvider = jev
-            if (quotaService != null && jevProvider != null) {
-                // Consume-before-call, like AiService.summarize: a failed Jev
+            val decisionProvider = decision
+            if (quotaService != null && decisionProvider != null) {
+                // Consume-before-call, like AiService.summarize: a failed decision
                 // batch still costs one quota unit while the page falls back
-                // to signals, because Jev bills attempts, not successes.
+                // to signals, because the model bills attempts, not successes.
                 quotaService.consume(userId, aiConfig.hourlyLimit, aiConfig.dailyLimit)
                 try {
-                    return scoreWithJev(jevProvider, candidates, stateMap, stored, affinityMap, now)
+                    return scoreWithDecision(decisionProvider, candidates, stateMap, stored, affinityMap, now)
                 } catch (_: Exception) {
-                    log("rss-api", "warn", "front-page jev fallback", mapOf("candidates" to candidates.size))
+                    log("rss-api", "warn", "front-page decision fallback", mapOf("candidates" to candidates.size))
                 }
             }
         }
         return candidates.map { scoreOne(it, stateMap[it.id], stored[it.id], affinityMap, now) }
     }
 
-    private fun scoreWithJev(
-        provider: JevScoreProvider,
+    private fun scoreWithDecision(
+        provider: DecisionScoreProvider,
         candidates: List<ArticleEntity>,
         stateMap: Map<String, ArticleStateEntity>,
         stored: Map<String, ArticleScoreEntity>,
@@ -148,18 +148,18 @@ class FrontPageService(
         val inputs = candidates.associate { it.id to signalInputOf(it, affinityMap) }
         val stale = candidates.filter { stored[it.id]?.isStale(now) ?: true }
         val worth = stale.associate { it.id to scorer.score(inputs.getValue(it.id)).worthy }
-        val top = stale.sortedByDescending { worth.getValue(it.id) }.take(JEV_BATCH_MAX)
-        val batchInputs = top.map { jevCandidateOf(it, inputs.getValue(it.id)) }
+        val top = stale.sortedByDescending { worth.getValue(it.id) }.take(DECISION_BATCH_MAX)
+        val batchInputs = top.map { decisionCandidateOf(it, inputs.getValue(it.id)) }
         val batch = provider.scoreBatch(topWordsOf(affinityMap), affinityMap, batchInputs)
         val out = candidates.map {
-            writeJevRow(it, stateMap[it.id], stored[it.id], inputs.getValue(it.id), batch, now)
+            writeDecisionRow(it, stateMap[it.id], stored[it.id], inputs.getValue(it.id), batch, now)
         }
-        val fields = mapOf("jev_rows" to batch.size, "duration_ms" to (System.currentTimeMillis() - started))
-        log("rss-api", "info", "front-page jev ok", fields)
+        val fields = mapOf("decision_rows" to batch.size, "duration_ms" to (System.currentTimeMillis() - started))
+        log("rss-api", "info", "front-page decision ok", fields)
         return out
     }
 
-    private fun writeJevRow(
+    private fun writeDecisionRow(
         article: ArticleEntity,
         state: ArticleStateEntity?,
         existing: ArticleScoreEntity?,
@@ -169,9 +169,9 @@ class FrontPageService(
     ): ScoredArticle {
         val fresh = existing?.takeUnless { it.isStale(now) }
         if (fresh != null) return toScored(article, state, fresh)
-        val jevScores = batch[article.id]
-        val model = if (jevScores != null) aiConfig.model.ifEmpty { JEV_DEFAULT_MODEL } else SCORE_MODEL
-        return toScored(article, state, refresh(article, input, existing, now, jevScores, model))
+        val decisionScores = batch[article.id]
+        val model = if (decisionScores != null) aiConfig.model.ifEmpty { DECISION_DEFAULT_MODEL } else SCORE_MODEL
+        return toScored(article, state, refresh(article, input, existing, now, decisionScores, model))
     }
 
     private fun toScored(article: ArticleEntity, state: ArticleStateEntity?, row: ArticleScoreEntity): ScoredArticle =
@@ -225,6 +225,16 @@ class FrontPageService(
             affinityKeys(article.feedId, article.domain, article.author)
         }
         return affinity.findAllById(keys.map { AffinityId(userId, it) }).associate { it.key to it.value }
+    }
+
+    /**
+     * Stored-judgment evidence for review: rows scored in the current window,
+     * grouped by producing model. Reads only; unlike [frontPage] it never
+     * refreshes stale rows, so inspecting past judgments costs no model calls.
+     */
+    fun modelEvidence(now: Instant): List<ModelEvidence> {
+        val since = now.minus(Duration.ofDays(DEFAULT_WINDOW_DAYS))
+        return modelEvidenceOf(scoreRows.findAllByScoredAtAfter(since))
     }
 }
 

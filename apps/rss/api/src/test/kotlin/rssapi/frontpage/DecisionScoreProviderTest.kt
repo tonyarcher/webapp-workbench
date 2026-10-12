@@ -2,9 +2,9 @@ package rssapi.frontpage
 
 import rssapi.ai.AiConfig
 import rssapi.ai.AiException
+import rssapi.ai.DecisionBackend
 import rssapi.ai.HttpPoster
 import rssapi.ai.HttpResult
-import rssapi.ai.JevBackend
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -30,10 +30,10 @@ private class ProviderFakePoster(private val handler: (body: String) -> HttpResu
 
 private fun providerPoster(reply: String): ProviderFakePoster = ProviderFakePoster { HttpResult(200, reply) }
 
-private fun providerOf(poster: ProviderFakePoster): JevScoreProvider =
-    JevScoreProvider(JevBackend(AiConfig(provider = "jev", jevApiKey = "test-key"), poster))
+private fun providerOf(poster: ProviderFakePoster): DecisionScoreProvider =
+    DecisionScoreProvider(DecisionBackend(AiConfig(provider = "decision", decisionApiKey = "test-key"), poster))
 
-private fun candidate(id: String): JevCandidate = JevCandidate(
+private fun candidate(id: String): DecisionCandidate = DecisionCandidate(
     id = id,
     title = "t-$id",
     feed = "f",
@@ -50,7 +50,7 @@ private fun score(id: String, value: String): String = """"$id":{"type":"score",
 
 private fun choice(id: String, value: String): String = """"$id":{"type":"choice","choice":"$value"}"""
 
-class JevScoreProviderTest {
+class DecisionScoreProviderTest {
     @Test
     fun emptyBatchSkipsHttp() {
         val poster = ProviderFakePoster { throw AssertionError("no HTTP for an empty batch") }
@@ -143,7 +143,7 @@ class JevScoreProviderTest {
 
     @Test
     fun listFailureThrowsForCallerFallback() {
-        val poster = ProviderFakePoster { throw AiException("jev down") }
+        val poster = ProviderFakePoster { throw AiException("decision down") }
         var threw = false
         try {
             providerOf(poster).scoreBatch(emptyList(), emptyMap(), listOf(candidate("a")))

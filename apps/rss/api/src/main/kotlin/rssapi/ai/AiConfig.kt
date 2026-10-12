@@ -25,7 +25,7 @@ data class AiConfig(
     val maxInputChars: Int = DEFAULT_MAX_INPUT_CHARS,
     val basicUser: String = "",
     val basicPassword: String = "",
-    val jevApiKey: String = "",
+    val decisionApiKey: String = "",
 ) {
     override fun toString(): String =
         "AiConfig(provider=$provider, baseUrl=$baseUrl, model=$model, timeoutMs=$timeoutMs)"
@@ -44,7 +44,7 @@ fun aiConfigFromEnv(env: Map<String, String> = System.getenv()): AiConfig {
         maxInputChars = envInt(env, "AI_MAX_INPUT_CHARS", DEFAULT_MAX_INPUT_CHARS),
         basicUser = env["AI_API_USER"] ?: "",
         basicPassword = env["AI_API_PASSWORD"] ?: "",
-        jevApiKey = envText(env, "TYPESAFE_API_KEY"),
+        decisionApiKey = envText(env, "TYPESAFE_API_KEY"),
     )
 }
 

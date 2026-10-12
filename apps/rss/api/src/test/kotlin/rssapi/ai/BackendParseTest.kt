@@ -85,12 +85,12 @@ class BackendParseTest {
     }
 
     @Test
-    fun jevKeyParsesTrimmedAndStaysOutOfToString() {
-        val config = aiConfigFromEnv(mapOf("AI_PROVIDER" to "jev", "TYPESAFE_API_KEY" to "  secret-key  "))
-        assertEquals("jev", config.provider)
-        assertEquals("secret-key", config.jevApiKey)
+    fun decisionKeyParsesTrimmedAndStaysOutOfToString() {
+        val config = aiConfigFromEnv(mapOf("AI_PROVIDER" to "decision", "TYPESAFE_API_KEY" to "  secret-key  "))
+        assertEquals("decision", config.provider)
+        assertEquals("secret-key", config.decisionApiKey)
         assertFalse(config.toString().contains("secret-key"))
-        assertEquals("", aiConfigFromEnv(emptyMap()).jevApiKey)
+        assertEquals("", aiConfigFromEnv(emptyMap()).decisionApiKey)
     }
 
     @Test

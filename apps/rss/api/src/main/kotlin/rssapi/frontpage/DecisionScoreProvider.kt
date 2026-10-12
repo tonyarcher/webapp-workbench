@@ -1,33 +1,39 @@
 package rssapi.frontpage
 
 import com.fasterxml.jackson.databind.JsonNode
-import rssapi.ai.JevBackend
+import rssapi.ai.DecisionBackend
 import rssapi.ai.jsonBody
 import rssapi.domain.affinitySum
 import rssapi.persist.ArticleEntity
 
-const val JEV_BATCH_MAX: Int = 20
-const val JEV_TOP_WORDS: Int = 10
-const val JEV_MAX_QUESTIONS: Int = 64
+const val DECISION_BATCH_MAX: Int = 20
+const val DECISION_TOP_WORDS: Int = 10
+const val DECISION_MAX_QUESTIONS: Int = 64
 
-/** One front-page candidate packaged for a Jev batch call, with its signal input for fallback. */
-data class JevCandidate(val id: String, val title: String, val feed: String, val hot: Double, val input: SignalInput)
+/** One front-page candidate packaged for a decision-model batch call, with its signal input for fallback. */
+data class DecisionCandidate(
+    val id: String,
+    val title: String,
+    val feed: String,
+    val hot: Double,
+    val input: SignalInput,
+)
 
 private val INTEREST_LEVELS = listOf("Not interesting to this reader", "Worth a skim", "Must read")
 
 private val TOPIC_CHOICES = listOf("news", "tech", "sports", "culture", "science", "business", "other")
 
 /**
- * Jev-backed scorer. Single-shot [score] stays on signals (Jev cannot
- * rank one article in isolation); per-serve ranking goes through
- * [scoreBatch], which asks one narrow judgment per question over shared
- * state and maps answers back to 0..1 scores. Thresholds and caps live
+ * Decision-model-backed scorer. Single-shot [score] stays on signals (a
+ * decision model cannot rank one article in isolation); per-serve ranking
+ * goes through [scoreBatch], which asks one narrow judgment per question over
+ * shared state and maps answers back to 0..1 scores. Thresholds and caps live
  * here in code. A question that comes back missing or malformed falls back
  * per-article to signals; a list-level failure throws and the caller falls
  * back for the whole batch. Never logs titles or affinity contents.
  */
-class JevScoreProvider(
-    private val backend: JevBackend,
+class DecisionScoreProvider(
+    private val backend: DecisionBackend,
     private val signals: SignalScoreProvider = SignalScoreProvider(),
 ) : ScoreProvider {
     override fun score(input: SignalInput): SignalScores = signals.score(input)
@@ -35,9 +41,9 @@ class JevScoreProvider(
     fun scoreBatch(
         topWords: List<String>,
         affinity: Map<String, Float>,
-        candidates: List<JevCandidate>,
+        candidates: List<DecisionCandidate>,
     ): Map<String, SignalScores> {
-        val batch = candidates.take(minOf(JEV_BATCH_MAX, JEV_MAX_QUESTIONS / 3))
+        val batch = candidates.take(minOf(DECISION_BATCH_MAX, DECISION_MAX_QUESTIONS / 3))
         if (batch.isEmpty()) return emptyMap()
         val answers = backend.score(stateJson(topWords, affinity, batch), questionsFor(batch))
         return batch.mapNotNull { candidate ->
@@ -45,7 +51,7 @@ class JevScoreProvider(
         }.toMap()
     }
 
-    private fun scoresFor(candidate: JevCandidate, answers: JsonNode): SignalScores? {
+    private fun scoresFor(candidate: DecisionCandidate, answers: JsonNode): SignalScores? {
         val fallback = signals.score(candidate.input)
         val worthy = answers.path(candidate.id + "_worthy").path("noul").asDouble(Double.NaN)
         val interest = answers.path(candidate.id + "_interest").path("score").asDouble(Double.NaN)
@@ -63,7 +69,7 @@ class JevScoreProvider(
     private fun stateJson(
         topWords: List<String>,
         affinity: Map<String, Float>,
-        candidates: List<JevCandidate>,
+        candidates: List<DecisionCandidate>,
     ): String = jsonBody(
         mapOf(
             "reader" to mapOf("topWords" to topWords, "affinity" to affinity),
@@ -73,7 +79,7 @@ class JevScoreProvider(
         ),
     )
 
-    private fun questionsFor(candidates: List<JevCandidate>): Map<String, Any> {
+    private fun questionsFor(candidates: List<DecisionCandidate>): Map<String, Any> {
         val out = LinkedHashMap<String, Any>(candidates.size * 3)
         candidates.forEachIndexed { index, candidate ->
             out[candidate.id + "_worthy"] = mapOf(
@@ -99,7 +105,7 @@ class JevScoreProvider(
 internal fun affinityOf(article: ArticleEntity, affinityMap: Map<String, Float>): Double =
     affinitySum(article.feedId, article.domain, article.author, affinityMap)
 
-/** Raw signal inputs for one article, shared by the signal path and Jev fallback. */
+/** Raw signal inputs for one article, shared by the signal path and decision fallback. */
 internal fun signalInputOf(article: ArticleEntity, affinityMap: Map<String, Float>): SignalInput = SignalInput(
     hot = article.hot.toDouble(),
     popularity = article.popularity.toDouble(),
@@ -109,7 +115,7 @@ internal fun signalInputOf(article: ArticleEntity, affinityMap: Map<String, Floa
 )
 
 /** Batch candidate for one article, carrying its signal input for per-article fallback. */
-internal fun jevCandidateOf(article: ArticleEntity, input: SignalInput): JevCandidate = JevCandidate(
+internal fun decisionCandidateOf(article: ArticleEntity, input: SignalInput): DecisionCandidate = DecisionCandidate(
     id = article.id,
     title = article.title,
     feed = article.feedId.toString(),
@@ -117,6 +123,6 @@ internal fun jevCandidateOf(article: ArticleEntity, input: SignalInput): JevCand
     input = input,
 )
 
-/** Top affinity keys by value, giving Jev a compact picture of reader taste. */
+/** Top affinity keys by value, giving the decision model a compact picture of reader taste. */
 internal fun topWordsOf(affinityMap: Map<String, Float>): List<String> =
-    affinityMap.entries.sortedByDescending { it.value }.take(JEV_TOP_WORDS).map { it.key }
+    affinityMap.entries.sortedByDescending { it.value }.take(DECISION_TOP_WORDS).map { it.key }

@@ -1,9 +1,9 @@
-// Interesting-filter smoke: word maps, settings persistence, scoring, Jev state, router.
+// Interesting-filter smoke: word maps, settings persistence, scoring, decision state, router.
 import { assert } from './smoke-assert';
 
-// ---- interesting filter: starred-word map, settings, ranking, jev state, router ----
+// ---- interesting filter: starred-word map, settings, ranking, decision state, router ----
 {
-    const { buildWordMap, extractWords, interestingScore, rankInteresting, topWords, toJevState } =
+    const { buildWordMap, extractWords, interestingScore, rankInteresting, topWords, toDecisionState } =
         await import('../src/services/interesting-words');
     const { adjustWordMap, isHideReadFolder, loadInterestingShadow, loadWordMap, saveInterestingShadow, saveWordMap } =
         await import('../src/services/interesting-settings');
@@ -74,23 +74,23 @@ import { assert } from './smoke-assert';
         { id: 'a2', title: 'Zebra News', feedId: 'fb', hot: 5 },
         { id: 'a3', title: 'Rust Performance Tips', feedId: 'fa', hot: 8 },
     ];
-    const full = toJevState(candidates, wordMap, { 'aff:feed:fa': 3 }, 100_000);
+    const full = toDecisionState(candidates, wordMap, { 'aff:feed:fa': 3 }, 100_000);
     const parsedFull = JSON.parse(full) as {
         candidates: Array<{ id: string; title: string; feed: string; hot: number }>;
     };
-    assert(parsedFull.candidates.length === 3, 'toJevState keeps all candidates when under budget');
+    assert(parsedFull.candidates.length === 3, 'toDecisionState keeps all candidates when under budget');
     assert(
         parsedFull.candidates[0]!.feed === 'fa' && typeof parsedFull.candidates[0]!.hot === 'number',
-        'toJevState candidates carry feed and hot',
+        'toDecisionState candidates carry feed and hot',
     );
-    const tight = toJevState(candidates, wordMap, { 'aff:feed:fa': 3 }, 200);
-    assert(tight.length <= 200, 'toJevState never exceeds maxChars');
+    const tight = toDecisionState(candidates, wordMap, { 'aff:feed:fa': 3 }, 200);
+    assert(tight.length <= 200, 'toDecisionState never exceeds maxChars');
     const parsedTight = JSON.parse(tight) as {
         candidates: Array<{ id: string; title: string; feed: string; hot: number }>;
     };
     assert(
         parsedTight.candidates.length < parsedFull.candidates.length,
-        'toJevState drops whole candidates over budget',
+        'toDecisionState drops whole candidates over budget',
     );
     for (const c of parsedTight.candidates) {
         assert(
@@ -98,7 +98,7 @@ import { assert } from './smoke-assert';
                 typeof c.title === 'string' &&
                 typeof c.feed === 'string' &&
                 typeof c.hot === 'number',
-            'toJevState never truncates mid-article',
+            'toDecisionState never truncates mid-article',
         );
     }
 

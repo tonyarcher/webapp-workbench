@@ -3,9 +3,9 @@ package rssapi.edition
 import org.springframework.stereotype.Component
 
 /**
- * Attach point for Jev enrichment. [SignalEnrichment] is the current
- * implementation (honest no-ops); a Jev-backed one can be added behind this
- * same interface without touching [EditionService]. No Jev code lives here.
+ * Attach point for decision-model enrichment. [SignalEnrichment] is the current
+ * implementation (honest no-ops); a model-backed one can be added behind this
+ * same interface without touching [EditionService]. No model code lives here.
  */
 interface EditionEnrichment {
     /** A topic label for one cluster, or null when the provider abstains. */

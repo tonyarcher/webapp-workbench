@@ -17,6 +17,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import rssapi.frontpage.FrontPageService
+import rssapi.frontpage.ModelEvidence
 import rssapi.frontpage.ScoredArticle
 import rssapi.frontpage.SignalScores
 import rssapi.persist.ArticleEntity
@@ -148,5 +149,34 @@ class FrontPageControllerTest {
             header("Authorization", "Bearer t")
         }.andExpect { status { isOk() } }
         verify(frontPage).frontPage(eq(uid), isNull(), eq(false), eq(50))
+    }
+
+    @Test
+    fun modelsShape200() {
+        auth(UUID.randomUUID())
+        whenever(frontPage.modelEvidence(any())).thenReturn(
+            listOf(ModelEvidence("jev-latest", 3, Instant.ofEpochMilli(2_000L), Instant.ofEpochMilli(1_000L))),
+        )
+
+        mvc.get("/front-page/models") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.models.length()") { value(1) }
+            jsonPath("$.models[0].model") { value("jev-latest") }
+            jsonPath("$.models[0].rows") { value(3) }
+            jsonPath("$.models[0].newestAt") { value(2_000L) }
+            jsonPath("$.models[0].oldestAt") { value(1_000L) }
+        }
+    }
+
+    @Test
+    fun modelsMissingJwtIs401() {
+        val res = mvc.get("/front-page/models") {
+            header("X-Api-Version", "1")
+        }.andReturn()
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), res.response.status)
+        assertEquals("""{"error":"unauthorized"}""", res.response.contentAsString)
     }
 }

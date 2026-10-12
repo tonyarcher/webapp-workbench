@@ -15,7 +15,7 @@ data class SignalInput(
     val wordCount: Int,
 )
 
-/** Scored signals, each 0..1. `topic` is set only by Jev; the signals path leaves it null. */
+/** Scored signals, each 0..1. `topic` is set only by the decision model; the signals path leaves it null. */
 data class SignalScores(
     val worthy: Double,
     val interest: Double,
@@ -26,14 +26,14 @@ data class SignalScores(
 
 /**
  * Score seam: the service depends on the concrete [SignalScoreProvider] so
- * Spring never has to choose between it and [JevScoreProvider].
- * Do not inject this interface; do not add Jev code here.
+ * Spring never has to choose between it and [DecisionScoreProvider].
+ * Do not inject this interface; do not add decision-model code here.
  */
 interface ScoreProvider {
     fun score(input: SignalInput): SignalScores
 }
 
-/** Deterministic blends from `domain/FrontPage.kt`. Sibling: [JevScoreProvider]. */
+/** Deterministic blends from `domain/FrontPage.kt`. Sibling: [DecisionScoreProvider]. */
 @Component
 class SignalScoreProvider : ScoreProvider {
     override fun score(input: SignalInput): SignalScores = SignalScores(

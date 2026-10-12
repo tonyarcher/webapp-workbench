@@ -36,6 +36,10 @@ data class ArticleScoresJson(
 
 data class FrontPageJson(val generatedAt: Long, val articles: List<ArticleJson>)
 
+data class ModelEvidenceJson(val model: String?, val rows: Int, val newestAt: Long?, val oldestAt: Long?)
+
+data class FrontPageModelsJson(val generatedAt: Long, val models: List<ModelEvidenceJson>)
+
 data class StateUpdateBody(val id: String?, val read: Boolean? = null, val starred: Boolean? = null)
 
 data class StateListBody(val updates: List<StateUpdateBody>?)

@@ -18,9 +18,9 @@ import org.springframework.http.HttpStatus
 import rssapi.ai.AiConfig
 import rssapi.ai.AiException
 import rssapi.ai.AiQuotaService
+import rssapi.ai.DecisionBackend
 import rssapi.ai.HttpPoster
 import rssapi.ai.HttpResult
-import rssapi.ai.JevBackend
 import rssapi.persist.AffinityEntity
 import rssapi.persist.AffinityRepo
 import rssapi.persist.AiQuotaEntity
@@ -31,6 +31,7 @@ import rssapi.persist.ArticleScoreEntity
 import rssapi.persist.ArticleScoreRepo
 import rssapi.persist.ArticleStateRepo
 import rssapi.web.ApiException
+import java.time.Duration
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
@@ -232,7 +233,7 @@ class FrontPageServiceTest {
         return AiQuotaService(repo) to repo
     }
 
-    private fun jevReply(vararg ids: String): String {
+    private fun decisionReply(vararg ids: String): String {
         val answers = ids.flatMap { id ->
             listOf(
                 """"${id}_worthy":{"type":"noul","noul":0.9}""",
@@ -243,23 +244,23 @@ class FrontPageServiceTest {
         return """{"model":"jev-latest","answers":{$answers},"usage":{"input_tokens":1,"output_tokens":1}}"""
     }
 
-    private fun jevService(poster: HttpPoster, quotas: AiQuotaService, model: String = ""): FrontPageService {
-        val config = AiConfig(provider = "jev", jevApiKey = "test-key", model = model)
-        val provider = JevScoreProvider(JevBackend(config, poster), SignalScoreProvider())
+    private fun decisionService(poster: HttpPoster, quotas: AiQuotaService, model: String = ""): FrontPageService {
+        val config = AiConfig(provider = "decision", decisionApiKey = "test-key", model = model)
+        val provider = DecisionScoreProvider(DecisionBackend(config, poster), SignalScoreProvider())
         return FrontPageService(articles, states, affinity, scoreRows, scorer, config, quotas, provider)
     }
 
     @Test
-    fun jevSuccessStoresJevModel() {
+    fun decisionSuccessStoresDecisionModel() {
         stubCandidates(article("fresh"), article("stale-a"), article("stale-b"))
         val now = Instant.now()
         whenever(scoreRows.findAllById(anyOrNull())).thenReturn(listOf(stored("fresh", 0.1, now)))
         whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
             .thenAnswer { it.getArgument<List<ArticleScoreEntity>>(0) }
         val (quotas, quotaRepo) = openQuota()
-        val poster = FrontPageJevPoster(jevReply("stale-a", "stale-b"))
+        val poster = FrontPageDecisionPoster(decisionReply("stale-a", "stale-b"))
 
-        val out = jevService(poster, quotas).frontPage(uid, 1_700_000_000_000L, false, 10)
+        val out = decisionService(poster, quotas).frontPage(uid, 1_700_000_000_000L, false, 10)
             .associateBy { it.article.id }
 
         assertEquals("jev-latest", out.getValue("stale-a").scoreRow.model)
@@ -276,31 +277,31 @@ class FrontPageServiceTest {
     }
 
     @Test
-    fun jevThrowFallsBackToSignals() {
+    fun decisionThrowFallsBackToSignals() {
         stubCandidates(article("a1"), article("a2"))
         whenever(scoreRows.findAllById(anyOrNull())).thenReturn(emptyList())
         whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
             .thenAnswer { it.getArgument<List<ArticleScoreEntity>>(0) }
         val (quotas, _) = openQuota()
-        val poster = FrontPageJevPoster("", fail = true)
+        val poster = FrontPageDecisionPoster("", fail = true)
 
-        val out = jevService(poster, quotas).frontPage(uid, 1_700_000_000_000L, false, 10)
+        val out = decisionService(poster, quotas).frontPage(uid, 1_700_000_000_000L, false, 10)
 
         assertEquals(2, out.size)
         assertTrue(out.all { it.scoreRow.model == SCORE_MODEL })
     }
 
     @Test
-    fun providerWithoutJevSkipsJevAndQuota() {
+    fun providerWithoutDecisionSkipsDecisionAndQuota() {
         stubCandidates(article("a1"))
         whenever(scoreRows.findAllById(anyOrNull())).thenReturn(emptyList())
         whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
             .thenAnswer { it.getArgument<List<ArticleScoreEntity>>(0) }
         val repo: AiQuotaRepo = mock()
         val quotas = AiQuotaService(repo)
-        val poster = FrontPageJevPoster(jevReply("a1"))
+        val poster = FrontPageDecisionPoster(decisionReply("a1"))
         val config = AiConfig(provider = "ollama", baseUrl = "http://x", model = "m")
-        val provider = JevScoreProvider(JevBackend(config, poster))
+        val provider = DecisionScoreProvider(DecisionBackend(config, poster))
         val service = FrontPageService(articles, states, affinity, scoreRows, scorer, config, quotas, provider)
 
         val out = service.frontPage(uid, 1_700_000_000_000L, false, 10)
@@ -312,16 +313,16 @@ class FrontPageServiceTest {
     }
 
     @Test
-    fun blankJevKeySkipsJevAndQuota() {
+    fun blankDecisionKeySkipsDecisionAndQuota() {
         stubCandidates(article("a1"))
         whenever(scoreRows.findAllById(anyOrNull())).thenReturn(emptyList())
         whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
             .thenAnswer { it.getArgument<List<ArticleScoreEntity>>(0) }
         val repo: AiQuotaRepo = mock()
         val quotas = AiQuotaService(repo)
-        val poster = FrontPageJevPoster(jevReply("a1"))
-        val config = AiConfig(provider = "jev")
-        val provider = JevScoreProvider(JevBackend(config, poster))
+        val poster = FrontPageDecisionPoster(decisionReply("a1"))
+        val config = AiConfig(provider = "decision")
+        val provider = DecisionScoreProvider(DecisionBackend(config, poster))
         val service = FrontPageService(articles, states, affinity, scoreRows, scorer, config, quotas, provider)
 
         val out = service.frontPage(uid, 1_700_000_000_000L, false, 10)
@@ -333,14 +334,14 @@ class FrontPageServiceTest {
     }
 
     @Test
-    fun jevWithoutQuotaServiceFallsBackToSignals() {
+    fun decisionWithoutQuotaServiceFallsBackToSignals() {
         stubCandidates(article("a1"))
         whenever(scoreRows.findAllById(anyOrNull())).thenReturn(emptyList())
         whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
             .thenAnswer { it.getArgument<List<ArticleScoreEntity>>(0) }
-        val poster = FrontPageJevPoster(jevReply("a1"))
-        val config = AiConfig(provider = "jev", jevApiKey = "test-key")
-        val provider = JevScoreProvider(JevBackend(config, poster), SignalScoreProvider())
+        val poster = FrontPageDecisionPoster(decisionReply("a1"))
+        val config = AiConfig(provider = "decision", decisionApiKey = "test-key")
+        val provider = DecisionScoreProvider(DecisionBackend(config, poster), SignalScoreProvider())
         val service = FrontPageService(articles, states, affinity, scoreRows, scorer, config, null, provider)
 
         val out = service.frontPage(uid, 1_700_000_000_000L, false, 10)
@@ -351,13 +352,13 @@ class FrontPageServiceTest {
     }
 
     @Test
-    fun jevWithoutProviderFallsBackToSignals() {
+    fun decisionWithoutProviderFallsBackToSignals() {
         stubCandidates(article("a1"))
         whenever(scoreRows.findAllById(anyOrNull())).thenReturn(emptyList())
         whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
             .thenAnswer { it.getArgument<List<ArticleScoreEntity>>(0) }
         val quotas = AiQuotaService(mock())
-        val config = AiConfig(provider = "jev", jevApiKey = "test-key")
+        val config = AiConfig(provider = "decision", decisionApiKey = "test-key")
         val service = FrontPageService(articles, states, affinity, scoreRows, scorer, config, quotas, null)
 
         val out = service.frontPage(uid, 1_700_000_000_000L, false, 10)
@@ -367,15 +368,15 @@ class FrontPageServiceTest {
     }
 
     @Test
-    fun jevBatchKeepsFreshAndFallsBackMissing() {
+    fun decisionBatchKeepsFreshAndFallsBackMissing() {
         stubCandidates(article("fresh"), article("stale-a"), article("stale-b"))
         val now = Instant.now()
         whenever(scoreRows.findAllById(anyOrNull())).thenReturn(listOf(stored("fresh", 0.1, now)))
         whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
             .thenAnswer { it.getArgument<List<ArticleScoreEntity>>(0) }
         val (quotas, _) = openQuota()
-        val poster = FrontPageJevPoster(jevReply("stale-a"))
-        val service = jevService(poster, quotas)
+        val poster = FrontPageDecisionPoster(decisionReply("stale-a"))
+        val service = decisionService(poster, quotas)
 
         val out = service.frontPage(uid, 1_700_000_000_000L, false, 10)
             .associateBy { it.article.id }
@@ -392,10 +393,10 @@ class FrontPageServiceTest {
         val repo: AiQuotaRepo = mock()
         whenever(repo.findById(uid)).thenReturn(Optional.of(AiQuotaEntity(uid, Instant.now(), 30, Instant.now(), 5)))
         val quotas = AiQuotaService(repo)
-        val poster = FrontPageJevPoster(jevReply("a1"))
+        val poster = FrontPageDecisionPoster(decisionReply("a1"))
 
         val err = assertFailsWith<ApiException> {
-            jevService(poster, quotas).frontPage(uid, 1_700_000_000_000L, false, 10)
+            decisionService(poster, quotas).frontPage(uid, 1_700_000_000_000L, false, 10)
         }
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), err.status.value())
@@ -404,15 +405,15 @@ class FrontPageServiceTest {
     }
 
     @Test
-    fun allFreshRowsSkipQuotaAndJev() {
+    fun allFreshRowsSkipQuotaAndDecision() {
         stubCandidates(article("a1"))
         val now = Instant.now()
         whenever(scoreRows.findAllById(anyOrNull())).thenReturn(listOf(stored("a1", 0.3, now)))
         val repo: AiQuotaRepo = mock()
         val quotas = AiQuotaService(repo)
-        val poster = FrontPageJevPoster(jevReply("a1"))
+        val poster = FrontPageDecisionPoster(decisionReply("a1"))
 
-        val out = jevService(poster, quotas).frontPage(uid, 1_700_000_000_000L, false, 10)
+        val out = decisionService(poster, quotas).frontPage(uid, 1_700_000_000_000L, false, 10)
 
         assertEquals(0.3, out.single().scores.worthy, 1e-9)
         verify(repo, never()).saveAndFlush(any<AiQuotaEntity>())
@@ -420,17 +421,21 @@ class FrontPageServiceTest {
     }
 
     @Test
-    fun modelOverrideUsedForJevRows() {
+    fun modelOverrideUsedForDecisionRows() {
         stubCandidates(article("a1"))
         whenever(scoreRows.findAllById(anyOrNull())).thenReturn(emptyList())
         whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
             .thenAnswer { it.getArgument<List<ArticleScoreEntity>>(0) }
         val (quotas, _) = openQuota()
-        val poster = FrontPageJevPoster(jevReply("a1"))
+        val poster = FrontPageDecisionPoster(decisionReply("a1"))
 
-        val out = jevService(poster, quotas, model = "custom-jev").frontPage(uid, 1_700_000_000_000L, false, 10)
+        val out = decisionService(
+            poster,
+            quotas,
+            model = "custom-decision",
+        ).frontPage(uid, 1_700_000_000_000L, false, 10)
 
-        assertEquals("custom-jev", out.single().scoreRow.model)
+        assertEquals("custom-decision", out.single().scoreRow.model)
     }
 
     @Test
@@ -455,21 +460,46 @@ class FrontPageServiceTest {
 
         assertEquals(listOf("a1", "b1"), out.map { it.article.id })
     }
+
+    @Test
+    fun modelEvidenceGroupsStoredRowsWithoutScoring() {
+        val now = Instant.parse("2026-10-12T00:00:00Z")
+        whenever(scoreRows.findAllByScoredAtAfter(any())).thenReturn(
+            listOf(
+                stored("a1", 0.9, Instant.parse("2026-10-11T00:00:00Z")).apply { model = "jev-latest" },
+                stored("a2", 0.2, Instant.parse("2026-10-10T00:00:00Z")).apply { model = "signals-v1" },
+            ),
+        )
+
+        val evidence = service.modelEvidence(now)
+
+        assertEquals(setOf("jev-latest", "signals-v1"), evidence.map { it.model }.toSet())
+        verify(scoreRows).findAllByScoredAtAfter(eq(now.minus(Duration.ofDays(DEFAULT_WINDOW_DAYS))))
+        verify(scoreRows, never()).saveAll(any<Iterable<ArticleScoreEntity>>())
+        verify(articles, never()).findAll(any<Specification<ArticleEntity>>(), any<Pageable>())
+    }
+
+    @Test
+    fun modelEvidenceEmptyTableGivesEmptyList() {
+        whenever(scoreRows.findAllByScoredAtAfter(any())).thenReturn(emptyList())
+
+        assertTrue(service.modelEvidence(Instant.now()).isEmpty())
+    }
 }
 
-private class FrontPageJevPoster(private val reply: String, private val fail: Boolean = false) : HttpPoster {
+private class FrontPageDecisionPoster(private val reply: String, private val fail: Boolean = false) : HttpPoster {
     val calls = mutableListOf<String>()
     override fun get(url: String, headers: Map<String, String>, timeoutMs: Long): HttpResult {
         calls.add("GET $url")
-        throw AssertionError("front-page jev only POSTs")
+        throw AssertionError("front-page decision only POSTs")
     }
     override fun post(url: String, headers: Map<String, String>, body: String, timeoutMs: Long): HttpResult {
         calls.add("POST $url")
-        if (fail) throw AiException("jev down")
+        if (fail) throw AiException("decision down")
         return HttpResult(200, reply)
     }
     override fun delete(url: String, headers: Map<String, String>, timeoutMs: Long): HttpResult {
         calls.add("DELETE $url")
-        throw AssertionError("front-page jev only POSTs")
+        throw AssertionError("front-page decision only POSTs")
     }
 }

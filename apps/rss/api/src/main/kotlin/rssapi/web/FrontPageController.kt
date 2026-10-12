@@ -24,6 +24,27 @@ class FrontPageController(private val user: IdentityUser, private val frontPage:
             articles = rows.map { it.article.toJson(it.state, it.scoreRow) },
         )
     }
+
+    /**
+     * Stored-judgment evidence, newest window only. Read-only: unlike
+     * /front-page it never refreshes stale rows, so reviewing past
+     * decision-model judgments costs no quota. Counts and timestamps only; no titles.
+     */
+    @GetMapping("/front-page/models", headers = ["X-Api-Version=1"])
+    fun frontPageModels(): FrontPageModelsJson {
+        val evidence = frontPage.modelEvidence(Instant.now())
+        return FrontPageModelsJson(
+            generatedAt = Instant.now().toEpochMilli(),
+            models = evidence.map {
+                ModelEvidenceJson(
+                    model = it.model,
+                    rows = it.rows,
+                    newestAt = it.newestAt?.toEpochMilli(),
+                    oldestAt = it.oldestAt?.toEpochMilli(),
+                )
+            },
+        )
+    }
 }
 
 private fun parseFrontPageSince(since: String?): Long? {

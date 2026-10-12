@@ -2,11 +2,11 @@ package rssapi.ai
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import rssapi.frontpage.JevScoreProvider
+import rssapi.frontpage.DecisionScoreProvider
 import rssapi.frontpage.SignalScoreProvider
 
 /**
- * Env-derived AI knobs and the Jev batch scorer. The TypeSafe key arrives
+ * Env-derived AI knobs and the decision-model batch scorer. The TypeSafe key arrives
  * only via TYPESAFE_API_KEY in the untracked deploy/.env; nothing here
  * ever logs or exposes it.
  */
@@ -16,6 +16,6 @@ class AiBeans {
     fun aiConfig(): AiConfig = aiConfigFromEnv()
 
     @Bean
-    fun jevScoreProvider(config: AiConfig, signals: SignalScoreProvider): JevScoreProvider =
-        JevScoreProvider(JevBackend(config), signals)
+    fun decisionScoreProvider(config: AiConfig, signals: SignalScoreProvider): DecisionScoreProvider =
+        DecisionScoreProvider(DecisionBackend(config), signals)
 }

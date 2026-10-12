@@ -6,9 +6,9 @@
  * the affinity precedent in mutations.ts where a star records affinity 4 and
  * a read records 1). Folder articles then rank by their average word weight.
  *
- * `toJevState` is the documented Jev attach point: it serializes a
- * bounded candidate set plus the learned scores so a future `jev_ask` call
- * can rank or explain the shadow list. It never fetches.
+ * `toDecisionState` is the documented decision-model attach point: it
+ * serializes a bounded candidate set plus the learned scores so a future
+ * `jev_ask` call can rank or explain the shadow list. It never fetches.
  */
 
 export const STAR_WORD_WEIGHT = 4;
@@ -152,7 +152,7 @@ export function rankInteresting<T extends { id: string; title: string }>(
     );
 }
 
-export interface JevCandidateInput {
+export interface DecisionCandidateInput {
     id: string;
     title: string;
     feedId: string;
@@ -160,14 +160,14 @@ export interface JevCandidateInput {
 }
 
 /**
- * Bounded JSON state for a future jev_ask ranking call.
+ * Bounded JSON state for a future decision-model ranking call.
  * Shape: {candidates:[{id,title,feed,hot}], wordScores, affinity}.
  * Never exceeds maxChars and never truncates mid-article: over-budget
  * output drops whole trailing candidates first, then word scores, then
  * affinity entries. Always returns valid JSON.
  */
-export function toJevState(
-    articles: JevCandidateInput[],
+export function toDecisionState(
+    articles: DecisionCandidateInput[],
     wordMap: Record<string, number>,
     affinity: Record<string, number>,
     maxChars: number,
