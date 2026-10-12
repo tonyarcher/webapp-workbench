@@ -15,7 +15,9 @@ interface ArticleStateRepo : JpaRepository<ArticleStateEntity, ArticleStateId> {
      * Bulk mark-read without loading articles into memory. One statement for
      * any feed set size; existing starred flags are preserved on conflict.
      * Two variants so every bind has a known type (a nullable timestamptz
-     * bind fails Postgres parameter inference with 42P18).
+     * bind fails Postgres parameter inference with 42P18). Both scan in
+     * article-id order so concurrent bulk marks take row locks in the same
+     * order instead of deadlocking each other (SQLState 40P01 under retry).
      */
     @Modifying
     @Query(
@@ -25,6 +27,7 @@ interface ArticleStateRepo : JpaRepository<ArticleStateEntity, ArticleStateId> {
         FROM articles a
         WHERE a.feed_id IN (:feedIds)
           AND a.published_at < :cutoff
+        ORDER BY a.id
         ON CONFLICT (user_id, article_id) DO UPDATE SET read = true, read_at = now()
         """,
         nativeQuery = true,
@@ -42,6 +45,7 @@ interface ArticleStateRepo : JpaRepository<ArticleStateEntity, ArticleStateId> {
         SELECT :userId, a.id, true, now(), false
         FROM articles a
         WHERE a.feed_id IN (:feedIds)
+        ORDER BY a.id
         ON CONFLICT (user_id, article_id) DO UPDATE SET read = true, read_at = now()
         """,
         nativeQuery = true,
