@@ -28,6 +28,7 @@ export interface ArticleListRenderHost {
     pageSize: number;
     interestingOnly: boolean;
     advancedOpen: boolean;
+    marking: boolean;
     advancedAnchor: MenuAnchor | null;
     scrollElRef: Ref<HTMLDivElement>;
     virtualizer: Virtualizer<HTMLDivElement, HTMLDivElement>;
@@ -226,7 +227,7 @@ function renderPageSizeSelect(host: ArticleListRenderHost) {
 }
 
 export function renderAdvancedMenu(host: ArticleListRenderHost) {
-    return html`<advanced-menu .open=${host.advancedOpen} .anchor=${host.advancedAnchor} .unreadOnly=${host.unreadOnly} .scopeLabel=${host.scopeLabel()} @unread-change=${host.onAdvancedUnread} @mark-before=${host.onMarkBefore} @close=${() => (host.advancedOpen = false)}></advanced-menu>`;
+    return html`<advanced-menu .open=${host.advancedOpen} .anchor=${host.advancedAnchor} .unreadOnly=${host.unreadOnly} .marking=${host.marking} .scopeLabel=${host.scopeLabel()} @unread-change=${host.onAdvancedUnread} @mark-before=${host.onMarkBefore} @close=${() => (host.advancedOpen = false)}></advanced-menu>`;
 }
 
 export function renderScroll(host: ArticleListRenderHost, virtualItems: VirtualItems, showFeed: boolean) {

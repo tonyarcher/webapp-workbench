@@ -70,3 +70,12 @@
 .mark-opt:hover {
     background: var(--hover);
 }
+
+.mark-opt:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.mark-opt:disabled:hover {
+    background: transparent;
+}

@@ -1,6 +1,14 @@
 // Toast notice smoke: the pub/sub store behind user-facing API errors.
 import { AuthError } from '../src/services/api';
-import { clearToasts, dismissToast, onToast, toastApiError, toastError, type ToastNotice } from '../src/services/toast';
+import {
+    clearToasts,
+    dismissToast,
+    onToast,
+    toastApiError,
+    toastError,
+    toastInfo,
+    type ToastNotice,
+} from '../src/services/toast';
 import { assert } from './smoke-assert';
 
 // Earlier phases exercise failing mutations, which now emit notices into the
@@ -57,4 +65,14 @@ assert(lastCount(gated) === 0, 'auth errors do not toast (sign-out owns that sur
 toastApiError(new Error('boom'), 'api trouble');
 assert(lastCount(gated) === 1 && lastText(gated) === 'api trouble', 'non-auth API errors toast');
 stopGated();
+clearToasts();
+
+const info: ToastNotice[][] = [];
+const stopInfo = onToast((notices) => {
+    info.push(notices);
+});
+toastInfo('working on it');
+assert(lastCount(info) === 1 && lastText(info) === 'working on it', 'info notices emit like errors');
+assert(info.at(-1)?.at(-1)?.kind === 'info', 'info notices carry their kind');
+stopInfo();
 clearToasts();

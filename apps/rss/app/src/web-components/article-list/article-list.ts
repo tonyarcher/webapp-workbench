@@ -28,7 +28,7 @@ import {
 } from './article-list-helpers';
 import { renderAdvancedMenu, renderInterestingHint, renderScroll, renderToolbar } from './article-list-render';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
-import { toastApiError } from '../../services/toast';
+import { toastApiError, toastInfo } from '../../services/toast';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
 import '../advanced-menu/advanced-menu';
 import '../lazy-img/lazy-img';
@@ -60,6 +60,7 @@ export class ArticleList extends LitElement {
     @state() private cols = 3;
     @state() private pageSize = DEFAULT_PAGE_SIZE;
     @state() private advancedOpen = false;
+    @state() private marking = false;
     @state() advancedAnchor: MenuAnchor | null = null;
     @state() refreshing = false;
     @state() private interestingOnly = false;
@@ -380,11 +381,19 @@ export class ArticleList extends LitElement {
     async onMarkBefore(e: Event) {
         const cutoff = (e as CustomEvent<number | null>).detail;
         this.advancedOpen = false;
+        // One mark at a time: a bulk mark over a large library takes tens of
+        // seconds, and overlapping calls pile transactions onto the database
+        // until one dies. Late clicks wait their turn by doing nothing.
+        if (this.marking) return;
+        this.marking = true;
+        toastInfo('Marking articles as read — this takes a while on large libraries.');
         try {
             await markBeforeAction(this as never, cutoff);
         } catch (err) {
             console.error('mark-before failed', err);
             toastApiError(err, 'Could not mark articles as read. Check your connection and try again.');
+        } finally {
+            this.marking = false;
         }
     }
 

@@ -23,6 +23,7 @@ export class AdvancedMenu extends LitElement {
     @property({ attribute: false }) anchor: MenuAnchor | null = null;
     @property({ attribute: false }) unreadOnly = false;
     @property({ attribute: false }) scopeLabel = '';
+    @property({ attribute: false }) marking = false;
 
     private menuEl: HTMLElement | null = null;
 
@@ -85,7 +86,9 @@ export class AdvancedMenu extends LitElement {
     }
 
     private renderMarkOpt(opt: { label: string; age: number | null }) {
-        return html`<button class="mark-opt" @click=${() => this.emitMarkBefore(opt.age)}>${opt.label}</button>`;
+        return html`<button class="mark-opt" ?disabled=${this.marking} @click=${() => this.emitMarkBefore(opt.age)}>${
+            this.marking ? 'Marking…' : opt.label
+        }</button>`;
     }
 
     private clampPosition() {

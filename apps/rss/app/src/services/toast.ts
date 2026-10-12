@@ -16,6 +16,7 @@ import { AuthError } from './api';
 export interface ToastNotice {
     id: number;
     message: string;
+    kind: 'error' | 'info';
 }
 
 type ToastListener = (current: ToastNotice[]) => void;
@@ -39,7 +40,13 @@ export function toastApiError(err: unknown, message: string): void {
 
 /** Show an error notice unconditionally. Prefer toastApiError for API failures. */
 export function toastError(message: string): void {
-    notices = [...notices, { id: nextId++, message }].slice(-MAX_NOTICES);
+    notices = [...notices, { id: nextId++, message, kind: 'error' as const }].slice(-MAX_NOTICES);
+    publish();
+}
+
+/** Show an informational notice (long operations). No danger styling. */
+export function toastInfo(message: string): void {
+    notices = [...notices, { id: nextId++, message, kind: 'info' as const }].slice(-MAX_NOTICES);
     publish();
 }
 
