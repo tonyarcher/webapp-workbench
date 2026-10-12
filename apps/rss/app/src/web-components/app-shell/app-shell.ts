@@ -158,7 +158,8 @@ export class AppShell extends LitElement {
     private renderToasts() {
         if (this.toasts.length === 0) return html``;
         return html`<div class="toasts" role="status">${this.toasts.map(
-            (notice) => html`<button class="toast" @click=${() => dismissToast(notice.id)}>${notice.message}</button>`,
+            (notice) =>
+                html`<button class="toast${notice.kind === 'info' ? ' toast-info' : ''}" @click=${() => dismissToast(notice.id)}>${notice.message}</button>`,
         )}</div>`;
     }
 

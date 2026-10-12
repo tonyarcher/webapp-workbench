@@ -184,6 +184,10 @@ main {
     cursor: pointer;
 }
 
+.toast-info {
+    border-color: var(--border);
+}
+
 .article-backdrop {
     position: absolute;
     inset: 0;
