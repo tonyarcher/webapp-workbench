@@ -21,7 +21,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @WebMvcTest(StationController::class, PlaylistController::class, HealthController::class)
-@Import(FakeWriterConfig::class)
+@Import(FakeWriterConfig::class, CorsConfig::class)
 class RadioRoutesTest {
     @Autowired
     lateinit var mvc: MockMvc
@@ -85,6 +85,33 @@ class RadioRoutesTest {
             param("tz", "Not/AZone")
         }.andReturn()
         assertEquals(HttpStatus.BAD_REQUEST.value(), zone.response.status)
+    }
+
+    @Test
+    fun sameOriginPostIsNotRejectedByCors() {
+        // Browsers send Origin on every POST, and Spring treats any request
+        // carrying one as a CORS request. Without the same-host bypass the
+        // API's own origin 403s here because it is not allowlisted.
+        val res = mvc.post("/playlists") {
+            header("X-Api-Version", "1")
+            header("Origin", "https://app.example")
+            header("Host", "app.example")
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = """{"stationId":"top40","seed":"autumn-oak"}"""
+        }.andReturn()
+        assertEquals(200, res.response.status)
+    }
+
+    @Test
+    fun foreignOriginPostIsStillRejected() {
+        val res = mvc.post("/playlists") {
+            header("X-Api-Version", "1")
+            header("Origin", "https://evil.example")
+            header("Host", "app.example")
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = """{"stationId":"top40","seed":"autumn-oak"}"""
+        }.andReturn()
+        assertEquals(HttpStatus.FORBIDDEN.value(), res.response.status)
     }
 }
 

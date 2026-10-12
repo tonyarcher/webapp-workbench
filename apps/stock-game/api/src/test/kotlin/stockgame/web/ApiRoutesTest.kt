@@ -169,6 +169,33 @@ class ApiRoutesTest {
     }
 
     @Test
+    fun sameOriginPostIsNotRejectedByCors() {
+        // Browsers send Origin on every POST, and Spring treats any request
+        // carrying one as a CORS request. Without the same-host bypass the
+        // API's own origin 403s here because it is not allowlisted.
+        asUser(ALICE_SUB, ALICE_ID)
+        val res = mvc.post("/orders/9999/cancel") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer alice-token")
+            header("Origin", "https://app.example")
+            header("Host", "app.example")
+        }.andReturn()
+        assertEquals(200, res.response.status)
+    }
+
+    @Test
+    fun foreignOriginPostIsStillRejected() {
+        asUser(ALICE_SUB, ALICE_ID)
+        val res = mvc.post("/orders/9999/cancel") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer alice-token")
+            header("Origin", "https://evil.example")
+            header("Host", "app.example")
+        }.andReturn()
+        assertEquals(HttpStatus.FORBIDDEN.value(), res.response.status)
+    }
+
+    @Test
     fun orderValidation() {
         asUser(ALICE_SUB, ALICE_ID)
         fun placeOrder(body: String): Int = mvc.post("/orders") {

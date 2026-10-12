@@ -1,5 +1,6 @@
 package fitnessapi.http
 
+import fitnessapi.web.CorsConfig
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
@@ -19,7 +20,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @WebMvcTest
-@Import(TestStoresConfig::class)
+@Import(TestStoresConfig::class, CorsConfig::class)
 class FitnessRoutesTest {
     @Autowired
     lateinit var mvc: MockMvc
@@ -145,5 +146,32 @@ class FitnessRoutesTest {
         val res = mvc.postJson("/imports", """{"samples":[${samplesJson.joinToString()}]}""")
         assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
         assertTrue(res.response.contentAsString.contains("at most 2000"))
+    }
+
+    @Test
+    fun sameOriginPostIsNotRejectedByCors() {
+        // Browsers send Origin on every POST, and Spring treats any request
+        // carrying one as a CORS request. Without the same-host bypass the
+        // API's own origin 403s here because it is not allowlisted.
+        val res = mvc.post("/imports") {
+            header("X-Api-Version", "1")
+            header("Origin", "https://app.example")
+            header("Host", "app.example")
+            contentType = MediaType.APPLICATION_JSON
+            content = BODY_MASS
+        }.andReturn()
+        assertEquals(200, res.response.status)
+    }
+
+    @Test
+    fun foreignOriginPostIsStillRejected() {
+        val res = mvc.post("/imports") {
+            header("X-Api-Version", "1")
+            header("Origin", "https://evil.example")
+            header("Host", "app.example")
+            contentType = MediaType.APPLICATION_JSON
+            content = BODY_MASS
+        }.andReturn()
+        assertEquals(HttpStatus.FORBIDDEN.value(), res.response.status)
     }
 }
