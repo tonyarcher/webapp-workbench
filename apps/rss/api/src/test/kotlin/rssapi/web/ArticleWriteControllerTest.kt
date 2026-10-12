@@ -142,4 +142,48 @@ class ArticleWriteControllerTest {
         verify(states, never()).markReadAll(any(), any())
         verify(articles, never()).findByFeedIdIn(any())
     }
+
+    @Test
+    fun sameOriginPostIsNotRejectedByCors() {
+        // Browsers send Origin on every POST, and Spring treats any request
+        // carrying one as a CORS request. Without the same-host bypass the
+        // API's own origin 403s here because it is not allowlisted.
+        val uid = UUID.randomUUID()
+        val feedA = UUID.randomUUID()
+        stubAuth(uid)
+        whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedA))
+
+        mvc.post("/articles/read-before") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            header("Origin", "https://app.example")
+            header("Host", "app.example")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"cutoff":1720000000000}"""
+        }.andExpect {
+            status { isOk() }
+        }
+        verify(states).markReadBefore(
+            org.mockito.kotlin.eq(uid),
+            org.mockito.kotlin.eq(listOf(feedA)),
+            org.mockito.kotlin.eq(java.time.Instant.ofEpochMilli(1720000000000)),
+        )
+    }
+
+    @Test
+    fun foreignOriginPostIsStillRejected() {
+        stubAuth(UUID.randomUUID())
+
+        mvc.post("/articles/read-before") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            header("Origin", "https://evil.example")
+            header("Host", "app.example")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"cutoff":1720000000000}"""
+        }.andExpect {
+            status { isForbidden() }
+        }
+        verify(states, never()).markReadBefore(any(), any(), any())
+    }
 }
