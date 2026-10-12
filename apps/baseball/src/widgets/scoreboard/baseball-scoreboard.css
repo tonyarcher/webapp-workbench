@@ -1,6 +1,19 @@
 :host {
     display: block;
     width: 100%;
+    /* Default animation length; plate-scene.ts overrides it per play through
+       an inline style the IDE cannot see, which is why every var() below
+       carries the same 4s fallback. Declared here so the contract has one
+       home instead of living only in fallbacks. */
+    --pitch-duration: 4s;
+    /* Same story for the team color: plate-scene.ts sets it per figure
+       inline, and every use falls back to this gold. */
+    --team: #ffd95a;
+    /* And for the pitch geometry plate-scene.ts sets inline per pitch;
+       the fallbacks are the no-offset defaults. */
+    --pitch-release: 0px;
+    --pitch-dx: 0px;
+    --pitch-dy: 80px;
 }
 
 .scoreboard-led {
@@ -167,6 +180,15 @@
     text-align: center;
     line-height: 20px;
     color: #ffffff;
+}
+
+/* White 8.8px text on occupied red (#ff2a3b) is 3.71:1, under the 4.5:1
+   floor. The dark chip carries the label instead of re-tinting the diamond,
+   and it holds through the 0.3s occupied transition, where the uncovered
+   text dips lower mid-fade. */
+.base.occupied > .base-label {
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 3px;
 }
 
 .text-muted {
