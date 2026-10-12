@@ -194,8 +194,11 @@ def tunnel_up(timeout: int = TUNNEL_UP_TIMEOUT_SECONDS) -> bool:
         )
         return False
     try:
+        # Forward slashes, always: the callee is bash, and a Windows
+        # backslash path does not survive MSYS argument parsing (`\t`
+        # becomes `t`, so deploy\tunnel.sh arrives as deploytunnel.sh).
         proc = subprocess.run(
-            [*bash, os.path.join("deploy", "tunnel.sh"), "up"],
+            [*bash, "deploy/tunnel.sh", "up"],
             capture_output=True,
             text=True,
             timeout=timeout,

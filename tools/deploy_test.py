@@ -311,6 +311,33 @@ class PreflightTest(unittest.TestCase):
             self.assertEqual(quiet_preflight(["--status"]), 0)
             store.assert_not_called()
 
+    def test_tunnel_up_uses_posix_path_for_bash(self) -> None:
+        # A Windows backslash path does not survive MSYS argument parsing, so
+        # the tunnel script must be addressed with forward slashes on every
+        # platform. Regression: deploytunnel.sh on a Windows git-bash box.
+        from unittest.mock import call
+
+        with (
+            patch("deploy.shutil.which", return_value="bash"),
+            patch("deploy.subprocess.run") as run,
+            patch("deploy.tcp_open", return_value=True),
+        ):
+            from deploy import tunnel_up
+
+            self.assertTrue(tunnel_up())
+            self.assertEqual(
+                run.call_args_list,
+                [
+                    call(
+                        ["bash", "deploy/tunnel.sh", "up"],
+                        capture_output=True,
+                        text=True,
+                        timeout=120,
+                        check=False,
+                    )
+                ],
+            )
+
     def test_ensure_open_skips_heal_when_already_open(self) -> None:
         with (
             patch("deploy.tcp_open", return_value=True),
