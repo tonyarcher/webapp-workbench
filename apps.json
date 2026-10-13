@@ -15,6 +15,14 @@
         "radio-api": "apps/radio-station/api/build/libs/radio-api-0.1.0.jar",
         "calendar-sync-api": "apps/calendar-sync/api/build/libs/calendar-sync-api-0.1.0.jar"
     },
+    "apiRoutes": {
+        "rss-api": { "path": "/rss-reader/api/", "readTimeout": "120s" },
+        "stock-game-api": { "path": "/stock-game/api/" },
+        "calendar-sync-api": { "path": "/calendar-sync/api/" },
+        "radio-api": { "path": "/radio-station/api/" },
+        "fitness-api": { "path": "/fitness/api/" },
+        "user-api": { "path": "/user-api/" }
+    },
     "apps": [
         {
             "id": "baseball",

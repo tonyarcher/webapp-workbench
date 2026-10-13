@@ -43,7 +43,7 @@ fun Project.gatewayTokens(hosts: List<String>): Map<String, String> {
         } else {
             ""
         },
-        "API_ROUTES" to apiRoutesToken(),
+        "API_ROUTES" to apiRoutesToken(appCatalog.apiRoutes),
         "ASSET_SERVER" to assetServerBlock(s3Apps(env), env, tls, redirect),
         // The same per-app location set, on the gateway's own host. One nginx
         // serves every app from the store, so the per-app UI containers are
@@ -57,7 +57,8 @@ fun Project.gatewayTokens(hosts: List<String>): Map<String, String> {
  * One prefix-stripping API proxy route: the public subpath, the nginx
  * variable name for its upstream, the compose address, and an optional
  * `proxy_read_timeout` for an API whose responses can outlast nginx's 60s
- * default. Adding an API is one entry here, not a copied location block.
+ * default. Derived from the catalog's `apiRoutes` (see [apiRoutesOf]); adding
+ * an API is one catalog entry, not a copied location block.
  */
 internal data class ApiRoute(
     val publicPath: String,
@@ -67,36 +68,39 @@ internal data class ApiRoute(
 )
 
 /**
- * Every JVM API behind the gateway. Location matching is longest-prefix, not
- * order-dependent, so these render as one group wherever the token sits.
+ * Derive the gateway routes from the catalog: the service key names the
+ * compose address (`http://<service>:3000`) and, with dashes swapped for
+ * underscores, the nginx variable — the shapes every hand-written block
+ * already used. Only the public path and any timeout come from the catalog,
+ * because neither is derivable from the service name.
  */
-internal val API_ROUTES: List<ApiRoute> = listOf(
-    // The reader's AI summarization can take a full model generation.
-    ApiRoute("/rss-reader/api/", "upstream_rss_api", "http://rss-api:3000", readTimeout = "120s"),
-    ApiRoute("/stock-game/api/", "upstream_stock_game_api", "http://stock-game-api:3000"),
-    ApiRoute("/calendar-sync/api/", "upstream_calendar_sync_api", "http://calendar-sync-api:3000"),
-    ApiRoute("/radio-station/api/", "upstream_radio_api", "http://radio-api:3000"),
-    ApiRoute("/fitness/api/", "upstream_fitness_api", "http://fitness-api:3000"),
-    ApiRoute("/user-api/", "upstream_user_api", "http://user-api:3000"),
-)
+internal fun apiRoutesOf(specs: Map<String, ApiRouteSpec>): List<ApiRoute> = specs.map { (service, spec) ->
+    ApiRoute(
+        publicPath = spec.path,
+        upstreamVar = "upstream_${service.replace('-', '_')}",
+        upstream = "http://$service:3000",
+        readTimeout = spec.readTimeout,
+    )
+}
 
 /** The API routes block for the @@API_ROUTES@@ token: shared shape, one entry per API. */
-internal fun apiRoutesToken(): String = API_ROUTES.joinToString("\n\n") { route ->
-    buildString {
-        appendLine("    location ^~ ${route.publicPath} {")
-        appendLine("        set \$${route.upstreamVar} ${route.upstream};")
-        appendLine("        rewrite ^${route.publicPath}(.*)\$ /\$1 break;")
-        appendLine("        proxy_pass \$${route.upstreamVar};")
-        appendLine("        proxy_http_version 1.1;")
-        route.readTimeout?.let { appendLine("        proxy_read_timeout $it;") }
-        appendLine("        proxy_set_header Host \$host;")
-        appendLine("        proxy_set_header X-Real-IP \$remote_addr;")
-        appendLine("        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;")
-        appendLine("        proxy_set_header X-Forwarded-Proto \$scheme;")
-        appendLine("        proxy_set_header X-Request-ID \$request_id;")
-        append("    }")
+internal fun apiRoutesToken(specs: Map<String, ApiRouteSpec>): String =
+    apiRoutesOf(specs).joinToString("\n\n") { route ->
+        buildString {
+            appendLine("    location ^~ ${route.publicPath} {")
+            appendLine("        set \$${route.upstreamVar} ${route.upstream};")
+            appendLine("        rewrite ^${route.publicPath}(.*)\$ /\$1 break;")
+            appendLine("        proxy_pass \$${route.upstreamVar};")
+            appendLine("        proxy_http_version 1.1;")
+            route.readTimeout?.let { appendLine("        proxy_read_timeout $it;") }
+            appendLine("        proxy_set_header Host \$host;")
+            appendLine("        proxy_set_header X-Real-IP \$remote_addr;")
+            appendLine("        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;")
+            appendLine("        proxy_set_header X-Forwarded-Proto \$scheme;")
+            appendLine("        proxy_set_header X-Request-ID \$request_id;")
+            append("    }")
+        }
     }
-}
 
 /** The token name on a `@@NAME@@` line, or null for ordinary lines. */
 fun tokenName(line: String): String? {

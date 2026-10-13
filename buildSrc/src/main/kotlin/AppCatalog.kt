@@ -26,11 +26,21 @@ data class HostApp(
 data class AppCatalog(
     val composeFile: String,
     val apiJars: Map<String, String>,
+    val apiRoutes: Map<String, ApiRouteSpec>,
     val apps: Map<String, HostApp>,
     val buildOrder: List<String>,
     val aliases: Map<String, String>,
     val dockerOnlyApps: Set<String>,
 )
+
+/**
+ * One gateway API route from the catalog: the public subpath the gateway
+ * serves the API under, and an optional `proxy_read_timeout` for an API whose
+ * responses can outlast nginx's 60s default. The upstream address and nginx
+ * variable name derive from the service key (the same key as `apiJars`), so
+ * the catalog holds only what cannot be derived.
+ */
+data class ApiRouteSpec(val path: String, val readTimeout: String? = null)
 
 /*
  * One cached catalog, paired with the mtime it was parsed from.
@@ -131,6 +141,23 @@ fun loadAppCatalog(rootDir: java.io.File): AppCatalog {
     val composeFile = catalogString(root["composeFile"], "apps.json.composeFile")
     val apiJars = catalogStringMap(root["apiJars"], "apps.json.apiJars")
     if (apiJars.isEmpty()) error("apps.json.apiJars must not be empty")
+    val apiRoutes = LinkedHashMap<String, ApiRouteSpec>()
+    catalogObject(root["apiRoutes"] ?: emptyMap<Any, Any>(), "apps.json.apiRoutes").forEach { (service, entry) ->
+        if (service !in apiJars) {
+            error("apps.json.apiRoutes[\"$service\"]: no such service in apiJars")
+        }
+        val obj = catalogObject(entry, "apps.json.apiRoutes[\"$service\"]")
+        val unknown = obj.keys - setOf("path", "readTimeout")
+        if (unknown.isNotEmpty()) {
+            error("apps.json.apiRoutes[\"$service\"]: unknown keys ${unknown.sorted().joinToString(", ")}")
+        }
+        val path = catalogString(obj["path"], "apps.json.apiRoutes[\"$service\"].path")
+        if (!path.startsWith("/") || !path.endsWith("/")) {
+            error("apps.json.apiRoutes[\"$service\"].path: must start and end with \"/\" (got \"$path\")")
+        }
+        val readTimeout = (obj["readTimeout"] as? String)?.takeIf { it.isNotEmpty() }
+        apiRoutes[service] = ApiRouteSpec(path, readTimeout)
+    }
     val rawApps = catalogList(root["apps"], "apps.json.apps")
     if (rawApps.isEmpty()) error("apps.json.apps must not be empty")
     val apps = LinkedHashMap<String, HostApp>()
@@ -183,6 +210,7 @@ fun loadAppCatalog(rootDir: java.io.File): AppCatalog {
     return AppCatalog(
         composeFile = composeFile,
         apiJars = apiJars,
+        apiRoutes = apiRoutes,
         apps = apps,
         buildOrder = apps.keys.toList(),
         aliases = aliases,
