@@ -101,6 +101,11 @@ fun Project.composeArgsFor(services: List<String>): List<String> {
     val extras = deployPassthrough()
     val up = mutableListOf("up", "-d")
     if (!deployHas("no-build")) up.add("--build")
+    // A compose service removed from the file otherwise leaves its container
+    // running as an orphan: `up` never touches services the file no longer
+    // names (this is how calendar-sync's old UI container outlived its
+    // removal). --remove-orphans prunes them in the same step.
+    up.add("--remove-orphans")
     val base = when {
         deployHas("down") -> listOf("down")
         deployHas("status") -> listOf("ps") + services
