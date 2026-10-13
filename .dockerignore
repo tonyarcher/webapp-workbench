@@ -106,9 +106,6 @@ deploy/football/**
 !deploy/clipstack
 deploy/clipstack/**
 !deploy/clipstack/nginx.conf
-!deploy/calendar-sync
-deploy/calendar-sync/**
-!deploy/calendar-sync/nginx.conf
 !deploy/calendar-sync-api
 !deploy/lemmy-vertical-scroll
 deploy/lemmy-vertical-scroll/**

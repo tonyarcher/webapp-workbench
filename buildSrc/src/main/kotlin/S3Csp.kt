@@ -57,6 +57,7 @@ private sealed interface CspPolicy {
         val scriptSrc: List<String> = listOf("'self'"),
         val styleSrc: List<String> = listOf("'self'"),
         val fontSrc: List<String> = emptyList(),
+        val frameSrc: List<String> = emptyList(),
     ) : CspPolicy
 
     data object Omit : CspPolicy
@@ -87,6 +88,20 @@ private val S3_CSP: Map<String, CspPolicy> = mapOf(
     "stock-game" to CspPolicy.Emit(connectSrc = listOf("'self'")),
     "fitness" to CspPolicy.Emit(connectSrc = listOf("'self'")),
     "radio-station" to CspPolicy.Emit(connectSrc = listOf("'self'")),
+    // calendar-sync reaches its own API origin and the identity base (both
+    // joined at render time), plus Google: the GIS script and its token-flow
+    // iframe (frame-src — the popup is an accounts.google.com iframe, and
+    // default-src 'self' would block it) and the Calendar insert calls.
+    // Styles allow 'unsafe-inline' because lit-html writes `style="..."`
+    // attributes and the document carries an inline loading-state <style>,
+    // both of which a style-src without it blocks; the same-origin deploy
+    // sets no CSP at all, so this is a non-regression. Scripts stay 'self'.
+    "calendar-sync" to CspPolicy.Emit(
+        connectSrc = listOf("'self'", "https://www.googleapis.com"),
+        scriptSrc = listOf("'self'", "https://accounts.google.com"),
+        styleSrc = listOf("'self'", "'unsafe-inline'"),
+        frameSrc = listOf("https://accounts.google.com"),
+    ),
     // lemmy-vertical-scroll reaches user-supplied Lemmy/PieFed instances and
     // arbitrary embed/media hosts; clipstack reaches TikTok oEmbed plus
     // arbitrary embed/media hosts. Neither set is enumerable. Omit.
@@ -108,10 +123,14 @@ internal fun cspHeader(app: S3App): String? {
             // The cross-origin API and identity origins, when the app has them,
             // lead the static connect sources (each app's own *_API_BASE key).
             // The identity base is a path-bearing source too, so its
-            // `<identityBase>/oauth/token` call matches.
+            // `<identityBase>/oauth/token` call matches. A CSP source carrying
+            // a path matches exactly that path unless it ends in a slash
+            // (CSP3 §6.7.2.12), so each is normalized to a trailing slash —
+            // without it `https://host/app/api` would allow that URL alone and
+            // block every request beneath it.
             val cross = listOfNotNull(
-                app.apiBase.takeIf { it.isNotEmpty() },
-                app.identityBase.takeIf { it.isNotEmpty() },
+                app.apiBase.takeIf { it.isNotEmpty() }?.let { cspPathSource(it) },
+                app.identityBase.takeIf { it.isNotEmpty() }?.let { cspPathSource(it) },
             )
             val connect = cross + policy.connectSrc
             buildList {
@@ -119,10 +138,23 @@ internal fun cspHeader(app: S3App): String? {
                 add("script-src ${policy.scriptSrc.joinToString(" ")}")
                 add("style-src ${policy.styleSrc.joinToString(" ")}")
                 if (policy.fontSrc.isNotEmpty()) add("font-src ${policy.fontSrc.joinToString(" ")}")
+                if (policy.frameSrc.isNotEmpty()) add("frame-src ${policy.frameSrc.joinToString(" ")}")
                 if (connect.isNotEmpty()) add("connect-src ${connect.joinToString(" ")}")
                 if (policy.mediaSrc.isNotEmpty()) add("media-src ${policy.mediaSrc.joinToString(" ")}")
                 add("img-src 'self' data: https:")
             }.joinToString("; ")
         }
     }
+}
+
+/**
+ * A connect-src source for a URL that carries a path: CSP matches a
+ * path-bearing source exactly, so `https://host/app/api` would block
+ * `/app/api/trakt/status`. Appending the slash turns it into the prefix match
+ * the client actually needs. An origin (no path) is returned unchanged.
+ */
+internal fun cspPathSource(url: String): String {
+    val trimmed = url.trimEnd('/')
+    val path = trimmed.substringAfter("://", "").substringAfter('/', "")
+    return if (path.isEmpty()) trimmed else "$trimmed/"
 }

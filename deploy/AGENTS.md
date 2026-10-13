@@ -17,9 +17,9 @@ Docker Compose reverse-proxy stack. Workflow and monorepo rules: repo-root
 
 - TypeScript and Kotlin compile on the **host** through Gradle, and the deploy
   task runs that build first. Static apps are published to the object store and
-  served by the gateway; the three apps that keep a container (`football`,
-  `calendar-sync`, `user-web`) copy `dist/` into nginx. API images copy the
-  host-built boot jar into a JRE image.
+  served by the gateway; the two apps that keep a container (`football`,
+  `user-web`) copy `dist/` into nginx. API images copy the host-built boot jar
+  into a JRE image.
 - **JVM images are JRE only and copy jars.** Do not run `tsc`, Vite, or Gradle
   inside Docker, and do not use a JDK base image at runtime. Do not delete the
   lockfile.
@@ -84,14 +84,12 @@ unset `S3_BUCKET` fails the deploy rather than falling back.
   there is no second store image to keep in sync. Either path needs a live
   store and credentials, so neither is exercised by a local check.
 - The published set is every catalog app with a `basePath` and a JavaScript
-  workspace — read `apps.json` rather than trusting a list here. Three static
+  workspace — read `apps.json` rather than trusting a list here. Two static
   apps are deliberately excluded, each for a stated reason: `football` carries
   in-flight uncommitted work on this branch; `user-web` is the accounts landing
   page whose session is a SameSite=Lax cookie and whose API calls are
-  origin-absolute `/user-api/`, so a separate asset origin would break sign-in;
-  and `calendar-sync` depends on its own nginx proxy for `/api/trakt/` (Trakt
-  has no CORS), which does not exist on the asset origin. All three stay
-  same-origin. The JVM APIs ship no `dist/` and are not published.
+  origin-absolute `/user-api/`, so a separate asset origin would break sign-in.
+  Both stay same-origin. The JVM APIs ship no `dist/` and are not published.
 - One nginx container serves both origins via `server_name`: the existing API
   origin and the asset origin. The same generated per-app location set is
   emitted into both server blocks, so a subpath on the API origin and the asset

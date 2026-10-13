@@ -36,6 +36,7 @@ val S3_SEED_KEYS: List<String> = listOf(
     "STOCK_GAME_API_BASE",
     "FITNESS_API_BASE",
     "RADIO_API_BASE",
+    "CALENDAR_SYNC_API_BASE",
 )
 
 /** S3 key prefix: S3_PREFIX + the app base path, slashes trimmed. */
@@ -190,11 +191,9 @@ fun Project.publishAppAssets(env: Map<String, String>, app: S3App) {
  * out until that lands. `user-web` is the identity landing page: its session
  * is a SameSite=Lax cookie and every API call is origin-absolute `/user-api/`,
  * so serving it from a separate browser origin breaks sign-in — it stays
- * same-origin. `calendar-sync` depends on its own nginx proxy for `/api/trakt/`
- * (Trakt has no CORS), and that proxy does not exist on the asset origin, so
- * the app stays same-origin.
+ * same-origin.
  */
-private val S3_EXCLUDED_APPS: Set<String> = setOf("football", "user-web", "calendar-sync")
+private val S3_EXCLUDED_APPS: Set<String> = setOf("football", "user-web")
 
 /**
  * The env key holding an app's cross-origin API origin, or null when it has
@@ -206,6 +205,7 @@ internal fun apiBaseEnvKey(appId: String): String? = when (appId) {
     "stock-game" -> "STOCK_GAME_API_BASE"
     "fitness" -> "FITNESS_API_BASE"
     "radio-station" -> "RADIO_API_BASE"
+    "calendar-sync" -> "CALENDAR_SYNC_API_BASE"
     else -> null
 }
 
@@ -220,7 +220,7 @@ internal fun apiBaseEnvKey(appId: String): String? = when (appId) {
  * `connect-src` for an app that never calls the identity service.
  */
 internal fun identityBaseEnvKey(appId: String): String? = when (appId) {
-    "rss-reader", "stock-game" -> "OAUTH_PUBLIC_BASE"
+    "rss-reader", "stock-game", "calendar-sync" -> "OAUTH_PUBLIC_BASE"
     else -> null
 }
 

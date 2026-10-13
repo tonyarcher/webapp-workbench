@@ -223,17 +223,18 @@ class S3SupportTest {
         )
         val block = assetServerBlock(apps, env, false, false)
         // Each app's API origin leads its connect-src, with 'self' for the
-        // document-origin calls.
+        // document-origin calls. A path-bearing source carries a trailing
+        // slash, or CSP3 matches it exactly and blocks everything beneath it.
         assertTrue(
-            block.contains("connect-src https://api.example.com/stock-game/api 'self';"),
+            block.contains("connect-src https://api.example.com/stock-game/api/ 'self';"),
             block,
         )
         assertTrue(
-            block.contains("connect-src https://api.example.com/fitness/api 'self';"),
+            block.contains("connect-src https://api.example.com/fitness/api/ 'self';"),
             block,
         )
         assertTrue(
-            block.contains("connect-src https://api.example.com/radio-station/api 'self';"),
+            block.contains("connect-src https://api.example.com/radio-station/api/ 'self';"),
             block,
         )
     }

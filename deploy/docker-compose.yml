@@ -58,7 +58,6 @@ services:
         depends_on:
             - rss-api
             - stock-game-api
-            - calendar-sync
             - calendar-sync-api
             - radio-api
             - football
@@ -168,15 +167,6 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
-        restart: unless-stopped
-        networks:
-            - baseball
-
-    calendar-sync:
-        logging: *bounded-logs
-        build:
-            context: ..
-            dockerfile: deploy/calendar-sync/Dockerfile
         restart: unless-stopped
         networks:
             - baseball

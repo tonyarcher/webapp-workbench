@@ -72,6 +72,7 @@
             "id": "calendar-sync",
             "workspaces": ["calendar-sync"],
             "services": ["calendar-sync"],
+            "containerless": true,
             "basePath": "/calendar-sync/",
             "aliases": ["calendar", "cal", "apps/calendar-sync"]
         },
