@@ -24,6 +24,12 @@ apps/clipstack/**
 apps/calendar-sync/**
 !apps/calendar-sync/dist
 !apps/calendar-sync/dist/**
+!apps/calendar-sync/api
+apps/calendar-sync/api/**
+!apps/calendar-sync/api/build
+apps/calendar-sync/api/build/**
+!apps/calendar-sync/api/build/libs
+!apps/calendar-sync/api/build/libs/**
 !apps/lemmy-vertical-scroll
 apps/lemmy-vertical-scroll/**
 !apps/lemmy-vertical-scroll/dist
@@ -103,6 +109,7 @@ deploy/clipstack/**
 !deploy/calendar-sync
 deploy/calendar-sync/**
 !deploy/calendar-sync/nginx.conf
+!deploy/calendar-sync-api
 !deploy/lemmy-vertical-scroll
 deploy/lemmy-vertical-scroll/**
 !deploy/lemmy-vertical-scroll/nginx.conf

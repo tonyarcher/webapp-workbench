@@ -64,7 +64,14 @@ ROUTES = [
     "/git/",
 ]
 
-APIS = ["user-api", "rss-api", "fitness-api", "stock-game-api", "radio-api"]
+APIS = [
+    "user-api",
+    "rss-api",
+    "fitness-api",
+    "stock-game-api",
+    "radio-api",
+    "calendar-sync-api",
+]
 
 
 def docker(*args: str, check: bool = False) -> str:

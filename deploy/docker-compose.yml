@@ -59,6 +59,7 @@ services:
             - rss-api
             - stock-game-api
             - calendar-sync
+            - calendar-sync-api
             - radio-api
             - football
             - fitness-api
@@ -176,6 +177,37 @@ services:
         build:
             context: ..
             dockerfile: deploy/calendar-sync/Dockerfile
+        restart: unless-stopped
+        networks:
+            - baseball
+
+    calendar-sync-api:
+        logging: *bounded-logs
+        build:
+            context: ..
+            dockerfile: deploy/calendar-sync-api/Dockerfile
+        # Must exceed the 20s graceful shutdown phase in
+        # application-prod.yml, or compose SIGKILLs mid-request.
+        stop_grace_period: 30s
+        environment:
+            # application-prod.yml: quiet framework logs, gzip, graceful shutdown.
+            SPRING_PROFILES_ACTIVE: prod
+            # JsonLog reads this; the app JSON lines are separate from the
+            # framework levels the prod profile sets.
+            LOG_LEVEL: ${LOG_LEVEL:-info}
+            PORT: 3000
+            DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/calendar
+            OAUTH_JWKS_URI: http://user-api:3000/oauth/jwks
+            # Defaults derive from PUBLIC_ORIGIN so a deployment sets one public
+            # origin and cannot leave a service advertising a stale host. The
+            # fallback keeps plain-HTTP localhost working with no .env at all.
+            OAUTH_ISSUER: ${OAUTH_ISSUER:-${PUBLIC_ORIGIN:-http://localhost}/user-api}
+            # Cross-origin client (assets on their own S3-backed origin) calling
+            # the API. Empty = same-origin only, the current gateway deployment.
+            CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+        depends_on:
+            postgres:
+                condition: service_healthy
         restart: unless-stopped
         networks:
             - baseball

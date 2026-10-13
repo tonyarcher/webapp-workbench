@@ -9,7 +9,8 @@
         "apps/fitness/*",
         "apps/stock-game/*",
         "apps/user/*",
-        "apps/radio-station/*"
+        "apps/radio-station/*",
+        "apps/calendar-sync/*"
     ],
     "scripts": {
         "build": "npm run build --workspaces --if-present",
@@ -26,6 +27,7 @@
         "dev:lemmy": "npm run dev -w lemmy-vertical-scroll",
         "dev:clipstack": "npm run dev -w clipstack",
         "dev:calendar-sync": "npm run dev -w calendar-sync",
+        "dev:calendar-sync-api": "npm run dev -w calendar-sync-api",
         "dev:radio-station": "npm run dev -w radio-station",
         "dev:radio-api": "npm run dev -w radio-api",
         "dev:football": "npm run dev -w football",
