@@ -3,10 +3,8 @@ import type { TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import type { CalEvent, SyncProgress } from '../../core/index.js';
 import {
-    TraktHttpError,
     dedupEvents,
     eventsToIcs,
-    fetchTraktEvents,
     findOrCreateCalendar,
     googleInsertEvent,
     eventToGoogleBody,
@@ -14,9 +12,20 @@ import {
     writeEvents,
 } from '../../core/index.js';
 import type { AppSettings, DeviceFlowView } from '../../types';
+import { hasSession, currentUsername } from '../../services/auth';
+import {
+    authError as authErrorTo,
+    authRequired,
+    bootAuth,
+    refreshSession,
+    renderSignIn,
+    refreshTraktStatus,
+    signIn,
+    signOut,
+} from './app-shell-auth';
+import { pollDeviceToken, requestDeviceCode, saveTraktCredentials, traktStatus } from '../../services/api';
+import { fetchTraktEventsViaApi, isTerminalDeviceError, pollDeviceUntil } from '../../services/trakt-sync';
 import { loadSettings, saveSettings } from '../../services/settings';
-import { traktProxyUrl } from '../../services/url';
-import { pollDeviceToken, refreshAccessToken, requestDeviceCode, tokenExpiry } from '../../services/trakt-auth';
 import { requestGoogleToken } from '../../services/google-auth';
 import { downloadText } from '../../services/download';
 import '../source-card/source-card';
@@ -36,21 +45,60 @@ export class AppShell extends LitElement {
     @state() private notice = '';
     @state() private busy: 'trakt' | 'netflix' | 'all' | 'ics' | 'google' | 'connect-trakt' | null = null;
     @state() private deviceFlow: DeviceFlowView | null = null;
+    @state() private authed = hasSession();
+    @state() private username: string | null = currentUsername();
+    // Shared with app-shell-auth through AuthHost: written by the module,
+    // read by the module. Stays declared here for Lit reactivity.
+    @state() authError = '';
+    @state() private traktClientId = '';
+    @state() private traktClientSecret = '';
+    @state() private traktAuth: { configured: boolean; authorized: boolean } | null = null;
 
     private abort: AbortController | null = null;
     private netflixText = '';
     private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
+    override connectedCallback(): void {
+        super.connectedCallback();
+        window.addEventListener('cal-auth-required', this.onAuthRequired);
+        window.addEventListener('cal-auth-changed', this.onAuthChanged);
+        window.addEventListener('cal-auth-error', this.onAuthError);
+        void bootAuth(this as never);
+    }
+
     override disconnectedCallback(): void {
         super.disconnectedCallback();
+        window.removeEventListener('cal-auth-required', this.onAuthRequired);
+        window.removeEventListener('cal-auth-changed', this.onAuthChanged);
+        window.removeEventListener('cal-auth-error', this.onAuthError);
         this.abort?.abort();
         if (this.saveTimer !== null) clearTimeout(this.saveTimer);
     }
 
+    private onAuthChanged = (): void => {
+        void refreshSession(this as never);
+    };
+
+    private onAuthRequired = (): void => {
+        authRequired(this as never);
+    };
+
+    private onAuthError = (e: Event): void => {
+        authErrorTo(this as never, e);
+    };
+
+    private onSignIn = (): void => {
+        signIn(this as never);
+    };
+
+    private onSignOut = (): void => {
+        signOut(this as never);
+    };
+
     private persist(next: AppSettings): void {
         this.settings = next;
-        // Debounce the localStorage write so typing a token/secret doesn't
-        // write on every keystroke; the final value always wins.
+        // Debounce the localStorage write so typing doesn't write on every
+        // keystroke; the final value always wins.
         if (this.saveTimer !== null) clearTimeout(this.saveTimer);
         this.saveTimer = setTimeout(() => {
             this.saveTimer = null;
@@ -72,10 +120,10 @@ export class AppShell extends LitElement {
 
     private onTraktField(event: Event, field: 'clientId' | 'clientSecret'): void {
         const value = (event.target as HTMLInputElement).value;
-        this.persist({
-            ...this.settings,
-            trakt: { ...this.settings.trakt, [field]: value },
-        });
+        // Transient only: app credentials live in the server vault after
+        // Connect, never in localStorage again.
+        if (field === 'clientId') this.traktClientId = value;
+        else this.traktClientSecret = value;
     }
 
     private onGoogleClientId(event: Event): void {
@@ -126,44 +174,14 @@ export class AppShell extends LitElement {
         };
     }
 
-    private persistTraktToken(token: { accessToken: string; refreshToken: string; expiresIn: number }): void {
-        this.persist({
-            ...this.settings,
-            trakt: {
-                ...this.settings.trakt,
-                accessToken: token.accessToken,
-                refreshToken: token.refreshToken,
-                accessExpiresAt: tokenExpiry(token),
-            },
-        });
-    }
-
-    private async ensureTraktToken(): Promise<string> {
-        const trakt = this.settings.trakt;
-        if (!trakt.clientId || !trakt.clientSecret) {
-            throw new Error('Paste a Trakt client id and secret in Settings.');
+    private async fetchTrakt(): Promise<void> {
+        const status = await traktStatus();
+        this.traktAuth = { configured: status.configured, authorized: status.authorized };
+        if (!status.configured) {
+            throw new Error('Enter a Trakt client id and secret in Settings, then Connect.');
         }
-        const now = Date.now();
-        const fresh = trakt.accessToken && (trakt.accessExpiresAt ?? 0) - 60_000 > now;
-        if (fresh && trakt.accessToken) return trakt.accessToken;
-        if (!trakt.refreshToken) throw new Error('Connect Trakt first.');
-        const token = await refreshAccessToken(
-            fetch,
-            traktProxyUrl(import.meta.env.BASE_URL),
-            trakt.clientId,
-            trakt.clientSecret,
-            trakt.refreshToken,
-        );
-        this.persistTraktToken(token);
-        return token.accessToken;
-    }
-
-    private loadTraktEvents(accessToken: string): Promise<CalEvent[]> {
-        return fetchTraktEvents({
-            fetch,
-            baseUrl: traktProxyUrl(import.meta.env.BASE_URL),
-            clientId: this.settings.trakt.clientId,
-            accessToken,
+        if (!status.authorized) throw new Error('Connect Trakt first.');
+        this.traktEvents = await fetchTraktEventsViaApi({
             includeCalendar: this.settings.trakt.includeCalendar,
             includeHistory: this.settings.trakt.includeHistory,
             onProgress: this.onProgress,
@@ -174,39 +192,8 @@ export class AppShell extends LitElement {
         });
     }
 
-    private isTraktUnauthorized(err: unknown): boolean {
-        return err instanceof TraktHttpError && err.status === 401 && Boolean(this.settings.trakt.refreshToken);
-    }
-
-    private async refreshAndRetry(): Promise<CalEvent[]> {
-        const t = this.settings.trakt;
-        const token = await refreshAccessToken(
-            fetch,
-            traktProxyUrl(import.meta.env.BASE_URL),
-            t.clientId,
-            t.clientSecret,
-            t.refreshToken ?? '',
-        );
-        this.persistTraktToken(token);
-        return this.loadTraktEvents(token.accessToken);
-    }
-
-    private async fetchTrakt(): Promise<void> {
-        const accessToken = await this.ensureTraktToken();
-        try {
-            this.traktEvents = await this.loadTraktEvents(accessToken);
-        } catch (err) {
-            if (this.isTraktUnauthorized(err)) {
-                this.traktEvents = await this.refreshAndRetry();
-                return;
-            }
-            throw err;
-        }
-    }
-
-    private validateTraktCreds(): boolean {
-        const { clientId, clientSecret } = this.settings.trakt;
-        if (!clientId || !clientSecret) {
+    private validateTransientCreds(): boolean {
+        if (!this.traktClientId.trim() || !this.traktClientSecret.trim()) {
             this.error = 'Paste a Trakt client id and secret in Settings.';
             return false;
         }
@@ -214,27 +201,34 @@ export class AppShell extends LitElement {
     }
 
     private async runDeviceFlow(signal: AbortSignal): Promise<void> {
-        const { clientId, clientSecret } = this.settings.trakt;
-        const baseUrl = traktProxyUrl(import.meta.env.BASE_URL);
-        const code = await requestDeviceCode(fetch, baseUrl, clientId);
+        const clientId = this.traktClientId.trim();
+        const clientSecret = this.traktClientSecret.trim();
+        await saveTraktCredentials(clientId, clientSecret);
+        // Drop the secret from memory as soon as the vault holds it.
+        this.traktClientId = '';
+        this.traktClientSecret = '';
+        const code = await requestDeviceCode();
         this.deviceFlow = { userCode: code.userCode, verificationUrl: code.verificationUrl };
-        const token = await pollDeviceToken({
-            fetch,
-            baseUrl,
-            clientId,
-            clientSecret,
-            deviceCode: code.deviceCode,
-            intervalMs: code.interval * 1_000,
+        const outcome = await pollDeviceUntil({
+            poll: () => pollDeviceToken(code.deviceCode),
+            intervalMs: Math.max(code.interval * 1_000, 1_000),
             expiresAt: Date.now() + code.expiresIn * 1_000,
             signal,
         });
-        this.persistTraktToken(token);
+        // Polling stopped on every path, so the card comes down on every
+        // path; what differs is the message. Terminal server rejections skip
+        // all of this via throw, and the catch below clears the card for them.
         this.deviceFlow = null;
+        if (outcome === 'expired') throw new Error('Trakt device code expired');
+        if (outcome === 'unreachable') {
+            throw new Error('Lost connection to the server while waiting. Check your connection and Connect again.');
+        }
+        await refreshTraktStatus(this as never);
     }
 
     private async onConnectTrakt(): Promise<void> {
         this.error = '';
-        if (!this.validateTraktCreds()) return;
+        if (!this.validateTransientCreds()) return;
         this.abort?.abort();
         this.abort = new AbortController();
         this.busy = 'connect-trakt';
@@ -242,6 +236,10 @@ export class AppShell extends LitElement {
             await this.runDeviceFlow(this.abort.signal);
         } catch (err) {
             if ((err as { name?: string }).name === 'AbortError') return;
+            // Terminal failure: drop the code card so the user cannot
+            // authorize against a dead code. Transient poll failures keep it:
+            // the code is still valid and the loop simply stopped early.
+            if (isTerminalDeviceError(err)) this.deviceFlow = null;
             this.error = err instanceof Error ? err.message : 'Trakt connect failed';
         } finally {
             this.busy = null;
@@ -295,7 +293,8 @@ export class AppShell extends LitElement {
         this.error = '';
         this.busy = 'all';
         try {
-            if (this.settings.trakt.accessToken || this.settings.trakt.refreshToken) {
+            await refreshTraktStatus(this as never);
+            if (this.traktAuth?.authorized) {
                 await this.fetchTrakt();
             }
             if (this.netflixText) this.parseNetflix();
@@ -387,10 +386,15 @@ export class AppShell extends LitElement {
         }
     }
 
-    private traktStatus(): string {
+    private traktReady(): boolean {
+        return this.traktAuth?.authorized ?? false;
+    }
+
+    private traktStatusText(): string {
         if (this.traktEvents.length) return `${this.traktEvents.length} events`;
-        const ready = Boolean(this.settings.trakt.accessToken || this.settings.trakt.refreshToken);
-        return ready ? 'Connected' : 'Not connected';
+        if (this.traktAuth?.authorized) return 'Connected';
+        if (this.traktAuth?.configured) return 'Credentials saved — connect to authorize';
+        return 'Not connected';
     }
 
     private netflixStatus(): string {
@@ -415,11 +419,11 @@ export class AppShell extends LitElement {
     }
 
     private renderTraktCard(): TemplateResult {
-        const ready = Boolean(this.settings.trakt.accessToken || this.settings.trakt.refreshToken);
+        const ready = this.traktReady();
         return html`<cal-source-card
                 name="Trakt"
                 help="Upcoming shows/movies plus watch history. Register an app at trakt.tv/oauth/applications and paste the client id/secret below."
-                .status=${this.traktStatus()}
+                .status=${this.traktStatusText()}
                 .statusKind=${ready ? 'ok' : 'idle'}
                 .syncing=${this.busy === 'trakt' || this.busy === 'all'}
                 .syncDisabled=${this.busy !== null}
@@ -460,7 +464,7 @@ export class AppShell extends LitElement {
         const googleReady = Boolean(this.settings.google.accessToken);
         return html`<div class="destinations">
                 <button ?disabled=${this.busy !== null} @click=${() => void this.onSyncAll()}>Sync all</button>
-                <button class="primary" ?disabled=${this.busy !== null || mergedCount === 0} @click=${this.onDownloadIcs}>Download .ics (${mergedCount})</button>
+                <button class="primary" ?disabled=${this.busy !== null || mergedCount === 0} @click=${() => void this.onDownloadIcs}>Download .ics (${mergedCount})</button>
                 <button class="primary" ?disabled=${this.busy !== null || mergedCount === 0} @click=${() => void this.onPushGoogle()}>
                     ${googleReady ? `Add to Google Calendar (${mergedCount})` : 'Connect Google Calendar'}
                 </button>
@@ -478,12 +482,12 @@ export class AppShell extends LitElement {
         return html`<details class="settings">
                 <summary>Settings</summary>
                 <div class="fields">
-                    <p class="hint">Credentials stay in this browser. Create your own Trakt app and a Google Cloud OAuth client (type: Web application) with this origin as an authorized JavaScript origin.</p>
+                    <p class="hint">Trakt app credentials are stored on the server, never in this browser. Create your own Trakt app and a Google Cloud OAuth client (type: Web application) with this origin as an authorized JavaScript origin.</p>
                     <label>Trakt client id
-                        <input type="text" autocomplete="off" .value=${s.trakt.clientId} @input=${(e: Event) => this.onTraktField(e, 'clientId')}>
+                        <input type="text" autocomplete="off" .value=${this.traktClientId} @input=${(e: Event) => this.onTraktField(e, 'clientId')}>
                     </label>
                     <label>Trakt client secret
-                        <input type="password" autocomplete="off" .value=${s.trakt.clientSecret} @input=${(e: Event) => this.onTraktField(e, 'clientSecret')}>
+                        <input type="password" autocomplete="off" .value=${this.traktClientSecret} @input=${(e: Event) => this.onTraktField(e, 'clientSecret')}>
                     </label>
                     <label>Google OAuth client id
                         <input type="text" autocomplete="off" .value=${s.google.clientId} @input=${this.onGoogleClientId}>
@@ -493,11 +497,13 @@ export class AppShell extends LitElement {
     }
 
     override render(): TemplateResult {
+        if (!this.authed) return renderSignIn(this as never, this.onSignIn);
         const mergedCount = this.merged().length;
         return html`
             <main class="page">
                 <h1 class="title">Calendar Sync</h1>
                 <p class="lede">Pull upcoming airings and watch history from Trakt, import a Netflix viewing export, then download an .ics or push a dedicated Google Calendar (shows up in Gmail).</p>
+                <p class="auth">Signed in as ${this.username ?? ''} <button class="auth-out" @click=${this.onSignOut}>Sign out</button></p>
                 ${this.renderBanners()} ${this.renderProgressBlock()}
                 <p class="section">Sources</p>
                 <div class="grid">${this.renderTraktCard()} ${this.renderNetflixCard()}</div>

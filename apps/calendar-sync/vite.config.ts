@@ -10,10 +10,13 @@ export default defineConfig({
     },
     server: {
         proxy: {
-            '/api/trakt': {
-                target: 'https://api.trakt.tv',
-                changeOrigin: true,
-                rewrite: (path) => path.replace(/^\/api\/trakt/, ''),
+            '/api': {
+                target: 'http://localhost:3006',
+                rewrite: (path) => path.replace(/^\/api/, ''),
+            },
+            '/user-api': {
+                target: 'http://localhost:3004',
+                rewrite: (path) => path.replace(/^\/user-api/, ''),
             },
         },
     },

@@ -6,8 +6,6 @@ export function defaultSettings(): AppSettings {
     return {
         version: 1,
         trakt: {
-            clientId: '',
-            clientSecret: '',
             includeCalendar: true,
             includeHistory: true,
         },
@@ -49,27 +47,38 @@ function optNumber(rec: Record<string, unknown> | null, key: string): number | u
 
 function baseTrakt(rec: Record<string, unknown> | null): TraktSettings {
     return {
-        clientId: optString(rec, 'clientId') ?? '',
-        clientSecret: optString(rec, 'clientSecret') ?? '',
         includeCalendar: rec ? asBoolean(rec['includeCalendar'], true) : true,
         includeHistory: rec ? asBoolean(rec['includeHistory'], true) : true,
     };
 }
 
-function applyTraktTokens(trakt: TraktSettings, rec: Record<string, unknown> | null): void {
-    const accessToken = optString(rec, 'accessToken');
-    const refreshToken = optString(rec, 'refreshToken');
-    const accessExpiresAt = optNumber(rec, 'accessExpiresAt');
-    if (accessToken) trakt.accessToken = accessToken;
-    if (refreshToken) trakt.refreshToken = refreshToken;
-    if (accessExpiresAt !== undefined) trakt.accessExpiresAt = accessExpiresAt;
+function parseTrakt(raw: unknown): TraktSettings {
+    return baseTrakt(asRecord(raw));
 }
 
-function parseTrakt(raw: unknown): TraktSettings {
-    const rec = asRecord(raw);
-    const trakt = baseTrakt(rec);
-    applyTraktTokens(trakt, rec);
-    return trakt;
+/** Pre-vault app credentials, read once for migration and never written. */
+export interface LegacyTraktSecrets {
+    clientId: string;
+    clientSecret: string;
+}
+
+/**
+ * One-shot migration read: browsers that stored Trakt app credentials locally
+ * before the server vault existed. Null when absent or incomplete; the caller
+ * pushes a complete pair to the vault, then saves stripped settings.
+ */
+export function readLegacyTraktSecrets(): LegacyTraktSecrets | null {
+    if (typeof localStorage === 'undefined') return null;
+    try {
+        const data: unknown = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '');
+        const trakt = asRecord(asRecord(data)?.['trakt']);
+        const clientId = optString(trakt, 'clientId');
+        const clientSecret = optString(trakt, 'clientSecret');
+        if (!clientId || !clientSecret) return null;
+        return { clientId, clientSecret };
+    } catch {
+        return null;
+    }
 }
 
 function googleWrittenUids(rec: Record<string, unknown> | null): string[] {

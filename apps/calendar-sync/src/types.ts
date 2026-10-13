@@ -1,9 +1,4 @@
 export interface TraktSettings {
-    clientId: string;
-    clientSecret: string;
-    accessToken?: string;
-    refreshToken?: string;
-    accessExpiresAt?: number;
     includeCalendar: boolean;
     includeHistory: boolean;
 }
