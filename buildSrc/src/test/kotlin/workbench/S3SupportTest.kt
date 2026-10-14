@@ -89,7 +89,9 @@ class S3SupportTest {
         assertTrue(block.contains("Cache-Control \"public, max-age=31536000, immutable\";"), block)
         assertTrue(block.contains("Cache-Control \"no-cache\";"), block)
         assertTrue(block.contains("script-src 'self';"), block)
-        assertTrue(block.contains("style-src 'self';"), block)
+        // rss-reader binds Lit style attributes in its virtualized list, so
+        // the style-src default carries 'unsafe-inline' (see CspPolicy.Emit).
+        assertTrue(block.contains("style-src 'self' 'unsafe-inline';"), block)
         assertTrue(block.contains("connect-src https://api.example.com"), block)
         assertFalse(block.contains("listen 443 ssl;"), block)
     }
@@ -166,7 +168,9 @@ class S3SupportTest {
             apiBase = "",
         )
         val block = assetServerBlock(listOf(baseball), env, false, false)
-        assertTrue(block.contains("style-src 'self' https://fonts.googleapis.com;"), block)
+        // 'unsafe-inline' because baseball binds Lit style attributes
+        // (game-shell's event log, plate-scene); the fonts widen further.
+        assertTrue(block.contains("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;"), block)
         assertTrue(block.contains("font-src https://fonts.gstatic.com;"), block)
         assertFalse(block.contains("connect-src"), block)
         assertFalse(block.contains("media-src"), block)

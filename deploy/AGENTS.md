@@ -89,7 +89,10 @@ unset `S3_BUCKET` fails the deploy rather than falling back.
   in-flight uncommitted work on this branch; `user-web` is the accounts landing
   page whose session is a SameSite=Lax cookie and whose API calls are
   origin-absolute `/user-api/`, so a separate asset origin would break sign-in.
-  Both stay same-origin. The JVM APIs ship no `dist/` and are not published.
+  Both stay same-origin. Each one's gateway proxy location (the football and
+  auth blocks in the nginx template) carries its own Content-Security-Policy
+  header, read from that app's client source the same way the store policies
+  are. The JVM APIs ship no `dist/` and are not published.
 - One nginx container serves both origins via `server_name`: the existing API
   origin and the asset origin. The same generated per-app location set is
   emitted into both server blocks, so a subpath on the API origin and the asset
@@ -99,8 +102,10 @@ unset `S3_BUCKET` fails the deploy rather than falling back.
   base-relative output resolves unchanged: the hashed
   `/assets/*`, the document, and the PWA files (`sw.js`, the web manifest, the
   icons) all come from the store. The document location carries a CSP
-  (`default-src 'self'`, `script-src` and `style-src` `'self'`, `img-src`
-  `'self'` data: https:), plus `connect-src` each API-backed app's own origin.
+  (`default-src 'self'`, `script-src 'self'`, `style-src 'self'
+'unsafe-inline'` — every client ships inline styles, see S3Csp —
+  `img-src 'self'` data: https:), plus `connect-src` each API-backed app's
+  own origin.
   There is no SPA fallback — only the base path serves the document — so a
   hash-routed app works as-is and a history-routed app needs a fallback added
   before it can move. A local SeaweedFS store (replacing MinIO, whose images no

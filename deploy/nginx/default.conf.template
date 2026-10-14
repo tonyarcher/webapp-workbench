@@ -156,6 +156,15 @@ server {
     }
 
     location /football/ {
+        # CSP read from apps/football's source: no fetches and no external
+        # script, style, font or image origin anywhere in the client, while
+        # index.html carries an inline <style> background guard that style-src
+        # must allow. A location-level add_header shadows the server's
+        # security headers, so the trio is restated inside this block.
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         set $upstream_football http://football:3000;
         rewrite ^/football/(.*)$ /$1 break;
         proxy_pass $upstream_football;
@@ -170,6 +179,15 @@ server {
     }
 
     location /auth/ {
+        # CSP read from apps/user/app's source: every API call is the
+        # origin-absolute /user-api/ prefix ('self'), there is no external
+        # script or origin, and index.html carries an inline <style>
+        # background guard that style-src must allow. Location-level
+        # add_header shadows the server's trio: restated here.
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         set $upstream_user_web http://user-web:3000;
         rewrite ^/auth/(.*)$ /$1 break;
         proxy_pass $upstream_user_web;

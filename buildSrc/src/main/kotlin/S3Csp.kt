@@ -44,9 +44,9 @@ internal val S3_PWA_FILES: Map<String, PwaFiles> = mapOf(
  * The asset-origin CSP policy for one app, keyed by app id like [S3_PWA_FILES].
  * The asset origin is a separate browser origin from the API origin, so
  * `'self'` below means the asset origin, not the gateway. [Emit] names the
- * exact connect-src/media-src sources and any widening of the fixed
- * script/style/font sources — every source read from that app's client source,
- * never guessed. [Omit] means the document ships no CSP: the app reaches
+ * exact connect-src/media-src sources and any widening of the script/font
+ * sources — every source read from that app's client source, never guessed.
+ * [Omit] means the document ships no CSP: the app reaches
  * origins that cannot be stated accurately, and the same-origin deploy sets no
  * CSP, so omitting is a non-regression.
  */
@@ -55,7 +55,16 @@ private sealed interface CspPolicy {
         val connectSrc: List<String> = emptyList(),
         val mediaSrc: List<String> = emptyList(),
         val scriptSrc: List<String> = listOf("'self'"),
-        val styleSrc: List<String> = listOf("'self'"),
+        // 'unsafe-inline' is the honest default, not a shortcut: every shipped
+        // client renders inline styles one way or another. lit-html commits
+        // `style="..."` attributes through setAttribute, which style-src
+        // governs — virtualized list positioning (rss-reader, radio-station,
+        // baseball), meter and progress widths (radio-station,
+        // calendar-sync), a trade-form hint (stock-game) — and four documents
+        // carry an inline <style> background guard in index.html. A style-src
+        // without it breaks that markup at load time; several apps shipped in
+        // exactly that broken state before this default. Scripts stay 'self'.
+        val styleSrc: List<String> = listOf("'self'", "'unsafe-inline'"),
         val fontSrc: List<String> = emptyList(),
         val frameSrc: List<String> = emptyList(),
     ) : CspPolicy
@@ -65,13 +74,15 @@ private sealed interface CspPolicy {
 
 private val S3_CSP: Map<String, CspPolicy> = mapOf(
     // Client-only apps whose only cross-origin loads are the Google Fonts
-    // stylesheet and its font files.
+    // stylesheet and its font files. Their style-src overrides the default
+    // only to add the Fonts origin — an override replaces the default list,
+    // so 'unsafe-inline' must be restated here (see CspPolicy.Emit).
     "baseball" to CspPolicy.Emit(
-        styleSrc = listOf("'self'", "https://fonts.googleapis.com"),
+        styleSrc = listOf("'self'", "'unsafe-inline'", "https://fonts.googleapis.com"),
         fontSrc = listOf("https://fonts.gstatic.com"),
     ),
     "basketball" to CspPolicy.Emit(
-        styleSrc = listOf("'self'", "https://fonts.googleapis.com"),
+        styleSrc = listOf("'self'", "'unsafe-inline'", "https://fonts.googleapis.com"),
         fontSrc = listOf("https://fonts.gstatic.com"),
     ),
     // The reader reaches its API origin (PUBLIC_API_BASE, joined at render
@@ -92,14 +103,13 @@ private val S3_CSP: Map<String, CspPolicy> = mapOf(
     // joined at render time), plus Google: the GIS script and its token-flow
     // iframe (frame-src — the popup is an accounts.google.com iframe, and
     // default-src 'self' would block it) and the Calendar insert calls.
-    // Styles allow 'unsafe-inline' because lit-html writes `style="..."`
-    // attributes and the document carries an inline loading-state <style>,
-    // both of which a style-src without it blocks; the same-origin deploy
-    // sets no CSP at all, so this is a non-regression. Scripts stay 'self'.
+    // Its style-src is the default: lit style attributes plus the inline
+    // loading-state <style> in its document. Scripts stay 'self' — the GIS
+    // origin above is the only script widening, and the same-origin deploy
+    // sets no CSP at all, so the policy is a non-regression either way.
     "calendar-sync" to CspPolicy.Emit(
         connectSrc = listOf("'self'", "https://www.googleapis.com"),
         scriptSrc = listOf("'self'", "https://accounts.google.com"),
-        styleSrc = listOf("'self'", "'unsafe-inline'"),
         frameSrc = listOf("https://accounts.google.com"),
     ),
     // lemmy-vertical-scroll reaches user-supplied Lemmy/PieFed instances and

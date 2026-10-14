@@ -44,6 +44,43 @@ class S3CspTest {
         )
         val header = requireNotNull(cspHeader(app))
         assertTrue("connect-src https://gateway/fitness/api/ 'self'" in header, header)
+        assertTrue("style-src 'self' 'unsafe-inline'" in header, "index.html inline <style>: $header")
         assertNull(cspHeader(S3App("unknown-app", "/", "dist", "")), "no policy is written for a foreign app")
     }
+
+    /**
+     * Every shipped app renders inline styles one way or another — a Lit
+     * `style="..."` attribute binding, which lit-html commits through
+     * setAttribute and therefore style-src governs, or an inline `<style>`
+     * guard in index.html — so every Emit policy's style-src must carry
+     * 'unsafe-inline' or that app's own markup breaks at load time. The
+     * default carries it; this pins that no future override drops it (the
+     * two Google-Fonts apps override style-src and must restate it).
+     */
+    @Test
+    fun everyEmitPolicyAllowsTheInlineStylesItsClientShips() {
+        val emitApps = listOf(
+            "baseball",
+            "basketball",
+            "rss-reader",
+            "stock-game",
+            "calendar-sync",
+            "fitness",
+            "radio-station",
+        )
+        for (id in emitApps) {
+            val header = requireNotNull(cspHeader(S3App(id, "/$id/", "dist", ""))) { id }
+            assertTrue(
+                "'unsafe-inline'" in styleSrcOf(header),
+                "$id ships inline styles but its style-src forbids them: $header",
+            )
+        }
+    }
+
+    /** The value of the style-src directive, without its name. */
+    private fun styleSrcOf(header: String): String = header
+        .split("; ")
+        .firstOrNull { it.startsWith("style-src ") }
+        ?.removePrefix("style-src ")
+        .orEmpty()
 }
