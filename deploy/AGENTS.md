@@ -90,9 +90,11 @@ unset `S3_BUCKET` fails the deploy rather than falling back.
   page whose session is a SameSite=Lax cookie and whose API calls are
   origin-absolute `/user-api/`, so a separate asset origin would break sign-in.
   Both stay same-origin. Each one's gateway proxy location (the football and
-  auth blocks in the nginx template) carries its own Content-Security-Policy
-  header, read from that app's client source the same way the store policies
-  are. The JVM APIs ship no `dist/` and are not published.
+  auth blocks in the nginx template) carries a Content-Security-Policy header
+  that mirrors the one the app's own nginx ships — two CSP headers intersect,
+  so the copies must stay identical. Both policies are read from the app's
+  client source the same way the store policies are. The JVM APIs ship no
+  `dist/` and are not published.
 - One nginx container serves both origins via `server_name`: the existing API
   origin and the asset origin. The same generated per-app location set is
   emitted into both server blocks, so a subpath on the API origin and the asset

@@ -159,9 +159,11 @@ server {
         # CSP read from apps/football's source: no fetches and no external
         # script, style, font or image origin anywhere in the client, while
         # index.html carries an inline <style> background guard that style-src
-        # must allow. A location-level add_header shadows the server's
-        # security headers, so the trio is restated inside this block.
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" always;
+        # must allow. This mirrors the policy the app's own nginx
+        # (deploy/football/nginx.conf) ships — two CSP headers intersect, so
+        # the copies must not drift. A location-level add_header shadows the
+        # server's security headers, so the trio is restated in this block.
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
@@ -182,9 +184,11 @@ server {
         # CSP read from apps/user/app's source: every API call is the
         # origin-absolute /user-api/ prefix ('self'), there is no external
         # script or origin, and index.html carries an inline <style>
-        # background guard that style-src must allow. Location-level
+        # background guard that style-src must allow. This mirrors the policy
+        # the app's own nginx (deploy/user-web/nginx.conf) ships — two CSP
+        # headers intersect, so the copies must not drift. Location-level
         # add_header shadows the server's trio: restated here.
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
