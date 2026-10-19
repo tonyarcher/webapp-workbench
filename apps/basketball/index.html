@@ -27,12 +27,5 @@
     <body>
         <div id="app"></div>
         <script type="module" src="/src/main.ts"></script>
-        <script>
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('%BASE_URL%sw.js').catch(() => undefined);
-                });
-            }
-        </script>
     </body>
 </html>
