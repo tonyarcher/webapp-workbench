@@ -93,6 +93,17 @@ server {
         try_files /index.html =404;
     }
 
+    # Privacy policy, from the same hello volume. Location-level add_header
+    # shadows the server's security headers, so the trio is restated here.
+    location = /privacy/ {
+        root /usr/share/nginx/hello;
+        add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        try_files /privacy.html =404;
+    }
+
     location = /favicon.svg {
         root /usr/share/nginx/hello;
         add_header Cache-Control "no-cache";

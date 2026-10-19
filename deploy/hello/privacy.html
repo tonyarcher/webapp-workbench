@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <!-- The page is static text plus inline styles; nothing else loads. -->
+        <meta
+            http-equiv="Content-Security-Policy"
+            content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:"
+        />
+        <title>Privacy Policy — workbench</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <style>
+            :root {
+                color-scheme: dark;
+            }
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                min-height: 100vh;
+                display: grid;
+                padding: 2rem 1rem;
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    Roboto,
+                    sans-serif;
+                background: linear-gradient(135deg, #1b1e24, #0f1115);
+                color: #e8eaed;
+            }
+            .card {
+                background: #23272f;
+                border: 1px solid #3a3f4a;
+                border-radius: 16px;
+                padding: 2.5rem 3rem;
+                width: min(52rem, 100%);
+                margin: auto;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            }
+            h1 {
+                margin: 0 0 0.5rem;
+                font-size: 2rem;
+            }
+            h2 {
+                font-size: 1.15rem;
+                margin: 1.75rem 0 0.5rem;
+            }
+            p,
+            li {
+                color: #b6bcc8;
+                line-height: 1.55;
+            }
+            ul {
+                padding-left: 1.25rem;
+            }
+            .meta {
+                color: #9aa3b2;
+                font-size: 0.9rem;
+            }
+            a {
+                color: #8ab4f8;
+            }
+            code {
+                background: #14161b;
+                border: 1px solid #3a3f4a;
+                border-radius: 8px;
+                padding: 0.15rem 0.45rem;
+                font-size: 0.9rem;
+            }
+            @media (max-width: 35rem) {
+                .card {
+                    padding: 1.75rem 1.25rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main class="card">
+            <h1>Privacy Policy</h1>
+            <p class="meta">Last updated 2026-10-14 · <a href="/">Back to the gateway</a></p>
+
+            <p>
+                These apps are a personal system, self-hosted on a home network and run by the operator for a small
+                group of people they know. There is no advertising, no analytics, no third-party tracking, and nothing
+                is sold or shared. Your data stays on the operator's server.
+            </p>
+
+            <h2>What each app stores</h2>
+            <ul>
+                <li>
+                    <strong>Accounts</strong> — your username, a password hash (Argon2), an optional authenticator-app
+                    secret, passkey credentials, and session and login-token hashes. Sign-in uses an HTTP-only cookie
+                    that expires after 12 hours.
+                </li>
+                <li>
+                    <strong>RSS Reader</strong> — your feed subscriptions, downloaded article text, reading state, and
+                    optional AI summaries computed on the server by a configured backend.
+                </li>
+                <li>
+                    <strong>Stock Game</strong> — your portfolio, trades, and game state. Market quotes are fetched from
+                    Yahoo Finance by the server.
+                </li>
+                <li>
+                    <strong>Pulse 101</strong> — the radio stations you add and your listening schedule. Audio plays
+                    straight from each station's own stream host.
+                </li>
+                <li><strong>Fitness</strong> — the activity samples you import from Health Connect on your phone.</li>
+                <li>
+                    <strong>Calendar Sync</strong> — its Trakt and Google connections. Trakt credentials and tokens are
+                    stored server-side and only ever sent to Trakt; the Google connection runs in your browser, where
+                    its access token stays in local storage and is only sent to Google. The app writes events into your
+                    own Google Calendar.
+                </li>
+                <li>
+                    <strong>Baseball, Basketball, Football, Clipstack, Lemmy Vertical Scroll</strong>
+                    — entirely in your browser (local storage on your device). The server only serves their files.
+                </li>
+            </ul>
+
+            <h2>External services these apps contact</h2>
+            <ul>
+                <li>Google (sign-in and Calendar) for Calendar Sync.</li>
+                <li>Trakt for Calendar Sync's watched-data sync.</li>
+                <li>Google Fonts for Baseball and Basketball typography.</li>
+                <li>
+                    Public CORS proxies (allorigins.win, corsproxy.io) when the RSS Reader cannot fetch a feed directly.
+                </li>
+                <li>Yahoo Finance for Stock Game quotes.</li>
+                <li>
+                    The Lemmy or PieFed instances you subscribe to, and TikTok's oEmbed endpoint for links you add, in
+                    the respective apps.
+                </li>
+                <li>The stream host of each station you add, when Pulse 101 plays audio.</li>
+            </ul>
+
+            <h2>Logs</h2>
+            <p>
+                The gateway keeps standard operational request logs (path, status, timing) on the server. Nothing is
+                shipped to an external log service.
+            </p>
+
+            <h2>Your data</h2>
+            <p>
+                Ask the operator to export or delete anything stored about you; deletion removes the account and its
+                data. This policy is kept in the deployment repository and updated when the stack changes.
+            </p>
+        </main>
+    </body>
+</html>
