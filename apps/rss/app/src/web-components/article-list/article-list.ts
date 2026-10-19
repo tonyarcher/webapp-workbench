@@ -74,9 +74,16 @@ export class ArticleList extends LitElement {
     private gen = 0;
     private loadingRef = false;
     private lastViewKey = '';
-    private lastFolderKey = '';
     resumeApplied = false;
     private pendingReset = false;
+    // A view that needs the library arrived before the library painted. Kept
+    // separate from pendingReset: pendingReset means "a load is in flight,
+    // reload when it settles", and consuming that here re-enters reset() on
+    // every update while the first fetch is still pending (the folder load
+    // hang). This flag is only consumed once, when the library arrives.
+    private pendingFirstLoad = false;
+    /** Feed membership last loaded: folder feeds, or every feed for All/Hot. */
+    private lastFeedSetKey = '';
     private resizeObserver: ResizeObserver | undefined;
     feedWindowOffset = 0;
     refreshJob: Promise<void> | null = null;
@@ -169,40 +176,63 @@ export class ArticleList extends LitElement {
     }
 
     override updated(_changed: Map<string, unknown>) {
-        const viewKey = `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}|${this.interestingOnly}`;
-        this.handleUpdate(viewKey);
+        this.handleUpdate(this.currentViewKey());
+    }
+
+    private currentViewKey(): string {
+        return `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}|${this.interestingOnly}`;
     }
 
     private handleUpdate(viewKey: string): void {
         if (viewKey !== this.lastViewKey) {
             this.hideRead = false;
             this.loadViewSettings();
-            this.lastViewKey = viewKey;
+            // Settings can change sort/listView/pageSize, which are part of
+            // the key. Record the key after loading them, or the next update
+            // sees a "new" view and runs a second, duplicate reset.
+            this.lastViewKey = this.currentViewKey();
             if (this.needsLibrary() && !this.library.data) {
                 // Feed-set views need the library (feed list) before loading;
                 // updated() re-fires when the library query resolves.
-                this.pendingReset = true;
+                this.pendingFirstLoad = true;
                 return;
             }
-            this.pendingReset = false;
+            this.pendingFirstLoad = false;
             void this.reset();
             return;
         }
-        if (this.pendingReset && this.library.data) {
-            this.pendingReset = false;
+        if (this.pendingFirstLoad && this.library.data) {
+            this.pendingFirstLoad = false;
             void this.reset();
             return;
         }
-        this.refreshFolderKey();
+        this.refreshFeedSetKey();
     }
 
-    private refreshFolderKey(): void {
-        if (this.view.kind !== 'folder') return;
-        const folderKey = this.folderFeeds()
-            .map((f) => f.id)
-            .join(',');
-        if (folderKey === this.lastFolderKey) return;
-        this.lastFolderKey = folderKey;
+    /**
+     * The loader depends on library feed membership in two views: a folder
+     * (its feeds) and All/Hot (every feed). `fetchLibrary()` paints feeds
+     * after folders, so the first load can run against an empty set. Reload
+     * when the set changes, or the view stays empty until something else
+     * resets it.
+     */
+    private feedSetKey(): string {
+        if (this.view.kind === 'folder') {
+            return this.folderFeeds()
+                .map((f) => f.id)
+                .join(',');
+        }
+        if (this.view.kind === 'all' && this.sort === 'hot') {
+            return (this.library.data?.feeds ?? []).map((f) => f.id).join(',');
+        }
+        return '';
+    }
+
+    private refreshFeedSetKey(): void {
+        if (this.view.kind !== 'folder' && !(this.view.kind === 'all' && this.sort === 'hot')) return;
+        const feedSetKey = this.feedSetKey();
+        if (feedSetKey === this.lastFeedSetKey) return;
+        this.lastFeedSetKey = feedSetKey;
         void this.reset();
     }
 
@@ -301,9 +331,7 @@ export class ArticleList extends LitElement {
         this.hasMoreSingle = true;
         this.cursor = -1;
         this.feedWindowOffset = 0;
-        this.lastFolderKey = this.folderFeeds()
-            .map((f) => f.id)
-            .join(',');
+        this.lastFeedSetKey = this.feedSetKey();
         const el = this.scrollElRef.value;
         if (el) el.scrollTop = 0;
         this.reinitVirtualizer();
