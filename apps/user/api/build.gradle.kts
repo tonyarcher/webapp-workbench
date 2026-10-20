@@ -82,7 +82,7 @@ configurations.all {
     resolutionStrategy.eachDependency {
         when {
             requested.group == "org.apache.tomcat.embed" &&
-                requested.name == "tomcat-embed-core" -> useVersion("11.0.25")
+                requested.name in setOf("tomcat-embed-core", "tomcat-embed-websocket") -> useVersion("11.0.25")
 
             requested.group == "com.fasterxml.jackson.core" &&
                 requested.name in setOf("jackson-core", "jackson-databind") -> useVersion("2.21.7")
