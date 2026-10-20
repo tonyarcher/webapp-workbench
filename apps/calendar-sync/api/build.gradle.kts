@@ -1,3 +1,18 @@
+buildscript {
+    configurations.classpath {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "tools.jackson.core" &&
+                requested.name in setOf("jackson-core", "jackson-databind")
+            ) {
+                useVersion("3.1.7")
+            }
+            if (requested.group == "org.apache.commons" && requested.name == "commons-lang3") {
+                useVersion("3.18.0")
+            }
+        }
+    }
+}
+
 plugins {
     kotlin("jvm") version "2.4.20"
     kotlin("plugin.spring") version "2.4.20"

@@ -89,7 +89,7 @@ describe('navigation', () => {
 
         const active = [...(el.shadowRoot?.querySelectorAll('.nav-link') ?? [])]
             .filter((node) => node.classList.contains('active'))
-            .map((node) => node.textContent?.trim());
+            .map((node) => node.textContent.trim());
         expect(active).toEqual(['Orders']);
     });
 
@@ -116,7 +116,7 @@ describe('navigation', () => {
     it('pushes a hash path when a nav link is clicked', async () => {
         const el = await mount();
         const links = [...(el.shadowRoot?.querySelectorAll('.nav-link') ?? [])];
-        const settings = links.find((node) => node.textContent?.trim() === 'Settings') as HTMLElement | undefined;
+        const settings = links.find((node) => node.textContent.trim() === 'Settings') as HTMLElement | undefined;
 
         settings?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
         await tick();
@@ -217,7 +217,7 @@ describe('sign in and out', () => {
     it('clears the account and the cache on sign out', async () => {
         const el = await mount(true);
         const signOut = [...(el.shadowRoot?.querySelectorAll('button') ?? [])].find(
-            (node) => node.textContent?.trim() === 'Sign out',
+            (node) => node.textContent.trim() === 'Sign out',
         ) as HTMLElement | null;
 
         signOut?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

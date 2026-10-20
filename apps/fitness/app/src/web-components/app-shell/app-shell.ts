@@ -46,6 +46,14 @@ export class AppShell extends LitElement {
         location.hash = `#/${view}`;
     }
 
+    private renderView(view: View): TemplateResult {
+        if (view === 'dashboard') return html`<ft-dashboard-view></ft-dashboard-view>`;
+        if (view === 'import') return html`<ft-import-view></ft-import-view>`;
+        if (view === 'lifts') return html`<ft-lifts-view></ft-lifts-view>`;
+        if (view === 'chart') return html`<ft-chart-view metric=${this.metric}></ft-chart-view>`;
+        return html`<ft-measure-view></ft-measure-view>`;
+    }
+
     override render(): TemplateResult {
         const view = this.view;
         return html`
@@ -58,19 +66,7 @@ export class AppShell extends LitElement {
                     >${v}</button>`,
                 )}
             </nav>
-            <main>
-                ${
-                    view === 'dashboard'
-                        ? html`<ft-dashboard-view></ft-dashboard-view>`
-                        : view === 'import'
-                          ? html`<ft-import-view></ft-import-view>`
-                          : view === 'lifts'
-                            ? html`<ft-lifts-view></ft-lifts-view>`
-                            : view === 'chart'
-                              ? html`<ft-chart-view metric=${this.metric}></ft-chart-view>`
-                              : html`<ft-measure-view></ft-measure-view>`
-                }
-            </main>
+            <main>${this.renderView(view)}</main>
         `;
     }
 }

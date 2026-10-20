@@ -23,7 +23,7 @@ async function mount(patch: Internals = {}): Promise<SgTradeForm> {
 
 function groupStartingWith(el: SgTradeForm, label: string): ParentNode {
     const found = [...(el.shadowRoot?.querySelectorAll('.segmented') ?? [])].find(
-        (group) => group.children[0]?.textContent?.trim() === label,
+        (group) => group.children[0]?.textContent.trim() === label,
     );
     if (!found) throw new Error(`no segmented group starting with "${label}"`);
     return found;

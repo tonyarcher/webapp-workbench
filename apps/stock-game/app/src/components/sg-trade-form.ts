@@ -511,7 +511,6 @@ export class SgTradeForm extends LitElement {
             if (cost > this.cashCents) return 'Not enough cash for this order';
             return undefined;
         }
-        if (this.side !== 'sell') return undefined;
         const held = Math.max(0, this.heldQty);
         if (held < this.qty) return `Only ${held} share(s) held`;
         return undefined;

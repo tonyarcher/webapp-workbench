@@ -121,6 +121,17 @@ export async function fetchTraktEventsViaApi(options: TraktSyncOptions = {}): Pr
     return events;
 }
 
+function appendCalendarEvents(shows: unknown[], movies: unknown[], events: CalEvent[]): void {
+    for (const item of shows) {
+        const event = mapCalendarShow(item);
+        if (event) events.push(event);
+    }
+    for (const item of movies) {
+        const event = mapCalendarMovie(item);
+        if (event) events.push(event);
+    }
+}
+
 async function loadCalendarViaApi(
     now: number,
     events: CalEvent[],
@@ -137,16 +148,16 @@ async function loadCalendarViaApi(
             fetchCalendarShows(window.start, window.days),
             fetchCalendarMovies(window.start, window.days),
         ]);
-        for (const item of shows) {
-            const event = mapCalendarShow(item);
-            if (event) events.push(event);
-        }
-        for (const item of movies) {
-            const event = mapCalendarMovie(item);
-            if (event) events.push(event);
-        }
+        appendCalendarEvents(shows, movies, events);
         processed += 2;
         onProgress?.({ phase: 'fetch', done: processed, total, label: `calendar ${window.start}` });
+    }
+}
+
+function appendHistoryEvents(items: unknown[], events: CalEvent[]): void {
+    for (const item of items) {
+        const event = mapHistoryItem(item);
+        if (event) events.push(event);
     }
 }
 
@@ -159,10 +170,7 @@ async function loadHistoryViaApi(
         for (let page = 1; page <= TRAKT_HISTORY_MAX_PAGES; page++) {
             onProgress?.({ phase: 'fetch', done: page - 1, label: `history ${type} page ${page}` });
             const items = await fetchHistoryPage(type, page, TRAKT_HISTORY_PAGE_SIZE);
-            for (const item of items) {
-                const event = mapHistoryItem(item);
-                if (event) events.push(event);
-            }
+            appendHistoryEvents(items, events);
             onProgress?.({ phase: 'fetch', done: page, label: `history ${type} page ${page}` });
             // A short page ends the listing; a full run to the cap truncates.
             if (items.length < TRAKT_HISTORY_PAGE_SIZE) break;

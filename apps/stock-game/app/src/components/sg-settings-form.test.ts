@@ -72,7 +72,7 @@ async function setField(el: SgSettingsForm, id: string, value: string): Promise<
 }
 
 function errorText(el: SgSettingsForm): string | undefined {
-    return el.shadowRoot?.querySelector('.error')?.textContent?.trim() ?? undefined;
+    return el.shadowRoot?.querySelector('.error')?.textContent.trim() ?? undefined;
 }
 
 beforeEach(() => {
