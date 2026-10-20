@@ -1,0 +1,56 @@
+:root {
+    --bg: #061a22;
+    --bg-deep: #041218;
+    --surface: #0b2731;
+    --surface-raised: #10333e;
+    --border: #1d4550;
+    --border-strong: #2f606b;
+    --text: #e7f3ef;
+    --text-soft: #b2c9c3;
+    --text-dim: #9cb7b1;
+    --accent: #7fe0c3;
+    --accent-soft: rgba(127, 224, 195, 0.14);
+    --on-accent: #03221d;
+    --good: #74d7a5;
+    --warn: #e6bd6b;
+    --danger: #f08b83;
+    --info: #8dbbd8;
+    color-scheme: dark;
+}
+
+html,
+body {
+    min-height: 100%;
+    margin: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    background:
+        radial-gradient(ellipse at 50% -20%, rgba(55, 133, 140, 0.35), transparent 55%),
+        linear-gradient(180deg, #071e27 0%, var(--bg) 55%, #041218 100%);
+    background-attachment: fixed;
+    color: var(--text);
+}
+
+#app {
+    min-height: 100vh;
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

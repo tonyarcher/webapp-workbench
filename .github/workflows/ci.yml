@@ -66,6 +66,7 @@ jobs:
                     - apps/clipstack
                     - apps/lemmy-vertical-scroll
                     - apps/radio-station
+                    - apps/coldwater
                     - apps/rss/app
                     - apps/stock-game/app
                     - apps/fitness/app

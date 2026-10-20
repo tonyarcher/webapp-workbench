@@ -67,6 +67,7 @@ class S3CspTest {
             "calendar-sync",
             "fitness",
             "radio-station",
+            "coldwater",
         )
         for (id in emitApps) {
             val header = requireNotNull(cspHeader(S3App(id, "/$id/", "dist", ""))) { id }

@@ -38,6 +38,7 @@ internal val S3_PWA_FILES: Map<String, PwaFiles> = mapOf(
     "calendar-sync" to PwaFiles("manifest.webmanifest", true, listOf("icon.svg")),
     "radio-station" to PwaFiles("manifest.webmanifest", true, listOf("icon.svg")),
     "fitness" to PwaFiles("manifest.webmanifest", true, listOf("icon.svg")),
+    "coldwater" to PwaFiles(null, false, listOf("favicon.svg")),
 )
 
 /**
@@ -112,6 +113,10 @@ private val S3_CSP: Map<String, CspPolicy> = mapOf(
         scriptSrc = listOf("'self'", "https://accounts.google.com"),
         frameSrc = listOf("https://accounts.google.com"),
     ),
+    // Client-only: the lake game loads no network resources beyond its own
+    // bundle and styles. Lit commits an inline style attribute for the scene
+    // and timer, so the default style-src carries 'unsafe-inline'.
+    "coldwater" to CspPolicy.Emit(),
     // lemmy-vertical-scroll reaches user-supplied Lemmy/PieFed instances and
     // arbitrary embed/media hosts; clipstack reaches TikTok oEmbed plus
     // arbitrary embed/media hosts. Neither set is enumerable. Omit.

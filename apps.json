@@ -134,6 +134,14 @@
             "aliases": ["apps/fitness/api"]
         },
         {
+            "id": "coldwater",
+            "workspaces": ["coldwater"],
+            "services": ["coldwater"],
+            "containerless": true,
+            "basePath": "/coldwater/",
+            "aliases": ["cold", "water", "apps/coldwater"]
+        },
+        {
             "id": "user-web",
             "workspaces": ["user-web"],
             "services": ["user-web"],

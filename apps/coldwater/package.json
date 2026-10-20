@@ -1,0 +1,27 @@
+{
+    "name": "coldwater",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc --noEmit && vite build",
+        "test": "vitest run",
+        "test:coverage": "vitest run --coverage",
+        "typecheck": "tsc --noEmit",
+        "test:e2e": "playwright test"
+    },
+    "dependencies": {
+        "lit": "^3.3.3"
+    },
+    "devDependencies": {
+        "@axe-core/playwright": "^4.13.0",
+        "@playwright/test": "^1.63.1",
+        "@types/node": "^26.6.2",
+        "@vitest/coverage-v8": "^5.0.1",
+        "jsdom": "^30.1.1",
+        "typescript": "7.0.2",
+        "vite": "^8.3.0",
+        "vitest": "^5.0.1"
+    }
+}
