@@ -203,7 +203,8 @@ h1:focus-visible {
 }
 
 .encounter.deep {
-    top: 58%;
+    top: auto;
+    bottom: 18px;
 }
 
 .fish-label {
@@ -389,7 +390,8 @@ kbd {
     }
 
     .encounter.deep {
-        top: 60%;
+        top: auto;
+        bottom: 14px;
     }
 }
 
