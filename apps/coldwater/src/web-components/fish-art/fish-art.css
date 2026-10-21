@@ -1,6 +1,7 @@
 :host {
     display: block;
     line-height: 0;
+    transform-origin: 60% 55%;
 }
 
 svg {
@@ -8,4 +9,257 @@ svg {
     width: 100%;
     height: auto;
     overflow: visible;
+}
+
+.fish-tail {
+    transform-box: fill-box;
+    transform-origin: 100% 50%;
+}
+
+.fish-dorsal {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+}
+
+.fish-mouth {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    transform: scaleY(0.45);
+}
+
+.mouth-opening {
+    fill: #2a1216;
+}
+
+.mouth-lip {
+    fill: none;
+    stroke-linecap: round;
+    stroke-width: 1.2;
+}
+
+.fish-gulp,
+.fish-puff {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    :host([motion='swim']) svg {
+        animation: fish-bob 4.6s ease-in-out infinite;
+    }
+
+    :host([motion='swim']) .fish-tail {
+        animation: fish-tail-swish 1.5s ease-in-out infinite;
+    }
+
+    :host([motion='swim']) .fish-dorsal {
+        animation: fish-dorsal-flutter 2.9s ease-in-out infinite;
+    }
+
+    :host([motion='swim'][mouth='breathe']) .fish-mouth {
+        animation: fish-mouth-breathe 5.4s ease-in-out infinite;
+    }
+
+    :host([mouth='chomp']) .fish-mouth {
+        animation: fish-mouth-chomp 620ms ease-in-out both;
+    }
+
+    :host([gulp='small']) {
+        animation: fish-squish-small 900ms ease-out both;
+    }
+
+    :host([gulp='big']) {
+        animation: fish-squish-big 1150ms ease-out both;
+    }
+
+    :host([gulp='small']) .fish-gulp,
+    :host([gulp='big']) .fish-gulp {
+        animation: fish-gulp 950ms ease-out both;
+    }
+
+    :host([gulp='small']) .fish-puff {
+        animation: fish-puff 900ms ease-out both;
+    }
+
+    :host([gulp='big']) .fish-puff {
+        animation: fish-puff-big 1150ms ease-out both;
+    }
+}
+
+@keyframes fish-bob {
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-4px) rotate(-0.6deg);
+    }
+}
+
+@keyframes fish-tail-swish {
+    0%,
+    100% {
+        transform: rotate(-7deg);
+    }
+
+    50% {
+        transform: rotate(7deg);
+    }
+}
+
+@keyframes fish-dorsal-flutter {
+    0%,
+    100% {
+        transform: rotate(-2deg);
+    }
+
+    50% {
+        transform: rotate(2.5deg);
+    }
+}
+
+@keyframes fish-mouth-breathe {
+    0%,
+    62%,
+    100% {
+        transform: scaleY(0.45);
+    }
+
+    70% {
+        transform: scaleY(1.5);
+    }
+
+    78% {
+        transform: scaleY(0.5);
+    }
+
+    86% {
+        transform: scaleY(1.1);
+    }
+}
+
+@keyframes fish-mouth-chomp {
+    0% {
+        transform: scaleY(0.45);
+    }
+
+    18% {
+        transform: scaleY(2.4);
+    }
+
+    40% {
+        transform: scaleY(0.25);
+    }
+
+    58% {
+        transform: scaleY(1.9);
+    }
+
+    100% {
+        transform: scaleY(0.45);
+    }
+}
+
+@keyframes fish-squish-small {
+    0% {
+        transform: scale(1);
+    }
+
+    28% {
+        transform: scale(1.1, 0.9);
+    }
+
+    52% {
+        transform: scale(0.97, 1.06);
+    }
+
+    74% {
+        transform: scale(1.04, 0.97);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes fish-squish-big {
+    0% {
+        transform: scale(1) rotate(0deg);
+    }
+
+    16% {
+        transform: scale(1.16, 0.82) rotate(-2deg);
+    }
+
+    36% {
+        transform: scale(0.88, 1.24) rotate(2deg);
+    }
+
+    56% {
+        transform: scale(1.22, 0.84) rotate(-1deg);
+    }
+
+    76% {
+        transform: scale(0.96, 1.08) rotate(0deg);
+    }
+
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+@keyframes fish-gulp {
+    0% {
+        opacity: 0;
+        transform: scale(0.35);
+    }
+
+    24% {
+        opacity: 0.9;
+        transform: scale(1);
+    }
+
+    58% {
+        opacity: 0.55;
+        transform: scale(1.18);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1.35);
+    }
+}
+
+@keyframes fish-puff {
+    0% {
+        opacity: 0;
+        transform: translateY(6px) scale(0.65);
+    }
+
+    30% {
+        opacity: 0.75;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-12px) scale(1.2);
+    }
+}
+
+@keyframes fish-puff-big {
+    0% {
+        opacity: 0;
+        transform: translateY(8px) scale(0.5) rotate(-4deg);
+    }
+
+    25% {
+        opacity: 0.9;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-20px) scale(1.6) rotate(6deg);
+    }
 }

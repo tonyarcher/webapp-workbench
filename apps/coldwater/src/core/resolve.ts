@@ -3,6 +3,8 @@ import type { Action, Encounter, EncounterId, Outcome, Species, SpeciesId } from
 
 export type Relationship = 'prey' | 'predator' | 'food' | 'hazard' | 'neutral';
 
+type Resolution = Omit<Outcome, 'action'>;
+
 const BASE_ACTIONS: readonly Action[] = ['eat', 'chase', 'ignore'];
 
 export function relationshipFor(species: Species, encounter: Encounter): Relationship {
@@ -20,11 +22,11 @@ export function availableActionsFor(species: Species): readonly Action[] {
     return actions;
 }
 
-function outcome(tone: Outcome['tone'], title: string, detail: string, points: number, survived: boolean): Outcome {
+function outcome(tone: Outcome['tone'], title: string, detail: string, points: number, survived: boolean): Resolution {
     return { tone, title, detail, points, survived };
 }
 
-function eatPrey(encounter: Encounter, roll: number): Outcome {
+function eatPrey(encounter: Encounter, roll: number): Resolution {
     if (encounter.kind === 'food') {
         return outcome(
             'good',
@@ -40,11 +42,11 @@ function eatPrey(encounter: Encounter, roll: number): Outcome {
     return outcome('neutral', 'It slips away', 'A flick of the tail and the fish is gone.', 0, true);
 }
 
-function eatPredator(encounter: Encounter): Outcome {
+function eatPredator(encounter: Encounter): Resolution {
     return outcome('fatal', 'You are eaten', `The ${encounter.name.toLowerCase()} is a hunter, not a meal.`, 0, false);
 }
 
-function eatHazard(): Outcome {
+function eatHazard(): Resolution {
     return outcome(
         'fatal',
         'The line goes taut',
@@ -54,7 +56,7 @@ function eatHazard(): Outcome {
     );
 }
 
-function eatWrongFood(encounter: Encounter): Outcome {
+function eatWrongFood(encounter: Encounter): Resolution {
     return outcome(
         'bad',
         'Wrong food',
@@ -64,11 +66,11 @@ function eatWrongFood(encounter: Encounter): Outcome {
     );
 }
 
-function eatOther(): Outcome {
+function eatOther(): Resolution {
     return outcome('neutral', 'Nothing to eat', 'You mouth it, then let it go.', 0, true);
 }
 
-function eat(relationship: Relationship, encounter: Encounter, roll: number): Outcome {
+function eat(relationship: Relationship, encounter: Encounter, roll: number): Resolution {
     switch (relationship) {
         case 'prey':
             return eatPrey(encounter, roll);
@@ -83,7 +85,7 @@ function eat(relationship: Relationship, encounter: Encounter, roll: number): Ou
     }
 }
 
-function chase(relationship: Relationship, encounter: Encounter, roll: number): Outcome {
+function chase(relationship: Relationship, encounter: Encounter, roll: number): Resolution {
     if (relationship === 'prey') {
         return outcome('neutral', 'Driven off', 'You chase it away. No meal, but no danger.', 0, true);
     }
@@ -105,7 +107,7 @@ function chase(relationship: Relationship, encounter: Encounter, roll: number): 
     return outcome('neutral', 'Nothing happens', 'You dart at it, but there is nothing to chase.', 0, true);
 }
 
-function ignore(relationship: Relationship, encounter: Encounter): Outcome {
+function ignore(relationship: Relationship, encounter: Encounter): Resolution {
     if (relationship === 'predator') {
         return outcome(
             'fatal',
@@ -127,7 +129,7 @@ function ignore(relationship: Relationship, encounter: Encounter): Outcome {
     return outcome('neutral', 'Let it pass', 'You hold your place and watch it go.', 0, true);
 }
 
-function escapePredator(action: 'shallow' | 'deep', encounter: Encounter): Outcome {
+function escapePredator(action: 'shallow' | 'deep', encounter: Encounter): Resolution {
     const safe = encounter.escape?.[action] ?? false;
     if (safe) {
         return outcome(
@@ -152,7 +154,7 @@ function escape(
     relationship: Relationship,
     species: Species,
     encounter: Encounter,
-): Outcome {
+): Resolution {
     const canMove = action === 'shallow' ? species.canShallow : species.canDeep;
     if (!canMove) {
         return outcome('neutral', 'You cannot go that way', 'Your body is built for another depth.', 0, true);
@@ -164,6 +166,26 @@ function escape(
             return outcome('good', 'Clear of the line', 'You swim away before the hook can set.', 1, true);
         default:
             return outcome('neutral', 'A change of depth', 'You move through the water and wait.', 0, true);
+    }
+}
+
+function resolveAction(
+    action: Action,
+    relationship: Relationship,
+    species: Species,
+    encounter: Encounter,
+    roll: number,
+): Resolution {
+    switch (action) {
+        case 'eat':
+            return eat(relationship, encounter, roll);
+        case 'chase':
+            return chase(relationship, encounter, roll);
+        case 'ignore':
+            return ignore(relationship, encounter);
+        case 'shallow':
+        case 'deep':
+            return escape(action, relationship, species, encounter);
     }
 }
 
@@ -181,16 +203,6 @@ export function resolveEncounter(
     const encounter = encounterById(encounterId);
     const relationship = relationshipFor(species, encounter);
     const safeRoll = Math.min(1, Math.max(0, roll));
-
-    switch (action) {
-        case 'eat':
-            return eat(relationship, encounter, safeRoll);
-        case 'chase':
-            return chase(relationship, encounter, safeRoll);
-        case 'ignore':
-            return ignore(relationship, encounter);
-        case 'shallow':
-        case 'deep':
-            return escape(action, relationship, species, encounter);
-    }
+    const resolution = resolveAction(action, relationship, species, encounter, safeRoll);
+    return { ...resolution, action };
 }

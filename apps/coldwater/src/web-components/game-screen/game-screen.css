@@ -126,6 +126,8 @@ h1:focus-visible {
 
 .scene {
     position: relative;
+    isolation: isolate;
+    container-type: inline-size;
     min-height: 300px;
     overflow: hidden;
     border: 1px solid var(--border);
@@ -164,6 +166,31 @@ h1:focus-visible {
         radial-gradient(circle at 88% 24%, rgba(227, 250, 244, 0.1) 0 1.5px, transparent 2.5px);
 }
 
+.scene-flash {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.scene-good .scene-flash {
+    background: radial-gradient(circle at 66% 50%, rgba(174, 239, 226, 0.42), transparent 70%);
+}
+
+.scene-neutral .scene-flash {
+    background: radial-gradient(circle at 66% 50%, rgba(227, 250, 244, 0.24), transparent 70%);
+}
+
+.scene-bad .scene-flash {
+    background: radial-gradient(circle at 66% 50%, rgba(226, 178, 94, 0.42), transparent 70%);
+}
+
+.scene-fatal .scene-flash {
+    background: radial-gradient(circle at 72% 50%, rgba(214, 72, 58, 0.62), transparent 70%);
+}
+
 .depth-marker {
     position: absolute;
     z-index: 2;
@@ -192,19 +219,62 @@ h1:focus-visible {
 }
 
 .player {
+    z-index: 2;
     left: 7%;
     top: 38%;
 }
 
 .encounter {
+    /*
+     * Land the prey on the player's mouth. The scene is 100cqw; 84cqw is the
+     * scene minus the 9% encounter inset and the 7% player inset. The clamps
+     * are the encounter half-width and the player mouth offset (119/160 of the
+     * player width), so the final center equals the mouth at every width.
+     */
+    --swallow-x: calc(84cqw - clamp(65px, 13vw, 105px) - clamp(82px, 16.36vw, 126.4px));
     right: 9%;
     top: 22%;
     width: clamp(130px, 26vw, 210px);
 }
 
+.encounter.attack {
+    z-index: 3;
+}
+
 .encounter.deep {
     top: auto;
     bottom: 18px;
+}
+
+/*
+ * Static end states for reduced-motion users. The outcome panel carries the
+ * result; no scene animation runs under reduce.
+ */
+.encounter.eaten,
+.encounter.fled {
+    opacity: 0;
+}
+
+.encounter.drift {
+    opacity: 0.55;
+}
+
+.encounter.nibbled {
+    opacity: 0.25;
+}
+
+.player.big-gulp::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 45%;
+    width: 70%;
+    aspect-ratio: 1;
+    border: 2px solid rgba(227, 250, 244, 0.55);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.2);
 }
 
 .fish-label {
@@ -385,6 +455,8 @@ kbd {
     }
 
     .encounter {
+        /* 92cqw = scene minus the 4% encounter and 4% player insets. */
+        --swallow-x: calc(92cqw - clamp(65px, 13vw, 105px) - clamp(82px, 16.36vw, 126.4px));
         right: 4%;
         top: 18%;
     }
@@ -392,6 +464,368 @@ kbd {
     .encounter.deep {
         top: auto;
         bottom: 14px;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .scene.scene-fatal {
+        animation: scene-hit 500ms ease-out;
+    }
+
+    .scene.scene-fatal .scene-flash {
+        animation: scene-flash-fatal 700ms ease-out;
+    }
+
+    .scene.feeding .scene-flash {
+        animation: scene-flash-feed 800ms ease-out;
+    }
+
+    .player.lunge {
+        animation: player-lunge 760ms ease-in-out;
+    }
+
+    .player.spit {
+        animation: player-spit 620ms ease-in-out;
+    }
+
+    .player.rush {
+        animation: player-rush 620ms ease-in-out;
+    }
+
+    .player.rise {
+        animation: player-rise 720ms ease-in-out;
+    }
+
+    .player.dive {
+        animation: player-dive 720ms ease-in-out;
+    }
+
+    .player.settle {
+        animation: player-settle 700ms ease-in-out;
+    }
+
+    .player.hit {
+        animation: player-hit 620ms ease-in-out;
+    }
+
+    .player.big-gulp::after {
+        animation: gulp-ring 1150ms ease-out;
+    }
+
+    .encounter.eaten {
+        animation: encounter-swallow 900ms ease-in both;
+    }
+
+    .encounter.fled {
+        animation: encounter-flee 560ms ease-in both;
+    }
+
+    .encounter.nibbled {
+        animation: encounter-nibble 620ms ease-out both;
+    }
+
+    .encounter.drift {
+        animation: encounter-drift 700ms ease-out both;
+    }
+
+    .encounter.attack {
+        animation: encounter-attack 620ms ease-in-out;
+    }
+
+    .encounter.wobble {
+        animation: encounter-wobble 620ms ease-in-out;
+    }
+}
+
+@keyframes scene-hit {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-3px);
+    }
+
+    40% {
+        transform: translateX(3px);
+    }
+
+    60% {
+        transform: translateX(-2px);
+    }
+
+    80% {
+        transform: translateX(2px);
+    }
+}
+
+@keyframes scene-flash-fatal {
+    0% {
+        opacity: 0;
+    }
+
+    16% {
+        opacity: 0.8;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes scene-flash-feed {
+    0% {
+        opacity: 0;
+    }
+
+    22% {
+        opacity: 0.45;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes player-lunge {
+    0% {
+        transform: translate(0, 0);
+    }
+
+    35% {
+        transform: translate(clamp(18px, 4vw, 40px), -3px);
+    }
+
+    62% {
+        transform: translate(clamp(10px, 2vw, 20px), 1px);
+    }
+
+    100% {
+        transform: translate(0, 0);
+    }
+}
+
+@keyframes player-spit {
+    0%,
+    100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+
+    20% {
+        transform: translate(-5px, -2px) rotate(-2deg);
+    }
+
+    40% {
+        transform: translate(5px, 2px) rotate(2deg);
+    }
+
+    60% {
+        transform: translate(-4px, -1px) rotate(-1.5deg);
+    }
+
+    80% {
+        transform: translate(3px, 1px) rotate(1deg);
+    }
+}
+
+@keyframes player-rush {
+    0% {
+        transform: translate(0, 0);
+    }
+
+    35% {
+        transform: translate(clamp(12px, 3vw, 28px), -2px);
+    }
+
+    100% {
+        transform: translate(0, 0);
+    }
+}
+
+@keyframes player-rise {
+    0% {
+        transform: translateY(0);
+    }
+
+    45% {
+        transform: translateY(-12px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+@keyframes player-dive {
+    0% {
+        transform: translateY(0);
+    }
+
+    45% {
+        transform: translateY(12px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+@keyframes player-settle {
+    0% {
+        transform: translateY(0) scale(1);
+    }
+
+    40% {
+        transform: translateY(-3px) scale(1.01);
+    }
+
+    100% {
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes player-hit {
+    0%,
+    100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+
+    15% {
+        transform: translate(-5px, 1px) rotate(-1.5deg);
+    }
+
+    30% {
+        transform: translate(5px, -1px) rotate(1.5deg);
+    }
+
+    45% {
+        transform: translate(-4px, 1px) rotate(-1deg);
+    }
+
+    60% {
+        transform: translate(4px, -1px) rotate(1deg);
+    }
+
+    75% {
+        transform: translate(-2px, 0) rotate(0deg);
+    }
+}
+
+@keyframes encounter-swallow {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) rotate(0deg) scale(1);
+    }
+
+    20% {
+        opacity: 1;
+        transform: translate(-4%, 2px) rotate(-3deg) scale(0.94);
+    }
+
+    45% {
+        opacity: 0.9;
+        transform: translate(-14%, 6px) rotate(4deg) scale(0.7);
+    }
+
+    70% {
+        opacity: 0.6;
+        transform: translate(calc(0px - var(--swallow-x)), 10px) rotate(-6deg) scale(0.3);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(calc(0px - var(--swallow-x)), 12px) rotate(-8deg) scale(0.08);
+    }
+}
+
+@keyframes encounter-flee {
+    0% {
+        opacity: 1;
+        transform: translateX(0) translateY(0) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(8%) translateY(-4px) scale(0.9);
+    }
+}
+
+@keyframes encounter-nibble {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    40% {
+        opacity: 0.7;
+        transform: scale(0.72);
+    }
+
+    100% {
+        opacity: 0.25;
+        transform: scale(0.6);
+    }
+}
+
+@keyframes encounter-drift {
+    0% {
+        opacity: 1;
+        transform: translateX(0) translateY(0);
+    }
+
+    100% {
+        opacity: 0.55;
+        transform: translateX(4%) translateY(-3px);
+    }
+}
+
+@keyframes encounter-attack {
+    0% {
+        transform: translateX(0) translateY(0) scale(1);
+    }
+
+    40% {
+        transform: translateX(-10%) translateY(4px) scale(1.08);
+    }
+
+    100% {
+        transform: translateX(0) translateY(0) scale(1);
+    }
+}
+
+@keyframes encounter-wobble {
+    0%,
+    100% {
+        transform: rotate(0deg) scale(1);
+    }
+
+    25% {
+        transform: rotate(-2deg) scale(1.02);
+    }
+
+    50% {
+        transform: rotate(2deg) scale(0.99);
+    }
+
+    75% {
+        transform: rotate(-1deg) scale(1.01);
+    }
+}
+
+@keyframes gulp-ring {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.2);
+    }
+
+    20% {
+        opacity: 0.75;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.35);
     }
 }
 

@@ -49,6 +49,7 @@ describe('run state', () => {
         expect(resolved.score).toBe(5);
         expect(resolved.timeLeftMs).toBe(0);
         expect(resolved.outcome?.tone).toBe('good');
+        expect(resolved.outcome?.action).toBe('eat');
         expect(chooseAction(resolved, 'eat', 0)).toBe(resolved);
     });
 

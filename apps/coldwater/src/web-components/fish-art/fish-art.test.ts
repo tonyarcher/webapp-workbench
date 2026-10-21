@@ -46,4 +46,33 @@ describe('fish art', () => {
         expect(element.art).toBe('chub');
         expect(element.renderRoot.querySelectorAll('path').length).toBeGreaterThan(0);
     });
+
+    it('marks fish parts for motion and leaves other art without them', async () => {
+        const fish = await mount('rainbow');
+        expect(fish.renderRoot.querySelector('.fish-tail')).not.toBeNull();
+        expect(fish.renderRoot.querySelector('.fish-dorsal')).not.toBeNull();
+        expect(fish.renderRoot.querySelector('.fish-mouth')).not.toBeNull();
+        expect(fish.renderRoot.querySelector('.fish-gulp')).not.toBeNull();
+        expect(fish.renderRoot.querySelector('.fish-puff')).not.toBeNull();
+        fish.remove();
+
+        const otter = await mount('otter');
+        expect(otter.renderRoot.querySelector('.fish-tail')).toBeNull();
+        expect(otter.renderRoot.querySelector('.fish-dorsal')).toBeNull();
+        expect(otter.renderRoot.querySelector('.fish-mouth')).toBeNull();
+        expect(otter.renderRoot.querySelector('.fish-gulp')).toBeNull();
+        otter.remove();
+    });
+
+    it('reflects motion, mouth, and gulp for CSS state', async () => {
+        const element = await mount('chub');
+        element.motion = 'swim';
+        element.mouth = 'chomp';
+        element.gulp = 'big';
+        await element.updateComplete;
+        expect(element.getAttribute('motion')).toBe('swim');
+        expect(element.getAttribute('mouth')).toBe('chomp');
+        expect(element.getAttribute('gulp')).toBe('big');
+        element.remove();
+    });
 });

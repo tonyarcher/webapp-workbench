@@ -4,6 +4,7 @@ import { customElement, property } from 'lit/decorators.js';
 import { POINTS_TIME_MS, availableActions, currentEncounter, currentSpecies } from '../../core/game';
 import type { Action, Encounter, Phase, RunState, Species } from '../../core/types';
 import '../fish-art/fish-art';
+import { sceneAnimation } from './animation';
 import styles from './game-screen.css?inline';
 
 const ACTION_COPY: Readonly<Record<Action, { label: string; key: string; detail: string }>> = {
@@ -103,19 +104,30 @@ export class CwGameScreen extends LitElement {
         `;
     }
 
-    private renderScene(species: Species, encounter: Encounter, revealName: boolean): TemplateResult {
+    private renderScene(run: RunState, species: Species, encounter: Encounter, revealName: boolean): TemplateResult {
+        const animation = sceneAnimation(run, species, encounter);
         return html`
-            <section class="scene" aria-label="The water">
+            <section class="scene ${animation.sceneClass}" aria-label="The water">
                 <span class="depth-marker surface">Surface</span>
                 <span class="depth-marker deep">Deep water</span>
-                <div class="player">
-                    <cw-fish-art .art=${species.art}></cw-fish-art>
+                <div class="player ${animation.playerClass}">
+                    <cw-fish-art
+                        .art=${species.art}
+                        motion=${animation.playerMotion}
+                        mouth=${animation.playerMouth}
+                        gulp=${animation.playerGulp}
+                    ></cw-fish-art>
                     <span class="fish-label">${revealName ? species.name : 'Your fish'}</span>
                 </div>
-                <div class="encounter ${encounter.depth}">
-                    <cw-fish-art .art=${encounter.art}></cw-fish-art>
+                <div class="encounter ${encounter.depth} ${animation.encounterClass}">
+                    <cw-fish-art
+                        .art=${encounter.art}
+                        motion=${animation.encounterMotion}
+                        mouth=${animation.encounterMouth}
+                    ></cw-fish-art>
                     <span class="fish-label">${revealName ? encounter.name : 'Unknown'}</span>
                 </div>
+                <span class="scene-flash" aria-hidden="true"></span>
             </section>
         `;
     }
@@ -185,7 +197,7 @@ export class CwGameScreen extends LitElement {
         return html`
             <main class="game">
                 ${this.renderHud(run, species, revealName)} ${this.renderTimer(run)}
-                ${this.renderScene(species, encounter, revealName)} ${this.renderPrompt(encounter, revealName)}
+                ${this.renderScene(run, species, encounter, revealName)} ${this.renderPrompt(encounter, revealName)}
                 ${this.renderActions(run)} ${this.renderOutcome(run, run.mode === 'points')}
             </main>
         `;

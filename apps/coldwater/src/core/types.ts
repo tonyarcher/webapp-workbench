@@ -70,6 +70,7 @@ export interface Outcome {
     readonly detail: string;
     readonly points: number;
     readonly survived: boolean;
+    readonly action: Action;
 }
 
 export interface RunState {

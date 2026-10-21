@@ -111,6 +111,54 @@ describe('game screen', () => {
         expect(element.renderRoot.textContent).toContain('Final score:');
     });
 
+    it('sets the swimming and breathing state before a choice', async () => {
+        const element = await mount(atEncounter(startRun('practice', 'walleye', 7), 'chub'));
+        const player = element.renderRoot.querySelector<HTMLElement>('.player');
+        const encounter = element.renderRoot.querySelector<HTMLElement>('.encounter');
+        const playerArt = player?.querySelector('cw-fish-art');
+        const encounterArt = encounter?.querySelector('cw-fish-art');
+        expect(player?.classList.contains('lunge')).toBe(false);
+        expect(playerArt?.getAttribute('motion')).toBe('swim');
+        expect(playerArt?.getAttribute('mouth')).toBe('breathe');
+        expect(playerArt?.getAttribute('gulp')).toBe('none');
+        expect(encounterArt?.getAttribute('motion')).toBe('swim');
+        expect(encounterArt?.getAttribute('mouth')).toBe('breathe');
+        expect(element.renderRoot.querySelector('.scene-flash')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('adds a big gulp state for the largest legal meal', async () => {
+        const run = chooseAction(atEncounter(startRun('practice', 'mackinaw', 7), 'walleye'), 'eat', 0);
+        const element = await mount(run);
+        const player = element.renderRoot.querySelector<HTMLElement>('.player');
+        const encounter = element.renderRoot.querySelector<HTMLElement>('.encounter');
+        const scene = element.renderRoot.querySelector<HTMLElement>('.scene');
+        expect(player?.classList.contains('lunge')).toBe(true);
+        expect(player?.classList.contains('big-gulp')).toBe(true);
+        expect(player?.querySelector('cw-fish-art')?.getAttribute('gulp')).toBe('big');
+        expect(player?.querySelector('cw-fish-art')?.getAttribute('mouth')).toBe('chomp');
+        expect(encounter?.classList.contains('eaten')).toBe(true);
+        expect(scene?.classList.contains('scene-good')).toBe(true);
+        expect(scene?.classList.contains('feeding')).toBe(true);
+    });
+
+    it('shows the fatal attack state', async () => {
+        const run = chooseAction(atEncounter(startRun('practice', 'walleye', 7), 'otter'), 'ignore', 0);
+        const element = await mount(run);
+        expect(element.renderRoot.querySelector('.scene')?.classList.contains('scene-fatal')).toBe(true);
+        expect(element.renderRoot.querySelector('.player')?.classList.contains('hit')).toBe(true);
+        expect(element.renderRoot.querySelector('.encounter')?.classList.contains('attack')).toBe(true);
+        expect(element.renderRoot.querySelector('.encounter cw-fish-art')?.getAttribute('mouth')).toBe('chomp');
+    });
+
+    it('keeps food still while the player nibbles', async () => {
+        const run = chooseAction(atEncounter(startRun('practice', 'chub', 7), 'algae'), 'eat', 0);
+        const element = await mount(run);
+        expect(element.renderRoot.querySelector('.encounter cw-fish-art')?.getAttribute('motion')).toBe('still');
+        expect(element.renderRoot.querySelector('.encounter cw-fish-art')?.getAttribute('mouth')).toBe('shut');
+        expect(element.renderRoot.querySelector('.player cw-fish-art')?.getAttribute('gulp')).toBe('small');
+        expect(element.renderRoot.querySelector('.encounter')?.classList.contains('nibbled')).toBe(true);
+    });
+
     it('renders nothing before a run exists', async () => {
         const element = new CwGameScreen();
         document.body.appendChild(element);

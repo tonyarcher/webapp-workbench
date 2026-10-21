@@ -101,4 +101,11 @@ describe('encounter resolution', () => {
         expect(resolve('walleye', 'chub', 'eat', -1).tone).toBe('good');
         expect(resolve('walleye', 'chub', 'eat', 2).tone).toBe('neutral');
     });
+
+    it('records the action that produced the outcome', () => {
+        expect(resolve('walleye', 'chub', 'eat').action).toBe('eat');
+        expect(resolve('walleye', 'chub', 'chase').action).toBe('chase');
+        expect(resolve('walleye', 'chub', 'ignore').action).toBe('ignore');
+        expect(resolve('walleye', 'chub', 'deep').action).toBe('deep');
+    });
 });

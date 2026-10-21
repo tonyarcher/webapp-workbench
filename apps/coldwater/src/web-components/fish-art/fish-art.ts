@@ -4,6 +4,10 @@ import { customElement, property } from 'lit/decorators.js';
 import type { ArtKey } from '../../core/types';
 import styles from './fish-art.css?inline';
 
+export type FishMotion = 'still' | 'swim';
+export type FishMouth = 'shut' | 'breathe' | 'chomp';
+export type FishGulp = 'none' | 'small' | 'big';
+
 interface FishStyle {
     readonly body: string;
     readonly belly: string;
@@ -58,6 +62,8 @@ const SPOT_POSITIONS: readonly (readonly [number, number])[] = [
     [56, 47],
 ];
 
+const BODY_PATH = 'M34 45 C48 22 94 19 121 42 C126 46 126 50 121 54 C94 77 48 74 34 51 C31 49 31 47 34 45 Z';
+
 function spotDots(style: FishStyle): SVGTemplateResult[] {
     if (!style.spots) return [];
     const fill = style.spots;
@@ -69,9 +75,18 @@ function spotDots(style: FishStyle): SVGTemplateResult[] {
 function fish(style: FishStyle): SVGTemplateResult {
     const spots = spotDots(style);
     return svg`
-        <path d="M34 45 C48 22 94 19 121 42 C126 46 126 50 121 54 C94 77 48 74 34 51 C31 49 31 47 34 45 Z" fill="${style.body}"></path>
-        <path d="M34 45 L10 24 L15 46 L10 66 Z" fill="${style.fin}"></path>
-        <path d="M70 26 L86 9 L94 30 Z" fill="${style.fin}"></path>
+        <defs>
+            <clipPath id="fish-body">
+                <path d="${BODY_PATH}"></path>
+            </clipPath>
+            <radialGradient id="fish-gulp-fill" cx="50%" cy="50%" r="50%">
+                <stop offset="0" stop-color="#ffffff" stop-opacity="0.6"></stop>
+                <stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
+            </radialGradient>
+        </defs>
+        <path class="fish-tail" d="M34 45 L10 24 L15 46 L10 66 Z" fill="${style.fin}"></path>
+        <path d="${BODY_PATH}" fill="${style.body}"></path>
+        <path class="fish-dorsal" d="M70 26 L86 9 L94 30 Z" fill="${style.fin}"></path>
         <path d="M34 48 C53 39 91 37 120 47 C91 57 53 55 34 48 Z" fill="${style.belly}" opacity="0.72"></path>
         ${
             style.stripe
@@ -79,9 +94,24 @@ function fish(style: FishStyle): SVGTemplateResult {
                 : ''
         }
         ${spots}
+        <g clip-path="url(#fish-body)">
+            <ellipse class="fish-gulp" cx="78" cy="46" rx="20" ry="10" fill="url(#fish-gulp-fill)"></ellipse>
+        </g>
         <circle cx="108" cy="40" r="3.4" fill="${style.eye}"></circle>
         <circle cx="109" cy="39" r="1" fill="#07151b"></circle>
-        <path d="M114 51 C117 52 119 53 121 55" fill="none" stroke="${style.fin}" stroke-width="1.4"></path>
+        <g transform="translate(119 52.5) rotate(18)">
+            <g class="fish-mouth">
+                <ellipse class="mouth-opening" cx="0" cy="0" rx="3.2" ry="1.15"></ellipse>
+                <path class="mouth-lip" d="M-4 -2.2 C-1.5 -3.6 1.5 -3.6 4 -2.2" stroke="${style.fin}"></path>
+                <path class="mouth-lip" d="M-4 2.2 C-1.5 3.6 1.5 3.6 4 2.2" stroke="${style.fin}"></path>
+            </g>
+        </g>
+        <g class="fish-puff">
+            <circle cx="58" cy="16" r="5" fill="${style.belly}" opacity="0.7"></circle>
+            <circle cx="72" cy="8" r="3.5" fill="${style.belly}" opacity="0.55"></circle>
+            <circle cx="84" cy="14" r="4.5" fill="${style.belly}" opacity="0.6"></circle>
+            <circle cx="66" cy="2" r="2.5" fill="${style.belly}" opacity="0.4"></circle>
+        </g>
     `;
 }
 
@@ -208,6 +238,12 @@ export class CwFishArt extends LitElement {
     static override styles = unsafeCSS(styles);
 
     @property({ type: String }) art: ArtKey = 'chub';
+
+    @property({ type: String, reflect: true }) motion: FishMotion = 'still';
+
+    @property({ type: String, reflect: true }) mouth: FishMouth = 'shut';
+
+    @property({ type: String, reflect: true }) gulp: FishGulp = 'none';
 
     override render(): TemplateResult {
         return html`<svg viewBox="0 0 160 90" aria-hidden="true" focusable="false">${artwork(this.art)}</svg>`;
