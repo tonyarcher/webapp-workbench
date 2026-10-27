@@ -2,6 +2,7 @@ import { classifyScrollItem, extractImageUrls, stripImageProxy, aspectRatioFromU
 import { safeUrl } from '../src/url';
 import { timeAgo, compactNumber } from '../src/format';
 import { registerEmbedProvider, EMBED_PROVIDERS, embedUrlFor, embedProviderForUrl } from '../src/embeds';
+import { playedCommands, syncCommands } from '../src/embed-playback';
 import type { EmbedProvider } from '../src/embeds/types';
 import type { ScrollItem } from '../src/types';
 
@@ -157,6 +158,14 @@ assert(
     embedUrlFor('https://example-embed.test/v/abc')?.includes('example-embed.test/embed/abc'),
     'registered provider',
 );
+
+// embed playback command order
+assert(syncCommands(false, false).join(',') === 'pause', 'inactive embed pauses');
+assert(syncCommands(false, true).join(',') === 'pause', 'inactive embed pauses even with sound on');
+assert(syncCommands(true, false).join(',') === 'mute,play', 'silent embed mutes before play');
+assert(syncCommands(true, true).join(',') === 'play,unmute', 'sound-on embed never mutes before play');
+assert(playedCommands(true).join(',') === 'unmute', 'sound-on re-asserts unmute after playback starts');
+assert(playedCommands(false).length === 0, 'silent embed sends nothing on playback start');
 
 // stripImageProxy
 assert(

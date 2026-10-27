@@ -4,6 +4,8 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { resolveVideoUrl } from './media';
 import { embedPosterFor, embedProviderForUrl, embedUrlFor } from './embeds';
+import { playedCommands, syncCommands } from './embed-playback';
+import type { EmbedCommand } from './embeds/types';
 import { safeUrl } from './url';
 import { getSoundOn, setSoundOn, subscribeSound } from './sound';
 import type { ScrollItem } from './types';
@@ -210,6 +212,13 @@ export class ScrollMediaVideo extends LitElement {
         iframe.style.transform = `translateX(-50%) scale(${scale})`;
     }
 
+    private sendCommands(commands: readonly EmbedCommand[]): void {
+        const win = this.iframe?.contentWindow;
+        const provider = embedProviderForUrl(this.embedSource());
+        if (!win || !provider?.commandPlayer) return;
+        for (const command of commands) provider.commandPlayer(win, command);
+    }
+
     private handleParsedMessage(parsed: import('./embeds/types').EmbedPlayerEvent | null): boolean {
         if (!parsed) return false;
         if (parsed.type === 'ready') {
@@ -217,7 +226,12 @@ export class ScrollMediaVideo extends LitElement {
             this.syncEmbedPlayback();
             return true;
         }
-        if (parsed.type === 'playing') this.setPlaying(true);
+        if (parsed.type === 'playing') {
+            this.setPlaying(true);
+            // The player mutes itself when autoplay is blocked, after the
+            // unmute from syncEmbedPlayback. Re-assert once it is running.
+            if (this.active) this.sendCommands(playedCommands(this.soundOn));
+        }
         if (parsed.type === 'paused' || parsed.type === 'ended') this.setPlaying(false);
         if (parsed.type === 'time' && !this.seeking) {
             this.embedTime = parsed.currentTime;
@@ -244,24 +258,14 @@ export class ScrollMediaVideo extends LitElement {
     }
 
     /**
-     * Drive a scriptable embed (TikTok player/v1) via postMessage. Mute
-     * before play only while the session is silent so autoplay is allowed.
-     * Once the user has turned sound on, skip mute — mute+unMute in the
-     * same turn can leave the embed at a ducked volume.
+     * Drive a scriptable embed (TikTok player/v1) via postMessage. The command
+     * order lives in embed-playback so it stays unit-tested.
      */
     private syncEmbedPlayback(): void {
-        const win = this.iframe?.contentWindow;
         const provider = embedProviderForUrl(this.embedSource());
-        if (!win || !provider?.commandPlayer || !this.embedReady) return;
-        if (this.active) {
-            if (!this.soundOn) provider.commandPlayer(win, 'mute');
-            provider.commandPlayer(win, 'play');
-            if (this.soundOn) provider.commandPlayer(win, 'unmute');
-            this.setPlaying(true);
-        } else {
-            provider.commandPlayer(win, 'pause');
-            this.setPlaying(false);
-        }
+        if (!this.iframe?.contentWindow || !provider?.commandPlayer || !this.embedReady) return;
+        this.sendCommands(syncCommands(this.active, this.soundOn));
+        this.setPlaying(this.active);
     }
 
     /** Advance to the next candidate when a source fails to load. */

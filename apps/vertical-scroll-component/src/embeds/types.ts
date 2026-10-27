@@ -4,6 +4,8 @@
  * renders an <iframe> instead of a <video> element. Providers are pure and
  * unit-tested via the registry in index.ts.
  */
+export type EmbedCommand = 'play' | 'pause' | 'mute' | 'unmute';
+
 export interface EmbedProvider {
     /** Stable identifier, used for iframe titles and debugging. */
     name: string;
@@ -39,7 +41,7 @@ export interface EmbedProvider {
     /** Decode a postMessage from the embed into a typed player event. */
     parsePlayerMessage?(data: unknown): EmbedPlayerEvent | null;
     /** postMessage a play/pause/mute command into the embed iframe. */
-    commandPlayer?(win: Window, command: 'play' | 'pause' | 'mute' | 'unmute'): void;
+    commandPlayer?(win: Window, command: EmbedCommand): void;
     /** Seek the embed player to `seconds`. */
     seekPlayer?(win: Window, seconds: number): void;
 }

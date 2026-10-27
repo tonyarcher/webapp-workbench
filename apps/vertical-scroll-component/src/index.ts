@@ -4,7 +4,7 @@ export { timeAgo, compactNumber } from './format';
 export { classifyScrollItem, extractImageUrls, resolveVideoUrl, stripImageProxy, aspectRatioFromUrl } from './media';
 export type { ResolvedVideo } from './media';
 export { embedProviderForUrl, embedUrlFor, embedPosterFor, EMBED_PROVIDERS, registerEmbedProvider } from './embeds';
-export type { EmbedProvider, EmbedPlayerEvent } from './embeds/types';
+export type { EmbedProvider, EmbedPlayerEvent, EmbedCommand } from './embeds/types';
 export { getSoundOn, setSoundOn, subscribeSound } from './sound';
 export { ScrollViewport } from './scroll-viewport';
 // Components self-register via @customElement decorators when imported.
