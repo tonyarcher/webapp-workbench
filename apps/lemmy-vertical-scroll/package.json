@@ -11,19 +11,19 @@
         "test:e2e": "playwright test"
     },
     "dependencies": {
-        "@tanstack/history": "1.162.4",
-        "@tanstack/query-core": "^5.103.2",
-        "@tanstack/virtual-core": "^3.17.11",
-        "idb": "^8.0.3",
+        "@tanstack/history": "1.162.5",
+        "@tanstack/query-core": "^5.105.0",
+        "@tanstack/virtual-core": "^3.19.8",
+        "idb": "^8.0.4",
         "lit": "^3.3.3",
         "vertical-scroll-component": "*"
     },
     "devDependencies": {
-        "fake-indexeddb": "^6.2.5",
+        "fake-indexeddb": "^6.2.6",
         "tsx": "^4.23.15",
         "typescript": "7.0.2",
-        "vite": "^8.3.0",
-        "@axe-core/playwright": "^4.13.0",
+        "vite": "^8.3.5",
+        "@axe-core/playwright": "^4.14.0",
         "@playwright/test": "^1.63.1"
     }
 }

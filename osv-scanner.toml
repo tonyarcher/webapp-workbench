@@ -2,15 +2,10 @@
 #
 # Every entry needs a reason and an expiry. An advisory that ships to a browser
 # or a container does not belong here; fix it, or pin the dependency.
-
-[[IgnoredVulns]]
-id = "GHSA-vfj7-8cjw-p6xm"
-ignoreUntil = 2027-10-01
-reason = """
-braces 3.0.3, dev-only. It arrives through @web/test-runner -> globby, so it
-exists to run the baseball widget tests and never reaches a built artifact: no
-bundle, no image, no browser. OSV reports no fixed version in range, and the
-alternative is a breaking major bump of the test runner for a dependency the
-shipped code does not load. Remove this entry when a fixed braces lands, or when
-the test runner moves past it.
-"""
+#
+# Empty today: the undici advisories were fixed by jsdom 30.1.3 and the zod
+# advisory by the puppeteer-core bump that carries chromium-bidi on zod 4. The
+# braces entry is gone because GHSA-vfj7-8cjw-p6xm was withdrawn upstream on
+# 2026-10-23 -- braces 3.0.3 is still in the tree through the test runner and
+# now carries no advisory. If one lands again, add the ignore back with a
+# reason and an expiry.

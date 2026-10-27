@@ -97,7 +97,7 @@ jobs:
               with:
                   # Matches the toolchain the API modules compile against.
                   distribution: temurin
-                  java-version: '25'
+                  java-version: '26'
             - uses: gradle/actions/setup-gradle@v6
             # checkAll runs tests, detekt and the Jacoco line and branch gates for all
             # five APIs.
@@ -150,7 +150,7 @@ jobs:
             - uses: actions/setup-java@v6
               with:
                   distribution: temurin
-                  java-version: '25'
+                  java-version: '26'
 
             - name: Install npm tools
               # prettier is only a devDependency, so `npm ci` puts it in

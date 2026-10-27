@@ -11,15 +11,15 @@
         "test:e2e": "playwright test"
     },
     "dependencies": {
-        "@tanstack/virtual-core": "^3.17.11",
+        "@tanstack/virtual-core": "^3.19.8",
         "lit": "^3.3.3"
     },
     "devDependencies": {
-        "@types/node": "^26.6.2",
+        "@types/node": "^26.6.5",
         "tsx": "^4.23.15",
         "typescript": "7.0.2",
-        "vite": "^8.3.0",
-        "@axe-core/playwright": "^4.13.0",
+        "vite": "^8.3.5",
+        "@axe-core/playwright": "^4.14.0",
         "@playwright/test": "^1.63.1"
     }
 }

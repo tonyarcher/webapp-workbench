@@ -14,11 +14,11 @@ buildscript {
 }
 
 plugins {
-    kotlin("jvm") version "2.4.20"
-    kotlin("plugin.spring") version "2.4.20"
-    kotlin("plugin.serialization") version "2.4.20"
-    kotlin("plugin.jpa") version "2.4.20"
-    id("org.springframework.boot") version "4.1.1"
+    kotlin("jvm") version "2.4.21"
+    kotlin("plugin.spring") version "2.4.21"
+    kotlin("plugin.serialization") version "2.4.21"
+    kotlin("plugin.jpa") version "2.4.21"
+    id("org.springframework.boot") version "4.1.2"
     id("io.spring.dependency-management") version "1.1.7"
     id("dev.detekt") version "2.0.0-alpha.6"
     jacoco
@@ -32,7 +32,7 @@ repositories {
 }
 
 kotlin {
-    jvmToolchain(25)
+    jvmToolchain(26)
     compilerOptions {
         allWarningsAsErrors.set(true)
         freeCompilerArgs.add("-Xjsr305=strict")
@@ -63,13 +63,13 @@ configurations.matching {
     resolutionStrategy.activateDependencyLocking()
 }
 
-// The managed versions below are held ahead of the Spring Boot BOM. Boot 4.1.1
-// is the newest release and its BOM still names vulnerable versions of these,
-// while upstream shipped the fixes in patch releases the BOM has not picked up:
-// osv-scanner -r . reports GHSA-9xv2-5v5q-p794, GHSA-gcx9-497g-6cp6 and
-// GHSA-h3x4-894j-xpx5 (critical) on tomcat-embed-core, and
-// GHSA-wv8q-qhhj-9h54, GHSA-cxp5-3px4-pw24, GHSA-p6pp-m3f8-5c89 and
-// GHSA-7hhh-6rmp-j9qf on the Jackson 2 and Jackson 3 core and databind.
+// The security floors below pin the Tomcat and Jackson core/databind
+// artifacts that carried the advisories osv-scanner reported:
+// GHSA-9xv2-5v5q-p794, GHSA-gcx9-497g-6cp6 and GHSA-h3x4-894j-xpx5 (critical)
+// on tomcat-embed-core, and GHSA-wv8q-qhhj-9h54, GHSA-cxp5-3px4-pw24,
+// GHSA-p6pp-m3f8-5c89 and GHSA-7hhh-6rmp-j9qf on the Jackson 2 and Jackson 3
+// core and databind. Boot 4.1.2's BOM names these patched versions today; the
+// rule keeps a BOM move or a transitive request from walking them back.
 //
 // Jackson core is pinned alongside databind: overriding only databind leaves
 // core on the BOM's vulnerable patch.
@@ -82,7 +82,7 @@ configurations.all {
     resolutionStrategy.eachDependency {
         when {
             requested.group == "org.apache.tomcat.embed" &&
-                requested.name in setOf("tomcat-embed-core", "tomcat-embed-websocket") -> useVersion("11.0.25")
+                requested.name in setOf("tomcat-embed-core", "tomcat-embed-websocket") -> useVersion("11.0.27")
 
             requested.group == "com.fasterxml.jackson.core" &&
                 requested.name in setOf("jackson-core", "jackson-databind") -> useVersion("2.21.7")
@@ -105,7 +105,7 @@ dependencies {
     // Jackson 2 ObjectMapper, so keep that line on the patched 2.21 BOM.
     implementation("org.springframework.boot:spring-boot-jackson2")
     implementation("tools.jackson.module:jackson-module-kotlin")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.postgresql:postgresql")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
@@ -113,9 +113,9 @@ dependencies {
     implementation("com.password4j:password4j:1.8.4")
     implementation("com.eatthepath:java-otp:1.0.0")
     implementation("commons-codec:commons-codec")
-    implementation("com.yubico:webauthn-server-core:2.9.0")
+    implementation("com.yubico:webauthn-server-core:2.10.1")
     implementation("com.nimbusds:nimbus-jose-jwt:10.10")
-    // Floor if a transitive reintroduces Bouncy Castle. webauthn 2.9 does not pull it.
+    // Floor if a transitive reintroduces Bouncy Castle. webauthn 2.10 does not pull it.
     constraints {
         implementation("org.bouncycastle:bcprov-jdk18on:1.86")
         implementation("org.bouncycastle:bcpkix-jdk18on:1.86")
@@ -125,7 +125,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.4.0")
     // @DataJpaTest for the rate limiter, which is deliberately a single upsert
     // statement: its correctness under concurrency cannot be faked. Boot 4 ships
     // the test slices as their own starters, separate from the webmvc one.
@@ -170,7 +170,7 @@ tasks.named("check") {
  * test needs a real server and a mock cannot stand in. But the test should not
  * know about Docker: it connects to a port, and this task owns the server's
  * lifecycle. That split is also why there is no Testcontainers dependency --
- * Boot 4.1.1 manages Testcontainers 2.0.5, which deprecates the whole container
+ * Boot 4.1.2 manages Testcontainers 2.0.5, which deprecates the whole container
  * API, and this module treats a warning as a build failure.
  *
  * Credentials are throwaway and local-only; nothing here is a secret.

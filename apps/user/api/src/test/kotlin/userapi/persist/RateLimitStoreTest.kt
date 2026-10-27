@@ -28,7 +28,7 @@ import kotlin.test.assertTrue
  *
  * Nothing here knows about Docker. The test connects to a port; the Gradle
  * `testPostgres` task owns the server's lifecycle, so this file stays about SQL.
- * That split also keeps it off Testcontainers, whose container API the Boot 4.1.1
+ * That split also keeps it off Testcontainers, whose container API the Boot 4.1.2
  * managed version (2.0.5) deprecates -- and this module compiles with
  * allWarningsAsErrors, so a deprecated call is a build failure, not a warning.
  *

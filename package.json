@@ -42,11 +42,11 @@
         "test:scripts": "python3 -m unittest discover -s tools -t . -p \"*_test.py\""
     },
     "devDependencies": {
-        "oxlint": "^1.85.0",
-        "oxlint-tsgolint": "^7.0.2002",
-        "prettier": "^3.9.9",
+        "oxlint": "^1.90.0",
+        "oxlint-tsgolint": "^7.0.2005",
+        "prettier": "^3.9.10",
         "ttsc": "^0.30.4",
         "typescript": "~7.0.2",
-        "vite": "^8.3.0"
+        "vite": "^8.3.5"
     }
 }
