@@ -120,11 +120,13 @@ export class CwGameScreen extends LitElement {
                     <span class="fish-label">${revealName ? species.name : 'Your fish'}</span>
                 </div>
                 <div class="encounter ${encounter.depth} ${animation.encounterClass}">
-                    <cw-fish-art
-                        .art=${encounter.art}
-                        motion=${animation.encounterMotion}
-                        mouth=${animation.encounterMouth}
-                    ></cw-fish-art>
+                    <div class="encounter-art">
+                        <cw-fish-art
+                            .art=${encounter.art}
+                            motion=${animation.encounterMotion}
+                            mouth=${animation.encounterMouth}
+                        ></cw-fish-art>
+                    </div>
                     <span class="fish-label">${revealName ? encounter.name : 'Unknown'}</span>
                 </div>
                 <span class="scene-flash" aria-hidden="true"></span>

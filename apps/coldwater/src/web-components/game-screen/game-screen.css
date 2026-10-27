@@ -237,6 +237,22 @@ h1:focus-visible {
     width: clamp(130px, 26vw, 210px);
 }
 
+/*
+ * Every fish is drawn facing right. The encounter sits to the right of the
+ * player, so flip it to face left and meet the player. Flip the art wrapper,
+ * not .encounter: the swallow and flee animations translate that parent, and a
+ * parent flip would reverse them. The -7.5% shift re-centres the asymmetric
+ * fish body after the flip.
+ */
+.encounter-art {
+    transform: translateX(-7.5%) scaleX(-1);
+    transform-origin: center;
+}
+
+.encounter.fled .encounter-art {
+    transform: translateX(0) scaleX(1);
+}
+
 .encounter.attack {
     z-index: 3;
 }
@@ -512,6 +528,10 @@ kbd {
         animation: gulp-ring 1150ms ease-out;
     }
 
+    .encounter-art {
+        transition: transform 140ms ease-out;
+    }
+
     .encounter.eaten {
         animation: encounter-swallow 900ms ease-in both;
     }
@@ -712,30 +732,36 @@ kbd {
     }
 }
 
+/*
+ * Move early and keep the prey readable: 45% of the distance by 45% of the
+ * animation, the full mouth target at 70% (the big-gulp peak), then shrink at
+ * the mouth. Holding near the start for 45% made the slide read as a nudge
+ * followed by a jump.
+ */
 @keyframes encounter-swallow {
     0% {
         opacity: 1;
         transform: translate(0, 0) rotate(0deg) scale(1);
     }
 
-    20% {
+    12% {
         opacity: 1;
-        transform: translate(-4%, 2px) rotate(-3deg) scale(0.94);
+        transform: translate(2%, -2px) rotate(2deg) scale(0.98);
     }
 
     45% {
-        opacity: 0.9;
-        transform: translate(-14%, 6px) rotate(4deg) scale(0.7);
+        opacity: 1;
+        transform: translate(calc(var(--swallow-x) * -0.45), 4px) rotate(-3deg) scale(0.82);
     }
 
     70% {
-        opacity: 0.6;
-        transform: translate(calc(0px - var(--swallow-x)), 10px) rotate(-6deg) scale(0.3);
+        opacity: 0.8;
+        transform: translate(calc(0px - var(--swallow-x)), 10px) rotate(4deg) scale(0.45);
     }
 
     100% {
         opacity: 0;
-        transform: translate(calc(0px - var(--swallow-x)), 12px) rotate(-8deg) scale(0.08);
+        transform: translate(calc(0px - var(--swallow-x)), 12px) rotate(-6deg) scale(0.08);
     }
 }
 
