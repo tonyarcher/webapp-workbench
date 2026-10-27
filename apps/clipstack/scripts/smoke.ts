@@ -15,7 +15,8 @@ const { classifyScrollItem } = await import('vertical-scroll-component');
 const { parseLinkList } = await import('../src/services/parse-list');
 const { toScrollItem } = await import('../src/services/to-scroll-item');
 const { parseSession, serializeSession } = await import('../src/services/session-store');
-const { watchedOEmbedIndex } = await import('../src/services/resolve-oembed');
+const { watchedOEmbedIndex, playerInfoFromPayload, resolveTiktokOEmbed } =
+    await import('../src/services/resolve-oembed');
 
 function assert(cond: unknown, msg: string): void {
     if (!cond) throw new Error(`FAIL: ${msg}`);
@@ -301,6 +302,62 @@ function assert(cond: unknown, msg: string): void {
     assert(watchedOEmbedIndex(10, 10) === null, 'past end');
     assert(watchedOEmbedIndex(-1, 10) === null, 'negative');
     assert(watchedOEmbedIndex(0, 0) === null, 'empty list');
+}
+
+// player items payload: the fields TikTok's oEmbed stopped returning
+{
+    const id = '6718335390845095173';
+    const info = playerInfoFromPayload(id, {
+        items: [
+            {
+                author_info: { unique_id: 'scout2015', nickname: 'Scout, Suki & Stella' },
+                desc: 'Scramble up ur name',
+                video_info: {
+                    origin_cover: { url_list: ['https://p16-common-sign.tiktokcdn-us.com/a.jpg'] },
+                    cover: { url_list: ['https://p19-common-sign.tiktokcdn-us.com/b.jpg'] },
+                },
+            },
+        ],
+    });
+    assert(info?.author === 'scout2015', 'player info handle');
+    assert(info?.authorName === 'Scout, Suki & Stella', 'player info display name');
+    assert(info?.title === 'Scramble up ur name', 'player info description');
+    assert(info?.pageUrl === `https://www.tiktok.com/@scout2015/video/${id}`, 'player info page url');
+    assert(info?.thumbnailUrl?.includes('p16-common-sign'), 'player info prefers origin cover');
+}
+
+// player payload shapes that carry nothing usable stay null
+{
+    assert(playerInfoFromPayload('1', null) === null, 'player info null payload');
+    assert(playerInfoFromPayload('1', { items: [] }) === null, 'player info no items');
+    assert(playerInfoFromPayload('1', { items: [{ desc: '' }] }) === null, 'player info blank desc');
+    const unsafe = playerInfoFromPayload('1', {
+        items: [{ video_info: { cover: { url_list: ['javascript:alert(1)'] } } }],
+    });
+    assert(unsafe === null, 'player info drops unsafe cover url');
+}
+
+// oEmbed with nothing usable falls through to the proxied player payload
+{
+    const realFetch = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+        const url = String(input);
+        calls.push(url);
+        const body = url.includes('/oembed?')
+            ? { version: '1.0', type: 'video', html: '<iframe></iframe>' }
+            : { items: [{ desc: 'fallback clip', author_info: { unique_id: 'u' } }] };
+        return new Response(JSON.stringify(body), { status: 200 });
+    }) as typeof fetch;
+    try {
+        const info = await resolveTiktokOEmbed('1234567890');
+        assert(info?.title === 'fallback clip', 'oembed miss falls back to player meta');
+        assert(info?.author === 'u', 'fallback author');
+        assert(calls.length === 2, 'one oembed then one meta call');
+        assert(calls[1] === 'meta/1234567890', 'meta path is app-relative');
+    } finally {
+        globalThis.fetch = realFetch;
+    }
 }
 
 // session persist / restore

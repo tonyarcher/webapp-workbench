@@ -25,6 +25,33 @@ import org.gradle.api.Project
 /** The object store's compose service name the gateway proxies the assets location to. */
 const val STORE_UPSTREAM: String = "http://seaweedfs:8333"
 
+/**
+ * One app's same-origin metadata proxy: the upstream base, the API path that
+ * takes a trailing video id, and the headers the upstream needs to answer a
+ * plain server-side request. Used where the client cannot call the upstream
+ * itself (it sends no CORS header) and the fields are not derivable in the
+ * browser.
+ */
+internal data class MetaProxy(val upstream: String, val apiPath: String, val userAgent: String, val referer: String)
+
+/**
+ * Apps that read slide metadata through a gateway proxy, keyed by app id.
+ *
+ * TikTok's oEmbed stopped returning the author, title, and thumbnail, and its
+ * player items API — the endpoint that still carries them — sends no CORS
+ * header, so the browser cannot read it. The route is emitted into both the
+ * gateway and the asset-origin server block, because both serve the app.
+ */
+internal val S3_META_PROXY: Map<String, MetaProxy> = mapOf(
+    "clipstack" to MetaProxy(
+        upstream = "https://www.tiktok.com",
+        apiPath = "/player/api/v1/items?aid=1284&app_name=tiktok_web&device_platform=web_pc&item_ids=",
+        userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        referer = "https://www.tiktok.com/",
+    ),
+)
+
 /** The S3/asset-origin seed values threaded through the deploy task to compose. */
 val S3_SEED_KEYS: List<String> = listOf(
     "S3_ENDPOINT",
@@ -340,6 +367,33 @@ fun assetServerBlock(apps: List<S3App>, env: Map<String, String>, tls: Boolean, 
 }
 
 /**
+ * One app's metadata proxy location. The capture is the video id and it is
+ * digits-only, so the route can never be aimed at another upstream path. A
+ * location-level `add_header` shadows the server's, so the security trio is
+ * restated here.
+ */
+private fun metaProxyLocation(basePath: String, proxy: MetaProxy): List<String> = listOf(
+    "",
+    "    # Same-origin metadata proxy: the upstream answers without CORS, so the",
+    "    # browser cannot read it directly. Digits only, one path, no open proxy.",
+    "    # The regex is quoted: nginx's config parser reads an unquoted `{` as a",
+    "    # block opener and truncates the pattern at the repetition count.",
+    "    location ~ \"^${basePath}meta/([0-9]{6,32})\$\" {",
+    "        set \$upstream_meta ${proxy.upstream};",
+    "        proxy_pass \$upstream_meta${proxy.apiPath}\$1;",
+    "        proxy_ssl_server_name on;",
+    "        proxy_set_header User-Agent \"${proxy.userAgent}\";",
+    "        proxy_set_header Referer \"${proxy.referer}\";",
+    "        proxy_set_header Accept \"application/json\";",
+    "        proxy_set_header X-Request-ID \$request_id;",
+    "        add_header Cache-Control \"public, max-age=3600\";",
+    "        add_header X-Content-Type-Options \"nosniff\" always;",
+    "        add_header X-Frame-Options \"SAMEORIGIN\" always;",
+    "        add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;",
+    "    }",
+)
+
+/**
  * The per-app static locations for the gateway's own host, or "" when the store
  * is unset. Once the per-app UI containers are gone this is the only thing that
  * serves those apps, so an unset store is a deploy error rather than a fallback.
@@ -447,5 +501,6 @@ internal fun appendAppLocations(lines: MutableList<String>, apps: List<S3App>, e
                 headers = headers,
             ),
         )
+        S3_META_PROXY[app.id]?.let { lines.addAll(metaProxyLocation(basePath, it)) }
     }
 }

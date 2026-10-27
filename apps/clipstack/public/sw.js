@@ -6,6 +6,7 @@ const VERSION = 'cs-v1';
 const SHELL = ['./', './index.html', './manifest.webmanifest'];
 const INDEX_FALLBACK = new URL('./index.html', self.registration.scope).href;
 const API_PREFIX = new URL('./api/', self.registration.scope).pathname;
+const META_PREFIX = new URL('./meta/', self.registration.scope).pathname;
 const MAX_RUNTIME_ENTRIES = 300;
 
 self.addEventListener('install', (event) => {
@@ -39,9 +40,12 @@ self.addEventListener('fetch', (event) => {
     if (request.method !== 'GET') return;
     const url = new URL(request.url);
     if (url.origin !== self.location.origin) return;
-    // never cache API traffic: exclude both a scope-relative prefix and the
-    // root /api/ path (apiGet requests root paths even under a subpath host)
-    if (url.pathname.startsWith(API_PREFIX) || url.pathname.startsWith('/api/')) return;
+    // never cache API or clip-metadata traffic: exclude both a scope-relative
+    // prefix and the root /api/ path (apiGet requests root paths even under a
+    // subpath host). A metadata miss falls through to the network or null;
+    // serving the cached shell instead would answer JSON parsing with HTML.
+    if (url.pathname.startsWith(API_PREFIX) || url.pathname.startsWith('/api/') || url.pathname.startsWith(META_PREFIX))
+        return;
     event.respondWith(
         fetch(request)
             .then(async (response) => {

@@ -27,6 +27,36 @@ class S3SupportTest {
     }
 
     @Test
+    fun metaProxyIsEmittedForTheAppOnBothOrigins() {
+        val env = mapOf("ASSETS_HOST" to "assets.example.com", "S3_BUCKET" to "workbench-assets")
+        val clip = S3App(
+            id = "clipstack",
+            basePath = "/clipstack/",
+            distDir = "apps/clipstack/dist",
+            apiBase = "",
+            manifest = "manifest.webmanifest",
+            swJs = true,
+            icons = listOf("icon.svg"),
+        )
+        val gateway = appLocationsToken(listOf(clip), env)
+        val assets = assetServerBlock(listOf(clip), env, false, false)
+        for (block in listOf(gateway, assets)) {
+            // Digits-only capture: the route is one upstream path, never an open proxy.
+            assertTrue(block.contains("location ~ \"^/clipstack/meta/([0-9]{6,32})\$\" {"), block)
+            assertTrue(block.contains("set \$upstream_meta https://www.tiktok.com;"), block)
+            assertTrue(block.contains("item_ids=\$1;"), block)
+            assertTrue(block.contains("proxy_ssl_server_name on;"), block)
+        }
+    }
+
+    @Test
+    fun metaProxyIsOnlyEmittedForItsApp() {
+        val env = mapOf("S3_BUCKET" to "workbench-assets")
+        val block = appLocationsToken(listOf(readerApp("")), env)
+        assertFalse(block.contains("upstream_meta"), block)
+    }
+
+    @Test
     fun s3SyncCommandOmitsEndpointWhenBlank() {
         assertEquals(
             listOf("aws", "s3", "sync", "dist", "s3://bucket/apps/rss-reader", "--delete"),
