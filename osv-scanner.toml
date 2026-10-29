@@ -3,9 +3,14 @@
 # Every entry needs a reason and an expiry. An advisory that ships to a browser
 # or a container does not belong here; fix it, or pin the dependency.
 #
-# Empty today: the undici advisories were fixed by jsdom 30.1.3 and the zod
-# advisory by the puppeteer-core bump that carries chromium-bidi on zod 4. The
-# braces entry is gone because GHSA-vfj7-8cjw-p6xm was withdrawn upstream on
-# 2026-10-23 -- braces 3.0.3 is still in the tree through the test runner and
-# now carries no advisory. If one lands again, add the ignore back with a
-# reason and an expiry.
+# The undici advisories were fixed by jsdom 30.1.3 and the zod advisory by the
+# puppeteer-core bump that carries chromium-bidi on zod 4. The braces entry is
+# gone because GHSA-vfj7-8cjw-p6xm was withdrawn upstream on 2026-10-23 --
+# braces 3.0.3 is still in the tree through the test runner and now carries no
+# advisory. If one lands again, add the ignore back with a reason and an
+# expiry.
+
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2027-01-31
+reason = "Prototype poisoning in deepmerge mergeObject(). dev only: @web/test-runner pulls @web/dev-server and @rollup/plugin-node-resolve, which pull deepmerge 4.3.1. None of it is bundled into a page or an image, and it merges the test runner's own config, never untrusted input. 4.3.1 is the last affected release and no patched version exists, so drop this entry when one ships."
