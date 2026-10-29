@@ -734,9 +734,8 @@ kbd {
 
 /*
  * Move early and keep the prey readable: 45% of the distance by 45% of the
- * animation, the full mouth target at 70% (the big-gulp peak), then shrink at
- * the mouth. Holding near the start for 45% made the slide read as a nudge
- * followed by a jump.
+ * animation, the full mouth target at 70%, then shrink at the mouth. Holding
+ * near the start for 45% made the slide read as a nudge followed by a jump.
  */
 @keyframes encounter-swallow {
     0% {
