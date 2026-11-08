@@ -13,6 +13,18 @@ import {
     toggleStarAction,
 } from './article-list-actions';
 import { loadFolderPageAction, loadSinglePageAction } from './article-list-paging';
+import {
+    beginReset,
+    initialLoadState,
+    isIdle,
+    isLoading,
+    libraryArrived,
+    loadSettled,
+    pageRequested,
+    viewChanged,
+    type LoadState,
+    type LoadStep,
+} from './article-list-load-state';
 import { interestingActiveFor, loadInterestingBatchAction, shadowEnabledFor } from './article-list-interesting';
 import {
     CARD_MIN_WIDTH,
@@ -50,7 +62,7 @@ export class ArticleList extends LitElement {
     @property({ attribute: false }) active = true;
 
     @state() private items: Article[] = [];
-    @state() loading = false;
+    @state() private loadState: LoadState = initialLoadState();
     @state() private unreadOnly = false;
     @state() hideRead = false;
     @state() private sort: ArticleSort = 'hot';
@@ -71,17 +83,8 @@ export class ArticleList extends LitElement {
     private cursors = new Map<string, string | undefined>();
     private feedHasMore = new Map<string, boolean>();
     private hasMoreSingle = true;
-    private gen = 0;
-    private loadingRef = false;
     private lastViewKey = '';
     resumeApplied = false;
-    private pendingReset = false;
-    // A view that needs the library arrived before the library painted. Kept
-    // separate from pendingReset: pendingReset means "a load is in flight,
-    // reload when it settles", and consuming that here re-enters reset() on
-    // every update while the first fetch is still pending (the folder load
-    // hang). This flag is only consumed once, when the library arrives.
-    private pendingFirstLoad = false;
     /** Feed membership last loaded: folder feeds, or every feed for All/Hot. */
     private lastFeedSetKey = '';
     private resizeObserver: ResizeObserver | undefined;
@@ -89,6 +92,16 @@ export class ArticleList extends LitElement {
     refreshJob: Promise<void> | null = null;
     refreshJobKey: string | null = null;
     refreshGenRef: { value: number } = { value: 0 };
+
+    /** True while a page fetch is in flight or queued; the footer renders "Loading…". */
+    get loading(): boolean {
+        return isLoading(this.loadState);
+    }
+
+    /** Staleness key the paging actions compare a result against. */
+    get gen(): number {
+        return this.loadState.gen;
+    }
 
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
@@ -191,19 +204,13 @@ export class ArticleList extends LitElement {
             // the key. Record the key after loading them, or the next update
             // sees a "new" view and runs a second, duplicate reset.
             this.lastViewKey = this.currentViewKey();
-            if (this.needsLibrary() && !this.library.data) {
-                // Feed-set views need the library (feed list) before loading;
-                // updated() re-fires when the library query resolves.
-                this.pendingFirstLoad = true;
-                return;
-            }
-            this.pendingFirstLoad = false;
-            void this.reset();
+            // Feed-set views need the library (feed list) before loading;
+            // updated() re-fires when the library query resolves.
+            void this.applyStep(viewChanged(this.loadState, this.needsLibrary(), this.library.data !== undefined));
             return;
         }
-        if (this.pendingFirstLoad && this.library.data) {
-            this.pendingFirstLoad = false;
-            void this.reset();
+        if (this.loadState.phase === 'awaiting-library' && this.library.data) {
+            void this.applyStep(libraryArrived(this.loadState));
             return;
         }
         this.refreshFeedSetKey();
@@ -274,11 +281,11 @@ export class ArticleList extends LitElement {
     }
 
     onScroll = () => {
-        if (this.loadingRef || !this.canLoadMore()) return;
+        if (!isIdle(this.loadState) || !this.canLoadMore()) return;
         const el = this.scrollElRef.value;
         if (!el) return;
         if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
-            void this.loadPage();
+            void this.loadNextPage();
         }
     };
 
@@ -323,8 +330,27 @@ export class ArticleList extends LitElement {
         this.virtualizerCleanup = this.virtualizer._didMount();
     }
 
+    /**
+     * Replace the list for the current view. The load machine decides whether
+     * this starts now, queues behind the load in flight, or waits for the
+     * library; `clear` is set on every path that replaces the list.
+     */
     private async reset() {
-        this.gen++;
+        await this.applyStep(beginReset(this.loadState));
+    }
+
+    /** Infinite-scroll paging: append the next page, but only from idle. */
+    private async loadNextPage() {
+        await this.applyStep(pageRequested(this.loadState));
+    }
+
+    private async applyStep(step: LoadStep) {
+        if (step.clear) this.clearList();
+        this.loadState = step.state;
+        if (step.start !== null) await this.runLoad(step.start);
+    }
+
+    private clearList() {
         this.items = [];
         this.cursors.clear();
         this.feedHasMore.clear();
@@ -335,32 +361,21 @@ export class ArticleList extends LitElement {
         const el = this.scrollElRef.value;
         if (el) el.scrollTop = 0;
         this.reinitVirtualizer();
-        await this.loadPage();
     }
 
     /**
-     * Fetch the next page for the current view. Pages accumulate (infinite
-     * scroll); `reset()` bumps the generation so in-flight results for a
-     * previous view are discarded instead of shown.
+     * Fetch the page for `gen`. Pages accumulate (infinite scroll); the paging
+     * actions drop a result whose generation no longer matches, so a superseded
+     * load cannot be written into the list that replaced it.
      */
-    private async loadPage() {
-        if (this.loadingRef) {
-            this.pendingReset = true;
-            return;
-        }
-        const gen = this.gen;
-        this.loadingRef = true;
-        this.loading = true;
+    private async runLoad(gen: number) {
         try {
             await this.loadPageSource(gen);
             applyResumeAction(this as never);
         } finally {
-            this.loadingRef = false;
-            this.loading = false;
-            if (this.pendingReset) {
-                this.pendingReset = false;
-                void this.reset();
-            }
+            const step = loadSettled(this.loadState);
+            this.loadState = step.state;
+            if (step.start !== null) void this.runLoad(step.start);
         }
     }
 
