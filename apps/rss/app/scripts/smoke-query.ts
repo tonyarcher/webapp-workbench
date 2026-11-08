@@ -254,3 +254,68 @@ import { assert } from './smoke-assert';
         shims['window'] = realWindow;
     }
 }
+
+// ---- explicit refresh keeps reading counts while the poller ingests ----
+{
+    const { queryClient, fetchLibrary, bustCounts } = await import('../src/query');
+    const { syncAllFeeds } = await import('../src/mutations');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = { dispatchEvent: () => false };
+    const store = shims['localStorage'] as { setItem: (k: string, v: string) => void } | undefined;
+    store?.setItem(
+        'rss.auth.tokens',
+        JSON.stringify({ access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900 }),
+    );
+    // Annotated for the same reason as the throttle counter above: the increment
+    // happens inside a fetch stub, which the control-flow analysis cannot see.
+    let countsCalls: number = 0;
+    let ingested = false;
+    const headers = { 'Content-Type': 'application/json' };
+    shims['fetch'] = async (url: unknown) => {
+        const path = String(url);
+        if (path.endsWith('/api/library/counts')) {
+            countsCalls += 1;
+            return new Response(JSON.stringify({ counts: ingested ? { a: 3 } : {} }), { status: 200, headers });
+        }
+        if (path.endsWith('/api/library/feeds')) {
+            return new Response(
+                JSON.stringify({
+                    feeds: [
+                        { id: 'a', title: 'A', url: 'https://a.example/rss', folderIds: [], unread: 0, addedAt: 0 },
+                    ],
+                }),
+                { status: 200, headers },
+            );
+        }
+        if (path.endsWith('/api/library/folders')) {
+            return new Response(JSON.stringify({ folders: [] }), { status: 200, headers });
+        }
+        if (path.endsWith('/api/sync')) {
+            return new Response(JSON.stringify({ queued: 1 }), { status: 200, headers });
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+    };
+    try {
+        bustCounts();
+        const readAll = await fetchLibrary();
+        assert(countsCalls === 1 && readAll.feeds[0]!.unread === 0, 'read-all refetch clears the badges');
+        await syncAllFeeds();
+        // /sync only queues the feeds; the refetch it triggers lands before the
+        // poller has ingested anything. Busting counts here would re-arm the
+        // throttle on this pre-ingest answer.
+        const queued = await fetchLibrary();
+        const beforeIngest: number = countsCalls;
+        assert(beforeIngest === 2 && queued.feeds[0]!.unread === 0, 'post-sync refetch still predates ingestion');
+        ingested = true; // the poller fetched the queued feeds
+        const refreshed = await fetchLibrary();
+        const afterIngest: number = countsCalls;
+        assert(afterIngest === 3, 'next interval refetch reads counts despite the throttle');
+        assert(refreshed.feeds[0]!.unread === 3, 'refresh badges show the articles the poller ingested');
+    } finally {
+        queryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}

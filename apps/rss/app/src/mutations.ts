@@ -22,6 +22,7 @@ import {
     libraryKey,
     queryClient,
     bustCounts,
+    markCountsChanging,
     type LibraryData,
 } from './query';
 import type { Article, Feed } from './types';
@@ -44,6 +45,7 @@ export async function addFeed(url: string): Promise<Feed> {
 export async function refreshFeed(feedId: string) {
     return feedSyncs.run(feedId, async () => {
         const result = await requestSync({ feedIds: [feedId] });
+        markCountsChanging();
         await invalidateLibrary();
         await invalidateArticles();
         return result;
@@ -58,6 +60,7 @@ export async function syncAllFeeds(
     if (key === null) return 0;
     onProgress?.(0, 0, '');
     const result = await allSyncs.run(key, () => requestSync(feedIds ? { feedIds } : undefined));
+    markCountsChanging();
     await invalidateLibrary();
     await invalidateArticles();
     onProgress?.(1, 1, '');

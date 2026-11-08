@@ -24,16 +24,30 @@ export type LibraryData = { folders: Folder[]; feeds: Feed[] };
  * Badges tolerate staleness (the counts aggregate scans the articles table),
  * so background refetches reuse counts younger than this. Mutations that
  * change read state call bustCounts() first so the next refetch is exact.
- * Refresh-triggered badge changes converge on this window too: each feed is
- * re-ingested on its own backoff schedule, so exactness was never instant.
  */
 export const COUNTS_STALE_MS = 5 * 60_000;
 let lastCountsAt = 0;
 let fetchSeq = 0;
+let countsChangingUntil = 0;
 
 export function bustCounts(): void {
     lastCountsAt = 0;
     fetchSeq += 1;
+}
+
+/**
+ * A sync only queues feeds; the poller ingests them afterwards, so counts read
+ * at /sync time predate the articles the refresh is about to produce. Read
+ * counts on every library refetch for one stale window instead of re-arming
+ * the throttle: the 60s interval then picks up the new badges within a minute
+ * of ingestion, rather than leaving them at the pre-refresh value for five.
+ */
+export function markCountsChanging(): void {
+    countsChangingUntil = Date.now() + COUNTS_STALE_MS;
+}
+
+function countsDue(): boolean {
+    return Date.now() < countsChangingUntil || Date.now() - lastCountsAt >= COUNTS_STALE_MS;
 }
 
 const cachedLibrary = () => queryClient.getQueryData(libraryKey) as LibraryData | undefined;
@@ -89,7 +103,7 @@ async function fetchFeedsStage(ctx: FetchCtx, folders: Folder[], paintedFolders:
             feeds: feeds.map((f) => ({ ...f, unread: ctx.prevUnread.get(f.id) ?? 0 })),
         };
         queryClient.setQueryData(libraryKey, paintedFeeds);
-        if (Date.now() - lastCountsAt < COUNTS_STALE_MS) return paintedFeeds;
+        if (!countsDue()) return paintedFeeds;
         return fetchCountsStage(ctx, folders, paintedFeeds);
     } catch (err) {
         if (!hadFeeds) throw err;
