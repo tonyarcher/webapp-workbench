@@ -41,6 +41,7 @@ import workbench.hasBuildScript
 import workbench.jsWorkspacesOf
 import workbench.prepareGateway
 import workbench.publishAppAssets
+import workbench.requireBuiltAssetsFitBase
 import workbench.resolveDockerHost
 import workbench.runProcess
 import workbench.s3Apps
@@ -237,6 +238,12 @@ tasks.register("deploy") {
             if (missing.isNotEmpty()) {
                 error("Missing Kotlin boot jars (run `gradle buildAll` first): ${missing.joinToString(", ")}")
             }
+            // A dist/ left by a bare `npm run build` has Vite's default `/`
+            // base, so the app is blank at its subpath. Check every catalog
+            // app, not just the selected one: a containerless app's name
+            // leaves the compose service list empty, which rebuilds every
+            // image, and a stale dist would be baked in unnoticed.
+            appMappings.keys.forEach { requireBuiltAssetsFitBase(it) }
         }
         prepareGateway(services)
         val seedEnv = gatewayEnv()
@@ -246,7 +253,7 @@ tasks.register("deploy") {
         // (both from the catalog), so a second app moving to S3 needs no change
         // here beyond its apps.json entry.
         if (!skipBuild && !deployHas("build-only")) {
-            s3Apps(seedEnv).forEach { app ->
+            s3Apps(seedEnv, selectedApps().toSet()).forEach { app ->
                 publishAppAssets(seedEnv, app)
             }
         }

@@ -168,7 +168,9 @@ fun Project.publishAppAssets(env: Map<String, String>, app: S3App) {
     }
     val key = s3KeyPrefix(env["S3_PREFIX"].orEmpty(), app.basePath)
     val endpoint = env["S3_ENDPOINT"]?.trim().orEmpty()
-    val rendered = renderAppConfig(file("${app.distDir}/index.html").readText(), app.apiBase, app.identityBase)
+    val html = file("${app.distDir}/index.html").readText()
+    requireAssetsFitBase(app.id, app.basePath, html)
+    val rendered = renderAppConfig(html, app.apiBase, app.identityBase)
     val renderedFile = java.io.File.createTempFile("app-config-", ".html").also { it.writeText(rendered) }
     try {
         when (publishTool(System.getenv("PATH"), System.getProperty("os.name"))) {
@@ -251,14 +253,6 @@ internal fun identityBaseEnvKey(appId: String): String? = when (appId) {
     else -> null
 }
 
-/** The app's built dist/ directory, from its last JavaScript workspace. */
-private fun Project.staticDistDir(appId: String): String? {
-    val workspaces = jsWorkspacesOf(appId)
-    val last = workspaces.lastOrNull() ?: return null
-    val dir = workspaceDirs[last] ?: return null
-    return "$dir/dist"
-}
-
 /**
  * Expand `${NAME}` references in a seed value against the same env map, the way
  * compose expands `deploy/.env` at run time. `dotenvLine` does not expand, so a
@@ -279,9 +273,15 @@ internal fun expandEnv(value: String, env: Map<String, String>): String =
  * with a non-empty base path and a JavaScript workspace, minus the exclusions.
  * The JVM APIs carry no base path and no dist/ and so drop out here; the
  * Docker-only services are not in the catalog at all.
+ *
+ * [only] limits the result to apps this invocation built. A partial deploy
+ * (`-Papps=clipstack`) must not re-upload another app's dist: it was not
+ * rebuilt, so it may still be whatever a bare `npm run build` left there.
+ * The gateway calls this with no filter, because it must serve every app.
  */
-fun Project.s3Apps(env: Map<String, String>): List<S3App> = buildList {
+fun Project.s3Apps(env: Map<String, String>, only: Set<String>? = null): List<S3App> = buildList {
     for ((id, app) in appMappings) {
+        if (only != null && id !in only) continue
         if (app.basePath.isEmpty() || id in S3_EXCLUDED_APPS) continue
         val distDir = staticDistDir(id) ?: continue
         val pwa = S3_PWA_FILES[id] ?: PwaFiles(null, false, emptyList())

@@ -446,6 +446,35 @@ class S3SupportTest {
     }
 
     @Test
+    fun assetsFitBaseAcceptsTheAppBasePath() {
+        val html = """<script src="/baseball/assets/index-a.js"></script>""" +
+            """<link rel="stylesheet" href="/baseball/assets/index.css">"""
+        assertTrue(assetsFitBase(html, "/baseball/"))
+    }
+
+    @Test
+    fun assetsFitBaseAcceptsRelativeReferences() {
+        val html = """<script src="./assets/index-a.js"></script>""" +
+            """<link rel="stylesheet" href="./assets/index.css">"""
+        assertTrue(assetsFitBase(html, "/fitness/"))
+    }
+
+    @Test
+    fun assetsFitBaseRejectsTheOriginRoot() {
+        val html = """<script src="/assets/index-a.js"></script>""" +
+            """<link rel="stylesheet" href="/assets/index.css">"""
+        assertFalse(assetsFitBase(html, "/baseball/"))
+    }
+
+    @Test
+    fun assetsFitBaseIgnoresNonAssetAndAbsoluteReferences() {
+        val html = """<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit">""" +
+            """<link rel="icon" href="/favicon.svg">""" +
+            """<script src="https://cdn.example.com/assets/vendor.js"></script>"""
+        assertTrue(assetsFitBase(html, "/baseball/"))
+    }
+
+    @Test
     fun storeUpstreamPointsAtTheSeaweedFsS3Port() {
         assertEquals("http://seaweedfs:8333", STORE_UPSTREAM)
     }
