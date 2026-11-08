@@ -3,6 +3,7 @@ import { ref, type Ref } from 'lit/directives/ref.js';
 import type { Virtualizer } from '@tanstack/virtual-core';
 import { safeHttpUrl } from '../../services/parser';
 import { articleImage, cardPlaceholderStyle } from '../../services/image';
+import { articleVideo } from '../../services/video';
 import { topWords } from '../../services/interesting-words';
 import { interestingWordMapOf } from './article-list-interesting';
 import { domainOf, formatDate } from '../../util';
@@ -135,10 +136,17 @@ export function cardRowTemplate(
     onKey: (e: KeyboardEvent, article: Article) => void,
 ) {
     const link = safeHttpUrl(article.link);
-    const image = articleImage(article, feedIcon);
+    const video = articleVideo(article);
+    const image = video ? undefined : articleImage(article, feedIcon);
     return html`
       <div class="grid-card ${article.read ? 'read' : ''} ${selected ? 'selected' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}" @click=${() => onOpen(article)} @keydown=${(e: KeyboardEvent) => onKey(e, article)}>
-        ${image ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>` : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`}
+        ${
+            video
+                ? html`<video-header class="grid-card-img" .video=${video} .videoTitle=${article.title}></video-header>`
+                : image
+                  ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>`
+                  : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`
+        }
         <div class="grid-card-body">
           ${cardTitleRow(article, link, onStar)}
           ${article.summary ? html`<div class="grid-card-summary">${article.summary}</div>` : ''}

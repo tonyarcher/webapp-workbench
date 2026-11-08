@@ -44,6 +44,7 @@ import { toastApiError, toastInfo } from '../../services/toast';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
 import '../advanced-menu/advanced-menu';
 import '../lazy-img/lazy-img';
+import '../video-header/video-header';
 import styles from './article-list.css?inline';
 
 interface Library {

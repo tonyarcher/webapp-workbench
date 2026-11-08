@@ -209,6 +209,37 @@ assert(
 assert(firstImageUrl('<p>no image</p>') === undefined, 'firstImageUrl returns undefined without img');
 assert(firstImageUrl('<img src="data:image/gif;base64,xxx">') === undefined, 'firstImageUrl rejects data: urls');
 
+// ---- video headers (click-to-play facade over sharp posters) ----
+const { parseYouTubeId, parseVimeoId, parseVideo, youtubeThumbs, youtubeEmbedUrl } =
+    await import('../src/services/video.js');
+assert(
+    parseYouTubeId('https://www.youtube.com/watch?v=dQw4w9WgXcQ') === 'dQw4w9WgXcQ',
+    'parseYouTubeId reads watch urls',
+);
+assert(parseYouTubeId('https://youtu.be/dQw4w9WgXcQ') === 'dQw4w9WgXcQ', 'parseYouTubeId reads youtu.be urls');
+assert(
+    parseYouTubeId('https://www.youtube.com/shorts/dQw4w9WgXcQ') === 'dQw4w9WgXcQ',
+    'parseYouTubeId reads shorts urls',
+);
+assert(
+    parseYouTubeId('https://www.youtube.com/embed/dQw4w9WgXcQ') === 'dQw4w9WgXcQ',
+    'parseYouTubeId reads embed urls',
+);
+assert(parseYouTubeId('https://example.com/article') === undefined, 'parseYouTubeId rejects plain links');
+assert(parseVimeoId('https://vimeo.com/123456789') === '123456789', 'parseVimeoId reads vimeo urls');
+assert(
+    youtubeThumbs('dQw4w9WgXcQ')[0] === 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
+    'youtube posters start at maxres',
+);
+assert(
+    youtubeEmbedUrl('dQw4w9WgXcQ').startsWith('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'),
+    'youtube embeds use nocookie',
+);
+assert(parseVideo('https://www.youtube.com/watch?v=dQw4w9WgXcQ')?.provider === 'youtube', 'parseVideo finds youtube');
+assert(parseVideo('https://vimeo.com/123456789')?.provider === 'vimeo', 'parseVideo finds vimeo');
+assert(parseVideo('https://example.com/clip.mp4')?.provider === 'direct', 'parseVideo finds direct video files');
+assert(parseVideo('https://example.com/article') === undefined, 'parseVideo rejects plain links');
+
 // ---- interleave (diverse hot pages) ----
 const hotArticle = (id: string, hot: number): Article => ({
     id,

@@ -98,8 +98,8 @@ function linkImage(url: string | undefined): string | undefined {
     if (!url) return undefined;
     const safe = safeHttpUrl(url);
     if (!safe) return undefined;
-    const yt = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/i.exec(url);
-    if (yt) return `https://i.ytimg.com/vi/${yt[1]}/hqdefault.jpg`;
+    const yt = /(?:youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i.exec(url);
+    if (yt) return `https://i.ytimg.com/vi/${yt[1]}/maxresdefault.jpg`;
     try {
         const u = new URL(url);
         const path = u.pathname.toLowerCase();

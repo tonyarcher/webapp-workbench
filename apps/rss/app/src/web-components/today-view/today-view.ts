@@ -5,6 +5,7 @@ import { fetchArticlesPage } from '../../services/api';
 import { markArticleRead, markShownRead, toggleStar } from '../../mutations';
 import { safeHttpUrl } from '../../services/parser';
 import { articleImage, cardPlaceholderStyle } from '../../services/image';
+import { articleVideo } from '../../services/video';
 import {
     loadTodaySettings,
     pruneTodaySettings,
@@ -16,6 +17,7 @@ import { buildTodaySections } from '../../services/today';
 import type { Article, Feed, Folder } from '../../types';
 import { domainOf, formatDate } from '../../util';
 import '../lazy-img/lazy-img';
+import '../video-header/video-header';
 import styles from './today-view.css?inline';
 
 interface Library {
@@ -281,11 +283,18 @@ export class TodayView extends LitElement {
         const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
         const feedIcon = feeds.find((f) => f.id === article.feedId)?.icon;
         const link = safeHttpUrl(article.link);
-        const image = articleImage(article, feedIcon);
+        const video = articleVideo(article);
+        const image = video ? undefined : articleImage(article, feedIcon);
         return html`
       <div class="grid-card ${article.read ? 'read' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}"
         @click=${() => this.openArticle(article)} @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}>
-        ${image ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>` : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`}
+        ${
+            video
+                ? html`<video-header class="grid-card-img" .video=${video} .videoTitle=${article.title}></video-header>`
+                : image
+                  ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>`
+                  : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`
+        }
         <div class="grid-card-body">
           <div class="grid-card-title-row">${this.renderUnread(article)}${this.renderTitleLink(article, link, 'grid-card-title')}${this.renderStarBtn(article)}</div>
           ${article.summary ? html`<div class="grid-card-summary">${article.summary}</div>` : ''}

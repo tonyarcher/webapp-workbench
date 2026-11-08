@@ -78,6 +78,20 @@ class S3CspTest {
         }
     }
 
+    @Test
+    fun rssReaderVideoHeadersAllowPlayerOrigins() {
+        val app = S3App(
+            id = "rss-reader",
+            basePath = "/rss-reader/",
+            distDir = "apps/rss-reader/dist",
+            apiBase = "https://gateway/rss-reader/api",
+        )
+        val header = requireNotNull(cspHeader(app))
+        assertTrue("frame-src https://www.youtube-nocookie.com" in header, "youtube facade: $header")
+        assertTrue("https://player.vimeo.com" in header, "vimeo facade: $header")
+        assertTrue("media-src https:" in header, "direct mp4 headers: $header")
+    }
+
     /** The value of the style-src directive, without its name. */
     private fun styleSrcOf(header: String): String = header
         .split("; ")

@@ -239,7 +239,18 @@ class FeedMediaBranchTest {
               <item><title>t</title><link>https://www.youtube.com/watch?v=dQw4w9WgXcQ</link><guid>g1</guid></item>
             </channel></rss>
         """.trimIndent()
-        assertEquals("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", parseFeedXml(xml, 0L).items[0].media)
+        assertEquals("https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg", parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun youtubeShortsLinkImage() {
+        val xml = """
+            <rss version="2.0"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://www.youtube.com/shorts/dQw4w9WgXcQ</link><guid>g1</guid></item>
+            </channel></rss>
+        """.trimIndent()
+        assertEquals("https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg", parseFeedXml(xml, 0L).items[0].media)
     }
 
     @Test

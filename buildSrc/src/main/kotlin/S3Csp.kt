@@ -88,9 +88,17 @@ private val S3_CSP: Map<String, CspPolicy> = mapOf(
     ),
     // The reader reaches its API origin (PUBLIC_API_BASE, joined at render
     // time), the identity token endpoint on the document origin ('self'), and
-    // the two CORS proxies it uses to fetch feed text.
+    // the two CORS proxies it uses to fetch feed text. Card video headers
+    // play YouTube/Vimeo behind a click-to-play facade, so the player origins
+    // join frame-src; direct mp4 enclosures join media-src.
     "rss-reader" to CspPolicy.Emit(
         connectSrc = listOf("'self'", "https://api.allorigins.win", "https://corsproxy.io"),
+        frameSrc = listOf(
+            "https://www.youtube-nocookie.com",
+            "https://www.youtube.com",
+            "https://player.vimeo.com",
+        ),
+        mediaSrc = listOf("https:", "data:"),
     ),
     // stock-game, fitness and radio-station each reach their own API origin
     // (STOCK_GAME_API_BASE / FITNESS_API_BASE / RADIO_API_BASE, joined at
