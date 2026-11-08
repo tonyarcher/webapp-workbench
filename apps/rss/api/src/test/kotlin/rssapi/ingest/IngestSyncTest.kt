@@ -78,6 +78,66 @@ class IngestSyncTest {
     }
 
     @Test
+    fun maybeUpdateMetaSetsFields() {
+        val feed = FeedEntity(xmlUrl = "https://example.com/rss", title = "t")
+        ingest.maybeUpdateMeta(feed, "https://example.com", "https://example.com/icon.png")
+        assertEquals("https://example.com", feed.siteUrl)
+        assertEquals("https://example.com/icon.png", feed.icon)
+        verify(feeds).save(feed)
+    }
+
+    @Test
+    fun maybeUpdateMetaSkipsNullsAndSame() {
+        val feed =
+            FeedEntity(
+                xmlUrl = "https://example.com/rss",
+                title = "t",
+                siteUrl = "https://example.com",
+                icon = "https://example.com/icon.png",
+            )
+        ingest.maybeUpdateMeta(feed, "https://example.com", "https://example.com/icon.png")
+        ingest.maybeUpdateMeta(feed, null, null)
+        verify(feeds, never()).save(any())
+    }
+
+    @Test
+    fun saveNotModifiedUpdatesRow() {
+        val row = FeedSyncEntity(feedId = feedId, lastError = "old")
+        whenever(sync.findById(feedId)).thenReturn(Optional.of(row))
+        ingest.saveNotModified(feedId, "e2", "m2")
+        assertEquals("e2", row.etag)
+        assertEquals("m2", row.lastModified)
+        verify(sync).save(row)
+    }
+
+    @Test
+    fun ensureRowsCreatesMissing() {
+        whenever(sync.findAllById(any())).thenReturn(emptyList())
+        ingest.ensureRows(listOf(feedId))
+        verify(sync).saveAll(any<List<FeedSyncEntity>>())
+    }
+
+    @Test
+    fun saveNotModifiedCreatesRow() {
+        whenever(sync.findById(feedId)).thenReturn(Optional.empty())
+        ingest.saveNotModified(feedId, "e", "m")
+        verify(sync).save(any())
+    }
+
+    @Test
+    fun ensureRowsEmptySkips() {
+        ingest.ensureRows(emptyList())
+        verify(sync, never()).saveAll(any<List<FeedSyncEntity>>())
+    }
+
+    @Test
+    fun ensureRowsAllExistSkips() {
+        whenever(sync.findAllById(any())).thenReturn(listOf(FeedSyncEntity(feedId = feedId)))
+        ingest.ensureRows(listOf(feedId))
+        verify(sync, never()).saveAll(any<List<FeedSyncEntity>>())
+    }
+
+    @Test
     fun metaMissingIsNulls() {
         whenever(sync.findById(feedId)).thenReturn(Optional.empty())
         val (etag, mod) = ingest.meta(feedId)

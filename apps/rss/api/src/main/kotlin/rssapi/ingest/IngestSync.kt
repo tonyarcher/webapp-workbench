@@ -16,6 +16,19 @@ class IngestSync(private val feeds: FeedRepo, private val sync: FeedSyncRepo) {
         feeds.save(feed)
     }
 
+    fun maybeUpdateMeta(feed: FeedEntity, siteUrl: String?, icon: String?) {
+        var changed = false
+        if (siteUrl != null && feed.siteUrl != siteUrl) {
+            feed.siteUrl = siteUrl
+            changed = true
+        }
+        if (icon != null && feed.icon != icon) {
+            feed.icon = icon
+            changed = true
+        }
+        if (changed) feeds.save(feed)
+    }
+
     private fun shouldRename(current: String, title: String): Boolean {
         if (title.isEmpty() || title == "Untitled feed") return false
         return current == "Untitled feed" || current.isEmpty()

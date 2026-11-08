@@ -20,6 +20,8 @@ class FeedEntity(
     @Column(name = "site_url")
     var siteUrl: String? = null,
     var title: String = "",
+    @Column(name = "icon")
+    var icon: String? = null,
     @Column(name = "added_at")
     var addedAt: Instant = Instant.now(),
 )

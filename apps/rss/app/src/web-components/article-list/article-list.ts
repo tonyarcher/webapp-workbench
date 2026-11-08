@@ -397,6 +397,10 @@ export class ArticleList extends LitElement {
         return feedTitleOf(feedId, this.library.data);
     }
 
+    feedIcon(feedId: string): string | undefined {
+        return this.library.data?.feeds.find((f) => f.id === feedId)?.icon;
+    }
+
     private async openArticle(article: Article) {
         await openArticleAction(this as never, article);
     }

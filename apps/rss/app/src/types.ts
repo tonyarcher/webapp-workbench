@@ -77,6 +77,7 @@ export interface ParsedFeed {
     title: string;
     siteUrl?: string | undefined;
     items: ParsedItem[];
+    icon?: string | undefined;
 }
 
 export interface OpmlSource {

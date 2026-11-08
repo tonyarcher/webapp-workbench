@@ -85,7 +85,7 @@ export async function runImageDerivationPhase(feedA: Feed) {
             (storedWithImg as unknown as { image?: string }).image === undefined,
         'stored article has no persisted image column (derived at render)',
     );
-    const { firstImageUrl: cFirst } = await import('../src/services/parser.js');
+    const { firstImageUrl: cFirst } = await import('../src/services/image.js');
     assert(
         cFirst(storedWithImg!.content) === 'https://img.example/thumb.jpg',
         'thumbnail derived from content via firstImageUrl',

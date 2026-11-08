@@ -10,6 +10,7 @@ data class FeedJson(
     val unread: Int,
     val addedAt: Long,
     val siteUrl: String? = null,
+    val icon: String? = null,
     val lastFetchedAt: Long? = null,
     val lastError: String? = null,
 )

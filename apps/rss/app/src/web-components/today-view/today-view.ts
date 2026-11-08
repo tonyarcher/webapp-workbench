@@ -3,7 +3,8 @@ import { customElement, state } from 'lit/decorators.js';
 import { libraryKey, queryClient, QueryController, fetchLibrary } from '../../query';
 import { fetchArticlesPage } from '../../services/api';
 import { markArticleRead, markShownRead, toggleStar } from '../../mutations';
-import { articleImage, safeHttpUrl } from '../../services/parser';
+import { safeHttpUrl } from '../../services/parser';
+import { articleImage, cardPlaceholderStyle } from '../../services/image';
 import {
     loadTodaySettings,
     pruneTodaySettings,
@@ -278,12 +279,13 @@ export class TodayView extends LitElement {
 
     private renderCard(article: Article, feeds: Feed[]) {
         const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
+        const feedIcon = feeds.find((f) => f.id === article.feedId)?.icon;
         const link = safeHttpUrl(article.link);
-        const image = articleImage(article);
+        const image = articleImage(article, feedIcon);
         return html`
       <div class="grid-card ${article.read ? 'read' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}"
         @click=${() => this.openArticle(article)} @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}>
-        ${image ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>` : html`<div class="grid-card-img grid-card-img-empty"></div>`}
+        ${image ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>` : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`}
         <div class="grid-card-body">
           <div class="grid-card-title-row">${this.renderUnread(article)}${this.renderTitleLink(article, link, 'grid-card-title')}${this.renderStarBtn(article)}</div>
           ${article.summary ? html`<div class="grid-card-summary">${article.summary}</div>` : ''}

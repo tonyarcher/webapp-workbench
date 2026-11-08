@@ -22,7 +22,7 @@ fun ArticleEntity.toJson(state: ArticleStateEntity?, scores: ArticleScoreEntity?
     author = author,
     summary = summary,
     content = contentHtml,
-    image = firstImageUrl(contentHtml),
+    image = firstImageUrl(contentHtml, link),
     normLink = normLink,
     comments = comments,
     engagement = engagement.toDouble().takeIf { it != 0.0 },

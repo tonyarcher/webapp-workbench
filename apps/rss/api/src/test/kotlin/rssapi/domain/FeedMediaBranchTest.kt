@@ -204,6 +204,192 @@ class FeedMediaBranchTest {
         assertNull(parseFeedXml(xml, 0L).items[0].media)
     }
 
+    @Test
+    fun itunesImage() {
+        val xml = """
+            <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/a</link><guid>g1</guid>
+                <itunes:image href="https://example.com/cover.png"/>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+        assertEquals("https://example.com/cover.png", parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun secondEnclosureImage() {
+        val xml = """
+            <rss version="2.0"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/a</link><guid>g1</guid>
+                <enclosure url="https://example.com/a.mp3" type="audio/mpeg"/>
+                <enclosure url="https://example.com/i.png" type="image/png"/>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+        assertEquals("https://example.com/i.png", parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun youtubeLinkImage() {
+        val xml = """
+            <rss version="2.0"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://www.youtube.com/watch?v=dQw4w9WgXcQ</link><guid>g1</guid></item>
+            </channel></rss>
+        """.trimIndent()
+        assertEquals("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun directImageLink() {
+        val xml = """
+            <rss version="2.0"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/photo.jpg</link><guid>g1</guid></item>
+            </channel></rss>
+        """.trimIndent()
+        assertEquals("https://example.com/photo.jpg", parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun itunesImageWithUrlAttr() {
+        val xml = """
+            <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/a</link><guid>g1</guid>
+                <itunes:image url="https://example.com/u.png"/>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+        assertEquals("https://example.com/u.png", parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun itunesImageElementWithUrl() {
+        val xml = """
+            <rss version="2.0"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/a</link><guid>g1</guid>
+                <image><url>https://example.com/img.png</url></image>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+        assertEquals("https://example.com/img.png", parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun enclosureEmptyUrlFallsThrough() {
+        val xml = """
+            <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/a</link><guid>g1</guid>
+                <enclosure url="" type="image/png"/>
+                <media:thumbnail url="https://example.com/t.png"/>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+        assertEquals("https://example.com/t.png", parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun thumbnailEmptyUrlSkipped() {
+        val xml = """
+            <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/a</link><guid>g1</guid>
+                <media:thumbnail url=""/>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+        assertNull(parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun linkImageNullForPlainLink() {
+        val xml = """
+            <rss version="2.0"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/article</link><guid>g1</guid></item>
+            </channel></rss>
+        """.trimIndent()
+        assertNull(parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun badEnclosureFallsThrough() {
+        val xml = """
+            <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/a</link><guid>g1</guid>
+                <enclosure url="javascript:alert(1)" type="image/png"/>
+                <media:thumbnail url="https://example.com/t.png"/>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+        assertEquals("https://example.com/t.png", parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun thumbnailBadUrlSkipped() {
+        val xml = """
+            <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/a</link><guid>g1</guid>
+                <media:thumbnail url="javascript:alert(1)"/>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+        assertNull(parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun itunesImageEmptyHref() {
+        val xml = """
+            <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/a</link><guid>g1</guid>
+                <itunes:image href=""/>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+        assertNull(parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun imageElementTextContent() {
+        val xml = """
+            <rss version="2.0"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://example.com/a</link><guid>g1</guid>
+                <image>https://example.com/tc.png</image>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+        assertEquals("https://example.com/tc.png", parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun atomEnclosureEmptyHrefSkipped() {
+        val xml = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>N</title>
+              <entry><title>t</title>
+                <link href="" rel="enclosure" type="image/png"/>
+              </entry>
+            </feed>
+        """.trimIndent()
+        assertNull(parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun linkImageNullForBadUrl() {
+        assertNull(linkImage("not a url"))
+        assertNull(linkImage(null))
+        assertNull(linkImage("https://example.com/article"))
+    }
+
     private fun rssWith(inner: String): String = """
         <rss version="2.0"><channel>
           <title>N</title><link>https://example.com/</link>

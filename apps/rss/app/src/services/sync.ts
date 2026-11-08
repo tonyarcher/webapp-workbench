@@ -8,7 +8,8 @@ import {
     updateFeedErrorIfExists,
 } from '../db/db';
 import { authEpoch, hasSession } from './auth';
-import { firstImageUrl, parseFeedXml } from './parser';
+import { parseFeedXml } from './parser';
+import { firstImageUrl } from './image';
 import { fetchFeedText } from './proxy';
 import {
     affinityBoostScore,
@@ -21,14 +22,18 @@ import {
 import { domainOf } from '../util';
 import type { Article, Feed, ParsedFeed, ParsedItem } from '../types';
 
-function withMedia(content: string | undefined, media: string | undefined): string | undefined {
-    if (media && firstImageUrl(content) !== media) return `<img src="${media}" alt="">` + (content ?? '');
+function withMedia(
+    content: string | undefined,
+    media: string | undefined,
+    link: string | undefined,
+): string | undefined {
+    if (media && firstImageUrl(content, link) !== media) return `<img src="${media}" alt="">` + (content ?? '');
     return content;
 }
 
 function buildArticle(feedId: string, item: ParsedItem, popularity: number, engagement: number): Article {
     const normLink = item.link ? normalizeLink(item.link) : undefined;
-    const content = withMedia(item.content, item.media);
+    const content = withMedia(item.content, item.media, item.link);
     return assembleArticle({ feedId, item, popularity, engagement, normLink, content });
 }
 
@@ -288,6 +293,7 @@ export async function syncFeed(feedId: string): Promise<SyncResult> {
             ...feed,
             title: feed.title === feed.url ? parsed.title : feed.title,
             siteUrl: parsed.siteUrl || feed.siteUrl,
+            icon: parsed.icon ?? feed.icon,
             lastFetchedAt: Date.now(),
             lastError: undefined,
         };
@@ -317,6 +323,7 @@ export async function addFeedFromUrl(url: string): Promise<Feed> {
         folderIds: [],
         unread: 0,
         addedAt: Date.now(),
+        icon: parsed.icon,
         lastFetchedAt: Date.now(),
     };
 

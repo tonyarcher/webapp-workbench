@@ -9,7 +9,13 @@ internal fun parseAtom(doc: Document, fallbackPublished: Long): ParsedFeed {
     val feedEl = doc.documentElement
     val title = feedEl.childText("title").ifEmpty { "Untitled feed" }
     val items = feedEl.descendants("entry").map { atomEntry(it, fallbackPublished, title) }
-    return ParsedFeed(title, atomSiteUrl(feedEl), items)
+    return ParsedFeed(title, atomSiteUrl(feedEl), items, atomIcon(feedEl))
+}
+
+private fun atomIcon(feedEl: Element): String? {
+    val logo = feedEl.childText("logo").ifEmpty { feedEl.childText("icon") }
+    if (logo.isNotEmpty()) return safeHttpUrl(logo)
+    return null
 }
 
 private fun atomSiteUrl(feedEl: Element): String? {
@@ -34,7 +40,7 @@ private fun atomEntry(entry: Element, fallbackPublished: Long, feedTitle: String
         author = entry.childText("name").ifEmpty { null },
         summary = stripHtml(summary).take(SUMMARY_CHARS).ifEmpty { null },
         content = content.ifEmpty { summary }.ifEmpty { null },
-        media = parseAtomMedia(entry) ?: firstImageUrl(content.ifEmpty { summary }.ifEmpty { null }),
+        media = parseAtomMedia(entry) ?: firstImageUrl(content.ifEmpty { summary }.ifEmpty { null }, link),
         comments = parseCommentCount(entry),
     )
 }

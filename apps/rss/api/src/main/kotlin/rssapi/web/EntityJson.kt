@@ -19,6 +19,7 @@ fun FeedEntity.toJson(folderIds: List<String>, unread: Int, lastFetchedAt: Long?
         unread = unread,
         addedAt = addedAt.toEpochMilli(),
         siteUrl = siteUrl,
+        icon = icon,
         lastFetchedAt = lastFetchedAt,
         lastError = lastError,
     )

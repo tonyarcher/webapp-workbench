@@ -1,6 +1,6 @@
 // Mutation smoke: mark-before cutoff posting, open/star revert-on-failure,
 // and card thumbnail derivation from content.
-import { firstImageUrl } from '../src/services/parser';
+import { firstImageUrl } from '../src/services/image';
 import type { Article } from '../src/types';
 import { assert } from './smoke-assert';
 

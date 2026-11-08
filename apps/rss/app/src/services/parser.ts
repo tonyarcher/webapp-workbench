@@ -5,15 +5,9 @@ import type { OpmlFolder, OpmlNode, OpmlSource, ParsedFeed } from '../types';
  * javascript:, data:, vbscript:, file: and other active/embedded schemes in
  * feed-supplied hrefs and image sources.
  */
-export function safeHttpUrl(url: string | undefined | null): string | undefined {
-    if (!url) return undefined;
-    try {
-        const u = new URL(url.trim());
-        return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : undefined;
-    } catch {
-        return undefined;
-    }
-}
+import { safeHttpUrl } from './url';
+export { safeHttpUrl } from './url';
+import { firstImageUrl } from './image';
 
 function el(root: Document, name: string): Element | null {
     return root.getElementsByTagName(name)[0] ?? null;
@@ -46,10 +40,13 @@ function isImageType(type: string | null): boolean {
 }
 
 function enclosureMedia(item: Element): string | undefined {
-    const enc = item.getElementsByTagName('enclosure')[0];
-    if (!enc) return undefined;
-    const url = enc.getAttribute('url');
-    if (url && isImageType(enc.getAttribute('type'))) return safeHttpUrl(url);
+    for (const enc of Array.from(item.getElementsByTagName('enclosure'))) {
+        const url = enc.getAttribute('url');
+        if (url && isImageType(enc.getAttribute('type'))) {
+            const safe = safeHttpUrl(url);
+            if (safe) return safe;
+        }
+    }
     return undefined;
 }
 
@@ -60,22 +57,57 @@ function mediaContentUrl(node: Element): string | undefined {
     return undefined;
 }
 
-function thumbnailMedia(item: Element): string | undefined {
-    for (const node of Array.from(item.getElementsByTagNameNS('*', 'thumbnail'))) {
-        const url = node.getAttribute('url');
-        if (url) return safeHttpUrl(url);
-    }
-    return undefined;
-}
-
-function parseMedia(item: Element): string | undefined {
+function parseMedia(item: Element, link?: string): string | undefined {
     const enc = enclosureMedia(item);
     if (enc) return enc;
     for (const node of Array.from(item.getElementsByTagNameNS('*', 'content'))) {
         const m = mediaContentUrl(node);
         if (m) return m;
     }
-    return thumbnailMedia(item);
+    for (const node of Array.from(item.getElementsByTagNameNS('*', 'thumbnail'))) {
+        const url = node.getAttribute('url');
+        if (url) {
+            const safe = safeHttpUrl(url);
+            if (safe) return safe;
+        }
+    }
+    // iTunes / item-level image
+    for (const node of Array.from(item.getElementsByTagNameNS('*', 'image'))) {
+        const href = node.getAttribute('href');
+        if (href) {
+            const safe = safeHttpUrl(href);
+            if (safe) return safe;
+        }
+        const url = node.getAttribute('url');
+        if (url) {
+            const safe = safeHttpUrl(url);
+            if (safe) return safe;
+        }
+    }
+    for (const node of Array.from(item.getElementsByTagName('image'))) {
+        const url = node.getElementsByTagName('url')[0]?.textContent?.trim();
+        if (url) {
+            const safe = safeHttpUrl(url);
+            if (safe) return safe;
+        }
+    }
+    return linkImage(link);
+}
+
+function linkImage(url: string | undefined): string | undefined {
+    if (!url) return undefined;
+    const safe = safeHttpUrl(url);
+    if (!safe) return undefined;
+    const yt = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/i.exec(url);
+    if (yt) return `https://i.ytimg.com/vi/${yt[1]}/hqdefault.jpg`;
+    try {
+        const u = new URL(url);
+        const path = u.pathname.toLowerCase();
+        if (/\.(jpe?g|png|webp|gif|avif)$/.test(path)) return safe;
+    } catch {
+        // ignore
+    }
+    return undefined;
 }
 
 function isEnclosureLink(link: Element): string | undefined {
@@ -91,7 +123,24 @@ function parseAtomMedia(entry: Element): string | undefined {
         const m = isEnclosureLink(link);
         if (m) return m;
     }
-    return undefined;
+    // iTunes-style image
+    for (const node of Array.from(entry.getElementsByTagNameNS('*', 'image'))) {
+        const href = node.getAttribute('href');
+        if (href) {
+            const safe = safeHttpUrl(href);
+            if (safe) return safe;
+        }
+    }
+    // <image><url>
+    for (const node of Array.from(entry.getElementsByTagName('image'))) {
+        const url = node.getElementsByTagName('url')[0]?.textContent?.trim();
+        if (url) {
+            const safe = safeHttpUrl(url);
+            if (safe) return safe;
+        }
+    }
+    const link = atomLink(entry);
+    return linkImage(link);
 }
 
 const FEED_ROOTS = new Set(['rss', 'feed', 'rdf']);
@@ -150,7 +199,7 @@ function rssItem(item: Element, fallbackPublished: number, feedTitle: string) {
         author: rssAuthor(item),
         summary: stripHtml(description).slice(0, 500) || undefined,
         content,
-        media: parseMedia(item),
+        media: parseMedia(item, link) ?? firstImageUrl(content, link),
         comments: parseCommentCount(item),
         published,
     };
@@ -160,8 +209,20 @@ function parseRss(doc: Document, fallbackPublished: number): ParsedFeed {
     const channel = el(doc, 'channel') ?? doc.documentElement;
     const title = childText(channel, 'title') || 'Untitled feed';
     const siteUrl = childText(channel, 'link') || undefined;
+    let icon: string | undefined;
+    const channelImage = channel.getElementsByTagName('image')[0];
+    if (channelImage) {
+        const url =
+            channelImage.getElementsByTagName('url')[0]?.textContent?.trim() || channelImage.getAttribute('href');
+        if (url) icon = safeHttpUrl(url);
+    }
+    // iTunes channel image
+    if (!icon) {
+        const itunesImg = Array.from(channel.getElementsByTagNameNS('*', 'image')).find((n) => n.getAttribute('href'));
+        if (itunesImg) icon = safeHttpUrl(itunesImg.getAttribute('href'));
+    }
     const items = Array.from(doc.getElementsByTagName('item')).map((it) => rssItem(it, fallbackPublished, title));
-    return { title, siteUrl, items };
+    return { title, siteUrl, items, icon };
 }
 
 function atomSiteUrl(feedEl: Element): string | undefined {
@@ -200,7 +261,7 @@ function atomEntry(entry: Element, fallbackPublished: number, feedTitle: string)
         author: childText(entry, 'name') || undefined,
         summary: stripHtml(summary).slice(0, 500) || undefined,
         content: content || summary || undefined,
-        media: parseAtomMedia(entry),
+        media: parseAtomMedia(entry) ?? firstImageUrl((content || summary) ?? undefined, link),
         comments: parseCommentCount(entry),
         published,
     };
@@ -210,8 +271,11 @@ function parseAtom(doc: Document, fallbackPublished: number): ParsedFeed {
     const feedEl = doc.documentElement;
     const title = childText(feedEl, 'title') || 'Untitled feed';
     const siteUrl = atomSiteUrl(feedEl);
+    let icon: string | undefined;
+    const logo = childText(feedEl, 'logo') || childText(feedEl, 'icon');
+    if (logo) icon = safeHttpUrl(logo);
     const items = Array.from(doc.getElementsByTagName('entry')).map((e) => atomEntry(e, fallbackPublished, title));
-    return { title, siteUrl, items };
+    return { title, siteUrl, items, icon };
 }
 
 export function stripHtml(html: string | undefined): string {
@@ -225,32 +289,6 @@ export function stripHtml(html: string | undefined): string {
         text = html.replace(/<[^>]*>/g, ' ');
     }
     return text.replace(/\s+/g, ' ').trim();
-}
-
-/** First image URL inside an HTML string, if any (http(s) only). */
-export function firstImageUrl(html: string | undefined): string | undefined {
-    if (!html) return undefined;
-    // Lazy-loading sites often defer the real URL to data-* attributes.
-    const lazy = /<img[^>]+(?:data-src|data-lazy-src|data-original)=["']([^"']+)["']/i.exec(html);
-    if (lazy) return safeHttpUrl(lazy[1]);
-    const src = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
-    if (src) return safeHttpUrl(src[1]);
-    const srcset = /<img[^>]+srcset=["']([^"']+)["']/i.exec(html);
-    if (srcset) {
-        const candidate = srcset[1]?.split(',')[0]?.trim();
-        const first = candidate?.split(' ')[0];
-        if (first) return safeHttpUrl(first);
-    }
-    return undefined;
-}
-
-/** Thumbnail for an article card, derived at render time from content. */
-export function articleImage(
-    article: { content?: string | undefined } & { image?: string | undefined },
-): string | undefined {
-    const fromContent = firstImageUrl(article.content);
-    if (fromContent) return fromContent;
-    return safeHttpUrl((article as { image?: string }).image);
 }
 
 const SAFE_TAGS = new Set([

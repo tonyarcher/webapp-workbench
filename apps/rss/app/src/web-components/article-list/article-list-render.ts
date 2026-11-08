@@ -1,7 +1,8 @@
 import { html } from 'lit';
 import { ref, type Ref } from 'lit/directives/ref.js';
 import type { Virtualizer } from '@tanstack/virtual-core';
-import { articleImage, safeHttpUrl } from '../../services/parser';
+import { safeHttpUrl } from '../../services/parser';
+import { articleImage, cardPlaceholderStyle } from '../../services/image';
 import { topWords } from '../../services/interesting-words';
 import { interestingWordMapOf } from './article-list-interesting';
 import { domainOf, formatDate } from '../../util';
@@ -36,6 +37,7 @@ export interface ArticleListRenderHost {
     viewTitle(): string;
     scopeLabel(): string;
     feedTitle(feedId: string): string | undefined;
+    feedIcon(feedId: string): string | undefined;
     shadowEnabled(): boolean;
     interestingActive(): boolean;
     updateCols(): void;
@@ -126,16 +128,17 @@ export function cardRowTemplate(
     article: Article,
     showFeed: boolean,
     feedTitle: string | undefined,
+    feedIcon: string | undefined,
     selected: boolean,
     onStar: (e: Event, article: Article) => void,
     onOpen: (article: Article) => void,
     onKey: (e: KeyboardEvent, article: Article) => void,
 ) {
     const link = safeHttpUrl(article.link);
-    const image = articleImage(article);
+    const image = articleImage(article, feedIcon);
     return html`
       <div class="grid-card ${article.read ? 'read' : ''} ${selected ? 'selected' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}" @click=${() => onOpen(article)} @keydown=${(e: KeyboardEvent) => onKey(e, article)}>
-        ${image ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>` : html`<div class="grid-card-img grid-card-img-empty"></div>`}
+        ${image ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>` : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`}
         <div class="grid-card-body">
           ${cardTitleRow(article, link, onStar)}
           ${article.summary ? html`<div class="grid-card-summary">${article.summary}</div>` : ''}
@@ -289,6 +292,7 @@ function renderCardRow(host: ArticleListRenderHost, article: Article, showFeed: 
         article,
         showFeed,
         host.feedTitle(article.feedId),
+        host.feedIcon(article.feedId),
         index === host.cursor,
         (e, a) => {
             void host.onStar(e, a);

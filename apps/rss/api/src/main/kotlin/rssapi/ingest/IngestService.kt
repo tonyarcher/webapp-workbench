@@ -62,6 +62,7 @@ class IngestService(
     fun ingestXml(feed: FeedEntity, xml: String) {
         val parsed = parseFeedXml(xml, System.currentTimeMillis())
         sync.maybeRename(feed, parsed.title)
+        sync.maybeUpdateMeta(feed, parsed.siteUrl, parsed.icon)
         val links = parsed.items.mapNotNull { saveItem(feed, it) }
         if (links.isNotEmpty()) maintenance.updatePopularity(feed.id!!, links.toTypedArray())
         maintenance.updateLonelyHot(feed.id!!)
@@ -91,7 +92,7 @@ class IngestService(
         val raw = item.content ?: item.summary.orEmpty()
         var html = sanitizeHtml(raw)
         if (html.length > MAX_CONTENT_BYTES) html = html.take(MAX_CONTENT_BYTES)
-        if (item.media != null && firstImageUrl(html) != item.media) {
+        if (item.media != null && firstImageUrl(html, item.link) != item.media) {
             html = sanitizeHtml("""<img src="${item.media}" alt="">""") + html
         }
         return html

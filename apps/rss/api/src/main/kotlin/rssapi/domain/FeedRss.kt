@@ -10,7 +10,18 @@ internal fun parseRss(doc: Document, fallbackPublished: Long): ParsedFeed {
     val title = channel.childText("title").ifEmpty { "Untitled feed" }
     val siteUrl = channel.childText("link").ifEmpty { null }
     val items = doc.documentElement.descendants("item").map { rssItem(it, fallbackPublished, title) }
-    return ParsedFeed(title, siteUrl, items)
+    return ParsedFeed(title, siteUrl, items, channelIcon(channel))
+}
+
+private fun channelIcon(channel: Element): String? {
+    val imgUrl = channel.descendants("image").firstOrNull()?.let { img ->
+        val url = img.childText("url").ifEmpty { img.getAttribute("href") }
+        if (url.isNotEmpty()) safeHttpUrl(url) else null
+    }
+    if (imgUrl != null) return imgUrl
+    val itunes = channel.descendants("image").firstOrNull { it.getAttribute("href").isNotEmpty() }?.getAttribute("href")
+    if (!itunes.isNullOrBlank()) return safeHttpUrl(itunes)
+    return null
 }
 
 private fun rssItem(item: Element, fallbackPublished: Long, feedTitle: String): ParsedItem {
@@ -19,16 +30,17 @@ private fun rssItem(item: Element, fallbackPublished: Long, feedTitle: String): 
     val description = item.childText("description")
     val encoded = item.firstDesc("encoded")?.textContent?.trim().orEmpty()
     val content = encoded.ifEmpty { description }.ifEmpty { null }
+    val link = safeHttpUrl(item.childText("link").ifEmpty { null })
     val guid = item.childText("guid").ifEmpty { item.childText("link") }.ifEmpty { "$published-$feedTitle" }
     return ParsedItem(
         guid = guid,
         title = item.childText("title").ifEmpty { "(untitled)" },
         published = published,
-        link = safeHttpUrl(item.childText("link").ifEmpty { null }),
+        link = link,
         author = rssAuthor(item),
         summary = stripHtml(description).take(SUMMARY_CHARS).ifEmpty { null },
         content = content,
-        media = parseMedia(item) ?: firstImageUrl(content),
+        media = parseMedia(item, link) ?: firstImageUrl(content, link),
         comments = parseCommentCount(item),
     )
 }

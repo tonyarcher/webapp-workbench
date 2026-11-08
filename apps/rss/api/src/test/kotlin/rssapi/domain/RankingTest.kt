@@ -2,6 +2,7 @@ package rssapi.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RankingTest {
@@ -54,10 +55,34 @@ class RankingTest {
         )
         assertEquals("https://example.com/s.png", firstImageUrl("<img src=\"https://example.com/s.png\">"))
         assertEquals(
-            "https://example.com/a.png",
+            "https://example.com/b.png",
             firstImageUrl("<img srcset=\"https://example.com/a.png 1x, https://example.com/b.png 2x\">"),
         )
         assertEquals(null, firstImageUrl("<img srcset=\"   \">"))
         assertEquals(null, firstImageUrl("<img src=\"javascript:alert(1)\">"))
+        assertEquals("https://example.com/x.png", firstImageUrl("<img src=\"//example.com/x.png\">"))
+    }
+
+    @Test
+    fun firstImagesExtended() {
+        assertEquals("https://base.example/x.png", firstImageUrl("<img src=\"/x.png\">", "https://base.example/p"))
+        assertEquals("https://example.com/p.jpg", firstImageUrl("<video poster=\"https://example.com/p.jpg\"></video>"))
+        assertEquals(
+            "https://example.com/s.png",
+            firstImageUrl("<picture><source srcset=\"https://example.com/s.png 1x\"></picture>"),
+        )
+        assertEquals("https://example.com/lz.png", firstImageUrl("<img data-url=\"https://example.com/lz.png\">"))
+        assertNull(firstImageUrl("<img src=\"/x.png\">"))
+        assertEquals(
+            "https://example.com/large.png",
+            firstImageUrl("<img srcset=\"https://example.com/small.png 480w, https://example.com/large.png 1200w\">"),
+        )
+        assertEquals(
+            "https://example.com/big.png",
+            firstImageUrl(
+                "<img data-srcset=\"https://example.com/small.png 480w, https://example.com/big.png 1200w\">",
+            ),
+        )
+        assertNull(firstImageUrl("<img src=\"/x.png\">", null))
     }
 }

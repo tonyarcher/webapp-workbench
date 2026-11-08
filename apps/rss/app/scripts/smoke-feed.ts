@@ -1,13 +1,5 @@
 // Feed pipeline smoke: RSS/Atom parsing, sanitizer, URL schemes, OPML, ranking, interleave.
-import {
-    firstImageUrl,
-    isFolder,
-    parseFeedXml,
-    parseOpml,
-    safeHttpUrl,
-    sanitizeHtml,
-    stripHtml,
-} from '../src/services/parser';
+import { isFolder, parseFeedXml, parseOpml, safeHttpUrl, sanitizeHtml, stripHtml } from '../src/services/parser';
 import { interleaveArticles } from '../src/util';
 import type { Article } from '../src/types';
 import {
@@ -18,6 +10,7 @@ import {
     popularityScore,
     velocityBonus,
 } from '../src/services/ranking';
+import { firstImageUrl } from '../src/services/image';
 import { assert } from './smoke-assert';
 
 const rss = `<?xml version="1.0"?>
@@ -210,7 +203,7 @@ assert(
 );
 assert(
     firstImageUrl('<img srcset="https://img.example/small.jpg 480w, https://img.example/large.jpg 1200w">') ===
-        'https://img.example/small.jpg',
+        'https://img.example/large.jpg',
     'firstImageUrl reads srcset',
 );
 assert(firstImageUrl('<p>no image</p>') === undefined, 'firstImageUrl returns undefined without img');

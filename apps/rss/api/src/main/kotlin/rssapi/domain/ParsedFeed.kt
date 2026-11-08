@@ -12,7 +12,12 @@ data class ParsedItem(
     val comments: Int? = null,
 )
 
-data class ParsedFeed(val title: String, val siteUrl: String? = null, val items: List<ParsedItem>)
+data class ParsedFeed(
+    val title: String,
+    val siteUrl: String? = null,
+    val items: List<ParsedItem>,
+    val icon: String? = null,
+)
 
 sealed class OpmlNode {
     abstract val title: String
