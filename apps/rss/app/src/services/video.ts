@@ -1,10 +1,14 @@
 import { safeHttpUrl } from './url';
 
-export type VideoProvider = 'youtube' | 'vimeo' | 'direct';
+export type VideoProvider = 'youtube' | 'vimeo' | 'dailymotion' | 'tiktok' | 'twitch' | 'rumble' | 'direct';
 
 export interface ArticleVideo {
     provider: VideoProvider;
-    /** Canonical embed/player URL (iframe src for youtube/vimeo, file URL for direct). */
+    /** Player id or slug (video id, clip slug). Absent for direct files. */
+    id?: string | undefined;
+    /** True when a Twitch id is a clip slug rather than a video id. */
+    clip?: boolean | undefined;
+    /** Canonical embed/player URL (iframe src for embeds, file URL for direct). */
     embedUrl: string;
     /** Poster candidates, sharpest first. */
     posters: string[];
@@ -40,6 +44,7 @@ export function youtubeThumbs(id: string): string[] {
         `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`,
         `https://i.ytimg.com/vi/${id}/sddefault.jpg`,
         `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+        `https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
     ];
 }
 
@@ -49,6 +54,66 @@ export function youtubeEmbedUrl(id: string): string {
 
 export function vimeoEmbedUrl(id: string): string {
     return `https://player.vimeo.com/video/${id}?autoplay=1`;
+}
+
+export function dailymotionEmbedUrl(id: string): string {
+    return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`;
+}
+
+export function dailymotionThumb(id: string): string {
+    return `https://www.dailymotion.com/thumbnail/video/${id}`;
+}
+
+export function tiktokEmbedUrl(id: string): string {
+    return `https://www.tiktok.com/embed/v2/${id}`;
+}
+
+export function rumbleEmbedUrl(id: string): string {
+    return `https://rumble.com/embed/${id}/`;
+}
+
+/**
+ * Twitch embeds require the serving host as `parent`, so the URL is built at
+ * play time rather than stored. Every other provider keeps its static URL.
+ */
+export function resolveEmbedUrl(video: ArticleVideo, parent: string): string {
+    if (video.provider === 'twitch' && video.id) {
+        const key = video.clip ? 'clip' : 'video';
+        const value = video.clip ? video.id : `v${video.id}`;
+        return `https://player.twitch.tv/?${key}=${value}&autoplay=true&parent=${parent}`;
+    }
+    return video.embedUrl;
+}
+
+/** Dailymotion video id from dailymotion.com and dai.ly URLs. */
+export function parseDailymotionId(url: string | undefined): string | undefined {
+    if (!url) return undefined;
+    const m = /(?:dailymotion\.com\/video\/|dai\.ly\/)([A-Za-z0-9]+)/i.exec(url);
+    return m?.[1];
+}
+
+/** TikTok video id from watch URLs (short vm.tiktok.com links need a redirect). */
+export function parseTikTokId(url: string | undefined): string | undefined {
+    if (!url) return undefined;
+    const m = /tiktok\.com\/@[^/]+\/video\/(\d+)/i.exec(url);
+    return m?.[1];
+}
+
+/** Twitch video id or clip slug. */
+export function parseTwitch(url: string | undefined): { id: string; clip: boolean } | undefined {
+    if (!url) return undefined;
+    const video = /twitch\.tv\/videos\/(\d+)/i.exec(url);
+    if (video?.[1]) return { id: video[1], clip: false };
+    const clip = /(?:clips\.twitch\.tv\/|twitch\.tv\/\w+\/clip\/)([A-Za-z0-9_-]+)/i.exec(url);
+    if (clip?.[1]) return { id: clip[1], clip: true };
+    return undefined;
+}
+
+/** Rumble video id from watch URLs. */
+export function parseRumbleId(url: string | undefined): string | undefined {
+    if (!url) return undefined;
+    const m = /rumble\.com\/(v[a-z0-9]+)(?:-[^/?#]*)?(?:\.html)?/i.exec(url);
+    return m?.[1];
 }
 
 /**
@@ -65,6 +130,7 @@ export function parseVideo(link: string | undefined): ArticleVideo | undefined {
     if (yt) {
         return {
             provider: 'youtube',
+            id: yt,
             embedUrl: youtubeEmbedUrl(yt),
             posters: youtubeThumbs(yt),
             label: 'YouTube video',
@@ -74,9 +140,51 @@ export function parseVideo(link: string | undefined): ArticleVideo | undefined {
     if (vimeo) {
         return {
             provider: 'vimeo',
+            id: vimeo,
             embedUrl: vimeoEmbedUrl(vimeo),
             posters: [],
             label: 'Vimeo video',
+        };
+    }
+    const dm = parseDailymotionId(safe);
+    if (dm) {
+        return {
+            provider: 'dailymotion',
+            id: dm,
+            embedUrl: dailymotionEmbedUrl(dm),
+            posters: [dailymotionThumb(dm)],
+            label: 'Dailymotion video',
+        };
+    }
+    const tiktok = parseTikTokId(safe);
+    if (tiktok) {
+        return {
+            provider: 'tiktok',
+            id: tiktok,
+            embedUrl: tiktokEmbedUrl(tiktok),
+            posters: [],
+            label: 'TikTok video',
+        };
+    }
+    const twitch = parseTwitch(safe);
+    if (twitch) {
+        return {
+            provider: 'twitch',
+            id: twitch.id,
+            clip: twitch.clip,
+            embedUrl: '',
+            posters: [],
+            label: 'Twitch video',
+        };
+    }
+    const rumble = parseRumbleId(safe);
+    if (rumble) {
+        return {
+            provider: 'rumble',
+            id: rumble,
+            embedUrl: rumbleEmbedUrl(rumble),
+            posters: [],
+            label: 'Rumble video',
         };
     }
     if (isDirectVideoUrl(safe)) {

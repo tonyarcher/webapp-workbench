@@ -2,10 +2,12 @@ import { html, LitElement, unsafeCSS } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sanitizeHtml, safeHttpUrl, stripHtml } from '../../services/parser';
+import { articleVideo } from '../../services/video';
 import { SUMMARY_LENGTHS, loadSummaryLength, saveSummaryLength, summarizeBest, type SummaryLength } from '../../ai';
 import { toggleStar } from '../../mutations';
 import type { Article } from '../../types';
 import { domainOf, formatDate } from '../../util';
+import '../video-header/video-header';
 import styles from './article-view.css?inline';
 
 const summaryCache = new Map<string, string>();
@@ -53,7 +55,8 @@ export class ArticleView extends LitElement {
         if (!a) return html``;
         const body = a.content ? sanitizeHtml(a.content) : '';
         const link = safeHttpUrl(a.link);
-        return html`${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderAiCard()}${this.renderBody(body, a)}</div>`;
+        const video = articleVideo(a);
+        return html`${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${video ? html`<video-header class="expanded-video" .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderAiCard()}${this.renderBody(body, a)}</div>`;
     }
 
     private renderToolbar(a: Article, link: string | undefined) {

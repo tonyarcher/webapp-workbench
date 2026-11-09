@@ -210,8 +210,18 @@ assert(firstImageUrl('<p>no image</p>') === undefined, 'firstImageUrl returns un
 assert(firstImageUrl('<img src="data:image/gif;base64,xxx">') === undefined, 'firstImageUrl rejects data: urls');
 
 // ---- video headers (click-to-play facade over sharp posters) ----
-const { parseYouTubeId, parseVimeoId, parseVideo, youtubeThumbs, youtubeEmbedUrl } =
-    await import('../src/services/video.js');
+const {
+    parseYouTubeId,
+    parseVimeoId,
+    parseDailymotionId,
+    parseTikTokId,
+    parseTwitch,
+    parseRumbleId,
+    parseVideo,
+    youtubeThumbs,
+    youtubeEmbedUrl,
+    resolveEmbedUrl,
+} = await import('../src/services/video.js');
 assert(
     parseYouTubeId('https://www.youtube.com/watch?v=dQw4w9WgXcQ') === 'dQw4w9WgXcQ',
     'parseYouTubeId reads watch urls',
@@ -232,11 +242,38 @@ assert(
     'youtube posters start at maxres',
 );
 assert(
+    youtubeThumbs('dQw4w9WgXcQ')[3] === 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+    'youtube posters end at the guaranteed mq fallback',
+);
+assert(
     youtubeEmbedUrl('dQw4w9WgXcQ').startsWith('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'),
     'youtube embeds use nocookie',
 );
 assert(parseVideo('https://www.youtube.com/watch?v=dQw4w9WgXcQ')?.provider === 'youtube', 'parseVideo finds youtube');
 assert(parseVideo('https://vimeo.com/123456789')?.provider === 'vimeo', 'parseVideo finds vimeo');
+assert(
+    parseDailymotionId('https://www.dailymotion.com/video/x8abc12') === 'x8abc12',
+    'parseDailymotionId reads watch urls',
+);
+assert(parseDailymotionId('https://dai.ly/x8abc12') === 'x8abc12', 'parseDailymotionId reads short urls');
+assert(
+    parseTikTokId('https://www.tiktok.com/@user/video/1234567890123456789') === '1234567890123456789',
+    'parseTikTokId reads watch urls',
+);
+assert(parseTwitch('https://www.twitch.tv/videos/123456789')?.id === '123456789', 'parseTwitch reads video urls');
+assert(parseTwitch('https://clips.twitch.tv/SlugHere-abc123')?.clip === true, 'parseTwitch reads clip urls');
+assert(parseRumbleId('https://rumble.com/v6abc12-title.html') === 'v6abc12', 'parseRumbleId reads watch urls');
+assert(
+    parseVideo('https://www.dailymotion.com/video/x8abc12')?.provider === 'dailymotion',
+    'parseVideo finds dailymotion',
+);
+assert(parseVideo('https://rumble.com/v6abc12-title.html')?.provider === 'rumble', 'parseVideo finds rumble');
+assert(
+    resolveEmbedUrl(parseVideo('https://www.twitch.tv/videos/123456789')!, 'example.com').includes(
+        'parent=example.com',
+    ),
+    'twitch embeds carry the serving parent',
+);
 assert(parseVideo('https://example.com/clip.mp4')?.provider === 'direct', 'parseVideo finds direct video files');
 assert(parseVideo('https://example.com/article') === undefined, 'parseVideo rejects plain links');
 

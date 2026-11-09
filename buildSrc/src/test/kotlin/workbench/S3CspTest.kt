@@ -89,6 +89,10 @@ class S3CspTest {
         val header = requireNotNull(cspHeader(app))
         assertTrue("frame-src https://www.youtube-nocookie.com" in header, "youtube facade: $header")
         assertTrue("https://player.vimeo.com" in header, "vimeo facade: $header")
+        assertTrue("https://www.dailymotion.com" in header, "dailymotion facade: $header")
+        assertTrue("https://player.twitch.tv" in header, "twitch facade: $header")
+        assertTrue("https://www.tiktok.com" in header, "tiktok facade: $header")
+        assertTrue("https://rumble.com" in header, "rumble facade: $header")
         assertTrue("media-src https:" in header, "direct mp4 headers: $header")
     }
 

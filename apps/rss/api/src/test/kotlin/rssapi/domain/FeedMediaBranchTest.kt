@@ -239,7 +239,7 @@ class FeedMediaBranchTest {
               <item><title>t</title><link>https://www.youtube.com/watch?v=dQw4w9WgXcQ</link><guid>g1</guid></item>
             </channel></rss>
         """.trimIndent()
-        assertEquals("https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg", parseFeedXml(xml, 0L).items[0].media)
+        assertEquals("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", parseFeedXml(xml, 0L).items[0].media)
     }
 
     @Test
@@ -250,7 +250,7 @@ class FeedMediaBranchTest {
               <item><title>t</title><link>https://www.youtube.com/shorts/dQw4w9WgXcQ</link><guid>g1</guid></item>
             </channel></rss>
         """.trimIndent()
-        assertEquals("https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg", parseFeedXml(xml, 0L).items[0].media)
+        assertEquals("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", parseFeedXml(xml, 0L).items[0].media)
     }
 
     @Test
@@ -315,6 +315,17 @@ class FeedMediaBranchTest {
             </channel></rss>
         """.trimIndent()
         assertNull(parseFeedXml(xml, 0L).items[0].media)
+    }
+
+    @Test
+    fun dailymotionLinkImage() {
+        val xml = """
+            <rss version="2.0"><channel>
+              <title>N</title><link>https://example.com/</link>
+              <item><title>t</title><link>https://www.dailymotion.com/video/x8abc12</link><guid>g1</guid></item>
+            </channel></rss>
+        """.trimIndent()
+        assertEquals("https://www.dailymotion.com/thumbnail/video/x8abc12", parseFeedXml(xml, 0L).items[0].media)
     }
 
     @Test

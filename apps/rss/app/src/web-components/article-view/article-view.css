@@ -101,6 +101,14 @@ h1 a:hover {
     text-decoration: none;
 }
 
+.expanded-video {
+    width: 100%;
+    --video-height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
 .ai-card {
     border: 1px solid var(--border);
     border-radius: 10px;

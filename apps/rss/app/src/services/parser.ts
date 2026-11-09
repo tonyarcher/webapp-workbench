@@ -99,7 +99,12 @@ function linkImage(url: string | undefined): string | undefined {
     const safe = safeHttpUrl(url);
     if (!safe) return undefined;
     const yt = /(?:youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i.exec(url);
-    if (yt) return `https://i.ytimg.com/vi/${yt[1]}/maxresdefault.jpg`;
+    // hqdefault, not maxres: this single URL cannot fall back, and maxres
+    // 404s (or a 120x90 placeholder) on non-HD uploads. Card sharpness lives
+    // in the video-header poster chain, which probes maxres first.
+    if (yt) return `https://i.ytimg.com/vi/${yt[1]}/hqdefault.jpg`;
+    const dm = /(?:dailymotion\.com\/video\/|dai\.ly\/)([A-Za-z0-9]+)/i.exec(url);
+    if (dm) return `https://www.dailymotion.com/thumbnail/video/${dm[1]}`;
     try {
         const u = new URL(url);
         const path = u.pathname.toLowerCase();
