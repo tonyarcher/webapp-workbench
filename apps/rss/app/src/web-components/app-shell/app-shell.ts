@@ -7,6 +7,14 @@ import { clearClientDb } from '../../db/db';
 import { currentUsername, hasSession, logout, startLogin } from '../../services/auth';
 import { clearToasts, dismissToast, onToast, type ToastNotice } from '../../services/toast';
 import type { Article, View } from '../../types';
+import {
+    MAX_ARTICLE_PANEL_WIDTH,
+    MIN_ARTICLE_PANEL_WIDTH,
+    clampArticlePanelWidth,
+    loadArticlePanelWidth,
+    nextArticlePanelWidth,
+    saveArticlePanelWidth,
+} from './article-panel-settings';
 import styles from './app-shell.css?inline';
 
 /**
@@ -46,6 +54,17 @@ export class AppShell extends LitElement {
     private readContext: { items: Article[]; index: number } | null = null;
     private unsubscribe?: () => void;
     private unsubscribeToasts: (() => void) | null = null;
+    private articleResizing = false;
+    private articleResizeHandleEl: HTMLElement | null = null;
+    private articleResizeStart: { x: number; width: number; pointerId: number } | null = null;
+    /**
+     * Current article panel width, the source of truth for aria-valuenow.
+     * Kept as a plain field like the sidebar width: a drag applies it on
+     * every pointermove, and re-rendering the whole shell that often would
+     * fight the pointer capture. The template reads it on render and
+     * applyArticlePanelWidth writes the attribute directly in between.
+     */
+    articleWidth = loadArticlePanelWidth();
 
     override connectedCallback() {
         super.connectedCallback();
@@ -69,6 +88,7 @@ export class AppShell extends LitElement {
         super.disconnectedCallback();
         this.unsubscribeToasts?.();
         this.unsubscribeToasts = null;
+        this.endArticleResize();
         for (const timer of this.toastTimers.values()) clearTimeout(timer);
         this.toastTimers.clear();
         window.removeEventListener('keydown', this.onKeyDown);
@@ -231,7 +251,22 @@ export class AppShell extends LitElement {
         // pointer-only: the backdrop is a click-outside affordance, not the way
         // out. article-view has a visible Back button and Escape closes it, so
         // a keyboard user is not trapped here.
-        return html`<div class="article-overlay"><div class="article-backdrop" @click=${this.closeArticle}></div><article-view .article=${this.article} @close=${this.closeArticle}></article-view></div>`;
+        return html`<div class="article-overlay"><div class="article-backdrop" @click=${this.closeArticle}></div><div class="article-panel" style="--article-width: ${this.articleWidth}px"><div
+            class="article-panel-handle"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize article panel"
+            aria-valuenow=${Math.round(this.articleWidth)}
+            aria-valuemin=${MIN_ARTICLE_PANEL_WIDTH}
+            aria-valuemax=${MAX_ARTICLE_PANEL_WIDTH}
+            tabindex="0"
+            title="Drag to resize"
+            @pointerdown=${this.onArticleResizeStart}
+            @pointermove=${this.onArticleResizeMove}
+            @pointerup=${this.onArticleResizeEnd}
+            @pointercancel=${this.onArticleResizeEnd}
+            @keydown=${this.onArticleResizeKey}
+        ><span class="article-panel-grip" aria-hidden="true"></span></div><article-view .article=${this.article} @close=${this.closeArticle}></article-view></div></div>`;
     }
 
     private renderSettings() {
@@ -316,10 +351,115 @@ export class AppShell extends LitElement {
         if (!this.article) return;
         this.article = null;
         this.readContext = null;
+        this.endArticleResize();
         const target = this.articleReturnFocus;
         this.articleReturnFocus = null;
         target?.focus();
     }
+
+    /**
+     * Release a panel resize torn down mid-drag. Escape and route changes
+     * remove the overlay (and the handle holding the pointer capture) while
+     * a drag is in flight, so without this the body keeps col-resize and
+     * unselectable text until the next successful drag-end or reload.
+     */
+    private endArticleResize() {
+        if (!this.articleResizing) return;
+        this.articleResizing = false;
+        const handle = this.articleResizeHandleEl;
+        const pointerId = this.articleResizeStart?.pointerId;
+        this.articleResizeStart = null;
+        this.articleResizeHandleEl = null;
+        if (handle && pointerId !== undefined) {
+            try {
+                if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+            } catch {
+                // handle already detached; nothing to release
+            }
+            handle.classList.remove('resizing');
+        }
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    }
+
+    /**
+     * The handle element, whether or not a drag is in progress. The active
+     * handle only exists between pointerdown and pointerup; a keyboard
+     * resize never sets it, so the shadow root fallback keeps aria-valuenow
+     * honest for exactly the users this control exists for.
+     */
+    private get articlePanelHandle(): HTMLElement | null {
+        return (
+            this.articleResizeHandleEl ?? this.renderRoot?.querySelector<HTMLElement>('.article-panel-handle') ?? null
+        );
+    }
+
+    /**
+     * The one place an article panel width is applied, so the pointer and
+     * keyboard paths cannot drift apart. Writes the CSS var on the panel
+     * (no re-render per pointermove) and the separator value a screen
+     * reader announces.
+     */
+    private applyArticlePanelWidth(raw: number) {
+        const width = clampArticlePanelWidth(raw);
+        this.articleWidth = width;
+        const panel = this.renderRoot?.querySelector<HTMLElement>('.article-panel');
+        panel?.style.setProperty('--article-width', `${width}px`);
+        this.articlePanelHandle?.setAttribute('aria-valuenow', String(width));
+        saveArticlePanelWidth(width);
+    }
+
+    private onArticleResizeStart = (e: PointerEvent) => {
+        if (e.button !== 0) return;
+        const handle = e.currentTarget as HTMLElement;
+        handle.setPointerCapture(e.pointerId);
+        this.articleResizeHandleEl = handle;
+        this.articleResizeStart = { x: e.clientX, width: this.articleWidth, pointerId: e.pointerId };
+        this.articleResizing = true;
+        handle.classList.add('resizing');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    };
+
+    private onArticleResizeMove = (e: PointerEvent) => {
+        if (!this.articleResizing || !this.articleResizeStart) return;
+        // The panel docks right: dragging left grows it.
+        this.applyArticlePanelWidth(this.articleResizeStart.width + (this.articleResizeStart.x - e.clientX));
+    };
+
+    private onArticleResizeEnd = (e: PointerEvent) => {
+        if (!this.articleResizing) return;
+        const handle = this.articleResizeHandleEl;
+        this.articleResizing = false;
+        this.articleResizeStart = null;
+        this.articleResizeHandleEl = null;
+        handle?.classList.remove('resizing');
+        if (handle) {
+            try {
+                if (handle.hasPointerCapture(e.pointerId)) handle.releasePointerCapture(e.pointerId);
+            } catch {
+                // handle already detached; nothing to release
+            }
+        }
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    };
+
+    /**
+     * Keyboard equivalent of the drag. Stepping and clamping live in
+     * nextArticlePanelWidth so they are testable without a DOM; this only
+     * decides whether the key is ours. Handled keys stop propagation: the
+     * shell's window keydown also listens for ArrowLeft (close) and would
+     * otherwise fire after the target listener and shut the overlay
+     * mid-resize.
+     */
+    private onArticleResizeKey = (e: KeyboardEvent) => {
+        const next = nextArticlePanelWidth(this.articleWidth, e.key, e.shiftKey);
+        if (next === null) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.applyArticlePanelWidth(next);
+    };
 }
 
 declare global {

@@ -197,13 +197,84 @@ main {
 
 /* ~65–75ch reading column lives inside article-view (760px). The panel
    is a reader stage: 1120px on desktop, and always leaves a dismiss
-   strip (52px phone → 240px desktop) so the folder list stays tappable. */
-.article-overlay article-view {
+   strip (52px phone → 240px desktop) so the folder list stays tappable.
+   The panel slides in on open; the floating grip straddles its left edge
+   Plasma-style (half inside, half outside) so the hit target never covers
+   content and never hides in the gutter. */
+.article-panel {
     position: relative;
-    width: min(1120px, calc(100% - clamp(52px, 14vw, 240px)));
     height: 100%;
     flex: none;
     min-width: 0;
+    width: min(var(--article-width, 880px), calc(100% - 52px), 1120px);
     border-left: 1px solid var(--border);
-    box-shadow: -12px 0 32px rgba(0, 0, 0, 0.18);
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+    background: var(--panel-bg);
+    box-shadow: -16px 0 48px rgba(0, 0, 0, 0.35);
+    animation: article-panel-in 180ms ease-out;
+}
+
+.article-panel article-view {
+    height: 100%;
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+}
+
+@keyframes article-panel-in {
+    from {
+        transform: translateX(32px);
+        opacity: 0;
+    }
+    to {
+        transform: none;
+        opacity: 1;
+    }
+}
+
+.article-panel-handle {
+    position: absolute;
+    left: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 72px;
+    border-radius: 15px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: col-resize;
+    touch-action: none;
+    z-index: 3;
+    padding: 0;
+}
+
+.article-panel-handle:hover,
+.article-panel-handle.resizing {
+    border-color: var(--accent);
+}
+
+.article-panel-handle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Grip dots: two columns of three, drawn as a radial gradient so no
+   extra markup is needed inside the pill. */
+.article-panel-grip {
+    width: 12px;
+    height: 28px;
+    background-image: radial-gradient(circle, var(--text-muted) 1.5px, transparent 1.6px);
+    background-size: 6px 8px;
+    background-repeat: repeat;
+    opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .article-panel {
+        animation: none;
+    }
 }

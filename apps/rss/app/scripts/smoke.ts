@@ -81,6 +81,7 @@ await import('./smoke-interesting.js');
 await import('./smoke-edition.js');
 await import('./smoke-router-guard.js');
 await import('./smoke-sidebar.js');
+await import('./smoke-article-panel.js');
 
 // Without the gcTime override above, smoke-fetch-races leaves a 300s gc timer
 // pending and this phase takes five minutes to finish. Assert the mechanism so
