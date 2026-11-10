@@ -360,7 +360,7 @@ export class BaseballGameShell extends LitElement {
     override render() {
         const game = this.game;
         if (!game) return nothing;
-        return html` <main class="local-shell">${this.renderSimTransport()} ${this.renderContainer(game)} ${this.renderEventLog(game)}</main> `;
+        return html` <main class="local-shell" tabindex="-1" data-screen-heading>${this.renderSimTransport()} ${this.renderContainer(game)} ${this.renderEventLog(game)}</main> `;
     }
 
     private renderSimTransport() {

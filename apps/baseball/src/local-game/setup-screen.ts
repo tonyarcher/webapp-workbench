@@ -167,7 +167,7 @@ export class BaseballSetupScreen extends LitElement {
         return html`
       <main class="local-setup">
         <div class="card">
-          <h1>⚾ Grand Slam Baseball — Local Game Setup</h1>
+          <h1 tabindex="-1" data-screen-heading>⚾ Grand Slam Baseball — Local Game Setup</h1>
           <p class="text-muted">
             Score a game yourself, or generate teams and watch a simulated match. Everything runs in your browser.
           </p>

@@ -40,11 +40,17 @@ export class BaseballApp extends LitElement {
             // State is assigned above; the route sync and the render both run
             // inside the transition so the old snapshot cannot already show
             // the new screen. The requestUpdate promise lets an async render
-            // settle inside the transition instead of racing it.
-            transitionScreen(() => {
-                this.syncRoute();
-                return this.requestUpdate();
-            });
+            // settle inside the transition instead of racing it. Focus follows
+            // the new screen: transitions morph layout but never move it.
+            transitionScreen(
+                () => {
+                    this.syncRoute();
+                    return this.requestUpdate();
+                },
+                () => {
+                    (this.querySelector('[data-screen-heading]') as HTMLElement | null)?.focus({ preventScroll: true });
+                },
+            );
         });
         this.unsubscribeHistory = this.history.subscribe(() => {
             this.requestUpdate();

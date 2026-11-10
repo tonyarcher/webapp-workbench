@@ -69,11 +69,64 @@ describe('transitionScreen', () => {
 
     it('swallows a rejected transition without throwing', async () => {
         globals['document'] = {
-            startViewTransition: () => ({ finished: Promise.reject(new Error('aborted')) }),
+            startViewTransition: () => ({
+                finished: Promise.resolve().then(() => {
+                    throw new Error('aborted');
+                }),
+            }),
         };
         stubMatchMedia(false);
         expect(() => transitionScreen(() => {})).not.toThrow();
         await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    it('routes focus after the update on the direct path', async () => {
+        globals['document'] = {};
+        stubMatchMedia(false);
+        const after = vi.fn();
+        transitionScreen(() => {}, after);
+        expect(after).not.toHaveBeenCalled();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(after).toHaveBeenCalledTimes(1);
+    });
+
+    it('routes focus after an async update settles', async () => {
+        globals['document'] = {};
+        stubMatchMedia(false);
+        let rendered = false;
+        const after = vi.fn(() => {
+            expect(rendered).toBe(true);
+        });
+        transitionScreen(() => Promise.resolve().then(() => void (rendered = true)), after);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(after).toHaveBeenCalledTimes(1);
+    });
+
+    it('routes focus when the transition resolves', async () => {
+        globals['document'] = {
+            startViewTransition: () => ({ finished: Promise.resolve() }),
+        };
+        stubMatchMedia(false);
+        const after = vi.fn();
+        transitionScreen(() => {}, after);
+        expect(after).not.toHaveBeenCalled();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(after).toHaveBeenCalledTimes(1);
+    });
+
+    it('still routes focus when the transition aborts', async () => {
+        globals['document'] = {
+            startViewTransition: () => ({
+                finished: Promise.resolve().then(() => {
+                    throw new Error('aborted');
+                }),
+            }),
+        };
+        stubMatchMedia(false);
+        const after = vi.fn();
+        transitionScreen(() => {}, after);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(after).toHaveBeenCalledTimes(1);
     });
 });
 

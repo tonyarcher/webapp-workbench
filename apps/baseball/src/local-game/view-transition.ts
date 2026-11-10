@@ -8,8 +8,9 @@
  *
  * The callback's return value passes through so async renders (Lit's
  * requestUpdate promise) settle inside the transition instead of racing it.
- * A rejected transition (interrupted by a second navigation) is swallowed:
- * the DOM is already correct, only the animation died.
+ * The after callback routes focus to the new screen once it is showing:
+ * view transitions morph layout but never move focus, so without it keyboard
+ * and screen-reader users are stranded where the old screen was.
  */
 type Update = () => unknown;
 
@@ -32,15 +33,30 @@ export function prefersReducedMotion(): boolean {
     );
 }
 
-export function transitionScreen(update: Update): void {
+export function transitionScreen(update: Update, after?: () => void): void {
     const start = starter();
     if (!start || prefersReducedMotion()) {
-        update();
+        // Lit renders async: route focus after the update settles, or after
+        // would find (and focus) the outgoing screen's heading. update() may
+        // also throw synchronously, in which case there is nothing to wait
+        // for and focus is best-effort on whatever is showing.
+        try {
+            void Promise.resolve(update()).then(() => after?.());
+        } catch {
+            after?.();
+        }
         return;
     }
     try {
-        start(update).finished.catch(() => {});
+        // then(after, after): focus routing runs whether the transition
+        // finished or was aborted — either way the DOM shows the new screen.
+        // The trailing catch swallows the derived rejection when there is no
+        // after callback (or it throws): the DOM is already correct.
+        start(update)
+            .finished.then(after, after)
+            .catch(() => {});
     } catch {
         update();
+        after?.();
     }
 }
