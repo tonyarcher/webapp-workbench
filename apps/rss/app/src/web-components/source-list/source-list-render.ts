@@ -90,8 +90,8 @@ export function feedRowTemplate(
     actions: unknown,
 ) {
     return html`
+      <!-- pointer-only: the row opens the feed on pointer; keyboard users open it with the name button. -->
       <div class="feed-row ${active ? 'active' : ''} ${feed.unread > 0 ? 'has-unread' : ''}" data-feed-id="${feed.id}" draggable="true" @dragstart=${(e: DragEvent) => onDragStart(e, feed)} @click=${() => onSelect(feed)}>
-        <!-- pointer-only: the row opens the feed on pointer; keyboard users open it with the name button. -->
         <button class="feed-open" @click=${(e: MouseEvent) => {
             e.stopPropagation();
             onSelect(feed);
@@ -129,8 +129,8 @@ function folderHeaderTemplate(
     shadow: boolean,
 ) {
     return html`
+      <!-- pointer-only: the row opens the folder on pointer; keyboard users open it with the name button. -->
       <div class="item ${active ? 'active' : ''}" data-folder-id="${folder.id}" draggable="true" @dragstart=${(e: DragEvent) => onDragStart(e, folder)} @click=${() => onSelect(folder)}>
-        <!-- pointer-only: the row opens the folder on pointer; keyboard users open it with the name button. -->
         ${folderToggleTemplate(isCollapsed, onToggle, folder.id)}
         <button class="item-open" @click=${(e: MouseEvent) => {
             e.stopPropagation();
@@ -195,8 +195,8 @@ function renderBriefNav(host: SourceListRenderHost) {
 function renderTodayNav(host: SourceListRenderHost) {
     const active = host.isActive({ kind: 'today' });
     return html`
+      <!-- pointer-only: the row opens Today on pointer; keyboard users open it with the name button. -->
       <div class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'today' })}>
-        <!-- pointer-only: the row opens Today on pointer; keyboard users open it with the name button. -->
         <button class="item-open" @click=${(e: MouseEvent) => {
             e.stopPropagation();
             host.select({ kind: 'today' });
