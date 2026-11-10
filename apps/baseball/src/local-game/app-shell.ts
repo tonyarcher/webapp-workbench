@@ -5,6 +5,7 @@ import { GameStore } from './game-store';
 import type { GameQueryResult } from './game-store';
 import type { LocalGameSetup } from './game-types';
 import { addBasePath, stripBasePath } from './base-path';
+import { transitionScreen } from './view-transition';
 import './setup-screen';
 import './game-shell';
 
@@ -27,9 +28,23 @@ export class BaseballApp extends LitElement {
     override connectedCallback() {
         super.connectedCallback();
         this.unsubscribeStore = this.store.subscribe((game) => {
+            const hadScreen = this.game !== undefined;
+            const hasScreen = game !== undefined;
             this.game = game;
             this.syncRoute();
-            this.requestUpdate();
+            if (hadScreen === hasScreen) {
+                this.requestUpdate();
+                return;
+            }
+            // Screen swap, not a data update: crossfade instead of cutting.
+            // State is assigned above; the route sync and the render both run
+            // inside the transition so the old snapshot cannot already show
+            // the new screen. The requestUpdate promise lets an async render
+            // settle inside the transition instead of racing it.
+            transitionScreen(() => {
+                this.syncRoute();
+                return this.requestUpdate();
+            });
         });
         this.unsubscribeHistory = this.history.subscribe(() => {
             this.requestUpdate();
