@@ -29,3 +29,96 @@ test('the initial screen has no automatic accessibility violations', async ({ pa
     await page.waitForLoadState('networkidle');
     expect(await audit(page)).toEqual([]);
 });
+
+/**
+ * Authenticated screens, behind the sign-in the initial audit never passes.
+ * Auth is seeded and every read is stubbed, following mark-read-busy: the
+ * only real code under audit is the list, the cards, and the article overlay.
+ * The initial screen stays untouched above; these cover what it cannot see.
+ */
+
+const FEED = { id: 'f1', title: 'Example', url: 'https://example.com/rss', folderIds: [], unread: 3, addedAt: 0 };
+
+function article(id: string, title: string, extra: Record<string, unknown> = {}) {
+    return {
+        id,
+        feedId: 'f1',
+        guid: id,
+        title,
+        published: 1_700_000_000_000,
+        fetchedAt: 1_700_000_000_000,
+        read: 0,
+        starred: false,
+        popularity: 1,
+        hot: 1,
+        summary: `${title} summary`,
+        content: `<p>${title} body</p>`,
+        ...extra,
+    };
+}
+
+const ARTICLES = [
+    article('a1', 'First article'),
+    article('a2', 'Second article'),
+    article('a3', 'Video article', { link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }),
+];
+
+async function seedAuth(page: Page) {
+    await page.addInitScript(() => {
+        const b64 = (obj: unknown) => btoa(JSON.stringify(obj));
+        const exp = Math.floor(Date.now() / 1000) + 3600;
+        const token = `${b64({ alg: 'RS256' })}.${b64({ exp })}.sig`;
+        localStorage.setItem('rss.auth.tokens', JSON.stringify({ access: token, refresh: 'r', exp }));
+    });
+}
+
+async function stubLibrary(page: Page, items: unknown[]) {
+    await page.route('**/api/library/folders', (route) => route.fulfill({ status: 200, body: '{"folders":[]}' }));
+    await page.route('**/api/library/feeds', (route) =>
+        route.fulfill({ status: 200, body: JSON.stringify({ feeds: [FEED] }) }),
+    );
+    await page.route('**/api/library/counts', (route) => route.fulfill({ status: 200, body: '{"counts":{}}' }));
+    await page.route('**/api/articles?**', (route) => route.fulfill({ status: 200, body: JSON.stringify({ items }) }));
+    await page.route('**/api/articles/state', (route) =>
+        route.fulfill({ status: 200, body: '{"ok":true,"updated":1}' }),
+    );
+    await page.route('**/api/affinity', (route) => route.fulfill({ status: 200, body: '{"ok":true}' }));
+    // Favicons and YouTube posters never load test fixtures: fail them fast
+    // so the audit reads the placeholder and facade states deterministically.
+    await page.route('**/favicon.ico', (route) => route.fulfill({ status: 404 }));
+    await page.route('https://i.ytimg.com/**', (route) => route.fulfill({ status: 404 }));
+}
+
+test('the article list has no automatic accessibility violations', async ({ page }) => {
+    await seedAuth(page);
+    await stubLibrary(page, [ARTICLES[0], ARTICLES[1]]);
+    await page.goto('/');
+    await expect(page.getByText('First article', { exact: true })).toBeVisible();
+    expect(await audit(page)).toEqual([]);
+});
+
+test('the cards view has no automatic accessibility violations', async ({ page }) => {
+    await seedAuth(page);
+    await page.addInitScript(() => {
+        localStorage.setItem(
+            'rss-reader:view-settings',
+            JSON.stringify({
+                all: { listView: 'cards', sort: 'newest', pageSize: 50, maxCardCols: 4, unreadOnly: false },
+            }),
+        );
+    });
+    await stubLibrary(page, ARTICLES);
+    await page.goto('/');
+    await expect(page.locator('.grid-card').first()).toBeVisible();
+    expect(await audit(page)).toEqual([]);
+});
+
+test('the open article has no automatic accessibility violations', async ({ page }) => {
+    await seedAuth(page);
+    await stubLibrary(page, [ARTICLES[0], ARTICLES[2]]);
+    await page.goto('/');
+    await expect(page.getByText('First article', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Video article', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
+    expect(await audit(page)).toEqual([]);
+});

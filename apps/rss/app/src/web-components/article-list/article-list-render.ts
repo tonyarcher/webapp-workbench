@@ -45,7 +45,6 @@ export interface ArticleListRenderHost {
     saveViewSettings(): void;
     openArticle(article: Article): Promise<void>;
     onStar(e: Event, article: Article): Promise<void>;
-    onRowKey(e: KeyboardEvent, article: Article): void;
     onMarkShownRead(): Promise<void>;
     onToggleAdvanced(e: Event): void;
     onRefresh(): Promise<void>;
@@ -62,6 +61,7 @@ export function detailRowTemplate(
     showFeed: boolean,
     feedTitle: string | undefined,
     onStar: (e: Event, article: Article) => void,
+    onOpen: (article: Article) => void,
 ) {
     const popular = article.popularity >= 4;
     const link = safeHttpUrl(article.link);
@@ -70,8 +70,8 @@ export function detailRowTemplate(
       <div class="detail-body">
         ${image ? html`<img class="detail-img" src=${image} alt="" loading="lazy" />` : ''}
         <div class="detail-text">
-          ${detailTitleRow(article, popular, link, onStar)}
-          ${detailMeta(article, showFeed, feedTitle)}
+          ${detailTitleRow(article, popular, onStar, onOpen)}
+          ${detailMeta(article, showFeed, feedTitle, link)}
           ${article.summary ? html`<div class="summary">${article.summary}</div>` : ''}
         </div>
       </div>
@@ -81,26 +81,36 @@ export function detailRowTemplate(
 function detailTitleRow(
     article: Article,
     popular: boolean,
-    link: string | undefined,
     onStar: (e: Event, article: Article) => void,
+    onOpen: (article: Article) => void,
 ) {
     return html`
       <div class="row-top">
         ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
         ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
-        ${link ? html`<a class="title title-link" href=${link} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${article.title}</a>` : html`<span class="title">${article.title}</span>`}
-        <button class="star" title="Star" @click=${(e: Event) => onStar(e, article)}>${article.starred ? '★' : '☆'}</button>
+        <button class="title title-open" @click=${(e: Event) => {
+            e.stopPropagation();
+            onOpen(article);
+        }}>${article.title}</button>
+        ${starButton(article, onStar)}
       </div>
     `;
 }
 
-function detailMeta(article: Article, showFeed: boolean, feedTitle: string | undefined) {
+/** Star toggle with its glyph hidden from the name computation: the visible
+ *  star is not the word "Star", so a bare glyph fails label-in-name. */
+function starButton(article: Article, onStar: (e: Event, article: Article) => void) {
+    return html`<button class="star" aria-label=${article.starred ? 'Unstar' : 'Star'} @click=${(e: Event) => onStar(e, article)}><span aria-hidden="true">${article.starred ? '★' : '☆'}</span></button>`;
+}
+
+function detailMeta(article: Article, showFeed: boolean, feedTitle: string | undefined, link: string | undefined) {
     return html`
       <div class="meta">
         ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
         <span>${domainOf(article.link)}</span>
         <span>${formatDate(article.published)}</span>
         ${article.author ? html`<span>by ${article.author}</span>` : ''}
+        ${link ? html`<a class="orig-link" href=${link} target="_blank" rel="noopener noreferrer">original ↗</a>` : ''}
       </div>
     `;
 }
@@ -110,17 +120,20 @@ export function headlineRowTemplate(
     showFeed: boolean,
     feedTitle: string | undefined,
     onStar: (e: Event, article: Article) => void,
+    onOpen: (article: Article) => void,
 ) {
     const popular = article.popularity >= 4;
-    const link = safeHttpUrl(article.link);
     return html`
       <div class="row-top">
         ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
         ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
         ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-        ${link ? html`<a class="title title-link" href=${link} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${article.title}</a>` : html`<span class="title">${article.title}</span>`}
+        <button class="title title-open" @click=${(e: Event) => {
+            e.stopPropagation();
+            onOpen(article);
+        }}>${article.title}</button>
         <span class="headline-date">${formatDate(article.published)}</span>
-        <button class="star" title="Star" @click=${(e: Event) => onStar(e, article)}>${article.starred ? '★' : '☆'}</button>
+        ${starButton(article, onStar)}
       </div>
     `;
 }
@@ -133,13 +146,13 @@ export function cardRowTemplate(
     selected: boolean,
     onStar: (e: Event, article: Article) => void,
     onOpen: (article: Article) => void,
-    onKey: (e: KeyboardEvent, article: Article) => void,
 ) {
     const link = safeHttpUrl(article.link);
     const video = articleVideo(article);
     const image = video ? undefined : articleImage(article, feedIcon);
     return html`
-      <div class="grid-card ${article.read ? 'read' : ''} ${selected ? 'selected' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}" @click=${() => onOpen(article)} @keydown=${(e: KeyboardEvent) => onKey(e, article)}>
+      <article class="grid-card ${article.read ? 'read' : ''} ${selected ? 'selected' : ''}" @click=${() => onOpen(article)}>
+        <!-- pointer-only: the card body opens the article on pointer; keyboard and screen-reader users open it with the title button below. -->
         ${
             video
                 ? html`<video-header class="grid-card-img" .video=${video} .videoTitle=${article.title}></video-header>`
@@ -148,30 +161,38 @@ export function cardRowTemplate(
                   : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`
         }
         <div class="grid-card-body">
-          ${cardTitleRow(article, link, onStar)}
+          ${cardTitleRow(article, onStar, onOpen)}
           ${article.summary ? html`<div class="grid-card-summary">${article.summary}</div>` : ''}
-          ${cardMeta(article, showFeed, feedTitle)}
+          ${cardMeta(article, showFeed, feedTitle, link)}
         </div>
-      </div>
+      </article>
     `;
 }
 
-function cardTitleRow(article: Article, link: string | undefined, onStar: (e: Event, article: Article) => void) {
+function cardTitleRow(
+    article: Article,
+    onStar: (e: Event, article: Article) => void,
+    onOpen: (article: Article) => void,
+) {
     return html`
       <div class="grid-card-title-row">
         ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
-        ${link ? html`<a class="grid-card-title" href=${link} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${article.title}</a>` : html`<span class="grid-card-title">${article.title}</span>`}
-        <button class="star" title="Star" @click=${(e: Event) => onStar(e, article)}>${article.starred ? '★' : '☆'}</button>
+        <button class="grid-card-title title-open" @click=${(e: Event) => {
+            e.stopPropagation();
+            onOpen(article);
+        }}>${article.title}</button>
+        ${starButton(article, onStar)}
       </div>
     `;
 }
 
-function cardMeta(article: Article, showFeed: boolean, feedTitle: string | undefined) {
+function cardMeta(article: Article, showFeed: boolean, feedTitle: string | undefined, link: string | undefined) {
     return html`
       <div class="meta">
         ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
         <span>${domainOf(article.link)}</span>
         <span>${formatDate(article.published)}</span>
+        ${link ? html`<a class="orig-link" href=${link} target="_blank" rel="noopener noreferrer">original ↗</a>` : ''}
       </div>
     `;
 }
@@ -208,14 +229,16 @@ export function renderInterestingHint(host: ArticleListRenderHost) {
 
 function renderSortSelect(host: ArticleListRenderHost) {
     if (host.interestingActive()) return html``;
-    return html`<label class="sort"><select .value=${host.sort} @change=${(e: Event) => {
+    return html`<label class="sort"><select aria-label="Sort articles" .value=${host.sort} @change=${(e: Event) => {
         host.sort = (e.target as HTMLSelectElement).value as ArticleSort;
         host.saveViewSettings();
     }}><option value="hot">Hot</option><option value="newest">Newest</option><option value="oldest">Oldest</option></select></label>`;
 }
 
 function renderViewSelect(host: ArticleListRenderHost) {
-    return html`<label class="view-mode"><select .value=${host.listView} @change=${(e: Event) => {
+    return html`<label class="view-mode"><select aria-label="List view" .value=${host.listView} @change=${(
+        e: Event,
+    ) => {
         host.listView = (e.target as HTMLSelectElement).value as ListViewType;
         host.saveViewSettings();
     }}><option value="detailed">Detailed List</option><option value="headline">Headline View</option><option value="cards">Cards</option></select></label>`;
@@ -265,7 +288,7 @@ function renderCardVirtualRow(host: ArticleListRenderHost, vi: { index: number; 
 function renderListVirtualRow(host: ArticleListRenderHost, vi: { index: number; start: number }, showFeed: boolean) {
     const article = host.items[vi.index];
     if (!article) return html``;
-    return html`<div class="row ${host.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''} ${vi.index === host.cursor ? 'selected' : ''}" data-index=${vi.index} style="transform: translateY(${vi.start}px)" role="button" tabindex="0" aria-label="Open ${article.title}" @click=${() => host.openArticle(article)} @keydown=${(e: KeyboardEvent) => host.onRowKey(e, article)} ${ref((el) => host.virtualizer?.measureElement(el as HTMLDivElement))}>${host.listView === 'headline' ? renderHeadlineRow(host, article, showFeed) : renderRow(host, article, showFeed)}</div>`;
+    return html`<!-- pointer-only: the row body opens the article on pointer; keyboard users open it with the title button. --><div class="row ${host.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''} ${vi.index === host.cursor ? 'selected' : ''}" data-index=${vi.index} style="transform: translateY(${vi.start}px)" @click=${() => host.openArticle(article)} ${ref((el) => host.virtualizer?.measureElement(el as HTMLDivElement))}>${host.listView === 'headline' ? renderHeadlineRow(host, article, showFeed) : renderRow(host, article, showFeed)}</div>`;
 }
 
 function renderScrollFooter(host: ArticleListRenderHost) {
@@ -284,15 +307,31 @@ function emptyText(host: ArticleListRenderHost): string {
 }
 
 function renderRow(host: ArticleListRenderHost, article: Article, showFeed: boolean) {
-    return detailRowTemplate(article, showFeed, host.feedTitle(article.feedId), (e, a) => {
-        void host.onStar(e, a);
-    });
+    return detailRowTemplate(
+        article,
+        showFeed,
+        host.feedTitle(article.feedId),
+        (e, a) => {
+            void host.onStar(e, a);
+        },
+        (a) => {
+            void host.openArticle(a);
+        },
+    );
 }
 
 function renderHeadlineRow(host: ArticleListRenderHost, article: Article, showFeed: boolean) {
-    return headlineRowTemplate(article, showFeed, host.feedTitle(article.feedId), (e, a) => {
-        void host.onStar(e, a);
-    });
+    return headlineRowTemplate(
+        article,
+        showFeed,
+        host.feedTitle(article.feedId),
+        (e, a) => {
+            void host.onStar(e, a);
+        },
+        (a) => {
+            void host.openArticle(a);
+        },
+    );
 }
 
 function renderCardRow(host: ArticleListRenderHost, article: Article, showFeed: boolean, index: number) {
@@ -308,6 +347,5 @@ function renderCardRow(host: ArticleListRenderHost, article: Article, showFeed: 
         (a) => {
             void host.openArticle(a);
         },
-        (e, a) => host.onRowKey(e, a),
     );
 }

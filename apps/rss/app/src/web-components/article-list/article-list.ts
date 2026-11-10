@@ -272,15 +272,6 @@ export class ArticleList extends LitElement {
         void queryClient.invalidateQueries({ queryKey: libraryKey });
     }
 
-    onRowKey(e: KeyboardEvent, article: Article) {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        // Let child links/buttons handle their own keys.
-        const tag = (e.target as HTMLElement | null)?.tagName;
-        if (tag === 'A' || tag === 'BUTTON' || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-        e.preventDefault();
-        void this.openArticle(article);
-    }
-
     onScroll = () => {
         if (!isIdle(this.loadState) || !this.canLoadMore()) return;
         const el = this.scrollElRef.value;
@@ -402,7 +393,7 @@ export class ArticleList extends LitElement {
         return this.library.data?.feeds.find((f) => f.id === feedId)?.icon;
     }
 
-    private async openArticle(article: Article) {
+    async openArticle(article: Article) {
         await openArticleAction(this as never, article);
     }
 

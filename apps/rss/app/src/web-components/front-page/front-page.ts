@@ -448,7 +448,7 @@ export class FrontPage extends LitElement {
     }
 
     private renderStarBtn(article: Article) {
-        return html`<button class="star" title="Star" aria-label="Star" @click=${(e: Event) => this.onStar(e, article)}>${article.starred ? '★' : '☆'}</button>`;
+        return html`<button class="star" aria-label=${article.starred ? 'Unstar' : 'Star'} @click=${(e: Event) => this.onStar(e, article)}><span aria-hidden="true">${article.starred ? '★' : '☆'}</span></button>`;
     }
 
     private toggleExpanded(id: string) {

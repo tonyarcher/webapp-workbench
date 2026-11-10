@@ -234,34 +234,36 @@ export class TodayView extends LitElement {
     }
 
     private renderStarBtn(article: Article) {
-        return html`<button class="star" title="Star" aria-label="Star" @click=${(e: Event) => this.onStar(e, article)}>${article.starred ? '★' : '☆'}</button>`;
+        return html`<button class="star" aria-label=${article.starred ? 'Unstar' : 'Star'} @click=${(e: Event) => this.onStar(e, article)}><span aria-hidden="true">${article.starred ? '★' : '☆'}</span></button>`;
     }
 
-    private renderTitleLink(article: Article, link: string | undefined, cls: string) {
-        if (link)
-            return html`<a class=${cls} href=${link} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>${article.title}</a>`;
-        return html`<span class=${cls}>${article.title}</span>`;
+    private renderTitleButton(article: Article, cls: string) {
+        return html`<button class=${`${cls} title-open`} @click=${(e: Event) => {
+            e.stopPropagation();
+            void this.openArticle(article);
+        }}>${article.title}</button>`;
     }
 
     private renderMeta(feedTitle: string | undefined, article: Article) {
+        const link = safeHttpUrl(article.link);
         return html`
               ${feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
               <span>${domainOf(article.link)}</span>
               <span>${formatDate(article.published)}</span>
-              ${article.author ? html`<span>by ${article.author}</span>` : ''}`;
+              ${article.author ? html`<span>by ${article.author}</span>` : ''}
+              ${link ? html`<a class="orig-link" href=${link} target="_blank" rel="noopener noreferrer">original ↗</a>` : ''}`;
     }
 
     private renderDetailed(article: Article, feeds: Feed[]) {
         const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
-        const link = safeHttpUrl(article.link);
         const image = articleImage(article);
         return html`
-      <div class="row ${article.read ? 'read' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}"
-        @click=${() => this.openArticle(article)} @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}>
+      <!-- pointer-only: the row body opens the article on pointer; keyboard users open it with the title button. -->
+      <div class="row ${article.read ? 'read' : ''}" @click=${() => this.openArticle(article)}>
         <div class="detail-body">
           ${image ? html`<img class="detail-img" src=${image} alt="" loading="lazy" />` : ''}
           <div class="detail-text">
-            <div class="row-top">${this.renderUnread(article)}${this.renderTitleLink(article, link, 'title title-link')}${this.renderStarBtn(article)}</div>
+            <div class="row-top">${this.renderUnread(article)}${this.renderTitleButton(article, 'title')}${this.renderStarBtn(article)}</div>
             <div class="meta">${this.renderMeta(feedTitle, article)}</div>
             ${article.summary ? html`<div class="summary">${article.summary}</div>` : ''}
           </div>
@@ -271,23 +273,21 @@ export class TodayView extends LitElement {
 
     private renderHeadline(article: Article, feeds: Feed[]) {
         const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
-        const link = safeHttpUrl(article.link);
         return html`
-      <div class="row headline ${article.read ? 'read' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}"
-        @click=${() => this.openArticle(article)} @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}>
-        <div class="row-top">${this.renderUnread(article)}${feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}${this.renderTitleLink(article, link, 'title title-link')}<span class="headline-date">${formatDate(article.published)}</span>${this.renderStarBtn(article)}</div>
+      <!-- pointer-only: the row body opens the article on pointer; keyboard users open it with the title button. -->
+      <div class="row headline ${article.read ? 'read' : ''}" @click=${() => this.openArticle(article)}>
+        <div class="row-top">${this.renderUnread(article)}${feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}${this.renderTitleButton(article, 'title')}<span class="headline-date">${formatDate(article.published)}</span>${this.renderStarBtn(article)}</div>
       </div>`;
     }
 
     private renderCard(article: Article, feeds: Feed[]) {
         const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
         const feedIcon = feeds.find((f) => f.id === article.feedId)?.icon;
-        const link = safeHttpUrl(article.link);
         const video = articleVideo(article);
         const image = video ? undefined : articleImage(article, feedIcon);
         return html`
-      <div class="grid-card ${article.read ? 'read' : ''}" role="button" tabindex="0" aria-label="Open ${article.title}"
-        @click=${() => this.openArticle(article)} @keydown=${(e: KeyboardEvent) => this.onRowKey(e, article)}>
+      <!-- pointer-only: the card body opens the article on pointer; keyboard users open it with the title button. -->
+      <div class="grid-card ${article.read ? 'read' : ''}" @click=${() => this.openArticle(article)}>
         ${
             video
                 ? html`<video-header class="grid-card-img" .video=${video} .videoTitle=${article.title}></video-header>`
@@ -296,19 +296,11 @@ export class TodayView extends LitElement {
                   : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`
         }
         <div class="grid-card-body">
-          <div class="grid-card-title-row">${this.renderUnread(article)}${this.renderTitleLink(article, link, 'grid-card-title')}${this.renderStarBtn(article)}</div>
+          <div class="grid-card-title-row">${this.renderUnread(article)}${this.renderTitleButton(article, 'grid-card-title')}${this.renderStarBtn(article)}</div>
           ${article.summary ? html`<div class="grid-card-summary">${article.summary}</div>` : ''}
           <div class="meta">${this.renderMeta(feedTitle, article)}</div>
         </div>
       </div>`;
-    }
-
-    private onRowKey(e: KeyboardEvent, article: Article) {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        const tag = (e.target as HTMLElement | null)?.tagName;
-        if (tag === 'A' || tag === 'BUTTON' || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-        e.preventDefault();
-        this.openArticle(article);
     }
 
     private onStar(e: Event, article: Article) {

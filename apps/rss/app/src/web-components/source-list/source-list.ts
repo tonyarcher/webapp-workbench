@@ -123,9 +123,11 @@ export class SourceList extends LitElement {
         const menuFeed = this.menuFeed();
         const folderMenuFolder = this.folderMenuFolder();
         return html`
-      ${renderHead(host)}
-      ${renderNav(host, folders, uncategorized)}
-      ${renderResizeHandle(host)}
+      <div class="sidebar" role="complementary" aria-label="Feeds">
+        ${renderHead(host)}
+        ${renderNav(host, folders, uncategorized)}
+        ${renderResizeHandle(host)}
+      </div>
       ${renderMenus(host, folders, menuFeed, folderMenuFolder)}
     `;
     }
@@ -262,7 +264,7 @@ export class SourceList extends LitElement {
         return this.libraryData.folders.find((f) => f.id === this.folderMenuFolderId);
     }
 
-    private select(view: View) {
+    select(view: View) {
         navigate(view);
     }
 
@@ -330,15 +332,6 @@ export class SourceList extends LitElement {
 
     private async applyFeedMove(feedId: string, target: { folderId: string | null }) {
         await handleFeedMove(this as never, feedId, target);
-    }
-
-    onItemKey(e: KeyboardEvent, view: View) {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        // Let child controls (menu buttons, toggles) handle their own keys.
-        const tag = (e.target as HTMLElement | null)?.tagName;
-        if (tag === 'A' || tag === 'BUTTON' || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-        e.preventDefault();
-        this.select(view);
     }
 
     onRetryLibrary() {

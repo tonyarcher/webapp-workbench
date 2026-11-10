@@ -43,7 +43,6 @@ export interface SourceListRenderHost extends ActionHost {
     folderUnread(folderId: string): number;
     isActive(view: View): boolean;
     select(view: View): void;
-    onItemKey(e: KeyboardEvent, view: View): void;
     onDragStart(e: DragEvent, kind: 'folder' | 'feed', id: string): void;
     onDragOver(e: DragEvent): void;
     onDragLeave(e: DragEvent): void;
@@ -87,16 +86,16 @@ export function feedRowTemplate(
     feed: Feed,
     active: boolean,
     onSelect: (feed: Feed) => void,
-    onKey: (e: KeyboardEvent, feed: Feed) => void,
     onDragStart: (e: DragEvent, feed: Feed) => void,
     actions: unknown,
 ) {
     return html`
-      <div class="feed-row ${active ? 'active' : ''} ${feed.unread > 0 ? 'has-unread' : ''}" data-feed-id="${feed.id}" draggable="true" role="button" tabindex="0" aria-label="Open feed ${feed.title}" @dragstart=${(e: DragEvent) => onDragStart(e, feed)} @click=${() => onSelect(feed)} @keydown=${(e: KeyboardEvent) => onKey(e, feed)}>
-        <span class="dot"></span>
-        <span class="label" title="${feed.title}${feed.lastError ? ` — ${feed.lastError}` : ''}">${feed.title}</span>
-        ${feed.unread > 0 ? html`<span class="badge">${feed.unread}</span>` : ''}
-        ${feed.lastError ? html`<span class="feed-error" title="${feed.lastError}">⚠</span>` : ''}
+      <div class="feed-row ${active ? 'active' : ''} ${feed.unread > 0 ? 'has-unread' : ''}" data-feed-id="${feed.id}" draggable="true" @dragstart=${(e: DragEvent) => onDragStart(e, feed)} @click=${() => onSelect(feed)}>
+        <!-- pointer-only: the row opens the feed on pointer; keyboard users open it with the name button. -->
+        <button class="feed-open" @click=${(e: MouseEvent) => {
+            e.stopPropagation();
+            onSelect(feed);
+        }}><span class="dot"></span><span class="label" title="${feed.title}${feed.lastError ? ` — ${feed.lastError}` : ''}">${feed.title}</span>${feed.unread > 0 ? html`<span class="badge">${feed.unread}</span>` : ''}${feed.lastError ? html`<span class="feed-error" title="${feed.lastError}">⚠</span>` : ''}</button>
         ${actions}
       </div>
     `;
@@ -124,19 +123,19 @@ function folderHeaderTemplate(
     isCollapsed: boolean,
     unread: number,
     onSelect: (folder: Folder) => void,
-    onKey: (e: KeyboardEvent, folder: Folder) => void,
     onDragStart: (e: DragEvent, folder: Folder) => void,
     onToggle: (id: string) => void,
     onOpenMenu: (e: MouseEvent, folder: Folder) => void,
     shadow: boolean,
 ) {
     return html`
-      <div class="item ${active ? 'active' : ''}" data-folder-id="${folder.id}" draggable="true" role="button" tabindex="0" aria-label="Open folder ${folder.title}" @dragstart=${(e: DragEvent) => onDragStart(e, folder)} @click=${() => onSelect(folder)} @keydown=${(e: KeyboardEvent) => onKey(e, folder)}>
+      <div class="item ${active ? 'active' : ''}" data-folder-id="${folder.id}" draggable="true" @dragstart=${(e: DragEvent) => onDragStart(e, folder)} @click=${() => onSelect(folder)}>
+        <!-- pointer-only: the row opens the folder on pointer; keyboard users open it with the name button. -->
         ${folderToggleTemplate(isCollapsed, onToggle, folder.id)}
-        ${iconTemplate('folder')}
-        <span class="label" title="${folder.title}">${folder.title}</span>
-        ${shadow ? html`<span class="shadow-mark" title="Interesting filter available">✨</span>` : ''}
-        ${unread > 0 ? html`<span class="badge">${unread}</span>` : ''}
+        <button class="item-open" @click=${(e: MouseEvent) => {
+            e.stopPropagation();
+            onSelect(folder);
+        }}>${iconTemplate('folder')}<span class="label" title="${folder.title}">${folder.title}</span>${shadow ? html`<span class="shadow-mark" title="Interesting filter available">✨</span>` : ''}${unread > 0 ? html`<span class="badge">${unread}</span>` : ''}</button>
         <button class="menu-btn" title="Folder options" @click=${(e: MouseEvent) => onOpenMenu(e, folder)}>${menuIconTemplate()}</button>
       </div>
     `;
@@ -149,7 +148,6 @@ export function folderRowTemplate(
     active: boolean,
     unread: number,
     onSelectFolder: (folder: Folder) => void,
-    onKeyFolder: (e: KeyboardEvent, folder: Folder) => void,
     onDragFolder: (e: DragEvent, folder: Folder) => void,
     onToggle: (id: string) => void,
     onOpenMenu: (e: MouseEvent, folder: Folder) => void,
@@ -158,7 +156,7 @@ export function folderRowTemplate(
 ) {
     return html`
       <div>
-        ${folderHeaderTemplate(folder, active, isCollapsed, unread, onSelectFolder, onKeyFolder, onDragFolder, onToggle, onOpenMenu, shadow)}
+        ${folderHeaderTemplate(folder, active, isCollapsed, unread, onSelectFolder, onDragFolder, onToggle, onOpenMenu, shadow)}
         ${isCollapsed ? '' : html`<div class="folder-children">${feeds.map((f) => feedRow(f))}</div>`}
       </div>
     `;
@@ -186,22 +184,29 @@ function renderStaticNav(host: SourceListRenderHost) {
 
 function renderFrontPageNav(host: SourceListRenderHost) {
     const active = host.isActive({ kind: 'frontpage' });
-    return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="Front Page" @click=${() => host.select({ kind: 'frontpage' })} @keydown=${(e: KeyboardEvent) => host.onItemKey(e, { kind: 'frontpage' })}><span class="icon">📰</span><span class="label">Front Page</span></div>`;
+    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'frontpage' })}><span class="icon">📰</span><span class="label">Front Page</span></button>`;
 }
 
 function renderBriefNav(host: SourceListRenderHost) {
     const active = host.isActive({ kind: 'brief' });
-    return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="Daily Brief" @click=${() => host.select({ kind: 'brief' })} @keydown=${(e: KeyboardEvent) => host.onItemKey(e, { kind: 'brief' })}><span class="icon">✨</span><span class="label">Daily Brief</span></div>`;
+    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'brief' })}><span class="icon">✨</span><span class="label">Daily Brief</span></button>`;
 }
 
 function renderTodayNav(host: SourceListRenderHost) {
     const active = host.isActive({ kind: 'today' });
-    return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="Today" @click=${() => host.select({ kind: 'today' })} @keydown=${(e: KeyboardEvent) => host.onItemKey(e, { kind: 'today' })}><span class="icon">🗓</span><span class="label">Today</span><button class="menu-btn" title="Today options" @click=${(e: MouseEvent) => openTodayMenuAction(host, e)}>${host.menuIcon()}</button></div>`;
+    return html`
+      <div class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'today' })}>
+        <!-- pointer-only: the row opens Today on pointer; keyboard users open it with the name button. -->
+        <button class="item-open" @click=${(e: MouseEvent) => {
+            e.stopPropagation();
+            host.select({ kind: 'today' });
+        }}><span class="icon">🗓</span><span class="label">Today</span></button><button class="menu-btn" title="Today options" @click=${(e: MouseEvent) => openTodayMenuAction(host, e)}>${host.menuIcon()}</button>
+      </div>`;
 }
 
 function renderAllNav(host: SourceListRenderHost) {
     const active = host.isActive({ kind: 'all' });
-    return html`<div class="item ${active ? 'active' : ''}" role="button" tabindex="0" aria-label="All feeds" @click=${() => host.select({ kind: 'all' })} @keydown=${(e: KeyboardEvent) => host.onItemKey(e, { kind: 'all' })}>${host.icon('all')}<span class="label">All</span>${host.totalUnread > 0 ? html`<span class="badge">${host.totalUnread}</span>` : ''}</div>`;
+    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'all' })}>${host.icon('all')}<span class="label">All</span>${host.totalUnread > 0 ? html`<span class="badge">${host.totalUnread}</span>` : ''}</button>`;
 }
 
 function renderUncategorized(host: SourceListRenderHost, uncategorized: Feed[]) {
@@ -261,7 +266,6 @@ function feedRow(host: SourceListRenderHost, feed: Feed) {
         feed,
         active,
         (f) => host.select({ kind: 'feed', id: f.id }),
-        (e, f) => host.onItemKey(e, { kind: 'feed', id: f.id }),
         (e, f) => host.onDragStart(e, 'feed', f.id),
         feedActions(host, feed),
     );
@@ -280,7 +284,6 @@ function folderRow(host: SourceListRenderHost, folder: Folder) {
         active,
         unread,
         (f) => host.select({ kind: 'folder', id: f.id }),
-        (e, f) => host.onItemKey(e, { kind: 'folder', id: f.id }),
         (e, f) => host.onDragStart(e, 'folder', f.id),
         (id) => host.toggleFolder(id),
         (e, f) => openFolderMenuAction(host, f, e),
