@@ -19,12 +19,24 @@ interface OpenHost {
 }
 
 export async function openArticleAction(host: OpenHost, article: Article) {
+    let pending: Promise<void> | undefined;
     if (article.read === 0) {
+        // Optimistic: paint the row read and open the overlay now; the
+        // network write and cache invalidations settle after the event so
+        // they never delay the reader, but the returned promise still waits
+        // for them (tests and callers can observe completion/revert).
         host.items = host.items.map((a) => (a.id === article.id ? { ...a, read: 1 } : a));
-        if (!(await markArticleRead(article.id))) {
-            host.items = host.items.map((a) => (a.id === article.id ? { ...a, read: 0 } : a));
-        }
-        void queryClient.invalidateQueries({ queryKey: libraryKey });
+        pending = markArticleRead(article.id)
+            .then((ok) => {
+                if (!ok) {
+                    host.items = host.items.map((a) => (a.id === article.id ? { ...a, read: 0 } : a));
+                }
+                void queryClient.invalidateQueries({ queryKey: libraryKey });
+            })
+            .catch(() => {
+                host.items = host.items.map((a) => (a.id === article.id ? { ...a, read: 0 } : a));
+                void queryClient.invalidateQueries({ queryKey: libraryKey });
+            });
     }
     const index = host.items.findIndex((a) => a.id === article.id);
     host.cursor = index;
@@ -35,6 +47,7 @@ export async function openArticleAction(host: OpenHost, article: Article) {
             composed: true,
         }),
     );
+    await pending;
 }
 
 export async function toggleStarAction(host: { items: Article[] }, article: Article) {

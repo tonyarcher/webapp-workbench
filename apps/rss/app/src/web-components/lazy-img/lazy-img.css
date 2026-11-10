@@ -7,7 +7,7 @@ img {
     height: 100%;
     object-fit: cover;
     display: block;
-    animation: lazy-fade 0.25s ease-in;
+    animation: lazy-fade 0.12s ease-in;
 }
 .lazy-placeholder {
     width: 100%;

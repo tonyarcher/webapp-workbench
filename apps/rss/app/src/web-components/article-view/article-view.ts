@@ -37,10 +37,14 @@ export class ArticleView extends LitElement {
         this.setAttribute('tabindex', '-1');
     }
 
+    /** Sanitized body keyed by article; render runs on every state change. */
+    private sanitizedBody: { id: string; source: string | undefined; html: string } | null = null;
+
     override updated(changed: Map<string, unknown>) {
         if (changed.has('article')) {
             this.aiSummary = null;
             this.aiError = '';
+            this.sanitizedBody = null;
         }
         const a = this.article;
         if (!a) return;
@@ -53,7 +57,13 @@ export class ArticleView extends LitElement {
     override render() {
         const a = this.article;
         if (!a) return html``;
-        const body = a.content ? sanitizeHtml(a.content) : '';
+        let body = '';
+        if (a.content) {
+            if (this.sanitizedBody?.id !== a.id || this.sanitizedBody.source !== a.content) {
+                this.sanitizedBody = { id: a.id, source: a.content, html: sanitizeHtml(a.content) };
+            }
+            body = this.sanitizedBody.html;
+        }
         const link = safeHttpUrl(a.link);
         const video = articleVideo(a);
         return html`${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${video ? html`<video-header class="expanded-video" .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderAiCard()}${this.renderBody(body, a)}</div>`;
