@@ -201,7 +201,6 @@
 }
 
 .grid-card.selected {
-    border-color: var(--accent);
     box-shadow: inset 3px 0 0 var(--accent);
     background: var(--active-bg);
 }
@@ -280,12 +279,7 @@
 }
 
 .row.selected {
-    /* Inset ring, not a border: rows size to content and the virtualizer
-       measures outer height, so a real top border would grow the row by 1px
-       on every cursor move. Box-shadow paints inside without touching layout. */
-    box-shadow:
-        inset 3px 0 0 var(--accent),
-        inset 0 0 0 1px var(--accent);
+    box-shadow: inset 3px 0 0 var(--accent);
     background: var(--active-bg);
 }
 
