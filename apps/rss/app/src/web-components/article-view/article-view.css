@@ -7,6 +7,13 @@
     box-sizing: border-box;
 }
 
+/* The dialog takes programmatic focus on open, which is correct modal
+   behavior, but a ring around the whole reading panel is noise: the opened
+   article is the context, and every control inside keeps its own indicator. */
+:host(:focus-visible) {
+    outline: none;
+}
+
 .toolbar {
     display: flex;
     align-items: center;
