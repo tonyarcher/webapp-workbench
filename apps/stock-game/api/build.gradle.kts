@@ -101,6 +101,12 @@ configurations.all {
 
             requested.group == "tools.jackson.module" &&
                 requested.name == "jackson-module-kotlin" -> useVersion("3.3.0")
+
+            // kotlinx-serialization ships its BOM, core and json artifacts in
+            // lockstep: the direct 1.12.0 line would otherwise mix with the
+            // BOM-managed 1.11.0 core at runtime.
+            requested.group == "org.jetbrains.kotlinx" &&
+                requested.name.startsWith("kotlinx-serialization") -> useVersion("1.12.0")
         }
     }
 }
