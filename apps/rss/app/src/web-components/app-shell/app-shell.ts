@@ -168,7 +168,11 @@ export class AppShell extends LitElement {
 
     override render() {
         if (!this.authed) return this.renderSignIn();
-        return html`${this.renderHeader()}<div class="layout"><source-list .view=${this.route}></source-list><main>${this.renderMain()}</main>${this.renderOverlay()}</div>${this.renderSettings()}${this.renderToasts()}`;
+        // The overlay lives inside main (not as a layout sibling) so every
+        // control it adds — including the panel resize grip outside the
+        // dialog element — stays contained by a landmark for the region audit.
+        // Position is unchanged: the overlay is absolute against .layout.
+        return html`${this.renderHeader()}<div class="layout"><source-list .view=${this.route}></source-list><main>${this.renderMain()}${this.renderOverlay()}</main></div>${this.renderSettings()}${this.renderToasts()}`;
     }
 
     /**

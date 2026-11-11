@@ -83,10 +83,18 @@ async function stubLibrary(page: Page, items: unknown[]) {
         route.fulfill({ status: 200, body: '{"ok":true,"updated":1}' }),
     );
     await page.route('**/api/affinity', (route) => route.fulfill({ status: 200, body: '{"ok":true}' }));
-    // Favicons and YouTube posters never load test fixtures: fail them fast
-    // so the audit reads the placeholder and facade states deterministically.
+    // Favicons, YouTube posters, and embed players never load test fixtures:
+    // fail them fast so the audit reads the placeholder and unloaded-player
+    // states deterministically instead of whatever the live third party
+    // serves that run.
     await page.route('**/favicon.ico', (route) => route.fulfill({ status: 404 }));
     await page.route('https://i.ytimg.com/**', (route) => route.fulfill({ status: 404 }));
+    await page.route('https://www.youtube-nocookie.com/**', (route) => route.fulfill({ status: 404 }));
+    await page.route('https://player.vimeo.com/**', (route) => route.fulfill({ status: 404 }));
+    await page.route('https://www.dailymotion.com/embed/**', (route) => route.fulfill({ status: 404 }));
+    await page.route('https://www.tiktok.com/embed/**', (route) => route.fulfill({ status: 404 }));
+    await page.route('https://rumble.com/embed/**', (route) => route.fulfill({ status: 404 }));
+    await page.route('https://player.twitch.tv/**', (route) => route.fulfill({ status: 404 }));
 }
 
 test('the article list has no automatic accessibility violations', async ({ page }) => {
