@@ -4,10 +4,10 @@ buildscript {
             if (requested.group == "tools.jackson.core" &&
                 requested.name in setOf("jackson-core", "jackson-databind")
             ) {
-                useVersion("3.1.7")
+                useVersion("3.3.0")
             }
             if (requested.group == "org.apache.commons" && requested.name == "commons-lang3") {
-                useVersion("3.18.0")
+                useVersion("3.21.0")
             }
         }
     }
@@ -61,7 +61,7 @@ configurations.matching {
     resolutionStrategy.activateDependencyLocking()
 }
 
-// The security floors below pin the Tomcat and Jackson core/databind
+// The security floors below pin the Tomcat and Jackson line artifacts
 // artifacts that carried the advisories osv-scanner reported:
 // GHSA-9xv2-5v5q-p794, GHSA-gcx9-497g-6cp6 and GHSA-h3x4-894j-xpx5 (critical)
 // on tomcat-embed-core, and GHSA-wv8q-qhhj-9h54, GHSA-cxp5-3px4-pw24,
@@ -69,8 +69,11 @@ configurations.matching {
 // core and databind. Boot 4.1.2's BOM names these patched versions today; the
 // rule keeps a BOM move or a transitive request from walking them back.
 //
-// Jackson core is pinned alongside databind: overriding only databind leaves
-// core on the BOM's vulnerable patch.
+// Jackson ships its core line in lockstep: databind 2.23 references
+// annotations classes that older patches lack, so each floor covers its whole
+// group with the modules on the same line. Annotations versions without the
+// trailing zero (2.23, not 2.23.0), and Jackson 3 folds annotations into core,
+// so each line names its own shape.
 //
 // This has to be eachDependency, registered after the plugin's own rule.
 // resolutionStrategy.force, a lockfile edit, and the plugin's overrides map
@@ -82,11 +85,22 @@ configurations.all {
             requested.group == "org.apache.tomcat.embed" &&
                 requested.name in setOf("tomcat-embed-core", "tomcat-embed-websocket") -> useVersion("11.0.27")
 
-            requested.group == "com.fasterxml.jackson.core" &&
-                requested.name in setOf("jackson-core", "jackson-databind") -> useVersion("2.21.7")
+            requested.group == "org.apache.commons" &&
+                requested.name == "commons-lang3" -> useVersion("3.21.0")
 
-            requested.group == "tools.jackson.core" &&
-                requested.name in setOf("jackson-core", "jackson-databind") -> useVersion("3.1.7")
+            requested.group == "com.fasterxml.jackson.core" &&
+                requested.name != "jackson-annotations" -> useVersion("2.23.0")
+
+            requested.group == "com.fasterxml.jackson.core" &&
+                requested.name == "jackson-annotations" -> useVersion("2.23")
+
+            requested.group == "com.fasterxml.jackson.module" &&
+                requested.name == "jackson-module-kotlin" -> useVersion("2.23.0")
+
+            requested.group == "tools.jackson.core" -> useVersion("3.3.0")
+
+            requested.group == "tools.jackson.module" &&
+                requested.name == "jackson-module-kotlin" -> useVersion("3.3.0")
         }
     }
 }
@@ -100,7 +114,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.postgresql:postgresql")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
