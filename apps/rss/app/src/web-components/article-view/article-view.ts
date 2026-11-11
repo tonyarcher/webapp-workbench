@@ -1,10 +1,10 @@
-import { html, LitElement, unsafeCSS } from 'lit';
+import { html, LitElement, svg, unsafeCSS } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sanitizeHtml, safeHttpUrl, stripHtml } from '../../services/parser';
 import { articleVideo } from '../../services/video';
-import { shareUrl } from '../../services/share';
-import { loadMastodonHost } from '../../services/share-settings';
+import { shareUrl, type ShareTarget } from '../../services/share';
+import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
 import { toastError, toastInfo } from '../../services/toast';
 import { SUMMARY_LENGTHS, loadSummaryLength, saveSummaryLength, summarizeBest, type SummaryLength } from '../../ai';
 import { toggleStar } from '../../mutations';
@@ -28,7 +28,6 @@ export class ArticleView extends LitElement {
     @state() private aiSummary: string | null = null;
     @state() private aiError = '';
     @state() private summaryLength: SummaryLength = loadSummaryLength();
-    @state() private shareOpen = false;
 
     override connectedCallback() {
         super.connectedCallback();
@@ -39,7 +38,18 @@ export class ArticleView extends LitElement {
         this.setAttribute('role', 'dialog');
         this.setAttribute('aria-modal', 'true');
         this.setAttribute('tabindex', '-1');
+        window.addEventListener('share-settings-changed', this.onShareSettingsChanged);
     }
+
+    override disconnectedCallback() {
+        super.disconnectedCallback();
+        window.removeEventListener('share-settings-changed', this.onShareSettingsChanged);
+    }
+
+    /** Re-render when Settings changes which share buttons are shown. */
+    private onShareSettingsChanged = () => {
+        this.requestUpdate();
+    };
 
     /** Sanitized body keyed by article; render runs on every state change. */
     private sanitizedBody: { id: string; source: string | undefined; html: string } | null = null;
@@ -49,7 +59,6 @@ export class ArticleView extends LitElement {
             this.aiSummary = null;
             this.aiError = '';
             this.sanitizedBody = null;
-            this.shareOpen = false;
         }
         const a = this.article;
         if (!a) return;
@@ -77,44 +86,40 @@ export class ArticleView extends LitElement {
     private renderToolbar(a: Article, link: string | undefined) {
         const label = this.summarizing ? 'Summarizing…' : this.aiSummary ? '✓ Summarized' : '✨ Summarize';
         return html`
-      <div class="toolbar">
+      <div class="toolbar" role="toolbar" aria-label="Article actions">
         <button class="btn" @click=${this.emitClose}>← Back</button>
         <button class="btn" @click=${this.onStar}>${a.starred ? '★ Unstar' : '☆ Star'}</button>
         <button class="btn" @click=${this.onSummarize} ?disabled=${this.summarizing}>${label}</button>
-        ${link ? html`<button class="btn" aria-expanded=${this.shareOpen} @click=${this.toggleShare}>↗ Share</button>` : ''}
+        ${link ? this.renderShareButtons(a, link) : ''}
         <div class="spacer"></div>
         ${link ? html`<a class="btn primary" href=${link} target="_blank" rel="noopener noreferrer">View original ↗</a>` : ''}
-      </div>
-      ${this.shareOpen && link ? this.renderShareBar(a, link) : ''}`;
+      </div>`;
     }
 
-    private emitClose = () => {
-        this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
-    };
-
-    private toggleShare = () => {
-        this.shareOpen = !this.shareOpen;
-    };
-
     /**
-     * One button per network. Facebook and X open their share intents;
+     * Share buttons straight in the toolbar, limited to the networks the
+     * reader enabled in Settings. Facebook and X open their share intents;
      * Mastodon posts through the configured instance; Instagram publishes
      * no web share endpoint, so its button copies the link for pasting.
      */
-    private renderShareBar(a: Article, link: string) {
+    private renderShareButtons(a: Article, link: string) {
         const open = (target: 'facebook' | 'x' | 'mastodon') => (e: Event) => {
             e.stopPropagation();
             const href = shareUrl(target, link, a.title, loadMastodonHost());
             if (href) window.open(href, '_blank', 'noopener,noreferrer');
         };
-        return html`
-      <div class="share-bar" role="group" aria-label="Share this article">
-        <button class="btn" @click=${open('facebook')}>Facebook</button>
-        <button class="btn" @click=${open('x')}>X</button>
-        <button class="btn" @click=${open('mastodon')}>Mastodon</button>
-        <button class="btn" @click=${() => void this.copyLink(link)}>Instagram</button>
-      </div>`;
+        const buttons: Record<ShareTarget, unknown> = {
+            facebook: html`<button class="btn share-btn" @click=${open('facebook')}>${shareIcon('facebook')}Facebook</button>`,
+            x: html`<button class="btn share-btn" @click=${open('x')}>${shareIcon('x')}X</button>`,
+            mastodon: html`<button class="btn share-btn" @click=${open('mastodon')}>${shareIcon('mastodon')}Mastodon</button>`,
+            instagram: html`<button class="btn share-btn" @click=${() => void this.copyLink(link)}>${shareIcon('instagram')}Instagram</button>`,
+        };
+        return loadShareTargets().map((t) => buttons[t]);
     }
+
+    private emitClose = () => {
+        this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
+    };
 
     /** Instagram path: no endpoint exists, so copy the link for pasting. */
     private async copyLink(link: string): Promise<void> {
@@ -235,5 +240,22 @@ export class ArticleView extends LitElement {
 declare global {
     interface HTMLElementTagNameMap {
         'article-view': ArticleView;
+    }
+}
+
+/**
+ * Brand glyphs for the share buttons, drawn as inline SVG so no font or
+ * image asset is needed. Decorative: the button text names the target.
+ */
+function shareIcon(target: ShareTarget) {
+    switch (target) {
+        case 'facebook':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13.5 21.5v-7.2h2.5l.4-2.8h-2.9V9.7c0-.8.3-1.4 1.5-1.4h1.5V5.8c-.3 0-1.2-.1-2.2-.1-2.1 0-3.6 1.3-3.6 3.7v2.1H8.2v2.8h2.5v7.2h2.8z"/></svg>`;
+        case 'x':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.8 3h3.1l-6.8 7.8L22 21h-6.3l-4.9-6.4L5.2 21H2.1l7.3-8.3L2 3h6.4l4.4 5.9L17.8 3zm-1.1 16.1h1.7L7.4 4.8H5.6l11.1 14.3z"/></svg>`;
+        case 'mastodon':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5c-3.9 0-6.8 2.4-6.8 5.8v4.3c0 2.9 1.9 5.2 4.6 5.2.5 0 1-.1 1.4-.2l.8 2.4.8-2.4c.4.1.9.2 1.4.2 2.7 0 4.6-2.3 4.6-5.2V8.3c0-3.4-2.9-5.8-6.8-5.8zM9.3 15.6c-.4-.9-.6-1.9-.6-2.9h1.5c0 .8.2 1.6.5 2.3l-1.4.6zm5.4 0l-1.4-.6c.3-.7.5-1.5.5-2.3h1.5c0 1-.2 2-.6 2.9z"/></svg>`;
+        case 'instagram':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="3.8"/><circle cx="17" cy="7" r="1.2" fill="currentColor" stroke="none"/></svg>`;
     }
 }

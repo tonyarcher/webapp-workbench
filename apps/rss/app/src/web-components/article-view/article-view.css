@@ -24,6 +24,8 @@
     top: 0;
     background: var(--panel-bg);
     z-index: 1;
+    flex-wrap: wrap;
+    row-gap: 8px;
 }
 
 .btn {
@@ -46,21 +48,18 @@
     cursor: default;
 }
 
+.btn svg {
+    width: 15px;
+    height: 15px;
+    vertical-align: -2px;
+    margin-right: 2px;
+}
+
 .btn.primary {
     background: var(--accent);
     color: white;
     border-color: var(--accent);
     text-decoration: none;
-}
-
-/* Share row under the toolbar, hidden until the Share toggle opens it. */
-.share-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel-bg);
 }
 
 .btn .spacer {

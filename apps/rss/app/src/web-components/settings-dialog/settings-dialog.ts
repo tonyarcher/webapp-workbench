@@ -2,8 +2,14 @@ import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { applyTheme, getTheme, type Theme } from '../../theme';
 import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
-import { normalizeMastodonHost } from '../../services/share';
-import { loadMastodonHost, saveMastodonHost } from '../../services/share-settings';
+import { normalizeMastodonHost, type ShareTarget } from '../../services/share';
+import {
+    ALL_SHARE_TARGETS,
+    loadMastodonHost,
+    loadShareTargets,
+    saveMastodonHost,
+    saveShareTargets,
+} from '../../services/share-settings';
 import { migrateLibrary } from '../../services/api';
 import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
 import { invalidateArticles, invalidateLibrary } from '../../query';
@@ -27,6 +33,7 @@ export class SettingsDialog extends LitElement {
     @state() private mastodonHost = '';
     @state() private shareStatus = '';
     @state() private shareStatusError = false;
+    @state() private shareTargets: ShareTarget[] = [];
 
     private dialogEl: HTMLDialogElement | null = null;
 
@@ -35,6 +42,7 @@ export class SettingsDialog extends LitElement {
             if (this.open) {
                 this.theme = getTheme();
                 this.mastodonHost = loadMastodonHost();
+                this.shareTargets = loadShareTargets();
                 this.shareStatus = '';
                 this.shareStatusError = false;
                 this.dialogEl?.showModal();
@@ -83,26 +91,69 @@ export class SettingsDialog extends LitElement {
         return html`
       <div class="section">
         <h3>Sharing</h3>
+        ${this.renderShareTargets()}
         <label class="field-label" for="mastodon-host">Mastodon instance</label>
-        <div class="share-row">
-          <input
-            id="mastodon-host"
-            type="text"
-            inputmode="url"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="mastodon.social"
-            .value=${this.mastodonHost}
-            @keydown=${(e: KeyboardEvent) => {
-                if (e.key === 'Enter') void this.submitMastodonHost();
-            }}
-          />
-          <button class="btn primary" @click=${this.submitMastodonHost}>Save</button>
-        </div>
+        ${this.renderMastodonRow()}
         <p class="hint">Article shares post through this instance, e.g. mastodon.social.</p>
         ${this.shareStatus ? html`<div class="status ${this.shareStatusError ? 'error' : ''}">${this.shareStatus}</div>` : ''}
       </div>
     `;
+    }
+
+    /** One checkbox per network; saving applies immediately. */
+    private renderShareTargets() {
+        const labels: Record<ShareTarget, string> = {
+            facebook: 'Facebook',
+            x: 'X',
+            mastodon: 'Mastodon',
+            instagram: 'Instagram',
+        };
+        return html`
+      <div class="share-targets" role="group" aria-label="Share buttons">
+        ${ALL_SHARE_TARGETS.map(
+            (target) => html`
+            <label class="share-target">
+              <input
+                type="checkbox"
+                .checked=${this.shareTargets.includes(target)}
+                @change=${(e: Event) => this.toggleShareTarget(e, target)}
+              />${labels[target]}
+            </label>`,
+        )}
+      </div>
+    `;
+    }
+
+    /** Mastodon instance field; Enter submits like the Save button. */
+    private renderMastodonRow() {
+        return html`
+      <div class="share-row">
+        <input
+          id="mastodon-host"
+          type="text"
+          inputmode="url"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="mastodon.social"
+          .value=${this.mastodonHost}
+          @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Enter') void this.submitMastodonHost();
+          }}
+        />
+        <button class="btn primary" @click=${this.submitMastodonHost}>Save</button>
+      </div>
+    `;
+    }
+
+    private toggleShareTarget(e: Event, target: ShareTarget) {
+        const on = (e.target as HTMLInputElement).checked;
+        const current = new Set(loadShareTargets());
+        if (on) current.add(target);
+        else current.delete(target);
+        const next = ALL_SHARE_TARGETS.filter((t) => current.has(t));
+        saveShareTargets(next);
+        this.shareTargets = next;
+        window.dispatchEvent(new CustomEvent('share-settings-changed'));
     }
 
     private async submitMastodonHost() {
@@ -118,6 +169,7 @@ export class SettingsDialog extends LitElement {
         this.mastodonHost = clean;
         this.shareStatus = `Sharing through ${clean}.`;
         this.shareStatusError = false;
+        window.dispatchEvent(new CustomEvent('share-settings-changed'));
     }
 
     private renderFeedsSection() {

@@ -148,6 +148,28 @@ dialog::backdrop {
     margin-top: 8px;
 }
 
+.share-targets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin: 0 0 12px;
+}
+
+.share-target {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.share-target input {
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    margin: 0;
+}
+
 .field-label {
     display: block;
     font-size: 13px;

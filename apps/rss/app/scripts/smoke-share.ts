@@ -1,7 +1,14 @@
-// Share smoke: share-intent URLs, Mastodon host normalization and persistence.
-// Instagram has no web share endpoint, so the contract is undefined (copy).
+// Share smoke: share-intent URLs, Mastodon host normalization and persistence,
+// and the share-button selection.
 import { facebookShareUrl, mastodonShareUrl, normalizeMastodonHost, shareUrl, xShareUrl } from '../src/services/share';
-import { DEFAULT_MASTODON_HOST, loadMastodonHost, saveMastodonHost } from '../src/services/share-settings';
+import {
+    ALL_SHARE_TARGETS,
+    DEFAULT_MASTODON_HOST,
+    loadMastodonHost,
+    loadShareTargets,
+    saveMastodonHost,
+    saveShareTargets,
+} from '../src/services/share-settings';
 import { assert } from './smoke-assert';
 
 const url = 'https://example.com/articles/hello-world';
@@ -59,6 +66,29 @@ try {
     assert(loadMastodonHost() === 'other.example', 'mastodon host round-trips through normalization');
     saveMastodonHost('garbage host !!');
     assert(loadMastodonHost() === DEFAULT_MASTODON_HOST, 'mastodon host falls back on garbage');
+
+    // ---- share-button selection ----
+    assert(
+        JSON.stringify(loadShareTargets()) === JSON.stringify(ALL_SHARE_TARGETS),
+        'share targets default to every network',
+    );
+    saveShareTargets(['instagram', 'x']);
+    assert(
+        JSON.stringify(loadShareTargets()) === JSON.stringify(['x', 'instagram']),
+        'share targets round-trip in canonical order',
+    );
+    saveShareTargets(['x', 'bogus' as never, 'facebook']);
+    assert(
+        JSON.stringify(loadShareTargets()) === JSON.stringify(['facebook', 'x']),
+        'share targets drop unknown entries',
+    );
+    saveShareTargets([]);
+    assert(loadShareTargets().length === 0, 'share targets honor every button off');
+    mem.set('rss-reader:share-targets', 'not json');
+    assert(
+        JSON.stringify(loadShareTargets()) === JSON.stringify(ALL_SHARE_TARGETS),
+        'share targets fall back on corrupt storage',
+    );
 } finally {
     gStorage['localStorage'] = realStorage;
 }
