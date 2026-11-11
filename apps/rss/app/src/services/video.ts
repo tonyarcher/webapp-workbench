@@ -56,6 +56,40 @@ export function vimeoEmbedUrl(id: string): string {
     return `https://player.vimeo.com/video/${id}?autoplay=1`;
 }
 
+/** Canonical YouTube watch page for a video id. */
+export function youtubeWatchUrl(id: string): string {
+    return `https://www.youtube.com/watch?v=${id}`;
+}
+
+/**
+ * Page the preview link opens. YouTube links normalize to the canonical
+ * watch URL, so shorts/youtu.be/embed forms all land on the same page.
+ * Providers without a reconstructible watch page fall back to the article
+ * link the video was parsed from.
+ */
+export function watchUrlFor(video: ArticleVideo, fallbackLink?: string): string | undefined {
+    if (video.provider === 'direct') return video.embedUrl;
+    return idWatchPage(video) ?? fallbackLink;
+}
+
+/** Watch page rebuilt from a parsed id, where the provider allows one. */
+function idWatchPage(video: ArticleVideo): string | undefined {
+    if (!video.id) return undefined;
+    const id = video.id;
+    switch (video.provider) {
+        case 'youtube':
+            return youtubeWatchUrl(id);
+        case 'vimeo':
+            return `https://vimeo.com/${id}`;
+        case 'dailymotion':
+            return `https://www.dailymotion.com/video/${id}`;
+        case 'twitch':
+            return video.clip ? undefined : `https://www.twitch.tv/videos/${id}`;
+        default:
+            return undefined;
+    }
+}
+
 export function dailymotionEmbedUrl(id: string): string {
     return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`;
 }

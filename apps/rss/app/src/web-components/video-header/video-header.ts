@@ -4,16 +4,19 @@ import { resolveEmbedUrl, type ArticleVideo } from '../../services/video';
 import styles from './video-header.css?inline';
 
 /**
- * Click-to-play video header for cards (the lite-facade pattern).
+ * Video header in two modes.
  *
- * Cards show a sharp poster with a play button; the iframe/<video> only loads
- * when the reader presses play. That keeps the list light (no autoplay, no
- * third-party player per row) and keeps keyboard users on a real button with
- * a named label. Posters fall back maxres -> sd -> hq -> mq because YouTube
- * only ships maxres for higher-resolution uploads; a missing maxres answers
- * 404 *or* a 120x90 placeholder with a 200, so the load handler rejects tiny
- * images by their natural size and the chain steps down.
+ * Cards show the preview: cover art only, wrapped in a link to the watch
+ * page (the YouTube page for YouTube articles, else the article link). No
+ * inline player lives in the list. The expanded article shows the embed:
+ * the iframe/<video> player directly, with no click-to-play step in between.
+ *
+ * Posters fall back maxres -> sd -> hq -> mq because YouTube only ships
+ * maxres for higher-resolution uploads; a missing maxres answers 404 *or* a
+ * 120x90 placeholder with a 200, so the load handler rejects tiny images by
+ * their natural size and the chain steps down.
  */
+export type VideoHeaderMode = 'preview' | 'embed';
 
 @customElement('video-header')
 export class VideoHeader extends LitElement {
@@ -21,8 +24,10 @@ export class VideoHeader extends LitElement {
 
     @property({ attribute: false }) video!: ArticleVideo;
     @property({ attribute: false }) videoTitle = '';
+    /** Where the preview cover links. Embed mode ignores it. */
+    @property({ attribute: false }) videoLink: string | undefined = undefined;
+    @property({ attribute: false }) mode: VideoHeaderMode = 'preview';
 
-    @state() private playing = false;
     @state() private posterIndex = 0;
     @state() private posterFailed = false;
 
@@ -48,36 +53,34 @@ export class VideoHeader extends LitElement {
         if (img && img.naturalWidth > 0 && img.naturalWidth < 200) this.stepPoster();
     }
 
-    private play() {
-        this.playing = true;
-    }
-
-    private onKey(e: KeyboardEvent) {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            e.stopPropagation();
-            this.play();
-        }
-    }
-
     override render() {
-        if (this.playing) return this.renderPlayer();
+        if (this.mode === 'embed') return this.renderPlayer();
+        return this.renderPreview();
+    }
+
+    /**
+     * Cover art only. The link around it opens the watch page; the image
+     * itself carries no action, so a click without a link simply bubbles to
+     * the card and opens the article like any other cover.
+     */
+    private renderPreview() {
         const poster = this.video.posters[this.posterIndex];
-        return html`
-      <div class="poster-wrap">
-        ${
+        const visual =
             poster && !this.posterFailed
                 ? html`<img class="poster" src=${poster} alt="" loading="lazy" decoding="async" @error=${() => this.onPosterError()} @load=${(e: Event) => this.onPosterLoad(e)} />`
-                : html`<div class="poster poster-empty" aria-hidden="true"></div>`
-        }
-        <button type="button" class="play" aria-label="Play ${this.video.label}${this.videoTitle ? `: ${this.videoTitle}` : ''}" @click=${(
-            e: Event,
-        ) => {
-            e.stopPropagation();
-            this.play();
-        }} @keydown=${(e: KeyboardEvent) => this.onKey(e)}>
-          <span class="play-glyph" aria-hidden="true"></span>
-        </button>
+                : html`<div class="poster poster-empty" aria-hidden="true"></div>`;
+        if (!this.videoLink) return html`<div class="poster-wrap">${visual}</div>`;
+        return html`
+      <div class="poster-wrap">
+        <a
+          class="poster-link"
+          href=${this.videoLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Watch ${this.video.label}${this.videoTitle ? `: ${this.videoTitle}` : ''}"
+          @click=${(e: Event) => e.stopPropagation()}
+          >${visual}</a
+        >
       </div>
     `;
     }

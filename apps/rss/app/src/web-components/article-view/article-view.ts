@@ -66,7 +66,7 @@ export class ArticleView extends LitElement {
         }
         const link = safeHttpUrl(a.link);
         const video = articleVideo(a);
-        return html`${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${video ? html`<video-header class="expanded-video" .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderAiCard()}${this.renderBody(body, a)}</div>`;
+        return html`${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderAiCard()}${this.renderBody(body, a)}</div>`;
     }
 
     private renderToolbar(a: Article, link: string | undefined) {

@@ -3,7 +3,7 @@ import { ref, type Ref } from 'lit/directives/ref.js';
 import type { Virtualizer } from '@tanstack/virtual-core';
 import { safeHttpUrl } from '../../services/parser';
 import { articleImage, cardPlaceholderStyle } from '../../services/image';
-import { articleVideo } from '../../services/video';
+import { articleVideo, watchUrlFor } from '../../services/video';
 import { topWords } from '../../services/interesting-words';
 import { interestingWordMapOf } from './article-list-interesting';
 import { domainOf, formatDate } from '../../util';
@@ -155,7 +155,7 @@ export function cardRowTemplate(
         <!-- pointer-only: the card body opens the article on pointer; keyboard and screen-reader users open it with the title button below. -->
         ${
             video
-                ? html`<video-header class="grid-card-img" .video=${video} .videoTitle=${article.title}></video-header>`
+                ? html`<video-header class="grid-card-img" .video=${video} .videoTitle=${article.title} .videoLink=${watchUrlFor(video, link)}></video-header>`
                 : image
                   ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>`
                   : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`

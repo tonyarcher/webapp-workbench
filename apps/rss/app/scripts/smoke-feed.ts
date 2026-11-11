@@ -220,6 +220,8 @@ const {
     parseVideo,
     youtubeThumbs,
     youtubeEmbedUrl,
+    youtubeWatchUrl,
+    watchUrlFor,
     resolveEmbedUrl,
 } = await import('../src/services/video.js');
 assert(
@@ -276,6 +278,41 @@ assert(
 );
 assert(parseVideo('https://example.com/clip.mp4')?.provider === 'direct', 'parseVideo finds direct video files');
 assert(parseVideo('https://example.com/article') === undefined, 'parseVideo rejects plain links');
+
+// ---- preview links (cover art opens the watch page, the embed plays inline) ----
+assert(
+    youtubeWatchUrl('dQw4w9WgXcQ') === 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    'youtubeWatchUrl builds the canonical watch page',
+);
+assert(
+    watchUrlFor(parseVideo('https://youtu.be/dQw4w9WgXcQ')!, 'https://youtu.be/dQw4w9WgXcQ') ===
+        'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    'preview link normalizes youtu.be to the watch page',
+);
+assert(
+    watchUrlFor(parseVideo('https://www.youtube.com/shorts/dQw4w9WgXcQ')!, undefined) ===
+        'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    'preview link normalizes shorts to the watch page',
+);
+assert(
+    watchUrlFor(parseVideo('https://vimeo.com/123456789')!, 'https://vimeo.com/123456789') ===
+        'https://vimeo.com/123456789',
+    'preview link keeps the vimeo page',
+);
+assert(
+    watchUrlFor(parseVideo('https://example.com/clip.mp4')!, undefined) === 'https://example.com/clip.mp4',
+    'preview link for direct files is the file itself',
+);
+assert(
+    watchUrlFor(parseVideo('https://www.twitch.tv/videos/123456789')!, undefined) ===
+        'https://www.twitch.tv/videos/123456789',
+    'preview link rebuilds twitch video pages',
+);
+assert(
+    watchUrlFor(parseVideo('https://clips.twitch.tv/SlugHere-abc123')!, 'https://clips.twitch.tv/SlugHere-abc123') ===
+        'https://clips.twitch.tv/SlugHere-abc123',
+    'preview link falls back to the article link when no page is rebuildable',
+);
 
 // ---- interleave (diverse hot pages) ----
 const hotArticle = (id: string, hot: number): Article => ({

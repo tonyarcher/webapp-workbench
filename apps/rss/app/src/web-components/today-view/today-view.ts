@@ -5,7 +5,7 @@ import { fetchArticlesPage } from '../../services/api';
 import { markArticleRead, markShownRead, toggleStar } from '../../mutations';
 import { safeHttpUrl } from '../../services/parser';
 import { articleImage, cardPlaceholderStyle } from '../../services/image';
-import { articleVideo } from '../../services/video';
+import { articleVideo, watchUrlFor } from '../../services/video';
 import {
     loadTodaySettings,
     pruneTodaySettings,
@@ -284,13 +284,14 @@ export class TodayView extends LitElement {
         const feedTitle = feeds.find((f) => f.id === article.feedId)?.title;
         const feedIcon = feeds.find((f) => f.id === article.feedId)?.icon;
         const video = articleVideo(article);
+        const link = safeHttpUrl(article.link);
         const image = video ? undefined : articleImage(article, feedIcon);
         return html`
       <!-- pointer-only: the card body opens the article on pointer; keyboard users open it with the title button. -->
       <div class="grid-card ${article.read ? 'read' : ''}" @click=${() => this.openArticle(article)}>
         ${
             video
-                ? html`<video-header class="grid-card-img" .video=${video} .videoTitle=${article.title}></video-header>`
+                ? html`<video-header class="grid-card-img" .video=${video} .videoTitle=${article.title} .videoLink=${watchUrlFor(video, link)}></video-header>`
                 : image
                   ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>`
                   : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`
