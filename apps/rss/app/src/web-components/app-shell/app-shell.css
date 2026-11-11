@@ -207,7 +207,8 @@ main {
     flex: none;
     min-width: 0;
     width: min(var(--article-width, 880px), calc(100% - 52px), 1120px);
-    border-left: 1px solid var(--border);
+    /* No edge border: the panel floats on shadow and rounded corners, and
+       a 1px border reads as a hard white line against the dimmed list. */
     border-top-left-radius: 16px;
     border-bottom-left-radius: 16px;
     background: var(--panel-bg);
