@@ -128,5 +128,17 @@ test('the open article has no automatic accessibility violations', async ({ page
     await expect(page.getByText('First article', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Video article', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
+    // The panel slides in over 180ms; auditing mid-fade blends every color
+    // with the backdrop and fails contrast at random. Wait for the entrance
+    // to settle instead of sleeping a fixed margin.
+    await page.waitForFunction(() => {
+        const panel = document
+            .querySelector('app-shell')
+            ?.shadowRoot?.querySelector('.article-panel') as HTMLElement | null;
+        if (!panel) return false;
+        return (
+            panel.getAnimations().every((a) => a.playState === 'finished') && getComputedStyle(panel).opacity === '1'
+        );
+    });
     expect(await audit(page)).toEqual([]);
 });
