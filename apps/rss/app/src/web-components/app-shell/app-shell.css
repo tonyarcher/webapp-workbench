@@ -242,7 +242,8 @@ main {
     height: 72px;
     border-radius: 15px;
     background: var(--panel-bg);
-    border: 1px solid var(--border);
+    /* No border on the pill itself: the dots are the affordance. */
+    border: none;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
     display: flex;
     align-items: center;
@@ -253,9 +254,10 @@ main {
     padding: 0;
 }
 
-.article-panel-handle:hover,
-.article-panel-handle.resizing {
-    border-color: var(--accent);
+.article-panel-handle:hover .article-panel-grip,
+.article-panel-handle.resizing .article-panel-grip {
+    background-image: radial-gradient(circle, var(--accent) 1.5px, transparent 1.6px);
+    opacity: 1;
 }
 
 .article-panel-handle:focus-visible {
