@@ -148,6 +148,35 @@ dialog::backdrop {
     margin-top: 8px;
 }
 
+.field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.share-row {
+    display: flex;
+    gap: 6px;
+}
+
+.share-row input[type='text'] {
+    flex: 1;
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text);
+}
+
+.hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 6px 0 0;
+}
+
 input[type='url'] {
     flex: 1;
     font: inherit;

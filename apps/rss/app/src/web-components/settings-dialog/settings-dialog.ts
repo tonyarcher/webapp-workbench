@@ -2,6 +2,8 @@ import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { applyTheme, getTheme, type Theme } from '../../theme';
 import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
+import { normalizeMastodonHost } from '../../services/share';
+import { loadMastodonHost, saveMastodonHost } from '../../services/share-settings';
 import { migrateLibrary } from '../../services/api';
 import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
 import { invalidateArticles, invalidateLibrary } from '../../query';
@@ -22,6 +24,9 @@ export class SettingsDialog extends LitElement {
     @state() private migrating = false;
     @state() private status = '';
     @state() private statusError = false;
+    @state() private mastodonHost = '';
+    @state() private shareStatus = '';
+    @state() private shareStatusError = false;
 
     private dialogEl: HTMLDialogElement | null = null;
 
@@ -29,6 +34,9 @@ export class SettingsDialog extends LitElement {
         if (changed.has('open')) {
             if (this.open) {
                 this.theme = getTheme();
+                this.mastodonHost = loadMastodonHost();
+                this.shareStatus = '';
+                this.shareStatusError = false;
                 this.dialogEl?.showModal();
             } else {
                 this.dialogEl?.close();
@@ -71,6 +79,47 @@ export class SettingsDialog extends LitElement {
     `;
     }
 
+    private renderSharingSection() {
+        return html`
+      <div class="section">
+        <h3>Sharing</h3>
+        <label class="field-label" for="mastodon-host">Mastodon instance</label>
+        <div class="share-row">
+          <input
+            id="mastodon-host"
+            type="text"
+            inputmode="url"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="mastodon.social"
+            .value=${this.mastodonHost}
+            @keydown=${(e: KeyboardEvent) => {
+                if (e.key === 'Enter') void this.submitMastodonHost();
+            }}
+          />
+          <button class="btn primary" @click=${this.submitMastodonHost}>Save</button>
+        </div>
+        <p class="hint">Article shares post through this instance, e.g. mastodon.social.</p>
+        ${this.shareStatus ? html`<div class="status ${this.shareStatusError ? 'error' : ''}">${this.shareStatus}</div>` : ''}
+      </div>
+    `;
+    }
+
+    private async submitMastodonHost() {
+        const input = this.shadowRoot?.querySelector<HTMLInputElement>('#mastodon-host');
+        const raw = input?.value.trim() ?? '';
+        const clean = normalizeMastodonHost(raw);
+        if (!clean) {
+            this.shareStatus = 'Enter an instance domain, e.g. mastodon.social.';
+            this.shareStatusError = true;
+            return;
+        }
+        saveMastodonHost(clean);
+        this.mastodonHost = clean;
+        this.shareStatus = `Sharing through ${clean}.`;
+        this.shareStatusError = false;
+    }
+
     private renderFeedsSection() {
         return html`
       <div class="section">
@@ -108,6 +157,7 @@ export class SettingsDialog extends LitElement {
         </div>
         <div class="body">
           ${this.renderAppearanceSection()}
+          ${this.renderSharingSection()}
           ${this.renderFeedsSection()}
         </div>
       </dialog>

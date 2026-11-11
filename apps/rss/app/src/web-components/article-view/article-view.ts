@@ -3,6 +3,9 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sanitizeHtml, safeHttpUrl, stripHtml } from '../../services/parser';
 import { articleVideo } from '../../services/video';
+import { shareUrl } from '../../services/share';
+import { loadMastodonHost } from '../../services/share-settings';
+import { toastError, toastInfo } from '../../services/toast';
 import { SUMMARY_LENGTHS, loadSummaryLength, saveSummaryLength, summarizeBest, type SummaryLength } from '../../ai';
 import { toggleStar } from '../../mutations';
 import type { Article } from '../../types';
@@ -25,6 +28,7 @@ export class ArticleView extends LitElement {
     @state() private aiSummary: string | null = null;
     @state() private aiError = '';
     @state() private summaryLength: SummaryLength = loadSummaryLength();
+    @state() private shareOpen = false;
 
     override connectedCallback() {
         super.connectedCallback();
@@ -45,6 +49,7 @@ export class ArticleView extends LitElement {
             this.aiSummary = null;
             this.aiError = '';
             this.sanitizedBody = null;
+            this.shareOpen = false;
         }
         const a = this.article;
         if (!a) return;
@@ -76,14 +81,62 @@ export class ArticleView extends LitElement {
         <button class="btn" @click=${this.emitClose}>← Back</button>
         <button class="btn" @click=${this.onStar}>${a.starred ? '★ Unstar' : '☆ Star'}</button>
         <button class="btn" @click=${this.onSummarize} ?disabled=${this.summarizing}>${label}</button>
+        ${link ? html`<button class="btn" aria-expanded=${this.shareOpen} @click=${this.toggleShare}>↗ Share</button>` : ''}
         <div class="spacer"></div>
         ${link ? html`<a class="btn primary" href=${link} target="_blank" rel="noopener noreferrer">View original ↗</a>` : ''}
-      </div>`;
+      </div>
+      ${this.shareOpen && link ? this.renderShareBar(a, link) : ''}`;
     }
 
     private emitClose = () => {
         this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     };
+
+    private toggleShare = () => {
+        this.shareOpen = !this.shareOpen;
+    };
+
+    /**
+     * One button per network. Facebook and X open their share intents;
+     * Mastodon posts through the configured instance; Instagram publishes
+     * no web share endpoint, so its button copies the link for pasting.
+     */
+    private renderShareBar(a: Article, link: string) {
+        const open = (target: 'facebook' | 'x' | 'mastodon') => (e: Event) => {
+            e.stopPropagation();
+            const href = shareUrl(target, link, a.title, loadMastodonHost());
+            if (href) window.open(href, '_blank', 'noopener,noreferrer');
+        };
+        return html`
+      <div class="share-bar" role="group" aria-label="Share this article">
+        <button class="btn" @click=${open('facebook')}>Facebook</button>
+        <button class="btn" @click=${open('x')}>X</button>
+        <button class="btn" @click=${open('mastodon')}>Mastodon</button>
+        <button class="btn" @click=${() => void this.copyLink(link)}>Instagram</button>
+      </div>`;
+    }
+
+    /** Instagram path: no endpoint exists, so copy the link for pasting. */
+    private async copyLink(link: string): Promise<void> {
+        let copied = false;
+        try {
+            await navigator.clipboard.writeText(link);
+            copied = true;
+        } catch {
+            try {
+                const area = document.createElement('textarea');
+                area.value = link;
+                document.body.appendChild(area);
+                area.select();
+                copied = document.execCommand('copy');
+                area.remove();
+            } catch {
+                copied = false;
+            }
+        }
+        if (copied) toastInfo('Link copied — paste it in Instagram');
+        else toastError('Could not copy the link');
+    }
 
     private renderTitle(a: Article, link: string | undefined) {
         return html`<h1>${link ? html`<a href=${link} target="_blank" rel="noopener noreferrer">${a.title}</a>` : a.title}</h1>`;

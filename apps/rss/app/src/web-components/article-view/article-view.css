@@ -53,6 +53,16 @@
     text-decoration: none;
 }
 
+/* Share row under the toolbar, hidden until the Share toggle opens it. */
+.share-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-bg);
+}
+
 .btn .spacer {
     flex: 1;
 }
