@@ -1,10 +1,14 @@
 package fitnessapi.http
 
+import fitnessapi.ai.AiConfig
+import fitnessapi.ai.AiQuotaService
+import fitnessapi.check.PlausibilityProvider
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,6 +25,15 @@ class WebBranchTest {
 
     @Autowired
     lateinit var profiles: FakeProfileStore
+
+    @MockitoBean
+    lateinit var aiConfig: AiConfig
+
+    @MockitoBean
+    lateinit var quotas: AiQuotaService
+
+    @MockitoBean
+    lateinit var provider: PlausibilityProvider
 
     @BeforeEach
     fun reset() {

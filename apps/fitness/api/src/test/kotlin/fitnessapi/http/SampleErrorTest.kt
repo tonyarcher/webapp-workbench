@@ -1,11 +1,15 @@
 package fitnessapi.http
 
+import fitnessapi.ai.AiConfig
+import fitnessapi.ai.AiQuotaService
+import fitnessapi.check.PlausibilityProvider
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.put
@@ -21,6 +25,15 @@ class SampleErrorTest {
 
     @Autowired
     lateinit var samples: FakeSampleStore
+
+    @MockitoBean
+    lateinit var aiConfig: AiConfig
+
+    @MockitoBean
+    lateinit var quotas: AiQuotaService
+
+    @MockitoBean
+    lateinit var provider: PlausibilityProvider
 
     @BeforeEach
     fun reset() {

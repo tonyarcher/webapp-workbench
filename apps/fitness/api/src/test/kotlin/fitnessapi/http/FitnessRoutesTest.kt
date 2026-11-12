@@ -1,5 +1,8 @@
 package fitnessapi.http
 
+import fitnessapi.ai.AiConfig
+import fitnessapi.ai.AiQuotaService
+import fitnessapi.check.PlausibilityProvider
 import fitnessapi.web.CorsConfig
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.double
@@ -13,6 +16,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 import kotlin.test.Test
@@ -30,6 +34,15 @@ class FitnessRoutesTest {
 
     @Autowired
     lateinit var profiles: FakeProfileStore
+
+    @MockitoBean
+    lateinit var aiConfig: AiConfig
+
+    @MockitoBean
+    lateinit var quotas: AiQuotaService
+
+    @MockitoBean
+    lateinit var provider: PlausibilityProvider
 
     @BeforeEach
     fun reset() {
