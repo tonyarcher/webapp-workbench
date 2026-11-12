@@ -23,6 +23,20 @@ export function domainOf(url: string | undefined): string {
     }
 }
 
+/** Rough reading time at 265wpm, rounded up. 0 when there is nothing to read. */
+const WORDS_PER_MINUTE = 265;
+
+export function readMinutes(content?: string, summary?: string): number {
+    const text = stripTags(content ?? '') || summary || '';
+    const words = text.split(/\s+/).filter(Boolean).length;
+    if (!words) return 0;
+    return Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
+}
+
+function stripTags(html: string): string {
+    return html.replace(/<[^>]*>/g, ' ');
+}
+
 /**
  * Build a diverse page from per-feed sorted lists: round-robin through the
  * feeds (ordered by their hottest item first) so no single source dominates

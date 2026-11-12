@@ -4,11 +4,19 @@
  * source-list.ts (HIDE_READ_KEY): validated loads, silent saves, {} on
  * anything unexpected. No API changes — these toggles never leave the browser.
  */
-import { extractWords } from './interesting-words';
+import {
+    DEFAULT_INTERESTING_STRICTNESS as WORDS_DEFAULT_STRICTNESS,
+    clampInterestingStrictness,
+    extractWords,
+} from './interesting-words';
+
+/** Re-exported so views import settings only; the words module owns the value. */
+export const DEFAULT_INTERESTING_STRICTNESS = WORDS_DEFAULT_STRICTNESS;
 
 const SHADOW_KEY = 'rss-reader:interesting-shadow';
 const WORD_MAP_KEY = 'rss-reader:word-map';
 const HIDE_READ_KEY = 'rss-reader:hide-read-by-folder';
+const STRICTNESS_KEY = 'rss-reader:interesting-strictness';
 
 /** Folder ids with the ✨ Interesting row enabled. */
 export function loadInterestingShadow(): Record<string, true> {
@@ -272,4 +280,37 @@ export function accrueEngagement(
     else totals[entry] = next;
     saveEngagementTotals(totals);
     adjustWordMap(title, applied);
+}
+
+/**
+ * Per-folder Interesting selectivity (0 loose … 100 strict). Stored as one
+ * JSON map so each folder keeps its own slider; a legacy bare number reads
+ * as every folder's value. Anything unexpected is the default.
+ */
+export function loadInterestingStrictness(folderId: string): number {
+    try {
+        const raw = localStorage.getItem(STRICTNESS_KEY);
+        if (!raw) return DEFAULT_INTERESTING_STRICTNESS;
+        const parsed = JSON.parse(raw) as unknown;
+        if (typeof parsed === 'number') return clampInterestingStrictness(parsed);
+        if (typeof parsed === 'object' && parsed !== null) {
+            return clampInterestingStrictness((parsed as Record<string, unknown>)[folderId]);
+        }
+        return DEFAULT_INTERESTING_STRICTNESS;
+    } catch {
+        return DEFAULT_INTERESTING_STRICTNESS;
+    }
+}
+
+export function saveInterestingStrictness(folderId: string, value: number): void {
+    try {
+        const raw = localStorage.getItem(STRICTNESS_KEY);
+        const parsed = raw ? (JSON.parse(raw) as unknown) : {};
+        const map: Record<string, number> =
+            typeof parsed === 'object' && parsed !== null ? { ...(parsed as Record<string, number>) } : {};
+        map[folderId] = clampInterestingStrictness(value);
+        localStorage.setItem(STRICTNESS_KEY, JSON.stringify(map));
+    } catch {
+        // storage unavailable; the slider just won't persist
+    }
 }

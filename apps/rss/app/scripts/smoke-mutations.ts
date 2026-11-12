@@ -1,5 +1,6 @@
 // Mutation smoke: mark-before cutoff posting, open/star revert-on-failure,
-// and card thumbnail derivation from content.
+// bulk selection actions, mark-on-scroll claiming, and card thumbnail
+// derivation from content.
 import { firstImageUrl } from '../src/services/image';
 import type { Article } from '../src/types';
 import { assert } from './smoke-assert';
@@ -47,6 +48,155 @@ import { assert } from './smoke-assert';
         shims['fetch'] = realFetch;
         shims['window'] = realWindow;
     }
+}
+
+// ---- bulk star writes once and teaches every selected title ----
+{
+    const { bulkStar } = await import('../src/mutations');
+    const { queryClient: bulkQueryClient } = await import('../src/query');
+    const { loadWordMap } = await import('../src/services/interesting-settings');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = { dispatchEvent: () => false };
+    const mem = new Map<string, string>();
+    shims['localStorage'] = {
+        getItem: (k: string) => mem.get(k) ?? null,
+        setItem: (k: string, v: string) => void mem.set(k, String(v)),
+        removeItem: (k: string) => void mem.delete(k),
+    };
+    const store = shims['localStorage'] as { setItem: (k: string, v: string) => void };
+    store.setItem(
+        'rss.auth.tokens',
+        JSON.stringify({ access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900 }),
+    );
+    const seen: Array<{ url: string; body: string | null }> = [];
+    shims['fetch'] = async (url: unknown, init?: { body?: unknown }) => {
+        seen.push({ url: String(url), body: typeof init?.body === 'string' ? init.body : null });
+        return new Response(JSON.stringify({ ok: true, updated: 2 }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    };
+    try {
+        const ok = await bulkStar([
+            { id: 's1', title: 'Shared Rust Story' },
+            { id: 's2', title: 'Other Rust Tale' },
+        ]);
+        assert(ok === true, 'bulk star resolves true on success');
+        const writes = seen.filter((s) => s.url.includes('/api/articles/state'));
+        assert(writes.length === 1, 'bulk star writes the whole selection at once');
+        assert(loadWordMap()['shared'] === 4 && loadWordMap()['other'] === 4, 'bulk star teaches every selected title');
+        assert(loadWordMap()['rust'] === 8, 'bulk star weights shared words twice');
+        shims['fetch'] = async () =>
+            new Response(JSON.stringify({ error: 'internal error' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        const { bulkStarAction } = await import('../src/web-components/article-list/article-list-selection');
+        const selection = ['s1', 's2'];
+        const clearSelection = () => {
+            selection.length = 0;
+        };
+        await bulkStarAction({ items: [], selectedIds: selection, clearSelection } as never);
+        assert(selection.join(',') === 's1,s2', 'an empty bulk selection writes nothing');
+        const failHost = {
+            items: [{ id: 's9', title: 'Unreachable Story', read: 0, starred: false }] as Article[],
+            selectedIds: ['s9'],
+            clearSelection: () => {},
+            requestUpdate: () => {},
+        };
+        await bulkStarAction(failHost as never);
+        assert(failHost.items[0]!.starred === false, 'a failed bulk star paints no stars');
+        assert(failHost.selectedIds.join(',') === 's9', 'a failed bulk star keeps the selection for retry');
+    } finally {
+        bulkQueryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
+// ---- mark-above claims only the scrolled-past unread rows ----
+{
+    const { markAboveAction, unreadIdsBefore } =
+        await import('../src/web-components/article-list/article-list-selection');
+    const { queryClient: aboveQueryClient } = await import('../src/query');
+    const items = [
+        { id: 'a', read: 0 },
+        { id: 'b', read: 1 },
+        { id: 'c', read: 0 },
+    ] as Article[];
+    assert(unreadIdsBefore(items, 0).length === 0, 'nothing scrolled past claims nothing');
+    assert(unreadIdsBefore(items, 2).join(',') === 'a', 'mark-above skips already-read rows');
+    assert(unreadIdsBefore(items, 9).join(',') === 'a,c', 'mark-above clamps to the loaded list');
+    const shims = globalThis as Record<string, unknown>;
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    const dispatched: string[] = [];
+    shims['window'] = {
+        dispatchEvent: (e: Event) => {
+            dispatched.push((e as CustomEvent<string>).detail);
+            return false;
+        },
+    };
+    const store = shims['localStorage'] as { setItem: (k: string, v: string) => void } | undefined;
+    store?.setItem(
+        'rss.auth.tokens',
+        JSON.stringify({ access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900 }),
+    );
+    shims['fetch'] = async () =>
+        new Response(JSON.stringify({ ok: true, updated: 2 }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    try {
+        const host = { items, lastAutoMark: 0 };
+        const mark = await markAboveAction(host as never, 3);
+        assert(mark === 3, 'mark-above advances past the visible rows');
+        assert(dispatched.join(',') === 'a,c', 'mark-above repaints exactly the claimed rows');
+        const repeat = await markAboveAction(host as never, 2);
+        assert(repeat === 3, 'mark-above never moves the mark backwards');
+        shims['fetch'] = async () =>
+            new Response(JSON.stringify({ error: 'internal error' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        const before = dispatched.length;
+        const failedMark = await markAboveAction({ items, lastAutoMark: 0 } as never, 3);
+        assert(failedMark === 0, 'a failed write does not advance the mark');
+        assert(dispatched.length === before, 'a failed write paints nothing and stays retryable');
+    } finally {
+        aboveQueryClient.clear();
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}
+
+// ---- selection anchors start where the reader last touched ----
+{
+    const { clearSelectionAction, selectRangeAction, setAnchor, toggleSelectAction } =
+        await import('../src/web-components/article-list/article-list-selection');
+    const list = [
+        { id: 'a', read: 0 },
+        { id: 'b', read: 0 },
+        { id: 'c', read: 0 },
+        { id: 'd', read: 0 },
+    ] as Article[];
+    const host = { items: list, selectedIds: [] as string[], selectAnchor: -1, cursor: -1 };
+    selectRangeAction(host as never, 2);
+    assert(host.selectedIds.join(',') === 'c', 'shift-click with no anchor selects only the clicked row');
+    setAnchor(host as never, 0);
+    host.selectedIds = [];
+    selectRangeAction(host as never, 2);
+    assert(host.selectedIds.join(',') === 'a,b,c', 'shift-click extends from the clicked anchor');
+    host.selectedIds = [];
+    setAnchor(host as never, 3);
+    selectRangeAction(host as never, 1);
+    assert(host.selectedIds.join(',') === 'b,c,d', 'shift-click extends downwards too');
+    toggleSelectAction(host as never, 2);
+    assert(host.selectedIds.join(',') === 'b,d', 'the select key toggles one row off');
+    clearSelectionAction(host as never);
+    assert(host.selectedIds.length === 0 && host.selectAnchor === -1, 'clearing resets the anchor');
 }
 
 // ---- markArticleRead reports success so opens can revert ----

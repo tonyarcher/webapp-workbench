@@ -122,6 +122,64 @@
     white-space: nowrap;
 }
 
+.selection-bar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--active-bg);
+    color: var(--active-text);
+    font-size: 13px;
+}
+
+.selection-count {
+    font-weight: 600;
+    margin-right: auto;
+}
+
+.row.picked,
+.grid-card.picked {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+.interesting-bar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.interesting-bar .interesting-hint {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border-bottom: none;
+}
+
+.interesting-selectivity {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.interesting-selectivity input[type='range'] {
+    width: 120px;
+    accent-color: var(--accent);
+}
+
+.interesting-selectivity input[type='range']:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 .freshness {
     flex: none;
     font-size: 12px;

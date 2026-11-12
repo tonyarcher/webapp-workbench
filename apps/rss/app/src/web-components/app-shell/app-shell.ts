@@ -2,21 +2,32 @@ import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { history, parsePath } from '../../router';
 import { markArticleRead } from '../../mutations';
-import { bustCounts, queryClient } from '../../query';
+import {
+    bustCounts,
+    fetchLibrary,
+    libraryKey,
+    queryClient,
+    QueryController,
+    unreadTitle,
+    type LibraryData,
+} from '../../query';
+import type { ArticleView } from '../article-view/article-view';
 import { clearClientDb } from '../../db/db';
 import { currentUsername, hasSession, logout, startLogin } from '../../services/auth';
 import { clearToasts, dismissToast, onToast, type ToastNotice } from '../../services/toast';
-import { accrueEngagement } from '../../services/interesting-settings';
-import { OPEN_READ_CAP, expandedReadWeight } from '../../services/engagement';
-import type { Article, View } from '../../types';
+import { endOpen, initialOpenTiming, trackOpen, type OpenTiming } from './article-open-tracking';
+import { isModalOpen } from '../../services/modal-guard';
 import {
-    MAX_ARTICLE_PANEL_WIDTH,
-    MIN_ARTICLE_PANEL_WIDTH,
-    clampArticlePanelWidth,
-    loadArticlePanelWidth,
-    nextArticlePanelWidth,
-    saveArticlePanelWidth,
-} from './article-panel-settings';
+    endArticleResize,
+    panelResizeEnd,
+    panelResizeKey,
+    panelResizeMove,
+    panelResizeStart,
+} from './article-panel-resize';
+import { overlayShortcut } from '../../services/shortcuts';
+import type { Article, View } from '../../types';
+import '../shortcuts-dialog/shortcuts-dialog';
+import { MAX_ARTICLE_PANEL_WIDTH, MIN_ARTICLE_PANEL_WIDTH, loadArticlePanelWidth } from './article-panel-settings';
 import styles from './app-shell.css?inline';
 
 /**
@@ -45,20 +56,28 @@ export class AppShell extends LitElement {
     @state() private article: Article | null = null;
     private articleReturnFocus: HTMLElement | null = null;
     @state() private settingsOpen = false;
+    @state() private shortcutsOpen = false;
     @state() private resume: { view: string; id: string } | null = null;
     @state() private authed = hasSession();
     @state() private username: string | null = currentUsername();
     @state() private authError = '';
     @state() private toasts: ToastNotice[] = [];
 
+    /** Shared library cache: only the unread total for the tab title. */
+    private titleLibrary = new QueryController<LibraryData>(this, () => ({
+        queryKey: libraryKey,
+        queryFn: () => fetchLibrary(),
+        refetchInterval: 60_000,
+    }));
+
     private toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
     private readContext: { items: Article[]; index: number } | null = null;
     private unsubscribe?: () => void;
     private unsubscribeToasts: (() => void) | null = null;
-    private articleResizing = false;
-    private articleResizeHandleEl: HTMLElement | null = null;
-    private articleResizeStart: { x: number; width: number; pointerId: number } | null = null;
+    articleResizing = false;
+    articleResizeHandleEl: HTMLElement | null = null;
+    articleResizeStart: { x: number; width: number; pointerId: number } | null = null;
     /**
      * Current article panel width, the source of truth for aria-valuenow.
      * Kept as a plain field like the sidebar width: a drag applies it on
@@ -73,13 +92,16 @@ export class AppShell extends LitElement {
         this.route = parsePath(history.location.pathname);
         this.unsubscribe = history.subscribe(({ location }) => {
             this.route = parsePath(location.pathname);
-            this.closeArticle();
+            // A route change is not a dismissal: leaving the view is not a
+            // bounce, so the open time still counts as reading.
+            this.closeArticle(false);
             this.resume = null;
         });
         window.addEventListener('keydown', this.onKeyDown);
         window.addEventListener('rss-auth-required', this.onAuthRequired);
         window.addEventListener('rss-auth-changed', this.onAuthChanged);
         window.addEventListener('rss-auth-error', this.onAuthError);
+        window.addEventListener('show-shortcuts', this.onShowShortcuts);
         this.unsubscribeToasts = onToast((notices) => {
             this.toasts = notices;
             this.syncToastTimers();
@@ -97,7 +119,18 @@ export class AppShell extends LitElement {
         window.removeEventListener('rss-auth-required', this.onAuthRequired);
         window.removeEventListener('rss-auth-changed', this.onAuthChanged);
         window.removeEventListener('rss-auth-error', this.onAuthError);
+        window.removeEventListener('show-shortcuts', this.onShowShortcuts);
         this.unsubscribe?.();
+    }
+
+    private onShowShortcuts = () => {
+        this.shortcutsOpen = true;
+    };
+
+    override updated(_changed: Map<string, unknown>) {
+        const total = (this.titleLibrary.data?.feeds ?? []).reduce((sum, f) => sum + f.unread, 0);
+        const title = unreadTitle(total);
+        if (document.title !== title) document.title = title;
     }
 
     private onAuthError = (e: Event) => {
@@ -162,6 +195,7 @@ export class AppShell extends LitElement {
         await clearClientDb();
         this.authed = false;
         this.username = null;
+        document.title = 'RSS Reader';
         clearToasts();
         this.authError = ended
             ? ''
@@ -276,15 +310,36 @@ export class AppShell extends LitElement {
     }
 
     private renderSettings() {
-        return html`<settings-dialog .open=${this.settingsOpen} @close=${() => (this.settingsOpen = false)}></settings-dialog>`;
+        return html`<settings-dialog .open=${this.settingsOpen} @close=${() => (this.settingsOpen = false)}></settings-dialog><shortcuts-dialog .open=${this.shortcutsOpen} @close=${() => (this.shortcutsOpen = false)}></shortcuts-dialog>`;
     }
 
     private onKeyDown = (e: KeyboardEvent) => {
+        // A modal dialog owns the keyboard outright: native Escape closes the
+        // dialog itself, and list keys must not leak through to the reader
+        // behind it (dialogs live in shadow roots, invisible to
+        // document-level queries).
+        if (isModalOpen()) return;
         // Before the nav keys, and before shouldIgnoreKey, so Escape closes the
         // article even with focus in a field or another dialog open.
         if (this.article && e.key === 'Escape') {
             this.closeArticle();
             return;
+        }
+        if (e.key === '?' && !this.shouldIgnoreKey(e)) {
+            e.preventDefault();
+            this.shortcutsOpen = true;
+            return;
+        }
+        if (this.article && !this.shouldIgnoreKey(e)) {
+            const action = overlayShortcut(e.key);
+            if (action === 'star' || action === 'derank' || action === 'original') {
+                e.preventDefault();
+                const view = this.renderRoot.querySelector('article-view') as ArticleView | null;
+                if (action === 'star') view?.keyboardStar();
+                else if (action === 'derank') view?.keyboardDerank();
+                else view?.keyboardOriginal();
+                return;
+            }
         }
         if (!this.readContext) return;
         if (this.shouldIgnoreKey(e)) return;
@@ -338,7 +393,8 @@ export class AppShell extends LitElement {
         const article = this.readContext.items[index];
         if (!article) return;
         this.readContext = { ...this.readContext, index };
-        this.trackOpen(article);
+        trackOpen(this.openTiming, this.article, article);
+        this.article = article;
         this.resume = { view: JSON.stringify(this.route), id: article.id };
         if (await markArticleRead(article.id)) {
             window.dispatchEvent(new CustomEvent('article-read', { detail: article.id }));
@@ -349,43 +405,17 @@ export class AppShell extends LitElement {
         const detail = (e as CustomEvent<{ article: Article; index: number; items: Article[] }>).detail;
         this.readContext = { items: detail.items, index: detail.index };
         this.articleReturnFocus = deepActiveElement();
-        this.trackOpen(detail.article);
+        trackOpen(this.openTiming, this.article, detail.article);
+        this.article = detail.article;
         this.resume = { view: JSON.stringify(this.route), id: detail.article.id };
     }
 
-    /**
-     * Expanded-read timing. Both open paths funnel here; every close path
-     * funnels through closeArticle (backdrop, Back button, Escape, keyboard
-     * close, route change), so open-to-close seconds are fully covered.
-     * Only an active dismissal can bounce: moving to the next story with
-     * j/k is still reading flow, never rejection.
-     */
-    private openArticleId: string | null = null;
-    private openedAt = 0;
+    /** Expanded-read timing, owned by article-open-tracking. */
+    private openTiming: OpenTiming = initialOpenTiming();
 
-    private trackOpen(article: Article) {
-        this.flushExpandedRead(false);
-        this.article = article;
-        this.openArticleId = article.id;
-        this.openedAt = Date.now();
-    }
-
-    private flushExpandedRead(dismissed: boolean) {
-        const open = this.article;
-        if (this.openArticleId === null || this.openedAt <= 0 || !open || open.id !== this.openArticleId) {
-            this.openArticleId = null;
-            this.openedAt = 0;
-            return;
-        }
-        const seconds = (Date.now() - this.openedAt) / 1000;
-        this.openArticleId = null;
-        this.openedAt = 0;
-        accrueEngagement(open.title, expandedReadWeight(seconds, dismissed), open.id, OPEN_READ_CAP, 'open');
-    }
-
-    private closeArticle() {
+    private closeArticle(dismissed = true) {
         if (!this.article) return;
-        this.flushExpandedRead(true);
+        endOpen(this.openTiming, this.article, dismissed);
         this.article = null;
         this.readContext = null;
         this.endArticleResize();
@@ -394,108 +424,24 @@ export class AppShell extends LitElement {
         target?.focus();
     }
 
-    /**
-     * Release a panel resize torn down mid-drag. Escape and route changes
-     * remove the overlay (and the handle holding the pointer capture) while
-     * a drag is in flight, so without this the body keeps col-resize and
-     * unselectable text until the next successful drag-end or reload.
-     */
     private endArticleResize() {
-        if (!this.articleResizing) return;
-        this.articleResizing = false;
-        const handle = this.articleResizeHandleEl;
-        const pointerId = this.articleResizeStart?.pointerId;
-        this.articleResizeStart = null;
-        this.articleResizeHandleEl = null;
-        if (handle && pointerId !== undefined) {
-            try {
-                if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
-            } catch {
-                // handle already detached; nothing to release
-            }
-            handle.classList.remove('resizing');
-        }
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-    }
-
-    /**
-     * The handle element, whether or not a drag is in progress. The active
-     * handle only exists between pointerdown and pointerup; a keyboard
-     * resize never sets it, so the shadow root fallback keeps aria-valuenow
-     * honest for exactly the users this control exists for.
-     */
-    private get articlePanelHandle(): HTMLElement | null {
-        return (
-            this.articleResizeHandleEl ?? this.renderRoot?.querySelector<HTMLElement>('.article-panel-handle') ?? null
-        );
-    }
-
-    /**
-     * The one place an article panel width is applied, so the pointer and
-     * keyboard paths cannot drift apart. Writes the CSS var on the panel
-     * (no re-render per pointermove) and the separator value a screen
-     * reader announces.
-     */
-    private applyArticlePanelWidth(raw: number) {
-        const width = clampArticlePanelWidth(raw);
-        this.articleWidth = width;
-        const panel = this.renderRoot?.querySelector<HTMLElement>('.article-panel');
-        panel?.style.setProperty('--article-width', `${width}px`);
-        this.articlePanelHandle?.setAttribute('aria-valuenow', String(width));
-        saveArticlePanelWidth(width);
+        endArticleResize(this as never);
     }
 
     private onArticleResizeStart = (e: PointerEvent) => {
-        if (e.button !== 0) return;
-        const handle = e.currentTarget as HTMLElement;
-        handle.setPointerCapture(e.pointerId);
-        this.articleResizeHandleEl = handle;
-        this.articleResizeStart = { x: e.clientX, width: this.articleWidth, pointerId: e.pointerId };
-        this.articleResizing = true;
-        handle.classList.add('resizing');
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
+        panelResizeStart(this as never, e);
     };
 
     private onArticleResizeMove = (e: PointerEvent) => {
-        if (!this.articleResizing || !this.articleResizeStart) return;
-        // The panel docks right: dragging left grows it.
-        this.applyArticlePanelWidth(this.articleResizeStart.width + (this.articleResizeStart.x - e.clientX));
+        panelResizeMove(this as never, e);
     };
 
     private onArticleResizeEnd = (e: PointerEvent) => {
-        if (!this.articleResizing) return;
-        const handle = this.articleResizeHandleEl;
-        this.articleResizing = false;
-        this.articleResizeStart = null;
-        this.articleResizeHandleEl = null;
-        handle?.classList.remove('resizing');
-        if (handle) {
-            try {
-                if (handle.hasPointerCapture(e.pointerId)) handle.releasePointerCapture(e.pointerId);
-            } catch {
-                // handle already detached; nothing to release
-            }
-        }
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
+        panelResizeEnd(this as never, e);
     };
 
-    /**
-     * Keyboard equivalent of the drag. Stepping and clamping live in
-     * nextArticlePanelWidth so they are testable without a DOM; this only
-     * decides whether the key is ours. Handled keys stop propagation: the
-     * shell's window keydown also listens for ArrowLeft (close) and would
-     * otherwise fire after the target listener and shut the overlay
-     * mid-resize.
-     */
     private onArticleResizeKey = (e: KeyboardEvent) => {
-        const next = nextArticlePanelWidth(this.articleWidth, e.key, e.shiftKey);
-        if (next === null) return;
-        e.preventDefault();
-        e.stopPropagation();
-        this.applyArticlePanelWidth(next);
+        panelResizeKey(this as never, e);
     };
 }
 

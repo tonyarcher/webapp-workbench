@@ -266,3 +266,70 @@ import { assert } from './smoke-assert';
         shims['window'] = realWindow;
     }
 }
+
+// ---- selectivity: the auto bar filters broad maps, the slider persists ----
+{
+    const {
+        clampInterestingStrictness,
+        DEFAULT_INTERESTING_STRICTNESS,
+        selectInteresting,
+        strictnessKeepFraction,
+        strictnessMinScore,
+    } = await import('../src/services/interesting-words');
+    const { loadInterestingStrictness, saveInterestingStrictness } =
+        await import('../src/services/interesting-settings');
+    const { emptyTextFor } = await import('../src/web-components/article-list/article-list-render');
+
+    assert(DEFAULT_INTERESTING_STRICTNESS === 50, 'selectivity defaults to the middle');
+    assert(clampInterestingStrictness(200) === 100, 'selectivity clamps high');
+    assert(clampInterestingStrictness(-5) === 0, 'selectivity clamps low');
+    assert(clampInterestingStrictness(Number.NaN) === 50, 'selectivity falls back on garbage');
+    assert(strictnessKeepFraction(0) === 1, 'loose keeps every positive');
+    assert(Math.abs(strictnessKeepFraction(100) - 0.1) < 1e-9, 'strict keeps a tenth');
+    assert(strictnessMinScore(0) === 0, 'loose has no absolute floor');
+    assert(strictnessMinScore(50) === 0.75, 'default floor needs a real match');
+
+    const broadMap = { news: 2, story: 2, update: 2 };
+    const batch = Array.from({ length: 60 }, (_, i) => ({ id: `n${i}`, title: `News Story Update ${i}` }));
+    const loose = selectInteresting(batch, broadMap, 0);
+    assert(loose.length === 60, 'loose keeps a broad batch whole');
+    const auto = selectInteresting(batch, broadMap, 50);
+    assert(auto.length > 0 && auto.length < 60, 'the default auto bar hides something on a broad map');
+    const strict = selectInteresting(batch, broadMap, 100);
+    assert(strict.length < auto.length, 'strict hides more than the default');
+    assert(strict.length >= 1, 'strict still shows the best match');
+    const weakEmpty = selectInteresting(batch, { news: 1, story: 1, update: 1 }, 100);
+    assert(weakEmpty.length === 0, 'an absolute floor can empty only when every match is weak');
+
+    const tiny = [
+        { id: 'a', title: 'Rust Guide' },
+        { id: 'b', title: 'Zebra News' },
+    ];
+    const tinyKept = selectInteresting(tiny, { rust: 4 }, 50);
+    assert(tinyKept.length === 1 && tinyKept[0]!.id === 'a', 'small batches keep positives without over-filtering');
+
+    const shims = globalThis as Record<string, unknown>;
+    const mem = new Map<string, string>();
+    shims['localStorage'] = {
+        getItem: (k: string) => mem.get(k) ?? null,
+        setItem: (k: string, v: string) => void mem.set(k, String(v)),
+        removeItem: (k: string) => void mem.delete(k),
+    };
+    assert(loadInterestingStrictness('f1') === 50, 'selectivity defaults per folder');
+    saveInterestingStrictness('f1', 80);
+    assert(loadInterestingStrictness('f1') === 80, 'selectivity round-trips per folder');
+    assert(loadInterestingStrictness('f2') === 50, 'one folder never moves another');
+    saveInterestingStrictness('f1', 200);
+    assert(loadInterestingStrictness('f1') === 100, 'selectivity persists clamped');
+    mem.set('rss-reader:interesting-strictness', 'oops');
+    assert(loadInterestingStrictness('f1') === 50, 'selectivity falls back on invalid JSON');
+
+    assert(
+        emptyTextFor(false, false, true) === 'Nothing here yet. Star articles to teach this view what you like.',
+        'cold Interesting start still invites starring',
+    );
+    assert(
+        emptyTextFor(false, false, true, true) === 'Nothing meets this selectivity — lower it to see more.',
+        'a filtered-empty Interesting view names the slider',
+    );
+}

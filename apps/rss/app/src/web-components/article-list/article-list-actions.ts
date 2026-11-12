@@ -10,6 +10,9 @@ import {
     toggleStar,
 } from '../../mutations';
 import type { Article, Feed, ListViewType, View } from '../../types';
+import { feedsForView } from './article-list-helpers';
+import { listShortcut } from '../../services/shortcuts';
+import { isModalOpen } from '../../services/modal-guard';
 import { toastApiError } from '../../services/toast';
 
 interface OpenHost {
@@ -103,7 +106,6 @@ interface RefreshHost {
     /** In-flight refresh jobs by view key. The component owns the map. */
     jobs: Map<string, Promise<void>>;
     setRefreshingKey(key: string, active: boolean): void;
-    feedsFor(view: View): Feed[];
     libraryFeeds(): Feed[];
     refreshTick(): Promise<void>;
     isAlive(): boolean;
@@ -150,7 +152,7 @@ async function runRefreshJob(host: RefreshHost, key: string): Promise<void> {
         if (queued) {
             await waitForIngest(
                 host,
-                host.feedsFor(view).map((f) => f.id),
+                feedsForView(view, { feeds: host.libraryFeeds() }).map((f) => f.id),
                 startedAt,
             );
             if (sameView(host.view, view)) await host.reset();
@@ -239,7 +241,7 @@ function isKeyHandlingIgnored(e: KeyboardEvent, host: CursorHost): boolean {
     if (e.key !== 'j' && e.key !== 'k') return true;
     const tag = (e.target as HTMLElement | null)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
-    if (document.querySelector('dialog[open]')) return true;
+    if (isModalOpen()) return true;
     if (!host.items.length) return true;
     return false;
 }
@@ -255,6 +257,63 @@ export function handleCursorKey(host: CursorHost, e: KeyboardEvent): void {
     host.cursor = next;
     const article = host.items[next];
     if (article) void host.openArticle(article);
+}
+
+/** Typing or an open modal dialog: shortcuts stay out of the way. Native
+ * dialogs live in shadow roots where document queries cannot see them, so
+ * open dialogs announce themselves through the modal guard instead. */
+function isShortcutIgnored(e: KeyboardEvent): boolean {
+    const tag = (e.target as HTMLElement | null)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    return isModalOpen();
+}
+
+export interface ListKeyHost extends CursorHost {
+    toggleStarCursor(): void;
+    toggleUnread(): void;
+    onRefresh(): Promise<unknown>;
+    setListView(view: ListViewType): void;
+    toggleSelectCursor(): void;
+    showShortcuts(): void;
+}
+
+/** Single-key shortcuts for the list. j/k keep their cursor behavior. */
+export function handleListKey(host: ListKeyHost, e: KeyboardEvent): void {
+    if (!host.active) return;
+    if (e.key === 'j' || e.key === 'k') {
+        handleCursorKey(host, e);
+        return;
+    }
+    if (isShortcutIgnored(e)) return;
+    const action = listShortcut(e.key);
+    if (action === null || !host.items.length) return;
+    e.preventDefault();
+    switch (action) {
+        case 'star':
+            host.toggleStarCursor();
+            break;
+        case 'unread':
+            host.toggleUnread();
+            break;
+        case 'refresh':
+            void host.onRefresh();
+            break;
+        case 'view-detailed':
+            host.setListView('detailed');
+            break;
+        case 'view-headline':
+            host.setListView('headline');
+            break;
+        case 'view-cards':
+            host.setListView('cards');
+            break;
+        case 'select':
+            host.toggleSelectCursor();
+            break;
+        case 'help':
+            host.showShortcuts();
+            break;
+    }
 }
 
 interface ResumeHost {

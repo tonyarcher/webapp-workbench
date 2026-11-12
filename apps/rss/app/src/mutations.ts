@@ -209,6 +209,30 @@ export async function toggleStar(articleId: string, nowStarred: boolean): Promis
 }
 
 /**
+ * Star a whole selection with one write. Titles come from the visible
+ * items (the caller hands them over, like the toggle reads the cache).
+ * Affinity stays per-article and fire-and-forget, matching toggleStar.
+ */
+export async function bulkStar(items: Array<{ id: string; title: string }>): Promise<boolean> {
+    for (const item of items) updateArticlesInCache(item.id, { starred: true });
+    try {
+        await updateArticleState(items.map((item) => ({ id: item.id, starred: true })));
+    } catch (err) {
+        console.error('bulkStar failed', err);
+        toastApiError(err, 'Could not star the selection. Check your connection and try again.');
+        await invalidateArticles();
+        await invalidateFrontPage();
+        return false;
+    }
+    for (const item of items) {
+        void recordAffinity(item.id, 4).catch(() => {});
+        adjustWordMap(item.title, STAR_WORD_WEIGHT, item.id);
+    }
+    await invalidateFrontPage();
+    return true;
+}
+
+/**
  * A share vouches for the story in public: the strongest local signal
  * (two stars) plus a server affinity touch so the front page and editions
  * feel it too. Fire-and-forget like the other affinity writes; the word
@@ -275,20 +299,24 @@ export async function markAllRead(feedId?: string) {
     await invalidateFrontPage();
 }
 
-export async function markShownRead(articleIds: string[]) {
+export async function markShownRead(articleIds: string[]): Promise<boolean> {
     for (const id of articleIds) updateArticlesInCache(id, { read: 1 });
     // Awaited: callers refetch unread-only lists right after this returns,
-    // and firing blind would let just-read articles reappear.
+    // and firing blind would let just-read articles reappear. Returns false
+    // when the write failed so callers neither advance marks nor paint rows
+    // as read — a failed write must stay retryable, never silently done.
     try {
         await updateArticleState(articleIds.map((id) => ({ id, read: true })));
     } catch (err) {
         console.error('markShownRead failed', err);
         toastApiError(err, 'Could not mark articles as read. Check your connection and try again.');
         await invalidateArticles();
+        return false;
     }
     bustCounts();
     await invalidateLibrary();
     await invalidateFrontPage();
+    return true;
 }
 
 export async function markReadBefore(feedIds: string[] | undefined, cutoff: number) {

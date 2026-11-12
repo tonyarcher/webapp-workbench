@@ -3,12 +3,13 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sanitizeHtml, safeHttpUrl, stripHtml } from '../../services/parser';
 import { articleVideo } from '../../services/video';
-import { shareUrl, type ShareTarget } from '../../services/share';
+import { canNativeShare, mailtoShareUrl, shareUrl, type ShareTarget } from '../../services/share';
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
 import { toastError, toastInfo } from '../../services/toast';
 import { SUMMARY_LENGTHS, loadSummaryLength, saveSummaryLength, summarizeBest, type SummaryLength } from '../../ai';
 import { noteDerank, noteOriginal, noteShare, noteSummary, toggleStar } from '../../mutations';
 import { isDeranked } from '../../services/interesting-settings';
+import { readMinutes } from '../../util';
 import type { Article } from '../../types';
 import { domainOf, formatDate } from '../../util';
 import '../video-header/video-header';
@@ -29,6 +30,10 @@ export class ArticleView extends LitElement {
     @state() private aiSummary: string | null = null;
     @state() private aiError = '';
     @state() private deranked = false;
+    /** Article the progress bar belongs to; object identity churns on star. */
+    private progressArticleId: string | null = null;
+    /** 0..1 fraction of the article scrolled, for the progress bar. */
+    @state() private readProgress = 0;
     @state() private summaryLength: SummaryLength = loadSummaryLength();
 
     override connectedCallback() {
@@ -41,11 +46,36 @@ export class ArticleView extends LitElement {
         this.setAttribute('aria-modal', 'true');
         this.setAttribute('tabindex', '-1');
         window.addEventListener('share-settings-changed', this.onShareSettingsChanged);
+        this.addEventListener('scroll', this.onScroll);
     }
 
     override disconnectedCallback() {
         super.disconnectedCallback();
         window.removeEventListener('share-settings-changed', this.onShareSettingsChanged);
+        this.removeEventListener('scroll', this.onScroll);
+    }
+
+    /** Progress bar: the host itself is the scroller. */
+    private onScroll = () => {
+        const max = this.scrollHeight - this.clientHeight;
+        this.readProgress = max > 0 ? Math.min(1, Math.max(0, this.scrollTop / max)) : 0;
+    };
+
+    /** Keyboard entry points, called by the shell which owns global keys. */
+    keyboardStar() {
+        void this.onStar();
+    }
+
+    keyboardDerank() {
+        this.onDerank();
+    }
+
+    keyboardOriginal() {
+        const a = this.article;
+        if (!a) return;
+        noteOriginal(a.id, a.title);
+        const link = safeHttpUrl(a.link);
+        if (link) window.open(link, '_blank', 'noopener,noreferrer');
     }
 
     /** Re-render when Settings changes which share buttons are shown. */
@@ -62,6 +92,14 @@ export class ArticleView extends LitElement {
             this.aiError = '';
             this.sanitizedBody = null;
             this.deranked = this.article ? isDeranked(this.article.id) : false;
+            // A new object identity does not mean a new article: starring
+            // replaces the object in place. Only a new id resets progress
+            // and scroll, or pressing S mid-article yanks the reader to top.
+            if (this.article?.id !== this.progressArticleId) {
+                this.progressArticleId = this.article?.id ?? null;
+                this.readProgress = 0;
+                this.scrollTop = 0;
+            }
         }
         const a = this.article;
         if (!a) return;
@@ -83,7 +121,7 @@ export class ArticleView extends LitElement {
         }
         const link = safeHttpUrl(a.link);
         const video = articleVideo(a);
-        return html`${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderAiCard()}${this.renderBody(body, a)}</div>`;
+        return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderAiCard()}${this.renderBody(body, a)}</div>`;
     }
 
     private renderToolbar(a: Article, link: string | undefined) {
@@ -121,32 +159,56 @@ export class ArticleView extends LitElement {
             mastodon: html`<button class="btn share-btn" @click=${open('mastodon')}>${shareIcon('mastodon')}Mastodon</button>`,
             instagram: html`<button class="btn share-btn" @click=${() => void this.copyLink(link, a)}>${shareIcon('instagram')}Instagram</button>`,
         };
-        return loadShareTargets().map((t) => buttons[t]);
+        return html`${loadShareTargets().map((t) => buttons[t])}${canNativeShare() ? html`<button class="btn share-btn" @click=${() => void this.nativeShare(a, link)}>More…</button>` : ''}<button class="btn share-btn" @click=${() => void this.copyTitleLink(a, link)}>Copy link</button><a class="btn share-btn" href=${mailtoShareUrl(link, a.title)} @click=${() => noteShare(a.id, a.title)}>Email</a>`;
+    }
+
+    /** OS share sheet where it exists; counts as a share like the rest. */
+    private async nativeShare(a: Article, link: string): Promise<void> {
+        try {
+            await navigator.share({ title: a.title, url: link });
+            noteShare(a.id, a.title);
+        } catch {
+            // dismissed or unsupported mid-flight; nothing to report
+        }
+    }
+
+    /** Title plus link on the clipboard for pasting anywhere. */
+    private async copyTitleLink(a: Article, link: string): Promise<void> {
+        if (await this.copyText(`${a.title}\n${link}`)) {
+            noteShare(a.id, a.title);
+            toastInfo('Link copied');
+        } else {
+            toastError('Could not copy the link');
+        }
     }
 
     private emitClose = () => {
         this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     };
 
-    /** Instagram path: no endpoint exists, so copy the link for pasting. */
-    private async copyLink(link: string, a: Article) {
-        let copied = false;
+    /** Clipboard with the legacy textarea fallback for older WebViews. */
+    private async copyText(text: string): Promise<boolean> {
         try {
-            await navigator.clipboard.writeText(link);
-            copied = true;
+            await navigator.clipboard.writeText(text);
+            return true;
         } catch {
             try {
                 const area = document.createElement('textarea');
-                area.value = link;
+                area.value = text;
                 document.body.appendChild(area);
                 area.select();
-                copied = document.execCommand('copy');
+                const copied = document.execCommand('copy');
                 area.remove();
+                return copied;
             } catch {
-                copied = false;
+                return false;
             }
         }
-        if (copied) {
+    }
+
+    /** Instagram path: no endpoint exists, so copy the link for pasting. */
+    private async copyLink(link: string, a: Article) {
+        if (await this.copyText(link)) {
             noteShare(a.id, a.title);
             toastInfo('Link copied — paste it in Instagram');
         } else toastError('Could not copy the link');
@@ -157,7 +219,8 @@ export class ArticleView extends LitElement {
     }
 
     private renderMeta(a: Article) {
-        return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}</div>`;
+        const minutes = readMinutes(a.content, a.summary);
+        return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}</div>`;
     }
 
     private renderAiCard() {

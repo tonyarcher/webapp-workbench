@@ -4,28 +4,47 @@ import { createRef, type Ref } from 'lit/directives/ref.js';
 import { Virtualizer } from '@tanstack/virtual-core';
 import { libraryKey, queryClient, QueryController, fetchLibrary } from '../../query';
 import {
-    applyResumeAction,
-    handleCursorKey,
+    handleListKey,
     markBeforeAction,
     markShownReadAction,
     openArticleAction,
     refreshViewAction,
     toggleStarAction,
 } from './article-list-actions';
-import { loadFolderPageAction, loadSinglePageAction } from './article-list-paging';
 import {
-    beginReset,
+    bulkDerankAction,
+    bulkMarkReadAction,
+    bulkStarAction,
+    clearSelectionAction,
+    markAboveViewport,
+    rowClickAction,
+    setAnchor,
+    toggleSelectAction,
+} from './article-list-selection';
+import {
+    applyStep,
+    canLoadMore,
+    loadNextPageAction,
+    needsLibrary,
+    refreshFeedSetKey,
+    reinitVirtualizer,
+    resetList,
+} from './article-list-loading';
+import {
     initialLoadState,
     isIdle,
     isLoading,
     libraryArrived,
-    loadSettled,
-    pageRequested,
     viewChanged,
     type LoadState,
-    type LoadStep,
 } from './article-list-load-state';
-import { interestingActiveFor, loadInterestingBatchAction } from './article-list-interesting';
+import { interestingActiveFor } from './article-list-interesting';
+import { clampInterestingStrictness } from '../../services/interesting-words';
+import {
+    loadInterestingStrictness,
+    saveInterestingStrictness,
+    DEFAULT_INTERESTING_STRICTNESS,
+} from '../../services/interesting-settings';
 import { DwellTracker } from './article-list-dwell';
 import {
     CARD_MIN_WIDTH,
@@ -35,13 +54,21 @@ import {
     folderFeedsOf,
     freshestFetchAt,
     loadViewSettingsFor,
+    readViewSettings,
     saveViewSettingsFor,
     scopeLabelOf,
+    viewKeyOf,
     viewRefreshKeyOf,
     viewTitleOf,
     virtualizerOptionsFor,
 } from './article-list-helpers';
-import { renderAdvancedMenu, renderInterestingHint, renderScroll, renderToolbar } from './article-list-render';
+import {
+    renderAdvancedMenu,
+    renderInterestingHint,
+    renderScroll,
+    renderSelectionBar,
+    renderToolbar,
+} from './article-list-render';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 import { toastApiError, toastInfo } from '../../services/toast';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
@@ -69,6 +96,8 @@ export class ArticleList extends LitElement {
     @state() private loadState: LoadState = initialLoadState();
     @state() private unreadOnly = false;
     @state() hideRead = false;
+    @state() markOnScroll = false;
+    @state() selectedIds: string[] = [];
     @state() private sort: ArticleSort = 'hot';
     @state() cursor = -1;
     @state() private listView: ListViewType = 'detailed';
@@ -78,6 +107,7 @@ export class ArticleList extends LitElement {
     @state() private advancedOpen = false;
     @state() private marking = false;
     @state() advancedAnchor: MenuAnchor | null = null;
+    @state() interestingStrictness = DEFAULT_INTERESTING_STRICTNESS;
     /** Last page-load failure, cleared on the next attempt. Rendered as a banner, never silent. */
     @state() loadError: string | null = null;
 
@@ -107,20 +137,22 @@ export class ArticleList extends LitElement {
     private scrollElRef: Ref<HTMLDivElement> = createRef();
     private virtualizer!: Virtualizer<HTMLDivElement, HTMLDivElement>;
     private virtualizerCleanup?: () => void;
-    private cursors = new Map<string, string | undefined>();
-    private feedHasMore = new Map<string, boolean>();
-    private hasMoreSingle = true;
+    cursors = new Map<string, string | undefined>();
+    feedHasMore = new Map<string, boolean>();
+    hasMoreSingle = true;
     private lastViewKey = '';
     resumeApplied = false;
     /** Feed membership last loaded: folder feeds, or every feed for All/Hot. */
-    private lastFeedSetKey = '';
+    lastFeedSetKey = '';
     /** Headline dwell with an active mouse, owned by this element's lifetime. */
     private dwell = new DwellTracker();
+    selectAnchor = -1;
+    lastAutoMark = 0;
     private resizeObserver: ResizeObserver | undefined;
     feedWindowOffset = 0;
     /** In-flight refresh jobs by view key. Each folder is its own elevator button. */
     refreshJobs = new Map<string, Promise<void>>();
-    @state() private activeRefreshKeys: string[] = [];
+    @state() activeRefreshKeys: string[] = [];
 
     /** True while a page fetch is in flight or queued; the footer renders "Loading…". */
     get loading(): boolean {
@@ -139,9 +171,7 @@ export class ArticleList extends LitElement {
     }));
 
     override firstUpdated() {
-        this.virtualizer = new Virtualizer(this.virtualizerOptions());
-        this.virtualizer._willUpdate();
-        this.virtualizerCleanup = this.virtualizer._didMount();
+        reinitVirtualizer(this as never);
         const el = this.scrollElRef.value;
         if (el) {
             this.updateCols();
@@ -222,10 +252,14 @@ export class ArticleList extends LitElement {
     override willUpdate(changed: Map<string, unknown>) {
         if (changed.has('view')) {
             this.dwell.flushViewChange();
+            // Unsaved views must not inherit auto-marking: without a saved
+            // setting the toggle is off, so opening a folder never starts
+            // silently marking another folder's articles as read.
+            this.markOnScroll = readViewSettings()[viewKeyOf(this.view)]?.markOnScroll ?? false;
             this.loadViewSettings();
         }
         if (this.virtualizer) {
-            this.virtualizer.setOptions(this.virtualizerOptions());
+            this.virtualizer.setOptions(virtualizerOptionsFor(this as never));
             this.virtualizer._willUpdate();
         }
     }
@@ -235,7 +269,8 @@ export class ArticleList extends LitElement {
     }
 
     private currentViewKey(): string {
-        return `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}`;
+        const strict = this.view.kind === 'interesting' ? `|strict:${this.interestingStrictness}` : '';
+        return `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}${strict}`;
     }
 
     private handleUpdate(viewKey: string): void {
@@ -248,54 +283,17 @@ export class ArticleList extends LitElement {
             this.lastViewKey = this.currentViewKey();
             // Feed-set views need the library (feed list) before loading;
             // updated() re-fires when the library query resolves.
-            void this.applyStep(viewChanged(this.loadState, this.needsLibrary(), this.library.data !== undefined));
+            void applyStep(
+                this as never,
+                viewChanged(this.loadState, needsLibrary(this as never), this.library.data !== undefined),
+            );
             return;
         }
         if (this.loadState.phase === 'awaiting-library' && this.library.data) {
-            void this.applyStep(libraryArrived(this.loadState));
+            void applyStep(this as never, libraryArrived(this.loadState));
             return;
         }
-        this.refreshFeedSetKey();
-    }
-
-    /**
-     * The loader depends on library feed membership in two views: a folder
-     * (its feeds) and All/Hot (every feed). `fetchLibrary()` paints feeds
-     * after folders, so the first load can run against an empty set. Reload
-     * when the set changes, or the view stays empty until something else
-     * resets it.
-     */
-    private feedSetKey(): string {
-        if (this.view.kind === 'folder' || this.view.kind === 'interesting') {
-            return this.folderFeeds()
-                .map((f) => f.id)
-                .join(',');
-        }
-        if (this.view.kind === 'all' && this.sort === 'hot') {
-            return (this.library.data?.feeds ?? []).map((f) => f.id).join(',');
-        }
-        return '';
-    }
-
-    private refreshFeedSetKey(): void {
-        if (
-            this.view.kind !== 'folder' &&
-            this.view.kind !== 'interesting' &&
-            !(this.view.kind === 'all' && this.sort === 'hot')
-        )
-            return;
-        const feedSetKey = this.feedSetKey();
-        if (feedSetKey === this.lastFeedSetKey) return;
-        this.lastFeedSetKey = feedSetKey;
-        void this.reset();
-    }
-
-    private needsLibrary(): boolean {
-        return (
-            this.view.kind === 'folder' ||
-            this.view.kind === 'interesting' ||
-            (this.view.kind === 'all' && this.sort === 'hot')
-        );
+        refreshFeedSetKey(this as never);
     }
 
     override render() {
@@ -304,13 +302,14 @@ export class ArticleList extends LitElement {
         const showFeed = this.view.kind !== 'feed';
         return html`
       ${renderToolbar(host)}
+      ${renderSelectionBar(host)}
       ${renderInterestingHint(host)}
       ${renderAdvancedMenu(host)}
       ${renderScroll(host, virtualItems, showFeed)}
     `;
     }
 
-    private interestingActive(): boolean {
+    interestingActive(): boolean {
         return interestingActiveFor(this.view);
     }
 
@@ -319,137 +318,41 @@ export class ArticleList extends LitElement {
     }
 
     onScroll = () => {
-        if (!isIdle(this.loadState) || !this.canLoadMore()) return;
+        if (this.markOnScroll) void markAboveViewport(this as never);
+        if (!isIdle(this.loadState) || !canLoadMore(this as never)) return;
         const el = this.scrollElRef.value;
         if (!el) return;
         if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
-            void this.loadNextPage();
+            void loadNextPageAction(this as never);
         }
     };
-
-    private canLoadMore(): boolean {
-        if (this.items.length >= this.pageSize) return false;
-        if (
-            this.view.kind === 'feed' ||
-            this.view.kind === 'folder' ||
-            this.view.kind === 'interesting' ||
-            (this.view.kind === 'all' && this.sort !== 'hot')
-        ) {
-            return this.hasMoreSingle;
-        }
-        const feeds = this.library.data?.feeds ?? [];
-        if (!feeds.length) return false;
-        return feeds.some((f) => this.feedHasMore.get(f.id) !== false);
-    }
 
     private onFeedsRefreshed = () => {
-        void this.reset();
+        void resetList(this as never);
     };
 
-    private virtualizerOptions() {
-        return virtualizerOptionsFor(this as never);
-    }
-
-    private folderFeeds(): Feed[] {
+    folderFeeds(): Feed[] {
         return folderFeedsOf(this.view, this.library.data);
-    }
-
-    /** Feeds for an explicit view, so a refresh job can snapshot the view that started it. */
-    feedsFor(view: View): Feed[] {
-        if (view.kind === 'feed') {
-            const feed = this.library.data?.feeds.find((f) => f.id === view.id);
-            return feed ? [feed] : [];
-        }
-        if (view.kind === 'folder' || view.kind === 'interesting') {
-            return folderFeedsOf(view, this.library.data);
-        }
-        return this.library.data?.feeds ?? [];
     }
 
     private loadViewSettings() {
         loadViewSettingsFor(this as never);
+        if (this.view.kind === 'interesting') {
+            this.interestingStrictness = loadInterestingStrictness(this.view.id);
+        }
     }
 
     private saveViewSettings() {
         saveViewSettingsFor(this as never);
     }
 
-    private reinitVirtualizer() {
-        this.virtualizerCleanup?.();
-        this.virtualizer = new Virtualizer(this.virtualizerOptions());
-        this.virtualizer._willUpdate();
-        this.virtualizerCleanup = this.virtualizer._didMount();
-    }
-
-    /**
-     * Replace the list for the current view. The load machine decides whether
-     * this starts now, queues behind the load in flight, or waits for the
-     * library; `clear` is set on every path that replaces the list.
-     */
-    private async reset() {
-        await this.applyStep(beginReset(this.loadState));
-    }
-
-    /** Infinite-scroll paging: append the next page, but only from idle. */
-    private async loadNextPage() {
-        await this.applyStep(pageRequested(this.loadState));
-    }
-
-    private async applyStep(step: LoadStep) {
-        if (step.clear) this.clearList();
-        this.loadState = step.state;
-        if (step.start !== null) await this.runLoad(step.start);
-    }
-
-    private clearList() {
-        this.items = [];
-        this.loadError = null;
-        this.cursors.clear();
-        this.feedHasMore.clear();
-        this.hasMoreSingle = true;
-        this.cursor = -1;
-        this.feedWindowOffset = 0;
-        this.lastFeedSetKey = this.feedSetKey();
-        const el = this.scrollElRef.value;
-        if (el) el.scrollTop = 0;
-        this.reinitVirtualizer();
-    }
-
-    /**
-     * Fetch the page for `gen`. Pages accumulate (infinite scroll); the paging
-     * actions drop a result whose generation no longer matches, so a superseded
-     * load cannot be written into the list that replaced it. A failure sets a
-     * banner instead of an empty list: without it the view reads as "no
-     * articles" while the sidebar badge still counts them.
-     */
-    private async runLoad(gen: number) {
-        try {
-            await this.loadPageSource(gen);
-            applyResumeAction(this as never);
-        } catch (err) {
-            console.error('article page load failed', err);
-            if (gen === this.loadState.gen) {
-                this.loadError = 'Could not load articles. Check your connection and try again.';
-            }
-        } finally {
-            const step = loadSettled(this.loadState);
-            this.loadState = step.state;
-            if (step.start !== null) void this.runLoad(step.start);
-        }
+    /** Thin delegator so actions and menus keep one reset entry point. */
+    async reset() {
+        await resetList(this as never);
     }
 
     onRetryArticles() {
-        void this.reset();
-    }
-
-    private loadPageSource(gen: number): Promise<void> {
-        if (this.interestingActive()) {
-            return loadInterestingBatchAction(this as never, gen);
-        }
-        if (this.view.kind === 'folder' || this.view.kind === 'interesting') {
-            return loadFolderPageAction(this as never, gen);
-        }
-        return loadSinglePageAction(this as never, gen);
+        void resetList(this as never);
     }
 
     viewTitle(): string {
@@ -470,8 +373,59 @@ export class ArticleList extends LitElement {
 
     private onKeyDown = (e: KeyboardEvent) => {
         this.dwell.noteInput();
-        handleCursorKey(this as never, e);
+        handleListKey(this as never, e);
     };
+
+    showShortcuts() {
+        window.dispatchEvent(new CustomEvent('show-shortcuts', { bubbles: true, composed: true }));
+    }
+
+    toggleStarCursor() {
+        const article = this.items[this.cursor];
+        if (article) void toggleStarAction(this as never, article);
+    }
+
+    toggleUnread() {
+        this.unreadOnly = !this.unreadOnly;
+        this.saveViewSettings();
+    }
+
+    setListView(listView: ListViewType) {
+        this.listView = listView;
+        this.saveViewSettings();
+        this.updateCols();
+    }
+
+    onRowClick(e: MouseEvent, index: number) {
+        if (e.shiftKey) {
+            rowClickAction(this as never, e, index);
+            return;
+        }
+        setAnchor(this as never, index);
+        const article = this.items[index];
+        if (article) void this.openArticle(article);
+    }
+
+    toggleSelectCursor() {
+        if (this.cursor >= 0) toggleSelectAction(this as never, this.cursor);
+    }
+
+    clearSelection() {
+        clearSelectionAction(this as never);
+    }
+
+    async onBulkMarkRead() {
+        await bulkMarkReadAction(this as never);
+    }
+
+    async onBulkStar() {
+        await bulkStarAction(this as never);
+    }
+
+    async onBulkDerank() {
+        bulkDerankAction(this as never);
+        this.requestUpdate();
+    }
 
     onToggleAdvanced(e: Event) {
         e.stopPropagation();
@@ -482,6 +436,11 @@ export class ArticleList extends LitElement {
 
     onAdvancedUnread(e: Event) {
         this.unreadOnly = (e as CustomEvent<boolean>).detail;
+        this.saveViewSettings();
+    }
+
+    onAdvancedMarkScroll(e: Event) {
+        this.markOnScroll = (e as CustomEvent<boolean>).detail;
         this.saveViewSettings();
     }
 
@@ -519,6 +478,13 @@ export class ArticleList extends LitElement {
     async onStar(e: Event, article: Article) {
         e.stopPropagation();
         await toggleStarAction(this as never, article);
+    }
+
+    onInterestingStrictness(e: Event) {
+        if (this.view.kind !== 'interesting') return;
+        const next = clampInterestingStrictness(Number((e.target as HTMLInputElement).value));
+        this.interestingStrictness = next;
+        saveInterestingStrictness(this.view.id, next);
     }
 
     async onMarkShownRead() {

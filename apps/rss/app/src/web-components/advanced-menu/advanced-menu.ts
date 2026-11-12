@@ -22,6 +22,7 @@ export class AdvancedMenu extends LitElement {
     @property({ attribute: false }) open = false;
     @property({ attribute: false }) anchor: MenuAnchor | null = null;
     @property({ attribute: false }) unreadOnly = false;
+    @property({ attribute: false }) markOnScroll = false;
     @property({ attribute: false }) scopeLabel = '';
     @property({ attribute: false }) marking = false;
 
@@ -72,6 +73,10 @@ export class AdvancedMenu extends LitElement {
                     <label class="filter">
                         <input type="checkbox" .checked=${this.unreadOnly} @change=${this.onUnreadChange} />
                         Unread only
+                    </label>
+                    <label class="filter">
+                        <input type="checkbox" .checked=${this.markOnScroll} @change=${this.onMarkScrollChange} />
+                        <span title="Mark articles as read once scrolled past">Mark as read on scroll</span>
                     </label>
                 </div>`;
     }
@@ -126,6 +131,17 @@ export class AdvancedMenu extends LitElement {
         const checked = (e.target as HTMLInputElement).checked;
         this.dispatchEvent(
             new CustomEvent('unread-change', {
+                detail: checked,
+                bubbles: true,
+                composed: true,
+            }),
+        );
+    }
+
+    private onMarkScrollChange(e: Event) {
+        const checked = (e.target as HTMLInputElement).checked;
+        this.dispatchEvent(
+            new CustomEvent('mark-scroll-change', {
                 detail: checked,
                 bubbles: true,
                 composed: true,

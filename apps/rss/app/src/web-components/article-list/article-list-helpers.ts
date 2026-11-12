@@ -15,6 +15,7 @@ export interface ViewSettings {
     pageSize: number;
     maxCardCols: number;
     unreadOnly: boolean;
+    markOnScroll: boolean;
 }
 
 export function clampPageSize(n: unknown): number {
@@ -69,6 +70,13 @@ export function folderFeedsOf(view: View, library: { feeds: Feed[] } | undefined
     return library.feeds.filter((f) => f.folderIds.includes(id));
 }
 
+/** Feeds for an explicit view, so jobs snapshot scope instead of reading live state. */
+export function feedsForView(view: View, library: { feeds: Feed[] } | undefined): Feed[] {
+    if (view.kind === 'feed') return library?.feeds.filter((f) => f.id === view.id) ?? [];
+    if (view.kind === 'folder' || view.kind === 'interesting') return folderFeedsOf(view, library);
+    return library?.feeds ?? [];
+}
+
 /** Every feed a view reads from: the folder's members, one feed, or all feeds. */
 export function scopeFeedsFor(view: View, library: { feeds: Feed[] } | undefined): Feed[] {
     if (!library) return [];
@@ -116,6 +124,7 @@ interface SettingsHost {
     pageSize: number;
     maxCardCols: number;
     unreadOnly: boolean;
+    markOnScroll: boolean;
     updateCols(): void;
 }
 
@@ -127,6 +136,7 @@ export function loadViewSettingsFor(host: SettingsHost): void {
     host.pageSize = clampPageSize(saved.pageSize);
     host.maxCardCols = saved.maxCardCols ?? 4;
     host.unreadOnly = saved.unreadOnly ?? false;
+    host.markOnScroll = saved.markOnScroll ?? false;
     host.updateCols();
 }
 
@@ -138,6 +148,7 @@ export function saveViewSettingsFor(host: SettingsHost): void {
         pageSize: host.pageSize,
         maxCardCols: host.maxCardCols,
         unreadOnly: host.unreadOnly,
+        markOnScroll: host.markOnScroll,
     };
     try {
         localStorage.setItem(VIEW_SETTINGS_KEY, JSON.stringify(map));

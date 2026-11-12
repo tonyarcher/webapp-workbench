@@ -7,6 +7,7 @@ import {
     saveTodaySettings,
 } from '../src/services/today-settings';
 import { buildTodaySections } from '../src/services/today';
+import { viewKeyOf } from '../src/web-components/article-list/article-list-helpers';
 import type { Article } from '../src/types';
 import { assert } from './smoke-assert';
 
@@ -112,3 +113,65 @@ assert(
     unreadOnly[0]!.articles.map((a) => a.id).join(',') === 'c1,a2',
     'today unread-only skips read articles before taking the per-folder quota',
 );
+
+// ---- per-view settings persist the reading toggles, including mark-on-scroll ----
+{
+    const { loadViewSettingsFor, saveViewSettingsFor } =
+        await import('../src/web-components/article-list/article-list-helpers');
+    const host = {
+        view: { kind: 'folder', id: 'f9' },
+        listView: 'headline',
+        sort: 'newest',
+        pageSize: 20,
+        maxCardCols: 2,
+        unreadOnly: true,
+        markOnScroll: true,
+        updateCols: () => {},
+    } as const;
+    saveViewSettingsFor(host as never);
+    const restored: {
+        view: { kind: string; id: string };
+        listView: string;
+        sort: string;
+        pageSize: number;
+        maxCardCols: number;
+        unreadOnly: boolean;
+        markOnScroll: boolean;
+        updateCols: () => void;
+    } = {
+        view: { kind: 'folder', id: 'f9' },
+        listView: 'detailed',
+        sort: 'hot',
+        pageSize: 50,
+        maxCardCols: 4,
+        unreadOnly: false,
+        markOnScroll: false,
+        updateCols: () => {},
+    };
+    loadViewSettingsFor(restored as never);
+    assert(restored.markOnScroll === true, 'view settings round-trip the mark-on-scroll toggle');
+    assert(restored.unreadOnly === true, 'view settings round-trip the unread filter');
+    assert(restored.listView === 'headline', 'view settings round-trip the list view');
+    const other: {
+        view: { kind: string; id: string };
+        listView: string;
+        sort: string;
+        pageSize: number;
+        maxCardCols: number;
+        unreadOnly: boolean;
+        markOnScroll: boolean;
+        updateCols: () => void;
+    } = {
+        view: { kind: 'folder', id: 'other' },
+        listView: 'detailed',
+        sort: 'hot',
+        pageSize: 50,
+        maxCardCols: 4,
+        unreadOnly: false,
+        markOnScroll: false,
+        updateCols: () => {},
+    };
+    loadViewSettingsFor(other as never);
+    assert(other.markOnScroll === false, 'mark-on-scroll defaults off for untouched views');
+    assert(viewKeyOf({ kind: 'all' }) === 'all', 'the all view keeps its settings bucket');
+}

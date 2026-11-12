@@ -91,6 +91,19 @@
     padding: 6px 8px;
 }
 
+.status {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 6px 8px;
+}
+
+.status .feed-error {
+    color: var(--danger);
+}
+
 .actions {
     display: flex;
     flex-direction: column;

@@ -20,6 +20,11 @@ export const queryClient = new QueryClient({
 export const libraryKey = ['library'] as const;
 export type LibraryData = { folders: Folder[]; feeds: Feed[] };
 
+/** Tab title with the unread count: "(176) RSS Reader". Zero means just the name. */
+export function unreadTitle(totalUnread: number): string {
+    return totalUnread > 0 ? `(${totalUnread}) RSS Reader` : 'RSS Reader';
+}
+
 /**
  * Badges tolerate staleness (the counts aggregate scans the articles table),
  * so background refetches reuse counts younger than this. Mutations that

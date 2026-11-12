@@ -48,6 +48,20 @@ export function shareUrl(
     }
 }
 
+/** A mailto compose with the article as subject + body. Always available. */
+export function mailtoShareUrl(articleUrl: string, title: string): string {
+    return `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(articleUrl)}`;
+}
+
+/** True where the OS share sheet exists (mobile, modern desktop). */
+export function canNativeShare(): boolean {
+    try {
+        return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+    } catch {
+        return false;
+    }
+}
+
 /**
  * A bare instance domain from user input. Accepts a pasted share URL, a
  * handle (`@user@host`), or a bare domain, and rejects anything that is

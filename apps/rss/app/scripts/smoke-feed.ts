@@ -1,6 +1,6 @@
 // Feed pipeline smoke: RSS/Atom parsing, sanitizer, URL schemes, OPML, ranking, interleave.
 import { isFolder, parseFeedXml, parseOpml, safeHttpUrl, sanitizeHtml, stripHtml } from '../src/services/parser';
-import { interleaveArticles } from '../src/util';
+import { interleaveArticles, readMinutes } from '../src/util';
 import type { Article } from '../src/types';
 import {
     affinityBoostScore,
@@ -343,3 +343,11 @@ assert(
 );
 assert(interleaveArticles([feedA], 1)[0]!.id === 'a1', 'interleave with one feed returns its top');
 assert(interleaveArticles([], 5).length === 0, 'interleave empty input returns empty');
+
+// ---- read time estimates at 265wpm, rounded up ----
+assert(readMinutes('<p>' + 'word '.repeat(265) + '</p>') === 1, 'a 265-word article reads as one minute');
+assert(readMinutes('<p>' + 'word '.repeat(266) + '</p>') === 2, 'read time rounds up');
+assert(readMinutes('<p>hi</p>') === 1, 'a short article still takes a minute');
+assert(readMinutes(undefined, 'short summary') === 1, 'read time falls back to the summary');
+assert(readMinutes() === 0, 'nothing to read estimates zero minutes');
+assert(readMinutes('<p></p>', '') === 0, 'empty markup estimates zero minutes');

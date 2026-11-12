@@ -1,6 +1,6 @@
 import { fetchArticlesPage } from '../../services/api';
-import { buildWordMap, interestingScore, meetsInterestingBar, rankInteresting } from '../../services/interesting-words';
-import { loadWordMap, loadWordMapIds } from '../../services/interesting-settings';
+import { buildWordMap, selectInteresting } from '../../services/interesting-words';
+import { loadInterestingStrictness, loadWordMap, loadWordMapIds } from '../../services/interesting-settings';
 import type { Article, View } from '../../types';
 
 /** Bounded newest batch the ✨ Interesting folder view ranks at once. */
@@ -15,6 +15,7 @@ interface InterestingHost {
     gen: number;
     hasMoreSingle: boolean;
     cursors: Map<string, string | undefined>;
+    interestingStrictness?: number;
 }
 
 /** The ✨ view is its own route now, not a toolbar toggle on the folder. */
@@ -41,8 +42,10 @@ export function interestingWordMapOf(batch: Article[]): Record<string, number> {
 
 /**
  * Interesting view: one bounded newest batch for the folder, ranked by
- * the learned word map, filtered to positively scored articles. No
- * cursors, no further paging — the batch is the whole list.
+ * the learned word map and cut by the selectivity slider. The default
+ * strictness keeps a bit over half of the positives plus an absolute
+ * floor, so a broad map still hides something instead of showing all.
+ * No cursors, no further paging — the batch is the whole list.
  * `toDecisionState` in interesting-words stays the documented
  * attach point if a server-side Jev ranking ever replaces this local one;
  * the key must stay server-side, so the browser never calls Jev directly.
@@ -58,10 +61,8 @@ export async function loadInterestingBatchAction(host: InterestingHost, gen: num
     if (gen !== host.gen) return;
     const visible = host.hideRead ? res.items.filter((a) => a.read === 0) : res.items;
     const wordMap = interestingWordMapOf(visible);
-    host.items = rankInteresting(
-        visible.filter((a) => meetsInterestingBar(interestingScore(a, wordMap))),
-        wordMap,
-    ).slice(0, host.pageSize);
+    const strictness = host.interestingStrictness ?? loadInterestingStrictness(host.view.id);
+    host.items = selectInteresting(visible, wordMap, strictness).slice(0, host.pageSize);
     host.hasMoreSingle = false;
     host.cursors.clear();
 }

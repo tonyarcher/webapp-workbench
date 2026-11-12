@@ -1,6 +1,7 @@
 import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { applyTheme, getTheme, type Theme } from '../../theme';
+import { modalClosed, modalOpened } from '../../services/modal-guard';
 import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
 import { normalizeMastodonHost, type ShareTarget } from '../../services/share';
 import {
@@ -46,8 +47,10 @@ export class SettingsDialog extends LitElement {
                 this.shareStatus = '';
                 this.shareStatusError = false;
                 this.dialogEl?.showModal();
+                modalOpened();
             } else {
                 this.dialogEl?.close();
+                modalClosed();
             }
         }
     }

@@ -76,6 +76,7 @@ await import('./smoke-article-list-load.js');
 await import('./smoke-auth.js');
 await import('./smoke-toast.js');
 await import('./smoke-router.js');
+await import('./smoke-shortcuts.js');
 await import('./smoke-summary.js');
 await import('./smoke-interesting.js');
 await import('./smoke-edition.js');

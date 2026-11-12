@@ -1,6 +1,7 @@
 import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { Feed, Folder } from '../../types';
+import { describeFreshness } from '../article-list/article-list-helpers';
 import styles from './feed-menu.css?inline';
 
 export interface MenuAnchor {
@@ -70,9 +71,16 @@ export class FeedMenu extends LitElement {
         return html`
               <div class="head"><h2 title="${feed.title}">${feed.title}</h2></div>
               <div class="body">
+                <div class="section"><h3>Status</h3>${this.renderStatus(feed)}</div>
                 <div class="section"><h3>Folders</h3>${this.renderFolderSection()}</div>
                 <div class="section"><h3>Actions</h3>${this.renderActions()}</div>
               </div>`;
+    }
+
+    /** Last check time plus any fetch error, so a quiet feed's health is visible. */
+    private renderStatus(feed: Feed) {
+        const freshness = describeFreshness(feed.lastFetchedAt ?? null, Date.now());
+        return html`<div class="status">${freshness ? html`<span>${freshness.replace('Updated', 'Checked')}</span>` : html`<span>Never checked</span>`}${feed.lastError ? html`<span class="feed-error" title="${feed.lastError}">⚠ ${feed.lastError}</span>` : ''}</div>`;
     }
 
     private renderFolderSection() {

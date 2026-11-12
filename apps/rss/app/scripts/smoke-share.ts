@@ -1,6 +1,14 @@
 // Share smoke: share-intent URLs, Mastodon host normalization and persistence,
 // and the share-button selection.
-import { facebookShareUrl, mastodonShareUrl, normalizeMastodonHost, shareUrl, xShareUrl } from '../src/services/share';
+import {
+    canNativeShare,
+    facebookShareUrl,
+    mastodonShareUrl,
+    mailtoShareUrl,
+    normalizeMastodonHost,
+    shareUrl,
+    xShareUrl,
+} from '../src/services/share';
 import {
     ALL_SHARE_TARGETS,
     DEFAULT_MASTODON_HOST,
@@ -50,6 +58,13 @@ assert(normalizeMastodonHost('  MAStoDon.Social  ') === 'mastodon.social', 'host
 assert(normalizeMastodonHost('') === undefined, 'empty host is undefined');
 assert(normalizeMastodonHost('not a host') === undefined, 'host with spaces is undefined');
 assert(normalizeMastodonHost('localhost') === undefined, 'dotless host is undefined');
+
+// ---- mail composes with subject and body, always available ----
+assert(
+    mailtoShareUrl(url, title) === `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`,
+    'mailto carries the subject and the link',
+);
+assert(typeof canNativeShare() === 'boolean', 'native share detection answers without a DOM');
 
 // ---- persistence falls back to the default instance ----
 const mem = new Map<string, string>();

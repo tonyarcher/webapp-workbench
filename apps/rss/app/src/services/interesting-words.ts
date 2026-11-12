@@ -163,6 +163,61 @@ export function meetsInterestingBar(score: number): boolean {
     return score > 0;
 }
 
+/**
+ * Default selectivity for the Interesting slider (0 loose … 100 strict).
+ * 50 keeps a bit over half of the positively scored batch while demanding
+ * a modest absolute score, so a broad word map still hides something.
+ */
+export const DEFAULT_INTERESTING_STRICTNESS = 50;
+
+/** Clamp any input to an integer 0…100; anything unexpected is the default. */
+export function clampInterestingStrictness(n: unknown): number {
+    if (typeof n !== 'number' || !Number.isFinite(n)) return DEFAULT_INTERESTING_STRICTNESS;
+    return Math.min(100, Math.max(0, Math.round(n)));
+}
+
+/**
+ * Fraction of positively scored articles a strictness keeps, before the
+ * absolute floor below. 0 keeps everything (legacy `> 0` bar), 50 keeps a
+ * bit over half, 100 keeps a tenth — so the default always filters a
+ * batch larger than a handful, even when every title shares a learned word.
+ */
+export function strictnessKeepFraction(strictness: number): number {
+    return 1 - (clampInterestingStrictness(strictness) / 100) * 0.9;
+}
+
+/**
+ * Absolute floor for a strictness: average word weight an article needs.
+ * Rises from 0 (loose) to 1.5 (strict). Long titles dilute one strong word
+ * across many tokens, so without a floor a single weak match still passes;
+ * with the default 0.75 a lone star word needs a short title to survive.
+ */
+export function strictnessMinScore(strictness: number): number {
+    return (clampInterestingStrictness(strictness) / 100) * 1.5;
+}
+
+/**
+ * Ranked Interesting subset for a strictness: positives sorted by score,
+ * then the absolute floor, then the top keep-fraction. Batches of ten or
+ * fewer keep every positive so a small folder never filters itself empty.
+ */
+export function selectInteresting<T extends { id: string; title: string }>(
+    articles: T[],
+    wordMap: Record<string, number>,
+    strictness: number = DEFAULT_INTERESTING_STRICTNESS,
+): T[] {
+    const s = clampInterestingStrictness(strictness);
+    const scored = articles
+        .map((a) => ({ article: a, score: interestingScore(a, wordMap) }))
+        .filter((e) => e.score > 0)
+        .sort((x, y) => y.score - x.score || (x.article.id < y.article.id ? -1 : x.article.id > y.article.id ? 1 : 0));
+    if (scored.length <= 10) return scored.map((e) => e.article);
+    const floor = strictnessMinScore(s);
+    const qualified = scored.filter((e) => e.score >= floor);
+    const keep = Math.max(1, Math.ceil(scored.length * strictnessKeepFraction(s)));
+    return qualified.slice(0, keep).map((e) => e.article);
+}
+
 export interface DecisionCandidateInput {
     id: string;
     title: string;

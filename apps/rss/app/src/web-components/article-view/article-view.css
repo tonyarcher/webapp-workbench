@@ -7,6 +7,21 @@
     box-sizing: border-box;
 }
 
+.read-progress {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    height: 2px;
+    flex: none;
+    background: transparent;
+}
+
+.read-progress span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+}
+
 /* The dialog takes programmatic focus on open, which is correct modal
    behavior, but a ring around the whole reading panel is noise: the opened
    article is the context, and every control inside keeps its own indicator. */

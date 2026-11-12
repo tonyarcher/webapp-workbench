@@ -319,3 +319,10 @@ import { assert } from './smoke-assert';
         shims['window'] = realWindow;
     }
 }
+
+// ---- the tab title carries the unread count ----
+{
+    const { unreadTitle } = await import('../src/query');
+    assert(unreadTitle(0) === 'RSS Reader', 'an empty inbox leaves the title alone');
+    assert(unreadTitle(176) === '(176) RSS Reader', 'unread articles count in the tab title');
+}
