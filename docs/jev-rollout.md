@@ -45,17 +45,29 @@ quota only when `AI_PROVIDER=decision` with a key, and falls back to exact
 matches on any model failure. The backend applies the same `https`-only key
 rule as radio. Never persists events. `src/core` stays pure.
 
-### Fitness import check (`apps/fitness/api`)
+## Phase 2 — done: fitness and stock-game
 
-Code parses first. Jev checks after. `Noul`: does the source row support this
-parsed value. `Score`: plausibility against recent history. Flag low rows for
-review. Never block the import. Never log sample payloads.
+### Fitness import check (`apps/fitness/api`) — done
 
-### Stock-game order intent (`apps/stock-game/api`)
+Same `ai` package plus per-user `ai_quota` table (`V3__ai_quota.sql`).
+`PlausibilityProvider` scores each submitted sample against recent history
+(latest value plus rollup average) with two questions per sample: `_plausible`
+score and `_review` noul. Flags use the review threshold `0.5` and the
+plausibility floor `0.35`. `POST /imports/check` is advisory only: code
+validates shape and metric first, consumes quota only when `AI_PROVIDER=decision`
+with a key, falls back to code verdicts on any model failure, and never persists
+anything. Never logs payloads.
 
-New `POST /orders/parse` behind auth and quota. `Noul` screen first for
-trade intent. `Choice` over buy, sell, or unknown. Slot fill only for known
-fields. Emit existing `PlaceOrderRequest`. Unknown routes to the form.
+### Stock-game order intent (`apps/stock-game/api`) — done
+
+Same `ai` package plus per-user `ai_quota` table (`V3__ai_quota.sql`).
+`OrderParseProvider` asks intent (noul) plus side (`buy`, `sell`, `unknown`)
+in one call; symbol and quantity are heuristic code slots (short uppercase
+token that is not an order word; first standalone integer outside decimals).
+`POST /orders/parse` is auth-gated, rejects blank text and payloads over
+`AI_MAX_INPUT_CHARS`, consumes quota only when enabled, and falls back to
+code-only extraction on any failure. Nothing here executes a trade: the trade
+form confirms every slot through the existing `POST /orders` validation.
 
 ## Phase 3 — later
 

@@ -17,6 +17,9 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.put
+import stockgame.ai.AiConfig
+import stockgame.ai.AiQuotaService
+import stockgame.parse.OrderParseProvider
 import stockgame.persist.UserEntity
 import stockgame.persist.UserRepo
 import java.util.UUID
@@ -47,6 +50,15 @@ class ApiRoutesTest {
 
     @MockitoBean
     lateinit var users: UserRepo
+
+    @MockitoBean
+    lateinit var aiConfig: AiConfig
+
+    @MockitoBean
+    lateinit var quotas: AiQuotaService
+
+    @MockitoBean
+    lateinit var orderParser: OrderParseProvider
 
     private fun asUser(sub: String, id: UUID) {
         whenever(decoder.decode(any())).thenReturn(jwt(sub))
