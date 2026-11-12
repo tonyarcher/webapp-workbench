@@ -2,15 +2,7 @@ import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { history, parsePath } from '../../router';
 import { markArticleRead } from '../../mutations';
-import {
-    bustCounts,
-    fetchLibrary,
-    libraryKey,
-    queryClient,
-    QueryController,
-    unreadTitle,
-    type LibraryData,
-} from '../../query';
+import { bustCounts, queryClient } from '../../query';
 import type { ArticleView } from '../article-view/article-view';
 import { clearClientDb } from '../../db/db';
 import { currentUsername, hasSession, logout, startLogin } from '../../services/auth';
@@ -62,13 +54,6 @@ export class AppShell extends LitElement {
     @state() private username: string | null = currentUsername();
     @state() private authError = '';
     @state() private toasts: ToastNotice[] = [];
-
-    /** Shared library cache: only the unread total for the tab title. */
-    private titleLibrary = new QueryController<LibraryData>(this, () => ({
-        queryKey: libraryKey,
-        queryFn: () => fetchLibrary(),
-        refetchInterval: 60_000,
-    }));
 
     private toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
@@ -126,12 +111,6 @@ export class AppShell extends LitElement {
     private onShowShortcuts = () => {
         this.shortcutsOpen = true;
     };
-
-    override updated(_changed: Map<string, unknown>) {
-        const total = (this.titleLibrary.data?.feeds ?? []).reduce((sum, f) => sum + f.unread, 0);
-        const title = unreadTitle(total);
-        if (document.title !== title) document.title = title;
-    }
 
     private onAuthError = (e: Event) => {
         const detail = (e as CustomEvent<unknown>).detail;
