@@ -152,6 +152,17 @@ export function rankInteresting<T extends { id: string; title: string }>(
     );
 }
 
+/**
+ * The Interesting bar: only positively scored articles make the view.
+ * Zero means nothing is known (or the good and bad exactly cancel), and
+ * negatives mean the reader actively dislikes the topic — neither belongs
+ * in a view that promises "interesting". Cold start shows nothing, which
+ * the empty state already explains.
+ */
+export function meetsInterestingBar(score: number): boolean {
+    return score > 0;
+}
+
 export interface DecisionCandidateInput {
     id: string;
     title: string;

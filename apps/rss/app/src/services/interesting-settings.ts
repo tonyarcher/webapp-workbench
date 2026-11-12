@@ -68,6 +68,13 @@ const MAX_COUNTED_IDS = 2000;
 /** Lifetime per-article engagement accrual, so time cannot compound past the cap. */
 const ENGAGEMENT_TOTALS_KEY = 'rss-reader:engagement-totals';
 
+/** Last daily decay run, so old lessons fade and recent behavior dominates. */
+const DECAY_AT_KEY = 'rss-reader:engagement-decayed-at';
+const DECAY_INTERVAL_MS = 24 * 3_600_000;
+const DECAY_FACTOR = 0.5;
+/** Bound the map: beyond this many words the tail is noise, not signal. */
+const MAX_WORD_MAP_WORDS = 500;
+
 export type EngagementKind = 'share' | 'summary' | 'original' | 'open' | 'dwell' | 'derank';
 
 const totalsEntry = (articleId: string, kind: EngagementKind): string => `${articleId}:${kind}`;
@@ -186,6 +193,47 @@ function saveDerankedIds(ids: string[]): void {
     }
 }
 
+/**
+ * Daily decay: halve every learned weight and lifetime total so recent
+ * behavior dominates and stale interests fade instead of flattening the
+ * ranking forever. Zeros drop out and the map prunes to its strongest
+ * words. Runs at most once a day, piggybacked on the next accrual, so no
+ * timer outlives anything.
+ */
+export function decayLearnedIfDue(now: number): void {
+    let last = 0;
+    try {
+        last = Number(localStorage.getItem(DECAY_AT_KEY) ?? 0);
+    } catch {
+        return;
+    }
+    if (Number.isFinite(last) && now - last < DECAY_INTERVAL_MS) return;
+    const map = loadWordMap();
+    for (const [word, weight] of Object.entries(map)) {
+        const next = weight * DECAY_FACTOR;
+        // Halving never reaches exactly zero, so anything below an eighth
+        // of a star-step counts as forgotten.
+        if (Math.abs(next) < 0.125) delete map[word];
+        else map[word] = next;
+    }
+    const pruned = Object.entries(map).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+    const kept: Record<string, number> = {};
+    for (const [word, weight] of pruned.slice(0, MAX_WORD_MAP_WORDS)) kept[word] = weight;
+    saveWordMap(kept);
+    const totals = loadEngagementTotals();
+    for (const [key, total] of Object.entries(totals)) {
+        const next = total * DECAY_FACTOR;
+        if (Math.abs(next) < 0.125) delete totals[key];
+        else totals[key] = next;
+    }
+    saveEngagementTotals(totals);
+    try {
+        localStorage.setItem(DECAY_AT_KEY, String(now));
+    } catch {
+        // storage unavailable; decay just retries next time
+    }
+}
+
 export function isDeranked(articleId: string): boolean {
     return loadDerankedIds().includes(articleId);
 }
@@ -213,6 +261,7 @@ export function accrueEngagement(
     kind: EngagementKind,
 ): void {
     if (weight === 0 || cap <= 0 || !Number.isFinite(weight)) return;
+    decayLearnedIfDue(Date.now());
     const totals = loadEngagementTotals();
     const entry = totalsEntry(articleId, kind);
     const total = totals[entry] ?? 0;

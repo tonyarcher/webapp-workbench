@@ -357,18 +357,20 @@ export class AppShell extends LitElement {
      * Expanded-read timing. Both open paths funnel here; every close path
      * funnels through closeArticle (backdrop, Back button, Escape, keyboard
      * close, route change), so open-to-close seconds are fully covered.
+     * Only an active dismissal can bounce: moving to the next story with
+     * j/k is still reading flow, never rejection.
      */
     private openArticleId: string | null = null;
     private openedAt = 0;
 
     private trackOpen(article: Article) {
-        this.flushExpandedRead();
+        this.flushExpandedRead(false);
         this.article = article;
         this.openArticleId = article.id;
         this.openedAt = Date.now();
     }
 
-    private flushExpandedRead() {
+    private flushExpandedRead(dismissed: boolean) {
         const open = this.article;
         if (this.openArticleId === null || this.openedAt <= 0 || !open || open.id !== this.openArticleId) {
             this.openArticleId = null;
@@ -378,12 +380,12 @@ export class AppShell extends LitElement {
         const seconds = (Date.now() - this.openedAt) / 1000;
         this.openArticleId = null;
         this.openedAt = 0;
-        accrueEngagement(open.title, expandedReadWeight(seconds), open.id, OPEN_READ_CAP, 'open');
+        accrueEngagement(open.title, expandedReadWeight(seconds, dismissed), open.id, OPEN_READ_CAP, 'open');
     }
 
     private closeArticle() {
         if (!this.article) return;
-        this.flushExpandedRead();
+        this.flushExpandedRead(true);
         this.article = null;
         this.readContext = null;
         this.endArticleResize();

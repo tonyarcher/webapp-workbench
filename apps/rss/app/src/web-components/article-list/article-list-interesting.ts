@@ -1,5 +1,5 @@
 import { fetchArticlesPage } from '../../services/api';
-import { buildWordMap, rankInteresting } from '../../services/interesting-words';
+import { buildWordMap, interestingScore, meetsInterestingBar, rankInteresting } from '../../services/interesting-words';
 import { loadWordMap, loadWordMapIds } from '../../services/interesting-settings';
 import type { Article, View } from '../../types';
 
@@ -41,8 +41,9 @@ export function interestingWordMapOf(batch: Article[]): Record<string, number> {
 
 /**
  * Interesting view: one bounded newest batch for the folder, ranked by
- * the learned word map. No cursors, no further paging — the batch is the
- * whole list. `toDecisionState` in interesting-words stays the documented
+ * the learned word map, filtered to positively scored articles. No
+ * cursors, no further paging — the batch is the whole list.
+ * `toDecisionState` in interesting-words stays the documented
  * attach point if a server-side Jev ranking ever replaces this local one;
  * the key must stay server-side, so the browser never calls Jev directly.
  */
@@ -56,7 +57,11 @@ export async function loadInterestingBatchAction(host: InterestingHost, gen: num
     });
     if (gen !== host.gen) return;
     const visible = host.hideRead ? res.items.filter((a) => a.read === 0) : res.items;
-    host.items = rankInteresting(visible, interestingWordMapOf(visible)).slice(0, host.pageSize);
+    const wordMap = interestingWordMapOf(visible);
+    host.items = rankInteresting(
+        visible.filter((a) => meetsInterestingBar(interestingScore(a, wordMap))),
+        wordMap,
+    ).slice(0, host.pageSize);
     host.hasMoreSingle = false;
     host.cursors.clear();
 }

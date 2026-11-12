@@ -35,7 +35,7 @@ export const OPEN_READ_CAP = 8;
 export const BOUNCE_SECONDS = 3;
 export const BOUNCE_WEIGHT = -1;
 
-export const DWELL_SECONDS_PER_STEP = 30;
+export const DWELL_SECONDS_PER_STEP = 60;
 export const DWELL_WEIGHT_PER_STEP = 1;
 export const DWELL_CAP = 4;
 
@@ -55,10 +55,15 @@ export const DWELL_TICKS_PER_FLUSH = 6;
 /** Input older than this counts as idle: the reader walked away. */
 export const INPUT_IDLE_MS = 30_000;
 
-/** Weight for an expanded (overlay) read of `seconds`. Bounces go negative. */
-export function expandedReadWeight(seconds: number): number {
+/**
+ * Weight for an expanded (overlay) read of `seconds`. A sub-three-second
+ * open counts as a bounce — but only when the reader actively dismissed the
+ * article. Navigating to the next story with j/k is still reading flow, not
+ * rejection, so it never bounces no matter how fast the reader moves.
+ */
+export function expandedReadWeight(seconds: number, dismissed: boolean): number {
     if (!Number.isFinite(seconds) || seconds < 0) return 0;
-    if (seconds < BOUNCE_SECONDS) return BOUNCE_WEIGHT;
+    if (dismissed && seconds < BOUNCE_SECONDS) return BOUNCE_WEIGHT;
     return Math.min(OPEN_READ_CAP, OPEN_READ_WEIGHT_PER_STEP * Math.floor(seconds / OPEN_READ_SECONDS_PER_STEP));
 }
 

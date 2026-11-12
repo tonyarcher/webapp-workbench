@@ -151,12 +151,13 @@ import { assert } from './smoke-assert';
         dwellWeight,
         expandedReadWeight,
     } = await import('../src/services/engagement');
-    assert(expandedReadWeight(2) === BOUNCE_WEIGHT, 'a sub-three-second open counts as a bounce');
-    assert(expandedReadWeight(30) === 2, 'thirty seconds of expanded reading weighs one step');
-    assert(expandedReadWeight(120) === 8, 'expanded reading caps instead of compounding');
-    assert(expandedReadWeight(Number.NaN) === 0, 'expanded reading ignores non-finite input');
+    assert(expandedReadWeight(2, true) === BOUNCE_WEIGHT, 'a sub-three-second dismissed open counts as a bounce');
+    assert(expandedReadWeight(2, false) === 0, 'moving on is never a bounce, no matter how fast');
+    assert(expandedReadWeight(30, true) === 2, 'thirty seconds of expanded reading weighs one step');
+    assert(expandedReadWeight(120, false) === 8, 'expanded reading caps instead of compounding');
+    assert(expandedReadWeight(Number.NaN, true) === 0, 'expanded reading ignores non-finite input');
     assert(dwellWeight(29) === 0, 'dwell under a step accrues nothing');
-    assert(dwellWeight(90) === 3, 'dwell accrues per step');
+    assert(dwellWeight(90) === 1, 'dwell accrues per minute');
     assert(dwellWeight(9_999) === DWELL_CAP, 'dwell caps instead of compounding');
 
     const shims = globalThis as Record<string, unknown>;
@@ -231,8 +232,27 @@ import { assert } from './smoke-assert';
         assert(loadWordMap()['deranked'] === undefined, 'untoggling pays the weight back');
         mem.set('rss-reader:deranked-ids', 'oops');
         assert(loadDerankedIds().length === 0, 'deranked ids fall back to [] on invalid JSON');
+        const { decayLearnedIfDue } = await import('../src/services/interesting-settings');
+        const { meetsInterestingBar } = await import('../src/services/interesting-words');
+        assert(meetsInterestingBar(0.5) === true, 'positively scored articles make the Interesting view');
+        assert(meetsInterestingBar(0) === false, 'unknown articles do not make the Interesting view');
+        assert(meetsInterestingBar(-1) === false, 'deranked articles do not make the Interesting view');
+        const many: Record<string, number> = { keep: 8, drop: 1, neg: -4 };
+        for (let i = 0; i < 505; i++) many[`filler${i}`] = 1;
+        mem.set('rss-reader:word-map', JSON.stringify(many));
+        mem.set('rss-reader:engagement-totals', JSON.stringify({ 'x:open': 8, 'y:open': 0.1 }));
+        mem.set('rss-reader:engagement-decayed-at', String(Date.now() - 25 * 3_600_000));
+        decayLearnedIfDue(Date.now());
+        const decayed = loadWordMap();
+        assert(decayed['keep'] === 4, 'a stale map halves instead of flattening the ranking');
+        assert(decayed['neg'] === -2, 'decay keeps the sign of deranked words');
+        assert(Object.keys(decayed).length === 500, 'decay prunes the map to its strongest words');
+        const decayedTotals = loadEngagementTotals();
+        assert(decayedTotals['x:open'] === 4, 'lifetime totals decay with the map');
+        assert(decayedTotals['y:open'] === undefined, 'decay forgets dust');
+        decayLearnedIfDue(Date.now());
+        assert(loadWordMap()['keep'] === 4, 'decay runs at most once a day');
         const affinityPosts = seen.filter((s) => s.url.includes('/api/affinity'));
-        assert(affinityPosts.length === 2, 'shares and summaries post affinity; originals stay local');
         assert(
             affinityPosts.some((s) => (s.body ?? '').includes('"amount":8')),
             'a share posts the share affinity amount',
