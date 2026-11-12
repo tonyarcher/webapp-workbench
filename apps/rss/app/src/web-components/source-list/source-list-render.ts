@@ -144,11 +144,11 @@ function folderHeaderTemplate(
  * One Interesting section row. The visible text carries the folder title so
  * every row is distinct: "Interesting in Tech", "Interesting in Sport".
  */
-function interestingRowTemplate(folder: Folder, active: boolean, onSelect: (folder: Folder) => void) {
+function interestingRowTemplate(folder: Folder, active: boolean, unread: number, onSelect: (folder: Folder) => void) {
     const name = `Interesting in ${folder.title}`;
     return html`
       <button class="item ${active ? 'active' : ''}" aria-label=${name} title=${name} @click=${() => onSelect(folder)}>
-        <span class="icon" aria-hidden="true">✨</span><span class="label">${name}</span>
+        <span class="icon" aria-hidden="true">✨</span><span class="label">${name}</span>${unread > 0 ? html`<span class="badge">${unread}</span>` : ''}
       </button>
     `;
 }
@@ -162,8 +162,11 @@ function renderInterestingSection(host: SourceListRenderHost, folders: Folder[])
     const enabled = folders.filter((f) => host.interestingShadow[f.id] === true);
     if (!enabled.length) return html``;
     return html`<div class="section-label">Interesting</div>${enabled.map((folder) =>
-        interestingRowTemplate(folder, host.isActive({ kind: 'interesting', id: folder.id }), (f) =>
-            host.select({ kind: 'interesting', id: f.id }),
+        interestingRowTemplate(
+            folder,
+            host.isActive({ kind: 'interesting', id: folder.id }),
+            host.folderUnread(folder.id),
+            (f) => host.select({ kind: 'interesting', id: f.id }),
         ),
     )}`;
 }
