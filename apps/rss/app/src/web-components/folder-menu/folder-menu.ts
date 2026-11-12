@@ -73,7 +73,7 @@ export class FolderMenu extends LitElement {
                   </label>
                   <label class="opt">
                     <input type="checkbox" .checked=${this.shadow} @change=${this.onShadowChange} />
-                    <span class="label" title="Show a ranked shadow list of this folder's most interesting articles">✨ Interesting shadow</span>
+                    <span class="label" title="Show an Interesting row under this folder with its most interesting articles">✨ Interesting in folder</span>
                   </label>`;
     }
 

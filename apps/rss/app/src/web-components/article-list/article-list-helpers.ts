@@ -35,6 +35,7 @@ export function readViewSettings(): Record<string, ViewSettings> {
 export function viewKeyOf(view: View): string {
     if (view.kind === 'feed') return `feed:${view.id}`;
     if (view.kind === 'folder') return `folder:${view.id}`;
+    if (view.kind === 'interesting') return `interesting:${view.id}`;
     return 'all';
 }
 
@@ -42,6 +43,10 @@ export function viewTitleOf(view: View, library: { feeds: Feed[]; folders: Folde
     if (!library) return 'Articles';
     if (view.kind === 'feed') return library.feeds.find((f) => f.id === view.id)?.title ?? 'Feed';
     if (view.kind === 'folder') return library.folders.find((f) => f.id === view.id)?.title ?? 'Folder';
+    if (view.kind === 'interesting') {
+        const title = library.folders.find((f) => f.id === view.id)?.title ?? 'Folder';
+        return `Interesting in ${title}`;
+    }
     return 'All';
 }
 
@@ -53,18 +58,54 @@ export function scopeLabelOf(view: View, library: { feeds: Feed[]; folders: Fold
     if (!library) return '';
     if (view.kind === 'feed') return library.feeds.find((f) => f.id === view.id)?.title ?? 'Feed';
     if (view.kind === 'folder') return library.folders.find((f) => f.id === view.id)?.title ?? 'Folder';
+    if (view.kind === 'interesting')
+        return `Interesting in ${library.folders.find((f) => f.id === view.id)?.title ?? 'Folder'}`;
     return 'All feeds';
 }
 
 export function folderFeedsOf(view: View, library: { feeds: Feed[] } | undefined): Feed[] {
-    if (view.kind !== 'folder' || !library) return [];
+    if ((view.kind !== 'folder' && view.kind !== 'interesting') || !library) return [];
     const id = view.id;
     return library.feeds.filter((f) => f.folderIds.includes(id));
+}
+
+/** Every feed a view reads from: the folder's members, one feed, or all feeds. */
+export function scopeFeedsFor(view: View, library: { feeds: Feed[] } | undefined): Feed[] {
+    if (!library) return [];
+    if (view.kind === 'feed') return library.feeds.filter((f) => f.id === view.id);
+    if (view.kind === 'folder' || view.kind === 'interesting') return folderFeedsOf(view, library);
+    return library.feeds;
+}
+
+/** Newest lastFetchedAt across the view's feeds, or null when none reported one. */
+export function freshestFetchAt(view: View, library: { feeds: Feed[] } | undefined): number | null {
+    let latest = 0;
+    for (const feed of scopeFeedsFor(view, library)) {
+        const ts = feed.lastFetchedAt ?? 0;
+        if (ts > latest) latest = ts;
+    }
+    return latest > 0 ? latest : null;
+}
+
+/**
+ * Short freshness label for the toolbar ("Updated 2m ago"). Empty when no
+ * feed reported a fetch yet, so the toolbar shows nothing rather than a lie.
+ * Clocks skew, so a future timestamp reads as just now.
+ */
+export function describeFreshness(fetchedAt: number | null, now: number): string {
+    if (fetchedAt === null) return '';
+    const minutes = Math.floor(Math.max(0, now - fetchedAt) / 60_000);
+    if (minutes < 1) return 'Updated just now';
+    if (minutes < 60) return `Updated ${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `Updated ${hours}h ago`;
+    return `Updated ${Math.floor(hours / 24)}d ago`;
 }
 
 export function viewRefreshKeyOf(view: View): string {
     if (view.kind === 'feed') return `feed:${view.id}`;
     if (view.kind === 'folder') return `folder:${view.id}`;
+    if (view.kind === 'interesting') return `interesting:${view.id}`;
     return 'all';
 }
 

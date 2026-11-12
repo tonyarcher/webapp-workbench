@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Switching the folder filter to ✨ Interesting while a folder refresh is in
- * flight must not loop. The interesting filter fetches one bounded newest
+ * Opening the ✨ Interesting row while a folder refresh is in
+ * flight must not loop. The Interesting view fetches one bounded newest
  * batch and replaces the list; a refresh finishes by resetting the list. If
  * the two resets feed each other the tab never yields.
  */
-test('the interesting filter settles while a refresh finishes', async ({ page }) => {
+test('the Interesting view settles while a refresh finishes', async ({ page }) => {
     await page.addInitScript(() => {
         const b64 = (obj: unknown) => btoa(JSON.stringify(obj));
         const exp = Math.floor(Date.now() / 1000) + 3600;
@@ -61,8 +61,8 @@ test('the interesting filter settles while a refresh finishes', async ({ page })
     await page.route('**/api/library/counts', (route) =>
         route.fulfill({ status: 200, body: JSON.stringify({ counts: { feed1: 60 } }) }),
     );
-    // Only the ✨ filter asks for `sort=newest` (its one bounded batch); the
-    // folder's own page loads use `sort=hot`, so this counts filter batches.
+    // Only the ✨ view asks for `sort=newest` (its one bounded batch); the
+    // folder's own page loads use `sort=hot`, so this counts view batches.
     let interestingRequests = 0;
     await page.route('**/api/articles?**', (route) => {
         if (route.request().url().includes('sort=newest')) interestingRequests += 1;
@@ -86,7 +86,7 @@ test('the interesting filter settles while a refresh finishes', async ({ page })
     await expect(page.getByRole('button', { name: 'Refreshing…' })).toBeVisible();
 
     const before = interestingRequests;
-    await page.getByRole('button', { name: '✨ Interesting' }).click();
+    await page.getByRole('button', { name: 'Interesting in Folder' }).click();
 
     releaseSync();
 
@@ -97,8 +97,8 @@ test('the interesting filter settles while a refresh finishes', async ({ page })
     const rows = page.locator('.row');
     await expect(rows.nth(1)).toContainText('Rust Story');
 
-    // A settle is the toggle's batch plus the refresh's trailing reset: two,
-    // never a stream. The lower bound fails if the filter silently stops
+    // A settle is the view's batch plus the refresh's trailing reset: two,
+    // never a stream. The lower bound fails if the view silently stops
     // fetching; before the fix the tab never yielded, so the liveness probe
     // below is the real freeze detector.
     await page.waitForTimeout(1000);

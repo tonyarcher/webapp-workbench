@@ -56,6 +56,7 @@ export type FeedSort = 'alpha' | 'unread';
 export type View =
     | { kind: 'all' }
     | { kind: 'folder'; id: string }
+    | { kind: 'interesting'; id: string }
     | { kind: 'feed'; id: string }
     | { kind: 'brief' }
     | { kind: 'today' }

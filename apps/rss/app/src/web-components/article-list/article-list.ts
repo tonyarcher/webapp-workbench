@@ -25,12 +25,14 @@ import {
     type LoadState,
     type LoadStep,
 } from './article-list-load-state';
-import { interestingActiveFor, loadInterestingBatchAction, shadowEnabledFor } from './article-list-interesting';
+import { interestingActiveFor, loadInterestingBatchAction } from './article-list-interesting';
 import {
     CARD_MIN_WIDTH,
     DEFAULT_PAGE_SIZE,
+    describeFreshness,
     feedTitleOf,
     folderFeedsOf,
+    freshestFetchAt,
     loadViewSettingsFor,
     saveViewSettingsFor,
     scopeLabelOf,
@@ -75,8 +77,31 @@ export class ArticleList extends LitElement {
     @state() private advancedOpen = false;
     @state() private marking = false;
     @state() advancedAnchor: MenuAnchor | null = null;
-    @state() refreshing = false;
-    @state() private interestingOnly = false;
+    /** Last page-load failure, cleared on the next attempt. Rendered as a banner, never silent. */
+    @state() loadError: string | null = null;
+
+    /** True while this view's own refresh job runs. Other folders track their own keys. */
+    get refreshing(): boolean {
+        return this.activeRefreshKeys.includes(viewRefreshKeyOf(this.view));
+    }
+
+    setRefreshingKey(key: string, active: boolean): void {
+        const has = this.activeRefreshKeys.includes(key);
+        if (active && !has) this.activeRefreshKeys = [...this.activeRefreshKeys, key];
+        else if (!active && has) this.activeRefreshKeys = this.activeRefreshKeys.filter((k) => k !== key);
+    }
+
+    libraryFeeds(): Feed[] {
+        return this.library.data?.feeds ?? [];
+    }
+
+    async refreshTick(): Promise<void> {
+        await fetchLibrary();
+    }
+
+    isAlive(): boolean {
+        return this.isConnected;
+    }
 
     private scrollElRef: Ref<HTMLDivElement> = createRef();
     private virtualizer!: Virtualizer<HTMLDivElement, HTMLDivElement>;
@@ -90,9 +115,9 @@ export class ArticleList extends LitElement {
     private lastFeedSetKey = '';
     private resizeObserver: ResizeObserver | undefined;
     feedWindowOffset = 0;
-    refreshJob: Promise<void> | null = null;
-    refreshJobKey: string | null = null;
-    refreshGenRef: { value: number } = { value: 0 };
+    /** In-flight refresh jobs by view key. Each folder is its own elevator button. */
+    refreshJobs = new Map<string, Promise<void>>();
+    @state() private activeRefreshKeys: string[] = [];
 
     /** True while a page fetch is in flight or queued; the footer renders "Loading…". */
     get loading(): boolean {
@@ -180,8 +205,6 @@ export class ArticleList extends LitElement {
     override willUpdate(changed: Map<string, unknown>) {
         if (changed.has('view')) {
             this.loadViewSettings();
-            // Ephemeral per-view filter: every folder starts at All.
-            this.interestingOnly = false;
         }
         if (this.virtualizer) {
             this.virtualizer.setOptions(this.virtualizerOptions());
@@ -194,7 +217,7 @@ export class ArticleList extends LitElement {
     }
 
     private currentViewKey(): string {
-        return `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}|${this.interestingOnly}`;
+        return `${JSON.stringify(this.view)}|${this.unreadOnly}|${this.sort}|${this.listView}|${this.pageSize}`;
     }
 
     private handleUpdate(viewKey: string): void {
@@ -225,7 +248,7 @@ export class ArticleList extends LitElement {
      * resets it.
      */
     private feedSetKey(): string {
-        if (this.view.kind === 'folder') {
+        if (this.view.kind === 'folder' || this.view.kind === 'interesting') {
             return this.folderFeeds()
                 .map((f) => f.id)
                 .join(',');
@@ -237,7 +260,12 @@ export class ArticleList extends LitElement {
     }
 
     private refreshFeedSetKey(): void {
-        if (this.view.kind !== 'folder' && !(this.view.kind === 'all' && this.sort === 'hot')) return;
+        if (
+            this.view.kind !== 'folder' &&
+            this.view.kind !== 'interesting' &&
+            !(this.view.kind === 'all' && this.sort === 'hot')
+        )
+            return;
         const feedSetKey = this.feedSetKey();
         if (feedSetKey === this.lastFeedSetKey) return;
         this.lastFeedSetKey = feedSetKey;
@@ -245,7 +273,11 @@ export class ArticleList extends LitElement {
     }
 
     private needsLibrary(): boolean {
-        return this.view.kind === 'folder' || (this.view.kind === 'all' && this.sort === 'hot');
+        return (
+            this.view.kind === 'folder' ||
+            this.view.kind === 'interesting' ||
+            (this.view.kind === 'all' && this.sort === 'hot')
+        );
     }
 
     override render() {
@@ -260,12 +292,8 @@ export class ArticleList extends LitElement {
     `;
     }
 
-    shadowEnabled(): boolean {
-        return shadowEnabledFor(this.view);
-    }
-
     private interestingActive(): boolean {
-        return interestingActiveFor(this.view, this.interestingOnly);
+        return interestingActiveFor(this.view);
     }
 
     onRetryLibrary() {
@@ -286,6 +314,7 @@ export class ArticleList extends LitElement {
         if (
             this.view.kind === 'feed' ||
             this.view.kind === 'folder' ||
+            this.view.kind === 'interesting' ||
             (this.view.kind === 'all' && this.sort !== 'hot')
         ) {
             return this.hasMoreSingle;
@@ -305,6 +334,18 @@ export class ArticleList extends LitElement {
 
     private folderFeeds(): Feed[] {
         return folderFeedsOf(this.view, this.library.data);
+    }
+
+    /** Feeds for an explicit view, so a refresh job can snapshot the view that started it. */
+    feedsFor(view: View): Feed[] {
+        if (view.kind === 'feed') {
+            const feed = this.library.data?.feeds.find((f) => f.id === view.id);
+            return feed ? [feed] : [];
+        }
+        if (view.kind === 'folder' || view.kind === 'interesting') {
+            return folderFeedsOf(view, this.library.data);
+        }
+        return this.library.data?.feeds ?? [];
     }
 
     private loadViewSettings() {
@@ -344,6 +385,7 @@ export class ArticleList extends LitElement {
 
     private clearList() {
         this.items = [];
+        this.loadError = null;
         this.cursors.clear();
         this.feedHasMore.clear();
         this.hasMoreSingle = true;
@@ -358,12 +400,19 @@ export class ArticleList extends LitElement {
     /**
      * Fetch the page for `gen`. Pages accumulate (infinite scroll); the paging
      * actions drop a result whose generation no longer matches, so a superseded
-     * load cannot be written into the list that replaced it.
+     * load cannot be written into the list that replaced it. A failure sets a
+     * banner instead of an empty list: without it the view reads as "no
+     * articles" while the sidebar badge still counts them.
      */
     private async runLoad(gen: number) {
         try {
             await this.loadPageSource(gen);
             applyResumeAction(this as never);
+        } catch (err) {
+            console.error('article page load failed', err);
+            if (gen === this.loadState.gen) {
+                this.loadError = 'Could not load articles. Check your connection and try again.';
+            }
         } finally {
             const step = loadSettled(this.loadState);
             this.loadState = step.state;
@@ -371,11 +420,15 @@ export class ArticleList extends LitElement {
         }
     }
 
+    onRetryArticles() {
+        void this.reset();
+    }
+
     private loadPageSource(gen: number): Promise<void> {
         if (this.interestingActive()) {
             return loadInterestingBatchAction(this as never, gen);
         }
-        if (this.view.kind === 'folder') {
+        if (this.view.kind === 'folder' || this.view.kind === 'interesting') {
             return loadFolderPageAction(this as never, gen);
         }
         return loadSinglePageAction(this as never, gen);
@@ -415,6 +468,10 @@ export class ArticleList extends LitElement {
 
     scopeLabel(): string {
         return scopeLabelOf(this.view, this.library.data);
+    }
+
+    freshnessLabel(): string {
+        return describeFreshness(freshestFetchAt(this.view, this.library.data), Date.now());
     }
 
     async onMarkBefore(e: Event) {

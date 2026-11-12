@@ -1,5 +1,5 @@
 /**
- * Starred-word map for per-folder "interesting shadow" views.
+ * Starred-word map for per-folder "Interesting" views.
  *
  * Pure and testable: no DOM, no network. The map learns which title words
  * the reader cares about from explicit signals only (stars weigh 4, matching
@@ -8,7 +8,7 @@
  *
  * `toDecisionState` is the documented decision-model attach point: it
  * serializes a bounded candidate set plus the learned scores so a future
- * `jev_ask` call can rank or explain the shadow list. It never fetches.
+ * `jev_ask` call can rank or explain the Interesting list. It never fetches.
  */
 
 export const STAR_WORD_WEIGHT = 4;

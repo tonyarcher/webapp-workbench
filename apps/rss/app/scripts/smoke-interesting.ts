@@ -1,7 +1,7 @@
 // Interesting-filter smoke: word maps, settings persistence, scoring, decision state, router.
 import { assert } from './smoke-assert';
 
-// ---- interesting filter: starred-word map, settings, ranking, decision state, router ----
+// ---- Interesting view: starred-word map, settings, ranking, decision state, router ----
 {
     const { buildWordMap, extractWords, interestingScore, rankInteresting, topWords, toDecisionState } =
         await import('../src/services/interesting-words');
@@ -127,9 +127,15 @@ import { assert } from './smoke-assert';
     rankInteresting(rankSrc, rankMap);
     assert(rankSrc[0]!.id === 'b', 'rankInteresting does not mutate the input');
 
-    const { parsePath } = await import('../src/router');
+    const { parsePath, viewToPath } = await import('../src/router');
+    const parsed = parsePath('/interesting/f1');
     assert(
-        parsePath('/interesting/f1').kind === 'all',
-        '#/interesting/:id no longer parses to a view (falls back to all)',
+        parsed.kind === 'interesting' && parsed.id === 'f1',
+        '#/interesting/:id parses to the Interesting view for that folder',
+    );
+    assert(viewToPath({ kind: 'interesting', id: 'f1' }) === '/interesting/f1', 'Interesting view round-trips to path');
+    assert(
+        parsePath('/folder/f1').kind === 'folder' && viewToPath({ kind: 'folder', id: 'f1' }) === '/folder/f1',
+        'folder view still round-trips',
     );
 }

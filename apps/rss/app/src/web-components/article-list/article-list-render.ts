@@ -28,7 +28,10 @@ export interface ArticleListRenderHost {
     listView: ListViewType;
     maxCardCols: number;
     pageSize: number;
-    interestingOnly: boolean;
+    interestingActive(): boolean;
+    loadError: string | null;
+    onRetryArticles(): void;
+    freshnessLabel(): string;
     advancedOpen: boolean;
     marking: boolean;
     advancedAnchor: MenuAnchor | null;
@@ -39,7 +42,6 @@ export interface ArticleListRenderHost {
     scopeLabel(): string;
     feedTitle(feedId: string): string | undefined;
     feedIcon(feedId: string): string | undefined;
-    shadowEnabled(): boolean;
     interestingActive(): boolean;
     updateCols(): void;
     saveViewSettings(): void;
@@ -202,26 +204,27 @@ export function renderToolbar(host: ArticleListRenderHost) {
       <div class="toolbar">
         <h2>${host.viewTitle()}</h2>
         <div class="actions">
-          ${renderInterestingFilter(host)}${renderSortSelect(host)}${renderViewSelect(host)}${renderCardColsSelect(host)}${renderPageSizeSelect(host)}
+          ${renderFreshness(host)}${renderSortSelect(host)}${renderViewSelect(host)}${renderCardColsSelect(host)}${renderPageSizeSelect(host)}
           <button class="btn" @click=${host.onMarkShownRead}>Mark shown as read</button>
           <button class="btn" @click=${host.onToggleAdvanced}>Advanced</button>
-          <button class="btn" @click=${host.onRefresh}>${host.refreshing ? 'Refreshing…' : 'Refresh'}</button>
+          <button class="btn refresh" @click=${host.onRefresh}>${host.refreshing ? html`<span class="spinner" aria-hidden="true"></span>Refreshing…` : 'Refresh'}</button>
         </div>
       </div>
     `;
 }
 
-function renderInterestingFilter(host: ArticleListRenderHost) {
-    if (!host.shadowEnabled()) return html``;
-    return html`<div class="segmented" role="group" aria-label="Article filter"><button class="seg ${!host.interestingOnly ? 'on' : ''}" aria-pressed=${!host.interestingOnly} @click=${() => {
-        host.interestingOnly = false;
-    }}>All</button><button class="seg ${host.interestingOnly ? 'on' : ''}" aria-pressed=${host.interestingOnly} @click=${() => {
-        host.interestingOnly = true;
-    }}>✨ Interesting</button></div>`;
+/**
+ * How fresh this view's feeds are ("Updated 2m ago"). Empty until a feed
+ * reports a fetch, so the toolbar shows nothing rather than a stale claim.
+ */
+function renderFreshness(host: ArticleListRenderHost) {
+    const label = host.freshnessLabel();
+    if (!label) return html``;
+    return html`<span class="freshness">${label}</span>`;
 }
 
 export function renderInterestingHint(host: ArticleListRenderHost) {
-    if (!host.shadowEnabled()) return html``;
+    if (!host.interestingActive()) return html``;
     const words = topWords(interestingWordMapOf(host.items), 3);
     if (!words.length) return html`<div class="interesting-hint">Star articles to teach this filter.</div>`;
     return html`<div class="interesting-hint" title="Top learned words">✨ ${words.map((w) => `${w.word} · ${w.score}`).join(', ')}</div>`;
@@ -266,6 +269,7 @@ export function renderAdvancedMenu(host: ArticleListRenderHost) {
 
 export function renderScroll(host: ArticleListRenderHost, virtualItems: VirtualItems, showFeed: boolean) {
     return html`
+      ${host.loadError ? html`<div class="load-error" role="alert">${host.loadError} <button class="btn" @click=${host.onRetryArticles}>Retry</button></div>` : ''}
       <div class="scroll" style="--cols: ${host.cols}" ${ref(host.scrollElRef)} @scroll=${host.onScroll}>
         <div class="viewport" style="height: ${host.virtualizer?.getTotalSize() ?? 0}px;">${renderVirtualRows(host, virtualItems, showFeed)}</div>
         ${renderScrollFooter(host)}
@@ -301,8 +305,17 @@ function renderScrollFooter(host: ArticleListRenderHost) {
 }
 
 function emptyText(host: ArticleListRenderHost): string {
-    if (host.unreadOnly || host.hideRead) return 'Nothing unread here — "Unread only" is filtering this view.';
-    if (host.interestingActive()) return 'Nothing here yet. Star articles to teach this filter what you like.';
+    return emptyTextFor(host.unreadOnly, host.hideRead, host.interestingActive());
+}
+
+/**
+ * Pure empty-state copy so the two unread filters cannot be confused: the
+ * "just marked as read" case names itself instead of blaming "Unread only".
+ */
+export function emptyTextFor(unreadOnly: boolean, hideRead: boolean, interesting: boolean): string {
+    if (hideRead && !unreadOnly) return 'Nothing unread here — the shown articles were just marked as read.';
+    if (unreadOnly || hideRead) return 'Nothing unread here — "Unread only" is filtering this view.';
+    if (interesting) return 'Nothing here yet. Star articles to teach this view what you like.';
     return 'No articles yet. Hit Refresh to sync this view.';
 }
 

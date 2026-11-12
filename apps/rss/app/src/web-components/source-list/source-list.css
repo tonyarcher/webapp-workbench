@@ -200,12 +200,6 @@ button.item {
     white-space: nowrap;
 }
 
-.shadow-mark {
-    flex: none;
-    font-size: 12px;
-    line-height: 1;
-}
-
 /* The folder disclosure glyph. It is a button, so the UA chrome comes off and
    the glyph keeps the metrics it had as a span. */
 .icon {

@@ -278,6 +278,7 @@ export class SourceList extends LitElement {
         )
             return true;
         if (this.view.kind === 'folder' && view.kind === 'folder') return this.view.id === view.id;
+        if (this.view.kind === 'interesting' && view.kind === 'interesting') return this.view.id === view.id;
         if (this.view.kind === 'feed' && view.kind === 'feed') return this.view.id === view.id;
         return false;
     }

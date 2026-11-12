@@ -224,7 +224,7 @@ export async function loadSinglePageAction(host: PageHost, gen: number): Promise
 }
 
 export async function loadFolderPageAction(host: PageHost, gen: number): Promise<void> {
-    if (host.view.kind !== 'folder') return;
+    if (host.view.kind !== 'folder' && host.view.kind !== 'interesting') return;
     const key = `folder:${host.view.id}`;
     const res = await fetchFolderPage(
         key,

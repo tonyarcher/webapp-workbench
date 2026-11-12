@@ -126,7 +126,6 @@ function folderHeaderTemplate(
     onDragStart: (e: DragEvent, folder: Folder) => void,
     onToggle: (id: string) => void,
     onOpenMenu: (e: MouseEvent, folder: Folder) => void,
-    shadow: boolean,
 ) {
     return html`
       <!-- pointer-only: the row opens the folder on pointer; keyboard users open it with the name button. -->
@@ -135,10 +134,38 @@ function folderHeaderTemplate(
         <button class="item-open" @click=${(e: MouseEvent) => {
             e.stopPropagation();
             onSelect(folder);
-        }}>${iconTemplate('folder')}<span class="label" title="${folder.title}">${folder.title}</span>${shadow ? html`<span class="shadow-mark" title="Interesting filter available">✨</span>` : ''}${unread > 0 ? html`<span class="badge">${unread}</span>` : ''}</button>
+        }}>${iconTemplate('folder')}<span class="label" title="${folder.title}">${folder.title}</span>${unread > 0 ? html`<span class="badge">${unread}</span>` : ''}</button>
         <button class="menu-btn" title="Folder options" @click=${(e: MouseEvent) => onOpenMenu(e, folder)}>${menuIconTemplate()}</button>
       </div>
     `;
+}
+
+/**
+ * One Interesting section row. The visible text carries the folder title so
+ * every row is distinct: "Interesting in Tech", "Interesting in Sport".
+ */
+function interestingRowTemplate(folder: Folder, active: boolean, onSelect: (folder: Folder) => void) {
+    const name = `Interesting in ${folder.title}`;
+    return html`
+      <button class="item ${active ? 'active' : ''}" aria-label=${name} title=${name} @click=${() => onSelect(folder)}>
+        <span class="icon" aria-hidden="true">✨</span><span class="label">${name}</span>
+      </button>
+    `;
+}
+
+/**
+ * Standalone Interesting section: one row per folder whose toggle is on.
+ * Rendered above the folders so the smart views stay visible without
+ * scrolling past a long folder list; the folders themselves are untouched.
+ */
+function renderInterestingSection(host: SourceListRenderHost, folders: Folder[]) {
+    const enabled = folders.filter((f) => host.interestingShadow[f.id] === true);
+    if (!enabled.length) return html``;
+    return html`<div class="section-label">Interesting</div>${enabled.map((folder) =>
+        interestingRowTemplate(folder, host.isActive({ kind: 'interesting', id: folder.id }), (f) =>
+            host.select({ kind: 'interesting', id: f.id }),
+        ),
+    )}`;
 }
 
 export function folderRowTemplate(
@@ -152,11 +179,10 @@ export function folderRowTemplate(
     onToggle: (id: string) => void,
     onOpenMenu: (e: MouseEvent, folder: Folder) => void,
     feedRow: (feed: Feed) => unknown,
-    shadow = false,
 ) {
     return html`
       <div>
-        ${folderHeaderTemplate(folder, active, isCollapsed, unread, onSelectFolder, onDragFolder, onToggle, onOpenMenu, shadow)}
+        ${folderHeaderTemplate(folder, active, isCollapsed, unread, onSelectFolder, onDragFolder, onToggle, onOpenMenu)}
         ${isCollapsed ? '' : html`<div class="folder-children">${feeds.map((f) => feedRow(f))}</div>`}
       </div>
     `;
@@ -167,7 +193,7 @@ export function renderHead(host: SourceListRenderHost) {
 }
 
 export function renderNav(host: SourceListRenderHost, folders: Folder[], uncategorized: Feed[]) {
-    return html`<nav class="nav" @dragover=${host.onDragOver} @dragleave=${host.onDragLeave} @drop=${host.onDrop} @dragend=${host.onDragEnd}>${renderNavError(host)}${renderStaticNav(host)}${folders.map((folder) => folderRow(host, folder))}${renderUncategorized(host, uncategorized)}<div class="drop-zone" data-no-folder>Drop here to move out of folders</div></nav>`;
+    return html`<nav class="nav" @dragover=${host.onDragOver} @dragleave=${host.onDragLeave} @drop=${host.onDrop} @dragend=${host.onDragEnd}>${renderNavError(host)}${renderStaticNav(host)}${renderInterestingSection(host, folders)}${folders.map((folder) => folderRow(host, folder))}${renderUncategorized(host, uncategorized)}<div class="drop-zone" data-no-folder>Drop here to move out of folders</div></nav>`;
 }
 
 function renderNavError(host: SourceListRenderHost) {
@@ -276,7 +302,6 @@ function folderRow(host: SourceListRenderHost, folder: Folder) {
     const isCollapsed = Boolean(host.collapsed[folder.id]);
     const active = host.isActive({ kind: 'folder', id: folder.id });
     const unread = host.folderUnread(folder.id);
-    const shadow = host.interestingShadow[folder.id] === true;
     return html`${folderRowTemplate(
         folder,
         feeds,
@@ -288,6 +313,5 @@ function folderRow(host: SourceListRenderHost, folder: Folder) {
         (id) => host.toggleFolder(id),
         (e, f) => openFolderMenuAction(host, f, e),
         (feed) => feedRow(host, feed),
-        shadow,
     )}`;
 }

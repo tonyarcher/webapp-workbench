@@ -1,5 +1,5 @@
 /**
- * Local settings for per-folder "interesting shadow" views.
+ * Local settings for per-folder "Interesting" rows.
  * Same localStorage precedent as the unread-only folder toggles in
  * source-list.ts (HIDE_READ_KEY): validated loads, silent saves, {} on
  * anything unexpected. No API changes — these toggles never leave the browser.
@@ -10,7 +10,7 @@ const SHADOW_KEY = 'rss-reader:interesting-shadow';
 const WORD_MAP_KEY = 'rss-reader:word-map';
 const HIDE_READ_KEY = 'rss-reader:hide-read-by-folder';
 
-/** Folder ids with the ✨ Interesting shadow row enabled. */
+/** Folder ids with the ✨ Interesting row enabled. */
 export function loadInterestingShadow(): Record<string, true> {
     try {
         const raw = localStorage.getItem(SHADOW_KEY);

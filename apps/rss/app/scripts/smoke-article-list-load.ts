@@ -116,3 +116,89 @@ assert(
     queuedPage.start === null && queuedPage.state.phase === 'again',
     'scroll paging never replaces the reset already owed',
 );
+
+// ---- empty-state copy names the active filter ----
+{
+    const { emptyTextFor } = await import('../src/web-components/article-list/article-list-render');
+    assert(
+        emptyTextFor(true, false, false) === 'Nothing unread here — "Unread only" is filtering this view.',
+        'unread-only keeps the unread-only copy',
+    );
+    assert(
+        emptyTextFor(false, true, false) === 'Nothing unread here — the shown articles were just marked as read.',
+        'mark-shown-read names itself instead of blaming Unread only',
+    );
+    assert(
+        emptyTextFor(true, true, false) === 'Nothing unread here — "Unread only" is filtering this view.',
+        'both filters keep the unread-only copy',
+    );
+    assert(
+        emptyTextFor(false, false, true) === 'Nothing here yet. Star articles to teach this view what you like.',
+        'empty Interesting view invites starring',
+    );
+    assert(
+        emptyTextFor(false, false, false) === 'No articles yet. Hit Refresh to sync this view.',
+        'unfiltered empty view suggests a refresh',
+    );
+}
+
+// ---- freshness label reads the view's own feeds ----
+{
+    const { describeFreshness, freshestFetchAt, scopeFeedsFor } =
+        await import('../src/web-components/article-list/article-list-helpers');
+    const library = {
+        feeds: [
+            {
+                id: 'a',
+                title: 'A',
+                url: 'https://a.example',
+                folderIds: ['f1'],
+                unread: 3,
+                addedAt: 0,
+                lastFetchedAt: 1_000,
+            },
+            {
+                id: 'b',
+                title: 'B',
+                url: 'https://b.example',
+                folderIds: ['f2'],
+                unread: 0,
+                addedAt: 0,
+                lastFetchedAt: 2_000,
+            },
+            { id: 'c', title: 'C', url: 'https://c.example', folderIds: [], unread: 0, addedAt: 0 },
+        ],
+    };
+    assert(
+        scopeFeedsFor({ kind: 'folder', id: 'f1' }, library)
+            .map((f) => f.id)
+            .join(',') === 'a',
+        'folder scope reads its own feeds',
+    );
+    assert(
+        scopeFeedsFor({ kind: 'interesting', id: 'f2' }, library)
+            .map((f) => f.id)
+            .join(',') === 'b',
+        'Interesting scope reads its own feeds',
+    );
+    assert(
+        scopeFeedsFor({ kind: 'feed', id: 'b' }, library)
+            .map((f) => f.id)
+            .join(',') === 'b',
+        'feed scope reads one feed',
+    );
+    assert(scopeFeedsFor({ kind: 'all' }, library).length === 3, 'All scope reads every feed');
+    assert(scopeFeedsFor({ kind: 'folder', id: 'f1' }, undefined).length === 0, 'no library means no feeds');
+    assert(
+        freshestFetchAt({ kind: 'folder', id: 'f1' }, library) === 1_000,
+        'freshness takes the newest fetch in scope',
+    );
+    assert(freshestFetchAt({ kind: 'all' }, library) === 2_000, 'All freshness takes the newest fetch anywhere');
+    assert(freshestFetchAt({ kind: 'feed', id: 'c' }, library) === null, 'no reported fetch means no label');
+    assert(describeFreshness(null, 9_000) === '', 'missing fetch renders nothing');
+    assert(describeFreshness(9_000, 9_000) === 'Updated just now', 'sub-minute freshness is just now');
+    assert(describeFreshness(9_000, 10_000) === 'Updated just now', 'future timestamps read as just now');
+    assert(describeFreshness(0, 120_000) === 'Updated 2m ago', 'minute freshness counts minutes');
+    assert(describeFreshness(0, 3_600_000) === 'Updated 1h ago', 'hour freshness counts hours');
+    assert(describeFreshness(0, 172_800_000) === 'Updated 2d ago', 'day freshness counts days');
+}

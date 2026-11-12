@@ -1,9 +1,9 @@
 import { fetchArticlesPage } from '../../services/api';
 import { buildWordMap, rankInteresting } from '../../services/interesting-words';
-import { loadInterestingShadow, loadWordMap, loadWordMapIds } from '../../services/interesting-settings';
+import { loadWordMap, loadWordMapIds } from '../../services/interesting-settings';
 import type { Article, View } from '../../types';
 
-/** Bounded newest batch the ✨ Interesting folder filter ranks at once. */
+/** Bounded newest batch the ✨ Interesting folder view ranks at once. */
 export const INTERESTING_BATCH = 200;
 
 interface InterestingHost {
@@ -17,14 +17,9 @@ interface InterestingHost {
     cursors: Map<string, string | undefined>;
 }
 
-/** The ✨ filter is offered only on folders opted into the shadow setting. */
-export function shadowEnabledFor(view: View): boolean {
-    if (view.kind !== 'folder') return false;
-    return loadInterestingShadow()[view.id] === true;
-}
-
-export function interestingActiveFor(view: View, interestingOnly: boolean): boolean {
-    return interestingOnly && shadowEnabledFor(view);
+/** The ✨ view is its own route now, not a toolbar toggle on the folder. */
+export function interestingActiveFor(view: View): boolean {
+    return view.kind === 'interesting';
 }
 
 /**
@@ -45,12 +40,14 @@ export function interestingWordMapOf(batch: Article[]): Record<string, number> {
 }
 
 /**
- * Interesting filter: one bounded newest batch for the folder, ranked by
+ * Interesting view: one bounded newest batch for the folder, ranked by
  * the learned word map. No cursors, no further paging — the batch is the
- * whole list until the filter toggles off.
+ * whole list. `toDecisionState` in interesting-words stays the documented
+ * attach point if a server-side Jev ranking ever replaces this local one;
+ * the key must stay server-side, so the browser never calls Jev directly.
  */
 export async function loadInterestingBatchAction(host: InterestingHost, gen: number): Promise<void> {
-    if (host.view.kind !== 'folder') return;
+    if (host.view.kind !== 'interesting') return;
     const res = await fetchArticlesPage({
         scope: `folder:${host.view.id}`,
         sort: 'newest',
