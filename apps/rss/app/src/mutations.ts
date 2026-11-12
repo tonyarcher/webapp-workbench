@@ -26,7 +26,19 @@ import {
     type LibraryData,
 } from './query';
 import type { Article, Feed } from './types';
-import { adjustWordMap } from './services/interesting-settings';
+import { accrueEngagement, adjustWordMap, isDeranked, setDeranked } from './services/interesting-settings';
+import {
+    DERANK_WORD_CAP,
+    DERANK_WORD_WEIGHT,
+    ORIGINAL_WORD_CAP,
+    ORIGINAL_WORD_WEIGHT,
+    SHARE_AFFINITY,
+    SHARE_WORD_CAP,
+    SHARE_WORD_WEIGHT,
+    SUMMARY_AFFINITY,
+    SUMMARY_WORD_CAP,
+    SUMMARY_WORD_WEIGHT,
+} from './services/engagement';
 import { STAR_WORD_WEIGHT } from './services/interesting-words';
 import { toastApiError } from './services/toast';
 
@@ -194,6 +206,50 @@ export async function toggleStar(articleId: string, nowStarred: boolean): Promis
     if (title !== undefined) adjustWordMap(title, nowStarred ? STAR_WORD_WEIGHT : -STAR_WORD_WEIGHT, articleId);
     await invalidateFrontPage();
     return true;
+}
+
+/**
+ * A share vouches for the story in public: the strongest local signal
+ * (two stars) plus a server affinity touch so the front page and editions
+ * feel it too. Fire-and-forget like the other affinity writes; the word
+ * map update is what Interesting ranks on.
+ */
+export function noteShare(articleId: string, title: string): void {
+    accrueEngagement(title, SHARE_WORD_WEIGHT, articleId, SHARE_WORD_CAP, 'share');
+    void recordAffinity(articleId, SHARE_AFFINITY).catch(() => {});
+}
+
+/**
+ * A completed summary means the reader spent model time on this story:
+ * star-equivalent locally and on the server. Callers must only call this
+ * for freshly produced summaries, not cache hits.
+ */
+export function noteSummary(articleId: string, title: string): void {
+    accrueEngagement(title, SUMMARY_WORD_WEIGHT, articleId, SUMMARY_WORD_CAP, 'summary');
+    void recordAffinity(articleId, SUMMARY_AFFINITY).catch(() => {});
+}
+
+/** Leaving the reader to read the original is real interest, local only. */
+export function noteOriginal(articleId: string, title: string): void {
+    accrueEngagement(title, ORIGINAL_WORD_WEIGHT, articleId, ORIGINAL_WORD_CAP, 'original');
+}
+
+/**
+ * Explicit "not interesting" toggle. The anti-star: same magnitude as
+ * STAR_WORD_WEIGHT, so one derank cancels one star on the same words.
+ * Local only — it names a topic, and server affinity only speaks feed,
+ * domain and author. Untoggling pays the weight back, capped like the rest.
+ */
+export function noteDerank(articleId: string, title: string, nowDeranked: boolean): void {
+    if (isDeranked(articleId) === nowDeranked) return;
+    accrueEngagement(
+        title,
+        nowDeranked ? -DERANK_WORD_WEIGHT : DERANK_WORD_WEIGHT,
+        articleId,
+        DERANK_WORD_CAP,
+        'derank',
+    );
+    setDeranked(articleId, nowDeranked);
 }
 
 /** Title lookup across cached article pages (articles + front-page lists). */

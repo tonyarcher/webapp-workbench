@@ -7,7 +7,8 @@ import { shareUrl, type ShareTarget } from '../../services/share';
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
 import { toastError, toastInfo } from '../../services/toast';
 import { SUMMARY_LENGTHS, loadSummaryLength, saveSummaryLength, summarizeBest, type SummaryLength } from '../../ai';
-import { toggleStar } from '../../mutations';
+import { noteDerank, noteOriginal, noteShare, noteSummary, toggleStar } from '../../mutations';
+import { isDeranked } from '../../services/interesting-settings';
 import type { Article } from '../../types';
 import { domainOf, formatDate } from '../../util';
 import '../video-header/video-header';
@@ -27,6 +28,7 @@ export class ArticleView extends LitElement {
     @state() private summarizing = false;
     @state() private aiSummary: string | null = null;
     @state() private aiError = '';
+    @state() private deranked = false;
     @state() private summaryLength: SummaryLength = loadSummaryLength();
 
     override connectedCallback() {
@@ -59,6 +61,7 @@ export class ArticleView extends LitElement {
             this.aiSummary = null;
             this.aiError = '';
             this.sanitizedBody = null;
+            this.deranked = this.article ? isDeranked(this.article.id) : false;
         }
         const a = this.article;
         if (!a) return;
@@ -89,10 +92,11 @@ export class ArticleView extends LitElement {
       <div class="toolbar" role="toolbar" aria-label="Article actions">
         <button class="btn" @click=${this.emitClose}>← Back</button>
         <button class="btn" @click=${this.onStar}>${a.starred ? '★ Unstar' : '☆ Star'}</button>
+        <button class="btn" @click=${this.onDerank} aria-pressed=${this.deranked}>${this.deranked ? '✓ Not interesting' : '⊘ Not interesting'}</button>
         <button class="btn" @click=${this.onSummarize} ?disabled=${this.summarizing}>${label}</button>
         ${link ? this.renderShareButtons(a, link) : ''}
         <div class="spacer"></div>
-        ${link ? html`<a class="btn primary" href=${link} target="_blank" rel="noopener noreferrer">View original ↗</a>` : ''}
+        ${link ? html`<a class="btn primary" href=${link} target="_blank" rel="noopener noreferrer" @click=${() => noteOriginal(a.id, a.title)}>View original ↗</a>` : ''}
       </div>`;
     }
 
@@ -106,13 +110,16 @@ export class ArticleView extends LitElement {
         const open = (target: 'facebook' | 'x' | 'mastodon') => (e: Event) => {
             e.stopPropagation();
             const href = shareUrl(target, link, a.title, loadMastodonHost());
-            if (href) window.open(href, '_blank', 'noopener,noreferrer');
+            if (href) {
+                noteShare(a.id, a.title);
+                window.open(href, '_blank', 'noopener,noreferrer');
+            }
         };
         const buttons: Record<ShareTarget, unknown> = {
             facebook: html`<button class="btn share-btn" @click=${open('facebook')}>${shareIcon('facebook')}Facebook</button>`,
             x: html`<button class="btn share-btn" @click=${open('x')}>${shareIcon('x')}X</button>`,
             mastodon: html`<button class="btn share-btn" @click=${open('mastodon')}>${shareIcon('mastodon')}Mastodon</button>`,
-            instagram: html`<button class="btn share-btn" @click=${() => void this.copyLink(link)}>${shareIcon('instagram')}Instagram</button>`,
+            instagram: html`<button class="btn share-btn" @click=${() => void this.copyLink(link, a)}>${shareIcon('instagram')}Instagram</button>`,
         };
         return loadShareTargets().map((t) => buttons[t]);
     }
@@ -122,7 +129,7 @@ export class ArticleView extends LitElement {
     };
 
     /** Instagram path: no endpoint exists, so copy the link for pasting. */
-    private async copyLink(link: string): Promise<void> {
+    private async copyLink(link: string, a: Article) {
         let copied = false;
         try {
             await navigator.clipboard.writeText(link);
@@ -139,12 +146,14 @@ export class ArticleView extends LitElement {
                 copied = false;
             }
         }
-        if (copied) toastInfo('Link copied — paste it in Instagram');
-        else toastError('Could not copy the link');
+        if (copied) {
+            noteShare(a.id, a.title);
+            toastInfo('Link copied — paste it in Instagram');
+        } else toastError('Could not copy the link');
     }
 
     private renderTitle(a: Article, link: string | undefined) {
-        return html`<h1>${link ? html`<a href=${link} target="_blank" rel="noopener noreferrer">${a.title}</a>` : a.title}</h1>`;
+        return html`<h1>${link ? html`<a href=${link} target="_blank" rel="noopener noreferrer" @click=${() => noteOriginal(a.id, a.title)}>${a.title}</a>` : a.title}</h1>`;
     }
 
     private renderMeta(a: Article) {
@@ -183,6 +192,14 @@ export class ArticleView extends LitElement {
         }
     }
 
+    private onDerank() {
+        const a = this.article;
+        if (!a) return;
+        const next = !this.deranked;
+        noteDerank(a.id, a.title, next);
+        this.deranked = next;
+    }
+
     private shouldSkipSummarize(a: Article | null): boolean {
         if (!a || this.summarizing) return true;
         if (this.aiSummary) return true;
@@ -215,6 +232,7 @@ export class ArticleView extends LitElement {
             if (!text) return;
             const summary = await summarizeBest(a.title, text.slice(0, MAX_SUMMARY_CHARS), this.summaryLength);
             if (this.article?.id !== a.id) return;
+            noteSummary(a.id, a.title);
             summaryCache.set(this.summaryCacheKey(a), summary);
             this.aiSummary = summary;
         } catch (err) {

@@ -26,6 +26,7 @@ import {
     type LoadStep,
 } from './article-list-load-state';
 import { interestingActiveFor, loadInterestingBatchAction } from './article-list-interesting';
+import { DwellTracker } from './article-list-dwell';
 import {
     CARD_MIN_WIDTH,
     DEFAULT_PAGE_SIZE,
@@ -113,6 +114,8 @@ export class ArticleList extends LitElement {
     resumeApplied = false;
     /** Feed membership last loaded: folder feeds, or every feed for All/Hot. */
     private lastFeedSetKey = '';
+    /** Headline dwell with an active mouse, owned by this element's lifetime. */
+    private dwell = new DwellTracker();
     private resizeObserver: ResizeObserver | undefined;
     feedWindowOffset = 0;
     /** In-flight refresh jobs by view key. Each folder is its own elevator button. */
@@ -144,6 +147,11 @@ export class ArticleList extends LitElement {
             this.updateCols();
             this.resizeObserver = new ResizeObserver(() => this.updateCols());
             this.resizeObserver.observe(el);
+            // Inside the shadow root the event target is the row itself.
+            // On window it would be retargeted to this host and dwell could
+            // never resolve a row.
+            el.addEventListener('pointermove', this.onPointerActivity);
+            el.addEventListener('wheel', this.onPointerActivity, { passive: true });
         }
     }
 
@@ -163,6 +171,7 @@ export class ArticleList extends LitElement {
         window.addEventListener('feeds-refreshed', this.onFeedsRefreshed);
         window.addEventListener('article-read', this.onArticleRead);
         window.addEventListener('article-starred', this.onArticleStarred);
+        this.dwell.start();
     }
 
     override disconnectedCallback() {
@@ -171,10 +180,18 @@ export class ArticleList extends LitElement {
         window.removeEventListener('feeds-refreshed', this.onFeedsRefreshed);
         window.removeEventListener('article-read', this.onArticleRead);
         window.removeEventListener('article-starred', this.onArticleStarred);
+        this.scrollElRef.value?.removeEventListener('pointermove', this.onPointerActivity);
+        this.scrollElRef.value?.removeEventListener('wheel', this.onPointerActivity);
+        this.dwell.stop();
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
         this.virtualizerCleanup?.();
     }
+
+    /** Stable listener identity; the tracker owns the dwell state. */
+    private onPointerActivity = (e: Event) => {
+        this.dwell.trackEvent(e, this.items, this.cols, this.renderRoot);
+    };
 
     private onArticleStarred = (e: Event) => {
         const { id, starred } = (e as CustomEvent<{ id: string; starred: boolean }>).detail;
@@ -204,6 +221,7 @@ export class ArticleList extends LitElement {
 
     override willUpdate(changed: Map<string, unknown>) {
         if (changed.has('view')) {
+            this.dwell.flushViewChange();
             this.loadViewSettings();
         }
         if (this.virtualizer) {
@@ -451,6 +469,7 @@ export class ArticleList extends LitElement {
     }
 
     private onKeyDown = (e: KeyboardEvent) => {
+        this.dwell.noteInput();
         handleCursorKey(this as never, e);
     };
 

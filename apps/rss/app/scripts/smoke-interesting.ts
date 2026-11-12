@@ -139,3 +139,110 @@ import { assert } from './smoke-assert';
         'folder view still round-trips',
     );
 }
+
+// ---- engagement: read time, dwell, shares, summaries, originals ----
+{
+    const {
+        BOUNCE_WEIGHT,
+        DWELL_CAP,
+        OPEN_READ_CAP,
+        SHARE_WORD_CAP,
+        SUMMARY_WORD_CAP,
+        dwellWeight,
+        expandedReadWeight,
+    } = await import('../src/services/engagement');
+    assert(expandedReadWeight(2) === BOUNCE_WEIGHT, 'a sub-three-second open counts as a bounce');
+    assert(expandedReadWeight(30) === 2, 'thirty seconds of expanded reading weighs one step');
+    assert(expandedReadWeight(120) === 8, 'expanded reading caps instead of compounding');
+    assert(expandedReadWeight(Number.NaN) === 0, 'expanded reading ignores non-finite input');
+    assert(dwellWeight(29) === 0, 'dwell under a step accrues nothing');
+    assert(dwellWeight(90) === 3, 'dwell accrues per step');
+    assert(dwellWeight(9_999) === DWELL_CAP, 'dwell caps instead of compounding');
+
+    const shims = globalThis as Record<string, unknown>;
+    const mem = new Map<string, string>();
+    shims['localStorage'] = {
+        getItem: (k: string) => mem.get(k) ?? null,
+        setItem: (k: string, v: string) => void mem.set(k, String(v)),
+        removeItem: (k: string) => void mem.delete(k),
+    };
+    const { accrueEngagement, loadEngagementTotals, loadWordMap } =
+        await import('../src/services/interesting-settings');
+    accrueEngagement('Rust Performance', 4, 'a1', OPEN_READ_CAP, 'open');
+    assert(loadWordMap()['rust'] === 4, 'accrual teaches the word map');
+    assert(loadEngagementTotals()['a1:open'] === 4, 'accrual ledgers the lifetime total');
+    accrueEngagement('Rust Performance', 8, 'a1', OPEN_READ_CAP, 'open');
+    assert(loadEngagementTotals()['a1:open'] === OPEN_READ_CAP, 'accrual clamps the lifetime total at the cap');
+    assert(loadWordMap()['rust'] === OPEN_READ_CAP, 'accrual only applies the unclamped slice');
+    accrueEngagement('Rust Performance', 2, 'a1', OPEN_READ_CAP, 'open');
+    assert(loadWordMap()['rust'] === OPEN_READ_CAP, 'accrual at the cap is a no-op');
+    accrueEngagement('Zebra News', -1, 'z1', OPEN_READ_CAP, 'open');
+    assert(loadEngagementTotals()['z1:open'] === BOUNCE_WEIGHT, 'bounces ledger negative');
+    accrueEngagement('Zebra News', -99, 'z1', 2, 'open');
+    assert(loadEngagementTotals()['z1:open'] === -2, 'accrual floors the lifetime total');
+    accrueEngagement('Ignored', 0, 'i1', 4, 'open');
+    assert(loadEngagementTotals()['i1:open'] === undefined, 'zero-weight accrual writes nothing');
+    accrueEngagement('Mixed Signals', 8, 'm1', SHARE_WORD_CAP, 'share');
+    accrueEngagement('Mixed Signals', 4, 'm1', SUMMARY_WORD_CAP, 'summary');
+    assert(
+        loadWordMap()['mixed'] === 12 && loadWordMap()['signals'] === 12,
+        'a low-cap signal adds to weight a high-cap signal earned',
+    );
+    assert(
+        loadEngagementTotals()['m1:share'] === 8 && loadEngagementTotals()['m1:summary'] === 4,
+        'each signal ledgers under its own cap',
+    );
+
+    const { noteDerank, noteOriginal, noteShare, noteSummary } = await import('../src/mutations');
+    const realFetch = shims['fetch'];
+    const realWindow = shims['window'];
+    shims['window'] = { dispatchEvent: () => false };
+    const store = shims['localStorage'] as { setItem: (k: string, v: string) => void };
+    store.setItem(
+        'rss.auth.tokens',
+        JSON.stringify({ access: 'test-access', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 900 }),
+    );
+    const seen: Array<{ url: string; body: string | null }> = [];
+    shims['fetch'] = async (url: unknown, init?: { body?: unknown }) => {
+        seen.push({ url: String(url), body: typeof init?.body === 'string' ? init.body : null });
+        return new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    };
+    try {
+        noteShare('s1', 'Shared Rust Story');
+        noteSummary('u1', 'Summarized Rust Guide');
+        noteOriginal('o1', 'Original Rust Post');
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        assert(loadWordMap()['shared'] === 8, 'a share teaches the word map two stars of weight');
+        assert(loadWordMap()['summarized'] === 4, 'a summary teaches the word map a star of weight');
+        assert(loadWordMap()['original'] === 2, 'opening the original teaches the word map');
+        assert(loadEngagementTotals()['s1:share'] === SHARE_WORD_CAP - 8, 'a share ledgers under its own cap');
+        const { isDeranked, loadDerankedIds } = await import('../src/services/interesting-settings');
+        noteDerank('d1', 'Deranked Rust Story', true);
+        assert(isDeranked('d1') === true, 'derank records the preference');
+        assert(loadWordMap()['deranked'] === -4, 'derank counts the anti-star against the words');
+        assert(loadEngagementTotals()['d1:derank'] === -4, 'derank ledgers the negative slice');
+        noteDerank('d1', 'Deranked Rust Story', true);
+        assert(loadWordMap()['deranked'] === -4, 'deranking twice does not double count');
+        noteDerank('d1', 'Deranked Rust Story', false);
+        assert(isDeranked('d1') === false, 'untoggling clears the preference');
+        assert(loadWordMap()['deranked'] === undefined, 'untoggling pays the weight back');
+        mem.set('rss-reader:deranked-ids', 'oops');
+        assert(loadDerankedIds().length === 0, 'deranked ids fall back to [] on invalid JSON');
+        const affinityPosts = seen.filter((s) => s.url.includes('/api/affinity'));
+        assert(affinityPosts.length === 2, 'shares and summaries post affinity; originals stay local');
+        assert(
+            affinityPosts.some((s) => (s.body ?? '').includes('"amount":8')),
+            'a share posts the share affinity amount',
+        );
+        assert(
+            affinityPosts.some((s) => (s.body ?? '').includes('"amount":4')),
+            'a summary posts the summary affinity amount',
+        );
+    } finally {
+        shims['fetch'] = realFetch;
+        shims['window'] = realWindow;
+    }
+}

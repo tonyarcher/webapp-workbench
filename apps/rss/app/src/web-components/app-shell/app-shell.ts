@@ -6,6 +6,8 @@ import { bustCounts, queryClient } from '../../query';
 import { clearClientDb } from '../../db/db';
 import { currentUsername, hasSession, logout, startLogin } from '../../services/auth';
 import { clearToasts, dismissToast, onToast, type ToastNotice } from '../../services/toast';
+import { accrueEngagement } from '../../services/interesting-settings';
+import { OPEN_READ_CAP, expandedReadWeight } from '../../services/engagement';
 import type { Article, View } from '../../types';
 import {
     MAX_ARTICLE_PANEL_WIDTH,
@@ -336,7 +338,7 @@ export class AppShell extends LitElement {
         const article = this.readContext.items[index];
         if (!article) return;
         this.readContext = { ...this.readContext, index };
-        this.article = article;
+        this.trackOpen(article);
         this.resume = { view: JSON.stringify(this.route), id: article.id };
         if (await markArticleRead(article.id)) {
             window.dispatchEvent(new CustomEvent('article-read', { detail: article.id }));
@@ -347,12 +349,41 @@ export class AppShell extends LitElement {
         const detail = (e as CustomEvent<{ article: Article; index: number; items: Article[] }>).detail;
         this.readContext = { items: detail.items, index: detail.index };
         this.articleReturnFocus = deepActiveElement();
-        this.article = detail.article;
+        this.trackOpen(detail.article);
         this.resume = { view: JSON.stringify(this.route), id: detail.article.id };
+    }
+
+    /**
+     * Expanded-read timing. Both open paths funnel here; every close path
+     * funnels through closeArticle (backdrop, Back button, Escape, keyboard
+     * close, route change), so open-to-close seconds are fully covered.
+     */
+    private openArticleId: string | null = null;
+    private openedAt = 0;
+
+    private trackOpen(article: Article) {
+        this.flushExpandedRead();
+        this.article = article;
+        this.openArticleId = article.id;
+        this.openedAt = Date.now();
+    }
+
+    private flushExpandedRead() {
+        const open = this.article;
+        if (this.openArticleId === null || this.openedAt <= 0 || !open || open.id !== this.openArticleId) {
+            this.openArticleId = null;
+            this.openedAt = 0;
+            return;
+        }
+        const seconds = (Date.now() - this.openedAt) / 1000;
+        this.openArticleId = null;
+        this.openedAt = 0;
+        accrueEngagement(open.title, expandedReadWeight(seconds), open.id, OPEN_READ_CAP, 'open');
     }
 
     private closeArticle() {
         if (!this.article) return;
+        this.flushExpandedRead();
         this.article = null;
         this.readContext = null;
         this.endArticleResize();
