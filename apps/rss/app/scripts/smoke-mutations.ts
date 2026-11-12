@@ -310,7 +310,7 @@ import { assert } from './smoke-assert';
         return {
             host: {
                 view: { kind: 'all' },
-                jobs: new Map<string, Promise<void>>(),
+                refreshJobs: new Map<string, Promise<void>>(),
                 setRefreshingKey: (key: string, on: boolean) => {
                     if (on) active.add(key);
                     else active.delete(key);
@@ -395,7 +395,7 @@ import { assert } from './smoke-assert';
         const active = new Set<string>();
         const host = {
             view: { kind: 'folder', id: 'f1' },
-            jobs: new Map<string, Promise<void>>(),
+            refreshJobs: new Map<string, Promise<void>>(),
             setRefreshingKey: (key: string, on: boolean) => {
                 if (on) active.add(key);
                 else active.delete(key);
@@ -431,7 +431,7 @@ import { assert } from './smoke-assert';
         });
         const moved = {
             view: { kind: 'folder', id: 'f1' } as { kind: 'folder'; id: string },
-            jobs: new Map<string, Promise<void>>(),
+            refreshJobs: new Map<string, Promise<void>>(),
             setRefreshingKey: (key: string, on: boolean) => {
                 if (on) active.add(key);
                 else active.delete(key);
