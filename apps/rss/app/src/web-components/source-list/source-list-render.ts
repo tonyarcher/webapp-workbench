@@ -41,6 +41,7 @@ export interface SourceListRenderHost extends ActionHost {
     menuIcon(): unknown;
     folderFeeds(folderId: string): Feed[];
     folderUnread(folderId: string): number;
+    interestingCount(folderId: string): number | undefined;
     isActive(view: View): boolean;
     select(view: View): void;
     onDragStart(e: DragEvent, kind: 'folder' | 'feed', id: string): void;
@@ -144,11 +145,17 @@ function folderHeaderTemplate(
  * One Interesting section row. The visible text carries the folder title so
  * every row is distinct: "Interesting in Tech", "Interesting in Sport".
  */
-function interestingRowTemplate(folder: Folder, active: boolean, onSelect: (folder: Folder) => void) {
+function interestingRowTemplate(
+    folder: Folder,
+    active: boolean,
+    count: number | undefined,
+    onSelect: (folder: Folder) => void,
+) {
     const name = `Interesting in ${folder.title}`;
+    const empty = count === 0 || count === undefined;
     return html`
-      <button class="item ${active ? 'active' : ''}" aria-label=${name} title=${name} @click=${() => onSelect(folder)}>
-        <span class="icon" aria-hidden="true">✨</span><span class="label">${name}</span>
+      <button class="item ${active ? 'active' : ''} ${empty ? 'empty' : ''}" aria-label=${name} title=${name} @click=${() => onSelect(folder)}>
+        <span class="icon" aria-hidden="true">✨</span><span class="label">${name}</span>${count && count > 0 ? html`<span class="badge">${count}</span>` : ''}
       </button>
     `;
 }
@@ -162,8 +169,11 @@ function renderInterestingSection(host: SourceListRenderHost, folders: Folder[])
     const enabled = folders.filter((f) => host.interestingShadow[f.id] === true);
     if (!enabled.length) return html``;
     return html`<div class="section-label">Interesting</div>${enabled.map((folder) =>
-        interestingRowTemplate(folder, host.isActive({ kind: 'interesting', id: folder.id }), (f) =>
-            host.select({ kind: 'interesting', id: f.id }),
+        interestingRowTemplate(
+            folder,
+            host.isActive({ kind: 'interesting', id: folder.id }),
+            host.interestingCount(folder.id),
+            (f) => host.select({ kind: 'interesting', id: f.id }),
         ),
     )}`;
 }

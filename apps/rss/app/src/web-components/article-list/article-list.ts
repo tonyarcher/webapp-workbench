@@ -45,6 +45,7 @@ import {
     saveInterestingStrictness,
     DEFAULT_INTERESTING_STRICTNESS,
 } from '../../services/interesting-settings';
+import { saveInterestingCount } from '../../services/interesting-counts';
 import { DwellTracker } from './article-list-dwell';
 import {
     CARD_MIN_WIDTH,
@@ -266,6 +267,9 @@ export class ArticleList extends LitElement {
 
     override updated(_changed: Map<string, unknown>) {
         this.handleUpdate(this.currentViewKey());
+        if (this.view.kind === 'interesting' && isIdle(this.loadState)) {
+            saveInterestingCount(this.view.id, this.items.length);
+        }
     }
 
     private currentViewKey(): string {

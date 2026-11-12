@@ -4,6 +4,7 @@ import { libraryKey, queryClient, QueryController, fetchLibrary } from '../../qu
 import { navigate } from '../../router';
 import { loadTodaySettings, type TodaySettings } from '../../services/today-settings';
 import { loadInterestingShadow } from '../../services/interesting-settings';
+import { loadInterestingCount } from '../../services/interesting-counts';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
 import type { Feed, FeedSort, Folder, View } from '../../types';
 import '../feed-list-menu/feed-list-menu';
@@ -246,6 +247,10 @@ export class SourceList extends LitElement {
 
     folderUnread(folderId: string): number {
         return folderUnreadFor(this.libraryData.feeds, folderId);
+    }
+
+    interestingCount(folderId: string): number | undefined {
+        return loadInterestingCount(folderId);
     }
 
     folderFeeds(folderId: string): Feed[] {

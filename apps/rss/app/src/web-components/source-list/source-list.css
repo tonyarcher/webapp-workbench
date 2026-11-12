@@ -192,6 +192,10 @@ button.item {
     color: var(--active-text);
 }
 
+.item.empty {
+    opacity: 0.45;
+}
+
 .item .label {
     flex: 1;
     min-width: 0;
