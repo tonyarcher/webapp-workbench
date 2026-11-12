@@ -127,18 +127,47 @@ class DecisionScoreProviderTest {
     }
 
     @Test
-    fun capsBatchAtTwenty() {
+    fun spamScalesWorthyDown() {
+        val poster = providerPoster(
+            answers(
+                noul("a_worthy", "0.9"),
+                score("a_interest", "1.8"),
+                noul("a_spam", "0.5"),
+                choice("a_topic", "tech"),
+            ),
+        )
+        val out = providerOf(poster).scoreBatch(emptyList(), emptyMap(), listOf(candidate("a")))
+        assertEquals(0.45, out.getValue("a").worthy, 1e-9)
+        assertTrue(poster.lastBody.contains("spam, an ad"))
+    }
+
+    @Test
+    fun missingSpamDefaultsToZero() {
+        val poster = providerPoster(
+            answers(noul("a_worthy", "0.9"), score("a_interest", "1.8"), choice("a_topic", "tech")),
+        )
+        val out = providerOf(poster).scoreBatch(emptyList(), emptyMap(), listOf(candidate("a")))
+        assertEquals(0.9, out.getValue("a").worthy, 1e-9)
+    }
+
+    @Test
+    fun capsBatchAtSixteen() {
         val reply = answers(
-            *(0 until 20).flatMap { i ->
-                listOf(noul("c${i}_worthy", "0.5"), score("c${i}_interest", "1.0"), choice("c${i}_topic", "news"))
+            *(0 until 16).flatMap { i ->
+                listOf(
+                    noul("c${i}_worthy", "0.5"),
+                    score("c${i}_interest", "1.0"),
+                    noul("c${i}_spam", "0.0"),
+                    choice("c${i}_topic", "news"),
+                )
             }.toTypedArray(),
         )
         val poster = providerPoster(reply)
         val many = (0 until 100).map { candidate("c$it") }
         val out = providerOf(poster).scoreBatch(emptyList(), emptyMap(), many)
-        assertEquals(20, out.size)
-        val questions = Regex("\"c\\d+_(worthy|interest|topic)\"").findAll(poster.lastBody).count()
-        assertEquals(60, questions)
+        assertEquals(16, out.size)
+        val questions = Regex("\"c\\d+_(worthy|interest|spam|topic)\"").findAll(poster.lastBody).count()
+        assertEquals(64, questions)
     }
 
     @Test

@@ -6,7 +6,7 @@ import rssapi.ai.jsonBody
 import rssapi.domain.affinitySum
 import rssapi.persist.ArticleEntity
 
-const val DECISION_BATCH_MAX: Int = 20
+const val DECISION_BATCH_MAX: Int = 16
 const val DECISION_TOP_WORDS: Int = 10
 const val DECISION_MAX_QUESTIONS: Int = 64
 
@@ -27,8 +27,10 @@ private val TOPIC_CHOICES = listOf("news", "tech", "sports", "culture", "science
  * Decision-model-backed scorer. Single-shot [score] stays on signals (a
  * decision model cannot rank one article in isolation); per-serve ranking
  * goes through [scoreBatch], which asks one narrow judgment per question over
- * shared state and maps answers back to 0..1 scores. Thresholds and caps live
- * here in code. A question that comes back missing or malformed falls back
+ * shared state and maps answers back to 0..1 scores. Each candidate asks
+ * worthy, interest, spam, and topic. Spam scales worthy down and defaults to
+ * zero when missing. Thresholds and caps live here in code. A worthy or
+ * interest answer that comes back missing or malformed falls back
  * per-article to signals; a list-level failure throws and the caller falls
  * back for the whole batch. Never logs titles or affinity contents.
  */
@@ -43,7 +45,7 @@ class DecisionScoreProvider(
         affinity: Map<String, Float>,
         candidates: List<DecisionCandidate>,
     ): Map<String, SignalScores> {
-        val batch = candidates.take(minOf(DECISION_BATCH_MAX, DECISION_MAX_QUESTIONS / 3))
+        val batch = candidates.take(minOf(DECISION_BATCH_MAX, DECISION_MAX_QUESTIONS / 4))
         if (batch.isEmpty()) return emptyMap()
         val answers = backend.score(stateJson(topWords, affinity, batch), questionsFor(batch))
         return batch.mapNotNull { candidate ->
@@ -56,9 +58,11 @@ class DecisionScoreProvider(
         val worthy = answers.path(candidate.id + "_worthy").path("noul").asDouble(Double.NaN)
         val interest = answers.path(candidate.id + "_interest").path("score").asDouble(Double.NaN)
         if (!worthy.isFinite() || !interest.isFinite()) return null
+        val spam = answers.path(candidate.id + "_spam").path("noul").asDouble(0.0)
+        val spamSafe = if (spam.isFinite()) spam.coerceIn(0.0, 1.0) else 0.0
         val topic = answers.path(candidate.id + "_topic").path("choice").asText().takeIf { it in TOPIC_CHOICES }
         return SignalScores(
-            worthy = worthy.coerceIn(0.0, 1.0),
+            worthy = (worthy * (1.0 - spamSafe)).coerceIn(0.0, 1.0),
             interest = (interest / 2.0).coerceIn(0.0, 1.0),
             popularityOutlook = fallback.popularityOutlook,
             readability = fallback.readability,
@@ -80,7 +84,7 @@ class DecisionScoreProvider(
     )
 
     private fun questionsFor(candidates: List<DecisionCandidate>): Map<String, Any> {
-        val out = LinkedHashMap<String, Any>(candidates.size * 3)
+        val out = LinkedHashMap<String, Any>(candidates.size * 4)
         candidates.forEachIndexed { index, candidate ->
             out[candidate.id + "_worthy"] = mapOf(
                 "type" to "noul",
@@ -90,6 +94,10 @@ class DecisionScoreProvider(
                 "type" to "score",
                 "instructions" to "How interesting is `candidates[$index].title` to this reader?",
                 "criteria" to INTEREST_LEVELS,
+            )
+            out[candidate.id + "_spam"] = mapOf(
+                "type" to "noul",
+                "instructions" to "Is `candidates[$index].title` spam, an ad, or boilerplate?",
             )
             out[candidate.id + "_topic"] = mapOf(
                 "type" to "choice",
