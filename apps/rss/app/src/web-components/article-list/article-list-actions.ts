@@ -104,7 +104,7 @@ interface RefreshHost {
     view: View;
     reset(): Promise<void>;
     /** In-flight refresh jobs by view key. The component owns the map. */
-    jobs: Map<string, Promise<void>>;
+    refreshJobs: Map<string, Promise<void>>;
     setRefreshingKey(key: string, active: boolean): void;
     libraryFeeds(): Feed[];
     refreshTick(): Promise<void>;
@@ -120,17 +120,17 @@ interface RefreshHost {
  * feeds actually report back, not just until the queue call returns.
  */
 export async function refreshViewAction(host: RefreshHost, key: string): Promise<void> {
-    const existing = host.jobs.get(key);
+    const existing = host.refreshJobs.get(key);
     if (existing) {
         await existing;
         return;
     }
     const job = runRefreshJob(host, key);
-    host.jobs.set(key, job);
+    host.refreshJobs.set(key, job);
     try {
         await job;
     } finally {
-        if (host.jobs.get(key) === job) host.jobs.delete(key);
+        if (host.refreshJobs.get(key) === job) host.refreshJobs.delete(key);
     }
 }
 
