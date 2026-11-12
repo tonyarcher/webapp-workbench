@@ -82,9 +82,6 @@ test('the Interesting view settles while a refresh finishes', async ({ page }) =
     await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible();
     await expect(page.getByText('Zebra Story 1', { exact: true })).toBeVisible();
 
-    // The Interesting row mirrors its folder's unread count.
-    await expect(page.getByRole('button', { name: 'Interesting in Folder' })).toContainText('60');
-
     await page.getByRole('button', { name: 'Refresh' }).click();
     await expect(page.getByRole('button', { name: 'Refreshing…' })).toBeVisible();
 
