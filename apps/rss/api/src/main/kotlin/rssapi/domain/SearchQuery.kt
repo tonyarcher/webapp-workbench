@@ -61,7 +61,7 @@ private fun parseMinRead(raw: String): Int? {
     return m.groupValues[1].toIntOrNull()?.coerceAtLeast(0)
 }
 
-fun parseSearchQueryText(query: String): ParsedSearchQuery {
+private class OperatorState {
     val authors = mutableListOf<String>()
     val feeds = mutableListOf<String>()
     val folders = mutableListOf<String>()
@@ -73,67 +73,74 @@ fun parseSearchQueryText(query: String): ParsedSearchQuery {
     var hasVideo: Boolean? = null
     var minReadMinutes: Int? = null
 
+    fun toOperators(): SearchOperators = SearchOperators(
+        authors = authors,
+        feeds = feeds,
+        folders = folders,
+        afterMs = afterMs,
+        beforeMs = beforeMs,
+        isStarred = isStarred,
+        isUnread = isUnread,
+        isRead = isRead,
+        hasVideo = hasVideo,
+        minReadMinutes = minReadMinutes,
+    )
+}
+
+fun parseSearchQueryText(query: String): ParsedSearchQuery {
+    val state = OperatorState()
     val text = StringBuffer()
     var last = 0
     for (m in OPERATOR_RE.findAll(query)) {
         text.append(query.substring(last, m.range.first))
         val lead = m.groupValues[1]
-        val key = m.groupValues[2].lowercase()
         val value = (m.groupValues[3].ifEmpty { m.groupValues[4] }).trim()
-        if (value.isNotEmpty()) {
-            when (key) {
-                "author" -> authors.add(value)
-
-                "feed" -> feeds.add(value)
-
-                "folder" -> folders.add(value)
-
-                "after" -> afterMs = parseDateStartMs(value) ?: afterMs
-
-                "before" -> beforeMs = parseDateEndMs(value) ?: beforeMs
-
-                "has" -> if (value.equals("video", ignoreCase = true)) hasVideo = true
-
-                "is" -> when (value.lowercase()) {
-                    "starred" -> isStarred = true
-
-                    "unread" -> {
-                        isUnread = true
-                        isRead = null
-                    }
-
-                    "read" -> {
-                        isRead = true
-                        isUnread = null
-                    }
-                }
-
-                "min" -> {
-                    val rt = Regex("""^readtime(?::|=)?(\d+)$""", RegexOption.IGNORE_CASE).matchEntire(value)
-                    minReadMinutes = if (rt != null) rt.groupValues[1].toIntOrNull() else parseMinRead(value)
-                }
-            }
-        }
+        if (value.isNotEmpty()) applyOperator(m.groupValues[2].lowercase(), value, state)
         text.append(lead)
         last = m.range.last + 1
     }
     text.append(query.substring(last))
     val cleaned = text.toString().replace(Regex("""\s+"""), " ").trim()
     val tokens = cleaned.lowercase().split(Regex("[^a-z0-9]+")).filter { it.length >= 2 }
-    return ParsedSearchQuery(
-        text = cleaned,
-        tokens = tokens,
-        operators = SearchOperators(
-            authors = authors,
-            feeds = feeds,
-            folders = folders,
-            afterMs = afterMs,
-            beforeMs = beforeMs,
-            isStarred = isStarred,
-            isUnread = isUnread,
-            isRead = isRead,
-            hasVideo = hasVideo,
-            minReadMinutes = minReadMinutes,
-        ),
-    )
+    return ParsedSearchQuery(text = cleaned, tokens = tokens, operators = state.toOperators())
+}
+
+private fun applyOperator(key: String, value: String, state: OperatorState) {
+    when (key) {
+        "author" -> state.authors.add(value)
+        "feed" -> state.feeds.add(value)
+        "folder" -> state.folders.add(value)
+        "after" -> state.afterMs = parseDateStartMs(value) ?: state.afterMs
+        "before" -> state.beforeMs = parseDateEndMs(value) ?: state.beforeMs
+        else -> applyFlagOperator(key, value, state)
+    }
+}
+
+private fun applyFlagOperator(key: String, value: String, state: OperatorState) {
+    when (key) {
+        "has" -> if (value.equals("video", ignoreCase = true)) state.hasVideo = true
+        "is" -> applyIsOperator(value, state)
+        "min" -> state.minReadMinutes = parseMinValue(value)
+    }
+}
+
+private fun applyIsOperator(value: String, state: OperatorState) {
+    when (value.lowercase()) {
+        "starred" -> state.isStarred = true
+
+        "unread" -> {
+            state.isUnread = true
+            state.isRead = null
+        }
+
+        "read" -> {
+            state.isRead = true
+            state.isUnread = null
+        }
+    }
+}
+
+private fun parseMinValue(value: String): Int? {
+    val rt = Regex("""^readtime(?::|=)?(\d+)$""", RegexOption.IGNORE_CASE).matchEntire(value)
+    return if (rt != null) rt.groupValues[1].toIntOrNull() else parseMinRead(value)
 }

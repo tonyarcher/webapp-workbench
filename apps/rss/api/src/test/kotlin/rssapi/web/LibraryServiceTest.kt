@@ -32,7 +32,9 @@ class LibraryServiceTest {
     private val subs: SubscriptionRepo = mock()
     private val memberships: FolderFeedRepo = mock()
     private val savedSearches: SavedSearchRepo = mock()
-    private val service = LibraryService(folders, feeds, sync, articles, subs, memberships, savedSearches)
+    private val searchCounts = SavedSearchService(savedSearches, articles)
+    private val service =
+        LibraryService(folders, feeds, sync, articles, subs, memberships, savedSearches, searchCounts)
 
     private val uid = UUID.randomUUID()
     private val folderId = UUID.randomUUID()

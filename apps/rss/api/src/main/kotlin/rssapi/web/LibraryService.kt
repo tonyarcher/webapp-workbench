@@ -1,9 +1,6 @@
 package rssapi.web
 
 import org.springframework.stereotype.Service
-import rssapi.domain.ArticleScope
-import rssapi.domain.ArticleSort
-import rssapi.domain.parseSearchQueryText
 import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedRepo
 import rssapi.persist.FeedSyncEntity
@@ -11,7 +8,6 @@ import rssapi.persist.FeedSyncRepo
 import rssapi.persist.FolderEntity
 import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
-import rssapi.persist.SavedSearchEntity
 import rssapi.persist.SavedSearchRepo
 import rssapi.persist.SubscriptionRepo
 import java.util.UUID
@@ -26,6 +22,7 @@ class LibraryService(
     private val subs: SubscriptionRepo,
     private val memberships: FolderFeedRepo,
     private val savedSearches: SavedSearchRepo,
+    private val searchCounts: SavedSearchService,
 ) {
     fun folders(uid: UUID): List<FolderJson> =
         folders.findByUserIdOrderBySortOrderAscCreatedAtAsc(uid).map { it.toJson() }
@@ -43,7 +40,7 @@ class LibraryService(
     fun counts(uid: UUID): LibraryCountsJson {
         val feedIds = subs.findFeedIdsByUserId(uid)
         val counts = unreadMap(uid, feedIds).mapKeys { it.key.toString() }.filterValues { it > 0 }
-        val savedCounts = savedSearchUnreadMap(uid).filterValues { it > 0 }
+        val savedCounts = searchCounts.unreadMap(uid).filterValues { it > 0 }
         return LibraryCountsJson(counts, savedCounts)
     }
 
@@ -51,7 +48,7 @@ class LibraryService(
         val folderRows = folders.findByUserIdOrderBySortOrderAscCreatedAtAsc(uid)
         val searchRows = savedSearches.findByUserIdOrderBySortOrderAscCreatedAtAsc(uid)
         val feedIds = subs.findFeedIdsByUserId(uid)
-        val savedCounts = savedSearchUnreadMap(uid)
+        val savedCounts = searchCounts.unreadMap(uid)
         val searches = searchRows.map { it.toJson(savedCounts[it.id.toString()] ?: 0) }
         if (feedIds.isEmpty()) return LibraryJson(folderRows.map { it.toJson() }, emptyList(), searches)
         return LibraryJson(
@@ -92,29 +89,5 @@ class LibraryService(
     private fun unreadMap(uid: UUID, feedIds: List<UUID>): Map<UUID, Int> {
         if (feedIds.isEmpty()) return emptyMap()
         return articles.countUnreadByFeed(uid, feedIds).associate { it.feedId to it.cnt.toInt() }
-    }
-
-    private fun savedSearchUnreadMap(uid: UUID): Map<String, Int> {
-        val rows = savedSearches.findByUserIdOrderBySortOrderAscCreatedAtAsc(uid)
-        if (rows.isEmpty()) return emptyMap()
-        return rows.associate { row ->
-            row.id.toString() to savedSearchUnreadCount(uid, row)
-        }
-    }
-
-    private fun savedSearchUnreadCount(uid: UUID, row: SavedSearchEntity): Int {
-        val scope = scopeOf(row)
-        val parsed = parseSearchQueryText(row.query)
-        // A saved search with no text and no enforceable ops matches nothing useful server-side
-        // (non-enforceable-only handled like client); count as 0 to avoid full scans.
-        if (parsed.tokens.isEmpty() && !parsed.hasEnforceableOperator()) return 0
-        val spec = articleSpec(uid, scope, true, ArticleSort.NEWEST, null, null, parsed)
-        return articles.count(spec).toInt().coerceAtLeast(0)
-    }
-
-    private fun scopeOf(row: SavedSearchEntity): ArticleScope = when (row.scopeKind) {
-        "feed" -> row.scopeId?.let { ArticleScope.Feed(it) } ?: ArticleScope.All
-        "folder" -> row.scopeId?.let { ArticleScope.Folder(it) } ?: ArticleScope.All
-        else -> ArticleScope.All
     }
 }

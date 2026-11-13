@@ -50,4 +50,59 @@ class SearchQueryTest {
         assertEquals(true, q.operators.isRead)
         assertTrue(q.hasAnyOperator())
     }
+
+    @Test
+    fun handlesMalformedOperators() {
+        val q = parseSearchQueryText("before:nope has:audio is:unknown min:abc")
+        assertNull(q.operators.beforeMs)
+        assertNull(q.operators.hasVideo)
+        assertNull(q.operators.minReadMinutes)
+        assertEquals(false, q.hasAnyOperator())
+    }
+
+    @Test
+    fun readAndUnreadOverrideEachOther() {
+        val unread = parseSearchQueryText("is:read is:unread")
+        assertEquals(true, unread.operators.isUnread)
+        assertNull(unread.operators.isRead)
+        val read = parseSearchQueryText("is:unread is:read")
+        assertEquals(true, read.operators.isRead)
+        assertNull(read.operators.isUnread)
+    }
+
+    @Test
+    fun anyOperatorCoversEveryField() {
+        val empty = ParsedSearchQuery("", emptyList(), SearchOperators())
+        assertEquals(false, empty.hasAnyOperator())
+        val fields = listOf(
+            SearchOperators(authors = listOf("a")),
+            SearchOperators(feeds = listOf("f")),
+            SearchOperators(folders = listOf("d")),
+            SearchOperators(afterMs = 1),
+            SearchOperators(beforeMs = 1),
+            SearchOperators(isStarred = true),
+            SearchOperators(isUnread = true),
+            SearchOperators(isRead = true),
+            SearchOperators(hasVideo = true),
+            SearchOperators(minReadMinutes = 1),
+        )
+        fields.forEach { assertTrue(ParsedSearchQuery("", emptyList(), it).hasAnyOperator()) }
+    }
+
+    @Test
+    fun enforceableOperatorCoversEveryField() {
+        val empty = ParsedSearchQuery("", emptyList(), SearchOperators())
+        assertEquals(false, empty.hasEnforceableOperator())
+        val fields = listOf(
+            SearchOperators(authors = listOf("a")),
+            SearchOperators(feeds = listOf("f")),
+            SearchOperators(folders = listOf("d")),
+            SearchOperators(afterMs = 1),
+            SearchOperators(beforeMs = 1),
+            SearchOperators(isStarred = true),
+            SearchOperators(isUnread = true),
+            SearchOperators(isRead = true),
+        )
+        fields.forEach { assertTrue(ParsedSearchQuery("", emptyList(), it).hasEnforceableOperator()) }
+    }
 }

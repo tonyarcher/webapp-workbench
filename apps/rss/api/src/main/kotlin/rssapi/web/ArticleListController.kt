@@ -2,10 +2,12 @@ package rssapi.web
 
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import org.springframework.data.jpa.domain.Specification
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import rssapi.domain.ArticleScope
 import rssapi.domain.ArticleSort
 import rssapi.domain.ParsedSearchQuery
 import rssapi.domain.clampPageLimit
@@ -13,9 +15,17 @@ import rssapi.domain.decodeCursor
 import rssapi.domain.parseArticleScope
 import rssapi.domain.parseArticleSort
 import rssapi.domain.parseSearchQueryText
+import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleRepo
-import rssapi.persist.ArticleStateId
+import rssapi.persist.ArticleStateEntity
 import rssapi.persist.ArticleStateRepo
+
+private const val SEARCH_WINDOW_MAX = 400
+private const val SEARCH_WINDOW_FACTOR = 4
+private const val SCORE_TITLE = 5
+private const val SCORE_AUTHOR = 3
+private const val SCORE_SUMMARY = 2
+private const val SCORE_OTHER = 1
 
 @RestController
 class ArticleListController(
@@ -33,43 +43,55 @@ class ArticleListController(
         @RequestParam(required = false) since: String?,
         @RequestParam(required = false) q: String?,
     ): ArticlePageJson {
-        val parsedScope = try {
-            parseArticleScope(scope ?: "all")
-        } catch (err: IllegalArgumentException) {
-            throw ApiException(HttpStatus.BAD_REQUEST, err.message ?: "invalid scope", err)
-        }
-        val sinceMs = parseSince(since)
+        val parsedScope = parseScope(scope)
         val articleSort = parseArticleSort(sort)
         val pageLimit = clampPageLimit(limit?.toDoubleOrNull())
-        val queryText = q?.trim()?.takeIf { it.isNotEmpty() }
-        val parsedSearch = queryText?.let { parseSearchQueryText(it) }
-        if (parsedSearch != null && parsedSearch.tokens.isEmpty() && !parsedSearch.hasAnyOperator()) {
-            return ArticlePageJson(emptyList(), null)
-        }
+        val parsedSearch = parseQuery(q)
+        if (isEmptyQuery(parsedSearch)) return ArticlePageJson(emptyList(), null)
         val spec = articleSpec(
             user.id,
             parsedScope,
             unreadOnly == "1",
             articleSort,
             if (parsedSearch == null) cursor?.let { decodeCursor(it) } else null,
-            sinceMs,
+            parseSince(since),
             parsedSearch,
         )
-        if (parsedSearch != null) {
-            val window = articles.findAll(
-                spec,
-                PageRequest.of(0, minOf(pageLimit * 4, 400), sortFor(ArticleSort.NEWEST)),
-            ).content
-            val ranked = rankSearchResults(window, parsedSearch).take(pageLimit)
-            val stateMap = states.findByUserIdAndArticleIdIn(user.id, ranked.map { it.id }).associateBy { it.articleId }
-            return ArticlePageJson(ranked.map { it.toJson(stateMap[it.id]) }, null)
+        return if (parsedSearch == null) {
+            cursorPage(spec, articleSort, pageLimit)
+        } else {
+            searchPage(spec, parsedSearch, pageLimit)
         }
-        val rows = articles.findAll(spec, PageRequest.of(0, pageLimit + 1, sortFor(articleSort))).content
+    }
+
+    private fun parseScope(scope: String?): ArticleScope = try {
+        parseArticleScope(scope ?: "all")
+    } catch (err: IllegalArgumentException) {
+        throw ApiException(HttpStatus.BAD_REQUEST, err.message ?: "invalid scope", err)
+    }
+
+    private fun searchPage(
+        spec: Specification<ArticleEntity>,
+        search: ParsedSearchQuery,
+        pageLimit: Int,
+    ): ArticlePageJson {
+        val windowSize = minOf(pageLimit * SEARCH_WINDOW_FACTOR, SEARCH_WINDOW_MAX)
+        val window = articles.findAll(spec, PageRequest.of(0, windowSize, sortFor(ArticleSort.NEWEST))).content
+        val ranked = rankSearchResults(window, search).take(pageLimit)
+        val stateMap = stateMapFor(ranked)
+        return ArticlePageJson(ranked.map { it.toJson(stateMap[it.id]) }, null)
+    }
+
+    private fun cursorPage(spec: Specification<ArticleEntity>, sort: ArticleSort, pageLimit: Int): ArticlePageJson {
+        val rows = articles.findAll(spec, PageRequest.of(0, pageLimit + 1, sortFor(sort))).content
         val hasMore = rows.size > pageLimit
         val page = rows.take(pageLimit)
-        val stateMap = states.findByUserIdAndArticleIdIn(user.id, page.map { it.id }).associateBy { it.articleId }
-        return ArticlePageJson(page.map { it.toJson(stateMap[it.id]) }, nextCursor(page, hasMore, articleSort))
+        val stateMap = stateMapFor(page)
+        return ArticlePageJson(page.map { it.toJson(stateMap[it.id]) }, nextCursor(page, hasMore, sort))
     }
+
+    private fun stateMapFor(rows: List<ArticleEntity>): Map<String, ArticleStateEntity> =
+        states.findByUserIdAndArticleIdIn(user.id, rows.map { it.id }).associateBy { it.articleId }
 }
 
 private fun parseSince(since: String?): Long? {
@@ -77,43 +99,46 @@ private fun parseSince(since: String?): Long? {
     return since.toDoubleOrNull()?.toLong() ?: throw ApiException(HttpStatus.BAD_REQUEST, "invalid since")
 }
 
+private fun parseQuery(q: String?): ParsedSearchQuery? =
+    q?.trim()?.takeIf { it.isNotEmpty() }?.let { parseSearchQueryText(it) }
+
+private fun isEmptyQuery(search: ParsedSearchQuery?): Boolean =
+    search != null && search.tokens.isEmpty() && !search.hasAnyOperator()
+
 private fun sortFor(sort: ArticleSort): Sort = when (sort) {
     ArticleSort.OLDEST -> Sort.by("publishedAt").ascending().and(Sort.by("id").ascending())
     ArticleSort.HOT -> Sort.by("hot").descending().and(Sort.by("id").descending())
     ArticleSort.NEWEST -> Sort.by("publishedAt").descending().and(Sort.by("id").descending())
 }
 
+private val NEWEST_FIRST: Comparator<ArticleEntity> =
+    compareByDescending<ArticleEntity> { it.publishedAt }.thenByDescending { it.id }
+
 private fun fieldHits(field: String?, token: String): Boolean {
     val f = field?.lowercase() ?: return false
     return f.contains(token)
 }
 
-private fun rankSearchResults(
-    rows: List<rssapi.persist.ArticleEntity>,
-    search: ParsedSearchQuery,
-): List<rssapi.persist.ArticleEntity> {
-    val tokens = search.tokens
-    if (tokens.isEmpty()) {
-        return rows.sortedWith(
-            compareByDescending<rssapi.persist.ArticleEntity> { it.publishedAt }
-                .thenByDescending { it.id },
+private fun rankSearchResults(rows: List<ArticleEntity>, search: ParsedSearchQuery): List<ArticleEntity> {
+    if (search.tokens.isEmpty()) return rows.sortedWith(NEWEST_FIRST)
+    return rows.map { it to scoreArticle(it, search.tokens) }
+        .sortedWith(
+            compareByDescending<Pair<ArticleEntity, Int>> { it.second }
+                .thenByDescending { it.first.publishedAt }
+                .thenByDescending { it.first.id },
         )
-    }
-    return rows.map { article ->
-        var score = 0
-        for (token in tokens) {
-            if (fieldHits(article.title, token)) score += 5
-            if (fieldHits(article.author, token)) score += 3
-            if (fieldHits(article.summary, token)) score += 2
-            if (fieldHits(article.contentHtml, token)) score += 1
-            if (fieldHits(article.domain, token)) score += 1
-            if (fieldHits(article.link, token)) score += 1
-        }
-        article to score
-    }.sortedWith(
-        compareByDescending<Pair<rssapi.persist.ArticleEntity, Int>> { it.second }
-            .thenByDescending { it.first.publishedAt }
-            .thenByDescending { it.first.id },
-    )
         .map { it.first }
+}
+
+private fun scoreArticle(article: ArticleEntity, tokens: List<String>): Int {
+    var score = 0
+    for (token in tokens) {
+        if (fieldHits(article.title, token)) score += SCORE_TITLE
+        if (fieldHits(article.author, token)) score += SCORE_AUTHOR
+        if (fieldHits(article.summary, token)) score += SCORE_SUMMARY
+        if (fieldHits(article.contentHtml, token)) score += SCORE_OTHER
+        if (fieldHits(article.domain, token)) score += SCORE_OTHER
+        if (fieldHits(article.link, token)) score += SCORE_OTHER
+    }
+    return score
 }

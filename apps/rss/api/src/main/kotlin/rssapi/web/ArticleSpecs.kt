@@ -34,7 +34,7 @@ fun articleSpec(
     if (sinceMs != null) {
         parts.add(cb.greaterThanOrEqualTo(root.get("publishedAt"), Instant.ofEpochMilli(sinceMs)))
     }
-    searchPredicate(search, userId, root, query, cb)?.let { parts.add(it) }
+    searchPredicate(search, root, query, cb)?.let { parts.add(it) }
     operatorPredicates(search?.operators, userId, root, query, cb).forEach { parts.add(it) }
     cursorPredicate(sort, cursor, root, cb)?.let { parts.add(it) }
     cb.and(*parts.toTypedArray())
@@ -68,7 +68,7 @@ private fun userFeedSub(userId: UUID, query: CriteriaQuery<*>, cb: CriteriaBuild
 private fun folderFeedSub(userId: UUID, folderId: UUID, query: CriteriaQuery<*>, cb: CriteriaBuilder): Subquery<UUID> {
     val sub = query.subquery(UUID::class.java)
     val ff = sub.from(FolderFeedEntity::class.java)
-    val folder = sub.from(rssapi.persist.FolderEntity::class.java)
+    val folder = sub.from(FolderEntity::class.java)
     sub.select(ff.get("feedId"))
     sub.where(
         cb.equal(ff.get<UUID>("folderId"), folderId),
@@ -78,7 +78,7 @@ private fun folderFeedSub(userId: UUID, folderId: UUID, query: CriteriaQuery<*>,
     return sub
 }
 
-private fun unreadPredicate(
+internal fun unreadPredicate(
     userId: UUID,
     root: Root<ArticleEntity>,
     query: CriteriaQuery<*>,
@@ -97,7 +97,6 @@ private fun unreadPredicate(
 
 private fun searchPredicate(
     search: ParsedSearchQuery?,
-    userId: UUID,
     root: Root<ArticleEntity>,
     query: CriteriaQuery<*>,
     cb: CriteriaBuilder,
@@ -132,84 +131,6 @@ private fun feedTitleMatches(
         cb.equal(feed.get<UUID>("id"), root.get<UUID>("feedId")),
         cb.like(cb.lower(cb.coalesce(feed.get("title"), "")), likeContains(token), '\\'),
     )
-    return cb.exists(sub)
-}
-
-private fun likeContains(term: String): String =
-    "%${term.lowercase().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")}%"
-
-private fun operatorPredicates(
-    ops: rssapi.domain.SearchOperators?,
-    userId: UUID,
-    root: Root<ArticleEntity>,
-    query: CriteriaQuery<*>,
-    cb: CriteriaBuilder,
-): List<jakarta.persistence.criteria.Predicate> {
-    if (ops == null) return emptyList()
-    val out = mutableListOf<jakarta.persistence.criteria.Predicate>()
-    ops.afterMs?.let {
-        out.add(cb.greaterThanOrEqualTo(root.get("publishedAt"), Instant.ofEpochMilli(it)))
-    }
-    ops.beforeMs?.let {
-        out.add(cb.lessThanOrEqualTo(root.get("publishedAt"), Instant.ofEpochMilli(it)))
-    }
-    for (term in ops.authors) {
-        out.add(cb.like(cb.lower(cb.coalesce(root.get("author"), "")), likeContains(term), '\\'))
-    }
-    for (term in ops.feeds) {
-        val sub = query.subquery(Long::class.java)
-        val feed = sub.from(FeedEntity::class.java)
-        val subr = sub.from(SubscriptionEntity::class.java)
-        sub.select(cb.literal(1L))
-        sub.where(
-            cb.equal(feed.get<UUID>("id"), root.get<UUID>("feedId")),
-            cb.equal(subr.get<UUID>("feedId"), root.get<UUID>("feedId")),
-            cb.equal(subr.get<UUID>("userId"), userId),
-            cb.like(cb.lower(cb.coalesce(feed.get("title"), "")), likeContains(term), '\\'),
-        )
-        out.add(cb.exists(sub))
-    }
-    for (term in ops.folders) {
-        val sub = query.subquery(Long::class.java)
-        val ff = sub.from(FolderFeedEntity::class.java)
-        val folder = sub.from(FolderEntity::class.java)
-        val subr = sub.from(SubscriptionEntity::class.java)
-        sub.select(cb.literal(1L))
-        sub.where(
-            cb.equal(ff.get<UUID>("feedId"), root.get<UUID>("feedId")),
-            cb.equal(ff.get<UUID>("folderId"), folder.get<UUID>("id")),
-            cb.equal(folder.get<UUID>("userId"), userId),
-            cb.equal(subr.get<UUID>("feedId"), root.get<UUID>("feedId")),
-            cb.equal(subr.get<UUID>("userId"), userId),
-            cb.like(cb.lower(cb.coalesce(folder.get("title"), "")), likeContains(term), '\\'),
-        )
-        out.add(cb.exists(sub))
-    }
-    if (ops.isStarred == true) out.add(starredPredicate(userId, root, query, cb, true))
-    if (ops.isUnread == true) out.add(unreadPredicate(userId, root, query, cb))
-    if (ops.isRead == true) out.add(starredPredicate(userId, root, query, cb, null, read = true))
-    // hasVideo/minReadMinutes not enforceable server-side (no columns); client refines.
-    return out
-}
-
-private fun starredPredicate(
-    userId: UUID,
-    root: Root<ArticleEntity>,
-    query: CriteriaQuery<*>,
-    cb: CriteriaBuilder,
-    starred: Boolean? = null,
-    read: Boolean? = null,
-): jakarta.persistence.criteria.Predicate {
-    val sub = query.subquery(Long::class.java)
-    val state = sub.from(ArticleStateEntity::class.java)
-    sub.select(cb.literal(1L))
-    val conds = mutableListOf(
-        cb.equal(state.get<UUID>("userId"), userId),
-        cb.equal(state.get<String>("articleId"), root.get<String>("id")),
-    )
-    if (starred != null) conds.add(cb.equal(state.get<Boolean>("starred"), starred))
-    if (read != null) conds.add(cb.equal(state.get<Boolean>("read"), read))
-    sub.where(*conds.toTypedArray())
     return cb.exists(sub)
 }
 

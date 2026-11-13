@@ -484,8 +484,10 @@ import { assert } from './smoke-assert';
             libraryFeeds: () => [{ id: 'a', lastFetchedAt: null }],
             isAlive: () => true,
         } as never;
-        await waitForIngest(stuckHost, ['a'], Date.now(), 1, 30);
-        assert(stuckTicks > 0 && stuckTicks < 20, 'the ingest watch gives up instead of pinning the button');
+        // 5ms polls leave only a handful of ticks inside the 40ms budget, so
+        // the bound does not depend on CI timer resolution.
+        await waitForIngest(stuckHost, ['a'], Date.now(), 5, 40);
+        assert(stuckTicks > 0 && stuckTicks < 10, 'the ingest watch gives up instead of pinning the button');
     } finally {
         elevatorQueryClient.clear();
         shims['fetch'] = realFetch;

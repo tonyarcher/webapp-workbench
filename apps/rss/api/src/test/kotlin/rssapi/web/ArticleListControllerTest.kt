@@ -114,8 +114,68 @@ class ArticleListControllerTest {
 
     @Test
     fun searchQueryFiltersAndReturnsPage() {
-        val uid = UUID.randomUUID()
-        auth(uid)
+        stubSearchHit()
+        val res = getArticles("q=battery+grid&scope=all")
+        assertEquals(200, res.status)
+        val body = res.contentAsString
+        kotlin.test.assertTrue(body.contains("\"items\""))
+        kotlin.test.assertTrue(body.contains("Battery storage grid"))
+    }
+
+    @Test
+    fun searchQueryWithNoUsableTokensReturnsEmpty() {
+        auth(UUID.randomUUID())
+        val res = getArticles("q=a")
+        assertEquals(200, res.status)
+        kotlin.test.assertTrue(res.contentAsString.contains("\"items\":[]"))
+    }
+
+    @Test
+    fun invalidSinceIsRejected() {
+        auth(UUID.randomUUID())
+        stubEmpty()
+        mvc.get("/articles?since=nope") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun invalidScopeIsRejected() {
+        auth(UUID.randomUUID())
+        stubEmpty()
+        mvc.get("/articles?scope=nope") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun blankQueryIsTreatedAsMissing() {
+        auth(UUID.randomUUID())
+        stubEmpty()
+        mvc.get("/articles?q=%20") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andExpect { status { isOk() } }
+    }
+
+    @Test
+    fun searchOperatorsAreAccepted() {
+        stubSearchHit()
+        for (q in SEARCH_OPERATOR_QUERIES) {
+            val res = mvc.get("/articles") {
+                param("q", q)
+                header("X-Api-Version", "1")
+                header("Authorization", "Bearer t")
+            }.andReturn().response
+            assertEquals(200, res.status, "failed for q=$q")
+            kotlin.test.assertTrue(res.contentAsString.contains("\"items\""), "missing items for q=$q")
+        }
+    }
+
+    private fun stubSearchHit() {
+        auth(UUID.randomUUID())
         val entity = ArticleEntity(
             id = "a1",
             feedId = UUID.randomUUID(),
@@ -132,72 +192,24 @@ class ArticleListControllerTest {
             ),
         ).thenReturn(PageImpl(listOf(entity)))
         whenever(states.findByUserIdAndArticleIdIn(any<UUID>(), any<List<String>>())).thenReturn(emptyList())
-
-        val res = mvc.get("/articles?q=battery+grid&scope=all") {
-            header("X-Api-Version", "1")
-            header("Authorization", "Bearer t")
-        }.andReturn()
-        assertEquals(200, res.response.status)
-        val body = res.response.contentAsString
-        kotlin.test.assertTrue(body.contains("\"items\""))
-        kotlin.test.assertTrue(body.contains("Battery storage grid"))
     }
 
-    @Test
-    fun searchQueryWithNoUsableTokensReturnsEmpty() {
-        auth(UUID.randomUUID())
-        val res = mvc.get("/articles?q=a") {
-            header("X-Api-Version", "1")
-            header("Authorization", "Bearer t")
-        }.andReturn()
-        assertEquals(200, res.response.status)
-        val body = res.response.contentAsString
-        kotlin.test.assertTrue(body.contains("\"items\":[]"))
-    }
-
-    @Test
-    fun searchOperatorsAreAccepted() {
-        val uid = UUID.randomUUID()
-        auth(uid)
-        val entity = ArticleEntity(
-            id = "a2",
-            feedId = UUID.randomUUID(),
-            guid = "g2",
-            title = "Operator match",
-            author = "Ada",
-            summary = "video grid",
-            publishedAt = java.time.Instant.ofEpochMilli(1_735_689_600_000),
-            fetchedAt = java.time.Instant.ofEpochMilli(1_735_689_600_000),
-        )
-        whenever(
-            articles.findAll(
-                any<org.springframework.data.jpa.domain.Specification<ArticleEntity>>(),
-                any<org.springframework.data.domain.Pageable>(),
-            ),
-        ).thenReturn(PageImpl(listOf(entity)))
-        whenever(states.findByUserIdAndArticleIdIn(any<UUID>(), any<List<String>>())).thenReturn(emptyList())
-
-        val queries = listOf(
-            "author:ada",
-            "is:starred",
-            "is:unread",
-            "is:read",
-            "after:2025-01-01",
-            "before:2025-12-31",
-            "has:video",
-            "min:readtime:5",
-            "feed:grid",
-            "folder:tech",
-            "author:ada is:unread after:2025-01-01",
-        )
-        for (q in queries) {
-            val res = mvc.get("/articles") {
-                param("q", q)
-                header("X-Api-Version", "1")
-                header("Authorization", "Bearer t")
-            }.andReturn()
-            assertEquals(200, res.response.status, "failed for q=$q")
-            kotlin.test.assertTrue(res.response.contentAsString.contains("\"items\""), "missing items for q=$q")
-        }
-    }
+    private fun getArticles(query: String) = mvc.get("/articles?$query") {
+        header("X-Api-Version", "1")
+        header("Authorization", "Bearer t")
+    }.andReturn().response
 }
+
+private val SEARCH_OPERATOR_QUERIES = listOf(
+    "author:ada",
+    "is:starred",
+    "is:unread",
+    "is:read",
+    "after:2025-01-01",
+    "before:2025-12-31",
+    "has:video",
+    "min:readtime:5",
+    "feed:grid",
+    "folder:tech",
+    "author:ada is:unread after:2025-01-01",
+)

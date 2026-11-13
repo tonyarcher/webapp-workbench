@@ -31,7 +31,7 @@ private fun libJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .claim("aud", listOf("rss-reader"))
     .build()
 
-@WebMvcTest(LibraryController::class)
+@WebMvcTest(LibraryController::class, SavedSearchController::class)
 @Import(SecurityConfig::class, RequestIdFilter::class, IdentityUser::class)
 class LibraryControllerTest {
     @Autowired
@@ -340,5 +340,196 @@ class LibraryControllerTest {
             status { isOk() }
         }
         verify(savedSearches).delete(row)
+    }
+
+    @Test
+    fun createSavedSearchRequiresTitle() {
+        stubAuth(UUID.randomUUID())
+        mvc.post("/saved-searches") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"title":" "}"""
+        }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun createSavedSearchWithFolderScope() {
+        val uid = UUID.randomUUID()
+        val scopeId = UUID.randomUUID()
+        stubAuth(uid)
+        whenever(savedSearches.save(any<SavedSearchEntity>())).thenAnswer { inv ->
+            (inv.arguments[0] as SavedSearchEntity).apply { id = UUID.randomUUID() }
+        }
+        mvc.post("/saved-searches") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"title":"T","query":"q","scopeKind":"folder","scopeId":"$scopeId"}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.scopeKind") { value("folder") }
+            jsonPath("$.scopeId") { value(scopeId.toString()) }
+        }
+    }
+
+    @Test
+    fun createSavedSearchUnknownScopeFallsBackToAll() {
+        val uid = UUID.randomUUID()
+        stubAuth(uid)
+        whenever(savedSearches.save(any<SavedSearchEntity>())).thenAnswer { inv ->
+            (inv.arguments[0] as SavedSearchEntity).apply { id = UUID.randomUUID() }
+        }
+        mvc.post("/saved-searches") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"title":"T","query":"q","scopeKind":"nope","scopeId":"${UUID.randomUUID()}"}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.scopeKind") { value("all") }
+        }
+        verify(savedSearches).save(
+            org.mockito.kotlin.check<SavedSearchEntity> {
+                assert(it.scopeKind == "all")
+                assert(it.scopeId == null)
+            },
+        )
+    }
+
+    @Test
+    fun createSavedSearchRejectsInvalidScopeId() {
+        stubAuth(UUID.randomUUID())
+        mvc.post("/saved-searches") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"title":"T","scopeKind":"folder","scopeId":"not-a-uuid"}"""
+        }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun updateSavedSearchRejectsInvalidId() {
+        stubAuth(UUID.randomUUID())
+        mvc.put("/saved-searches/not-a-uuid") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"title":"T"}"""
+        }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun updateSavedSearchMissingAnswersNotFound() {
+        val uid = UUID.randomUUID()
+        val id = UUID.randomUUID()
+        stubAuth(uid)
+        whenever(savedSearches.findByUserIdAndId(uid, id)).thenReturn(null)
+        mvc.put("/saved-searches/$id") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"title":"T"}"""
+        }.andExpect { status { isNotFound() } }
+    }
+
+    @Test
+    fun updateSavedSearchAppliesFeedScope() {
+        val uid = UUID.randomUUID()
+        val id = UUID.randomUUID()
+        val scopeId = UUID.randomUUID()
+        stubAuth(uid)
+        val row = SavedSearchEntity(id = id, userId = uid, title = "Old", query = "q")
+        whenever(savedSearches.findByUserIdAndId(uid, id)).thenReturn(row)
+        whenever(savedSearches.save(any<SavedSearchEntity>())).thenAnswer { it.arguments[0] }
+        mvc.put("/saved-searches/$id") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"scopeKind":"feed","scopeId":"$scopeId"}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.scopeKind") { value("feed") }
+        }
+        assert(row.scopeKind == "feed")
+        assert(row.scopeId == scopeId)
+    }
+
+    @Test
+    fun updateSavedSearchScopeIdOnly() {
+        val uid = UUID.randomUUID()
+        val id = UUID.randomUUID()
+        val scopeId = UUID.randomUUID()
+        stubAuth(uid)
+        val row = SavedSearchEntity(id = id, userId = uid, title = "Old", query = "q")
+        whenever(savedSearches.findByUserIdAndId(uid, id)).thenReturn(row)
+        whenever(savedSearches.save(any<SavedSearchEntity>())).thenAnswer { it.arguments[0] }
+        mvc.put("/saved-searches/$id") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"scopeId":"$scopeId"}"""
+        }.andExpect { status { isOk() } }
+        assert(row.scopeId == scopeId)
+    }
+
+    @Test
+    fun updateSavedSearchRejectsInvalidScopeId() {
+        val uid = UUID.randomUUID()
+        val id = UUID.randomUUID()
+        stubAuth(uid)
+        whenever(savedSearches.findByUserIdAndId(uid, id))
+            .thenReturn(SavedSearchEntity(id = id, userId = uid, title = "Old", query = "q"))
+        mvc.put("/saved-searches/$id") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"scopeId":"not-a-uuid"}"""
+        }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun deleteSavedSearchRejectsInvalidId() {
+        stubAuth(UUID.randomUUID())
+        mvc.delete("/saved-searches/not-a-uuid") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun deleteSavedSearchMissingIsIdempotent() {
+        val uid = UUID.randomUUID()
+        val id = UUID.randomUUID()
+        stubAuth(uid)
+        whenever(savedSearches.findByUserIdAndId(uid, id)).thenReturn(null)
+        mvc.delete("/saved-searches/$id") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }.andExpect { status { isOk() } }
+        verify(savedSearches, org.mockito.kotlin.never()).delete(any())
+    }
+
+    @Test
+    fun reorderSavedSearchesRequiresIds() {
+        stubAuth(UUID.randomUUID())
+        mvc.post("/saved-searches/reorder") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{}"""
+        }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun reorderSavedSearchesIgnoresInvalidIds() {
+        stubAuth(UUID.randomUUID())
+        mvc.post("/saved-searches/reorder") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"ids":["not-a-uuid"]}"""
+        }.andExpect { status { isOk() } }
+        verify(savedSearches, org.mockito.kotlin.never()).saveAll(any<List<SavedSearchEntity>>())
     }
 }
