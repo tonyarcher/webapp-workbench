@@ -53,6 +53,8 @@ export type ArticleSort = 'hot' | 'newest' | 'oldest';
 export type ListViewType = 'detailed' | 'headline' | 'cards';
 export type FeedSort = 'alpha' | 'unread';
 
+export type SearchScopeKind = 'all' | 'folder' | 'feed';
+
 export type View =
     | { kind: 'all' }
     | { kind: 'folder'; id: string }
@@ -60,7 +62,8 @@ export type View =
     | { kind: 'feed'; id: string }
     | { kind: 'brief' }
     | { kind: 'today' }
-    | { kind: 'frontpage' };
+    | { kind: 'frontpage' }
+    | { kind: 'search'; scope?: SearchScopeKind | undefined; id?: string | undefined; q?: string | undefined };
 
 export interface ParsedItem {
     guid: string;

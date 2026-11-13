@@ -70,4 +70,10 @@ class ArticleSpecsTest {
         )
         assertNotNull(spec.toPredicate(root, query, cb))
     }
+
+    @Test
+    fun searchQueryBuilds() {
+        val spec = articleSpec(userId, ArticleScope.All, false, ArticleSort.NEWEST, null, null, "battery grid")
+        assertNotNull(spec.toPredicate(root, query, cb))
+    }
 }

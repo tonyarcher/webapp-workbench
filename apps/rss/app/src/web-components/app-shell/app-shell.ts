@@ -1,6 +1,6 @@
 import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { history, parsePath } from '../../router';
+import { history, navigate, parsePath } from '../../router';
 import { markArticleRead } from '../../mutations';
 import { bustCounts, queryClient } from '../../query';
 import type { ArticleView } from '../article-view/article-view';
@@ -74,9 +74,9 @@ export class AppShell extends LitElement {
 
     override connectedCallback() {
         super.connectedCallback();
-        this.route = parsePath(history.location.pathname);
+        this.route = parsePath(history.location.pathname, history.location.search);
         this.unsubscribe = history.subscribe(({ location }) => {
-            this.route = parsePath(location.pathname);
+            this.route = parsePath(location.pathname, location.search);
             // A route change is not a dismissal: leaving the view is not a
             // bounce, so the open time still counts as reading.
             this.closeArticle(false);
@@ -257,6 +257,8 @@ export class AppShell extends LitElement {
         if (this.route.kind === 'brief') return html`<brief-view @open-article=${this.onOpenArticle}></brief-view>`;
         if (this.route.kind === 'today') return html`<today-view @open-article=${this.onOpenArticle}></today-view>`;
         if (this.route.kind === 'frontpage') return html`<front-page @open-article=${this.onOpenArticle}></front-page>`;
+        if (this.route.kind === 'search')
+            return html`<search-view .view=${this.route} @open-article=${this.onOpenArticle}></search-view>`;
         return html`<article-list .view=${this.route} .active=${!this.article} .resumeArticleId=${this.resumeArticleId} @open-article=${this.onOpenArticle}></article-list>`;
     }
 
@@ -309,6 +311,11 @@ export class AppShell extends LitElement {
             this.shortcutsOpen = true;
             return;
         }
+        if (e.key === '/' && !this.shouldIgnoreKey(e)) {
+            e.preventDefault();
+            navigate({ kind: 'search' });
+            return;
+        }
         if (this.article && !this.shouldIgnoreKey(e)) {
             const action = overlayShortcut(e.key);
             if (action === 'star' || action === 'derank' || action === 'original') {
@@ -325,9 +332,11 @@ export class AppShell extends LitElement {
         this.handleNavKey(e);
     };
 
-    private shouldIgnoreKey(e: KeyboardEvent): boolean {
-        const tag = (e.target as HTMLElement | null)?.tagName;
+    private shouldIgnoreKey(_e: KeyboardEvent): boolean {
+        const active = deepActiveElement();
+        const tag = active?.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+        if (active?.isContentEditable) return true;
         if (document.querySelector('dialog[open]')) return true;
         return false;
     }

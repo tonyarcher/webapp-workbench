@@ -214,8 +214,13 @@ function renderNavError(host: SourceListRenderHost) {
 
 function renderStaticNav(host: SourceListRenderHost) {
     return html`
-      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderAllNav(host)}
+      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderSearchNav(host)}${renderAllNav(host)}
     `;
+}
+
+function renderSearchNav(host: SourceListRenderHost) {
+    const active = host.isActive({ kind: 'search' });
+    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'search' })}><span class="icon" aria-hidden="true">🔎</span><span class="label">Search</span></button>`;
 }
 
 function renderFrontPageNav(host: SourceListRenderHost) {

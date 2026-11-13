@@ -3,8 +3,10 @@ import type { View } from './types';
 
 export const history = createHashHistory();
 
-export function parsePath(pathname: string): View {
-    const parts = pathname.split('/').filter(Boolean);
+export function parsePath(pathname: string, search = ''): View {
+    const [pathPart, queryPart] = pathname.split('?');
+    const parts = (pathPart ?? '').split('/').filter(Boolean);
+    const params = new URLSearchParams(search || queryPart || '');
     if (parts[0] === 'folder' && parts[1]) {
         return { kind: 'folder', id: decodeURIComponent(parts[1]) };
     }
@@ -22,6 +24,18 @@ export function parsePath(pathname: string): View {
     }
     if (parts[0] === 'frontpage') {
         return { kind: 'frontpage' };
+    }
+    if (parts[0] === 'search') {
+        const scope = params.get('scope');
+        const id = params.get('id') ?? undefined;
+        const q = params.get('q') ?? undefined;
+        const scopeKind = scope === 'folder' || scope === 'feed' || scope === 'all' ? scope : undefined;
+        return {
+            kind: 'search',
+            ...(scopeKind ? { scope: scopeKind } : {}),
+            ...(id ? { id } : {}),
+            ...(q ? { q } : {}),
+        };
     }
     return { kind: 'all' };
 }
@@ -42,9 +56,19 @@ export function viewToPath(view: View): string {
             return `/interesting/${encodeURIComponent(view.id)}`;
         case 'feed':
             return `/feed/${encodeURIComponent(view.id)}`;
+        case 'search': {
+            const params = new URLSearchParams();
+            if (view.scope) params.set('scope', view.scope);
+            if (view.id) params.set('id', view.id);
+            if (view.q) params.set('q', view.q);
+            const qs = params.toString();
+            return qs ? `/search?${qs}` : '/search';
+        }
     }
 }
 
-export function navigate(view: View) {
-    history.push(viewToPath(view));
+export function navigate(view: View, replace = false) {
+    const path = viewToPath(view);
+    if (replace) history.replace(path);
+    else history.push(path);
 }

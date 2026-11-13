@@ -111,4 +111,47 @@ class ArticleListControllerTest {
             assertEquals(200, res.response.status)
         }
     }
+
+    @Test
+    fun searchQueryFiltersAndReturnsPage() {
+        val uid = UUID.randomUUID()
+        auth(uid)
+        val entity = ArticleEntity(
+            id = "a1",
+            feedId = UUID.randomUUID(),
+            guid = "g1",
+            title = "Battery storage grid",
+            summary = "grid batteries",
+            publishedAt = java.time.Instant.ofEpochMilli(1000),
+            fetchedAt = java.time.Instant.ofEpochMilli(1000),
+        )
+        whenever(
+            articles.findAll(
+                any<org.springframework.data.jpa.domain.Specification<ArticleEntity>>(),
+                any<org.springframework.data.domain.Pageable>(),
+            ),
+        ).thenReturn(PageImpl(listOf(entity)))
+        whenever(states.findByUserIdAndArticleIdIn(any<UUID>(), any<List<String>>())).thenReturn(emptyList())
+
+        val res = mvc.get("/articles?q=battery+grid&scope=all") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andReturn()
+        assertEquals(200, res.response.status)
+        val body = res.response.contentAsString
+        kotlin.test.assertTrue(body.contains("\"items\""))
+        kotlin.test.assertTrue(body.contains("Battery storage grid"))
+    }
+
+    @Test
+    fun searchQueryWithNoUsableTokensReturnsEmpty() {
+        auth(UUID.randomUUID())
+        val res = mvc.get("/articles?q=a") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andReturn()
+        assertEquals(200, res.response.status)
+        val body = res.response.contentAsString
+        kotlin.test.assertTrue(body.contains("\"items\":[]"))
+    }
 }

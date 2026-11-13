@@ -32,6 +32,28 @@ import { assert } from './smoke-assert';
             JSON.stringify(parsePath(viewToPath({ kind: 'frontpage' }))) === JSON.stringify({ kind: 'frontpage' }),
             'frontpage router round-trips',
         );
+
+        assert(viewToPath({ kind: 'search' }) === '/search', 'search serializes to #/search');
+        assert(
+            viewToPath({ kind: 'search', scope: 'folder', id: 'f1', q: 'grid storage' }) ===
+                '/search?scope=folder&id=f1&q=grid+storage',
+            'search serializes with scope and query',
+        );
+        assert(
+            JSON.stringify(parsePath('/search', '?scope=folder&id=f1&q=grid+storage')) ===
+                JSON.stringify({ kind: 'search', scope: 'folder', id: 'f1', q: 'grid storage' }),
+            'search parses query params from search string',
+        );
+        assert(
+            JSON.stringify(parsePath('/search?scope=feed&id=f2&q=grid')) ===
+                JSON.stringify({ kind: 'search', scope: 'feed', id: 'f2', q: 'grid' }),
+            'search parses query params from pathname for compatibility',
+        );
+        assert(
+            JSON.stringify(parsePath(viewToPath({ kind: 'search', scope: 'all', q: 'kube' }))) ===
+                JSON.stringify({ kind: 'search', scope: 'all', q: 'kube' }),
+            'search router round-trips',
+        );
     } finally {
         shims['window'] = realWindow;
         shims['document'] = realDocument;

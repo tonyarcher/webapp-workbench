@@ -10,6 +10,7 @@ import rssapi.domain.ArticleSort
 import rssapi.domain.CursorPayload
 import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleStateEntity
+import rssapi.persist.FeedEntity
 import rssapi.persist.FolderFeedEntity
 import rssapi.persist.SubscriptionEntity
 import java.time.Instant
@@ -22,6 +23,7 @@ fun articleSpec(
     sort: ArticleSort,
     cursor: CursorPayload?,
     sinceMs: Long?,
+    q: String? = null,
 ): Specification<ArticleEntity> = Specification { root, query, cb ->
     val parts = mutableListOf(
         scopePredicate(userId, scope, root, query, cb),
@@ -30,6 +32,7 @@ fun articleSpec(
     if (sinceMs != null) {
         parts.add(cb.greaterThanOrEqualTo(root.get("publishedAt"), Instant.ofEpochMilli(sinceMs)))
     }
+    searchPredicate(q, root, query, cb)?.let { parts.add(it) }
     cursorPredicate(sort, cursor, root, cb)?.let { parts.add(it) }
     cb.and(*parts.toTypedArray())
 }
@@ -87,6 +90,45 @@ private fun unreadPredicate(
         cb.isTrue(state.get("read")),
     )
     return cb.not(cb.exists(sub))
+}
+
+private fun searchPredicate(
+    q: String?,
+    root: Root<ArticleEntity>,
+    query: CriteriaQuery<*>,
+    cb: CriteriaBuilder,
+): jakarta.persistence.criteria.Predicate? {
+    val tokens = q?.trim()?.lowercase()?.split(Regex("[^a-z0-9]+"))?.filter { it.length >= 2 } ?: return null
+    if (tokens.isEmpty()) return null
+    val tokenPredicates = tokens.map { token ->
+        val pattern = "%$token%"
+        cb.or(
+            cb.like(cb.lower(cb.coalesce(root.get("title"), "")), pattern),
+            cb.like(cb.lower(cb.coalesce(root.get("summary"), "")), pattern),
+            cb.like(cb.lower(cb.coalesce(root.get("contentHtml"), "")), pattern),
+            cb.like(cb.lower(cb.coalesce(root.get("author"), "")), pattern),
+            cb.like(cb.lower(cb.coalesce(root.get("domain"), "")), pattern),
+            cb.like(cb.lower(cb.coalesce(root.get("link"), "")), pattern),
+            feedTitleMatches(token, root, query, cb),
+        )
+    }
+    return cb.and(*tokenPredicates.toTypedArray())
+}
+
+private fun feedTitleMatches(
+    token: String,
+    root: Root<ArticleEntity>,
+    query: CriteriaQuery<*>,
+    cb: CriteriaBuilder,
+): jakarta.persistence.criteria.Predicate {
+    val sub = query.subquery(Long::class.java)
+    val feed = sub.from(FeedEntity::class.java)
+    sub.select(cb.literal(1L))
+    sub.where(
+        cb.equal(feed.get<UUID>("id"), root.get<UUID>("feedId")),
+        cb.like(cb.lower(cb.coalesce(feed.get("title"), "")), "%$token%"),
+    )
+    return cb.exists(sub)
 }
 
 private fun cursorPredicate(
