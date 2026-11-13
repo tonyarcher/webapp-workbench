@@ -293,8 +293,14 @@
     background: var(--panel-bg);
     display: flex;
     flex-direction: column;
-    cursor: pointer;
+    cursor: default;
     box-sizing: border-box;
+}
+
+/* Only the cover is a pointer target; the body stays selectable text. */
+.grid-card-media {
+    flex: none;
+    cursor: pointer;
 }
 
 .grid-card:hover {

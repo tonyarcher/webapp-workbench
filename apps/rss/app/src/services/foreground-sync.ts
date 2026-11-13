@@ -5,8 +5,10 @@
  * feel current like a hosted reader. The manual Refresh button still owns
  * user-visible failures, so this loop stays quiet.
  */
-import { fetchLibrary, libraryKey, queryClient, type LibraryData } from '../query';
+import { libraryKey, queryClient, type LibraryData } from '../query';
+import { getLibraryFeeds } from './api';
 import { syncAllFeeds } from '../mutations';
+import type { Feed } from '../types';
 
 export const AUTO_SYNC_MS = 5 * 60_000;
 /** Returning to the tab forces a sync only after this long, so alt-tabbing is cheap. */
@@ -113,9 +115,16 @@ async function waitForFeeds(feedIds: string[], startedAt: number, gen: number): 
     if (!feedIds.length) return;
     const deadline = startedAt + INGEST_WAIT_MS;
     while (started && gen === runGen && !document.hidden) {
-        await fetchLibrary();
+        // Read feeds without writing the library query: the card/list views
+        // observe it, and re-rendering them every poll makes scrolling drag.
+        let feeds: Feed[] = [];
+        try {
+            feeds = (await getLibraryFeeds()).feeds;
+        } catch {
+            return;
+        }
         if (gen !== runGen || !started) return;
-        if (allFetched(feedIds, startedAt)) return;
+        if (allFetched(feeds, feedIds, startedAt)) return;
         if (Date.now() >= deadline) return;
         await new Promise<void>((resolve) => {
             window.setTimeout(resolve, INGEST_POLL_MS);
@@ -123,8 +132,7 @@ async function waitForFeeds(feedIds: string[], startedAt: number, gen: number): 
     }
 }
 
-function allFetched(feedIds: string[], startedAt: number): boolean {
-    const feeds = libraryFeeds() ?? [];
+function allFetched(feeds: Feed[], feedIds: string[], startedAt: number): boolean {
     for (const id of feedIds) {
         const feed = feeds.find((f) => f.id === id);
         if (!feed) continue;

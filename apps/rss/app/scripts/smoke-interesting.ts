@@ -81,6 +81,24 @@ import { assert } from './smoke-assert';
     adjustWordWeight('rare', 0);
     assert(loadWordMap()['rare'] === -1, 'adjustWordWeight ignores empty words and zero steps');
 
+    const { articleKeywordsOf } = await import('../src/services/keywords');
+    const plain = articleKeywordsOf('Battery storage grid', undefined, undefined, {});
+    assert(
+        plain.length === 3 && plain.some((k) => k.word === 'battery'),
+        'article keywords come from the text without a learned map',
+    );
+    const learned = articleKeywordsOf('Battery storage grid', undefined, undefined, { grid: 4 });
+    assert(learned[0]?.word === 'grid' && learned[0]?.score === 4, 'learned words sort first in article keywords');
+    const derankedWords = articleKeywordsOf('Battery storage grid', undefined, undefined, { grid: -2 });
+    assert(
+        derankedWords[0]?.word === 'grid' && derankedWords[0]?.score === -2,
+        'deranked words stay in the article keyword list',
+    );
+    assert(
+        articleKeywordsOf('Battery storage grid', undefined, undefined, {}, 2).length === 2,
+        'article keywords honor the cap',
+    );
+
     mem.set('rss-reader:hide-read-by-folder', JSON.stringify({ f1: true }));
     assert(isHideReadFolder('f1') === true, 'hide-read lookup follows the folder toggle');
     assert(isHideReadFolder('f2') === false, 'hide-read lookup defaults to false');

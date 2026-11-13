@@ -169,15 +169,23 @@ export function cardRowTemplate(
     const video = articleVideo(article);
     const image = video ? undefined : articleImage(article, feedIcon);
     return html`
-      <article class="grid-card ${article.read ? 'read' : ''} ${selected ? 'selected' : ''} ${picked ? 'picked' : ''}" @click=${(e: MouseEvent) => onOpen(e, article)}>
-        <!-- pointer-only: the card body opens the article on pointer; keyboard and screen-reader users open it with the title button below. -->
-        ${
-            video
-                ? html`<video-header class="grid-card-img" .video=${video} .videoTitle=${article.title} .videoLink=${watchUrlFor(video, link)}></video-header>`
-                : image
-                  ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>`
-                  : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`
-        }
+      <article class="grid-card ${article.read ? 'read' : ''} ${selected ? 'selected' : ''} ${picked ? 'picked' : ''}" @click=${(
+          e: MouseEvent,
+      ) => {
+          if (e.shiftKey) onOpen(e, article);
+      }}>
+        <!-- pointer-only: the cover opens the article; shift+click on the card extends the selection; keyboard and screen-reader users use the title button below. -->
+        <div class="grid-card-media" @click=${(e: MouseEvent) => {
+            if (!e.shiftKey) onOpen(e, article);
+        }}>
+          ${
+              video
+                  ? html`<video-header class="grid-card-img" .video=${video} .videoTitle=${article.title} .videoLink=${watchUrlFor(video, link)}></video-header>`
+                  : image
+                    ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>`
+                    : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`
+          }
+        </div>
         <div class="grid-card-body">
           ${cardTitleRow(article, onStar, onOpen)}
           ${article.summary ? html`<div class="grid-card-summary">${article.summary}</div>` : ''}

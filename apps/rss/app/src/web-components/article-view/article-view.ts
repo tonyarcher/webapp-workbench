@@ -19,15 +19,11 @@ import {
 } from '../../mutations';
 import { fetchSavedArticlesList } from '../../query';
 import { adjustWordWeight, loadWordMap, isDeranked } from '../../services/interesting-settings';
-import { extractWords } from '../../services/interesting-words';
+import { articleKeywordsOf, type ArticleKeyword } from '../../services/keywords';
 import { readMinutes } from '../../util';
 import type { Article } from '../../types';
 import { domainOf, formatDate } from '../../util';
 
-interface ArticleKeyword {
-    word: string;
-    score: number;
-}
 import '../video-header/video-header';
 import styles from './article-view.css?inline';
 
@@ -254,7 +250,7 @@ export class ArticleView extends LitElement {
                 this.keywords,
                 (k) => k.word,
                 (k) =>
-                    html`<span class="keyword ${k.score > 0 ? 'interesting' : ''}">
+                    html`<span class="keyword ${k.score > 0 ? 'interesting' : k.score < 0 ? 'deranked' : ''}">
                         <span class="keyword-word" title=${`Weight ${k.score}`}>${k.word}</span>
                         <button
                             class="keyword-step"
@@ -285,7 +281,7 @@ export class ArticleView extends LitElement {
     private unwrapHighlights(): void {
         const content = this.renderRoot.querySelector('.content');
         if (!(content instanceof HTMLElement)) return;
-        for (const mark of content.querySelectorAll('mark.kw-interest, mark.kw')) {
+        for (const mark of content.querySelectorAll('mark.kw-interest, mark.kw, mark.kw-derank')) {
             const parent = mark.parentNode;
             if (!parent) continue;
             parent.replaceChild(document.createTextNode(mark.textContent ?? ''), mark);
@@ -375,11 +371,13 @@ export class ArticleView extends LitElement {
         const content = this.renderRoot.querySelector('.content');
         if (!(content instanceof HTMLElement)) return;
         // Already highlighted for this rendered content.
-        if (content.querySelector('mark.kw-interest, mark.kw')) return;
-        const words = this.keywords.map((k) => k.word);
+        if (content.querySelector('mark.kw-interest, mark.kw, mark.kw-derank')) return;
+        // Only learned words are highlighted; plain article keywords are chips.
+        const words = this.keywords.filter((k) => k.score !== 0).map((k) => k.word);
         if (!words.length) return;
         const pattern = new RegExp(`\\b(${words.map(escapeRegExp).join('|')})\\b`, 'gi');
         const interesting = new Set(this.keywords.filter((k) => k.score > 0).map((k) => k.word));
+        const deranked = new Set(this.keywords.filter((k) => k.score < 0).map((k) => k.word));
         const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {
             acceptNode(node) {
                 const parent = node.parentElement;
@@ -408,7 +406,8 @@ export class ArticleView extends LitElement {
                 const match = m[0] ?? '';
                 if (start > last) frag.append(text.slice(last, start));
                 const mark = document.createElement('mark');
-                mark.className = interesting.has(match.toLowerCase()) ? 'kw-interest' : 'kw';
+                const key = match.toLowerCase();
+                mark.className = interesting.has(key) ? 'kw-interest' : deranked.has(key) ? 'kw-derank' : 'kw';
                 mark.textContent = match;
                 frag.append(mark);
                 last = start + match.length;
@@ -425,21 +424,7 @@ function escapeRegExp(s: string): string {
 }
 
 function articleKeywords(article: Article): ArticleKeyword[] {
-    const wordMap = loadWordMap();
-    if (!Object.keys(wordMap).length) return [];
-    const text = `${article.title} ${article.summary ?? ''}`;
-    // include some body text without parsing HTML heavily; content may be HTML string
-    const raw = `${text} ${(article.content ?? '').replace(/<[^>]+>/g, ' ')}`.slice(0, 20_000);
-    const seen = new Set<string>();
-    const matched: ArticleKeyword[] = [];
-    for (const w of extractWords(raw)) {
-        if (seen.has(w)) continue;
-        seen.add(w);
-        const score = wordMap[w] ?? 0;
-        if (score > 0) matched.push({ word: w, score });
-    }
-    matched.sort((a, b) => b.score - a.score || a.word.localeCompare(b.word));
-    return matched.slice(0, 24);
+    return articleKeywordsOf(article.title, article.summary, article.content, loadWordMap());
 }
 
 declare global {

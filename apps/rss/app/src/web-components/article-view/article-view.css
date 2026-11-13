@@ -157,7 +157,8 @@ h1 a:hover {
     padding: 2px 4px 2px 8px;
     border-radius: 999px;
     border: 1px solid var(--border);
-    color: var(--text-muted);
+    /* Full text color: 12px muted text on --hover fails 4.5:1 in light. */
+    color: var(--text);
     background: var(--hover);
 }
 
@@ -186,13 +187,18 @@ h1 a:hover {
 }
 
 .keyword.interesting {
-    color: var(--accent, #0a66c2);
     border-color: color-mix(in srgb, var(--accent, #0a66c2) 35%, var(--border));
     background: color-mix(in srgb, var(--accent, #0a66c2) 12%, transparent);
 }
 
+.keyword.deranked {
+    border-color: color-mix(in srgb, var(--danger, #dc2626) 35%, var(--border));
+    background: color-mix(in srgb, var(--danger, #dc2626) 10%, transparent);
+}
+
 .content mark.kw-interest,
-.content mark.kw {
+.content mark.kw,
+.content mark.kw-derank {
     padding: 0 2px;
     border-radius: 3px;
     color: inherit;
@@ -201,6 +207,11 @@ h1 a:hover {
 .content mark.kw-interest {
     background: color-mix(in srgb, var(--accent, #0a66c2) 22%, transparent);
     box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent, #0a66c2) 45%, transparent);
+}
+
+.content mark.kw-derank {
+    background: color-mix(in srgb, var(--danger, #dc2626) 14%, transparent);
+    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--danger, #dc2626) 35%, transparent);
 }
 
 .expanded-video {
