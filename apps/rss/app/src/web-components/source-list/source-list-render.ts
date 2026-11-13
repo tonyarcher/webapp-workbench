@@ -1,5 +1,5 @@
 import { html, svg } from 'lit';
-import type { Feed, Folder, View } from '../../types';
+import type { Feed, Folder, SavedSearch, View } from '../../types';
 import type { ActionHost } from './source-list-actions';
 import { MAX_SIDEBAR_WIDTH, MIN_SIDEBAR_WIDTH } from './source-list-settings';
 import {
@@ -12,6 +12,8 @@ import {
     menuFoldersChangeAction,
     menuRefreshAction,
     refreshAllAction,
+    savedSearchMenuDeleteAction,
+    savedSearchMenuRenameAction,
     sortFoldersAction,
     todaySettingsChangeAction,
     toggleAutoHideAction,
@@ -20,9 +22,11 @@ import {
     closeFeedListMenuAction,
     closeFolderMenuAction,
     closeMenuAction,
+    closeSavedSearchMenuAction,
     openFeedListMenuAction,
     openFeedMenuAction,
     openFolderMenuAction,
+    openSavedSearchMenuAction,
     openTodayMenuAction,
 } from './source-list-menus';
 
@@ -34,7 +38,7 @@ import {
 export interface SourceListRenderHost extends ActionHost {
     autoHide: boolean;
     totalUnread: number;
-    library: { error: Error | undefined };
+    library: { error: Error | undefined; data?: { savedSearches?: SavedSearch[] } };
     icon(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash'): unknown;
     pinIcon(): unknown;
     filterIcon(): unknown;
@@ -44,7 +48,7 @@ export interface SourceListRenderHost extends ActionHost {
     interestingCount(folderId: string): number | undefined;
     isActive(view: View): boolean;
     select(view: View): void;
-    onDragStart(e: DragEvent, kind: 'folder' | 'feed', id: string): void;
+    onDragStart(e: DragEvent, kind: 'folder' | 'feed' | 'savedSearch', id: string): void;
     onDragOver(e: DragEvent): void;
     onDragLeave(e: DragEvent): void;
     onDrop(e: DragEvent): Promise<void>;
@@ -203,7 +207,8 @@ export function renderHead(host: SourceListRenderHost) {
 }
 
 export function renderNav(host: SourceListRenderHost, folders: Folder[], uncategorized: Feed[]) {
-    return html`<nav class="nav" @dragover=${host.onDragOver} @dragleave=${host.onDragLeave} @drop=${host.onDrop} @dragend=${host.onDragEnd}>${renderNavError(host)}${renderStaticNav(host)}${renderInterestingSection(host, folders)}${folders.map((folder) => folderRow(host, folder))}${renderUncategorized(host, uncategorized)}<div class="drop-zone" data-no-folder>Drop here to move out of folders</div></nav>`;
+    const savedSearches = (host.libraryData as { savedSearches?: SavedSearch[] }).savedSearches ?? [];
+    return html`<nav class="nav" @dragover=${host.onDragOver} @dragleave=${host.onDragLeave} @drop=${host.onDrop} @dragend=${host.onDragEnd}>${renderNavError(host)}${renderStaticNav(host)}${renderSavedSearches(host, savedSearches)}${renderInterestingSection(host, folders)}${folders.map((folder) => folderRow(host, folder))}${renderUncategorized(host, uncategorized)}<div class="drop-zone" data-no-folder>Drop here to move out of folders</div></nav>`;
 }
 
 function renderNavError(host: SourceListRenderHost) {
@@ -216,6 +221,29 @@ function renderStaticNav(host: SourceListRenderHost) {
     return html`
       ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderSearchNav(host)}${renderAllNav(host)}
     `;
+}
+
+function savedSearchRow(host: SourceListRenderHost, search: SavedSearch) {
+    const active = host.isActive({ kind: 'search', savedId: search.id });
+    return html`
+      <div class="item ${active ? 'active' : ''}" data-saved-search-id="${search.id}" draggable="true" @dragstart=${(e: DragEvent) => host.onDragStart(e, 'savedSearch', search.id)} @click=${() => host.select({ kind: 'search', q: search.query, scope: search.scopeKind, ...(search.scopeId ? { id: search.scopeId } : {}), savedId: search.id })}>
+        <button class="item-open" @click=${(e: MouseEvent) => {
+            e.stopPropagation();
+            host.select({
+                kind: 'search',
+                q: search.query,
+                scope: search.scopeKind,
+                ...(search.scopeId ? { id: search.scopeId } : {}),
+                savedId: search.id,
+            });
+        }}><span class="icon" aria-hidden="true">🔎</span><span class="label" title="${search.title}">${search.title}</span>${search.unread > 0 ? html`<span class="badge">${search.unread}</span>` : ''}</button>
+        <button class="menu-btn" title="Saved search options" @click=${(e: MouseEvent) => openSavedSearchMenuAction(host, search, e)}>${menuIconTemplate()}</button>
+      </div>`;
+}
+
+function renderSavedSearches(host: SourceListRenderHost, searches: SavedSearch[]) {
+    if (!searches.length) return html``;
+    return html`<div class="section-label">Saved searches</div>${searches.map((s) => savedSearchRow(host, s))}`;
 }
 
 function renderSearchNav(host: SourceListRenderHost) {
@@ -282,10 +310,12 @@ export function renderMenus(
     folders: Folder[],
     menuFeed: Feed | undefined,
     folderMenuFolder: Folder | undefined,
+    savedSearchMenuSearch?: SavedSearch | undefined,
 ) {
     return html`
       <feed-menu .feed=${menuFeed ?? null} .folders=${folders} .open=${host.menuOpen && menuFeed !== undefined} .anchor=${host.menuAnchor} @close=${() => closeMenuAction(host)} @refresh=${() => menuRefreshAction(host)} @delete=${() => menuDeleteAction(host)} @folders-change=${(e: Event) => menuFoldersChangeAction(host, e)}></feed-menu>
       <folder-menu .folder=${folderMenuFolder ?? null} .open=${host.folderMenuOpen && folderMenuFolder !== undefined} .anchor=${host.folderMenuAnchor} .unreadOnly=${folderMenuFolder ? Boolean(host.hideReadByFolder[folderMenuFolder.id]) : false} .shadow=${folderMenuFolder ? host.interestingShadow[folderMenuFolder.id] === true : false} @close=${() => closeFolderMenuAction(host)} @delete=${() => folderMenuDeleteAction(host)} @refresh=${() => folderMenuRefreshAction(host)} @unread-only-change=${(e: Event) => folderMenuUnreadOnlyAction(host, e)} @shadow-change=${(e: Event) => folderMenuShadowAction(host, e)}></folder-menu>
+      <saved-search-menu .search=${savedSearchMenuSearch ?? null} .open=${host.savedSearchMenuOpen && savedSearchMenuSearch !== undefined} .anchor=${host.savedSearchMenuAnchor} @close=${() => closeSavedSearchMenuAction(host)} @rename=${() => savedSearchMenuRenameAction(host)} @delete=${() => savedSearchMenuDeleteAction(host)}></saved-search-menu>
       <feed-list-menu .open=${host.feedListMenuOpen} .anchor=${host.feedListMenuAnchor} .feedSort=${host.feedSort} @close=${() => closeFeedListMenuAction(host)} @sort-change=${(e: Event) => feedSortChangeAction(host, e)} @sort-folders=${() => sortFoldersAction(host)} @refresh-all=${() => refreshAllAction(host)}></feed-list-menu>
       <today-menu .open=${host.todayMenuOpen} .anchor=${host.todayMenuAnchor} .folders=${folders} .settings=${host.todaySettings} @close=${() => (host.todayMenuOpen = false)} @settings-change=${(e: Event) => todaySettingsChangeAction(host, e)}></today-menu>
     `;

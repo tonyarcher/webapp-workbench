@@ -226,8 +226,10 @@ export class AppShell extends LitElement {
     private renderSignIn() {
         return html`
             <header>
-                <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2" fill="currentColor"/><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-                <h1>RSS Reader</h1><span class="sub">your feeds, in one place</span>
+                <button class="brand-link" @click=${() => navigate({ kind: 'all' })}>
+                    <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2" fill="currentColor"/><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                    <h1>RSS Reader</h1><span class="sub">your feeds, in one place</span>
+                </button>
             </header>
             <main class="signin">
                 <div class="signin-card">
@@ -242,8 +244,11 @@ export class AppShell extends LitElement {
     private renderHeader() {
         return html`
             <header>
-                <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2" fill="currentColor"/><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-                <h1>RSS Reader</h1><span class="sub">your feeds, in one place</span><div class="spacer"></div>
+                <button class="brand-link" @click=${() => navigate({ kind: 'all' })}>
+                    <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2" fill="currentColor"/><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                    <h1>RSS Reader</h1><span class="sub">your feeds, in one place</span>
+                </button>
+                <div class="spacer"></div>
                 ${this.username ? html`<span class="who">${this.username}</span><button class="signout" @click=${this.onSignOut}>Sign out</button>` : ''}
                 <button class="gear" title="Settings" @click=${() => (this.settingsOpen = true)}>${this.renderGearIcon()}</button>
             </header>`;

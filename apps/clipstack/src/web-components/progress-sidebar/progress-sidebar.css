@@ -20,6 +20,27 @@
     border-bottom: 1px solid var(--border);
 }
 
+.brand-home {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.brand-home:hover .brand-name,
+.brand-home:focus-visible .brand-name {
+    color: var(--accent);
+}
+
 .brand-glyph {
     flex: none;
     width: 36px;

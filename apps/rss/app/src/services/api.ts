@@ -1,4 +1,4 @@
-import type { Article, Edition, EditionMeta, EditionSection, EditionStatus, Feed, Folder } from '../types';
+import type { Article, Edition, EditionMeta, EditionSection, EditionStatus, Feed, Folder, SavedSearch } from '../types';
 import type { SummaryLength } from '../ai';
 import { getAccessToken, refreshTokens } from './auth';
 import { appConfig, resolveApiBase } from './config';
@@ -97,18 +97,24 @@ async function errorMessage(res: Response): Promise<string> {
     }
 }
 
-// ---- library (progressive: folders, then names, then badges) ----
+// ---- library (progressive: folders/saved searches, then names, then badges) ----
 
-export async function getLibraryFolders(): Promise<{ folders: Folder[] }> {
-    return apiFetch('/library/folders') as Promise<{ folders: Folder[] }>;
+export async function getLibraryFolders(): Promise<{ folders: Folder[]; savedSearches?: SavedSearch[] }> {
+    return apiFetch('/library/folders') as Promise<{ folders: Folder[]; savedSearches?: SavedSearch[] }>;
 }
 
 export async function getLibraryFeeds(): Promise<{ feeds: Feed[] }> {
     return apiFetch('/library/feeds') as Promise<{ feeds: Feed[] }>;
 }
 
-export async function getLibraryCounts(): Promise<{ counts: Record<string, number> }> {
-    return apiFetch('/library/counts') as Promise<{ counts: Record<string, number> }>;
+export async function getLibraryCounts(): Promise<{
+    counts: Record<string, number>;
+    savedSearchCounts?: Record<string, number>;
+}> {
+    return apiFetch('/library/counts') as Promise<{
+        counts: Record<string, number>;
+        savedSearchCounts?: Record<string, number>;
+    }>;
 }
 
 // ---- folders ----
@@ -126,6 +132,41 @@ export async function deleteFolder(id: string): Promise<{ ok: true }> {
 
 export async function reorderFolders(ids: string[]): Promise<{ ok: true }> {
     return apiFetch('/folders/reorder', {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+    }) as Promise<{ ok: true }>;
+}
+
+// ---- saved searches ----
+
+export async function addSavedSearch(body: {
+    title: string;
+    query: string;
+    scopeKind: string;
+    scopeId?: string | undefined;
+}): Promise<SavedSearch> {
+    return apiFetch('/saved-searches', {
+        method: 'POST',
+        body: JSON.stringify(body),
+    }) as Promise<SavedSearch>;
+}
+
+export async function updateSavedSearch(
+    id: string,
+    body: { title?: string; query?: string; scopeKind?: string; scopeId?: string | null },
+): Promise<SavedSearch> {
+    return apiFetch(`/saved-searches/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+    }) as Promise<SavedSearch>;
+}
+
+export async function deleteSavedSearch(id: string): Promise<{ ok: true }> {
+    return apiFetch(`/saved-searches/${id}`, { method: 'DELETE' }) as Promise<{ ok: true }>;
+}
+
+export async function reorderSavedSearches(ids: string[]): Promise<{ ok: true }> {
+    return apiFetch('/saved-searches/reorder', {
         method: 'POST',
         body: JSON.stringify({ ids }),
     }) as Promise<{ ok: true }>;

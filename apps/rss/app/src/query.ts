@@ -1,7 +1,7 @@
 import { QueryClient, QueryObserver, type QueryObserverResult } from '@tanstack/query-core';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { getLibraryCounts, getLibraryFeeds, getLibraryFolders } from './services/api';
-import type { Article, Feed, Folder } from './types';
+import type { Article, Feed, Folder, SavedSearch } from './types';
 
 export const queryClient = new QueryClient({
     defaultOptions: {
@@ -18,7 +18,7 @@ export const queryClient = new QueryClient({
 });
 
 export const libraryKey = ['library'] as const;
-export type LibraryData = { folders: Folder[]; feeds: Feed[] };
+export type LibraryData = { folders: Folder[]; feeds: Feed[]; savedSearches: SavedSearch[] };
 
 /** Tab title with the unread count: "(176) RSS Reader". Zero means just the name. */
 export function unreadTitle(totalUnread: number): string {
@@ -70,14 +70,19 @@ const cachedLibrary = () => queryClient.getQueryData(libraryKey) as LibraryData 
 export async function fetchLibrary(): Promise<LibraryData> {
     const prev = cachedLibrary();
     const prevUnread = new Map((prev?.feeds ?? []).map((f) => [f.id, f.unread] as const));
+    const prevSavedUnread = new Map((prev?.savedSearches ?? []).map((s) => [s.id, s.unread] as const));
     // Last starter wins: a newer fetch or a mark (via bustCounts) supersedes
     // this one, so a late response can neither overwrite fresher badges nor
     // re-arm the counts throttle.
     const mySeq = ++fetchSeq;
-    const ctx: FetchCtx = { prev, prevUnread, superseded: () => mySeq !== fetchSeq };
+    const ctx: FetchCtx = { prev, prevUnread, prevSavedUnread, superseded: () => mySeq !== fetchSeq };
     const first = await fetchFoldersStage(ctx);
     if ('reuse' in first) return first.reuse;
-    const paintedFolders: LibraryData = { folders: first.folders, feeds: prev?.feeds ?? [] };
+    const paintedFolders: LibraryData = {
+        folders: first.folders,
+        feeds: prev?.feeds ?? [],
+        savedSearches: first.savedSearches.map((s) => ({ ...s, unread: prevSavedUnread.get(s.id) ?? 0 })),
+    };
     if (ctx.superseded()) return cachedLibrary() ?? paintedFolders;
     queryClient.setQueryData(libraryKey, paintedFolders);
     return fetchFeedsStage(ctx, first.folders, paintedFolders);
@@ -86,12 +91,16 @@ export async function fetchLibrary(): Promise<LibraryData> {
 interface FetchCtx {
     prev: LibraryData | undefined;
     prevUnread: Map<string, number>;
+    prevSavedUnread: Map<string, number>;
     superseded: () => boolean;
 }
 
-async function fetchFoldersStage(ctx: FetchCtx): Promise<{ folders: Folder[] } | { reuse: LibraryData }> {
+async function fetchFoldersStage(
+    ctx: FetchCtx,
+): Promise<{ folders: Folder[]; savedSearches: SavedSearch[] } | { reuse: LibraryData }> {
     try {
-        return { folders: (await getLibraryFolders()).folders };
+        const res = await getLibraryFolders();
+        return { folders: res.folders, savedSearches: res.savedSearches ?? [] };
     } catch (err) {
         if (!ctx.prev) throw err;
         return { reuse: ctx.prev };
@@ -106,6 +115,7 @@ async function fetchFeedsStage(ctx: FetchCtx, folders: Folder[], paintedFolders:
         const paintedFeeds: LibraryData = {
             folders,
             feeds: feeds.map((f) => ({ ...f, unread: ctx.prevUnread.get(f.id) ?? 0 })),
+            savedSearches: paintedFolders.savedSearches,
         };
         queryClient.setQueryData(libraryKey, paintedFeeds);
         if (!countsDue()) return paintedFeeds;
@@ -118,12 +128,16 @@ async function fetchFeedsStage(ctx: FetchCtx, folders: Folder[], paintedFolders:
 
 async function fetchCountsStage(ctx: FetchCtx, folders: Folder[], paintedFeeds: LibraryData): Promise<LibraryData> {
     try {
-        const { counts } = await getLibraryCounts();
+        const { counts, savedSearchCounts } = await getLibraryCounts();
         if (ctx.superseded()) return cachedLibrary() ?? paintedFeeds;
         lastCountsAt = Date.now();
         const merged: LibraryData = {
             folders,
             feeds: paintedFeeds.feeds.map((f) => ({ ...f, unread: counts[f.id] ?? 0 })),
+            savedSearches: paintedFeeds.savedSearches.map((s) => ({
+                ...s,
+                unread: savedSearchCounts?.[s.id] ?? 0,
+            })),
         };
         queryClient.setQueryData(libraryKey, merged);
         return merged;

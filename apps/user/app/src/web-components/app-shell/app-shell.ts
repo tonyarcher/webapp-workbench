@@ -399,10 +399,26 @@ export class AppShell extends LitElement {
         return { ok: response.ok, body: await response.json() };
     }
 
+    private onBrandClick = (): void => {
+        if (this.view === 'loading') return;
+        if (this.view === 'home') return;
+        const signal = new AbortController().signal;
+        void this.loadMe(signal)
+            .then((me) => {
+                if (!this.isConnected) return;
+                if (me) this.signedIn(me.username, me.totpEnabled, me.passkeyCount);
+                else this.view = 'form';
+            })
+            .catch(() => {
+                if (!this.isConnected) return;
+                this.view = 'form';
+            });
+    };
+
     override render(): TemplateResult {
         return html`
             <header class="bar">
-                <h1 class="brand">Accounts</h1>
+                <h1 class="brand"><button class="brand-btn" @click=${this.onBrandClick} aria-label="Go to main Accounts page">Accounts</button></h1>
                 <p class="status">API: ${this.apiLabel()}</p>
             </header>
             <main class="main">${this.body()}</main>

@@ -29,4 +29,5 @@ export function saveInterestingCount(folderId: string, count: number): void {
     } catch {
         // Storage unavailable (private mode, quota): the badge just stays stale.
     }
+    window.dispatchEvent(new CustomEvent('interesting-counts-changed', { detail: { folderId, count } }));
 }

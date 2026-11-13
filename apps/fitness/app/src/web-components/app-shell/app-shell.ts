@@ -58,7 +58,7 @@ export class AppShell extends LitElement {
         const view = this.view;
         return html`
             <nav class="nav">
-                <strong class="brand">Fitness</strong>
+                <button class="brand brand-btn" @click=${() => this.go('dashboard')} aria-label="Go to main Fitness page">Fitness</button>
                 ${NAV.map(
                     (v) => html`<button
                         class="nav-btn ${view === v ? 'active' : ''}"

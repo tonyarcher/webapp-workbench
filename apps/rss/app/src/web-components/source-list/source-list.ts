@@ -6,8 +6,10 @@ import { loadTodaySettings, type TodaySettings } from '../../services/today-sett
 import { loadInterestingShadow } from '../../services/interesting-settings';
 import { loadInterestingCount } from '../../services/interesting-counts';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
-import type { Feed, FeedSort, Folder, View } from '../../types';
+import type { Feed, FeedSort, Folder, SavedSearch, View } from '../../types';
 import '../feed-list-menu/feed-list-menu';
+import '../folder-menu/folder-menu';
+import '../saved-search-menu/saved-search-menu';
 import '../today-menu/today-menu';
 import styles from './source-list.css?inline';
 import {
@@ -43,6 +45,7 @@ import {
 interface Library {
     folders: Folder[];
     feeds: Feed[];
+    savedSearches: SavedSearch[];
 }
 
 @customElement('source-list')
@@ -72,7 +75,7 @@ export class SourceList extends LitElement {
     @state() feedListMenuOpen = false;
     @state() feedListMenuAnchor: MenuAnchor | null = null;
 
-    private dragging: { kind: 'folder' | 'feed'; id: string } | null = null;
+    private dragging: { kind: 'folder' | 'feed' | 'savedSearch'; id: string } | null = null;
     private dragTargetEl: HTMLElement | null = null;
     menuTriggerFeedId: string | null = null;
     @state() menuOpen = false;
@@ -82,6 +85,10 @@ export class SourceList extends LitElement {
     @state() folderMenuOpen = false;
     @state() private folderMenuFolderId: string | null = null;
     @state() folderMenuAnchor: MenuAnchor | null = null;
+    savedSearchMenuTriggerId: string | null = null;
+    @state() savedSearchMenuOpen = false;
+    @state() private savedSearchMenuId: string | null = null;
+    @state() savedSearchMenuAnchor: MenuAnchor | null = null;
     @state() todayMenuOpen = false;
     @state() todayMenuAnchor: MenuAnchor | null = null;
     @state() todaySettings: TodaySettings = loadTodaySettings();
@@ -93,22 +100,28 @@ export class SourceList extends LitElement {
     }));
 
     private get libraryData(): Library {
-        return this.library.data ?? { folders: [], feeds: [] };
+        return this.library.data ?? { folders: [], feeds: [], savedSearches: [] };
     }
 
     get totalUnread(): number {
         return this.libraryData.feeds.reduce((sum, f) => sum + f.unread, 0);
     }
 
+    private onInterestingCountsChanged = (): void => {
+        this.requestUpdate();
+    };
+
     override connectedCallback() {
         super.connectedCallback();
         this.style.setProperty('--sidebar-width', `${this.sidebarWidth}px`);
         this.addEventListener('mouseenter', this.onHoverEnter);
         this.addEventListener('mouseleave', this.onHoverLeave);
+        window.addEventListener('interesting-counts-changed', this.onInterestingCountsChanged);
     }
 
     override disconnectedCallback() {
         super.disconnectedCallback();
+        window.removeEventListener('interesting-counts-changed', this.onInterestingCountsChanged);
         this.removeEventListener('mouseenter', this.onHoverEnter);
         this.removeEventListener('mouseleave', this.onHoverLeave);
         if (this.hideTimer !== null) {
@@ -123,13 +136,14 @@ export class SourceList extends LitElement {
         const uncategorized = this.uncategorizedFeeds();
         const menuFeed = this.menuFeed();
         const folderMenuFolder = this.folderMenuFolder();
+        const savedSearchMenuSearch = this.savedSearchMenuSearch();
         return html`
       <div class="sidebar" role="complementary" aria-label="Feeds">
         ${renderHead(host)}
         ${renderNav(host, folders, uncategorized)}
         ${renderResizeHandle(host)}
       </div>
-      ${renderMenus(host, folders, menuFeed, folderMenuFolder)}
+      ${renderMenus(host, folders, menuFeed, folderMenuFolder, savedSearchMenuSearch)}
     `;
     }
 
@@ -269,6 +283,10 @@ export class SourceList extends LitElement {
         return this.libraryData.folders.find((f) => f.id === this.folderMenuFolderId);
     }
 
+    private savedSearchMenuSearch(): SavedSearch | undefined {
+        return this.libraryData.savedSearches.find((s) => s.id === this.savedSearchMenuId);
+    }
+
     select(view: View) {
         navigate(view);
     }
@@ -279,10 +297,14 @@ export class SourceList extends LitElement {
             this.view.kind === 'all' ||
             this.view.kind === 'brief' ||
             this.view.kind === 'today' ||
-            this.view.kind === 'frontpage' ||
-            this.view.kind === 'search'
+            this.view.kind === 'frontpage'
         )
             return true;
+        if (this.view.kind === 'search' && view.kind === 'search') {
+            if (view.savedId) return this.view.savedId === view.savedId;
+            if (this.view.savedId) return false;
+            return true;
+        }
         if (this.view.kind === 'folder' && view.kind === 'folder') return this.view.id === view.id;
         if (this.view.kind === 'interesting' && view.kind === 'interesting') return this.view.id === view.id;
         if (this.view.kind === 'feed' && view.kind === 'feed') return this.view.id === view.id;
@@ -293,7 +315,7 @@ export class SourceList extends LitElement {
         toggleFolderAction(this as never, id);
     }
 
-    onDragStart(e: DragEvent, kind: 'folder' | 'feed', id: string) {
+    onDragStart(e: DragEvent, kind: 'folder' | 'feed' | 'savedSearch', id: string) {
         handleDragStart(this as never, e, kind, id);
     }
 
@@ -312,8 +334,16 @@ export class SourceList extends LitElement {
         this.dragTargetEl = null;
     }
 
-    private dropTarget(e: DragEvent): { folderId: string | null } {
-        return { folderId: dropFolderId(this.dragging?.kind ?? null, e.target as HTMLElement, this.libraryData.feeds) };
+    private dropTarget(e: DragEvent): { folderId: string | null; savedSearchId: string | null } {
+        const savedSearchId =
+            this.dragging?.kind === 'savedSearch'
+                ? ((e.target as HTMLElement).closest<HTMLElement>('[data-saved-search-id]')?.dataset['savedSearchId'] ??
+                  null)
+                : null;
+        return {
+            folderId: dropFolderId(this.dragging?.kind ?? null, e.target as HTMLElement, this.libraryData.feeds),
+            savedSearchId,
+        };
     }
 
     async onDrop(e: DragEvent) {
@@ -321,7 +351,8 @@ export class SourceList extends LitElement {
         if (!this.dragging) return;
         const target = this.dropTarget(e);
         if (this.dragging.kind === 'folder') await this.applyFolderReorder(this.dragging.id, target);
-        else await this.applyFeedMove(this.dragging.id, target);
+        else if (this.dragging.kind === 'feed') await this.applyFeedMove(this.dragging.id, target);
+        else await this.applySavedSearchReorder(this.dragging.id, target.savedSearchId);
         this.endDrag();
     }
 
@@ -339,6 +370,11 @@ export class SourceList extends LitElement {
 
     private async applyFeedMove(feedId: string, target: { folderId: string | null }) {
         await handleFeedMove(this as never, feedId, target);
+    }
+
+    private async applySavedSearchReorder(searchId: string, targetId: string | null) {
+        const { handleSavedSearchReorder } = await import('./source-list-drag');
+        await handleSavedSearchReorder(this as never, searchId, targetId);
     }
 
     onRetryLibrary() {

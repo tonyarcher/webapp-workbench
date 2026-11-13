@@ -1,17 +1,17 @@
-import { moveFeed, reorderFolders } from '../../mutations';
+import { moveFeed, reorderFolders, reorderSavedSearches } from '../../mutations';
 import type { Feed } from '../../types';
 
 interface DragHost {
-    dragging: { kind: 'folder' | 'feed'; id: string } | null;
+    dragging: { kind: 'folder' | 'feed' | 'savedSearch'; id: string } | null;
     dragTargetEl: HTMLElement | null;
     collapsed: Record<string, boolean>;
     shadowRoot: ShadowRoot | null;
-    libraryData: { feeds: Feed[]; folders: { id: string }[] };
+    libraryData: { feeds: Feed[]; folders: { id: string }[]; savedSearches?: { id: string }[] };
     toggleFolder(id: string): void;
     clearDragOver(): void;
 }
 
-export function handleDragStart(host: DragHost, e: DragEvent, kind: 'folder' | 'feed', id: string) {
+export function handleDragStart(host: DragHost, e: DragEvent, kind: 'folder' | 'feed' | 'savedSearch', id: string) {
     host.dragging = { kind, id };
     if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = 'move';
@@ -26,7 +26,11 @@ export function handleDragOver(host: DragHost & { shadowRoot: ShadowRoot | null 
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
     const selector =
-        host.dragging.kind === 'feed' ? '[data-folder-id], [data-feed-id], [data-no-folder]' : '[data-folder-id]';
+        host.dragging.kind === 'feed'
+            ? '[data-folder-id], [data-feed-id], [data-no-folder]'
+            : host.dragging.kind === 'folder'
+              ? '[data-folder-id]'
+              : '[data-saved-search-id]';
     const target =
         (e.target as HTMLElement).closest<HTMLElement>(selector) ??
         (host.shadowRoot?.querySelector('.nav') as HTMLElement | null);
@@ -78,6 +82,24 @@ export async function handleFolderReorder(
         ids.push(folderId);
     }
     await reorderFolders(ids);
+}
+
+export async function handleSavedSearchReorder(
+    host: DragHost & { libraryData: { savedSearches?: { id: string }[] } },
+    searchId: string,
+    targetId: string | null,
+) {
+    const ids = (host.libraryData.savedSearches ?? []).map((s) => s.id);
+    const from = ids.indexOf(searchId);
+    if (from < 0) return;
+    ids.splice(from, 1);
+    if (targetId && targetId !== searchId) {
+        const to = ids.indexOf(targetId);
+        ids.splice(to < 0 ? ids.length : to, 0, searchId);
+    } else {
+        ids.push(searchId);
+    }
+    await reorderSavedSearches(ids);
 }
 
 export async function handleFeedMove(

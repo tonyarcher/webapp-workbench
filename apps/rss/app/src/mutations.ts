@@ -1,16 +1,20 @@
 import {
     addFeed as apiAddFeed,
+    addSavedSearch as apiAddSavedSearch,
     deleteFeed as apiDeleteFeed,
     deleteFolder as apiDeleteFolder,
+    deleteSavedSearch as apiDeleteSavedSearch,
     exportOpml as apiExportOpml,
     importOpmlXml as apiImportOpml,
     readAll as apiReadAll,
     readBefore as apiReadBefore,
     reorderFolders as apiReorderFolders,
+    reorderSavedSearches as apiReorderSavedSearches,
     recordAffinity,
     requestSync,
     setFeedFolders as apiSetFeedFolders,
     updateArticleState,
+    updateSavedSearch as apiUpdateSavedSearch,
 } from './services/api';
 import { createCoalescer } from './services/coalesce';
 import { allSyncKey } from './services/sync-keys';
@@ -89,7 +93,7 @@ export async function refreshFolder(folderId: string) {
 export async function importOpmlFile(xml: string) {
     const result = await apiImportOpml(xml);
     queryClient.setQueryData(libraryKey, (prev) => {
-        const prior = (prev ?? { folders: [], feeds: [] }) as LibraryData;
+        const prior = (prev ?? { folders: [], feeds: [], savedSearches: [] }) as LibraryData;
         const folders = [...prior.folders];
         for (const folder of result.folders) {
             if (!folders.some((f) => f.id === folder.id)) folders.push(folder);
@@ -98,7 +102,7 @@ export async function importOpmlFile(xml: string) {
         for (const feed of result.feeds) {
             if (!feeds.some((f) => f.id === feed.id)) feeds.push(feed);
         }
-        return { folders, feeds };
+        return { folders, feeds, savedSearches: prior.savedSearches };
     });
     await invalidateLibrary();
     return result;
@@ -155,6 +159,62 @@ export async function reorderFolders(folderIds: string[]) {
     }
     try {
         await apiReorderFolders(folderIds);
+    } finally {
+        await invalidateLibrary();
+    }
+}
+
+export async function createSavedSearch(title: string, query: string, scopeKind: string, scopeId?: string) {
+    const created = await apiAddSavedSearch({ title, query, scopeKind, ...(scopeId ? { scopeId } : {}) });
+    bustCounts();
+    await invalidateLibrary();
+    return created;
+}
+
+export async function renameSavedSearch(id: string, title: string) {
+    const prev = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
+    if (prev) {
+        queryClient.setQueryData(libraryKey, {
+            ...prev,
+            savedSearches: prev.savedSearches.map((s) => (s.id === id ? { ...s, title } : s)),
+        });
+    }
+    try {
+        await apiUpdateSavedSearch(id, { title });
+    } finally {
+        await invalidateLibrary();
+    }
+}
+
+export async function removeSavedSearch(id: string) {
+    const prev = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
+    if (prev) {
+        queryClient.setQueryData(libraryKey, {
+            ...prev,
+            savedSearches: prev.savedSearches.filter((s) => s.id !== id),
+        });
+    }
+    try {
+        await apiDeleteSavedSearch(id);
+    } finally {
+        bustCounts();
+        await invalidateLibrary();
+    }
+}
+
+export async function reorderSavedSearches(ids: string[]) {
+    const prev = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
+    if (prev) {
+        const order = new Map(ids.map((id, i) => [id, i] as const));
+        queryClient.setQueryData(libraryKey, {
+            ...prev,
+            savedSearches: [...prev.savedSearches].sort(
+                (a, b) => (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+            ),
+        });
+    }
+    try {
+        await apiReorderSavedSearches(ids);
     } finally {
         await invalidateLibrary();
     }

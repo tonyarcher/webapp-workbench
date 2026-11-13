@@ -3,20 +3,27 @@ import {
     deleteFolder,
     refreshFeed,
     refreshFolder,
+    removeSavedSearch,
+    renameSavedSearch,
     reorderFolders,
     setFeedFolderMembership,
     syncAllFeeds,
 } from '../../mutations';
 import { pruneTodaySettings, saveTodaySettings, type TodaySettings } from '../../services/today-settings';
 import { saveInterestingShadow } from '../../services/interesting-settings';
-import type { Feed, FeedSort, Folder } from '../../types';
+import type { Feed, FeedSort, Folder, SavedSearch } from '../../types';
 import type { MenuHost } from './source-list-menus';
-import { closeFeedListMenuAction, closeFolderMenuAction, closeMenuAction } from './source-list-menus';
+import {
+    closeFeedListMenuAction,
+    closeFolderMenuAction,
+    closeMenuAction,
+    closeSavedSearchMenuAction,
+} from './source-list-menus';
 import { saveAutoHide, saveCollapsed, saveFeedSort, saveHideReadByFolder } from './source-list-settings';
 
 /** Menu command state the sidebar actions read and update on the component. */
 export interface ActionHost extends MenuHost {
-    libraryData: { folders: Folder[]; feeds: Feed[] };
+    libraryData: { folders: Folder[]; feeds: Feed[]; savedSearches: SavedSearch[] };
     collapsed: Record<string, boolean>;
     feedSort: FeedSort;
     hideReadByFolder: Record<string, boolean>;
@@ -24,6 +31,7 @@ export interface ActionHost extends MenuHost {
     todaySettings: TodaySettings;
     menuFeed(): Feed | undefined;
     folderMenuFolder(): Folder | undefined;
+    savedSearchMenuSearch(): SavedSearch | undefined;
 }
 
 async function doRefresh(feed: Feed) {
@@ -158,4 +166,22 @@ export function todaySettingsChangeAction(host: ActionHost, e: Event): void {
     );
     saveTodaySettings(host.todaySettings);
     window.dispatchEvent(new CustomEvent('today-settings-changed'));
+}
+
+export async function savedSearchMenuRenameAction(host: ActionHost): Promise<void> {
+    const search = host.savedSearchMenuSearch();
+    closeSavedSearchMenuAction(host);
+    if (!search) return;
+    const title = window.prompt('Rename saved search', search.title)?.trim();
+    if (!title || title === search.title) return;
+    await renameSavedSearch(search.id, title);
+}
+
+export async function savedSearchMenuDeleteAction(host: ActionHost): Promise<void> {
+    const search = host.savedSearchMenuSearch();
+    closeSavedSearchMenuAction(host);
+    if (!search) return;
+    if (confirm(`Delete saved search "${search.title}"?`)) {
+        await removeSavedSearch(search.id);
+    }
 }

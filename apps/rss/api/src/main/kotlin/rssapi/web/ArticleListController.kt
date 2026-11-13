@@ -7,10 +7,12 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import rssapi.domain.ArticleSort
+import rssapi.domain.ParsedSearchQuery
 import rssapi.domain.clampPageLimit
 import rssapi.domain.decodeCursor
 import rssapi.domain.parseArticleScope
 import rssapi.domain.parseArticleSort
+import rssapi.domain.parseSearchQueryText
 import rssapi.persist.ArticleRepo
 import rssapi.persist.ArticleStateId
 import rssapi.persist.ArticleStateRepo
@@ -40,7 +42,8 @@ class ArticleListController(
         val articleSort = parseArticleSort(sort)
         val pageLimit = clampPageLimit(limit?.toDoubleOrNull())
         val queryText = q?.trim()?.takeIf { it.isNotEmpty() }
-        if (queryText != null && searchTokens(queryText).isEmpty()) {
+        val parsedSearch = queryText?.let { parseSearchQueryText(it) }
+        if (parsedSearch != null && parsedSearch.tokens.isEmpty() && !parsedSearch.hasAnyOperator()) {
             return ArticlePageJson(emptyList(), null)
         }
         val spec = articleSpec(
@@ -48,16 +51,16 @@ class ArticleListController(
             parsedScope,
             unreadOnly == "1",
             articleSort,
-            if (queryText == null) cursor?.let { decodeCursor(it) } else null,
+            if (parsedSearch == null) cursor?.let { decodeCursor(it) } else null,
             sinceMs,
-            queryText,
+            parsedSearch,
         )
-        if (queryText != null) {
+        if (parsedSearch != null) {
             val window = articles.findAll(
                 spec,
                 PageRequest.of(0, minOf(pageLimit * 4, 400), sortFor(ArticleSort.NEWEST)),
             ).content
-            val ranked = rankSearchResults(window, queryText).take(pageLimit)
+            val ranked = rankSearchResults(window, parsedSearch).take(pageLimit)
             val stateMap = states.findByUserIdAndArticleIdIn(user.id, ranked.map { it.id }).associateBy { it.articleId }
             return ArticlePageJson(ranked.map { it.toJson(stateMap[it.id]) }, null)
         }
@@ -80,18 +83,22 @@ private fun sortFor(sort: ArticleSort): Sort = when (sort) {
     ArticleSort.NEWEST -> Sort.by("publishedAt").descending().and(Sort.by("id").descending())
 }
 
-private fun searchTokens(q: String): List<String> = q.trim().lowercase()
-    .split(Regex("[^a-z0-9]+"))
-    .filter { it.length >= 2 }
-
 private fun fieldHits(field: String?, token: String): Boolean {
     val f = field?.lowercase() ?: return false
     return f.contains(token)
 }
 
-private fun rankSearchResults(rows: List<rssapi.persist.ArticleEntity>, q: String): List<rssapi.persist.ArticleEntity> {
-    val tokens = searchTokens(q)
-    if (tokens.isEmpty()) return rows
+private fun rankSearchResults(
+    rows: List<rssapi.persist.ArticleEntity>,
+    search: ParsedSearchQuery,
+): List<rssapi.persist.ArticleEntity> {
+    val tokens = search.tokens
+    if (tokens.isEmpty()) {
+        return rows.sortedWith(
+            compareByDescending<rssapi.persist.ArticleEntity> { it.publishedAt }
+                .thenByDescending { it.id },
+        )
+    }
     return rows.map { article ->
         var score = 0
         for (token in tokens) {

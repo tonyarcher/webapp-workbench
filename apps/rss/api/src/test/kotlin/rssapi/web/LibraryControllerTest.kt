@@ -15,8 +15,11 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
+import org.springframework.test.web.servlet.put
 import rssapi.persist.FolderEntity
 import rssapi.persist.FolderRepo
+import rssapi.persist.SavedSearchEntity
+import rssapi.persist.SavedSearchRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
 import java.util.UUID
@@ -42,6 +45,9 @@ class LibraryControllerTest {
 
     @MockitoBean
     lateinit var folders: FolderRepo
+
+    @MockitoBean
+    lateinit var savedSearches: SavedSearchRepo
 
     @MockitoBean
     lateinit var service: LibraryService
@@ -90,6 +96,7 @@ class LibraryControllerTest {
         val uid = UUID.randomUUID()
         stubAuth(uid)
         whenever(service.folders(uid)).thenReturn(listOf(folderJson(UUID.randomUUID())))
+        whenever(service.savedSearches(uid)).thenReturn(emptyList())
 
         mvc.get("/library/folders") {
             header("X-Api-Version", "1")
@@ -97,6 +104,7 @@ class LibraryControllerTest {
         }.andExpect {
             status { isOk() }
             jsonPath("$.folders.length()") { value(1) }
+            jsonPath("$.savedSearches.length()") { value(0) }
         }
     }
 
@@ -121,7 +129,7 @@ class LibraryControllerTest {
         val uid = UUID.randomUUID()
         val feedA = UUID.randomUUID()
         stubAuth(uid)
-        whenever(service.counts(uid)).thenReturn(mapOf(feedA.toString() to 7))
+        whenever(service.counts(uid)).thenReturn(LibraryCountsJson(mapOf(feedA.toString() to 7), emptyMap()))
 
         mvc.get("/library/counts") {
             header("X-Api-Version", "1")
@@ -253,5 +261,84 @@ class LibraryControllerTest {
         }.andExpect {
             status { isBadRequest() }
         }
+    }
+
+    @Test
+    fun reorderSavedSearches() {
+        val uid = UUID.randomUUID()
+        val a = UUID.randomUUID()
+        val b = UUID.randomUUID()
+        stubAuth(uid)
+        val rows = listOf(
+            SavedSearchEntity(id = a, userId = uid, title = "A", query = "a", sortOrder = 0),
+            SavedSearchEntity(id = b, userId = uid, title = "B", query = "b", sortOrder = 1),
+        )
+        whenever(savedSearches.findByUserIdAndIdIn(uid, listOf(b, a))).thenReturn(rows)
+
+        mvc.post("/saved-searches/reorder") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"ids":["$b","$a"]}"""
+        }.andExpect {
+            status { isOk() }
+        }
+        verify(savedSearches).saveAll(
+            org.mockito.kotlin.check<List<SavedSearchEntity>> {
+                assert(it.first { e -> e.id == b }.sortOrder == 0)
+                assert(it.first { e -> e.id == a }.sortOrder == 1)
+            },
+        )
+    }
+
+    @Test
+    fun createSavedSearch() {
+        val uid = UUID.randomUUID()
+        val id = UUID.randomUUID()
+        stubAuth(uid)
+        whenever(savedSearches.save(any<SavedSearchEntity>())).thenAnswer { inv ->
+            (inv.arguments[0] as SavedSearchEntity).apply { this.id = id }
+        }
+
+        mvc.post("/saved-searches") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"title":"Batteries","query":"is:unread battery","scopeKind":"all"}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.id") { value(id.toString()) }
+            jsonPath("$.title") { value("Batteries") }
+            jsonPath("$.query") { value("is:unread battery") }
+        }
+    }
+
+    @Test
+    fun updateAndDeleteSavedSearch() {
+        val uid = UUID.randomUUID()
+        val id = UUID.randomUUID()
+        stubAuth(uid)
+        val row = SavedSearchEntity(id = id, userId = uid, title = "Old", query = "q")
+        whenever(savedSearches.findByUserIdAndId(uid, id)).thenReturn(row)
+        whenever(savedSearches.save(any<SavedSearchEntity>())).thenAnswer { it.arguments[0] }
+
+        mvc.put("/saved-searches/$id") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"title":"New","query":"is:starred"}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.title") { value("New") }
+            jsonPath("$.query") { value("is:starred") }
+        }
+
+        mvc.delete("/saved-searches/$id") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }.andExpect {
+            status { isOk() }
+        }
+        verify(savedSearches).delete(row)
     }
 }

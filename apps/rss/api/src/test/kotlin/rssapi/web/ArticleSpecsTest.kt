@@ -8,6 +8,7 @@ import org.mockito.kotlin.mock
 import rssapi.domain.ArticleScope
 import rssapi.domain.ArticleSort
 import rssapi.domain.CursorPayload
+import rssapi.domain.parseSearchQueryText
 import rssapi.persist.ArticleEntity
 import java.util.UUID
 import kotlin.test.Test
@@ -73,7 +74,31 @@ class ArticleSpecsTest {
 
     @Test
     fun searchQueryBuilds() {
-        val spec = articleSpec(userId, ArticleScope.All, false, ArticleSort.NEWEST, null, null, "battery grid")
+        val spec = articleSpec(
+            userId,
+            ArticleScope.All,
+            false,
+            ArticleSort.NEWEST,
+            null,
+            null,
+            parseSearchQueryText("battery grid"),
+        )
+        assertNotNull(spec.toPredicate(root, query, cb))
+    }
+
+    @Test
+    fun searchOperatorQueryBuilds() {
+        val spec = articleSpec(
+            userId,
+            ArticleScope.All,
+            false,
+            ArticleSort.NEWEST,
+            null,
+            null,
+            parseSearchQueryText(
+                "author:ada is:starred after:2026-01-01 before:2026-12-31 feed:grid folder:news has:video min:readtime:5 battery",
+            ),
+        )
         assertNotNull(spec.toPredicate(root, query, cb))
     }
 }

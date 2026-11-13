@@ -2,6 +2,7 @@ package rssapi.web
 
 import rssapi.persist.FeedEntity
 import rssapi.persist.FolderEntity
+import rssapi.persist.SavedSearchEntity
 
 fun FolderEntity.toJson(): FolderJson = FolderJson(
     id = id.toString(),
@@ -23,3 +24,14 @@ fun FeedEntity.toJson(folderIds: List<String>, unread: Int, lastFetchedAt: Long?
         lastFetchedAt = lastFetchedAt,
         lastError = lastError,
     )
+
+fun SavedSearchEntity.toJson(unread: Int = 0): SavedSearchJson = SavedSearchJson(
+    id = id.toString(),
+    title = title,
+    query = query,
+    scopeKind = scopeKind,
+    scopeId = scopeId?.toString(),
+    sortOrder = sortOrder,
+    createdAt = createdAt.toEpochMilli(),
+    unread = unread,
+)

@@ -172,3 +172,65 @@
 .recent li {
     border-bottom: 1px solid var(--border-subtle, var(--border));
 }
+
+.cheatsheet {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    max-width: 720px;
+}
+
+.cheatsheet summary {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    list-style: revert;
+}
+
+.cheatsheet p {
+    margin: 0 0 10px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.chip {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.chip:hover,
+.chip:focus-visible {
+    border-color: var(--primary, #2563eb);
+}
+
+.chip-val {
+    color: var(--text-muted);
+    margin-left: 2px;
+}
+
+.op-help {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text-muted);
+    font-size: 13px;
+    display: grid;
+    gap: 4px;
+}
+
+.op-help code {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}

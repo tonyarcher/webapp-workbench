@@ -5,6 +5,17 @@ export interface Folder {
     sortOrder?: number | undefined;
 }
 
+export interface SavedSearch {
+    id: string;
+    title: string;
+    query: string;
+    scopeKind: SearchScopeKind;
+    scopeId?: string | undefined;
+    sortOrder?: number | undefined;
+    createdAt: number;
+    unread: number;
+}
+
 export interface Feed {
     id: string;
     title: string;
@@ -63,7 +74,13 @@ export type View =
     | { kind: 'brief' }
     | { kind: 'today' }
     | { kind: 'frontpage' }
-    | { kind: 'search'; scope?: SearchScopeKind | undefined; id?: string | undefined; q?: string | undefined };
+    | {
+          kind: 'search';
+          scope?: SearchScopeKind | undefined;
+          id?: string | undefined;
+          q?: string | undefined;
+          savedId?: string | undefined;
+      };
 
 export interface ParsedItem {
     guid: string;

@@ -29,12 +29,14 @@ export function parsePath(pathname: string, search = ''): View {
         const scope = params.get('scope');
         const id = params.get('id') ?? undefined;
         const q = params.get('q') ?? undefined;
+        const savedId = params.get('saved') ?? undefined;
         const scopeKind = scope === 'folder' || scope === 'feed' || scope === 'all' ? scope : undefined;
         return {
             kind: 'search',
             ...(scopeKind ? { scope: scopeKind } : {}),
             ...(id ? { id } : {}),
             ...(q ? { q } : {}),
+            ...(savedId ? { savedId } : {}),
         };
     }
     return { kind: 'all' };
@@ -61,6 +63,7 @@ export function viewToPath(view: View): string {
             if (view.scope) params.set('scope', view.scope);
             if (view.id) params.set('id', view.id);
             if (view.q) params.set('q', view.q);
+            if (view.savedId) params.set('saved', view.savedId);
             const qs = params.toString();
             return qs ? `/search?${qs}` : '/search';
         }

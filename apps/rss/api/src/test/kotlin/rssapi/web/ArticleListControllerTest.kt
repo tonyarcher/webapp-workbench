@@ -154,4 +154,50 @@ class ArticleListControllerTest {
         val body = res.response.contentAsString
         kotlin.test.assertTrue(body.contains("\"items\":[]"))
     }
+
+    @Test
+    fun searchOperatorsAreAccepted() {
+        val uid = UUID.randomUUID()
+        auth(uid)
+        val entity = ArticleEntity(
+            id = "a2",
+            feedId = UUID.randomUUID(),
+            guid = "g2",
+            title = "Operator match",
+            author = "Ada",
+            summary = "video grid",
+            publishedAt = java.time.Instant.ofEpochMilli(1_735_689_600_000),
+            fetchedAt = java.time.Instant.ofEpochMilli(1_735_689_600_000),
+        )
+        whenever(
+            articles.findAll(
+                any<org.springframework.data.jpa.domain.Specification<ArticleEntity>>(),
+                any<org.springframework.data.domain.Pageable>(),
+            ),
+        ).thenReturn(PageImpl(listOf(entity)))
+        whenever(states.findByUserIdAndArticleIdIn(any<UUID>(), any<List<String>>())).thenReturn(emptyList())
+
+        val queries = listOf(
+            "author:ada",
+            "is:starred",
+            "is:unread",
+            "is:read",
+            "after:2025-01-01",
+            "before:2025-12-31",
+            "has:video",
+            "min:readtime:5",
+            "feed:grid",
+            "folder:tech",
+            "author:ada is:unread after:2025-01-01",
+        )
+        for (q in queries) {
+            val res = mvc.get("/articles") {
+                param("q", q)
+                header("X-Api-Version", "1")
+                header("Authorization", "Bearer t")
+            }.andReturn()
+            assertEquals(200, res.response.status, "failed for q=$q")
+            kotlin.test.assertTrue(res.response.contentAsString.contains("\"items\""), "missing items for q=$q")
+        }
+    }
 }

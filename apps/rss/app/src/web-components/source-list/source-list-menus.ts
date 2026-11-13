@@ -1,5 +1,5 @@
 import type { MenuAnchor } from '../feed-menu/feed-menu';
-import type { Feed, Folder } from '../../types';
+import type { Feed, Folder, SavedSearch } from '../../types';
 
 /** Menu open/close/anchor state the menu actions read and update. */
 export interface MenuHost {
@@ -11,6 +11,10 @@ export interface MenuHost {
     folderMenuOpen: boolean;
     folderMenuFolderId: string | null;
     folderMenuAnchor: MenuAnchor | null;
+    savedSearchMenuTriggerId: string | null;
+    savedSearchMenuOpen: boolean;
+    savedSearchMenuId: string | null;
+    savedSearchMenuAnchor: MenuAnchor | null;
     feedListMenuTriggerId: string | null;
     feedListMenuOpen: boolean;
     feedListMenuAnchor: MenuAnchor | null;
@@ -56,6 +60,26 @@ export function openFolderMenuAction(host: MenuHost, folder: Folder, e: MouseEve
 export function closeFolderMenuAction(host: MenuHost): void {
     host.folderMenuOpen = false;
     host.folderMenuTriggerId = null;
+}
+
+export function openSavedSearchMenuAction(host: MenuHost, search: SavedSearch, e: MouseEvent): void {
+    e.stopPropagation();
+    const btn = e.currentTarget as HTMLElement;
+    if (host.savedSearchMenuOpen && host.savedSearchMenuTriggerId === search.id) {
+        host.savedSearchMenuOpen = false;
+        host.savedSearchMenuTriggerId = null;
+        return;
+    }
+    const rect = btn.getBoundingClientRect();
+    host.savedSearchMenuTriggerId = search.id;
+    host.savedSearchMenuAnchor = { x: rect.left, y: rect.bottom };
+    host.savedSearchMenuId = search.id;
+    host.savedSearchMenuOpen = true;
+}
+
+export function closeSavedSearchMenuAction(host: MenuHost): void {
+    host.savedSearchMenuOpen = false;
+    host.savedSearchMenuTriggerId = null;
 }
 
 export function openFeedListMenuAction(host: MenuHost, e: MouseEvent): void {

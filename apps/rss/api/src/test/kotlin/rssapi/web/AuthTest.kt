@@ -23,6 +23,7 @@ import rssapi.persist.FeedRepo
 import rssapi.persist.FeedSyncRepo
 import rssapi.persist.FolderFeedRepo
 import rssapi.persist.FolderRepo
+import rssapi.persist.SavedSearchRepo
 import rssapi.persist.SubscriptionEntity
 import rssapi.persist.SubscriptionRepo
 import rssapi.persist.UserEntity
@@ -68,6 +69,9 @@ class AuthTest {
 
     @MockitoBean
     lateinit var subs: SubscriptionRepo
+
+    @MockitoBean
+    lateinit var savedSearches: SavedSearchRepo
 
     @MockitoBean
     lateinit var service: LibraryService
