@@ -1,6 +1,6 @@
 import { fetchArticlesPage } from '../../services/api';
 import { capItems, feedWindow, perFeedLimit } from '../../services/pagination';
-import { filterMutedArticles, loadMuteRules } from '../../services/mute-rules';
+import { filterMutedArticles, loadMuteRules, type FeedFolderLookup } from '../../services/mute-rules';
 import { interleaveArticles } from '../../util';
 import type { Article, ArticleSort, Feed, View } from '../../types';
 
@@ -14,6 +14,12 @@ function mergeSorted(current: Article[], incoming: Article[], sort: ArticleSort)
               ? (a: Article, b: Article) => a.published - b.published || a.id.localeCompare(b.id)
               : (a: Article, b: Article) => b.published - a.published || a.id.localeCompare(b.id);
     return Array.from(seen.values()).sort(cmp);
+}
+
+function lookupFromFeeds(feeds: readonly Feed[] | undefined): FeedFolderLookup {
+    const out: Record<string, readonly string[]> = {};
+    for (const feed of feeds ?? []) out[feed.id] = feed.folderIds;
+    return out;
 }
 
 interface FeedFetchContext {
@@ -64,10 +70,11 @@ function pickKept(
     existingIds: Set<string>,
     sort: ArticleSort,
     pageSize: number,
+    lookup: FeedFolderLookup,
 ): Article[] {
     const rules = loadMuteRules();
     const visiblePages = windowFeeds.map((f) =>
-        filterMutedArticles(pages.get(f.id) ?? [], rules).filter((a) => !existingIds.has(a.id)),
+        filterMutedArticles(pages.get(f.id) ?? [], rules, lookup).filter((a) => !existingIds.has(a.id)),
     );
     const picked =
         sort === 'hot'
@@ -92,13 +99,18 @@ export async function fetchSinglePage(
     sort: ArticleSort,
     pageSize: number,
     items: Article[],
+    lookup: FeedFolderLookup = {},
 ): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string | undefined }> {
     const key = feedId ?? 'all';
     const cursor = cursors.get(key);
     const scope = feedId ? `feed:${feedId}` : undefined;
     const res = await fetchArticlesPage({ scope, unreadOnly: unreadOnly || hideRead, sort, limit: pageSize, cursor });
     const next = res.nextCursor;
-    const nextItems = filterMutedArticles(capItems(mergeSorted(items, res.items, sort), pageSize), loadMuteRules());
+    const nextItems = filterMutedArticles(
+        capItems(mergeSorted(items, res.items, sort), pageSize),
+        loadMuteRules(),
+        lookup,
+    );
     return { items: nextItems, hasMore: next !== undefined, nextCursor: next };
 }
 
@@ -110,6 +122,7 @@ export async function fetchFolderPage(
     sort: ArticleSort,
     pageSize: number,
     items: Article[],
+    lookup: FeedFolderLookup = {},
 ): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string | undefined }> {
     const cursor = cursors.get(folderKey);
     const res = await fetchArticlesPage({
@@ -120,7 +133,11 @@ export async function fetchFolderPage(
         cursor,
     });
     const next = res.nextCursor;
-    const nextItems = filterMutedArticles(capItems(mergeSorted(items, res.items, sort), pageSize), loadMuteRules());
+    const nextItems = filterMutedArticles(
+        capItems(mergeSorted(items, res.items, sort), pageSize),
+        loadMuteRules(),
+        lookup,
+    );
     return { items: nextItems, hasMore: next !== undefined, nextCursor: next };
 }
 
@@ -132,6 +149,7 @@ async function refillKept(
     pageSize: number,
     kept: Article[],
     existingIds: Set<string>,
+    lookup: FeedFolderLookup,
 ): Promise<Article[] | null> {
     let next = kept;
     while (next.length < pageSize) {
@@ -141,7 +159,7 @@ async function refillKept(
         const refillPerFeed = perFeedLimit(pageSize - next.length, more.length);
         await fetchFeeds(more, refillPerFeed, ctx, pages, lastHasMore);
         if (ctx.gen !== ctx.currentGen()) return null;
-        const filled = pickKept(windowFeeds, pages, existingIds, ctx.sort, pageSize);
+        const filled = pickKept(windowFeeds, pages, existingIds, ctx.sort, pageSize, lookup);
         const afterCount = Array.from(pages.values()).reduce((sum, items) => sum + items.length, 0);
         if (filled.length === next.length && afterCount === beforeCount) break;
         next = filled;
@@ -177,6 +195,7 @@ export async function fetchFeedSetWindow(
     existingItems: Article[],
     gen: number,
     currentGen: () => number,
+    lookup: FeedFolderLookup = {},
 ): Promise<{ kept: Article[]; hasMoreEntries: Array<[string, boolean]>; items: Article[] } | null> {
     const pages = new Map<string, Article[]>();
     const lastHasMore = new Map<string, boolean>();
@@ -185,8 +204,8 @@ export async function fetchFeedSetWindow(
     await fetchFeeds(windowFeeds, perFeed, ctx, pages, lastHasMore);
     if (gen !== currentGen()) return null;
     const existingIds = new Set(existingItems.map((a) => a.id));
-    const initial = pickKept(windowFeeds, pages, existingIds, sort, pageSize);
-    const kept = await refillKept(windowFeeds, ctx, pages, lastHasMore, pageSize, initial, existingIds);
+    const initial = pickKept(windowFeeds, pages, existingIds, sort, pageSize, lookup);
+    const kept = await refillKept(windowFeeds, ctx, pages, lastHasMore, pageSize, initial, existingIds, lookup);
     if (kept === null) return null;
     return finishFeedSetWindow(windowFeeds, lastHasMore, kept, existingItems, sort, pageSize);
 }
@@ -217,6 +236,7 @@ export interface PageHost {
 
 export async function loadSinglePageAction(host: PageHost, gen: number): Promise<void> {
     const feedId = host.view.kind === 'feed' ? host.view.id : undefined;
+    const lookup = lookupFromFeeds(host.library.data?.feeds);
     if (host.view.kind === 'all' && host.sort === 'hot') {
         await loadFeedSetPageAction(host, host.library.data?.feeds ?? [], gen);
         return;
@@ -229,6 +249,7 @@ export async function loadSinglePageAction(host: PageHost, gen: number): Promise
         host.sort,
         host.pageSize,
         host.items,
+        lookup,
     );
     if (gen !== host.gen) return;
     host.hasMoreSingle = res.hasMore;
@@ -239,6 +260,7 @@ export async function loadSinglePageAction(host: PageHost, gen: number): Promise
 export async function loadFolderPageAction(host: PageHost, gen: number): Promise<void> {
     if (host.view.kind !== 'folder' && host.view.kind !== 'interesting') return;
     const key = `folder:${host.view.id}`;
+    const lookup = lookupFromFeeds(host.library.data?.feeds);
     const res = await fetchFolderPage(
         key,
         host.cursors,
@@ -247,6 +269,7 @@ export async function loadFolderPageAction(host: PageHost, gen: number): Promise
         host.sort,
         host.pageSize,
         host.items,
+        lookup,
     );
     if (gen !== host.gen) return;
     host.hasMoreSingle = res.hasMore;
@@ -258,7 +281,7 @@ function applyHasMoreEntries(host: PageHost, entries: Array<[string, boolean]>):
     for (const [id, hasMore] of entries) host.feedHasMore.set(id, hasMore);
 }
 
-function fetchWindowForHost(host: PageHost, windowFeeds: Feed[], gen: number) {
+function fetchWindowForHost(host: PageHost, windowFeeds: Feed[], gen: number, lookup: FeedFolderLookup) {
     return fetchFeedSetWindow(
         windowFeeds,
         host.cursors,
@@ -270,15 +293,16 @@ function fetchWindowForHost(host: PageHost, windowFeeds: Feed[], gen: number) {
         host.items,
         gen,
         () => host.gen,
+        lookup,
     );
 }
 
-async function stepFeedSetPage(host: PageHost, feeds: Feed[], gen: number): Promise<boolean> {
+async function stepFeedSetPage(host: PageHost, feeds: Feed[], gen: number, lookup: FeedFolderLookup): Promise<boolean> {
     const active = getActiveFeeds(feeds, host.feedHasMore);
     if (!active.length) return true;
     const windowFeeds = nextWindow(active, host.feedWindowOffset, host.pageSize);
     host.feedWindowOffset += windowFeeds.length;
-    const result = await fetchWindowForHost(host, windowFeeds, gen);
+    const result = await fetchWindowForHost(host, windowFeeds, gen, lookup);
     if (!result || gen !== host.gen) return true;
     applyHasMoreEntries(host, result.hasMoreEntries);
     if (result.kept.length) {
@@ -289,7 +313,8 @@ async function stepFeedSetPage(host: PageHost, feeds: Feed[], gen: number): Prom
 }
 
 export async function loadFeedSetPageAction(host: PageHost, feeds: Feed[], gen: number): Promise<void> {
+    const lookup = lookupFromFeeds(feeds);
     while (true) {
-        if (await stepFeedSetPage(host, feeds, gen)) return;
+        if (await stepFeedSetPage(host, feeds, gen, lookup)) return;
     }
 }

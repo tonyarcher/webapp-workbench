@@ -11,14 +11,6 @@ import {
     saveMastodonHost,
     saveShareTargets,
 } from '../../services/share-settings';
-import {
-    createMuteRuleId,
-    loadMuteRules,
-    parseMuteTerms,
-    saveMuteRules,
-    type MuteMatch,
-    type MuteRule,
-} from '../../services/mute-rules';
 import { migrateLibrary } from '../../services/api';
 import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
 import { invalidateArticles, invalidateLibrary } from '../../query';
@@ -43,11 +35,6 @@ export class SettingsDialog extends LitElement {
     @state() private shareStatus = '';
     @state() private shareStatusError = false;
     @state() private shareTargets: ShareTarget[] = [];
-    @state() private muteRules: MuteRule[] = [];
-    @state() private muteTerms = '';
-    @state() private muteMatch: MuteMatch = 'either';
-    @state() private muteStatus = '';
-    @state() private muteStatusError = false;
 
     private dialogEl: HTMLDialogElement | null = null;
 
@@ -57,11 +44,6 @@ export class SettingsDialog extends LitElement {
                 this.theme = getTheme();
                 this.mastodonHost = loadMastodonHost();
                 this.shareTargets = loadShareTargets();
-                this.muteRules = loadMuteRules();
-                this.muteTerms = '';
-                this.muteMatch = 'either';
-                this.muteStatus = '';
-                this.muteStatusError = false;
                 this.shareStatus = '';
                 this.shareStatusError = false;
                 this.dialogEl?.showModal();
@@ -106,86 +88,6 @@ export class SettingsDialog extends LitElement {
         <button class="btn" @click=${this.cancelAdd}>Cancel</button>
       </div>
     `;
-    }
-
-    private renderMuteSection() {
-        return html`
-      <div class="section">
-        <h3>Mute filters</h3>
-        <p class="hint">Hide articles matching any muted word or phrase. Match in title, article body, or either.</p>
-        <div class="mute-form">
-          <label class="field-label" for="mute-terms">Words or phrases</label>
-          <textarea
-            id="mute-terms"
-            rows="2"
-            placeholder="keyword, another phrase"
-            .value=${this.muteTerms}
-            @input=${(e: Event) => (this.muteTerms = (e.target as HTMLTextAreaElement).value)}
-          ></textarea>
-          <div class="mute-row">
-            <label class="mute-match">
-              <span>Match in</span>
-              <select .value=${this.muteMatch} @change=${(e: Event) => (this.muteMatch = (e.target as HTMLSelectElement).value as MuteMatch)}>
-                <option value="either">Title or body</option>
-                <option value="title">Title</option>
-                <option value="body">Body</option>
-              </select>
-            </label>
-            <button class="btn primary" @click=${this.addMuteRule}>Add filter</button>
-          </div>
-        </div>
-        ${this.muteStatus ? html`<div class="status ${this.muteStatusError ? 'error' : ''}">${this.muteStatus}</div>` : ''}
-        ${
-            this.muteRules.length
-                ? html`<ul class="mute-list">${this.muteRules.map((rule) => this.renderMuteRule(rule))}</ul>`
-                : html`<p class="hint">No mute filters yet.</p>`
-        }
-      </div>
-    `;
-    }
-
-    private renderMuteRule(rule: MuteRule) {
-        const matchLabel = rule.match === 'title' ? 'Title' : rule.match === 'body' ? 'Body' : 'Title or body';
-        return html`
-      <li class="mute-item ${rule.enabled ? '' : 'disabled'}">
-        <label class="mute-toggle">
-          <input type="checkbox" .checked=${rule.enabled} @change=${() => this.toggleMuteRule(rule.id)} />
-          <span class="mute-terms">${rule.terms.join(', ')}</span>
-        </label>
-        <span class="mute-meta">${matchLabel}</span>
-        <button class="btn" @click=${() => this.removeMuteRule(rule.id)}>Remove</button>
-      </li>
-    `;
-    }
-
-    private commitMuteRules(next: MuteRule[], status = '') {
-        saveMuteRules(next);
-        this.muteRules = next;
-        this.muteStatus = status;
-        this.muteStatusError = false;
-        window.dispatchEvent(new CustomEvent('mute-rules-changed'));
-    }
-
-    private addMuteRule = () => {
-        const terms = parseMuteTerms(this.muteTerms);
-        if (!terms.length) {
-            this.muteStatus = 'Enter at least one word or phrase to mute.';
-            this.muteStatusError = true;
-            return;
-        }
-        const next = [...this.muteRules, { id: createMuteRuleId(), terms, match: this.muteMatch, enabled: true }];
-        this.muteTerms = '';
-        this.commitMuteRules(next, 'Mute filter added.');
-    };
-
-    private toggleMuteRule(id: string) {
-        const next = this.muteRules.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r));
-        this.commitMuteRules(next);
-    }
-
-    private removeMuteRule(id: string) {
-        const next = this.muteRules.filter((r) => r.id !== id);
-        this.commitMuteRules(next, 'Mute filter removed.');
     }
 
     private renderSharingSection() {
@@ -282,6 +184,9 @@ export class SettingsDialog extends LitElement {
             <span>Add feed<br /><span class="desc">Subscribe by RSS/Atom URL</span></span><span>+</span>
           </button>
           ${this.renderAddRow()}
+          <button class="action" @click=${this.openMuteFilters} ?disabled=${this.busy}>
+            <span>Mute filters<br /><span class="desc">Hide articles by words in title or body, per folder or all</span></span><span>🔇</span>
+          </button>
           <button class="action" @click=${this.onImportClick} ?disabled=${this.busy}>
             <span>Import OPML<br /><span class="desc">Restore feeds and folders</span></span><span>↑</span>
           </button>
@@ -310,7 +215,6 @@ export class SettingsDialog extends LitElement {
         </div>
         <div class="body">
           ${this.renderAppearanceSection()}
-          ${this.renderMuteSection()}
           ${this.renderSharingSection()}
           ${this.renderFeedsSection()}
         </div>
@@ -352,6 +256,11 @@ export class SettingsDialog extends LitElement {
         this.statusError = false;
         this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]')?.focus();
     }
+
+    private openMuteFilters = () => {
+        this.close();
+        navigate({ kind: 'mute-filters' });
+    };
 
     private async submitAdd() {
         const input = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]');

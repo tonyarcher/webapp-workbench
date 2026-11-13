@@ -279,10 +279,12 @@ export function searchArticles(query: string, corpus: SearchCorpus): SearchResul
             b.article.published - a.article.published ||
             (a.article.id < b.article.id ? -1 : a.article.id > b.article.id ? 1 : 0),
     );
+    const feedFolderLookup = Object.fromEntries(corpus.feeds.map((f) => [f.id, f.folderIds]));
     const muted = new Set(
         filterMutedArticles(
             results.map((r) => r.article),
             loadMuteRules(),
+            feedFolderLookup,
         ).map((a) => a.id),
     );
     return results.filter((r) => muted.has(r.article.id));

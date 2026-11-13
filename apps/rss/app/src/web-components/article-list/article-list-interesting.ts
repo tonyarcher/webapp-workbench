@@ -1,8 +1,8 @@
 import { fetchArticlesPage } from '../../services/api';
 import { buildWordMap, selectInteresting } from '../../services/interesting-words';
 import { loadInterestingStrictness, loadWordMap, loadWordMapIds } from '../../services/interesting-settings';
-import { filterMutedArticles, loadMuteRules } from '../../services/mute-rules';
-import type { Article, View } from '../../types';
+import { filterMutedArticles, loadMuteRules, type FeedFolderLookup } from '../../services/mute-rules';
+import type { Article, Feed, View } from '../../types';
 
 /** Bounded newest batch the ✨ Interesting folder view ranks at once. */
 export const INTERESTING_BATCH = 200;
@@ -17,6 +17,13 @@ interface InterestingHost {
     hasMoreSingle: boolean;
     cursors: Map<string, string | undefined>;
     interestingStrictness?: number;
+    library?: { data?: { feeds: Feed[] } };
+}
+
+function lookupFromFeeds(feeds: readonly Feed[] | undefined): FeedFolderLookup {
+    const out: Record<string, readonly string[]> = {};
+    for (const feed of feeds ?? []) out[feed.id] = feed.folderIds;
+    return out;
 }
 
 /** The ✨ view is its own route now, not a toolbar toggle on the folder. */
@@ -61,7 +68,8 @@ export async function loadInterestingBatchAction(host: InterestingHost, gen: num
     });
     if (gen !== host.gen) return;
     const visible = host.hideRead ? res.items.filter((a) => a.read === 0) : res.items;
-    const filtered = filterMutedArticles(visible, loadMuteRules());
+    const lookup = lookupFromFeeds(host.library?.data?.feeds);
+    const filtered = filterMutedArticles(visible, loadMuteRules(), lookup);
     const wordMap = interestingWordMapOf(filtered);
     const strictness = host.interestingStrictness ?? loadInterestingStrictness(host.view.id);
     host.items = selectInteresting(filtered, wordMap, strictness).slice(0, host.pageSize);

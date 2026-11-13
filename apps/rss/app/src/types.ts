@@ -75,6 +75,7 @@ export type View =
     | { kind: 'today' }
     | { kind: 'frontpage' }
     | { kind: 'organize' }
+    | { kind: 'mute-filters' }
     | {
           kind: 'search';
           scope?: SearchScopeKind | undefined;

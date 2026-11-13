@@ -219,13 +219,18 @@ function renderNavError(host: SourceListRenderHost) {
 
 function renderStaticNav(host: SourceListRenderHost) {
     return html`
-      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderSearchNav(host)}${renderOrganizeNav(host)}${renderAllNav(host)}
+      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderSearchNav(host)}${renderOrganizeNav(host)}${renderMuteFiltersNav(host)}${renderAllNav(host)}
     `;
 }
 
 function renderOrganizeNav(host: SourceListRenderHost) {
     const active = host.isActive({ kind: 'organize' });
     return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'organize' })}><span class="icon" aria-hidden="true">⚙</span><span class="label">Organize</span></button>`;
+}
+
+function renderMuteFiltersNav(host: SourceListRenderHost) {
+    const active = host.isActive({ kind: 'mute-filters' });
+    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'mute-filters' })}><span class="icon" aria-hidden="true">🔇</span><span class="label">Mute filters</span></button>`;
 }
 
 function savedSearchRow(host: SourceListRenderHost, search: SavedSearch) {
