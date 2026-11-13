@@ -1,5 +1,6 @@
 import { fetchArticlesPage } from '../../services/api';
 import { capItems, feedWindow, perFeedLimit } from '../../services/pagination';
+import { filterMutedArticles, loadMuteRules } from '../../services/mute-rules';
 import { interleaveArticles } from '../../util';
 import type { Article, ArticleSort, Feed, View } from '../../types';
 
@@ -64,18 +65,23 @@ function pickKept(
     sort: ArticleSort,
     pageSize: number,
 ): Article[] {
+    const rules = loadMuteRules();
+    const visiblePages = windowFeeds.map((f) =>
+        filterMutedArticles(pages.get(f.id) ?? [], rules).filter((a) => !existingIds.has(a.id)),
+    );
     const picked =
         sort === 'hot'
-            ? interleaveArticles(
-                  windowFeeds.map((f) => pages.get(f.id) ?? []),
-                  pageSize,
-              )
-            : mergeSorted(
-                  [],
-                  windowFeeds.flatMap((f) => pages.get(f.id) ?? []),
-                  sort,
-              ).slice(0, pageSize);
-    return picked.filter((a) => !existingIds.has(a.id));
+            ? interleaveArticles(visiblePages, pageSize)
+            : mergeSorted([], visiblePages.flat(), sort).slice(0, pageSize);
+    const seen = new Set<string>();
+    const visible: Article[] = [];
+    for (const a of picked) {
+        if (existingIds.has(a.id) || seen.has(a.id)) continue;
+        seen.add(a.id);
+        visible.push(a);
+        if (visible.length >= pageSize) break;
+    }
+    return visible;
 }
 
 export async function fetchSinglePage(
@@ -92,7 +98,7 @@ export async function fetchSinglePage(
     const scope = feedId ? `feed:${feedId}` : undefined;
     const res = await fetchArticlesPage({ scope, unreadOnly: unreadOnly || hideRead, sort, limit: pageSize, cursor });
     const next = res.nextCursor;
-    const nextItems = capItems(mergeSorted(items, res.items, sort), pageSize);
+    const nextItems = filterMutedArticles(capItems(mergeSorted(items, res.items, sort), pageSize), loadMuteRules());
     return { items: nextItems, hasMore: next !== undefined, nextCursor: next };
 }
 
@@ -114,7 +120,7 @@ export async function fetchFolderPage(
         cursor,
     });
     const next = res.nextCursor;
-    const nextItems = capItems(mergeSorted(items, res.items, sort), pageSize);
+    const nextItems = filterMutedArticles(capItems(mergeSorted(items, res.items, sort), pageSize), loadMuteRules());
     return { items: nextItems, hasMore: next !== undefined, nextCursor: next };
 }
 
@@ -128,14 +134,17 @@ async function refillKept(
     existingIds: Set<string>,
 ): Promise<Article[] | null> {
     let next = kept;
-    if (next.length < pageSize) {
+    while (next.length < pageSize) {
         const more = windowFeeds.filter((f) => lastHasMore.get(f.id) === true);
-        if (more.length) {
-            const refillPerFeed = perFeedLimit(pageSize - next.length, more.length);
-            await fetchFeeds(more, refillPerFeed, ctx, pages, lastHasMore);
-            if (ctx.gen !== ctx.currentGen()) return null;
-            next = pickKept(windowFeeds, pages, existingIds, ctx.sort, pageSize);
-        }
+        if (!more.length) break;
+        const beforeCount = Array.from(pages.values()).reduce((sum, items) => sum + items.length, 0);
+        const refillPerFeed = perFeedLimit(pageSize - next.length, more.length);
+        await fetchFeeds(more, refillPerFeed, ctx, pages, lastHasMore);
+        if (ctx.gen !== ctx.currentGen()) return null;
+        const filled = pickKept(windowFeeds, pages, existingIds, ctx.sort, pageSize);
+        const afterCount = Array.from(pages.values()).reduce((sum, items) => sum + items.length, 0);
+        if (filled.length === next.length && afterCount === beforeCount) break;
+        next = filled;
     }
     return next;
 }
@@ -150,7 +159,11 @@ function finishFeedSetWindow(
 ): { kept: Article[]; hasMoreEntries: Array<[string, boolean]>; items: Article[] } {
     const hasMoreEntries = windowFeeds.map((f) => [f.id, lastHasMore.get(f.id) ?? false] as [string, boolean]);
     if (!kept.length) return { kept, hasMoreEntries, items: existingItems };
-    return { kept, hasMoreEntries, items: capItems(mergeSorted(existingItems, kept, sort), pageSize) };
+    return {
+        kept,
+        hasMoreEntries,
+        items: capItems(mergeSorted(existingItems, kept, sort), pageSize),
+    };
 }
 
 export async function fetchFeedSetWindow(

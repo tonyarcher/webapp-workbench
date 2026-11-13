@@ -491,9 +491,11 @@ triage as premium features. Ours are core.
 - **Why.** Some topics, authors, and domains are never worth your minutes.
   A mute that is scary to create never gets created.
 - **What.** Global and per-folder mute rules over keywords, phrases,
-  authors, and domains, with plain and pattern matching; a test-drive mode
-  shows what the rule would have hidden across the last batch before it
-  goes live; one-tap undo from the empty state.
+  authors, and domains, with plain and pattern matching. A rule can target
+  title, article body, or either, and accept multiple words/terms (any
+  match mutes). A test-drive mode shows what the rule would have hidden
+  across the last batch before it goes live; one-tap undo from the empty
+  state.
 - **Half.** `both` (rules sync; evaluation client-side for lists).
 - **Effort.** `L`.
 - **First test.** Smoke for matching and the test-drive counts; API tests

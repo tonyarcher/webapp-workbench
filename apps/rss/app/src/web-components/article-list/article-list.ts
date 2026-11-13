@@ -202,6 +202,7 @@ export class ArticleList extends LitElement {
         window.addEventListener('feeds-refreshed', this.onFeedsRefreshed);
         window.addEventListener('article-read', this.onArticleRead);
         window.addEventListener('article-starred', this.onArticleStarred);
+        window.addEventListener('mute-rules-changed', this.onMuteRulesChanged);
         this.dwell.start();
     }
 
@@ -211,6 +212,7 @@ export class ArticleList extends LitElement {
         window.removeEventListener('feeds-refreshed', this.onFeedsRefreshed);
         window.removeEventListener('article-read', this.onArticleRead);
         window.removeEventListener('article-starred', this.onArticleStarred);
+        window.removeEventListener('mute-rules-changed', this.onMuteRulesChanged);
         this.scrollElRef.value?.removeEventListener('pointermove', this.onPointerActivity);
         this.scrollElRef.value?.removeEventListener('wheel', this.onPointerActivity);
         this.dwell.stop();
@@ -218,6 +220,10 @@ export class ArticleList extends LitElement {
         this.resizeObserver = undefined;
         this.virtualizerCleanup?.();
     }
+
+    private onMuteRulesChanged = () => {
+        void resetList(this as never);
+    };
 
     /** Stable listener identity; the tracker owns the dwell state. */
     private onPointerActivity = (e: Event) => {

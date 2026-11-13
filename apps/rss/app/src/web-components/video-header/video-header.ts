@@ -59,9 +59,8 @@ export class VideoHeader extends LitElement {
     }
 
     /**
-     * Cover art only. The link around it opens the watch page; the image
-     * itself carries no action, so a click without a link simply bubbles to
-     * the card and opens the article like any other cover.
+     * Cover art only. In article lists the click bubbles to the card so the
+     * picture opens the article view like any other cover.
      */
     private renderPreview() {
         const poster = this.video.posters[this.posterIndex];
@@ -69,20 +68,7 @@ export class VideoHeader extends LitElement {
             poster && !this.posterFailed
                 ? html`<img class="poster" src=${poster} alt="" loading="lazy" decoding="async" @error=${() => this.onPosterError()} @load=${(e: Event) => this.onPosterLoad(e)} />`
                 : html`<div class="poster poster-empty" aria-hidden="true"></div>`;
-        if (!this.videoLink) return html`<div class="poster-wrap">${visual}</div>`;
-        return html`
-      <div class="poster-wrap">
-        <a
-          class="poster-link"
-          href=${this.videoLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Watch ${this.video.label}${this.videoTitle ? `: ${this.videoTitle}` : ''}"
-          @click=${(e: Event) => e.stopPropagation()}
-          >${visual}</a
-        >
-      </div>
-    `;
+        return html`<div class="poster-wrap">${visual}</div>`;
     }
 
     private renderPlayer() {

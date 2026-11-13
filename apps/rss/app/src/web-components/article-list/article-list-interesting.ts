@@ -1,6 +1,7 @@
 import { fetchArticlesPage } from '../../services/api';
 import { buildWordMap, selectInteresting } from '../../services/interesting-words';
 import { loadInterestingStrictness, loadWordMap, loadWordMapIds } from '../../services/interesting-settings';
+import { filterMutedArticles, loadMuteRules } from '../../services/mute-rules';
 import type { Article, View } from '../../types';
 
 /** Bounded newest batch the ✨ Interesting folder view ranks at once. */
@@ -60,9 +61,10 @@ export async function loadInterestingBatchAction(host: InterestingHost, gen: num
     });
     if (gen !== host.gen) return;
     const visible = host.hideRead ? res.items.filter((a) => a.read === 0) : res.items;
-    const wordMap = interestingWordMapOf(visible);
+    const filtered = filterMutedArticles(visible, loadMuteRules());
+    const wordMap = interestingWordMapOf(filtered);
     const strictness = host.interestingStrictness ?? loadInterestingStrictness(host.view.id);
-    host.items = selectInteresting(visible, wordMap, strictness).slice(0, host.pageSize);
+    host.items = selectInteresting(filtered, wordMap, strictness).slice(0, host.pageSize);
     host.hasMoreSingle = false;
     host.cursors.clear();
 }

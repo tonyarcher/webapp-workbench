@@ -6,6 +6,7 @@
  */
 import type { Article, Feed, Folder } from '../types';
 import { readMinutes } from '../util';
+import { filterMutedArticles, loadMuteRules } from './mute-rules';
 import { parseVideo } from './video';
 
 export interface SearchScope {
@@ -278,7 +279,13 @@ export function searchArticles(query: string, corpus: SearchCorpus): SearchResul
             b.article.published - a.article.published ||
             (a.article.id < b.article.id ? -1 : a.article.id > b.article.id ? 1 : 0),
     );
-    return results;
+    const muted = new Set(
+        filterMutedArticles(
+            results.map((r) => r.article),
+            loadMuteRules(),
+        ).map((a) => a.id),
+    );
+    return results.filter((r) => muted.has(r.article.id));
 }
 
 export function loadRecentSearches(): string[] {

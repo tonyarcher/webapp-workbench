@@ -85,13 +85,19 @@ export class SearchView extends LitElement {
                 this.syncFromView();
             }
         });
+        window.addEventListener('mute-rules-changed', this.onMuteRulesChanged);
     }
 
     override disconnectedCallback() {
         super.disconnectedCallback();
         this.unsubscribe?.();
+        window.removeEventListener('mute-rules-changed', this.onMuteRulesChanged);
         if (this.debounceTimer !== null) window.clearTimeout(this.debounceTimer);
     }
+
+    private onMuteRulesChanged = () => {
+        this.runSearch();
+    };
 
     private lastLibraryData: unknown = undefined;
 
