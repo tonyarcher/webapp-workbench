@@ -1,4 +1,14 @@
-import type { Article, Edition, EditionMeta, EditionSection, EditionStatus, Feed, Folder, SavedSearch } from '../types';
+import type {
+    Article,
+    Edition,
+    EditionMeta,
+    EditionSection,
+    EditionStatus,
+    Feed,
+    Folder,
+    SavedArticleSnapshot,
+    SavedSearch,
+} from '../types';
 import type { SummaryLength } from '../ai';
 import { getAccessToken, refreshTokens } from './auth';
 import { appConfig, resolveApiBase } from './config';
@@ -306,6 +316,24 @@ export async function importOpmlXml(xml: string): Promise<OpmlImportResult> {
         method: 'POST',
         body: JSON.stringify({ xml }),
     }) as Promise<OpmlImportResult>;
+}
+
+// ---- saved for later ----
+
+export async function fetchSavedArticles(): Promise<SavedArticleSnapshot[]> {
+    const data = await apiFetch('/saved-articles');
+    return (data as { items: SavedArticleSnapshot[] }).items;
+}
+
+export async function saveArticleForLater(articleId: string): Promise<SavedArticleSnapshot> {
+    return apiFetch('/saved-articles', {
+        method: 'POST',
+        body: JSON.stringify({ articleId }),
+    }) as Promise<SavedArticleSnapshot>;
+}
+
+export async function unsaveArticleForLater(articleId: string): Promise<{ ok: true }> {
+    return apiFetch(`/saved-articles/${encodeURIComponent(articleId)}`, { method: 'DELETE' }) as Promise<{ ok: true }>;
 }
 
 // ---- front page ----

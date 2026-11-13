@@ -18,6 +18,7 @@ import {
     todaySettingsChangeAction,
     toggleAutoHideAction,
 } from './source-list-actions';
+import { orderedInterestingFolderIds } from '../../services/interesting-settings';
 import {
     closeFeedListMenuAction,
     closeFolderMenuAction,
@@ -38,6 +39,8 @@ import {
 export interface SourceListRenderHost extends ActionHost {
     autoHide: boolean;
     totalUnread: number;
+    interestingOrder: string[];
+    toggleInterestingSection(): void;
     library: { error: Error | undefined; data?: { savedSearches?: SavedSearch[] } };
     icon(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash'): unknown;
     pinIcon(): unknown;
@@ -48,7 +51,7 @@ export interface SourceListRenderHost extends ActionHost {
     interestingCount(folderId: string): number | undefined;
     isActive(view: View): boolean;
     select(view: View): void;
-    onDragStart(e: DragEvent, kind: 'folder' | 'feed' | 'savedSearch', id: string): void;
+    onDragStart(e: DragEvent, kind: 'folder' | 'feed' | 'savedSearch' | 'interesting', id: string): void;
     onDragOver(e: DragEvent): void;
     onDragLeave(e: DragEvent): void;
     onDrop(e: DragEvent): Promise<void>;
@@ -150,17 +153,31 @@ function folderHeaderTemplate(
  * every row is distinct: "Interesting in Tech", "Interesting in Sport".
  */
 function interestingRowTemplate(
+    host: SourceListRenderHost,
     folder: Folder,
     active: boolean,
     count: number | undefined,
-    onSelect: (folder: Folder) => void,
 ) {
     const name = `Interesting in ${folder.title}`;
-    const empty = count === 0 || count === undefined;
+    const empty = count === 0;
     return html`
-      <button class="item ${active ? 'active' : ''} ${empty ? 'empty' : ''}" aria-label=${name} title=${name} @click=${() => onSelect(folder)}>
-        <span class="icon" aria-hidden="true">✨</span><span class="label">${name}</span>${count && count > 0 ? html`<span class="badge">${count}</span>` : ''}
-      </button>
+      <div
+        class="item ${active ? 'active' : ''} ${empty ? 'empty' : ''}"
+        data-interesting-id="${folder.id}"
+        draggable="true"
+        @dragstart=${(e: DragEvent) => host.onDragStart(e, 'interesting', folder.id)}
+        @click=${() => host.select({ kind: 'interesting', id: folder.id })}
+      >
+        <button
+          class="item-open"
+          aria-label=${name}
+          title=${name}
+          @click=${(e: MouseEvent) => {
+              e.stopPropagation();
+              host.select({ kind: 'interesting', id: folder.id });
+          }}
+        ><span class="icon" aria-hidden="true">✨</span><span class="label">${name}</span>${count && count > 0 ? html`<span class="badge">${count}</span>` : ''}</button>
+      </div>
     `;
 }
 
@@ -170,16 +187,31 @@ function interestingRowTemplate(
  * scrolling past a long folder list; the folders themselves are untouched.
  */
 function renderInterestingSection(host: SourceListRenderHost, folders: Folder[]) {
-    const enabled = folders.filter((f) => host.interestingShadow[f.id] === true);
+    const ids = orderedInterestingFolderIds(host.interestingShadow, folders, host.interestingOrder);
+    if (!ids.length) return html``;
+    const folderById = new Map(folders.map((f) => [f.id, f]));
+    const enabled = ids.map((id) => folderById.get(id)).filter((f): f is Folder => !!f);
     if (!enabled.length) return html``;
-    return html`<div class="section-label">Interesting</div>${enabled.map((folder) =>
-        interestingRowTemplate(
-            folder,
-            host.isActive({ kind: 'interesting', id: folder.id }),
-            host.interestingCount(folder.id),
-            (f) => host.select({ kind: 'interesting', id: f.id }),
-        ),
-    )}`;
+    const collapsed = host.collapsed['__interesting__'] === true;
+    return html`
+      <div class="section-row">
+        <button class="section-label-btn" aria-expanded=${!collapsed} @click=${() => host.toggleInterestingSection()}>
+          <span class="chev" aria-hidden="true">${collapsed ? '▸' : '▾'}</span><span>Interesting</span>
+        </button>
+      </div>
+      ${
+          collapsed
+              ? ''
+              : enabled.map((folder) =>
+                    interestingRowTemplate(
+                        host,
+                        folder,
+                        host.isActive({ kind: 'interesting', id: folder.id }),
+                        host.interestingCount(folder.id),
+                    ),
+                )
+      }
+    `;
 }
 
 export function folderRowTemplate(
@@ -219,8 +251,13 @@ function renderNavError(host: SourceListRenderHost) {
 
 function renderStaticNav(host: SourceListRenderHost) {
     return html`
-      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderSearchNav(host)}${renderOrganizeNav(host)}${renderMuteFiltersNav(host)}${renderAllNav(host)}
+      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderSavedNav(host)}${renderSearchNav(host)}${renderOrganizeNav(host)}${renderMuteFiltersNav(host)}${renderAllNav(host)}
     `;
+}
+
+function renderSavedNav(host: SourceListRenderHost) {
+    const active = host.isActive({ kind: 'saved' });
+    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'saved' })}><span class="icon" aria-hidden="true">🔖</span><span class="label">Saved for later</span></button>`;
 }
 
 function renderOrganizeNav(host: SourceListRenderHost) {

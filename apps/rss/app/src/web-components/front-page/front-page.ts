@@ -18,7 +18,7 @@ import {
     fetchLatestEdition,
     QuotaError,
 } from '../../services/api';
-import { markArticleRead, toggleStar } from '../../mutations';
+import { toggleStar } from '../../mutations';
 import {
     applyWeights,
     EDITION_WINDOW_HOURS_OPTIONS,
@@ -473,9 +473,6 @@ export class FrontPage extends LitElement {
     }
 
     private openArticle(article: Article) {
-        if (article.read === 0) {
-            void markArticleRead(article.id).then(() => queryClient.invalidateQueries({ queryKey: ['front-page'] }));
-        }
         const edition = this.edition.data;
         const sections = edition
             ? applyWeights(edition.sections, this.options).slice(0, this.options.sectionCount)

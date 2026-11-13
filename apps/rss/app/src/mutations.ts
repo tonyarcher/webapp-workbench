@@ -12,7 +12,9 @@ import {
     reorderSavedSearches as apiReorderSavedSearches,
     recordAffinity,
     requestSync,
+    saveArticleForLater as apiSaveArticleForLater,
     setFeedFolders as apiSetFeedFolders,
+    unsaveArticleForLater as apiUnsaveArticleForLater,
     updateArticleState,
     updateSavedSearch as apiUpdateSavedSearch,
 } from './services/api';
@@ -22,6 +24,7 @@ import {
     invalidateArticles,
     invalidateFrontPage,
     invalidateLibrary,
+    invalidateSavedArticles,
     updateArticlesInCache,
     libraryKey,
     queryClient,
@@ -243,6 +246,25 @@ export async function markArticleRead(articleId: string): Promise<boolean> {
     return true;
 }
 
+export async function markArticleUnread(articleId: string): Promise<boolean> {
+    updateArticlesInCache(articleId, { read: 0 });
+    try {
+        await updateArticleState([{ id: articleId, read: false }]);
+    } catch (err) {
+        console.error('markArticleUnread failed', err);
+        toastApiError(err, 'Could not mark the article as unread. Check your connection and try again.');
+        await invalidateArticles();
+        await invalidateFrontPage();
+        bustCounts();
+        await invalidateLibrary();
+        return false;
+    }
+    bustCounts();
+    await invalidateLibrary();
+    await invalidateFrontPage();
+    return true;
+}
+
 /** The caller supplies the toggled value — it always has the article in hand,
  *  and no shared cache holds article pages to read the prior state from.
  *  The write is awaited: today-view chains its refetch on this resolving,
@@ -385,4 +407,28 @@ export async function markReadBefore(feedIds: string[] | undefined, cutoff: numb
     bustCounts();
     await invalidateLibrary();
     await invalidateFrontPage();
+}
+
+export async function saveForLater(articleId: string): Promise<boolean> {
+    try {
+        await apiSaveArticleForLater(articleId);
+        await invalidateSavedArticles();
+        window.dispatchEvent(new CustomEvent('saved-articles-changed'));
+        return true;
+    } catch (err) {
+        toastApiError(err, 'Could not save article for later.');
+        return false;
+    }
+}
+
+export async function unsaveForLater(articleId: string): Promise<boolean> {
+    try {
+        await apiUnsaveArticleForLater(articleId);
+        await invalidateSavedArticles();
+        window.dispatchEvent(new CustomEvent('saved-articles-changed'));
+        return true;
+    } catch (err) {
+        toastApiError(err, 'Could not remove saved article.');
+        return false;
+    }
 }

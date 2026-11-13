@@ -2,16 +2,22 @@ import { moveFeed, reorderFolders, reorderSavedSearches } from '../../mutations'
 import type { Feed } from '../../types';
 
 interface DragHost {
-    dragging: { kind: 'folder' | 'feed' | 'savedSearch'; id: string } | null;
+    dragging: { kind: 'folder' | 'feed' | 'savedSearch' | 'interesting'; id: string } | null;
     dragTargetEl: HTMLElement | null;
     collapsed: Record<string, boolean>;
     shadowRoot: ShadowRoot | null;
     libraryData: { feeds: Feed[]; folders: { id: string }[]; savedSearches?: { id: string }[] };
+    interestingOrder?: string[];
     toggleFolder(id: string): void;
     clearDragOver(): void;
 }
 
-export function handleDragStart(host: DragHost, e: DragEvent, kind: 'folder' | 'feed' | 'savedSearch', id: string) {
+export function handleDragStart(
+    host: DragHost,
+    e: DragEvent,
+    kind: 'folder' | 'feed' | 'savedSearch' | 'interesting',
+    id: string,
+) {
     host.dragging = { kind, id };
     if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = 'move';
@@ -30,7 +36,9 @@ export function handleDragOver(host: DragHost & { shadowRoot: ShadowRoot | null 
             ? '[data-folder-id], [data-feed-id], [data-no-folder]'
             : host.dragging.kind === 'folder'
               ? '[data-folder-id]'
-              : '[data-saved-search-id]';
+              : host.dragging.kind === 'savedSearch'
+                ? '[data-saved-search-id]'
+                : '[data-interesting-id]';
     const target =
         (e.target as HTMLElement).closest<HTMLElement>(selector) ??
         (host.shadowRoot?.querySelector('.nav') as HTMLElement | null);
@@ -100,6 +108,21 @@ export async function handleSavedSearchReorder(
         ids.push(searchId);
     }
     await reorderSavedSearches(ids);
+}
+
+export function reorderInterestingIds(current: string[], draggedId: string, targetId: string | null): string[] {
+    if (targetId === draggedId) return [...current];
+    const ids = [...current];
+    const from = ids.indexOf(draggedId);
+    if (from < 0) return ids;
+    ids.splice(from, 1);
+    if (targetId) {
+        const to = ids.indexOf(targetId);
+        ids.splice(to < 0 ? ids.length : to, 0, draggedId);
+    } else {
+        ids.push(draggedId);
+    }
+    return ids;
 }
 
 export async function handleFeedMove(

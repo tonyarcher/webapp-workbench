@@ -6,11 +6,27 @@ import { articleVideo } from '../../services/video';
 import { canNativeShare, mailtoShareUrl, shareUrl, type ShareTarget } from '../../services/share';
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
 import { toastError, toastInfo } from '../../services/toast';
-import { noteDerank, noteOriginal, noteShare, toggleStar } from '../../mutations';
-import { isDeranked } from '../../services/interesting-settings';
+import {
+    markArticleRead,
+    markArticleUnread,
+    noteDerank,
+    noteOriginal,
+    noteShare,
+    saveForLater,
+    toggleStar,
+    unsaveForLater,
+} from '../../mutations';
+import { fetchSavedArticlesList } from '../../query';
+import { loadWordMap, isDeranked } from '../../services/interesting-settings';
+import { extractWords } from '../../services/interesting-words';
 import { readMinutes } from '../../util';
 import type { Article } from '../../types';
 import { domainOf, formatDate } from '../../util';
+
+interface ArticleKeyword {
+    word: string;
+    score: number;
+}
 import '../video-header/video-header';
 import styles from './article-view.css?inline';
 
@@ -22,6 +38,10 @@ export class ArticleView extends LitElement {
     private focused = false;
 
     @state() private deranked = false;
+    @state() private savedForLater = false;
+    @state() private keywords: ArticleKeyword[] = [];
+    /** Prevent async saved-state refresh from clobbering newer intent/results. */
+    private savedStateGen = 0;
     /** Article the progress bar belongs to; object identity churns on star. */
     private progressArticleId: string | null = null;
     /** 0..1 fraction of the article scrolled, for the progress bar. */
@@ -37,14 +57,20 @@ export class ArticleView extends LitElement {
         this.setAttribute('aria-modal', 'true');
         this.setAttribute('tabindex', '-1');
         window.addEventListener('share-settings-changed', this.onShareSettingsChanged);
+        window.addEventListener('saved-articles-changed', this.onSavedArticlesChanged);
         this.addEventListener('scroll', this.onScroll);
     }
 
     override disconnectedCallback() {
         super.disconnectedCallback();
         window.removeEventListener('share-settings-changed', this.onShareSettingsChanged);
+        window.removeEventListener('saved-articles-changed', this.onSavedArticlesChanged);
         this.removeEventListener('scroll', this.onScroll);
     }
+
+    private onSavedArticlesChanged = () => {
+        void this.refreshSavedState();
+    };
 
     /** Progress bar: the host itself is the scroller. */
     private onScroll = () => {
@@ -81,17 +107,24 @@ export class ArticleView extends LitElement {
         if (changed.has('article')) {
             this.sanitizedBody = null;
             this.deranked = this.article ? isDeranked(this.article.id) : false;
+            this.keywords = this.article ? articleKeywords(this.article) : [];
             // A new object identity does not mean a new article: starring
             // replaces the object in place. Only a new id resets progress
             // and scroll, or pressing S mid-article yanks the reader to top.
             if (this.article?.id !== this.progressArticleId) {
                 this.progressArticleId = this.article?.id ?? null;
+                this.savedStateGen++;
+                this.savedForLater = false;
                 this.readProgress = 0;
                 this.scrollTop = 0;
+                void this.refreshSavedState();
             }
         }
         const a = this.article;
         if (!a) return;
+        // State-driven re-renders (scroll progress, save/star toggles) can replace
+        // rendered content; always ensure keyword marks are applied for this article.
+        this.highlightBodyKeywords();
         this.setAttribute('aria-label', a.title);
         if (this.focused) return;
         this.focused = true;
@@ -118,6 +151,8 @@ export class ArticleView extends LitElement {
       <div class="toolbar" role="toolbar" aria-label="Article actions">
         <button class="btn" @click=${this.emitClose}>← Back</button>
         <button class="btn" @click=${this.onStar}>${a.starred ? '★ Unstar' : '☆ Star'}</button>
+        <button class="btn" @click=${this.onToggleRead}>${a.read ? 'Keep unread' : 'Mark read'}</button>
+        <button class="btn" @click=${this.onToggleSaved} aria-pressed=${this.savedForLater}>${this.savedForLater ? '🔖 Saved' : '🔖 Save for later'}</button>
         <button class="btn" @click=${this.onDerank} aria-pressed=${this.deranked}>${this.deranked ? '✓ Not interesting' : '⊘ Not interesting'}</button>
         ${link ? this.renderShareButtons(a, link) : ''}
         <div class="spacer"></div>
@@ -207,7 +242,18 @@ export class ArticleView extends LitElement {
 
     private renderMeta(a: Article) {
         const minutes = readMinutes(a.content, a.summary);
-        return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}</div>`;
+        return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}</div>${this.renderKeywords()}`;
+    }
+
+    private renderKeywords() {
+        if (!this.keywords.length) return '';
+        return html`<div class="keywords" aria-label="Article keywords">
+            <span class="keywords-label">Keywords</span>
+            ${this.keywords.map(
+                (k) =>
+                    html`<span class="keyword ${k.score > 0 ? 'interesting' : ''}" title=${`Weight ${k.score}`}>${k.word}</span>`,
+            )}
+        </div>`;
     }
 
     private renderBody(body: string, a: Article) {
@@ -225,12 +271,59 @@ export class ArticleView extends LitElement {
         if (await toggleStar(started.id, next)) {
             window.dispatchEvent(new CustomEvent('article-starred', { detail: { id: started.id, starred: next } }));
         } else if (this.article?.id === started.id) {
-            this.article = { ...started, starred: started.starred };
+            this.article = { ...this.article, starred: started.starred };
             window.dispatchEvent(
                 new CustomEvent('article-starred', { detail: { id: started.id, starred: started.starred } }),
             );
         }
     }
+
+    private onToggleRead = async () => {
+        const started = this.article;
+        if (!started) return;
+        const nextRead: 0 | 1 = started.read ? 0 : 1;
+        this.article = { ...started, read: nextRead };
+        const ok = nextRead === 1 ? await markArticleRead(started.id) : await markArticleUnread(started.id);
+        if (!ok) {
+            if (this.article?.id === started.id) this.article = { ...this.article, read: started.read };
+            window.dispatchEvent(new CustomEvent('article-read', { detail: { id: started.id, read: started.read } }));
+            return;
+        }
+        window.dispatchEvent(new CustomEvent('article-read', { detail: { id: started.id, read: nextRead } }));
+    };
+
+    private async refreshSavedState(): Promise<void> {
+        const a = this.article;
+        if (!a) {
+            this.savedForLater = false;
+            return;
+        }
+        const gen = ++this.savedStateGen;
+        try {
+            const items = await fetchSavedArticlesList();
+            if (this.article?.id !== a.id || this.savedStateGen !== gen) return;
+            this.savedForLater = items.some((s) => s.articleId === a.id);
+        } catch {
+            // keep previous state on transient failures
+        }
+    }
+
+    private onToggleSaved = async () => {
+        const a = this.article;
+        if (!a) return;
+        const next = !this.savedForLater;
+        // Invalidate any in-flight refresh so it can't overwrite optimistic intent.
+        this.savedStateGen++;
+        this.savedForLater = next;
+        const ok = next ? await saveForLater(a.id) : await unsaveForLater(a.id);
+        if (!ok) {
+            if (this.article?.id === a.id) this.savedForLater = !next;
+            void this.refreshSavedState();
+            return;
+        }
+        // Reconcile from source of truth after success/invalidation events.
+        void this.refreshSavedState();
+    };
 
     private onDerank() {
         const a = this.article;
@@ -239,6 +332,77 @@ export class ArticleView extends LitElement {
         noteDerank(a.id, a.title, next);
         this.deranked = next;
     }
+
+    private highlightBodyKeywords(): void {
+        if (!this.keywords.length) return;
+        const content = this.renderRoot.querySelector('.content');
+        if (!(content instanceof HTMLElement)) return;
+        // Already highlighted for this rendered content.
+        if (content.querySelector('mark.kw-interest, mark.kw')) return;
+        const words = this.keywords.map((k) => k.word);
+        if (!words.length) return;
+        const pattern = new RegExp(`\\b(${words.map(escapeRegExp).join('|')})\\b`, 'gi');
+        const interesting = new Set(this.keywords.filter((k) => k.score > 0).map((k) => k.word));
+        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {
+            acceptNode(node) {
+                const parent = node.parentElement;
+                if (!parent) return NodeFilter.FILTER_REJECT;
+                if (parent.closest('pre,code,script,style,textarea,mark')) return NodeFilter.FILTER_REJECT;
+                if (!node.nodeValue || !pattern.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+                pattern.lastIndex = 0;
+                return NodeFilter.FILTER_ACCEPT;
+            },
+        });
+        const nodes: Text[] = [];
+        let n = walker.nextNode();
+        while (n) {
+            nodes.push(n as Text);
+            n = walker.nextNode();
+        }
+        if (!nodes.length) return;
+        for (const textNode of nodes) {
+            const text = textNode.nodeValue ?? '';
+            pattern.lastIndex = 0;
+            const frag = document.createDocumentFragment();
+            let last = 0;
+            let m: RegExpExecArray | null;
+            while ((m = pattern.exec(text))) {
+                const start = m.index;
+                const match = m[0] ?? '';
+                if (start > last) frag.append(text.slice(last, start));
+                const mark = document.createElement('mark');
+                mark.className = interesting.has(match.toLowerCase()) ? 'kw-interest' : 'kw';
+                mark.textContent = match;
+                frag.append(mark);
+                last = start + match.length;
+            }
+            if (last === 0) continue;
+            if (last < text.length) frag.append(text.slice(last));
+            textNode.replaceWith(frag);
+        }
+    }
+}
+
+function escapeRegExp(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function articleKeywords(article: Article): ArticleKeyword[] {
+    const wordMap = loadWordMap();
+    if (!Object.keys(wordMap).length) return [];
+    const text = `${article.title} ${article.summary ?? ''}`;
+    // include some body text without parsing HTML heavily; content may be HTML string
+    const raw = `${text} ${(article.content ?? '').replace(/<[^>]+>/g, ' ')}`.slice(0, 20_000);
+    const seen = new Set<string>();
+    const matched: ArticleKeyword[] = [];
+    for (const w of extractWords(raw)) {
+        if (seen.has(w)) continue;
+        seen.add(w);
+        const score = wordMap[w] ?? 0;
+        if (score > 0) matched.push({ word: w, score });
+    }
+    matched.sort((a, b) => b.score - a.score || a.word.localeCompare(b.word));
+    return matched.slice(0, 24);
 }
 
 declare global {

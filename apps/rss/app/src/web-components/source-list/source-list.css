@@ -123,7 +123,9 @@
     font: inherit;
 }
 
-.item[data-folder-id] {
+.item[data-folder-id],
+.item[data-saved-search-id],
+.item[data-interesting-id] {
     cursor: grab;
 }
 
@@ -338,6 +340,37 @@ button.item {
     letter-spacing: 0.04em;
     color: var(--text-muted);
     padding: 10px 8px 4px;
+}
+
+.section-row {
+    padding: 10px 8px 4px;
+}
+
+.section-label-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    text-align: left;
+}
+
+.section-label-btn:hover {
+    color: var(--text);
+}
+
+.section-label-btn .chev {
+    font-size: 10px;
+    line-height: 1;
 }
 
 .item.dragging,

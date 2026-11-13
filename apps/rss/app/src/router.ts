@@ -31,6 +31,9 @@ export function parsePath(pathname: string, search = ''): View {
     if (parts[0] === 'mute-filters') {
         return { kind: 'mute-filters' };
     }
+    if (parts[0] === 'saved') {
+        return { kind: 'saved' };
+    }
     if (parts[0] === 'search') {
         const scope = params.get('scope');
         const id = params.get('id') ?? undefined;
@@ -62,6 +65,8 @@ export function viewToPath(view: View): string {
             return '/organize';
         case 'mute-filters':
             return '/mute-filters';
+        case 'saved':
+            return '/saved';
         case 'folder':
             return `/folder/${encodeURIComponent(view.id)}`;
         case 'interesting':

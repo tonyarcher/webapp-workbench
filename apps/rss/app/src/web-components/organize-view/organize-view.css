@@ -139,22 +139,36 @@
     flex-wrap: wrap;
 }
 
-.move {
+.folders-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 180px;
+}
+
+.picker-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.folder-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    max-width: 420px;
+}
+
+.folder-check {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: var(--text-muted);
 }
 
-.move select {
-    max-width: 180px;
-    padding: 4px 6px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--bg);
-    color: var(--text);
-    font: inherit;
+.empty-hint {
+    font-size: 13px;
+    color: var(--text-muted);
 }
 
 .btn {

@@ -1,7 +1,7 @@
 import { QueryClient, QueryObserver, type QueryObserverResult } from '@tanstack/query-core';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import { getLibraryCounts, getLibraryFeeds, getLibraryFolders } from './services/api';
-import type { Article, Feed, Folder, SavedSearch } from './types';
+import { fetchSavedArticles, getLibraryCounts, getLibraryFeeds, getLibraryFolders } from './services/api';
+import type { Article, Feed, Folder, SavedArticleSnapshot, SavedSearch } from './types';
 
 export const queryClient = new QueryClient({
     defaultOptions: {
@@ -18,7 +18,16 @@ export const queryClient = new QueryClient({
 });
 
 export const libraryKey = ['library'] as const;
+export const savedArticlesKey = ['saved-articles'] as const;
 export type LibraryData = { folders: Folder[]; feeds: Feed[]; savedSearches: SavedSearch[] };
+
+export async function fetchSavedArticlesList(): Promise<SavedArticleSnapshot[]> {
+    return fetchSavedArticles();
+}
+
+export function invalidateSavedArticles() {
+    return queryClient.invalidateQueries({ queryKey: savedArticlesKey });
+}
 
 /** Tab title with the unread count: "(176) RSS Reader". Zero means just the name. */
 export function unreadTitle(totalUnread: number): string {

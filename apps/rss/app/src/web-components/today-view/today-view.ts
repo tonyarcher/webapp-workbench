@@ -2,7 +2,7 @@ import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { libraryKey, queryClient, QueryController, fetchLibrary } from '../../query';
 import { fetchArticlesPage } from '../../services/api';
-import { markArticleRead, markShownRead, toggleStar } from '../../mutations';
+import { markShownRead, toggleStar } from '../../mutations';
 import { safeHttpUrl } from '../../services/parser';
 import { articleImage, cardPlaceholderStyle } from '../../services/image';
 import { articleVideo, watchUrlFor } from '../../services/video';
@@ -352,16 +352,13 @@ export class TodayView extends LitElement {
             .filter((a) => a.read === 0)
             .map((a) => a.id);
         if (!ids.length) return;
-        await markShownRead(ids);
+        const ok = await markShownRead(ids);
+        if (!ok) return;
         await queryClient.invalidateQueries({ queryKey: ['today'] });
+        this.scrollTo({ top: 0, behavior: 'auto' });
     }
 
     private openArticle(article: Article) {
-        if (article.read === 0) {
-            // Chain the query refresh after the write so a refetch can't win
-            // the race and re-show the article as unread.
-            void markArticleRead(article.id).then(() => queryClient.invalidateQueries({ queryKey: ['today'] }));
-        }
         const items = this.visibleArticles();
         const index = items.findIndex((a) => a.id === article.id);
         this.dispatchEvent(

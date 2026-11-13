@@ -8,6 +8,26 @@
 
 const STORAGE_KEY = 'rss-reader:interesting-counts';
 
+/**
+ * The active Interesting view's transient "hide read" filter, held in memory
+ * only. The background badge refresh reads it so its count matches the list
+ * right after "Mark shown as read", then forgets it on view change/disconnect.
+ */
+const hideReadFolders = new Set<string>();
+
+export function setInterestingHideRead(folderId: string, active: boolean): void {
+    if (active) hideReadFolders.add(folderId);
+    else hideReadFolders.delete(folderId);
+}
+
+export function isInterestingHideRead(folderId: string): boolean {
+    return hideReadFolders.has(folderId);
+}
+
+export function clearInterestingHideRead(): void {
+    hideReadFolders.clear();
+}
+
 export function loadInterestingCount(folderId: string): number | undefined {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -21,13 +41,18 @@ export function loadInterestingCount(folderId: string): number | undefined {
 }
 
 export function saveInterestingCount(folderId: string, count: number): void {
+    const next = Math.max(0, Math.round(count));
+    let prev: number | undefined;
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         const map: Record<string, number> = raw ? (JSON.parse(raw) as Record<string, number>) : {};
-        map[folderId] = Math.max(0, Math.round(count));
+        const existing = map[folderId];
+        if (typeof existing === 'number') prev = existing;
+        map[folderId] = next;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
     } catch {
         // Storage unavailable (private mode, quota): the badge just stays stale.
     }
-    window.dispatchEvent(new CustomEvent('interesting-counts-changed', { detail: { folderId, count } }));
+    if (prev === next) return;
+    window.dispatchEvent(new CustomEvent('interesting-counts-changed', { detail: { folderId, count: next } }));
 }

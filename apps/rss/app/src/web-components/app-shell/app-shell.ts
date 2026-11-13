@@ -1,12 +1,13 @@
 import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { history, navigate, parsePath } from '../../router';
-import { markArticleRead } from '../../mutations';
+// article opens no longer auto-mark read; explicit read/unread controls live in article view.
 import { bustCounts, queryClient } from '../../query';
 import type { ArticleView } from '../article-view/article-view';
 import { clearClientDb } from '../../db/db';
 import { currentUsername, hasSession, logout, startLogin } from '../../services/auth';
 import { clearToasts, dismissToast, onToast, type ToastNotice } from '../../services/toast';
+import { startInterestingCountsRefresh, stopInterestingCountsRefresh } from '../../services/interesting-counts-refresh';
 import { endOpen, initialOpenTiming, trackOpen, type OpenTiming } from './article-open-tracking';
 import { isModalOpen } from '../../services/modal-guard';
 import {
@@ -20,6 +21,7 @@ import { overlayShortcut } from '../../services/shortcuts';
 import type { Article, View } from '../../types';
 import '../mute-filters-view/mute-filters-view';
 import '../organize-view/organize-view';
+import '../saved-view/saved-view';
 import '../shortcuts-dialog/shortcuts-dialog';
 import { MAX_ARTICLE_PANEL_WIDTH, MIN_ARTICLE_PANEL_WIDTH, loadArticlePanelWidth } from './article-panel-settings';
 import styles from './app-shell.css?inline';
@@ -93,10 +95,12 @@ export class AppShell extends LitElement {
             this.toasts = notices;
             this.syncToastTimers();
         });
+        if (this.authed) startInterestingCountsRefresh();
     }
 
     override disconnectedCallback() {
         super.disconnectedCallback();
+        stopInterestingCountsRefresh();
         this.unsubscribeToasts?.();
         this.unsubscribeToasts = null;
         this.endArticleResize();
@@ -123,6 +127,8 @@ export class AppShell extends LitElement {
         this.authed = hasSession();
         this.username = currentUsername();
         clearToasts();
+        if (this.authed) startInterestingCountsRefresh();
+        else stopInterestingCountsRefresh();
     };
 
     private onAuthRequired = () => {
@@ -148,6 +154,7 @@ export class AppShell extends LitElement {
      * user signed in with no explanation.
      */
     private signOut = (): void => {
+        stopInterestingCountsRefresh();
         void this.resetAccount().catch(() => {
             this.authError = 'Signed out on this device, but some local data could not be cleared.';
             this.authed = false;
@@ -170,6 +177,7 @@ export class AppShell extends LitElement {
         try {
             localStorage.removeItem('rss-reader:word-map');
             localStorage.removeItem('rss-reader:word-map-ids');
+            localStorage.removeItem('rss-reader:interesting-counts');
         } catch {
             // storage unavailable; nothing to clear
         }
@@ -266,6 +274,7 @@ export class AppShell extends LitElement {
         if (this.route.kind === 'frontpage') return html`<front-page @open-article=${this.onOpenArticle}></front-page>`;
         if (this.route.kind === 'organize') return html`<organize-view></organize-view>`;
         if (this.route.kind === 'mute-filters') return html`<mute-filters-view></mute-filters-view>`;
+        if (this.route.kind === 'saved') return html`<saved-view @open-article=${this.onOpenArticle}></saved-view>`;
         if (this.route.kind === 'search')
             return html`<search-view .view=${this.route} @open-article=${this.onOpenArticle}></search-view>`;
         return html`<article-list .view=${this.route} .active=${!this.article} .resumeArticleId=${this.resumeArticleId} @open-article=${this.onOpenArticle}></article-list>`;
@@ -393,9 +402,6 @@ export class AppShell extends LitElement {
         trackOpen(this.openTiming, this.article, article);
         this.article = article;
         this.resume = { view: JSON.stringify(this.route), id: article.id };
-        if (await markArticleRead(article.id)) {
-            window.dispatchEvent(new CustomEvent('article-read', { detail: article.id }));
-        }
     }
 
     private onOpenArticle(e: Event) {

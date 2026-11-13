@@ -259,11 +259,11 @@ import { assert } from './smoke-assert';
         };
         fail = false;
         await openArticleAction(openHost as never, openHost.items[0]!);
-        assert(openHost.items[0]!.read === 1, 'successful open leaves the row read');
+        assert(openHost.items[0]!.read === 0, 'opening an article does not mark it read');
         fail = true;
         openHost.items[0]!.read = 0;
         await openArticleAction(openHost as never, openHost.items[0]!);
-        assert(openHost.items[0]!.read === 0, 'failed open reverts the row to unread');
+        assert(openHost.items[0]!.read === 0, 'opening still leaves the row unread when writes fail');
 
         const starHost: { items: Article[] } = {
             items: [{ ...openHost.items[0]!, read: 1, starred: false }],

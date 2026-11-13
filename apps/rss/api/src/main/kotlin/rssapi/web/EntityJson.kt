@@ -2,6 +2,7 @@ package rssapi.web
 
 import rssapi.persist.FeedEntity
 import rssapi.persist.FolderEntity
+import rssapi.persist.SavedArticleEntity
 import rssapi.persist.SavedSearchEntity
 
 fun FolderEntity.toJson(): FolderJson = FolderJson(
@@ -34,4 +35,18 @@ fun SavedSearchEntity.toJson(unread: Int = 0): SavedSearchJson = SavedSearchJson
     sortOrder = sortOrder,
     createdAt = createdAt.toEpochMilli(),
     unread = unread,
+)
+
+fun SavedArticleEntity.toSavedArticleJson(): SavedArticleJson = SavedArticleJson(
+    id = id.toString(),
+    articleId = articleId,
+    feedId = feedId?.toString(),
+    feedTitle = feedTitle,
+    title = title,
+    link = link,
+    author = author,
+    summary = summary,
+    content = contentHtml,
+    published = publishedAt?.toEpochMilli(),
+    savedAt = savedAt.toEpochMilli(),
 )

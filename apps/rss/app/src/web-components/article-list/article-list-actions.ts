@@ -1,7 +1,6 @@
-import { libraryKey, queryClient } from '../../query';
+// (no query imports needed)
 import {
     markAllRead,
-    markArticleRead,
     markReadBefore,
     markShownRead,
     refreshFeed,
@@ -23,25 +22,6 @@ interface OpenHost {
 }
 
 export async function openArticleAction(host: OpenHost, article: Article) {
-    let pending: Promise<void> | undefined;
-    if (article.read === 0) {
-        // Optimistic: paint the row read and open the overlay now; the
-        // network write and cache invalidations settle after the event so
-        // they never delay the reader, but the returned promise still waits
-        // for them (tests and callers can observe completion/revert).
-        host.items = host.items.map((a) => (a.id === article.id ? { ...a, read: 1 } : a));
-        pending = markArticleRead(article.id)
-            .then((ok) => {
-                if (!ok) {
-                    host.items = host.items.map((a) => (a.id === article.id ? { ...a, read: 0 } : a));
-                }
-                void queryClient.invalidateQueries({ queryKey: libraryKey });
-            })
-            .catch(() => {
-                host.items = host.items.map((a) => (a.id === article.id ? { ...a, read: 0 } : a));
-                void queryClient.invalidateQueries({ queryKey: libraryKey });
-            });
-    }
     const index = host.items.findIndex((a) => a.id === article.id);
     host.cursor = index;
     host.dispatchEvent(
@@ -51,21 +31,30 @@ export async function openArticleAction(host: OpenHost, article: Article) {
             composed: true,
         }),
     );
-    await pending;
 }
 
-export async function toggleStarAction(host: { items: Article[] }, article: Article) {
-    const starred = !article.starred;
+export async function toggleStarAction(host: { items: Article[]; pendingStarIds?: Set<string> }, article: Article) {
+    host.pendingStarIds ??= new Set<string>();
+    if (host.pendingStarIds.has(article.id)) return;
+    const current = host.items.find((a) => a.id === article.id) ?? article;
+    const previous = current.starred;
+    const starred = !previous;
+    host.pendingStarIds.add(article.id);
     host.items = host.items.map((a) => (a.id === article.id ? { ...a, starred } : a));
-    if (!(await toggleStar(article.id, starred))) {
-        host.items = host.items.map((a) => (a.id === article.id ? { ...a, starred: article.starred } : a));
+    try {
+        if (!(await toggleStar(article.id, starred))) {
+            host.items = host.items.map((a) => (a.id === article.id ? { ...a, starred: previous } : a));
+        }
+    } finally {
+        host.pendingStarIds.delete(article.id);
     }
 }
 
 export async function markShownReadAction(host: { items: Article[]; hideRead: boolean; reset(): Promise<void> }) {
     const ids = host.items.filter((a) => a.read === 0).map((a) => a.id);
     if (!ids.length) return;
-    await markShownRead(ids);
+    const ok = await markShownRead(ids);
+    if (!ok) return;
     host.hideRead = true;
     await host.reset();
 }

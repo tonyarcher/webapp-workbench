@@ -1,8 +1,8 @@
 import { html, LitElement, unsafeCSS } from 'lit';
-import { customElement } from 'lit/decorators.js';
+import { customElement, state } from 'lit/decorators.js';
 import { invalidateLibrary, libraryKey, queryClient, QueryController, fetchLibrary } from '../../query';
 import { addFolder } from '../../services/api';
-import { deleteFeed, deleteFolder, moveFeed } from '../../mutations';
+import { deleteFeed, deleteFolder, setFeedFolderMembership } from '../../mutations';
 import type { Feed, Folder, SavedSearch } from '../../types';
 import styles from './organize-view.css?inline';
 
@@ -16,6 +16,10 @@ interface Library {
 export class OrganizeView extends LitElement {
     static override styles = unsafeCSS(styles);
 
+    /** Optimistic folder membership so rapid toggles don't clobber each other. */
+    @state() private folderOverrides = new Map<string, string[]>();
+    private folderSaveQueue = new Map<string, Promise<void>>();
+
     private library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
         queryFn: () => fetchLibrary(),
@@ -26,9 +30,13 @@ export class OrganizeView extends LitElement {
         return this.library.data ?? { folders: [], feeds: [], savedSearches: [] };
     }
 
+    private folderIdsFor(feed: Feed): string[] {
+        return this.folderOverrides.get(feed.id) ?? feed.folderIds;
+    }
+
     override render() {
         const { folders, feeds } = this.libraryData;
-        const uncategorized = feeds.filter((f) => f.folderIds.length === 0);
+        const uncategorized = feeds.filter((f) => this.folderIdsFor(f).length === 0);
         return html`
             <div class="organize">
                 <div class="toolbar">
@@ -53,7 +61,7 @@ export class OrganizeView extends LitElement {
     }
 
     private feedsFor(folderId: string): Feed[] {
-        return this.libraryData.feeds.filter((f) => f.folderIds.includes(folderId));
+        return this.libraryData.feeds.filter((f) => this.folderIdsFor(f).includes(folderId));
     }
 
     private renderFolderSection(
@@ -79,8 +87,8 @@ export class OrganizeView extends LitElement {
         `;
     }
 
-    private renderFeed(feed: Feed, folders: Folder[], currentFolderId: string | null) {
-        const current = currentFolderId ?? '';
+    private renderFeed(feed: Feed, folders: Folder[], _currentFolderId: string | null) {
+        const folderIds = this.folderIdsFor(feed);
         return html`
             <li class="feed-row">
                 <div class="feed-main">
@@ -92,13 +100,26 @@ export class OrganizeView extends LitElement {
                     </div>
                 </div>
                 <div class="feed-actions">
-                    <label class="move">
-                        <span>Folder</span>
-                        <select .value=${current} @change=${(e: Event) => this.onMoveFeed(feed, e)}>
-                            <option value="">Uncategorized</option>
-                            ${folders.map((f) => html`<option value=${f.id}>${f.title}</option>`)}
-                        </select>
-                    </label>
+                    <div class="folders-picker" role="group" aria-label="Folders for ${feed.title || feed.url}">
+                        <span class="picker-label">Folders</span>
+                        ${
+                            folders.length
+                                ? html`<div class="folder-checks">
+                                    ${folders.map(
+                                        (f) => html`
+                                        <label class="folder-check">
+                                            <input
+                                                type="checkbox"
+                                                .checked=${folderIds.includes(f.id)}
+                                                @change=${(e: Event) => this.onToggleFeedFolder(feed, f.id, (e.target as HTMLInputElement).checked)}
+                                            />
+                                            <span>${f.title}</span>
+                                        </label>`,
+                                    )}
+                                  </div>`
+                                : html`<span class="empty-hint">No folders yet</span>`
+                        }
+                    </div>
                     <button class="btn danger" @click=${() => this.onDeleteFeed(feed)}>Unfollow</button>
                 </div>
             </li>
@@ -138,14 +159,43 @@ export class OrganizeView extends LitElement {
         }
     }
 
-    private async onMoveFeed(feed: Feed, e: Event) {
-        const value = (e.target as HTMLSelectElement).value;
-        const folderId = value || null;
+    private async onToggleFeedFolder(feed: Feed, folderId: string, checked: boolean) {
+        const base = this.folderIdsFor(feed);
+        const nextSet = new Set(base);
+        if (checked) nextSet.add(folderId);
+        else nextSet.delete(folderId);
+        const next = [...nextSet];
+        this.folderOverrides = new Map(this.folderOverrides).set(feed.id, next);
+        const prev = this.folderSaveQueue.get(feed.id) ?? Promise.resolve();
+        const run = prev
+            .catch(() => undefined)
+            .then(async () => {
+                const current = this.folderOverrides.get(feed.id) ?? next;
+                await setFeedFolderMembership(feed.id, current);
+            });
+        this.folderSaveQueue.set(feed.id, run);
         try {
-            await moveFeed(feed.id, folderId);
+            await run;
         } catch (err) {
-            window.alert(err instanceof Error ? err.message : 'Could not move feed');
+            // Only the active tail reports/clears so a newer queued save can still win.
+            if (this.folderSaveQueue.get(feed.id) === run) {
+                window.alert(err instanceof Error ? err.message : 'Could not update folders');
+                const overrides = new Map(this.folderOverrides);
+                overrides.delete(feed.id);
+                this.folderOverrides = overrides;
+                await invalidateLibrary();
+            }
+            return;
+        } finally {
+            if (this.folderSaveQueue.get(feed.id) === run) this.folderSaveQueue.delete(feed.id);
+        }
+        // Clear optimistic state only when no newer toggle is queued/in flight for this feed.
+        if (this.folderSaveQueue.get(feed.id) === undefined) {
             await invalidateLibrary();
+            const overrides = new Map(this.folderOverrides);
+            // Keep any override set after invalidation started by a newer interaction.
+            if (this.folderSaveQueue.get(feed.id) === undefined) overrides.delete(feed.id);
+            this.folderOverrides = overrides;
         }
     }
 }

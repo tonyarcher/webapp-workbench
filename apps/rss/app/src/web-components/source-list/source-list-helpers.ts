@@ -36,11 +36,11 @@ export function folderUnreadFor(allFeeds: Feed[], folderId: string): number {
 }
 
 export function dropFolderId(
-    draggingKind: 'folder' | 'feed' | 'savedSearch' | null,
+    draggingKind: 'folder' | 'feed' | 'savedSearch' | 'interesting' | null,
     target: HTMLElement | null,
     libraryFeeds: Feed[],
 ): string | null {
-    if (draggingKind === 'savedSearch') return null;
+    if (draggingKind === 'savedSearch' || draggingKind === 'interesting') return null;
     const selector = draggingKind === 'feed' ? '[data-folder-id], [data-feed-id]' : '[data-folder-id]';
     const el = target?.closest<HTMLElement>(selector) ?? null;
     if (el?.dataset['folderId']) return el.dataset['folderId'];

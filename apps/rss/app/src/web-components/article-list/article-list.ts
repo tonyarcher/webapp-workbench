@@ -45,7 +45,12 @@ import {
     saveInterestingStrictness,
     DEFAULT_INTERESTING_STRICTNESS,
 } from '../../services/interesting-settings';
-import { saveInterestingCount } from '../../services/interesting-counts';
+import {
+    clearInterestingHideRead,
+    saveInterestingCount,
+    setInterestingHideRead,
+} from '../../services/interesting-counts';
+import { invalidateInterestingBatch } from '../../services/interesting-counts-refresh';
 import { DwellTracker } from './article-list-dwell';
 import {
     CARD_MIN_WIDTH,
@@ -219,6 +224,7 @@ export class ArticleList extends LitElement {
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
         this.virtualizerCleanup?.();
+        clearInterestingHideRead();
     }
 
     private onMuteRulesChanged = () => {
@@ -244,12 +250,14 @@ export class ArticleList extends LitElement {
     };
 
     private onArticleRead = (e: Event) => {
-        const id = (e as CustomEvent<string>).detail;
+        const detail = (e as CustomEvent<string | { id: string; read: 0 | 1 }>).detail;
+        const id = typeof detail === 'string' ? detail : detail.id;
+        const read = typeof detail === 'string' ? 1 : detail.read;
         let changed = false;
         this.items = this.items.map((a) => {
-            if (a.id === id && a.read === 0) {
+            if (a.id === id && a.read !== read) {
                 changed = true;
-                return { ...a, read: 1 };
+                return { ...a, read };
             }
             return a;
         });
@@ -271,10 +279,15 @@ export class ArticleList extends LitElement {
         }
     }
 
-    override updated(_changed: Map<string, unknown>) {
+    override updated(changed: Map<string, unknown>) {
         this.handleUpdate(this.currentViewKey());
-        if (this.view.kind === 'interesting' && isIdle(this.loadState)) {
-            saveInterestingCount(this.view.id, this.items.length);
+        clearInterestingHideRead();
+        if (this.view.kind === 'interesting') {
+            // Mark shown as read sets hideRead after the write; the cached
+            // batch still says read 0, so drop it before the badge recompute.
+            if (changed.has('hideRead') && this.hideRead) invalidateInterestingBatch(this.view.id);
+            setInterestingHideRead(this.view.id, this.hideRead);
+            if (isIdle(this.loadState)) saveInterestingCount(this.view.id, this.items.length);
         }
     }
 

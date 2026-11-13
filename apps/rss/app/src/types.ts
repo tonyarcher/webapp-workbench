@@ -66,6 +66,20 @@ export type FeedSort = 'alpha' | 'unread';
 
 export type SearchScopeKind = 'all' | 'folder' | 'feed';
 
+export interface SavedArticleSnapshot {
+    id: string;
+    articleId?: string | undefined;
+    feedId?: string | undefined;
+    feedTitle?: string | undefined;
+    title: string;
+    link?: string | undefined;
+    author?: string | undefined;
+    summary?: string | undefined;
+    content?: string | undefined;
+    published?: number | undefined;
+    savedAt: number;
+}
+
 export type View =
     | { kind: 'all' }
     | { kind: 'folder'; id: string }
@@ -76,6 +90,7 @@ export type View =
     | { kind: 'frontpage' }
     | { kind: 'organize' }
     | { kind: 'mute-filters' }
+    | { kind: 'saved' }
     | {
           kind: 'search';
           scope?: SearchScopeKind | undefined;

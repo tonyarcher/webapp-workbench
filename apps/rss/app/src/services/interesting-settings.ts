@@ -14,6 +14,7 @@ import {
 export const DEFAULT_INTERESTING_STRICTNESS = WORDS_DEFAULT_STRICTNESS;
 
 const SHADOW_KEY = 'rss-reader:interesting-shadow';
+const ORDER_KEY = 'rss-reader:interesting-order';
 const WORD_MAP_KEY = 'rss-reader:word-map';
 const HIDE_READ_KEY = 'rss-reader:hide-read-by-folder';
 const STRICTNESS_KEY = 'rss-reader:interesting-strictness';
@@ -41,6 +42,70 @@ export function saveInterestingShadow(shadow: Record<string, true>): void {
     } catch {
         // storage unavailable; the toggle just won't persist
     }
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('interesting-settings-changed'));
+}
+
+/** Preferred display order for enabled Interesting rows (folder ids). */
+export function loadInterestingOrder(): string[] {
+    try {
+        const raw = localStorage.getItem(ORDER_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw) as unknown;
+        if (!Array.isArray(parsed)) return [];
+        const out: string[] = [];
+        const seen = new Set<string>();
+        for (const id of parsed) {
+            if (typeof id !== 'string' || !id || seen.has(id)) continue;
+            seen.add(id);
+            out.push(id);
+        }
+        return out;
+    } catch {
+        return [];
+    }
+}
+
+export function saveInterestingOrder(ids: string[]): void {
+    try {
+        const out: string[] = [];
+        const seen = new Set<string>();
+        for (const id of ids) {
+            if (typeof id !== 'string' || !id || seen.has(id)) continue;
+            seen.add(id);
+            out.push(id);
+        }
+        localStorage.setItem(ORDER_KEY, JSON.stringify(out));
+    } catch {
+        // storage unavailable; order just won't persist
+    }
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('interesting-settings-changed'));
+}
+
+/**
+ * Enabled Interesting folder ids in preferred order. Keeps stored order for
+ * enabled ids, appends newly-enabled ids in folder-library order, and drops ids
+ * that are no longer enabled or no longer exist.
+ */
+export function orderedInterestingFolderIds(
+    shadow: Record<string, true>,
+    folders: Array<{ id: string }>,
+    storedOrder: string[],
+): string[] {
+    const folderIds = new Set(folders.map((f) => f.id));
+    const enabled = new Set(Object.keys(shadow).filter((id) => shadow[id] === true && folderIds.has(id)));
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const id of storedOrder) {
+        if (!enabled.has(id) || seen.has(id)) continue;
+        seen.add(id);
+        out.push(id);
+    }
+    for (const folder of folders) {
+        if (!enabled.has(folder.id) || seen.has(folder.id)) continue;
+        seen.add(folder.id);
+        out.push(folder.id);
+    }
+    return out;
 }
 
 /** Learned word weights shared across folders. Zero entries are dropped, negatives kept. */
@@ -139,6 +204,7 @@ export function adjustWordMap(title: string, weight: number, articleId?: string)
         else map[word] = next;
     }
     saveWordMap(map);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('interesting-model-changed'));
 }
 
 /** Mirror of the folder hide-read toggle owned by source-list.ts. */
@@ -313,4 +379,5 @@ export function saveInterestingStrictness(folderId: string, value: number): void
     } catch {
         // storage unavailable; the slider just won't persist
     }
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('interesting-settings-changed'));
 }

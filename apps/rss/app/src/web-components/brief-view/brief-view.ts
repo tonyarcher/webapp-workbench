@@ -1,8 +1,8 @@
 import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { libraryKey, queryClient, QueryController, fetchLibrary } from '../../query';
+import { libraryKey, QueryController, fetchLibrary } from '../../query';
 import { fetchArticlesPage } from '../../services/api';
-import { markArticleRead } from '../../mutations';
+// article opens no longer auto-mark read.
 import {
     aiAvailability,
     type AiAvailability,
@@ -272,11 +272,6 @@ export class BriefView extends LitElement {
     }
 
     private openArticle(article: Article) {
-        if (article.read === 0) {
-            // Chain the brief refresh after the write so a refetch can't win
-            // the race and re-show the article as unread.
-            void markArticleRead(article.id).then(() => queryClient.invalidateQueries({ queryKey: ['brief'] }));
-        }
         const items = this.articles.data ?? [];
         const index = items.findIndex((a) => a.id === article.id);
         this.dispatchEvent(

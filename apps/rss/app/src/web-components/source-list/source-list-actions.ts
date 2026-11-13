@@ -10,7 +10,11 @@ import {
     syncAllFeeds,
 } from '../../mutations';
 import { pruneTodaySettings, saveTodaySettings, type TodaySettings } from '../../services/today-settings';
-import { saveInterestingShadow } from '../../services/interesting-settings';
+import {
+    orderedInterestingFolderIds,
+    saveInterestingOrder,
+    saveInterestingShadow,
+} from '../../services/interesting-settings';
 import type { Feed, FeedSort, Folder, SavedSearch } from '../../types';
 import type { MenuHost } from './source-list-menus';
 import {
@@ -28,6 +32,7 @@ export interface ActionHost extends MenuHost {
     feedSort: FeedSort;
     hideReadByFolder: Record<string, boolean>;
     interestingShadow: Record<string, true>;
+    interestingOrder: string[];
     todaySettings: TodaySettings;
     menuFeed(): Feed | undefined;
     folderMenuFolder(): Folder | undefined;
@@ -92,10 +97,24 @@ export function folderMenuShadowAction(host: ActionHost, e: Event): void {
     if (!folder) return;
     const enabled = (e as CustomEvent<boolean>).detail;
     const next = { ...host.interestingShadow };
-    if (enabled) next[folder.id] = true;
-    else delete next[folder.id];
+    const ordered = orderedInterestingFolderIds(
+        host.interestingShadow,
+        host.libraryData.folders,
+        host.interestingOrder,
+    );
+    let nextOrder = host.interestingOrder;
+    if (enabled) {
+        next[folder.id] = true;
+        if (!ordered.includes(folder.id)) nextOrder = [...ordered, folder.id];
+        else nextOrder = ordered;
+    } else {
+        delete next[folder.id];
+        nextOrder = ordered.filter((id) => id !== folder.id);
+    }
     host.interestingShadow = next;
+    host.interestingOrder = nextOrder;
     saveInterestingShadow(next);
+    saveInterestingOrder(nextOrder);
 }
 
 export function feedSortChangeAction(host: ActionHost, e: Event): void {

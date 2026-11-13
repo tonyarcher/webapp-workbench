@@ -3,7 +3,12 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { libraryKey, queryClient, QueryController, fetchLibrary } from '../../query';
 import { navigate } from '../../router';
 import { loadTodaySettings, type TodaySettings } from '../../services/today-settings';
-import { loadInterestingShadow } from '../../services/interesting-settings';
+import {
+    loadInterestingOrder,
+    loadInterestingShadow,
+    orderedInterestingFolderIds,
+    saveInterestingOrder,
+} from '../../services/interesting-settings';
 import { loadInterestingCount } from '../../services/interesting-counts';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
 import type { Feed, FeedSort, Folder, SavedSearch, View } from '../../types';
@@ -39,6 +44,7 @@ import {
     loadSidebarWidth,
     clampSidebarWidth,
     nextSidebarWidth,
+    saveCollapsed,
     saveSidebarWidth,
 } from './source-list-settings';
 
@@ -59,6 +65,7 @@ export class SourceList extends LitElement {
     @state() private feedSort: FeedSort = loadFeedSort();
     @state() private hideReadByFolder: Record<string, boolean> = loadHideReadByFolder();
     @state() interestingShadow: Record<string, true> = loadInterestingShadow();
+    @state() interestingOrder: string[] = loadInterestingOrder();
 
     private hideTimer: number | null = null;
     private resizing = false;
@@ -75,7 +82,7 @@ export class SourceList extends LitElement {
     @state() feedListMenuOpen = false;
     @state() feedListMenuAnchor: MenuAnchor | null = null;
 
-    private dragging: { kind: 'folder' | 'feed' | 'savedSearch'; id: string } | null = null;
+    private dragging: { kind: 'folder' | 'feed' | 'savedSearch' | 'interesting'; id: string } | null = null;
     private dragTargetEl: HTMLElement | null = null;
     menuTriggerFeedId: string | null = null;
     @state() menuOpen = false;
@@ -299,7 +306,8 @@ export class SourceList extends LitElement {
             this.view.kind === 'today' ||
             this.view.kind === 'frontpage' ||
             this.view.kind === 'organize' ||
-            this.view.kind === 'mute-filters'
+            this.view.kind === 'mute-filters' ||
+            this.view.kind === 'saved'
         )
             return true;
         if (this.view.kind === 'search' && view.kind === 'search') {
@@ -317,7 +325,12 @@ export class SourceList extends LitElement {
         toggleFolderAction(this as never, id);
     }
 
-    onDragStart(e: DragEvent, kind: 'folder' | 'feed' | 'savedSearch', id: string) {
+    toggleInterestingSection() {
+        this.collapsed = { ...this.collapsed, __interesting__: !this.collapsed['__interesting__'] };
+        saveCollapsed(this.collapsed);
+    }
+
+    onDragStart(e: DragEvent, kind: 'folder' | 'feed' | 'savedSearch' | 'interesting', id: string) {
         handleDragStart(this as never, e, kind, id);
     }
 
@@ -336,15 +349,25 @@ export class SourceList extends LitElement {
         this.dragTargetEl = null;
     }
 
-    private dropTarget(e: DragEvent): { folderId: string | null; savedSearchId: string | null } {
+    private dropTarget(e: DragEvent): {
+        folderId: string | null;
+        savedSearchId: string | null;
+        interestingId: string | null;
+    } {
         const savedSearchId =
             this.dragging?.kind === 'savedSearch'
                 ? ((e.target as HTMLElement).closest<HTMLElement>('[data-saved-search-id]')?.dataset['savedSearchId'] ??
                   null)
                 : null;
+        const interestingId =
+            this.dragging?.kind === 'interesting'
+                ? ((e.target as HTMLElement).closest<HTMLElement>('[data-interesting-id]')?.dataset['interestingId'] ??
+                  null)
+                : null;
         return {
             folderId: dropFolderId(this.dragging?.kind ?? null, e.target as HTMLElement, this.libraryData.feeds),
             savedSearchId,
+            interestingId,
         };
     }
 
@@ -354,8 +377,36 @@ export class SourceList extends LitElement {
         const target = this.dropTarget(e);
         if (this.dragging.kind === 'folder') await this.applyFolderReorder(this.dragging.id, target);
         else if (this.dragging.kind === 'feed') await this.applyFeedMove(this.dragging.id, target);
-        else await this.applySavedSearchReorder(this.dragging.id, target.savedSearchId);
+        else if (this.dragging.kind === 'savedSearch')
+            await this.applySavedSearchReorder(this.dragging.id, target.savedSearchId);
+        else this.applyInterestingReorder(this.dragging.id, target.interestingId);
         this.endDrag();
+    }
+
+    private applyInterestingReorder(draggedId: string, targetId: string | null) {
+        const current = orderedInterestingFolderIds(
+            this.interestingShadow,
+            this.libraryData.folders,
+            this.interestingOrder,
+        );
+        const next = this.reorderInterestingIdsLocal(current, draggedId, targetId);
+        this.interestingOrder = next;
+        saveInterestingOrder(next);
+    }
+
+    private reorderInterestingIdsLocal(current: string[], draggedId: string, targetId: string | null): string[] {
+        if (targetId === draggedId) return [...current];
+        const ids = [...current];
+        const from = ids.indexOf(draggedId);
+        if (from < 0) return ids;
+        ids.splice(from, 1);
+        if (targetId) {
+            const to = ids.indexOf(targetId);
+            ids.splice(to < 0 ? ids.length : to, 0, draggedId);
+        } else {
+            ids.push(draggedId);
+        }
+        return ids;
     }
 
     onDragEnd() {
