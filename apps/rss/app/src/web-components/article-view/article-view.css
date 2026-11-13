@@ -149,13 +149,40 @@ h1 a:hover {
 }
 
 .keyword {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
     font-size: 12px;
     line-height: 1.4;
-    padding: 2px 8px;
+    padding: 2px 4px 2px 8px;
     border-radius: 999px;
     border: 1px solid var(--border);
     color: var(--text-muted);
     background: var(--hover);
+}
+
+.keyword-step {
+    font: inherit;
+    font-size: 12px;
+    line-height: 1;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.keyword-step:hover,
+.keyword-step:focus-visible {
+    background: color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.keyword-step:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 1px;
 }
 
 .keyword.interesting {

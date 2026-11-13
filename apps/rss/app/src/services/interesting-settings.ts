@@ -207,6 +207,21 @@ export function adjustWordMap(title: string, weight: number, articleId?: string)
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('interesting-model-changed'));
 }
 
+/**
+ * Nudge one learned word directly (article keyword +/- controls). Unlike
+ * adjustWordMap this does not fold a whole title or dedupe by article id:
+ * the reader is tuning this exact word, so each press is one step.
+ */
+export function adjustWordWeight(word: string, delta: number): void {
+    if (!word || delta === 0) return;
+    const map = loadWordMap();
+    const next = (map[word] ?? 0) + delta;
+    if (next === 0) delete map[word];
+    else map[word] = next;
+    saveWordMap(map);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('interesting-model-changed'));
+}
+
 /** Mirror of the folder hide-read toggle owned by source-list.ts. */
 export function isHideReadFolder(folderId: string): boolean {
     try {

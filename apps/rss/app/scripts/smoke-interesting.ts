@@ -5,8 +5,15 @@ import { assert } from './smoke-assert';
 {
     const { buildWordMap, extractWords, interestingScore, rankInteresting, topWords, toDecisionState } =
         await import('../src/services/interesting-words');
-    const { adjustWordMap, isHideReadFolder, loadInterestingShadow, loadWordMap, saveInterestingShadow, saveWordMap } =
-        await import('../src/services/interesting-settings');
+    const {
+        adjustWordMap,
+        adjustWordWeight,
+        isHideReadFolder,
+        loadInterestingShadow,
+        loadWordMap,
+        saveInterestingShadow,
+        saveWordMap,
+    } = await import('../src/services/interesting-settings');
 
     assert(
         extractWords('The Quick, Brown Fox!').join(',') === 'quick,brown,fox',
@@ -64,6 +71,15 @@ import { assert } from './smoke-assert';
     assert(loadWordMap()['rust'] === undefined, 'adjustWordMap unstar forgets the id');
     adjustWordMap('Rust Performance', 4, 'a1');
     assert(loadWordMap()['rust'] === 4, 'adjustWordMap re-star counts again');
+    adjustWordWeight('rust', 1);
+    assert(loadWordMap()['rust'] === 5, 'adjustWordWeight adds one step');
+    adjustWordWeight('rust', -5);
+    assert(loadWordMap()['rust'] === undefined, 'adjustWordWeight removes the entry at zero');
+    adjustWordWeight('rare', -1);
+    assert(loadWordMap()['rare'] === -1, 'adjustWordWeight keeps negative weights');
+    adjustWordWeight('', 1);
+    adjustWordWeight('rare', 0);
+    assert(loadWordMap()['rare'] === -1, 'adjustWordWeight ignores empty words and zero steps');
 
     mem.set('rss-reader:hide-read-by-folder', JSON.stringify({ f1: true }));
     assert(isHideReadFolder('f1') === true, 'hide-read lookup follows the folder toggle');

@@ -1,4 +1,5 @@
 import { html, LitElement, svg, unsafeCSS } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sanitizeHtml, safeHttpUrl } from '../../services/parser';
@@ -17,7 +18,7 @@ import {
     unsaveForLater,
 } from '../../mutations';
 import { fetchSavedArticlesList } from '../../query';
-import { loadWordMap, isDeranked } from '../../services/interesting-settings';
+import { adjustWordWeight, loadWordMap, isDeranked } from '../../services/interesting-settings';
 import { extractWords } from '../../services/interesting-words';
 import { readMinutes } from '../../util';
 import type { Article } from '../../types';
@@ -249,11 +250,47 @@ export class ArticleView extends LitElement {
         if (!this.keywords.length) return '';
         return html`<div class="keywords" aria-label="Article keywords">
             <span class="keywords-label">Keywords</span>
-            ${this.keywords.map(
+            ${repeat(
+                this.keywords,
+                (k) => k.word,
                 (k) =>
-                    html`<span class="keyword ${k.score > 0 ? 'interesting' : ''}" title=${`Weight ${k.score}`}>${k.word}</span>`,
+                    html`<span class="keyword ${k.score > 0 ? 'interesting' : ''}">
+                        <span class="keyword-word" title=${`Weight ${k.score}`}>${k.word}</span>
+                        <button
+                            class="keyword-step"
+                            title=${`Make ${k.word} less interesting`}
+                            aria-label=${`Decrease weight for ${k.word}`}
+                            @click=${(e: MouseEvent) => this.adjustKeyword(e, k.word, -1)}
+                        >−</button>
+                        <button
+                            class="keyword-step"
+                            title=${`Make ${k.word} more interesting`}
+                            aria-label=${`Increase weight for ${k.word}`}
+                            @click=${(e: MouseEvent) => this.adjustKeyword(e, k.word, 1)}
+                        >+</button>
+                    </span>`,
             )}
         </div>`;
+    }
+
+    private adjustKeyword(e: MouseEvent, word: string, delta: number) {
+        e.stopPropagation();
+        // Marks are keyed to the old word set; unwrap before the new set is
+        // applied so removing a word really removes its highlight.
+        this.unwrapHighlights();
+        adjustWordWeight(word, delta);
+        this.keywords = this.article ? articleKeywords(this.article) : [];
+    }
+
+    private unwrapHighlights(): void {
+        const content = this.renderRoot.querySelector('.content');
+        if (!(content instanceof HTMLElement)) return;
+        for (const mark of content.querySelectorAll('mark.kw-interest, mark.kw')) {
+            const parent = mark.parentNode;
+            if (!parent) continue;
+            parent.replaceChild(document.createTextNode(mark.textContent ?? ''), mark);
+            parent.normalize();
+        }
     }
 
     private renderBody(body: string, a: Article) {

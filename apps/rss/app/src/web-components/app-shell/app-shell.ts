@@ -2,12 +2,13 @@ import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { history, navigate, parsePath } from '../../router';
 // article opens no longer auto-mark read; explicit read/unread controls live in article view.
-import { bustCounts, queryClient } from '../../query';
+import { bustCounts, libraryKey, queryClient } from '../../query';
 import type { ArticleView } from '../article-view/article-view';
 import { clearClientDb } from '../../db/db';
 import { currentUsername, hasSession, logout, startLogin } from '../../services/auth';
 import { clearToasts, dismissToast, onToast, type ToastNotice } from '../../services/toast';
 import { startInterestingCountsRefresh, stopInterestingCountsRefresh } from '../../services/interesting-counts-refresh';
+import { startForegroundSync, stopForegroundSync } from '../../services/foreground-sync';
 import { endOpen, initialOpenTiming, trackOpen, type OpenTiming } from './article-open-tracking';
 import { isModalOpen } from '../../services/modal-guard';
 import {
@@ -95,12 +96,16 @@ export class AppShell extends LitElement {
             this.toasts = notices;
             this.syncToastTimers();
         });
-        if (this.authed) startInterestingCountsRefresh();
+        if (this.authed) {
+            startInterestingCountsRefresh();
+            startForegroundSync(this.autoSyncFeedIds);
+        }
     }
 
     override disconnectedCallback() {
         super.disconnectedCallback();
         stopInterestingCountsRefresh();
+        stopForegroundSync();
         this.unsubscribeToasts?.();
         this.unsubscribeToasts = null;
         this.endArticleResize();
@@ -118,6 +123,23 @@ export class AppShell extends LitElement {
         this.shortcutsOpen = true;
     };
 
+    /**
+     * Feeds the foreground sync should force. Folder/feed views refresh only
+     * what they show; All, brief, today, and the rest refresh the whole library.
+     */
+    private autoSyncFeedIds = (): string[] | undefined => {
+        const lib = queryClient.getQueryData(libraryKey) as
+            { feeds?: Array<{ id: string; folderIds: string[] }> } | undefined;
+        const feeds = lib?.feeds;
+        if (!feeds?.length) return undefined;
+        const view = this.route;
+        if (view.kind === 'feed') return feeds.filter((f) => f.id === view.id).map((f) => f.id);
+        if (view.kind === 'folder' || view.kind === 'interesting') {
+            return feeds.filter((f) => f.folderIds.includes(view.id)).map((f) => f.id);
+        }
+        return undefined;
+    };
+
     private onAuthError = (e: Event) => {
         const detail = (e as CustomEvent<unknown>).detail;
         this.authError = typeof detail === 'string' && detail ? detail : 'Sign-in failed';
@@ -127,8 +149,13 @@ export class AppShell extends LitElement {
         this.authed = hasSession();
         this.username = currentUsername();
         clearToasts();
-        if (this.authed) startInterestingCountsRefresh();
-        else stopInterestingCountsRefresh();
+        if (this.authed) {
+            startInterestingCountsRefresh();
+            startForegroundSync(this.autoSyncFeedIds);
+        } else {
+            stopInterestingCountsRefresh();
+            stopForegroundSync();
+        }
     };
 
     private onAuthRequired = () => {
@@ -155,6 +182,7 @@ export class AppShell extends LitElement {
      */
     private signOut = (): void => {
         stopInterestingCountsRefresh();
+        stopForegroundSync();
         void this.resetAccount().catch(() => {
             this.authError = 'Signed out on this device, but some local data could not be cleared.';
             this.authed = false;
