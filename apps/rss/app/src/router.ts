@@ -25,6 +25,9 @@ export function parsePath(pathname: string, search = ''): View {
     if (parts[0] === 'frontpage') {
         return { kind: 'frontpage' };
     }
+    if (parts[0] === 'organize') {
+        return { kind: 'organize' };
+    }
     if (parts[0] === 'search') {
         const scope = params.get('scope');
         const id = params.get('id') ?? undefined;
@@ -52,6 +55,8 @@ export function viewToPath(view: View): string {
             return '/today';
         case 'frontpage':
             return '/frontpage';
+        case 'organize':
+            return '/organize';
         case 'folder':
             return `/folder/${encodeURIComponent(view.id)}`;
         case 'interesting':

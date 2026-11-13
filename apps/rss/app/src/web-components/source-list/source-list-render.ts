@@ -219,8 +219,13 @@ function renderNavError(host: SourceListRenderHost) {
 
 function renderStaticNav(host: SourceListRenderHost) {
     return html`
-      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderSearchNav(host)}${renderAllNav(host)}
+      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderSearchNav(host)}${renderOrganizeNav(host)}${renderAllNav(host)}
     `;
+}
+
+function renderOrganizeNav(host: SourceListRenderHost) {
+    const active = host.isActive({ kind: 'organize' });
+    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'organize' })}><span class="icon" aria-hidden="true">⚙</span><span class="label">Organize</span></button>`;
 }
 
 function savedSearchRow(host: SourceListRenderHost, search: SavedSearch) {

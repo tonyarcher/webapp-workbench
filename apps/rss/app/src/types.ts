@@ -74,6 +74,7 @@ export type View =
     | { kind: 'brief' }
     | { kind: 'today' }
     | { kind: 'frontpage' }
+    | { kind: 'organize' }
     | {
           kind: 'search';
           scope?: SearchScopeKind | undefined;

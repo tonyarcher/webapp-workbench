@@ -18,6 +18,7 @@ import {
 } from './article-panel-resize';
 import { overlayShortcut } from '../../services/shortcuts';
 import type { Article, View } from '../../types';
+import '../organize-view/organize-view';
 import '../shortcuts-dialog/shortcuts-dialog';
 import { MAX_ARTICLE_PANEL_WIDTH, MIN_ARTICLE_PANEL_WIDTH, loadArticlePanelWidth } from './article-panel-settings';
 import styles from './app-shell.css?inline';
@@ -262,6 +263,7 @@ export class AppShell extends LitElement {
         if (this.route.kind === 'brief') return html`<brief-view @open-article=${this.onOpenArticle}></brief-view>`;
         if (this.route.kind === 'today') return html`<today-view @open-article=${this.onOpenArticle}></today-view>`;
         if (this.route.kind === 'frontpage') return html`<front-page @open-article=${this.onOpenArticle}></front-page>`;
+        if (this.route.kind === 'organize') return html`<organize-view></organize-view>`;
         if (this.route.kind === 'search')
             return html`<search-view .view=${this.route} @open-article=${this.onOpenArticle}></search-view>`;
         return html`<article-list .view=${this.route} .active=${!this.article} .resumeArticleId=${this.resumeArticleId} @open-article=${this.onOpenArticle}></article-list>`;

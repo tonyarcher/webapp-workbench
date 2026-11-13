@@ -297,7 +297,8 @@ export class SourceList extends LitElement {
             this.view.kind === 'all' ||
             this.view.kind === 'brief' ||
             this.view.kind === 'today' ||
-            this.view.kind === 'frontpage'
+            this.view.kind === 'frontpage' ||
+            this.view.kind === 'organize'
         )
             return true;
         if (this.view.kind === 'search' && view.kind === 'search') {
