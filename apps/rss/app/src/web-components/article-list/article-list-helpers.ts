@@ -128,9 +128,7 @@ interface SettingsHost {
     updateCols(): void;
 }
 
-export function loadViewSettingsFor(host: SettingsHost): void {
-    const saved = readViewSettings()[viewKeyOf(host.view)];
-    if (!saved) return;
+function applyViewSettings(host: SettingsHost, saved: ViewSettings): void {
     host.listView = saved.listView ?? 'detailed';
     host.sort = saved.sort ?? 'hot';
     host.pageSize = clampPageSize(saved.pageSize);
@@ -138,6 +136,31 @@ export function loadViewSettingsFor(host: SettingsHost): void {
     host.unreadOnly = saved.unreadOnly ?? false;
     host.markOnScroll = saved.markOnScroll ?? false;
     host.updateCols();
+}
+
+function resetViewSettings(host: SettingsHost): void {
+    host.listView = 'detailed';
+    host.sort = 'hot';
+    host.pageSize = DEFAULT_PAGE_SIZE;
+    host.maxCardCols = 4;
+    host.unreadOnly = false;
+    host.markOnScroll = false;
+    host.updateCols();
+}
+
+/**
+ * Per-view layout and filters. An Interesting view is a smart folder of its
+ * own: without saved settings it starts from the defaults rather than
+ * inheriting the folder's "Unread only" toggle. The background badge refresh
+ * uses the same defaults, so the badge and the list agree.
+ */
+export function loadViewSettingsFor(host: SettingsHost): void {
+    const saved = readViewSettings()[viewKeyOf(host.view)];
+    if (saved) {
+        applyViewSettings(host, saved);
+        return;
+    }
+    if (host.view.kind === 'interesting') resetViewSettings(host);
 }
 
 export function saveViewSettingsFor(host: SettingsHost): void {
