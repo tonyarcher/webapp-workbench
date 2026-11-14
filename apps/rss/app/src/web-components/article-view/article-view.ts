@@ -131,9 +131,6 @@ export class ArticleView extends LitElement {
         }
         const a = this.article;
         if (!a) return;
-        // State-driven re-renders (scroll progress, save/star toggles) can replace
-        // rendered content; always ensure keyword marks are applied for this article.
-        this.highlightBodyKeywords();
         this.setAttribute('aria-label', a.title);
         if (this.focused) return;
         this.focused = true;
@@ -290,9 +287,6 @@ export class ArticleView extends LitElement {
 
     private adjustKeyword(e: MouseEvent, word: string, delta: number) {
         e.stopPropagation();
-        // Marks are keyed to the old word set; unwrap before the new set is
-        // applied so removing a word really removes its highlight.
-        this.unwrapHighlights();
         adjustWordWeight(word, delta);
         this.keywords = this.article ? articleKeywords(this.article) : [];
         this.pulseKeyword(word, delta);
@@ -321,17 +315,6 @@ export class ArticleView extends LitElement {
             return;
         }
         arm();
-    }
-
-    private unwrapHighlights(): void {
-        const content = this.renderRoot.querySelector('.content');
-        if (!(content instanceof HTMLElement)) return;
-        for (const mark of content.querySelectorAll('mark.kw-interest, mark.kw, mark.kw-derank')) {
-            const parent = mark.parentNode;
-            if (!parent) continue;
-            parent.replaceChild(document.createTextNode(mark.textContent ?? ''), mark);
-            parent.normalize();
-        }
     }
 
     private renderBody(body: string, a: Article) {
@@ -513,62 +496,6 @@ export class ArticleView extends LitElement {
         if (minutes > 0) parts.push(`${minutes} min read`);
         return parts.join(' · ') || 'selected key excerpts';
     }
-
-    private highlightBodyKeywords(): void {
-        if (!this.keywords.length) return;
-        const content = this.renderRoot.querySelector('.content');
-        if (!(content instanceof HTMLElement)) return;
-        // Already highlighted for this rendered content.
-        if (content.querySelector('mark.kw-interest, mark.kw, mark.kw-derank')) return;
-        // Only learned words are highlighted; plain article keywords are chips.
-        const words = this.keywords.filter((k) => k.score !== 0).map((k) => k.word);
-        if (!words.length) return;
-        const pattern = new RegExp(`\\b(${words.map(escapeRegExp).join('|')})\\b`, 'gi');
-        const interesting = new Set(this.keywords.filter((k) => k.score > 0).map((k) => k.word));
-        const deranked = new Set(this.keywords.filter((k) => k.score < 0).map((k) => k.word));
-        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {
-            acceptNode(node) {
-                const parent = node.parentElement;
-                if (!parent) return NodeFilter.FILTER_REJECT;
-                if (parent.closest('pre,code,script,style,textarea,mark')) return NodeFilter.FILTER_REJECT;
-                if (!node.nodeValue || !pattern.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
-                pattern.lastIndex = 0;
-                return NodeFilter.FILTER_ACCEPT;
-            },
-        });
-        const nodes: Text[] = [];
-        let n = walker.nextNode();
-        while (n) {
-            nodes.push(n as Text);
-            n = walker.nextNode();
-        }
-        if (!nodes.length) return;
-        for (const textNode of nodes) {
-            const text = textNode.nodeValue ?? '';
-            pattern.lastIndex = 0;
-            const frag = document.createDocumentFragment();
-            let last = 0;
-            let m: RegExpExecArray | null;
-            while ((m = pattern.exec(text))) {
-                const start = m.index;
-                const match = m[0] ?? '';
-                if (start > last) frag.append(text.slice(last, start));
-                const mark = document.createElement('mark');
-                const key = match.toLowerCase();
-                mark.className = interesting.has(key) ? 'kw-interest' : deranked.has(key) ? 'kw-derank' : 'kw';
-                mark.textContent = match;
-                frag.append(mark);
-                last = start + match.length;
-            }
-            if (last === 0) continue;
-            if (last < text.length) frag.append(text.slice(last));
-            textNode.replaceWith(frag);
-        }
-    }
-}
-
-function escapeRegExp(s: string): string {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function articleKeywords(article: Article): ArticleKeyword[] {
