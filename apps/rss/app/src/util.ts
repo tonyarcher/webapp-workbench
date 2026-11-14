@@ -33,7 +33,7 @@ export function readMinutes(content?: string, summary?: string): number {
     return Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
 }
 
-function stripTags(html: string): string {
+export function stripTags(html: string): string {
     return html.replace(/<[^>]*>/g, ' ');
 }
 

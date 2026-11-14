@@ -66,6 +66,20 @@ export type FeedSort = 'alpha' | 'unread';
 
 export type SearchScopeKind = 'all' | 'folder' | 'feed';
 
+/** Extractive key lines plus typed why signals from the decision model. */
+export interface RowHighlight {
+    available: boolean;
+    excerpts: HighlightExcerpt[];
+    interesting?: number | null;
+    spam?: number | null;
+}
+
+export interface HighlightExcerpt {
+    index: number;
+    text: string;
+    score: number;
+}
+
 export interface SavedArticleSnapshot {
     id: string;
     articleId?: string | undefined;

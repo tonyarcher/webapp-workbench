@@ -1,6 +1,7 @@
 import type {
     Article,
     Edition,
+    RowHighlight,
     EditionMeta,
     EditionSection,
     EditionStatus,
@@ -358,6 +359,18 @@ export async function fetchFrontPage(params: FrontPageParams = {}): Promise<Fron
 }
 
 // ---- server AI (admin provider setting; hidden when unavailable) ----
+
+export async function fetchRowHighlights(articleId: string): Promise<RowHighlight> {
+    return apiFetch(`/ai/highlights/${encodeURIComponent(articleId)}`) as Promise<RowHighlight>;
+}
+
+/** Dynamically extract fuller article text from the source page. */
+export async function extractArticle(articleId: string): Promise<{ article: Article; extracted: boolean }> {
+    const res = (await apiFetch(`/articles/${encodeURIComponent(articleId)}/extract`, {
+        method: 'POST',
+    })) as { article: Article; extracted: boolean };
+    return { article: res.article, extracted: res.extracted === true };
+}
 
 export interface ServerAiStatus {
     available: boolean;

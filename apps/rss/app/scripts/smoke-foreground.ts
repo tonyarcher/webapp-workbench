@@ -8,4 +8,12 @@ import { assert } from './smoke-assert';
     assert(!autoSyncDue({ ...base, hidden: true, now: 60_000 }), 'foreground sync skips a hidden tab');
     assert(!autoSyncDue({ ...base, focused: false, now: 60_000 }), 'foreground sync skips an unfocused tab');
     assert(!autoSyncDue({ ...base, now: 59_999 }), 'foreground sync waits for the gap after a recent run');
+
+    const { areHighlightsEnabled, loadRowHighlights, setHighlightsEnabled } =
+        await import('../src/services/highlights');
+    assert(areHighlightsEnabled(), 'row highlights default on');
+    setHighlightsEnabled(false);
+    assert((await loadRowHighlights('a1')) === null, 'disabled row highlights return null without fetching');
+    setHighlightsEnabled(true);
+    assert(areHighlightsEnabled(), 'row highlights re-enable from storage');
 }

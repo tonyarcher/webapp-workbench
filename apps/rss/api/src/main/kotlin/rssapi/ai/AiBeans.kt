@@ -16,6 +16,9 @@ class AiBeans {
     fun aiConfig(): AiConfig = aiConfigFromEnv()
 
     @Bean
-    fun decisionScoreProvider(config: AiConfig, signals: SignalScoreProvider): DecisionScoreProvider =
-        DecisionScoreProvider(DecisionBackend(config), signals)
+    fun decisionBackend(config: AiConfig): DecisionBackend = DecisionBackend(config)
+
+    @Bean
+    fun decisionScoreProvider(backend: DecisionBackend, signals: SignalScoreProvider): DecisionScoreProvider =
+        DecisionScoreProvider(backend, signals)
 }

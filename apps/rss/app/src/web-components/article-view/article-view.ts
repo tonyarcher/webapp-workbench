@@ -20,9 +20,10 @@ import {
 import { fetchSavedArticlesList } from '../../query';
 import { adjustWordWeight, loadWordMap, isDeranked } from '../../services/interesting-settings';
 import { articleKeywordsOf, type ArticleKeyword } from '../../services/keywords';
+import { areHighlightsEnabled, loadRowHighlights, setHighlightsEnabled } from '../../services/highlights';
 import { readMinutes } from '../../util';
-import type { Article } from '../../types';
-import { domainOf, formatDate } from '../../util';
+import type { Article, RowHighlight } from '../../types';
+import { domainOf, formatDate, stripTags } from '../../util';
 
 import '../video-header/video-header';
 import styles from './article-view.css?inline';
@@ -39,6 +40,10 @@ export class ArticleView extends LitElement {
     @state() private keywords: ArticleKeyword[] = [];
     /** Prevent async saved-state refresh from clobbering newer intent/results. */
     private savedStateGen = 0;
+    /** Decision-model-selected key lines for the open article. */
+    @state() private keyLines: RowHighlight | null = null;
+    @state() private keyLinesLoading = false;
+    @state() private highlightsOn = areHighlightsEnabled();
     /** Article the progress bar belongs to; object identity churns on star. */
     private progressArticleId: string | null = null;
     /** 0..1 fraction of the article scrolled, for the progress bar. */
@@ -114,6 +119,9 @@ export class ArticleView extends LitElement {
                 this.savedForLater = false;
                 this.readProgress = 0;
                 this.scrollTop = 0;
+                this.keyLines = null;
+                this.keyLinesLoading = false;
+                if (this.highlightsOn) void this.refreshKeyLines();
                 void this.refreshSavedState();
             }
         }
@@ -140,7 +148,7 @@ export class ArticleView extends LitElement {
         }
         const link = safeHttpUrl(a.link);
         const video = articleVideo(a);
-        return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderBody(body, a)}</div>`;
+        return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderKeyLines()}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderBody(body, a)}</div>`;
     }
 
     private renderToolbar(a: Article, link: string | undefined) {
@@ -239,7 +247,7 @@ export class ArticleView extends LitElement {
 
     private renderMeta(a: Article) {
         const minutes = readMinutes(a.content, a.summary);
-        return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}</div>${this.renderKeywords()}`;
+        return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}${this.renderHighlightsToggle()}</div>${this.renderKeywords()}`;
     }
 
     private renderKeywords() {
@@ -364,6 +372,109 @@ export class ArticleView extends LitElement {
         const next = !this.deranked;
         noteDerank(a.id, a.title, next);
         this.deranked = next;
+    }
+
+    /**
+     * Fetch the decision model's selected excerpts. They are verbatim slices of
+     * this article, so the panel cites the open row and never adds prose.
+     * When stored content is thin, try dynamic full-text extraction first.
+     */
+    private async refreshKeyLines(): Promise<void> {
+        const a = this.article;
+        if (!a || !this.highlightsOn) return;
+        this.keyLinesLoading = true;
+        await this.ensureRichContent(a);
+        const current = this.article;
+        if (!current || current.id !== a.id || !this.highlightsOn) {
+            this.keyLinesLoading = false;
+            return;
+        }
+        const result = await loadRowHighlights(current.id);
+        if (this.article?.id !== a.id) return;
+        this.keyLines = result;
+        this.keyLinesLoading = false;
+    }
+
+    /** Dynamically fetch fuller article text for thin content so analysis improves. */
+    private async ensureRichContent(a: Article): Promise<void> {
+        const text = stripTags(a.content ?? a.summary ?? '');
+        if (text.length >= 1200 || !a.link) return;
+        try {
+            const { extractArticle } = await import('../../services/api');
+            const res = await extractArticle(a.id);
+            if (this.article?.id !== a.id || !res.extracted) return;
+            // Keep local read/starred and other user state; extraction only enriches content.
+            this.article = {
+                ...this.article,
+                content: res.article.content ?? this.article.content,
+                summary: res.article.summary ?? this.article.summary,
+            };
+            this.sanitizedBody = null;
+            this.keywords = articleKeywords(this.article);
+        } catch {
+            // extraction is best-effort; keep showing stored content
+        }
+    }
+
+    private onToggleKeyLines(): void {
+        this.highlightsOn = !this.highlightsOn;
+        setHighlightsEnabled(this.highlightsOn);
+        if (!this.highlightsOn) {
+            this.keyLines = null;
+            this.keyLinesLoading = false;
+            return;
+        }
+        void this.refreshKeyLines();
+    }
+
+    private renderKeyLines() {
+        if (!this.highlightsOn) return '';
+        const result = this.keyLines;
+        const has = !!result && result.available && result.excerpts.length > 0;
+        const settledEmpty = !this.keyLinesLoading && !has;
+        return html`<section class="key-lines" aria-label="Key lines">
+            <div class="key-lines-head">
+                <h2>Key lines</h2>
+                <button class="key-lines-toggle" @click=${this.onToggleKeyLines} aria-pressed=${this.highlightsOn}>Hide</button>
+            </div>
+            ${this.keyLinesLoading && !has ? html`<div class="skl"></div><div class="skl skl-short"></div>` : ''}
+            ${settledEmpty ? html`<p class="key-why">No key lines found for this article.</p>` : ''}
+            ${
+                has
+                    ? html`<ul>
+                      ${repeat(
+                          result.excerpts,
+                          (e) => e.index,
+                          (e) => html`<li><blockquote>${e.text}</blockquote></li>`,
+                      )}
+                  </ul>
+                  <p class="key-why">From this article · ${this.whyLine(result)}</p>`
+                    : ''
+            }
+        </section>`;
+    }
+
+    /** Re-enable affordance while the feature is off. */
+    private renderHighlightsToggle() {
+        if (this.highlightsOn) return '';
+        return html`<button class="key-lines-toggle" @click=${this.onToggleKeyLines} aria-pressed="false">Key lines</button>`;
+    }
+
+    /** Assembled signal labels only; no generated sentence. */
+    private whyLine(result: RowHighlight): string {
+        const parts: string[] = [];
+        const learned = this.keywords
+            .filter((k) => k.score !== 0)
+            .slice(0, 4)
+            .map((k) => `${k.word} ${k.score > 0 ? '+' : ''}${k.score}`);
+        if (learned.length) parts.push(`learned: ${learned.join(', ')}`);
+        if (result.interesting !== null && result.interesting !== undefined) {
+            parts.push(`Jev interest ${Math.round(result.interesting * 100)}%`);
+        }
+        if (result.spam != null && result.spam >= 0.5) parts.push('looks like boilerplate');
+        const minutes = readMinutes(this.article?.content ?? '', this.article?.summary);
+        if (minutes > 0) parts.push(`${minutes} min read`);
+        return parts.join(' · ') || 'selected key excerpts';
     }
 
     private highlightBodyKeywords(): void {
