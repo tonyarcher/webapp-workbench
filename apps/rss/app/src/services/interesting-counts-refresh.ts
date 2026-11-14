@@ -13,13 +13,9 @@ import { filterMutedArticles, loadMuteRules, type FeedFolderLookup } from './mut
 import type { Article, Feed } from '../types';
 
 const VIEW_SETTINGS_KEY = 'rss-reader:view-settings';
-/** Mirrors the Interesting view's page-size options; the badge shows the capped list. */
-const DEFAULT_PAGE_SIZE = 50;
-const PAGE_SIZES: readonly number[] = [20, 50, 100, 500];
 
 interface InterestingViewSettings {
     unreadOnly: boolean;
-    pageSize: number;
 }
 
 interface BatchEntry {
@@ -75,16 +71,12 @@ function enabledFolderIds(): string[] {
 function interestingViewSettings(folderId: string): InterestingViewSettings {
     try {
         const raw = localStorage.getItem(VIEW_SETTINGS_KEY);
-        if (!raw) return { unreadOnly: false, pageSize: DEFAULT_PAGE_SIZE };
-        const parsed = JSON.parse(raw) as Record<string, { unreadOnly?: boolean; pageSize?: number } | undefined>;
+        if (!raw) return { unreadOnly: false };
+        const parsed = JSON.parse(raw) as Record<string, { unreadOnly?: boolean } | undefined>;
         const entry = parsed[`interesting:${folderId}`];
-        const pageSize =
-            typeof entry?.pageSize === 'number' && PAGE_SIZES.includes(entry.pageSize)
-                ? entry.pageSize
-                : DEFAULT_PAGE_SIZE;
-        return { unreadOnly: entry?.unreadOnly === true, pageSize };
+        return { unreadOnly: entry?.unreadOnly === true };
     } catch {
-        return { unreadOnly: false, pageSize: DEFAULT_PAGE_SIZE };
+        return { unreadOnly: false };
     }
 }
 
@@ -117,15 +109,16 @@ export function invalidateInterestingBatch(folderId: string): void {
     batchCache.delete(folderId);
 }
 
-function computeCount(folderId: string, articles: Article[], lookup: FeedFolderLookup, pageSize: number): number {
+export function computeCount(folderId: string, articles: Article[], lookup: FeedFolderLookup): number {
     // Mirror the view's transient "hide read" filter after Mark shown as read.
     const visible = isInterestingHideRead(folderId) ? articles.filter((a) => a.read === 0) : articles;
     const filtered = filterMutedArticles(visible, loadMuteRules(), lookup);
     const wordMap = interestingWordMapOf(filtered);
     const strictness = loadInterestingStrictness(folderId);
-    // The view slices its ranked batch to the page size, so the badge must
-    // count the visible window rather than the whole matching set.
-    return Math.min(selectInteresting(filtered, wordMap, strictness).length, pageSize);
+    // The badge is the total the view can show, not the current page. Capping
+    // at the page size made "Mark shown as read" look like it did nothing:
+    // the next page refilled the badge to the same number.
+    return selectInteresting(filtered, wordMap, strictness).length;
 }
 
 async function runPool<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
@@ -162,8 +155,7 @@ async function refreshNow(refetch: boolean): Promise<void> {
                     if (gen !== refreshGen) return;
                     const batch = await getBatch(folderId, doRefetch);
                     if (gen !== refreshGen) return;
-                    const settings = interestingViewSettings(folderId);
-                    const count = computeCount(folderId, batch, lookup, settings.pageSize);
+                    const count = computeCount(folderId, batch, lookup);
                     if (gen !== refreshGen) return;
                     if (loadInterestingCount(folderId) !== count) saveInterestingCount(folderId, count);
                 } catch {

@@ -45,7 +45,7 @@ import {
     saveInterestingStrictness,
     DEFAULT_INTERESTING_STRICTNESS,
 } from '../../services/interesting-settings';
-import { saveInterestingCount, setInterestingHideRead } from '../../services/interesting-counts';
+import { setInterestingHideRead } from '../../services/interesting-counts';
 import { invalidateInterestingBatch } from '../../services/interesting-counts-refresh';
 import { DwellTracker } from './article-list-dwell';
 import {
@@ -303,9 +303,6 @@ export class ArticleList extends LitElement {
         // still says read 0, so drop it before the badge recompute.
         if (changed.has('hideRead') && this.hideRead) invalidateInterestingBatch(view.id);
         setInterestingHideRead(view.id, this.hideRead);
-        // Don't persist a stale pre-reset count when hideRead just flipped on.
-        if (changed.has('hideRead')) return;
-        if (isIdle(this.loadState)) saveInterestingCount(view.id, this.items.length);
     }
 
     private currentViewKey(): string {

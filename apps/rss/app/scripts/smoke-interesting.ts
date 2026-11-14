@@ -367,3 +367,38 @@ import { assert } from './smoke-assert';
         'a filtered-empty Interesting view names the slider',
     );
 }
+
+// ---- the badge counts the whole visible set, not just the current page ----
+{
+    const { computeCount } = await import('../src/services/interesting-counts-refresh');
+    const { setInterestingHideRead } = await import('../src/services/interesting-counts');
+    const { saveWordMap, saveInterestingStrictness } = await import('../src/services/interesting-settings');
+
+    const shims = globalThis as Record<string, unknown>;
+    const mem = new Map<string, string>();
+    shims['localStorage'] = {
+        getItem: (k: string) => mem.get(k) ?? null,
+        setItem: (k: string, v: string) => void mem.set(k, String(v)),
+        removeItem: (k: string) => void mem.delete(k),
+    };
+    saveWordMap({ rust: 4, guide: 1 });
+    saveInterestingStrictness('f1', 0);
+    const article = (i: number, read: 0 | 1) => ({
+        id: `a${i}`,
+        feedId: 'feed1',
+        guid: `a${i}`,
+        title: `Rust Guide ${i}`,
+        published: i,
+        fetchedAt: 0,
+        read,
+        starred: false,
+        popularity: 1,
+        hot: 0,
+    });
+    const batch = Array.from({ length: 40 }, (_, i) => article(i, 0));
+    assert(computeCount('f1', batch, {}) === 40, 'the Interesting badge counts the whole ranked batch, not the page');
+    const mixed = batch.map((a, i) => ({ ...a, read: (i < 10 ? 1 : 0) as 0 | 1 }));
+    setInterestingHideRead('f1', true);
+    assert(computeCount('f1', mixed, {}) === 30, 'hide-read lowers the Interesting badge by the read rows');
+    setInterestingHideRead('f1', false);
+}

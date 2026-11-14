@@ -1,6 +1,7 @@
 import { fetchArticlesPage } from '../../services/api';
 import { buildWordMap, selectInteresting } from '../../services/interesting-words';
 import { loadInterestingStrictness, loadWordMap, loadWordMapIds } from '../../services/interesting-settings';
+import { saveInterestingCount } from '../../services/interesting-counts';
 import { filterMutedArticles, loadMuteRules, type FeedFolderLookup } from '../../services/mute-rules';
 import type { Article, Feed, View } from '../../types';
 
@@ -72,7 +73,11 @@ export async function loadInterestingBatchAction(host: InterestingHost, gen: num
     const filtered = filterMutedArticles(visible, loadMuteRules(), lookup);
     const wordMap = interestingWordMapOf(filtered);
     const strictness = host.interestingStrictness ?? loadInterestingStrictness(host.view.id);
-    host.items = selectInteresting(filtered, wordMap, strictness).slice(0, host.pageSize);
+    const ranked = selectInteresting(filtered, wordMap, strictness);
+    host.items = ranked.slice(0, host.pageSize);
+    // Badge is the whole visible set, not just the current page, so Mark shown
+    // as read visibly lowers it instead of refilling to the page size.
+    saveInterestingCount(host.view.id, ranked.length);
     host.hasMoreSingle = false;
     host.cursors.clear();
 }
