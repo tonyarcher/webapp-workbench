@@ -48,6 +48,9 @@ export class ArticleView extends LitElement {
     private progressArticleId: string | null = null;
     /** 0..1 fraction of the article scrolled, for the progress bar. */
     @state() private readProgress = 0;
+    /** Brief visual feedback when a keyword weight is stepped. */
+    @state() private keywordPulse: { word: string; delta: number } | null = null;
+    private keywordPulseTimer: number | null = null;
 
     override connectedCallback() {
         super.connectedCallback();
@@ -68,6 +71,7 @@ export class ArticleView extends LitElement {
         window.removeEventListener('share-settings-changed', this.onShareSettingsChanged);
         window.removeEventListener('saved-articles-changed', this.onSavedArticlesChanged);
         this.removeEventListener('scroll', this.onScroll);
+        if (this.keywordPulseTimer !== null) window.clearTimeout(this.keywordPulseTimer);
     }
 
     private onSavedArticlesChanged = () => {
@@ -257,8 +261,14 @@ export class ArticleView extends LitElement {
             ${repeat(
                 this.keywords,
                 (k) => k.word,
-                (k) =>
-                    html`<span class="keyword ${k.score > 0 ? 'interesting' : k.score < 0 ? 'deranked' : ''}">
+                (k) => {
+                    const pulse =
+                        this.keywordPulse?.word === k.word
+                            ? this.keywordPulse.delta > 0
+                                ? 'pulse-up'
+                                : 'pulse-down'
+                            : '';
+                    return html`<span class="keyword ${k.score > 0 ? 'interesting' : k.score < 0 ? 'deranked' : ''} ${pulse}">
                         <span class="keyword-word" title=${`Weight ${k.score}`}>${k.word}</span>
                         <button
                             class="keyword-step"
@@ -272,7 +282,8 @@ export class ArticleView extends LitElement {
                             aria-label=${`Increase weight for ${k.word}`}
                             @click=${(e: MouseEvent) => this.adjustKeyword(e, k.word, 1)}
                         >+</button>
-                    </span>`,
+                    </span>`;
+                },
             )}
         </div>`;
     }
@@ -284,6 +295,32 @@ export class ArticleView extends LitElement {
         this.unwrapHighlights();
         adjustWordWeight(word, delta);
         this.keywords = this.article ? articleKeywords(this.article) : [];
+        this.pulseKeyword(word, delta);
+    }
+
+    private pulseKeyword(word: string, delta: number): void {
+        if (this.keywordPulseTimer !== null) window.clearTimeout(this.keywordPulseTimer);
+        const sameActive = this.keywordPulse?.word === word && this.keywordPulse?.delta === delta;
+        const arm = () => {
+            this.keywordPulse = { word, delta };
+            this.keywordPulseTimer = window.setTimeout(() => {
+                this.keywordPulse = null;
+                this.keywordPulseTimer = null;
+            }, 420);
+        };
+        if (sameActive) {
+            // Same pulse still active: drop and reapply across a frame so the CSS animation restarts.
+            this.keywordPulse = null;
+            void this.updateComplete.then(() => {
+                if (!this.isConnected || this.keywordPulse !== null) return;
+                window.requestAnimationFrame(() => {
+                    if (!this.isConnected || this.keywordPulse !== null) return;
+                    arm();
+                });
+            });
+            return;
+        }
+        arm();
     }
 
     private unwrapHighlights(): void {

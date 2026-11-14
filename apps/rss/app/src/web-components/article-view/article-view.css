@@ -196,6 +196,56 @@ h1 a:hover {
     background: color-mix(in srgb, var(--danger, #dc2626) 10%, transparent);
 }
 
+.keyword.pulse-up {
+    animation: keyword-pulse-up 420ms ease-out;
+}
+
+.keyword.pulse-down {
+    animation: keyword-pulse-down 420ms ease-out;
+}
+
+@keyframes keyword-pulse-up {
+    0% {
+        background: color-mix(in srgb, var(--accent, #0a66c2) 35%, transparent);
+        border-color: var(--accent, #0a66c2);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, #0a66c2) 30%, transparent);
+        transform: scale(1.08);
+    }
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+        transform: scale(1);
+    }
+}
+
+@keyframes keyword-pulse-down {
+    0% {
+        background: color-mix(in srgb, var(--danger, #dc2626) 35%, transparent);
+        border-color: var(--danger, #dc2626);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger, #dc2626) 30%, transparent);
+        transform: scale(1.08);
+    }
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+        transform: scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .keyword.pulse-up {
+        animation: none;
+        background: color-mix(in srgb, var(--accent, #0a66c2) 28%, transparent);
+        border-color: var(--accent, #0a66c2);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, #0a66c2) 25%, transparent);
+    }
+
+    .keyword.pulse-down {
+        animation: none;
+        background: color-mix(in srgb, var(--danger, #dc2626) 28%, transparent);
+        border-color: var(--danger, #dc2626);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger, #dc2626) 25%, transparent);
+    }
+}
+
 .key-lines {
     border: 1px solid var(--border);
     border-radius: 10px;
