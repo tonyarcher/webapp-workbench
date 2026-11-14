@@ -74,15 +74,17 @@ export function detailRowTemplate(
     article: Article,
     showFeed: boolean,
     feedTitle: string | undefined,
+    feedIcon: string | undefined,
     onStar: (e: Event, article: Article) => void,
     onOpen: (e: MouseEvent, article: Article) => void,
 ) {
     const popular = article.popularity >= 4;
     const link = safeHttpUrl(article.link);
-    const image = articleImage(article);
+    const video = articleVideo(article);
+    const image = articleImage(article, feedIcon);
     return html`
       <div class="detail-body">
-        ${image ? html`<img class="detail-img" src=${image} alt="" loading="lazy" />` : ''}
+        ${detailMedia(video, image, article, link)}
         <div class="detail-text">
           ${detailTitleRow(article, popular, onStar, onOpen)}
           ${detailMeta(article, showFeed, feedTitle, link)}
@@ -90,6 +92,34 @@ export function detailRowTemplate(
         </div>
       </div>
     `;
+}
+
+function detailMedia(
+    video: ReturnType<typeof articleVideo>,
+    image: string | undefined,
+    article: Article,
+    link: string | undefined,
+) {
+    if (video?.posters.length) {
+        return html`<video-header
+            class="detail-img detail-video"
+            .video=${video}
+            .videoTitle=${article.title}
+            .videoLink=${watchUrlFor(video, link)}
+        ></video-header>`;
+    }
+    if (image) {
+        return html`<lazy-img class="detail-img" .src=${image}></lazy-img>`;
+    }
+    if (video) {
+        return html`<video-header
+            class="detail-img detail-video"
+            .video=${video}
+            .videoTitle=${article.title}
+            .videoLink=${watchUrlFor(video, link)}
+        ></video-header>`;
+    }
+    return '';
 }
 
 function detailTitleRow(
@@ -396,6 +426,7 @@ function renderRow(host: ArticleListRenderHost, article: Article, showFeed: bool
         article,
         showFeed,
         host.feedTitle(article.feedId),
+        host.feedIcon(article.feedId),
         (e, a) => {
             void host.onStar(e, a);
         },

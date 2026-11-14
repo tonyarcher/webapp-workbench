@@ -45,11 +45,7 @@ import {
     saveInterestingStrictness,
     DEFAULT_INTERESTING_STRICTNESS,
 } from '../../services/interesting-settings';
-import {
-    clearInterestingHideRead,
-    saveInterestingCount,
-    setInterestingHideRead,
-} from '../../services/interesting-counts';
+import { saveInterestingCount, setInterestingHideRead } from '../../services/interesting-counts';
 import { invalidateInterestingBatch } from '../../services/interesting-counts-refresh';
 import { DwellTracker } from './article-list-dwell';
 import {
@@ -211,6 +207,9 @@ export class ArticleList extends LitElement {
         this.dwell.start();
     }
 
+    /** Folder whose transient hide-read state is mirrored for count refresh. */
+    private interestingHideReadFolderId: string | null = null;
+
     override disconnectedCallback() {
         super.disconnectedCallback();
         window.removeEventListener('keydown', this.onKeyDown);
@@ -224,7 +223,10 @@ export class ArticleList extends LitElement {
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
         this.virtualizerCleanup?.();
-        clearInterestingHideRead();
+        if (this.interestingHideReadFolderId) {
+            setInterestingHideRead(this.interestingHideReadFolderId, false);
+            this.interestingHideReadFolderId = null;
+        }
     }
 
     private onMuteRulesChanged = () => {
@@ -281,14 +283,29 @@ export class ArticleList extends LitElement {
 
     override updated(changed: Map<string, unknown>) {
         this.handleUpdate(this.currentViewKey());
-        clearInterestingHideRead();
-        if (this.view.kind === 'interesting') {
-            // Mark shown as read sets hideRead after the write; the cached
-            // batch still says read 0, so drop it before the badge recompute.
-            if (changed.has('hideRead') && this.hideRead) invalidateInterestingBatch(this.view.id);
-            setInterestingHideRead(this.view.id, this.hideRead);
-            if (isIdle(this.loadState)) saveInterestingCount(this.view.id, this.items.length);
+        this.syncInterestingCount(changed);
+    }
+
+    private syncInterestingCount(changed: Map<string, unknown>): void {
+        const view = this.view;
+        if (view.kind !== 'interesting') {
+            if (this.interestingHideReadFolderId) {
+                setInterestingHideRead(this.interestingHideReadFolderId, false);
+                this.interestingHideReadFolderId = null;
+            }
+            return;
         }
+        if (this.interestingHideReadFolderId && this.interestingHideReadFolderId !== view.id) {
+            setInterestingHideRead(this.interestingHideReadFolderId, false);
+        }
+        this.interestingHideReadFolderId = view.id;
+        // Mark shown as read sets hideRead after the write; the cached batch
+        // still says read 0, so drop it before the badge recompute.
+        if (changed.has('hideRead') && this.hideRead) invalidateInterestingBatch(view.id);
+        setInterestingHideRead(view.id, this.hideRead);
+        // Don't persist a stale pre-reset count when hideRead just flipped on.
+        if (changed.has('hideRead')) return;
+        if (isIdle(this.loadState)) saveInterestingCount(view.id, this.items.length);
     }
 
     private currentViewKey(): string {
