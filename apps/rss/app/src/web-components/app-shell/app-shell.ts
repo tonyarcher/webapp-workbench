@@ -288,6 +288,7 @@ export class AppShell extends LitElement {
                 </button>
                 <div class="spacer"></div>
                 ${this.username ? html`<span class="who">${this.username}</span><button class="signout" @click=${this.onSignOut}>Sign out</button>` : ''}
+                <button class="gear help" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts (?)" @click=${this.onShowShortcuts}>?</button>
                 <button class="gear" title="Settings" @click=${() => (this.settingsOpen = true)}>${this.renderGearIcon()}</button>
             </header>`;
     }

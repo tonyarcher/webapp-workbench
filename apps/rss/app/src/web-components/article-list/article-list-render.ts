@@ -273,7 +273,6 @@ export function renderToolbar(host: ArticleListRenderHost) {
         <div class="actions">
           ${renderFreshness(host)}${renderSortSelect(host)}${renderViewSelect(host)}${renderCardColsSelect(host)}${renderPageSizeSelect(host)}
           <button class="btn" @click=${host.onMarkShownRead}>Mark shown as read</button>
-          <button class="btn" title="Keyboard shortcuts (?)" @click=${host.showShortcuts}>?</button>
           <button class="btn" @click=${host.onToggleAdvanced}>Advanced</button>
           <button class="btn refresh" @click=${host.onRefresh}>${host.refreshing ? html`<span class="spinner" aria-hidden="true"></span>Refreshing…` : 'Refresh'}</button>
         </div>

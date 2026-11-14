@@ -147,6 +147,16 @@ header .sub {
     height: 18px;
 }
 
+.help {
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    min-height: 30px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+}
+
 .layout {
     flex: 1;
     display: flex;
