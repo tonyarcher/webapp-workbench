@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, svg } from 'lit';
 import { ref, type Ref } from 'lit/directives/ref.js';
 import type { Virtualizer } from '@tanstack/virtual-core';
 import { safeHttpUrl } from '../../services/parser';
@@ -117,16 +117,24 @@ function starButton(article: Article, onStar: (e: Event, article: Article) => vo
     return html`<button class="star" aria-label=${article.starred ? 'Unstar' : 'Star'} @click=${(e: Event) => onStar(e, article)}><span aria-hidden="true">${article.starred ? '★' : '☆'}</span></button>`;
 }
 
+function externalIcon() {
+    return svg`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M10 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
 function detailMeta(article: Article, showFeed: boolean, feedTitle: string | undefined, link: string | undefined) {
     const minutes = readMinutes(article.content, article.summary);
     return html`
       <div class="meta">
         ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-        <span>${domainOf(article.link)}</span>
-        <span>${formatDate(article.published)}</span>
-        ${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}
-        ${article.author ? html`<span>by ${article.author}</span>` : ''}
-        ${link ? html`<a class="orig-link" href=${link} target="_blank" rel="noopener noreferrer">original ↗</a>` : ''}
+        <span class="meta-domain">${domainOf(article.link)}</span>
+        <span class="meta-date">${formatDate(article.published)}</span>
+        ${minutes > 0 ? html`<span class="meta-time">${minutes} min read</span>` : ''}
+        ${article.author ? html`<span class="meta-author">by ${article.author}</span>` : ''}
+        ${
+            link
+                ? html`<a class="orig-link" href=${link} target="_blank" rel="noopener noreferrer" title="Open original" aria-label="Open original">${externalIcon()}</a>`
+                : ''
+        }
       </div>
     `;
 }
@@ -217,9 +225,13 @@ function cardMeta(article: Article, showFeed: boolean, feedTitle: string | undef
     return html`
       <div class="meta">
         ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-        <span>${domainOf(article.link)}</span>
-        <span>${formatDate(article.published)}${minutes > 0 ? ` · ${minutes} min` : ''}</span>
-        ${link ? html`<a class="orig-link" href=${link} target="_blank" rel="noopener noreferrer">original ↗</a>` : ''}
+        <span class="meta-domain">${domainOf(article.link)}</span>
+        <span class="meta-date">${formatDate(article.published)}${minutes > 0 ? ` · ${minutes} min` : ''}</span>
+        ${
+            link
+                ? html`<a class="orig-link" href=${link} target="_blank" rel="noopener noreferrer" title="Open original" aria-label="Open original">${externalIcon()}</a>`
+                : ''
+        }
       </div>
     `;
 }
