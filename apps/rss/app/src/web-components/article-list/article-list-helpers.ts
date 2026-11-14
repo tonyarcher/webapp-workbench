@@ -4,6 +4,7 @@ import type { ArticleSort, Feed, Folder, ListViewType, View } from '../../types'
 export const DEFAULT_PAGE_SIZE = 50;
 export const PAGE_SIZES = [20, 50, 100, 500] as const;
 export const VIEW_SETTINGS_KEY = 'rss-reader:view-settings';
+export const DEFAULT_VIEW_SETTINGS_KEY = 'rss-reader:default-view-settings';
 export const CARD_MIN_WIDTH = 240;
 export const CARD_HEIGHT = 420;
 export const CARD_ROW_GAP = 32;
@@ -18,8 +19,37 @@ export interface ViewSettings {
     markOnScroll: boolean;
 }
 
+/** Built-in reading defaults, used until the reader saves their own. */
+export const DEFAULT_VIEW_SETTINGS: ViewSettings = {
+    listView: 'detailed',
+    sort: 'hot',
+    pageSize: DEFAULT_PAGE_SIZE,
+    maxCardCols: 4,
+    unreadOnly: false,
+    markOnScroll: false,
+};
+
 export function clampPageSize(n: unknown): number {
     return typeof n === 'number' && (PAGE_SIZES as readonly number[]).includes(n) ? n : DEFAULT_PAGE_SIZE;
+}
+
+/** Coerce stored or edited settings into a complete, in-range object. */
+export function normalizeViewSettings(input: Partial<ViewSettings> | null | undefined): ViewSettings {
+    const listView: ListViewType =
+        input?.listView === 'headline' || input?.listView === 'cards' ? input.listView : 'detailed';
+    const sort: ArticleSort = input?.sort === 'newest' || input?.sort === 'oldest' ? input.sort : 'hot';
+    const maxCardCols =
+        typeof input?.maxCardCols === 'number'
+            ? Math.min(6, Math.max(2, Math.round(input.maxCardCols)))
+            : DEFAULT_VIEW_SETTINGS.maxCardCols;
+    return {
+        listView,
+        sort,
+        pageSize: clampPageSize(input?.pageSize),
+        maxCardCols,
+        unreadOnly: input?.unreadOnly === true,
+        markOnScroll: input?.markOnScroll === true,
+    };
 }
 
 export function readViewSettings(): Record<string, ViewSettings> {
@@ -30,6 +60,44 @@ export function readViewSettings(): Record<string, ViewSettings> {
         return typeof parsed === 'object' && parsed ? parsed : {};
     } catch {
         return {};
+    }
+}
+
+/** Reading defaults the reader saved in Settings, or the built-in defaults. */
+export function readDefaultViewSettings(): ViewSettings {
+    try {
+        const raw = localStorage.getItem(DEFAULT_VIEW_SETTINGS_KEY);
+        if (!raw) return { ...DEFAULT_VIEW_SETTINGS };
+        return normalizeViewSettings(JSON.parse(raw) as Partial<ViewSettings>);
+    } catch {
+        return { ...DEFAULT_VIEW_SETTINGS };
+    }
+}
+
+export function saveDefaultViewSettings(settings: ViewSettings): void {
+    try {
+        localStorage.setItem(DEFAULT_VIEW_SETTINGS_KEY, JSON.stringify(normalizeViewSettings(settings)));
+    } catch {
+        // storage unavailable; the defaults just do not persist
+    }
+}
+
+/** Settings a view should use: its own saved values, else the reading defaults. */
+export function readViewSettingsFor(view: View): ViewSettings {
+    return normalizeViewSettings(readViewSettings()[viewKeyOf(view)] ?? readDefaultViewSettings());
+}
+
+/**
+ * Make the reading defaults apply to every view. Per-view overrides are
+ * dropped, so a later default change reaches the views again. The caller
+ * dispatches `view-settings-changed` if the open list should reload now.
+ */
+export function applyDefaultToAllViews(settings: ViewSettings): void {
+    saveDefaultViewSettings(settings);
+    try {
+        localStorage.removeItem(VIEW_SETTINGS_KEY);
+    } catch {
+        // storage unavailable; the badges just keep their old overrides
     }
 }
 
@@ -129,38 +197,24 @@ interface SettingsHost {
 }
 
 function applyViewSettings(host: SettingsHost, saved: ViewSettings): void {
-    host.listView = saved.listView ?? 'detailed';
-    host.sort = saved.sort ?? 'hot';
-    host.pageSize = clampPageSize(saved.pageSize);
-    host.maxCardCols = saved.maxCardCols ?? 4;
-    host.unreadOnly = saved.unreadOnly ?? false;
-    host.markOnScroll = saved.markOnScroll ?? false;
-    host.updateCols();
-}
-
-function resetViewSettings(host: SettingsHost): void {
-    host.listView = 'detailed';
-    host.sort = 'hot';
-    host.pageSize = DEFAULT_PAGE_SIZE;
-    host.maxCardCols = 4;
-    host.unreadOnly = false;
-    host.markOnScroll = false;
+    const settings = normalizeViewSettings(saved);
+    host.listView = settings.listView;
+    host.sort = settings.sort;
+    host.pageSize = settings.pageSize;
+    host.maxCardCols = settings.maxCardCols;
+    host.unreadOnly = settings.unreadOnly;
+    host.markOnScroll = settings.markOnScroll;
     host.updateCols();
 }
 
 /**
- * Per-view layout and filters. An Interesting view is a smart folder of its
- * own: without saved settings it starts from the defaults rather than
- * inheriting the folder's "Unread only" toggle. The background badge refresh
- * uses the same defaults, so the badge and the list agree.
+ * Per-view layout and filters. A view with its own saved values keeps them;
+ * any other view, including an Interesting smart folder, uses the reading
+ * defaults from Settings. The background badge refresh uses the same lookup,
+ * so the badge and the list agree.
  */
 export function loadViewSettingsFor(host: SettingsHost): void {
-    const saved = readViewSettings()[viewKeyOf(host.view)];
-    if (saved) {
-        applyViewSettings(host, saved);
-        return;
-    }
-    if (host.view.kind === 'interesting') resetViewSettings(host);
+    applyViewSettings(host, readViewSettingsFor(host.view));
 }
 
 export function saveViewSettingsFor(host: SettingsHost): void {

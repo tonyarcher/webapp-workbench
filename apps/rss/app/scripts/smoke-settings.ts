@@ -175,3 +175,89 @@ assert(
     assert(other.markOnScroll === false, 'mark-on-scroll defaults off for untouched views');
     assert(viewKeyOf({ kind: 'all' }) === 'all', 'the all view keeps its settings bucket');
 }
+
+// ---- reading defaults apply to every view until a view saves its own ----
+{
+    const {
+        applyDefaultToAllViews,
+        DEFAULT_VIEW_SETTINGS,
+        loadViewSettingsFor,
+        normalizeViewSettings,
+        readDefaultViewSettings,
+        readViewSettingsFor,
+        saveDefaultViewSettings,
+        saveViewSettingsFor,
+    } = await import('../src/web-components/article-list/article-list-helpers');
+
+    mem.delete('rss-reader:view-settings');
+    mem.delete('rss-reader:default-view-settings');
+
+    assert(readDefaultViewSettings().listView === 'detailed', 'reading defaults start as Detailed');
+    assert(
+        readDefaultViewSettings().pageSize === DEFAULT_VIEW_SETTINGS.pageSize,
+        'reading defaults use the built-in page size',
+    );
+
+    saveDefaultViewSettings({
+        ...DEFAULT_VIEW_SETTINGS,
+        listView: 'cards',
+        pageSize: 20,
+        maxCardCols: 2,
+        unreadOnly: true,
+    });
+    assert(readDefaultViewSettings().listView === 'cards', 'reading defaults round-trip the list view');
+    assert(readDefaultViewSettings().maxCardCols === 2, 'reading defaults round-trip the card columns');
+
+    const freshHost = () => ({
+        view: { kind: 'folder' as 'folder' | 'feed' | 'interesting', id: 'fresh' },
+        listView: 'detailed' as 'detailed' | 'headline' | 'cards',
+        sort: 'hot' as 'hot' | 'newest' | 'oldest',
+        pageSize: 50,
+        maxCardCols: 4,
+        unreadOnly: false,
+        markOnScroll: false,
+        updateCols: () => {},
+    });
+    const fresh = freshHost();
+    loadViewSettingsFor(fresh as never);
+    assert(fresh.listView === 'cards', 'an untouched view picks up the reading defaults');
+    assert(fresh.unreadOnly === true, 'an untouched view picks up the default unread filter');
+
+    const own = freshHost();
+    saveViewSettingsFor({ ...own, view: { kind: 'feed', id: 'own' }, listView: 'headline', pageSize: 100 } as never);
+    loadViewSettingsFor(own as never);
+    assert(own.listView === 'cards', 'a different untouched view still uses the defaults');
+
+    const overridden = freshHost();
+    overridden.view = { kind: 'feed', id: 'own' };
+    loadViewSettingsFor(overridden as never);
+    assert(overridden.listView === 'headline', 'a view with its own settings keeps them');
+    assert(overridden.pageSize === 100, 'a view with its own settings keeps its page size');
+
+    applyDefaultToAllViews({
+        ...DEFAULT_VIEW_SETTINGS,
+        listView: 'headline',
+        sort: 'newest',
+        pageSize: 50,
+        maxCardCols: 3,
+        unreadOnly: false,
+    });
+    const afterApply = freshHost();
+    afterApply.view = { kind: 'feed', id: 'own' };
+    loadViewSettingsFor(afterApply as never);
+    assert(afterApply.listView === 'headline', 'apply to all views clears the per-view override');
+    assert(afterApply.sort === 'newest', 'apply to all views writes the new default sort');
+
+    const interestingSettings = readViewSettingsFor({ kind: 'interesting', id: 'fresh' });
+    assert(interestingSettings.listView === 'headline', 'Interesting views use the reading defaults');
+    assert(interestingSettings.unreadOnly === false, 'Interesting views use the default unread filter');
+
+    const clamped = normalizeViewSettings({
+        listView: 'bogus' as never,
+        pageSize: 999,
+        maxCardCols: 99,
+        sort: 'bad' as never,
+    });
+    assert(clamped.listView === 'detailed' && clamped.pageSize === 50, 'invalid list view and page size fall back');
+    assert(clamped.maxCardCols === 6 && clamped.sort === 'hot', 'invalid card columns and sort fall back');
+}

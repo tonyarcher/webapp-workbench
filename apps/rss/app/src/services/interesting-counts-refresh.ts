@@ -8,11 +8,10 @@ import {
     orderedInterestingFolderIds,
 } from './interesting-settings';
 import { interestingWordMapOf } from '../web-components/article-list/article-list-interesting';
+import { readViewSettingsFor } from '../web-components/article-list/article-list-helpers';
 import { selectInteresting } from './interesting-words';
 import { filterMutedArticles, loadMuteRules, type FeedFolderLookup } from './mute-rules';
 import type { Article, Feed } from '../types';
-
-const VIEW_SETTINGS_KEY = 'rss-reader:view-settings';
 
 interface InterestingViewSettings {
     unreadOnly: boolean;
@@ -69,15 +68,7 @@ function enabledFolderIds(): string[] {
 }
 
 function interestingViewSettings(folderId: string): InterestingViewSettings {
-    try {
-        const raw = localStorage.getItem(VIEW_SETTINGS_KEY);
-        if (!raw) return { unreadOnly: false };
-        const parsed = JSON.parse(raw) as Record<string, { unreadOnly?: boolean } | undefined>;
-        const entry = parsed[`interesting:${folderId}`];
-        return { unreadOnly: entry?.unreadOnly === true };
-    } catch {
-        return { unreadOnly: false };
-    }
+    return { unreadOnly: readViewSettingsFor({ kind: 'interesting', id: folderId }).unreadOnly };
 }
 
 async function fetchBatch(folderId: string, unreadOnly: boolean): Promise<Article[]> {
@@ -213,6 +204,7 @@ export function startInterestingCountsRefresh(): void {
     window.addEventListener('interesting-model-changed', onLightModelChange);
     window.addEventListener('interesting-settings-changed', onLightModelChange);
     window.addEventListener('mute-rules-changed', onLightModelChange);
+    window.addEventListener('view-settings-changed', onLightModelChange);
     window.addEventListener('feeds-refreshed', onDataChange);
     window.addEventListener('share-settings-changed', onLightModelChange as EventListener);
     document.addEventListener('visibilitychange', onVisibility);
@@ -245,6 +237,7 @@ export function stopInterestingCountsRefresh(): void {
     window.removeEventListener('interesting-model-changed', onLightModelChange);
     window.removeEventListener('interesting-settings-changed', onLightModelChange);
     window.removeEventListener('mute-rules-changed', onLightModelChange);
+    window.removeEventListener('view-settings-changed', onLightModelChange);
     window.removeEventListener('feeds-refreshed', onDataChange);
     window.removeEventListener('share-settings-changed', onLightModelChange as EventListener);
     document.removeEventListener('visibilitychange', onVisibility);

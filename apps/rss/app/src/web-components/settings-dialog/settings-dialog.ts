@@ -15,6 +15,16 @@ import { migrateLibrary } from '../../services/api';
 import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
 import { invalidateArticles, invalidateLibrary } from '../../query';
 import { navigate } from '../../router';
+import {
+    applyDefaultToAllViews,
+    DEFAULT_VIEW_SETTINGS,
+    normalizeViewSettings,
+    readDefaultViewSettings,
+    readViewSettingsFor,
+    saveDefaultViewSettings,
+    type ViewSettings,
+} from '../article-list/article-list-helpers';
+import type { View } from '../../types';
 import styles from './settings-dialog.css?inline';
 
 const MIGRATE_SIZE_LIMIT = 1_800_000;
@@ -24,6 +34,8 @@ export class SettingsDialog extends LitElement {
     static override styles = unsafeCSS(styles);
 
     @property({ attribute: false }) open = false;
+    /** Current route, so the dialog can copy the open view's settings. */
+    @property({ attribute: false }) view: View = { kind: 'all' };
 
     @state() private theme: Theme = 'light';
     @state() private adding = false;
@@ -35,6 +47,8 @@ export class SettingsDialog extends LitElement {
     @state() private shareStatus = '';
     @state() private shareStatusError = false;
     @state() private shareTargets: ShareTarget[] = [];
+    @state() private viewSettings: ViewSettings = { ...DEFAULT_VIEW_SETTINGS };
+    @state() private viewStatus = '';
 
     private dialogEl: HTMLDialogElement | null = null;
 
@@ -46,6 +60,8 @@ export class SettingsDialog extends LitElement {
                 this.shareTargets = loadShareTargets();
                 this.shareStatus = '';
                 this.shareStatusError = false;
+                this.viewSettings = readDefaultViewSettings();
+                this.viewStatus = '';
                 this.dialogEl?.showModal();
                 modalOpened();
             } else {
@@ -76,6 +92,133 @@ export class SettingsDialog extends LitElement {
       </div>
     `;
     }
+
+    private renderReadingSection() {
+        const s = this.viewSettings;
+        return html`
+      <div class="section">
+        <h3>Reading</h3>
+        <div class="view-defaults">
+          <label class="view-field">
+            <span>Default list view</span>
+            <select .value=${s.listView} @change=${(e: Event) => this.setListView((e.target as HTMLSelectElement).value)}>
+              <option value="detailed">Detailed List</option>
+              <option value="headline">Headline View</option>
+              <option value="cards">Cards</option>
+            </select>
+          </label>
+          <label class="view-field">
+            <span>Sort</span>
+            <select .value=${s.sort} @change=${(e: Event) => this.setSort((e.target as HTMLSelectElement).value)}>
+              <option value="hot">Hot</option>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+            </select>
+          </label>
+          <label class="view-field">
+            <span>Page size</span>
+            <select .value=${String(s.pageSize)} @change=${(e: Event) => this.setPageSize(Number((e.target as HTMLSelectElement).value))}>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="500">500</option>
+            </select>
+          </label>
+          <label class="view-field">
+            <span>Card columns</span>
+            <select .value=${String(s.maxCardCols)} @change=${(e: Event) => this.setMaxCardCols(Number((e.target as HTMLSelectElement).value))}>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+            </select>
+          </label>
+        </div>
+        <div class="view-toggles">
+          <label class="share-target"><input type="checkbox" .checked=${s.unreadOnly} @change=${(e: Event) => this.setUnreadOnly((e.target as HTMLInputElement).checked)} />Unread only</label>
+          <label class="share-target"><input type="checkbox" .checked=${s.markOnScroll} @change=${(e: Event) => this.setMarkOnScroll((e.target as HTMLInputElement).checked)} />Mark on scroll</label>
+        </div>
+        <div class="view-actions">
+          ${
+              this.canUseCurrentView
+                  ? html`<button class="btn" @click=${this.useCurrentView}>Use current view</button>`
+                  : ''
+          }
+          <button class="btn primary" @click=${this.applyAllViews}>Apply to all views</button>
+        </div>
+        <p class="hint">New and untouched views use these defaults. Apply to all views replaces every view's own settings.</p>
+        ${this.viewStatus ? html`<div class="status">${this.viewStatus}</div>` : ''}
+      </div>
+    `;
+    }
+
+    private saveViewDefaults() {
+        saveDefaultViewSettings(this.viewSettings);
+        // Let an open view that has no own override adopt the new default now.
+        this.announceViewSettings();
+        this.viewStatus = 'Defaults saved. Apply to all views to replace per-view settings.';
+    }
+
+    /** Tell the open list and the badge refresh that the defaults changed. */
+    private announceViewSettings() {
+        window.dispatchEvent(new CustomEvent('view-settings-changed'));
+    }
+
+    private setListView(value: string) {
+        if (value !== 'detailed' && value !== 'headline' && value !== 'cards') return;
+        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, listView: value });
+        this.saveViewDefaults();
+    }
+
+    private setSort(value: string) {
+        if (value !== 'hot' && value !== 'newest' && value !== 'oldest') return;
+        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, sort: value });
+        this.saveViewDefaults();
+    }
+
+    private setPageSize(value: number) {
+        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, pageSize: value });
+        this.saveViewDefaults();
+    }
+
+    private setMaxCardCols(value: number) {
+        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, maxCardCols: value });
+        this.saveViewDefaults();
+    }
+
+    private setUnreadOnly(value: boolean) {
+        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, unreadOnly: value });
+        this.saveViewDefaults();
+    }
+
+    private setMarkOnScroll(value: boolean) {
+        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, markOnScroll: value });
+        this.saveViewDefaults();
+    }
+
+    /** Only the article-list routes have per-view settings worth copying. */
+    private get canUseCurrentView(): boolean {
+        return (
+            this.view.kind === 'all' ||
+            this.view.kind === 'folder' ||
+            this.view.kind === 'feed' ||
+            this.view.kind === 'interesting'
+        );
+    }
+
+    private useCurrentView = () => {
+        this.viewSettings = readViewSettingsFor(this.view);
+        saveDefaultViewSettings(this.viewSettings);
+        this.announceViewSettings();
+        this.viewStatus = "Loaded the current view's settings.";
+    };
+
+    private applyAllViews = () => {
+        applyDefaultToAllViews(this.viewSettings);
+        this.announceViewSettings();
+        this.viewStatus = 'Applied to all views.';
+    };
 
     private renderAddRow() {
         if (!this.adding) return html``;
@@ -215,6 +358,7 @@ export class SettingsDialog extends LitElement {
         </div>
         <div class="body">
           ${this.renderAppearanceSection()}
+          ${this.renderReadingSection()}
           ${this.renderSharingSection()}
           ${this.renderFeedsSection()}
         </div>

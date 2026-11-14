@@ -337,7 +337,7 @@ export class AppShell extends LitElement {
     }
 
     private renderSettings() {
-        return html`<settings-dialog .open=${this.settingsOpen} @close=${() => (this.settingsOpen = false)}></settings-dialog><shortcuts-dialog .open=${this.shortcutsOpen} @close=${() => (this.shortcutsOpen = false)}></shortcuts-dialog>`;
+        return html`<settings-dialog .open=${this.settingsOpen} .view=${this.route} @close=${() => (this.settingsOpen = false)}></settings-dialog><shortcuts-dialog .open=${this.shortcutsOpen} @close=${() => (this.shortcutsOpen = false)}></shortcuts-dialog>`;
     }
 
     private onKeyDown = (e: KeyboardEvent) => {

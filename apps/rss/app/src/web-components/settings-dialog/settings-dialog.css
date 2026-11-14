@@ -111,6 +111,37 @@ dialog::backdrop {
     border-color: #333;
 }
 
+.view-defaults {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.view-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.view-field select {
+    width: 100%;
+}
+
+.view-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin: 0 0 10px;
+}
+
+.view-actions {
+    display: flex;
+    gap: 8px;
+}
+
 .actions {
     display: flex;
     flex-direction: column;
