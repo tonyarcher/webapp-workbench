@@ -17,6 +17,7 @@ interface InterestingHost {
     gen: number;
     hasMoreSingle: boolean;
     cursors: Map<string, string | undefined>;
+    mutedHidden: number;
     interestingStrictness?: number;
     library?: { data?: { feeds: Feed[] } };
 }
@@ -71,6 +72,7 @@ export async function loadInterestingBatchAction(host: InterestingHost, gen: num
     const visible = host.hideRead ? res.items.filter((a) => a.read === 0) : res.items;
     const lookup = lookupFromFeeds(host.library?.data?.feeds);
     const filtered = filterMutedArticles(visible, loadMuteRules(), lookup);
+    host.mutedHidden = visible.length - filtered.length;
     const wordMap = interestingWordMapOf(filtered);
     const strictness = host.interestingStrictness ?? loadInterestingStrictness(host.view.id);
     const ranked = selectInteresting(filtered, wordMap, strictness);

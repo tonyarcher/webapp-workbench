@@ -137,6 +137,33 @@ textarea {
     color: var(--danger, #b42318);
 }
 
+.preview {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text);
+}
+
+.preview p {
+    margin: 0 0 6px;
+}
+
+.preview p:last-child {
+    margin-bottom: 0;
+}
+
+.preview.error {
+    color: var(--danger, #b42318);
+}
+
+.preview-list {
+    margin: 6px 0 0;
+    padding-left: 18px;
+    color: var(--text-muted);
+}
+
 .folder-picker {
     margin: 0 0 12px;
     padding: 10px;

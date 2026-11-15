@@ -73,6 +73,7 @@ import {
 } from './article-list-render';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 import { toastApiError, toastInfo } from '../../services/toast';
+import { peekMuteUndo, restoreMuteUndo } from '../../services/mute-rules';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
 import '../advanced-menu/advanced-menu';
 import '../lazy-img/lazy-img';
@@ -112,6 +113,8 @@ export class ArticleList extends LitElement {
     @state() interestingStrictness = DEFAULT_INTERESTING_STRICTNESS;
     /** Last page-load failure, cleared on the next attempt. Rendered as a banner, never silent. */
     @state() loadError: string | null = null;
+    /** Articles hidden by mute filters in the current loaded batch/page. */
+    @state() mutedHidden = 0;
 
     /** True while this view's own refresh job runs. Other folders track their own keys. */
     get refreshing(): boolean {
@@ -398,6 +401,16 @@ export class ArticleList extends LitElement {
 
     onRetryArticles() {
         void resetList(this as never);
+    }
+
+    onUndoMute() {
+        if (!restoreMuteUndo()) return;
+        toastInfo('Mute filter change undone');
+        window.dispatchEvent(new CustomEvent('mute-rules-changed'));
+    }
+
+    canUndoMute(): boolean {
+        return peekMuteUndo() !== null;
     }
 
     viewTitle(): string {

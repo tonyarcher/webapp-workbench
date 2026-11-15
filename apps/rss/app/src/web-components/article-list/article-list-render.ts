@@ -34,6 +34,9 @@ export interface ArticleListRenderHost {
     interestingActive(): boolean;
     loadError: string | null;
     selectedIds: string[];
+    mutedHidden: number;
+    canUndoMute(): boolean;
+    onUndoMute(): void;
     onRowClick(e: MouseEvent, index: number): void;
     clearSelection(): void;
     onBulkMarkRead(): void;
@@ -52,7 +55,6 @@ export interface ArticleListRenderHost {
     scopeLabel(): string;
     feedTitle(feedId: string): string | undefined;
     feedIcon(feedId: string): string | undefined;
-    interestingActive(): boolean;
     updateCols(): void;
     saveViewSettings(): void;
     openArticle(article: Article): Promise<void>;
@@ -393,30 +395,54 @@ function renderListVirtualRow(host: ArticleListRenderHost, vi: { index: number; 
 }
 
 function renderScrollFooter(host: ArticleListRenderHost) {
+    const undo = host.mutedHidden > 0 && host.canUndoMute();
+    const mutedNote =
+        !host.loading && host.mutedHidden > 0
+            ? html`<p class="empty-note">${host.mutedHidden} article${host.mutedHidden === 1 ? '' : 's'} hidden by mute filters.</p>`
+            : '';
+    const undoBtn =
+        !host.loading && undo
+            ? html`<p class="empty-note"><button class="btn" @click=${() => host.onUndoMute()}>Undo mute change</button></p>`
+            : '';
     return html`
       ${host.loading ? html`<div class="end">Loading…</div>` : ''}
       ${!host.loading && host.items.length ? html`<div class="mark-end"><button class="mark-end-btn" ?disabled=${!host.items.some((a) => a.read === 0)} @click=${host.onMarkShownRead}>Mark shown as read</button></div>` : ''}
-      ${!host.loading && !host.items.length ? html`<div class="empty">${emptyText(host)}</div>` : ''}
+      ${!host.loading && !host.items.length ? html`<div class="empty"><p>${emptyText(host)}</p>${mutedNote}${undoBtn}</div>` : ''}
       ${host.library.error && host.view.kind !== 'feed' ? html`<div class="empty">Could not load your feeds. <button class="btn" @click=${host.onRetryLibrary}>Retry</button></div>` : ''}
     `;
 }
 
 function emptyText(host: ArticleListRenderHost): string {
-    if (!host.interestingActive()) return emptyTextFor(host.unreadOnly, host.hideRead, false);
-    if (host.unreadOnly || host.hideRead) return emptyTextFor(host.unreadOnly, host.hideRead, true);
+    if (!host.interestingActive())
+        return emptyTextFor(host.unreadOnly, host.hideRead, false, false, host.mutedHidden, host.canUndoMute());
+    if (host.unreadOnly || host.hideRead)
+        return emptyTextFor(host.unreadOnly, host.hideRead, true, false, host.mutedHidden, host.canUndoMute());
     const learned = Object.keys(interestingWordMapOf(host.items)).length > 0;
-    return emptyTextFor(false, false, true, learned);
+    return emptyTextFor(false, false, true, learned, host.mutedHidden, host.canUndoMute());
 }
 
 /**
  * Pure empty-state copy so the two unread filters cannot be confused: the
  * "just marked as read" case names itself instead of blaming "Unread only".
  */
-export function emptyTextFor(unreadOnly: boolean, hideRead: boolean, interesting: boolean, hasSignal = false): string {
+export function emptyTextFor(
+    unreadOnly: boolean,
+    hideRead: boolean,
+    interesting: boolean,
+    hasSignal = false,
+    mutedHidden = 0,
+    canUndoMute = false,
+): string {
+    if (mutedHidden > 0 && canUndoMute) {
+        return interesting
+            ? 'All matching articles are hidden by your latest mute filter.'
+            : 'All articles in this view are hidden by your latest mute filter.';
+    }
     if (hideRead && !unreadOnly) return 'Nothing unread here — the shown articles were just marked as read.';
     if (unreadOnly || hideRead) return 'Nothing unread here — "Unread only" is filtering this view.';
     if (interesting && hasSignal) return 'Nothing meets this selectivity — lower it to see more.';
     if (interesting) return 'Nothing here yet. Star articles to teach this view what you like.';
+    if (mutedHidden > 0) return 'No articles to show here.';
     return 'No articles yet. Hit Refresh to sync this view.';
 }
 

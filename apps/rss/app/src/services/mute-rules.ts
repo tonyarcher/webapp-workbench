@@ -16,6 +16,31 @@ export type FeedFolderLookup = ReadonlyMap<string, readonly string[]> | Record<s
 
 const MUTE_RULES_KEY = 'rss-reader:mute-rules';
 
+let muteUndoSnapshot: MuteRule[] | null = null;
+
+/** Remember the previous rules so the last mute change can be undone once. */
+export function rememberMuteUndo(rules: readonly MuteRule[]): void {
+    muteUndoSnapshot = rules.map((r) => ({
+        ...r,
+        terms: [...r.terms],
+        scope: r.scope.kind === 'folders' ? { kind: 'folders', folderIds: [...r.scope.folderIds] } : { kind: 'all' },
+    }));
+}
+
+export function peekMuteUndo(): MuteRule[] | null {
+    return muteUndoSnapshot;
+}
+
+export function consumeMuteUndo(): MuteRule[] | null {
+    const snap = muteUndoSnapshot;
+    muteUndoSnapshot = null;
+    return snap;
+}
+
+export function clearMuteUndo(): void {
+    muteUndoSnapshot = null;
+}
+
 function isMuteMatch(value: unknown): value is MuteMatch {
     return value === 'title' || value === 'body' || value === 'either';
 }
@@ -134,4 +159,33 @@ export function muteScopeLabel(scope: MuteScope, folderTitleById?: ReadonlyMap<s
     const names = scope.folderIds.map((id) => folderTitleById?.get(id) ?? id);
     if (names.length <= 2) return names.join(', ');
     return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
+}
+
+export interface MutePreview {
+    total: number;
+    hidden: number;
+    samples: string[];
+}
+
+/** Preview how many articles a draft rule would hide, without persisting it. */
+export function previewMutedArticles(
+    articles: readonly Article[],
+    rule: MuteRule,
+    lookup?: FeedFolderLookup,
+): MutePreview {
+    const hiddenTitles: string[] = [];
+    let hidden = 0;
+    for (const article of articles) {
+        if (!isMutedArticle(article, [rule], lookup)) continue;
+        hidden++;
+        if (hiddenTitles.length < 5) hiddenTitles.push(article.title || '(untitled)');
+    }
+    return { total: articles.length, hidden, samples: hiddenTitles };
+}
+
+export function restoreMuteUndo(): boolean {
+    const snap = consumeMuteUndo();
+    if (!snap) return false;
+    saveMuteRules(snap);
+    return true;
 }

@@ -234,3 +234,8 @@
 .op-help code {
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
+
+.empty-note {
+    margin: 8px 0 0;
+    font-size: 13px;
+}

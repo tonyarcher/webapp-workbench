@@ -8,9 +8,10 @@ import {
     clearRecentSearches,
     loadRecentSearches,
     saveRecentSearch,
-    searchArticles,
+    searchArticlesWithMeta,
     type SearchResult,
 } from '../../services/search';
+import { peekMuteUndo, restoreMuteUndo } from '../../services/mute-rules';
 import { safeHttpUrl } from '../../services/parser';
 import { domainOf, formatDate } from '../../util';
 import type { Article, Feed, Folder, SavedSearch, View } from '../../types';
@@ -63,6 +64,7 @@ export class SearchView extends LitElement {
     @state() private scopeId = '';
     @state() private recent: string[] = loadRecentSearches();
     @state() private results: SearchResult[] = [];
+    @state() private mutedHidden = 0;
     @state() private corpusSize = 0;
 
     private inputEl: HTMLInputElement | null = null;
@@ -139,8 +141,20 @@ export class SearchView extends LitElement {
         const folders = this.library.data?.folders ?? [];
         const articles = collectCachedArticles();
         this.corpusSize = articles.length;
-        this.results = searchArticles(this.query, { articles, feeds, folders, folderFeedIds: this.folderFeedIds() });
+        const { results, mutedHidden } = searchArticlesWithMeta(this.query, {
+            articles,
+            feeds,
+            folders,
+            folderFeedIds: this.folderFeedIds(),
+        });
+        this.results = results;
+        this.mutedHidden = mutedHidden;
     }
+
+    private undoMute = () => {
+        if (!restoreMuteUndo()) return;
+        window.dispatchEvent(new CustomEvent('mute-rules-changed'));
+    };
 
     private updateRoute(q: string, scopeKind = this.scopeKind, scopeId = this.scopeId, replace = true) {
         navigate(
@@ -273,8 +287,13 @@ export class SearchView extends LitElement {
         const q = this.query.trim();
         if (!q) return this.renderRecent();
         if (this.results.length === 0) {
+            const canUndo = this.mutedHidden > 0 && peekMuteUndo() !== null;
+            const hiddenNote =
+                this.mutedHidden > 0
+                    ? html`<p class="empty-note">${this.mutedHidden} matching article${this.mutedHidden === 1 ? '' : 's'} hidden by mute filters.${canUndo ? html` <button type="button" class="link-btn" @click=${this.undoMute}>Undo mute change</button>` : ''}</p>`
+                    : '';
             return html`<div class="count">0 results</div>
-                <div class="empty">No results for "${q}" in cached articles. Open more views to grow the local index, or try a broader scope.</div>
+                <div class="empty">No results for "${q}" in cached articles. Open more views to grow the local index, or try a broader scope.${hiddenNote}</div>
                 ${this.renderCheatSheet()}`;
         }
         return html`<div class="count">${this.results.length} result${this.results.length === 1 ? '' : 's'}</div>

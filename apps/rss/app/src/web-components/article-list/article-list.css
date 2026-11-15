@@ -568,3 +568,11 @@ button.title-open:hover {
     text-align: center;
     color: var(--text-muted);
 }
+
+.empty p {
+    margin: 0 0 8px;
+}
+
+.empty-note {
+    font-size: 13px;
+}

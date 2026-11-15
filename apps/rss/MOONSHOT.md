@@ -463,10 +463,11 @@ triage as premium features. Ours are core.
 - **What.** Global and per-folder mute rules over keywords, phrases,
   authors, and domains, with plain and pattern matching. A rule can target
   title, article body, or either, and accept multiple words/terms (any
-  match mutes). Shipped: rules, matching, the editor, and list/search
-  application. Still wanted: a test-drive mode that shows what the rule
-  would have hidden across the last batch before it goes live, one-tap
-  undo from the empty state, and server-side rule sync.
+  match mutes). Shipped: rules, matching, the editor, list/search
+  application, a test-drive preview that shows what a draft rule would
+  hide in the latest batch before it goes live, and one-tap undo from the
+  empty state. Still wanted: server-side rule sync and richer matching
+  (authors/domains/patterns).
 - **Half.** `both` (sync still wanted; evaluation client-side for lists).
 - **Effort.** `L`.
 - **First test.** Smoke for matching and the test-drive counts; API tests

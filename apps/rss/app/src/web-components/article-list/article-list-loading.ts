@@ -28,6 +28,7 @@ export interface LoadingHost {
     pageSize: number;
     listView: ListViewType;
     cols: number;
+    mutedHidden: number;
     virtualizer: Virtualizer<HTMLDivElement, HTMLDivElement> | undefined;
     virtualizerCleanup?: () => void;
     scrollElRef: { value: HTMLDivElement | null };
@@ -58,6 +59,7 @@ export async function applyStep(host: LoadingHost, step: LoadStep): Promise<void
 export function clearList(host: LoadingHost): void {
     host.items = [];
     host.loadError = null;
+    host.mutedHidden = 0;
     host.lastAutoMark = 0;
     clearSelectionAction(host);
     host.cursors.clear();

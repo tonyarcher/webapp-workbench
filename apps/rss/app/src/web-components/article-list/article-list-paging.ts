@@ -71,8 +71,10 @@ function pickKept(
     sort: ArticleSort,
     pageSize: number,
     lookup: FeedFolderLookup,
-): Article[] {
+): { kept: Article[]; mutedHidden: number } {
     const rules = loadMuteRules();
+    const fresh = windowFeeds.flatMap((f) => (pages.get(f.id) ?? []).filter((a) => !existingIds.has(a.id)));
+    const mutedHidden = fresh.length - filterMutedArticles(fresh, rules, lookup).length;
     const visiblePages = windowFeeds.map((f) =>
         filterMutedArticles(pages.get(f.id) ?? [], rules, lookup).filter((a) => !existingIds.has(a.id)),
     );
@@ -88,7 +90,7 @@ function pickKept(
         visible.push(a);
         if (visible.length >= pageSize) break;
     }
-    return visible;
+    return { kept: visible, mutedHidden };
 }
 
 export async function fetchSinglePage(
@@ -100,18 +102,20 @@ export async function fetchSinglePage(
     pageSize: number,
     items: Article[],
     lookup: FeedFolderLookup = {},
-): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string | undefined }> {
+): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string | undefined; mutedHidden: number }> {
     const key = feedId ?? 'all';
     const cursor = cursors.get(key);
     const scope = feedId ? `feed:${feedId}` : undefined;
     const res = await fetchArticlesPage({ scope, unreadOnly: unreadOnly || hideRead, sort, limit: pageSize, cursor });
     const next = res.nextCursor;
-    const nextItems = filterMutedArticles(
-        capItems(mergeSorted(items, res.items, sort), pageSize),
-        loadMuteRules(),
-        lookup,
-    );
-    return { items: nextItems, hasMore: next !== undefined, nextCursor: next };
+    const merged = capItems(mergeSorted(items, res.items, sort), pageSize);
+    const nextItems = filterMutedArticles(merged, loadMuteRules(), lookup);
+    return {
+        items: nextItems,
+        hasMore: next !== undefined,
+        nextCursor: next,
+        mutedHidden: merged.length - nextItems.length,
+    };
 }
 
 export async function fetchFolderPage(
@@ -123,7 +127,7 @@ export async function fetchFolderPage(
     pageSize: number,
     items: Article[],
     lookup: FeedFolderLookup = {},
-): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string | undefined }> {
+): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string | undefined; mutedHidden: number }> {
     const cursor = cursors.get(folderKey);
     const res = await fetchArticlesPage({
         scope: folderKey,
@@ -133,12 +137,14 @@ export async function fetchFolderPage(
         cursor,
     });
     const next = res.nextCursor;
-    const nextItems = filterMutedArticles(
-        capItems(mergeSorted(items, res.items, sort), pageSize),
-        loadMuteRules(),
-        lookup,
-    );
-    return { items: nextItems, hasMore: next !== undefined, nextCursor: next };
+    const merged = capItems(mergeSorted(items, res.items, sort), pageSize);
+    const nextItems = filterMutedArticles(merged, loadMuteRules(), lookup);
+    return {
+        items: nextItems,
+        hasMore: next !== undefined,
+        nextCursor: next,
+        mutedHidden: merged.length - nextItems.length,
+    };
 }
 
 async function refillKept(
@@ -150,8 +156,9 @@ async function refillKept(
     kept: Article[],
     existingIds: Set<string>,
     lookup: FeedFolderLookup,
-): Promise<Article[] | null> {
+): Promise<{ kept: Article[]; mutedHidden: number } | null> {
     let next = kept;
+    let mutedHidden = 0;
     while (next.length < pageSize) {
         const more = windowFeeds.filter((f) => lastHasMore.get(f.id) === true);
         if (!more.length) break;
@@ -160,11 +167,15 @@ async function refillKept(
         await fetchFeeds(more, refillPerFeed, ctx, pages, lastHasMore);
         if (ctx.gen !== ctx.currentGen()) return null;
         const filled = pickKept(windowFeeds, pages, existingIds, ctx.sort, pageSize, lookup);
+        mutedHidden = filled.mutedHidden;
         const afterCount = Array.from(pages.values()).reduce((sum, items) => sum + items.length, 0);
-        if (filled.length === next.length && afterCount === beforeCount) break;
-        next = filled;
+        if (filled.kept.length === next.length && afterCount === beforeCount) break;
+        next = filled.kept;
     }
-    return next;
+    if (mutedHidden === 0) {
+        mutedHidden = pickKept(windowFeeds, pages, existingIds, ctx.sort, pageSize, lookup).mutedHidden;
+    }
+    return { kept: next, mutedHidden };
 }
 
 function finishFeedSetWindow(
@@ -174,13 +185,15 @@ function finishFeedSetWindow(
     existingItems: Article[],
     sort: ArticleSort,
     pageSize: number,
-): { kept: Article[]; hasMoreEntries: Array<[string, boolean]>; items: Article[] } {
+    mutedHidden: number,
+): { kept: Article[]; hasMoreEntries: Array<[string, boolean]>; items: Article[]; mutedHidden: number } {
     const hasMoreEntries = windowFeeds.map((f) => [f.id, lastHasMore.get(f.id) ?? false] as [string, boolean]);
-    if (!kept.length) return { kept, hasMoreEntries, items: existingItems };
+    if (!kept.length) return { kept, hasMoreEntries, items: existingItems, mutedHidden };
     return {
         kept,
         hasMoreEntries,
         items: capItems(mergeSorted(existingItems, kept, sort), pageSize),
+        mutedHidden,
     };
 }
 
@@ -196,7 +209,12 @@ export async function fetchFeedSetWindow(
     gen: number,
     currentGen: () => number,
     lookup: FeedFolderLookup = {},
-): Promise<{ kept: Article[]; hasMoreEntries: Array<[string, boolean]>; items: Article[] } | null> {
+): Promise<{
+    kept: Article[];
+    hasMoreEntries: Array<[string, boolean]>;
+    items: Article[];
+    mutedHidden: number;
+} | null> {
     const pages = new Map<string, Article[]>();
     const lastHasMore = new Map<string, boolean>();
     const perFeed = perFeedLimit(pageSize, windowFeeds.length);
@@ -205,9 +223,26 @@ export async function fetchFeedSetWindow(
     if (gen !== currentGen()) return null;
     const existingIds = new Set(existingItems.map((a) => a.id));
     const initial = pickKept(windowFeeds, pages, existingIds, sort, pageSize, lookup);
-    const kept = await refillKept(windowFeeds, ctx, pages, lastHasMore, pageSize, initial, existingIds, lookup);
-    if (kept === null) return null;
-    return finishFeedSetWindow(windowFeeds, lastHasMore, kept, existingItems, sort, pageSize);
+    const refilled = await refillKept(
+        windowFeeds,
+        ctx,
+        pages,
+        lastHasMore,
+        pageSize,
+        initial.kept,
+        existingIds,
+        lookup,
+    );
+    if (refilled === null) return null;
+    return finishFeedSetWindow(
+        windowFeeds,
+        lastHasMore,
+        refilled.kept,
+        existingItems,
+        sort,
+        pageSize,
+        refilled.mutedHidden,
+    );
 }
 
 export function getActiveFeeds(feeds: Feed[], feedHasMore: Map<string, boolean>): Feed[] {
@@ -231,6 +266,7 @@ export interface PageHost {
     cursors: Map<string, string | undefined>;
     feedHasMore: Map<string, boolean>;
     feedWindowOffset: number;
+    mutedHidden: number;
     library: { data?: { feeds: Feed[] } };
 }
 
@@ -254,6 +290,7 @@ export async function loadSinglePageAction(host: PageHost, gen: number): Promise
     if (gen !== host.gen) return;
     host.hasMoreSingle = res.hasMore;
     host.items = res.items;
+    host.mutedHidden = res.mutedHidden;
     if (res.nextCursor) host.cursors.set(feedId ?? 'all', res.nextCursor);
 }
 
@@ -274,6 +311,7 @@ export async function loadFolderPageAction(host: PageHost, gen: number): Promise
     if (gen !== host.gen) return;
     host.hasMoreSingle = res.hasMore;
     host.items = res.items;
+    host.mutedHidden = res.mutedHidden;
     if (res.nextCursor) host.cursors.set(key, res.nextCursor);
 }
 
@@ -297,24 +335,38 @@ function fetchWindowForHost(host: PageHost, windowFeeds: Feed[], gen: number, lo
     );
 }
 
-async function stepFeedSetPage(host: PageHost, feeds: Feed[], gen: number, lookup: FeedFolderLookup): Promise<boolean> {
+async function stepFeedSetPage(
+    host: PageHost,
+    feeds: Feed[],
+    gen: number,
+    lookup: FeedFolderLookup,
+    mutedHidden: number,
+): Promise<{ done: boolean; mutedHidden: number }> {
     const active = getActiveFeeds(feeds, host.feedHasMore);
-    if (!active.length) return true;
+    if (!active.length) return { done: true, mutedHidden };
     const windowFeeds = nextWindow(active, host.feedWindowOffset, host.pageSize);
     host.feedWindowOffset += windowFeeds.length;
     const result = await fetchWindowForHost(host, windowFeeds, gen, lookup);
-    if (!result || gen !== host.gen) return true;
+    if (!result || gen !== host.gen) return { done: true, mutedHidden };
     applyHasMoreEntries(host, result.hasMoreEntries);
+    const nextHidden = mutedHidden + result.mutedHidden;
     if (result.kept.length) {
         host.items = result.items;
-        return true;
+        host.mutedHidden = nextHidden;
+        return { done: true, mutedHidden: nextHidden };
     }
-    return false;
+    return { done: false, mutedHidden: nextHidden };
 }
 
 export async function loadFeedSetPageAction(host: PageHost, feeds: Feed[], gen: number): Promise<void> {
     const lookup = lookupFromFeeds(feeds);
+    let mutedHidden = 0;
     while (true) {
-        if (await stepFeedSetPage(host, feeds, gen, lookup)) return;
+        const step = await stepFeedSetPage(host, feeds, gen, lookup, mutedHidden);
+        mutedHidden = step.mutedHidden;
+        if (step.done) {
+            if (gen === host.gen) host.mutedHidden = mutedHidden;
+            return;
+        }
     }
 }

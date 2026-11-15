@@ -222,12 +222,17 @@ function matchesOperators(
     return true;
 }
 
+export interface SearchArticlesResult {
+    results: SearchResult[];
+    mutedHidden: number;
+}
+
 /**
  * Rank articles matching all query tokens and operators. Returns sorted by
  * score desc then published desc then id. If there are only operators and no
  * text tokens, all operator-matching articles are returned (score 0, newest first).
  */
-export function searchArticles(query: string, corpus: SearchCorpus): SearchResult[] {
+export function searchArticlesWithMeta(query: string, corpus: SearchCorpus): SearchArticlesResult {
     const parsed = parseSearchInput(query);
     const { tokens, operators } = parsed;
     const hasOps =
@@ -241,7 +246,7 @@ export function searchArticles(query: string, corpus: SearchCorpus): SearchResul
         operators.isUnread === true ||
         operators.isRead === true ||
         operators.minReadMinutes !== undefined;
-    if (tokens.length === 0 && !hasOps) return [];
+    if (tokens.length === 0 && !hasOps) return { results: [], mutedHidden: 0 };
     const feedById = new Map(corpus.feeds.map((f) => [f.id, f] as const));
     const allowed = corpus.folderFeedIds === undefined ? null : new Set(corpus.folderFeedIds);
     const results: SearchResult[] = [];
@@ -287,7 +292,13 @@ export function searchArticles(query: string, corpus: SearchCorpus): SearchResul
             feedFolderLookup,
         ).map((a) => a.id),
     );
-    return results.filter((r) => muted.has(r.article.id));
+    const visible = results.filter((r) => muted.has(r.article.id));
+    return { results: visible, mutedHidden: results.length - visible.length };
+}
+
+/** Back-compat wrapper returning only visible results. */
+export function searchArticles(query: string, corpus: SearchCorpus): SearchResult[] {
+    return searchArticlesWithMeta(query, corpus).results;
 }
 
 export function loadRecentSearches(): string[] {
