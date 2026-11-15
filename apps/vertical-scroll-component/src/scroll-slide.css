@@ -218,6 +218,12 @@ a.meta-author:hover {
     color: rgba(255, 255, 255, 0.9);
 }
 
+.meta-source {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    overflow-wrap: anywhere;
+}
+
 .meta-open {
     pointer-events: auto;
     margin-top: 2px;

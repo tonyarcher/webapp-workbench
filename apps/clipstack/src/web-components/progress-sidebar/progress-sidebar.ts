@@ -55,7 +55,11 @@ export class ProgressSidebar extends LitElement {
 
     private rowLabel(item: ClipLink): string {
         const user = item.author ? `@${item.author}` : null;
-        return item.date && user ? `${item.date} / ${user}` : (item.date ?? user ?? item.id);
+        const sourceId = `${item.provider ?? 'tiktok'} ${item.id}`;
+        if (item.date && user) return `${sourceId} / ${item.date} / ${user}`;
+        if (item.date) return `${sourceId} / ${item.date}`;
+        if (user) return `${sourceId} / ${user}`;
+        return sourceId;
     }
 
     private renderRow(item: ClipLink, index: number): TemplateResult {

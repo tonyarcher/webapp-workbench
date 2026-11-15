@@ -3,6 +3,7 @@ import type { TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { classifyScrollItem } from './media';
 import { embedProviderForUrl } from './embeds';
+import { stripImageProxy } from './embeds/util';
 import { compactNumber, timeAgo } from './format';
 import { safeUrl } from './url';
 import type { ScrollItem } from './types';
@@ -111,13 +112,24 @@ export class ScrollSlide extends LitElement {
         return safeUrl(host);
     }
 
+    private sourceIdFor(item: ScrollItem): string | null {
+        const raw = item.videoUrl ?? item.url ?? null;
+        if (!raw) return null;
+        const provider = embedProviderForUrl(raw);
+        if (provider?.name !== 'tiktok' && provider?.name !== 'instagram') return null;
+        const clipId = provider.id(stripImageProxy(raw));
+        if (!clipId) return null;
+        return provider.name === 'instagram' ? `Instagram ${clipId}` : `TikTok ${clipId}`;
+    }
+
     private isMetaEmpty(
         handle: string | null,
         showName: boolean,
         caption: string | null,
+        sourceId: string | null,
         original: string | null,
     ): boolean {
-        return !handle && !showName && !caption && !original;
+        return !handle && !showName && !caption && !sourceId && !original;
     }
 
     private renderLetterboxMeta(): TemplateResult {
@@ -126,10 +138,11 @@ export class ScrollSlide extends LitElement {
         const displayName = this.displayNameFor(item);
         const showName = this.shouldShowName(displayName, handle, item.author);
         const caption = this.captionFor(item, handle, displayName);
+        const sourceId = this.sourceIdFor(item);
         const original = safeUrl(item.originalUrl ?? null);
-        if (this.isMetaEmpty(handle, showName, caption, original)) return html``;
+        if (this.isMetaEmpty(handle, showName, caption, sourceId, original)) return html``;
         const authorUrl = this.profileUrl(item);
-        return html`<div class="slide-meta" @pointerdown=${(e: Event) => e.stopPropagation()}>${showName ? html`<div class="meta-name">${displayName}</div>` : nothing}${this.renderLetterboxAuthor(handle, authorUrl)}${caption ? html`<div class="meta-caption">${caption}</div>` : nothing}${original ? html`<a class="meta-open" href=${original} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>Open original ↗</a>` : nothing}</div>`;
+        return html`<div class="slide-meta" @pointerdown=${(e: Event) => e.stopPropagation()}>${showName ? html`<div class="meta-name">${displayName}</div>` : nothing}${this.renderLetterboxAuthor(handle, authorUrl)}${caption ? html`<div class="meta-caption">${caption}</div>` : nothing}${sourceId ? html`<div class="meta-source">${sourceId}</div>` : nothing}${original ? html`<a class="meta-open" href=${original} target="_blank" rel="noopener noreferrer" @click=${(e: Event) => e.stopPropagation()}>Open original ↗</a>` : nothing}</div>`;
     }
 
     private renderLetterboxAuthor(handle: string | null, authorUrl: string | null): TemplateResult {
