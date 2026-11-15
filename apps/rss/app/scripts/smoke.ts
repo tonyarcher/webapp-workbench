@@ -68,6 +68,7 @@ await import('./smoke-coalesce.js');
 await import('./smoke-settings.js');
 await import('./smoke-mute.js');
 await import('./smoke-reading-progress.js');
+await import('./smoke-focus-session.js');
 await import('./smoke-config.js');
 await import('./smoke-api.js');
 await import('./smoke-server-ai.js');

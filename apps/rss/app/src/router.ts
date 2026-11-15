@@ -25,6 +25,9 @@ export function parsePath(pathname: string, search = ''): View {
     if (parts[0] === 'frontpage') {
         return { kind: 'frontpage' };
     }
+    if (parts[0] === 'focus') {
+        return { kind: 'focus' };
+    }
     if (parts[0] === 'organize') {
         return { kind: 'organize' };
     }
@@ -61,6 +64,8 @@ export function viewToPath(view: View): string {
             return '/today';
         case 'frontpage':
             return '/frontpage';
+        case 'focus':
+            return '/focus';
         case 'organize':
             return '/organize';
         case 'mute-filters':

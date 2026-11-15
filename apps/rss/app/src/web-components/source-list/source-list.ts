@@ -305,6 +305,7 @@ export class SourceList extends LitElement {
             this.view.kind === 'brief' ||
             this.view.kind === 'today' ||
             this.view.kind === 'frontpage' ||
+            this.view.kind === 'focus' ||
             this.view.kind === 'organize' ||
             this.view.kind === 'mute-filters' ||
             this.view.kind === 'saved'

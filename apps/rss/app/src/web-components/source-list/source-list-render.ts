@@ -251,7 +251,7 @@ function renderNavError(host: SourceListRenderHost) {
 
 function renderStaticNav(host: SourceListRenderHost) {
     return html`
-      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderSavedNav(host)}${renderSearchNav(host)}${renderOrganizeNav(host)}${renderMuteFiltersNav(host)}${renderAllNav(host)}
+      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderFocusNav(host)}${renderSavedNav(host)}${renderSearchNav(host)}${renderOrganizeNav(host)}${renderMuteFiltersNav(host)}${renderAllNav(host)}
     `;
 }
 
@@ -318,6 +318,11 @@ function renderTodayNav(host: SourceListRenderHost) {
             host.select({ kind: 'today' });
         }}><span class="icon">🗓</span><span class="label">Today</span></button><button class="menu-btn" title="Today options" @click=${(e: MouseEvent) => openTodayMenuAction(host, e)}>${host.menuIcon()}</button>
       </div>`;
+}
+
+function renderFocusNav(host: SourceListRenderHost) {
+    const active = host.isActive({ kind: 'focus' });
+    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'focus' })}><span class="icon" aria-hidden="true">⏱</span><span class="label">Focus session</span></button>`;
 }
 
 function renderAllNav(host: SourceListRenderHost) {

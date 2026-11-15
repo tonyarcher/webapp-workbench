@@ -102,6 +102,7 @@ export type View =
     | { kind: 'brief' }
     | { kind: 'today' }
     | { kind: 'frontpage' }
+    | { kind: 'focus' }
     | { kind: 'organize' }
     | { kind: 'mute-filters' }
     | { kind: 'saved' }

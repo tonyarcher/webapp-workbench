@@ -25,6 +25,7 @@ import type { Article, View } from '../../types';
 import '../mute-filters-view/mute-filters-view';
 import '../organize-view/organize-view';
 import '../saved-view/saved-view';
+import '../focus-view/focus-view';
 import '../shortcuts-dialog/shortcuts-dialog';
 import '../command-palette/command-palette';
 import { MAX_ARTICLE_PANEL_WIDTH, MIN_ARTICLE_PANEL_WIDTH, loadArticlePanelWidth } from './article-panel-settings';
@@ -343,6 +344,7 @@ export class AppShell extends LitElement {
         if (this.route.kind === 'brief') return html`<brief-view @open-article=${this.onOpenArticle}></brief-view>`;
         if (this.route.kind === 'today') return html`<today-view @open-article=${this.onOpenArticle}></today-view>`;
         if (this.route.kind === 'frontpage') return html`<front-page @open-article=${this.onOpenArticle}></front-page>`;
+        if (this.route.kind === 'focus') return html`<focus-view @open-article=${this.onOpenArticle}></focus-view>`;
         if (this.route.kind === 'organize') return html`<organize-view></organize-view>`;
         if (this.route.kind === 'mute-filters') return html`<mute-filters-view></mute-filters-view>`;
         if (this.route.kind === 'saved') return html`<saved-view @open-article=${this.onOpenArticle}></saved-view>`;

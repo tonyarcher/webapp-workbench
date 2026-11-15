@@ -395,8 +395,11 @@ command, and stats that respect attention.
   bottoms.
 - **What.** Scheduled sessions that queue a ranked set with a timer,
   progress, and a done screen that marks the rest read only on approval;
-  streaks track kept sessions, never guilt.
-- **Half.** `app`.
+  streaks track kept sessions, never guilt. Shipped: the Focus session view
+  (duration, ranked unread queue, timer, progress, open/read flow), a done
+  screen that marks the rest read only on approval or keeps it unread, local
+  session/streak persistence, and sidebar/command/route wiring.
+- **Half.** `app`. Shipped.
 - **Effort.** `S`.
 - **First test.** Session flow smoke.
 
