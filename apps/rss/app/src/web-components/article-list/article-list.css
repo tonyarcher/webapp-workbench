@@ -576,3 +576,66 @@ button.title-open:hover {
 .empty-note {
     font-size: 13px;
 }
+
+.row-highlight-toggle {
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.2;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-2, transparent);
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.row-highlight-toggle:hover,
+.row-highlight-toggle:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.row-highlights {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2, transparent);
+}
+
+.row-highlights ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.row-highlights blockquote {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.row-why {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.row-highlights .skl {
+    height: 12px;
+    border-radius: 4px;
+    background: var(--surface-3, rgba(127, 127, 127, 0.2));
+    margin: 4px 0;
+}
+
+.row-highlights .skl-short {
+    width: 60%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .row-highlights .skl {
+        animation: none;
+    }
+}

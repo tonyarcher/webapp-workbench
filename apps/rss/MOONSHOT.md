@@ -293,8 +293,9 @@ server.
   list rows for long pieces plus a why-this-row line naming the Jev signals
   and scores that ranked it; a global off switch; cached per article. No
   generated abstracts. Shipped: the excerpts, why signals, cache, and global
-  off switch render in the article panel. Still wanted: the list-row
-  expansion hook.
+  off switch render in the article panel and in detailed/headline list rows
+  for long pieces (on-demand expansion hook, client-cached). Still wanted:
+  card-row expansion and broader coverage as needed.
 - **Half.** `both`.
 - **Effort.** `M`.
 - **First test.** Cache and quota tests; row-expansion smoke.

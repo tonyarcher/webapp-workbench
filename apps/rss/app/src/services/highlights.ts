@@ -32,6 +32,9 @@ export function setHighlightsEnabled(enabled: boolean): void {
         // storage unavailable; the session still honors the toggle
     }
     if (!enabled) cache.clear();
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('highlights-enabled-changed', { detail: { enabled } }));
+    }
 }
 
 /** Cached highlights, or null when disabled/unavailable/failed. */

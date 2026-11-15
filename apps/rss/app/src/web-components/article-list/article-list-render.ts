@@ -10,13 +10,19 @@ import { interestingWordMapOf } from './article-list-interesting';
 import { domainOf, formatDate } from '../../util';
 import type { Article, ArticleSort, ListViewType, View } from '../../types';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
-
+import {
+    highlightArgs,
+    highlightToggle,
+    renderRowHighlights,
+    type HighlightHost,
+    type RowHighlightRenderState,
+} from './article-list-render-highlights';
 /**
  * State and handlers the article-list templates read. The component passes
  * itself (`this as never`, matching article-list-actions.ts) so the html
  * strings stay identical to the ones the class used to render.
  */
-export interface ArticleListRenderHost {
+export interface ArticleListRenderHost extends HighlightHost {
     view: View;
     items: Article[];
     cursor: number;
@@ -69,9 +75,7 @@ export interface ArticleListRenderHost {
     onScroll(): void;
     onInterestingStrictness(e: Event): void;
 }
-
 type VirtualItems = ReturnType<Virtualizer<HTMLDivElement, HTMLDivElement>['getVirtualItems']>;
-
 export function detailRowTemplate(
     article: Article,
     showFeed: boolean,
@@ -79,6 +83,7 @@ export function detailRowTemplate(
     feedIcon: string | undefined,
     onStar: (e: Event, article: Article) => void,
     onOpen: (e: MouseEvent, article: Article) => void,
+    highlight?: RowHighlightRenderState,
 ) {
     const popular = article.popularity >= 4;
     const link = safeHttpUrl(article.link);
@@ -89,13 +94,13 @@ export function detailRowTemplate(
         ${detailMedia(video, image, article, link)}
         <div class="detail-text">
           ${detailTitleRow(article, popular, onStar, onOpen)}
-          ${detailMeta(article, showFeed, feedTitle, link)}
+          ${detailMeta(article, showFeed, feedTitle, link, highlight)}
           ${article.summary ? html`<div class="summary">${article.summary}</div>` : ''}
+          ${highlight?.open ? renderRowHighlights(highlight) : ''}
         </div>
       </div>
     `;
 }
-
 function detailMedia(
     video: ReturnType<typeof articleVideo>,
     image: string | undefined,
@@ -123,7 +128,6 @@ function detailMedia(
     }
     return '';
 }
-
 function detailTitleRow(
     article: Article,
     popular: boolean,
@@ -153,7 +157,13 @@ function externalIcon() {
     return svg`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M10 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
-function detailMeta(article: Article, showFeed: boolean, feedTitle: string | undefined, link: string | undefined) {
+function detailMeta(
+    article: Article,
+    showFeed: boolean,
+    feedTitle: string | undefined,
+    link: string | undefined,
+    highlight?: RowHighlightRenderState,
+) {
     const minutes = readMinutes(article.content, article.summary);
     return html`
       <div class="meta">
@@ -162,6 +172,7 @@ function detailMeta(article: Article, showFeed: boolean, feedTitle: string | und
         <span class="meta-date">${formatDate(article.published)}</span>
         ${minutes > 0 ? html`<span class="meta-time">${minutes} min read</span>` : ''}
         ${article.author ? html`<span class="meta-author">by ${article.author}</span>` : ''}
+        ${highlightToggle(minutes, highlight)}
         ${
             link
                 ? html`<a class="orig-link" href=${link} target="_blank" rel="noopener noreferrer" title="Open original" aria-label="Open original">${externalIcon()}</a>`
@@ -177,6 +188,7 @@ export function headlineRowTemplate(
     feedTitle: string | undefined,
     onStar: (e: Event, article: Article) => void,
     onOpen: (e: MouseEvent, article: Article) => void,
+    highlight?: RowHighlightRenderState,
 ) {
     const popular = article.popularity >= 4;
     const minutes = readMinutes(article.content, article.summary);
@@ -189,9 +201,11 @@ export function headlineRowTemplate(
             e.stopPropagation();
             onOpen(e, article);
         }}>${article.title}</button>
+        ${highlightToggle(minutes, highlight)}
         <span class="headline-date">${formatDate(article.published)}${minutes > 0 ? ` · ${minutes} min` : ''}</span>
         ${starButton(article, onStar)}
       </div>
+      ${highlight?.open ? renderRowHighlights(highlight) : ''}
     `;
 }
 
@@ -452,12 +466,9 @@ function renderRow(host: ArticleListRenderHost, article: Article, showFeed: bool
         showFeed,
         host.feedTitle(article.feedId),
         host.feedIcon(article.feedId),
-        (e, a) => {
-            void host.onStar(e, a);
-        },
-        (e) => {
-            host.onRowClick(e, index);
-        },
+        (e, a) => void host.onStar(e, a),
+        (e) => host.onRowClick(e, index),
+        highlightArgs(host, article.id),
     );
 }
 
@@ -466,12 +477,9 @@ function renderHeadlineRow(host: ArticleListRenderHost, article: Article, showFe
         article,
         showFeed,
         host.feedTitle(article.feedId),
-        (e, a) => {
-            void host.onStar(e, a);
-        },
-        (e) => {
-            host.onRowClick(e, index);
-        },
+        (e, a) => void host.onStar(e, a),
+        (e) => host.onRowClick(e, index),
+        highlightArgs(host, article.id),
     );
 }
 
