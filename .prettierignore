@@ -27,3 +27,6 @@ deploy/grafana/provisioning/dashboards/
 # Gradle / Kotlin caches reachable from the repo root.
 **/.gradle/
 **/.kotlin/
+
+# Build-time generated modules (gitignored).
+**/src/generated/

@@ -25,6 +25,13 @@ import {
     type ViewSettings,
 } from '../article-list/article-list-helpers';
 import type { View } from '../../types';
+import {
+    renderAboutSection,
+    renderAppearanceSection,
+    renderFeedsSection,
+    renderReadingSection,
+    renderSharingSection,
+} from './settings-dialog-sections';
 import styles from './settings-dialog.css?inline';
 
 const MIGRATE_SIZE_LIMIT = 1_800_000;
@@ -37,18 +44,19 @@ export class SettingsDialog extends LitElement {
     /** Current route, so the dialog can copy the open view's settings. */
     @property({ attribute: false }) view: View = { kind: 'all' };
 
-    @state() private theme: Theme = 'light';
-    @state() private adding = false;
-    @state() private busy = false;
-    @state() private migrating = false;
-    @state() private status = '';
-    @state() private statusError = false;
-    @state() private mastodonHost = '';
-    @state() private shareStatus = '';
-    @state() private shareStatusError = false;
-    @state() private shareTargets: ShareTarget[] = [];
-    @state() private viewSettings: ViewSettings = { ...DEFAULT_VIEW_SETTINGS };
-    @state() private viewStatus = '';
+    @state() theme: Theme = 'light';
+    @state() adding = false;
+    @state() busy = false;
+    @state() migrating = false;
+    @state() status = '';
+    @state() statusError = false;
+    @state() mastodonHost = '';
+    @state() shareStatus = '';
+    @state() shareStatusError = false;
+    @state() shareTargets: ShareTarget[] = [];
+    @state() viewSettings: ViewSettings = { ...DEFAULT_VIEW_SETTINGS };
+    @state() viewStatus = '';
+    @state() showHistory = false;
 
     private dialogEl: HTMLDialogElement | null = null;
 
@@ -62,6 +70,7 @@ export class SettingsDialog extends LitElement {
                 this.shareStatusError = false;
                 this.viewSettings = readDefaultViewSettings();
                 this.viewStatus = '';
+                this.showHistory = false;
                 this.dialogEl?.showModal();
                 modalOpened();
             } else {
@@ -71,86 +80,11 @@ export class SettingsDialog extends LitElement {
         }
     }
 
-    private renderThemeOption(value: Theme, label: string) {
-        return html`
-      <button class="theme-opt ${this.theme === value ? 'active' : ''}" data-theme=${value} @click=${this.onThemeClick}>
-        <span class="swatch ${value}"></span>
-        ${label}
-      </button>
-    `;
-    }
-
     private renderAppearanceSection() {
-        return html`
-      <div class="section">
-        <h3>Appearance</h3>
-        <div class="theme-row">
-          ${this.renderThemeOption('light', 'Light')}
-          ${this.renderThemeOption('dark', 'Dark grey')}
-          ${this.renderThemeOption('oled', 'Lights out')}
-        </div>
-      </div>
-    `;
+        return renderAppearanceSection(this);
     }
-
     private renderReadingSection() {
-        const s = this.viewSettings;
-        return html`
-      <div class="section">
-        <h3>Reading</h3>
-        <div class="view-defaults">
-          <label class="view-field">
-            <span>Default list view</span>
-            <select .value=${s.listView} @change=${(e: Event) => this.setListView((e.target as HTMLSelectElement).value)}>
-              <option value="detailed">Detailed List</option>
-              <option value="headline">Headline View</option>
-              <option value="cards">Cards</option>
-            </select>
-          </label>
-          <label class="view-field">
-            <span>Sort</span>
-            <select .value=${s.sort} @change=${(e: Event) => this.setSort((e.target as HTMLSelectElement).value)}>
-              <option value="hot">Hot</option>
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-            </select>
-          </label>
-          <label class="view-field">
-            <span>Page size</span>
-            <select .value=${String(s.pageSize)} @change=${(e: Event) => this.setPageSize(Number((e.target as HTMLSelectElement).value))}>
-              <option value="20">20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-              <option value="500">500</option>
-            </select>
-          </label>
-          <label class="view-field">
-            <span>Card columns</span>
-            <select .value=${String(s.maxCardCols)} @change=${(e: Event) => this.setMaxCardCols(Number((e.target as HTMLSelectElement).value))}>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-            </select>
-          </label>
-        </div>
-        <div class="view-toggles">
-          <label class="share-target"><input type="checkbox" .checked=${s.unreadOnly} @change=${(e: Event) => this.setUnreadOnly((e.target as HTMLInputElement).checked)} />Unread only</label>
-          <label class="share-target"><input type="checkbox" .checked=${s.markOnScroll} @change=${(e: Event) => this.setMarkOnScroll((e.target as HTMLInputElement).checked)} />Mark on scroll</label>
-        </div>
-        <div class="view-actions">
-          ${
-              this.canUseCurrentView
-                  ? html`<button class="btn" @click=${this.useCurrentView}>Use current view</button>`
-                  : ''
-          }
-          <button class="btn primary" @click=${this.applyAllViews}>Apply to all views</button>
-        </div>
-        <p class="hint">New and untouched views use these defaults. Apply to all views replaces every view's own settings.</p>
-        ${this.viewStatus ? html`<div class="status">${this.viewStatus}</div>` : ''}
-      </div>
-    `;
+        return renderReadingSection(this);
     }
 
     private saveViewDefaults() {
@@ -165,40 +99,40 @@ export class SettingsDialog extends LitElement {
         window.dispatchEvent(new CustomEvent('view-settings-changed'));
     }
 
-    private setListView(value: string) {
+    setListView(value: string) {
         if (value !== 'detailed' && value !== 'headline' && value !== 'cards') return;
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, listView: value });
         this.saveViewDefaults();
     }
 
-    private setSort(value: string) {
+    setSort(value: string) {
         if (value !== 'hot' && value !== 'newest' && value !== 'oldest') return;
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, sort: value });
         this.saveViewDefaults();
     }
 
-    private setPageSize(value: number) {
+    setPageSize(value: number) {
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, pageSize: value });
         this.saveViewDefaults();
     }
 
-    private setMaxCardCols(value: number) {
+    setMaxCardCols(value: number) {
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, maxCardCols: value });
         this.saveViewDefaults();
     }
 
-    private setUnreadOnly(value: boolean) {
+    setUnreadOnly(value: boolean) {
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, unreadOnly: value });
         this.saveViewDefaults();
     }
 
-    private setMarkOnScroll(value: boolean) {
+    setMarkOnScroll(value: boolean) {
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, markOnScroll: value });
         this.saveViewDefaults();
     }
 
     /** Only the article-list routes have per-view settings worth copying. */
-    private get canUseCurrentView(): boolean {
+    get canUseCurrentView(): boolean {
         return (
             this.view.kind === 'all' ||
             this.view.kind === 'folder' ||
@@ -207,91 +141,24 @@ export class SettingsDialog extends LitElement {
         );
     }
 
-    private useCurrentView = () => {
+    useCurrentView = () => {
         this.viewSettings = readViewSettingsFor(this.view);
         saveDefaultViewSettings(this.viewSettings);
         this.announceViewSettings();
         this.viewStatus = "Loaded the current view's settings.";
     };
 
-    private applyAllViews = () => {
+    applyAllViews = () => {
         applyDefaultToAllViews(this.viewSettings);
         this.announceViewSettings();
         this.viewStatus = 'Applied to all views.';
     };
 
-    private renderAddRow() {
-        if (!this.adding) return html``;
-        return html`
-      <div class="add-row">
-        <input data-add-url type="url" placeholder="https://example.com/feed.xml" @keydown=${(e: KeyboardEvent) => {
-            if (e.key === 'Enter') void this.submitAdd();
-        }} />
-        <button class="btn primary" @click=${this.submitAdd} ?disabled=${this.busy}>Add</button>
-        <button class="btn" @click=${this.cancelAdd}>Cancel</button>
-      </div>
-    `;
-    }
-
     private renderSharingSection() {
-        return html`
-      <div class="section">
-        <h3>Sharing</h3>
-        ${this.renderShareTargets()}
-        <label class="field-label" for="mastodon-host">Mastodon instance</label>
-        ${this.renderMastodonRow()}
-        <p class="hint">Article shares post through this instance, e.g. mastodon.social.</p>
-        ${this.shareStatus ? html`<div class="status ${this.shareStatusError ? 'error' : ''}">${this.shareStatus}</div>` : ''}
-      </div>
-    `;
+        return renderSharingSection(this);
     }
 
-    /** One checkbox per network; saving applies immediately. */
-    private renderShareTargets() {
-        const labels: Record<ShareTarget, string> = {
-            facebook: 'Facebook',
-            x: 'X',
-            mastodon: 'Mastodon',
-            instagram: 'Instagram',
-        };
-        return html`
-      <div class="share-targets" role="group" aria-label="Share buttons">
-        ${ALL_SHARE_TARGETS.map(
-            (target) => html`
-            <label class="share-target">
-              <input
-                type="checkbox"
-                .checked=${this.shareTargets.includes(target)}
-                @change=${(e: Event) => this.toggleShareTarget(e, target)}
-              />${labels[target]}
-            </label>`,
-        )}
-      </div>
-    `;
-    }
-
-    /** Mastodon instance field; Enter submits like the Save button. */
-    private renderMastodonRow() {
-        return html`
-      <div class="share-row">
-        <input
-          id="mastodon-host"
-          type="text"
-          inputmode="url"
-          autocomplete="off"
-          spellcheck="false"
-          placeholder="mastodon.social"
-          .value=${this.mastodonHost}
-          @keydown=${(e: KeyboardEvent) => {
-              if (e.key === 'Enter') void this.submitMastodonHost();
-          }}
-        />
-        <button class="btn primary" @click=${this.submitMastodonHost}>Save</button>
-      </div>
-    `;
-    }
-
-    private toggleShareTarget(e: Event, target: ShareTarget) {
+    toggleShareTarget(e: Event, target: ShareTarget) {
         const on = (e.target as HTMLInputElement).checked;
         const current = new Set(loadShareTargets());
         if (on) current.add(target);
@@ -302,7 +169,7 @@ export class SettingsDialog extends LitElement {
         window.dispatchEvent(new CustomEvent('share-settings-changed'));
     }
 
-    private async submitMastodonHost() {
+    async submitMastodonHost() {
         const input = this.shadowRoot?.querySelector<HTMLInputElement>('#mastodon-host');
         const raw = input?.value.trim() ?? '';
         const clean = normalizeMastodonHost(raw);
@@ -319,32 +186,15 @@ export class SettingsDialog extends LitElement {
     }
 
     private renderFeedsSection() {
-        return html`
-      <div class="section">
-        <h3>Feeds</h3>
-        <div class="actions">
-          <button class="action" @click=${this.openAdd} ?disabled=${this.busy}>
-            <span>Add feed<br /><span class="desc">Subscribe by RSS/Atom URL</span></span><span>+</span>
-          </button>
-          ${this.renderAddRow()}
-          <button class="action" @click=${this.openMuteFilters} ?disabled=${this.busy}>
-            <span>Mute filters<br /><span class="desc">Hide articles by words in title or body, per folder or all</span></span><span>🔇</span>
-          </button>
-          <button class="action" @click=${this.onImportClick} ?disabled=${this.busy}>
-            <span>Import OPML<br /><span class="desc">Restore feeds and folders</span></span><span>↑</span>
-          </button>
-          <button class="action" @click=${this.onExport} ?disabled=${this.busy}>
-            <span>Export OPML<br /><span class="desc">Back up your subscriptions</span></span><span>↓</span>
-          </button>
-          <button class="action" @click=${this.onMigrate} ?disabled=${this.busy || this.migrating}>
-            <span>Upload local library<br /><span class="desc">Migrate IndexedDB data to the server</span></span><span>${this.migrating ? '…' : '⇪'}</span>
-          </button>
-        </div>
-        <input type="file" data-import accept=".opml,.xml,text/xml,application/xml" style="display:none" @change=${this.onImportFile} />
-        ${this.status ? html`<div class="status ${this.statusError ? 'error' : ''}">${this.status}</div>` : ''}
-      </div>
-    `;
+        return renderFeedsSection(this);
     }
+    private renderAboutSection() {
+        return renderAboutSection(this);
+    }
+
+    toggleHistory = () => {
+        this.showHistory = !this.showHistory;
+    };
 
     override render() {
         return html`
@@ -356,11 +206,12 @@ export class SettingsDialog extends LitElement {
           <h2>Settings</h2>
           <button class="close" title="Close" @click=${this.close}>✕</button>
         </div>
-        <div class="body">
+        <div class="body" tabindex="0">
           ${this.renderAppearanceSection()}
           ${this.renderReadingSection()}
           ${this.renderSharingSection()}
           ${this.renderFeedsSection()}
+          ${this.renderAboutSection()}
         </div>
       </dialog>
     `;
@@ -381,32 +232,32 @@ export class SettingsDialog extends LitElement {
         applyTheme(theme);
     }
 
-    private onThemeClick(e: Event) {
+    onThemeClick(e: Event) {
         const theme = (e.currentTarget as HTMLElement).dataset['theme'] as Theme | undefined;
         if (theme) this.setTheme(theme);
     }
 
-    private cancelAdd() {
+    cancelAdd() {
         this.adding = false;
     }
 
-    private onImportClick() {
+    onImportClick() {
         this.shadowRoot?.querySelector<HTMLInputElement>('input[data-import]')?.click();
     }
 
-    private openAdd() {
+    openAdd() {
         this.adding = true;
         this.status = '';
         this.statusError = false;
         this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]')?.focus();
     }
 
-    private openMuteFilters = () => {
+    openMuteFilters = () => {
         this.close();
         navigate({ kind: 'mute-filters' });
     };
 
-    private async submitAdd() {
+    async submitAdd() {
         const input = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]');
         const url = input?.value.trim() ?? '';
         if (!url) return;
@@ -425,7 +276,7 @@ export class SettingsDialog extends LitElement {
         }
     }
 
-    private async onImportFile(e: Event) {
+    async onImportFile(e: Event) {
         const input = e.target as HTMLInputElement;
         const file = input.files?.[0];
         if (!file) return;
@@ -450,7 +301,7 @@ export class SettingsDialog extends LitElement {
         }
     }
 
-    private async onExport() {
+    async onExport() {
         this.busy = true;
         try {
             const xml = await exportOpmlFile();
@@ -491,7 +342,7 @@ export class SettingsDialog extends LitElement {
         this.status = 'Migration complete';
     }
 
-    private async onMigrate() {
+    async onMigrate() {
         this.migrating = true;
         this.status = '';
         this.statusError = false;

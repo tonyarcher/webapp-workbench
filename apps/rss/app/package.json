@@ -4,12 +4,12 @@
     "version": "0.1.0",
     "type": "module",
     "scripts": {
-        "dev": "vite",
-        "build": "tsc --noEmit && vite build && node scripts/write-sw.mjs",
+        "dev": "node scripts/write-version-history.mjs && vite",
+        "build": "node scripts/write-version-history.mjs && tsc --noEmit && vite build && node scripts/write-sw.mjs",
         "preview": "vite preview",
-        "test": "tsx scripts/smoke.ts && tsx scripts/db-smoke.ts && npm run test:browser",
+        "test": "node scripts/write-version-history.mjs && tsx scripts/smoke.ts && tsx scripts/db-smoke.ts && npm run test:browser",
         "test:browser": "wtr",
-        "typecheck": "tsc --noEmit -p tsconfig.test.json",
+        "typecheck": "node scripts/write-version-history.mjs && tsc --noEmit -p tsconfig.test.json",
         "test:e2e": "playwright test"
     },
     "dependencies": {

@@ -6,3 +6,4 @@ dist/
 /.air/settings.json
 dist-server/
 .tmp/
+src/generated/
