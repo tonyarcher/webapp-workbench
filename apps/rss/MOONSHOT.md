@@ -600,9 +600,10 @@ estimates, video handling). This theme makes reading itself delightful.
 
 - **Why.** Longform gets interrupted. Remembering scroll position per
   article is a small kindness with outsized love.
-- **What.** Per-article progress persisted locally with a "resume" affordance
-  and the existing progress bar extended to restore position.
-- **Half.** `app`.
+- **What.** Per-article reading progress persisted locally (fraction-based)
+  and restored when reopening an article; the existing progress bar reflects
+  the restored position and progress clears on completion.
+- **Half.** `app`. Shipped.
 - **Effort.** `S`.
 - **First test.** Smoke for save, restore, and completion clearing.
 

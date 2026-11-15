@@ -1,4 +1,4 @@
-import { html, LitElement, svg, unsafeCSS } from 'lit';
+import { html, LitElement, unsafeCSS } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { customElement, property, state } from 'lit/decorators.js';
@@ -6,7 +6,14 @@ import { sanitizeHtml, safeHttpUrl } from '../../services/parser';
 import { articleVideo } from '../../services/video';
 import { canNativeShare, mailtoShareUrl, shareUrl, type ShareTarget } from '../../services/share';
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
-import { toastError, toastInfo } from '../../services/toast';
+
+import {
+    beginArticleProgress,
+    flushProgressOnSwitch,
+    handleProgressScroll,
+    persistReadingProgress as persistArticleReadingProgress,
+    restoreReadingProgress as restoreArticleReadingProgress,
+} from './article-view-progress';
 import {
     markArticleRead,
     markArticleUnread,
@@ -18,12 +25,13 @@ import {
     unsaveForLater,
 } from '../../mutations';
 import { fetchSavedArticlesList } from '../../query';
-import { adjustWordWeight, loadWordMap, isDeranked } from '../../services/interesting-settings';
-import { articleKeywordsOf, type ArticleKeyword } from '../../services/keywords';
+import { adjustWordWeight, isDeranked } from '../../services/interesting-settings';
+import type { ArticleKeyword } from '../../services/keywords';
 import { areHighlightsEnabled, loadRowHighlights, setHighlightsEnabled } from '../../services/highlights';
 import { readMinutes } from '../../util';
 import type { Article, RowHighlight } from '../../types';
 import { domainOf, formatDate, stripTags } from '../../util';
+import { articleKeywords, copyLinkForInstagram, copyTitleLink, shareIcon, whyLineFor } from './article-view-helpers';
 
 import '../video-header/video-header';
 import styles from './article-view.css?inline';
@@ -45,9 +53,14 @@ export class ArticleView extends LitElement {
     @state() private keyLinesLoading = false;
     @state() private highlightsOn = areHighlightsEnabled();
     /** Article the progress bar belongs to; object identity churns on star. */
-    private progressArticleId: string | null = null;
+    progressArticleId: string | null = null;
     /** 0..1 fraction of the article scrolled, for the progress bar. */
-    @state() private readProgress = 0;
+    @state() readProgress = 0;
+    /** Prevent saving "0" before a saved position is restored for the open article. */
+    progressRestorePending = false;
+    progressSaveTimer: number | null = null;
+    progressRestoreUserScrolled = false;
+    progressApplyingRestore = false;
     /** Brief visual feedback when a keyword weight is stepped. */
     @state() private keywordPulse: { word: string; delta: number } | null = null;
     private keywordPulseTimer: number | null = null;
@@ -67,11 +80,13 @@ export class ArticleView extends LitElement {
     }
 
     override disconnectedCallback() {
+        persistArticleReadingProgress(this);
         super.disconnectedCallback();
         window.removeEventListener('share-settings-changed', this.onShareSettingsChanged);
         window.removeEventListener('saved-articles-changed', this.onSavedArticlesChanged);
         this.removeEventListener('scroll', this.onScroll);
         if (this.keywordPulseTimer !== null) window.clearTimeout(this.keywordPulseTimer);
+        if (this.progressSaveTimer !== null) window.clearTimeout(this.progressSaveTimer);
     }
 
     private onSavedArticlesChanged = () => {
@@ -80,8 +95,7 @@ export class ArticleView extends LitElement {
 
     /** Progress bar: the host itself is the scroller. */
     private onScroll = () => {
-        const max = this.scrollHeight - this.clientHeight;
-        this.readProgress = max > 0 ? Math.min(1, Math.max(0, this.scrollTop / max)) : 0;
+        handleProgressScroll(this);
     };
 
     /** Keyboard entry points, called by the shell which owns global keys. */
@@ -118,13 +132,15 @@ export class ArticleView extends LitElement {
             // replaces the object in place. Only a new id resets progress
             // and scroll, or pressing S mid-article yanks the reader to top.
             if (this.article?.id !== this.progressArticleId) {
+                // Flush pending progress for the article being replaced before switching.
+                flushProgressOnSwitch(this);
                 this.progressArticleId = this.article?.id ?? null;
                 this.savedStateGen++;
                 this.savedForLater = false;
-                this.readProgress = 0;
-                this.scrollTop = 0;
                 this.keyLines = null;
                 this.keyLinesLoading = false;
+                const saved = beginArticleProgress(this);
+                if (saved !== null) void restoreArticleReadingProgress(this, this.article!.id, saved);
                 if (this.highlightsOn) void this.refreshKeyLines();
                 void this.refreshSavedState();
             }
@@ -185,9 +201,9 @@ export class ArticleView extends LitElement {
             facebook: html`<button class="btn share-btn" @click=${open('facebook')}>${shareIcon('facebook')}Facebook</button>`,
             x: html`<button class="btn share-btn" @click=${open('x')}>${shareIcon('x')}X</button>`,
             mastodon: html`<button class="btn share-btn" @click=${open('mastodon')}>${shareIcon('mastodon')}Mastodon</button>`,
-            instagram: html`<button class="btn share-btn" @click=${() => void this.copyLink(link, a)}>${shareIcon('instagram')}Instagram</button>`,
+            instagram: html`<button class="btn share-btn" @click=${() => void copyLinkForInstagram(link, a)}>${shareIcon('instagram')}Instagram</button>`,
         };
-        return html`${loadShareTargets().map((t) => buttons[t])}${canNativeShare() ? html`<button class="btn share-btn" @click=${() => void this.nativeShare(a, link)}>More…</button>` : ''}<button class="btn share-btn" @click=${() => void this.copyTitleLink(a, link)}>Copy link</button><a class="btn share-btn" href=${mailtoShareUrl(link, a.title)} @click=${() => noteShare(a.id, a.title)}>Email</a>`;
+        return html`${loadShareTargets().map((t) => buttons[t])}${canNativeShare() ? html`<button class="btn share-btn" @click=${() => void this.nativeShare(a, link)}>More…</button>` : ''}<button class="btn share-btn" @click=${() => void copyTitleLink(a, link)}>Copy link</button><a class="btn share-btn" href=${mailtoShareUrl(link, a.title)} @click=${() => noteShare(a.id, a.title)}>Email</a>`;
     }
 
     /** OS share sheet where it exists; counts as a share like the rest. */
@@ -200,47 +216,10 @@ export class ArticleView extends LitElement {
         }
     }
 
-    /** Title plus link on the clipboard for pasting anywhere. */
-    private async copyTitleLink(a: Article, link: string): Promise<void> {
-        if (await this.copyText(`${a.title}\n${link}`)) {
-            noteShare(a.id, a.title);
-            toastInfo('Link copied');
-        } else {
-            toastError('Could not copy the link');
-        }
-    }
-
     private emitClose = () => {
+        persistArticleReadingProgress(this);
         this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     };
-
-    /** Clipboard with the legacy textarea fallback for older WebViews. */
-    private async copyText(text: string): Promise<boolean> {
-        try {
-            await navigator.clipboard.writeText(text);
-            return true;
-        } catch {
-            try {
-                const area = document.createElement('textarea');
-                area.value = text;
-                document.body.appendChild(area);
-                area.select();
-                const copied = document.execCommand('copy');
-                area.remove();
-                return copied;
-            } catch {
-                return false;
-            }
-        }
-    }
-
-    /** Instagram path: no endpoint exists, so copy the link for pasting. */
-    private async copyLink(link: string, a: Article) {
-        if (await this.copyText(link)) {
-            noteShare(a.id, a.title);
-            toastInfo('Link copied - paste it in Instagram');
-        } else toastError('Could not copy the link');
-    }
 
     private renderTitle(a: Article, link: string | undefined) {
         return html`<h1>${link ? html`<a href=${link} target="_blank" rel="noopener noreferrer" @click=${() => noteOriginal(a.id, a.title)}>${a.title}</a>` : a.title}</h1>`;
@@ -468,7 +447,7 @@ export class ArticleView extends LitElement {
                           (e) => html`<li><blockquote>${e.text}</blockquote></li>`,
                       )}
                   </ul>
-                  <p class="key-why">From this article · ${this.whyLine(result)}</p>`
+                  <p class="key-why">From this article · ${whyLineFor(result, this.keywords, this.article)}</p>`
                     : ''
             }
         </section>`;
@@ -479,48 +458,10 @@ export class ArticleView extends LitElement {
         if (this.highlightsOn) return '';
         return html`<button class="key-lines-toggle" @click=${this.onToggleKeyLines} aria-pressed="false">Key lines</button>`;
     }
-
-    /** Assembled signal labels only; no generated sentence. */
-    private whyLine(result: RowHighlight): string {
-        const parts: string[] = [];
-        const learned = this.keywords
-            .filter((k) => k.score !== 0)
-            .slice(0, 4)
-            .map((k) => `${k.word} ${k.score > 0 ? '+' : ''}${k.score}`);
-        if (learned.length) parts.push(`learned: ${learned.join(', ')}`);
-        if (result.interesting !== null && result.interesting !== undefined) {
-            parts.push(`Jev interest ${Math.round(result.interesting * 100)}%`);
-        }
-        if (result.spam != null && result.spam >= 0.5) parts.push('looks like boilerplate');
-        const minutes = readMinutes(this.article?.content ?? '', this.article?.summary);
-        if (minutes > 0) parts.push(`${minutes} min read`);
-        return parts.join(' · ') || 'selected key excerpts';
-    }
-}
-
-function articleKeywords(article: Article): ArticleKeyword[] {
-    return articleKeywordsOf(article.title, article.summary, article.content, loadWordMap());
 }
 
 declare global {
     interface HTMLElementTagNameMap {
         'article-view': ArticleView;
-    }
-}
-
-/**
- * Brand glyphs for the share buttons, drawn as inline SVG so no font or
- * image asset is needed. Decorative: the button text names the target.
- */
-function shareIcon(target: ShareTarget) {
-    switch (target) {
-        case 'facebook':
-            return svg`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13.5 21.5v-7.2h2.5l.4-2.8h-2.9V9.7c0-.8.3-1.4 1.5-1.4h1.5V5.8c-.3 0-1.2-.1-2.2-.1-2.1 0-3.6 1.3-3.6 3.7v2.1H8.2v2.8h2.5v7.2h2.8z"/></svg>`;
-        case 'x':
-            return svg`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.8 3h3.1l-6.8 7.8L22 21h-6.3l-4.9-6.4L5.2 21H2.1l7.3-8.3L2 3h6.4l4.4 5.9L17.8 3zm-1.1 16.1h1.7L7.4 4.8H5.6l11.1 14.3z"/></svg>`;
-        case 'mastodon':
-            return svg`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5c-3.9 0-6.8 2.4-6.8 5.8v4.3c0 2.9 1.9 5.2 4.6 5.2.5 0 1-.1 1.4-.2l.8 2.4.8-2.4c.4.1.9.2 1.4.2 2.7 0 4.6-2.3 4.6-5.2V8.3c0-3.4-2.9-5.8-6.8-5.8zM9.3 15.6c-.4-.9-.6-1.9-.6-2.9h1.5c0 .8.2 1.6.5 2.3l-1.4.6zm5.4 0l-1.4-.6c.3-.7.5-1.5.5-2.3h1.5c0 1-.2 2-.6 2.9z"/></svg>`;
-        case 'instagram':
-            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="3.8"/><circle cx="17" cy="7" r="1.2" fill="currentColor" stroke="none"/></svg>`;
     }
 }
