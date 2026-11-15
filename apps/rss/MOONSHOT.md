@@ -68,10 +68,12 @@ estimates; video handling; and a PWA shell with virtualized lists.
 Honest gaps against Feedly, which the middle of this file attacks: no boards
 or collections beyond stars, no keyword alerts, no audio way to read, no
 offline pack for planes, no user highlights or margin notes, no feed
-discovery, no feed health story, no stats, no webhooks or automation
-surface, and no public sharing. The super-app themes at the top assume those
-foundations land first: the briefing desk needs clustering and digests; the
-workbench needs provenance.
+discovery, no feed health story, no ingestion beyond RSS/Atom feeds (no JSON
+Feed, no feed autodiscovery beyond pasting a feed URL, no social/API sources,
+no scrape fallback for sites without feeds), no stats, no webhooks or
+automation surface, and no public sharing. The super-app themes at the top
+assume those foundations land first: the briefing desk needs clustering and
+digests; the workbench needs provenance.
 
 ## K. The briefing desk (mornings like the president)
 
@@ -717,8 +719,11 @@ needs piles. Ours add portability: everything exports, everything migrates.
 
 ## E. Discovery (find new feeds)
 
-Today the only door is pasting a URL. Feedly's discovery keeps people
-paying; ours respects the no-tracking rule while doing it better.
+Today the only door is pasting a feed URL. Feedly's discovery keeps people
+paying; ours respects the no-tracking rule while doing it better. Detecting
+feeds from a site (E1) and ingesting sources beyond traditional feeds
+(formats, social APIs, and scrape fallbacks) are tackled in P. Sources and
+ingestion.
 
 ### E1. Site-to-feed finder
 
@@ -906,6 +911,256 @@ reader into infrastructure.
 - **Effort.** `L`.
 - **First test.** Migration tests; conflict-note smoke.
 
+## P. Sources and ingestion (beyond Atom/RSS feeds)
+
+The reader should be able to follow anything worth reading, not just whatever
+already publishes a clean feed. This theme expands the front door: richer feed
+formats and autodiscovery, push where the web supports it, standards-based
+page and social sources, and careful scrape fallbacks for sites that offer no
+feed at all. Every connector normalizes into the same article/feed model so
+ranking, search, mute rules, clustering, and reading all work unchanged.
+
+Ingestion conventions (apply to every item here): sources are explicit and
+user-added, never auto-subscribed; fetches respect robots.txt, site terms,
+and rate limits; polling is bounded and backoff-aware; credentials for
+private or API-keyed sources stay server-side and never appear in logs or
+client bundles; fetched content is untrusted (sanitized before render,
+URLs validated, no script execution); connector failures surface in feed
+health (D4) with actionable errors; and every new source type records
+provenance (source kind, canonical URL, fetch method, timestamps) so users
+can tell where an item came from.
+
+### P1. JSON Feed 1.1 and feed-format parity
+
+- **Why.** Many modern sites publish JSON Feed instead of, or in addition to,
+  RSS/Atom. Treating it as a second-class citizen turns "subscribe" into a
+  guessing game.
+- **What.** First-class parsing and subscription for JSON Feed 1.1 (including
+  `items`, `content_html`/`content_text`, attachments, authors, tags, and
+  extensions we choose to ignore safely), with parity handling for RSS 0.9x/
+  1.0/2.0 and Atom (enclosures, media namespaces, content encodings, dates,
+  GUID/id stability). Normalize titles, links, authors, published/updated
+  times, summaries, full content, and media into the existing article fields.
+- **Half.** `both` (parser/fetcher in `api`, subscription UX/validation in
+  `app`).
+- **Effort.** `M`.
+- **First test.** Parser goldens for JSON Feed, RSS variants, Atom, and
+  malformed/edge cases; API slice tests for subscribe/refresh; smoke for
+  adding a JSON Feed URL.
+
+### P2. Rich feed autodiscovery from any page
+
+- **Why.** People paste homepages, article URLs, and profile pages, not feed
+  URLs. Discovery should find every usable followable source a page advertises.
+- **What.** When subscribing to a URL, fetch and inspect `<link rel="alternate">`
+  (RSS, Atom, JSON Feed MIME types), common feed paths, and visible feed links;
+  detect Microformats2 `h-feed`/`h-entry` on the page as a standards-based
+  fallback source; present candidates with type, title, item count/cadence
+  preview, and confidence before subscribing. One page may yield multiple
+  candidates (site feed, comments feed, section feeds, h-feed); the user picks.
+  Reuse/extend E1 site-to-feed finder UI and heuristics.
+- **Half.** `both` (discovery endpoint in `api`, candidate picker/preview in
+  `app`).
+- **Effort.** `M`.
+- **First test.** Discovery goldens over fixture HTML (multiple alternates,
+  JSON Feed, h-feed, no feed); preview smoke; seeded audit for the picker.
+
+### P3. WebSub push subscriptions
+
+- **Why.** Polling wastes requests and delays updates. Hubs can tell us when
+  content changes, which is faster and kinder to publishers.
+- **What.** Discover `hub`/`self` links for Atom/RSS feeds that advertise
+  WebSub; subscribe and verify callbacks, renew leases before expiry, handle
+  unsubscription, and fall back to polling when no hub exists or verification
+  fails. Ingest pushed content through the same normalization/dedupe pipeline.
+  WebSub callbacks are a specific unauthenticated, signed/verified route;
+  implementing them requires an explicit `apps/rss/api/AGENTS.md` contract
+  update and strict verification (hub challenge, signature/HMAC where
+  provided, replay/expiry handling). All other data routes remain
+  authenticated and versioned.
+- **Half.** `api` (hub client, callback endpoint, lease management) plus
+  minimal `app` status/health surfacing.
+- **Effort.** `L`.
+- **First test.** Hub handshake and callback verification tests, renewal and
+  fallback tests, malformed-payload rejection tests.
+
+### P4. Conditional fetch and polite polling
+
+- **Why.** Good citizenship and good performance are the same work: do not
+  re-download unchanged feeds, and do not hammer sources that are slow or
+  broken.
+- **What.** Send `If-None-Match`/`If-Modified-Since` when available, honor
+  `304 Not Modified`, cache validators per feed, and respect `Retry-After` and
+  reasonable backoff on errors/429s. Adaptive poll intervals based on observed
+  update cadence and feed health, with per-source floors/ceilings and manual
+  refresh always available. Expose fetch status (last success, next attempt,
+  backoff reason) to D4.
+- **Half.** `api`.
+- **Effort.** `M`.
+- **First test.** HTTP fixture tests for 304/ETag/Last-Modified/Retry-After;
+  backoff and cadence tests.
+
+### P5. Follow any page (scrape fallback when no feed exists)
+
+- **Why.** Many valuable sites publish updates with no RSS/Atom/JSON Feed or
+  h-feed at all. A reader that requires a feed cannot follow them.
+- **What.** A "watch this page" source type: periodically fetch a page and
+  extract a list of items (links/titles/dates/snippets) using layered
+  strategies — structured data (JSON-LD/ItemList/Article), semantic/list
+  heuristics, readability-style content extraction, and optional user-defined
+  CSS selectors/XPath-like hints for stubborn pages. Detect changes/new items
+  by stable keys (URL, content hash), produce normalized articles with clear
+  "scraped from page" provenance, and let users preview extracted items before
+  saving. Mark as best-effort: layout changes can break extraction, and errors
+  must be visible and recoverable.
+- **Half.** `both` (fetch/extract pipeline in `api`, preview/configure UI in
+  `app`).
+- **Effort.** `XL`.
+- **First test.** Extraction goldens over fixture pages (blog index, news
+  listing, product/changelog pages, JS-light pages), change-detection tests,
+  and a preview/config smoke.
+
+### P6. Browser-assisted extraction for JS-heavy and protected pages
+
+- **Why.** Some sites render content only after client-side JavaScript or hide
+  it behind interactions that plain HTTP fetch cannot reach. Without an
+  optional browser path, those sources are unfollowable.
+- **What.** An opt-in, bounded browser-render fetch path (headless browser
+  worker) for sources that require it: render, wait for configured selectors/
+  network-idle with strict timeouts, capture the resulting DOM/text, then run
+  the same extraction/normalization pipeline as P5. Strong limits: per-source
+  opt-in, resource/timeout caps, no stored cookies/credentials by default,
+  isolated execution, and clear labeling that this mode is heavier and more
+  fragile. Never bypass paywalls, logins, CAPTCHAs, or access controls.
+- **Half.** `api` (render worker/service) plus `app` opt-in controls and
+  warnings.
+- **Effort.** `XL`.
+- **First test.** Worker timeout/resource-cap tests, fixture-page render
+  extraction tests, and opt-in/labeling smoke. (Requires a browser runtime in
+  the deploy environment.)
+
+### P7. ActivityPub and Mastodon sources
+
+- **Why.** A large part of the open social web publishes via ActivityPub.
+  Following public accounts, tags, or instances as first-class sources brings
+  that conversation into the reader without building a social network.
+- **What.** Subscribe to public ActivityPub actors (Mastodon accounts) and,
+  where feasible, public hashtag/instance timelines: resolve actors via
+  WebFinger/ActivityPub, fetch outboxes/collections over HTTP with proper
+  content negotiation, and normalize posts/boosts/replies/attachments into
+  article-like rows (with post kind, author/handle/instance, visibility,
+  media, CW/summary, and canonical URL). Read-only and public-only by default;
+  authenticated/home-timeline access is a separate, explicit follow-up that
+  would store tokens server-side per the security rules. Deduplicate boosts
+  and cross-posts where possible.
+- **Half.** `both`.
+- **Effort.** `L`.
+- **First test.** ActivityPub JSON-LD fixture parsing tests, actor resolution
+  tests, normalization/dedupe tests, and a subscribe-to-account smoke.
+
+### P8. Bluesky and AT Protocol sources
+
+- **Why.** Bluesky/ATProto hosts high-signal public feeds and authors that
+  readers want alongside traditional publications.
+- **What.** Subscribe to public Bluesky actors, feeds, and lists via the AT
+  Protocol/Bluesky APIs: resolve handles/DIDs, fetch posts with pagination,
+  normalize text, links, quotes, reposts, embeds/media, and canonical URLs
+  into rows with clear provenance. Read-only public access first; any
+  authenticated or app-password flow is a separate opt-in item with
+  server-side credential storage and revocation.
+- **Half.** `both`.
+- **Effort.** `L`.
+- **First test.** API fixture/contract tests for resolution and post
+  normalization, pagination tests, and a subscribe smoke.
+
+### P9. YouTube, video, and audio channels
+
+- **Why.** Creators publish primarily on video/audio platforms. Treating
+  channels and playlists as readable/watchable sources keeps the reader
+  current without a separate app.
+- **What.** Subscribe to YouTube channels and playlists (via channel/playlist
+  feeds where available, or platform APIs where necessary and permitted),
+  normalize videos/livestreams/premieres with title, description, duration,
+  thumbnails, publish time, and canonical/watch/embed URLs. Similar connectors
+  for podcast feeds and other media channels where a standard feed exists
+  (building on P1). Integrate with existing video handling and the listen
+  queue where media type fits.
+- **Half.** `both` (connectors in `api`, rich media rows/player affordances
+  in `app`).
+- **Effort.** `M`.
+- **First test.** Feed/API fixture normalization tests, channel/playlist URL
+  resolution tests, and a media-row smoke.
+
+### P10. Reddit, forums, and community sources
+
+- **Why.** Subreddits, forum threads, and community boards are primary sources
+  for many beats, but their native feeds vary in quality and completeness.
+- **What.** First-class subscription for subreddits and users via available
+  feeds/APIs, normalized into rows with flair, score/comment signals (where
+  permitted), and canonical links; optional thread-expansion view that fetches
+  top-level context on demand. A generic forum/community connector pattern for
+  platforms that expose RSS/Atom/JSON feeds or stable JSON endpoints, with
+  per-source mapping rules. Respect platform rate limits and terms.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Mapping/normalization tests over fixtures, rate-limit/backoff
+  tests, and a subreddit/community subscribe smoke.
+
+### P11. Newsletters and email-to-reader ingestion
+
+- **Why.** A growing share of writing ships as email newsletters, not feeds.
+  Without an inbox bridge, the reader misses whole authors.
+- **What.** Per-user inbound addresses or forwarding rules that accept
+  newsletter emails and convert them into articles: parse MIME/HTML/text,
+  extract the canonical web view when present, preserve images/links safely,
+  attribute to a synthetic "newsletter" source per sender/publication, and
+  dedupe against the same content if it also arrives via feed/scrape.
+  Double-opt-in/confirmation for new senders, easy unsubscribe/block, and
+  strict size/sanitization limits. Any public receive endpoint must be treated
+  as an explicit, hardened surface (authz tokenized address, abuse/rate
+  limits, spam filtering) and documented in `apps/rss/api/AGENTS.md`.
+- **Half.** `both` (`api` receive/parse pipeline, `app` address management and
+  sender controls).
+- **Effort.** `L`.
+- **First test.** MIME parsing and sanitization goldens, dedupe tests,
+  sender-confirmation tests, and abuse-limit tests.
+
+### P12. Connector framework, provenance, and source safety
+
+- **Why.** Every new source type is another way to fail, leak, or confuse.
+  A shared framework keeps connectors consistent, observable, and safe to add.
+- **What.** A common connector contract (discover, validate, fetch, normalize,
+  schedule, health) with capability flags (supports push, supports auth,
+  supports incremental, best-effort), unified provenance stored per article
+  (source type, connector id/version, canonical and source URLs, fetch mode),
+  per-connector rate limits/timeouts/retries, and sandboxed parsing of
+  untrusted inputs. A "source info" view shows users exactly what a connector
+  does, when it last ran, and what it can access. Adding a connector means
+  implementing the contract plus fixtures, not ad-hoc code paths.
+- **Half.** `both` (contract/runtime in `api`, provenance and source-info UI
+  in `app`).
+- **Effort.** `L`.
+- **First test.** Contract conformance tests with a fake connector, provenance
+  persistence tests, timeout/rate-limit enforcement tests, and a source-info
+  smoke.
+
+### P13. Source permissions, privacy, and robots compliance
+
+- **Why.** Ingestion touches the open web, third-party APIs, and sometimes
+  user credentials. Trust requires clear boundaries and enforceable rules.
+- **What.** A permissions model per source: what network hosts it contacts,
+  whether it uses credentials/API keys, whether it runs browser rendering,
+  and what data it stores; explicit consent for elevated modes (browser
+  rendering, authenticated APIs, email ingestion). Enforce robots.txt/`noai`-
+  style directives where applicable, configurable per-source user-agent,
+  domain allow/deny controls, and a central audit log (local, user-visible)
+  of connector actions without payload-bearing logs. One place to pause or
+  revoke any source or connector class.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Robots/permission enforcement tests, consent-gating smoke,
+  and audit-log integrity tests.
+
 ## I. Sequencing (six months to daylight)
 
 Foundations first, because the desk depends on them. The months below name
@@ -923,26 +1178,29 @@ storylines below consume them, then three-tier briefing with overnight
 deltas, scheduled briefings that arrive, audio briefs with offline cache,
 ask-your-feeds scoped Q&A, keyword and cluster alerts with quiet hours,
 push plumbing (F3) so the alert and briefing deliveries have a channel,
-feed health dashboard, site-to-feed finder, and stats. The push and email
-surfaces stay opt-in from day one with revoke paths tested.
+feed health dashboard, site-to-feed finder, feed-format parity and
+autodiscovery with polite polling foundations (P1, P2, P4), and stats. The
+push and email surfaces stay opt-in from day one with revoke paths tested.
 
 Month three is understanding: duplicate clustering (B2) with the
 perspective spectrum (M1) as coverage compare, row-level why-this-row (N1)
 on top of the provenance layer (N6), highlights with margin notes, webhooks,
-personal reading page, and full portable export. The quarter closes by
-deleting shipped lines from this file and writing the next quarter from
-what readers actually used, informed by the private stats screen (O4) and
-any opt-in aggregate signals (E3), not by opinion.
+personal reading page, full portable export, and the connector framework,
+provenance, and source safety baseline (P12). The quarter closes by deleting
+shipped lines from this file and writing the next quarter from what readers
+actually used, informed by the private stats screen (O4) and any opt-in
+aggregate signals (E3), not by opinion.
 
 Months four through six are the super app proper: storylines across time,
 the evidence tray with saved research sessions, entity dossiers with
 backgrounders on demand, the in-panel reading companion, the coverage-
 balance meter (N4) as the second half of the perspective-spectrum pair
 with M1, the contradiction radar, numbers with receipts, beat workspaces,
-the weekend review edition, and the full offline reader. These range from
-`M` to `XL`; sequence them by which unlocked the most delight in months
-one through three, and cut any two without grief if the foundations need
-the time instead.
+the weekend review edition, the full offline reader, and the broader source
+expansion (P3, P5–P11, P13) as the connector foundation proves out. These
+range from `M` to `XL`; sequence them by which unlocked the most delight in
+months one through three, and cut any two without grief if the foundations
+need the time instead.
 
 ## J. Non-goals (what we will not copy)
 
@@ -960,6 +1218,10 @@ the time instead.
 - New Node data access for server data, hand-rolled SQL mappers, or
   unversioned data routes. The API contract section in the API notes
   stays the law.
+- Bypassing paywalls, logins, CAPTCHAs, or access controls; ignoring
+  robots.txt, platform terms, or rate limits; or scraping in ways that hide
+  source identity or abuse publishers. Connectors are explicit, polite, and
+  user-controlled.
 - A mobile native app before the PWA earns it: share-target receiving,
   offline packs, and push come first, and only then is native discussed.
 - Registries, extra manifests, or orchestration beyond what the repo
