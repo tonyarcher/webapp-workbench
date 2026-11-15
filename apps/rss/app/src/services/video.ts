@@ -49,11 +49,11 @@ export function youtubeThumbs(id: string): string[] {
 }
 
 export function youtubeEmbedUrl(id: string): string {
-    return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+    return `https://www.youtube-nocookie.com/embed/${id}?rel=0`;
 }
 
 export function vimeoEmbedUrl(id: string): string {
-    return `https://player.vimeo.com/video/${id}?autoplay=1`;
+    return `https://player.vimeo.com/video/${id}`;
 }
 
 /** Canonical YouTube watch page for a video id. */
@@ -91,7 +91,7 @@ function idWatchPage(video: ArticleVideo): string | undefined {
 }
 
 export function dailymotionEmbedUrl(id: string): string {
-    return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`;
+    return `https://www.dailymotion.com/embed/video/${id}`;
 }
 
 export function dailymotionThumb(id: string): string {
@@ -114,7 +114,7 @@ export function resolveEmbedUrl(video: ArticleVideo, parent: string): string {
     if (video.provider === 'twitch' && video.id) {
         const key = video.clip ? 'clip' : 'video';
         const value = video.clip ? video.id : `v${video.id}`;
-        return `https://player.twitch.tv/?${key}=${value}&autoplay=true&parent=${parent}`;
+        return `https://player.twitch.tv/?${key}=${value}&parent=${parent}`;
     }
     return video.embedUrl;
 }

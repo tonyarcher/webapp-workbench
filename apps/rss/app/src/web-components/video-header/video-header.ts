@@ -73,14 +73,14 @@ export class VideoHeader extends LitElement {
 
     private renderPlayer() {
         if (this.video.provider === 'direct') {
-            return html`<video class="player" src=${this.video.embedUrl} controls autoplay playsinline></video>`;
+            return html`<video class="player" src=${this.video.embedUrl} controls playsinline></video>`;
         }
         const src = resolveEmbedUrl(this.video, globalThis.location?.hostname ?? '');
         return html`<iframe
         class="player"
         src=${src}
         title=${this.videoTitle || this.video.label}
-        allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
+        allow="accelerometer; encrypted-media; picture-in-picture"
         allowfullscreen
       ></iframe>`;
     }
