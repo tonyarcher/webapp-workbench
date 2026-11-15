@@ -151,3 +151,14 @@ test('the search screen has no automatic accessibility violations', async ({ pag
     await expect(page.getByLabel('Search articles')).toBeVisible();
     expect(await audit(page)).toEqual([]);
 });
+
+test('the command palette has no automatic accessibility violations', async ({ page }) => {
+    await seedAuth(page);
+    await stubLibrary(page, [ARTICLES[0]]);
+    await page.goto('/');
+    await expect(page.getByText('First article', { exact: true })).toBeVisible();
+    await page.keyboard.press('Control+K');
+    await expect(page.getByRole('dialog', { name: 'Command palette' })).toBeVisible();
+    await expect(page.getByLabel('Commands')).toBeVisible();
+    expect(await audit(page)).toEqual([]);
+});

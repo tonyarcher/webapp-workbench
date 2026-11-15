@@ -58,18 +58,20 @@ What already beats the default reader: a per-folder Interesting view that
 learns from stars, reads, dwells, shares, summaries and explicit
 not-interested signals; a strictness slider when the auto bar is not enough;
 a word-map inspector hint; a Today view; an AI Brief; a Frontpage with
-generated editions; bulk selection with bulk star and bulk derank; keyboard
-shortcuts with a shortcuts dialog; OPML import, export and migration;
-Mastodon plus multi-network share targets; read-time estimates; video
-handling; and a PWA shell with virtualized lists.
+generated editions; full-text search with operators and saved searches as
+sidebar rows; mute rules; extractive row highlights and why-this-row in the
+article panel; a saved-for-later queue; bulk selection with bulk star and
+bulk derank; keyboard shortcuts with a shortcuts dialog; OPML import, export
+and migration; Mastodon plus multi-network share targets; read-time
+estimates; video handling; and a PWA shell with virtualized lists.
 
-Honest gaps against Feedly, which the middle of this file attacks: there
-is no search at all, no boards or collections beyond stars, no keyword
-alerts, no audio way to read, no offline pack for planes, no notes or
-highlights, no feed discovery, no feed health story, no stats, no webhooks
-or automation surface, and no public sharing. The super-app themes at the
-top assume those foundations land first: the briefing desk needs search,
-clustering, and digests; the workbench needs retrieval plus provenance.
+Honest gaps against Feedly, which the middle of this file attacks: no boards
+or collections beyond stars, no keyword alerts, no audio way to read, no
+offline pack for planes, no user highlights or margin notes, no feed
+discovery, no feed health story, no stats, no webhooks or automation
+surface, and no public sharing. The super-app themes at the top assume those
+foundations land first: the briefing desk needs clustering and digests; the
+workbench needs provenance.
 
 ## K. The briefing desk (mornings like the president)
 
@@ -288,7 +290,9 @@ server.
 - **What.** Expandable Jev-selected key excerpts (extractive highlights) in
   list rows for long pieces plus a why-this-row line naming the Jev signals
   and scores that ranked it; a global off switch; cached per article. No
-  generated abstracts.
+  generated abstracts. Shipped: the excerpts, why signals, cache, and global
+  off switch render in the article panel. Still wanted: the list-row
+  expansion hook.
 - **Half.** `both`.
 - **Effort.** `M`.
 - **First test.** Cache and quota tests; row-expansion smoke.
@@ -419,46 +423,10 @@ command, and stats that respect attention.
 
 ## A. Find anything (search and retrieval)
 
-Search is the single biggest gap: as of 2026-11-12 there is no search view,
-route, or service. Feedly's power search is a paid moat; ours is local-first
-and free. Everything in the workbench themes depends on retrieval landing
-first. When the search view ships, cut the dated sentence above and update
-the "Where we stand" gap list; keep the theme and its work orders.
-
-### A1. Instant full-text search
-
-- **Why.** A reader with hundreds of feeds cannot find the story they half
-  remember. Search turns the archive from a pile into a library.
-- **What.** A search view with instant-as-you-type results across titles,
-  content, authors, and feed names; recent searches; keyboard-first with a
-  palette entry; per-scope search (everything, one folder, one feed).
-- **Half.** `both` (client index over cached pages first, server endpoint
-  with ranking second).
-- **Effort.** `L`.
-- **First test.** Client smoke for the query parser and ranking; API slice
-  tests for the endpoint; seeded audit for the new screen.
-
-### A2. Search operators
-
-- **Why.** Power readers think in filters: from a site, after a date, with
-  video, starred only.
-- **What.** Operators such as author, feed, folder, date ranges, has video,
-  is starred, is unread, and min read time, with a cheat sheet in the
-  empty state and clickable chips that build the query.
-- **Half.** `both` (parse on the client, enforce on the server).
-- **Effort.** `M`.
-- **First test.** Parser unit coverage plus endpoint tests per operator.
-
-### A3. Saved searches as smart folders
-
-- **Why.** A standing question ("everything about semiconductors, unread")
-  deserves a permanent sidebar row, not a retyped query.
-- **What.** Save any search as a named sidebar row with its own unread
-  count; rows refresh like folders; rename, reorder, and delete behave
-  like folders.
-- **Half.** `both` (definitions sync per user; counts derive like badges).
-- **Effort.** `L`.
-- **First test.** Migration plus endpoint tests; smoke for count derivation.
+Search shipped local-first: a client index over cached pages, a server `q=`
+endpoint with ranking, operators, and saved searches as sidebar rows.
+Feedly's power search is a paid moat; ours is local-first and free.
+Everything in the workbench themes depends on retrieval landing first.
 
 ### A4. Stories like this one
 
@@ -493,10 +461,11 @@ triage as premium features. Ours are core.
 - **What.** Global and per-folder mute rules over keywords, phrases,
   authors, and domains, with plain and pattern matching. A rule can target
   title, article body, or either, and accept multiple words/terms (any
-  match mutes). A test-drive mode shows what the rule would have hidden
-  across the last batch before it goes live; one-tap undo from the empty
-  state.
-- **Half.** `both` (rules sync; evaluation client-side for lists).
+  match mutes). Shipped: rules, matching, the editor, and list/search
+  application. Still wanted: a test-drive mode that shows what the rule
+  would have hidden across the last batch before it goes live, one-tap
+  undo from the empty state, and server-side rule sync.
+- **Half.** `both` (sync still wanted; evaluation client-side for lists).
 - **Effort.** `L`.
 - **First test.** Smoke for matching and the test-drive counts; API tests
   for rule storage.
@@ -577,6 +546,14 @@ triage as premium features. Ours are core.
 - **Effort.** `XL`.
 - **First test.** Cluster goldens with synthetic corpora; merge and
   split tests; growth-rate tests.
+
+### B8. Ignore folder from metadata
+
+- **Why.** Some folders come from imported or provider metadata (OPML groups, feed categories) that should stay out of the daily reading flow without deleting the underlying feeds.
+- **What.** Let a folder be ignored based on its metadata/source so it can be excluded from sidebar emphasis, unread counts, and default views while remaining manageable in Organize; the ignore state is explicit, reversible, and visible.
+- **Half.** `both` (metadata sync/derivation as needed; view/count filtering client-side first).
+- **Effort.** `M`.
+- **First test.** Smoke for ignore toggles, count/view exclusion, and restore; migration or storage tests if the flag syncs.
 
 ## C. Read better (the reading experience)
 
@@ -662,6 +639,14 @@ estimates, video handling). This theme makes reading itself delightful.
 - **First test.** Labeling and excerpt-selection smoke; provenance-link
   tests where corpus context is shown.
 
+### C8. Slideshow view
+
+- **Why.** Some reading sessions work better as a paced, one-article-at-a-time flow than as a scrolling list.
+- **What.** A slideshow view mode for articles, in the spirit of Clipstack and lemmy-scroll: step or swipe through items with focused reading, clear progress, and quick actions (star, save, mark read, open original) without losing place.
+- **Half.** `app`.
+- **Effort.** `M`.
+- **First test.** View-mode smoke for navigation, progress, and actions; accessibility audit for the new mode.
+
 ## D. Organize and own your data
 
 Stars are a single bucket. Feedly's boards are beloved because thinking
@@ -683,7 +668,9 @@ needs piles. Ours add portability: everything exports, everything migrates.
 - **Why.** Offline planes, subways, and cabins are where queues earn love.
 - **What.** A dedicated queue plus one-tap offline pack (articles, images,
   and audio segments) with a storage meter and eviction rules; the pack
-  completes in the background with progress.
+  completes in the background with progress. Shipped: the saved-for-later
+  queue. Still wanted: the offline pack, storage meter, eviction, and
+  background progress.
 - **Half.** `app`.
 - **Effort.** `L`.
 - **First test.** Cache accounting smoke; quota-of-storage edge tests.
@@ -924,9 +911,9 @@ reader into infrastructure.
 Foundations first, because the desk depends on them. The months below name
 the work orders that land in each; anything not named is unscheduled on
 purpose and waits for a month to claim it. Month one is
-retrieval and control: instant search with operators, mute rules with test
-drive, boards with export, the read-later queue with plane mode, the
-command palette, and copy-as-markdown. Each ships behind its own flag where
+retrieval and control: instant search with operators (shipped), mute rules
+with test drive, boards with export, the read-later queue with plane mode,
+the command palette, and copy-as-markdown. Each ships behind its own flag where
 risky, each with its named tests, and the month ends with the accessibility
 audits green on every new screen.
 

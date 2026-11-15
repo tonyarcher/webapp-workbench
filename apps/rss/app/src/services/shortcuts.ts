@@ -64,6 +64,7 @@ export const LIST_SHORTCUTS_HELP: ShortcutHelp[] = [
     { keys: 'r', action: 'Refresh this view' },
     { keys: '1 / 2 / 3', action: 'Detailed / headline / cards view' },
     { keys: '/', action: 'Open search' },
+    { keys: 'Ctrl+K', action: 'Open command palette' },
     { keys: '?', action: 'This cheatsheet' },
 ];
 

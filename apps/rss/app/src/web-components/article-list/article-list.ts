@@ -441,6 +441,11 @@ export class ArticleList extends LitElement {
         this.updateCols();
     }
 
+    setSort(sort: ArticleSort) {
+        this.sort = sort;
+        this.saveViewSettings();
+    }
+
     onRowClick(e: MouseEvent, index: number) {
         if (e.shiftKey) {
             rowClickAction(this as never, e, index);

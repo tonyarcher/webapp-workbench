@@ -157,6 +157,17 @@ header .sub {
     line-height: 1;
 }
 
+.palette {
+    align-items: center;
+    justify-content: center;
+    min-width: 46px;
+    min-height: 30px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+}
+
 .layout {
     flex: 1;
     display: flex;

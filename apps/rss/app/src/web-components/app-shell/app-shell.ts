@@ -2,8 +2,10 @@ import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { history, navigate, parsePath } from '../../router';
 // article opens no longer auto-mark read; explicit read/unread controls live in article view.
-import { bustCounts, libraryKey, queryClient } from '../../query';
+import { bustCounts, libraryKey, queryClient, type LibraryData } from '../../query';
+import { buildCommands, type Command, type CommandContext } from '../../services/commands';
 import type { ArticleView } from '../article-view/article-view';
+import type { ArticleList } from '../article-list/article-list';
 import { clearClientDb } from '../../db/db';
 import { currentUsername, hasSession, logout, startLogin } from '../../services/auth';
 import { clearToasts, dismissToast, onToast, type ToastNotice } from '../../services/toast';
@@ -24,6 +26,7 @@ import '../mute-filters-view/mute-filters-view';
 import '../organize-view/organize-view';
 import '../saved-view/saved-view';
 import '../shortcuts-dialog/shortcuts-dialog';
+import '../command-palette/command-palette';
 import { MAX_ARTICLE_PANEL_WIDTH, MIN_ARTICLE_PANEL_WIDTH, loadArticlePanelWidth } from './article-panel-settings';
 import styles from './app-shell.css?inline';
 
@@ -54,6 +57,9 @@ export class AppShell extends LitElement {
     private articleReturnFocus: HTMLElement | null = null;
     @state() private settingsOpen = false;
     @state() private shortcutsOpen = false;
+    @state() private paletteOpen = false;
+    @state() private paletteCommands: Command[] = [];
+    private paletteContext: CommandContext | null = null;
     @state() private resume: { view: string; id: string } | null = null;
     @state() private authed = hasSession();
     @state() private username: string | null = currentUsername();
@@ -121,6 +127,41 @@ export class AppShell extends LitElement {
 
     private onShowShortcuts = () => {
         this.shortcutsOpen = true;
+    };
+
+    /** Build the palette from the live library and the open list, then open. */
+    private openPalette = () => {
+        const lib = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
+        const list = this.renderRoot.querySelector<ArticleList>('article-list');
+        const listAvailable =
+            this.route.kind === 'all' ||
+            this.route.kind === 'folder' ||
+            this.route.kind === 'feed' ||
+            this.route.kind === 'interesting';
+        this.paletteContext = {
+            navigate: (view) => navigate(view),
+            star: () => list?.toggleStarCursor(),
+            markShownRead: () => void list?.onMarkShownRead(),
+            refresh: () => void list?.onRefresh(),
+            setListView: (view) => list?.setListView(view),
+            setSort: (sort) => list?.setSort(sort),
+            toggleUnread: () => list?.toggleUnread(),
+            toggleSelect: () => list?.toggleSelectCursor(),
+            openSettings: () => {
+                this.settingsOpen = true;
+            },
+            openShortcuts: () => {
+                this.shortcutsOpen = true;
+            },
+        };
+        this.paletteCommands = buildCommands(lib, this.paletteContext, { listAvailable });
+        this.paletteOpen = true;
+    };
+
+    private onRunCommand = (e: Event) => {
+        const command = (e as CustomEvent<Command>).detail;
+        this.paletteOpen = false;
+        command.run();
     };
 
     /**
@@ -289,6 +330,7 @@ export class AppShell extends LitElement {
                 <div class="spacer"></div>
                 ${this.username ? html`<span class="who">${this.username}</span><button class="signout" @click=${this.onSignOut}>Sign out</button>` : ''}
                 <button class="gear help" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts (?)" @click=${this.onShowShortcuts}>?</button>
+                <button class="gear palette" title="Command palette (Ctrl+K)" aria-label="Command palette Ctrl+K" @click=${this.openPalette}>Ctrl+K</button>
                 <button class="gear" title="Settings" @click=${() => (this.settingsOpen = true)}>${this.renderGearIcon()}</button>
             </header>`;
     }
@@ -338,7 +380,7 @@ export class AppShell extends LitElement {
     }
 
     private renderSettings() {
-        return html`<settings-dialog .open=${this.settingsOpen} .view=${this.route} @close=${() => (this.settingsOpen = false)}></settings-dialog><shortcuts-dialog .open=${this.shortcutsOpen} @close=${() => (this.shortcutsOpen = false)}></shortcuts-dialog>`;
+        return html`<settings-dialog .open=${this.settingsOpen} .view=${this.route} @close=${() => (this.settingsOpen = false)}></settings-dialog><shortcuts-dialog .open=${this.shortcutsOpen} @close=${() => (this.shortcutsOpen = false)}></shortcuts-dialog><command-palette .open=${this.paletteOpen} .commands=${this.paletteCommands} @close=${() => (this.paletteOpen = false)} @run=${this.onRunCommand}></command-palette>`;
     }
 
     private onKeyDown = (e: KeyboardEvent) => {
@@ -347,6 +389,11 @@ export class AppShell extends LitElement {
         // behind it (dialogs live in shadow roots, invisible to
         // document-level queries).
         if (isModalOpen()) return;
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            this.openPalette();
+            return;
+        }
         // Before the nav keys, and before shouldIgnoreKey, so Escape closes the
         // article even with focus in a field or another dialog open.
         if (this.article && e.key === 'Escape') {
