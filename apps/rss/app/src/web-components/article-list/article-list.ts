@@ -270,6 +270,12 @@ export class ArticleList extends LitElement {
     override updated(changed: Map<string, unknown>) {
         handleUpdateHost(this, currentViewKeyHost(this));
         syncInterestingCountHost(this, changed);
+        if (changed.has('active') && this.active && this.pendingFeedsRefresh) {
+            this.pendingFeedsRefresh = false;
+            // In unread-filtered views a full reset would drop items the reader
+            // just opened/read; keep the current list stable for immediate re-read.
+            if (!this.unreadOnly && !this.hideRead) void resetList(this as never);
+        }
     }
 
     override render() {
@@ -297,7 +303,17 @@ export class ArticleList extends LitElement {
         onScrollHost(this);
     };
 
-    private onFeedsRefreshed = () => void resetList(this as never);
+    /** A background refresh arrived while the article overlay had focus; apply it once active again. */
+    private pendingFeedsRefresh = false;
+
+    private onFeedsRefreshed = () => {
+        if (!this.active) {
+            this.pendingFeedsRefresh = true;
+            return;
+        }
+        this.pendingFeedsRefresh = false;
+        void resetList(this as never);
+    };
 
     folderFeeds(): Feed[] {
         return folderFeedsHost(this);
