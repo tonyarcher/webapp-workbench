@@ -2,9 +2,10 @@ import { LitElement, html, svg, unsafeCSS } from 'lit';
 import type { TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
-import { isTiktokPhotoUrl, resolveVideoUrl, shouldEmitTimeEnded } from './media';
+import { resolveVideoUrl, shouldEmitTimeEnded } from './media';
 import { embedPosterFor, embedProviderForUrl, embedUrlFor } from './embeds';
 import { playedCommands, syncCommands } from './embed-playback';
+import { VideoAutoAdvance } from './media-video-auto-advance';
 import type { EmbedCommand } from './embeds/types';
 import { safeUrl } from './url';
 import { getSoundOn, setSoundOn, subscribeSound } from './sound';
@@ -26,8 +27,8 @@ export class ScrollMediaVideo extends LitElement {
     @state() private src: string | null = null;
     @state() private poster: string | null = null;
     @state() private candidates: string[] = [];
-    @state() private resolveFailed = false;
-    @state() private playing = false;
+    @state() resolveFailed = false;
+    @state() playing = false;
     @state() private embedTime = 0;
     @state() private embedDuration = 0;
 
@@ -38,24 +39,16 @@ export class ScrollMediaVideo extends LitElement {
     private embedReady = false;
     private unsubscribeSound: (() => void) | null = null;
     private resolveToken = 0;
-    private photoFallbackTimer: ReturnType<typeof setTimeout> | null = null;
-    private unavailableFallbackTimer: ReturnType<typeof setTimeout> | null = null;
-    private naturalEnded = false;
-    private sawPlaybackProgress = false;
-
-    private static readonly PHOTO_AUTO_ADVANCE_FALLBACK_MS = 30_000;
-    private static readonly UNAVAILABLE_AUTO_ADVANCE_MS = 15_000;
+    naturalEnded = false;
+    sawPlaybackProgress = false;
+    private readonly auto = new VideoAutoAdvance(this);
 
     private setPlaying(next: boolean): void {
         if (this.playing === next) return;
         this.playing = next;
-        this.syncPhotoFallbackTimer();
+        this.auto.syncPhoto();
         this.dispatchEvent(
-            new CustomEvent('playback-change', {
-                detail: { playing: next },
-                bubbles: true,
-                composed: true,
-            }),
+            new CustomEvent('playback-change', { detail: { playing: next }, bubbles: true, composed: true }),
         );
     }
 
@@ -104,8 +97,7 @@ export class ScrollMediaVideo extends LitElement {
 
     override disconnectedCallback(): void {
         super.disconnectedCallback();
-        this.clearPhotoFallbackTimer();
-        this.clearUnavailableFallbackTimer();
+        this.auto.clearAll();
         this.unsubscribeSound?.();
         this.unsubscribeSound = null;
         window.removeEventListener('message', this.onEmbedMessage);
@@ -126,11 +118,11 @@ export class ScrollMediaVideo extends LitElement {
      * video slide). The player must read the same pair or those slides
      * render as "Video unavailable".
      */
-    private embedSource(): string | null {
+    embedSource(): string | null {
         return this.item?.videoUrl ?? this.item?.url ?? null;
     }
 
-    private embedOptions(): { loop: boolean } {
+    embedOptions(): { loop: boolean } {
         return { loop: !this.autoAdvance };
     }
 
@@ -140,8 +132,7 @@ export class ScrollMediaVideo extends LitElement {
     }
 
     private resetPlaybackState(): void {
-        this.clearPhotoFallbackTimer();
-        this.clearUnavailableFallbackTimer();
+        this.auto.reset();
         this.src = null;
         this.poster = null;
         this.candidates = [];
@@ -186,10 +177,8 @@ export class ScrollMediaVideo extends LitElement {
             this.syncEmbedPlayback();
         }
         if (changed.has('active')) this.applyEmbedScale();
-        if (changed.has('active') && this.active) {
-            this.naturalEnded = false;
-        }
-        if (changed.has('active') || changed.has('autoAdvance') || changed.has('item')) this.syncPhotoFallbackTimer();
+        if (changed.has('active') && this.active) this.naturalEnded = false;
+        if (changed.has('active') || changed.has('autoAdvance') || changed.has('item')) this.auto.syncPhoto();
         if (
             changed.has('active') ||
             changed.has('autoAdvance') ||
@@ -197,7 +186,7 @@ export class ScrollMediaVideo extends LitElement {
             changed.has('resolveFailed') ||
             changed.has('src')
         ) {
-            this.syncUnavailableFallbackTimer();
+            this.auto.syncUnavailable();
         }
     }
 
@@ -252,92 +241,6 @@ export class ScrollMediaVideo extends LitElement {
         for (const command of commands) provider.commandPlayer(win, command);
     }
 
-    private isPhotoAutoAdvancePost(): boolean {
-        return (
-            isTiktokPhotoUrl(this.embedSource()) ||
-            isTiktokPhotoUrl(this.item?.originalUrl ?? null) ||
-            isTiktokPhotoUrl(this.item?.url ?? null)
-        );
-    }
-
-    private clearPhotoFallbackTimer(): void {
-        if (this.photoFallbackTimer !== null) {
-            clearTimeout(this.photoFallbackTimer);
-            this.photoFallbackTimer = null;
-        }
-    }
-
-    private clearUnavailableFallbackTimer(): void {
-        if (this.unavailableFallbackTimer !== null) {
-            clearTimeout(this.unavailableFallbackTimer);
-            this.unavailableFallbackTimer = null;
-        }
-    }
-
-    private emitPlaybackEnded(): void {
-        if (!this.active || !this.isConnected || this.naturalEnded) return;
-        this.naturalEnded = true;
-        this.clearPhotoFallbackTimer();
-        this.clearUnavailableFallbackTimer();
-        this.dispatchEvent(
-            new CustomEvent('playback-ended', {
-                bubbles: true,
-                composed: true,
-            }),
-        );
-    }
-
-    private syncPhotoFallbackTimer(): void {
-        if (
-            this.autoAdvance &&
-            this.active &&
-            this.isConnected &&
-            !this.naturalEnded &&
-            this.isPhotoAutoAdvancePost()
-        ) {
-            if (!this.playing) {
-                this.clearPhotoFallbackTimer();
-                return;
-            }
-            if (this.photoFallbackTimer === null) {
-                this.photoFallbackTimer = setTimeout(() => {
-                    this.photoFallbackTimer = null;
-                    if (this.autoAdvance && this.active && this.isConnected && !this.naturalEnded && this.playing) {
-                        this.emitPlaybackEnded();
-                    }
-                }, ScrollMediaVideo.PHOTO_AUTO_ADVANCE_FALLBACK_MS);
-            }
-            return;
-        }
-        this.clearPhotoFallbackTimer();
-    }
-
-    private syncUnavailableFallbackTimer(): void {
-        const embedUrl = embedUrlFor(this.embedSource(), this.embedOptions());
-        const provider = embedProviderForUrl(this.embedSource());
-        const isNativeUnavailable = this.resolveFailed && !embedUrl;
-        const canDetectProgress = !!provider?.parsePlayerMessage;
-        const isStalledEmbed = !!embedUrl && canDetectProgress && !this.sawPlaybackProgress;
-        const isNonPlayback = isNativeUnavailable || isStalledEmbed;
-        if (this.autoAdvance && this.active && this.isConnected && !this.naturalEnded && isNonPlayback) {
-            if (this.unavailableFallbackTimer === null) {
-                this.unavailableFallbackTimer = setTimeout(() => {
-                    this.unavailableFallbackTimer = null;
-                    const currentEmbedUrl = embedUrlFor(this.embedSource(), this.embedOptions());
-                    const currentProvider = embedProviderForUrl(this.embedSource());
-                    const stillNonPlayback =
-                        (this.resolveFailed && !currentEmbedUrl) ||
-                        (!!currentEmbedUrl && !!currentProvider?.parsePlayerMessage && !this.sawPlaybackProgress);
-                    if (this.autoAdvance && this.active && this.isConnected && !this.naturalEnded && stillNonPlayback) {
-                        this.emitPlaybackEnded();
-                    }
-                }, ScrollMediaVideo.UNAVAILABLE_AUTO_ADVANCE_MS);
-            }
-            return;
-        }
-        this.clearUnavailableFallbackTimer();
-    }
-
     private handleParsedMessage(parsed: import('./embeds/types').EmbedPlayerEvent | null): boolean {
         if (!parsed) return false;
         if (parsed.type === 'ready') {
@@ -347,29 +250,27 @@ export class ScrollMediaVideo extends LitElement {
         }
         if (parsed.type === 'playing') {
             this.sawPlaybackProgress = true;
-            this.clearUnavailableFallbackTimer();
+            this.auto.clearUnavailableTimer();
             this.setPlaying(true);
-            // The player mutes itself when autoplay is blocked, after the
-            // unmute from syncEmbedPlayback. Re-assert once it is running.
             if (this.active) this.sendCommands(playedCommands(this.soundOn));
         }
         if (parsed.type === 'paused') this.setPlaying(false);
         if (parsed.type === 'ended') {
             this.setPlaying(false);
-            this.emitPlaybackEnded();
+            this.auto.emitEnded();
         }
         if (parsed.type === 'time' && !this.seeking) {
             this.embedTime = parsed.currentTime;
             this.embedDuration = parsed.duration;
             this.sawPlaybackProgress = true;
-            this.clearUnavailableFallbackTimer();
+            this.auto.clearUnavailableTimer();
             if (
                 this.autoAdvance &&
                 this.active &&
-                this.isPhotoAutoAdvancePost() &&
+                this.auto.isPhotoPost() &&
                 shouldEmitTimeEnded(parsed.currentTime, parsed.duration)
             ) {
-                this.emitPlaybackEnded();
+                this.auto.emitEnded();
             }
         }
         return true;
@@ -412,11 +313,11 @@ export class ScrollMediaVideo extends LitElement {
             return;
         }
         this.resolveFailed = true;
-        this.syncUnavailableFallbackTimer();
+        this.auto.syncUnavailable();
     }
 
     private onRetry(): void {
-        this.clearUnavailableFallbackTimer();
+        this.auto.clearUnavailableTimer();
         this.resolveFailed = false;
         this.src = null;
         this.candidates = [];
@@ -427,7 +328,7 @@ export class ScrollMediaVideo extends LitElement {
         this.poster = resolved.poster;
         this.candidates = resolved.candidates;
         this.resolveFailed = resolved.src === null;
-        this.syncUnavailableFallbackTimer();
+        this.auto.syncUnavailable();
     }
 
     /** Stable identity so the ref directive only fires on attach/detach. */
@@ -445,7 +346,7 @@ export class ScrollMediaVideo extends LitElement {
                 if (!this.isConnected) return;
                 if (!video.paused) {
                     this.sawPlaybackProgress = true;
-                    this.clearUnavailableFallbackTimer();
+                    this.auto.clearUnavailableTimer();
                 }
                 this.setPlaying(!video.paused);
             };
@@ -484,9 +385,7 @@ export class ScrollMediaVideo extends LitElement {
     private formatTime(seconds: number): string {
         if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
         const whole = Math.floor(seconds);
-        const mins = Math.floor(whole / 60);
-        const secs = whole % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+        return `${Math.floor(whole / 60)}:${(whole % 60).toString().padStart(2, '0')}`;
     }
 
     private onToggleSound(event: Event): void {
@@ -559,7 +458,7 @@ export class ScrollMediaVideo extends LitElement {
 
     private onVideoEnded(): void {
         this.setPlaying(false);
-        this.emitPlaybackEnded();
+        this.auto.emitEnded();
     }
 
     private renderNativeMedia(original: string | null): TemplateResult {
