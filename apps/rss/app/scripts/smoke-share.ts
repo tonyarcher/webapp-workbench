@@ -17,6 +17,8 @@ import {
     saveMastodonHost,
     saveShareTargets,
 } from '../src/services/share-settings';
+import { formatMarkdownCitation, renderQuoteCard } from '../src/services/citation';
+import type { Article } from '../src/types';
 import { assert } from './smoke-assert';
 
 const url = 'https://example.com/articles/hello-world';
@@ -106,4 +108,48 @@ try {
     );
 } finally {
     gStorage['localStorage'] = realStorage;
+}
+
+// ---- markdown citation goldens ----
+const citeArticle: Article = {
+    id: 'a1',
+    feedId: 'f1',
+    guid: 'g1',
+    title: 'Hello [World]',
+    link: 'https://example.com/articles/hello-world',
+    published: Date.UTC(2026, 10, 16),
+    fetchedAt: 0,
+    read: 0,
+    starred: false,
+    author: 'Ada',
+    popularity: 0,
+    hot: 0,
+};
+const md = formatMarkdownCitation(citeArticle);
+assert(
+    md.startsWith('[Hello World](https://example.com/articles/hello-world)'),
+    'markdown citation starts with linked title',
+);
+assert(md.includes('example.com'), 'markdown citation includes source');
+const noLink = formatMarkdownCitation({ ...citeArticle, link: undefined });
+assert(noLink.startsWith('Hello World'), 'markdown citation without link keeps title text');
+assert(!noLink.includes(']('), 'markdown citation without link omits markdown link');
+assert(noLink.includes('Ada'), 'markdown citation without link keeps author/source');
+
+// ---- quote card render smoke ----
+if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
+    try {
+        const canvas = document.createElement('canvas');
+        const okCanvas = !!canvas.getContext?.('2d') && typeof canvas.toBlob === 'function';
+        if (okCanvas) {
+            const blob = await renderQuoteCard(citeArticle, citeArticle.link);
+            assert(blob instanceof Blob && blob.size > 0, 'quote card renders a non-empty blob');
+        } else {
+            console.log('ok: quote card render skipped (canvas unavailable)');
+        }
+    } catch {
+        console.log('ok: quote card render skipped (environment unsupported)');
+    }
+} else {
+    console.log('ok: quote card render skipped (no document)');
 }

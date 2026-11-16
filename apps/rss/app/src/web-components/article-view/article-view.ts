@@ -31,7 +31,16 @@ import { areHighlightsEnabled, loadRowHighlights, setHighlightsEnabled } from '.
 import { readMinutes } from '../../util';
 import type { Article, RowHighlight } from '../../types';
 import { domainOf, formatDate, stripTags } from '../../util';
-import { articleKeywords, copyLinkForInstagram, copyTitleLink, shareIcon, whyLineFor } from './article-view-helpers';
+import {
+    actionIcon,
+    articleKeywords,
+    copyLinkForInstagram,
+    copyMarkdownCitation,
+    copyQuoteCard,
+    copyTitleLink,
+    shareIcon,
+    whyLineFor,
+} from './article-view-helpers';
 
 import '../video-header/video-header';
 import styles from './article-view.css?inline';
@@ -171,22 +180,23 @@ export class ArticleView extends LitElement {
     private renderToolbar(a: Article, link: string | undefined) {
         return html`
       <div class="toolbar" role="toolbar" aria-label="Article actions">
-        <button class="btn" @click=${this.emitClose}>← Back</button>
-        <button class="btn" @click=${this.onStar}>${a.starred ? '★ Unstar' : '☆ Star'}</button>
-        <button class="btn" @click=${this.onToggleRead}>${a.read ? 'Keep unread' : 'Mark read'}</button>
-        <button class="btn" @click=${this.onToggleSaved} aria-pressed=${this.savedForLater}>${this.savedForLater ? '🔖 Saved' : '🔖 Save for later'}</button>
-        <button class="btn" @click=${this.onDerank} aria-pressed=${this.deranked}>${this.deranked ? '✓ Not interesting' : '⊘ Not interesting'}</button>
-        ${link ? this.renderShareButtons(a, link) : ''}
+        <div class="toolbar-group">
+          <button class="btn icon-btn" @click=${this.emitClose} aria-label="Back" title="Back">${actionIcon('back')}</button>
+        </div>
+        <div class="toolbar-group" aria-label="Article state">
+          <button class="btn icon-btn ${a.starred ? 'active' : ''}" @click=${this.onStar} aria-label=${a.starred ? 'Unstar' : 'Star'} aria-pressed=${a.starred} title=${a.starred ? 'Unstar' : 'Star'}>${actionIcon(a.starred ? 'starred' : 'star')}</button>
+          <button class="btn icon-btn" @click=${this.onToggleRead} aria-label=${a.read ? 'Keep unread' : 'Mark read'} title=${a.read ? 'Keep unread' : 'Mark read'}>${actionIcon(a.read ? 'read' : 'unread')}</button>
+          <button class="btn icon-btn ${this.savedForLater ? 'active' : ''}" @click=${this.onToggleSaved} aria-label=${this.savedForLater ? 'Saved for later' : 'Save for later'} aria-pressed=${this.savedForLater} title=${this.savedForLater ? 'Saved for later' : 'Save for later'}>${actionIcon(this.savedForLater ? 'saved' : 'save')}</button>
+          <button class="btn icon-btn ${this.deranked ? 'active' : ''}" @click=${this.onDerank} aria-label="Not interesting" aria-pressed=${this.deranked} title=${this.deranked ? 'Marked not interesting' : 'Not interesting'}>${actionIcon(this.deranked ? 'deranked' : 'derank')}</button>
+        </div>
+        ${link ? html`<span class="toolbar-divider" aria-hidden="true"></span>${this.renderShareButtons(a, link)}` : ''}
         <div class="spacer"></div>
-        ${link ? html`<a class="btn primary" href=${link} target="_blank" rel="noopener noreferrer" @click=${() => noteOriginal(a.id, a.title)}>View original ↗</a>` : ''}
+        ${link ? html`<a class="btn icon-btn primary" href=${link} target="_blank" rel="noopener noreferrer" aria-label="Open original" title="Open original" @click=${() => noteOriginal(a.id, a.title)}>${actionIcon('external')}</a>` : ''}
       </div>`;
     }
 
     /**
-     * Share buttons straight in the toolbar, limited to the networks the
-     * reader enabled in Settings. Facebook and X open their share intents;
-     * Mastodon posts through the configured instance; Instagram publishes
-     * no web share endpoint, so its button copies the link for pasting.
+     * Compact share/copy actions: icon-only buttons with accessible labels.
      */
     private renderShareButtons(a: Article, link: string) {
         const open = (target: 'facebook' | 'x' | 'mastodon') => (e: Event) => {
@@ -197,13 +207,26 @@ export class ArticleView extends LitElement {
                 window.open(href, '_blank', 'noopener,noreferrer');
             }
         };
-        const buttons: Record<ShareTarget, unknown> = {
-            facebook: html`<button class="btn share-btn" @click=${open('facebook')}>${shareIcon('facebook')}Facebook</button>`,
-            x: html`<button class="btn share-btn" @click=${open('x')}>${shareIcon('x')}X</button>`,
-            mastodon: html`<button class="btn share-btn" @click=${open('mastodon')}>${shareIcon('mastodon')}Mastodon</button>`,
-            instagram: html`<button class="btn share-btn" @click=${() => void copyLinkForInstagram(link, a)}>${shareIcon('instagram')}Instagram</button>`,
+        const labels: Record<ShareTarget, string> = {
+            facebook: 'Share on Facebook',
+            x: 'Share on X',
+            mastodon: 'Share on Mastodon',
+            instagram: 'Copy link for Instagram',
         };
-        return html`${loadShareTargets().map((t) => buttons[t])}${canNativeShare() ? html`<button class="btn share-btn" @click=${() => void this.nativeShare(a, link)}>More…</button>` : ''}<button class="btn share-btn" @click=${() => void copyTitleLink(a, link)}>Copy link</button><a class="btn share-btn" href=${mailtoShareUrl(link, a.title)} @click=${() => noteShare(a.id, a.title)}>Email</a>`;
+        const buttons: Record<ShareTarget, unknown> = {
+            facebook: html`<button class="btn icon-btn" @click=${open('facebook')} aria-label=${labels.facebook} title=${labels.facebook}>${shareIcon('facebook')}</button>`,
+            x: html`<button class="btn icon-btn" @click=${open('x')} aria-label=${labels.x} title=${labels.x}>${shareIcon('x')}</button>`,
+            mastodon: html`<button class="btn icon-btn" @click=${open('mastodon')} aria-label=${labels.mastodon} title=${labels.mastodon}>${shareIcon('mastodon')}</button>`,
+            instagram: html`<button class="btn icon-btn" @click=${() => void copyLinkForInstagram(link, a)} aria-label=${labels.instagram} title=${labels.instagram}>${shareIcon('instagram')}</button>`,
+        };
+        return html`<div class="toolbar-group toolbar-share" aria-label="Share and copy">
+          ${loadShareTargets().map((t) => buttons[t])}
+          ${canNativeShare() ? html`<button class="btn icon-btn" @click=${() => void this.nativeShare(a, link)} aria-label="Share" title="Share">${actionIcon('more')}</button>` : ''}
+          <button class="btn icon-btn" @click=${() => void copyTitleLink(a, link)} aria-label="Copy link" title="Copy link">${actionIcon('copy')}</button>
+          <button class="btn icon-btn" @click=${() => void copyMarkdownCitation(a, link)} aria-label="Copy markdown citation" title="Copy markdown citation">${actionIcon('markdown')}</button>
+          <button class="btn icon-btn" @click=${() => void copyQuoteCard(a, link)} aria-label="Copy quote card" title="Copy quote card">${actionIcon('quote')}</button>
+          <a class="btn icon-btn" href=${mailtoShareUrl(link, a.title)} @click=${() => noteShare(a.id, a.title)} aria-label="Email" title="Email">${actionIcon('mail')}</a>
+        </div>`;
     }
 
     /** OS share sheet where it exists; counts as a share like the rest. */

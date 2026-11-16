@@ -6,6 +6,7 @@ import { toastError, toastInfo } from '../../services/toast';
 import { readMinutes } from '../../util';
 import type { Article, RowHighlight } from '../../types';
 import type { ShareTarget } from '../../services/share';
+import { copyImageBlob, downloadBlob, formatMarkdownCitation, renderQuoteCard } from '../../services/citation';
 
 export function articleKeywords(article: Article): ArticleKeyword[] {
     return articleKeywordsOf(article.title, article.summary, article.content, loadWordMap());
@@ -45,6 +46,58 @@ export function shareIcon(target: ShareTarget) {
     }
 }
 
+export function actionIcon(
+    name:
+        | 'back'
+        | 'star'
+        | 'starred'
+        | 'read'
+        | 'unread'
+        | 'save'
+        | 'saved'
+        | 'derank'
+        | 'deranked'
+        | 'copy'
+        | 'markdown'
+        | 'quote'
+        | 'mail'
+        | 'external'
+        | 'more',
+) {
+    switch (name) {
+        case 'back':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/><path d="M10 12h9"/></svg>`;
+        case 'star':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z"/></svg>`;
+        case 'starred':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z"/></svg>`;
+        case 'read':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16v11H4z"/><path d="M4 8l8 6 8-6"/></svg>`;
+        case 'unread':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>`;
+        case 'save':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4.5h12v15l-6-3.5-6 3.5z"/></svg>`;
+        case 'saved':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 4.5h12v15l-6-3.5-6 3.5z"/></svg>`;
+        case 'derank':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M8 8l8 8"/></svg>`;
+        case 'deranked':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>`;
+        case 'copy':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="10" height="11" rx="2"/><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>`;
+        case 'markdown':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M7 15V9l2.5 3L12 9v6"/><path d="M16 9v6m0 0l-2-2m2 2l2-2"/></svg>`;
+        case 'quote':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M7.5 14h3l-1 2M13.5 14h3l-1 2"/></svg>`;
+        case 'mail':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6"/></svg>`;
+        case 'external':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"/><path d="M10 14L19 5"/><path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4"/></svg>`;
+        case 'more':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18" cy="12" r="1.8" fill="currentColor"/></svg>`;
+    }
+}
+
 /** Clipboard with the legacy textarea fallback for older WebViews. */
 export async function copyText(text: string): Promise<boolean> {
     try {
@@ -80,5 +133,38 @@ export async function copyLinkForInstagram(link: string, a: Article): Promise<vo
         toastInfo('Link copied - paste it in Instagram');
     } else {
         toastError('Could not copy the link');
+    }
+}
+
+export async function copyMarkdownCitation(a: Article, link: string): Promise<void> {
+    const text = formatMarkdownCitation(a, link);
+    if (await copyText(text)) {
+        noteShare(a.id, a.title);
+        toastInfo('Markdown citation copied');
+    } else {
+        toastError('Could not copy citation');
+    }
+}
+
+export async function copyQuoteCard(a: Article, link: string): Promise<void> {
+    try {
+        const blob = await renderQuoteCard(a, link);
+        const copied = await copyImageBlob(blob);
+        if (copied) {
+            noteShare(a.id, a.title);
+            toastInfo('Quote card copied');
+            return;
+        }
+        const name = `${
+            (a.title || 'quote')
+                .replace(/[^a-z0-9]+/gi, '-')
+                .replace(/^-+|-+$/g, '')
+                .slice(0, 40) || 'quote'
+        }.png`;
+        downloadBlob(blob, name);
+        noteShare(a.id, a.title);
+        toastInfo('Quote card downloaded');
+    } catch {
+        toastError('Could not create quote card');
     }
 }

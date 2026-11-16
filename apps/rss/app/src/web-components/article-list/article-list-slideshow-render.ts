@@ -4,7 +4,13 @@ import { noteOriginal, noteShare } from '../../mutations';
 import { sanitizeHtml, safeHttpUrl } from '../../services/parser';
 import { articleVideo } from '../../services/video';
 import { domainOf, formatDate, readMinutes } from '../../util';
-import { copyTitleLink, shareIcon } from '../article-view/article-view-helpers';
+import {
+    actionIcon,
+    copyMarkdownCitation,
+    copyQuoteCard,
+    copyTitleLink,
+    shareIcon,
+} from '../article-view/article-view-helpers';
 import { canNativeShare, mailtoShareUrl, shareUrl } from '../../services/share';
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
 import type { Article } from '../../types';
@@ -49,31 +55,57 @@ function shareButtons(a: Article, link: string) {
             window.open(href, '_blank', 'noopener,noreferrer');
         }
     };
-    const buttons: Record<string, unknown> = {
-        facebook: html`<button class="btn share-btn" @click=${open('facebook')}>${shareIcon('facebook')}Facebook</button>`,
-        x: html`<button class="btn share-btn" @click=${open('x')}>${shareIcon('x')}X</button>`,
-        mastodon: html`<button class="btn share-btn" @click=${open('mastodon')}>${shareIcon('mastodon')}Mastodon</button>`,
-        instagram: html`<button class="btn share-btn" @click=${async () => {
-            try {
-                await navigator.clipboard.writeText(link);
-                noteShare(a.id, a.title);
-            } catch {
-                /* ignore */
-            }
-        }}>${shareIcon('instagram')}Copy link</button>`,
+    const labels: Record<string, string> = {
+        facebook: 'Share on Facebook',
+        x: 'Share on X',
+        mastodon: 'Share on Mastodon',
+        instagram: 'Copy link for Instagram',
     };
-    return html`${loadShareTargets().map((t) => buttons[t])}${
+    const buttons: Record<string, unknown> = {
+        facebook: html`<button
+            class="btn icon-btn"
+            @click=${open('facebook')}
+            aria-label=${labels['facebook']}
+            title=${labels['facebook']}
+            >${shareIcon('facebook')}</button
+        >`,
+        x: html`<button class="btn icon-btn" @click=${open('x')} aria-label=${labels['x']} title=${labels['x']}
+            >${shareIcon('x')}</button
+        >`,
+        mastodon: html`<button
+            class="btn icon-btn"
+            @click=${open('mastodon')}
+            aria-label=${labels['mastodon']}
+            title=${labels['mastodon']}
+            >${shareIcon('mastodon')}</button
+        >`,
+        instagram: html`<button
+            class="btn icon-btn"
+            @click=${async () => {
+                try {
+                    await navigator.clipboard.writeText(link);
+                    noteShare(a.id, a.title);
+                } catch {
+                    /* ignore */
+                }
+            }}
+            aria-label=${labels['instagram']}
+            title=${labels['instagram']}
+            >${shareIcon('instagram')}</button
+        >`,
+    };
+    return html`<div class="slideshow-share-group">${loadShareTargets().map((t) => buttons[t as string])}${
         canNativeShare()
-            ? html`<button class="btn share-btn" @click=${async () => {
+            ? html`<button class="btn icon-btn" @click=${async () => {
                   try {
                       await navigator.share({ title: a.title, url: link });
                       noteShare(a.id, a.title);
                   } catch {
                       /* dismissed */
                   }
-              }}>More…</button>`
+              }} aria-label="Share" title="Share">${actionIcon('more')}</button>`
             : ''
-    }<button class="btn share-btn" @click=${() => void copyTitleLink(a, link)}>Copy</button><a class="btn share-btn" href=${mailtoShareUrl(link, a.title)} @click=${() => noteShare(a.id, a.title)}>Email</a>`;
+    }<button class="btn icon-btn" @click=${() => void copyTitleLink(a, link)} aria-label="Copy link" title="Copy link">${actionIcon('copy')}</button><button class="btn icon-btn" @click=${() => void copyMarkdownCitation(a, link)} aria-label="Copy markdown citation" title="Copy markdown citation">${actionIcon('markdown')}</button><button class="btn icon-btn" @click=${() => void copyQuoteCard(a, link)} aria-label="Copy quote card" title="Copy quote card">${actionIcon('quote')}</button><a class="btn icon-btn" href=${mailtoShareUrl(link, a.title)} @click=${() => noteShare(a.id, a.title)} aria-label="Email" title="Email">${actionIcon('mail')}</a></div>`;
 }
 
 export function renderSlideshow(host: SlideshowRenderHost, actions: SlideshowRenderActions) {

@@ -46,6 +46,52 @@
     background: var(--hover);
 }
 
+.btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.icon-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.icon-btn:hover {
+    background: var(--hover);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.icon-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.icon-btn.active,
+.icon-btn[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--accent, #3b82f6) 14%, transparent);
+    color: var(--accent, #3b82f6);
+}
+
+.btn.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
 .refresh {
     display: inline-flex;
     align-items: center;
@@ -685,10 +731,11 @@ button.title-open:hover {
     color: var(--text);
 }
 .slideshow-actions,
-.slideshow-share {
+.slideshow-share,
+.slideshow-share-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
 }
 .slideshow-share {
