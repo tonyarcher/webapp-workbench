@@ -82,7 +82,7 @@ export function renderReadingSection(host: SettingsDialogSectionsHost) {
             </select></label>
           <label class="view-field"><span>Page size</span>
             <select .value=${String(s.pageSize)} @change=${(e: Event) => host.setPageSize(Number((e.target as HTMLSelectElement).value))}>
-              <option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option>
+              <option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option>
             </select></label>
           <label class="view-field"><span>Card columns</span>
             <select .value=${String(s.maxCardCols)} @change=${(e: Event) => host.setMaxCardCols(Number((e.target as HTMLSelectElement).value))}>

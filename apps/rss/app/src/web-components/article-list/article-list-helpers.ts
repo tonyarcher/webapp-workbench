@@ -2,7 +2,7 @@ import { elementScroll, observeElementOffset, observeElementRect, type Virtualiz
 import type { ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 
 export const DEFAULT_PAGE_SIZE = 50;
-export const PAGE_SIZES = [20, 50, 100, 500] as const;
+export const PAGE_SIZES = [5, 10, 20, 50, 100, 500] as const;
 export const VIEW_SETTINGS_KEY = 'rss-reader:view-settings';
 export const DEFAULT_VIEW_SETTINGS_KEY = 'rss-reader:default-view-settings';
 export const CARD_MIN_WIDTH = 240;

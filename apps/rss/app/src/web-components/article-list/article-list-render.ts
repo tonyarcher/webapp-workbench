@@ -357,7 +357,7 @@ function renderPageSizeSelect(host: ArticleListRenderHost) {
     return html`<label class="page-size"><select .value=${host.pageSize} @change=${(e: Event) => {
         host.pageSize = Number((e.target as HTMLSelectElement).value);
         host.saveViewSettings();
-    }} title="Articles shown at a time"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option></select></label>`;
+    }} title="Articles shown at a time"><option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option></select></label>`;
 }
 
 export function renderAdvancedMenu(host: ArticleListRenderHost) {
