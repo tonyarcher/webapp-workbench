@@ -42,6 +42,13 @@ import {
     renderSelectionBar,
     renderToolbar,
 } from './article-list-render';
+import { renderSlideshowSection } from './article-list-slideshow-render';
+import {
+    clearSlideshowAuto,
+    handleSlideshowKeyDown,
+    handleSlideshowUpdated,
+    handleSlideshowWillUpdate,
+} from './article-list-slideshow';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 
 import { areHighlightsEnabled } from '../../services/highlights';
@@ -115,6 +122,15 @@ export class ArticleList extends LitElement {
         data: Record<string, RowHighlight | null>;
     } = { open: {}, loading: {}, data: {} };
 
+    /** Slideshow view mode: current article index and playback options. */
+    @state() slideshowIndex = 0;
+    @state() slideshowAutoAdvance = false;
+    @state() slideshowSavedIds = new Set<string>();
+    slideshowAutoTimer: ReturnType<typeof setTimeout> | null = null;
+    slideshowMarked = new Set<string>();
+    slideshowSuppressRead = new Set<string>();
+    private boundScrollEl: HTMLDivElement | null = null;
+
     /** True while this view's own refresh job runs. Other folders track their own keys. */
     get refreshing(): boolean {
         return this.activeRefreshKeys.includes(viewRefreshKeyOf(this.view));
@@ -176,14 +192,23 @@ export class ArticleList extends LitElement {
 
     override firstUpdated() {
         reinitVirtualizer(this as never);
-        const el = this.scrollElRef.value;
+        this.syncScrollBindings();
+    }
+
+    private syncScrollBindings() {
+        const el = this.scrollElRef.value ?? null;
+        if (el === this.boundScrollEl) return;
+        if (this.boundScrollEl) {
+            this.boundScrollEl.removeEventListener('pointermove', this.onPointerActivity);
+            this.boundScrollEl.removeEventListener('wheel', this.onPointerActivity);
+            this.resizeObserver?.disconnect();
+            this.resizeObserver = undefined;
+        }
+        this.boundScrollEl = el;
         if (el) {
             this.updateCols();
             this.resizeObserver = new ResizeObserver(() => this.updateCols());
             this.resizeObserver.observe(el);
-            // Inside the shadow root the event target is the row itself.
-            // On window it would be retargeted to this host and dwell could
-            // never resolve a row.
             el.addEventListener('pointermove', this.onPointerActivity);
             el.addEventListener('wheel', this.onPointerActivity, { passive: true });
         }
@@ -217,6 +242,7 @@ export class ArticleList extends LitElement {
 
     override disconnectedCallback() {
         super.disconnectedCallback();
+        clearSlideshowAuto(this as never);
         window.removeEventListener('keydown', this.onKeyDown);
         window.removeEventListener('feeds-refreshed', this.onFeedsRefreshed);
         window.removeEventListener('article-read', this.onArticleRead);
@@ -225,8 +251,11 @@ export class ArticleList extends LitElement {
         window.removeEventListener('view-settings-changed', this.onViewSettingsChanged);
         window.removeEventListener('storage', this.onStorage);
         window.removeEventListener('highlights-enabled-changed', this.onHighlightsEnabledChanged);
-        this.scrollElRef.value?.removeEventListener('pointermove', this.onPointerActivity);
-        this.scrollElRef.value?.removeEventListener('wheel', this.onPointerActivity);
+        if (this.boundScrollEl) {
+            this.boundScrollEl.removeEventListener('pointermove', this.onPointerActivity);
+            this.boundScrollEl.removeEventListener('wheel', this.onPointerActivity);
+            this.boundScrollEl = null;
+        }
         this.dwell.stop();
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
@@ -255,12 +284,10 @@ export class ArticleList extends LitElement {
     override willUpdate(changed: Map<string, unknown>) {
         if (changed.has('view')) {
             this.dwell.flushViewChange();
-            // Unsaved views must not inherit auto-marking: without a saved
-            // setting the toggle is off, so opening a folder never starts
-            // silently marking another folder's articles as read.
             this.markOnScroll = readViewSettings()[viewKeyOf(this.view)]?.markOnScroll ?? false;
             this.loadViewSettings();
         }
+        handleSlideshowWillUpdate(this as never, changed);
         if (this.virtualizer) {
             this.virtualizer.setOptions(virtualizerOptionsFor(this as never));
             this.virtualizer._willUpdate();
@@ -272,14 +299,17 @@ export class ArticleList extends LitElement {
         syncInterestingCountHost(this, changed);
         if (changed.has('active') && this.active && this.pendingFeedsRefresh) {
             this.pendingFeedsRefresh = false;
-            // In unread-filtered views a full reset would drop items the reader
-            // just opened/read; keep the current list stable for immediate re-read.
             if (!this.unreadOnly && !this.hideRead) void resetList(this as never);
         }
+        handleSlideshowUpdated(this as never, changed);
+        this.syncScrollBindings();
     }
 
     override render() {
         const host = this as never;
+        if (this.listView === 'slideshow') {
+            return html`${renderToolbar(host)}${renderInterestingHint(host)}${renderAdvancedMenu(host)}${renderSlideshowSection(host)}`;
+        }
         const virtualItems = this.virtualizer?.getVirtualItems() ?? [];
         const showFeed = this.view.kind !== 'feed';
         return html`
@@ -376,6 +406,7 @@ export class ArticleList extends LitElement {
 
     private onKeyDown = (e: KeyboardEvent) => {
         this.dwell.noteInput();
+        if (handleSlideshowKeyDown(this as never, e, handleListKey)) return;
         handleListKey(this as never, e);
     };
 

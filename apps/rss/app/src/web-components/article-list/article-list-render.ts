@@ -342,7 +342,7 @@ function renderViewSelect(host: ArticleListRenderHost) {
     ) => {
         host.listView = (e.target as HTMLSelectElement).value as ListViewType;
         host.saveViewSettings();
-    }}><option value="detailed">Detailed List</option><option value="headline">Headline View</option><option value="cards">Cards</option></select></label>`;
+    }}><option value="detailed">Detailed List</option><option value="headline">Headline View</option><option value="cards">Cards</option><option value="slideshow">Slideshow</option></select></label>`;
 }
 
 function renderCardColsSelect(host: ArticleListRenderHost) {

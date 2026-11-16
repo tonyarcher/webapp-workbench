@@ -74,7 +74,7 @@ export function renderReadingSection(host: SettingsDialogSectionsHost) {
         <div class="view-defaults">
           <label class="view-field"><span>Default list view</span>
             <select .value=${s.listView} @change=${(e: Event) => host.setListView((e.target as HTMLSelectElement).value)}>
-              <option value="detailed">Detailed List</option><option value="headline">Headline View</option><option value="cards">Cards</option>
+              <option value="detailed">Detailed List</option><option value="headline">Headline View</option><option value="cards">Cards</option><option value="slideshow">Slideshow</option>
             </select></label>
           <label class="view-field"><span>Sort</span>
             <select .value=${s.sort} @change=${(e: Event) => host.setSort((e.target as HTMLSelectElement).value)}>

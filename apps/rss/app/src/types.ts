@@ -61,7 +61,7 @@ export interface Article {
 }
 
 export type ArticleSort = 'hot' | 'newest' | 'oldest';
-export type ListViewType = 'detailed' | 'headline' | 'cards';
+export type ListViewType = 'detailed' | 'headline' | 'cards' | 'slideshow';
 export type FeedSort = 'alpha' | 'unread';
 
 export type SearchScopeKind = 'all' | 'folder' | 'feed';

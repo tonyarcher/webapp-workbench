@@ -296,6 +296,9 @@ export function handleListKey(host: ListKeyHost, e: KeyboardEvent): void {
         case 'view-cards':
             host.setListView('cards');
             break;
+        case 'view-slideshow':
+            host.setListView('slideshow');
+            break;
         case 'select':
             host.toggleSelectCursor();
             break;

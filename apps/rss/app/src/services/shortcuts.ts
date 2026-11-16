@@ -6,7 +6,15 @@
  */
 
 export type ListShortcut =
-    'star' | 'unread' | 'refresh' | 'view-detailed' | 'view-headline' | 'view-cards' | 'select' | 'help';
+    | 'star'
+    | 'unread'
+    | 'refresh'
+    | 'view-detailed'
+    | 'view-headline'
+    | 'view-cards'
+    | 'view-slideshow'
+    | 'select'
+    | 'help';
 
 export type OverlayShortcut = 'star' | 'derank' | 'original' | 'help';
 
@@ -25,6 +33,8 @@ export function listShortcut(key: string): ListShortcut | null {
             return 'view-headline';
         case '3':
             return 'view-cards';
+        case '4':
+            return 'view-slideshow';
         case 'x':
             return 'select';
         case '?':
@@ -62,7 +72,7 @@ export const LIST_SHORTCUTS_HELP: ShortcutHelp[] = [
     { keys: 'Shift+click', action: 'Select a range of articles' },
     { keys: 'u', action: 'Toggle Unread only' },
     { keys: 'r', action: 'Refresh this view' },
-    { keys: '1 / 2 / 3', action: 'Detailed / headline / cards view' },
+    { keys: '1 / 2 / 3 / 4', action: 'Detailed / headline / cards / slideshow view' },
     { keys: '/', action: 'Open search' },
     { keys: 'Ctrl+K', action: 'Open command palette' },
     { keys: '?', action: 'This cheatsheet' },

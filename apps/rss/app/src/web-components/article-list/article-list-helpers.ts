@@ -36,7 +36,9 @@ export function clampPageSize(n: unknown): number {
 /** Coerce stored or edited settings into a complete, in-range object. */
 export function normalizeViewSettings(input: Partial<ViewSettings> | null | undefined): ViewSettings {
     const listView: ListViewType =
-        input?.listView === 'headline' || input?.listView === 'cards' ? input.listView : 'detailed';
+        input?.listView === 'headline' || input?.listView === 'cards' || input?.listView === 'slideshow'
+            ? input.listView
+            : 'detailed';
     const sort: ArticleSort = input?.sort === 'newest' || input?.sort === 'oldest' ? input.sort : 'hot';
     const maxCardCols =
         typeof input?.maxCardCols === 'number'

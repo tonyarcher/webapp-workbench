@@ -117,6 +117,7 @@ export function buildCommands(
         act('view-detailed', 'Detailed list view', () => ctx.setListView('detailed'));
         act('view-headline', 'Headline view', () => ctx.setListView('headline'));
         act('view-cards', 'Cards view', () => ctx.setListView('cards'));
+        act('view-slideshow', 'Slideshow view', () => ctx.setListView('slideshow'));
         act('select', 'Select current article', () => ctx.toggleSelect());
     }
 

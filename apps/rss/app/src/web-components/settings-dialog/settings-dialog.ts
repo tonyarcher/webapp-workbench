@@ -100,7 +100,7 @@ export class SettingsDialog extends LitElement {
     }
 
     setListView(value: string) {
-        if (value !== 'detailed' && value !== 'headline' && value !== 'cards') return;
+        if (value !== 'detailed' && value !== 'headline' && value !== 'cards' && value !== 'slideshow') return;
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, listView: value });
         this.saveViewDefaults();
     }
