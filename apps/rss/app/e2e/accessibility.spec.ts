@@ -121,6 +121,22 @@ test('the cards view has no automatic accessibility violations', async ({ page }
     expect(await audit(page)).toEqual([]);
 });
 
+test('the slideshow view has no automatic accessibility violations', async ({ page }) => {
+    await seedAuth(page);
+    await page.addInitScript(() => {
+        localStorage.setItem(
+            'rss-reader:view-settings',
+            JSON.stringify({
+                all: { listView: 'slideshow', sort: 'newest', pageSize: 50, maxCardCols: 4, unreadOnly: false },
+            }),
+        );
+    });
+    await stubLibrary(page, ARTICLES);
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: 'Exit slideshow' })).toBeVisible();
+    expect(await audit(page)).toEqual([]);
+});
+
 test('the open article has no automatic accessibility violations', async ({ page }) => {
     await seedAuth(page);
     await stubLibrary(page, [ARTICLES[0], ARTICLES[2]]);
