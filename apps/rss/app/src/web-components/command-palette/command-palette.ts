@@ -30,6 +30,7 @@ export class CommandPalette extends LitElement {
     private dialogEl: HTMLDialogElement | null = null;
     private inputEl: HTMLInputElement | null = null;
     private returnFocus: HTMLElement | null = null;
+    private backdropPress = false;
 
     override firstUpdated() {
         this.dialogEl = this.renderRoot.querySelector('dialog');
@@ -99,10 +100,20 @@ export class CommandPalette extends LitElement {
         if (this.open) this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     }
 
+    private onDialogPointerDown(e: PointerEvent) {
+        this.backdropPress = e.target === this.dialogEl;
+    }
+
+    private onDialogClick(e: MouseEvent) {
+        const backdropClick = this.backdropPress && e.target === this.dialogEl;
+        this.backdropPress = false;
+        if (backdropClick) this.emitClose();
+    }
+
     override render() {
         const results = this.results;
         return html`
-            <dialog aria-label="Command palette" @close=${this.emitClose}>
+            <dialog aria-label="Command palette" @close=${this.emitClose} @pointerdown=${this.onDialogPointerDown} @click=${this.onDialogClick}>
                 <div class="palette">
                     <h2>Command palette</h2>
                     <input

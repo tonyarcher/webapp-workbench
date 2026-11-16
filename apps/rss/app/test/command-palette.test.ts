@@ -85,4 +85,27 @@ describe('command-palette', () => {
         await el.updateComplete;
         expect(closed).to.equal(true);
     });
+
+    it('closes when clicking outside the dialog content', async () => {
+        el = await mount([]);
+        let closed = false;
+        el.addEventListener('close', () => (closed = true));
+        const dialog = el.shadowRoot!.querySelector('dialog')!;
+        dialog.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+        dialog.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+        await el.updateComplete;
+        expect(closed).to.equal(true);
+    });
+
+    it('does not close when a drag that started inside ends on the dialog', async () => {
+        el = await mount([]);
+        let closed = false;
+        el.addEventListener('close', () => (closed = true));
+        const dialog = el.shadowRoot!.querySelector('dialog')!;
+        const field = input(el);
+        field.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+        dialog.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+        await el.updateComplete;
+        expect(closed).to.equal(false);
+    });
 });
