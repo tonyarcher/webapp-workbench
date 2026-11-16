@@ -12,7 +12,7 @@ function redgifsId(url: string): string | null {
 export const REDGIFS: EmbedProvider = {
     name: 'redgifs',
     id: redgifsId,
-    embedUrl(url) {
+    embedUrl(url, _options) {
         const id = redgifsId(url ?? '');
         return id ? safeUrl(`https://www.redgifs.com/ifr/${id}`) : null;
     },

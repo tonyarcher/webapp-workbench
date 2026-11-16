@@ -33,11 +33,11 @@ export function embedProviderForUrl(url: string | null): EmbedProvider | null {
 }
 
 /** Official embed iframe URL for a page URL, or null when not an embed site. */
-export function embedUrlFor(url: string | null): string | null {
+export function embedUrlFor(url: string | null, options?: { loop?: boolean }): string | null {
     if (!url) return null;
     const decoded = stripImageProxy(url);
     const provider = providerForDecoded(decoded);
-    return provider ? provider.embedUrl(decoded) : null;
+    return provider ? provider.embedUrl(decoded, options) : null;
 }
 
 /** Static poster for the inactive placeholder, or null when the provider has none. */

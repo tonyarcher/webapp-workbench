@@ -24,6 +24,7 @@ export class ScrollSlide extends LitElement {
 
     @property({ attribute: false }) item!: ScrollItem;
     @property({ attribute: false }) active = false;
+    @property({ attribute: false }) autoAdvance = false;
 
     @state() private expanded = false;
 
@@ -45,7 +46,7 @@ export class ScrollSlide extends LitElement {
     private renderMedia(): TemplateResult {
         const kind = classifyScrollItem(this.item);
         if (kind === 'video') {
-            return html`<vsc-media-video .item=${this.item} .active=${this.active}></vsc-media-video>`;
+            return html`<vsc-media-video .item=${this.item} .active=${this.active} .autoAdvance=${this.autoAdvance}></vsc-media-video>`;
         }
         if (kind === 'image') {
             return html`<vsc-media-image .images=${this.item.imageUrls ?? []}></vsc-media-image>`;

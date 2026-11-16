@@ -14,7 +14,8 @@ Object.defineProperty(globalThis, 'document', {
 const { classifyScrollItem } = await import('vertical-scroll-component');
 const { parseLinkList } = await import('../src/services/parse-list');
 const { toScrollItem } = await import('../src/services/to-scroll-item');
-const { parseSession, serializeSession } = await import('../src/services/session-store');
+const { AUTO_ADVANCE_KEY, loadAutoAdvance, parseSession, saveAutoAdvance, serializeSession } =
+    await import('../src/services/session-store');
 const { watchedOEmbedIndex, playerInfoFromPayload, resolveTiktokOEmbed } =
     await import('../src/services/resolve-oembed');
 
@@ -391,6 +392,24 @@ function assert(cond: unknown, msg: string): void {
 {
     const r = parseLinkList('javascript:alert(1)\nhttps://example.com/x');
     assert(r.items.length === 0, 'javascript and non-tiktok not playable');
+}
+
+// auto-advance preference persistence
+{
+    const data = new Map<string, string>();
+    const storage = {
+        getItem: (key: string) => data.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+            data.set(key, value);
+        },
+    };
+    assert(loadAutoAdvance(storage) === false, 'auto-advance defaults off');
+    saveAutoAdvance(true, storage);
+    assert(data.get(AUTO_ADVANCE_KEY) === '1', 'auto-advance saved as 1');
+    assert(loadAutoAdvance(storage) === true, 'auto-advance loads enabled');
+    saveAutoAdvance(false, storage);
+    assert(loadAutoAdvance(storage) === false, 'auto-advance loads disabled');
+    assert(loadAutoAdvance(null) === false, 'auto-advance null storage defaults off');
 }
 
 console.log('smoke.ts: all assertions passed');

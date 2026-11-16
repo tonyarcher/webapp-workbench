@@ -69,6 +69,11 @@ assert(
     'tiktok @user/video embed',
 );
 assert(embedUrlFor('https://www.tiktok.com/@user/video/1234567890')?.includes('autoplay=1'), 'tiktok autoplay param');
+assert(embedUrlFor('https://www.tiktok.com/@user/video/1234567890')?.includes('loop=1'), 'tiktok loops by default');
+assert(
+    embedUrlFor('https://www.tiktok.com/@user/video/1234567890', { loop: false })?.includes('loop=0'),
+    'tiktok loop disabled for auto-advance',
+);
 assert(embedUrlFor('https://www.tiktok.com/@user/video/1234567890')?.includes('muted=0'), 'tiktok not locked muted');
 assert(embedUrlFor('https://m.tiktok.com/v/1234567890.html')?.includes('player/v1/1234567890'), 'tiktok mobile embed');
 assert(

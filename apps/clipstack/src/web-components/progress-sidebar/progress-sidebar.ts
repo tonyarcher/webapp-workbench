@@ -13,6 +13,7 @@ export class ProgressSidebar extends LitElement {
     @property({ attribute: false }) activeIndex = 0;
     @property({ attribute: false }) maxSeen = 0;
     @property({ attribute: false }) skippedCount = 0;
+    @property({ attribute: false }) autoAdvance = false;
 
     private list: HTMLElement | null = null;
     private prevActiveIndex = -1;
@@ -35,6 +36,17 @@ export class ProgressSidebar extends LitElement {
         const index = Number(button.dataset['index']);
         if (Number.isNaN(index)) return;
         this.dispatchEvent(new CustomEvent('jump', { detail: { index }, bubbles: true, composed: true }));
+    }
+
+    private onAutoAdvanceChange(event: Event): void {
+        const input = event.currentTarget as HTMLInputElement;
+        this.dispatchEvent(
+            new CustomEvent('auto-advance-change', {
+                detail: { enabled: input.checked },
+                bubbles: true,
+                composed: true,
+            }),
+        );
     }
 
     override updated(changed: Map<string, unknown>): void {
@@ -76,7 +88,7 @@ export class ProgressSidebar extends LitElement {
         const total = this.items.length;
         const progress = total > 0 ? ((this.activeIndex + 1) / total) * 100 : 0;
         const skipped = this.skippedCount;
-        return html`<div class="sidebar">${this.renderBrand()}<div class="count">${this.activeIndex + 1} / ${total}${skipped > 0 ? ` · ${skipped} skipped` : ''}</div><div class="progress-track"><div class="progress-fill" style="width: ${progress}%"></div></div><div class="scroller" ${ref(this.onListRef)}>${this.renderList()}<div class="toolbar"><button class="new-list" @click=${this.emitNewList}>New list</button></div></div></div>`;
+        return html`<div class="sidebar">${this.renderBrand()}<div class="count">${this.activeIndex + 1} / ${total}${skipped > 0 ? ` · ${skipped} skipped` : ''}</div><div class="progress-track"><div class="progress-fill" style="width: ${progress}%"></div></div><div class="scroller" ${ref(this.onListRef)}>${this.renderList()}<div class="toolbar"><label class="auto-advance"><input type="checkbox" .checked=${this.autoAdvance} @change=${this.onAutoAdvanceChange}>Auto-advance</label><button class="new-list" @click=${this.emitNewList}>New list</button></div></div></div>`;
     }
 }
 

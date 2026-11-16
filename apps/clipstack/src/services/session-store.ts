@@ -4,6 +4,7 @@ export const SESSION_KEY = 'cs-session';
 const PROGRESS_KEY = 'cs-session-progress';
 const LEGACY_SESSION_KEY = 'tts-session';
 const LEGACY_PROGRESS_KEY = 'tts-session-progress';
+export const AUTO_ADVANCE_KEY = 'cs-auto-advance';
 
 function compactLink(link: ClipLink): ClipLink {
     const out: ClipLink = { id: link.id, url: link.url };
@@ -143,6 +144,27 @@ export function clearSession(): void {
         localStorage.removeItem(PROGRESS_KEY);
         localStorage.removeItem(LEGACY_SESSION_KEY);
         localStorage.removeItem(LEGACY_PROGRESS_KEY);
+    } catch {
+        // ignore
+    }
+}
+
+export function loadAutoAdvance(
+    storage: Pick<Storage, 'getItem'> | null = typeof localStorage !== 'undefined' ? localStorage : null,
+): boolean {
+    try {
+        return storage?.getItem(AUTO_ADVANCE_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
+
+export function saveAutoAdvance(
+    enabled: boolean,
+    storage: Pick<Storage, 'setItem'> | null = typeof localStorage !== 'undefined' ? localStorage : null,
+): void {
+    try {
+        storage?.setItem(AUTO_ADVANCE_KEY, enabled ? '1' : '0');
     } catch {
         // ignore
     }

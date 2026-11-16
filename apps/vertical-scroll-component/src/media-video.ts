@@ -20,6 +20,7 @@ export class ScrollMediaVideo extends LitElement {
 
     @property({ attribute: false }) item!: ScrollItem;
     @property({ attribute: false }) active = false;
+    @property({ attribute: false }) autoAdvance = false;
 
     @state() private soundOn = getSoundOn();
     @state() private src: string | null = null;
@@ -52,7 +53,7 @@ export class ScrollMediaVideo extends LitElement {
 
     togglePlay(): void {
         if (!this.active) return;
-        if (embedUrlFor(this.embedSource())) {
+        if (embedUrlFor(this.embedSource(), this.embedOptions())) {
             const win = this.iframe?.contentWindow;
             const provider = embedProviderForUrl(this.embedSource());
             if (!win || !provider?.commandPlayer) return;
@@ -119,8 +120,12 @@ export class ScrollMediaVideo extends LitElement {
         return this.item?.videoUrl ?? this.item?.url ?? null;
     }
 
-    private isSameEmbed(prev: ScrollItem | undefined, nextEmbed: string | null): boolean {
-        const prevEmbed = embedUrlFor(prev?.videoUrl ?? prev?.url ?? null);
+    private embedOptions(): { loop: boolean } {
+        return { loop: !this.autoAdvance };
+    }
+
+    private isSameEmbed(prev: ScrollItem | undefined, prevAutoAdvance: boolean, nextEmbed: string | null): boolean {
+        const prevEmbed = embedUrlFor(prev?.videoUrl ?? prev?.url ?? null, { loop: !prevAutoAdvance });
         return !!prevEmbed && prevEmbed === nextEmbed;
     }
 
@@ -146,10 +151,11 @@ export class ScrollMediaVideo extends LitElement {
     }
 
     override willUpdate(changed: Map<string, unknown>): void {
-        if (!changed.has('item')) return;
-        const prev = changed.get('item') as ScrollItem | undefined;
-        const nextEmbed = embedUrlFor(this.embedSource());
-        if (this.isSameEmbed(prev, nextEmbed)) return;
+        if (!changed.has('item') && !changed.has('autoAdvance')) return;
+        const prev = (changed.get('item') as ScrollItem | undefined) ?? this.item;
+        const prevAutoAdvance = changed.has('autoAdvance') ? (changed.get('autoAdvance') as boolean) : this.autoAdvance;
+        const nextEmbed = embedUrlFor(this.embedSource(), this.embedOptions());
+        if (this.isSameEmbed(prev, prevAutoAdvance, nextEmbed)) return;
         this.resetPlaybackState();
         if (nextEmbed) return;
         this.resolveNativeSource();
@@ -219,6 +225,16 @@ export class ScrollMediaVideo extends LitElement {
         for (const command of commands) provider.commandPlayer(win, command);
     }
 
+    private emitPlaybackEnded(): void {
+        if (!this.active || !this.isConnected) return;
+        this.dispatchEvent(
+            new CustomEvent('playback-ended', {
+                bubbles: true,
+                composed: true,
+            }),
+        );
+    }
+
     private handleParsedMessage(parsed: import('./embeds/types').EmbedPlayerEvent | null): boolean {
         if (!parsed) return false;
         if (parsed.type === 'ready') {
@@ -232,7 +248,11 @@ export class ScrollMediaVideo extends LitElement {
             // unmute from syncEmbedPlayback. Re-assert once it is running.
             if (this.active) this.sendCommands(playedCommands(this.soundOn));
         }
-        if (parsed.type === 'paused' || parsed.type === 'ended') this.setPlaying(false);
+        if (parsed.type === 'paused') this.setPlaying(false);
+        if (parsed.type === 'ended') {
+            this.setPlaying(false);
+            this.emitPlaybackEnded();
+        }
         if (parsed.type === 'time' && !this.seeking) {
             this.embedTime = parsed.currentTime;
             this.embedDuration = parsed.duration;
@@ -415,11 +435,16 @@ export class ScrollMediaVideo extends LitElement {
         </div>`;
     }
 
+    private onVideoEnded(): void {
+        this.setPlaying(false);
+        this.emitPlaybackEnded();
+    }
+
     private renderNativeMedia(original: string | null): TemplateResult {
         if (this.resolveFailed)
             return html`<div class="video-fallback"><p class="fallback-text">Video unavailable</p><div class="fallback-actions"><button class="fallback-button" @click=${this.onRetry}>Retry</button>${original ? html`<a class="fallback-link" href=${original} target="_blank" rel="noopener noreferrer">Open original ↗</a>` : html``}</div></div>`;
         if (this.src)
-            return html`<video class="media-video" src=${this.src} poster=${this.poster ?? ''} playsinline loop preload="metadata" controls @error=${this.onVideoError} ${ref(this.onVideoRef)}></video>`;
+            return html`<video class="media-video" src=${this.src} poster=${this.poster ?? ''} playsinline ?loop=${!this.autoAdvance} preload="metadata" controls @error=${this.onVideoError} @ended=${this.onVideoEnded} ${ref(this.onVideoRef)}></video>`;
         return html`<span class="video-spinner" aria-label="Loading video"></span>`;
     }
 
@@ -434,7 +459,7 @@ export class ScrollMediaVideo extends LitElement {
     }
 
     override render(): TemplateResult {
-        const embedUrl = embedUrlFor(this.embedSource());
+        const embedUrl = embedUrlFor(this.embedSource(), this.embedOptions());
         return embedUrl ? this.renderEmbed(embedUrl) : this.renderNative();
     }
 }

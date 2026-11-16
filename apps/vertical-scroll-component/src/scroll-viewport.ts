@@ -28,6 +28,7 @@ export class ScrollViewport extends LitElement {
     @property({ attribute: false }) resetKey = '';
     /** Slide to land on after mount / resetKey. Used to restore a saved position. */
     @property({ attribute: false }) startIndex = 0;
+    @property({ attribute: false }) autoAdvance = false;
     /**
      * Accessible name for the scroll region. The package names no screen, so
      * the consumer supplies this; omitting it leaves the group unnamed, which a
@@ -315,6 +316,12 @@ export class ScrollViewport extends LitElement {
         if (active && event.composedPath().includes(active)) this.playing = event.detail.playing;
     }
 
+    private onPlaybackEnded(event: Event): void {
+        if (!this.autoAdvance || !this.isConnected) return;
+        const active = this.renderRoot.querySelector('.slide-inner.active');
+        if (active && event.composedPath().includes(active)) this.nextSlide();
+    }
+
     /**
      * Native files and scriptable embeds (TikTok) can be driven; YouTube-style
      * iframes have no commandPlayer, and image/text slides have no player.
@@ -356,7 +363,7 @@ export class ScrollViewport extends LitElement {
     private renderSlideItem(item: ScrollItem, index: number, from: number, to: number, count: number): TemplateResult {
         const visible = index >= from && index <= to;
         return html`<section class="slide" style="transform: translateY(${index * 100}%); height: ${100 / count}%">
-            <div class="slide-inner${index === this.activeIndex ? ' active' : ''}">${visible ? html`<vsc-scroll-slide .item=${item} .active=${index === this.activeIndex}></vsc-scroll-slide>` : html`<div class="slide-placeholder"></div>`}</div>
+            <div class="slide-inner${index === this.activeIndex ? ' active' : ''}">${visible ? html`<vsc-scroll-slide .item=${item} .active=${index === this.activeIndex} .autoAdvance=${this.autoAdvance}></vsc-scroll-slide>` : html`<div class="slide-placeholder"></div>`}</div>
         </section>`;
     }
 
@@ -368,7 +375,7 @@ export class ScrollViewport extends LitElement {
         const count = this.items.length;
         const from = Math.max(0, this.activeIndex - SLIDE_WINDOW);
         const to = Math.min(count - 1, this.activeIndex + SLIDE_WINDOW);
-        return html`<div class="scroll-viewport${this.dragging ? ' dragging' : ''}" tabindex="0" role="group" aria-label=${ifDefined(this.label || undefined)} ${ref(this.onViewportRef)} @scroll=${this.onScroll} @pointerdown=${this.onPointerDown} @playback-change=${this.onPlaybackChange}>
+        return html`<div class="scroll-viewport${this.dragging ? ' dragging' : ''}" tabindex="0" role="group" aria-label=${ifDefined(this.label || undefined)} ${ref(this.onViewportRef)} @scroll=${this.onScroll} @pointerdown=${this.onPointerDown} @playback-change=${this.onPlaybackChange} @playback-ended=${this.onPlaybackEnded}>
                 <div class="slides" style="height: ${count * 100}%">${this.items.map((item, index) => this.renderSlideItem(item, index, from, to, count))}</div>
             </div>${this.renderChrome()}`;
     }

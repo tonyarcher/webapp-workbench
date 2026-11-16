@@ -67,7 +67,7 @@ export const YOUTUBE: EmbedProvider = {
     // fails with Error 153 when it's stripped, so this overrides the
     // no-referrer default. Sends only the app origin to YouTube.
     iframeReferrerPolicy: 'strict-origin-when-cross-origin',
-    embedUrl(url) {
+    embedUrl(url, _options) {
         const id = youtubeId(url ?? '');
         // privacy-enhanced host; plain youtube.com sets cookies even before playback
         return id ? safeUrl(`https://www.youtube-nocookie.com/embed/${id}`) : null;

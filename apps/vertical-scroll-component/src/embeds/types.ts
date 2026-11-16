@@ -12,7 +12,7 @@ export interface EmbedProvider {
     /** Extracts the embed id from a page URL, or null if the URL isn't this provider. */
     id(url: string): string | null;
     /** Maps a page URL to the official embed iframe URL, or null when not this provider / unsafe. */
-    embedUrl(url: string | null): string | null;
+    embedUrl(url: string | null, options?: { loop?: boolean }): string | null;
     /**
      * Static poster image for the inactive placeholder, or null when the
      * provider has no simple thumbnail (e.g. redgifs).

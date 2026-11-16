@@ -4,7 +4,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { toScrollItem } from '../../services/to-scroll-item';
 import { resolveTiktokOEmbed, watchedOEmbedIndex } from '../../services/resolve-oembed';
-import { saveProgress, saveSessionItems } from '../../services/session-store';
+import { loadAutoAdvance, saveAutoAdvance, saveProgress, saveSessionItems } from '../../services/session-store';
 import type { ClipLink } from '../../types';
 import type { ScrollItem, ScrollViewport } from 'vertical-scroll-component';
 import 'vertical-scroll-component';
@@ -28,6 +28,7 @@ export class WatchView extends LitElement {
     @state() private maxSeen = 0;
     @state() private resetKey = '';
     @state() private sidebarOpen = false;
+    @state() private autoAdvance = false;
 
     private viewport: ScrollViewport | null = null;
     private prevItems: ClipLink[] = [];
@@ -167,6 +168,11 @@ export class WatchView extends LitElement {
         this.viewport?.goToIndex(event.detail.index);
     }
 
+    private onAutoAdvanceChange(event: CustomEvent<{ enabled: boolean }>): void {
+        this.autoAdvance = event.detail.enabled;
+        saveAutoAdvance(this.autoAdvance);
+    }
+
     private onBackdrop(): void {
         this.sidebarOpen = false;
     }
@@ -181,6 +187,7 @@ export class WatchView extends LitElement {
 
     override connectedCallback(): void {
         super.connectedCallback();
+        this.autoAdvance = loadAutoAdvance();
         window.addEventListener('keydown', this.onWindowKeydown);
         window.addEventListener('pagehide', this.flushProgress);
     }
@@ -256,7 +263,9 @@ export class WatchView extends LitElement {
                 .activeIndex=${this.activeIndex}
                 .maxSeen=${this.maxSeen}
                 .skippedCount=${this.skippedCount}
+                .autoAdvance=${this.autoAdvance}
                 @jump=${this.onJump}
+                @auto-advance-change=${this.onAutoAdvanceChange}
                 @new-list=${this.emitNewList}
                 @close=${this.onBackdrop}
             ></cs-progress-sidebar>
@@ -269,6 +278,7 @@ export class WatchView extends LitElement {
                 .items=${this.scrollItems}
                 .resetKey=${this.resetKey}
                 .startIndex=${this.startIndex}
+                .autoAdvance=${this.autoAdvance}
                 label="Clips"
                 @active-index-change=${this.onActive}
                 ${ref(this.onViewportRef)}

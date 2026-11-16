@@ -69,7 +69,7 @@ export const INSTAGRAM: EmbedProvider = {
     // unplayable here — Instagram has no commandPlayer, so the user must
     // click the iframe's own play button. The `portrait` class in
     // media-video.ts still frames it 9:16.
-    embedUrl(url) {
+    embedUrl(url, _options) {
         const code = instagramId(url ?? '');
         // /p/{code}/embed is the documented iframe and works for reels too.
         return code ? safeUrl(`https://www.instagram.com/p/${code}/embed`) : null;
