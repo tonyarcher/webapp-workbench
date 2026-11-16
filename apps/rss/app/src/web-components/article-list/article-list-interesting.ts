@@ -3,7 +3,7 @@ import { buildWordMap, selectInteresting } from '../../services/interesting-word
 import { loadInterestingStrictness, loadWordMap, loadWordMapIds } from '../../services/interesting-settings';
 import { saveInterestingCount } from '../../services/interesting-counts';
 import { filterMutedArticles, loadMuteRules, type FeedFolderLookup } from '../../services/mute-rules';
-import type { Article, Feed, View } from '../../types';
+import type { Article, ArticleSort, Feed, View } from '../../types';
 
 /** Bounded newest batch the ✨ Interesting folder view ranks at once. */
 export const INTERESTING_BATCH = 200;
@@ -18,6 +18,7 @@ interface InterestingHost {
     hasMoreSingle: boolean;
     cursors: Map<string, string | undefined>;
     mutedHidden: number;
+    sort: ArticleSort;
     interestingStrictness?: number;
     library?: { data?: { feeds: Feed[] } };
 }
@@ -50,15 +51,22 @@ export function interestingWordMapOf(batch: Article[]): Record<string, number> {
     return merged;
 }
 
+function sortInteresting(items: Article[], sort: ArticleSort): Article[] {
+    const out = [...items];
+    if (sort === 'hot')
+        return out.sort((a, b) => b.hot - a.hot || b.published - a.published || a.id.localeCompare(b.id));
+    if (sort === 'oldest') return out.sort((a, b) => a.published - b.published || a.id.localeCompare(b.id));
+    return out.sort((a, b) => b.published - a.published || a.id.localeCompare(b.id));
+}
+
 /**
- * Interesting view: one bounded newest batch for the folder, ranked by
- * the learned word map and cut by the selectivity slider. The default
- * strictness keeps a bit over half of the positives plus an absolute
- * floor, so a broad map still hides something instead of showing all.
- * No cursors, no further paging — the batch is the whole list.
- * `toDecisionState` in interesting-words stays the documented
- * attach point if a server-side Jev ranking ever replaces this local one;
- * the key must stay server-side, so the browser never calls Jev directly.
+ * Interesting view: filter a bounded recent batch by learned relevance
+ * (selectivity/word map), then order the kept articles by the view sort.
+ * Interestingness decides which articles qualify; `host.sort` decides their
+ * display order. No cursors, no further paging — the batch is the whole list.
+ * `toDecisionState` in interesting-words stays the documented attach point if
+ * a server-side Jev ranking ever replaces this local one; the key must stay
+ * server-side, so the browser never calls Jev directly.
  */
 export async function loadInterestingBatchAction(host: InterestingHost, gen: number): Promise<void> {
     if (host.view.kind !== 'interesting') return;
@@ -75,11 +83,12 @@ export async function loadInterestingBatchAction(host: InterestingHost, gen: num
     host.mutedHidden = visible.length - filtered.length;
     const wordMap = interestingWordMapOf(filtered);
     const strictness = host.interestingStrictness ?? loadInterestingStrictness(host.view.id);
-    const ranked = selectInteresting(filtered, wordMap, strictness);
-    host.items = ranked.slice(0, host.pageSize);
+    const selected = selectInteresting(filtered, wordMap, strictness);
+    const ordered = sortInteresting(selected, host.sort);
+    host.items = ordered.slice(0, host.pageSize);
     // Badge is the whole visible set, not just the current page, so Mark shown
     // as read visibly lowers it instead of refilling to the page size.
-    saveInterestingCount(host.view.id, ranked.length);
+    saveInterestingCount(host.view.id, ordered.length);
     host.hasMoreSingle = false;
     host.cursors.clear();
 }

@@ -329,7 +329,6 @@ export function renderInterestingHint(host: ArticleListRenderHost) {
 }
 
 function renderSortSelect(host: ArticleListRenderHost) {
-    if (host.interestingActive()) return html``;
     return html`<label class="sort"><select aria-label="Sort articles" .value=${host.sort} @change=${(e: Event) => {
         host.sort = (e.target as HTMLSelectElement).value as ArticleSort;
         host.saveViewSettings();
