@@ -105,8 +105,11 @@ A stale Vite process on 5199 hangs baseball e2e — kill it first.
    (build tooling, deploy config, each service, the client), each given the files it owns. A
    review that returns no verdict is not an `APPROVE` — re-scope and re-dispatch, and never read
    a step-limited report as consent.
-5. Do not commit or push unless the user explicitly asks. Conventional commits
-   (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`). Stage files explicitly.
+5. After verification, jev-gate (when required), and `review` returns `APPROVE`,
+   create a conventional commit (`feat:`, `fix:`, `chore:`, `test:`, `docs:`,
+   `refactor:`). Stage files explicitly. Do not push, deploy, or ship unless the
+   user explicitly asks. Keep fixing and re-reviewing until `APPROVE` before
+   committing.
 6. `AGENTS.md` files may be
    updated to stay in sync with the code — but never to dodge the work. Do not
    weaken a documented rule or floor instead of meeting it. Change the code
