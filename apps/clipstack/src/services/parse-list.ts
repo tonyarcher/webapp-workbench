@@ -49,6 +49,7 @@ function validId(raw: string): string | null {
 const ID_PATTERNS: Array<{ re: RegExp; pick: (match: RegExpMatchArray) => string | null }> = [
     { re: /\/share\/video\/(\d{6,32})/, pick: (match) => match[1] ?? null },
     { re: /(?:^|\/)video\/(\d{6,32})/, pick: (match) => match[1] ?? null },
+    { re: /(?:^|\/)photo\/(\d{6,32})/, pick: (match) => match[1] ?? null },
     { re: /(?:^|\/)v\/(\d{6,32})(?:\.html)?/i, pick: (match) => validId(match[1] ?? '') },
     { re: /\/embed\/v2\/(\d{6,32})/, pick: (match) => match[1] ?? null },
     { re: /\/player\/v1\/(\d{6,32})/, pick: (match) => match[1] ?? null },

@@ -9,7 +9,7 @@ export function toScrollItem(link: ClipLink, index: number, total: number): Scro
         mediaType: 'Video',
         videoUrl: page,
         url: page,
-        originalUrl: page,
+        originalUrl: link.url,
         metaLine: link.date ? `${index + 1} of ${total} · ${link.date}` : `${index + 1} of ${total}`,
     };
     if (link.author !== undefined) item.author = link.author;

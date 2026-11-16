@@ -101,12 +101,23 @@ function assert(cond: unknown, msg: string): void {
     );
 }
 
-// photo post skipped no-id
+// photo post with short/non-numeric id skipped no-id
 {
     const r = parseLinkList('https://www.tiktok.com/@user/photo/123');
-    assert(r.items.length === 0, 'photo not playable');
-    assert(r.skipped.length === 1, 'photo skipped');
-    assert(r.skipped[0]!.reason === 'no-id', 'photo reason no-id');
+    assert(r.items.length === 0, 'short photo id not playable');
+    assert(r.skipped.length === 1, 'short photo id skipped');
+    assert(r.skipped[0]!.reason === 'no-id', 'short photo id reason no-id');
+}
+
+// TikTok photo post with playable id is imported
+{
+    const r = parseLinkList('https://www.tiktok.com/@photo_user/photo/7123456789012345678');
+    assert(r.items.length === 1, 'photo post parsed');
+    assert(r.skipped.length === 0, 'photo post not skipped');
+    assert(r.items[0]!.id === '7123456789012345678', 'photo post id');
+    assert(r.items[0]!.provider === 'tiktok', 'photo post provider');
+    assert(r.items[0]!.author === 'photo_user', 'photo post author');
+    assert(r.items[0]!.url === 'https://www.tiktok.com/@photo_user/photo/7123456789012345678', 'photo post keeps url');
 }
 
 // non-tiktok skipped
@@ -259,10 +270,10 @@ function assert(cond: unknown, msg: string): void {
         1,
     );
     assert(item.metaLine === '1 of 1 · 2026-06-07 01:25:56 UTC', 'date in metaLine');
-    assert(item.originalUrl === 'https://www.tiktokv.com/share/video/191919/', 'original is share url');
+    assert(item.originalUrl === 'https://www.tiktokv.com/share/video/191919/', 'original is imported share url');
 }
 
-// oEmbed pageUrl wins for Open original
+// originalUrl keeps the imported link; pageUrl drives playback/navigation
 {
     const item = toScrollItem(
         {
@@ -274,7 +285,11 @@ function assert(cond: unknown, msg: string): void {
         0,
         1,
     );
-    assert(item.originalUrl === 'https://www.tiktok.com/@ufo.phenom/video/7463395292222672170', 'pageUrl for original');
+    assert(
+        item.originalUrl === 'https://www.tiktokv.com/share/video/7463395292222672170/',
+        'original keeps imported url',
+    );
+    assert(item.videoUrl === 'https://www.tiktok.com/@ufo.phenom/video/7463395292222672170', 'pageUrl for playback');
     assert(item.title === '@ufo.phenom', 'author title');
     assert(item.author === 'ufo.phenom', 'author field set');
 }

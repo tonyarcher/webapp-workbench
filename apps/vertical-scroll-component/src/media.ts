@@ -5,6 +5,28 @@ import { stripImageProxy } from './embeds/util';
 
 export { stripImageProxy };
 
+const TIKTOK_PHOTO_PATH_RE = /\/photo\/\d{6,32}(?:[/?#]|$)/i;
+
+export function isTiktokPhotoUrl(url: string | null | undefined): boolean {
+    if (!url) return false;
+    try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.toLowerCase();
+        const isTiktokHost =
+            host === 'tiktok.com' ||
+            host.endsWith('.tiktok.com') ||
+            host === 'tiktokv.com' ||
+            host.endsWith('.tiktokv.com');
+        return isTiktokHost && TIKTOK_PHOTO_PATH_RE.test(parsed.pathname);
+    } catch {
+        return false;
+    }
+}
+
+export function shouldEmitTimeEnded(currentTime: number, duration: number): boolean {
+    return Number.isFinite(currentTime) && Number.isFinite(duration) && duration > 0 && currentTime >= duration - 0.25;
+}
+
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)(\?|#|$)/i;
 const VIDEO_EXT = /\.(mp4|webm|mov|m4v|ogg|ogv)(\?|#|$)/i;
 const IMAGE_LINK_RE = /!\[[^\]]*\]\((\S+)\)/g;

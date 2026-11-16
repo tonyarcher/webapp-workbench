@@ -35,7 +35,7 @@ function isTiktokHost(host: string): boolean {
 }
 
 function idFromPrefixes(path: string): string | null {
-    for (const prefix of ['/share/video/', '/video/', '/embed/v2/', '/player/v1/', '/v/']) {
+    for (const prefix of ['/share/video/', '/video/', '/photo/', '/embed/v2/', '/player/v1/', '/v/']) {
         const raw = pathSegmentAfter(path, prefix);
         if (!raw) continue;
         const id = raw.replace(/\.html$/i, '');
@@ -45,9 +45,9 @@ function idFromPrefixes(path: string): string | null {
     return null;
 }
 
-function idFromAtVideo(path: string): string | null {
-    const atVideo = path.match(/\/video\/(\d+)/);
-    if (atVideo) return isValidId(atVideo[1] ?? null);
+function idFromAtMedia(path: string): string | null {
+    const atMedia = path.match(/\/(?:video|photo)\/(\d+)/);
+    if (atMedia) return isValidId(atMedia[1] ?? null);
     return null;
 }
 
@@ -56,7 +56,7 @@ function tiktokId(url: string): string | null {
     const parsed = parseUrlSafe(url);
     if (!parsed) return null;
     if (!isTiktokHost(parsed.hostname.toLowerCase())) return null;
-    return idFromPrefixes(parsed.pathname) ?? idFromAtVideo(parsed.pathname);
+    return idFromPrefixes(parsed.pathname) ?? idFromAtMedia(parsed.pathname);
 }
 
 const TIKTOK_PLAYER_ORIGIN = 'https://www.tiktok.com';

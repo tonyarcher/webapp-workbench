@@ -67,11 +67,10 @@ export class ProgressSidebar extends LitElement {
 
     private rowLabel(item: ClipLink): string {
         const user = item.author ? `@${item.author}` : null;
-        const sourceId = `${item.provider ?? 'tiktok'} ${item.id}`;
-        if (item.date && user) return `${sourceId} / ${item.date} / ${user}`;
-        if (item.date) return `${sourceId} / ${item.date}`;
-        if (user) return `${sourceId} / ${user}`;
-        return sourceId;
+        if (item.date && user) return `${item.date} / ${user}`;
+        if (item.date) return item.date;
+        if (user) return user;
+        return '';
     }
 
     private renderRow(item: ClipLink, index: number): TemplateResult {
@@ -88,7 +87,7 @@ export class ProgressSidebar extends LitElement {
         const total = this.items.length;
         const progress = total > 0 ? ((this.activeIndex + 1) / total) * 100 : 0;
         const skipped = this.skippedCount;
-        return html`<div class="sidebar">${this.renderBrand()}<div class="count">${this.activeIndex + 1} / ${total}${skipped > 0 ? ` · ${skipped} skipped` : ''}</div><div class="progress-track"><div class="progress-fill" style="width: ${progress}%"></div></div><div class="scroller" ${ref(this.onListRef)}>${this.renderList()}<div class="toolbar"><label class="auto-advance"><input type="checkbox" .checked=${this.autoAdvance} @change=${this.onAutoAdvanceChange}>Auto-advance</label><button class="new-list" @click=${this.emitNewList}>New list</button></div></div></div>`;
+        return html`<div class="sidebar">${this.renderBrand()}<div class="count">${this.activeIndex + 1} / ${total}${skipped > 0 ? ` · ${skipped} skipped` : ''}</div><div class="progress-track"><div class="progress-fill" style="width: ${progress}%"></div></div><label class="auto-advance auto-advance-top"><input type="checkbox" .checked=${this.autoAdvance} @change=${this.onAutoAdvanceChange}>Auto-advance</label><div class="scroller" ${ref(this.onListRef)}>${this.renderList()}<div class="toolbar"><button class="new-list" @click=${this.emitNewList}>New list</button></div></div></div>`;
     }
 }
 

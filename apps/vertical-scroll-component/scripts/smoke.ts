@@ -1,4 +1,11 @@
-import { classifyScrollItem, extractImageUrls, stripImageProxy, aspectRatioFromUrl } from '../src/media';
+import {
+    classifyScrollItem,
+    extractImageUrls,
+    stripImageProxy,
+    aspectRatioFromUrl,
+    isTiktokPhotoUrl,
+    shouldEmitTimeEnded,
+} from '../src/media';
 import { safeUrl } from '../src/url';
 import { timeAgo, compactNumber } from '../src/format';
 import { registerEmbedProvider, EMBED_PROVIDERS, embedUrlFor, embedProviderForUrl } from '../src/embeds';
@@ -108,6 +115,10 @@ assert(
     embedUrlFor('https://www.tiktokv.com/share/video/7450092027154566446/')?.includes('player/v1/7450092027154566446'),
     'tiktokv data-export share url',
 );
+assert(
+    embedUrlFor('https://www.tiktok.com/@user/photo/7123456789012345678')?.includes('player/v1/7123456789012345678'),
+    'tiktok photo url embeds via player',
+);
 {
     const provider = embedProviderForUrl('https://www.tiktok.com/@u/video/1234567890');
     assert(provider?.commandPlayer !== undefined, 'tiktok has commandPlayer');
@@ -190,5 +201,17 @@ assert(embedUrlFor(null) === null, 'embed null safe');
 
 // aspectRatioFromUrl
 assert(aspectRatioFromUrl('https://x/pictrs/img_1280x720.png') === 1280 / 720, 'aspect ratio');
+
+// TikTok photo URL detection (used for auto-advance fallback behavior)
+assert(isTiktokPhotoUrl('https://www.tiktok.com/@user/photo/7123456789012345678'), 'tiktok photo url');
+assert(isTiktokPhotoUrl('https://m.tiktok.com/@user/photo/7123456789012345678?x=1'), 'mobile tiktok photo url');
+assert(!isTiktokPhotoUrl('https://www.tiktok.com/@user/video/7123456789012345678'), 'tiktok video is not photo url');
+assert(!isTiktokPhotoUrl('https://example.com/@user/photo/7123456789012345678'), 'non-tiktok photo-like url');
+assert(!isTiktokPhotoUrl(null), 'null photo url');
+
+assert(shouldEmitTimeEnded(29.8, 30), 'time near duration ends');
+assert(shouldEmitTimeEnded(30, 30), 'time at duration ends');
+assert(!shouldEmitTimeEnded(10, 30), 'time before duration does not end');
+assert(!shouldEmitTimeEnded(5, 0), 'unknown duration does not end by time');
 
 console.log('smoke.ts: all assertions passed');
