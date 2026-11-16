@@ -178,6 +178,10 @@ export class ScrollMediaVideo extends LitElement {
         }
         if (changed.has('active')) this.applyEmbedScale();
         if (changed.has('active') && this.active) this.naturalEnded = false;
+        if (changed.has('active') && !this.active) {
+            this.embedTime = 0;
+            this.embedDuration = 0;
+        }
         if (changed.has('active') || changed.has('autoAdvance') || changed.has('item')) this.auto.syncPhoto();
         if (
             changed.has('active') ||
@@ -260,16 +264,17 @@ export class ScrollMediaVideo extends LitElement {
             this.auto.emitEnded();
         }
         if (parsed.type === 'time' && !this.seeking) {
+            const previousTime = this.embedTime;
             this.embedTime = parsed.currentTime;
             this.embedDuration = parsed.duration;
             this.sawPlaybackProgress = true;
             this.auto.clearUnavailableTimer();
-            if (
+            const endedByTime =
                 this.autoAdvance &&
                 this.active &&
-                this.auto.isPhotoPost() &&
-                shouldEmitTimeEnded(parsed.currentTime, parsed.duration)
-            ) {
+                (shouldEmitTimeEnded(parsed.currentTime, parsed.duration) ||
+                    (previousTime >= parsed.duration - 1.5 && parsed.currentTime <= 1 && parsed.duration > 0));
+            if (endedByTime) {
                 this.auto.emitEnded();
             }
         }
