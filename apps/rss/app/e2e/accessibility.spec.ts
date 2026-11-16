@@ -158,7 +158,8 @@ test('the command palette has no automatic accessibility violations', async ({ p
     await page.goto('/');
     await expect(page.getByText('First article', { exact: true })).toBeVisible();
     await page.keyboard.press('Control+K');
-    await expect(page.getByRole('dialog', { name: 'Command palette' })).toBeVisible();
-    await expect(page.getByLabel('Commands')).toBeVisible();
+    const dialog = page.getByRole('dialog', { name: 'Command palette' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel('Commands')).toBeVisible();
     expect(await audit(page)).toEqual([]);
 });

@@ -157,15 +157,44 @@ header .sub {
     line-height: 1;
 }
 
-.palette {
+.palette-search-trigger {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 46px;
-    min-height: 30px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    line-height: 1;
+    justify-content: space-between;
+    gap: 8px;
+    width: 220px;
+    max-width: 32vw;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--input-bg);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.palette-search-trigger:hover {
+    background: var(--hover);
+}
+
+.palette-search-trigger:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.palette-search-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.palette-search-hint {
+    font: inherit;
+    font-size: 11px;
+    color: var(--text-muted);
 }
 
 .layout {

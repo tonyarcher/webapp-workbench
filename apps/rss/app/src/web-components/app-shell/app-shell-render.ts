@@ -75,7 +75,16 @@ function renderHeader(host: AppShellRenderHost) {
             <div class="spacer"></div>
             ${host.username ? html`<span class="who">${host.username}</span><button class="signout" @click=${host.onSignOut}>Sign out</button>` : ''}
             <button class="gear help" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts (?)" @click=${host.onShowShortcuts}>?</button>
-            <button class="gear palette" title="Command palette (Ctrl+K)" aria-label="Command palette Ctrl+K" @click=${host.openPalette}>Ctrl+K</button>
+            <button
+                type="button"
+                class="palette-search-trigger"
+                aria-label="Search commands Ctrl+K"
+                title="Command palette (Ctrl+K)"
+                @click=${host.openPalette}
+            >
+                <span class="palette-search-text">Search commands</span>
+                <kbd class="palette-search-hint" aria-hidden="true">Ctrl+K</kbd>
+            </button>
             <button class="gear" title="Settings" @click=${() => {
                 host.settingsOpen = true;
             }}>${renderGearIcon()}</button>
