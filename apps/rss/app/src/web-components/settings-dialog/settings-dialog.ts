@@ -1,6 +1,7 @@
 import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { applyTheme, getTheme, type Theme } from '../../theme';
+import { loadReaderMode, saveReaderMode, applyReaderMode, type ReaderMode } from '../../services/reader-mode';
 import { modalClosed, modalOpened } from '../../services/modal-guard';
 import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
 import { normalizeMastodonHost, type ShareTarget } from '../../services/share';
@@ -45,6 +46,7 @@ export class SettingsDialog extends LitElement {
     @property({ attribute: false }) view: View = { kind: 'all' };
 
     @state() theme: Theme = 'light';
+    @state() readerMode = loadReaderMode();
     @state() adding = false;
     @state() busy = false;
     @state() migrating = false;
@@ -103,6 +105,12 @@ export class SettingsDialog extends LitElement {
         if (value !== 'detailed' && value !== 'headline' && value !== 'cards' && value !== 'slideshow') return;
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, listView: value });
         this.saveViewDefaults();
+    }
+
+    setReaderMode(mode: ReaderMode) {
+        this.readerMode = mode;
+        saveReaderMode(mode);
+        applyReaderMode(mode);
     }
 
     setSort(value: string) {

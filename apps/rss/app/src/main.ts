@@ -12,6 +12,7 @@ import './web-components/feed-menu/feed-menu';
 import './web-components/folder-menu/folder-menu';
 import './styles/global.css';
 import { initTheme } from './theme';
+import { applyReaderMode, loadReaderMode } from './services/reader-mode';
 import { finishLoginFromCallback } from './services/auth';
 import { parseAppConfig, setAppConfig } from './services/config';
 import { recomputeHotIfNeeded } from './db/db-query';
@@ -33,6 +34,7 @@ const loggedIn = await finishLoginFromCallback().catch((err: unknown) => {
 if (loggedIn) window.dispatchEvent(new CustomEvent('rss-auth-changed'));
 
 initTheme();
+applyReaderMode(loadReaderMode());
 void recomputeHotIfNeeded();
 
 // PWA install + offline support; registration in dev would fight HMR, so only

@@ -20,6 +20,8 @@ export interface SettingsDialogSectionsHost {
     shareTargets: ShareTarget[];
     viewSettings: ViewSettings;
     viewStatus: string;
+    readerMode: import('../../services/reader-mode').ReaderMode;
+    setReaderMode: (mode: import('../../services/reader-mode').ReaderMode) => void;
     showHistory: boolean;
     canUseCurrentView: boolean;
     onThemeClick: (e: Event) => void;
@@ -92,6 +94,24 @@ export function renderReadingSection(host: SettingsDialogSectionsHost) {
         <div class="view-toggles">
           <label class="share-target"><input type="checkbox" .checked=${s.unreadOnly} @change=${(e: Event) => host.setUnreadOnly((e.target as HTMLInputElement).checked)} />Unread only</label>
           <label class="share-target"><input type="checkbox" .checked=${s.markOnScroll} @change=${(e: Event) => host.setMarkOnScroll((e.target as HTMLInputElement).checked)} />Mark on scroll</label>
+        </div>
+        <div class="view-defaults">
+          <label class="view-field"><span>Font</span>
+            <select .value=${host.readerMode.font} @change=${(e: Event) => host.setReaderMode({ ...host.readerMode, font: (e.target as HTMLSelectElement).value as any })}>
+              <option value="sans">Sans</option><option value="serif">Serif</option><option value="dyslexia">Dyslexia-friendly</option>
+            </select></label>
+          <label class="view-field"><span>Size</span>
+            <select .value=${host.readerMode.size} @change=${(e: Event) => host.setReaderMode({ ...host.readerMode, size: (e.target as HTMLSelectElement).value as any })}>
+              <option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option>
+            </select></label>
+          <label class="view-field"><span>Line spacing</span>
+            <select .value=${host.readerMode.line} @change=${(e: Event) => host.setReaderMode({ ...host.readerMode, line: (e.target as HTMLSelectElement).value as any })}>
+              <option value="compact">Compact</option><option value="normal">Normal</option><option value="relaxed">Relaxed</option>
+            </select></label>
+          <label class="view-field"><span>Width</span>
+            <select .value=${host.readerMode.width} @change=${(e: Event) => host.setReaderMode({ ...host.readerMode, width: (e.target as HTMLSelectElement).value as any })}>
+              <option value="narrow">Narrow</option><option value="medium">Medium</option><option value="wide">Wide</option>
+            </select></label>
         </div>
         <div class="view-actions">
           ${host.canUseCurrentView ? html`<button class="btn" @click=${host.useCurrentView}>Use current view</button>` : ''}
