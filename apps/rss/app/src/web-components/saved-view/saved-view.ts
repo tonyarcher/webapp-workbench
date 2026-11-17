@@ -1,5 +1,5 @@
 import { html, LitElement, unsafeCSS } from 'lit';
-import { customElement } from 'lit/decorators.js';
+import { customElement, state } from 'lit/decorators.js';
 import { fetchSavedArticlesList, savedArticlesKey, QueryController } from '../../query';
 import { unsaveForLater } from '../../mutations';
 import { domainOf, formatDate } from '../../util';
@@ -29,6 +29,19 @@ function toArticle(s: SavedArticleSnapshot): Article {
 export class SavedView extends LitElement {
     static override styles = unsafeCSS(styles);
 
+    @state() private storageEstimate: { usage: number; quota: number } | null = null;
+
+    override connectedCallback() {
+        super.connectedCallback();
+        void this.refreshStorage();
+    }
+
+    private async refreshStorage() {
+        if (!navigator.storage?.estimate) return;
+        const est = await navigator.storage.estimate();
+        this.storageEstimate = { usage: est.usage ?? 0, quota: est.quota ?? 0 };
+    }
+
     private saved = new QueryController<SavedArticleSnapshot[]>(this, () => ({
         queryKey: savedArticlesKey,
         queryFn: () => fetchSavedArticlesList(),
@@ -39,7 +52,7 @@ export class SavedView extends LitElement {
         const items = this.saved.data ?? [];
         return html`
             <div class="view">
-                <div class="toolbar"><h2>Saved for later</h2><span class="meta">${items.length} item${items.length === 1 ? '' : 's'}</span></div>
+                <div class="toolbar"><h2>Saved for later</h2><span class="meta">${items.length} item${items.length === 1 ? '' : 's'}</span>${this.storageEstimate ? html`<span class="storage">${(this.storageEstimate.usage / 1024 / 1024).toFixed(1)} MB used</span>` : ''}</div>
                 <div class="body" tabindex="0">
                     ${this.saved.error ? html`<div class="empty error">Could not load saved articles.</div>` : ''}
                     ${!items.length && !this.saved.error ? html`<div class="empty">No saved articles yet. Use “Save for later” while reading an article.</div>` : ''}
