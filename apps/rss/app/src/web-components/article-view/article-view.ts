@@ -196,7 +196,7 @@ export class ArticleView extends LitElement {
           <button class="btn icon-btn" @click=${() => (this.overflowOpen = !this.overflowOpen)} aria-label="More actions" title="More actions">${actionIcon('more')}</button>
           ${
               this.overflowOpen
-                  ? html`<div class="overflow-menu">
+                  ? html`<div class="overflow-backdrop" @click=${() => (this.overflowOpen = false)}></div><div class="overflow-menu">
             <button class="btn" @click=${() => {
                 this.speedReadOpen = true;
                 this.overflowOpen = false;
