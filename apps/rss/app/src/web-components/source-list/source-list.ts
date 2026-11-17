@@ -316,7 +316,8 @@ export class SourceList extends LitElement {
             this.view.kind === 'mute-filters' ||
             this.view.kind === 'saved' ||
             this.view.kind === 'boards' ||
-            this.view.kind === 'stats'
+            this.view.kind === 'stats' ||
+            this.view.kind === 'coverage'
         )
             return true;
         if (this.view.kind === 'search' && view.kind === 'search') {

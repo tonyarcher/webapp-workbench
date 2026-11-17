@@ -68,6 +68,7 @@ export function buildCommands(
     go('focus', 'Focus session', () => ctx.navigate({ kind: 'focus' }));
     go('saved', 'Saved for later', () => ctx.navigate({ kind: 'saved' }));
     go('stats', 'Mastery stats', () => ctx.navigate({ kind: 'stats' }));
+    go('coverage', 'Coverage balance', () => ctx.navigate({ kind: 'coverage' }));
     go('boards', 'Boards', () => ctx.navigate({ kind: 'boards' }));
     go('search', 'Search', () => ctx.navigate({ kind: 'search' }));
     go('organize', 'Organize', () => ctx.navigate({ kind: 'organize' }));
