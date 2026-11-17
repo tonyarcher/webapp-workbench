@@ -348,6 +348,8 @@ fetchers cannot send custom headers.
   workspace, and each one owns its own gate: Jacoco line and branch verification in a
   Kotlin API's `build.gradle.kts`, coverage thresholds in that workspace's Vite or vitest
   config, and `wtr` thresholds in `apps/baseball/web-test-runner.config.js`.
+  Local coverage gates must pass individually per module on a developer machine,
+  not only in CI with integration tests.
   Read the gate where it is configured rather than trusting a list here. Several
   workspaces sit below the floor today
   (untested entry points, Lit shells, branch tails) — raise uncovered areas to
