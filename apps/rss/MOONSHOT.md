@@ -562,6 +562,18 @@ triage as premium features. Ours are core.
 - **Effort.** `M`.
 - **First test.** Smoke for ignore toggles, count/view exclusion, and restore; migration or storage tests if the flag syncs.
 
+### B9. Duplicate consolidation
+
+- **Why.** The same story, the same feed, the same author — duplicates waste
+  minutes and split reading state across rows.
+- **What.** Consolidate exact and near-exact duplicate articles into a single
+  canonical row with a "merged from N" affordance; per-member open; the
+  consolidated row survives marking read; user can un-merge. Reuses B2
+  clustering signals.
+- **Half.** `both` (dedup signals server-side; merge rules client-first).
+- **Effort.** `L`.
+- **First test.** Golden dedup cases in smoke; merge/unmerge smoke.
+
 ## C. Read better (the reading experience)
 
 The reader shell is already strong (shortcuts, bulk select, read-time
