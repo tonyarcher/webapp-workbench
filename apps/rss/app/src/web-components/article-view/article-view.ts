@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import { html, LitElement, unsafeCSS } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { customElement, property, state } from 'lit/decorators.js';
