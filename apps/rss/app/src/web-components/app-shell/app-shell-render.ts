@@ -104,6 +104,9 @@ function renderMain(host: AppShellRenderHost) {
     if (host.route.kind === 'organize') return html`<organize-view></organize-view>`;
     if (host.route.kind === 'mute-filters') return html`<mute-filters-view></mute-filters-view>`;
     if (host.route.kind === 'saved') return html`<saved-view @open-article=${host.onOpenArticle}></saved-view>`;
+    if (host.route.kind === 'boards') return html`<boards-view></boards-view>`;
+    if (host.route.kind === 'board')
+        return html`<board-view .boardId=${host.route.id} @open-article=${host.onOpenArticle}></board-view>`;
     if (host.route.kind === 'search')
         return html`<search-view .view=${host.route} @open-article=${host.onOpenArticle}></search-view>`;
     return html`<article-list .view=${host.route} .active=${!host.article} .resumeArticleId=${resumeArticleId} @open-article=${host.onOpenArticle}></article-list>`;

@@ -1,5 +1,7 @@
 package rssapi.web
 
+import rssapi.persist.BoardEntity
+import rssapi.persist.BoardEntryEntity
 import rssapi.persist.FeedEntity
 import rssapi.persist.FolderEntity
 import rssapi.persist.SavedArticleEntity
@@ -49,4 +51,27 @@ fun SavedArticleEntity.toSavedArticleJson(): SavedArticleJson = SavedArticleJson
     content = contentHtml,
     published = publishedAt?.toEpochMilli(),
     savedAt = savedAt.toEpochMilli(),
+)
+
+fun BoardEntity.toJson(): BoardJson = BoardJson(
+    id = id.toString(),
+    title = title,
+    createdAt = createdAt.toEpochMilli(),
+    sortOrder = sortOrder,
+)
+
+fun BoardEntryEntity.toJson(): BoardEntryJson = BoardEntryJson(
+    id = id.toString(),
+    articleId = articleId,
+    feedId = feedId?.toString(),
+    feedTitle = feedTitle,
+    title = title,
+    link = link,
+    author = author,
+    summary = summary,
+    content = contentHtml,
+    published = publishedAt?.toEpochMilli(),
+    note = note,
+    addedAt = addedAt.toEpochMilli(),
+    sortOrder = sortOrder,
 )

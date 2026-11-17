@@ -1,0 +1,57 @@
+.view {
+    padding: 1rem;
+}
+.toolbar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+.meta {
+    color: var(--muted, #888);
+    font-size: 0.85rem;
+}
+.body {
+    overflow: auto;
+}
+.list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border, #eee);
+}
+.open {
+    flex: 1;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+.btn {
+    padding: 0.25rem 0.5rem;
+}
+.btn.danger {
+    color: #b00;
+}
+.create-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+.create-row input {
+    flex: 1;
+    padding: 0.25rem 0.5rem;
+}
+.empty {
+    padding: 2rem;
+    text-align: center;
+    color: var(--muted, #888);
+}

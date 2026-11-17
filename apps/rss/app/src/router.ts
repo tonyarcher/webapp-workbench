@@ -37,6 +37,12 @@ export function parsePath(pathname: string, search = ''): View {
     if (parts[0] === 'saved') {
         return { kind: 'saved' };
     }
+    if (parts[0] === 'boards') {
+        return { kind: 'boards' };
+    }
+    if (parts[0] === 'board' && parts[1]) {
+        return { kind: 'board', id: decodeURIComponent(parts[1]) };
+    }
     if (parts[0] === 'search') {
         const scope = params.get('scope');
         const id = params.get('id') ?? undefined;
@@ -72,6 +78,10 @@ export function viewToPath(view: View): string {
             return '/mute-filters';
         case 'saved':
             return '/saved';
+        case 'boards':
+            return '/boards';
+        case 'board':
+            return `/board/${encodeURIComponent(view.id)}`;
         case 'folder':
             return `/folder/${encodeURIComponent(view.id)}`;
         case 'interesting':

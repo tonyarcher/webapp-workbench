@@ -1,0 +1,69 @@
+.view {
+    padding: 1rem;
+}
+.toolbar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+.meta {
+    color: var(--muted, #888);
+    font-size: 0.85rem;
+}
+.search {
+    padding: 0.25rem 0.5rem;
+}
+.body {
+    overflow: auto;
+}
+.list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border, #eee);
+}
+.open {
+    flex: 1;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+.title {
+    display: block;
+    font-weight: 600;
+}
+.meta-line {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--muted, #888);
+}
+.summary {
+    display: block;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+.note {
+    width: 12rem;
+    min-height: 2.5rem;
+}
+.btn {
+    padding: 0.25rem 0.5rem;
+}
+.btn.danger {
+    color: #b00;
+}
+.empty {
+    padding: 2rem;
+    text-align: center;
+    color: var(--muted, #888);
+}

@@ -251,13 +251,18 @@ function renderNavError(host: SourceListRenderHost) {
 
 function renderStaticNav(host: SourceListRenderHost) {
     return html`
-      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderFocusNav(host)}${renderSavedNav(host)}${renderSearchNav(host)}${renderOrganizeNav(host)}${renderMuteFiltersNav(host)}${renderAllNav(host)}
+      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderFocusNav(host)}${renderSavedNav(host)}${renderBoardsNav(host)}${renderSearchNav(host)}${renderOrganizeNav(host)}${renderMuteFiltersNav(host)}${renderAllNav(host)}
     `;
 }
 
 function renderSavedNav(host: SourceListRenderHost) {
     const active = host.isActive({ kind: 'saved' });
     return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'saved' })}><span class="icon" aria-hidden="true">🔖</span><span class="label">Saved for later</span></button>`;
+}
+
+function renderBoardsNav(host: SourceListRenderHost) {
+    const active = host.isActive({ kind: 'boards' });
+    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'boards' })}><span class="icon" aria-hidden="true">📋</span><span class="label">Boards</span></button>`;
 }
 
 function renderOrganizeNav(host: SourceListRenderHost) {

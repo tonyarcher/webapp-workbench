@@ -15,21 +15,25 @@ import {
     restoreReadingProgress as restoreArticleReadingProgress,
 } from './article-view-progress';
 import {
+    addToBoard,
+    createBoard as createBoardMutation,
     markArticleRead,
     markArticleUnread,
     noteDerank,
     noteOriginal,
     noteShare,
+    removeFromBoard,
     saveForLater,
     toggleStar,
     unsaveForLater,
 } from '../../mutations';
 import { fetchSavedArticlesList } from '../../query';
+import { fetchBoards, fetchBoardEntries } from '../../services/api';
 import { adjustWordWeight, isDeranked } from '../../services/interesting-settings';
 import type { ArticleKeyword } from '../../services/keywords';
 import { areHighlightsEnabled, loadRowHighlights, setHighlightsEnabled } from '../../services/highlights';
 import { readMinutes } from '../../util';
-import type { Article, RowHighlight } from '../../types';
+import type { Article, Board, RowHighlight } from '../../types';
 import { domainOf, formatDate, stripTags } from '../../util';
 import {
     actionIcon,
@@ -54,6 +58,10 @@ export class ArticleView extends LitElement {
 
     @state() private deranked = false;
     @state() private savedForLater = false;
+    @state() private boardPickerOpen = false;
+    @state() private boards: Board[] = [];
+    @state() private boardMembership = new Set<string>();
+    @state() private newBoardTitle = '';
     @state() private keywords: ArticleKeyword[] = [];
     /** Prevent async saved-state refresh from clobbering newer intent/results. */
     private savedStateGen = 0;
@@ -174,7 +182,7 @@ export class ArticleView extends LitElement {
         }
         const link = safeHttpUrl(a.link);
         const video = articleVideo(a);
-        return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderKeyLines()}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderBody(body, a)}</div>`;
+        return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderKeyLines()}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderBody(body, a)}</div>${this.renderBoardPicker(a)}`;
     }
 
     private renderToolbar(a: Article, link: string | undefined) {
@@ -187,6 +195,7 @@ export class ArticleView extends LitElement {
           <button class="btn icon-btn ${a.starred ? 'active' : ''}" @click=${this.onStar} aria-label=${a.starred ? 'Unstar' : 'Star'} aria-pressed=${a.starred} title=${a.starred ? 'Unstar' : 'Star'}>${actionIcon(a.starred ? 'starred' : 'star')}</button>
           <button class="btn icon-btn" @click=${this.onToggleRead} aria-label=${a.read ? 'Keep unread' : 'Mark read'} title=${a.read ? 'Keep unread' : 'Mark read'}>${actionIcon(a.read ? 'read' : 'unread')}</button>
           <button class="btn icon-btn ${this.savedForLater ? 'active' : ''}" @click=${this.onToggleSaved} aria-label=${this.savedForLater ? 'Saved for later' : 'Save for later'} aria-pressed=${this.savedForLater} title=${this.savedForLater ? 'Saved for later' : 'Save for later'}>${actionIcon(this.savedForLater ? 'saved' : 'save')}</button>
+          <button class="btn icon-btn" @click=${() => void this.openBoardPicker()} aria-label="Add to board" title="Add to board">📋</button>
           <button class="btn icon-btn ${this.deranked ? 'active' : ''}" @click=${this.onDerank} aria-label="Not interesting" aria-pressed=${this.deranked} title=${this.deranked ? 'Marked not interesting' : 'Not interesting'}>${actionIcon(this.deranked ? 'deranked' : 'derank')}</button>
         </div>
         ${link ? html`<span class="toolbar-divider" aria-hidden="true"></span>${this.renderShareButtons(a, link)}` : ''}
@@ -319,6 +328,36 @@ export class ArticleView extends LitElement {
         arm();
     }
 
+    private renderBoardPicker(a: Article) {
+        if (!this.boardPickerOpen) return '';
+        return html`
+            <div class="board-picker-backdrop" @click=${() => (this.boardPickerOpen = false)}></div>
+            <div class="board-picker" role="dialog" aria-label="Add to board">
+                <div class="board-picker-head">
+                    <h3>Boards</h3>
+                    <button class="btn" @click=${() => (this.boardPickerOpen = false)}>Close</button>
+                </div>
+                <div class="board-picker-create">
+                    <input type="text" placeholder="New board" .value=${this.newBoardTitle}
+                        @input=${(e: Event) => (this.newBoardTitle = (e.target as HTMLInputElement).value)} />
+                    <button class="btn" @click=${() => void this.createBoardFromPicker()}>Create</button>
+                </div>
+                <ul class="board-picker-list">
+                    ${this.boards.map(
+                        (b) => html`
+                        <li>
+                            <label>
+                                <input type="checkbox" .checked=${this.boardMembership.has(b.id)}
+                                    @change=${() => void this.toggleBoardMembership(b, a.id)} />
+                                ${b.title}
+                            </label>
+                        </li>
+                    `,
+                    )}
+                </ul>
+            </div>
+        `;
+    }
     private renderBody(body: string, a: Article) {
         // sanitized: body is sanitizeHtml(a.content), applied in render().
         if (body) return html`<div class="content">${unsafeHTML(body)}</div>`;
@@ -371,6 +410,59 @@ export class ArticleView extends LitElement {
         }
     }
 
+    private async openBoardPicker(): Promise<void> {
+        const a = this.article;
+        if (!a) return;
+        this.boardPickerOpen = true;
+        this.newBoardTitle = '';
+        try {
+            const boards = await fetchBoards();
+            this.boards = boards;
+            const membership = new Set<string>();
+            await Promise.all(
+                boards.map(async (b) => {
+                    try {
+                        const entries = await fetchBoardEntries(b.id);
+                        if (entries.some((e) => e.articleId === a.id)) membership.add(b.id);
+                    } catch {
+                        // ignore
+                    }
+                }),
+            );
+            this.boardMembership = membership;
+        } catch {
+            this.boards = [];
+        }
+    }
+
+    private async toggleBoardMembership(board: Board, articleId: string): Promise<void> {
+        if (this.boardMembership.has(board.id)) {
+            if (await removeFromBoard(board.id, articleId)) {
+                const next = new Set(this.boardMembership);
+                next.delete(board.id);
+                this.boardMembership = next;
+            }
+        } else {
+            if (await addToBoard(board.id, articleId)) {
+                const next = new Set(this.boardMembership);
+                next.add(board.id);
+                this.boardMembership = next;
+            }
+        }
+    }
+
+    private async createBoardFromPicker(): Promise<void> {
+        const title = this.newBoardTitle.trim();
+        if (!title || !this.article) return;
+        const board = await createBoardMutation(title);
+        if (!board) return;
+        this.newBoardTitle = '';
+        this.boards = [...this.boards, board];
+        await addToBoard(board.id, this.article.id);
+        const next = new Set(this.boardMembership);
+        next.add(board.id);
+        this.boardMembership = next;
+    }
     private onToggleSaved = async () => {
         const a = this.article;
         if (!a) return;

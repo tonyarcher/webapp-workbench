@@ -80,6 +80,28 @@ export interface HighlightExcerpt {
     score: number;
 }
 
+export interface Board {
+    id: string;
+    title: string;
+    createdAt: number;
+    sortOrder?: number | undefined;
+}
+
+export interface BoardEntry {
+    id: string;
+    articleId: string;
+    feedId?: string | undefined;
+    feedTitle?: string | undefined;
+    title: string;
+    link?: string | undefined;
+    author?: string | undefined;
+    summary?: string | undefined;
+    content?: string | undefined;
+    published?: number | undefined;
+    note: string;
+    addedAt: number;
+    sortOrder?: number | undefined;
+}
 export interface SavedArticleSnapshot {
     id: string;
     articleId?: string | undefined;
@@ -106,6 +128,8 @@ export type View =
     | { kind: 'organize' }
     | { kind: 'mute-filters' }
     | { kind: 'saved' }
+    | { kind: 'boards' }
+    | { kind: 'board'; id: string }
     | {
           kind: 'search';
           scope?: SearchScopeKind | undefined;

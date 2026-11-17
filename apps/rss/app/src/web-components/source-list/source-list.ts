@@ -308,7 +308,8 @@ export class SourceList extends LitElement {
             this.view.kind === 'focus' ||
             this.view.kind === 'organize' ||
             this.view.kind === 'mute-filters' ||
-            this.view.kind === 'saved'
+            this.view.kind === 'saved' ||
+            this.view.kind === 'boards'
         )
             return true;
         if (this.view.kind === 'search' && view.kind === 'search') {
@@ -319,6 +320,7 @@ export class SourceList extends LitElement {
         if (this.view.kind === 'folder' && view.kind === 'folder') return this.view.id === view.id;
         if (this.view.kind === 'interesting' && view.kind === 'interesting') return this.view.id === view.id;
         if (this.view.kind === 'feed' && view.kind === 'feed') return this.view.id === view.id;
+        if (this.view.kind === 'board' && view.kind === 'board') return this.view.id === view.id;
         return false;
     }
 
