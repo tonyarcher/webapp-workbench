@@ -179,6 +179,15 @@ export class ArticleView extends LitElement {
         <div class="toolbar-group">
           <button class="btn icon-btn" @click=${this.emitClose} aria-label="Back" title="Back">${actionIcon('back')}</button>
         </div>
+        ${this.renderStateButtons(a)}
+        ${link ? html`<span class="toolbar-divider" aria-hidden="true"></span>${this.renderShareButtons(a, link)}` : ''}
+        <div class="spacer"></div>
+        ${link ? this.renderOpenOriginal(a, link) : ''}
+      </div>`;
+    }
+
+    private renderStateButtons(a: Article) {
+        return html`
         <div class="toolbar-group" aria-label="Article state">
           <button class="btn icon-btn ${a.starred ? 'active' : ''}" @click=${this.onStar} aria-label=${a.starred ? 'Unstar' : 'Star'} aria-pressed=${a.starred} title=${a.starred ? 'Unstar' : 'Star'} ?disabled=${this.deranked}>${actionIcon(a.starred ? 'starred' : 'star')}</button>
           <button class="btn icon-btn ${this.deranked ? 'active' : ''}" @click=${this.onDerank} aria-label="Not interesting" aria-pressed=${this.deranked} title=${this.deranked ? 'Marked not interesting' : 'Not interesting'}>${actionIcon(this.deranked ? 'deranked' : 'derank')}</button>
@@ -186,11 +195,11 @@ export class ArticleView extends LitElement {
           <button class="btn icon-btn ${this.savedForLater ? 'active' : ''}" @click=${this.onToggleSaved} aria-label=${this.savedForLater ? 'Saved for later' : 'Save for later'} aria-pressed=${this.savedForLater} title=${this.savedForLater ? 'Saved for later' : 'Save for later'}>${actionIcon(this.savedForLater ? 'saved' : 'save')}</button>
           <button class="btn icon-btn" @click=${() => (this.speedReadOpen = true)} aria-label="Speed read" title="Speed read">⚡</button>
           <button class="btn icon-btn" @click=${() => void this.openBoardPicker()} aria-label="Add to board" title="Add to board">📋</button>
-        </div>
-        ${link ? html`<span class="toolbar-divider" aria-hidden="true"></span>${this.renderShareButtons(a, link)}` : ''}
-        <div class="spacer"></div>
-        ${link ? html`<a class="btn icon-btn primary" href=${link} target="_blank" rel="noopener noreferrer" aria-label="Open original" title="Open original" @click=${() => noteOriginal(a.id, a.title)}>${actionIcon('external')}</a>` : ''}
-      </div>`;
+        </div>`;
+    }
+
+    private renderOpenOriginal(a: Article, link: string) {
+        return html`<a class="btn icon-btn primary" href=${link} target="_blank" rel="noopener noreferrer" aria-label="Open original" title="Open original" @click=${() => noteOriginal(a.id, a.title)}>${actionIcon('external')}</a>`;
     }
     /**
      * Compact share/copy actions: icon-only buttons with accessible labels.
