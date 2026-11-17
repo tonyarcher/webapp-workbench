@@ -1,6 +1,7 @@
 import { QueryClient, QueryObserver, type QueryObserverResult } from '@tanstack/query-core';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { fetchSavedArticles, getLibraryCounts, getLibraryFeeds, getLibraryFolders } from './services/api';
+import { clearSavedArticles, getSavedArticles, putSavedArticle } from './db/db';
 import type { Article, Feed, Folder, SavedArticleSnapshot, SavedSearch } from './types';
 
 export const queryClient = new QueryClient({
@@ -34,7 +35,14 @@ export function invalidateBoard(boardId: string) {
 export type LibraryData = { folders: Folder[]; feeds: Feed[]; savedSearches: SavedSearch[] };
 
 export async function fetchSavedArticlesList(): Promise<SavedArticleSnapshot[]> {
-    return fetchSavedArticles();
+    try {
+        const items = await fetchSavedArticles();
+        await clearSavedArticles();
+        for (const item of items) await putSavedArticle(item);
+        return items;
+    } catch {
+        return getSavedArticles();
+    }
 }
 
 export function invalidateSavedArticles() {

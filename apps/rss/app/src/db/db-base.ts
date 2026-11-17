@@ -1,5 +1,5 @@
 import { type DBSchema, type IDBPDatabase, type IDBPTransaction, type StoreNames, openDB } from 'idb';
-import type { Article, Feed, Folder } from '../types';
+import type { Article, Feed, Folder, SavedArticleSnapshot } from '../types';
 
 export interface ReaderDB extends DBSchema {
     folders: {
@@ -24,6 +24,10 @@ export interface ReaderDB extends DBSchema {
             byHot: [number, string];
             byFeedHot: [string, number, string];
         };
+    };
+    saved: {
+        key: string;
+        value: SavedArticleSnapshot;
     };
     meta: {
         key: string;
@@ -59,6 +63,9 @@ export function ensureSchema(db: IDBPDatabase<ReaderDB>, tx: UpgradeTx) {
         const articles = db.createObjectStore('articles', { keyPath: 'id' });
         for (const [name, keyPath] of ARTICLE_INDEXES) articles.createIndex(name, keyPath as never);
     }
+    if (!db.objectStoreNames.contains('saved')) {
+        db.createObjectStore('saved', { keyPath: 'id' });
+    }
     if (!db.objectStoreNames.contains('meta')) {
         db.createObjectStore('meta', { keyPath: 'key' });
     }
@@ -74,7 +81,7 @@ let dbPromise: Promise<IDBPDatabase<ReaderDB>> | undefined;
 
 export function getDb() {
     if (!dbPromise) {
-        dbPromise = openDB<ReaderDB>('rss-reader', 4, {
+        dbPromise = openDB<ReaderDB>('rss-reader', 5, {
             upgrade(db, _oldVersion, _newVersion, tx) {
                 ensureSchema(db, tx);
             },

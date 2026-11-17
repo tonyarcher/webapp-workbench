@@ -1,4 +1,4 @@
-import type { Feed, Folder } from '../types';
+import type { Feed, Folder, SavedArticleSnapshot } from '../types';
 import { getDb } from './db-base';
 
 export { clearClientDb, closeDb, getDb, uid } from './db-base';
@@ -108,6 +108,25 @@ export async function setFeedFolders(feedId: string, folderIds: string[]): Promi
     }
 }
 
+export async function getSavedArticles(): Promise<SavedArticleSnapshot[]> {
+    const db = await getDb();
+    return db.getAll('saved');
+}
+
+export async function putSavedArticle(article: SavedArticleSnapshot): Promise<void> {
+    await (await getDb()).put('saved', article);
+}
+
+export async function deleteSavedArticle(id: string): Promise<void> {
+    await (await getDb()).delete('saved', id);
+}
+
+export async function clearSavedArticles(): Promise<void> {
+    const db = await getDb();
+    const tx = db.transaction('saved', 'readwrite');
+    await tx.store.clear();
+    await tx.done;
+}
 export async function getMeta(key: string): Promise<unknown> {
     const rec = await (await getDb()).get('meta', key);
     return rec?.value;
