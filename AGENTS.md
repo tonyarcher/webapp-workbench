@@ -211,6 +211,7 @@ comments, and workflow only — not Lit/CSS/PWA.
 - `declare global { interface HTMLElementTagNameMap { 'prefix-name': Name; } }` at the bottom of every component file.
 - Events: `new CustomEvent('name', {detail, bubbles: true, composed: true})`.
 - Templates: 6-space indent, `.checked=${...}`, `@click=${this.emitX}`, ternaries inside `${...}`.
+- Keep the component class thin: put non-trivial template markup in a sibling `*-render.ts` module that takes a host object (`source-list-render.ts`, `article-list-render.ts`, `saved-view-render.ts`). The component passes state and callbacks; any value the user edits must go through a callback so the element's own state changes and re-renders — a plain field on the host literal does not.
 
 ### CSS
 
