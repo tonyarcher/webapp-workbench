@@ -1,0 +1,52 @@
+.view {
+    padding: 1rem;
+}
+.toolbar {
+    margin-bottom: 0.5rem;
+}
+.body {
+    overflow: auto;
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.card {
+    padding: 0.75rem;
+    border: 1px solid var(--border, #eee);
+    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
+}
+.label {
+    font-size: 0.8rem;
+    color: var(--muted, #888);
+}
+.value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+.topics {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.topics li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--border, #eee);
+}
+.topic {
+    font-weight: 600;
+}
+.count {
+    color: var(--muted, #888);
+}
+.empty {
+    padding: 2rem;
+    text-align: center;
+    color: var(--muted, #888);
+}

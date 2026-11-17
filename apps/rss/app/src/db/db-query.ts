@@ -95,6 +95,9 @@ async function takeFromCursor(
     return out;
 }
 
+export async function getAllArticles(): Promise<Article[]> {
+    return (await getDb()).getAll('articles');
+}
 export async function getAllArticlesCount(): Promise<number> {
     return (await getDb()).count('articles');
 }
