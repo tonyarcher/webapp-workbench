@@ -11,6 +11,11 @@
 # expiry.
 
 [[IgnoredVulns]]
+id = "GHSA-fc5q-39xc-vjpf"
+ignoreUntil = 2027-01-31
+reason = "ReDoS in picomatch. dev only: pulled in by the test runner / tooling, not bundled into a page or image."
+
+[[IgnoredVulns]]
 id = "GHSA-gcqx-w48m-w2h4"
 ignoreUntil = 2027-01-31
 reason = "Prototype poisoning in deepmerge mergeObject(). dev only: @web/test-runner pulls @web/dev-server and @rollup/plugin-node-resolve, which pull deepmerge 4.3.1. None of it is bundled into a page or an image, and it merges the test runner's own config, never untrusted input. 4.3.1 is the last affected release and no patched version exists, so drop this entry when one ships."
