@@ -509,8 +509,15 @@ export class ArticleList extends LitElement {
 
     private onToggleDerank = (e: Event) => {
         const { id, title } = (e as CustomEvent<{ id: string; title: string }>).detail;
-        noteDerank(id, title, !isDeranked(id));
-        this.items = this.items.map((a) => a);
+        const next = !isDeranked(id);
+        noteDerank(id, title, next);
+        if (next) {
+            // Deranking clears a star.
+            const item = this.items.find((a) => a.id === id);
+            if (item?.starred) {
+                void toggleStarAction(this as never, item);
+            }
+        }
         this.requestUpdate();
     };
 

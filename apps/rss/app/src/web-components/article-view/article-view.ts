@@ -267,6 +267,11 @@ export class ArticleView extends LitElement {
         if (!started) return;
         const next = !started.starred;
         this.article = { ...started, starred: next };
+        if (next) {
+            // Star and "not interesting" are mutually exclusive.
+            noteDerank(started.id, started.title, false);
+            this.deranked = false;
+        }
         if (await toggleStar(started.id, next)) {
             window.dispatchEvent(new CustomEvent('article-starred', { detail: { id: started.id, starred: next } }));
         } else if (this.article?.id === started.id) {
@@ -377,6 +382,11 @@ export class ArticleView extends LitElement {
         const next = !this.deranked;
         noteDerank(a.id, a.title, next);
         this.deranked = next;
+        if (next && a.starred) {
+            // Deranking clears a star.
+            this.article = { ...a, starred: false };
+            void toggleStar(a.id, false);
+        }
     }
     /**
      * Fetch the decision model's selected excerpts. They are verbatim slices of
