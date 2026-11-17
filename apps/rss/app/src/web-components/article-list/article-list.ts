@@ -24,7 +24,8 @@ import { initialLoadState, isLoading, type LoadState } from './article-list-load
 import { interestingActiveFor } from './article-list-interesting';
 
 import { DEFAULT_INTERESTING_STRICTNESS, isDeranked } from '../../services/interesting-settings';
-import { noteDerank } from '../../mutations';
+import { noteDerank, markShownRead } from '../../mutations';
+import { readMinutes } from '../../util';
 import { DwellTracker } from './article-list-dwell';
 import {
     CARD_MIN_WIDTH,
@@ -531,6 +532,36 @@ export class ArticleList extends LitElement {
 
     async onMarkShownRead() {
         await markShownReadAction(this as never);
+    }
+
+    async onCatchMeUp() {
+        const budget = 5;
+        const unread = this.items.filter((a) => a.read === 0);
+        if (!unread.length) return;
+        const ranked = [...unread].sort((a, b) => {
+            const ia = a.scores?.interest ?? 0;
+            const ib = b.scores?.interest ?? 0;
+            if (ib !== ia) return ib - ia;
+            return readMinutes(a.content, a.summary) - readMinutes(b.content, b.summary);
+        });
+        let used = 0;
+        const keep = new Set<string>();
+        for (const a of ranked) {
+            const m = readMinutes(a.content, a.summary) || 1;
+            if (used + m <= budget) {
+                used += m;
+                keep.add(a.id);
+            }
+        }
+        const markRead = unread.filter((a) => !keep.has(a.id)).map((a) => a.id);
+        if (!markRead.length) return;
+        if (
+            !window.confirm(
+                `Mark ${markRead.length} article${markRead.length === 1 ? '' : 's'} as read, keeping ${keep.size} for a ${budget}-minute catch-up?`,
+            )
+        )
+            return;
+        await markShownRead(markRead);
     }
 }
 

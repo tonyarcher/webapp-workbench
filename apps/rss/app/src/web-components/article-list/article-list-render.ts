@@ -67,6 +67,7 @@ export interface ArticleListRenderHost extends HighlightHost {
     openArticle(article: Article): Promise<void>;
     onStar(e: Event, article: Article): Promise<void>;
     onMarkShownRead(): Promise<void>;
+    onCatchMeUp(): Promise<void>;
     onToggleAdvanced(e: Event): void;
     onRefresh(): Promise<void>;
     onAdvancedUnread(e: Event): void;
@@ -310,6 +311,7 @@ export function renderToolbar(host: ArticleListRenderHost) {
         <div class="actions">
           ${renderFreshness(host)}${renderSortSelect(host)}${renderViewSelect(host)}${renderCardColsSelect(host)}${renderPageSizeSelect(host)}
           <button class="btn" @click=${host.onMarkShownRead}>Mark shown as read</button>
+          <button class="btn" @click=${host.onCatchMeUp}>Catch me up (5 min)</button>
           <button class="btn" @click=${host.onToggleAdvanced}>Advanced</button>
           <button class="btn refresh" @click=${host.onRefresh}>${host.refreshing ? html`<span class="spinner" aria-hidden="true"></span>Refreshing…` : 'Refresh'}</button>
         </div>
