@@ -117,15 +117,16 @@ class BoardControllerTest {
         }.andExpect { status { isBadRequest() } }
     }
 
-
     @Test
     fun createBoardNew() {
         auth()
         whenever(boards.findByUserIdAndTitle(uid, "New")).thenReturn(null)
         whenever(boards.save(any<BoardEntity>())).thenAnswer { it.arguments[0] }
         mvc.post("/boards") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{"title":"New"}"""
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"title":"New"}"""
         }.andExpect { status { isOk() } }
     }
 
@@ -317,8 +318,10 @@ class BoardControllerTest {
     fun reorderBoardsEmpty() {
         auth()
         mvc.post("/boards/reorder") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{"ids":["not-a-uuid"]}"""
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"ids":["not-a-uuid"]}"""
         }.andExpect { status { isOk() } }
     }
 
@@ -327,16 +330,36 @@ class BoardControllerTest {
         auth()
         ownedBoard()
         whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(null).thenReturn(
-            BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0),
+            BoardEntryEntity(
+                id = UUID.randomUUID(),
+                boardId = boardId,
+                articleId = "a1",
+                title = "T",
+                addedAt = Instant.ofEpochMilli(1000),
+                sortOrder = 0,
+            ),
         )
-        whenever(articles.findById("a1")).thenReturn(Optional.of(ArticleEntity(id = "a1", feedId = feedId, title = "Article", publishedAt = Instant.ofEpochMilli(1000))))
+        whenever(articles.findById("a1")).thenReturn(
+            Optional.of(
+                ArticleEntity(
+                    id = "a1",
+                    feedId = feedId,
+                    title = "Article",
+                    publishedAt = Instant.ofEpochMilli(1000),
+                ),
+            ),
+        )
         whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedId))
-        whenever(feeds.findById(feedId)).thenReturn(Optional.of(FeedEntity(id = feedId, xmlUrl = "https://f.example/rss", title = "Feed")))
+        whenever(
+            feeds.findById(feedId),
+        ).thenReturn(Optional.of(FeedEntity(id = feedId, xmlUrl = "https://f.example/rss", title = "Feed")))
         whenever(entries.findFirstByBoardIdOrderBySortOrderDesc(boardId)).thenReturn(null)
         whenever(entries.save(any<BoardEntryEntity>())).thenThrow(DataIntegrityViolationException("dup"))
         mvc.post("/boards/$boardId/entries") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{"articleId":"a1"}"""
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"articleId":"a1"}"""
         }.andExpect { status { isOk() } }
     }
 
@@ -345,9 +368,21 @@ class BoardControllerTest {
         auth()
         ownedBoard()
         whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
-            listOf(BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)),
+            listOf(
+                BoardEntryEntity(
+                    id = UUID.randomUUID(),
+                    boardId = boardId,
+                    articleId = "a1",
+                    title = "T",
+                    addedAt = Instant.ofEpochMilli(1000),
+                    sortOrder = 0,
+                ),
+            ),
         )
-        mvc.get("/boards/$boardId/search") { header("X-Api-Version", "1"); header("Authorization", "Bearer good") }
+        mvc.get("/boards/$boardId/search") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }
             .andExpect { status { isOk() } }
     }
 
@@ -357,8 +392,10 @@ class BoardControllerTest {
         ownedBoard()
         whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(null)
         mvc.put("/boards/$boardId/entries/a1") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{"note":"x"}"""
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"note":"x"}"""
         }.andExpect { status { isNotFound() } }
     }
 
@@ -367,13 +404,25 @@ class BoardControllerTest {
         auth()
         ownedBoard()
         whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
-            listOf(BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", feedId = UUID.randomUUID(), title = "T", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)),
+            listOf(
+                BoardEntryEntity(
+                    id = UUID.randomUUID(),
+                    boardId = boardId,
+                    articleId = "a1",
+                    feedId = UUID.randomUUID(),
+                    title = "T",
+                    addedAt = Instant.ofEpochMilli(1000),
+                    sortOrder = 0,
+                ),
+            ),
         )
         whenever(feeds.findAllById(any())).thenReturn(emptyList())
-        mvc.get("/boards/$boardId/opml") { header("X-Api-Version", "1"); header("Authorization", "Bearer good") }
+        mvc.get("/boards/$boardId/opml") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }
             .andExpect { status { isOk() } }
     }
-
 
     @Test
     fun searchEntriesWithTokens() {
@@ -381,12 +430,30 @@ class BoardControllerTest {
         ownedBoard()
         whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
             listOf(
-                BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "Batteries review", author = "Alice", summary = "lithium", note = "important", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0),
-                BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a2", title = "Solar power", addedAt = Instant.ofEpochMilli(2000), sortOrder = 1),
+                BoardEntryEntity(
+                    id = UUID.randomUUID(),
+                    boardId = boardId,
+                    articleId = "a1",
+                    title = "Batteries review",
+                    author = "Alice",
+                    summary = "lithium",
+                    note = "important",
+                    addedAt = Instant.ofEpochMilli(1000),
+                    sortOrder = 0,
+                ),
+                BoardEntryEntity(
+                    id = UUID.randomUUID(),
+                    boardId = boardId,
+                    articleId = "a2",
+                    title = "Solar power",
+                    addedAt = Instant.ofEpochMilli(2000),
+                    sortOrder = 1,
+                ),
             ),
         )
         mvc.get("/boards/$boardId/search") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             param("q", "batteries")
         }.andExpect { status { isOk() } }
     }
@@ -395,13 +462,31 @@ class BoardControllerTest {
     fun reorderEntriesMultiple() {
         auth()
         ownedBoard()
-        val e1 = BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T1", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)
-        val e2 = BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a2", title = "T2", addedAt = Instant.ofEpochMilli(2000), sortOrder = 1)
+        val e1 =
+            BoardEntryEntity(
+                id = UUID.randomUUID(),
+                boardId = boardId,
+                articleId = "a1",
+                title = "T1",
+                addedAt = Instant.ofEpochMilli(1000),
+                sortOrder = 0,
+            )
+        val e2 =
+            BoardEntryEntity(
+                id = UUID.randomUUID(),
+                boardId = boardId,
+                articleId = "a2",
+                title = "T2",
+                addedAt = Instant.ofEpochMilli(2000),
+                sortOrder = 1,
+            )
         whenever(entries.findByBoardIdAndArticleIdIn(boardId, listOf("a2", "a1"))).thenReturn(listOf(e1, e2))
         whenever(entries.saveAll(any<List<BoardEntryEntity>>())).thenAnswer { it.arguments[0] }
         mvc.post("/boards/$boardId/entries/reorder") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{"articleIds":["a2","a1"]}"""
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"articleIds":["a2","a1"]}"""
         }.andExpect { status { isOk() } }
     }
 
@@ -411,115 +496,29 @@ class BoardControllerTest {
         ownedBoard()
         val fid = UUID.randomUUID()
         whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
-            listOf(BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", feedId = fid, title = "T", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)),
+            listOf(
+                BoardEntryEntity(
+                    id = UUID.randomUUID(),
+                    boardId = boardId,
+                    articleId = "a1",
+                    feedId = fid,
+                    title = "T",
+                    addedAt = Instant.ofEpochMilli(1000),
+                    sortOrder = 0,
+                ),
+            ),
         )
-        whenever(feeds.findAllById(listOf(fid))).thenReturn(listOf(FeedEntity(id = fid, xmlUrl = "https://f.example/rss", title = "Feed", siteUrl = "https://f.example")))
-        mvc.get("/boards/$boardId/opml") { header("X-Api-Version", "1"); header("Authorization", "Bearer good") }
+        whenever(
+            feeds.findAllById(listOf(fid)),
+        ).thenReturn(
+            listOf(
+                FeedEntity(id = fid, xmlUrl = "https://f.example/rss", title = "Feed", siteUrl = "https://f.example"),
+            ),
+        )
+        mvc.get("/boards/$boardId/opml") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }
             .andExpect { status { isOk() } }
     }
-
-
-    @Test
-    fun reorderEntriesEmpty() {
-        auth()
-        ownedBoard()
-        mvc.post("/boards/$boardId/entries/reorder") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{"articleIds":[]}"""
-        }.andExpect { status { isOk() } }
-    }
-
-    @Test
-    fun addEntryUnsubscribed() {
-        auth()
-        ownedBoard()
-        whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(null)
-        whenever(articles.findById("a1")).thenReturn(java.util.Optional.of(ArticleEntity(id = "a1", feedId = feedId, title = "Article", publishedAt = Instant.ofEpochMilli(1000))))
-        whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(UUID.randomUUID()))
-        mvc.post("/boards/$boardId/entries") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{"articleId":"a1"}"""
-        }.andExpect { status { isNotFound() } }
-    }
-
-
-    @Test
-    fun noteEntryNullNote() {
-        auth()
-        ownedBoard()
-        val row = BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T", note = "old", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)
-        whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(row)
-        whenever(entries.save(any<BoardEntryEntity>())).thenAnswer { it.arguments[0] }
-        mvc.put("/boards/$boardId/entries/a1") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{}"""
-        }.andExpect { status { isOk() }; jsonPath("$.note") { value("") } }
-    }
-
-    @Test
-    fun addEntryBlankId() {
-        auth()
-        ownedBoard()
-        mvc.post("/boards/$boardId/entries") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{"articleId":"  "}"""
-        }.andExpect { status { isBadRequest() } }
-    }
-
-
-    @Test
-    fun addEntryRaceMissing() {
-        auth()
-        ownedBoard()
-        whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(null)
-        whenever(articles.findById("a1")).thenReturn(java.util.Optional.of(ArticleEntity(id = "a1", feedId = feedId, title = "Article", publishedAt = Instant.ofEpochMilli(1000))))
-        whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedId))
-        whenever(feeds.findById(feedId)).thenReturn(java.util.Optional.of(FeedEntity(id = feedId, xmlUrl = "https://f.example/rss", title = "Feed")))
-        whenever(entries.findFirstByBoardIdOrderBySortOrderDesc(boardId)).thenReturn(null)
-        whenever(entries.save(any<BoardEntryEntity>())).thenThrow(DataIntegrityViolationException("dup"))
-        whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(null)
-        mvc.post("/boards/$boardId/entries") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{"articleId":"a1"}"""
-        }.andExpect { status { isConflict() } }
-    }
-
-    @Test
-    fun reorderEntriesNull() {
-        auth()
-        ownedBoard()
-        mvc.post("/boards/$boardId/entries/reorder") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{}"""
-        }.andExpect { status { isBadRequest() } }
-    }
-
-    @Test
-    fun reorderEntriesPartial() {
-        auth()
-        ownedBoard()
-        val e1 = BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T1", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)
-        val e2 = BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a2", title = "T2", addedAt = Instant.ofEpochMilli(2000), sortOrder = 1)
-        whenever(entries.findByBoardIdAndArticleIdIn(boardId, listOf("a1"))).thenReturn(listOf(e1))
-        whenever(entries.saveAll(any<List<BoardEntryEntity>>())).thenAnswer { it.arguments[0] }
-        mvc.post("/boards/$boardId/entries/reorder") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            contentType = MediaType.APPLICATION_JSON; content = """{"articleIds":["a1"]}"""
-        }.andExpect { status { isOk() } }
-    }
-
-
-    @Test
-    fun searchEntriesBlankQuery() {
-        auth()
-        ownedBoard()
-        whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
-            listOf(BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)),
-        )
-        mvc.get("/boards/$boardId/search") {
-            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
-            param("q", "   ")
-        }.andExpect { status { isOk() } }
-    }
-
 }

@@ -6,7 +6,6 @@ import { sanitizeHtml, safeHttpUrl } from '../../services/parser';
 import { articleVideo } from '../../services/video';
 import { canNativeShare, mailtoShareUrl, shareUrl, type ShareTarget } from '../../services/share';
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
-
 import {
     beginArticleProgress,
     flushProgressOnSwitch,
@@ -45,17 +44,13 @@ import {
     shareIcon,
     whyLineFor,
 } from './article-view-helpers';
-
 import '../video-header/video-header';
 import styles from './article-view.css?inline';
-
 @customElement('article-view')
 export class ArticleView extends LitElement {
     static override styles = unsafeCSS(styles);
-
     @property({ attribute: false }) article: Article | null = null;
     private focused = false;
-
     @state() private deranked = false;
     @state() private savedForLater = false;
     @state() private boardPickerOpen = false;
@@ -81,7 +76,6 @@ export class ArticleView extends LitElement {
     /** Brief visual feedback when a keyword weight is stepped. */
     @state() private keywordPulse: { word: string; delta: number } | null = null;
     private keywordPulseTimer: number | null = null;
-
     override connectedCallback() {
         super.connectedCallback();
         // This element is only created while an article is open, so
@@ -95,7 +89,6 @@ export class ArticleView extends LitElement {
         window.addEventListener('saved-articles-changed', this.onSavedArticlesChanged);
         this.addEventListener('scroll', this.onScroll);
     }
-
     override disconnectedCallback() {
         persistArticleReadingProgress(this);
         super.disconnectedCallback();
@@ -105,25 +98,20 @@ export class ArticleView extends LitElement {
         if (this.keywordPulseTimer !== null) window.clearTimeout(this.keywordPulseTimer);
         if (this.progressSaveTimer !== null) window.clearTimeout(this.progressSaveTimer);
     }
-
     private onSavedArticlesChanged = () => {
         void this.refreshSavedState();
     };
-
     /** Progress bar: the host itself is the scroller. */
     private onScroll = () => {
         handleProgressScroll(this);
     };
-
     /** Keyboard entry points, called by the shell which owns global keys. */
     keyboardStar() {
         void this.onStar();
     }
-
     keyboardDerank() {
         this.onDerank();
     }
-
     keyboardOriginal() {
         const a = this.article;
         if (!a) return;
@@ -131,15 +119,12 @@ export class ArticleView extends LitElement {
         const link = safeHttpUrl(a.link);
         if (link) window.open(link, '_blank', 'noopener,noreferrer');
     }
-
     /** Re-render when Settings changes which share buttons are shown. */
     private onShareSettingsChanged = () => {
         this.requestUpdate();
     };
-
     /** Sanitized body keyed by article; render runs on every state change. */
     private sanitizedBody: { id: string; source: string | undefined; html: string } | null = null;
-
     override updated(changed: Map<string, unknown>) {
         if (changed.has('article')) {
             this.sanitizedBody = null;
@@ -169,7 +154,6 @@ export class ArticleView extends LitElement {
         this.focused = true;
         this.focus();
     }
-
     override render() {
         const a = this.article;
         if (!a) return html``;
@@ -184,7 +168,6 @@ export class ArticleView extends LitElement {
         const video = articleVideo(a);
         return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderKeyLines()}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderBody(body, a)}</div>${this.renderBoardPicker(a)}`;
     }
-
     private renderToolbar(a: Article, link: string | undefined) {
         return html`
       <div class="toolbar" role="toolbar" aria-label="Article actions">
@@ -203,7 +186,6 @@ export class ArticleView extends LitElement {
         ${link ? html`<a class="btn icon-btn primary" href=${link} target="_blank" rel="noopener noreferrer" aria-label="Open original" title="Open original" @click=${() => noteOriginal(a.id, a.title)}>${actionIcon('external')}</a>` : ''}
       </div>`;
     }
-
     /**
      * Compact share/copy actions: icon-only buttons with accessible labels.
      */
@@ -237,7 +219,6 @@ export class ArticleView extends LitElement {
           <a class="btn icon-btn" href=${mailtoShareUrl(link, a.title)} @click=${() => noteShare(a.id, a.title)} aria-label="Email" title="Email">${actionIcon('mail')}</a>
         </div>`;
     }
-
     /** OS share sheet where it exists; counts as a share like the rest. */
     private async nativeShare(a: Article, link: string): Promise<void> {
         try {
@@ -247,21 +228,17 @@ export class ArticleView extends LitElement {
             // dismissed or unsupported mid-flight; nothing to report
         }
     }
-
     private emitClose = () => {
         persistArticleReadingProgress(this);
         this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     };
-
     private renderTitle(a: Article, link: string | undefined) {
         return html`<h1>${link ? html`<a href=${link} target="_blank" rel="noopener noreferrer" @click=${() => noteOriginal(a.id, a.title)}>${a.title}</a>` : a.title}</h1>`;
     }
-
     private renderMeta(a: Article) {
         const minutes = readMinutes(a.content, a.summary);
         return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}${this.renderHighlightsToggle()}</div>${this.renderKeywords()}`;
     }
-
     private renderKeywords() {
         if (!this.keywords.length) return '';
         return html`<div class="keywords" aria-label="Article keywords">
@@ -295,14 +272,12 @@ export class ArticleView extends LitElement {
             )}
         </div>`;
     }
-
     private adjustKeyword(e: MouseEvent, word: string, delta: number) {
         e.stopPropagation();
         adjustWordWeight(word, delta);
         this.keywords = this.article ? articleKeywords(this.article) : [];
         this.pulseKeyword(word, delta);
     }
-
     private pulseKeyword(word: string, delta: number): void {
         if (this.keywordPulseTimer !== null) window.clearTimeout(this.keywordPulseTimer);
         const sameActive = this.keywordPulse?.word === word && this.keywordPulse?.delta === delta;
@@ -327,7 +302,6 @@ export class ArticleView extends LitElement {
         }
         arm();
     }
-
     private renderBoardPicker(a: Article) {
         if (!this.boardPickerOpen) return '';
         return html`
@@ -348,7 +322,6 @@ export class ArticleView extends LitElement {
         if (a.summary) return html`<div class="content">${a.summary}</div>`;
         return html`<p class="content">No content available for this article.</p>`;
     }
-
     private async onStar() {
         const started = this.article;
         if (!started) return;
@@ -363,7 +336,6 @@ export class ArticleView extends LitElement {
             );
         }
     }
-
     private onToggleRead = async () => {
         const started = this.article;
         if (!started) return;
@@ -377,7 +349,6 @@ export class ArticleView extends LitElement {
         }
         window.dispatchEvent(new CustomEvent('article-read', { detail: { id: started.id, read: nextRead } }));
     };
-
     private async refreshSavedState(): Promise<void> {
         const a = this.article;
         if (!a) {
@@ -393,7 +364,6 @@ export class ArticleView extends LitElement {
             // keep previous state on transient failures
         }
     }
-
     private async openBoardPicker(): Promise<void> {
         const a = this.article;
         if (!a) return;
@@ -409,7 +379,7 @@ export class ArticleView extends LitElement {
                         const entries = await fetchBoardEntries(b.id);
                         if (entries.some((e) => e.articleId === a.id)) membership.add(b.id);
                     } catch {
-                        // ignore
+                        /* ignore */
                     }
                 }),
             );
@@ -418,7 +388,6 @@ export class ArticleView extends LitElement {
             this.boards = [];
         }
     }
-
     private async toggleBoardMembership(board: Board, articleId: string): Promise<void> {
         if (this.boardMembership.has(board.id)) {
             if (await removeFromBoard(board.id, articleId)) {
@@ -434,7 +403,6 @@ export class ArticleView extends LitElement {
             }
         }
     }
-
     private async createBoardFromPicker(): Promise<void> {
         const title = this.newBoardTitle.trim();
         if (!title || !this.article) return;
@@ -463,7 +431,6 @@ export class ArticleView extends LitElement {
         // Reconcile from source of truth after success/invalidation events.
         void this.refreshSavedState();
     };
-
     private onDerank() {
         const a = this.article;
         if (!a) return;
@@ -471,7 +438,6 @@ export class ArticleView extends LitElement {
         noteDerank(a.id, a.title, next);
         this.deranked = next;
     }
-
     /**
      * Fetch the decision model's selected excerpts. They are verbatim slices of
      * this article, so the panel cites the open row and never adds prose.
@@ -492,7 +458,6 @@ export class ArticleView extends LitElement {
         this.keyLines = result;
         this.keyLinesLoading = false;
     }
-
     /** Dynamically fetch fuller article text for thin content so analysis improves. */
     private async ensureRichContent(a: Article): Promise<void> {
         const text = stripTags(a.content ?? a.summary ?? '');
@@ -513,7 +478,6 @@ export class ArticleView extends LitElement {
             // extraction is best-effort; keep showing stored content
         }
     }
-
     private onToggleKeyLines(): void {
         this.highlightsOn = !this.highlightsOn;
         setHighlightsEnabled(this.highlightsOn);
@@ -524,7 +488,6 @@ export class ArticleView extends LitElement {
         }
         void this.refreshKeyLines();
     }
-
     private renderKeyLines() {
         if (!this.highlightsOn) return '';
         const result = this.keyLines;
@@ -551,14 +514,12 @@ export class ArticleView extends LitElement {
             }
         </section>`;
     }
-
     /** Re-enable affordance while the feature is off. */
     private renderHighlightsToggle() {
         if (this.highlightsOn) return '';
         return html`<button class="key-lines-toggle" @click=${this.onToggleKeyLines} aria-pressed="false">Key lines</button>`;
     }
 }
-
 declare global {
     interface HTMLElementTagNameMap {
         'article-view': ArticleView;
