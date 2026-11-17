@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { html, LitElement, unsafeCSS } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
@@ -329,34 +328,17 @@ export class ArticleView extends LitElement {
         arm();
     }
 
-    // eslint-disable-next-line max-lines-per-function
     private renderBoardPicker(a: Article) {
         if (!this.boardPickerOpen) return '';
         return html`
             <div class="board-picker-backdrop" @click=${() => (this.boardPickerOpen = false)}></div>
             <div class="board-picker" role="dialog" aria-label="Add to board">
-                <div class="board-picker-head">
-                    <h3>Boards</h3>
-                    <button class="btn" @click=${() => (this.boardPickerOpen = false)}>Close</button>
-                </div>
+                <div class="board-picker-head"><h3>Boards</h3><button class="btn" @click=${() => (this.boardPickerOpen = false)}>Close</button></div>
                 <div class="board-picker-create">
-                    <input type="text" placeholder="New board" .value=${this.newBoardTitle}
-                        @input=${(e: Event) => (this.newBoardTitle = (e.target as HTMLInputElement).value)} />
+                    <input type="text" placeholder="New board" .value=${this.newBoardTitle} @input=${(e: Event) => (this.newBoardTitle = (e.target as HTMLInputElement).value)} />
                     <button class="btn" @click=${() => void this.createBoardFromPicker()}>Create</button>
                 </div>
-                <ul class="board-picker-list">
-                    ${this.boards.map(
-                        (b) => html`
-                        <li>
-                            <label>
-                                <input type="checkbox" .checked=${this.boardMembership.has(b.id)}
-                                    @change=${() => void this.toggleBoardMembership(b, a.id)} />
-                                ${b.title}
-                            </label>
-                        </li>
-                    `,
-                    )}
-                </ul>
+                <ul class="board-picker-list">${this.boards.map((b) => html`<li><label><input type="checkbox" .checked=${this.boardMembership.has(b.id)} @change=${() => void this.toggleBoardMembership(b, a.id)} />${b.title}</label></li>`)}</ul>
             </div>
         `;
     }
