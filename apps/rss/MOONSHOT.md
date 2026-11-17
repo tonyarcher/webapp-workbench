@@ -666,7 +666,10 @@ needs piles. Ours add portability: everything exports, everything migrates.
   different piles with different lives.
 - **What.** Named boards with ordering, notes per entry, per-board sharing
   by link, per-board OPML export, and board-scoped search; stars stay as
-  the zero-friction default.
+  the zero-friction default. Shipped: named boards with ordering, notes per
+  entry, add/remove entries, drag reorder, board-scoped search, per-board
+  OPML export. Still wanted: per-board sharing by link (needs an explicit
+  unauthenticated-route contract update).
 - **Half.** `both` (boards sync with migrations).
 - **Effort.** `L`.
 - **First test.** Migration plus endpoint tests; drag-order smoke.
