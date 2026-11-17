@@ -160,7 +160,7 @@ function derankButton(article: Article) {
     const glyph = active
         ? svg`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z"/><path d="M4 4l16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`
         : svg`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z"/><path d="M4 4l16 16"/></svg>`;
-    return html`<button class="derank" aria-label=${active ? 'Marked not interesting' : 'Not interesting'} aria-pressed=${active} title=${active ? 'Marked not interesting' : 'Not interesting'} ?disabled=${article.starred} @click=${(
+    return html`<button class="derank" aria-label=${active ? 'Marked not interesting' : 'Not interesting'} aria-pressed=${active} title=${active ? 'Marked not interesting' : 'Not interesting'} @click=${(
         e: Event,
     ) => {
         e.stopPropagation();
