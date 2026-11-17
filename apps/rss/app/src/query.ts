@@ -22,14 +22,14 @@ export const savedArticlesKey = ['saved-articles'] as const;
 export function boardsKey() {
     return ['boards'] as const;
 }
-export function boardEntriesKey(boardId: string) {
-    return ['board-entries', boardId] as const;
+export function boardEntriesKey(boardId: string, q?: string) {
+    return ['board-entries', boardId, q ?? ''] as const;
 }
 export function invalidateBoards() {
     return queryClient.invalidateQueries({ queryKey: boardsKey() });
 }
 export function invalidateBoard(boardId: string) {
-    return queryClient.invalidateQueries({ queryKey: boardEntriesKey(boardId) });
+    return queryClient.invalidateQueries({ queryKey: ['board-entries', boardId] });
 }
 export type LibraryData = { folders: Folder[]; feeds: Feed[]; savedSearches: SavedSearch[] };
 

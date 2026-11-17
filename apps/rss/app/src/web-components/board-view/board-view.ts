@@ -33,36 +33,21 @@ export class BoardView extends LitElement {
 
     @property() boardId = '';
     @state() private q = '';
-    @state() private searchResults: BoardEntry[] | null = null;
     @state() private draggingIndex = -1;
 
     private entries = new QueryController<BoardEntry[]>(this, () => ({
-        queryKey: boardEntriesKey(this.boardId),
+        queryKey: boardEntriesKey(this.boardId, this.q.trim()),
         queryFn: () => (this.q.trim() ? searchBoard(this.boardId, this.q.trim()) : fetchBoardEntries(this.boardId)),
         refetchInterval: 60_000,
     }));
 
     private get items(): BoardEntry[] {
-        return this.searchResults ?? this.entries.data ?? [];
+        return this.entries.data ?? [];
     }
 
     override updated(changed: Map<string, unknown>) {
         if (changed.has('boardId')) {
             this.q = '';
-            this.searchResults = null;
-        }
-    }
-
-    private async runSearch() {
-        const q = this.q.trim();
-        if (!q) {
-            this.searchResults = null;
-            return;
-        }
-        try {
-            this.searchResults = await searchBoard(this.boardId, q);
-        } catch {
-            this.searchResults = null;
         }
     }
 
@@ -127,7 +112,6 @@ export class BoardView extends LitElement {
                     <input class="search" type="search" placeholder="Search this board" .value=${this.q}
                         @input=${(e: Event) => {
                             this.q = (e.target as HTMLInputElement).value;
-                            void this.runSearch();
                         }} />
                     <button class="btn" @click=${() => void this.exportOpml()}>Export OPML</button>
                 </div>
