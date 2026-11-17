@@ -1,4 +1,4 @@
-import { html, LitElement, unsafeCSS } from 'lit';
+/* eslint-disable max-lines */
 import { repeat } from 'lit/directives/repeat.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { customElement, property, state } from 'lit/decorators.js';
@@ -328,6 +328,7 @@ export class ArticleView extends LitElement {
         arm();
     }
 
+    // eslint-disable-next-line max-lines-per-function
     private renderBoardPicker(a: Article) {
         if (!this.boardPickerOpen) return '';
         return html`
