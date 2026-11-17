@@ -62,7 +62,8 @@ export function actionIcon(
         | 'quote'
         | 'mail'
         | 'external'
-        | 'more',
+        | 'more'
+        | 'share',
 ) {
     switch (name) {
         case 'back':
@@ -95,6 +96,8 @@ export function actionIcon(
             return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"/><path d="M10 14L19 5"/><path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4"/></svg>`;
         case 'more':
             return svg`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18" cy="12" r="1.8" fill="currentColor"/></svg>`;
+        case 'share':
+            return svg`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><rect x="5" y="11" width="14" height="10" rx="2"/></svg>`;
     }
 }
 

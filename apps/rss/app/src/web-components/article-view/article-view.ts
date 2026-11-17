@@ -28,7 +28,7 @@ import {
 } from '../../mutations';
 import { fetchSavedArticlesList } from '../../query';
 import { fetchBoards, fetchBoardEntries } from '../../services/api';
-import { adjustWordWeight, isDeranked } from '../../services/interesting-settings';
+import { isDeranked } from '../../services/interesting-settings';
 import type { ArticleKeyword } from '../../services/keywords';
 import { areHighlightsEnabled, loadRowHighlights, setHighlightsEnabled } from '../../services/highlights';
 import { readMinutes } from '../../util';
@@ -73,9 +73,6 @@ export class ArticleView extends LitElement {
     progressSaveTimer: number | null = null;
     progressRestoreUserScrolled = false;
     progressApplyingRestore = false;
-    /** Brief visual feedback when a keyword weight is stepped. */
-    @state() private keywordPulse: { word: string; delta: number } | null = null;
-    private keywordPulseTimer: number | null = null;
     override connectedCallback() {
         super.connectedCallback();
         // This element is only created while an article is open, so
@@ -95,7 +92,6 @@ export class ArticleView extends LitElement {
         window.removeEventListener('share-settings-changed', this.onShareSettingsChanged);
         window.removeEventListener('saved-articles-changed', this.onSavedArticlesChanged);
         this.removeEventListener('scroll', this.onScroll);
-        if (this.keywordPulseTimer !== null) window.clearTimeout(this.keywordPulseTimer);
         if (this.progressSaveTimer !== null) window.clearTimeout(this.progressSaveTimer);
     }
     private onSavedArticlesChanged = () => {
@@ -212,7 +208,7 @@ export class ArticleView extends LitElement {
         };
         return html`<div class="toolbar-group toolbar-share" aria-label="Share and copy">
           ${loadShareTargets().map((t) => buttons[t])}
-          ${canNativeShare() ? html`<button class="btn icon-btn" @click=${() => void this.nativeShare(a, link)} aria-label="Share" title="Share">${actionIcon('more')}</button>` : ''}
+          ${canNativeShare() ? html`<button class="btn icon-btn" @click=${() => void this.nativeShare(a, link)} aria-label="Share" title="Share">${actionIcon('share')}</button>` : ''}
           <button class="btn icon-btn" @click=${() => void copyTitleLink(a, link)} aria-label="Copy link" title="Copy link">${actionIcon('copy')}</button>
           <button class="btn icon-btn" @click=${() => void copyMarkdownCitation(a, link)} aria-label="Copy markdown citation" title="Copy markdown citation">${actionIcon('markdown')}</button>
           <button class="btn icon-btn" @click=${() => void copyQuoteCard(a, link)} aria-label="Copy quote card" title="Copy quote card">${actionIcon('quote')}</button>
@@ -239,68 +235,10 @@ export class ArticleView extends LitElement {
         const minutes = readMinutes(a.content, a.summary);
         return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}${this.renderHighlightsToggle()}</div>${this.renderKeywords()}`;
     }
+
     private renderKeywords() {
         if (!this.keywords.length) return '';
-        return html`<div class="keywords" aria-label="Article keywords">
-            <span class="keywords-label">Keywords</span>
-            ${repeat(
-                this.keywords,
-                (k) => k.word,
-                (k) => {
-                    const pulse =
-                        this.keywordPulse?.word === k.word
-                            ? this.keywordPulse.delta > 0
-                                ? 'pulse-up'
-                                : 'pulse-down'
-                            : '';
-                    return html`<span class="keyword ${k.score > 0 ? 'interesting' : k.score < 0 ? 'deranked' : ''} ${pulse}">
-                        <span class="keyword-word" title=${`Weight ${k.score}`}>${k.word}</span>
-                        <button
-                            class="keyword-step"
-                            title=${`Make ${k.word} less interesting`}
-                            aria-label=${`Decrease weight for ${k.word}`}
-                            @click=${(e: MouseEvent) => this.adjustKeyword(e, k.word, -1)}
-                        >−</button>
-                        <button
-                            class="keyword-step"
-                            title=${`Make ${k.word} more interesting`}
-                            aria-label=${`Increase weight for ${k.word}`}
-                            @click=${(e: MouseEvent) => this.adjustKeyword(e, k.word, 1)}
-                        >+</button>
-                    </span>`;
-                },
-            )}
-        </div>`;
-    }
-    private adjustKeyword(e: MouseEvent, word: string, delta: number) {
-        e.stopPropagation();
-        adjustWordWeight(word, delta);
-        this.keywords = this.article ? articleKeywords(this.article) : [];
-        this.pulseKeyword(word, delta);
-    }
-    private pulseKeyword(word: string, delta: number): void {
-        if (this.keywordPulseTimer !== null) window.clearTimeout(this.keywordPulseTimer);
-        const sameActive = this.keywordPulse?.word === word && this.keywordPulse?.delta === delta;
-        const arm = () => {
-            this.keywordPulse = { word, delta };
-            this.keywordPulseTimer = window.setTimeout(() => {
-                this.keywordPulse = null;
-                this.keywordPulseTimer = null;
-            }, 420);
-        };
-        if (sameActive) {
-            // Same pulse still active: drop and reapply across a frame so the CSS animation restarts.
-            this.keywordPulse = null;
-            void this.updateComplete.then(() => {
-                if (!this.isConnected || this.keywordPulse !== null) return;
-                window.requestAnimationFrame(() => {
-                    if (!this.isConnected || this.keywordPulse !== null) return;
-                    arm();
-                });
-            });
-            return;
-        }
-        arm();
+        return html`<div class="keywords" aria-label="Article keywords"><span class="keywords-label">Keywords</span>${this.keywords.map((k) => html`<span class="keyword">${k.word}</span>`)}</div>`;
     }
     private renderBoardPicker(a: Article) {
         if (!this.boardPickerOpen) return '';
