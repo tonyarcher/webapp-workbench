@@ -19,7 +19,7 @@ export function saveQueue(items: ListenItem[]): void {
     try {
         localStorage.setItem(QUEUE_KEY, JSON.stringify(items));
     } catch {
-        // ignore
+        throw new Error('storage full');
     }
 }
 

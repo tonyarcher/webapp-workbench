@@ -36,7 +36,7 @@ import { detectLanguage, LANGUAGE_NAMES } from '../../services/language';
 import type { Article, Board, RowHighlight } from '../../types';
 import { domainOf, formatDate, stripTags } from '../../util';
 import { enqueue } from '../../services/listen-queue';
-import { toastInfo } from '../../services/toast';
+import { toastError, toastInfo } from '../../services/toast';
 import { navigate } from '../../router';
 import {
     actionIcon,
@@ -137,9 +137,6 @@ export class ArticleView extends LitElement {
             this.sanitizedBody = null;
             this.deranked = this.article ? isDeranked(this.article.id) : false;
             this.keywords = this.article ? articleKeywords(this.article) : [];
-            this.prevDeranked = false;
-            this.prevStarred = false;
-            // ...
             // A new object identity does not mean a new article: starring
             // replaces the object in place. Only a new id resets progress
             // and scroll, or pressing S mid-article yanks the reader to top.
@@ -151,6 +148,8 @@ export class ArticleView extends LitElement {
                 this.savedForLater = false;
                 this.keyLines = null;
                 this.keyLinesLoading = false;
+                this.prevDeranked = false;
+                this.prevStarred = false;
                 const saved = beginArticleProgress(this);
                 if (saved !== null) void restoreArticleReadingProgress(this, this.article!.id, saved);
                 if (this.highlightsOn) void this.refreshKeyLines();
@@ -363,10 +362,14 @@ export class ArticleView extends LitElement {
         const a = this.article;
         if (!a) return;
         const text = stripTags(a.content ?? a.summary ?? '');
-        enqueue({ id: a.id, title: a.title, text });
-        window.dispatchEvent(new CustomEvent('listen-queue-changed'));
-        toastInfo('Added to listen queue');
-        navigate({ kind: 'listen' });
+        try {
+            enqueue({ id: a.id, title: a.title, text });
+            window.dispatchEvent(new CustomEvent('listen-queue-changed'));
+            toastInfo('Added to listen queue');
+            navigate({ kind: 'listen' });
+        } catch {
+            toastError('Could not add to listen queue (storage full).');
+        }
     }
 
     private async openBoardPicker(): Promise<void> {

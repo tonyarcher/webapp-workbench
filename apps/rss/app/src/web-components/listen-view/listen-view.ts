@@ -13,13 +13,13 @@ export class ListenView extends LitElement {
     @state() private rate = 1.0;
     @state() private sleepMinutes = 0;
     private sleepTimer: number | null = null;
+    private autoPlayTimer: number | null = null;
 
     override connectedCallback() {
         super.connectedCallback();
         this.queue = loadQueue();
         if (this.queue.length) {
-            // Auto-play the current item.
-            setTimeout(() => this.play(), 100);
+            this.autoPlayTimer = window.setTimeout(() => this.play(), 100);
         }
     }
 
@@ -27,6 +27,7 @@ export class ListenView extends LitElement {
         super.disconnectedCallback();
         stopSpeaking();
         if (this.sleepTimer !== null) window.clearTimeout(this.sleepTimer);
+        if (this.autoPlayTimer !== null) window.clearTimeout(this.autoPlayTimer);
     }
 
     private current(): ListenItem | null {
