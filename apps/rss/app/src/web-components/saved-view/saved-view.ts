@@ -2,6 +2,7 @@ import { LitElement, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { fetchSavedArticlesList, savedArticlesKey, QueryController } from '../../query';
 import { unsaveForLater } from '../../mutations';
+import { downloadNotesExport } from '../../services/notes-export';
 import type { Article, SavedArticleSnapshot } from '../../types';
 import { renderSavedView } from './saved-view-render';
 import styles from './saved-view.css?inline';
@@ -48,6 +49,12 @@ export class SavedView extends LitElement {
         this.storageEstimate = { usage: est.usage ?? 0, quota: est.quota ?? 0 };
     }
 
+    private onExport() {
+        const items = this.saved.data ?? [];
+        const articles = items.map(toArticle);
+        downloadNotesExport(articles, 'obsidian');
+    }
+
     override render() {
         return renderSavedView({
             items: this.saved.data ?? [],
@@ -55,6 +62,7 @@ export class SavedView extends LitElement {
             storageEstimate: this.storageEstimate,
             open: (s) => this.open(s),
             remove: (s) => this.removeSaved(s),
+            exportNotes: () => this.onExport(),
             toArticle,
         });
     }

@@ -8,6 +8,7 @@ export interface SavedViewRenderHost {
     storageEstimate: { usage: number; quota: number } | null;
     open(item: SavedArticleSnapshot): void;
     remove(item: SavedArticleSnapshot): void;
+    exportNotes(): void;
     toArticle(item: SavedArticleSnapshot): Article;
 }
 
@@ -19,6 +20,7 @@ export function renderSavedView(host: SavedViewRenderHost) {
                 <h2>Saved for later</h2>
                 <span class="meta">${items.length} item${items.length === 1 ? '' : 's'}</span>
                 ${host.storageEstimate ? html`<span class="storage">${(host.storageEstimate.usage / 1024 / 1024).toFixed(1)} MB used</span>` : ''}
+                <button class="btn" @click=${() => host.exportNotes()}>Export to markdown</button>
             </div>
             <div class="body" tabindex="0">
                 ${host.error ? html`<div class="empty error">Could not load saved articles.</div>` : ''}
