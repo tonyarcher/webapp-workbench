@@ -32,6 +32,7 @@ import { isDeranked } from '../../services/interesting-settings';
 import type { ArticleKeyword } from '../../services/keywords';
 import { areHighlightsEnabled, loadRowHighlights, setHighlightsEnabled } from '../../services/highlights';
 import { readMinutes } from '../../util';
+import { detectLanguage, LANGUAGE_NAMES } from '../../services/language';
 import type { Article, Board, RowHighlight } from '../../types';
 import { domainOf, formatDate, stripTags } from '../../util';
 import {
@@ -266,7 +267,12 @@ export class ArticleView extends LitElement {
     private renderMeta(a: Article) {
         const minutes = readMinutes(a.content, a.summary);
         const { verdict, why } = worthMinutesVerdict(a);
-        return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}<span class="worth-badge" title=${why}>${verdict}</span>${this.renderHighlightsToggle()}</div>${this.renderKeywords()}`;
+        const lang = detectLanguage(a.content ?? a.summary ?? '');
+        const langBadge =
+            lang !== 'en'
+                ? html`<span class="lang-badge" title="Original language">${LANGUAGE_NAMES[lang] ?? lang}</span>`
+                : '';
+        return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}<span class="worth-badge" title=${why}>${verdict}</span>${langBadge}${this.renderHighlightsToggle()}</div>${this.renderKeywords()}`;
     }
 
     private renderKeywords() {
