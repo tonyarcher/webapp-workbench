@@ -53,6 +53,8 @@ export class ArticleView extends LitElement {
     @property({ attribute: false }) article: Article | null = null;
     private focused = false;
     @state() private deranked = false;
+    private prevDeranked = false;
+    private prevStarred = false;
     @state() private savedForLater = false;
     @state() private boardPickerOpen = false;
     @state() private boards: Board[] = [];
@@ -266,21 +268,24 @@ export class ArticleView extends LitElement {
         const started = this.article;
         if (!started) return;
         const next = !started.starred;
-        this.article = { ...started, starred: next };
         if (next) {
-            // Star and "not interesting" are mutually exclusive.
+            this.prevDeranked = this.deranked;
             noteDerank(started.id, started.title, false);
             this.deranked = false;
+        } else if (this.prevDeranked) {
+            noteDerank(started.id, started.title, true);
+            this.deranked = true;
+            this.prevDeranked = false;
         }
+        this.article = { ...started, starred: next };
         if (await toggleStar(started.id, next)) {
             window.dispatchEvent(new CustomEvent('article-starred', { detail: { id: started.id, starred: next } }));
         } else if (this.article?.id === started.id) {
             this.article = { ...this.article, starred: started.starred };
-            window.dispatchEvent(
-                new CustomEvent('article-starred', { detail: { id: started.id, starred: started.starred } }),
-            );
+            window.dispatchEvent(new CustomEvent('article-starred', { detail: { id: started.id, starred: started.starred } }));
         }
     }
+
     private onToggleRead = async () => {
         const started = this.article;
         if (!started) return;
@@ -380,14 +385,25 @@ export class ArticleView extends LitElement {
         const a = this.article;
         if (!a) return;
         const next = !this.deranked;
-        noteDerank(a.id, a.title, next);
-        this.deranked = next;
-        if (next && a.starred) {
-            // Deranking clears a star.
-            this.article = { ...a, starred: false };
-            void toggleStar(a.id, false);
+        if (next) {
+            this.prevStarred = a.starred;
+            noteDerank(a.id, a.title, true);
+            this.deranked = true;
+            if (a.starred) {
+                this.article = { ...a, starred: false };
+                void toggleStar(a.id, false);
+            }
+        } else {
+            noteDerank(a.id, a.title, false);
+            this.deranked = false;
+            if (this.prevStarred) {
+                this.article = { ...a, starred: true };
+                void toggleStar(a.id, true);
+                this.prevStarred = false;
+            }
         }
     }
+
     /**
      * Fetch the decision model's selected excerpts. They are verbatim slices of
      * this article, so the panel cites the open row and never adds prose.
