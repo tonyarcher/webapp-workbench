@@ -117,6 +117,18 @@ class BoardControllerTest {
         }.andExpect { status { isBadRequest() } }
     }
 
+
+    @Test
+    fun createBoardNew() {
+        auth()
+        whenever(boards.findByUserIdAndTitle(uid, "New")).thenReturn(null)
+        whenever(boards.save(any<BoardEntity>())).thenAnswer { it.arguments[0] }
+        mvc.post("/boards") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{"title":"New"}"""
+        }.andExpect { status { isOk() } }
+    }
+
     @Test
     fun renameBoard() {
         auth()
@@ -428,6 +440,86 @@ class BoardControllerTest {
             header("X-Api-Version", "1"); header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON; content = """{"articleId":"a1"}"""
         }.andExpect { status { isNotFound() } }
+    }
+
+
+    @Test
+    fun noteEntryNullNote() {
+        auth()
+        ownedBoard()
+        val row = BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T", note = "old", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)
+        whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(row)
+        whenever(entries.save(any<BoardEntryEntity>())).thenAnswer { it.arguments[0] }
+        mvc.put("/boards/$boardId/entries/a1") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{}"""
+        }.andExpect { status { isOk() }; jsonPath("$.note") { value("") } }
+    }
+
+    @Test
+    fun addEntryBlankId() {
+        auth()
+        ownedBoard()
+        mvc.post("/boards/$boardId/entries") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{"articleId":"  "}"""
+        }.andExpect { status { isBadRequest() } }
+    }
+
+
+    @Test
+    fun addEntryRaceMissing() {
+        auth()
+        ownedBoard()
+        whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(null)
+        whenever(articles.findById("a1")).thenReturn(java.util.Optional.of(ArticleEntity(id = "a1", feedId = feedId, title = "Article", publishedAt = Instant.ofEpochMilli(1000))))
+        whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedId))
+        whenever(feeds.findById(feedId)).thenReturn(java.util.Optional.of(FeedEntity(id = feedId, xmlUrl = "https://f.example/rss", title = "Feed")))
+        whenever(entries.findFirstByBoardIdOrderBySortOrderDesc(boardId)).thenReturn(null)
+        whenever(entries.save(any<BoardEntryEntity>())).thenThrow(DataIntegrityViolationException("dup"))
+        whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(null)
+        mvc.post("/boards/$boardId/entries") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{"articleId":"a1"}"""
+        }.andExpect { status { isConflict() } }
+    }
+
+    @Test
+    fun reorderEntriesNull() {
+        auth()
+        ownedBoard()
+        mvc.post("/boards/$boardId/entries/reorder") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{}"""
+        }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun reorderEntriesPartial() {
+        auth()
+        ownedBoard()
+        val e1 = BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T1", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)
+        val e2 = BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a2", title = "T2", addedAt = Instant.ofEpochMilli(2000), sortOrder = 1)
+        whenever(entries.findByBoardIdAndArticleIdIn(boardId, listOf("a1"))).thenReturn(listOf(e1))
+        whenever(entries.saveAll(any<List<BoardEntryEntity>>())).thenAnswer { it.arguments[0] }
+        mvc.post("/boards/$boardId/entries/reorder") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{"articleIds":["a1"]}"""
+        }.andExpect { status { isOk() } }
+    }
+
+
+    @Test
+    fun searchEntriesBlankQuery() {
+        auth()
+        ownedBoard()
+        whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
+            listOf(BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)),
+        )
+        mvc.get("/boards/$boardId/search") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            param("q", "   ")
+        }.andExpect { status { isOk() } }
     }
 
 }
