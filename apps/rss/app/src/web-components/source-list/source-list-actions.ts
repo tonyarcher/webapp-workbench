@@ -31,9 +31,11 @@ export interface ActionHost extends MenuHost {
     collapsed: Record<string, boolean>;
     feedSort: FeedSort;
     hideReadByFolder: Record<string, boolean>;
+    ignoredFolders?: Record<string, boolean>;
     interestingShadow: Record<string, true>;
     interestingOrder: string[];
     todaySettings: TodaySettings;
+    toggleIgnored?(id: string): void;
     menuFeed(): Feed | undefined;
     folderMenuFolder(): Folder | undefined;
     savedSearchMenuSearch(): SavedSearch | undefined;
@@ -148,11 +150,16 @@ export async function folderMenuDeleteAction(host: ActionHost): Promise<void> {
     closeFolderMenuAction(host);
 }
 
+export function folderMenuIgnoreAction(host: ActionHost): void {
+    const folder = host.folderMenuFolder();
+    if (folder) host.toggleIgnored?.(folder.id);
+    closeFolderMenuAction(host);
+}
+
 export async function folderMenuRefreshAction(host: ActionHost): Promise<void> {
     const folder = host.folderMenuFolder();
-    closeFolderMenuAction(host);
     if (folder) await refreshFolder(folder.id);
-    window.dispatchEvent(new CustomEvent('feeds-refreshed'));
+    closeFolderMenuAction(host);
 }
 
 export async function sortFoldersAction(host: ActionHost): Promise<void> {

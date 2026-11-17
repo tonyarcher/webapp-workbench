@@ -13,6 +13,7 @@ export class FolderMenu extends LitElement {
     @property({ attribute: false }) anchor: MenuAnchor | null = null;
     @property({ attribute: false }) unreadOnly = false;
     @property({ attribute: false }) shadow = false;
+    @property({ attribute: false }) ignored = false;
 
     private menuEl: HTMLElement | null = null;
 
@@ -83,6 +84,9 @@ export class FolderMenu extends LitElement {
                     <button class="action" @click=${this.emitRefresh}>
                       <span>Refresh folder<br /><span class="desc">Fetch the latest articles from all feeds in this folder</span></span>
                     </button>
+                    <button class="action" @click=${this.emitIgnore}>
+                      <span>${this.ignored ? 'Unignore folder' : 'Ignore folder'}<br /><span class="desc">Exclude from sidebar counts and default views</span></span>
+                    </button>
                     <button class="action danger" @click=${this.emitDelete}>
                       <span>Delete folder<br /><span class="desc">Remove the folder; feeds are removed from it</span></span>
                     </button>
@@ -126,6 +130,10 @@ export class FolderMenu extends LitElement {
 
     private emitRefresh() {
         this.dispatchEvent(new CustomEvent('refresh', { bubbles: true, composed: true }));
+    }
+
+    private emitIgnore() {
+        this.dispatchEvent(new CustomEvent('ignore', { bubbles: true, composed: true }));
     }
 
     private onUnreadChange(e: Event) {

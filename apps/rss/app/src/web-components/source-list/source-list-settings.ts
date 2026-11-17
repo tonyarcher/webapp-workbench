@@ -5,6 +5,7 @@ export const AUTO_HIDE_KEY = 'rss-reader:auto-hide-sidebar';
 export const SIDEBAR_WIDTH_KEY = 'rss-reader:sidebar-width';
 export const FEED_SORT_KEY = 'rss-reader:feed-sort';
 export const HIDE_READ_KEY = 'rss-reader:hide-read-by-folder';
+export const IGNORED_KEY = 'rss-reader:ignored-folders';
 export const MIN_SIDEBAR_WIDTH = 140;
 export const MAX_SIDEBAR_WIDTH = 480;
 
@@ -121,4 +122,23 @@ export function nextSidebarWidth(current: number, key: string, shiftKey: boolean
     if (key === 'Home') return MIN_SIDEBAR_WIDTH;
     if (key === 'End') return MAX_SIDEBAR_WIDTH;
     return null;
+}
+
+export function loadIgnoredFolders(): Record<string, boolean> {
+    try {
+        const raw = localStorage.getItem(IGNORED_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw) as Record<string, boolean>;
+        return typeof parsed === 'object' && parsed ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+export function saveIgnoredFolders(map: Record<string, boolean>): void {
+    try {
+        localStorage.setItem(IGNORED_KEY, JSON.stringify(map));
+    } catch {
+        // storage unavailable; preference just won't persist
+    }
 }

@@ -6,6 +6,7 @@ import { articleImage, cardPlaceholderStyle } from '../../services/image';
 import { articleVideo, watchUrlFor } from '../../services/video';
 import { readMinutes } from '../../util';
 import { topWords } from '../../services/interesting-words';
+import { isDeranked } from '../../services/interesting-settings';
 import { interestingWordMapOf } from './article-list-interesting';
 import { domainOf, formatDate } from '../../util';
 import type { Article, ArticleSort, ListViewType, View } from '../../types';
@@ -138,6 +139,7 @@ function detailTitleRow(
       <div class="row-top">
         ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
         ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
+        ${isDeranked(article.id) ? html`<span class="deranked-badge" title="Marked not interesting">⊘</span>` : ''}
         <button class="title title-open" @click=${(e: MouseEvent) => {
             e.stopPropagation();
             onOpen(e, article);
@@ -196,6 +198,7 @@ export function headlineRowTemplate(
       <div class="row-top">
         ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
         ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
+        ${isDeranked(article.id) ? html`<span class="deranked-badge" title="Marked not interesting">⊘</span>` : ''}
         ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
         <button class="title title-open" @click=${(e: MouseEvent) => {
             e.stopPropagation();

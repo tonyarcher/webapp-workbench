@@ -5,6 +5,7 @@ import { MAX_SIDEBAR_WIDTH, MIN_SIDEBAR_WIDTH } from './source-list-settings';
 import {
     feedSortChangeAction,
     folderMenuDeleteAction,
+    folderMenuIgnoreAction,
     folderMenuRefreshAction,
     folderMenuShadowAction,
     folderMenuUnreadOnlyAction,
@@ -40,6 +41,7 @@ export interface SourceListRenderHost extends ActionHost {
     autoHide: boolean;
     totalUnread: number;
     interestingOrder: string[];
+    ignoredFolders?: Record<string, boolean>;
     toggleInterestingSection(): void;
     library: { error: Error | undefined; data?: { savedSearches?: SavedSearch[] } };
     icon(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash'): unknown;
@@ -371,7 +373,7 @@ export function renderMenus(
 ) {
     return html`
       <feed-menu .feed=${menuFeed ?? null} .folders=${folders} .open=${host.menuOpen && menuFeed !== undefined} .anchor=${host.menuAnchor} @close=${() => closeMenuAction(host)} @refresh=${() => menuRefreshAction(host)} @delete=${() => menuDeleteAction(host)} @folders-change=${(e: Event) => menuFoldersChangeAction(host, e)}></feed-menu>
-      <folder-menu .folder=${folderMenuFolder ?? null} .open=${host.folderMenuOpen && folderMenuFolder !== undefined} .anchor=${host.folderMenuAnchor} .unreadOnly=${folderMenuFolder ? Boolean(host.hideReadByFolder[folderMenuFolder.id]) : false} .shadow=${folderMenuFolder ? host.interestingShadow[folderMenuFolder.id] === true : false} @close=${() => closeFolderMenuAction(host)} @delete=${() => folderMenuDeleteAction(host)} @refresh=${() => folderMenuRefreshAction(host)} @unread-only-change=${(e: Event) => folderMenuUnreadOnlyAction(host, e)} @shadow-change=${(e: Event) => folderMenuShadowAction(host, e)}></folder-menu>
+      <folder-menu .folder=${folderMenuFolder ?? null} .open=${host.folderMenuOpen && folderMenuFolder !== undefined} .anchor=${host.folderMenuAnchor} .unreadOnly=${folderMenuFolder ? Boolean(host.hideReadByFolder[folderMenuFolder.id]) : false} .shadow=${folderMenuFolder ? host.interestingShadow[folderMenuFolder.id] === true : false} .ignored=${folderMenuFolder ? Boolean(host.ignoredFolders?.[folderMenuFolder.id]) : false} @close=${() => closeFolderMenuAction(host)} @delete=${() => folderMenuDeleteAction(host)} @refresh=${() => folderMenuRefreshAction(host)} @unread-only-change=${(e: Event) => folderMenuUnreadOnlyAction(host, e)} @shadow-change=${(e: Event) => folderMenuShadowAction(host, e)} @ignore=${() => folderMenuIgnoreAction(host)}></folder-menu>
       <saved-search-menu .search=${savedSearchMenuSearch ?? null} .open=${host.savedSearchMenuOpen && savedSearchMenuSearch !== undefined} .anchor=${host.savedSearchMenuAnchor} @close=${() => closeSavedSearchMenuAction(host)} @rename=${() => savedSearchMenuRenameAction(host)} @delete=${() => savedSearchMenuDeleteAction(host)}></saved-search-menu>
       <feed-list-menu .open=${host.feedListMenuOpen} .anchor=${host.feedListMenuAnchor} .feedSort=${host.feedSort} @close=${() => closeFeedListMenuAction(host)} @sort-change=${(e: Event) => feedSortChangeAction(host, e)} @sort-folders=${() => sortFoldersAction(host)} @refresh-all=${() => refreshAllAction(host)}></feed-list-menu>
       <today-menu .open=${host.todayMenuOpen} .anchor=${host.todayMenuAnchor} .folders=${folders} .settings=${host.todaySettings} @close=${() => (host.todayMenuOpen = false)} @settings-change=${(e: Event) => todaySettingsChangeAction(host, e)}></today-menu>

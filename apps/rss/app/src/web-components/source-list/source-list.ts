@@ -41,6 +41,8 @@ import {
     loadCollapsed,
     loadFeedSort,
     loadHideReadByFolder,
+    loadIgnoredFolders,
+    saveIgnoredFolders,
     loadSidebarWidth,
     clampSidebarWidth,
     nextSidebarWidth,
@@ -64,6 +66,7 @@ export class SourceList extends LitElement {
     @state() collapsed: Record<string, boolean> = loadCollapsed();
     @state() private feedSort: FeedSort = loadFeedSort();
     @state() private hideReadByFolder: Record<string, boolean> = loadHideReadByFolder();
+    @state() private ignoredFolders: Record<string, boolean> = loadIgnoredFolders();
     @state() interestingShadow: Record<string, true> = loadInterestingShadow();
     @state() interestingOrder: string[] = loadInterestingOrder();
 
@@ -111,7 +114,10 @@ export class SourceList extends LitElement {
     }
 
     get totalUnread(): number {
-        return this.libraryData.feeds.reduce((sum, f) => sum + f.unread, 0);
+        return this.libraryData.feeds.reduce((sum, f) => {
+            const ignored = f.folderIds.some((fid) => this.ignoredFolders[fid]);
+            return ignored ? sum : sum + f.unread;
+        }, 0);
     }
 
     private onInterestingCountsChanged = (): void => {
@@ -326,6 +332,13 @@ export class SourceList extends LitElement {
 
     toggleFolder(id: string) {
         toggleFolderAction(this as never, id);
+    }
+    toggleIgnored(id: string) {
+        const next = { ...this.ignoredFolders };
+        if (next[id]) delete next[id];
+        else next[id] = true;
+        this.ignoredFolders = next;
+        saveIgnoredFolders(next);
     }
 
     toggleInterestingSection() {
