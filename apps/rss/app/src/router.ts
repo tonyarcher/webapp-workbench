@@ -37,6 +37,9 @@ export function parsePath(pathname: string, search = ''): View {
     if (parts[0] === 'saved') {
         return { kind: 'saved' };
     }
+    if (parts[0] === 'glossary') {
+        return { kind: 'glossary' };
+    }
     if (parts[0] === 'coverage') {
         return { kind: 'coverage' };
     }
@@ -84,6 +87,8 @@ export function viewToPath(view: View): string {
             return '/mute-filters';
         case 'saved':
             return '/saved';
+        case 'glossary':
+            return '/glossary';
         case 'coverage':
             return '/coverage';
         case 'stats':

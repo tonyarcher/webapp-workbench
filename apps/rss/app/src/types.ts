@@ -128,6 +128,7 @@ export type View =
     | { kind: 'organize' }
     | { kind: 'mute-filters' }
     | { kind: 'saved' }
+    | { kind: 'glossary' }
     | { kind: 'coverage' }
     | { kind: 'stats' }
     | { kind: 'boards' }
