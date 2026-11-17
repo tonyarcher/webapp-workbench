@@ -137,11 +137,7 @@ export class ArticleView extends LitElement {
             this.sanitizedBody = null;
             this.deranked = this.article ? isDeranked(this.article.id) : false;
             this.keywords = this.article ? articleKeywords(this.article) : [];
-            // A new object identity does not mean a new article: starring
-            // replaces the object in place. Only a new id resets progress
-            // and scroll, or pressing S mid-article yanks the reader to top.
             if (this.article?.id !== this.progressArticleId) {
-                // Flush pending progress for the article being replaced before switching.
                 flushProgressOnSwitch(this);
                 this.progressArticleId = this.article?.id ?? null;
                 this.savedStateGen++;
@@ -245,16 +241,8 @@ export class ArticleView extends LitElement {
             mastodon: html`<button class="btn icon-btn" @click=${open('mastodon')} aria-label=${labels.mastodon} title=${labels.mastodon}>${shareIcon('mastodon')}</button>`,
             instagram: html`<button class="btn icon-btn" @click=${() => void copyLinkForInstagram(link, a)} aria-label=${labels.instagram} title=${labels.instagram}>${shareIcon('instagram')}</button>`,
         };
-        return html`<div class="toolbar-group toolbar-share" aria-label="Share and copy">
-          ${loadShareTargets().map((t) => buttons[t])}
-          ${canNativeShare() ? html`<button class="btn icon-btn" @click=${() => void this.nativeShare(a, link)} aria-label="Share" title="Share">${actionIcon('share')}</button>` : ''}
-          <button class="btn icon-btn" @click=${() => void copyTitleLink(a, link)} aria-label="Copy link" title="Copy link">${actionIcon('copy')}</button>
-          <button class="btn icon-btn" @click=${() => void copyMarkdownCitation(a, link)} aria-label="Copy markdown citation" title="Copy markdown citation">${actionIcon('markdown')}</button>
-          <button class="btn icon-btn" @click=${() => void copyQuoteCard(a, link)} aria-label="Copy quote card" title="Copy quote card">${actionIcon('quote')}</button>
-          <a class="btn icon-btn" href=${mailtoShareUrl(link, a.title)} @click=${() => noteShare(a.id, a.title)} aria-label="Email" title="Email">${actionIcon('mail')}</a>
-        </div>`;
+        return html`<div class="toolbar-group toolbar-share" aria-label="Share and copy">${loadShareTargets().map((t) => buttons[t])}${canNativeShare() ? html`<button class="btn icon-btn" @click=${() => void this.nativeShare(a, link)} aria-label="Share" title="Share">${actionIcon('share')}</button>` : ''}<button class="btn icon-btn" @click=${() => void copyTitleLink(a, link)} aria-label="Copy link" title="Copy link">${actionIcon('copy')}</button><button class="btn icon-btn" @click=${() => void copyMarkdownCitation(a, link)} aria-label="Copy markdown citation" title="Copy markdown citation">${actionIcon('markdown')}</button><button class="btn icon-btn" @click=${() => void copyQuoteCard(a, link)} aria-label="Copy quote card" title="Copy quote card">${actionIcon('quote')}</button><a class="btn icon-btn" href=${mailtoShareUrl(link, a.title)} @click=${() => noteShare(a.id, a.title)} aria-label="Email" title="Email">${actionIcon('mail')}</a></div>`;
     }
-    /** OS share sheet where it exists; counts as a share like the rest. */
     private async nativeShare(a: Article, link: string): Promise<void> {
         try {
             await navigator.share({ title: a.title, url: link });
@@ -301,7 +289,6 @@ export class ArticleView extends LitElement {
         );
     }
     private renderBody(body: string, a: Article) {
-        // sanitized: body is sanitizeHtml(a.content), applied in render().
         if (body) return html`<div class="content">${unsafeHTML(body)}</div>`;
         if (a.summary) return html`<div class="content">${a.summary}</div>`;
         return html`<p class="content">No content available for this article.</p>`;
@@ -436,7 +423,6 @@ export class ArticleView extends LitElement {
             void this.refreshSavedState();
             return;
         }
-        // Reconcile from source of truth after success/invalidation events.
         void this.refreshSavedState();
     };
     private onDerank() {
@@ -517,28 +503,16 @@ export class ArticleView extends LitElement {
         const result = this.keyLines;
         const has = !!result && result.available && result.excerpts.length > 0;
         const settledEmpty = !this.keyLinesLoading && !has;
-        return html`<section class="key-lines" aria-label="Key lines">
-            <div class="key-lines-head">
-                <h2>Key lines</h2>
-                <button class="key-lines-toggle" @click=${this.onToggleKeyLines} aria-pressed=${this.highlightsOn}>Hide</button>
-            </div>
-            ${this.keyLinesLoading && !has ? html`<div class="skl"></div><div class="skl skl-short"></div>` : ''}
-            ${settledEmpty ? html`<p class="key-why">No key lines found for this article.</p>` : ''}
-            ${
-                has
-                    ? html`<ul>
-                      ${repeat(
-                          result.excerpts,
-                          (e) => e.index,
-                          (e) => html`<li><blockquote>${e.text}</blockquote></li>`,
-                      )}
-                  </ul>
-                  <p class="key-why">From this article · ${whyLineFor(result, this.keywords, this.article)}</p>`
-                    : ''
-            }
-        </section>`;
+        return html`<section class="key-lines" aria-label="Key lines"><div class="key-lines-head"><h2>Key lines</h2><button class="key-lines-toggle" @click=${this.onToggleKeyLines} aria-pressed=${this.highlightsOn}>Hide</button></div>${this.keyLinesLoading && !has ? html`<div class="skl"></div><div class="skl skl-short"></div>` : ''}${settledEmpty ? html`<p class="key-why">No key lines found for this article.</p>` : ''}${
+            has
+                ? html`<ul>${repeat(
+                      result!.excerpts,
+                      (e) => e.index,
+                      (e) => html`<li><blockquote>${e.text}</blockquote></li>`,
+                  )} </ul><p class="key-why">From this article � ${whyLineFor(result!, this.keywords, this.article)}</p>`
+                : ''
+        }</section>`;
     }
-    /** Re-enable affordance while the feature is off. */
     private renderHighlightsToggle() {
         if (this.highlightsOn) return '';
         return html`<button class="key-lines-toggle" @click=${this.onToggleKeyLines} aria-pressed="false">Key lines</button>`;

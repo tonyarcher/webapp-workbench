@@ -22,7 +22,6 @@ import {
 import { reinitVirtualizer, resetList } from './article-list-loading';
 import { initialLoadState, isLoading, type LoadState } from './article-list-load-state';
 import { interestingActiveFor } from './article-list-interesting';
-
 import { DEFAULT_INTERESTING_STRICTNESS, isDeranked } from '../../services/interesting-settings';
 import { noteDerank, markShownRead } from '../../mutations';
 import { readMinutes } from '../../util';
@@ -52,7 +51,6 @@ import {
     handleSlideshowWillUpdate,
 } from './article-list-slideshow';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
-
 import { areHighlightsEnabled } from '../../services/highlights';
 import { syncHighlightsEnabled, toggleRowHighlight, type RowHighlightsHost } from './article-list-row-highlights';
 import { setInterestingHideRead } from '../../services/interesting-counts';
@@ -80,7 +78,6 @@ import '../advanced-menu/advanced-menu';
 import '../lazy-img/lazy-img';
 import '../video-header/video-header';
 import styles from './article-list.css?inline';
-
 interface Library {
     folders: Folder[];
     feeds: Feed[];

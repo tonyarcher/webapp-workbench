@@ -445,9 +445,37 @@ h1 a:hover {
     max-width: 100%;
 }
 
-.speed-read-overlay { position: fixed; inset: 0; background: var(--bg, #000); z-index: 100; overflow: auto; }
+.speed-read-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg, #000);
+    z-index: 100;
+    overflow: auto;
+}
 
-.overflow-menu { position: absolute; top: 40px; right: 8px; background: var(--panel-bg, #fff); border: 1px solid var(--border, #eee); border-radius: .5rem; box-shadow: 0 4px 12px rgba(0,0,0,.15); padding: .25rem; display: flex; flex-direction: column; gap: .25rem; z-index: 50; }
-.overflow-menu .btn { text-align: left; white-space: nowrap; }
-.toolbar-group { position: relative; }
-.overflow-backdrop { position: fixed; inset: 0; z-index: 49; }
+.overflow-menu {
+    position: absolute;
+    top: 40px;
+    right: 8px;
+    background: var(--panel-bg, #fff);
+    border: 1px solid var(--border, #eee);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    z-index: 50;
+}
+.overflow-menu .btn {
+    text-align: left;
+    white-space: nowrap;
+}
+.toolbar-group {
+    position: relative;
+}
+.overflow-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 49;
+}

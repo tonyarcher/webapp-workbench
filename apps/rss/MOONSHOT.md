@@ -564,7 +564,7 @@ triage as premium features. Ours are core.
 
 ### B9. Duplicate consolidation
 
-- **Why.** The same story, the same feed, the same author — duplicates waste
+- **Why.** The same story, the same feed, the same author ï¿½ duplicates waste
   minutes and split reading state across rows.
 - **What.** Consolidate exact and near-exact duplicate articles into a single
   canonical row with a "merged from N" affordance; per-member open; the
