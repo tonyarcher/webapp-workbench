@@ -104,6 +104,7 @@ function renderMain(host: AppShellRenderHost) {
     if (host.route.kind === 'organize') return html`<organize-view></organize-view>`;
     if (host.route.kind === 'mute-filters') return html`<mute-filters-view></mute-filters-view>`;
     if (host.route.kind === 'saved') return html`<saved-view @open-article=${host.onOpenArticle}></saved-view>`;
+    if (host.route.kind === 'backgrounder') return html`<backgrounder-view></backgrounder-view>`;
     if (host.route.kind === 'listen') return html`<listen-view></listen-view>`;
     if (host.route.kind === 'glossary') return html`<glossary-view></glossary-view>`;
     if (host.route.kind === 'coverage') return html`<coverage-view></coverage-view>`;

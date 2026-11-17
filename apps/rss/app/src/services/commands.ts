@@ -71,6 +71,7 @@ export function buildCommands(
     go('coverage', 'Coverage balance', () => ctx.navigate({ kind: 'coverage' }));
     go('glossary', 'Glossary', () => ctx.navigate({ kind: 'glossary' }));
     go('listen', 'Listen queue', () => ctx.navigate({ kind: 'listen' }));
+    go('backgrounder', 'Catch me up', () => ctx.navigate({ kind: 'backgrounder' }));
     go('boards', 'Boards', () => ctx.navigate({ kind: 'boards' }));
     go('search', 'Search', () => ctx.navigate({ kind: 'search' }));
     go('organize', 'Organize', () => ctx.navigate({ kind: 'organize' }));
