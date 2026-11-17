@@ -46,6 +46,7 @@ import {
     worthMinutesVerdict,
 } from './article-view-helpers';
 import '../video-header/video-header';
+import '../speed-read-view/speed-read-view';
 import styles from './article-view.css?inline';
 @customElement('article-view')
 export class ArticleView extends LitElement {
@@ -56,6 +57,7 @@ export class ArticleView extends LitElement {
     private prevDeranked = false;
     private prevStarred = false;
     @state() private savedForLater = false;
+    @state() private speedReadOpen = false;
     @state() private boardPickerOpen = false;
     @state() private boards: Board[] = [];
     @state() private boardMembership = new Set<string>();
@@ -165,7 +167,7 @@ export class ArticleView extends LitElement {
         }
         const link = safeHttpUrl(a.link);
         const video = articleVideo(a);
-        return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderKeyLines()}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderBody(body, a)}</div>${this.renderBoardPicker(a)}`;
+        return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderKeyLines()}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderBody(body, a)}</div>${this.renderBoardPicker(a)}${this.speedReadOpen ? html`<div class="speed-read-overlay"><speed-read-view .text=${stripTags(a.content ?? a.summary ?? '')} @close=${() => (this.speedReadOpen = false)}></speed-read-view></div>` : ''}`;
     }
     private renderToolbar(a: Article, link: string | undefined) {
         return html`
@@ -178,6 +180,7 @@ export class ArticleView extends LitElement {
           <button class="btn icon-btn ${this.deranked ? 'active' : ''}" @click=${this.onDerank} aria-label="Not interesting" aria-pressed=${this.deranked} title=${this.deranked ? 'Marked not interesting' : 'Not interesting'}>${actionIcon(this.deranked ? 'deranked' : 'derank')}</button>
           <button class="btn icon-btn" @click=${this.onToggleRead} aria-label=${a.read ? 'Keep unread' : 'Mark read'} title=${a.read ? 'Keep unread' : 'Mark read'}>${actionIcon(a.read ? 'read' : 'unread')}</button>
           <button class="btn icon-btn ${this.savedForLater ? 'active' : ''}" @click=${this.onToggleSaved} aria-label=${this.savedForLater ? 'Saved for later' : 'Save for later'} aria-pressed=${this.savedForLater} title=${this.savedForLater ? 'Saved for later' : 'Save for later'}>${actionIcon(this.savedForLater ? 'saved' : 'save')}</button>
+          <button class="btn icon-btn" @click=${() => (this.speedReadOpen = true)} aria-label="Speed read" title="Speed read">⚡</button>
           <button class="btn icon-btn" @click=${() => void this.openBoardPicker()} aria-label="Add to board" title="Add to board">📋</button>
         </div>
         ${link ? html`<span class="toolbar-divider" aria-hidden="true"></span>${this.renderShareButtons(a, link)}` : ''}
