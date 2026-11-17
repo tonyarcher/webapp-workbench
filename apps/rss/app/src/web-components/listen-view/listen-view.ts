@@ -17,6 +17,10 @@ export class ListenView extends LitElement {
     override connectedCallback() {
         super.connectedCallback();
         this.queue = loadQueue();
+        if (this.queue.length) {
+            // Auto-play the current item.
+            setTimeout(() => this.play(), 100);
+        }
     }
 
     override disconnectedCallback() {

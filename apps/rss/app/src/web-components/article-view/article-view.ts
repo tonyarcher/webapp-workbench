@@ -36,6 +36,8 @@ import { detectLanguage, LANGUAGE_NAMES } from '../../services/language';
 import type { Article, Board, RowHighlight } from '../../types';
 import { domainOf, formatDate, stripTags } from '../../util';
 import { enqueue } from '../../services/listen-queue';
+import { toastInfo } from '../../services/toast';
+import { navigate } from '../../router';
 import {
     actionIcon,
     articleKeywords,
@@ -363,6 +365,8 @@ export class ArticleView extends LitElement {
         const text = stripTags(a.content ?? a.summary ?? '');
         enqueue({ id: a.id, title: a.title, text });
         window.dispatchEvent(new CustomEvent('listen-queue-changed'));
+        toastInfo('Added to listen queue');
+        navigate({ kind: 'listen' });
     }
 
     private async openBoardPicker(): Promise<void> {
