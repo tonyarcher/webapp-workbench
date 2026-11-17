@@ -258,6 +258,7 @@ export class ArticleView extends LitElement {
                 boards: this.boards,
                 boardMembership: this.boardMembership,
                 newBoardTitle: this.newBoardTitle,
+                setNewBoardTitle: (value) => (this.newBoardTitle = value),
                 close: () => (this.boardPickerOpen = false),
                 createBoard: () => void this.createBoardFromPicker(),
                 toggleMembership: (b, id) => void this.toggleBoardMembership(b, id),

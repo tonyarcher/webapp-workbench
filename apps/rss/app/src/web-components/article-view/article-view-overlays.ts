@@ -6,6 +6,7 @@ export interface BoardPickerHost {
     boards: Board[];
     boardMembership: Set<string>;
     newBoardTitle: string;
+    setNewBoardTitle(value: string): void;
     close(): void;
     createBoard(): void;
     toggleMembership(board: Board, articleId: string): void;
@@ -26,7 +27,7 @@ export function renderBoardPicker(host: BoardPickerHost, a: Article) {
         <div class="board-picker" role="dialog" aria-label="Add to board">
             <div class="board-picker-head"><h3>Boards</h3><button class="btn" @click=${() => host.close()}>Close</button></div>
             <div class="board-picker-create">
-                <input type="text" placeholder="New board" .value=${host.newBoardTitle} @input=${(e: Event) => (host.newBoardTitle = (e.target as HTMLInputElement).value)} />
+                <input type="text" placeholder="New board" .value=${host.newBoardTitle} @input=${(e: Event) => host.setNewBoardTitle((e.target as HTMLInputElement).value)} />
                 <button class="btn" @click=${() => host.createBoard()}>Create</button>
             </div>
             <ul class="board-picker-list">${host.boards.map((b) => html`<li><label><input type="checkbox" .checked=${host.boardMembership.has(b.id)} @change=${() => host.toggleMembership(b, a.id)} />${b.title}</label></li>`)}</ul>
