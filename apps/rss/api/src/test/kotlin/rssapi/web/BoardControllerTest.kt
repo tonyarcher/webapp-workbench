@@ -300,4 +300,66 @@ class BoardControllerTest {
         }
             .andExpect { status { isOk() } }
     }
+
+    @Test
+    fun reorderBoardsEmpty() {
+        auth()
+        mvc.post("/boards/reorder") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{"ids":["not-a-uuid"]}"""
+        }.andExpect { status { isOk() } }
+    }
+
+    @Test
+    fun addEntryRace() {
+        auth()
+        ownedBoard()
+        whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(null).thenReturn(
+            BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0),
+        )
+        whenever(articles.findById("a1")).thenReturn(Optional.of(ArticleEntity(id = "a1", feedId = feedId, title = "Article", publishedAt = Instant.ofEpochMilli(1000))))
+        whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedId))
+        whenever(feeds.findById(feedId)).thenReturn(Optional.of(FeedEntity(id = feedId, xmlUrl = "https://f.example/rss", title = "Feed")))
+        whenever(entries.findFirstByBoardIdOrderBySortOrderDesc(boardId)).thenReturn(null)
+        whenever(entries.save(any<BoardEntryEntity>())).thenThrow(DataIntegrityViolationException("dup"))
+        mvc.post("/boards/$boardId/entries") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{"articleId":"a1"}"""
+        }.andExpect { status { isOk() } }
+    }
+
+    @Test
+    fun searchEntriesEmptyQuery() {
+        auth()
+        ownedBoard()
+        whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
+            listOf(BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)),
+        )
+        mvc.get("/boards/$boardId/search") { header("X-Api-Version", "1"); header("Authorization", "Bearer good") }
+            .andExpect { status { isOk() } }
+    }
+
+    @Test
+    fun noteEntryNotFound() {
+        auth()
+        ownedBoard()
+        whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(null)
+        mvc.put("/boards/$boardId/entries/a1") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{"note":"x"}"""
+        }.andExpect { status { isNotFound() } }
+    }
+
+    @Test
+    fun opmlExportMissingFeed() {
+        auth()
+        ownedBoard()
+        whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
+            listOf(BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", feedId = UUID.randomUUID(), title = "T", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)),
+        )
+        whenever(feeds.findAllById(any())).thenReturn(emptyList())
+        mvc.get("/boards/$boardId/opml") { header("X-Api-Version", "1"); header("Authorization", "Bearer good") }
+            .andExpect { status { isOk() } }
+    }
+
 }
