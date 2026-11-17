@@ -362,4 +362,48 @@ class BoardControllerTest {
             .andExpect { status { isOk() } }
     }
 
+
+    @Test
+    fun searchEntriesWithTokens() {
+        auth()
+        ownedBoard()
+        whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
+            listOf(
+                BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "Batteries review", author = "Alice", summary = "lithium", note = "important", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0),
+                BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a2", title = "Solar power", addedAt = Instant.ofEpochMilli(2000), sortOrder = 1),
+            ),
+        )
+        mvc.get("/boards/$boardId/search") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            param("q", "batteries")
+        }.andExpect { status { isOk() } }
+    }
+
+    @Test
+    fun reorderEntriesMultiple() {
+        auth()
+        ownedBoard()
+        val e1 = BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", title = "T1", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)
+        val e2 = BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a2", title = "T2", addedAt = Instant.ofEpochMilli(2000), sortOrder = 1)
+        whenever(entries.findByBoardIdAndArticleIdIn(boardId, listOf("a2", "a1"))).thenReturn(listOf(e1, e2))
+        whenever(entries.saveAll(any<List<BoardEntryEntity>>())).thenAnswer { it.arguments[0] }
+        mvc.post("/boards/$boardId/entries/reorder") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{"articleIds":["a2","a1"]}"""
+        }.andExpect { status { isOk() } }
+    }
+
+    @Test
+    fun opmlExportWithFeeds() {
+        auth()
+        ownedBoard()
+        val fid = UUID.randomUUID()
+        whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
+            listOf(BoardEntryEntity(id = UUID.randomUUID(), boardId = boardId, articleId = "a1", feedId = fid, title = "T", addedAt = Instant.ofEpochMilli(1000), sortOrder = 0)),
+        )
+        whenever(feeds.findAllById(listOf(fid))).thenReturn(listOf(FeedEntity(id = fid, xmlUrl = "https://f.example/rss", title = "Feed", siteUrl = "https://f.example")))
+        mvc.get("/boards/$boardId/opml") { header("X-Api-Version", "1"); header("Authorization", "Bearer good") }
+            .andExpect { status { isOk() } }
+    }
+
 }
