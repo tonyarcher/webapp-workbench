@@ -260,6 +260,7 @@ function cardTitleRow(
     return html`
       <div class="grid-card-title-row">
         ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
+        ${isDeranked(article.id) ? html`<span class="deranked-badge" title="Marked not interesting">⊘</span>` : ''}
         <button class="grid-card-title title-open" @click=${(e: MouseEvent) => {
             e.stopPropagation();
             onOpen(e, article);
