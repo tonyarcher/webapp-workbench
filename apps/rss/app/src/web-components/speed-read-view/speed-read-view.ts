@@ -55,9 +55,11 @@ export class SpeedReadView extends LitElement {
             return;
         }
         const chunk = this.chunks[this.index] ?? '';
-        this.index += 1;
         const delay = nextDelay(this.wpm, this.chunkSize, chunk);
-        this.timer = window.setTimeout(() => this.tick(), delay);
+        this.timer = window.setTimeout(() => {
+            this.index += 1;
+            this.tick();
+        }, delay);
     }
 
     private restart() {

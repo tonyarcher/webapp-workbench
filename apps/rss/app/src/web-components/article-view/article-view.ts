@@ -131,6 +131,9 @@ export class ArticleView extends LitElement {
             this.sanitizedBody = null;
             this.deranked = this.article ? isDeranked(this.article.id) : false;
             this.keywords = this.article ? articleKeywords(this.article) : [];
+            this.prevDeranked = false;
+            this.prevStarred = false;
+            // ...
             // A new object identity does not mean a new article: starring
             // replaces the object in place. Only a new id resets progress
             // and scroll, or pressing S mid-article yanks the reader to top.
@@ -167,7 +170,16 @@ export class ArticleView extends LitElement {
         }
         const link = safeHttpUrl(a.link);
         const video = articleVideo(a);
-        return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderKeyLines()}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderBody(body, a)}</div>${this.renderBoardPicker(a)}${this.speedReadOpen ? html`<div class="speed-read-overlay"><speed-read-view .text=${stripTags(a.content ?? a.summary ?? '')} @close=${() => (this.speedReadOpen = false)}></speed-read-view></div>` : ''}`;
+        return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderKeyLines()}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderBody(body, a)}</div>${this.renderBoardPicker(a)}${
+            this.speedReadOpen
+                ? html`<div class="speed-read-overlay"><speed-read-view .text=${stripTags(a.content ?? a.summary ?? '')} @close=${(
+                      e: Event,
+                  ) => {
+                      e.stopPropagation();
+                      this.speedReadOpen = false;
+                  }}></speed-read-view></div>`
+                : ''
+        }`;
     }
     private renderToolbar(a: Article, link: string | undefined) {
         return html`
