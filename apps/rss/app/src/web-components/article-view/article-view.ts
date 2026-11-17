@@ -58,6 +58,7 @@ export class ArticleView extends LitElement {
     private prevDeranked = false;
     private prevStarred = false;
     @state() private savedForLater = false;
+    @state() private overflowOpen = false;
     @state() private speedReadOpen = false;
     @state() private boardPickerOpen = false;
     @state() private boards: Board[] = [];
@@ -187,14 +188,26 @@ export class ArticleView extends LitElement {
     }
 
     private renderStateButtons(a: Article) {
-        return html`
-        <div class="toolbar-group" aria-label="Article state">
+        return html`<div class="toolbar-group" aria-label="Article state">
           <button class="btn icon-btn ${a.starred ? 'active' : ''}" @click=${this.onStar} aria-label=${a.starred ? 'Unstar' : 'Star'} aria-pressed=${a.starred} title=${a.starred ? 'Unstar' : 'Star'} ?disabled=${this.deranked}>${actionIcon(a.starred ? 'starred' : 'star')}</button>
           <button class="btn icon-btn ${this.deranked ? 'active' : ''}" @click=${this.onDerank} aria-label="Not interesting" aria-pressed=${this.deranked} title=${this.deranked ? 'Marked not interesting' : 'Not interesting'}>${actionIcon(this.deranked ? 'deranked' : 'derank')}</button>
           <button class="btn icon-btn" @click=${this.onToggleRead} aria-label=${a.read ? 'Keep unread' : 'Mark read'} title=${a.read ? 'Keep unread' : 'Mark read'}>${actionIcon(a.read ? 'read' : 'unread')}</button>
           <button class="btn icon-btn ${this.savedForLater ? 'active' : ''}" @click=${this.onToggleSaved} aria-label=${this.savedForLater ? 'Saved for later' : 'Save for later'} aria-pressed=${this.savedForLater} title=${this.savedForLater ? 'Saved for later' : 'Save for later'}>${actionIcon(this.savedForLater ? 'saved' : 'save')}</button>
-          <button class="btn icon-btn" @click=${() => (this.speedReadOpen = true)} aria-label="Speed read" title="Speed read">⚡</button>
-          <button class="btn icon-btn" @click=${() => void this.openBoardPicker()} aria-label="Add to board" title="Add to board">📋</button>
+          <button class="btn icon-btn" @click=${() => (this.overflowOpen = !this.overflowOpen)} aria-label="More actions" title="More actions">${actionIcon('more')}</button>
+          ${
+              this.overflowOpen
+                  ? html`<div class="overflow-menu">
+            <button class="btn" @click=${() => {
+                this.speedReadOpen = true;
+                this.overflowOpen = false;
+            }}>⚡ Speed read</button>
+            <button class="btn" @click=${() => {
+                void this.openBoardPicker();
+                this.overflowOpen = false;
+            }}>📋 Add to board</button>
+          </div>`
+                  : ''
+          }
         </div>`;
     }
 
