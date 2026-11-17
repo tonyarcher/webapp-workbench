@@ -46,6 +46,7 @@ import {
     worthMinutesVerdict,
 } from './article-view-helpers';
 import '../video-header/video-header';
+import { renderBoardPicker, renderSpeedReadOverlay } from './article-view-overlays';
 import '../speed-read-view/speed-read-view';
 import styles from './article-view.css?inline';
 @customElement('article-view')
@@ -170,16 +171,7 @@ export class ArticleView extends LitElement {
         }
         const link = safeHttpUrl(a.link);
         const video = articleVideo(a);
-        return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderKeyLines()}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderBody(body, a)}</div>${this.renderBoardPicker(a)}${
-            this.speedReadOpen
-                ? html`<div class="speed-read-overlay"><speed-read-view .text=${stripTags(a.content ?? a.summary ?? '')} @close=${(
-                      e: Event,
-                  ) => {
-                      e.stopPropagation();
-                      this.speedReadOpen = false;
-                  }}></speed-read-view></div>`
-                : ''
-        }`;
+        return html`<div class="read-progress" aria-hidden="true"><span style="width: ${Math.round(this.readProgress * 100)}%"></span></div>${this.renderToolbar(a, link)}<div class="body">${this.renderTitle(a, link)}${this.renderMeta(a)}${this.renderKeyLines()}${video ? html`<video-header class="expanded-video" .mode=${'embed'} .video=${video} .videoTitle=${a.title}></video-header>` : ''}${this.renderBody(body, a)}</div>${this.renderBoardPicker(a)}${renderSpeedReadOverlay(this.speedReadOpen, stripTags(a.content ?? a.summary ?? ''), () => (this.speedReadOpen = false))}`;
     }
     private renderToolbar(a: Article, link: string | undefined) {
         return html`
@@ -260,18 +252,18 @@ export class ArticleView extends LitElement {
         return html`<div class="keywords" aria-label="Article keywords"><span class="keywords-label">Keywords</span>${this.keywords.map((k) => html`<span class="keyword">${k.word}</span>`)}</div>`;
     }
     private renderBoardPicker(a: Article) {
-        if (!this.boardPickerOpen) return '';
-        return html`
-            <div class="board-picker-backdrop" @click=${() => (this.boardPickerOpen = false)}></div>
-            <div class="board-picker" role="dialog" aria-label="Add to board">
-                <div class="board-picker-head"><h3>Boards</h3><button class="btn" @click=${() => (this.boardPickerOpen = false)}>Close</button></div>
-                <div class="board-picker-create">
-                    <input type="text" placeholder="New board" .value=${this.newBoardTitle} @input=${(e: Event) => (this.newBoardTitle = (e.target as HTMLInputElement).value)} />
-                    <button class="btn" @click=${() => void this.createBoardFromPicker()}>Create</button>
-                </div>
-                <ul class="board-picker-list">${this.boards.map((b) => html`<li><label><input type="checkbox" .checked=${this.boardMembership.has(b.id)} @change=${() => void this.toggleBoardMembership(b, a.id)} />${b.title}</label></li>`)}</ul>
-            </div>
-        `;
+        return renderBoardPicker(
+            {
+                boardPickerOpen: this.boardPickerOpen,
+                boards: this.boards,
+                boardMembership: this.boardMembership,
+                newBoardTitle: this.newBoardTitle,
+                close: () => (this.boardPickerOpen = false),
+                createBoard: () => void this.createBoardFromPicker(),
+                toggleMembership: (b, id) => void this.toggleBoardMembership(b, id),
+            },
+            a,
+        );
     }
     private renderBody(body: string, a: Article) {
         // sanitized: body is sanitizeHtml(a.content), applied in render().
