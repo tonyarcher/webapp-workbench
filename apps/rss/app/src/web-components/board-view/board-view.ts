@@ -102,6 +102,39 @@ export class BoardView extends LitElement {
         URL.revokeObjectURL(url);
     }
 
+    private async exportCaseFile() {
+        const items = this.items;
+        const lines: string[] = [];
+        lines.push('# Board case file');
+        lines.push('');
+        lines.push(`Exported ${items.length} pinned article${items.length === 1 ? '' : 's'}.`);
+        lines.push('');
+        for (const e of items) {
+            lines.push(`## ${e.title}`);
+            lines.push('');
+            if (e.feedTitle) lines.push(`*Source: ${e.feedTitle}*`);
+            if (e.link) lines.push(`*Link: ${e.link}*`);
+            if (e.published) lines.push(`*Published: ${new Date(e.published).toISOString().slice(0, 10)}*`);
+            lines.push('');
+            if (e.note) {
+                lines.push('**Note:**');
+                lines.push(e.note);
+                lines.push('');
+            }
+            if (e.summary) lines.push(e.summary);
+            lines.push('');
+            lines.push('---');
+            lines.push('');
+        }
+        const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'case-file.md';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
     override render() {
         const items = this.items;
         return html`
@@ -114,6 +147,7 @@ export class BoardView extends LitElement {
                             this.q = (e.target as HTMLInputElement).value;
                         }} />
                     <button class="btn" @click=${() => void this.exportOpml()}>Export OPML</button>
+                    <button class="btn" @click=${() => void this.exportCaseFile()}>Export case file</button>
                 </div>
                 <div class="body" tabindex="0">
                     ${!items.length ? html`<div class="empty">No pinned articles yet. Use “Add to board” while reading.</div>` : ''}
