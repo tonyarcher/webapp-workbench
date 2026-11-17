@@ -563,13 +563,27 @@ button.title-open:hover {
 }
 
 .star {
-    margin-left: auto;
     border: none;
     background: none;
     cursor: pointer;
     color: var(--star-color);
     font-size: 15px;
     padding: 0 2px;
+}
+
+.derank {
+    margin-left: auto;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 15px;
+    padding: 0 2px;
+}
+
+.derank[aria-pressed='true'] {
+    color: var(--text-muted);
+    opacity: 0.8;
 }
 
 .end {

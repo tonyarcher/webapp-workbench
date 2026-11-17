@@ -139,12 +139,11 @@ function detailTitleRow(
       <div class="row-top">
         ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
         ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
-        ${isDeranked(article.id) ? html`<span class="deranked-badge" title="Marked not interesting">⊘</span>` : ''}
         <button class="title title-open" @click=${(e: MouseEvent) => {
             e.stopPropagation();
             onOpen(e, article);
         }}>${article.title}</button>
-        ${starButton(article, onStar)}
+        ${derankButton(article)}${starButton(article, onStar)}
       </div>
     `;
 }
@@ -153,6 +152,23 @@ function detailTitleRow(
  *  star is not the word "Star", so a bare glyph fails label-in-name. */
 function starButton(article: Article, onStar: (e: Event, article: Article) => void) {
     return html`<button class="star" aria-label=${article.starred ? 'Unstar' : 'Star'} @click=${(e: Event) => onStar(e, article)}><span aria-hidden="true">${article.starred ? '★' : '☆'}</span></button>`;
+}
+
+/** Yin-yang twin of the star: marks a row not interesting in place. */
+function derankButton(article: Article) {
+    const active = isDeranked(article.id);
+    return html`<button class="derank" aria-label=${active ? 'Marked not interesting' : 'Not interesting'} aria-pressed=${active} title=${active ? 'Marked not interesting' : 'Not interesting'} @click=${(
+        e: Event,
+    ) => {
+        e.stopPropagation();
+        (e.currentTarget as HTMLElement).dispatchEvent(
+            new CustomEvent('toggle-derank', {
+                bubbles: true,
+                composed: true,
+                detail: { id: article.id, title: article.title },
+            }),
+        );
+    }}><span aria-hidden="true">${active ? '⊘' : '○'}</span></button>`;
 }
 
 function externalIcon() {
@@ -198,7 +214,6 @@ export function headlineRowTemplate(
       <div class="row-top">
         ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
         ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
-        ${isDeranked(article.id) ? html`<span class="deranked-badge" title="Marked not interesting">⊘</span>` : ''}
         ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
         <button class="title title-open" @click=${(e: MouseEvent) => {
             e.stopPropagation();
@@ -206,7 +221,7 @@ export function headlineRowTemplate(
         }}>${article.title}</button>
         ${highlightToggle(minutes, highlight)}
         <span class="headline-date">${formatDate(article.published)}${minutes > 0 ? ` · ${minutes} min` : ''}</span>
-        ${starButton(article, onStar)}
+        ${derankButton(article)}${starButton(article, onStar)}
       </div>
       ${highlight?.open ? renderRowHighlights(highlight) : ''}
     `;
@@ -260,12 +275,11 @@ function cardTitleRow(
     return html`
       <div class="grid-card-title-row">
         ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
-        ${isDeranked(article.id) ? html`<span class="deranked-badge" title="Marked not interesting">⊘</span>` : ''}
         <button class="grid-card-title title-open" @click=${(e: MouseEvent) => {
             e.stopPropagation();
             onOpen(e, article);
         }}>${article.title}</button>
-        ${starButton(article, onStar)}
+        ${derankButton(article)}${starButton(article, onStar)}
       </div>
     `;
 }

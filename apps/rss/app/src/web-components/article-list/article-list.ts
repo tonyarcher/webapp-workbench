@@ -23,7 +23,8 @@ import { reinitVirtualizer, resetList } from './article-list-loading';
 import { initialLoadState, isLoading, type LoadState } from './article-list-load-state';
 import { interestingActiveFor } from './article-list-interesting';
 
-import { DEFAULT_INTERESTING_STRICTNESS } from '../../services/interesting-settings';
+import { DEFAULT_INTERESTING_STRICTNESS, isDeranked } from '../../services/interesting-settings';
+import { noteDerank } from '../../mutations';
 import { DwellTracker } from './article-list-dwell';
 import {
     CARD_MIN_WIDTH,
@@ -234,6 +235,7 @@ export class ArticleList extends LitElement {
         window.addEventListener('view-settings-changed', this.onViewSettingsChanged);
         window.addEventListener('storage', this.onStorage);
         window.addEventListener('highlights-enabled-changed', this.onHighlightsEnabledChanged);
+        this.addEventListener('toggle-derank', this.onToggleDerank);
         this.dwell.start();
     }
 
@@ -251,6 +253,7 @@ export class ArticleList extends LitElement {
         window.removeEventListener('view-settings-changed', this.onViewSettingsChanged);
         window.removeEventListener('storage', this.onStorage);
         window.removeEventListener('highlights-enabled-changed', this.onHighlightsEnabledChanged);
+        this.removeEventListener('toggle-derank', this.onToggleDerank);
         if (this.boundScrollEl) {
             this.boundScrollEl.removeEventListener('pointermove', this.onPointerActivity);
             this.boundScrollEl.removeEventListener('wheel', this.onPointerActivity);
@@ -503,6 +506,13 @@ export class ArticleList extends LitElement {
         e.stopPropagation();
         await toggleStarAction(this as never, article);
     }
+
+    private onToggleDerank = (e: Event) => {
+        const { id, title } = (e as CustomEvent<{ id: string; title: string }>).detail;
+        noteDerank(id, title, !isDeranked(id));
+        this.items = this.items.map((a) => a);
+        this.requestUpdate();
+    };
 
     onInterestingStrictness(e: Event) {
         onInterestingStrictnessHost(this, e);
