@@ -504,6 +504,10 @@ export class ArticleList extends LitElement {
 
     async onStar(e: Event, article: Article) {
         e.stopPropagation();
+        if (!article.starred) {
+            // Starring clears a "not interesting" mark.
+            noteDerank(article.id, article.title, false);
+        }
         await toggleStarAction(this as never, article);
     }
 
