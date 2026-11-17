@@ -27,6 +27,7 @@ import type { Article, View } from '../../types';
 import '../mute-filters-view/mute-filters-view';
 import '../organize-view/organize-view';
 import '../saved-view/saved-view';
+import '../listen-view/listen-view';
 import '../glossary-view/glossary-view';
 import '../coverage-view/coverage-view';
 import '../stats-view/stats-view';

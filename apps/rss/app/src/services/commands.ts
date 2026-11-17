@@ -70,6 +70,7 @@ export function buildCommands(
     go('stats', 'Mastery stats', () => ctx.navigate({ kind: 'stats' }));
     go('coverage', 'Coverage balance', () => ctx.navigate({ kind: 'coverage' }));
     go('glossary', 'Glossary', () => ctx.navigate({ kind: 'glossary' }));
+    go('listen', 'Listen queue', () => ctx.navigate({ kind: 'listen' }));
     go('boards', 'Boards', () => ctx.navigate({ kind: 'boards' }));
     go('search', 'Search', () => ctx.navigate({ kind: 'search' }));
     go('organize', 'Organize', () => ctx.navigate({ kind: 'organize' }));

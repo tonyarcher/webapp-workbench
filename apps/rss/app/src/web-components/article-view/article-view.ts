@@ -35,6 +35,7 @@ import { readMinutes } from '../../util';
 import { detectLanguage, LANGUAGE_NAMES } from '../../services/language';
 import type { Article, Board, RowHighlight } from '../../types';
 import { domainOf, formatDate, stripTags } from '../../util';
+import { enqueue } from '../../services/listen-queue';
 import {
     actionIcon,
     articleKeywords,
@@ -206,6 +207,10 @@ export class ArticleView extends LitElement {
                 void this.openBoardPicker();
                 this.overflowOpen = false;
             }}>📋 Add to board</button>
+            <button class="btn" @click=${() => {
+                this.enqueueListen();
+                this.overflowOpen = false;
+            }}>🎧 Listen</button>
           </div>`
                   : ''
           }
@@ -352,6 +357,14 @@ export class ArticleView extends LitElement {
             // keep previous state on transient failures
         }
     }
+    private enqueueListen() {
+        const a = this.article;
+        if (!a) return;
+        const text = stripTags(a.content ?? a.summary ?? '');
+        enqueue({ id: a.id, title: a.title, text });
+        window.dispatchEvent(new CustomEvent('listen-queue-changed'));
+    }
+
     private async openBoardPicker(): Promise<void> {
         const a = this.article;
         if (!a) return;
