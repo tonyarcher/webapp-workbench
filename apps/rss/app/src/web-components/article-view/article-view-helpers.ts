@@ -13,6 +13,17 @@ export function articleKeywords(article: Article): ArticleKeyword[] {
 }
 
 /** Assembled signal labels only; no generated sentence. */
+export function worthMinutesVerdict(article: Article): { verdict: string; why: string } {
+    const minutes = readMinutes(article.content, article.summary);
+    const interest = article.scores?.interest ?? 0;
+    const worthy = article.scores?.worthy ?? 0;
+    const score = interest * 0.6 + worthy * 0.4;
+    let verdict = 'Maybe';
+    if (score >= 0.7) verdict = 'Worth it';
+    else if (score < 0.3) verdict = 'Skip';
+    const why = `Read time ${minutes} min; interest ${(interest * 100).toFixed(0)}%; worthiness ${(worthy * 100).toFixed(0)}%.`;
+    return { verdict, why };
+}
 export function whyLineFor(result: RowHighlight, keywords: ArticleKeyword[], article: Article | null): string {
     const parts: string[] = [];
     const learned = keywords

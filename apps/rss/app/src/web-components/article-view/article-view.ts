@@ -43,6 +43,7 @@ import {
     copyTitleLink,
     shareIcon,
     whyLineFor,
+    worthMinutesVerdict,
 } from './article-view-helpers';
 import '../video-header/video-header';
 import styles from './article-view.css?inline';
@@ -233,7 +234,8 @@ export class ArticleView extends LitElement {
     }
     private renderMeta(a: Article) {
         const minutes = readMinutes(a.content, a.summary);
-        return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}${this.renderHighlightsToggle()}</div>${this.renderKeywords()}`;
+        const { verdict, why } = worthMinutesVerdict(a);
+        return html`<div class="meta"><span>${domainOf(a.link) || 'unknown source'}</span><span>${formatDate(a.published)}</span>${a.author ? html`<span>by ${a.author}</span>` : ''}${minutes > 0 ? html`<span>${minutes} min read</span>` : ''}<span class="worth-badge" title=${why}>${verdict}</span>${this.renderHighlightsToggle()}</div>${this.renderKeywords()}`;
     }
 
     private renderKeywords() {
