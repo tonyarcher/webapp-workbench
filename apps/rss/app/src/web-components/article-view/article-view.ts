@@ -174,8 +174,8 @@ export class ArticleView extends LitElement {
           <button class="btn icon-btn" @click=${this.emitClose} aria-label="Back" title="Back">${actionIcon('back')}</button>
         </div>
         <div class="toolbar-group" aria-label="Article state">
-          <button class="btn icon-btn ${a.starred ? 'active' : ''}" @click=${this.onStar} aria-label=${a.starred ? 'Unstar' : 'Star'} aria-pressed=${a.starred} title=${a.starred ? 'Unstar' : 'Star'}>${actionIcon(a.starred ? 'starred' : 'star')}</button>
-          <button class="btn icon-btn ${this.deranked ? 'active' : ''}" @click=${this.onDerank} aria-label="Not interesting" aria-pressed=${this.deranked} title=${this.deranked ? 'Marked not interesting' : 'Not interesting'}>${actionIcon(this.deranked ? 'deranked' : 'derank')}</button>
+          <button class="btn icon-btn ${a.starred ? 'active' : ''}" @click=${this.onStar} aria-label=${a.starred ? 'Unstar' : 'Star'} aria-pressed=${a.starred} title=${a.starred ? 'Unstar' : 'Star'} ?disabled=${this.deranked}>${actionIcon(a.starred ? 'starred' : 'star')}</button>
+          <button class="btn icon-btn ${this.deranked ? 'active' : ''}" @click=${this.onDerank} aria-label="Not interesting" aria-pressed=${this.deranked} title=${this.deranked ? 'Marked not interesting' : 'Not interesting'} ?disabled=${a.starred}>${actionIcon(this.deranked ? 'deranked' : 'derank')}</button>
           <button class="btn icon-btn" @click=${this.onToggleRead} aria-label=${a.read ? 'Keep unread' : 'Mark read'} title=${a.read ? 'Keep unread' : 'Mark read'}>${actionIcon(a.read ? 'read' : 'unread')}</button>
           <button class="btn icon-btn ${this.savedForLater ? 'active' : ''}" @click=${this.onToggleSaved} aria-label=${this.savedForLater ? 'Saved for later' : 'Save for later'} aria-pressed=${this.savedForLater} title=${this.savedForLater ? 'Saved for later' : 'Save for later'}>${actionIcon(this.savedForLater ? 'saved' : 'save')}</button>
           <button class="btn icon-btn" @click=${() => void this.openBoardPicker()} aria-label="Add to board" title="Add to board">📋</button>
@@ -282,7 +282,9 @@ export class ArticleView extends LitElement {
             window.dispatchEvent(new CustomEvent('article-starred', { detail: { id: started.id, starred: next } }));
         } else if (this.article?.id === started.id) {
             this.article = { ...this.article, starred: started.starred };
-            window.dispatchEvent(new CustomEvent('article-starred', { detail: { id: started.id, starred: started.starred } }));
+            window.dispatchEvent(
+                new CustomEvent('article-starred', { detail: { id: started.id, starred: started.starred } }),
+            );
         }
     }
 
