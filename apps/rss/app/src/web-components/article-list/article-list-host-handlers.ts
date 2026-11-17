@@ -18,7 +18,7 @@ import {
     saveViewSettingsFor,
     scopeLabelOf,
 } from './article-list-helpers';
-import type { Article, Feed, View } from '../../types';
+import type { Article, ArticleSort, Feed, ListViewType, View } from '../../types';
 
 export function onArticleStarred(host: any, e: Event): void {
     const { id, starred } = (e as CustomEvent<{ id: string; starred: boolean }>).detail;
@@ -100,6 +100,23 @@ export function loadViewSettings(host: any): void {
 
 export function saveViewSettings(host: any): void {
     saveViewSettingsFor(host);
+}
+
+/** Toolbar and shortcut mutators: each writes its setting, then persists the per-view prefs. */
+export function toggleUnread(host: any): void {
+    host.unreadOnly = !host.unreadOnly;
+    saveViewSettings(host);
+}
+
+export function setListViewPref(host: any, listView: ListViewType): void {
+    host.listView = listView;
+    saveViewSettings(host);
+    host.updateCols();
+}
+
+export function setSortPref(host: any, sort: ArticleSort): void {
+    host.sort = sort;
+    saveViewSettings(host);
 }
 
 export function onInterestingStrictness(host: any, e: Event): void {

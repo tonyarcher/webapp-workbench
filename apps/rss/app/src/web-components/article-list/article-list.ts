@@ -3,31 +3,33 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { createRef, type Ref } from 'lit/directives/ref.js';
 import { Virtualizer } from '@tanstack/virtual-core';
 import { QueryController, fetchLibrary, libraryKey } from '../../query';
+import { markShownReadAction, openArticleAction } from './article-list-actions';
+import { bulkDerankAction, bulkMarkReadAction, bulkStarAction, clearSelectionAction } from './article-list-selection';
+import { onRowClickAction, toggleSelectCursorAction, toggleStarCursorAction } from './article-list-cursor';
 import {
-    handleListKey,
-    markShownReadAction,
-    openArticleAction,
+    applyPendingFeedsRefresh,
+    isRefreshing,
+    libraryFeedsOf,
+    onFeedsRefreshedAction,
     refreshViewAction,
-    toggleStarAction,
-} from './article-list-actions';
-import {
-    bulkDerankAction,
-    bulkMarkReadAction,
-    bulkStarAction,
-    clearSelectionAction,
-    rowClickAction,
-    setAnchor,
-    toggleSelectAction,
-} from './article-list-selection';
+    setRefreshingKey as setRefreshingKeyAction,
+} from './article-list-refresh';
 import { reinitVirtualizer, resetList } from './article-list-loading';
 import { initialLoadState, isLoading, type LoadState } from './article-list-load-state';
 import { interestingActiveFor } from './article-list-interesting';
-import { DEFAULT_INTERESTING_STRICTNESS, isDeranked } from '../../services/interesting-settings';
-import { noteDerank, markShownRead } from '../../mutations';
-import { readMinutes } from '../../util';
+import { DEFAULT_INTERESTING_STRICTNESS } from '../../services/interesting-settings';
 import { DwellTracker } from './article-list-dwell';
+import { handleKeyDown, showShortcutsAction } from './article-list-keyboard';
 import {
-    CARD_MIN_WIDTH,
+    syncScrollBindings as syncScrollBindingsLayout,
+    trackPointerActivity,
+    updateCols as updateColsLayout,
+} from './article-list-layout';
+import { attachHostListeners, teardownHost } from './article-list-lifecycle';
+import { catchMeUpAction } from './article-list-catch-up';
+import { advancedMarkScrollAction, advancedUnreadAction, toggleAdvancedAction } from './article-list-advanced';
+import { onStarAction, onToggleDerankAction } from './article-list-star-derank';
+import {
     DEFAULT_PAGE_SIZE,
     feedTitleOf,
     readViewSettings,
@@ -44,16 +46,10 @@ import {
     renderToolbar,
 } from './article-list-render';
 import { renderSlideshowSection } from './article-list-slideshow-render';
-import {
-    clearSlideshowAuto,
-    handleSlideshowKeyDown,
-    handleSlideshowUpdated,
-    handleSlideshowWillUpdate,
-} from './article-list-slideshow';
+import { handleSlideshowUpdated, handleSlideshowWillUpdate } from './article-list-slideshow';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 import { areHighlightsEnabled } from '../../services/highlights';
 import { syncHighlightsEnabled, toggleRowHighlight, type RowHighlightsHost } from './article-list-row-highlights';
-import { setInterestingHideRead } from '../../services/interesting-counts';
 import {
     canUndoMute as canUndoMuteHost,
     currentViewKey as currentViewKeyHost,
@@ -70,7 +66,10 @@ import {
     onUndoMute as onUndoMuteHost,
     saveViewSettings as saveViewSettingsHost,
     scopeLabel as scopeLabelHost,
+    setListViewPref as setListViewPrefHost,
+    setSortPref as setSortPrefHost,
     syncInterestingCount as syncInterestingCountHost,
+    toggleUnread as toggleUnreadHost,
 } from './article-list-host-handlers';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
 import type { RowHighlight } from '../../types';
@@ -78,6 +77,7 @@ import '../advanced-menu/advanced-menu';
 import '../lazy-img/lazy-img';
 import '../video-header/video-header';
 import styles from './article-list.css?inline';
+
 interface Library {
     folders: Folder[];
     feeds: Feed[];
@@ -85,6 +85,12 @@ interface Library {
 
 export { INTERESTING_BATCH } from './article-list-interesting';
 
+/**
+ * The element itself: reactive state plus thin delegators. Behavior lives in
+ * the sibling `article-list-*` modules, each receiving the element as an
+ * explicitly typed host (`this as never`), so this class stays under the
+ * max-lines budget and every group stays unit-testable on its own.
+ */
 @customElement('article-list')
 export class ArticleList extends LitElement {
     static override styles = unsafeCSS(styles);
@@ -128,34 +134,10 @@ export class ArticleList extends LitElement {
     slideshowAutoTimer: ReturnType<typeof setTimeout> | null = null;
     slideshowMarked = new Set<string>();
     slideshowSuppressRead = new Set<string>();
-    private boundScrollEl: HTMLDivElement | null = null;
-
-    /** True while this view's own refresh job runs. Other folders track their own keys. */
-    get refreshing(): boolean {
-        return this.activeRefreshKeys.includes(viewRefreshKeyOf(this.view));
-    }
-
-    setRefreshingKey(key: string, active: boolean): void {
-        const has = this.activeRefreshKeys.includes(key);
-        if (active && !has) this.activeRefreshKeys = [...this.activeRefreshKeys, key];
-        else if (!active && has) this.activeRefreshKeys = this.activeRefreshKeys.filter((k) => k !== key);
-    }
-
-    libraryFeeds(): Feed[] {
-        return this.library.data?.feeds ?? [];
-    }
-
-    async refreshTick(): Promise<void> {
-        await fetchLibrary();
-    }
-
-    isAlive(): boolean {
-        return this.isConnected;
-    }
 
     scrollElRef: Ref<HTMLDivElement> = createRef();
     virtualizer!: Virtualizer<HTMLDivElement, HTMLDivElement>;
-    private virtualizerCleanup?: () => void;
+    virtualizerCleanup?: () => void;
     cursors = new Map<string, string | undefined>();
     feedHasMore = new Map<string, boolean>();
     hasMoreSingle = true;
@@ -164,14 +146,30 @@ export class ArticleList extends LitElement {
     /** Feed membership last loaded: folder feeds, or every feed for All/Hot. */
     lastFeedSetKey = '';
     /** Headline dwell with an active mouse, owned by this element's lifetime. */
-    private dwell = new DwellTracker();
+    dwell = new DwellTracker();
     selectAnchor = -1;
     lastAutoMark = 0;
-    private resizeObserver: ResizeObserver | undefined;
+    resizeObserver: ResizeObserver | undefined;
+    boundScrollEl: HTMLDivElement | null = null;
     feedWindowOffset = 0;
     /** In-flight refresh jobs by view key. Each folder is its own elevator button. */
     refreshJobs = new Map<string, Promise<void>>();
     @state() activeRefreshKeys: string[] = [];
+    /** A background refresh arrived while the article overlay had focus; apply it once active again. */
+    pendingFeedsRefresh = false;
+    /** Folder whose transient hide-read state is mirrored for count refresh. */
+    interestingHideReadFolderId: string | null = null;
+
+    library = new QueryController<Library>(this, () => ({
+        queryKey: libraryKey,
+        queryFn: () => fetchLibrary(),
+        refetchInterval: 60_000,
+    }));
+
+    /** True while this view's own refresh job runs. Other folders track their own keys. */
+    get refreshing(): boolean {
+        return isRefreshing(this as never);
+    }
 
     /** True while a page fetch is in flight or queued; the footer renders "Loading…". */
     get loading(): boolean {
@@ -183,104 +181,60 @@ export class ArticleList extends LitElement {
         return this.loadState.gen;
     }
 
-    library = new QueryController<Library>(this, () => ({
-        queryKey: libraryKey,
-        queryFn: () => fetchLibrary(),
-        refetchInterval: 60_000,
-    }));
+    setRefreshingKey(key: string, active: boolean): void {
+        setRefreshingKeyAction(this as never, key, active);
+    }
+
+    libraryFeeds(): Feed[] {
+        return libraryFeedsOf(this as never);
+    }
+
+    async refreshTick(): Promise<void> {
+        await fetchLibrary();
+    }
+
+    isAlive(): boolean {
+        return this.isConnected;
+    }
 
     override firstUpdated() {
         reinitVirtualizer(this as never);
-        this.syncScrollBindings();
-    }
-
-    private syncScrollBindings() {
-        const el = this.scrollElRef.value ?? null;
-        if (el === this.boundScrollEl) return;
-        if (this.boundScrollEl) {
-            this.boundScrollEl.removeEventListener('pointermove', this.onPointerActivity);
-            this.boundScrollEl.removeEventListener('wheel', this.onPointerActivity);
-            this.resizeObserver?.disconnect();
-            this.resizeObserver = undefined;
-        }
-        this.boundScrollEl = el;
-        if (el) {
-            this.updateCols();
-            this.resizeObserver = new ResizeObserver(() => this.updateCols());
-            this.resizeObserver.observe(el);
-            el.addEventListener('pointermove', this.onPointerActivity);
-            el.addEventListener('wheel', this.onPointerActivity, { passive: true });
-        }
+        syncScrollBindingsLayout(this as never);
     }
 
     updateCols() {
-        const el = this.scrollElRef.value;
-        if (!el) return;
-        const width = el.clientWidth;
-        const cols = Math.max(1, Math.min(this.maxCardCols, Math.floor(width / CARD_MIN_WIDTH)));
-        if (cols !== this.cols) {
-            this.cols = cols;
-        }
+        updateColsLayout(this as never);
     }
 
     override connectedCallback() {
         super.connectedCallback();
-        window.addEventListener('keydown', this.onKeyDown);
-        window.addEventListener('feeds-refreshed', this.onFeedsRefreshed);
-        window.addEventListener('article-read', this.onArticleRead);
-        window.addEventListener('article-starred', this.onArticleStarred);
-        window.addEventListener('mute-rules-changed', this.onMuteRulesChanged);
-        window.addEventListener('view-settings-changed', this.onViewSettingsChanged);
-        window.addEventListener('storage', this.onStorage);
-        window.addEventListener('highlights-enabled-changed', this.onHighlightsEnabledChanged);
-        this.addEventListener('toggle-derank', this.onToggleDerank);
-        this.dwell.start();
+        attachHostListeners(this as never);
     }
-
-    /** Folder whose transient hide-read state is mirrored for count refresh. */
-    private interestingHideReadFolderId: string | null = null;
 
     override disconnectedCallback() {
         super.disconnectedCallback();
-        clearSlideshowAuto(this as never);
-        window.removeEventListener('keydown', this.onKeyDown);
-        window.removeEventListener('feeds-refreshed', this.onFeedsRefreshed);
-        window.removeEventListener('article-read', this.onArticleRead);
-        window.removeEventListener('article-starred', this.onArticleStarred);
-        window.removeEventListener('mute-rules-changed', this.onMuteRulesChanged);
-        window.removeEventListener('view-settings-changed', this.onViewSettingsChanged);
-        window.removeEventListener('storage', this.onStorage);
-        window.removeEventListener('highlights-enabled-changed', this.onHighlightsEnabledChanged);
-        this.removeEventListener('toggle-derank', this.onToggleDerank);
-        if (this.boundScrollEl) {
-            this.boundScrollEl.removeEventListener('pointermove', this.onPointerActivity);
-            this.boundScrollEl.removeEventListener('wheel', this.onPointerActivity);
-            this.boundScrollEl = null;
-        }
-        this.dwell.stop();
-        this.resizeObserver?.disconnect();
-        this.resizeObserver = undefined;
-        this.virtualizerCleanup?.();
-        if (this.interestingHideReadFolderId) {
-            setInterestingHideRead(this.interestingHideReadFolderId, false);
-            this.interestingHideReadFolderId = null;
-        }
+        teardownHost(this as never);
     }
 
-    private onStorage = (e: StorageEvent) => {
+    // Handler fields stay public with stable arrow identities: the lifecycle
+    // module adds and removes these exact references on window.
+    onStorage = (e: StorageEvent) => {
         syncHighlightsEnabled(this as unknown as RowHighlightsHost, e.key);
     };
-    private onHighlightsEnabledChanged = () => {
+    onHighlightsEnabledChanged = () => {
         syncHighlightsEnabled(this as unknown as RowHighlightsHost, null);
     };
-    private onMuteRulesChanged = () => void resetList(this as never);
-    private onViewSettingsChanged = () => {
+    onMuteRulesChanged = () => void resetList(this as never);
+    onViewSettingsChanged = () => {
         loadViewSettingsHost(this);
         this.requestUpdate();
     };
-    private onPointerActivity = (e: Event) => this.dwell.trackEvent(e, this.items, this.cols, this.renderRoot);
-    private onArticleStarred = (e: Event) => onArticleStarredHost(this, e);
-    private onArticleRead = (e: Event) => onArticleReadHost(this, e);
+    onPointerActivity = (e: Event) => trackPointerActivity(this as never, e);
+    onArticleStarred = (e: Event) => onArticleStarredHost(this, e);
+    onArticleRead = (e: Event) => onArticleReadHost(this, e);
+    onFeedsRefreshed = () => onFeedsRefreshedAction(this as never);
+    onKeyDown = (e: KeyboardEvent) => handleKeyDown(this as never, e);
+    onToggleDerank = (e: Event) => onToggleDerankAction(this as never, e);
 
     override willUpdate(changed: Map<string, unknown>) {
         if (changed.has('view')) {
@@ -298,12 +252,9 @@ export class ArticleList extends LitElement {
     override updated(changed: Map<string, unknown>) {
         handleUpdateHost(this, currentViewKeyHost(this));
         syncInterestingCountHost(this, changed);
-        if (changed.has('active') && this.active && this.pendingFeedsRefresh) {
-            this.pendingFeedsRefresh = false;
-            if (!this.unreadOnly && !this.hideRead) void resetList(this as never);
-        }
+        applyPendingFeedsRefresh(this as never, changed);
         handleSlideshowUpdated(this as never, changed);
-        this.syncScrollBindings();
+        syncScrollBindingsLayout(this as never);
     }
 
     override render() {
@@ -334,18 +285,6 @@ export class ArticleList extends LitElement {
         onScrollHost(this);
     };
 
-    /** A background refresh arrived while the article overlay had focus; apply it once active again. */
-    private pendingFeedsRefresh = false;
-
-    private onFeedsRefreshed = () => {
-        if (!this.active) {
-            this.pendingFeedsRefresh = true;
-            return;
-        }
-        this.pendingFeedsRefresh = false;
-        void resetList(this as never);
-    };
-
     folderFeeds(): Feed[] {
         return folderFeedsHost(this);
     }
@@ -354,7 +293,7 @@ export class ArticleList extends LitElement {
         loadViewSettingsHost(this);
     }
 
-    private saveViewSettings() {
+    saveViewSettings() {
         saveViewSettingsHost(this);
     }
 
@@ -405,49 +344,32 @@ export class ArticleList extends LitElement {
         await openArticleAction(this as never, article);
     }
 
-    private onKeyDown = (e: KeyboardEvent) => {
-        this.dwell.noteInput();
-        if (handleSlideshowKeyDown(this as never, e, handleListKey)) return;
-        handleListKey(this as never, e);
-    };
-
     showShortcuts() {
-        window.dispatchEvent(new CustomEvent('show-shortcuts', { bubbles: true, composed: true }));
+        showShortcutsAction();
     }
 
     toggleStarCursor() {
-        const article = this.items[this.cursor];
-        if (article) void toggleStarAction(this as never, article);
+        toggleStarCursorAction(this as never);
     }
 
     toggleUnread() {
-        this.unreadOnly = !this.unreadOnly;
-        this.saveViewSettings();
+        toggleUnreadHost(this);
     }
 
     setListView(listView: ListViewType) {
-        this.listView = listView;
-        this.saveViewSettings();
-        this.updateCols();
+        setListViewPrefHost(this, listView);
     }
 
     setSort(sort: ArticleSort) {
-        this.sort = sort;
-        this.saveViewSettings();
+        setSortPrefHost(this, sort);
     }
 
     onRowClick(e: MouseEvent, index: number) {
-        if (e.shiftKey) {
-            rowClickAction(this as never, e, index);
-            return;
-        }
-        setAnchor(this as never, index);
-        const article = this.items[index];
-        if (article) void this.openArticle(article);
+        onRowClickAction(this as never, e, index);
     }
 
     toggleSelectCursor() {
-        if (this.cursor >= 0) toggleSelectAction(this as never, this.cursor);
+        toggleSelectCursorAction(this as never);
     }
 
     clearSelection() {
@@ -468,20 +390,15 @@ export class ArticleList extends LitElement {
     }
 
     onToggleAdvanced(e: Event) {
-        e.stopPropagation();
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        this.advancedAnchor = { x: rect.right, y: rect.bottom + 6 };
-        this.advancedOpen = !this.advancedOpen;
+        toggleAdvancedAction(this as never, e);
     }
 
     onAdvancedUnread(e: Event) {
-        this.unreadOnly = (e as CustomEvent<boolean>).detail;
-        this.saveViewSettings();
+        advancedUnreadAction(this as never, e);
     }
 
     onAdvancedMarkScroll(e: Event) {
-        this.markOnScroll = (e as CustomEvent<boolean>).detail;
-        this.saveViewSettings();
+        advancedMarkScrollAction(this as never, e);
     }
 
     scopeLabel(): string {
@@ -501,27 +418,8 @@ export class ArticleList extends LitElement {
     }
 
     async onStar(e: Event, article: Article) {
-        e.stopPropagation();
-        if (!article.starred) {
-            // Starring clears a "not interesting" mark.
-            noteDerank(article.id, article.title, false);
-        }
-        await toggleStarAction(this as never, article);
+        await onStarAction(this as never, e, article);
     }
-
-    private onToggleDerank = (e: Event) => {
-        const { id, title } = (e as CustomEvent<{ id: string; title: string }>).detail;
-        const next = !isDeranked(id);
-        noteDerank(id, title, next);
-        if (next) {
-            // Deranking clears a star.
-            const item = this.items.find((a) => a.id === id);
-            if (item?.starred) {
-                void toggleStarAction(this as never, item);
-            }
-        }
-        this.requestUpdate();
-    };
 
     onInterestingStrictness(e: Event) {
         onInterestingStrictnessHost(this, e);
@@ -532,33 +430,7 @@ export class ArticleList extends LitElement {
     }
 
     async onCatchMeUp() {
-        const budget = 5;
-        const unread = this.items.filter((a) => a.read === 0);
-        if (!unread.length) return;
-        const ranked = [...unread].sort((a, b) => {
-            const ia = a.scores?.interest ?? 0;
-            const ib = b.scores?.interest ?? 0;
-            if (ib !== ia) return ib - ia;
-            return readMinutes(a.content, a.summary) - readMinutes(b.content, b.summary);
-        });
-        let used = 0;
-        const keep = new Set<string>();
-        for (const a of ranked) {
-            const m = readMinutes(a.content, a.summary) || 1;
-            if (used + m <= budget) {
-                used += m;
-                keep.add(a.id);
-            }
-        }
-        const markRead = unread.filter((a) => !keep.has(a.id)).map((a) => a.id);
-        if (!markRead.length) return;
-        if (
-            !window.confirm(
-                `Mark ${markRead.length} article${markRead.length === 1 ? '' : 's'} as read, keeping ${keep.size} for a ${budget}-minute catch-up?`,
-            )
-        )
-            return;
-        await markShownRead(markRead);
+        await catchMeUpAction(this as never);
     }
 }
 

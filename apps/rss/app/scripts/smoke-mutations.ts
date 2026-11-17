@@ -284,7 +284,7 @@ import { assert } from './smoke-assert';
 
 // ---- a failed refresh toasts instead of stranding "Refreshing…" ----
 {
-    const { refreshViewAction } = await import('../src/web-components/article-list/article-list-actions');
+    const { refreshViewAction } = await import('../src/web-components/article-list/article-list-refresh');
     const { clearToasts, onToast } = await import('../src/services/toast');
     const { queryClient: refreshQueryClient } = await import('../src/query');
     const shims = globalThis as Record<string, unknown>;
@@ -353,7 +353,7 @@ import { assert } from './smoke-assert';
 // ---- mashing Refresh on one folder joins its job; another folder runs its own ----
 {
     const { ingestDone, refreshViewAction, waitForIngest } =
-        await import('../src/web-components/article-list/article-list-actions');
+        await import('../src/web-components/article-list/article-list-refresh');
     const { queryClient: elevatorQueryClient } = await import('../src/query');
     const shims = globalThis as Record<string, unknown>;
     const realFetch = shims['fetch'];
