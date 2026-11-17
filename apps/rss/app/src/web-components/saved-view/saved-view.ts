@@ -1,9 +1,9 @@
-import { html, LitElement, unsafeCSS } from 'lit';
+import { LitElement, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { fetchSavedArticlesList, savedArticlesKey, QueryController } from '../../query';
 import { unsaveForLater } from '../../mutations';
-import { domainOf, formatDate } from '../../util';
 import type { Article, SavedArticleSnapshot } from '../../types';
+import { renderSavedView } from './saved-view-render';
 import styles from './saved-view.css?inline';
 
 function toArticle(s: SavedArticleSnapshot): Article {
@@ -31,6 +31,12 @@ export class SavedView extends LitElement {
 
     @state() private storageEstimate: { usage: number; quota: number } | null = null;
 
+    private saved = new QueryController<SavedArticleSnapshot[]>(this, () => ({
+        queryKey: savedArticlesKey,
+        queryFn: () => fetchSavedArticlesList(),
+        refetchInterval: 60_000,
+    }));
+
     override connectedCallback() {
         super.connectedCallback();
         void this.refreshStorage();
@@ -42,42 +48,15 @@ export class SavedView extends LitElement {
         this.storageEstimate = { usage: est.usage ?? 0, quota: est.quota ?? 0 };
     }
 
-    private saved = new QueryController<SavedArticleSnapshot[]>(this, () => ({
-        queryKey: savedArticlesKey,
-        queryFn: () => fetchSavedArticlesList(),
-        refetchInterval: 60_000,
-    }));
-
     override render() {
-        const items = this.saved.data ?? [];
-        return html`
-            <div class="view">
-                <div class="toolbar"><h2>Saved for later</h2><span class="meta">${items.length} item${items.length === 1 ? '' : 's'}</span>${this.storageEstimate ? html`<span class="storage">${(this.storageEstimate.usage / 1024 / 1024).toFixed(1)} MB used</span>` : ''}</div>
-                <div class="body" tabindex="0">
-                    ${this.saved.error ? html`<div class="empty error">Could not load saved articles.</div>` : ''}
-                    ${!items.length && !this.saved.error ? html`<div class="empty">No saved articles yet. Use “Save for later” while reading an article.</div>` : ''}
-                    ${items.length ? html`<ul class="list">${items.map((s) => this.renderItem(s))}</ul>` : ''}
-                </div>
-            </div>
-        `;
-    }
-
-    private renderItem(s: SavedArticleSnapshot) {
-        const article = toArticle(s);
-        return html`
-            <li class="row">
-                <button class="open" @click=${() => this.open(s)}>
-                    <span class="title">${s.title}</span>
-                    <span class="meta-line">
-                        ${s.feedTitle ? html`<span>${s.feedTitle}</span>` : html`<span>Saved article</span>`}
-                        ${s.link ? html`<span>${domainOf(s.link)}</span>` : ''}
-                        <span>${formatDate(article.published)}</span>
-                    </span>
-                    ${s.summary ? html`<span class="summary">${s.summary}</span>` : ''}
-                </button>
-                <button class="btn danger" @click=${() => this.removeSaved(s)}>Remove</button>
-            </li>
-        `;
+        return renderSavedView({
+            items: this.saved.data ?? [],
+            error: Boolean(this.saved.error),
+            storageEstimate: this.storageEstimate,
+            open: (s) => this.open(s),
+            remove: (s) => this.removeSaved(s),
+            toArticle,
+        });
     }
 
     private open(s: SavedArticleSnapshot) {
@@ -93,8 +72,6 @@ export class SavedView extends LitElement {
 
     private removeSaved(s: SavedArticleSnapshot) {
         if (!s.articleId) return;
-        // unsaveForLater resolves (it toasts on failure), so the handler stays
-        // synchronous and no floating promise escapes the click event.
         void unsaveForLater(s.articleId);
     }
 }

@@ -1,9 +1,10 @@
-import { html, LitElement, unsafeCSS } from 'lit';
+import { LitElement, unsafeCSS } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { getAllArticles } from '../../db/db-query';
 import { loadFocusStreak } from '../../services/focus-session';
 import { readMinutes } from '../../util';
 import type { Article } from '../../types';
+import { renderStatsView } from './stats-view-render';
 import styles from './stats-view.css?inline';
 
 @customElement('stats-view')
@@ -47,32 +48,15 @@ export class StatsView extends LitElement {
     }
 
     override render() {
-        const streak = loadFocusStreak();
-        return html`
-            <div class="view">
-                <div class="toolbar"><h2>Mastery stats</h2></div>
-                <div class="body" tabindex="0">
-                    ${this.loading ? html`<div class="empty">Loading…</div>` : ''}
-                    ${
-                        !this.loading
-                            ? html`
-                        <div class="grid">
-                            <div class="card"><span class="label">Minutes read</span><span class="value">${this.totalMinutes}</span></div>
-                            <div class="card"><span class="label">Finish rate</span><span class="value">${Math.round(this.finishRate * 100)}%</span></div>
-                            <div class="card"><span class="label">Articles read</span><span class="value">${this.readArticles.length} / ${this.articles.length}</span></div>
-                            <div class="card"><span class="label">Focus streak</span><span class="value">${streak.kept}</span></div>
-                        </div>
-                        <h3>Topic mix</h3>
-                        <ul class="topics">
-                            ${this.topicMix.map((t) => html`<li><span class="topic">${t.topic}</span><span class="count">${t.count}</span></li>`)}
-                        </ul>
-                        ${!this.topicMix.length ? html`<div class="empty">No read articles yet.</div>` : ''}
-                    `
-                            : ''
-                    }
-                </div>
-            </div>
-        `;
+        return renderStatsView({
+            loading: this.loading,
+            totalMinutes: this.totalMinutes,
+            finishRate: this.finishRate,
+            readCount: this.readArticles.length,
+            totalCount: this.articles.length,
+            streak: loadFocusStreak().kept,
+            topics: this.topicMix,
+        });
     }
 }
 
