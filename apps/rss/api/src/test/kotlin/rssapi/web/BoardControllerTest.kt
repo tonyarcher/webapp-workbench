@@ -406,4 +406,28 @@ class BoardControllerTest {
             .andExpect { status { isOk() } }
     }
 
+
+    @Test
+    fun reorderEntriesEmpty() {
+        auth()
+        ownedBoard()
+        mvc.post("/boards/$boardId/entries/reorder") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{"articleIds":[]}"""
+        }.andExpect { status { isOk() } }
+    }
+
+    @Test
+    fun addEntryUnsubscribed() {
+        auth()
+        ownedBoard()
+        whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(null)
+        whenever(articles.findById("a1")).thenReturn(java.util.Optional.of(ArticleEntity(id = "a1", feedId = feedId, title = "Article", publishedAt = Instant.ofEpochMilli(1000))))
+        whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(UUID.randomUUID()))
+        mvc.post("/boards/$boardId/entries") {
+            header("X-Api-Version", "1"); header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON; content = """{"articleId":"a1"}"""
+        }.andExpect { status { isNotFound() } }
+    }
+
 }

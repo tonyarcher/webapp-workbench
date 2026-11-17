@@ -176,4 +176,17 @@ class BoardSupportTest {
         assertEquals(board, ownedBoard(boards, uid, id))
     }
 
+
+    @Test
+    fun resolveSubscribedArticleUnsubscribed() {
+        val articles = mock<rssapi.persist.ArticleRepo>()
+        val subs = mock<SubscriptionRepo>()
+        val feedId = UUID.randomUUID()
+        val uid = UUID.randomUUID()
+        val article = ArticleEntity(id = "a1", feedId = feedId, title = "T", publishedAt = Instant.now())
+        whenever(articles.findById("a1")).thenReturn(java.util.Optional.of(article))
+        whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(UUID.randomUUID()))
+        assertThrows<ApiException> { resolveSubscribedArticle(articles, subs, uid, "a1") }
+    }
+
 }
