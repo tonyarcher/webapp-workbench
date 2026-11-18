@@ -1,24 +1,8 @@
 import styles from './saved-search-menu.css?inline';
 
 export class SavedSearchMenu extends HTMLElement {
-    private _search: { id: string; title: string } | null = null;
-    private _open = false;
+    private open = false;
     private root: HTMLDivElement | null = null;
-
-    get search() {
-        return this._search;
-    }
-    set search(v) {
-        this._search = v;
-        this.paint();
-    }
-    get open() {
-        return this._open;
-    }
-    set open(v) {
-        this._open = v;
-        this.paint();
-    }
 
     connectedCallback() {
         const shadow = this.attachShadow({ mode: 'open' });
@@ -34,7 +18,7 @@ export class SavedSearchMenu extends HTMLElement {
     private paint() {
         if (!this.root) return;
         this.root.replaceChildren();
-        if (!this._open || !this._search) {
+        if (!this.open) {
             this.root.style.display = 'none';
             return;
         }
