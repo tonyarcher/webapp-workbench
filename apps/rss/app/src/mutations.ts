@@ -243,6 +243,23 @@ export async function markArticleRead(articleId: string): Promise<boolean> {
     return true;
 }
 
+/**
+ * Persist the read flag when a reader opens an article, without touching the
+ * cached article pages or broadcasting `article-read`. The row stays visible in
+ * the current unread-only list until the next refresh, as requested.
+ */
+export async function markArticleReadOnOpen(articleId: string): Promise<boolean> {
+    try {
+        await updateArticleState([{ id: articleId, read: true }]);
+        void recordAffinity(articleId, 1).catch(() => {});
+        return true;
+    } catch (err) {
+        console.error('markArticleReadOnOpen failed', err);
+        toastApiError(err, 'Could not mark the article as read.');
+        return false;
+    }
+}
+
 export async function markArticleUnread(articleId: string): Promise<boolean> {
     updateArticlesInCache(articleId, { read: 0 });
     try {

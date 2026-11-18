@@ -1,6 +1,6 @@
 import { accrueEngagement } from '../../services/interesting-settings';
 import { OPEN_READ_CAP, expandedReadWeight } from '../../services/engagement';
-import { markArticleRead } from '../../mutations';
+import { markArticleReadOnOpen } from '../../mutations';
 import type { Article } from '../../types';
 
 /** Open-article timing state. The shell owns one instance for its lifetime. */
@@ -57,7 +57,6 @@ export function endOpen(timing: OpenTiming, article: { id: string; title: string
 /** Mark a newly opened article read (Feedly-like) while keeping it accessible for re-read. */
 export async function markOpenedRead(article: Article, onMarked: (id: string) => void): Promise<void> {
     if (article.read !== 0) return;
-    if (!(await markArticleRead(article.id))) return;
-    window.dispatchEvent(new CustomEvent('article-read', { detail: { id: article.id, read: 1 as const } }));
+    if (!(await markArticleReadOnOpen(article.id))) return;
     onMarked(article.id);
 }
