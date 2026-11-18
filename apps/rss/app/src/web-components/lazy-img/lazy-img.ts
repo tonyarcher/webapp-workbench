@@ -1,104 +1,64 @@
-import { html, LitElement, unsafeCSS } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { safeHttpUrl } from '../../services/parser';
-import styles from './lazy-img.css?inline';
-
-/**
- * Lazy-loads an image only when it approaches the viewport (500px preload
- * margin), with a pulsing placeholder while waiting and a fade-in on load.
- * Errors degrade to a quiet placeholder instead of a broken-image icon.
- */
-@customElement('lazy-img')
-export class LazyImg extends LitElement {
-    static override styles = unsafeCSS(styles);
-
-    @property() src: string | undefined;
-
-    @state() private state: 'waiting' | 'loading' | 'loaded' | 'error' = 'waiting';
-
-    private img: HTMLImageElement | null = null;
+export class LazyImg extends HTMLElement {
+    private src = '';
     private observer: IntersectionObserver | null = null;
+    private root: HTMLDivElement | null = null;
 
-    override willUpdate(changed: Map<string, unknown>) {
-        if (changed.has('src')) {
-            this.observer?.disconnect();
-            this.observer = null;
-            this.state = 'waiting';
+    static get observedAttributes() {
+        return ['src'];
+    }
+
+    connectedCallback() {
+        this.src = this.getAttribute('src') ?? '';
+        this.root = document.createElement('div');
+        this.root.className = 'lazy-img';
+        this.appendChild(this.root);
+        this.observe();
+    }
+
+    disconnectedCallback() {
+        this.observer?.disconnect();
+    }
+
+    attributeChangedCallback(name: string, _old: string | null, value: string | null) {
+        if (name === 'src') {
+            this.src = value ?? '';
+            this.load();
         }
     }
 
-    override updated() {
-        if (this.state === 'waiting' && this.src && !this.observer) {
-            this.observer = new IntersectionObserver(
-                (entries) => {
-                    if (entries.some((e) => e.isIntersecting)) {
-                        this.observer?.disconnect();
-                        this.observer = null;
-                        this.load();
-                    }
-                },
-                { rootMargin: '500px 0px' },
-            );
-            this.observer.observe(this);
+    private observe() {
+        if (!('IntersectionObserver' in window)) {
+            this.load();
+            return;
         }
+        this.observer = new IntersectionObserver(
+            (entries) => {
+                for (const e of entries) {
+                    if (e.isIntersecting) {
+                        this.load();
+                        this.observer?.disconnect();
+                    }
+                }
+            },
+            { rootMargin: '500px 0px' },
+        );
+        this.observer.observe(this);
     }
 
     private load() {
-        if (!this.src || this.state !== 'waiting') return;
-        // Legacy records may predate parse-time filtering; never load
-        // non-http(s) sources.
-        const src = safeHttpUrl(this.src);
-        if (!src) {
-            this.state = 'error';
-            return;
-        }
-        this.state = 'loading';
-        this.img = this.makeImage(src);
-    }
-
-    /** The probe image; its load and error events settle the state. */
-    private makeImage(src: string): HTMLImageElement {
+        if (!this.root || !this.src) return;
+        this.root.replaceChildren();
         const img = document.createElement('img');
-        img.alt = '';
         img.decoding = 'async';
-        img.addEventListener(
-            'load',
-            () => {
-                this.state = 'loaded';
-            },
-            { once: true },
-        );
-        img.addEventListener(
-            'error',
-            () => {
-                this.state = 'error';
-            },
-            { once: true },
-        );
-        img.src = src;
-        return img;
-    }
-
-    override disconnectedCallback() {
-        super.disconnectedCallback();
-        this.observer?.disconnect();
-        this.observer = null;
-        if (this.img) {
-            this.img.src = '';
-            this.img = null;
-        }
-    }
-
-    override render() {
-        if (this.state === 'loaded' && this.img) {
-            return html`${this.img}`;
-        }
-        return html`<div class="lazy-placeholder ${this.state === 'error' ? 'lazy-error' : ''}"></div>`;
+        img.src = this.src;
+        img.addEventListener('load', () => {
+            this.root?.classList.add('loaded');
+        });
+        img.addEventListener('error', () => {
+            this.root?.classList.add('error');
+        });
+        this.root.appendChild(img);
     }
 }
 
-declare global {
-    interface HTMLElementTagNameMap {
-        'lazy-img': LazyImg;
-    }
-}
+customElements.define('lazy-img', LazyImg);
