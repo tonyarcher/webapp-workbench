@@ -1,7 +1,3 @@
-import { html, LitElement, unsafeCSS } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
-import { QueryController } from '../../query';
-import { boardsKey, invalidateBoards } from '../../query';
 import { fetchBoards } from '../../services/api';
 import {
     createBoard as createBoardMutation,
@@ -13,21 +9,30 @@ import { navigate } from '../../router';
 import type { Board } from '../../types';
 import styles from './boards-view.css?inline';
 
-@customElement('boards-view')
-export class BoardsView extends LitElement {
-    static override styles = unsafeCSS(styles);
+export class BoardsView extends HTMLElement {
+    private newTitle = '';
+    private draggingIndex = -1;
+    private boards: Board[] = [];
+    private root: HTMLDivElement | null = null;
 
-    @state() private newTitle = '';
-    @state() private draggingIndex = -1;
+    connectedCallback() {
+        const shadow = this.attachShadow({ mode: 'open' });
+        const style = document.createElement('style');
+        style.textContent = styles;
+        shadow.appendChild(style);
+        this.root = document.createElement('div');
+        this.root.className = 'view';
+        shadow.appendChild(this.root);
+        void this.load();
+    }
 
-    private boards = new QueryController<Board[]>(this, () => ({
-        queryKey: boardsKey(),
-        queryFn: () => fetchBoards(),
-        refetchInterval: 60_000,
-    }));
-
-    private get items(): Board[] {
-        return this.boards.data ?? [];
+    private async load() {
+        try {
+            this.boards = await fetchBoards();
+        } catch {
+            this.boards = [];
+        }
+        this.paint();
     }
 
     private async onCreate() {
@@ -36,7 +41,7 @@ export class BoardsView extends LitElement {
         const b = await createBoardMutation(title);
         if (b) {
             this.newTitle = '';
-            await invalidateBoards();
+            await this.load();
         }
     }
 
@@ -46,11 +51,13 @@ export class BoardsView extends LitElement {
         const t = next.trim();
         if (!t || t === b.title) return;
         await renameBoardMutation(b.id, t);
+        await this.load();
     }
 
     private async onDelete(b: Board) {
         if (!window.confirm(`Delete board "${b.title}"?`)) return;
         await removeBoard(b.id);
+        await this.load();
     }
 
     private async onDrop(targetIndex: number) {
@@ -59,57 +66,91 @@ export class BoardsView extends LitElement {
             this.draggingIndex = -1;
             return;
         }
-        const list = [...this.items];
+        const list = [...this.boards];
         const [moved] = list.splice(from, 1);
         if (moved) list.splice(targetIndex, 0, moved);
         this.draggingIndex = -1;
         await reorderBoardsMutation(list.map((b) => b.id));
+        await this.load();
     }
 
     private open(b: Board) {
         navigate({ kind: 'board', id: b.id });
     }
 
-    override render() {
-        const items = this.items;
-        return html`
-            <div class="view">
-                <div class="toolbar">
-                    <h2>Boards</h2>
-                    <span class="meta">${items.length} board${items.length === 1 ? '' : 's'}</span>
-                </div>
-                <div class="create-row">
-                    <input type="text" placeholder="New board name" .value=${this.newTitle}
-                        @input=${(e: Event) => (this.newTitle = (e.target as HTMLInputElement).value)}
-                        @keydown=${(e: KeyboardEvent) => {
-                            if (e.key === 'Enter') void this.onCreate();
-                        }} />
-                    <button class="btn" @click=${() => void this.onCreate()}>Create</button>
-                </div>
-                <div class="body" tabindex="0">
-                    ${!items.length ? html`<div class="empty">No boards yet. Create one above.</div>` : ''}
-                    <ul class="list">
-                        ${items.map(
-                            (b, i) => html`
-                            <li class="row" draggable="true"
-                                @dragstart=${() => (this.draggingIndex = i)}
-                                @dragover=${(e: DragEvent) => e.preventDefault()}
-                                @drop=${() => void this.onDrop(i)}>
-                                <button class="open" @click=${() => this.open(b)}>${b.title}</button>
-                                <button class="btn" @click=${() => void this.onRename(b)}>Rename</button>
-                                <button class="btn danger" @click=${() => void this.onDelete(b)}>Delete</button>
-                            </li>
-                        `,
-                        )}
-                    </ul>
-                </div>
-            </div>
-        `;
+    private paint() {
+        if (!this.root) return;
+        this.root.replaceChildren();
+        const toolbar = document.createElement('div');
+        toolbar.className = 'toolbar';
+        const h = document.createElement('h2');
+        h.textContent = 'Boards';
+        const meta = document.createElement('span');
+        meta.className = 'meta';
+        meta.textContent = `${this.boards.length} board${this.boards.length === 1 ? '' : 's'}`;
+        toolbar.appendChild(h);
+        toolbar.appendChild(meta);
+        this.root.appendChild(toolbar);
+        const createRow = document.createElement('div');
+        createRow.className = 'create-row';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'New board name';
+        input.value = this.newTitle;
+        input.addEventListener('input', (e) => {
+            this.newTitle = (e.target as HTMLInputElement).value;
+        });
+        input.addEventListener('keydown', (e) => {
+            if ((e as KeyboardEvent).key === 'Enter') void this.onCreate();
+        });
+        const createBtn = document.createElement('button');
+        createBtn.className = 'btn';
+        createBtn.textContent = 'Create';
+        createBtn.addEventListener('click', () => void this.onCreate());
+        createRow.appendChild(input);
+        createRow.appendChild(createBtn);
+        this.root.appendChild(createRow);
+        const body = document.createElement('div');
+        body.className = 'body';
+        body.tabIndex = 0;
+        if (!this.boards.length) {
+            const empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = 'No boards yet. Create one above.';
+            body.appendChild(empty);
+        } else {
+            const ul = document.createElement('ul');
+            ul.className = 'list';
+            this.boards.forEach((b, i) => {
+                const li = document.createElement('li');
+                li.className = 'row';
+                li.draggable = true;
+                li.addEventListener('dragstart', () => {
+                    this.draggingIndex = i;
+                });
+                li.addEventListener('dragover', (e) => e.preventDefault());
+                li.addEventListener('drop', () => void this.onDrop(i));
+                const openBtn = document.createElement('button');
+                openBtn.className = 'open';
+                openBtn.textContent = b.title;
+                openBtn.addEventListener('click', () => this.open(b));
+                const renameBtn = document.createElement('button');
+                renameBtn.className = 'btn';
+                renameBtn.textContent = 'Rename';
+                renameBtn.addEventListener('click', () => void this.onRename(b));
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn danger';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', () => void this.onDelete(b));
+                li.appendChild(openBtn);
+                li.appendChild(renameBtn);
+                li.appendChild(deleteBtn);
+                ul.appendChild(li);
+            });
+            body.appendChild(ul);
+        }
+        this.root.appendChild(body);
     }
 }
 
-declare global {
-    interface HTMLElementTagNameMap {
-        'boards-view': BoardsView;
-    }
-}
+customElements.define('boards-view', BoardsView);
