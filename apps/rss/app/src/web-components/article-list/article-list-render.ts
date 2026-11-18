@@ -337,15 +337,11 @@ export function cardRowTemplate(
         'article',
         `grid-card ${article.read ? 'read' : ''} ${selected ? 'selected' : ''} ${picked ? 'picked' : ''}`,
     );
-    // pointer-only: the cover opens the article; shift+click on the card extends the selection;
-    // keyboard and screen-reader users use the title button below.
     card.addEventListener('click', (e: MouseEvent) => {
-        if (e.shiftKey) onOpen(e, article);
+        if ((e.target as HTMLElement).closest('button')) return;
+        onOpen(e, article);
     });
     const media = el('div', 'grid-card-media');
-    media.addEventListener('click', (e: MouseEvent) => {
-        if (!e.shiftKey) onOpen(e, article);
-    });
     if (video) {
         const header = document.createElement('video-header');
         header.className = 'grid-card-img';
