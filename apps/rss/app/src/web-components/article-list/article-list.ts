@@ -1,6 +1,5 @@
-import { html, LitElement, unsafeCSS } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { createRef, type Ref } from 'lit/directives/ref.js';
+import { unsafeCSS } from 'lit';
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { Virtualizer } from '@tanstack/virtual-core';
 import { QueryController, fetchLibrary, libraryKey } from '../../query';
 import { markShownReadAction, openArticleAction } from './article-list-actions';
@@ -41,6 +40,7 @@ import {
 import {
     renderAdvancedMenu,
     renderInterestingHint,
+    renderLoadError,
     renderScroll,
     renderSelectionBar,
     renderToolbar,
@@ -85,57 +85,89 @@ interface Library {
 
 export { INTERESTING_BATCH } from './article-list-interesting';
 
+interface Regions {
+    toolbar: Comment;
+    selection: Comment;
+    hint: Comment;
+    advanced: Comment;
+    slideshow: Comment;
+    loadError: Comment;
+}
+
+function anchor(root: ShadowRoot): Comment {
+    const node = document.createComment('');
+    root.appendChild(node);
+    return node;
+}
+
+/** Install a reactive accessor. Assignments request the same batched paint Lit used to. */
+function defineReactive<T>(host: ArticleList, name: string, initial: T): void {
+    let current = initial;
+    Object.defineProperty(host, name, {
+        configurable: true,
+        enumerable: true,
+        get(): T {
+            return current;
+        },
+        set(next: T): void {
+            if (Object.is(current, next)) return;
+            const previous = current;
+            current = next;
+            host.requestUpdate(name, previous);
+        },
+    });
+}
+
 /**
- * The element itself: reactive state plus thin delegators. Behavior lives in
- * the sibling `article-list-*` modules, each receiving the element as an
- * explicitly typed host (`this as never`), so this class stays under the
- * max-lines budget and every group stays unit-testable on its own.
+ * Vanilla custom element: reactive fields plus thin delegators. Behavior lives
+ * in the sibling `article-list-*` modules, each receiving the element as an
+ * explicitly typed host (`this as never`), so every group stays unit-testable.
+ * DOM is built imperatively; no template literal or html tag is involved.
  */
-@customElement('article-list')
-export class ArticleList extends LitElement {
-    static override styles = unsafeCSS(styles);
+export class ArticleList extends HTMLElement implements ReactiveControllerHost {
+    static styles = unsafeCSS(styles);
 
-    @property({ attribute: false }) view: View = { kind: 'all' };
-    @property({ attribute: false }) resumeArticleId: string | null = null;
-    @property({ attribute: false }) active = true;
-
-    @state() items: Article[] = [];
-    @state() loadState: LoadState = initialLoadState();
-    @state() unreadOnly = false;
-    @state() hideRead = false;
-    @state() markOnScroll = false;
-    @state() selectedIds: string[] = [];
-    @state() sort: ArticleSort = 'hot';
-    @state() cursor = -1;
-    @state() listView: ListViewType = 'detailed';
-    @state() maxCardCols = 4;
-    @state() cols = 3;
-    @state() pageSize = DEFAULT_PAGE_SIZE;
-    @state() advancedOpen = false;
-    @state() marking = false;
-    @state() advancedAnchor: MenuAnchor | null = null;
-    @state() interestingStrictness = DEFAULT_INTERESTING_STRICTNESS;
+    declare view: View;
+    declare resumeArticleId: string | null;
+    declare active: boolean;
+    declare items: Article[];
+    declare loadState: LoadState;
+    declare unreadOnly: boolean;
+    declare hideRead: boolean;
+    declare markOnScroll: boolean;
+    declare selectedIds: string[];
+    declare sort: ArticleSort;
+    declare cursor: number;
+    declare listView: ListViewType;
+    declare maxCardCols: number;
+    declare cols: number;
+    declare pageSize: number;
+    declare advancedOpen: boolean;
+    declare marking: boolean;
+    declare advancedAnchor: MenuAnchor | null;
+    declare interestingStrictness: number;
     /** Last page-load failure, cleared on the next attempt. Rendered as a banner, never silent. */
-    @state() loadError: string | null = null;
+    declare loadError: string | null;
     /** Articles hidden by mute filters in the current loaded batch/page. */
-    @state() mutedHidden = 0;
+    declare mutedHidden: number;
     /** Row-level key lines expansion (N1). */
-    @state() highlightsOn = areHighlightsEnabled();
-    @state() rowHighlights: {
+    declare highlightsOn: boolean;
+    declare rowHighlights: {
         open: Record<string, boolean>;
         loading: Record<string, boolean>;
         data: Record<string, RowHighlight | null>;
-    } = { open: {}, loading: {}, data: {} };
-
+    };
     /** Slideshow view mode: current article index and playback options. */
-    @state() slideshowIndex = 0;
-    @state() slideshowAutoAdvance = false;
-    @state() slideshowSavedIds = new Set<string>();
+    declare slideshowIndex: number;
+    declare slideshowAutoAdvance: boolean;
+    declare slideshowSavedIds: Set<string>;
+    declare activeRefreshKeys: string[];
+
     slideshowAutoTimer: ReturnType<typeof setTimeout> | null = null;
     slideshowMarked = new Set<string>();
     slideshowSuppressRead = new Set<string>();
 
-    scrollElRef: Ref<HTMLDivElement> = createRef();
+    scrollElRef: { value: HTMLDivElement | null } = { value: null };
     virtualizer!: Virtualizer<HTMLDivElement, HTMLDivElement>;
     virtualizerCleanup?: () => void;
     cursors = new Map<string, string | undefined>();
@@ -154,17 +186,167 @@ export class ArticleList extends LitElement {
     feedWindowOffset = 0;
     /** In-flight refresh jobs by view key. Each folder is its own elevator button. */
     refreshJobs = new Map<string, Promise<void>>();
-    @state() activeRefreshKeys: string[] = [];
     /** A background refresh arrived while the article overlay had focus; apply it once active again. */
     pendingFeedsRefresh = false;
     /** Folder whose transient hide-read state is mirrored for count refresh. */
     interestingHideReadFolderId: string | null = null;
+
+    private readonly controllers = new Set<ReactiveController>();
+    private changedProperties = new Map<string, unknown>();
+    private updatePending = false;
+    private updatePromise: Promise<boolean> = Promise.resolve(true);
+    private resolveUpdate: ((value: boolean) => void) | null = null;
+    private firstPaintDone = false;
+    private readonly regionNodes = new Map<Comment, Node>();
+    private readonly anchors: Regions;
+    private readonly scrollEl: HTMLDivElement;
+    readonly renderRoot: ShadowRoot;
 
     library = new QueryController<Library>(this, () => ({
         queryKey: libraryKey,
         queryFn: () => fetchLibrary(),
         refetchInterval: 60_000,
     }));
+
+    constructor() {
+        super();
+        const shadow = this.attachShadow({ mode: 'open' });
+        this.renderRoot = shadow;
+        const cssText = (this.constructor as typeof ArticleList).styles.cssText;
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(cssText);
+        shadow.adoptedStyleSheets = [sheet];
+        this.anchors = {
+            toolbar: anchor(shadow),
+            selection: anchor(shadow),
+            hint: anchor(shadow),
+            advanced: anchor(shadow),
+            slideshow: anchor(shadow),
+            loadError: anchor(shadow),
+        };
+        this.scrollEl = document.createElement('div');
+        this.scrollEl.className = 'scroll';
+        this.scrollEl.addEventListener('scroll', this.onScroll);
+        shadow.appendChild(this.scrollEl);
+        this.scrollElRef.value = this.scrollEl;
+
+        defineReactive(this, 'view', { kind: 'all' } satisfies View);
+        defineReactive(this, 'resumeArticleId', null);
+        defineReactive(this, 'active', true);
+        defineReactive(this, 'items', [] as Article[]);
+        defineReactive(this, 'loadState', initialLoadState());
+        defineReactive(this, 'unreadOnly', false);
+        defineReactive(this, 'hideRead', false);
+        defineReactive(this, 'markOnScroll', false);
+        defineReactive(this, 'selectedIds', [] as string[]);
+        defineReactive(this, 'sort', 'hot' as ArticleSort);
+        defineReactive(this, 'cursor', -1);
+        defineReactive(this, 'listView', 'detailed' as ListViewType);
+        defineReactive(this, 'maxCardCols', 4);
+        defineReactive(this, 'cols', 3);
+        defineReactive(this, 'pageSize', DEFAULT_PAGE_SIZE);
+        defineReactive(this, 'advancedOpen', false);
+        defineReactive(this, 'marking', false);
+        defineReactive(this, 'advancedAnchor', null as MenuAnchor | null);
+        defineReactive(this, 'interestingStrictness', DEFAULT_INTERESTING_STRICTNESS);
+        defineReactive(this, 'loadError', null as string | null);
+        defineReactive(this, 'mutedHidden', 0);
+        defineReactive(this, 'highlightsOn', areHighlightsEnabled());
+        defineReactive(this, 'rowHighlights', { open: {}, loading: {}, data: {} });
+        defineReactive(this, 'slideshowIndex', 0);
+        defineReactive(this, 'slideshowAutoAdvance', false);
+        defineReactive(this, 'slideshowSavedIds', new Set<string>());
+        defineReactive(this, 'activeRefreshKeys', [] as string[]);
+    }
+
+    addController(controller: ReactiveController): void {
+        this.controllers.add(controller);
+    }
+
+    removeController(controller: ReactiveController): void {
+        this.controllers.delete(controller);
+    }
+
+    requestUpdate(name?: string, oldValue?: unknown): void {
+        if (name !== undefined && !this.changedProperties.has(name)) this.changedProperties.set(name, oldValue);
+        if (this.updatePending || !this.isConnected) return;
+        this.updatePending = true;
+        this.updatePromise = new Promise((resolve) => {
+            this.resolveUpdate = resolve;
+        });
+        queueMicrotask(() => this.performUpdate());
+    }
+
+    get updateComplete(): Promise<boolean> {
+        return this.updatePromise;
+    }
+
+    private performUpdate(): void {
+        if (!this.updatePending) return;
+        this.updatePending = false;
+        if (!this.isConnected) {
+            this.resolveUpdate?.(true);
+            this.resolveUpdate = null;
+            return;
+        }
+        const changed = this.changedProperties;
+        this.changedProperties = new Map();
+        for (const controller of this.controllers) controller.hostUpdate?.();
+        this.willUpdate(changed);
+        this.paint();
+        for (const controller of this.controllers) controller.hostUpdated?.();
+        this.updated(changed);
+        this.resolveUpdate?.(true);
+        this.resolveUpdate = null;
+    }
+
+    connectedCallback(): void {
+        for (const controller of this.controllers) controller.hostConnected?.();
+        attachHostListeners(this as never);
+        this.requestUpdate();
+    }
+
+    disconnectedCallback(): void {
+        for (const controller of this.controllers) controller.hostDisconnected?.();
+        teardownHost(this as never);
+    }
+
+    private mountRegion(anchor: Comment, node: Node | null): void {
+        const previous = this.regionNodes.get(anchor);
+        if (previous?.parentNode) previous.parentNode.removeChild(previous);
+        if (node) {
+            this.regionNodes.set(anchor, node);
+            anchor.parentNode?.insertBefore(node, anchor.nextSibling);
+        } else {
+            this.regionNodes.delete(anchor);
+        }
+    }
+
+    private paint(): void {
+        const host = this as never;
+        const { toolbar, selection, hint, advanced, slideshow, loadError } = this.anchors;
+        this.mountRegion(toolbar, renderToolbar(host));
+        this.mountRegion(hint, renderInterestingHint(host));
+        this.mountRegion(advanced, renderAdvancedMenu(host));
+        if (this.listView === 'slideshow') {
+            this.mountRegion(selection, null);
+            this.mountRegion(slideshow, renderSlideshowSection(host));
+            this.mountRegion(loadError, null);
+            this.scrollEl.style.display = 'none';
+            return;
+        }
+        this.mountRegion(selection, renderSelectionBar(host));
+        this.mountRegion(slideshow, null);
+        this.mountRegion(loadError, renderLoadError(host));
+        this.scrollEl.style.display = '';
+        const virtualItems = this.virtualizer?.getVirtualItems() ?? [];
+        renderScroll(host, virtualItems, this.view.kind !== 'feed', this.scrollEl);
+        // Virtual rows are freshly built each paint. Re-measure them once they
+        // are in the scroll container, as the old ref directive did.
+        for (const row of this.scrollEl.querySelectorAll<HTMLElement>('.viewport .row')) {
+            this.virtualizer?.measureElement(row as HTMLDivElement);
+        }
+    }
 
     /** True while this view's own refresh job runs. Other folders track their own keys. */
     get refreshing(): boolean {
@@ -197,23 +379,8 @@ export class ArticleList extends LitElement {
         return this.isConnected;
     }
 
-    override firstUpdated() {
-        reinitVirtualizer(this as never);
-        syncScrollBindingsLayout(this as never);
-    }
-
-    updateCols() {
+    updateCols(): void {
         updateColsLayout(this as never);
-    }
-
-    override connectedCallback() {
-        super.connectedCallback();
-        attachHostListeners(this as never);
-    }
-
-    override disconnectedCallback() {
-        super.disconnectedCallback();
-        teardownHost(this as never);
     }
 
     // Handler fields stay public with stable arrow identities: the lifecycle
@@ -236,7 +403,7 @@ export class ArticleList extends LitElement {
     onKeyDown = (e: KeyboardEvent) => handleKeyDown(this as never, e);
     onToggleDerank = (e: Event) => onToggleDerankAction(this as never, e);
 
-    override willUpdate(changed: Map<string, unknown>) {
+    willUpdate(changed: Map<string, unknown>): void {
         if (changed.has('view')) {
             this.dwell.flushViewChange();
             this.markOnScroll = readViewSettings()[viewKeyOf(this.view)]?.markOnScroll ?? false;
@@ -249,7 +416,12 @@ export class ArticleList extends LitElement {
         }
     }
 
-    override updated(changed: Map<string, unknown>) {
+    updated(changed: Map<string, unknown>): void {
+        if (!this.firstPaintDone) {
+            this.firstPaintDone = true;
+            reinitVirtualizer(this as never);
+            syncScrollBindingsLayout(this as never);
+        }
         handleUpdateHost(this, currentViewKeyHost(this));
         syncInterestingCountHost(this, changed);
         applyPendingFeedsRefresh(this as never, changed);
@@ -257,27 +429,11 @@ export class ArticleList extends LitElement {
         syncScrollBindingsLayout(this as never);
     }
 
-    override render() {
-        const host = this as never;
-        if (this.listView === 'slideshow') {
-            return html`${renderToolbar(host)}${renderInterestingHint(host)}${renderAdvancedMenu(host)}${renderSlideshowSection(host)}`;
-        }
-        const virtualItems = this.virtualizer?.getVirtualItems() ?? [];
-        const showFeed = this.view.kind !== 'feed';
-        return html`
-      ${renderToolbar(host)}
-      ${renderSelectionBar(host)}
-      ${renderInterestingHint(host)}
-      ${renderAdvancedMenu(host)}
-      ${renderScroll(host, virtualItems, showFeed)}
-    `;
-    }
-
     interestingActive(): boolean {
         return interestingActiveFor(this.view);
     }
 
-    onRetryLibrary() {
+    onRetryLibrary(): void {
         onRetryLibraryHost();
     }
 
@@ -289,24 +445,24 @@ export class ArticleList extends LitElement {
         return folderFeedsHost(this);
     }
 
-    private loadViewSettings() {
+    private loadViewSettings(): void {
         loadViewSettingsHost(this);
     }
 
-    saveViewSettings() {
+    saveViewSettings(): void {
         saveViewSettingsHost(this);
     }
 
     /** Thin delegator so actions and menus keep one reset entry point. */
-    async reset() {
+    async reset(): Promise<void> {
         await resetList(this as never);
     }
 
-    onRetryArticles() {
+    onRetryArticles(): void {
         void resetList(this as never);
     }
 
-    onUndoMute() {
+    onUndoMute(): void {
         onUndoMuteHost();
     }
 
@@ -340,64 +496,64 @@ export class ArticleList extends LitElement {
         return this.library.data?.feeds.find((f) => f.id === feedId)?.icon;
     }
 
-    async openArticle(article: Article) {
+    async openArticle(article: Article): Promise<void> {
         await openArticleAction(this as never, article);
     }
 
-    showShortcuts() {
+    showShortcuts(): void {
         showShortcutsAction();
     }
 
-    toggleStarCursor() {
+    toggleStarCursor(): void {
         toggleStarCursorAction(this as never);
     }
 
-    toggleUnread() {
+    toggleUnread(): void {
         toggleUnreadHost(this);
     }
 
-    setListView(listView: ListViewType) {
+    setListView(listView: ListViewType): void {
         setListViewPrefHost(this, listView);
     }
 
-    setSort(sort: ArticleSort) {
+    setSort(sort: ArticleSort): void {
         setSortPrefHost(this, sort);
     }
 
-    onRowClick(e: MouseEvent, index: number) {
+    onRowClick(e: MouseEvent, index: number): void {
         onRowClickAction(this as never, e, index);
     }
 
-    toggleSelectCursor() {
+    toggleSelectCursor(): void {
         toggleSelectCursorAction(this as never);
     }
 
-    clearSelection() {
+    clearSelection(): void {
         clearSelectionAction(this as never);
     }
 
-    async onBulkMarkRead() {
+    async onBulkMarkRead(): Promise<void> {
         await bulkMarkReadAction(this as never);
     }
 
-    async onBulkStar() {
+    async onBulkStar(): Promise<void> {
         await bulkStarAction(this as never);
     }
 
-    async onBulkDerank() {
+    async onBulkDerank(): Promise<void> {
         bulkDerankAction(this as never);
         this.requestUpdate();
     }
 
-    onToggleAdvanced(e: Event) {
+    onToggleAdvanced(e: Event): void {
         toggleAdvancedAction(this as never, e);
     }
 
-    onAdvancedUnread(e: Event) {
+    onAdvancedUnread(e: Event): void {
         advancedUnreadAction(this as never, e);
     }
 
-    onAdvancedMarkScroll(e: Event) {
+    onAdvancedMarkScroll(e: Event): void {
         advancedMarkScrollAction(this as never, e);
     }
 
@@ -409,27 +565,27 @@ export class ArticleList extends LitElement {
         return freshnessLabelHost(this);
     }
 
-    async onMarkBefore(e: Event) {
+    async onMarkBefore(e: Event): Promise<void> {
         await onMarkBeforeHost(this, e);
     }
 
-    async onRefresh() {
+    async onRefresh(): Promise<void> {
         await refreshViewAction(this as never, viewRefreshKeyOf(this.view));
     }
 
-    async onStar(e: Event, article: Article) {
+    async onStar(e: Event, article: Article): Promise<void> {
         await onStarAction(this as never, e, article);
     }
 
-    onInterestingStrictness(e: Event) {
+    onInterestingStrictness(e: Event): void {
         onInterestingStrictnessHost(this, e);
     }
 
-    async onMarkShownRead() {
+    async onMarkShownRead(): Promise<void> {
         await markShownReadAction(this as never);
     }
 
-    async onCatchMeUp() {
+    async onCatchMeUp(): Promise<void> {
         await catchMeUpAction(this as never);
     }
 }
@@ -439,3 +595,5 @@ declare global {
         'article-list': ArticleList;
     }
 }
+
+customElements.define('article-list', ArticleList);

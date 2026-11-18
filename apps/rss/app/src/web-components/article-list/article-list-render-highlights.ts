@@ -1,5 +1,4 @@
-import { html } from 'lit';
-import { repeat } from 'lit/directives/repeat.js';
+import { append, el } from './article-list-dom';
 import type { RowHighlight } from '../../types';
 
 export interface RowHighlightRenderState {
@@ -36,22 +35,41 @@ function whyLineForRow(result: RowHighlight): string {
     return parts.join(' · ') || 'key excerpts';
 }
 
-export function renderRowHighlights(h: { loading: boolean; result: RowHighlight | null | undefined }) {
+export function renderRowHighlights(h: { loading: boolean; result: RowHighlight | null | undefined }): HTMLElement {
+    const box = el('div', 'row-highlights');
+    box.setAttribute('aria-label', 'Key lines');
     if (h.loading && (!h.result || !h.result.available || !h.result.excerpts.length)) {
-        return html`<div class="row-highlights" aria-label="Key lines"><div class="skl"></div><div class="skl skl-short"></div></div>`;
+        box.appendChild(el('div', 'skl'));
+        box.appendChild(el('div', 'skl skl-short'));
+        return box;
     }
     const result = h.result;
     if (!result || !result.available || !result.excerpts.length) {
-        return html`<div class="row-highlights" aria-label="Key lines"><p class="row-why">No key lines found for this article.</p></div>`;
+        box.appendChild(el('p', 'row-why', 'No key lines found for this article.'));
+        return box;
     }
-    return html`<div class="row-highlights" aria-label="Key lines"><ul>${repeat(
-        result.excerpts,
-        (e) => e.index,
-        (e) => html`<li><blockquote>${e.text}</blockquote></li>`,
-    )}</ul><p class="row-why">Why: ${whyLineForRow(result)}</p></div>`;
+    const list = document.createElement('ul');
+    for (const excerpt of result.excerpts) {
+        const item = document.createElement('li');
+        item.appendChild(el('blockquote', undefined, excerpt.text));
+        list.appendChild(item);
+    }
+    box.appendChild(list);
+    box.appendChild(el('p', 'row-why', `Why: ${whyLineForRow(result)}`));
+    return box;
 }
 
-export function highlightToggle(minutes: number, h: RowHighlightRenderState | undefined) {
-    if (!h?.enabled || minutes < 4) return '';
-    return html`<button class="row-highlight-toggle" @click=${h.onToggle} aria-expanded=${h.open}>${h.open ? 'Hide key lines' : 'Key lines'}</button>`;
+export function highlightToggle(minutes: number, h: RowHighlightRenderState | undefined): HTMLButtonElement | null {
+    if (!h?.enabled || minutes < 4) return null;
+    const button = el('button', 'row-highlight-toggle', h.open ? 'Hide key lines' : 'Key lines');
+    button.setAttribute('aria-expanded', String(h.open));
+    button.addEventListener('click', h.onToggle);
+    return button;
+}
+
+/** Join a set of nodes into one DOM fragment (used by multi-root helpers). */
+export function rowFragment(...children: Array<Node | null>): DocumentFragment {
+    const frag = document.createDocumentFragment();
+    append(frag, ...children);
+    return frag;
 }

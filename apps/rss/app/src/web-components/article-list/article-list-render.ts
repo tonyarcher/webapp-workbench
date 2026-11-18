@@ -1,5 +1,3 @@
-import { html, svg } from 'lit';
-import { ref, type Ref } from 'lit/directives/ref.js';
 import type { Virtualizer } from '@tanstack/virtual-core';
 import { safeHttpUrl } from '../../services/parser';
 import { articleImage, cardPlaceholderStyle } from '../../services/image';
@@ -11,17 +9,19 @@ import { interestingWordMapOf } from './article-list-interesting';
 import { domainOf, formatDate } from '../../util';
 import type { Article, ArticleSort, ListViewType, View } from '../../types';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
+import { append, el, svgIcon } from './article-list-dom';
 import {
     highlightArgs,
     highlightToggle,
     renderRowHighlights,
+    rowFragment,
     type HighlightHost,
     type RowHighlightRenderState,
 } from './article-list-render-highlights';
+
 /**
- * State and handlers the article-list templates read. The component passes
- * itself (`this as never`, matching article-list-actions.ts) so the html
- * strings stay identical to the ones the class used to render.
+ * State and handlers the vanilla renderers read. The component passes itself
+ * (`this as never`, matching article-list-actions.ts).
  */
 export interface ArticleListRenderHost extends HighlightHost {
     view: View;
@@ -55,7 +55,7 @@ export interface ArticleListRenderHost extends HighlightHost {
     advancedOpen: boolean;
     marking: boolean;
     advancedAnchor: MenuAnchor | null;
-    scrollElRef: Ref<HTMLDivElement>;
+    scrollElRef: { value: HTMLDivElement | null };
     virtualizer: Virtualizer<HTMLDivElement, HTMLDivElement>;
     library: { error: Error | undefined };
     viewTitle(): string;
@@ -78,105 +78,174 @@ export interface ArticleListRenderHost extends HighlightHost {
     onInterestingStrictness(e: Event): void;
 }
 type VirtualItems = ReturnType<Virtualizer<HTMLDivElement, HTMLDivElement>['getVirtualItems']>;
-export function detailRowTemplate(
-    article: Article,
-    showFeed: boolean,
-    feedTitle: string | undefined,
-    feedIcon: string | undefined,
-    onStar: (e: Event, article: Article) => void,
-    onOpen: (e: MouseEvent, article: Article) => void,
-    highlight?: RowHighlightRenderState,
-) {
-    const popular = article.popularity >= 4;
-    const link = safeHttpUrl(article.link);
-    const video = articleVideo(article);
-    const image = articleImage(article, feedIcon);
-    return html`
-      <div class="detail-body">
-        ${detailMedia(video, image, article, link)}
-        <div class="detail-text">
-          ${detailTitleRow(article, popular, onStar, onOpen)}
-          ${detailMeta(article, showFeed, feedTitle, link, highlight)}
-          ${article.summary ? html`<div class="summary">${article.summary}</div>` : ''}
-          ${highlight?.open ? renderRowHighlights(highlight) : ''}
-        </div>
-      </div>
-    `;
-}
-function detailMedia(
-    video: ReturnType<typeof articleVideo>,
-    image: string | undefined,
-    article: Article,
-    link: string | undefined,
-) {
-    if (video?.posters.length) {
-        return html`<video-header
-            class="detail-img detail-video"
-            .video=${video}
-            .videoTitle=${article.title}
-            .videoLink=${watchUrlFor(video, link)}
-        ></video-header>`;
-    }
-    if (image) {
-        return html`<lazy-img class="detail-img" .src=${image}></lazy-img>`;
-    }
-    if (video) {
-        return html`<video-header
-            class="detail-img detail-video"
-            .video=${video}
-            .videoTitle=${article.title}
-            .videoLink=${watchUrlFor(video, link)}
-        ></video-header>`;
-    }
-    return '';
-}
-function detailTitleRow(
-    article: Article,
-    popular: boolean,
-    onStar: (e: Event, article: Article) => void,
-    onOpen: (e: MouseEvent, article: Article) => void,
-) {
-    return html`
-      <div class="row-top">
-        ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
-        ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
-        <button class="title title-open" @click=${(e: MouseEvent) => {
-            e.stopPropagation();
-            onOpen(e, article);
-        }}>${article.title}</button>
-        ${derankButton(article)}${starButton(article, onStar)}
-      </div>
-    `;
-}
 
-/** Star toggle with its glyph hidden from the name computation: the visible
- *  star is not the word "Star", so a bare glyph fails label-in-name. */
-function starButton(article: Article, onStar: (e: Event, article: Article) => void) {
-    return html`<button class="star" aria-label=${article.starred ? 'Unstar' : 'Star'} @click=${(e: Event) => onStar(e, article)}><span aria-hidden="true">${article.starred ? '★' : '☆'}</span></button>`;
-}
+const DERANK_ACTIVE = 'M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z';
+const DERANK_SLASH = 'M4 4l16 16';
 
-/** Yin-yang twin of the star: marks a row not interesting in place. */
-function derankButton(article: Article) {
+function derankButton(article: Article): HTMLButtonElement {
     const active = isDeranked(article.id);
-    const glyph = active
-        ? svg`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z"/><path d="M4 4l16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`
-        : svg`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z"/><path d="M4 4l16 16"/></svg>`;
-    return html`<button class="derank" aria-label=${active ? 'Marked not interesting' : 'Not interesting'} aria-pressed=${active} title=${active ? 'Marked not interesting' : 'Not interesting'} @click=${(
-        e: Event,
-    ) => {
+    const button = el('button', 'derank');
+    button.setAttribute('aria-label', active ? 'Marked not interesting' : 'Not interesting');
+    button.setAttribute('aria-pressed', String(active));
+    button.title = active ? 'Marked not interesting' : 'Not interesting';
+    if (active) {
+        button.appendChild(
+            svgIcon({ viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' }, [
+                ['path', { fill: 'currentColor', d: DERANK_ACTIVE }],
+                [
+                    'path',
+                    {
+                        d: DERANK_SLASH,
+                        fill: 'none',
+                        stroke: 'currentColor',
+                        'stroke-width': '2.2',
+                        'stroke-linecap': 'round',
+                    },
+                ],
+            ]),
+        );
+    } else {
+        button.appendChild(
+            svgIcon(
+                {
+                    viewBox: '0 0 24 24',
+                    'aria-hidden': 'true',
+                    focusable: 'false',
+                    fill: 'none',
+                    stroke: 'currentColor',
+                    'stroke-width': '1.8',
+                    'stroke-linecap': 'round',
+                    'stroke-linejoin': 'round',
+                },
+                [
+                    ['path', { d: DERANK_ACTIVE }],
+                    ['path', { d: DERANK_SLASH }],
+                ],
+            ),
+        );
+    }
+    button.addEventListener('click', (e) => {
         e.stopPropagation();
-        (e.currentTarget as HTMLElement).dispatchEvent(
+        button.dispatchEvent(
             new CustomEvent('toggle-derank', {
                 bubbles: true,
                 composed: true,
                 detail: { id: article.id, title: article.title },
             }),
         );
-    }}>${glyph}</button>`;
+    });
+    return button;
 }
 
-function externalIcon() {
-    return svg`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M10 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+/** Star toggle with its glyph hidden from the name computation. */
+function starButton(article: Article, onStar: (e: Event, article: Article) => void): HTMLButtonElement {
+    const button = el('button', 'star');
+    button.setAttribute('aria-label', article.starred ? 'Unstar' : 'Star');
+    const glyph = el('span', undefined, article.starred ? '★' : '☆');
+    glyph.setAttribute('aria-hidden', 'true');
+    button.appendChild(glyph);
+    button.addEventListener('click', (e) => onStar(e, article));
+    return button;
+}
+
+function externalIcon(): SVGElement {
+    return svgIcon({ viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' }, [
+        [
+            'path',
+            {
+                d: 'M14 4h6v6M20 4l-9 9M10 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-5',
+                fill: 'none',
+                stroke: 'currentColor',
+                'stroke-width': '2',
+                'stroke-linecap': 'round',
+                'stroke-linejoin': 'round',
+            },
+        ],
+    ]);
+}
+
+function origLink(link: string): HTMLAnchorElement {
+    const anchor = document.createElement('a');
+    anchor.className = 'orig-link';
+    anchor.href = link;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    anchor.title = 'Open original';
+    anchor.setAttribute('aria-label', 'Open original');
+    anchor.appendChild(externalIcon());
+    return anchor;
+}
+
+function dot(): HTMLSpanElement {
+    return el('span', 'unread-dot');
+}
+
+function popSpan(): HTMLSpanElement {
+    const pop = el('span', 'pop', '🔥');
+    pop.title = 'Trending in your feeds';
+    return pop;
+}
+
+function feedLabel(feedTitle: string | undefined): HTMLSpanElement | null {
+    return feedTitle ? el('span', 'feed-label', feedTitle) : null;
+}
+
+function detailMedia(
+    video: ReturnType<typeof articleVideo>,
+    image: string | undefined,
+    article: Article,
+    link: string | undefined,
+): HTMLElement | null {
+    if (video?.posters.length) {
+        const header = document.createElement('video-header');
+        header.className = 'detail-img detail-video';
+        (header as unknown as { video: typeof video }).video = video;
+        (header as unknown as { videoTitle: string }).videoTitle = article.title;
+        (header as unknown as { videoLink: string | undefined }).videoLink = watchUrlFor(video, link);
+        return header;
+    }
+    if (image) {
+        const lazy = document.createElement('lazy-img');
+        lazy.className = 'detail-img';
+        (lazy as unknown as { src: string }).src = image;
+        return lazy;
+    }
+    if (video) {
+        const header = document.createElement('video-header');
+        header.className = 'detail-img detail-video';
+        (header as unknown as { video: typeof video }).video = video;
+        (header as unknown as { videoTitle: string }).videoTitle = article.title;
+        (header as unknown as { videoLink: string | undefined }).videoLink = watchUrlFor(video, link);
+        return header;
+    }
+    return null;
+}
+
+function openButton(article: Article, className: string, onOpen: (e: MouseEvent, article: Article) => void) {
+    const button = el('button', className, article.title);
+    button.addEventListener('click', (e: MouseEvent) => {
+        e.stopPropagation();
+        onOpen(e, article);
+    });
+    return button;
+}
+
+function detailTitleRow(
+    article: Article,
+    popular: boolean,
+    onStar: (e: Event, article: Article) => void,
+    onOpen: (e: MouseEvent, article: Article) => void,
+): HTMLElement {
+    const row = el('div', 'row-top');
+    append(
+        row,
+        article.read === 0 ? dot() : null,
+        popular ? popSpan() : null,
+        openButton(article, 'title title-open', onOpen),
+        derankButton(article),
+        starButton(article, onStar),
+    );
+    return row;
 }
 
 function detailMeta(
@@ -185,23 +254,45 @@ function detailMeta(
     feedTitle: string | undefined,
     link: string | undefined,
     highlight?: RowHighlightRenderState,
-) {
+): HTMLElement {
+    const meta = el('div', 'meta');
     const minutes = readMinutes(article.content, article.summary);
-    return html`
-      <div class="meta">
-        ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-        <span class="meta-domain">${domainOf(article.link)}</span>
-        <span class="meta-date">${formatDate(article.published)}</span>
-        ${minutes > 0 ? html`<span class="meta-time">${minutes} min read</span>` : ''}
-        ${article.author ? html`<span class="meta-author">by ${article.author}</span>` : ''}
-        ${highlightToggle(minutes, highlight)}
-        ${
-            link
-                ? html`<a class="orig-link" href=${link} target="_blank" rel="noopener noreferrer" title="Open original" aria-label="Open original">${externalIcon()}</a>`
-                : ''
-        }
-      </div>
-    `;
+    const children: Array<Node | null> = [
+        showFeed ? feedLabel(feedTitle) : null,
+        el('span', 'meta-domain', domainOf(article.link)),
+        el('span', 'meta-date', formatDate(article.published)),
+        minutes > 0 ? el('span', 'meta-time', `${minutes} min read`) : null,
+        article.author ? el('span', 'meta-author', `by ${article.author}`) : null,
+        highlightToggle(minutes, highlight),
+        link ? origLink(link) : null,
+    ];
+    append(meta, ...children);
+    return meta;
+}
+
+export function detailRowTemplate(
+    article: Article,
+    showFeed: boolean,
+    feedTitle: string | undefined,
+    feedIcon: string | undefined,
+    onStar: (e: Event, article: Article) => void,
+    onOpen: (e: MouseEvent, article: Article) => void,
+    highlight?: RowHighlightRenderState,
+): HTMLElement {
+    const popular = article.popularity >= 4;
+    const link = safeHttpUrl(article.link);
+    const video = articleVideo(article);
+    const image = articleImage(article, feedIcon);
+    const body = el('div', 'detail-body');
+    const media = detailMedia(video, image, article, link);
+    if (media) body.appendChild(media);
+    const text = el('div', 'detail-text');
+    append(text, detailTitleRow(article, popular, onStar, onOpen));
+    append(text, detailMeta(article, showFeed, feedTitle, link, highlight));
+    if (article.summary) text.appendChild(el('div', 'summary', article.summary));
+    if (highlight?.open) text.appendChild(renderRowHighlights(highlight));
+    body.appendChild(text);
+    return body;
 }
 
 export function headlineRowTemplate(
@@ -211,24 +302,22 @@ export function headlineRowTemplate(
     onStar: (e: Event, article: Article) => void,
     onOpen: (e: MouseEvent, article: Article) => void,
     highlight?: RowHighlightRenderState,
-) {
+): DocumentFragment {
     const popular = article.popularity >= 4;
     const minutes = readMinutes(article.content, article.summary);
-    return html`
-      <div class="row-top">
-        ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
-        ${popular ? html`<span class="pop" title="Trending in your feeds">🔥</span>` : ''}
-        ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-        <button class="title title-open" @click=${(e: MouseEvent) => {
-            e.stopPropagation();
-            onOpen(e, article);
-        }}>${article.title}</button>
-        ${highlightToggle(minutes, highlight)}
-        <span class="headline-date">${formatDate(article.published)}${minutes > 0 ? ` · ${minutes} min` : ''}</span>
-        ${derankButton(article)}${starButton(article, onStar)}
-      </div>
-      ${highlight?.open ? renderRowHighlights(highlight) : ''}
-    `;
+    const row = el('div', 'row-top');
+    append(
+        row,
+        article.read === 0 ? dot() : null,
+        popular ? popSpan() : null,
+        showFeed ? feedLabel(feedTitle) : null,
+        openButton(article, 'title title-open', onOpen),
+        highlightToggle(minutes, highlight),
+        el('span', 'headline-date', `${formatDate(article.published)}${minutes > 0 ? ` · ${minutes} min` : ''}`),
+        derankButton(article),
+        starButton(article, onStar),
+    );
+    return rowFragment(row, highlight?.open ? renderRowHighlights(highlight) : null);
 }
 
 export function cardRowTemplate(
@@ -240,212 +329,372 @@ export function cardRowTemplate(
     picked: boolean,
     onStar: (e: Event, article: Article) => void,
     onOpen: (e: MouseEvent, article: Article) => void,
-) {
+): HTMLElement {
     const link = safeHttpUrl(article.link);
     const video = articleVideo(article);
     const image = video ? undefined : articleImage(article, feedIcon);
-    return html`
-      <article class="grid-card ${article.read ? 'read' : ''} ${selected ? 'selected' : ''} ${picked ? 'picked' : ''}" @click=${(
-          e: MouseEvent,
-      ) => {
-          if (e.shiftKey) onOpen(e, article);
-      }}>
-        <!-- pointer-only: the cover opens the article; shift+click on the card extends the selection; keyboard and screen-reader users use the title button below. -->
-        <div class="grid-card-media" @click=${(e: MouseEvent) => {
-            if (!e.shiftKey) onOpen(e, article);
-        }}>
-          ${
-              video
-                  ? html`<video-header class="grid-card-img" .video=${video} .videoTitle=${article.title} .videoLink=${watchUrlFor(video, link)}></video-header>`
-                  : image
-                    ? html`<lazy-img class="grid-card-img" .src=${image}></lazy-img>`
-                    : html`<div class="grid-card-img grid-card-img-empty" style=${cardPlaceholderStyle(article)}></div>`
-          }
-        </div>
-        <div class="grid-card-body">
-          ${cardTitleRow(article, onStar, onOpen)}
-          ${article.summary ? html`<div class="grid-card-summary">${article.summary}</div>` : ''}
-          ${cardMeta(article, showFeed, feedTitle, link)}
-        </div>
-      </article>
-    `;
-}
-
-function cardTitleRow(
-    article: Article,
-    onStar: (e: Event, article: Article) => void,
-    onOpen: (e: MouseEvent, article: Article) => void,
-) {
-    return html`
-      <div class="grid-card-title-row">
-        ${article.read === 0 ? html`<span class="unread-dot"></span>` : ''}
-        <button class="grid-card-title title-open" @click=${(e: MouseEvent) => {
-            e.stopPropagation();
-            onOpen(e, article);
-        }}>${article.title}</button>
-        ${derankButton(article)}${starButton(article, onStar)}
-      </div>
-    `;
-}
-
-function cardMeta(article: Article, showFeed: boolean, feedTitle: string | undefined, link: string | undefined) {
+    const card = el(
+        'article',
+        `grid-card ${article.read ? 'read' : ''} ${selected ? 'selected' : ''} ${picked ? 'picked' : ''}`,
+    );
+    // pointer-only: the cover opens the article; shift+click on the card extends the selection;
+    // keyboard and screen-reader users use the title button below.
+    card.addEventListener('click', (e: MouseEvent) => {
+        if (e.shiftKey) onOpen(e, article);
+    });
+    const media = el('div', 'grid-card-media');
+    media.addEventListener('click', (e: MouseEvent) => {
+        if (!e.shiftKey) onOpen(e, article);
+    });
+    if (video) {
+        const header = document.createElement('video-header');
+        header.className = 'grid-card-img';
+        (header as unknown as { video: typeof video }).video = video;
+        (header as unknown as { videoTitle: string }).videoTitle = article.title;
+        (header as unknown as { videoLink: string | undefined }).videoLink = watchUrlFor(video, link);
+        media.appendChild(header);
+    } else if (image) {
+        const lazy = document.createElement('lazy-img');
+        lazy.className = 'grid-card-img';
+        (lazy as unknown as { src: string }).src = image;
+        media.appendChild(lazy);
+    } else {
+        const empty = el('div', 'grid-card-img grid-card-img-empty');
+        empty.setAttribute('style', cardPlaceholderStyle(article));
+        media.appendChild(empty);
+    }
+    card.appendChild(media);
+    const body = el('div', 'grid-card-body');
+    const titleRow = el('div', 'grid-card-title-row');
+    append(titleRow, article.read === 0 ? dot() : null);
+    titleRow.appendChild(openButton(article, 'grid-card-title title-open', onOpen));
+    titleRow.appendChild(derankButton(article));
+    titleRow.appendChild(starButton(article, onStar));
+    body.appendChild(titleRow);
+    if (article.summary) body.appendChild(el('div', 'grid-card-summary', article.summary));
     const minutes = readMinutes(article.content, article.summary);
-    return html`
-      <div class="meta">
-        ${showFeed && feedTitle ? html`<span class="feed-label">${feedTitle}</span>` : ''}
-        <span class="meta-domain">${domainOf(article.link)}</span>
-        <span class="meta-date">${formatDate(article.published)}${minutes > 0 ? ` · ${minutes} min` : ''}</span>
-        ${
-            link
-                ? html`<a class="orig-link" href=${link} target="_blank" rel="noopener noreferrer" title="Open original" aria-label="Open original">${externalIcon()}</a>`
-                : ''
-        }
-      </div>
-    `;
+    const meta = el('div', 'meta');
+    append(
+        meta,
+        showFeed ? feedLabel(feedTitle) : null,
+        el('span', 'meta-domain', domainOf(article.link)),
+        el('span', 'meta-date', `${formatDate(article.published)}${minutes > 0 ? ` · ${minutes} min` : ''}`),
+        link ? origLink(link) : null,
+    );
+    body.appendChild(meta);
+    card.appendChild(body);
+    return card;
 }
 
-export function renderToolbar(host: ArticleListRenderHost) {
-    return html`
-      <div class="toolbar">
-        <h2>${host.viewTitle()}</h2>
-        <div class="actions">
-          ${renderFreshness(host)}${renderSortSelect(host)}${renderViewSelect(host)}${renderCardColsSelect(host)}${renderPageSizeSelect(host)}
-          <button class="btn" @click=${host.onMarkShownRead}>Mark shown as read</button>
-          <button class="btn" @click=${host.onCatchMeUp}>Catch me up (5 min)</button>
-          <button class="btn" @click=${host.onToggleAdvanced}>Advanced</button>
-          <button class="btn refresh" @click=${host.onRefresh}>${host.refreshing ? html`<span class="spinner" aria-hidden="true"></span>Refreshing…` : 'Refresh'}</button>
-        </div>
-      </div>
-    `;
+export function renderToolbar(host: ArticleListRenderHost): HTMLElement {
+    const toolbar = el('div', 'toolbar');
+    toolbar.appendChild(el('h2', undefined, host.viewTitle()));
+    const actions = el('div', 'actions');
+    const freshness = renderFreshness(host);
+    if (freshness) actions.appendChild(freshness);
+    actions.appendChild(
+        labeledSelect(
+            'sort',
+            'Sort articles',
+            host.sort,
+            [
+                ['hot', 'Hot'],
+                ['newest', 'Newest'],
+                ['oldest', 'Oldest'],
+            ] as Array<[string, string]>,
+            (e) => {
+                host.sort = (e.target as HTMLSelectElement).value as ArticleSort;
+                host.saveViewSettings();
+            },
+        ),
+    );
+    actions.appendChild(
+        labeledSelect(
+            'view-mode',
+            'List view',
+            host.listView,
+            [
+                ['detailed', 'Detailed List'],
+                ['headline', 'Headline View'],
+                ['cards', 'Cards'],
+                ['slideshow', 'Slideshow'],
+            ] as Array<[string, string]>,
+            (e) => {
+                host.listView = (e.target as HTMLSelectElement).value as ListViewType;
+                host.saveViewSettings();
+            },
+        ),
+    );
+    if (host.listView === 'cards') {
+        const select = labeledSelect(
+            'view-mode',
+            null,
+            host.maxCardCols,
+            [
+                ['2', '2 cols'],
+                ['3', '3 cols'],
+                ['4', '4 cols'],
+                ['5', '5 cols'],
+                ['6', '6 cols'],
+            ] as Array<[string, string]>,
+            (e) => {
+                host.maxCardCols = Number((e.target as HTMLSelectElement).value);
+                host.saveViewSettings();
+                host.updateCols();
+            },
+        );
+        select.title = 'Maximum card columns';
+        actions.appendChild(select);
+    }
+    const pageSize = labeledSelect(
+        'page-size',
+        null,
+        host.pageSize,
+        [
+            ['5', '5'],
+            ['10', '10'],
+            ['20', '20'],
+            ['50', '50'],
+            ['100', '100'],
+            ['500', '500'],
+        ] as Array<[string, string]>,
+        (e) => {
+            host.pageSize = Number((e.target as HTMLSelectElement).value);
+            host.saveViewSettings();
+        },
+    );
+    pageSize.title = 'Articles shown at a time';
+    actions.appendChild(pageSize);
+    actions.appendChild(actionButton('btn', 'Mark shown as read', host.onMarkShownRead.bind(host)));
+    actions.appendChild(actionButton('btn', 'Catch me up (5 min)', host.onCatchMeUp.bind(host)));
+    actions.appendChild(actionButton('btn', 'Advanced', host.onToggleAdvanced.bind(host)));
+    const refresh = el('button', 'btn refresh');
+    if (host.refreshing) {
+        const spinner = el('span', 'spinner');
+        spinner.setAttribute('aria-hidden', 'true');
+        refresh.appendChild(spinner);
+        refresh.appendChild(document.createTextNode('Refreshing…'));
+    } else {
+        refresh.textContent = 'Refresh';
+    }
+    refresh.addEventListener('click', host.onRefresh.bind(host));
+    actions.appendChild(refresh);
+    toolbar.appendChild(actions);
+    return toolbar;
 }
 
-/**
- * How fresh this view's feeds are ("Updated 2m ago"). Empty until a feed
- * reports a fetch, so the toolbar shows nothing rather than a stale claim.
- */
-function renderFreshness(host: ArticleListRenderHost) {
+function actionButton(className: string, text: string, onClick: EventListener): HTMLButtonElement {
+    const button = el('button', className, text);
+    button.addEventListener('click', onClick);
+    return button;
+}
+
+function labeledSelect(
+    className: string,
+    ariaLabel: string | null,
+    value: string | number,
+    options: Array<[string, string]>,
+    onChange: (e: Event) => void,
+): HTMLElement {
+    const label = el('label', className);
+    const select = document.createElement('select');
+    if (ariaLabel !== null) select.setAttribute('aria-label', ariaLabel);
+    for (const [val, text] of options) {
+        const option = document.createElement('option');
+        option.value = val;
+        option.textContent = text;
+        select.appendChild(option);
+    }
+    select.value = String(value);
+    select.addEventListener('change', onChange);
+    label.appendChild(select);
+    return label;
+}
+
+/** "Updated 2m ago" — empty until a feed reports a fetch. */
+function renderFreshness(host: ArticleListRenderHost): HTMLElement | null {
     const label = host.freshnessLabel();
-    if (!label) return html``;
-    return html`<span class="freshness">${label}</span>`;
+    if (!label) return null;
+    return el('span', 'freshness', label);
 }
 
-export function renderInterestingHint(host: ArticleListRenderHost) {
-    if (!host.interestingActive()) return html``;
+export function renderInterestingHint(host: ArticleListRenderHost): HTMLElement | null {
+    if (!host.interestingActive()) return null;
     const strictness = host.interestingStrictness ?? 50;
     const words = topWords(interestingWordMapOf(host.items), 3);
     const hint = !words.length
         ? 'Star articles to teach this filter.'
         : `✨ ${words.map((w) => `${w.word} · ${w.score}`).join(', ')} · showing ${host.items.length}`;
-    return html`<div class="interesting-bar">
-      <label class="interesting-selectivity"><span>Selectivity</span><input
-        type="range"
-        min="0"
-        max="100"
-        step="5"
-        .value=${String(strictness)}
-        aria-label="Interesting selectivity"
-        title="Higher hides more; lower shows more"
-        @change=${host.onInterestingStrictness}
-      /></label>
-      <div class="interesting-hint" title="Top learned words">${hint}</div>
-    </div>`;
+    const bar = el('div', 'interesting-bar');
+    const label = el('label', 'interesting-selectivity');
+    label.appendChild(el('span', undefined, 'Selectivity'));
+    const range = document.createElement('input');
+    range.type = 'range';
+    range.min = '0';
+    range.max = '100';
+    range.step = '5';
+    range.value = String(strictness);
+    range.setAttribute('aria-label', 'Interesting selectivity');
+    range.title = 'Higher hides more; lower shows more';
+    range.addEventListener('change', host.onInterestingStrictness.bind(host));
+    label.appendChild(range);
+    bar.appendChild(label);
+    const text = el('div', 'interesting-hint', hint);
+    text.title = 'Top learned words';
+    bar.appendChild(text);
+    return bar;
 }
 
-function renderSortSelect(host: ArticleListRenderHost) {
-    return html`<label class="sort"><select aria-label="Sort articles" .value=${host.sort} @change=${(e: Event) => {
-        host.sort = (e.target as HTMLSelectElement).value as ArticleSort;
-        host.saveViewSettings();
-    }}><option value="hot">Hot</option><option value="newest">Newest</option><option value="oldest">Oldest</option></select></label>`;
+export function renderAdvancedMenu(host: ArticleListRenderHost): HTMLElement {
+    const menu = document.createElement('advanced-menu');
+    (menu as unknown as { open: boolean }).open = host.advancedOpen;
+    (menu as unknown as { anchor: MenuAnchor | null }).anchor = host.advancedAnchor;
+    (menu as unknown as { unreadOnly: boolean }).unreadOnly = host.unreadOnly;
+    (menu as unknown as { markOnScroll: boolean }).markOnScroll = host.markOnScroll;
+    (menu as unknown as { marking: boolean }).marking = host.marking;
+    (menu as unknown as { scopeLabel: string }).scopeLabel = host.scopeLabel();
+    menu.addEventListener('unread-change', host.onAdvancedUnread.bind(host));
+    menu.addEventListener('mark-scroll-change', host.onAdvancedMarkScroll.bind(host));
+    menu.addEventListener('mark-before', host.onMarkBefore.bind(host));
+    menu.addEventListener('close', () => {
+        host.advancedOpen = false;
+    });
+    return menu;
 }
 
-function renderViewSelect(host: ArticleListRenderHost) {
-    return html`<label class="view-mode"><select aria-label="List view" .value=${host.listView} @change=${(
-        e: Event,
-    ) => {
-        host.listView = (e.target as HTMLSelectElement).value as ListViewType;
-        host.saveViewSettings();
-    }}><option value="detailed">Detailed List</option><option value="headline">Headline View</option><option value="cards">Cards</option><option value="slideshow">Slideshow</option></select></label>`;
+/** Last page-load failure, rendered as a banner rather than an empty list. */
+export function renderLoadError(host: ArticleListRenderHost): HTMLElement | null {
+    if (!host.loadError) return null;
+    const banner = el('div', 'load-error');
+    banner.setAttribute('role', 'alert');
+    banner.appendChild(document.createTextNode(host.loadError));
+    banner.appendChild(document.createTextNode(' '));
+    banner.appendChild(actionButton('btn', 'Retry', host.onRetryArticles.bind(host)));
+    return banner;
 }
 
-function renderCardColsSelect(host: ArticleListRenderHost) {
-    if (host.listView !== 'cards') return html``;
-    return html`<label class="view-mode"><select .value=${host.maxCardCols} @change=${(e: Event) => {
-        host.maxCardCols = Number((e.target as HTMLSelectElement).value);
-        host.saveViewSettings();
-        host.updateCols();
-    }} title="Maximum card columns"><option value="2">2 cols</option><option value="3">3 cols</option><option value="4">4 cols</option><option value="5">5 cols</option><option value="6">6 cols</option></select></label>`;
+/** Fill the stable scroll container. The element itself is created once by the component. */
+export function renderScroll(
+    host: ArticleListRenderHost,
+    virtualItems: VirtualItems,
+    showFeed: boolean,
+    scrollEl: HTMLDivElement,
+): void {
+    scrollEl.style.setProperty('--cols', String(host.cols));
+    const viewport = el('div', 'viewport');
+    viewport.style.height = `${host.virtualizer?.getTotalSize() ?? 0}px`;
+    append(viewport, ...renderVirtualRows(host, virtualItems, showFeed));
+    append(scrollEl, viewport, ...renderScrollFooter(host));
 }
 
-function renderPageSizeSelect(host: ArticleListRenderHost) {
-    return html`<label class="page-size"><select .value=${host.pageSize} @change=${(e: Event) => {
-        host.pageSize = Number((e.target as HTMLSelectElement).value);
-        host.saveViewSettings();
-    }} title="Articles shown at a time"><option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option></select></label>`;
-}
-
-export function renderAdvancedMenu(host: ArticleListRenderHost) {
-    return html`<advanced-menu .open=${host.advancedOpen} .anchor=${host.advancedAnchor} .unreadOnly=${host.unreadOnly} .markOnScroll=${host.markOnScroll} .marking=${host.marking} .scopeLabel=${host.scopeLabel()} @unread-change=${host.onAdvancedUnread} @mark-scroll-change=${host.onAdvancedMarkScroll} @mark-before=${host.onMarkBefore} @close=${() => (host.advancedOpen = false)}></advanced-menu>`;
-}
-
-export function renderScroll(host: ArticleListRenderHost, virtualItems: VirtualItems, showFeed: boolean) {
-    return html`
-      ${host.loadError ? html`<div class="load-error" role="alert">${host.loadError} <button class="btn" @click=${host.onRetryArticles}>Retry</button></div>` : ''}
-      <div class="scroll" style="--cols: ${host.cols}" ${ref(host.scrollElRef)} @scroll=${host.onScroll}>
-        <div class="viewport" style="height: ${host.virtualizer?.getTotalSize() ?? 0}px;">${renderVirtualRows(host, virtualItems, showFeed)}</div>
-        ${renderScrollFooter(host)}
-      </div>
-    `;
-}
-
-function renderVirtualRows(host: ArticleListRenderHost, virtualItems: VirtualItems, showFeed: boolean) {
+function renderVirtualRows(
+    host: ArticleListRenderHost,
+    virtualItems: VirtualItems,
+    showFeed: boolean,
+): Array<Node | null> {
     if (host.listView === 'cards') return virtualItems.map((vi) => renderCardVirtualRow(host, vi, showFeed));
     return virtualItems.map((vi) => renderListVirtualRow(host, vi, showFeed));
 }
 
-function renderCardVirtualRow(host: ArticleListRenderHost, vi: { index: number; start: number }, showFeed: boolean) {
+function renderCardVirtualRow(
+    host: ArticleListRenderHost,
+    vi: { index: number; start: number },
+    showFeed: boolean,
+): HTMLElement | null {
     const start = vi.index * host.cols;
     const rowItems = host.items.slice(start, start + host.cols);
-    if (!rowItems.length) return html``;
-    return html`<div class="row cards" data-row=${vi.index} style="transform: translateY(${vi.start}px)" ${ref((el) => host.virtualizer?.measureElement(el as HTMLDivElement))}>${rowItems.map((article, c) => renderCardRow(host, article, showFeed, start + c))}</div>`;
+    if (!rowItems.length) return null;
+    const row = el('div', 'row cards');
+    row.setAttribute('data-row', String(vi.index));
+    row.style.transform = `translateY(${vi.start}px)`;
+    for (let c = 0; c < rowItems.length; c += 1) {
+        const article = rowItems[c];
+        if (article) row.appendChild(renderCardRow(host, article, showFeed, start + c));
+    }
+    return row;
 }
 
-export function renderSelectionBar(host: ArticleListRenderHost) {
-    if (!host.selectedIds.length) return html``;
-    const count = host.selectedIds.length;
-    return html`
-      <div class="selection-bar" role="toolbar" aria-label="Bulk actions">
-        <span class="selection-count">${count} selected</span>
-        <button class="btn" @click=${host.onBulkMarkRead}>Mark read</button>
-        <button class="btn" @click=${host.onBulkStar}>Star</button>
-        <button class="btn" @click=${host.onBulkDerank}>Not interesting</button>
-        <button class="btn" @click=${host.clearSelection}>Clear</button>
-      </div>
-    `;
+export function renderSelectionBar(host: ArticleListRenderHost): HTMLElement | null {
+    if (!host.selectedIds.length) return null;
+    const bar = el('div', 'selection-bar');
+    bar.setAttribute('role', 'toolbar');
+    bar.setAttribute('aria-label', 'Bulk actions');
+    bar.appendChild(el('span', 'selection-count', `${host.selectedIds.length} selected`));
+    bar.appendChild(actionButton('btn', 'Mark read', host.onBulkMarkRead.bind(host)));
+    bar.appendChild(actionButton('btn', 'Star', host.onBulkStar.bind(host)));
+    bar.appendChild(actionButton('btn', 'Not interesting', host.onBulkDerank.bind(host)));
+    bar.appendChild(actionButton('btn', 'Clear', host.clearSelection.bind(host)));
+    return bar;
 }
 
-function renderListVirtualRow(host: ArticleListRenderHost, vi: { index: number; start: number }, showFeed: boolean) {
+function renderListVirtualRow(
+    host: ArticleListRenderHost,
+    vi: { index: number; start: number },
+    showFeed: boolean,
+): HTMLElement | null {
     const article = host.items[vi.index];
-    if (!article) return html``;
+    if (!article) return null;
     const picked = host.selectedIds.includes(article.id);
-    return html`<!-- pointer-only: the row body opens the article on pointer; keyboard users open it with the title button. Shift+click selects a range. --><div class="row ${host.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''} ${vi.index === host.cursor ? 'selected' : ''} ${picked ? 'picked' : ''}" data-index=${vi.index} style="transform: translateY(${vi.start}px)" @click=${(e: MouseEvent) => host.onRowClick(e, vi.index)} ${ref((el) => host.virtualizer?.measureElement(el as HTMLDivElement))}>${host.listView === 'headline' ? renderHeadlineRow(host, article, showFeed, vi.index) : renderRow(host, article, showFeed, vi.index)}</div>`;
+    // pointer-only: the row body opens the article on pointer; keyboard users open it
+    // with the title button. Shift+click selects a range.
+    const row = el(
+        'div',
+        `row ${host.listView === 'headline' ? 'headline' : ''} ${article.read ? 'read' : ''} ${
+            vi.index === host.cursor ? 'selected' : ''
+        } ${picked ? 'picked' : ''}`,
+    );
+    row.setAttribute('data-index', String(vi.index));
+    row.style.transform = `translateY(${vi.start}px)`;
+    row.addEventListener('click', (e: MouseEvent) => host.onRowClick(e, vi.index));
+    const content =
+        host.listView === 'headline'
+            ? renderHeadlineRow(host, article, showFeed, vi.index)
+            : renderRow(host, article, showFeed, vi.index);
+    append(row, content);
+    return row;
 }
 
-function renderScrollFooter(host: ArticleListRenderHost) {
+function renderScrollFooter(host: ArticleListRenderHost): Array<Node | null> {
     const undo = host.mutedHidden > 0 && host.canUndoMute();
     const mutedNote =
         !host.loading && host.mutedHidden > 0
-            ? html`<p class="empty-note">${host.mutedHidden} article${host.mutedHidden === 1 ? '' : 's'} hidden by mute filters.</p>`
-            : '';
+            ? el(
+                  'p',
+                  'empty-note',
+                  `${host.mutedHidden} article${host.mutedHidden === 1 ? '' : 's'} hidden by mute filters.`,
+              )
+            : null;
     const undoBtn =
         !host.loading && undo
-            ? html`<p class="empty-note"><button class="btn" @click=${() => host.onUndoMute()}>Undo mute change</button></p>`
-            : '';
-    return html`
-      ${host.loading ? html`<div class="end">Loading…</div>` : ''}
-      ${!host.loading && host.items.length ? html`<div class="mark-end"><button class="mark-end-btn" ?disabled=${!host.items.some((a) => a.read === 0)} @click=${host.onMarkShownRead}>Mark shown as read</button></div>` : ''}
-      ${!host.loading && !host.items.length ? html`<div class="empty"><p>${emptyText(host)}</p>${mutedNote}${undoBtn}</div>` : ''}
-      ${host.library.error && host.view.kind !== 'feed' ? html`<div class="empty">Could not load your feeds. <button class="btn" @click=${host.onRetryLibrary}>Retry</button></div>` : ''}
-    `;
+            ? (() => {
+                  const p = el('p', 'empty-note');
+                  p.appendChild(actionButton('btn', 'Undo mute change', () => host.onUndoMute()));
+                  return p;
+              })()
+            : null;
+    const nodes: Array<Node | null> = [];
+    if (host.loading) nodes.push(el('div', 'end', 'Loading…'));
+    if (!host.loading && host.items.length) {
+        const markEnd = el('div', 'mark-end');
+        const markBtn = el('button', 'mark-end-btn', 'Mark shown as read');
+        markBtn.disabled = !host.items.some((a) => a.read === 0);
+        markBtn.addEventListener('click', host.onMarkShownRead.bind(host));
+        markEnd.appendChild(markBtn);
+        nodes.push(markEnd);
+    }
+    if (!host.loading && !host.items.length) {
+        const empty = el('div', 'empty');
+        empty.appendChild(el('p', undefined, emptyText(host)));
+        append(empty, mutedNote, undoBtn);
+        nodes.push(empty);
+    }
+    if (host.library.error && host.view.kind !== 'feed') {
+        const empty = el('div', 'empty');
+        empty.appendChild(document.createTextNode('Could not load your feeds. '));
+        empty.appendChild(actionButton('btn', 'Retry', host.onRetryLibrary.bind(host)));
+        nodes.push(empty);
+    }
+    return nodes;
 }
 
 function emptyText(host: ArticleListRenderHost): string {

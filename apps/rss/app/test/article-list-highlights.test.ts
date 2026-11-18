@@ -1,5 +1,4 @@
 import './test-setup';
-import { render } from 'lit';
 import { expect } from '@esm-bundle/chai';
 import { detailRowTemplate, headlineRowTemplate } from '../src/web-components/article-list/article-list-render';
 import type { Article, RowHighlight } from '../src/types';
@@ -33,10 +32,10 @@ const highlight: RowHighlight = {
     ],
 };
 
-function mount(template: unknown): HTMLElement {
+function mount(node: Node): HTMLElement {
     const host = document.createElement('div');
     document.body.append(host);
-    render(template as any, host);
+    host.appendChild(node);
     return host;
 }
 
