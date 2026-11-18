@@ -1,4 +1,3 @@
-import { unsafeCSS } from 'lit';
 import { sanitizeHtml, safeHttpUrl } from '../../services/parser';
 import { articleVideo } from '../../services/video';
 import { canNativeShare, mailtoShareUrl, shareUrl, type ShareTarget } from '../../services/share';
@@ -87,7 +86,7 @@ function iconButton(icon: SVGElement, options: IconButtonOptions): HTMLButtonEle
 }
 
 export class ArticleView extends HTMLElement {
-    static styles = unsafeCSS(styles);
+    static styles = { cssText: styles };
 
     private _article: Article | null = null;
     get article(): Article | null {

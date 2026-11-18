@@ -1,5 +1,3 @@
-import { LitElement, unsafeCSS } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
 import { history, parsePath } from '../../router';
 import type { Command, CommandContext } from '../../services/commands';
 import { dismissToast, onToast, type ToastNotice } from '../../services/toast';
@@ -22,7 +20,7 @@ import {
     handleShellKeyDown,
     openPalette as openPaletteAction,
 } from './app-shell-keyboard';
-import { renderShell } from './app-shell-render';
+import { ShellDom } from './app-shell-render';
 import type { Article, View } from '../../types';
 import '../mute-filters-view/mute-filters-view';
 import '../organize-view/organize-view';
@@ -39,36 +37,109 @@ import '../shortcuts-dialog/shortcuts-dialog';
 import '../command-palette/command-palette';
 import styles from './app-shell.css?inline';
 
-@customElement('app-shell')
-export class AppShell extends LitElement {
-    static override styles = unsafeCSS(styles);
+/** Install a reactive accessor. Assignments request the same batched paint Lit used to. */
+function defineReactive<T>(host: AppShell, name: string, initial: T): void {
+    let current = initial;
+    Object.defineProperty(host, name, {
+        configurable: true,
+        enumerable: true,
+        get(): T {
+            return current;
+        },
+        set(next: T): void {
+            if (Object.is(current, next)) return;
+            current = next;
+            host.requestUpdate(name);
+        },
+    });
+}
 
-    @state() route: View = { kind: 'all' };
-    @state() article: Article | null = null;
+/**
+ * Vanilla custom element: state, lifecycle, and thin delegators. Behavior lives
+ * in the sibling `app-shell-*` modules, each receiving the element as an
+ * explicitly typed host (`this as never`). DOM is built once by `ShellDom`,
+ * which updates it in place; no template literal or html tag is involved.
+ */
+export class AppShell extends HTMLElement {
+    declare route: View;
+    declare article: Article | null;
+    declare settingsOpen: boolean;
+    declare shortcutsOpen: boolean;
+    declare paletteOpen: boolean;
+    declare paletteCommands: Command[];
+    declare resume: { view: string; id: string } | null;
+    declare authed: boolean;
+    declare username: string | null;
+    declare authError: string;
+    declare toasts: ToastNotice[];
+    declare articleWidth: number;
+
     articleReturnFocus: HTMLElement | null = null;
-    @state() settingsOpen = false;
-    @state() shortcutsOpen = false;
-    @state() paletteOpen = false;
-    @state() paletteCommands: Command[] = [];
     paletteContext: CommandContext | null = null;
-    @state() resume: { view: string; id: string } | null = null;
-    @state() authed = hasSession();
-    @state() username: string | null = currentUsername();
-    @state() authError = '';
-    @state() toasts: ToastNotice[] = [];
-
     toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
     readContext: { items: Article[]; index: number } | null = null;
-    private unsubscribe?: () => void;
-    private unsubscribeToasts: (() => void) | null = null;
     articleResizing = false;
     articleResizeHandleEl: HTMLElement | null = null;
     articleResizeStart: { x: number; width: number; pointerId: number } | null = null;
-    articleWidth = loadArticlePanelWidth();
-    private openTiming: OpenTiming = initialOpenTiming();
 
-    override connectedCallback() {
-        super.connectedCallback();
+    readonly renderRoot: ShadowRoot;
+    private shell: ShellDom | null = null;
+    private unsubscribe?: () => void;
+    private unsubscribeToasts: (() => void) | null = null;
+    private openTiming: OpenTiming = initialOpenTiming();
+    private updatePending = false;
+    private updatePromise: Promise<boolean> = Promise.resolve(true);
+    private resolveUpdate: ((value: boolean) => void) | null = null;
+
+    constructor() {
+        super();
+        const shadow = this.attachShadow({ mode: 'open' });
+        this.renderRoot = shadow;
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(styles);
+        shadow.adoptedStyleSheets = [sheet];
+        defineReactive(this, 'route', { kind: 'all' } satisfies View);
+        defineReactive(this, 'article', null as Article | null);
+        defineReactive(this, 'settingsOpen', false);
+        defineReactive(this, 'shortcutsOpen', false);
+        defineReactive(this, 'paletteOpen', false);
+        defineReactive(this, 'paletteCommands', [] as Command[]);
+        defineReactive(this, 'resume', null as { view: string; id: string } | null);
+        defineReactive(this, 'authed', hasSession());
+        defineReactive(this, 'username', currentUsername());
+        defineReactive(this, 'authError', '');
+        defineReactive(this, 'toasts', [] as ToastNotice[]);
+        defineReactive(this, 'articleWidth', loadArticlePanelWidth());
+    }
+
+    requestUpdate(_name?: string, _oldValue?: unknown): void {
+        if (this.updatePending || !this.isConnected) return;
+        this.updatePending = true;
+        this.updatePromise = new Promise((resolve) => {
+            this.resolveUpdate = resolve;
+        });
+        queueMicrotask(() => this.performUpdate());
+    }
+
+    get updateComplete(): Promise<boolean> {
+        return this.updatePromise;
+    }
+
+    private performUpdate(): void {
+        if (!this.updatePending) return;
+        this.updatePending = false;
+        if (!this.isConnected) {
+            this.resolveUpdate?.(true);
+            this.resolveUpdate = null;
+            return;
+        }
+        if (!this.shell) this.shell = new ShellDom(this.renderRoot, this as never);
+        this.shell.render();
+        this.resolveUpdate?.(true);
+        this.resolveUpdate = null;
+    }
+
+    connectedCallback() {
         this.route = parsePath(history.location.pathname, history.location.search);
         this.unsubscribe = history.subscribe(({ location }) => {
             this.route = parsePath(location.pathname, location.search);
@@ -89,10 +160,10 @@ export class AppShell extends LitElement {
             startInterestingCountsRefresh();
             startForegroundSync(this.autoSyncFeedIds);
         }
+        this.requestUpdate();
     }
 
-    override disconnectedCallback() {
-        super.disconnectedCallback();
+    disconnectedCallback() {
         stopInterestingCountsRefresh();
         stopForegroundSync();
         this.unsubscribeToasts?.();
@@ -136,10 +207,6 @@ export class AppShell extends LitElement {
     onSignOut = () => {
         signOut(this as never);
     };
-
-    override render() {
-        return renderShell(this as never);
-    }
 
     private onKeyDown = (e: KeyboardEvent) => {
         handleShellKeyDown(this as never, e);
@@ -207,6 +274,8 @@ export class AppShell extends LitElement {
         panelResizeKey(this as never, e);
     };
 }
+
+customElements.define('app-shell', AppShell);
 
 declare global {
     interface HTMLElementTagNameMap {

@@ -1,14 +1,25 @@
-import { html } from 'lit';
 import { ALL_SHARE_TARGETS } from '../../services/share-settings';
+import { PAGE_SIZES } from '../article-list/article-list-helpers';
+import type { ReaderFont, ReaderLine, ReaderMode, ReaderSize, ReaderWidth } from '../../services/reader-mode';
 import type { ShareTarget } from '../../services/share';
 import type { Theme } from '../../theme';
-import type { View } from '../../types';
 import type { ViewSettings } from '../article-list/article-list-helpers';
 import { APP_COMMIT, APP_VERSION, BUILD_TIME, VERSION_HISTORY } from '../../generated/version-history';
+import {
+    button,
+    checkboxField,
+    el,
+    hint,
+    section,
+    selectField,
+    setFocusKey,
+    statusLine,
+    type SelectOption,
+} from './settings-dialog-dom';
 
+/** The element's public surface, as the section builders need it. */
 export interface SettingsDialogSectionsHost {
     theme: Theme;
-    view: View;
     adding: boolean;
     busy: boolean;
     migrating: boolean;
@@ -20,201 +31,316 @@ export interface SettingsDialogSectionsHost {
     shareTargets: ShareTarget[];
     viewSettings: ViewSettings;
     viewStatus: string;
-    readerMode: import('../../services/reader-mode').ReaderMode;
-    setReaderMode: (mode: import('../../services/reader-mode').ReaderMode) => void;
+    readerMode: ReaderMode;
     showHistory: boolean;
     canUseCurrentView: boolean;
-    onThemeClick: (e: Event) => void;
+    onThemeClick: (event: Event) => void;
     setListView: (value: string) => void;
     setSort: (value: string) => void;
     setPageSize: (value: number) => void;
     setMaxCardCols: (value: number) => void;
     setUnreadOnly: (value: boolean) => void;
     setMarkOnScroll: (value: boolean) => void;
+    setReaderMode: (mode: ReaderMode) => void;
     useCurrentView: () => void;
     applyAllViews: () => void;
-    toggleShareTarget: (e: Event, target: ShareTarget) => void;
+    toggleShareTarget: (target: ShareTarget, checked: boolean) => void;
     submitMastodonHost: () => void;
     openAdd: () => void;
     cancelAdd: () => void;
     submitAdd: () => void;
     openMuteFilters: () => void;
     onImportClick: () => void;
-    onImportFile: (e: Event) => void;
+    onImportFile: (event: Event) => void;
     onExport: () => void;
     onMigrate: () => void;
     toggleHistory: () => void;
 }
 
-function renderThemeOption(host: SettingsDialogSectionsHost, value: Theme, label: string) {
-    return html`
-      <button class="theme-opt ${host.theme === value ? 'active' : ''}" data-theme=${value} @click=${host.onThemeClick}>
-        <span class="swatch ${value}"></span>
-        ${label}
-      </button>
-    `;
+const THEMES: Array<{ value: Theme; label: string }> = [
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark grey' },
+    { value: 'oled', label: 'Lights out' },
+];
+
+const LIST_VIEW_OPTIONS: SelectOption[] = [
+    { value: 'detailed', label: 'Detailed List' },
+    { value: 'headline', label: 'Headline View' },
+    { value: 'cards', label: 'Cards' },
+    { value: 'slideshow', label: 'Slideshow' },
+];
+
+const SORT_OPTIONS: SelectOption[] = [
+    { value: 'hot', label: 'Hot' },
+    { value: 'newest', label: 'Newest' },
+    { value: 'oldest', label: 'Oldest' },
+];
+
+const PAGE_SIZE_OPTIONS: SelectOption[] = PAGE_SIZES.map((size) => ({ value: String(size), label: String(size) }));
+const COLUMN_OPTIONS: SelectOption[] = [2, 3, 4, 5, 6].map((cols) => ({ value: String(cols), label: String(cols) }));
+
+const FONT_OPTIONS: SelectOption[] = [
+    { value: 'sans', label: 'Sans' },
+    { value: 'serif', label: 'Serif' },
+    { value: 'dyslexia', label: 'Dyslexia-friendly' },
+];
+
+const SIZE_OPTIONS: SelectOption[] = [
+    { value: 'small', label: 'Small' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'large', label: 'Large' },
+];
+
+const LINE_OPTIONS: SelectOption[] = [
+    { value: 'compact', label: 'Compact' },
+    { value: 'normal', label: 'Normal' },
+    { value: 'relaxed', label: 'Relaxed' },
+];
+
+const WIDTH_OPTIONS: SelectOption[] = [
+    { value: 'narrow', label: 'Narrow' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'wide', label: 'Wide' },
+];
+
+const SHARE_LABELS: Record<ShareTarget, string> = {
+    facebook: 'Facebook',
+    x: 'X',
+    mastodon: 'Mastodon',
+    instagram: 'Instagram',
+};
+
+function themeOption(host: SettingsDialogSectionsHost, value: Theme, label: string): HTMLButtonElement {
+    const option = el('button', host.theme === value ? 'theme-opt active' : 'theme-opt');
+    option.type = 'button';
+    option.dataset['theme'] = value;
+    setFocusKey(option, `button:${label}`);
+    option.append(el('span', `swatch ${value}`), document.createTextNode(label));
+    option.addEventListener('click', (event) => host.onThemeClick(event));
+    return option;
 }
 
-export function renderAppearanceSection(host: SettingsDialogSectionsHost) {
-    return html`
-      <div class="section">
-        <h3>Appearance</h3>
-        <div class="theme-row">
-          ${renderThemeOption(host, 'light', 'Light')}
-          ${renderThemeOption(host, 'dark', 'Dark grey')}
-          ${renderThemeOption(host, 'oled', 'Lights out')}
-        </div>
-      </div>
-    `;
+export function buildAppearanceSection(host: SettingsDialogSectionsHost): HTMLElement {
+    const root = section('Appearance');
+    const row = el('div', 'theme-row');
+    for (const theme of THEMES) row.append(themeOption(host, theme.value, theme.label));
+    root.append(row);
+    return root;
 }
 
-export function renderReadingSection(host: SettingsDialogSectionsHost) {
-    const s = host.viewSettings;
-    return html`
-      <div class="section">
-        <h3>Reading</h3>
-        <div class="view-defaults">
-          <label class="view-field"><span>Default list view</span>
-            <select .value=${s.listView} @change=${(e: Event) => host.setListView((e.target as HTMLSelectElement).value)}>
-              <option value="detailed">Detailed List</option><option value="headline">Headline View</option><option value="cards">Cards</option><option value="slideshow">Slideshow</option>
-            </select></label>
-          <label class="view-field"><span>Sort</span>
-            <select .value=${s.sort} @change=${(e: Event) => host.setSort((e.target as HTMLSelectElement).value)}>
-              <option value="hot">Hot</option><option value="newest">Newest</option><option value="oldest">Oldest</option>
-            </select></label>
-          <label class="view-field"><span>Page size</span>
-            <select .value=${String(s.pageSize)} @change=${(e: Event) => host.setPageSize(Number((e.target as HTMLSelectElement).value))}>
-              <option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option>
-            </select></label>
-          <label class="view-field"><span>Card columns</span>
-            <select .value=${String(s.maxCardCols)} @change=${(e: Event) => host.setMaxCardCols(Number((e.target as HTMLSelectElement).value))}>
-              <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option>
-            </select></label>
-        </div>
-        <div class="view-toggles">
-          <label class="share-target"><input type="checkbox" .checked=${s.unreadOnly} @change=${(e: Event) => host.setUnreadOnly((e.target as HTMLInputElement).checked)} />Unread only</label>
-          <label class="share-target"><input type="checkbox" .checked=${s.markOnScroll} @change=${(e: Event) => host.setMarkOnScroll((e.target as HTMLInputElement).checked)} />Mark on scroll</label>
-        </div>
-        <div class="view-defaults">
-          <label class="view-field"><span>Font</span>
-            <select .value=${host.readerMode.font} @change=${(e: Event) => host.setReaderMode({ ...host.readerMode, font: (e.target as HTMLSelectElement).value as any })}>
-              <option value="sans">Sans</option><option value="serif">Serif</option><option value="dyslexia">Dyslexia-friendly</option>
-            </select></label>
-          <label class="view-field"><span>Size</span>
-            <select .value=${host.readerMode.size} @change=${(e: Event) => host.setReaderMode({ ...host.readerMode, size: (e.target as HTMLSelectElement).value as any })}>
-              <option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option>
-            </select></label>
-          <label class="view-field"><span>Line spacing</span>
-            <select .value=${host.readerMode.line} @change=${(e: Event) => host.setReaderMode({ ...host.readerMode, line: (e.target as HTMLSelectElement).value as any })}>
-              <option value="compact">Compact</option><option value="normal">Normal</option><option value="relaxed">Relaxed</option>
-            </select></label>
-          <label class="view-field"><span>Width</span>
-            <select .value=${host.readerMode.width} @change=${(e: Event) => host.setReaderMode({ ...host.readerMode, width: (e.target as HTMLSelectElement).value as any })}>
-              <option value="narrow">Narrow</option><option value="medium">Medium</option><option value="wide">Wide</option>
-            </select></label>
-        </div>
-        <div class="view-actions">
-          ${host.canUseCurrentView ? html`<button class="btn" @click=${host.useCurrentView}>Use current view</button>` : ''}
-          <button class="btn primary" @click=${host.applyAllViews}>Apply to all views</button>
-        </div>
-        <p class="hint">New and untouched views use these defaults. Apply to all views replaces every view's own settings.</p>
-        ${host.viewStatus ? html`<div class="status">${host.viewStatus}</div>` : ''}
-      </div>
-    `;
+function viewDefaultFields(host: SettingsDialogSectionsHost): HTMLElement {
+    const grid = el('div', 'view-defaults');
+    const settings = host.viewSettings;
+    grid.append(
+        selectField('Default list view', LIST_VIEW_OPTIONS, settings.listView, host.setListView),
+        selectField('Sort', SORT_OPTIONS, settings.sort, host.setSort),
+        selectField('Page size', PAGE_SIZE_OPTIONS, String(settings.pageSize), (value) =>
+            host.setPageSize(Number(value)),
+        ),
+        selectField('Card columns', COLUMN_OPTIONS, String(settings.maxCardCols), (value) =>
+            host.setMaxCardCols(Number(value)),
+        ),
+    );
+    return grid;
 }
 
-function renderShareTargets(host: SettingsDialogSectionsHost) {
-    const labels: Record<ShareTarget, string> = {
-        facebook: 'Facebook',
-        x: 'X',
-        mastodon: 'Mastodon',
-        instagram: 'Instagram',
-    };
-    return html`
-      <div class="share-targets" role="group" aria-label="Share buttons">
-        ${ALL_SHARE_TARGETS.map(
-            (target) =>
-                html`<label class="share-target"><input type="checkbox" .checked=${host.shareTargets.includes(target)} @change=${(e: Event) => host.toggleShareTarget(e, target)} />${labels[target]}</label>`,
-        )}
-      </div>
-    `;
+function viewToggles(host: SettingsDialogSectionsHost): HTMLElement {
+    const row = el('div', 'view-toggles');
+    row.append(
+        checkboxField('Unread only', host.viewSettings.unreadOnly, host.setUnreadOnly),
+        checkboxField('Mark on scroll', host.viewSettings.markOnScroll, host.setMarkOnScroll),
+    );
+    return row;
 }
 
-function renderMastodonRow(host: SettingsDialogSectionsHost) {
-    return html`
-      <div class="share-row">
-        <input id="mastodon-host" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="mastodon.social" .value=${host.mastodonHost} @keydown=${(
-            e: KeyboardEvent,
-        ) => {
-            if (e.key === 'Enter') void host.submitMastodonHost();
-        }} />
-        <button class="btn primary" @click=${host.submitMastodonHost}>Save</button>
-      </div>
-    `;
+function readerModeFields(host: SettingsDialogSectionsHost): HTMLElement {
+    const mode = host.readerMode;
+    const grid = el('div', 'view-defaults');
+    grid.append(
+        selectField('Font', FONT_OPTIONS, mode.font, (value) =>
+            host.setReaderMode({ ...host.readerMode, font: value as ReaderFont }),
+        ),
+        selectField('Size', SIZE_OPTIONS, mode.size, (value) =>
+            host.setReaderMode({ ...host.readerMode, size: value as ReaderSize }),
+        ),
+        selectField('Line spacing', LINE_OPTIONS, mode.line, (value) =>
+            host.setReaderMode({ ...host.readerMode, line: value as ReaderLine }),
+        ),
+        selectField('Width', WIDTH_OPTIONS, mode.width, (value) =>
+            host.setReaderMode({ ...host.readerMode, width: value as ReaderWidth }),
+        ),
+    );
+    return grid;
 }
 
-export function renderSharingSection(host: SettingsDialogSectionsHost) {
-    return html`
-      <div class="section">
-        <h3>Sharing</h3>
-        ${renderShareTargets(host)}
-        <label class="field-label" for="mastodon-host">Mastodon instance</label>
-        ${renderMastodonRow(host)}
-        <p class="hint">Article shares post through this instance, e.g. mastodon.social.</p>
-        ${host.shareStatus ? html`<div class="status ${host.shareStatusError ? 'error' : ''}">${host.shareStatus}</div>` : ''}
-      </div>
-    `;
+function viewActions(host: SettingsDialogSectionsHost): HTMLElement {
+    const actions = el('div', 'view-actions');
+    if (host.canUseCurrentView) actions.append(button('btn', 'Use current view', () => host.useCurrentView()));
+    actions.append(button('btn primary', 'Apply to all views', () => host.applyAllViews()));
+    return actions;
 }
 
-function renderAddRow(host: SettingsDialogSectionsHost) {
-    if (!host.adding) return html``;
-    return html`
-      <div class="add-row">
-        <input data-add-url type="url" placeholder="https://example.com/feed.xml" @keydown=${(e: KeyboardEvent) => {
-            if (e.key === 'Enter') void host.submitAdd();
-        }} />
-        <button class="btn primary" @click=${host.submitAdd} ?disabled=${host.busy}>Add</button>
-        <button class="btn" @click=${host.cancelAdd}>Cancel</button>
-      </div>
-    `;
+export function buildReadingSection(host: SettingsDialogSectionsHost): HTMLElement {
+    const root = section('Reading');
+    root.append(viewDefaultFields(host), viewToggles(host), readerModeFields(host), viewActions(host));
+    root.append(
+        hint("New and untouched views use these defaults. Apply to all views replaces every view's own settings."),
+    );
+    if (host.viewStatus) root.append(statusLine(host.viewStatus, false));
+    return root;
 }
 
-export function renderFeedsSection(host: SettingsDialogSectionsHost) {
-    return html`
-      <div class="section">
-        <h3>Feeds</h3>
-        <div class="actions">
-          <button class="action" @click=${host.openAdd} ?disabled=${host.busy}><span>Add feed<br /><span class="desc">Subscribe by RSS/Atom URL</span></span><span>+</span></button>
-          ${renderAddRow(host)}
-          <button class="action" @click=${host.openMuteFilters} ?disabled=${host.busy}><span>Mute filters<br /><span class="desc">Hide articles by words in title or body, per folder or all</span></span><span>🔇</span></button>
-          <button class="action" @click=${host.onImportClick} ?disabled=${host.busy}><span>Import OPML<br /><span class="desc">Restore feeds and folders</span></span><span>↑</span></button>
-          <button class="action" @click=${host.onExport} ?disabled=${host.busy}><span>Export OPML<br /><span class="desc">Back up your subscriptions</span></span><span>↓</span></button>
-          <button class="action" @click=${host.onMigrate} ?disabled=${host.busy || host.migrating}><span>Upload local library<br /><span class="desc">Migrate IndexedDB data to the server</span></span><span>${host.migrating ? '…' : '⇪'}</span></button>
-        </div>
-        <input type="file" data-import accept=".opml,.xml,text/xml,application/xml" style="display:none" @change=${host.onImportFile} />
-        ${host.status ? html`<div class="status ${host.statusError ? 'error' : ''}">${host.status}</div>` : ''}
-      </div>
-    `;
+function shareTargets(host: SettingsDialogSectionsHost): HTMLElement {
+    const group = el('div', 'share-targets');
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Share buttons');
+    for (const target of ALL_SHARE_TARGETS) {
+        group.append(
+            checkboxField(SHARE_LABELS[target], host.shareTargets.includes(target), (checked) =>
+                host.toggleShareTarget(target, checked),
+            ),
+        );
+    }
+    return group;
 }
 
-function renderHistory() {
-    if (VERSION_HISTORY.length === 0) return html`<p class="hint">No version history available.</p>`;
-    return html`<ul class="history-list">${VERSION_HISTORY.map(
-        (entry) =>
-            html`<li class="history-item"><div class="history-date">${entry.date} <span class="history-id">${entry.id}</span></div><div class="history-summary">${entry.summary}</div></li>`,
-    )}</ul>`;
+function mastodonRow(host: SettingsDialogSectionsHost): HTMLElement {
+    const row = el('div', 'share-row');
+    const input = el('input');
+    input.id = 'mastodon-host';
+    input.type = 'text';
+    input.inputMode = 'url';
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    input.placeholder = 'mastodon.social';
+    input.value = host.mastodonHost;
+    setFocusKey(input, 'input:mastodon-host');
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') void host.submitMastodonHost();
+    });
+    row.append(
+        input,
+        button('btn primary', 'Save', () => void host.submitMastodonHost()),
+    );
+    return row;
 }
 
-export function renderAboutSection(host: SettingsDialogSectionsHost) {
+export function buildSharingSection(host: SettingsDialogSectionsHost): HTMLElement {
+    const root = section('Sharing');
+    const label = el('label', 'field-label', 'Mastodon instance');
+    label.htmlFor = 'mastodon-host';
+    root.append(
+        shareTargets(host),
+        label,
+        mastodonRow(host),
+        hint('Article shares post through this instance, e.g. mastodon.social.'),
+    );
+    if (host.shareStatus) root.append(statusLine(host.shareStatus, host.shareStatusError));
+    return root;
+}
+
+function actionButton(
+    label: string,
+    desc: string,
+    glyph: string,
+    disabled: boolean,
+    onClick: () => void,
+): HTMLButtonElement {
+    const node = el('button', 'action');
+    node.type = 'button';
+    node.disabled = disabled;
+    setFocusKey(node, `action:${label}`);
+    const text = el('span');
+    text.append(document.createTextNode(label), el('br'), el('span', 'desc', desc));
+    node.append(text, el('span', undefined, glyph));
+    node.addEventListener('click', onClick);
+    return node;
+}
+
+function addRow(host: SettingsDialogSectionsHost): HTMLElement | null {
+    if (!host.adding) return null;
+    const row = el('div', 'add-row');
+    const input = el('input');
+    input.type = 'url';
+    input.placeholder = 'https://example.com/feed.xml';
+    input.setAttribute('data-add-url', '');
+    setFocusKey(input, 'input:add-url');
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') void host.submitAdd();
+    });
+    const add = button('btn primary', 'Add', () => void host.submitAdd());
+    add.disabled = host.busy;
+    row.append(
+        input,
+        add,
+        button('btn', 'Cancel', () => host.cancelAdd()),
+    );
+    return row;
+}
+
+function feedActions(host: SettingsDialogSectionsHost): HTMLElement {
+    const actions = el('div', 'actions');
+    actions.append(actionButton('Add feed', 'Subscribe by RSS/Atom URL', '+', host.busy, host.openAdd));
+    const row = addRow(host);
+    if (row) actions.append(row);
+    actions.append(
+        actionButton(
+            'Mute filters',
+            'Hide articles by words in title or body, per folder or all',
+            '🔇',
+            host.busy,
+            host.openMuteFilters,
+        ),
+        actionButton('Import OPML', 'Restore feeds and folders', '↑', host.busy, host.onImportClick),
+        actionButton('Export OPML', 'Back up your subscriptions', '↓', host.busy, host.onExport),
+        actionButton(
+            'Upload local library',
+            'Migrate IndexedDB data to the server',
+            host.migrating ? '…' : '⇪',
+            host.busy || host.migrating,
+            host.onMigrate,
+        ),
+    );
+    return actions;
+}
+
+function opmlFileInput(host: SettingsDialogSectionsHost): HTMLInputElement {
+    const input = el('input');
+    input.type = 'file';
+    input.accept = '.opml,.xml,text/xml,application/xml';
+    input.style.display = 'none';
+    input.setAttribute('data-import', '');
+    input.addEventListener('change', (event) => host.onImportFile(event));
+    return input;
+}
+
+export function buildFeedsSection(host: SettingsDialogSectionsHost): HTMLElement {
+    const root = section('Feeds');
+    root.append(feedActions(host), opmlFileInput(host));
+    if (host.status) root.append(statusLine(host.status, host.statusError));
+    return root;
+}
+
+function historyList(): HTMLElement {
+    if (VERSION_HISTORY.length === 0) return hint('No version history available.');
+    const list = el('ul', 'history-list');
+    for (const entry of VERSION_HISTORY) {
+        const item = el('li', 'history-item');
+        const date = el('div', 'history-date', entry.date);
+        date.append(document.createTextNode(' '), el('span', 'history-id', entry.id));
+        item.append(date, el('div', 'history-summary', entry.summary));
+        list.append(item);
+    }
+    return list;
+}
+
+export function buildAboutSection(host: SettingsDialogSectionsHost): HTMLElement {
+    const root = section('About');
     const built = BUILD_TIME ? new Date(BUILD_TIME).toLocaleDateString() : '';
-    return html`
-      <div class="section">
-        <h3>About</h3>
-        <p class="hint about-meta">Version ${APP_VERSION} · ${APP_COMMIT}${built ? ` · ${built}` : ''}</p>
-        <div class="view-actions">
-          <button class="btn" @click=${host.toggleHistory}>${host.showHistory ? 'Hide version history' : "What's new"}</button>
-        </div>
-        ${host.showHistory ? renderHistory() : ''}
-      </div>
-    `;
+    root.append(hint(`Version ${APP_VERSION} · ${APP_COMMIT}${built ? ` · ${built}` : ''}`, 'about-meta'));
+    const actions = el('div', 'view-actions');
+    actions.append(button('btn', host.showHistory ? 'Hide version history' : "What's new", () => host.toggleHistory()));
+    root.append(actions);
+    if (host.showHistory) root.append(historyList());
+    return root;
 }

@@ -1,4 +1,3 @@
-import { html, svg } from 'lit';
 import type { Feed, Folder, SavedSearch, View } from '../../types';
 import type { ActionHost } from './source-list-actions';
 import { MAX_SIDEBAR_WIDTH, MIN_SIDEBAR_WIDTH } from './source-list-settings';
@@ -29,25 +28,25 @@ import {
     openFeedMenuAction,
     openFolderMenuAction,
     openSavedSearchMenuAction,
-    openTodayMenuAction,
 } from './source-list-menus';
+import { append, el } from './source-list-dom';
+import { icon, menuIcon, type IconKind } from './source-list-icons';
+import { renderStaticNav } from './source-list-nav';
 
 /**
- * State and handlers the sidebar templates read. The component passes
- * itself (`this as never`, matching source-list-drag.ts) so the html
- * strings stay identical to the ones the class used to render.
+ * State and handlers the sidebar renderers read. The component passes itself
+ * (`this as never`, matching source-list-drag.ts) so the group stays testable
+ * without a live custom element.
  */
 export interface SourceListRenderHost extends ActionHost {
     autoHide: boolean;
     totalUnread: number;
-    interestingOrder: string[];
-    ignoredFolders?: Record<string, boolean>;
     toggleInterestingSection(): void;
-    library: { error: Error | undefined; data?: { savedSearches?: SavedSearch[] } };
-    icon(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash'): unknown;
-    pinIcon(): unknown;
-    filterIcon(): unknown;
-    menuIcon(): unknown;
+    library: { readonly error: Error | undefined };
+    icon(kind: IconKind): Node;
+    pinIcon(): Node;
+    filterIcon(): Node;
+    menuIcon(): Node;
     folderFeeds(folderId: string): Feed[];
     folderUnread(folderId: string): number;
     interestingCount(folderId: string): number | undefined;
@@ -67,67 +66,216 @@ export interface SourceListRenderHost extends ActionHost {
     toggleFolder(id: string): void;
 }
 
-export function iconTemplate(kind: 'rss' | 'folder' | 'all' | 'refresh' | 'trash') {
-    const paths: Record<string, ReturnType<typeof svg>> = {
-        rss: svg`<circle cx="6" cy="18" r="2" fill="currentColor"></circle><path d="M4 4a16 16 0 0 1 16 16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path><path d="M4 11a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path>`,
-        folder: svg`<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.6"></path>`,
-        all: svg`<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle>`,
-        refresh: svg`<path d="M20 11a8 8 0 1 0-2.3 5.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>`,
-        trash: svg`<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>`,
+function rowClass(active: boolean): string {
+    return active ? 'item active' : 'item';
+}
+
+function feedRowClass(active: boolean, hasUnread: boolean): string {
+    return `feed-row${active ? ' active' : ''}${hasUnread ? ' has-unread' : ''}`;
+}
+
+/** The scrolling nav. Created once: drag state lives on its class list. */
+export function createNav(host: SourceListRenderHost): HTMLElement {
+    const nav = el('nav', 'nav');
+    nav.addEventListener('dragover', (e) => host.onDragOver(e));
+    nav.addEventListener('dragleave', (e) => host.onDragLeave(e));
+    nav.addEventListener('drop', (e) => void host.onDrop(e));
+    nav.addEventListener('dragend', () => host.onDragEnd());
+    return nav;
+}
+
+/** The landmark wrapper for the whole sidebar, created once. */
+export function createSidebar(): HTMLElement {
+    const sidebar = el('div', 'sidebar');
+    sidebar.setAttribute('role', 'complementary');
+    sidebar.setAttribute('aria-label', 'Feeds');
+    return sidebar;
+}
+
+export function renderHead(host: SourceListRenderHost): DocumentFragment {
+    const fragment = document.createDocumentFragment();
+    const filter = el('button', 'pin-btn filter-btn');
+    filter.title = 'Feed list options';
+    append(filter, host.filterIcon());
+    filter.addEventListener('click', (e) => openFeedListMenuAction(host, e));
+    const pin = el('button', 'pin-btn');
+    pin.title = host.autoHide ? 'Pin the feed list open' : 'Auto-hide the feed list';
+    append(pin, host.pinIcon());
+    pin.addEventListener('click', () => toggleAutoHideAction(host));
+    append(fragment, filter, pin);
+    return fragment;
+}
+
+export function renderNav(host: SourceListRenderHost, folders: Folder[], uncategorized: Feed[]): DocumentFragment {
+    const fragment = document.createDocumentFragment();
+    append(
+        fragment,
+        renderNavError(host),
+        renderStaticNav(host),
+        renderSavedSearches(host, host.libraryData.savedSearches),
+        renderInterestingSection(host, folders),
+        ...folders.map((folder) => folderRow(host, folder)),
+        renderUncategorized(host, uncategorized),
+        dropZone(),
+    );
+    return fragment;
+}
+
+function dropZone(): HTMLElement {
+    const zone = el('div', 'drop-zone', 'Drop here to move out of folders');
+    zone.setAttribute('data-no-folder', '');
+    return zone;
+}
+
+function renderNavError(host: SourceListRenderHost): HTMLElement | null {
+    if (!host.library.error) return null;
+    const banner = el('div', 'nav-error', 'Could not load feeds. ');
+    const retry = el('button', undefined, 'Retry');
+    retry.addEventListener('click', () => host.onRetryLibrary());
+    banner.appendChild(retry);
+    return banner;
+}
+
+function savedSearchView(search: SavedSearch): View {
+    return {
+        kind: 'search',
+        q: search.query,
+        scope: search.scopeKind,
+        ...(search.scopeId ? { id: search.scopeId } : {}),
+        savedId: search.id,
     };
-    return html`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[kind]}</svg>`;
 }
 
-export function pinIconTemplate(autoHide: boolean) {
-    const pin = svg`<line x1="12" x2="12" y1="17" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>`;
-    const off = svg`<line x1="2" x2="22" y1="2" y2="22"></line>`;
-    return html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${pin}${autoHide ? off : ''}</svg>`;
+function savedSearchRow(host: SourceListRenderHost, search: SavedSearch): HTMLElement {
+    const view = savedSearchView(search);
+    const row = el('div', rowClass(host.isActive(view)));
+    row.setAttribute('data-saved-search-id', search.id);
+    row.draggable = true;
+    row.addEventListener('dragstart', (e) => host.onDragStart(e, 'savedSearch', search.id));
+    row.addEventListener('click', () => host.select(view));
+    const open = el('button', 'item-open');
+    open.addEventListener('click', (e) => {
+        e.stopPropagation();
+        host.select(view);
+    });
+    const glyph = el('span', 'icon', '🔎');
+    glyph.setAttribute('aria-hidden', 'true');
+    const label = el('span', 'label', search.title);
+    label.title = search.title;
+    append(open, glyph, label);
+    if (search.unread > 0) append(open, el('span', 'badge', search.unread));
+    const menu = el('button', 'menu-btn');
+    menu.title = 'Saved search options';
+    append(menu, host.menuIcon());
+    menu.addEventListener('click', (e) => openSavedSearchMenuAction(host, search, e));
+    append(row, open, menu);
+    return row;
 }
 
-export function filterIconTemplate() {
-    return html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18l-7 8v5l-4 2v-7L3 4z"></path></svg>`;
+function renderSavedSearches(host: SourceListRenderHost, searches: SavedSearch[]): DocumentFragment | null {
+    if (!searches.length) return null;
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(el('div', 'section-label', 'Saved searches'));
+    for (const search of searches) fragment.appendChild(savedSearchRow(host, search));
+    return fragment;
 }
 
-export function menuIconTemplate() {
-    return html`<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 10.2l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-}
-
-export function feedRowTemplate(
-    feed: Feed,
+/**
+ * One Interesting row. The visible text carries the folder title so every row
+ * is distinct: "Interesting in Tech", "Interesting in Sport".
+ */
+function interestingRow(
+    host: SourceListRenderHost,
+    folder: Folder,
     active: boolean,
-    onSelect: (feed: Feed) => void,
-    onDragStart: (e: DragEvent, feed: Feed) => void,
-    actions: unknown,
-) {
-    return html`
-      <!-- pointer-only: the row opens the feed on pointer; keyboard users open it with the name button. -->
-      <div class="feed-row ${active ? 'active' : ''} ${feed.unread > 0 ? 'has-unread' : ''}" data-feed-id="${feed.id}" draggable="true" @dragstart=${(e: DragEvent) => onDragStart(e, feed)} @click=${() => onSelect(feed)}>
-        <button class="feed-open" @click=${(e: MouseEvent) => {
-            e.stopPropagation();
-            onSelect(feed);
-        }}><span class="dot"></span><span class="label" title="${feed.title}${feed.lastError ? ` — ${feed.lastError}` : ''}">${feed.title}</span>${feed.unread > 0 ? html`<span class="badge">${feed.unread}</span>` : ''}${feed.lastError ? html`<span class="feed-error" title="${feed.lastError}">⚠</span>` : ''}</button>
-        ${actions}
-      </div>
-    `;
+    count: number | undefined,
+): HTMLElement {
+    const name = `Interesting in ${folder.title}`;
+    const row = el('div', `item${active ? ' active' : ''}${count === 0 ? ' empty' : ''}`);
+    row.setAttribute('data-interesting-id', folder.id);
+    row.draggable = true;
+    row.addEventListener('dragstart', (e) => host.onDragStart(e, 'interesting', folder.id));
+    row.addEventListener('click', () => host.select({ kind: 'interesting', id: folder.id }));
+    row.appendChild(interestingOpenButton(name, count, () => host.select({ kind: 'interesting', id: folder.id })));
+    return row;
 }
 
-function folderToggleTemplate(isCollapsed: boolean, onToggle: (id: string) => void, folderId: string) {
+function interestingOpenButton(name: string, count: number | undefined, onSelect: () => void): HTMLButtonElement {
+    const open = el('button', 'item-open');
+    open.setAttribute('aria-label', name);
+    open.title = name;
+    open.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onSelect();
+    });
+    const glyph = el('span', 'icon', '✨');
+    glyph.setAttribute('aria-hidden', 'true');
+    append(open, glyph, el('span', 'label', name));
+    if (count && count > 0) append(open, el('span', 'badge', count));
+    return open;
+}
+
+function interestingFolders(host: SourceListRenderHost, folders: Folder[]): Folder[] {
+    const ids = orderedInterestingFolderIds(host.interestingShadow, folders, host.interestingOrder);
+    const folderById = new Map(folders.map((folder) => [folder.id, folder]));
+    return ids.map((id) => folderById.get(id)).filter((folder): folder is Folder => !!folder);
+}
+
+function interestingLabelRow(host: SourceListRenderHost, collapsed: boolean): HTMLElement {
+    const labelRow = el('div', 'section-row');
+    const label = el('button', 'section-label-btn');
+    label.setAttribute('aria-expanded', String(!collapsed));
+    const chevron = el('span', 'chev', collapsed ? '▸' : '▾');
+    chevron.setAttribute('aria-hidden', 'true');
+    append(label, chevron, el('span', undefined, 'Interesting'));
+    label.addEventListener('click', () => host.toggleInterestingSection());
+    labelRow.appendChild(label);
+    return labelRow;
+}
+
+function renderInterestingSection(host: SourceListRenderHost, folders: Folder[]): DocumentFragment | null {
+    const enabled = interestingFolders(host, folders);
+    if (!enabled.length) return null;
+    const collapsed = host.collapsed['__interesting__'] === true;
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(interestingLabelRow(host, collapsed));
+    if (collapsed) return fragment;
+    for (const folder of enabled) {
+        const active = host.isActive({ kind: 'interesting', id: folder.id });
+        fragment.appendChild(interestingRow(host, folder, active, host.interestingCount(folder.id)));
+    }
+    return fragment;
+}
+
+function folderToggle(isCollapsed: boolean, onToggle: (id: string) => void, folderId: string): HTMLButtonElement {
     // A real button rather than a span with a click handler: this is the only
     // way to collapse a folder, and the arrow glyph says nothing to a screen
     // reader, so it carries the name and the expanded state too.
-    return html`<button
-        type="button"
-        class="icon"
-        aria-expanded=${!isCollapsed}
-        aria-label=${isCollapsed ? 'Expand folder' : 'Collapse folder'}
-        @click=${(e: Event) => {
-            e.stopPropagation();
-            onToggle(folderId);
-        }}
-    >${isCollapsed ? '▸' : '▾'}</button>`;
+    const button = el('button', 'icon', isCollapsed ? '▸' : '▾');
+    button.type = 'button';
+    button.setAttribute('aria-expanded', String(!isCollapsed));
+    button.setAttribute('aria-label', isCollapsed ? 'Expand folder' : 'Collapse folder');
+    button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onToggle(folderId);
+    });
+    return button;
 }
 
-function folderHeaderTemplate(
+function folderOpenButton(folder: Folder, unread: number, onSelect: (folder: Folder) => void): HTMLButtonElement {
+    const button = el('button', 'item-open');
+    button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onSelect(folder);
+    });
+    const label = el('span', 'label', folder.title);
+    label.title = folder.title;
+    append(button, icon('folder'), label);
+    if (unread > 0) append(button, el('span', 'badge', unread));
+    return button;
+}
+
+function folderHeader(
     folder: Folder,
     active: boolean,
     isCollapsed: boolean,
@@ -136,311 +284,237 @@ function folderHeaderTemplate(
     onDragStart: (e: DragEvent, folder: Folder) => void,
     onToggle: (id: string) => void,
     onOpenMenu: (e: MouseEvent, folder: Folder) => void,
-) {
-    return html`
-      <!-- pointer-only: the row opens the folder on pointer; keyboard users open it with the name button. -->
-      <div class="item ${active ? 'active' : ''}" data-folder-id="${folder.id}" draggable="true" @dragstart=${(e: DragEvent) => onDragStart(e, folder)} @click=${() => onSelect(folder)}>
-        ${folderToggleTemplate(isCollapsed, onToggle, folder.id)}
-        <button class="item-open" @click=${(e: MouseEvent) => {
-            e.stopPropagation();
-            onSelect(folder);
-        }}>${iconTemplate('folder')}<span class="label" title="${folder.title}">${folder.title}</span>${unread > 0 ? html`<span class="badge">${unread}</span>` : ''}</button>
-        <button class="menu-btn" title="Folder options" @click=${(e: MouseEvent) => onOpenMenu(e, folder)}>${menuIconTemplate()}</button>
-      </div>
-    `;
+): HTMLElement {
+    const row = el('div', rowClass(active));
+    row.setAttribute('data-folder-id', folder.id);
+    row.draggable = true;
+    row.addEventListener('dragstart', (e) => onDragStart(e, folder));
+    row.addEventListener('click', () => onSelect(folder));
+    const menu = el('button', 'menu-btn');
+    menu.title = 'Folder options';
+    append(menu, menuIcon());
+    menu.addEventListener('click', (e) => onOpenMenu(e, folder));
+    append(row, folderToggle(isCollapsed, onToggle, folder.id), folderOpenButton(folder, unread, onSelect), menu);
+    return row;
 }
 
-/**
- * One Interesting section row. The visible text carries the folder title so
- * every row is distinct: "Interesting in Tech", "Interesting in Sport".
- */
-function interestingRowTemplate(
-    host: SourceListRenderHost,
-    folder: Folder,
-    active: boolean,
-    count: number | undefined,
-) {
-    const name = `Interesting in ${folder.title}`;
-    const empty = count === 0;
-    return html`
-      <div
-        class="item ${active ? 'active' : ''} ${empty ? 'empty' : ''}"
-        data-interesting-id="${folder.id}"
-        draggable="true"
-        @dragstart=${(e: DragEvent) => host.onDragStart(e, 'interesting', folder.id)}
-        @click=${() => host.select({ kind: 'interesting', id: folder.id })}
-      >
-        <button
-          class="item-open"
-          aria-label=${name}
-          title=${name}
-          @click=${(e: MouseEvent) => {
-              e.stopPropagation();
-              host.select({ kind: 'interesting', id: folder.id });
-          }}
-        ><span class="icon" aria-hidden="true">✨</span><span class="label">${name}</span>${count && count > 0 ? html`<span class="badge">${count}</span>` : ''}</button>
-      </div>
-    `;
+function folderRow(host: SourceListRenderHost, folder: Folder): HTMLElement {
+    const wrapper = document.createElement('div');
+    const isCollapsed = Boolean(host.collapsed[folder.id]);
+    append(
+        wrapper,
+        folderHeader(
+            folder,
+            host.isActive({ kind: 'folder', id: folder.id }),
+            isCollapsed,
+            host.folderUnread(folder.id),
+            (target) => host.select({ kind: 'folder', id: target.id }),
+            (e, target) => host.onDragStart(e, 'folder', target.id),
+            (id) => host.toggleFolder(id),
+            (e, target) => openFolderMenuAction(host, target, e),
+        ),
+    );
+    if (isCollapsed) return wrapper;
+    const children = el('div', 'folder-children');
+    for (const feed of host.folderFeeds(folder.id)) children.appendChild(feedRow(host, feed));
+    wrapper.appendChild(children);
+    return wrapper;
 }
 
-/**
- * Standalone Interesting section: one row per folder whose toggle is on.
- * Rendered above the folders so the smart views stay visible without
- * scrolling past a long folder list; the folders themselves are untouched.
- */
-function renderInterestingSection(host: SourceListRenderHost, folders: Folder[]) {
-    const ids = orderedInterestingFolderIds(host.interestingShadow, folders, host.interestingOrder);
-    if (!ids.length) return html``;
-    const folderById = new Map(folders.map((f) => [f.id, f]));
-    const enabled = ids.map((id) => folderById.get(id)).filter((f): f is Folder => !!f);
-    if (!enabled.length) return html``;
-    const collapsed = host.collapsed['__interesting__'] === true;
-    return html`
-      <div class="section-row">
-        <button class="section-label-btn" aria-expanded=${!collapsed} @click=${() => host.toggleInterestingSection()}>
-          <span class="chev" aria-hidden="true">${collapsed ? '▸' : '▾'}</span><span>Interesting</span>
-        </button>
-      </div>
-      ${
-          collapsed
-              ? ''
-              : enabled.map((folder) =>
-                    interestingRowTemplate(
-                        host,
-                        folder,
-                        host.isActive({ kind: 'interesting', id: folder.id }),
-                        host.interestingCount(folder.id),
-                    ),
-                )
-      }
-    `;
+function feedOpenButton(feed: Feed, onSelect: (feed: Feed) => void): HTMLButtonElement {
+    const button = el('button', 'feed-open');
+    button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onSelect(feed);
+    });
+    const label = el('span', 'label', feed.title);
+    label.title = feed.lastError ? `${feed.title} — ${feed.lastError}` : feed.title;
+    append(button, el('span', 'dot'), label);
+    if (feed.unread > 0) append(button, el('span', 'badge', feed.unread));
+    if (feed.lastError) {
+        const error = el('span', 'feed-error', '⚠');
+        error.title = feed.lastError;
+        button.appendChild(error);
+    }
+    return button;
 }
 
-export function folderRowTemplate(
-    folder: Folder,
-    feeds: Feed[],
-    isCollapsed: boolean,
-    active: boolean,
-    unread: number,
-    onSelectFolder: (folder: Folder) => void,
-    onDragFolder: (e: DragEvent, folder: Folder) => void,
-    onToggle: (id: string) => void,
-    onOpenMenu: (e: MouseEvent, folder: Folder) => void,
-    feedRow: (feed: Feed) => unknown,
-) {
-    return html`
-      <div>
-        ${folderHeaderTemplate(folder, active, isCollapsed, unread, onSelectFolder, onDragFolder, onToggle, onOpenMenu)}
-        ${isCollapsed ? '' : html`<div class="folder-children">${feeds.map((f) => feedRow(f))}</div>`}
-      </div>
-    `;
+function feedActions(host: SourceListRenderHost, feed: Feed): HTMLButtonElement {
+    const button = el('button', 'menu-btn', '⋯');
+    button.title = 'Feed options';
+    button.addEventListener('click', (e) => openFeedMenuAction(host, feed, e));
+    return button;
 }
 
-export function renderHead(host: SourceListRenderHost) {
-    return html`<div class="sidebar-head"><button class="pin-btn filter-btn" title="Feed list options" @click=${(e: MouseEvent) => openFeedListMenuAction(host, e)}>${host.filterIcon()}</button><button class="pin-btn" title=${host.autoHide ? 'Pin the feed list open' : 'Auto-hide the feed list'} @click=${() => toggleAutoHideAction(host)}>${host.pinIcon()}</button></div>`;
+function feedRow(host: SourceListRenderHost, feed: Feed): HTMLElement {
+    const row = el('div', feedRowClass(host.isActive({ kind: 'feed', id: feed.id }), feed.unread > 0));
+    row.setAttribute('data-feed-id', feed.id);
+    row.draggable = true;
+    row.addEventListener('dragstart', (e) => host.onDragStart(e, 'feed', feed.id));
+    row.addEventListener('click', () => host.select({ kind: 'feed', id: feed.id }));
+    append(
+        row,
+        feedOpenButton(feed, (target) => host.select({ kind: 'feed', id: target.id })),
+        feedActions(host, feed),
+    );
+    return row;
 }
 
-export function renderNav(host: SourceListRenderHost, folders: Folder[], uncategorized: Feed[]) {
-    const savedSearches = (host.libraryData as { savedSearches?: SavedSearch[] }).savedSearches ?? [];
-    return html`<nav class="nav" @dragover=${host.onDragOver} @dragleave=${host.onDragLeave} @drop=${host.onDrop} @dragend=${host.onDragEnd}>${renderNavError(host)}${renderStaticNav(host)}${renderSavedSearches(host, savedSearches)}${renderInterestingSection(host, folders)}${folders.map((folder) => folderRow(host, folder))}${renderUncategorized(host, uncategorized)}<div class="drop-zone" data-no-folder>Drop here to move out of folders</div></nav>`;
+function renderUncategorized(host: SourceListRenderHost, uncategorized: Feed[]): DocumentFragment | null {
+    if (!uncategorized.length) return null;
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(el('div', 'section-label', 'No folder'));
+    for (const feed of uncategorized) fragment.appendChild(feedRow(host, feed));
+    return fragment;
 }
 
-function renderNavError(host: SourceListRenderHost) {
-    return host.library.error
-        ? html`<div class="nav-error">Could not load feeds. <button @click=${host.onRetryLibrary}>Retry</button></div>`
-        : '';
-}
-
-function renderStaticNav(host: SourceListRenderHost) {
-    return html`
-      ${renderFrontPageNav(host)}${renderBriefNav(host)}${renderTodayNav(host)}${renderFocusNav(host)}${renderSavedNav(host)}${renderListenNav(host)}${renderBackgrounderNav(host)}${renderBoardsNav(host)}${renderStatsNav(host)}${renderCoverageNav(host)}${renderGlossaryNav(host)}${renderSearchNav(host)}${renderOrganizeNav(host)}${renderMuteFiltersNav(host)}${renderAllNav(host)}
-    `;
-}
-
-function renderSavedNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'saved' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'saved' })}><span class="icon" aria-hidden="true">🔖</span><span class="label">Saved for later</span></button>`;
-}
-
-function renderBackgrounderNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'backgrounder' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'backgrounder' })}><span class="icon" aria-hidden="true">📰</span><span class="label">Catch me up</span></button>`;
-}
-
-function renderListenNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'listen' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'listen' })}><span class="icon" aria-hidden="true">🎧</span><span class="label">Listen queue</span></button>`;
-}
-
-function renderGlossaryNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'glossary' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'glossary' })}><span class="icon" aria-hidden="true">📖</span><span class="label">Glossary</span></button>`;
-}
-
-function renderCoverageNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'coverage' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'coverage' })}><span class="icon" aria-hidden="true">⚖</span><span class="label">Coverage</span></button>`;
-}
-
-function renderStatsNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'stats' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'stats' })}><span class="icon" aria-hidden="true">📊</span><span class="label">Stats</span></button>`;
-}
-
-function renderBoardsNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'boards' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'boards' })}><span class="icon" aria-hidden="true">📋</span><span class="label">Boards</span></button>`;
-}
-
-function renderOrganizeNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'organize' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'organize' })}><span class="icon" aria-hidden="true">⚙</span><span class="label">Organize</span></button>`;
-}
-
-function renderMuteFiltersNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'mute-filters' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'mute-filters' })}><span class="icon" aria-hidden="true">🔇</span><span class="label">Mute filters</span></button>`;
-}
-
-function savedSearchRow(host: SourceListRenderHost, search: SavedSearch) {
-    const active = host.isActive({ kind: 'search', savedId: search.id });
-    return html`
-      <div class="item ${active ? 'active' : ''}" data-saved-search-id="${search.id}" draggable="true" @dragstart=${(e: DragEvent) => host.onDragStart(e, 'savedSearch', search.id)} @click=${() => host.select({ kind: 'search', q: search.query, scope: search.scopeKind, ...(search.scopeId ? { id: search.scopeId } : {}), savedId: search.id })}>
-        <button class="item-open" @click=${(e: MouseEvent) => {
-            e.stopPropagation();
-            host.select({
-                kind: 'search',
-                q: search.query,
-                scope: search.scopeKind,
-                ...(search.scopeId ? { id: search.scopeId } : {}),
-                savedId: search.id,
-            });
-        }}><span class="icon" aria-hidden="true">🔎</span><span class="label" title="${search.title}">${search.title}</span>${search.unread > 0 ? html`<span class="badge">${search.unread}</span>` : ''}</button>
-        <button class="menu-btn" title="Saved search options" @click=${(e: MouseEvent) => openSavedSearchMenuAction(host, search, e)}>${menuIconTemplate()}</button>
-      </div>`;
-}
-
-function renderSavedSearches(host: SourceListRenderHost, searches: SavedSearch[]) {
-    if (!searches.length) return html``;
-    return html`<div class="section-label">Saved searches</div>${searches.map((s) => savedSearchRow(host, s))}`;
-}
-
-function renderSearchNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'search' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'search' })}><span class="icon" aria-hidden="true">🔎</span><span class="label">Search</span></button>`;
-}
-
-function renderFrontPageNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'frontpage' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'frontpage' })}><span class="icon">📰</span><span class="label">Front Page</span></button>`;
-}
-
-function renderBriefNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'brief' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'brief' })}><span class="icon">✨</span><span class="label">Daily Brief</span></button>`;
-}
-
-function renderTodayNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'today' });
-    return html`
-      <!-- pointer-only: the row opens Today on pointer; keyboard users open it with the name button. -->
-      <div class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'today' })}>
-        <button class="item-open" @click=${(e: MouseEvent) => {
-            e.stopPropagation();
-            host.select({ kind: 'today' });
-        }}><span class="icon">🗓</span><span class="label">Today</span></button><button class="menu-btn" title="Today options" @click=${(e: MouseEvent) => openTodayMenuAction(host, e)}>${host.menuIcon()}</button>
-      </div>`;
-}
-
-function renderFocusNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'focus' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'focus' })}><span class="icon" aria-hidden="true">⏱</span><span class="label">Focus session</span></button>`;
-}
-
-function renderAllNav(host: SourceListRenderHost) {
-    const active = host.isActive({ kind: 'all' });
-    return html`<button class="item ${active ? 'active' : ''}" @click=${() => host.select({ kind: 'all' })}>${host.icon('all')}<span class="label">All</span>${host.totalUnread > 0 ? html`<span class="badge">${host.totalUnread}</span>` : ''}</button>`;
-}
-
-function renderUncategorized(host: SourceListRenderHost, uncategorized: Feed[]) {
-    if (!uncategorized.length) return html``;
-    return html`<div class="section-label">No folder</div>${uncategorized.map((feed) => feedRow(host, feed))}`;
-}
-
-export function renderResizeHandle(host: SourceListRenderHost) {
+export function createResizeHandle(host: SourceListRenderHost): HTMLElement {
     // The WAI-ARIA window splitter: a separator the keyboard can move. Without
     // role, tabindex and a key path the sidebar width is reachable by pointer
     // only, and a keyboard user cannot set it at all.
-    return html`<div
-        class="resize-handle"
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize sidebar"
-        aria-valuenow=${Math.round(host.sidebarWidth)}
-        aria-valuemin=${MIN_SIDEBAR_WIDTH}
-        aria-valuemax=${MAX_SIDEBAR_WIDTH}
-        tabindex="0"
-        title="Drag to resize"
-        @pointerdown=${host.onResizeStart}
-        @pointermove=${host.onResizeMove}
-        @pointerup=${host.onResizeEnd}
-        @pointercancel=${host.onResizeEnd}
-        @keydown=${host.onResizeKey}
-    ></div>`;
+    const handle = el('div', 'resize-handle');
+    handle.setAttribute('role', 'separator');
+    handle.setAttribute('aria-orientation', 'vertical');
+    handle.setAttribute('aria-label', 'Resize sidebar');
+    handle.setAttribute('aria-valuemin', String(MIN_SIDEBAR_WIDTH));
+    handle.setAttribute('aria-valuemax', String(MAX_SIDEBAR_WIDTH));
+    handle.setAttribute('tabindex', '0');
+    handle.title = 'Drag to resize';
+    handle.addEventListener('pointerdown', (e) => host.onResizeStart(e));
+    handle.addEventListener('pointermove', (e) => host.onResizeMove(e));
+    handle.addEventListener('pointerup', (e) => host.onResizeEnd(e));
+    handle.addEventListener('pointercancel', (e) => host.onResizeEnd(e));
+    handle.addEventListener('keydown', (e) => host.onResizeKey(e));
+    syncResizeHandle(handle, host);
+    return handle;
 }
 
-export function renderMenus(
+/** aria-valuenow tracks the width. A drag writes it directly between paints. */
+export function syncResizeHandle(handle: HTMLElement, host: SourceListRenderHost): void {
+    handle.setAttribute('aria-valuenow', String(Math.round(host.sidebarWidth)));
+}
+
+export interface SourceListMenus {
+    feed: HTMLElement;
+    folder: HTMLElement;
+    savedSearch: HTMLElement;
+    feedList: HTMLElement;
+    today: HTMLElement;
+}
+
+function feedMenu(host: SourceListRenderHost): HTMLElement {
+    const menu = document.createElement('feed-menu');
+    menu.addEventListener('close', () => closeMenuAction(host));
+    menu.addEventListener('refresh', () => void menuRefreshAction(host));
+    menu.addEventListener('delete', () => void menuDeleteAction(host));
+    menu.addEventListener('folders-change', (e) => menuFoldersChangeAction(host, e));
+    return menu;
+}
+
+function folderMenu(host: SourceListRenderHost): HTMLElement {
+    const menu = document.createElement('folder-menu');
+    menu.addEventListener('close', () => closeFolderMenuAction(host));
+    menu.addEventListener('delete', () => void folderMenuDeleteAction(host));
+    menu.addEventListener('refresh', () => void folderMenuRefreshAction(host));
+    menu.addEventListener('unread-only-change', (e) => folderMenuUnreadOnlyAction(host, e));
+    menu.addEventListener('shadow-change', (e) => folderMenuShadowAction(host, e));
+    menu.addEventListener('ignore', () => folderMenuIgnoreAction(host));
+    return menu;
+}
+
+function savedSearchMenu(host: SourceListRenderHost): HTMLElement {
+    const menu = document.createElement('saved-search-menu');
+    menu.addEventListener('close', () => closeSavedSearchMenuAction(host));
+    menu.addEventListener('rename', () => void savedSearchMenuRenameAction(host));
+    menu.addEventListener('delete', () => void savedSearchMenuDeleteAction(host));
+    return menu;
+}
+
+function feedListMenu(host: SourceListRenderHost): HTMLElement {
+    const menu = document.createElement('feed-list-menu');
+    menu.addEventListener('close', () => closeFeedListMenuAction(host));
+    menu.addEventListener('sort-change', (e) => feedSortChangeAction(host, e));
+    menu.addEventListener('sort-folders', () => void sortFoldersAction(host));
+    menu.addEventListener('refresh-all', () => void refreshAllAction(host));
+    return menu;
+}
+
+function todayMenu(host: SourceListRenderHost): HTMLElement {
+    const menu = document.createElement('today-menu');
+    menu.addEventListener('close', () => {
+        host.todayMenuOpen = false;
+    });
+    menu.addEventListener('settings-change', (e) => todaySettingsChangeAction(host, e));
+    return menu;
+}
+
+export function createMenus(host: SourceListRenderHost): SourceListMenus {
+    return {
+        feed: feedMenu(host),
+        folder: folderMenu(host),
+        savedSearch: savedSearchMenu(host),
+        feedList: feedListMenu(host),
+        today: todayMenu(host),
+    };
+}
+
+function updateFeedMenu(
+    menu: HTMLElement,
+    host: SourceListRenderHost,
+    folders: Folder[],
+    feed: Feed | undefined,
+): void {
+    Object.assign(menu, {
+        feed: feed ?? null,
+        folders,
+        open: host.menuOpen && feed !== undefined,
+        anchor: host.menuAnchor,
+    });
+}
+
+function updateFolderMenu(menu: HTMLElement, host: SourceListRenderHost, folder: Folder | undefined): void {
+    Object.assign(menu, {
+        folder: folder ?? null,
+        open: host.folderMenuOpen && folder !== undefined,
+        anchor: host.folderMenuAnchor,
+        unreadOnly: folder ? Boolean(host.hideReadByFolder[folder.id]) : false,
+        shadow: folder ? host.interestingShadow[folder.id] === true : false,
+        ignored: folder ? Boolean(host.ignoredFolders?.[folder.id]) : false,
+    });
+}
+
+function updateSavedSearchMenu(menu: HTMLElement, host: SourceListRenderHost, search: SavedSearch | undefined): void {
+    Object.assign(menu, {
+        search: search ?? null,
+        open: host.savedSearchMenuOpen && search !== undefined,
+        anchor: host.savedSearchMenuAnchor,
+    });
+}
+
+function updatePanelMenus(menus: SourceListMenus, host: SourceListRenderHost, folders: Folder[]): void {
+    Object.assign(menus.feedList, {
+        open: host.feedListMenuOpen,
+        anchor: host.feedListMenuAnchor,
+        feedSort: host.feedSort,
+    });
+    Object.assign(menus.today, {
+        open: host.todayMenuOpen,
+        anchor: host.todayMenuAnchor,
+        folders,
+        settings: host.todaySettings,
+    });
+}
+
+export function updateMenus(
+    menus: SourceListMenus,
     host: SourceListRenderHost,
     folders: Folder[],
     menuFeed: Feed | undefined,
     folderMenuFolder: Folder | undefined,
-    savedSearchMenuSearch?: SavedSearch | undefined,
-) {
-    return html`
-      <feed-menu .feed=${menuFeed ?? null} .folders=${folders} .open=${host.menuOpen && menuFeed !== undefined} .anchor=${host.menuAnchor} @close=${() => closeMenuAction(host)} @refresh=${() => menuRefreshAction(host)} @delete=${() => menuDeleteAction(host)} @folders-change=${(e: Event) => menuFoldersChangeAction(host, e)}></feed-menu>
-      <folder-menu .folder=${folderMenuFolder ?? null} .open=${host.folderMenuOpen && folderMenuFolder !== undefined} .anchor=${host.folderMenuAnchor} .unreadOnly=${folderMenuFolder ? Boolean(host.hideReadByFolder[folderMenuFolder.id]) : false} .shadow=${folderMenuFolder ? host.interestingShadow[folderMenuFolder.id] === true : false} .ignored=${folderMenuFolder ? Boolean(host.ignoredFolders?.[folderMenuFolder.id]) : false} @close=${() => closeFolderMenuAction(host)} @delete=${() => folderMenuDeleteAction(host)} @refresh=${() => folderMenuRefreshAction(host)} @unread-only-change=${(e: Event) => folderMenuUnreadOnlyAction(host, e)} @shadow-change=${(e: Event) => folderMenuShadowAction(host, e)} @ignore=${() => folderMenuIgnoreAction(host)}></folder-menu>
-      <saved-search-menu .search=${savedSearchMenuSearch ?? null} .open=${host.savedSearchMenuOpen && savedSearchMenuSearch !== undefined} .anchor=${host.savedSearchMenuAnchor} @close=${() => closeSavedSearchMenuAction(host)} @rename=${() => savedSearchMenuRenameAction(host)} @delete=${() => savedSearchMenuDeleteAction(host)}></saved-search-menu>
-      <feed-list-menu .open=${host.feedListMenuOpen} .anchor=${host.feedListMenuAnchor} .feedSort=${host.feedSort} @close=${() => closeFeedListMenuAction(host)} @sort-change=${(e: Event) => feedSortChangeAction(host, e)} @sort-folders=${() => sortFoldersAction(host)} @refresh-all=${() => refreshAllAction(host)}></feed-list-menu>
-      <today-menu .open=${host.todayMenuOpen} .anchor=${host.todayMenuAnchor} .folders=${folders} .settings=${host.todaySettings} @close=${() => (host.todayMenuOpen = false)} @settings-change=${(e: Event) => todaySettingsChangeAction(host, e)}></today-menu>
-    `;
-}
-
-function feedActions(host: SourceListRenderHost, feed: Feed) {
-    return html`
-      <button
-        class="menu-btn"
-        title="Feed options"
-        @click=${(e: MouseEvent) => openFeedMenuAction(host, feed, e)}
-      >⋯</button>
-    `;
-}
-
-function feedRow(host: SourceListRenderHost, feed: Feed) {
-    const active = host.isActive({ kind: 'feed', id: feed.id });
-    return feedRowTemplate(
-        feed,
-        active,
-        (f) => host.select({ kind: 'feed', id: f.id }),
-        (e, f) => host.onDragStart(e, 'feed', f.id),
-        feedActions(host, feed),
-    );
-}
-
-function folderRow(host: SourceListRenderHost, folder: Folder) {
-    const feeds = host.folderFeeds(folder.id);
-    const isCollapsed = Boolean(host.collapsed[folder.id]);
-    const active = host.isActive({ kind: 'folder', id: folder.id });
-    const unread = host.folderUnread(folder.id);
-    return html`${folderRowTemplate(
-        folder,
-        feeds,
-        isCollapsed,
-        active,
-        unread,
-        (f) => host.select({ kind: 'folder', id: f.id }),
-        (e, f) => host.onDragStart(e, 'folder', f.id),
-        (id) => host.toggleFolder(id),
-        (e, f) => openFolderMenuAction(host, f, e),
-        (feed) => feedRow(host, feed),
-    )}`;
+    savedSearchMenuSearch: SavedSearch | undefined,
+): void {
+    updateFeedMenu(menus.feed, host, folders, menuFeed);
+    updateFolderMenu(menus.folder, host, folderMenuFolder);
+    updateSavedSearchMenu(menus.savedSearch, host, savedSearchMenuSearch);
+    updatePanelMenus(menus, host, folders);
 }

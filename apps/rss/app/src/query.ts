@@ -1,8 +1,21 @@
 import { QueryClient, QueryObserver, type QueryObserverResult } from '@tanstack/query-core';
-import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { fetchSavedArticles, getLibraryCounts, getLibraryFeeds, getLibraryFolders } from './services/api';
 import { clearSavedArticles, getSavedArticles, putSavedArticle } from './db/db';
 import type { Article, Feed, Folder, SavedArticleSnapshot, SavedSearch } from './types';
+
+export interface ReactiveController {
+    hostConnected?(): void;
+    hostDisconnected?(): void;
+    hostUpdate?(): void;
+    hostUpdated?(): void;
+}
+
+export interface ReactiveControllerHost {
+    addController(controller: ReactiveController): void;
+    removeController(controller: ReactiveController): void;
+    requestUpdate(): void;
+    readonly updateComplete: Promise<boolean>;
+}
 
 export const queryClient = new QueryClient({
     defaultOptions: {

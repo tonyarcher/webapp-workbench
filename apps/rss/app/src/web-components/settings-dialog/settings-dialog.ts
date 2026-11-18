@@ -1,7 +1,5 @@
-import { html, LitElement, unsafeCSS } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
 import { applyTheme, getTheme, type Theme } from '../../theme';
-import { loadReaderMode, saveReaderMode, applyReaderMode, type ReaderMode } from '../../services/reader-mode';
+import { applyReaderMode, loadReaderMode, saveReaderMode, type ReaderMode } from '../../services/reader-mode';
 import { modalClosed, modalOpened } from '../../services/modal-guard';
 import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
 import { normalizeMastodonHost, type ShareTarget } from '../../services/share';
@@ -27,117 +25,284 @@ import {
 } from '../article-list/article-list-helpers';
 import type { View } from '../../types';
 import {
-    renderAboutSection,
-    renderAppearanceSection,
-    renderFeedsSection,
-    renderReadingSection,
-    renderSharingSection,
+    buildAboutSection,
+    buildAppearanceSection,
+    buildFeedsSection,
+    buildReadingSection,
+    buildSharingSection,
 } from './settings-dialog-sections';
+import { el } from './settings-dialog-dom';
 import styles from './settings-dialog.css?inline';
 
 const MIGRATE_SIZE_LIMIT = 1_800_000;
 
-@customElement('settings-dialog')
-export class SettingsDialog extends LitElement {
-    static override styles = unsafeCSS(styles);
+/** Install a reactive accessor. Assignments request the same batched paint Lit used to. */
+function defineReactive<T>(host: SettingsDialog, name: string, initial: T): void {
+    let current = initial;
+    Object.defineProperty(host, name, {
+        configurable: true,
+        enumerable: true,
+        get(): T {
+            return current;
+        },
+        set(next: T): void {
+            if (Object.is(current, next)) return;
+            current = next;
+            host.requestUpdate();
+        },
+    });
+}
 
-    @property({ attribute: false }) open = false;
-    /** Current route, so the dialog can copy the open view's settings. */
-    @property({ attribute: false }) view: View = { kind: 'all' };
+/**
+ * Vanilla custom element: the native `<dialog>` and its head are built once,
+ * the five sections are rebuilt from plain DOM in `paint()`. No template
+ * literal is involved. `updateComplete` resolves after the next paint so tests
+ * and callers can await a property change, as they could with Lit.
+ */
+export class SettingsDialog extends HTMLElement {
+    declare view: View;
+    declare theme: Theme;
+    declare readerMode: ReaderMode;
+    declare adding: boolean;
+    declare busy: boolean;
+    declare migrating: boolean;
+    declare status: string;
+    declare statusError: boolean;
+    declare mastodonHost: string;
+    declare shareStatus: string;
+    declare shareStatusError: boolean;
+    declare shareTargets: ShareTarget[];
+    declare viewSettings: ViewSettings;
+    declare viewStatus: string;
+    declare showHistory: boolean;
 
-    @state() theme: Theme = 'light';
-    @state() readerMode = loadReaderMode();
-    @state() adding = false;
-    @state() busy = false;
-    @state() migrating = false;
-    @state() status = '';
-    @state() statusError = false;
-    @state() mastodonHost = '';
-    @state() shareStatus = '';
-    @state() shareStatusError = false;
-    @state() shareTargets: ShareTarget[] = [];
-    @state() viewSettings: ViewSettings = { ...DEFAULT_VIEW_SETTINGS };
-    @state() viewStatus = '';
-    @state() showHistory = false;
-
+    private currentOpen = false;
     private dialogEl: HTMLDialogElement | null = null;
+    private bodyEl: HTMLDivElement | null = null;
+    private updateScheduled = false;
+    private updateResolvers: Array<(value: boolean) => void> = [];
+    /** Text typed into a field before a paint; restored only while focused. */
+    private mastodonDraft: string | null = null;
+    private addUrlDraft: string | null = null;
 
-    override updated(changed: Map<string, unknown>) {
-        if (changed.has('open')) {
-            if (this.open) {
-                this.theme = getTheme();
-                this.mastodonHost = loadMastodonHost();
-                this.shareTargets = loadShareTargets();
-                this.shareStatus = '';
-                this.shareStatusError = false;
-                this.viewSettings = readDefaultViewSettings();
-                this.viewStatus = '';
-                this.showHistory = false;
-                this.dialogEl?.showModal();
-                modalOpened();
-            } else {
-                this.dialogEl?.close();
-                modalClosed();
+    constructor() {
+        super();
+        defineReactive(this, 'view', { kind: 'all' } satisfies View);
+        defineReactive(this, 'theme', 'light' as Theme);
+        defineReactive(this, 'readerMode', loadReaderMode());
+        defineReactive(this, 'adding', false);
+        defineReactive(this, 'busy', false);
+        defineReactive(this, 'migrating', false);
+        defineReactive(this, 'status', '');
+        defineReactive(this, 'statusError', false);
+        defineReactive(this, 'mastodonHost', '');
+        defineReactive(this, 'shareStatus', '');
+        defineReactive(this, 'shareStatusError', false);
+        defineReactive(this, 'shareTargets', [] as ShareTarget[]);
+        defineReactive(this, 'viewSettings', { ...DEFAULT_VIEW_SETTINGS });
+        defineReactive(this, 'viewStatus', '');
+        defineReactive(this, 'showHistory', false);
+    }
+
+    get open(): boolean {
+        return this.currentOpen;
+    }
+
+    set open(value: boolean) {
+        if (Object.is(this.currentOpen, value)) return;
+        this.currentOpen = value;
+        if (value) this.prepareOpenState();
+        this.requestUpdate();
+    }
+
+    get updateComplete(): Promise<boolean> {
+        return new Promise((resolve) => {
+            this.updateResolvers.push(resolve);
+            setTimeout(() => {
+                const index = this.updateResolvers.indexOf(resolve);
+                if (index < 0) return;
+                this.updateResolvers.splice(index, 1);
+                resolve(true);
+            }, 0);
+        });
+    }
+
+    requestUpdate(): void {
+        if (this.updateScheduled) return;
+        this.updateScheduled = true;
+        queueMicrotask(() => {
+            this.updateScheduled = false;
+            try {
+                this.paint();
+            } finally {
+                this.resolveUpdate();
             }
+        });
+    }
+
+    private resolveUpdate(): void {
+        for (const resolve of this.updateResolvers.splice(0)) resolve(true);
+    }
+
+    connectedCallback(): void {
+        if (!this.dialogEl) this.build();
+        this.paint();
+    }
+
+    private build(): void {
+        const shadow = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
+        const style = el('style');
+        style.textContent = styles;
+        const dialog = el('dialog');
+        dialog.addEventListener('click', (event) => this.onDialogClick(event));
+        dialog.addEventListener('cancel', (event) => {
+            event.preventDefault();
+            this.emitClose();
+        });
+        const head = el('div', 'head');
+        head.append(el('h2', undefined, 'Settings'), this.closeButton());
+        const body = el('div', 'body');
+        body.tabIndex = 0;
+        dialog.append(head, body);
+        shadow.append(style, dialog);
+        this.dialogEl = dialog;
+        this.bodyEl = body;
+    }
+
+    private closeButton(): HTMLButtonElement {
+        const close = el('button', 'close', '✕');
+        close.type = 'button';
+        close.title = 'Close';
+        close.addEventListener('click', () => this.emitClose());
+        return close;
+    }
+
+    private paint(): void {
+        if (!this.bodyEl) return;
+        const focusKey = this.focusedKey();
+        this.captureDrafts();
+        this.bodyEl.replaceChildren(
+            buildAppearanceSection(this),
+            buildReadingSection(this),
+            buildSharingSection(this),
+            buildFeedsSection(this),
+            buildAboutSection(this),
+        );
+        this.restoreDrafts();
+        this.restoreFocus(focusKey);
+        this.syncDialog();
+    }
+
+    private focusedKey(): string | null {
+        return this.shadowRoot?.activeElement?.getAttribute('data-focus-key') ?? null;
+    }
+
+    /**
+     * A repaint replaces the body, so focus would fall back to `<body>`. Put it
+     * back on the control the reader was using, found by its stable key.
+     */
+    private restoreFocus(key: string | null): void {
+        if (!key || !this.bodyEl) return;
+        for (const node of this.bodyEl.querySelectorAll<HTMLElement>('[data-focus-key]')) {
+            if (node.getAttribute('data-focus-key') !== key) continue;
+            node.focus();
+            return;
         }
     }
 
-    private renderAppearanceSection() {
-        return renderAppearanceSection(this);
-    }
-    private renderReadingSection() {
-        return renderReadingSection(this);
+    /** Keep typed text while its field is focused; a loaded value always wins. */
+    private captureDrafts(): void {
+        this.mastodonDraft = null;
+        this.addUrlDraft = null;
+        const active = this.shadowRoot?.activeElement;
+        if (!(active instanceof HTMLInputElement)) return;
+        if (active.id === 'mastodon-host') this.mastodonDraft = active.value;
+        if (active.hasAttribute('data-add-url')) this.addUrlDraft = active.value;
     }
 
-    private saveViewDefaults() {
+    private restoreDrafts(): void {
+        const mastodon = this.shadowRoot?.querySelector<HTMLInputElement>('#mastodon-host');
+        if (mastodon && this.mastodonDraft !== null) mastodon.value = this.mastodonDraft;
+        const addUrl = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]');
+        if (addUrl && this.addUrlDraft !== null) addUrl.value = this.addUrlDraft;
+    }
+
+    /** Show or hide the native dialog to match `open`, announcing it to the modal guard. */
+    private syncDialog(): void {
+        const dialog = this.dialogEl;
+        if (!dialog || !this.isConnected) return;
+        if (this.currentOpen && !dialog.open) {
+            dialog.showModal();
+            modalOpened();
+        } else if (!this.currentOpen && dialog.open) {
+            dialog.close();
+            modalClosed();
+        }
+    }
+
+    /** Fresh state every time the dialog opens, so stale status text never shows. */
+    private prepareOpenState(): void {
+        this.theme = getTheme();
+        this.mastodonHost = loadMastodonHost();
+        this.shareTargets = loadShareTargets();
+        this.shareStatus = '';
+        this.shareStatusError = false;
+        this.viewSettings = readDefaultViewSettings();
+        this.viewStatus = '';
+        this.showHistory = false;
+        this.mastodonDraft = null;
+        this.addUrlDraft = null;
+    }
+
+    private saveViewDefaults = (): void => {
         saveDefaultViewSettings(this.viewSettings);
         // Let an open view that has no own override adopt the new default now.
         this.announceViewSettings();
         this.viewStatus = 'Defaults saved. Apply to all views to replace per-view settings.';
-    }
+    };
 
     /** Tell the open list and the badge refresh that the defaults changed. */
-    private announceViewSettings() {
+    private announceViewSettings(): void {
         window.dispatchEvent(new CustomEvent('view-settings-changed'));
     }
 
-    setListView(value: string) {
+    setListView = (value: string): void => {
         if (value !== 'detailed' && value !== 'headline' && value !== 'cards' && value !== 'slideshow') return;
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, listView: value });
         this.saveViewDefaults();
-    }
+    };
 
-    setReaderMode(mode: ReaderMode) {
+    setReaderMode = (mode: ReaderMode): void => {
         this.readerMode = mode;
         saveReaderMode(mode);
         applyReaderMode(mode);
-    }
+    };
 
-    setSort(value: string) {
+    setSort = (value: string): void => {
         if (value !== 'hot' && value !== 'newest' && value !== 'oldest') return;
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, sort: value });
         this.saveViewDefaults();
-    }
+    };
 
-    setPageSize(value: number) {
+    setPageSize = (value: number): void => {
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, pageSize: value });
         this.saveViewDefaults();
-    }
+    };
 
-    setMaxCardCols(value: number) {
+    setMaxCardCols = (value: number): void => {
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, maxCardCols: value });
         this.saveViewDefaults();
-    }
+    };
 
-    setUnreadOnly(value: boolean) {
+    setUnreadOnly = (value: boolean): void => {
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, unreadOnly: value });
         this.saveViewDefaults();
-    }
+    };
 
-    setMarkOnScroll(value: boolean) {
+    setMarkOnScroll = (value: boolean): void => {
         this.viewSettings = normalizeViewSettings({ ...this.viewSettings, markOnScroll: value });
         this.saveViewDefaults();
-    }
+    };
 
     /** Only the article-list routes have per-view settings worth copying. */
     get canUseCurrentView(): boolean {
@@ -149,123 +314,83 @@ export class SettingsDialog extends LitElement {
         );
     }
 
-    useCurrentView = () => {
+    useCurrentView = (): void => {
         this.viewSettings = readViewSettingsFor(this.view);
         saveDefaultViewSettings(this.viewSettings);
         this.announceViewSettings();
         this.viewStatus = "Loaded the current view's settings.";
     };
 
-    applyAllViews = () => {
+    applyAllViews = (): void => {
         applyDefaultToAllViews(this.viewSettings);
         this.announceViewSettings();
         this.viewStatus = 'Applied to all views.';
     };
 
-    private renderSharingSection() {
-        return renderSharingSection(this);
-    }
-
-    toggleShareTarget(e: Event, target: ShareTarget) {
-        const on = (e.target as HTMLInputElement).checked;
+    toggleShareTarget = (target: ShareTarget, checked: boolean): void => {
         const current = new Set(loadShareTargets());
-        if (on) current.add(target);
+        if (checked) current.add(target);
         else current.delete(target);
-        const next = ALL_SHARE_TARGETS.filter((t) => current.has(t));
+        const next = ALL_SHARE_TARGETS.filter((item) => current.has(item));
         saveShareTargets(next);
         this.shareTargets = next;
         window.dispatchEvent(new CustomEvent('share-settings-changed'));
-    }
+    };
 
-    async submitMastodonHost() {
+    submitMastodonHost = async (): Promise<void> => {
         const input = this.shadowRoot?.querySelector<HTMLInputElement>('#mastodon-host');
-        const raw = input?.value.trim() ?? '';
-        const clean = normalizeMastodonHost(raw);
+        const clean = normalizeMastodonHost(input?.value.trim() ?? '');
         if (!clean) {
             this.shareStatus = 'Enter an instance domain, e.g. mastodon.social.';
             this.shareStatusError = true;
             return;
         }
         saveMastodonHost(clean);
+        if (input) input.value = clean;
         this.mastodonHost = clean;
+        this.mastodonDraft = null;
         this.shareStatus = `Sharing through ${clean}.`;
         this.shareStatusError = false;
         window.dispatchEvent(new CustomEvent('share-settings-changed'));
-    }
+    };
 
-    private renderFeedsSection() {
-        return renderFeedsSection(this);
-    }
-    private renderAboutSection() {
-        return renderAboutSection(this);
-    }
-
-    toggleHistory = () => {
+    toggleHistory = (): void => {
         this.showHistory = !this.showHistory;
     };
 
-    override render() {
-        return html`
-      <dialog @click=${this.onDialogClick} @cancel=${(e: Event) => {
-          e.preventDefault();
-          this.close();
-      }}>
-        <div class="head">
-          <h2>Settings</h2>
-          <button class="close" title="Close" @click=${this.close}>✕</button>
-        </div>
-        <div class="body" tabindex="0">
-          ${this.renderAppearanceSection()}
-          ${this.renderReadingSection()}
-          ${this.renderSharingSection()}
-          ${this.renderFeedsSection()}
-          ${this.renderAboutSection()}
-        </div>
-      </dialog>
-    `;
-    }
+    onThemeClick = (event: Event): void => {
+        const theme = (event.currentTarget as HTMLElement).dataset['theme'] as Theme | undefined;
+        if (theme) this.setTheme(theme);
+    };
 
-    override firstUpdated() {
-        this.dialogEl = this.shadowRoot?.querySelector('dialog') ?? null;
-    }
-
-    private onDialogClick(e: MouseEvent) {
-        if (e.target === this.dialogEl) {
-            this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
-        }
-    }
-
-    private setTheme(theme: Theme) {
+    private setTheme(theme: Theme): void {
         this.theme = theme;
         applyTheme(theme);
     }
 
-    onThemeClick(e: Event) {
-        const theme = (e.currentTarget as HTMLElement).dataset['theme'] as Theme | undefined;
-        if (theme) this.setTheme(theme);
-    }
-
-    cancelAdd() {
+    cancelAdd = (): void => {
         this.adding = false;
-    }
+    };
 
-    onImportClick() {
+    onImportClick = (): void => {
         this.shadowRoot?.querySelector<HTMLInputElement>('input[data-import]')?.click();
-    }
+    };
 
-    openAdd() {
+    openAdd = (): void => {
         this.adding = true;
         this.status = '';
         this.statusError = false;
-        this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]')?.focus();
-    }
+        void this.updateComplete.then(() => {
+            this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]')?.focus();
+        });
+    };
 
-    openMuteFilters = () => {
-        this.close();
+    openMuteFilters = (): void => {
+        this.emitClose();
         navigate({ kind: 'mute-filters' });
     };
 
-    async submitAdd() {
+    submitAdd = async (): Promise<void> => {
         const input = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]');
         const url = input?.value.trim() ?? '';
         if (!url) return;
@@ -274,7 +399,7 @@ export class SettingsDialog extends LitElement {
             const feed = await addFeed(url);
             if (input) input.value = '';
             this.adding = false;
-            this.close();
+            this.emitClose();
             navigate({ kind: 'feed', id: feed.id });
         } catch (err) {
             this.status = err instanceof Error ? err.message : 'Could not add feed';
@@ -282,10 +407,10 @@ export class SettingsDialog extends LitElement {
         } finally {
             this.busy = false;
         }
-    }
+    };
 
-    async onImportFile(e: Event) {
-        const input = e.target as HTMLInputElement;
+    onImportFile = async (event: Event): Promise<void> => {
+        const input = event.target as HTMLInputElement;
         const file = input.files?.[0];
         if (!file) return;
         this.busy = true;
@@ -307,18 +432,18 @@ export class SettingsDialog extends LitElement {
             this.busy = false;
             input.value = '';
         }
-    }
+    };
 
-    async onExport() {
+    onExport = async (): Promise<void> => {
         this.busy = true;
         try {
             const xml = await exportOpmlFile();
             const blob = new Blob([xml], { type: 'text/xml' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'subscriptions.opml';
-            a.click();
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = 'subscriptions.opml';
+            anchor.click();
             URL.revokeObjectURL(url);
             this.status = 'Exported subscriptions.opml';
             this.statusError = false;
@@ -328,7 +453,7 @@ export class SettingsDialog extends LitElement {
         } finally {
             this.busy = false;
         }
-    }
+    };
 
     private async prepareMigratePayload() {
         const { folders, feeds, articles, metaEntries } = await readIdbForMigration();
@@ -350,7 +475,7 @@ export class SettingsDialog extends LitElement {
         this.status = 'Migration complete';
     }
 
-    async onMigrate() {
+    onMigrate = async (): Promise<void> => {
         this.migrating = true;
         this.status = '';
         this.statusError = false;
@@ -367,12 +492,19 @@ export class SettingsDialog extends LitElement {
         } finally {
             this.migrating = false;
         }
+    };
+
+    /** Backdrop click: the `<dialog>` itself is the only target behind the panel. */
+    private onDialogClick(event: MouseEvent): void {
+        if (event.target === this.dialogEl) this.emitClose();
     }
 
-    private close() {
+    emitClose(): void {
         this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     }
 }
+
+customElements.define('settings-dialog', SettingsDialog);
 
 declare global {
     interface HTMLElementTagNameMap {

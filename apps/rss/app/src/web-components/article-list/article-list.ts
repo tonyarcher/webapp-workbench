@@ -1,7 +1,11 @@
-import { unsafeCSS } from 'lit';
-import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { Virtualizer } from '@tanstack/virtual-core';
-import { QueryController, fetchLibrary, libraryKey } from '../../query';
+import {
+    QueryController,
+    fetchLibrary,
+    libraryKey,
+    type ReactiveController,
+    type ReactiveControllerHost,
+} from '../../query';
 import { markShownReadAction, openArticleAction } from './article-list-actions';
 import { bulkDerankAction, bulkMarkReadAction, bulkStarAction, clearSelectionAction } from './article-list-selection';
 import { onRowClickAction, toggleSelectCursorAction, toggleStarCursorAction } from './article-list-cursor';
@@ -77,6 +81,7 @@ import '../advanced-menu/advanced-menu';
 import '../lazy-img/lazy-img';
 import '../video-header/video-header';
 import styles from './article-list.css?inline';
+// removed
 
 interface Library {
     folders: Folder[];
@@ -125,7 +130,7 @@ function defineReactive<T>(host: ArticleList, name: string, initial: T): void {
  * DOM is built imperatively; no template literal or html tag is involved.
  */
 export class ArticleList extends HTMLElement implements ReactiveControllerHost {
-    static styles = unsafeCSS(styles);
+    static styles = { cssText: styles };
 
     declare view: View;
     declare resumeArticleId: string | null;
