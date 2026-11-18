@@ -2,6 +2,7 @@ import { getAllArticles } from '../../db/db-query';
 import { loadFocusStreak } from '../../services/focus-session';
 import { readMinutes } from '../../util';
 import type { Article } from '../../types';
+import styles from './stats-view.css?inline';
 
 export class StatsView extends HTMLElement {
     private articles: Article[] = [];
@@ -9,9 +10,13 @@ export class StatsView extends HTMLElement {
     private root: HTMLDivElement | null = null;
 
     connectedCallback() {
+        const shadow = this.attachShadow({ mode: 'open' });
+        const style = document.createElement('style');
+        style.textContent = styles;
+        shadow.appendChild(style);
         this.root = document.createElement('div');
         this.root.className = 'view';
-        this.appendChild(this.root);
+        shadow.appendChild(this.root);
         void this.load();
     }
 
