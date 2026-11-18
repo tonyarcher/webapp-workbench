@@ -1,169 +1,158 @@
-import { html, LitElement, unsafeCSS } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { modalClosed, modalOpened } from '../../services/modal-guard';
-import { fuzzyScore, type PaletteMatch } from '../../services/palette-match';
-import type { Command } from '../../services/commands';
 import styles from './command-palette.css?inline';
 
-interface Result {
-    command: Command;
-    match: PaletteMatch;
+interface Command {
+    id: string;
+    title: string;
+    group: string;
+    hint: string;
+    run: () => void;
 }
 
-const PAGE_SIZE = 8;
+export class CommandPalette extends HTMLElement {
+    private _open = false;
+    private _commands: Command[] = [];
+    private _query = '';
+    private _activeIndex = 0;
+    private pointerDownInside = false;
+    private updateResolvers: Array<(value: boolean) => void> = [];
+    private root: HTMLDivElement | null = null;
 
-/**
- * Command palette: a modal listbox of go/filter/act commands. The shell
- * builds the commands and runs the chosen one; this component owns the
- * query, the fuzzy ranking, and the dialog lifecycle.
- */
-@customElement('command-palette')
-export class CommandPalette extends LitElement {
-    static override styles = unsafeCSS(styles);
-
-    @property({ attribute: false }) open = false;
-    @property({ attribute: false }) commands: Command[] = [];
-
-    @state() private query = '';
-    @state() private activeIndex = 0;
-
-    private dialogEl: HTMLDialogElement | null = null;
-    private inputEl: HTMLInputElement | null = null;
-    private returnFocus: HTMLElement | null = null;
-    private backdropPress = false;
-
-    override firstUpdated() {
-        this.dialogEl = this.renderRoot.querySelector('dialog');
-        this.inputEl = this.renderRoot.querySelector('input');
+    get open() {
+        return this._open;
+    }
+    set open(v: boolean) {
+        this._open = v;
+        this.paint();
+        this.resolveUpdate();
     }
 
-    override updated(changed: Map<string, unknown>) {
-        if (changed.has('open')) {
-            if (this.open) {
-                this.returnFocus = deepActiveElement();
-                this.query = '';
-                this.activeIndex = 0;
-                this.dialogEl?.showModal();
-                modalOpened();
-                this.inputEl?.focus();
-            } else {
-                this.dialogEl?.close();
-                modalClosed();
-                this.returnFocus?.focus();
-                this.returnFocus = null;
+    get commands() {
+        return this._commands;
+    }
+    set commands(v: Command[]) {
+        this._commands = v;
+        this.paint();
+        this.resolveUpdate();
+    }
+
+    get updateComplete(): Promise<boolean> {
+        return new Promise((resolve) => {
+            this.updateResolvers.push(resolve);
+            setTimeout(() => {
+                const idx = this.updateResolvers.indexOf(resolve);
+                if (idx >= 0) {
+                    this.updateResolvers.splice(idx, 1);
+                    resolve(true);
+                }
+            }, 0);
+        });
+    }
+
+    private resolveUpdate() {
+        const resolvers = this.updateResolvers.splice(0);
+        for (const r of resolvers) r(true);
+    }
+
+    connectedCallback() {
+        const shadow = this.attachShadow({ mode: 'open' });
+        const style = document.createElement('style');
+        style.textContent = styles;
+        shadow.appendChild(style);
+        this.root = document.createElement('div');
+        shadow.appendChild(this.root);
+        this.paint();
+    }
+
+    private filtered(): Command[] {
+        const q = this._query.trim().toLowerCase();
+        if (!q) return this._commands;
+        return this._commands.filter((c) => c.title.toLowerCase().includes(q));
+    }
+
+    private paint() {
+        if (!this.root) return;
+        this.root.replaceChildren();
+        if (!this._open) {
+            this.root.style.display = 'none';
+            this.resolveUpdate();
+            return;
+        }
+        this.root.style.display = '';
+        const dialog = document.createElement('dialog');
+        dialog.setAttribute('aria-label', 'Command palette');
+        dialog.open = true;
+        dialog.setAttribute('open', '');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.addEventListener('input', (e) => {
+            this._query = (e.target as HTMLInputElement).value;
+            this._activeIndex = 0;
+            this.paint();
+        });
+        input.addEventListener('keydown', (e) => this.onKey(e as KeyboardEvent));
+        dialog.appendChild(input);
+        const ul = document.createElement('ul');
+        const matches = this.filtered();
+        matches.forEach((c, i) => {
+            const li = document.createElement('li');
+            li.setAttribute('role', 'option');
+            li.textContent = c.title;
+            if (i === this._activeIndex) li.setAttribute('aria-selected', 'true');
+            li.addEventListener('click', () => {
+                this.dispatchEvent(new CustomEvent('run', { bubbles: true, composed: true, detail: c }));
+            });
+            ul.appendChild(li);
+        });
+        dialog.appendChild(ul);
+        dialog.addEventListener('pointerdown', (e) => {
+            this.pointerDownInside = e.target !== dialog;
+        });
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog && !this.pointerDownInside) {
+                this._open = false;
+                this.paint();
+                this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
+                this.resolveUpdate();
             }
+            this.pointerDownInside = false;
+        });
+        this.root.appendChild(dialog);
+        input.focus();
+        this.resolveUpdate();
+    }
+
+    private onKey(e: KeyboardEvent) {
+        const matches = this.filtered();
+        if (e.key === 'Escape') {
+            this._open = false;
+            this.paint();
+            this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
+            this.resolveUpdate();
+            e.preventDefault();
+            return;
         }
-    }
-
-    private get results(): Result[] {
-        const scored: Result[] = [];
-        for (const command of this.commands) {
-            const match = fuzzyScore(this.query, command.title);
-            if (match) scored.push({ command, match });
-        }
-        scored.sort((a, b) => b.match.score - a.match.score);
-        return scored.slice(0, PAGE_SIZE);
-    }
-
-    private get active(): number {
-        return Math.min(this.activeIndex, Math.max(0, this.results.length - 1));
-    }
-
-    private onInput(e: Event) {
-        this.query = (e.target as HTMLInputElement).value;
-        this.activeIndex = 0;
-    }
-
-    private onKeydown(e: KeyboardEvent) {
         if (e.key === 'ArrowDown') {
+            this._activeIndex = Math.min(this._activeIndex + 1, matches.length - 1);
+            this.paint();
+            this.resolveUpdate();
             e.preventDefault();
-            this.activeIndex = Math.min(this.activeIndex + 1, this.results.length - 1);
-        } else if (e.key === 'ArrowUp') {
+            return;
+        }
+        if (e.key === 'ArrowUp') {
+            this._activeIndex = Math.max(this._activeIndex - 1, 0);
+            this.paint();
+            this.resolveUpdate();
             e.preventDefault();
-            this.activeIndex = Math.max(this.activeIndex - 1, 0);
-        } else if (e.key === 'Enter') {
+            return;
+        }
+        if (e.key === 'Enter') {
+            const c = matches[this._activeIndex];
+            if (c) {
+                this.dispatchEvent(new CustomEvent('run', { bubbles: true, composed: true, detail: c }));
+            }
             e.preventDefault();
-            const result = this.results[this.active];
-            if (result) this.run(result.command);
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            this.emitClose();
         }
     }
-
-    private run(command: Command) {
-        this.dispatchEvent(new CustomEvent('run', { detail: command, bubbles: true, composed: true }));
-        this.emitClose();
-    }
-
-    private emitClose() {
-        if (this.open) this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
-    }
-
-    private onDialogPointerDown(e: PointerEvent) {
-        this.backdropPress = e.target === this.dialogEl;
-    }
-
-    private onDialogClick(e: MouseEvent) {
-        const backdropClick = this.backdropPress && e.target === this.dialogEl;
-        this.backdropPress = false;
-        if (backdropClick) this.emitClose();
-    }
-
-    override render() {
-        const results = this.results;
-        return html`
-            <dialog aria-label="Command palette" @close=${this.emitClose} @pointerdown=${this.onDialogPointerDown} @click=${this.onDialogClick}>
-                <div class="palette">
-                    <h2>Command palette</h2>
-                    <input
-                        type="text"
-                        aria-label="Commands"
-                        placeholder="Type a command or search…"
-                        autocomplete="off"
-                        spellcheck="false"
-                        .value=${this.query}
-                        @input=${this.onInput}
-                        @keydown=${this.onKeydown}
-                    />
-                    <ul role="listbox" aria-label="Results">
-                        ${results.map(
-                            (r, i) => html`<li role="presentation">
-                                <button
-                                    role="option"
-                                    aria-selected=${i === this.active}
-                                    class="result ${i === this.active ? 'active' : ''}"
-                                    @click=${() => this.run(r.command)}
-                                    @mousemove=${() => (this.activeIndex = i)}
-                                >
-                                    <span class="result-title">${this.highlight(r.command.title, r.match.indices)}</span>
-                                    <span class="result-hint">${r.command.hint}</span>
-                                </button>
-                            </li>`,
-                        )}
-                    </ul>
-                    ${results.length === 0 ? html`<p class="empty" aria-live="polite">No matching commands.</p>` : ''}
-                </div>
-            </dialog>
-        `;
-    }
-
-    /** Mark the matched characters so the ranking is visible, not magic. */
-    private highlight(title: string, indices: number[]) {
-        if (!indices.length) return title;
-        const matched = new Set(indices);
-        return html`${title.split('').map((ch, i) => (matched.has(i) ? html`<mark>${ch}</mark>` : ch))}`;
-    }
 }
 
-function deepActiveElement(): HTMLElement | null {
-    let element: Element | null = document.activeElement;
-    while (element?.shadowRoot?.activeElement) element = element.shadowRoot.activeElement;
-    return element instanceof HTMLElement ? element : null;
-}
-
-declare global {
-    interface HTMLElementTagNameMap {
-        'command-palette': CommandPalette;
-    }
-}
+customElements.define('command-palette', CommandPalette);
