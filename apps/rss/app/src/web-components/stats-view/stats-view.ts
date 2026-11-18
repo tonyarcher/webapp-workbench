@@ -1,32 +1,30 @@
-import { LitElement, unsafeCSS } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
 import { getAllArticles } from '../../db/db-query';
 import { loadFocusStreak } from '../../services/focus-session';
 import { readMinutes } from '../../util';
 import type { Article } from '../../types';
-import { renderStatsView } from './stats-view-render';
-import styles from './stats-view.css?inline';
 
-@customElement('stats-view')
-export class StatsView extends LitElement {
-    static override styles = unsafeCSS(styles);
+export class StatsView extends HTMLElement {
+    private articles: Article[] = [];
+    private loading = true;
+    private root: HTMLDivElement | null = null;
 
-    @state() private articles: Article[] = [];
-    @state() private loading = true;
-
-    override connectedCallback() {
-        super.connectedCallback();
+    connectedCallback() {
+        this.root = document.createElement('div');
+        this.root.className = 'view';
+        this.appendChild(this.root);
         void this.load();
     }
 
     private async load() {
         this.loading = true;
+        this.paint();
         try {
             this.articles = await getAllArticles();
         } catch {
             this.articles = [];
         }
         this.loading = false;
+        this.paint();
     }
 
     private get readArticles() {
@@ -47,21 +45,75 @@ export class StatsView extends LitElement {
         return [...map.entries()].map(([topic, count]) => ({ topic, count })).sort((a, b) => b.count - a.count);
     }
 
-    override render() {
-        return renderStatsView({
-            loading: this.loading,
-            totalMinutes: this.totalMinutes,
-            finishRate: this.finishRate,
-            readCount: this.readArticles.length,
-            totalCount: this.articles.length,
-            streak: loadFocusStreak().kept,
-            topics: this.topicMix,
-        });
+    private paint() {
+        if (!this.root) return;
+        this.root.replaceChildren();
+        const toolbar = document.createElement('div');
+        toolbar.className = 'toolbar';
+        const h = document.createElement('h2');
+        h.textContent = 'Mastery stats';
+        toolbar.appendChild(h);
+        this.root.appendChild(toolbar);
+        const body = document.createElement('div');
+        body.className = 'body';
+        body.tabIndex = 0;
+        if (this.loading) {
+            const empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = 'Loading…';
+            body.appendChild(empty);
+        } else {
+            const grid = document.createElement('div');
+            grid.className = 'grid';
+            const streak = loadFocusStreak();
+            const cards = [
+                { label: 'Minutes read', value: String(this.totalMinutes) },
+                { label: 'Finish rate', value: `${Math.round(this.finishRate * 100)}%` },
+                { label: 'Articles read', value: `${this.readArticles.length} / ${this.articles.length}` },
+                { label: 'Focus streak', value: String(streak.kept) },
+            ];
+            for (const c of cards) {
+                const card = document.createElement('div');
+                card.className = 'card';
+                const label = document.createElement('span');
+                label.className = 'label';
+                label.textContent = c.label;
+                const value = document.createElement('span');
+                value.className = 'value';
+                value.textContent = c.value;
+                card.appendChild(label);
+                card.appendChild(value);
+                grid.appendChild(card);
+            }
+            body.appendChild(grid);
+            const h3 = document.createElement('h3');
+            h3.textContent = 'Topic mix';
+            body.appendChild(h3);
+            if (!this.topicMix.length) {
+                const empty = document.createElement('div');
+                empty.className = 'empty';
+                empty.textContent = 'No read articles yet.';
+                body.appendChild(empty);
+            } else {
+                const ul = document.createElement('ul');
+                ul.className = 'topics';
+                for (const t of this.topicMix) {
+                    const li = document.createElement('li');
+                    const topic = document.createElement('span');
+                    topic.className = 'topic';
+                    topic.textContent = t.topic;
+                    const count = document.createElement('span');
+                    count.className = 'count';
+                    count.textContent = String(t.count);
+                    li.appendChild(topic);
+                    li.appendChild(count);
+                    ul.appendChild(li);
+                }
+                body.appendChild(ul);
+            }
+        }
+        this.root.appendChild(body);
     }
 }
 
-declare global {
-    interface HTMLElementTagNameMap {
-        'stats-view': StatsView;
-    }
-}
+customElements.define('stats-view', StatsView);
