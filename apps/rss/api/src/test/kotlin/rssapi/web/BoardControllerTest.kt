@@ -83,7 +83,7 @@ class BoardControllerTest {
         order: Int = 0,
         author: String? = null,
         summary: String? = null,
-        note: String? = null,
+        note: String = "",
         fid: UUID? = null,
     ) = BoardEntryEntity(
         id = UUID.randomUUID(), boardId = boardId, articleId = aid, feedId = fid,
