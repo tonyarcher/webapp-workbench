@@ -35,9 +35,14 @@ jobs:
                   cache: npm
             - run: npm ci
             # npm ci installs the Playwright package but not its browser binaries, and
-            # @web/test-runner launches real Chromium. Without this the web job failed
-            # with "Executable doesn't exist at .../chrome-headless-shell". --with-deps
-            # also installs the shared libraries the binary needs on a bare runner.
+            # @web/test-runner launches real Chromium. Cache the downloaded browsers to
+            # avoid re-fetching them on every run; --with-deps still ensures the
+            # required system libraries are present.
+            - name: Cache Playwright browsers
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
             - name: Install Playwright Chromium
               run: npx playwright install --with-deps chromium
             # npm test runs the workspace suites and then test:scripts, which is the
@@ -48,29 +53,23 @@ jobs:
             - run: npm run build
 
     a11y:
-        name: A11y (axe audits per app)
+        name: A11y (${{ matrix.name }})
         runs-on: ubuntu-24.04
         strategy:
-            # One runner per app: each audit boots its own dev server on its
-            # own port, so legs never collide, and a red app reports without
-            # cancelling the rest before they finish.
+            # Audits are grouped to avoid repeating npm ci and Playwright setup for
+            # every app. Each app still boots its own dev server on its own port,
+            # and all apps in a group run even if one fails. Groups run in parallel.
             fail-fast: false
             matrix:
-                # Every directory holding a playwright.config.ts. A new audited
-                # app needs its entry here before CI covers it.
-                dir:
-                    - apps/baseball
-                    - apps/basketball
-                    - apps/football
-                    - apps/calendar-sync
-                    - apps/clipstack
-                    - apps/lemmy-vertical-scroll
-                    - apps/radio-station
-                    - apps/coldwater
-                    - apps/rss/app
-                    - apps/stock-game/app
-                    - apps/fitness/app
-                    - apps/user/app
+                include:
+                    - name: baseball-basketball-football
+                      dirs: apps/baseball apps/basketball apps/football
+                    - name: calendar-clipstack-lemmy
+                      dirs: apps/calendar-sync apps/clipstack apps/lemmy-vertical-scroll
+                    - name: radio-coldwater-rss
+                      dirs: apps/radio-station apps/coldwater apps/rss/app
+                    - name: stock-fitness-user
+                      dirs: apps/stock-game/app apps/fitness/app apps/user/app
         steps:
             - uses: actions/checkout@v7
             - uses: actions/setup-node@v7
@@ -78,15 +77,31 @@ jobs:
                   node-version: 22
                   cache: npm
             - run: npm ci
-            # Same install as the web job: npm ci fetches the Playwright
-            # package but not its browser binaries.
+            # Cache the downloaded browser binaries to avoid re-fetching them on every
+            # run; --with-deps still ensures the required system libraries are present.
+            - name: Cache Playwright browsers
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
             - name: Install Playwright Chromium
               run: npx playwright install --with-deps chromium
-            # Run from the app's own directory, where `playwright test` finds
-            # its config and `npm run dev` serves that app.
-            - name: Run axe audit
-              working-directory: ${{ matrix.dir }}
-              run: npm run test:e2e
+            # Run from each app's own directory, where `playwright test` finds its
+            # config and `npm run dev` serves that app. Run every app in the group
+            # so one failure does not hide others.
+            - name: Run axe audits
+              shell: bash
+              run: |
+                  failed=0
+                  for dir in ${{ matrix.dirs }}; do
+                      echo "::group::axe audit $dir"
+                      if ! (cd "$dir" && npm run test:e2e); then
+                          echo "::error::axe audit failed: $dir"
+                          failed=1
+                      fi
+                      echo "::endgroup::"
+                  done
+                  exit $failed
 
     jvm:
         name: JVM (tests, detekt, coverage)
@@ -147,6 +162,8 @@ jobs:
             - uses: actions/setup-python@v7
               with:
                   python-version: '3.12'
+                  cache: pip
+                  cache-dependency-path: .github/workflows/ci.yml
             - uses: actions/setup-java@v6
               with:
                   distribution: temurin
@@ -171,18 +188,23 @@ jobs:
 
             - name: Install shellcheck
               run: |
-                  sudo apt-get update
-                  sudo apt-get install -y shellcheck
+                  if ! command -v shellcheck >/dev/null 2>&1; then
+                      sudo apt-get update
+                      sudo apt-get install -y shellcheck
+                  fi
 
-            # Each binary linter is fetched at whatever its newest published release
-            # is, rather than at a version pinned here. A pin that no one ever
-            # executes is the one failure this workflow could not report honestly: a
-            # stale or wrong version 404s, and --strict would then blame the linter
-            # for a missing binary instead of blaming the install. Resolving the tag
-            # from the releases API cannot drift out of date. The trade is that an
-            # upstream release can turn a green push red, which is visible and
-            # reviewable, where a stale pin is not.
+            # Downloaded on cache miss and cached; bump the cache key to refresh the
+            # resolved tool versions. The downloader still resolves the latest release
+            # on a miss (asset-name globs handle upstream renames) so a refresh picks
+            # up current binaries without hardcoding asset filenames.
+            - name: Cache binary linters
+              uses: actions/cache@v4
+              id: cache-linters
+              with:
+                  path: ${{ runner.temp }}/ci-tools
+                  key: binary-linters-${{ runner.os }}-v1
             - name: Install binary linters
+              if: steps.cache-linters.outputs.cache-hit != 'true'
               env:
                   GITHUB_TOKEN: ${{ github.token }}
                   TOOL_DIR: ${{ runner.temp }}/ci-tools
@@ -282,11 +304,21 @@ jobs:
                       destination.chmod(0o755)
                       print(f"{repo} {release['tag_name']} -> {destination}")
                   PY
-                  echo "$TOOL_DIR" >> "$GITHUB_PATH"
+            - name: Add binary linters to PATH
+              env:
+                  TOOL_DIR: ${{ runner.temp }}/ci-tools
+              run: echo "$TOOL_DIR" >> "$GITHUB_PATH"
 
             # The two .ps1 files under apps/rss/app/scripts make verify.py generate this
             # check, so the module has to be present or --strict turns into a failure.
+            - name: Cache PSScriptAnalyzer
+              uses: actions/cache@v4
+              id: cache-pssa
+              with:
+                  path: ~/.local/share/powershell/Modules
+                  key: pssa-${{ runner.os }}-v1
             - name: Install PSScriptAnalyzer
+              if: steps.cache-pssa.outputs.cache-hit != 'true'
               shell: pwsh
               run: |
                   Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
