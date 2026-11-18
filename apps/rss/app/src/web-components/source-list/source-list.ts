@@ -56,7 +56,14 @@ function menuNodes(menus: SourceListMenus): HTMLElement[] {
 export class SourceList extends HTMLElement implements ReactiveControllerHost {
     static styles = { cssText: styles };
 
-    declare view: View;
+    private _view: View = { kind: 'all' };
+    get view(): View {
+        return this._view;
+    }
+    set view(v: View) {
+        this._view = v;
+        this.paint();
+    }
     declare autoHide: boolean;
     declare hover: boolean;
     declare collapsed: Record<string, boolean>;
