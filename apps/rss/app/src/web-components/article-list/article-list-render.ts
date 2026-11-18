@@ -584,7 +584,7 @@ export function renderScroll(
     const viewport = el('div', 'viewport');
     viewport.style.height = `${host.virtualizer?.getTotalSize() ?? 0}px`;
     append(viewport, ...renderVirtualRows(host, virtualItems, showFeed));
-    append(scrollEl, viewport, ...renderScrollFooter(host));
+    scrollEl.replaceChildren(viewport, ...renderScrollFooter(host).filter((n): n is Node => n !== null));
 }
 
 function renderVirtualRows(
