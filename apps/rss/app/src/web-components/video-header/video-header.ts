@@ -1,93 +1,121 @@
-import { html, LitElement, unsafeCSS } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { resolveEmbedUrl, type ArticleVideo } from '../../services/video';
+import type { ArticleVideo } from '../../services/video';
 import styles from './video-header.css?inline';
 
-/**
- * Video header in two modes.
- *
- * Cards show the preview: cover art only, wrapped in a link to the watch
- * page (the YouTube page for YouTube articles, else the article link). No
- * inline player lives in the list. The expanded article shows the embed:
- * the iframe/<video> player directly, with no click-to-play step in between.
- *
- * Posters fall back maxres -> sd -> hq -> mq because YouTube only ships
- * maxres for higher-resolution uploads; a missing maxres answers 404 *or* a
- * 120x90 placeholder with a 200, so the load handler rejects tiny images by
- * their natural size and the chain steps down.
- */
 export type VideoHeaderMode = 'preview' | 'embed';
 
-@customElement('video-header')
-export class VideoHeader extends LitElement {
-    static override styles = unsafeCSS(styles);
+export class VideoHeader extends HTMLElement {
+    private _video: ArticleVideo | null = null;
+    private _videoTitle = '';
+    private _videoLink: string | undefined = undefined;
+    private _mode: VideoHeaderMode = 'preview';
 
-    @property({ attribute: false }) video!: ArticleVideo;
-    @property({ attribute: false }) videoTitle = '';
-    /** Where the preview cover links. Embed mode ignores it. */
-    @property({ attribute: false }) videoLink: string | undefined = undefined;
-    @property({ attribute: false }) mode: VideoHeaderMode = 'preview';
+    get video() {
+        return this._video as ArticleVideo;
+    }
+    set video(v: ArticleVideo) {
+        this._video = v;
+        this.paint();
+    }
+    get videoTitle() {
+        return this._videoTitle;
+    }
+    set videoTitle(v: string) {
+        this._videoTitle = v;
+        this.paint();
+    }
+    get videoLink() {
+        return this._videoLink;
+    }
+    set videoLink(v: string | undefined) {
+        this._videoLink = v;
+        this.paint();
+    }
+    get mode() {
+        return this._mode;
+    }
+    set mode(v: VideoHeaderMode) {
+        this._mode = v;
+        this.paint();
+    }
+    private posterIndex = 0;
+    private root: HTMLDivElement | null = null;
 
-    @state() private posterIndex = 0;
-    @state() private posterFailed = false;
+    static get observedAttributes() {
+        return ['mode', 'video-title', 'video-link'];
+    }
 
+    connectedCallback() {
+        const shadow = this.attachShadow({ mode: 'open' });
+        const style = document.createElement('style');
+        style.textContent = styles;
+        shadow.appendChild(style);
+        this.root = document.createElement('div');
+        this.root.className = 'video-header';
+        shadow.appendChild(this.root);
+        this.paint();
+    }
+
+    attributeChangedCallback(name: string, _old: string | null, value: string | null) {
+        if (name === 'mode') this.mode = (value as VideoHeaderMode) ?? 'preview';
+        if (name === 'video-title') this.videoTitle = value ?? '';
+        if (name === 'video-link') this.videoLink = value ?? undefined;
+        this.paint();
+    }
+
+    // property setters for .video, .videoTitle, .videoLink, .mode
     private stepPoster() {
+        if (!this.video) return;
         if (this.posterIndex < this.video.posters.length - 1) {
             this.posterIndex += 1;
-        } else {
-            this.posterFailed = true;
         }
+        this.paint();
     }
 
     private onPosterError() {
         this.stepPoster();
     }
 
-    /**
-     * YouTube answers a missing maxres with a 120x90 placeholder and a 200,
-     * so no error fires. Every real thumbnail is at least 320px wide, so a
-     * tiny natural size means "no such poster" and the chain steps down.
-     */
-    private onPosterLoad(e: Event) {
-        const img = e.target as HTMLImageElement | null;
+    private onPosterLoad(img: HTMLImageElement) {
         if (img && img.naturalWidth > 0 && img.naturalWidth < 200) this.stepPoster();
     }
 
-    override render() {
-        if (this.mode === 'embed') return this.renderPlayer();
-        return this.renderPreview();
+    private paint() {
+        if (!this.root || !this.video) return;
+        this.root.replaceChildren();
+        if (this.mode === 'embed') {
+            this.renderPlayer();
+        } else {
+            this.renderPreview();
+        }
     }
 
-    /**
-     * Cover art only. In article lists the click bubbles to the card so the
-     * picture opens the article view like any other cover.
-     */
     private renderPreview() {
-        const poster = this.video.posters[this.posterIndex];
-        const visual =
-            poster && !this.posterFailed
-                ? html`<img class="poster" src=${poster} alt="" loading="lazy" decoding="async" @error=${() => this.onPosterError()} @load=${(e: Event) => this.onPosterLoad(e)} />`
-                : html`<div class="poster poster-empty" aria-hidden="true"></div>`;
-        return html`<div class="poster-wrap">${visual}</div>`;
+        if (!this.root || !this.video) return;
+        const link = this.videoLink ?? '#';
+        const a = document.createElement('a');
+        a.href = link;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        const img = document.createElement('img');
+        img.className = 'poster';
+        const posterUrl = this.video.posters[this.posterIndex];
+        if (posterUrl) img.src = posterUrl;
+        img.alt = this.videoTitle;
+        img.addEventListener('load', (e) => this.onPosterLoad(e.target as HTMLImageElement));
+        img.addEventListener('error', () => this.onPosterError());
+        a.appendChild(img);
+        this.root.appendChild(a);
     }
 
     private renderPlayer() {
-        if (this.video.provider === 'direct') {
-            return html`<video class="player" src=${this.video.embedUrl} controls playsinline></video>`;
-        }
-        const src = resolveEmbedUrl(this.video, globalThis.location?.hostname ?? '');
-        return html`<iframe
-        class="player"
-        src=${src}
-        title=${this.videoTitle || this.video.label}
-        allow="accelerometer; encrypted-media; picture-in-picture"
-        allowfullscreen
-      ></iframe>`;
+        if (!this.root || !this.video) return;
+        const iframe = document.createElement('iframe');
+        iframe.src = this.video.embedUrl;
+        iframe.title = this.videoTitle;
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        iframe.allowFullscreen = true;
+        this.root.appendChild(iframe);
     }
 }
 
-declare global {
-    interface HTMLElementTagNameMap {
-        'video-header': VideoHeader;
-    }
-}
+customElements.define('video-header', VideoHeader);

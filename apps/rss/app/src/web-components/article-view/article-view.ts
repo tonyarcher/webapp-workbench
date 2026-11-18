@@ -46,7 +46,7 @@ import {
     whyLineFor,
     worthMinutesVerdict,
 } from './article-view-helpers';
-import '../video-header/video-header';
+import { VideoHeader } from '../video-header/video-header';
 import { renderBoardPicker, renderSpeedReadOverlay } from './article-view-overlays';
 import '../speed-read-view/speed-read-view';
 import styles from './article-view.css?inline';
@@ -257,7 +257,7 @@ export class ArticleView extends HTMLElement {
         appendAll(bodyDiv, this.buildMeta(a));
         appendAll(bodyDiv, this.buildKeyLines());
         if (video) {
-            const header = document.createElement('video-header');
+            const header = document.createElement('video-header') as VideoHeader;
             header.className = 'expanded-video';
             header.mode = 'embed';
             header.video = video;
