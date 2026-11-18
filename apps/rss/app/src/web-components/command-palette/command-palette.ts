@@ -84,6 +84,8 @@ export class CommandPalette extends HTMLElement {
         dialog.setAttribute('open', '');
         const input = document.createElement('input');
         input.type = 'text';
+        input.placeholder = 'Search commands';
+        input.setAttribute('aria-label', 'Search command query');
         input.addEventListener('input', (e) => {
             this._query = (e.target as HTMLInputElement).value;
             this._activeIndex = 0;
@@ -94,6 +96,7 @@ export class CommandPalette extends HTMLElement {
         const ul = document.createElement('ul');
         ul.setAttribute('role', 'listbox');
         ul.setAttribute('aria-label', 'Commands');
+        ul.tabIndex = 0;
         const matches = this.filtered();
         matches.forEach((c, i) => {
             const li = document.createElement('li');

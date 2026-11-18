@@ -224,12 +224,10 @@ function buildHelpButton(host: AppShellRenderHost): HTMLButtonElement {
 function buildPaletteTrigger(host: AppShellRenderHost): HTMLButtonElement {
     const trigger = el('button', 'palette-search-trigger');
     trigger.type = 'button';
-    trigger.setAttribute('aria-label', 'Search commands Ctrl+K');
     trigger.title = 'Command palette (Ctrl+K)';
     const text = el('span', 'palette-search-text');
     text.textContent = 'Search commands';
     const hint = el('kbd', 'palette-search-hint');
-    hint.setAttribute('aria-hidden', 'true');
     hint.textContent = 'Ctrl+K';
     trigger.append(text, hint);
     trigger.addEventListener('click', () => host.openPalette());
