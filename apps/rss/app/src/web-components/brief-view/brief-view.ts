@@ -25,7 +25,8 @@ export class BriefView extends HTMLElement {
         try {
             this.editions = await fetchEditions(10);
             if (this.editions.length) {
-                const first = this.editions[0]; if (first) this.current = await fetchEdition(first.id);
+                const first = this.editions[0];
+                if (first) this.current = await fetchEdition(first.id);
             }
         } catch {
             this.editions = [];
