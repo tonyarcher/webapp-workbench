@@ -41,15 +41,7 @@ import {
     viewTitleOf,
     virtualizerOptionsFor,
 } from './article-list-helpers';
-import {
-    renderAdvancedMenu,
-    renderInterestingHint,
-    renderLoadError,
-    renderScroll,
-    renderSelectionBar,
-    renderToolbar,
-} from './article-list-render';
-import { renderSlideshowSection } from './article-list-slideshow-render';
+import { anchor, paint as paintRegions, type Regions } from './article-list-paint';
 import { handleSlideshowUpdated, handleSlideshowWillUpdate } from './article-list-slideshow';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 import { areHighlightsEnabled } from '../../services/highlights';
@@ -89,21 +81,6 @@ interface Library {
 }
 
 export { INTERESTING_BATCH } from './article-list-interesting';
-
-interface Regions {
-    toolbar: Comment;
-    selection: Comment;
-    hint: Comment;
-    advanced: Comment;
-    slideshow: Comment;
-    loadError: Comment;
-}
-
-function anchor(root: ShadowRoot): Comment {
-    const node = document.createComment('');
-    root.appendChild(node);
-    return node;
-}
 
 /** Install a reactive accessor. Assignments request the same batched paint Lit used to. */
 function defineReactive<T>(host: ArticleList, name: string, initial: T): void {
@@ -202,8 +179,8 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     private updatePromise: Promise<boolean> = Promise.resolve(true);
     private resolveUpdate: ((value: boolean) => void) | null = null;
     private firstPaintDone = false;
-    private readonly regionNodes = new Map<Comment, Node>();
-    private readonly anchors: Regions;
+    readonly regionNodes = new Map<Comment, Node>();
+    readonly anchors: Regions;
     private readonly scrollEl: HTMLDivElement;
     readonly renderRoot: ShadowRoot;
 
@@ -316,41 +293,8 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         teardownHost(this as never);
     }
 
-    private mountRegion(anchor: Comment, node: Node | null): void {
-        const previous = this.regionNodes.get(anchor);
-        if (previous?.parentNode) previous.parentNode.removeChild(previous);
-        if (node) {
-            this.regionNodes.set(anchor, node);
-            anchor.parentNode?.insertBefore(node, anchor.nextSibling);
-        } else {
-            this.regionNodes.delete(anchor);
-        }
-    }
-
     private paint(): void {
-        const host = this as never;
-        const { toolbar, selection, hint, advanced, slideshow, loadError } = this.anchors;
-        this.mountRegion(toolbar, renderToolbar(host));
-        this.mountRegion(hint, renderInterestingHint(host));
-        this.mountRegion(advanced, renderAdvancedMenu(host));
-        if (this.listView === 'slideshow') {
-            this.mountRegion(selection, null);
-            this.mountRegion(slideshow, renderSlideshowSection(host));
-            this.mountRegion(loadError, null);
-            this.scrollEl.style.display = 'none';
-            return;
-        }
-        this.mountRegion(selection, renderSelectionBar(host));
-        this.mountRegion(slideshow, null);
-        this.mountRegion(loadError, renderLoadError(host));
-        this.scrollEl.style.display = '';
-        const virtualItems = this.virtualizer?.getVirtualItems() ?? [];
-        renderScroll(host, virtualItems, this.view.kind !== 'feed', this.scrollEl);
-        // Virtual rows are freshly built each paint. Re-measure them once they
-        // are in the scroll container, as the old ref directive did.
-        for (const row of this.scrollEl.querySelectorAll<HTMLElement>('.viewport .row')) {
-            this.virtualizer?.measureElement(row as HTMLDivElement);
-        }
+        paintRegions(this as never);
     }
 
     /** True while this view's own refresh job runs. Other folders track their own keys. */
