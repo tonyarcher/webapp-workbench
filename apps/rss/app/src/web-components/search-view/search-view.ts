@@ -55,6 +55,7 @@ export class SearchView extends HTMLElement {
         input.type = 'search';
         input.className = 'search';
         input.placeholder = 'Search articles';
+        input.setAttribute('aria-label', 'Search articles');
         input.value = this.query;
         input.addEventListener('input', (e) => {
             this.query = (e.target as HTMLInputElement).value;

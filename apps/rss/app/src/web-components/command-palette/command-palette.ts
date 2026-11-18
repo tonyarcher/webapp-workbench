@@ -92,6 +92,8 @@ export class CommandPalette extends HTMLElement {
         input.addEventListener('keydown', (e) => this.onKey(e as KeyboardEvent));
         dialog.appendChild(input);
         const ul = document.createElement('ul');
+        ul.setAttribute('role', 'listbox');
+        ul.setAttribute('aria-label', 'Commands');
         const matches = this.filtered();
         matches.forEach((c, i) => {
             const li = document.createElement('li');

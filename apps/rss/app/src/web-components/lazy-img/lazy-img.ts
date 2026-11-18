@@ -1,5 +1,5 @@
 export class LazyImg extends HTMLElement {
-    private src = '';
+    private _src = '';
     private observer: IntersectionObserver | null = null;
     private root: HTMLDivElement | null = null;
 
@@ -7,26 +7,39 @@ export class LazyImg extends HTMLElement {
         return ['src'];
     }
 
+    get src(): string {
+        return this._src;
+    }
+
+    set src(value: string) {
+        const next = value ?? '';
+        if (this._src === next) return;
+        this._src = next;
+        if (this.isConnected) this.load();
+    }
+
     connectedCallback() {
-        this.src = this.getAttribute('src') ?? '';
-        this.root = document.createElement('div');
-        this.root.className = 'lazy-img';
-        this.appendChild(this.root);
+        if (!this.root) {
+            this.root = document.createElement('div');
+            this.root.className = 'lazy-img';
+            this.appendChild(this.root);
+        }
+        const attr = this.getAttribute('src');
+        if (attr != null && !this._src) this._src = attr;
         this.observe();
     }
 
     disconnectedCallback() {
         this.observer?.disconnect();
+        this.observer = null;
     }
 
     attributeChangedCallback(name: string, _old: string | null, value: string | null) {
-        if (name === 'src') {
-            this.src = value ?? '';
-            this.load();
-        }
+        if (name === 'src') this.src = value ?? '';
     }
 
     private observe() {
+        if (this.observer) return;
         if (!('IntersectionObserver' in window)) {
             this.load();
             return;
@@ -37,6 +50,7 @@ export class LazyImg extends HTMLElement {
                     if (e.isIntersecting) {
                         this.load();
                         this.observer?.disconnect();
+                        this.observer = null;
                     }
                 }
             },
@@ -46,11 +60,12 @@ export class LazyImg extends HTMLElement {
     }
 
     private load() {
-        if (!this.root || !this.src) return;
+        if (!this.root || !this._src) return;
         this.root.replaceChildren();
         const img = document.createElement('img');
+        img.alt = this.getAttribute('alt') ?? '';
         img.decoding = 'async';
-        img.src = this.src;
+        img.src = this._src;
         img.addEventListener('load', () => {
             this.root?.classList.add('loaded');
         });

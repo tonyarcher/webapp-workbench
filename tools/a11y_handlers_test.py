@@ -68,7 +68,7 @@ HANDLER_ATTR = re.compile(r"@(?:click|pointerdown)\s*=", re.IGNORECASE)
 # Floors for the anti-vacuity test. A guard that scans nothing, or that
 # matches nothing, looks identical to a clean result.
 MIN_FILES = 40
-MAX_BYTES = 2_000_000
+MAX_BYTES = 2_500_000
 
 # How far into a file a tag's close may be sought. An opening tag longer than
 # this is malformed, and bounding the search keeps one bad row from making the

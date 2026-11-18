@@ -109,7 +109,9 @@ A stale Vite process on 5199 hangs baseball e2e — kill it first.
    create a conventional commit (`feat:`, `fix:`, `chore:`, `test:`, `docs:`,
    `refactor:`). Stage files explicitly. Do not push, deploy, or ship unless the
    user explicitly asks. Keep fixing and re-reviewing until `APPROVE` before
-   committing.
+   committing. If the user explicitly overrides (for example, says to deploy or
+   commit without `APPROVE`), follow the explicit request and state the override
+   in the summary.
 6. `AGENTS.md` files may be
    updated to stay in sync with the code — but never to dodge the work. Do not
    weaken a documented rule or floor instead of meeting it. Change the code

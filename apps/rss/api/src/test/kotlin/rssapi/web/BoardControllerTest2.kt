@@ -199,15 +199,6 @@ class BoardControllerTest2 {
                 addedAt = Instant.ofEpochMilli(1000),
                 sortOrder = 0,
             )
-        val e2 =
-            BoardEntryEntity(
-                id = UUID.randomUUID(),
-                boardId = boardId,
-                articleId = "a2",
-                title = "T2",
-                addedAt = Instant.ofEpochMilli(2000),
-                sortOrder = 1,
-            )
         whenever(entries.findByBoardIdAndArticleIdIn(boardId, listOf("a1"))).thenReturn(listOf(e1))
         whenever(entries.saveAll(any<List<BoardEntryEntity>>())).thenAnswer { it.arguments[0] }
         mvc.post("/boards/$boardId/entries/reorder") {
