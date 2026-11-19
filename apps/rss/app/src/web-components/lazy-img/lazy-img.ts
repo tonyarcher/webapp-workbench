@@ -3,6 +3,8 @@ import styles from './lazy-img.css?inline';
 
 type LoadState = 'waiting' | 'loading' | 'loaded' | 'error';
 
+const loadedSrcs = new Set<string>();
+
 export class LazyImg extends HTMLElement {
     private _src = '';
     private state: LoadState = 'waiting';
@@ -36,6 +38,15 @@ export class LazyImg extends HTMLElement {
     connectedCallback() {
         const attr = this.getAttribute('src');
         if (attr != null && !this._src) this._src = attr;
+        if (this.state === 'loaded' && !this.img && this.resolvedSrc()) {
+            this.restoreLoaded();
+            return;
+        }
+        if (this.state === 'loading') {
+            // A prior load was interrupted by disconnect (virtual scroll); restart.
+            this.state = 'waiting';
+            this.img = null;
+        }
         this.render();
         this.ensureObserved();
     }
@@ -43,10 +54,10 @@ export class LazyImg extends HTMLElement {
     disconnectedCallback() {
         this.observer?.disconnect();
         this.observer = null;
-        if (this.img) {
+        if (this.state !== 'loaded' && this.img) {
             this.img.src = '';
-            this.img = null;
         }
+        this.img = null;
     }
 
     attributeChangedCallback(name: string, _old: string | null, value: string | null) {
@@ -67,6 +78,30 @@ export class LazyImg extends HTMLElement {
         }
     }
 
+    private resolvedSrc(): string | undefined {
+        const raw = this._src.trim();
+        return safeHttpUrl(raw) ?? (raw.startsWith('data:image/') ? raw : undefined);
+    }
+
+    private restoreLoaded() {
+        const src = this.resolvedSrc();
+        if (!src) {
+            this.state = 'error';
+            this.img = null;
+            this.render();
+            return;
+        }
+        const img = document.createElement('img');
+        img.alt = this.getAttribute('alt') ?? '';
+        img.decoding = 'async';
+        img.style.animation = 'none';
+        img.src = src;
+        this.img = img;
+        this.state = 'loaded';
+        loadedSrcs.add(src);
+        this.render();
+    }
+
     private ensureObserved() {
         if (!this.isConnected || this.state !== 'waiting' || !this._src) return;
         // Start loading promptly so above-the-fold media appears quickly, while
@@ -76,21 +111,25 @@ export class LazyImg extends HTMLElement {
 
     private load() {
         if (!this._src || this.state !== 'waiting') return;
-        const raw = this._src.trim();
-        const src = safeHttpUrl(raw) ?? (raw.startsWith('data:image/') ? raw : undefined);
+        const src = this.resolvedSrc();
         if (!src) {
             this.state = 'error';
             this.render();
             return;
         }
-        this.state = 'loading';
-        this.render();
+
+        if (loadedSrcs.has(src)) {
+            this.restoreLoaded();
+            return;
+        }
+
         const img = document.createElement('img');
         img.alt = this.getAttribute('alt') ?? '';
         img.decoding = 'async';
         img.addEventListener(
             'load',
             () => {
+                loadedSrcs.add(src);
                 this.state = 'loaded';
                 this.render();
             },
@@ -107,6 +146,16 @@ export class LazyImg extends HTMLElement {
         );
         img.src = src;
         this.img = img;
+
+        if (img.complete) {
+            loadedSrcs.add(src);
+            this.state = 'loaded';
+            this.render();
+            return;
+        }
+
+        this.state = 'loading';
+        this.render();
     }
 
     private render() {
