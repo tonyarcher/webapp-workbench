@@ -397,11 +397,13 @@ def audit_dirs(root: Path = ROOT) -> set[str]:
 
 
 def ci_matrix_dirs(text: str, job: str = "a11y") -> set[str]:
-    """Values of the `dir:` matrix list in one workflow job.
+    """Values of the `dir:`/`dirs:` matrix entries in one workflow job.
 
     Read line-wise, like ci_test.py's gradle scan, so the guard needs no YAML
-    parser to notice a missing entry. Only `- apps/...` items under the job's
-    `dir:` key count, so other lists in the file cannot pollute the set.
+    parser to notice a missing entry. Both shapes count: one `dir:` list of
+    `- apps/...` items, and the grouped `include:` form where each entry names
+    its apps on one `dirs: apps/a apps/b` line. Only workspace paths under
+    those keys count, so other lists in the file cannot pollute the set.
     """
     lines = text.splitlines()
     start = next(
@@ -425,7 +427,14 @@ def ci_matrix_dirs(text: str, job: str = "a11y") -> set[str]:
     out: set[str] = set()
     in_list = False
     for line in lines[start:end]:
-        if re.match(r"^\s*dir:\s*$", line):
+        grouped = re.match(r"^\s*dirs:\s+(.+?)\s*$", line)
+        if grouped is not None:
+            for token in grouped.group(1).split():
+                cleaned = token.strip("'\"")
+                if re.fullmatch(r"apps/\S+", cleaned):
+                    out.add(cleaned)
+            in_list = False
+        elif re.match(r"^\s*dir:\s*$", line):
             in_list = True
         elif in_list:
             item = re.match(r"""^\s*-\s+['"]?(apps/\S+?)['"]?\s*$""", line)

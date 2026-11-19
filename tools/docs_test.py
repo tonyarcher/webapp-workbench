@@ -418,6 +418,25 @@ class CiAuditMatrixTest(unittest.TestCase):
 """
         self.assertEqual({"apps/baseball", "apps/rss/app"}, ci_matrix_dirs(synthetic))
         self.assertEqual(set(), ci_matrix_dirs("jobs:\n    web:\n      steps: []\n"))
+        grouped = """jobs:
+    a11y:
+        strategy:
+            matrix:
+                include:
+                    - name: baseball-rss
+                      dirs: apps/baseball apps/rss/app
+                    - name: radio
+                      dirs: "apps/radio-station"
+        steps:
+            - run: npm run test:e2e
+    jvm:
+        steps:
+            - run: ./gradlew checkAll
+"""
+        self.assertEqual(
+            {"apps/baseball", "apps/rss/app", "apps/radio-station"},
+            ci_matrix_dirs(grouped),
+        )
 
 
 if __name__ == "__main__":
