@@ -204,7 +204,9 @@ function applyViewSettings(host: SettingsHost, saved: ViewSettings): void {
     host.sort = settings.sort;
     host.pageSize = settings.pageSize;
     host.maxCardCols = settings.maxCardCols;
-    host.unreadOnly = settings.unreadOnly;
+    // Interesting ranks a bounded recent batch; unreadOnly starves it once
+    // items are read, so never apply it to Interesting views.
+    host.unreadOnly = host.view.kind === 'interesting' ? false : settings.unreadOnly;
     host.markOnScroll = settings.markOnScroll;
     host.updateCols();
 }

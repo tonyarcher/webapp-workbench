@@ -70,11 +70,14 @@ function sortInteresting(items: Article[], sort: ArticleSort): Article[] {
  */
 export async function loadInterestingBatchAction(host: InterestingHost, gen: number): Promise<void> {
     if (host.view.kind !== 'interesting') return;
+    // Interesting ranks recent articles by learned relevance. Server-side
+    // unreadOnly filtering starves the candidate pool once items are read, so
+    // always fetch the full recent batch and apply hide-read client-side.
     const res = await fetchArticlesPage({
         scope: `folder:${host.view.id}`,
         sort: 'newest',
         limit: INTERESTING_BATCH,
-        unreadOnly: host.unreadOnly,
+        unreadOnly: false,
     });
     if (gen !== host.gen) return;
     const visible = host.hideRead ? res.items.filter((a) => a.read === 0) : res.items;

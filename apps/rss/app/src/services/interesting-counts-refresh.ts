@@ -8,7 +8,6 @@ import {
     orderedInterestingFolderIds,
 } from './interesting-settings';
 import { interestingWordMapOf } from '../web-components/article-list/article-list-interesting';
-import { readViewSettingsFor } from '../web-components/article-list/article-list-helpers';
 import { selectInteresting } from './interesting-words';
 import { filterMutedArticles, loadMuteRules, type FeedFolderLookup } from './mute-rules';
 import type { Article, Feed } from '../types';
@@ -67,8 +66,9 @@ function enabledFolderIds(): string[] {
     return out;
 }
 
-function interestingViewSettings(folderId: string): InterestingViewSettings {
-    return { unreadOnly: readViewSettingsFor({ kind: 'interesting', id: folderId }).unreadOnly };
+function interestingViewSettings(): InterestingViewSettings {
+    // Interesting ranks from the full recent batch; unreadOnly would starve it.
+    return { unreadOnly: false };
 }
 
 async function fetchBatch(folderId: string, unreadOnly: boolean): Promise<Article[]> {
@@ -82,7 +82,7 @@ async function fetchBatch(folderId: string, unreadOnly: boolean): Promise<Articl
 }
 
 async function getBatch(folderId: string, refetch: boolean): Promise<Article[]> {
-    const unreadOnly = interestingViewSettings(folderId).unreadOnly;
+    const unreadOnly = interestingViewSettings().unreadOnly;
     // Read-sensitive lenses cannot trust a cached batch: its read flags may
     // predate the write that just changed them.
     const mustRefetch = refetch || unreadOnly || isInterestingHideRead(folderId);

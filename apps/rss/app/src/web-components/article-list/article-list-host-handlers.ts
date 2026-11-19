@@ -104,6 +104,11 @@ export function saveViewSettings(host: any): void {
 
 /** Toolbar and shortcut mutators: each writes its setting, then persists the per-view prefs. */
 export function toggleUnread(host: any): void {
+    if (host.view?.kind === 'interesting') {
+        host.unreadOnly = false;
+        saveViewSettings(host);
+        return;
+    }
     host.unreadOnly = !host.unreadOnly;
     saveViewSettings(host);
 }
