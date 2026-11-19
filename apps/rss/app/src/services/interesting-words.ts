@@ -112,6 +112,32 @@ function addTitles(map: Record<string, number>, articles: Array<{ title: string 
 }
 
 /**
+ * Fold explicit likes into a learned map without letting decay erase them.
+ * A liked title's words are raised to at least the star weight when the word
+ * is absent or has decayed to a smaller positive. A word carrying a negative
+ * weight stays negative: the reader deranked that topic on purpose. Likes are
+ * set, not added, so re-seeding the same batch never inflates the map.
+ */
+export function mergeStarredWordMap(
+    wordMap: Record<string, number>,
+    starred: ReadonlyArray<{ title: string }>,
+): Record<string, number> {
+    const out = { ...wordMap };
+    for (const article of starred) {
+        for (const word of extractWords(article.title)) {
+            const current = out[word];
+            if (current === undefined || (current > 0 && current < STAR_WORD_WEIGHT)) out[word] = STAR_WORD_WEIGHT;
+        }
+    }
+    return out;
+}
+
+/** True when at least one title word still carries learned weight. */
+export function titleHasLearnedWord(title: string, wordMap: Record<string, number>): boolean {
+    return extractWords(title).some((word) => wordMap[word] !== undefined);
+}
+
+/**
  * Average word weight over the title's tokens. Normalized by token count so
  * long titles do not outrank short ones by word volume alone. 0 when the
  * title has no tokens or none of its words are known.

@@ -4,6 +4,7 @@ import { currentUsername, hasSession, logout, startLogin } from '../../services/
 import { clearToasts, type ToastNotice } from '../../services/toast';
 import { startForegroundSync, stopForegroundSync } from '../../services/foreground-sync';
 import { startInterestingCountsRefresh, stopInterestingCountsRefresh } from '../../services/interesting-counts-refresh';
+import { invalidateStarredTitles } from '../../services/interesting-starred';
 
 export interface AppShellAuthHost {
     authed: boolean;
@@ -53,6 +54,9 @@ async function resetAccount(host: AppShellAuthHost): Promise<void> {
     const ended = await logout();
     bustCounts();
     queryClient.clear();
+    // The seeded likes list is in memory, not storage: drop it here or the
+    // next sign-in would rank with the previous account's likes.
+    invalidateStarredTitles();
     try {
         localStorage.removeItem('rss-reader:word-map');
         localStorage.removeItem('rss-reader:word-map-ids');

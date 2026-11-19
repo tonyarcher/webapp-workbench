@@ -118,19 +118,22 @@ export interface ArticlePageParams {
     cursor?: string | undefined;
     limit?: number | undefined;
     since?: number | undefined;
+    /** Search query, e.g. `is:starred`. The server ranks and windows it. */
+    q?: string | undefined;
 }
 
 export async function fetchArticlesPage(
     params: ArticlePageParams = {},
 ): Promise<{ items: Article[]; nextCursor?: string }> {
-    const q = new URLSearchParams();
-    if (params.scope) q.set('scope', params.scope);
-    if (params.unreadOnly) q.set('unreadOnly', '1');
-    if (params.sort) q.set('sort', params.sort);
-    if (params.cursor) q.set('cursor', params.cursor);
-    if (params.limit) q.set('limit', String(params.limit));
-    if (params.since) q.set('since', String(params.since));
-    return apiFetch(`/articles?${q}`) as Promise<{ items: Article[]; nextCursor?: string }>;
+    const query = new URLSearchParams();
+    if (params.scope) query.set('scope', params.scope);
+    if (params.unreadOnly) query.set('unreadOnly', '1');
+    if (params.sort) query.set('sort', params.sort);
+    if (params.cursor) query.set('cursor', params.cursor);
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.since) query.set('since', String(params.since));
+    if (params.q) query.set('q', params.q);
+    return apiFetch(`/articles?${query}`) as Promise<{ items: Article[]; nextCursor?: string }>;
 }
 
 export interface ArticleStateUpdate {

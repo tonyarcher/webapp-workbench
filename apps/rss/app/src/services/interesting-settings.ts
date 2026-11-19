@@ -8,6 +8,7 @@ import {
     DEFAULT_INTERESTING_STRICTNESS as WORDS_DEFAULT_STRICTNESS,
     clampInterestingStrictness,
     extractWords,
+    titleHasLearnedWord,
 } from './interesting-words';
 
 /** Re-exported so views import settings only; the words module owns the value. */
@@ -182,27 +183,61 @@ function saveWordMapIds(ids: string[]): void {
  * the app teaches the shadow views, even for articles outside the currently
  * open folder page. Zero totals are removed; negatives persist so a derank
  * sinks even a never-starred topic. Each article counts once: repeats are
- * skipped, un-starring forgets the id so a later re-star counts again.
+ * skipped, un-starring forgets the id so a later re-star counts again. A
+ * counted article whose words all decayed away repairs only the missing ones,
+ * so a quiet stretch cannot leave the model permanently deaf to old likes.
+ * Un-starring only removes positive teaching; it never pushes a word below
+ * zero, so it cannot invent a dislike the reader never expressed.
  */
 export function adjustWordMap(title: string, weight: number, articleId?: string): void {
     if (weight === 0) return;
+    const map = loadWordMap();
+    // A counted article whose words all decayed away must be allowed to teach
+    // again, or the model can never rebuild from likes it already saw.
+    let repairOnly = false;
     if (articleId !== undefined) {
         const counted = new Set(loadWordMapIds());
         if (weight > 0) {
-            if (counted.has(articleId)) return;
-            counted.add(articleId);
-            saveWordMapIds([...counted]);
+            if (counted.has(articleId)) {
+                if (titleHasLearnedWord(title, map)) return;
+                repairOnly = true;
+            } else {
+                counted.add(articleId);
+                saveWordMapIds([...counted]);
+            }
         } else {
             if (!counted.delete(articleId)) return;
             saveWordMapIds([...counted]);
         }
     }
-    const map = loadWordMap();
+    let changed = false;
     for (const word of extractWords(title)) {
-        const next = (map[word] ?? 0) + weight;
-        if (next === 0) delete map[word];
-        else map[word] = next;
+        const current = map[word];
+        if (repairOnly && current !== undefined) continue;
+        // An unstar only removes positive teaching. Decay may already have
+        // lowered or pruned the word, so subtracting the full star step would
+        // leave a dislike the reader never expressed. Negatives come from an
+        // explicit derank or engagement (no article id).
+        if (articleId !== undefined && weight < 0) {
+            if (current === undefined || current < 0) continue;
+            map[word] = Math.max(0, current + weight);
+            if (map[word] === 0) delete map[word];
+            changed = true;
+            continue;
+        }
+        const next = (current ?? 0) + weight;
+        if (current === undefined) {
+            map[word] = next;
+            changed = true;
+        } else if (next === 0) {
+            delete map[word];
+            changed = true;
+        } else if (next !== current) {
+            map[word] = next;
+            changed = true;
+        }
     }
+    if (!changed) return;
     saveWordMap(map);
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('interesting-model-changed'));
 }

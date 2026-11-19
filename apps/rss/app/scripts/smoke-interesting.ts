@@ -3,14 +3,23 @@ import { assert } from './smoke-assert';
 
 // ---- Interesting view: starred-word map, settings, ranking, decision state, router ----
 {
-    const { buildWordMap, extractWords, interestingScore, rankInteresting, topWords, toDecisionState } =
-        await import('../src/services/interesting-words');
+    const {
+        buildWordMap,
+        extractWords,
+        interestingScore,
+        mergeStarredWordMap,
+        rankInteresting,
+        titleHasLearnedWord,
+        topWords,
+        toDecisionState,
+    } = await import('../src/services/interesting-words');
     const {
         adjustWordMap,
         adjustWordWeight,
         isHideReadFolder,
         loadInterestingShadow,
         loadWordMap,
+        loadWordMapIds,
         saveInterestingShadow,
         saveWordMap,
     } = await import('../src/services/interesting-settings');
@@ -71,6 +80,18 @@ import { assert } from './smoke-assert';
     assert(loadWordMap()['rust'] === undefined, 'adjustWordMap unstar forgets the id');
     adjustWordMap('Rust Performance', 4, 'a1');
     assert(loadWordMap()['rust'] === 4, 'adjustWordMap re-star counts again');
+
+    const restored = mergeStarredWordMap({ rust: 1, deranked: -4 }, [{ title: 'Rust Deranked Guide' }]);
+    assert(restored['rust'] === 4, 'a like lifts a decayed positive back to the star weight');
+    assert(restored['deranked'] === -4, 'a like leaves a deranked word negative');
+    assert(restored['guide'] === 4, 'a like teaches a word the map never had');
+    assert(mergeStarredWordMap({}, [{ title: 'Rust' }])['rust'] === 4, 'a like seeds an empty map');
+    assert(
+        titleHasLearnedWord('Rust Guide', { rust: 0.5 }) === true,
+        'titleHasLearnedWord sees a decayed weight as learned',
+    );
+    assert(titleHasLearnedWord('Zebra Guide', { rust: 4 }) === false, 'titleHasLearnedWord ignores unknown words');
+
     adjustWordWeight('rust', 1);
     assert(loadWordMap()['rust'] === 5, 'adjustWordWeight adds one step');
     adjustWordWeight('rust', -5);
@@ -80,6 +101,32 @@ import { assert } from './smoke-assert';
     adjustWordWeight('', 1);
     adjustWordWeight('rare', 0);
     assert(loadWordMap()['rare'] === -1, 'adjustWordWeight ignores empty words and zero steps');
+
+    // Decay prunes below 0.125 and leaves the counted id behind. The article
+    // must be able to teach its words again, or the model stays dead forever.
+    saveWordMap({});
+    mem.set('rss-reader:word-map-ids', JSON.stringify(['a2']));
+    adjustWordMap('Kubernetes Rust', 4, 'a2');
+    assert(loadWordMap()['kubernetes'] === 4, 'a counted article re-teaches words decay pruned away');
+    adjustWordMap('Kubernetes Rust', 4, 'a2');
+    assert(loadWordMap()['kubernetes'] === 4, 're-teaching a counted article does not double its weight');
+    // An unstar must not invent a dislike for a word decay already forgot.
+    saveWordMap({});
+    mem.set('rss-reader:word-map-ids', JSON.stringify(['a3']));
+    adjustWordMap('Pruned Topic', -4, 'a3');
+    assert(Object.keys(loadWordMap()).length === 0, 'an unstar does not invent a negative for a pruned word');
+    assert(loadWordMapIds().includes('a3') === false, 'an unstar still releases the counted id');
+    // Decay can lower a star weight without pruning it. Unstarring the full
+    // star step would then leave the reader with a dislike they never gave.
+    saveWordMap({ rust: 2 });
+    mem.set('rss-reader:word-map-ids', JSON.stringify(['a4']));
+    adjustWordMap('Rust Performance', -4, 'a4');
+    assert(loadWordMap()['rust'] === undefined, 'an unstar clamps a decayed positive to zero');
+    // A derank is an explicit dislike; an unstar must not deepen or erase it.
+    saveWordMap({ rust: -3 });
+    mem.set('rss-reader:word-map-ids', JSON.stringify(['a5']));
+    adjustWordMap('Rust Performance', -4, 'a5');
+    assert(loadWordMap()['rust'] === -3, 'an unstar never deepens an existing derank');
 
     const { articleKeywordsOf } = await import('../src/services/keywords');
     const plain = articleKeywordsOf('Battery storage grid', undefined, undefined, {});

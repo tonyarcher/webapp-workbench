@@ -8,6 +8,7 @@ import {
     orderedInterestingFolderIds,
 } from './interesting-settings';
 import { interestingWordMapOf } from '../web-components/article-list/article-list-interesting';
+import { invalidateStarredTitles, loadStarredTitles, type StarredSeed } from './interesting-starred';
 import { selectInteresting } from './interesting-words';
 import { filterMutedArticles, loadMuteRules, type FeedFolderLookup } from './mute-rules';
 import type { Article, Feed } from '../types';
@@ -100,11 +101,16 @@ export function invalidateInterestingBatch(folderId: string): void {
     batchCache.delete(folderId);
 }
 
-export function computeCount(folderId: string, articles: Article[], lookup: FeedFolderLookup): number {
+export function computeCount(
+    folderId: string,
+    articles: Article[],
+    lookup: FeedFolderLookup,
+    starred: ReadonlyArray<{ title: string }> = [],
+): number {
     // Mirror the view's transient "hide read" filter after Mark shown as read.
     const visible = isInterestingHideRead(folderId) ? articles.filter((a) => a.read === 0) : articles;
     const filtered = filterMutedArticles(visible, loadMuteRules(), lookup);
-    const wordMap = interestingWordMapOf(filtered);
+    const wordMap = interestingWordMapOf(filtered, starred);
     const strictness = loadInterestingStrictness(folderId);
     // The badge is the total the view can show, not the current page. Capping
     // at the page size made "Mark shown as read" look like it did nothing:
@@ -141,12 +147,15 @@ async function refreshNow(refetch: boolean): Promise<void> {
             const ids = enabledFolderIds();
             if (!ids.length) break;
             const lookup = feedLookup();
+            // One likes fetch per pass, shared by every folder's badge.
+            const starred: StarredSeed[] = await loadStarredTitles();
+            if (gen !== refreshGen) break;
             await runPool(ids, CONCURRENCY, async (folderId) => {
                 try {
                     if (gen !== refreshGen) return;
                     const batch = await getBatch(folderId, doRefetch);
                     if (gen !== refreshGen) return;
-                    const count = computeCount(folderId, batch, lookup);
+                    const count = computeCount(folderId, batch, lookup, starred);
                     if (gen !== refreshGen) return;
                     if (loadInterestingCount(folderId) !== count) saveInterestingCount(folderId, count);
                 } catch {
@@ -187,6 +196,12 @@ function onLightModelChange() {
     schedule(false, 800);
 }
 
+function onStarChange() {
+    // A like changed the seed set, so the next pass must fetch it again.
+    invalidateStarredTitles();
+    schedule(false, 800);
+}
+
 function onDataChange() {
     // Feeds/articles/library likely changed: allow refetch (TTL still applies).
     schedule(true, 1200);
@@ -199,7 +214,7 @@ function onVisibility() {
 export function startInterestingCountsRefresh(): void {
     if (started || typeof window === 'undefined') return;
     started = true;
-    window.addEventListener('article-starred', onLightModelChange);
+    window.addEventListener('article-starred', onStarChange);
     window.addEventListener('article-read', onLightModelChange);
     window.addEventListener('interesting-model-changed', onLightModelChange);
     window.addEventListener('interesting-settings-changed', onLightModelChange);
@@ -232,7 +247,7 @@ export function stopInterestingCountsRefresh(): void {
     running = false;
     queued = false;
     forceRefetch = false;
-    window.removeEventListener('article-starred', onLightModelChange);
+    window.removeEventListener('article-starred', onStarChange);
     window.removeEventListener('article-read', onLightModelChange);
     window.removeEventListener('interesting-model-changed', onLightModelChange);
     window.removeEventListener('interesting-settings-changed', onLightModelChange);

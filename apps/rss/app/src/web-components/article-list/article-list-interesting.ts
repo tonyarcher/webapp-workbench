@@ -1,6 +1,7 @@
 import { fetchArticlesPage } from '../../services/api';
-import { buildWordMap, selectInteresting } from '../../services/interesting-words';
+import { mergeStarredWordMap, selectInteresting } from '../../services/interesting-words';
 import { loadInterestingStrictness, loadWordMap, loadWordMapIds } from '../../services/interesting-settings';
+import { loadStarredTitles, type StarredSeed } from '../../services/interesting-starred';
 import { saveInterestingCount } from '../../services/interesting-counts';
 import { filterMutedArticles, loadMuteRules, type FeedFolderLookup } from '../../services/mute-rules';
 import type { Article, ArticleSort, Feed, View } from '../../types';
@@ -35,20 +36,21 @@ export function interestingActiveFor(view: View): boolean {
 }
 
 /**
- * Word map for ranking: the cache (every star toggle maintains it) plus
- * fresh weights for batch-starred articles the cache has not counted yet
- * (e.g. starred on another device). Counted ids are skipped so a star
- * visible in the batch never counts twice.
+ * Word map for ranking: the cache (every star toggle maintains it), every
+ * like the server knows about (`starred` seeds, which is what keeps a folder
+ * warm when its liked articles are older than the recent batch), plus fresh
+ * weights for batch-starred articles the cache has not counted yet (e.g.
+ * starred on another device). Likes are merged by word, so the same article
+ * seen twice can never inflate the map.
  */
-export function interestingWordMapOf(batch: Article[]): Record<string, number> {
+export function interestingWordMapOf(
+    batch: Article[],
+    starred: ReadonlyArray<{ title: string }> = [],
+): Record<string, number> {
     const cached = loadWordMap();
     const counted = new Set(loadWordMapIds());
     const fresh = batch.filter((a) => a.starred && !counted.has(a.id));
-    if (!fresh.length) return cached;
-    const extra = buildWordMap(fresh, []);
-    const merged: Record<string, number> = { ...cached };
-    for (const [word, weight] of Object.entries(extra)) merged[word] = (merged[word] ?? 0) + weight;
-    return merged;
+    return mergeStarredWordMap(cached, [...starred, ...fresh]);
 }
 
 function sortInteresting(items: Article[], sort: ArticleSort): Article[] {
@@ -73,18 +75,23 @@ export async function loadInterestingBatchAction(host: InterestingHost, gen: num
     // Interesting ranks recent articles by learned relevance. Server-side
     // unreadOnly filtering starves the candidate pool once items are read, so
     // always fetch the full recent batch and apply hide-read client-side.
-    const res = await fetchArticlesPage({
-        scope: `folder:${host.view.id}`,
-        sort: 'newest',
-        limit: INTERESTING_BATCH,
-        unreadOnly: false,
-    });
+    // Likes come from the cached global search in parallel: the model must see
+    // older likes even when they fall outside this folder's recent batch.
+    const [res, starred] = await Promise.all([
+        fetchArticlesPage({
+            scope: `folder:${host.view.id}`,
+            sort: 'newest',
+            limit: INTERESTING_BATCH,
+            unreadOnly: false,
+        }),
+        loadStarredTitles().catch(() => [] as StarredSeed[]),
+    ]);
     if (gen !== host.gen) return;
     const visible = host.hideRead ? res.items.filter((a) => a.read === 0) : res.items;
     const lookup = lookupFromFeeds(host.library?.data?.feeds);
     const filtered = filterMutedArticles(visible, loadMuteRules(), lookup);
     host.mutedHidden = visible.length - filtered.length;
-    const wordMap = interestingWordMapOf(filtered);
+    const wordMap = interestingWordMapOf(filtered, starred);
     const strictness = host.interestingStrictness ?? loadInterestingStrictness(host.view.id);
     const selected = selectInteresting(filtered, wordMap, strictness);
     const ordered = sortInteresting(selected, host.sort);

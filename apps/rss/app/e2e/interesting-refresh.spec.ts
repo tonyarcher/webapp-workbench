@@ -63,9 +63,16 @@ test('the Interesting view settles while a refresh finishes', async ({ page }) =
     );
     // Only the ✨ view asks for `sort=newest` (its one bounded batch); the
     // folder's own page loads use `sort=hot`, so this counts view batches.
+    // The ✨ view also asks for the reader's likes (`q=is:starred`); this
+    // fixture has none, and answering it with the whole batch would seed the
+    // model with every title in it.
     let interestingRequests = 0;
     await page.route('**/api/articles?**', (route) => {
-        if (route.request().url().includes('sort=newest')) interestingRequests += 1;
+        const url = new URL(route.request().url());
+        if (url.searchParams.get('q') === 'is:starred') {
+            return route.fulfill({ status: 200, body: JSON.stringify({ items: [] }) });
+        }
+        if (url.searchParams.get('sort') === 'newest') interestingRequests += 1;
         return route.fulfill({ status: 200, body: JSON.stringify({ items: articles }) });
     });
 

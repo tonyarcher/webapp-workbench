@@ -31,6 +31,7 @@ import {
 } from './query';
 import type { Article, Feed } from './types';
 import { accrueEngagement, adjustWordMap, isDeranked, setDeranked } from './services/interesting-settings';
+import { invalidateStarredTitles } from './services/interesting-starred';
 import {
     DERANK_WORD_CAP,
     DERANK_WORD_WEIGHT,
@@ -300,6 +301,9 @@ export async function toggleStar(articleId: string, nowStarred: boolean): Promis
     // own batch for the rest.
     const title = findCachedArticleTitle(articleId);
     if (title !== undefined) adjustWordMap(title, nowStarred ? STAR_WORD_WEIGHT : -STAR_WORD_WEIGHT, articleId);
+    // The seeded likes list is now stale either way: a star must reach the
+    // model before its 5-minute TTL, and an unstar must stop seeding a word.
+    invalidateStarredTitles();
     await invalidateFrontPage();
     return true;
 }
@@ -324,6 +328,7 @@ export async function bulkStar(items: Array<{ id: string; title: string }>): Pro
         void recordAffinity(item.id, 4).catch(() => {});
         adjustWordMap(item.title, STAR_WORD_WEIGHT, item.id);
     }
+    invalidateStarredTitles();
     await invalidateFrontPage();
     return true;
 }
