@@ -13,6 +13,7 @@ import { migrateLibrary } from '../../services/api';
 import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
 import { invalidateArticles, invalidateLibrary } from '../../query';
 import { navigate } from '../../router';
+import { onAddFeedRequested, takeAddFeedRequest } from '../../services/add-feed-intent';
 import {
     applyDefaultToAllViews,
     DEFAULT_VIEW_SETTINGS,
@@ -81,6 +82,7 @@ export class SettingsGeneral extends HTMLElement {
     /** Text typed into a field before a paint; restored only while focused. */
     private mastodonDraft: string | null = null;
     private addUrlDraft: string | null = null;
+    private unsubscribeAddFeed: (() => void) | null = null;
 
     constructor() {
         super();
@@ -134,6 +136,16 @@ export class SettingsGeneral extends HTMLElement {
     connectedCallback(): void {
         if (!this.bodyEl) this.build();
         this.paint();
+        this.unsubscribeAddFeed = onAddFeedRequested(() => {
+            takeAddFeedRequest();
+            this.openAdd();
+        });
+        if (takeAddFeedRequest()) this.openAdd();
+    }
+
+    disconnectedCallback(): void {
+        this.unsubscribeAddFeed?.();
+        this.unsubscribeAddFeed = null;
     }
 
     private build(): void {

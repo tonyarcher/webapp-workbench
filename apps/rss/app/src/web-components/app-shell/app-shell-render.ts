@@ -1,4 +1,5 @@
 import { navigate } from '../../router';
+import { requestAddFeed } from '../../services/add-feed-intent';
 import { dismissToast, type ToastNotice } from '../../services/toast';
 import { MAX_ARTICLE_PANEL_WIDTH, MIN_ARTICLE_PANEL_WIDTH } from './article-panel-settings';
 import type { Article, SettingsSection, View } from '../../types';
@@ -174,8 +175,30 @@ function buildHeader(host: AppShellRenderHost): HeaderNodes {
     const signOut = el('button', 'signout');
     signOut.textContent = 'Sign out';
     signOut.addEventListener('click', () => host.onSignOut());
-    header.append(brandButton(), el('div', 'spacer'), who, signOut, buildHelpButton(host), buildPaletteTrigger(host));
+    header.append(
+        brandButton(),
+        el('div', 'spacer'),
+        who,
+        signOut,
+        buildAddFeedButton(),
+        buildHelpButton(host),
+        buildPaletteTrigger(host),
+    );
     return { root: header, who, signOut };
+}
+
+function buildAddFeedButton(): HTMLButtonElement {
+    const button = el('button', 'add-feed');
+    button.type = 'button';
+    button.title = 'Add feed';
+    button.setAttribute('aria-label', 'Add feed');
+    const plus = el('span', 'add-feed-plus');
+    plus.textContent = '+';
+    const text = el('span', 'add-feed-text');
+    text.textContent = 'Add feed';
+    button.append(plus, text);
+    button.addEventListener('click', requestAddFeed);
+    return button;
 }
 
 function buildHelpButton(host: AppShellRenderHost): HTMLButtonElement {

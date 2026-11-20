@@ -5,6 +5,39 @@ import { test, expect } from '@playwright/test';
  * browser's back button and an old bookmark both land on the right panel, and
  * the sidebar has a single Settings row instead of five.
  */
+test('every Add feed entry point opens the one form', async ({ page }) => {
+    await page.addInitScript(() => {
+        const b64 = (obj: unknown) => btoa(JSON.stringify(obj));
+        const exp = Math.floor(Date.now() / 1000) + 3600;
+        const token = `${b64({ alg: 'RS256' })}.${b64({ exp, preferred_username: 'tester' })}.sig`;
+        localStorage.setItem('rss.auth.tokens', JSON.stringify({ access: token, refresh: 'r', exp }));
+    });
+    await page.route('**/api/library/folders', (route) =>
+        route.fulfill({ status: 200, body: '{"folders":[],"savedSearches":[]}' }),
+    );
+    await page.route('**/api/library/feeds', (route) => route.fulfill({ status: 200, body: '{"feeds":[]}' }));
+    await page.route('**/api/library/counts', (route) => route.fulfill({ status: 200, body: '{"counts":{}}' }));
+    await page.route('**/api/articles?**', (route) => route.fulfill({ status: 200, body: '{"items":[]}' }));
+
+    const formInput = page.locator('input[data-add-url]');
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Add feed' }).click();
+    await expect(page).toHaveURL(/#\/settings$/);
+    await expect(formInput).toBeVisible();
+    await expect(formInput).toBeFocused();
+
+    await page.getByRole('link', { name: 'Organize' }).click();
+    await page.locator('organize-view').getByRole('button', { name: 'Add feed' }).click();
+    await expect(page).toHaveURL(/#\/settings$/);
+    await expect(formInput).toBeVisible();
+
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Feed list options' }).click();
+    await page.locator('feed-list-menu').getByRole('button', { name: 'Add feed' }).click();
+    await expect(page).toHaveURL(/#\/settings$/);
+    await expect(formInput).toBeVisible();
+});
+
 test('the settings area opens from the sidebar and its tabs are routes', async ({ page }) => {
     await page.addInitScript(() => {
         const b64 = (obj: unknown) => btoa(JSON.stringify(obj));

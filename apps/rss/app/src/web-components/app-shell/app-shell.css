@@ -127,6 +127,31 @@ header .sub {
     margin: 12px 0 0;
 }
 
+.add-feed {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.add-feed:hover {
+    filter: brightness(1.1);
+}
+
+.add-feed:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 .gear {
     border: none;
     background: none;
@@ -386,6 +411,16 @@ main {
 
     .palette-search-text,
     .palette-search-hint {
+        display: none;
+    }
+
+    .add-feed {
+        width: 34px;
+        min-width: 34px;
+        padding: 0;
+    }
+
+    .add-feed-text {
         display: none;
     }
 }

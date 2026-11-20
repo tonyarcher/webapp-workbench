@@ -1,6 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from '../../query';
 import { libraryKey, queryClient, QueryController, fetchLibrary } from '../../query';
 import { navigate } from '../../router';
+import { requestAddFeed } from '../../services/add-feed-intent';
 import type { TodaySettings } from '../../services/today-settings';
 import { orderedInterestingFolderIds, saveInterestingOrder } from '../../services/interesting-settings';
 import { loadInterestingCount } from '../../services/interesting-counts';
@@ -499,6 +500,10 @@ export class SourceList extends HTMLElement implements ReactiveControllerHost {
     private async applySavedSearchReorder(searchId: string, targetId: string | null) {
         const { handleSavedSearchReorder } = await import('./source-list-drag');
         await handleSavedSearchReorder(this as never, searchId, targetId);
+    }
+
+    onAddFeed() {
+        requestAddFeed();
     }
 
     onRetryLibrary() {

@@ -63,6 +63,7 @@ export interface SourceListRenderHost extends ActionHost {
     onResizeKey(e: KeyboardEvent): void;
     sidebarWidth: number;
     onRetryLibrary(): void;
+    onAddFeed(): void;
     toggleFolder(id: string): void;
 }
 
@@ -442,6 +443,7 @@ function savedSearchMenu(host: SourceListRenderHost): HTMLElement {
 function feedListMenu(host: SourceListRenderHost): HTMLElement {
     const menu = document.createElement('feed-list-menu');
     menu.addEventListener('close', () => closeFeedListMenuAction(host));
+    menu.addEventListener('add-feed', () => host.onAddFeed());
     menu.addEventListener('sort-change', (e) => feedSortChangeAction(host, e));
     menu.addEventListener('sort-folders', () => void sortFoldersAction(host));
     menu.addEventListener('refresh-all', () => void refreshAllAction(host));

@@ -191,6 +191,12 @@
     border-color: var(--danger, #b42318);
 }
 
+.btn.primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+}
+
 .btn.subtle {
     margin-left: auto;
 }

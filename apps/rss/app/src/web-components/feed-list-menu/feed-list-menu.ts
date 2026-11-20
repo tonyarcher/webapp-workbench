@@ -32,6 +32,13 @@ export class FeedListMenu extends HTMLElement {
         if (!open) return;
         const actions = document.createElement('div');
         actions.className = 'actions';
+        const add = document.createElement('button');
+        add.className = 'action';
+        add.textContent = 'Add feed';
+        add.addEventListener('click', () =>
+            this.dispatchEvent(new CustomEvent('add-feed', { bubbles: true, composed: true })),
+        );
+        actions.appendChild(add);
         const close = document.createElement('button');
         close.className = 'action';
         close.textContent = 'Close';

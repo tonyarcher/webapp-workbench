@@ -1,4 +1,5 @@
 import { fetchLibrary } from '../../query';
+import { requestAddFeed } from '../../services/add-feed-intent';
 import { deleteFolder, renameFolder, reorderFolders, setFeedFolderMembership } from '../../mutations';
 import { addFolder } from '../../services/api';
 import type { Feed, Folder } from '../../types';
@@ -138,7 +139,12 @@ export class OrganizeView extends HTMLElement {
         addBtn.textContent = 'New folder';
         addBtn.setAttribute('data-setting', 'new-folder');
         addBtn.addEventListener('click', () => void this.onCreateFolder());
-        toolbar.append(h, addBtn);
+        const feedBtn = document.createElement('button');
+        feedBtn.className = 'btn primary';
+        feedBtn.textContent = 'Add feed';
+        feedBtn.setAttribute('aria-label', 'Add feed');
+        feedBtn.addEventListener('click', requestAddFeed);
+        toolbar.append(h, addBtn, feedBtn);
         this.root.appendChild(toolbar);
         if (this.status) {
             const status = document.createElement('p');
