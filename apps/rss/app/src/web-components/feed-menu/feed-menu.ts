@@ -1,3 +1,4 @@
+import { syncMenuPopover } from '../source-list/menu-popover';
 import styles from './feed-menu.css?inline';
 
 export interface MenuAnchor {
@@ -8,6 +9,15 @@ export interface MenuAnchor {
 export class FeedMenu extends HTMLElement {
     private feed: { id: string; title: string } | null = null;
     private open = false;
+    private _anchor: MenuAnchor | null = null;
+
+    get anchor() {
+        return this._anchor;
+    }
+    set anchor(v: MenuAnchor | null) {
+        this._anchor = v;
+        this.paint();
+    }
     private root: HTMLDivElement | null = null;
 
     connectedCallback() {
@@ -23,12 +33,12 @@ export class FeedMenu extends HTMLElement {
 
     private paint() {
         if (!this.root) return;
+        const open = this.open && this.feed !== null;
+        syncMenuPopover(this.root, open, this._anchor, () =>
+            this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true })),
+        );
         this.root.replaceChildren();
-        if (!this.open || !this.feed) {
-            this.root.style.display = 'none';
-            return;
-        }
-        this.root.style.display = '';
+        if (!open) return;
         const actions = document.createElement('div');
         actions.className = 'actions';
         const refresh = document.createElement('button');

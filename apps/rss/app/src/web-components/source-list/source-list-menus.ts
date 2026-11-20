@@ -1,4 +1,5 @@
 import type { MenuAnchor } from '../feed-menu/feed-menu';
+import { anchorFromEvent } from './menu-popover';
 import type { Feed, Folder, SavedSearch } from '../../types';
 
 /** Menu open/close/anchor state the menu actions read and update. */
@@ -24,15 +25,13 @@ export interface MenuHost {
 
 export function openFeedMenuAction(host: MenuHost, feed: Feed, e: MouseEvent): void {
     e.stopPropagation();
-    const btn = e.currentTarget as HTMLElement;
     if (host.menuOpen && host.menuTriggerFeedId === feed.id) {
         host.menuOpen = false;
         host.menuTriggerFeedId = null;
         return;
     }
-    const rect = btn.getBoundingClientRect();
     host.menuTriggerFeedId = feed.id;
-    host.menuAnchor = { x: rect.left, y: rect.bottom };
+    host.menuAnchor = anchorFromEvent(e);
     host.menuFeedId = feed.id;
     host.menuOpen = true;
 }
@@ -44,15 +43,13 @@ export function closeMenuAction(host: MenuHost): void {
 
 export function openFolderMenuAction(host: MenuHost, folder: Folder, e: MouseEvent): void {
     e.stopPropagation();
-    const btn = e.currentTarget as HTMLElement;
     if (host.folderMenuOpen && host.folderMenuTriggerId === folder.id) {
         host.folderMenuOpen = false;
         host.folderMenuTriggerId = null;
         return;
     }
-    const rect = btn.getBoundingClientRect();
     host.folderMenuTriggerId = folder.id;
-    host.folderMenuAnchor = { x: rect.left, y: rect.bottom };
+    host.folderMenuAnchor = anchorFromEvent(e);
     host.folderMenuFolderId = folder.id;
     host.folderMenuOpen = true;
 }
@@ -64,15 +61,13 @@ export function closeFolderMenuAction(host: MenuHost): void {
 
 export function openSavedSearchMenuAction(host: MenuHost, search: SavedSearch, e: MouseEvent): void {
     e.stopPropagation();
-    const btn = e.currentTarget as HTMLElement;
     if (host.savedSearchMenuOpen && host.savedSearchMenuTriggerId === search.id) {
         host.savedSearchMenuOpen = false;
         host.savedSearchMenuTriggerId = null;
         return;
     }
-    const rect = btn.getBoundingClientRect();
     host.savedSearchMenuTriggerId = search.id;
-    host.savedSearchMenuAnchor = { x: rect.left, y: rect.bottom };
+    host.savedSearchMenuAnchor = anchorFromEvent(e);
     host.savedSearchMenuId = search.id;
     host.savedSearchMenuOpen = true;
 }
@@ -84,15 +79,13 @@ export function closeSavedSearchMenuAction(host: MenuHost): void {
 
 export function openFeedListMenuAction(host: MenuHost, e: MouseEvent): void {
     e.stopPropagation();
-    const btn = e.currentTarget as HTMLElement;
     if (host.feedListMenuOpen && host.feedListMenuTriggerId === 'list') {
         host.feedListMenuOpen = false;
         host.feedListMenuTriggerId = null;
         return;
     }
-    const rect = btn.getBoundingClientRect();
     host.feedListMenuTriggerId = 'list';
-    host.feedListMenuAnchor = { x: rect.left, y: rect.bottom };
+    host.feedListMenuAnchor = anchorFromEvent(e);
     host.feedListMenuOpen = true;
 }
 
@@ -103,10 +96,8 @@ export function closeFeedListMenuAction(host: MenuHost): void {
 
 export function openTodayMenuAction(host: MenuHost, e: MouseEvent): void {
     e.stopPropagation();
-    const btn = e.currentTarget as HTMLElement;
     host.todayMenuOpen = !host.todayMenuOpen;
     if (host.todayMenuOpen) {
-        const rect = btn.getBoundingClientRect();
-        host.todayMenuAnchor = { x: rect.left, y: rect.bottom };
+        host.todayMenuAnchor = anchorFromEvent(e);
     }
 }

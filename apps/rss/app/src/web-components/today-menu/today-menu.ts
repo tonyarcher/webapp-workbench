@@ -1,8 +1,18 @@
+import { syncMenuPopover, type MenuAnchor } from '../source-list/menu-popover';
 import styles from './today-menu.css?inline';
 
 export class TodayMenu extends HTMLElement {
     private open = false;
+    private _anchor: MenuAnchor | null = null;
     private root: HTMLDivElement | null = null;
+
+    get anchor() {
+        return this._anchor;
+    }
+    set anchor(v: MenuAnchor | null) {
+        this._anchor = v;
+        this.paint();
+    }
 
     connectedCallback() {
         const shadow = this.attachShadow({ mode: 'open' });
@@ -17,12 +27,12 @@ export class TodayMenu extends HTMLElement {
 
     private paint() {
         if (!this.root) return;
+        const open = this.open;
+        syncMenuPopover(this.root, open, this._anchor, () =>
+            this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true })),
+        );
         this.root.replaceChildren();
-        if (!this.open) {
-            this.root.style.display = 'none';
-            return;
-        }
-        this.root.style.display = '';
+        if (!open) return;
         const actions = document.createElement('div');
         actions.className = 'actions';
         const close = document.createElement('button');
