@@ -116,6 +116,30 @@ export async function setFeedFolders(id: string, folderIds: string[]): Promise<{
     }) as Promise<{ ok: true }>;
 }
 
+// ---- page-as-source preview (P5) ----
+
+export interface ScrapeCandidate {
+    title: string;
+    url: string;
+    published?: number | null;
+    summary?: string | null;
+}
+
+export interface ScrapePreview {
+    strategy: string;
+    label: string;
+    confidence: number;
+    title?: string | null;
+    candidates: ScrapeCandidate[];
+}
+
+export async function previewScrape(url: string, selector?: string): Promise<ScrapePreview> {
+    return apiFetch('/sources/preview', {
+        method: 'POST',
+        body: JSON.stringify({ url, ...(selector ? { selector } : {}) }),
+    }) as Promise<ScrapePreview>;
+}
+
 // ---- articles ----
 
 export interface ArticlePageParams {

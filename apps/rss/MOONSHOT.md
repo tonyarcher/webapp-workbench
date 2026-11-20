@@ -1017,6 +1017,9 @@ can tell where an item came from.
 
 ### P5. Follow any page (scrape fallback when no feed exists)
 
+- **Plan.** `SCRAPE_PLAN.md` in this folder. Phase 0 (extractor classes plus a
+  preview endpoint) is shipped; persistence and the picker UI follow.
+
 - **Why.** Many valuable sites publish updates with no RSS/Atom/JSON Feed or
   h-feed at all. A reader that requires a feed cannot follow them.
 - **What.** A "watch this page" source type: periodically fetch a page and

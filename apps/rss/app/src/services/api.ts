@@ -45,6 +45,7 @@ export {
     reorderFolders,
     reorderSavedSearches,
     requestServerSummary,
+    previewScrape,
     requestSync,
     saveArticleForLater,
     setFeedFolders,
@@ -59,5 +60,7 @@ export type {
     FrontPageParams,
     MigratePayload,
     OpmlImportResult,
+    ScrapeCandidate,
+    ScrapePreview,
     ServerAiStatus,
 } from './api-domains';
