@@ -204,7 +204,7 @@ test('the settings area has no automatic accessibility violations', async ({ pag
     await stubLibrary(page, ARTICLES);
     await page.goto('/#/settings');
     await expect(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    await page.getByLabel('Search settings').fill('page');
+    await page.getByLabel('Filter settings').fill('page');
     await expect(page.getByRole('link', { name: 'Page size' })).toBeVisible();
     expect(await audit(page)).toEqual([]);
 });

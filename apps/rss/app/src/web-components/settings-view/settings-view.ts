@@ -35,9 +35,10 @@ function specOf(section: SettingsSection): SectionSpec {
 }
 
 /**
- * One settings page with a tab strip and a search that jumps to a setting.
- * Only the active panel is mounted, so a tab that loads data pays for it when
- * opened, not when the app starts.
+ * One settings page with a tab strip and a live filter. Typing replaces the
+ * panel with a list of matching settings; each result links to its tab and
+ * focuses the control. Only the active panel is mounted, so a tab that loads
+ * data pays for it when opened, not when the app starts.
  */
 export class SettingsView extends HTMLElement {
     private _section: SettingsSection = 'general';
@@ -47,7 +48,7 @@ export class SettingsView extends HTMLElement {
     private panel: HTMLElement | null = null;
     private activeTag = '';
     private tabLinks: Array<[SettingsSection, HTMLAnchorElement]> = [];
-    private searchInput: HTMLInputElement | null = null;
+    private filterInput: HTMLInputElement | null = null;
     private resultsEl: HTMLElement | null = null;
     private statusEl: HTMLElement | null = null;
     private results: SettingEntry[] = [];
@@ -98,53 +99,57 @@ export class SettingsView extends HTMLElement {
             this.tabLinks.push([entry.id, link]);
             tabs.append(link);
         }
-        bar.append(tabs, this.buildSearch());
+        bar.append(tabs, this.buildFilter());
+        const content = document.createElement('div');
+        content.className = 'content';
         const panel = document.createElement('div');
         panel.className = 'panel';
-        root.append(bar, panel);
+        const results = document.createElement('div');
+        results.className = 'results';
+        results.id = 'settings-results';
+        results.hidden = true;
+        results.addEventListener('keydown', (event) => this.onFilterKey(event));
+        content.append(panel, results);
+        root.append(bar, content);
         shadow.append(style, root);
         this.root = root;
         this.panelHost = panel;
+        this.resultsEl = results;
     }
 
-    private buildSearch(): HTMLElement {
+    private buildFilter(): HTMLElement {
         const form = document.createElement('form');
-        form.className = 'settings-search';
+        form.className = 'settings-filter';
         form.setAttribute('role', 'search');
         form.addEventListener('submit', (event) => event.preventDefault());
         const input = document.createElement('input');
         input.type = 'search';
         input.id = 'settings-search-input';
-        input.placeholder = 'Search settings';
+        input.placeholder = 'Filter settings';
         input.autocomplete = 'off';
-        input.setAttribute('aria-label', 'Search settings');
-        input.addEventListener('input', () => this.onSearchInput());
-        input.addEventListener('keydown', (event) => this.onSearchKey(event));
-        const results = document.createElement('div');
-        results.className = 'results';
-        results.id = 'settings-results';
-        results.hidden = true;
-        results.addEventListener('keydown', (event) => this.onSearchKey(event));
+        input.setAttribute('aria-label', 'Filter settings');
+        input.addEventListener('input', () => this.onFilterInput());
+        input.addEventListener('keydown', (event) => this.onFilterKey(event));
         const status = document.createElement('p');
         status.className = 'sr-only';
         status.setAttribute('role', 'status');
-        form.append(input, results, status);
-        this.searchInput = input;
-        this.resultsEl = results;
+        form.append(input, status);
+        this.filterInput = input;
         this.statusEl = status;
         return form;
     }
 
-    private onSearchInput(): void {
-        const query = this.searchInput?.value.trim() ?? '';
+    /** Filtering is live: every keystroke repaints the result list in place. */
+    private onFilterInput(): void {
+        const query = this.filterInput?.value.trim() ?? '';
         this.results = query === '' ? [] : searchSettings(query);
         this.activeResult = this.results.length > 0 ? 0 : -1;
-        this.renderResults();
+        this.renderResults(query);
     }
 
-    private onSearchKey(event: KeyboardEvent): void {
+    private onFilterKey(event: KeyboardEvent): void {
         if (event.key === 'Escape') {
-            this.clearSearch();
+            this.clearFilter();
             return;
         }
         if (this.resultLinks.length === 0) return;
@@ -164,18 +169,37 @@ export class SettingsView extends HTMLElement {
         }
     }
 
-    private renderResults(): void {
-        if (!this.resultsEl || !this.searchInput || !this.statusEl) return;
-        this.resultsEl.replaceChildren();
+    private renderResults(query: string): void {
+        if (!this.resultsEl || !this.panelHost || !this.statusEl) return;
         this.resultLinks = [];
-        if (this.results.length === 0) {
+        this.resultsEl.replaceChildren();
+        if (query === '') {
             this.resultsEl.hidden = true;
+            this.panelHost.hidden = false;
             this.statusEl.textContent = '';
             return;
         }
+        this.panelHost.hidden = true;
+        this.resultsEl.hidden = false;
+        const heading = document.createElement('h2');
+        heading.textContent = 'Filtered settings';
+        const count = document.createElement('p');
+        count.className = 'count';
+        count.textContent = `${this.results.length} ${this.results.length === 1 ? 'setting' : 'settings'} matching “${query}”`;
+        this.resultsEl.append(heading, count);
+        if (this.results.length === 0) {
+            const empty = document.createElement('p');
+            empty.className = 'empty';
+            empty.textContent = 'No settings match. Try a shorter word.';
+            this.resultsEl.append(empty);
+            this.statusEl.textContent = 'No settings match.';
+            return;
+        }
         const list = document.createElement('ul');
+        list.className = 'list';
         for (const entry of this.results) {
             const item = document.createElement('li');
+            item.className = 'result';
             const link = document.createElement('a');
             link.href = `#${viewToPath({ kind: 'settings', section: entry.section })}`;
             link.textContent = entry.label;
@@ -191,16 +215,15 @@ export class SettingsView extends HTMLElement {
             this.resultLinks.push(link);
         }
         this.resultsEl.append(list);
-        this.resultsEl.hidden = false;
         this.statusEl.textContent = `${this.results.length} ${this.results.length === 1 ? 'setting' : 'settings'} found`;
     }
 
-    private clearSearch(): void {
-        if (this.searchInput) this.searchInput.value = '';
+    private clearFilter(focus = true): void {
+        if (this.filterInput) this.filterInput.value = '';
         this.results = [];
         this.activeResult = -1;
-        this.renderResults();
-        this.searchInput?.focus();
+        this.renderResults('');
+        if (focus) this.filterInput?.focus();
     }
 
     /** Jump to the setting: change tab and URL, then focus its control. */
@@ -214,7 +237,7 @@ export class SettingsView extends HTMLElement {
         } else {
             this.paint();
         }
-        this.clearSearch();
+        this.clearFilter(false);
         requestAnimationFrame(() => this.revealPending());
     }
 
@@ -262,6 +285,7 @@ export class SettingsView extends HTMLElement {
             if (event.defaultPrevented || event.button !== 0 || event.metaKey) return;
             if (event.ctrlKey || event.shiftKey || event.altKey) return;
             event.preventDefault();
+            this.clearFilter(false);
             navigate({ kind: 'settings', section: entry.id });
         });
         return link;

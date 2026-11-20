@@ -55,6 +55,24 @@ describe('settings search', () => {
         expect(el.shadowRoot!.querySelector('#settings-results')!.hasAttribute('hidden')).to.equal(true);
     });
 
+    it('filters live in the page and restores the panel when cleared', async () => {
+        el = document.createElement('settings-view') as SettingsView;
+        document.body.append(el);
+        const panel = el.shadowRoot!.querySelector<HTMLElement>('.panel')!;
+        expect(panel.hasAttribute('hidden')).to.equal(false);
+        type(el, 'forget');
+        expect(results(el).length).to.be.greaterThan(0);
+        expect(el.shadowRoot!.querySelector('.results')!.hasAttribute('hidden')).to.equal(false);
+        expect(panel.hasAttribute('hidden')).to.equal(true);
+        expect(el.shadowRoot!.querySelector('.count')!.textContent).to.include('matching');
+        type(el, 'zzzz');
+        expect(results(el).length).to.equal(0);
+        expect(el.shadowRoot!.querySelector('.empty')).to.not.equal(null);
+        type(el, '');
+        expect(panel.hasAttribute('hidden')).to.equal(false);
+        expect(el.shadowRoot!.querySelector('.results')!.hasAttribute('hidden')).to.equal(true);
+    });
+
     it('changes tab for a setting on another panel and focuses it', async () => {
         el = document.createElement('settings-view') as SettingsView;
         document.body.append(el);

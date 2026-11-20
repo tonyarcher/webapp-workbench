@@ -50,14 +50,17 @@ test('the settings area opens from the sidebar and its tabs are routes', async (
     await expect(page).toHaveURL(/#\/settings$/);
     await expect(page.getByRole('heading', { name: 'General' })).toBeVisible();
 
-    // The search filters the index and jumps to the control itself.
-    await page.getByLabel('Search settings').fill('page size');
+    // The filter updates the page live, not a dropdown.
+    await page.getByLabel('Filter settings').fill('page size');
+    await expect(page.getByRole('heading', { name: 'Filtered settings' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Page size' })).toBeVisible();
     await page.getByRole('link', { name: 'Page size' }).click();
     await expect(page.getByRole('combobox', { name: 'Page size' })).toBeFocused();
-    await expect(page.getByLabel('Search settings')).toHaveValue('');
+    await expect(page.getByLabel('Filter settings')).toHaveValue('');
+    await expect(page.getByRole('heading', { name: 'General' })).toBeVisible();
 
     // A setting on another tab switches the tab and the URL together.
-    await page.getByLabel('Search settings').fill('forget everything');
+    await page.getByLabel('Filter settings').fill('forget everything');
     await page.getByRole('link', { name: 'Forget everything' }).click();
     await expect(page).toHaveURL(/#\/settings\/privacy$/);
     await expect(page.getByRole('heading', { name: 'Privacy dashboard' })).toBeVisible();

@@ -59,12 +59,11 @@
     margin-bottom: -1px;
 }
 
-.settings-search {
-    position: relative;
+.settings-filter {
     margin-bottom: 8px;
 }
 
-.settings-search input {
+.settings-filter input {
     width: 220px;
     max-width: 100%;
     font: inherit;
@@ -76,62 +75,89 @@
     color: var(--text);
 }
 
-.settings-search input:focus-visible {
+.settings-filter input:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
 }
 
-.results {
-    position: absolute;
-    right: 0;
-    top: calc(100% + 4px);
-    z-index: 5;
-    width: min(320px, 80vw);
-    max-height: 60vh;
-    overflow-y: auto;
-    padding: 4px;
-    background: var(--panel-bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+.content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
 }
 
-.results ul {
+.panel,
+.results {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+}
+
+.panel {
+    display: flex;
+    overflow: auto;
+}
+
+.panel > * {
+    flex: 1;
+    min-width: 0;
+}
+
+.panel[hidden],
+.results[hidden] {
+    display: none;
+}
+
+.results {
+    overflow: auto;
+    padding: 1rem 1.25rem 2rem;
+}
+
+.results h2 {
+    margin: 0 0 0.25rem;
+}
+
+.results .count {
+    margin: 0 0 0.75rem;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.results .empty {
+    color: var(--text-muted);
+}
+
+.results .list {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
+    max-width: 46rem;
 }
 
-.results li {
+.results .result {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
 }
 
 .results a {
-    flex: 1;
-    min-width: 0;
-    padding: 6px 8px;
-    border-radius: 6px;
-    color: var(--text);
+    color: var(--accent);
+    font-weight: 600;
     text-decoration: none;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .results a:hover,
 .results a:focus-visible {
-    background: var(--hover);
+    text-decoration: underline;
     outline: none;
 }
 
 .result-tab {
     flex: none;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-muted);
 }
 
@@ -145,16 +171,4 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
-}
-
-.panel {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-}
-
-.panel > * {
-    flex: 1;
-    min-width: 0;
 }
