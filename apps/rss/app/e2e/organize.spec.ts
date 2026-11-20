@@ -8,7 +8,7 @@ import { test, expect, type Page } from '@playwright/test';
 type Folder = { id: string; title: string; createdAt: number; sortOrder: number };
 type Feed = { id: string; title: string; url: string; folderIds: string[]; unread: number; addedAt: number };
 
-test('Organize moves feeds, renames folders, and reorders them', async ({ page }) => {
+test('Organize manages multi-folder membership, rename, and reorder', async ({ page }) => {
     await page.addInitScript(() => {
         const b64 = (obj: unknown) => btoa(JSON.stringify(obj));
         const exp = Math.floor(Date.now() / 1000) + 3600;
@@ -68,17 +68,28 @@ test('Organize moves feeds, renames folders, and reorders them', async ({ page }
     await expect(page.getByRole('heading', { name: 'Tech (1)' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Sport (0)' })).toBeVisible();
 
-    // Move a feed out of Tech into Sport.
-    await page.getByLabel('Move Feed One to folder').selectOption('f2');
-    await expect(page.getByRole('heading', { name: 'Tech (0)' })).toBeVisible();
+    // A feed can belong to several folders at once.
+    await page.getByRole('button', { name: 'Folders for Feed One' }).first().click();
+    await expect(page.getByRole('checkbox', { name: 'Tech' })).toBeChecked();
+    await page.getByRole('checkbox', { name: 'Sport' }).check();
+    await expect(page.getByRole('heading', { name: 'Tech (1)' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Sport (1)' })).toBeVisible();
-    expect(moved).toEqual(['f2']);
+    expect(moved).toEqual(['f1', 'f2']);
+    await page.keyboard.press('Escape');
 
     // Rename the folder.
     page.once('dialog', (dialog) => void dialog.accept('Outdoor'));
     await page.getByRole('button', { name: 'Rename Sport' }).click();
     await expect(page.getByRole('heading', { name: 'Outdoor (1)' })).toBeVisible();
     expect(renamed).toBe('Outdoor');
+
+    // Drop Tech from the feed while keeping the renamed folder.
+    await page.getByRole('button', { name: 'Folders for Feed One' }).first().click();
+    await page.getByRole('checkbox', { name: 'Tech' }).uncheck();
+    await expect(page.getByRole('heading', { name: 'Tech (0)' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Outdoor (1)' })).toBeVisible();
+    expect(moved).toEqual(['f2']);
+    await page.keyboard.press('Escape');
 
     // Move it above Tech.
     await page.getByRole('button', { name: 'Move Outdoor up' }).click();
@@ -87,8 +98,9 @@ test('Organize moves feeds, renames folders, and reorders them', async ({ page }
     await expect(heads.nth(2)).toHaveText('Tech (0)');
     expect(reordered).toEqual(['f2', 'f1']);
 
-    // And the feed can go back to Uncategorized.
-    await page.getByLabel('Move Feed One to folder').selectOption('');
+    // With no folders left the feed is Uncategorized.
+    await page.getByRole('button', { name: 'Folders for Feed One' }).first().click();
+    await page.getByRole('checkbox', { name: 'Outdoor' }).uncheck();
     await expect(page.getByRole('heading', { name: 'Uncategorized (2)' })).toBeVisible();
     expect(moved).toEqual([]);
 });

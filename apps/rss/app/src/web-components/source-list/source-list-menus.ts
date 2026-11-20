@@ -1,5 +1,5 @@
 import type { MenuAnchor } from '../feed-menu/feed-menu';
-import { anchorFromEvent } from './menu-popover';
+import { anchorFromEvent } from '../menu-popover';
 import type { Feed, Folder, SavedSearch } from '../../types';
 
 /** Menu open/close/anchor state the menu actions read and update. */

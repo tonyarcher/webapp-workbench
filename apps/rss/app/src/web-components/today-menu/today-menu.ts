@@ -1,4 +1,4 @@
-import { syncMenuPopover, type MenuAnchor } from '../source-list/menu-popover';
+import { syncMenuPopover, type MenuAnchor } from '../menu-popover';
 import styles from './today-menu.css?inline';
 
 export class TodayMenu extends HTMLElement {

@@ -1,4 +1,4 @@
-import { syncMenuPopover } from '../source-list/menu-popover';
+import { syncMenuPopover } from '../menu-popover';
 import styles from './folder-menu.css?inline';
 
 export class FolderMenu extends HTMLElement {

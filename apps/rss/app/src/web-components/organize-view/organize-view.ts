@@ -1,7 +1,8 @@
 import { fetchLibrary } from '../../query';
-import { deleteFolder, moveFeed, renameFolder, reorderFolders } from '../../mutations';
+import { deleteFolder, renameFolder, reorderFolders, setFeedFolderMembership } from '../../mutations';
 import { addFolder } from '../../services/api';
 import type { Feed, Folder } from '../../types';
+import { anchorFromEvent, syncMenuPopover, type MenuAnchor } from '../menu-popover';
 import { movedFolderOrder } from './organize-view-helpers';
 import styles from './organize-view.css?inline';
 
@@ -9,6 +10,10 @@ export class OrganizeView extends HTMLElement {
     private folders: Folder[] = [];
     private feeds: Feed[] = [];
     private root: HTMLDivElement | null = null;
+    private popoverEl: HTMLDivElement | null = null;
+    private popoverFeedId: string | null = null;
+    private popoverOpen = false;
+    private popoverAnchor: MenuAnchor | null = null;
     private status = '';
     private statusError = false;
 
@@ -19,7 +24,9 @@ export class OrganizeView extends HTMLElement {
         shadow.appendChild(style);
         this.root = document.createElement('div');
         this.root.className = 'view';
-        shadow.appendChild(this.root);
+        this.popoverEl = document.createElement('div');
+        this.popoverEl.className = 'folders-popover';
+        shadow.append(this.root, this.popoverEl);
         void this.load();
     }
 
@@ -40,10 +47,6 @@ export class OrganizeView extends HTMLElement {
     private feedsFor(folderId: string | null): Feed[] {
         if (folderId === null) return this.feeds.filter((f) => !f.folderIds.length);
         return this.feeds.filter((f) => f.folderIds.includes(folderId));
-    }
-
-    private folderTitle(id: string | null): string {
-        return id === null ? 'Uncategorized' : (this.folders.find((f) => f.id === id)?.title ?? 'Uncategorized');
     }
 
     private announce(text: string, error = false): void {
@@ -94,14 +97,18 @@ export class OrganizeView extends HTMLElement {
         }
     }
 
-    private async onMoveFeed(feed: Feed, folderId: string | null) {
+    /** A feed can sit in any number of folders; no folders means Uncategorized. */
+    private async onToggleMembership(feed: Feed, folderId: string, checked: boolean) {
+        const next = new Set(feed.folderIds);
+        if (checked) next.add(folderId);
+        else next.delete(folderId);
         try {
-            await moveFeed(feed.id, folderId);
-            this.status = `${feed.title} moved to ${this.folderTitle(folderId)}.`;
+            await setFeedFolderMembership(feed.id, [...next]);
+            this.status = `${feed.title} folders saved.`;
             this.statusError = false;
             await this.load();
         } catch {
-            this.fail(`Could not move ${feed.title}.`);
+            this.fail(`Could not save ${feed.title} folders.`);
         }
     }
 
@@ -149,6 +156,7 @@ export class OrganizeView extends HTMLElement {
             body.appendChild(this.renderFolderSection(folder.title, this.feedsFor(folder.id), folder, index));
         });
         this.root.appendChild(body);
+        this.paintPopover();
     }
 
     private renderFolderSection(title: string, feeds: Feed[], folder?: Folder, index?: number): HTMLElement {
@@ -203,28 +211,63 @@ export class OrganizeView extends HTMLElement {
         return button;
     }
 
+    private folderLabels(feed: Feed): string {
+        if (feed.folderIds.length === 0) return 'Uncategorized';
+        return feed.folderIds
+            .map((id) => this.folders.find((f) => f.id === id)?.title)
+            .filter((title): title is string => !!title)
+            .join(', ');
+    }
+
     private feedItem(feed: Feed): HTMLElement {
         const li = document.createElement('li');
         li.className = 'feed-item';
         const title = document.createElement('span');
         title.className = 'feed-title';
         title.textContent = feed.title;
-        const move = document.createElement('select');
-        move.setAttribute('aria-label', `Move ${feed.title} to folder`);
-        const uncategorized = document.createElement('option');
-        uncategorized.value = '';
-        uncategorized.textContent = 'Uncategorized';
-        move.appendChild(uncategorized);
-        for (const folder of this.folders) {
-            const option = document.createElement('option');
-            option.value = folder.id;
-            option.textContent = folder.title;
-            move.appendChild(option);
-        }
-        move.value = feed.folderIds[0] ?? '';
-        move.addEventListener('change', () => void this.onMoveFeed(feed, move.value === '' ? null : move.value));
-        li.append(title, move);
+        const folders = document.createElement('button');
+        folders.className = 'btn folders-btn';
+        folders.textContent = this.folderLabels(feed);
+        folders.setAttribute('aria-label', `Folders for ${feed.title}`);
+        folders.addEventListener('click', (event) => {
+            event.stopPropagation();
+            this.popoverFeedId = feed.id;
+            this.popoverAnchor = anchorFromEvent(event);
+            this.popoverOpen = true;
+            this.paintPopover();
+        });
+        li.append(title, folders);
         return li;
+    }
+
+    private paintPopover(): void {
+        if (!this.popoverEl) return;
+        const feed = this.feeds.find((f) => f.id === this.popoverFeedId);
+        const open = this.popoverOpen && feed !== undefined;
+        syncMenuPopover(this.popoverEl, open, this.popoverAnchor, () => {
+            this.popoverOpen = false;
+            this.popoverFeedId = null;
+            this.paintPopover();
+        });
+        this.popoverEl.replaceChildren();
+        if (!open || !feed) return;
+        const heading = document.createElement('h3');
+        heading.textContent = feed.title;
+        this.popoverEl.appendChild(heading);
+        for (const folder of this.folders) {
+            const label = document.createElement('label');
+            label.className = 'folder-choice';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.checked = feed.folderIds.includes(folder.id);
+            input.addEventListener('change', () => void this.onToggleMembership(feed, folder.id, input.checked));
+            label.append(input, document.createTextNode(folder.title));
+            this.popoverEl.appendChild(label);
+        }
+        const hint = document.createElement('p');
+        hint.className = 'folders-hint';
+        hint.textContent = 'None selected means Uncategorized.';
+        this.popoverEl.appendChild(hint);
     }
 }
 

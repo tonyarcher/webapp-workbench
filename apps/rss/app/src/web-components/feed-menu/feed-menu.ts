@@ -1,4 +1,4 @@
-import { syncMenuPopover } from '../source-list/menu-popover';
+import { syncMenuPopover } from '../menu-popover';
 import styles from './feed-menu.css?inline';
 
 export interface MenuAnchor {

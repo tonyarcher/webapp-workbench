@@ -1,4 +1,4 @@
-import { syncMenuPopover, type MenuAnchor } from '../source-list/menu-popover';
+import { syncMenuPopover, type MenuAnchor } from '../menu-popover';
 import styles from './feed-list-menu.css?inline';
 
 export class FeedListMenu extends HTMLElement {
