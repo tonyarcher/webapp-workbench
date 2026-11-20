@@ -8,6 +8,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.data.domain.Pageable
+import rssapi.ingest.FeedBackoff
 import rssapi.ingest.IngestService
 import rssapi.ingest.IngestSync
 import rssapi.persist.FeedSyncEntity
@@ -30,7 +31,7 @@ class FeedPollerTest {
         FeedSyncEntity(feedId = feedId, lastFetchedAt = fetched)
 
     private fun tickOnce(): FeedPoller {
-        val poller = FeedPoller(ingest, syncRows, sync, subs)
+        val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.scheduledTick()
         poller.destroy()
         return poller
@@ -41,7 +42,7 @@ class FeedPollerTest {
         val activeFeed = UUID.randomUUID()
         val staleFeed = UUID.randomUUID()
         val fetched = now.minus(Duration.ofHours(2))
-        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(
+        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(
             listOf(row(activeFeed, fetched), row(staleFeed, fetched)),
         )
         whenever(subs.findMaxLastSeenByFeedId(activeFeed)).thenReturn(now.minus(Duration.ofDays(1)))
@@ -60,7 +61,7 @@ class FeedPollerTest {
     fun throttlesRecentlyFetchedInactiveOnlyFeeds() {
         val feedId = UUID.randomUUID()
         val fetched = now.minus(Duration.ofHours(2))
-        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(listOf(row(feedId, fetched)))
+        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(listOf(row(feedId, fetched)))
         // 10 days quiet needs a full day of staleness; 2 hours is not due.
         whenever(subs.findMaxLastSeenByFeedId(feedId)).thenReturn(now.minus(Duration.ofDays(10)))
 
@@ -74,7 +75,7 @@ class FeedPollerTest {
     fun pollsStaleEnoughInactiveOnlyFeeds() {
         val feedId = UUID.randomUUID()
         val fetched = now.minus(Duration.ofDays(3))
-        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(listOf(row(feedId, fetched)))
+        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(listOf(row(feedId, fetched)))
         whenever(subs.findMaxLastSeenByFeedId(feedId)).thenReturn(now.minus(Duration.ofDays(10)))
 
         tickOnce()
@@ -86,7 +87,7 @@ class FeedPollerTest {
     fun unknownRecencyStaysEligible() {
         val feedId = UUID.randomUUID()
         val fetched = now.minus(Duration.ofHours(1))
-        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(listOf(row(feedId, fetched)))
+        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(listOf(row(feedId, fetched)))
         whenever(subs.findMaxLastSeenByFeedId(feedId)).thenReturn(null)
 
         tickOnce()
@@ -97,7 +98,7 @@ class FeedPollerTest {
     @Test
     fun lookupFailureFallsBackToEligible() {
         val feedId = UUID.randomUUID()
-        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(
+        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(
             listOf(row(feedId, now.minus(Duration.ofHours(1)))),
         )
         whenever(subs.findMaxLastSeenByFeedId(feedId)).thenThrow(RuntimeException("db down"))
@@ -112,7 +113,7 @@ class FeedPollerTest {
         val badFeed = UUID.randomUUID()
         val goodFeed = UUID.randomUUID()
         val fetched = now.minus(Duration.ofHours(2))
-        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(
+        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(
             listOf(row(badFeed, fetched), row(goodFeed, fetched)),
         )
         whenever(subs.findMaxLastSeenByFeedId(badFeed)).thenReturn(now.minus(Duration.ofDays(1)))
@@ -130,12 +131,12 @@ class FeedPollerTest {
     @Test
     fun destroyedPollerSkipsTick() {
         val feedId = UUID.randomUUID()
-        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(
+        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(
             listOf(row(feedId, now.minus(Duration.ofHours(2)))),
         )
         whenever(subs.findMaxLastSeenByFeedId(feedId)).thenReturn(null)
 
-        val poller = FeedPoller(ingest, syncRows, sync, subs)
+        val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.destroy()
         poller.scheduledTick()
 

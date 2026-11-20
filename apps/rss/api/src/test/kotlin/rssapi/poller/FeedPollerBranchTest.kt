@@ -7,6 +7,7 @@ import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.data.domain.Pageable
+import rssapi.ingest.FeedBackoff
 import rssapi.ingest.IngestService
 import rssapi.ingest.IngestSync
 import rssapi.persist.FeedSyncEntity
@@ -26,7 +27,7 @@ class FeedPollerBranchTest {
     fun pollErrorsAreLogged() {
         val badState = UUID.randomUUID()
         val badArg = UUID.randomUUID()
-        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(
+        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(
             listOf(
                 FeedSyncEntity(feedId = badState, lastFetchedAt = null),
                 FeedSyncEntity(feedId = badArg, lastFetchedAt = null),
@@ -35,7 +36,7 @@ class FeedPollerBranchTest {
         whenever(subs.findMaxLastSeenByFeedId(any())).thenReturn(null)
         whenever(ingest.pollFeed(badState)).thenThrow(IllegalStateException("boom"))
         whenever(ingest.pollFeed(badArg)).thenThrow(IllegalArgumentException("bad"))
-        val poller = FeedPoller(ingest, syncRows, sync, subs)
+        val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.scheduledTick()
         poller.destroy()
         verify(ingest).pollFeed(badState)
@@ -44,7 +45,7 @@ class FeedPollerBranchTest {
 
     @Test
     fun stoppedTickReturnsEarly() {
-        val poller = FeedPoller(ingest, syncRows, sync, subs)
+        val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.destroy()
         poller.scheduledTick()
         verify(ingest, never()).pollFeed(any())
@@ -53,12 +54,12 @@ class FeedPollerBranchTest {
     @Test
     fun anonymousErrorLogged() {
         val feedId = UUID.randomUUID()
-        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(
+        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(
             listOf(FeedSyncEntity(feedId = feedId, lastFetchedAt = null)),
         )
         whenever(subs.findMaxLastSeenByFeedId(any())).thenReturn(null)
         whenever(ingest.pollFeed(feedId)).thenThrow(object : IllegalStateException() {})
-        val poller = FeedPoller(ingest, syncRows, sync, subs)
+        val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.scheduledTick()
         poller.destroy()
         verify(ingest).pollFeed(feedId)
@@ -67,9 +68,9 @@ class FeedPollerBranchTest {
     @Test
     fun queuedIdsPollAsync() {
         val id = UUID.randomUUID()
-        whenever(syncRows.findDue(any(), any<Pageable>())).thenReturn(emptyList())
+        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(emptyList())
         whenever(subs.findMaxLastSeenByFeedId(any())).thenReturn(null)
-        val poller = FeedPoller(ingest, syncRows, sync, subs)
+        val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.queue(listOf(id, id))
         verify(ingest, timeout(5_000L)).pollFeed(id)
         poller.destroy()
@@ -78,10 +79,10 @@ class FeedPollerBranchTest {
     @Test
     fun forcedOverflowSkipsQuery() {
         val ids = (0 until 7).map { UUID.randomUUID() }
-        val poller = FeedPoller(ingest, syncRows, sync, subs)
+        val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.queue(ids)
         ids.take(5).forEach { verify(ingest, timeout(5_000L)).pollFeed(it) }
-        verify(syncRows, never()).findDue(any(), any<Pageable>())
+        verify(syncRows, never()).findDue(any(), any(), any<Pageable>())
         poller.destroy()
     }
 }

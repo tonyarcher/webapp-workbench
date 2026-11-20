@@ -85,6 +85,25 @@ describe('source-list nav order', () => {
         }
     });
 
+    it('marks stale and unreachable feeds with distinct, labelled indicators', () => {
+        const stale = { ...feed, status: 'stale' as const, lastFetchedAt: 1 };
+        const dead = {
+            ...feed,
+            id: 'fd2',
+            title: 'Feed Two',
+            status: 'unreachable' as const,
+            consecutiveFailures: 3,
+            lastError: 'timeout',
+        };
+        const root = render(host({ folderFeeds: () => [stale, dead] }));
+        const marks = root.querySelectorAll<HTMLElement>('.feed-error');
+        expect(marks.length).to.equal(2);
+        expect(marks[0]!.getAttribute('aria-label')).to.equal('Feed stale');
+        expect(marks[1]!.getAttribute('aria-label')).to.equal('Feed unreachable');
+        expect(marks[1]!.title).to.include('timeout');
+        expect(marks[1]!.title).to.include('Refresh from Feed options');
+    });
+
     it('honours the persisted Interesting collapse', () => {
         const root = render(
             host({

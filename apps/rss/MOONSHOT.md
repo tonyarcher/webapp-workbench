@@ -1013,7 +1013,9 @@ can tell where an item came from.
 - **Half.** `api`.
 - **Effort.** `M`.
 - **First test.** HTTP fixture tests for 304/ETag/Last-Modified/Retry-After;
-  backoff and cadence tests.
+  backoff and cadence tests. Shipped: consecutive failure counts with capped
+  exponential retry delays, forced refresh bypass, and stale/unreachable status
+  on feeds. Conditional GET and Retry-After handling remain open.
 
 ### P5. Follow any page (scrape fallback when no feed exists)
 

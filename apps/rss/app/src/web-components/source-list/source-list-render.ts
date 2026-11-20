@@ -335,9 +335,14 @@ function feedOpenButton(feed: Feed, onSelect: (feed: Feed) => void): HTMLButtonE
     label.title = feed.lastError ? `${feed.title} — ${feed.lastError}` : feed.title;
     append(button, el('span', 'dot'), label);
     if (feed.unread > 0) append(button, el('span', 'badge', feed.unread));
-    if (feed.lastError) {
-        const error = el('span', 'feed-error', '⚠');
-        error.title = feed.lastError;
+    const status = feed.status ?? 'ok';
+    if (feed.lastError || status !== 'ok') {
+        const error = el('span', `feed-error ${status}`, status === 'unreachable' ? '⚠' : '△');
+        error.setAttribute('aria-label', status === 'unreachable' ? 'Feed unreachable' : 'Feed stale');
+        error.title =
+            status === 'unreachable'
+                ? `${feed.title} — unreachable after ${feed.consecutiveFailures ?? 1} tries: ${feed.lastError ?? 'unknown error'}. Refresh from Feed options to retry.`
+                : `${feed.title} — ${feed.lastError ?? 'no recent update'}`;
         button.appendChild(error);
     }
     return button;

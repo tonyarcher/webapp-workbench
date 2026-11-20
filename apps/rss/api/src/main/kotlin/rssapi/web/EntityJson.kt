@@ -14,19 +14,27 @@ fun FolderEntity.toJson(): FolderJson = FolderJson(
     sortOrder = sortOrder,
 )
 
-fun FeedEntity.toJson(folderIds: List<String>, unread: Int, lastFetchedAt: Long?, lastError: String?): FeedJson =
-    FeedJson(
-        id = id.toString(),
-        title = title,
-        url = xmlUrl,
-        folderIds = folderIds,
-        unread = unread,
-        addedAt = addedAt.toEpochMilli(),
-        siteUrl = siteUrl,
-        icon = icon,
-        lastFetchedAt = lastFetchedAt,
-        lastError = lastError,
-    )
+fun FeedEntity.toJson(
+    folderIds: List<String>,
+    unread: Int,
+    lastFetchedAt: Long?,
+    lastError: String?,
+    consecutiveFailures: Int = 0,
+    status: String = "ok",
+): FeedJson = FeedJson(
+    id = id.toString(),
+    title = title,
+    url = xmlUrl,
+    folderIds = folderIds,
+    unread = unread,
+    addedAt = addedAt.toEpochMilli(),
+    siteUrl = siteUrl,
+    icon = icon,
+    lastFetchedAt = lastFetchedAt,
+    lastError = lastError,
+    consecutiveFailures = consecutiveFailures,
+    status = status,
+)
 
 fun SavedSearchEntity.toJson(unread: Int = 0): SavedSearchJson = SavedSearchJson(
     id = id.toString(),

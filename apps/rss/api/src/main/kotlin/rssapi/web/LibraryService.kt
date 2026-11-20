@@ -1,6 +1,7 @@
 package rssapi.web
 
 import org.springframework.stereotype.Service
+import rssapi.domain.FeedHealth
 import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedRepo
 import rssapi.persist.FeedSyncEntity
@@ -74,11 +75,16 @@ class LibraryService(
         val syncs = syncMap(feedIds)
         return feeds.findAllById(feedIds).sortedBy { it.addedAt }.map { feed ->
             val st = syncs[feed.id]
+            val fetched = st?.lastFetchedAt?.toEpochMilli()
+            val failures = st?.consecutiveFailures ?: 0
+            val health = FeedHealth.statusOf(st?.lastError, failures, fetched, System.currentTimeMillis())
             feed.toJson(
                 folderMap[feed.id] ?: emptyList(),
                 unread[feed.id] ?: 0,
-                st?.lastFetchedAt?.toEpochMilli(),
+                fetched,
                 st?.lastError,
+                failures,
+                health,
             )
         }
     }

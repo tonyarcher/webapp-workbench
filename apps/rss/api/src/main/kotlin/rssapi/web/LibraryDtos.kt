@@ -13,6 +13,8 @@ data class FeedJson(
     val icon: String? = null,
     val lastFetchedAt: Long? = null,
     val lastError: String? = null,
+    val consecutiveFailures: Int = 0,
+    val status: String = "ok",
 )
 
 data class SavedSearchJson(

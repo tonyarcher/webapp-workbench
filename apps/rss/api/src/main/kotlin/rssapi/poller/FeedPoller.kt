@@ -5,6 +5,7 @@ import org.springframework.dao.DataAccessException
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import rssapi.POLL_BATCH
+import rssapi.ingest.FeedBackoff
 import rssapi.ingest.IngestService
 import rssapi.ingest.IngestSync
 import rssapi.log.log
@@ -23,6 +24,7 @@ class FeedPoller(
     private val syncRows: FeedSyncRepo,
     private val sync: IngestSync,
     private val subs: SubscriptionRepo,
+    private val backoff: FeedBackoff,
 ) : DisposableBean {
     private val extra = ConcurrentLinkedQueue<UUID>()
     private val inFlight = AtomicBoolean(false)
@@ -63,6 +65,7 @@ class FeedPoller(
         do {
             if (stopped) return
             val forced = drainForced()
+            forced.forEach(backoff::clear)
             val due = dueIds(forced)
             for (id in due.take(POLL_BATCH)) {
                 if (stopped) return
@@ -82,14 +85,16 @@ class FeedPoller(
 
     private fun dueIds(forced: List<UUID>): List<UUID> {
         val maxAge = System.getenv("POLL_MAX_AGE_MS")?.toLongOrNull() ?: (15 * 60_000L)
-        val cutoff = Instant.now().minusMillis(maxAge)
+        val now = Instant.now()
+        val cutoff = now.minusMillis(maxAge)
         val need = POLL_BATCH - forced.size
         if (need <= 0) return forced.distinct()
         val candidates = syncRows.findDue(
             cutoff,
+            now,
             org.springframework.data.domain.PageRequest.of(0, need + OVERFETCH),
         )
-        val eligible = candidates.filter { isEligible(it, Instant.now(), maxAge) }
+        val eligible = candidates.filter { isEligible(it, now, maxAge) }
         val extraDue = eligible.take(need).map { it.feedId }
         return (forced + extraDue).distinct()
     }

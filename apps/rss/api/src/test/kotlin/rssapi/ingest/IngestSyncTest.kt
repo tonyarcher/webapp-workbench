@@ -14,6 +14,7 @@ import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class IngestSyncTest {
     private val feeds: FeedRepo = mock()
@@ -51,6 +52,26 @@ class IngestSyncTest {
         whenever(sync.findById(feedId)).thenReturn(Optional.empty())
         ingest.saveError(feedId, "boom")
         verify(sync).save(any())
+    }
+
+    @Test
+    fun failuresCountUpAndScheduleRetry() {
+        val row = FeedSyncEntity(feedId = feedId)
+        whenever(sync.findById(feedId)).thenReturn(Optional.of(row))
+        ingest.saveError(feedId, "boom")
+        assertEquals(1, row.consecutiveFailures)
+        ingest.saveError(feedId, "still down")
+        assertEquals(2, row.consecutiveFailures)
+        assertTrue(row.nextAttemptAt!!.toEpochMilli() > row.lastFetchedAt!!.toEpochMilli())
+    }
+
+    @Test
+    fun successClearsFailuresAndBackoff() {
+        val row = FeedSyncEntity(feedId = feedId, consecutiveFailures = 3, nextAttemptAt = java.time.Instant.MAX)
+        whenever(sync.findById(feedId)).thenReturn(Optional.of(row))
+        ingest.saveOk(feedId, null, null)
+        assertEquals(0, row.consecutiveFailures)
+        assertNull(row.nextAttemptAt)
     }
 
     @Test

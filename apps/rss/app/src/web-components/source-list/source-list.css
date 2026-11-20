@@ -294,6 +294,10 @@ button.item {
     opacity: 1;
 }
 
+.feed-error.stale {
+    color: var(--text-muted);
+}
+
 .feed-error {
     position: absolute;
     right: 68px;

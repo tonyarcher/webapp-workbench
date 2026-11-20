@@ -27,6 +27,8 @@ export interface Feed {
     addedAt: number;
     lastFetchedAt?: number | undefined;
     lastError?: string | undefined;
+    consecutiveFailures?: number | undefined;
+    status?: 'ok' | 'stale' | 'unreachable' | undefined;
 }
 
 export interface Article {

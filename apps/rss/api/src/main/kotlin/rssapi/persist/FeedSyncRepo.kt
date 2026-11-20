@@ -11,9 +11,10 @@ interface FeedSyncRepo : JpaRepository<FeedSyncEntity, UUID> {
     @Query(
         """
         select s from FeedSyncEntity s
-        where s.lastFetchedAt is null or s.lastFetchedAt < :cutoff
-        order by s.lastFetchedAt asc nulls first
+        where (s.nextAttemptAt is null and (s.lastFetchedAt is null or s.lastFetchedAt < :cutoff))
+           or s.nextAttemptAt <= :now
+        order by s.nextAttemptAt asc nulls first, s.lastFetchedAt asc nulls first
         """,
     )
-    fun findDue(@Param("cutoff") cutoff: Instant, page: Pageable): List<FeedSyncEntity>
+    fun findDue(@Param("cutoff") cutoff: Instant, @Param("now") now: Instant, page: Pageable): List<FeedSyncEntity>
 }

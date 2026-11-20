@@ -21,11 +21,11 @@ class IngestSyncRemainderTest {
     private val feedId = UUID.randomUUID()
 
     @Test
-    fun saveNotModifiedKeepsError() {
+    fun saveNotModifiedClearsError() {
         val row = FeedSyncEntity(feedId = feedId, lastError = "old")
         whenever(sync.findById(feedId)).thenReturn(Optional.of(row))
         ingest.saveNotModified(feedId, null, null)
-        assertEquals("old", row.lastError)
+        assertNull(row.lastError)
         verify(sync).save(row)
     }
 

@@ -20,4 +20,8 @@ class FeedSyncEntity(
     var lastFetchedAt: Instant? = null,
     @Column(name = "last_error")
     var lastError: String? = null,
+    @Column(name = "consecutive_failures")
+    var consecutiveFailures: Int = 0,
+    @Column(name = "next_attempt_at")
+    var nextAttemptAt: Instant? = null,
 )

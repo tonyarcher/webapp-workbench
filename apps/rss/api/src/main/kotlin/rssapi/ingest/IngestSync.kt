@@ -5,6 +5,7 @@ import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
 import rssapi.persist.FeedSyncEntity
 import rssapi.persist.FeedSyncRepo
+import rssapi.poller.PollingBackoff
 import java.time.Instant
 import java.util.UUID
 
@@ -38,6 +39,8 @@ class IngestSync(private val feeds: FeedRepo, private val sync: FeedSyncRepo) {
         val row = sync.findById(feedId).orElseGet { FeedSyncEntity(feedId = feedId) }
         row.lastFetchedAt = Instant.now()
         row.lastError = message
+        row.consecutiveFailures += 1
+        row.nextAttemptAt = PollingBackoff.nextAttempt(row.consecutiveFailures, Instant.now())
         sync.save(row)
     }
 
@@ -45,6 +48,8 @@ class IngestSync(private val feeds: FeedRepo, private val sync: FeedSyncRepo) {
         val row = sync.findById(feedId).orElseGet { FeedSyncEntity(feedId = feedId) }
         row.lastFetchedAt = Instant.now()
         row.lastError = null
+        row.consecutiveFailures = 0
+        row.nextAttemptAt = null
         if (etag != null) row.etag = etag
         if (lastModified != null) row.lastModified = lastModified
         sync.save(row)
@@ -53,6 +58,9 @@ class IngestSync(private val feeds: FeedRepo, private val sync: FeedSyncRepo) {
     fun saveNotModified(feedId: UUID, etag: String?, lastModified: String?) {
         val row = sync.findById(feedId).orElseGet { FeedSyncEntity(feedId = feedId) }
         row.lastFetchedAt = Instant.now()
+        row.lastError = null
+        row.consecutiveFailures = 0
+        row.nextAttemptAt = null
         if (etag != null) row.etag = etag
         if (lastModified != null) row.lastModified = lastModified
         sync.save(row)
