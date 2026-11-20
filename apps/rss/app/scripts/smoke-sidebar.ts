@@ -11,6 +11,25 @@ import {
     nextSidebarWidth,
 } from '../src/web-components/source-list/source-list-settings';
 import { assert } from './smoke-assert';
+import { interestingBadgeCap } from '../src/web-components/source-list/source-list-helpers';
+import type { Feed } from '../src/types';
+
+// ---- Interesting is a subset of All ----
+{
+    const feed = (id: string, unread: number, folderIds: string[]): Feed => ({
+        id,
+        title: id,
+        url: `https://example.test/${id}`,
+        folderIds,
+        unread,
+        addedAt: 1,
+    });
+    const feeds = [feed('a', 50, ['f1']), feed('b', 33, ['f1', 'f2']), feed('c', 20, ['f2'])];
+    assert(interestingBadgeCap(feeds, 'f1', {}) === 83, 'a folder cap is the unread sum of its feeds');
+    assert(interestingBadgeCap(feeds, 'f1', { f1: true }) === 0, 'an ignored folder cannot feed the badge');
+    assert(interestingBadgeCap(feeds, 'f1', { f2: true }) === 50, 'a feed shared with an ignored folder is excluded');
+    assert(interestingBadgeCap(feeds, 'f2', {}) === 53, 'the other folder keeps its own unread');
+}
 
 const mid = Math.round((MIN_SIDEBAR_WIDTH + MAX_SIDEBAR_WIDTH) / 2);
 

@@ -107,9 +107,11 @@ export function computeCount(
     lookup: FeedFolderLookup,
     starred: ReadonlyArray<{ title: string }> = [],
 ): number {
-    // Mirror the view's transient "hide read" filter after Mark shown as read.
-    const visible = isInterestingHideRead(folderId) ? articles.filter((a) => a.read === 0) : articles;
-    const filtered = filterMutedArticles(visible, loadMuteRules(), lookup);
+    // The badge feeds the sidebar next to All, which counts unread articles.
+    // Read rows may stay in the ranking pool (they keep the model warm), but
+    // they must never make an Interesting badge exceed the All badge.
+    const unread = articles.filter((a) => a.read === 0);
+    const filtered = filterMutedArticles(unread, loadMuteRules(), lookup);
     const wordMap = interestingWordMapOf(filtered, starred);
     const strictness = loadInterestingStrictness(folderId);
     // The badge is the total the view can show, not the current page. Capping

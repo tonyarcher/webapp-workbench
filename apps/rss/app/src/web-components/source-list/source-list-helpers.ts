@@ -1,5 +1,16 @@
 import type { Feed, FeedSort } from '../../types';
 
+/** Unread rows a folder can contribute to All, skipping ignored folders. */
+export function interestingBadgeCap(
+    feeds: readonly Feed[],
+    folderId: string,
+    ignored: Record<string, boolean>,
+): number {
+    return feeds
+        .filter((f) => f.folderIds.includes(folderId) && !f.folderIds.some((fid) => ignored[fid]))
+        .reduce((sum, f) => sum + f.unread, 0);
+}
+
 export function sortedFeeds(feeds: Feed[], feedSort: FeedSort): Feed[] {
     if (feedSort !== 'unread') return feeds;
     return [...feeds].sort(

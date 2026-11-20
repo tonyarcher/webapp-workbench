@@ -415,7 +415,7 @@ import { assert } from './smoke-assert';
     );
 }
 
-// ---- the badge counts the whole visible set, not just the current page ----
+// ---- the badge counts interesting unread, never read rows ----
 {
     const { computeCount } = await import('../src/services/interesting-counts-refresh');
     const { setInterestingHideRead } = await import('../src/services/interesting-counts');
@@ -445,7 +445,8 @@ import { assert } from './smoke-assert';
     const batch = Array.from({ length: 40 }, (_, i) => article(i, 0));
     assert(computeCount('f1', batch, {}) === 40, 'the Interesting badge counts the whole ranked batch, not the page');
     const mixed = batch.map((a, i) => ({ ...a, read: (i < 10 ? 1 : 0) as 0 | 1 }));
+    assert(computeCount('f1', mixed, {}) === 30, 'read rows never inflate the Interesting badge');
     setInterestingHideRead('f1', true);
-    assert(computeCount('f1', mixed, {}) === 30, 'hide-read lowers the Interesting badge by the read rows');
+    assert(computeCount('f1', mixed, {}) === 30, 'the transient hide-read switch no longer changes the badge');
     setInterestingHideRead('f1', false);
 }

@@ -101,9 +101,9 @@ export async function loadInterestingBatchAction(host: InterestingHost, gen: num
     const selected = selectInteresting(filtered, wordMap, strictness);
     const ordered = sortInteresting(selected, host.sort);
     host.items = ordered.slice(0, host.pageSize);
-    // Badge is the whole visible set, not just the current page, so Mark shown
-    // as read visibly lowers it instead of refilling to the page size.
-    saveInterestingCount(host.view.id, ordered.length);
+    // The badge sits beside All (unread only), so count only unread rows even
+    // though the ranking pool still holds read articles.
+    saveInterestingCount(host.view.id, ordered.filter((a) => a.read === 0).length);
     host.hasMoreSingle = false;
     host.cursors.clear();
 }

@@ -22,7 +22,13 @@ import {
     updateMenus,
     type SourceListMenus,
 } from './source-list-render';
-import { dropFolderId, folderFeedsFor, folderUnreadFor, uncategorizedFor } from './source-list-helpers';
+import {
+    dropFolderId,
+    folderFeedsFor,
+    folderUnreadFor,
+    interestingBadgeCap,
+    uncategorizedFor,
+} from './source-list-helpers';
 import {
     handleDragOver,
     handleDragStart,
@@ -311,7 +317,11 @@ export class SourceList extends HTMLElement implements ReactiveControllerHost {
     }
 
     interestingCount(folderId: string): number | undefined {
-        return loadInterestingCount(folderId);
+        const count = loadInterestingCount(folderId);
+        if (count === undefined) return undefined;
+        // Interesting is a subset of the folder's unread, and All skips ignored
+        // folders. A stale cached count must never outnumber either one.
+        return Math.min(count, interestingBadgeCap(this.libraryData.feeds, folderId, this.ignoredFolders));
     }
 
     folderFeeds(folderId: string): Feed[] {
