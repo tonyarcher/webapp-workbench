@@ -8,6 +8,7 @@ import {
     importOpmlXml as apiImportOpml,
     readAll as apiReadAll,
     readBefore as apiReadBefore,
+    renameFolder as apiRenameFolder,
     reorderFolders as apiReorderFolders,
     reorderSavedSearches as apiReorderSavedSearches,
     recordAffinity,
@@ -124,6 +125,12 @@ export async function deleteFolder(folderId: string) {
     await apiDeleteFolder(folderId);
     await invalidateLibrary();
     await invalidateArticles();
+}
+
+export async function renameFolder(folderId: string, title: string) {
+    const folder = await apiRenameFolder(folderId, title);
+    await invalidateLibrary();
+    return folder;
 }
 
 export async function moveFeed(feedId: string, folderId: string | null) {

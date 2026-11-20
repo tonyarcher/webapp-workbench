@@ -41,6 +41,7 @@ export {
     readAll,
     readBefore,
     recordAffinity,
+    renameFolder,
     reorderFolders,
     reorderSavedSearches,
     requestServerSummary,

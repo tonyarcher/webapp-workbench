@@ -43,6 +43,13 @@ export async function addFolder(title: string): Promise<Folder> {
     }) as Promise<Folder>;
 }
 
+export async function renameFolder(id: string, title: string): Promise<Folder> {
+    return apiFetch(`/folders/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ title }),
+    }) as Promise<Folder>;
+}
+
 export async function deleteFolder(id: string): Promise<{ ok: true }> {
     return apiFetch(`/folders/${id}`, { method: 'DELETE' }) as Promise<{ ok: true }>;
 }

@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import rssapi.domain.isUuid
@@ -40,6 +41,26 @@ class LibraryController(
         val existing = folders.findByUserIdAndTitle(user.id, title)
         val row = existing ?: folders.save(FolderEntity(userId = user.id, title = title))
         return row.toJson()
+    }
+
+    @PutMapping("/folders/{id}", headers = ["X-Api-Version=1"])
+    fun renameFolder(@PathVariable id: String, @RequestBody body: TitleBody): FolderJson {
+        if (!isUuid(id)) throw ApiException(HttpStatus.BAD_REQUEST, "invalid folder id")
+        val title = body.title?.trim()?.takeIf { it.isNotEmpty() }
+            ?: throw ApiException(HttpStatus.BAD_REQUEST, "title is required")
+        val row = folders.findById(UUID.fromString(id)).filter { it.userId == user.id }.orElseThrow {
+            ApiException(HttpStatus.NOT_FOUND, "folder not found")
+        }
+        ensureUniqueTitle(row, title)
+        row.title = title
+        return folders.save(row).toJson()
+    }
+
+    private fun ensureUniqueTitle(row: FolderEntity, title: String) {
+        val clash = folders.findByUserIdAndTitle(user.id, title)
+        if (clash != null && clash.id != row.id) {
+            throw ApiException(HttpStatus.CONFLICT, "folder title already exists")
+        }
     }
 
     @DeleteMapping("/folders/{id}", headers = ["X-Api-Version=1"])

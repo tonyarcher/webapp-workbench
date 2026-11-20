@@ -80,6 +80,7 @@ await import('./smoke-palette.js');
 await import('./smoke-auth.js');
 await import('./smoke-toast.js');
 await import('./smoke-router.js');
+await import('./smoke-organize.js');
 await import('./smoke-settings-search.js');
 await import('./smoke-shortcuts.js');
 await import('./smoke-summary.js');
