@@ -77,6 +77,7 @@ const VIEW_TAGS: Record<View['kind'], string> = {
     glossary: 'glossary-view',
     coverage: 'coverage-view',
     stats: 'stats-view',
+    privacy: 'privacy-view',
     boards: 'boards-view',
     board: 'board-view',
     search: 'search-view',

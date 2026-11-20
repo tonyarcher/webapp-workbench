@@ -362,6 +362,7 @@ export class SourceList extends HTMLElement implements ReactiveControllerHost {
             this.view.kind === 'saved' ||
             this.view.kind === 'boards' ||
             this.view.kind === 'stats' ||
+            this.view.kind === 'privacy' ||
             this.view.kind === 'coverage' ||
             this.view.kind === 'glossary' ||
             this.view.kind === 'listen' ||

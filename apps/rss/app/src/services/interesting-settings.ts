@@ -10,6 +10,7 @@ import {
     extractWords,
     titleHasLearnedWord,
 } from './interesting-words';
+import { isSignalEnabled } from './learning-signals';
 
 /** Re-exported so views import settings only; the words module owns the value. */
 export const DEFAULT_INTERESTING_STRICTNESS = WORDS_DEFAULT_STRICTNESS;
@@ -144,7 +145,7 @@ const ENGAGEMENT_TOTALS_KEY = 'rss-reader:engagement-totals';
 
 /** Last daily decay run, so old lessons fade and recent behavior dominates. */
 const DECAY_AT_KEY = 'rss-reader:engagement-decayed-at';
-const DECAY_INTERVAL_MS = 24 * 3_600_000;
+export const DECAY_INTERVAL_MS = 24 * 3_600_000;
 const DECAY_FACTOR = 0.5;
 /** Bound the map: beyond this many words the tail is noise, not signal. */
 const MAX_WORD_MAP_WORDS = 500;
@@ -318,13 +319,30 @@ function saveDerankedIds(ids: string[]): void {
 }
 
 /**
+ * Last successful decay, or null when it has never run. The dashboard shows
+ * this so the reader can see why an old like has a small weight now.
+ */
+export function loadDecayAt(): number | null {
+    try {
+        const raw = localStorage.getItem(DECAY_AT_KEY);
+        if (!raw) return null;
+        const value = Number(raw);
+        return Number.isFinite(value) && value > 0 ? value : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Daily decay: halve every learned weight and lifetime total so recent
  * behavior dominates and stale interests fade instead of flattening the
  * ranking forever. Zeros drop out and the map prunes to its strongest
  * words. Runs at most once a day, piggybacked on the next accrual, so no
- * timer outlives anything.
+ * timer outlives anything. Switching the decay signal off freezes the map
+ * where it is; re-enabling it decays on the next accrual.
  */
 export function decayLearnedIfDue(now: number): void {
+    if (!isSignalEnabled('decay')) return;
     let last = 0;
     try {
         last = Number(localStorage.getItem(DECAY_AT_KEY) ?? 0);
@@ -384,6 +402,7 @@ export function accrueEngagement(
     cap: number,
     kind: EngagementKind,
 ): void {
+    if (!isSignalEnabled(kind)) return;
     if (weight === 0 || cap <= 0 || !Number.isFinite(weight)) return;
     decayLearnedIfDue(Date.now());
     const totals = loadEngagementTotals();
@@ -430,4 +449,30 @@ export function saveInterestingStrictness(folderId: string, value: number): void
         // storage unavailable; the slider just won't persist
     }
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('interesting-settings-changed'));
+}
+
+/**
+ * One-tap forget for the privacy dashboard: drop every learned weight, the
+ * engagement ledger, the derank list, the decay clock, and the derived badge
+ * counts. The reader's choices stay -- signal switches, Interesting folders,
+ * strictness, and the stars themselves are settings or server state, not
+ * inference. The next ranking starts from an empty map and (when star
+ * learning is on) re-seeds from explicit likes.
+ */
+export function forgetLearning(): void {
+    try {
+        for (const key of [
+            WORD_MAP_KEY,
+            WORD_MAP_IDS_KEY,
+            ENGAGEMENT_TOTALS_KEY,
+            DECAY_AT_KEY,
+            DERANKED_IDS_KEY,
+            'rss-reader:interesting-counts',
+        ]) {
+            localStorage.removeItem(key);
+        }
+    } catch {
+        // storage unavailable; there is nothing learned to forget
+    }
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('interesting-model-changed'));
 }

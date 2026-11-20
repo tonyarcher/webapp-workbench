@@ -52,6 +52,9 @@ export function parsePath(pathname: string, search = ''): View {
     if (parts[0] === 'stats') {
         return { kind: 'stats' };
     }
+    if (parts[0] === 'privacy') {
+        return { kind: 'privacy' };
+    }
     if (parts[0] === 'boards') {
         return { kind: 'boards' };
     }
@@ -103,6 +106,8 @@ export function viewToPath(view: View): string {
             return '/coverage';
         case 'stats':
             return '/stats';
+        case 'privacy':
+            return '/privacy';
         case 'boards':
             return '/boards';
         case 'board':

@@ -30,6 +30,7 @@ import '../listen-view/listen-view';
 import '../glossary-view/glossary-view';
 import '../coverage-view/coverage-view';
 import '../stats-view/stats-view';
+import '../privacy-view/privacy-view';
 import '../boards-view/boards-view';
 import '../board-view/board-view';
 import '../focus-view/focus-view';

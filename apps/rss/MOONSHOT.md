@@ -912,16 +912,6 @@ reader into infrastructure.
 - **Effort.** `M`.
 - **First test.** The budget test itself plus a known-slow fixture.
 
-### H3. Privacy dashboard
-
-- **Why.** A reader that learns must prove what it learned, locally.
-- **What.** One screen showing every learned signal (word weights, totals,
-  deranks, decay), per-signal toggles, export of the learned profile, and
-  one-tap forget with confirmation.
-- **Half.** `app`.
-- **Effort.** `M`.
-- **First test.** Inspector smoke against a rigged profile; forget tests.
-
 ### H4. Cross-device settings sync
 
 - **Why.** Two devices should feel like one reader.

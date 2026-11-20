@@ -2,6 +2,7 @@ import { fetchArticlesPage } from '../../services/api';
 import { mergeStarredWordMap, selectInteresting } from '../../services/interesting-words';
 import { loadInterestingStrictness, loadWordMap, loadWordMapIds } from '../../services/interesting-settings';
 import { loadStarredTitles, type StarredSeed } from '../../services/interesting-starred';
+import { isSignalEnabled } from '../../services/learning-signals';
 import { saveInterestingCount } from '../../services/interesting-counts';
 import { filterMutedArticles, loadMuteRules, type FeedFolderLookup } from '../../services/mute-rules';
 import type { Article, ArticleSort, Feed, View } from '../../types';
@@ -42,12 +43,16 @@ export function interestingActiveFor(view: View): boolean {
  * weights for batch-starred articles the cache has not counted yet (e.g.
  * starred on another device). Likes are merged by word, so the same article
  * seen twice can never inflate the map.
+ *
+ * With star learning switched off the cached map is used as-is: the reader
+ * keeps what stars taught before, but no like is newly folded in.
  */
 export function interestingWordMapOf(
     batch: Article[],
     starred: ReadonlyArray<{ title: string }> = [],
 ): Record<string, number> {
     const cached = loadWordMap();
+    if (!isSignalEnabled('star')) return cached;
     const counted = new Set(loadWordMapIds());
     const fresh = batch.filter((a) => a.starred && !counted.has(a.id));
     return mergeStarredWordMap(cached, [...starred, ...fresh]);

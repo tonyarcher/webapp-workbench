@@ -5,6 +5,7 @@ import { clearToasts, type ToastNotice } from '../../services/toast';
 import { startForegroundSync, stopForegroundSync } from '../../services/foreground-sync';
 import { startInterestingCountsRefresh, stopInterestingCountsRefresh } from '../../services/interesting-counts-refresh';
 import { invalidateStarredTitles } from '../../services/interesting-starred';
+import { forgetLearning } from '../../services/interesting-settings';
 
 export interface AppShellAuthHost {
     authed: boolean;
@@ -57,13 +58,9 @@ async function resetAccount(host: AppShellAuthHost): Promise<void> {
     // The seeded likes list is in memory, not storage: drop it here or the
     // next sign-in would rank with the previous account's likes.
     invalidateStarredTitles();
-    try {
-        localStorage.removeItem('rss-reader:word-map');
-        localStorage.removeItem('rss-reader:word-map-ids');
-        localStorage.removeItem('rss-reader:interesting-counts');
-    } catch {
-        // storage unavailable; nothing to clear
-    }
+    // Every learned signal is account-scoped, including the ledger, deranks,
+    // and the decay clock. The stars themselves live on the server.
+    forgetLearning();
     await clearClientDb();
     host.authed = false;
     host.username = null;

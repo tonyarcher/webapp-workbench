@@ -133,6 +133,7 @@ export type View =
     | { kind: 'glossary' }
     | { kind: 'coverage' }
     | { kind: 'stats' }
+    | { kind: 'privacy' }
     | { kind: 'boards' }
     | { kind: 'board'; id: string }
     | {

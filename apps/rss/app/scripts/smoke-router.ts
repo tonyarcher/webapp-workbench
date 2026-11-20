@@ -33,6 +33,13 @@ import { assert } from './smoke-assert';
             'frontpage router round-trips',
         );
 
+        assert(viewToPath({ kind: 'privacy' }) === '/privacy', 'privacy serializes to #/privacy');
+        assert(parsePath('/privacy').kind === 'privacy', 'privacy parses back to a View');
+        assert(
+            JSON.stringify(parsePath(viewToPath({ kind: 'privacy' }))) === JSON.stringify({ kind: 'privacy' }),
+            'privacy router round-trips',
+        );
+
         assert(viewToPath({ kind: 'search' }) === '/search', 'search serializes to #/search');
         assert(
             viewToPath({ kind: 'search', scope: 'folder', id: 'f1', q: 'grid storage' }) ===

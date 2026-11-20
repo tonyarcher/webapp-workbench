@@ -64,6 +64,7 @@ export function renderStaticNav(host: SourceListRenderHost): DocumentFragment {
         navRow(host, { kind: 'backgrounder' }, '📰', 'Catch me up', true),
         navRow(host, { kind: 'boards' }, '📋', 'Boards', true),
         navRow(host, { kind: 'stats' }, '📊', 'Stats', true),
+        navRow(host, { kind: 'privacy' }, '🔒', 'Privacy', true),
         navRow(host, { kind: 'coverage' }, '⚖', 'Coverage', true),
         navRow(host, { kind: 'glossary' }, '📖', 'Glossary', true),
         navRow(host, { kind: 'search' }, '🔎', 'Search', true),

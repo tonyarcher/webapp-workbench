@@ -179,3 +179,22 @@ test('the command palette has no automatic accessibility violations', async ({ p
     await expect(dialog.getByLabel('Commands')).toBeVisible();
     expect(await audit(page)).toEqual([]);
 });
+
+test('the privacy dashboard has no automatic accessibility violations', async ({ page }) => {
+    await seedAuth(page);
+    await page.addInitScript(() => {
+        localStorage.setItem('rss-reader:word-map', JSON.stringify({ rust: 8, crypto: -6 }));
+        localStorage.setItem('rss-reader:engagement-totals', JSON.stringify({ 'a1:share': 8 }));
+        localStorage.setItem('rss-reader:deranked-ids', JSON.stringify(['a1']));
+        localStorage.setItem('rss-reader:engagement-decayed-at', '1700000000000');
+    });
+    await stubLibrary(page, ARTICLES);
+    await page.goto('/#/privacy');
+    await expect(page.getByRole('heading', { name: 'Privacy dashboard' })).toBeVisible();
+    await expect(page.getByText('rust', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Export learned profile' })).toBeVisible();
+    await page.getByRole('button', { name: 'Forget everything' }).click();
+    await expect(page.getByRole('heading', { name: 'Forget everything?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    expect(await audit(page)).toEqual([]);
+});
