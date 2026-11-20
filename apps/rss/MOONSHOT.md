@@ -952,6 +952,10 @@ can tell where an item came from.
   1.0/2.0 and Atom (enclosures, media namespaces, content encodings, dates,
   GUID/id stability). Normalize titles, links, authors, published/updated
   times, summaries, full content, and media into the existing article fields.
+  Shipped: JSON Feed 1.0/1.1 parsing (content HTML or text, authors, tags,
+  media attachments) dispatched by content, normalized into the existing
+  ParsedFeed model, with parser and ingest tests. RSS/Atom parity already
+  lands in the existing RSS and Atom parsers.
 - **Half.** `both` (parser/fetcher in `api`, subscription UX/validation in
   `app`).
 - **Effort.** `M`.

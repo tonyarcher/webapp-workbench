@@ -32,6 +32,25 @@ class IngestServiceTest {
     """.trimIndent()
 
     @Test
+    fun ingestsJsonFeedText() {
+        val feedId = UUID.randomUUID()
+        val feed = FeedEntity(id = feedId, xmlUrl = "https://example.com/feed.json", title = "t")
+        val json = """
+            {"version":"https://jsonfeed.org/version/1.1","title":"JSON","items":[
+              {"id":"j1","url":"https://example.com/j1","title":"Story","content_text":"body"}
+            ]}
+        """.trimIndent()
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
+
+        ingest.ingestXml(feed, json)
+
+        val captor = argumentCaptor<ArticleEntity>()
+        verify(articles).save(captor.capture())
+        assertEquals("Story", captor.firstValue.title)
+        verify(sync).maybeRename(feed, "JSON")
+    }
+
+    @Test
     fun popularityRefreshStaysOnIngestedFeed() {
         val feedId = UUID.randomUUID()
         val feed = FeedEntity(id = feedId, xmlUrl = "https://example.com/rss", title = "t")

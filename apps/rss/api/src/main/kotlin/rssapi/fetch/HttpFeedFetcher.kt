@@ -49,7 +49,10 @@ class HttpFeedFetcher(private val allowLocal: Boolean) : FeedFetcher {
         val req = HttpRequest.newBuilder(URI.create(url))
             .timeout(Duration.ofMillis(FETCH_TIMEOUT_MS))
             .header("User-Agent", "rss-reader-server/0.1")
-            .header("Accept", "application/rss+xml, application/atom+xml, application/xml, text/xml, */*")
+            .header(
+                "Accept",
+                "application/rss+xml, application/atom+xml, application/feed+json, application/json, application/xml, text/xml, */*",
+            )
             .apply {
                 if (etag != null) header("If-None-Match", etag)
                 if (lastModified != null) header("If-Modified-Since", lastModified)

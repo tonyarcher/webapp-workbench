@@ -263,7 +263,7 @@ function addRow(host: SettingsGeneralSectionsHost): HTMLElement | null {
     const row = el('div', 'add-row');
     const input = el('input');
     input.type = 'url';
-    input.placeholder = 'https://example.com/feed.xml';
+    input.placeholder = 'https://example.com/feed.json';
     input.setAttribute('data-add-url', '');
     setFocusKey(input, 'input:add-url');
     input.addEventListener('keydown', (event) => {
@@ -281,7 +281,7 @@ function addRow(host: SettingsGeneralSectionsHost): HTMLElement | null {
 
 function feedActions(host: SettingsGeneralSectionsHost): HTMLElement {
     const actions = el('div', 'actions');
-    actions.append(actionButton('Add feed', 'Subscribe by RSS/Atom URL', '+', host.busy, host.openAdd));
+    actions.append(actionButton('Add feed', 'Subscribe by RSS, Atom or JSON Feed URL', '+', host.busy, host.openAdd));
     const row = addRow(host);
     if (row) actions.append(row);
     actions.append(
