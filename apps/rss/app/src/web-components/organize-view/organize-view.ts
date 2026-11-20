@@ -59,12 +59,15 @@ export class OrganizeView extends HTMLElement {
         const addBtn = document.createElement('button');
         addBtn.className = 'btn';
         addBtn.textContent = 'New folder';
+        addBtn.setAttribute('data-setting', 'new-folder');
         addBtn.addEventListener('click', () => void this.onCreateFolder());
         toolbar.appendChild(h);
         toolbar.appendChild(addBtn);
         this.root.appendChild(toolbar);
         const body = document.createElement('div');
         body.className = 'body';
+        body.tabIndex = 0;
+        body.setAttribute('data-setting', 'folders');
         // Uncategorized
         const uncSection = this.renderFolderSection(null, 'Uncategorized', this.feedsFor(null));
         body.appendChild(uncSection);

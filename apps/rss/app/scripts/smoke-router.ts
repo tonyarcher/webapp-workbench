@@ -33,11 +33,27 @@ import { assert } from './smoke-assert';
             'frontpage router round-trips',
         );
 
-        assert(viewToPath({ kind: 'privacy' }) === '/privacy', 'privacy serializes to #/privacy');
-        assert(parsePath('/privacy').kind === 'privacy', 'privacy parses back to a View');
+        // The settings panels are tabs of one page now. The old top-level paths
+        // stay parseable so a bookmark or an installed PWA still lands right.
+        const privacy = { kind: 'settings', section: 'privacy' } as const;
+        assert(viewToPath(privacy) === '/settings/privacy', 'a settings tab serializes to /settings/<tab>');
         assert(
-            JSON.stringify(parsePath(viewToPath({ kind: 'privacy' }))) === JSON.stringify({ kind: 'privacy' }),
-            'privacy router round-trips',
+            JSON.stringify(parsePath('/settings/privacy')) === JSON.stringify(privacy),
+            'a settings tab round-trips',
+        );
+        assert(
+            JSON.stringify(parsePath(viewToPath({ kind: 'settings', section: 'general' }))) ===
+                JSON.stringify({ kind: 'settings', section: 'general' }),
+            'the default settings tab round-trips',
+        );
+        assert(JSON.stringify(parsePath('/privacy')) === JSON.stringify(privacy), 'the old privacy URL opens Privacy');
+        assert(
+            JSON.stringify(parsePath('/organize')) === JSON.stringify({ kind: 'settings', section: 'organize' }),
+            'the old organize URL opens the Organize tab',
+        );
+        assert(
+            JSON.stringify(parsePath('/settings/nope')) === JSON.stringify({ kind: 'settings', section: 'general' }),
+            'an unknown settings tab falls back to General',
         );
 
         assert(viewToPath({ kind: 'search' }) === '/search', 'search serializes to #/search');

@@ -67,17 +67,19 @@ export function buildCommands(
     go('today', 'Today', () => ctx.navigate({ kind: 'today' }));
     go('focus', 'Focus session', () => ctx.navigate({ kind: 'focus' }));
     go('saved', 'Saved for later', () => ctx.navigate({ kind: 'saved' }));
-    go('stats', 'Mastery stats', () => ctx.navigate({ kind: 'stats' }));
-    go('privacy', 'Privacy dashboard', () => ctx.navigate({ kind: 'privacy' }));
     go('coverage', 'Coverage balance', () => ctx.navigate({ kind: 'coverage' }));
-    go('glossary', 'Glossary', () => ctx.navigate({ kind: 'glossary' }));
     go('listen', 'Listen queue', () => ctx.navigate({ kind: 'listen' }));
     go('backgrounder', 'Catch me up', () => ctx.navigate({ kind: 'backgrounder' }));
     go('boards', 'Boards', () => ctx.navigate({ kind: 'boards' }));
     go('search', 'Search', () => ctx.navigate({ kind: 'search' }));
-    go('organize', 'Organize', () => ctx.navigate({ kind: 'organize' }));
-    go('mute-filters', 'Mute filters', () => ctx.navigate({ kind: 'mute-filters' }));
     go('settings', 'Settings', () => ctx.openSettings());
+    go('settings-organize', 'Settings: Organize', () => ctx.navigate({ kind: 'settings', section: 'organize' }));
+    go('settings-mute-filters', 'Settings: Mute filters', () =>
+        ctx.navigate({ kind: 'settings', section: 'mute-filters' }),
+    );
+    go('settings-privacy', 'Settings: Privacy', () => ctx.navigate({ kind: 'settings', section: 'privacy' }));
+    go('settings-stats', 'Settings: Mastery stats', () => ctx.navigate({ kind: 'settings', section: 'stats' }));
+    go('settings-glossary', 'Settings: Glossary', () => ctx.navigate({ kind: 'settings', section: 'glossary' }));
     go('shortcuts', 'Keyboard shortcuts', () => ctx.openShortcuts());
 
     for (const folder of lib?.folders ?? []) {

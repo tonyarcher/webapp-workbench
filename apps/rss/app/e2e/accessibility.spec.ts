@@ -198,3 +198,13 @@ test('the privacy dashboard has no automatic accessibility violations', async ({
     await page.getByRole('button', { name: 'Cancel' }).click();
     expect(await audit(page)).toEqual([]);
 });
+
+test('the settings area has no automatic accessibility violations', async ({ page }) => {
+    await seedAuth(page);
+    await stubLibrary(page, ARTICLES);
+    await page.goto('/#/settings');
+    await expect(page.getByRole('heading', { name: 'General' })).toBeVisible();
+    await page.getByLabel('Search settings').fill('page');
+    await expect(page.getByRole('link', { name: 'Page size' })).toBeVisible();
+    expect(await audit(page)).toEqual([]);
+});

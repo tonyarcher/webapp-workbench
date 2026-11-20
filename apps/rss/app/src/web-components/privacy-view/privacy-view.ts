@@ -107,6 +107,8 @@ export class PrivacyView extends HTMLElement {
 
     private signals(profile: LearningProfile): HTMLElement {
         const section = document.createElement('section');
+        section.setAttribute('data-setting', 'signals');
+        section.tabIndex = -1;
         section.append(text('h3', '', 'What the reader learns from'));
         const list = el('ul', 'signals');
         for (const spec of LEARNING_SIGNALS) {

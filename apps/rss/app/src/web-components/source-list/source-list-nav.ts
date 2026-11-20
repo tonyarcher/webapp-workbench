@@ -55,22 +55,32 @@ export function renderStaticNav(host: SourceListRenderHost): DocumentFragment {
     const fragment = document.createDocumentFragment();
     append(
         fragment,
+        allRow(host),
+        todayRow(host),
         navRow(host, { kind: 'frontpage' }, '📰', 'Front Page', false),
         navRow(host, { kind: 'brief' }, '✨', 'Daily Brief', false),
-        todayRow(host),
         navRow(host, { kind: 'focus' }, '⏱', 'Focus session', true),
         navRow(host, { kind: 'saved' }, '🔖', 'Saved for later', true),
         navRow(host, { kind: 'listen' }, '🎧', 'Listen queue', true),
         navRow(host, { kind: 'backgrounder' }, '📰', 'Catch me up', true),
         navRow(host, { kind: 'boards' }, '📋', 'Boards', true),
-        navRow(host, { kind: 'stats' }, '📊', 'Stats', true),
-        navRow(host, { kind: 'privacy' }, '🔒', 'Privacy', true),
         navRow(host, { kind: 'coverage' }, '⚖', 'Coverage', true),
-        navRow(host, { kind: 'glossary' }, '📖', 'Glossary', true),
         navRow(host, { kind: 'search' }, '🔎', 'Search', true),
-        navRow(host, { kind: 'organize' }, '⚙', 'Organize', true),
-        navRow(host, { kind: 'mute-filters' }, '🔇', 'Mute filters', true),
-        allRow(host),
     );
     return fragment;
+}
+
+/**
+ * The one entry to the settings area. The five panels it holds (Organize,
+ * Mute filters, Privacy, Stats, Glossary) used to be sidebar rows, ahead of
+ * the feeds the reader actually opens.
+ */
+export function renderSettingsRow(host: SourceListRenderHost): HTMLButtonElement {
+    const view: View = { kind: 'settings', section: 'general' };
+    const button = el('button', itemClass(host, view));
+    const glyph = el('span', 'icon', '\u2699');
+    glyph.setAttribute('aria-hidden', 'true');
+    append(button, glyph, el('span', 'label', 'Settings'));
+    button.addEventListener('click', () => host.select(view));
+    return button;
 }

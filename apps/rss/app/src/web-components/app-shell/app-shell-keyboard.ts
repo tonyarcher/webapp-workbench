@@ -21,7 +21,6 @@ export interface AppShellKeyboardHost {
     paletteCommands: Command[];
     paletteContext: CommandContext | null;
     readContext: { items: Article[]; index: number } | null;
-    settingsOpen: boolean;
     renderRoot: ShadowRoot;
     closeArticle: (dismissed?: boolean) => void;
     openAt: (index: number) => Promise<void>;
@@ -45,9 +44,7 @@ export function openPalette(host: AppShellKeyboardHost): void {
         setSort: (sort) => list?.setSort(sort),
         toggleUnread: () => list?.toggleUnread(),
         toggleSelect: () => list?.toggleSelectCursor(),
-        openSettings: () => {
-            host.settingsOpen = true;
-        },
+        openSettings: () => navigate({ kind: 'settings', section: 'general' }),
         openShortcuts: () => {
             host.shortcutsOpen = true;
         },

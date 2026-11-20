@@ -49,6 +49,7 @@ export class GlossaryView extends HTMLElement {
         const body = document.createElement('div');
         body.className = 'body';
         body.tabIndex = 0;
+        body.setAttribute('data-setting', 'glossary');
         body.appendChild(this.filterInput());
         if (this.loading) {
             body.appendChild(this.empty('Loading…'));
@@ -78,6 +79,7 @@ export class GlossaryView extends HTMLElement {
 
     private filterInput() {
         const input = document.createElement('input');
+        input.setAttribute('data-setting', 'glossary-search');
         input.className = 'search';
         input.type = 'search';
         input.placeholder = 'Filter terms';

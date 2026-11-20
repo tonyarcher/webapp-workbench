@@ -62,6 +62,7 @@ export class StatsView extends HTMLElement {
         const body = document.createElement('div');
         body.className = 'body';
         body.tabIndex = 0;
+        body.setAttribute('data-setting', 'stats');
         if (this.loading) {
             const empty = document.createElement('div');
             empty.className = 'empty';
@@ -93,6 +94,8 @@ export class StatsView extends HTMLElement {
             body.appendChild(grid);
             const h3 = document.createElement('h3');
             h3.textContent = 'Topic mix';
+            h3.tabIndex = -1;
+            h3.setAttribute('data-setting', 'topic-mix');
             body.appendChild(h3);
             if (!this.topicMix.length) {
                 const empty = document.createElement('div');

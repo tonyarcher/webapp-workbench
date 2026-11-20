@@ -7,7 +7,7 @@ import './web-components/front-page/front-page';
 import './web-components/today-view/today-view';
 import './web-components/search-view/search-view';
 import './web-components/today-menu/today-menu';
-import './web-components/settings-dialog/settings-dialog';
+import './web-components/settings-view/settings-view';
 import './web-components/feed-menu/feed-menu';
 import './web-components/folder-menu/folder-menu';
 import './styles/global.css';

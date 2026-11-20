@@ -29,6 +29,7 @@ export class MuteFiltersView extends HTMLElement {
         const addBtn = document.createElement('button');
         addBtn.className = 'btn';
         addBtn.textContent = 'Add rule';
+        addBtn.setAttribute('data-setting', 'add-rule');
         addBtn.addEventListener('click', () => {
             const rule: MuteRule = {
                 id: crypto.randomUUID(),
@@ -46,6 +47,7 @@ export class MuteFiltersView extends HTMLElement {
         const body = document.createElement('div');
         body.className = 'body';
         body.tabIndex = 0;
+        body.setAttribute('data-setting', 'mute-rules');
         if (!this.rules.length) {
             const empty = document.createElement('div');
             empty.className = 'empty';

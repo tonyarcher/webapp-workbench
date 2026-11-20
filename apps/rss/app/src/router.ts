@@ -1,12 +1,42 @@
 import { createHashHistory } from '@tanstack/history';
-import type { View } from './types';
+import type { SettingsSection, View } from './types';
 
 export const history = createHashHistory();
+
+const SETTINGS_SECTIONS: readonly SettingsSection[] = [
+    'general',
+    'organize',
+    'mute-filters',
+    'privacy',
+    'stats',
+    'glossary',
+];
+
+/**
+ * Old top-level routes and the tab each one became. The paths stay parseable so
+ * a bookmark or an installed PWA's saved URL still opens the right panel.
+ */
+const LEGACY_SETTINGS_PATHS: Record<string, SettingsSection> = {
+    organize: 'organize',
+    'mute-filters': 'mute-filters',
+    privacy: 'privacy',
+    stats: 'stats',
+    glossary: 'glossary',
+};
+
+function isSettingsSection(value: string | undefined): value is SettingsSection {
+    return value !== undefined && (SETTINGS_SECTIONS as readonly string[]).includes(value);
+}
 
 export function parsePath(pathname: string, search = ''): View {
     const [pathPart, queryPart] = pathname.split('?');
     const parts = (pathPart ?? '').split('/').filter(Boolean);
     const params = new URLSearchParams(search || queryPart || '');
+    if (parts[0] === 'settings') {
+        return { kind: 'settings', section: isSettingsSection(parts[1]) ? parts[1] : 'general' };
+    }
+    const legacy = parts[0] ? LEGACY_SETTINGS_PATHS[parts[0]] : undefined;
+    if (legacy) return { kind: 'settings', section: legacy };
     if (parts[0] === 'folder' && parts[1]) {
         return { kind: 'folder', id: decodeURIComponent(parts[1]) };
     }
@@ -28,12 +58,6 @@ export function parsePath(pathname: string, search = ''): View {
     if (parts[0] === 'focus') {
         return { kind: 'focus' };
     }
-    if (parts[0] === 'organize') {
-        return { kind: 'organize' };
-    }
-    if (parts[0] === 'mute-filters') {
-        return { kind: 'mute-filters' };
-    }
     if (parts[0] === 'saved') {
         return { kind: 'saved' };
     }
@@ -43,17 +67,8 @@ export function parsePath(pathname: string, search = ''): View {
     if (parts[0] === 'listen') {
         return { kind: 'listen' };
     }
-    if (parts[0] === 'glossary') {
-        return { kind: 'glossary' };
-    }
     if (parts[0] === 'coverage') {
         return { kind: 'coverage' };
-    }
-    if (parts[0] === 'stats') {
-        return { kind: 'stats' };
-    }
-    if (parts[0] === 'privacy') {
-        return { kind: 'privacy' };
     }
     if (parts[0] === 'boards') {
         return { kind: 'boards' };
@@ -90,24 +105,16 @@ export function viewToPath(view: View): string {
             return '/frontpage';
         case 'focus':
             return '/focus';
-        case 'organize':
-            return '/organize';
-        case 'mute-filters':
-            return '/mute-filters';
+        case 'settings':
+            return view.section === 'general' ? '/settings' : `/settings/${view.section}`;
         case 'saved':
             return '/saved';
         case 'backgrounder':
             return '/backgrounder';
         case 'listen':
             return '/listen';
-        case 'glossary':
-            return '/glossary';
         case 'coverage':
             return '/coverage';
-        case 'stats':
-            return '/stats';
-        case 'privacy':
-            return '/privacy';
         case 'boards':
             return '/boards';
         case 'board':

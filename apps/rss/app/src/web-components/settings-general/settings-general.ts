@@ -1,6 +1,5 @@
 import { applyTheme, getTheme, type Theme } from '../../theme';
 import { applyReaderMode, loadReaderMode, saveReaderMode, type ReaderMode } from '../../services/reader-mode';
-import { modalClosed, modalOpened } from '../../services/modal-guard';
 import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
 import { normalizeMastodonHost, type ShareTarget } from '../../services/share';
 import {
@@ -30,14 +29,14 @@ import {
     buildFeedsSection,
     buildReadingSection,
     buildSharingSection,
-} from './settings-dialog-sections';
-import { el } from './settings-dialog-dom';
-import styles from './settings-dialog.css?inline';
+} from './settings-general-sections';
+import { el } from './settings-general-dom';
+import styles from './settings-general.css?inline';
 
 const MIGRATE_SIZE_LIMIT = 1_800_000;
 
 /** Install a reactive accessor. Assignments request the same batched paint Lit used to. */
-function defineReactive<T>(host: SettingsDialog, name: string, initial: T): void {
+function defineReactive<T>(host: SettingsGeneral, name: string, initial: T): void {
     let current = initial;
     Object.defineProperty(host, name, {
         configurable: true,
@@ -54,12 +53,12 @@ function defineReactive<T>(host: SettingsDialog, name: string, initial: T): void
 }
 
 /**
- * Vanilla custom element: the native `<dialog>` and its head are built once,
- * the five sections are rebuilt from plain DOM in `paint()`. No template
- * literal is involved. `updateComplete` resolves after the next paint so tests
- * and callers can await a property change, as they could with Lit.
+ * The General tab of the settings area: appearance, reading defaults, sharing,
+ * feed import/export, and about. Built once, its five sections are rebuilt from
+ * plain DOM in `paint()`. It used to be a modal dialog; it is a page panel now,
+ * so there is no open state, backdrop, or focus trap.
  */
-export class SettingsDialog extends HTMLElement {
+export class SettingsGeneral extends HTMLElement {
     declare view: View;
     declare theme: Theme;
     declare readerMode: ReaderMode;
@@ -76,8 +75,6 @@ export class SettingsDialog extends HTMLElement {
     declare viewStatus: string;
     declare showHistory: boolean;
 
-    private currentOpen = false;
-    private dialogEl: HTMLDialogElement | null = null;
     private bodyEl: HTMLDivElement | null = null;
     private updateScheduled = false;
     private updateResolvers: Array<(value: boolean) => void> = [];
@@ -102,17 +99,7 @@ export class SettingsDialog extends HTMLElement {
         defineReactive(this, 'viewSettings', { ...DEFAULT_VIEW_SETTINGS });
         defineReactive(this, 'viewStatus', '');
         defineReactive(this, 'showHistory', false);
-    }
-
-    get open(): boolean {
-        return this.currentOpen;
-    }
-
-    set open(value: boolean) {
-        if (Object.is(this.currentOpen, value)) return;
-        this.currentOpen = value;
-        if (value) this.prepareOpenState();
-        this.requestUpdate();
+        this.resetState();
     }
 
     get updateComplete(): Promise<boolean> {
@@ -145,7 +132,7 @@ export class SettingsDialog extends HTMLElement {
     }
 
     connectedCallback(): void {
-        if (!this.dialogEl) this.build();
+        if (!this.bodyEl) this.build();
         this.paint();
     }
 
@@ -153,28 +140,13 @@ export class SettingsDialog extends HTMLElement {
         const shadow = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
         const style = el('style');
         style.textContent = styles;
-        const dialog = el('dialog');
-        dialog.addEventListener('click', (event) => this.onDialogClick(event));
-        dialog.addEventListener('cancel', (event) => {
-            event.preventDefault();
-            this.emitClose();
-        });
-        const head = el('div', 'head');
-        head.append(el('h2', undefined, 'Settings'), this.closeButton());
+        const panel = el('div', 'panel');
+        panel.append(el('h2', undefined, 'General'));
         const body = el('div', 'body');
         body.tabIndex = 0;
-        dialog.append(head, body);
-        shadow.append(style, dialog);
-        this.dialogEl = dialog;
+        panel.append(body);
+        shadow.append(style, panel);
         this.bodyEl = body;
-    }
-
-    private closeButton(): HTMLButtonElement {
-        const close = el('button', 'close', '✕');
-        close.type = 'button';
-        close.title = 'Close';
-        close.addEventListener('click', () => this.emitClose());
-        return close;
     }
 
     private paint(): void {
@@ -190,7 +162,6 @@ export class SettingsDialog extends HTMLElement {
         );
         this.restoreDrafts();
         this.restoreFocus(focusKey);
-        this.syncDialog();
     }
 
     private focusedKey(): string | null {
@@ -227,21 +198,8 @@ export class SettingsDialog extends HTMLElement {
         if (addUrl && this.addUrlDraft !== null) addUrl.value = this.addUrlDraft;
     }
 
-    /** Show or hide the native dialog to match `open`, announcing it to the modal guard. */
-    private syncDialog(): void {
-        const dialog = this.dialogEl;
-        if (!dialog || !this.isConnected) return;
-        if (this.currentOpen && !dialog.open) {
-            dialog.showModal();
-            modalOpened();
-        } else if (!this.currentOpen && dialog.open) {
-            dialog.close();
-            modalClosed();
-        }
-    }
-
-    /** Fresh state every time the dialog opens, so stale status text never shows. */
-    private prepareOpenState(): void {
+    /** Load the persisted values. The panel is a page, so this runs once per mount. */
+    private resetState(): void {
         this.theme = getTheme();
         this.mastodonHost = loadMastodonHost();
         this.shareTargets = loadShareTargets();
@@ -386,8 +344,7 @@ export class SettingsDialog extends HTMLElement {
     };
 
     openMuteFilters = (): void => {
-        this.emitClose();
-        navigate({ kind: 'mute-filters' });
+        navigate({ kind: 'settings', section: 'mute-filters' });
     };
 
     submitAdd = async (): Promise<void> => {
@@ -399,7 +356,6 @@ export class SettingsDialog extends HTMLElement {
             const feed = await addFeed(url);
             if (input) input.value = '';
             this.adding = false;
-            this.emitClose();
             navigate({ kind: 'feed', id: feed.id });
         } catch (err) {
             this.status = err instanceof Error ? err.message : 'Could not add feed';
@@ -493,21 +449,12 @@ export class SettingsDialog extends HTMLElement {
             this.migrating = false;
         }
     };
-
-    /** Backdrop click: the `<dialog>` itself is the only target behind the panel. */
-    private onDialogClick(event: MouseEvent): void {
-        if (event.target === this.dialogEl) this.emitClose();
-    }
-
-    emitClose(): void {
-        this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
-    }
 }
 
-customElements.define('settings-dialog', SettingsDialog);
+customElements.define('settings-general', SettingsGeneral);
 
 declare global {
     interface HTMLElementTagNameMap {
-        'settings-dialog': SettingsDialog;
+        'settings-general': SettingsGeneral;
     }
 }

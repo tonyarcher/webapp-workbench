@@ -22,15 +22,11 @@ import {
 } from './app-shell-keyboard';
 import { ShellDom } from './app-shell-render';
 import type { Article, View } from '../../types';
-import '../mute-filters-view/mute-filters-view';
-import '../organize-view/organize-view';
+import '../settings-view/settings-view';
 import '../saved-view/saved-view';
 import '../backgrounder-view/backgrounder-view';
 import '../listen-view/listen-view';
-import '../glossary-view/glossary-view';
 import '../coverage-view/coverage-view';
-import '../stats-view/stats-view';
-import '../privacy-view/privacy-view';
 import '../boards-view/boards-view';
 import '../board-view/board-view';
 import '../focus-view/focus-view';
@@ -64,7 +60,6 @@ function defineReactive<T>(host: AppShell, name: string, initial: T): void {
 export class AppShell extends HTMLElement {
     declare route: View;
     declare article: Article | null;
-    declare settingsOpen: boolean;
     declare shortcutsOpen: boolean;
     declare paletteOpen: boolean;
     declare paletteCommands: Command[];
@@ -101,7 +96,6 @@ export class AppShell extends HTMLElement {
         shadow.adoptedStyleSheets = [sheet];
         defineReactive(this, 'route', { kind: 'all' } satisfies View);
         defineReactive(this, 'article', null as Article | null);
-        defineReactive(this, 'settingsOpen', false);
         defineReactive(this, 'shortcutsOpen', false);
         defineReactive(this, 'paletteOpen', false);
         defineReactive(this, 'paletteCommands', [] as Command[]);

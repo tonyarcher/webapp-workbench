@@ -1,17 +1,16 @@
 import { navigate } from '../../router';
 import { dismissToast, type ToastNotice } from '../../services/toast';
 import { MAX_ARTICLE_PANEL_WIDTH, MIN_ARTICLE_PANEL_WIDTH } from './article-panel-settings';
-import type { Article, View } from '../../types';
+import type { Article, SettingsSection, View } from '../../types';
 
 /**
  * State and handlers the shell DOM reads. The element passes itself, so every
- * assignment (settings gear, dialog close) goes back through its setters.
+ * assignment (dialogs, toasts) goes back through its setters.
  */
 export interface AppShellRenderHost {
     authed: boolean;
     route: View;
     article: Article | null;
-    settingsOpen: boolean;
     shortcutsOpen: boolean;
     paletteOpen: boolean;
     paletteCommands: unknown[];
@@ -36,9 +35,6 @@ export interface AppShellRenderHost {
 interface DialogElement extends HTMLElement {
     open: boolean;
 }
-interface SettingsElement extends DialogElement {
-    view: View;
-}
 interface PaletteElement extends DialogElement {
     commands: unknown[];
 }
@@ -48,6 +44,10 @@ interface ArticleListElement extends HTMLElement {
     resumeArticleId: string | null;
 }
 interface SearchViewElement extends HTMLElement {
+    view: View;
+}
+interface SettingsViewElement extends HTMLElement {
+    section: SettingsSection;
     view: View;
 }
 interface BoardViewElement extends HTMLElement {
@@ -69,15 +69,11 @@ const VIEW_TAGS: Record<View['kind'], string> = {
     today: 'today-view',
     frontpage: 'front-page',
     focus: 'focus-view',
-    organize: 'organize-view',
-    'mute-filters': 'mute-filters-view',
+    settings: 'settings-view',
     saved: 'saved-view',
     backgrounder: 'backgrounder-view',
     listen: 'listen-view',
-    glossary: 'glossary-view',
     coverage: 'coverage-view',
-    stats: 'stats-view',
-    privacy: 'privacy-view',
     boards: 'boards-view',
     board: 'board-view',
     search: 'search-view',
@@ -131,29 +127,6 @@ function logoIcon(): SVGElement {
     ]);
 }
 
-function gearIcon(): SVGElement {
-    return svg({ viewBox: '0 0 24 24', 'aria-hidden': 'true' }, [
-        [
-            'path',
-            {
-                d: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
-                fill: 'none',
-                stroke: 'currentColor',
-                'stroke-width': '1.7',
-            },
-        ],
-        [
-            'path',
-            {
-                d: 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
-                fill: 'none',
-                stroke: 'currentColor',
-                'stroke-width': '1.5',
-            },
-        ],
-    ]);
-}
-
 function brandButton(): HTMLButtonElement {
     const brand = el('button', 'brand-link');
     const heading = el('h1');
@@ -201,15 +174,7 @@ function buildHeader(host: AppShellRenderHost): HeaderNodes {
     const signOut = el('button', 'signout');
     signOut.textContent = 'Sign out';
     signOut.addEventListener('click', () => host.onSignOut());
-    header.append(
-        brandButton(),
-        el('div', 'spacer'),
-        who,
-        signOut,
-        buildHelpButton(host),
-        buildPaletteTrigger(host),
-        buildGearButton(host),
-    );
+    header.append(brandButton(), el('div', 'spacer'), who, signOut, buildHelpButton(host), buildPaletteTrigger(host));
     return { root: header, who, signOut };
 }
 
@@ -235,30 +200,15 @@ function buildPaletteTrigger(host: AppShellRenderHost): HTMLButtonElement {
     return trigger;
 }
 
-function buildGearButton(host: AppShellRenderHost): HTMLButtonElement {
-    const gear = el('button', 'gear');
-    gear.title = 'Settings';
-    gear.appendChild(gearIcon());
-    gear.addEventListener('click', () => {
-        host.settingsOpen = true;
-    });
-    return gear;
-}
-
 interface DialogNodes {
-    settings: SettingsElement;
     shortcuts: DialogElement;
     palette: PaletteElement;
     toasts: HTMLElement;
 }
 
 function buildDialogs(host: AppShellRenderHost): DialogNodes {
-    const settings = document.createElement('settings-dialog') as SettingsElement;
     const shortcuts = document.createElement('shortcuts-dialog') as DialogElement;
     const palette = document.createElement('command-palette') as PaletteElement;
-    settings.addEventListener('close', () => {
-        host.settingsOpen = false;
-    });
     shortcuts.addEventListener('close', () => {
         host.shortcutsOpen = false;
     });
@@ -268,7 +218,7 @@ function buildDialogs(host: AppShellRenderHost): DialogNodes {
     palette.addEventListener('run', host.onRunCommand);
     const toasts = el('div', 'toasts');
     toasts.setAttribute('role', 'status');
-    return { settings, shortcuts, palette, toasts };
+    return { shortcuts, palette, toasts };
 }
 
 function attachBoardId(node: HTMLElement, route: View): void {
@@ -300,6 +250,8 @@ export class ShellDom {
     private handle: HTMLElement | null = null;
     private articleView: ArticleViewElement | null = null;
     private toastKey = '';
+    /** The last article route, so Settings > Reading can copy that view's settings. */
+    private lastContentView: View = { kind: 'all' };
 
     constructor(shadow: ShadowRoot, host: AppShellRenderHost) {
         this.host = host;
@@ -315,7 +267,6 @@ export class ShellDom {
             this.signIn.main,
             this.header.root,
             this.layout,
-            this.dialogs.settings,
             this.dialogs.shortcuts,
             this.dialogs.palette,
             this.dialogs.toasts,
@@ -345,7 +296,6 @@ export class ShellDom {
         const shell = [
             this.header.root,
             this.layout,
-            this.dialogs.settings,
             this.dialogs.shortcuts,
             this.dialogs.palette,
             this.dialogs.toasts,
@@ -372,6 +322,7 @@ export class ShellDom {
 
     private renderMain(): void {
         const route = this.host.route;
+        if (route.kind !== 'settings') this.lastContentView = route;
         if (this.sourceList.view !== route) this.sourceList.view = route;
         this.mountView(route);
     }
@@ -383,6 +334,7 @@ export class ShellDom {
         if (!view) return;
         if (tag === 'article-list') this.updateArticleList(view, route);
         else if (tag === 'search-view') this.updateSearchView(view, route);
+        else if (tag === 'settings-view') this.updateSettingsView(view, route);
     }
 
     /** Reuse the mounted view unless the route needs a different element. */
@@ -411,6 +363,13 @@ export class ShellDom {
     private updateSearchView(view: HTMLElement, route: View): void {
         const search = view as SearchViewElement;
         if (search.view !== route) search.view = route;
+    }
+
+    private updateSettingsView(view: HTMLElement, route: View): void {
+        if (route.kind !== 'settings') return;
+        const settings = view as SettingsViewElement;
+        if (settings.section !== route.section) settings.section = route.section;
+        if (settings.view !== this.lastContentView) settings.view = this.lastContentView;
     }
 
     private renderOverlay(): void {
@@ -507,9 +466,7 @@ export class ShellDom {
 
     private renderDialogs(): void {
         const host = this.host;
-        const { settings, shortcuts, palette } = this.dialogs;
-        if (settings.open !== host.settingsOpen) settings.open = host.settingsOpen;
-        if (settings.view !== host.route) settings.view = host.route;
+        const { shortcuts, palette } = this.dialogs;
         if (shortcuts.open !== host.shortcutsOpen) shortcuts.open = host.shortcutsOpen;
         if (palette.open !== host.paletteOpen) palette.open = host.paletteOpen;
         if (palette.commands !== host.paletteCommands) palette.commands = host.paletteCommands;

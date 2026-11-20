@@ -1,6 +1,6 @@
 /**
- * Small document-building helpers shared by the settings dialog sections.
- * The dialog is a vanilla custom element, so every section builds nodes here
+ * Small document-building helpers shared by the settings panel sections.
+ * The panel is a vanilla custom element, so every section builds nodes here
  * instead of a template literal.
  */
 export function el<K extends keyof HTMLElementTagNameMap>(
@@ -16,13 +16,13 @@ export function el<K extends keyof HTMLElementTagNameMap>(
 
 /**
  * Stable identity for a control, so a repaint can put keyboard focus back on
- * the same field. Labels are unique within the dialog.
+ * the same field. Labels are unique within the panel.
  */
 export function setFocusKey(node: HTMLElement, key: string): void {
     node.setAttribute('data-focus-key', key);
 }
 
-/** A plain `<button>`: no form lives in the dialog, so no submit default. */
+/** A plain `<button>`: no form lives in the panel, so no submit default. */
 export function button(className: string, label: string, onClick: (event: MouseEvent) => void): HTMLButtonElement {
     const node = el('button', className, label);
     node.type = 'button';

@@ -4,32 +4,31 @@
 // option, and "Apply to all views" must clear the per-view map.
 import './test-setup';
 import { expect } from '@esm-bundle/chai';
-import '../src/web-components/settings-dialog/settings-dialog';
-import type { SettingsDialog } from '../src/web-components/settings-dialog/settings-dialog';
+import '../src/web-components/settings-general/settings-general';
+import type { SettingsGeneral } from '../src/web-components/settings-general/settings-general';
 
-function readingSection(el: SettingsDialog): HTMLElement {
-    const dialog = el.shadowRoot!.querySelector('dialog')!;
-    const section = Array.from(dialog.querySelectorAll<HTMLElement>('.section')).find(
+function readingSection(el: SettingsGeneral): HTMLElement {
+    const panel = el.shadowRoot!.querySelector('.panel')!;
+    const section = Array.from(panel.querySelectorAll<HTMLElement>('.section')).find(
         (s) => s.querySelector('h3')?.textContent === 'Reading',
     );
     if (!section) throw new Error('Reading section missing');
     return section;
 }
 
-function selects(el: SettingsDialog): HTMLSelectElement[] {
+function selects(el: SettingsGeneral): HTMLSelectElement[] {
     return Array.from(readingSection(el).querySelectorAll<HTMLSelectElement>('.view-field select'));
 }
 
-async function mount(): Promise<SettingsDialog> {
-    const el = document.createElement('settings-dialog') as SettingsDialog;
-    el.open = true;
+async function mount(): Promise<SettingsGeneral> {
+    const el = document.createElement('settings-general') as SettingsGeneral;
     document.body.append(el);
     await el.updateComplete;
     return el;
 }
 
-describe('settings-dialog reading defaults', () => {
-    let el: SettingsDialog | undefined;
+describe('settings-general reading defaults', () => {
+    let el: SettingsGeneral | undefined;
 
     beforeEach(() => {
         localStorage.clear();
@@ -37,7 +36,6 @@ describe('settings-dialog reading defaults', () => {
 
     afterEach(async () => {
         if (el) {
-            el.open = false;
             await el.updateComplete;
             el.remove();
             el = undefined;

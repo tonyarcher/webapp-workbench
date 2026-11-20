@@ -15,10 +15,10 @@ import {
     setFocusKey,
     statusLine,
     type SelectOption,
-} from './settings-dialog-dom';
+} from './settings-general-dom';
 
 /** The element's public surface, as the section builders need it. */
-export interface SettingsDialogSectionsHost {
+export interface SettingsGeneralSectionsHost {
     theme: Theme;
     adding: boolean;
     busy: boolean;
@@ -110,7 +110,7 @@ const SHARE_LABELS: Record<ShareTarget, string> = {
     instagram: 'Instagram',
 };
 
-function themeOption(host: SettingsDialogSectionsHost, value: Theme, label: string): HTMLButtonElement {
+function themeOption(host: SettingsGeneralSectionsHost, value: Theme, label: string): HTMLButtonElement {
     const option = el('button', host.theme === value ? 'theme-opt active' : 'theme-opt');
     option.type = 'button';
     option.dataset['theme'] = value;
@@ -120,7 +120,7 @@ function themeOption(host: SettingsDialogSectionsHost, value: Theme, label: stri
     return option;
 }
 
-export function buildAppearanceSection(host: SettingsDialogSectionsHost): HTMLElement {
+export function buildAppearanceSection(host: SettingsGeneralSectionsHost): HTMLElement {
     const root = section('Appearance');
     const row = el('div', 'theme-row');
     for (const theme of THEMES) row.append(themeOption(host, theme.value, theme.label));
@@ -128,7 +128,7 @@ export function buildAppearanceSection(host: SettingsDialogSectionsHost): HTMLEl
     return root;
 }
 
-function viewDefaultFields(host: SettingsDialogSectionsHost): HTMLElement {
+function viewDefaultFields(host: SettingsGeneralSectionsHost): HTMLElement {
     const grid = el('div', 'view-defaults');
     const settings = host.viewSettings;
     grid.append(
@@ -144,7 +144,7 @@ function viewDefaultFields(host: SettingsDialogSectionsHost): HTMLElement {
     return grid;
 }
 
-function viewToggles(host: SettingsDialogSectionsHost): HTMLElement {
+function viewToggles(host: SettingsGeneralSectionsHost): HTMLElement {
     const row = el('div', 'view-toggles');
     row.append(
         checkboxField('Unread only', host.viewSettings.unreadOnly, host.setUnreadOnly),
@@ -153,7 +153,7 @@ function viewToggles(host: SettingsDialogSectionsHost): HTMLElement {
     return row;
 }
 
-function readerModeFields(host: SettingsDialogSectionsHost): HTMLElement {
+function readerModeFields(host: SettingsGeneralSectionsHost): HTMLElement {
     const mode = host.readerMode;
     const grid = el('div', 'view-defaults');
     grid.append(
@@ -173,14 +173,14 @@ function readerModeFields(host: SettingsDialogSectionsHost): HTMLElement {
     return grid;
 }
 
-function viewActions(host: SettingsDialogSectionsHost): HTMLElement {
+function viewActions(host: SettingsGeneralSectionsHost): HTMLElement {
     const actions = el('div', 'view-actions');
     if (host.canUseCurrentView) actions.append(button('btn', 'Use current view', () => host.useCurrentView()));
     actions.append(button('btn primary', 'Apply to all views', () => host.applyAllViews()));
     return actions;
 }
 
-export function buildReadingSection(host: SettingsDialogSectionsHost): HTMLElement {
+export function buildReadingSection(host: SettingsGeneralSectionsHost): HTMLElement {
     const root = section('Reading');
     root.append(viewDefaultFields(host), viewToggles(host), readerModeFields(host), viewActions(host));
     root.append(
@@ -190,10 +190,11 @@ export function buildReadingSection(host: SettingsDialogSectionsHost): HTMLEleme
     return root;
 }
 
-function shareTargets(host: SettingsDialogSectionsHost): HTMLElement {
+function shareTargets(host: SettingsGeneralSectionsHost): HTMLElement {
     const group = el('div', 'share-targets');
     group.setAttribute('role', 'group');
     group.setAttribute('aria-label', 'Share buttons');
+    group.tabIndex = -1;
     for (const target of ALL_SHARE_TARGETS) {
         group.append(
             checkboxField(SHARE_LABELS[target], host.shareTargets.includes(target), (checked) =>
@@ -204,7 +205,7 @@ function shareTargets(host: SettingsDialogSectionsHost): HTMLElement {
     return group;
 }
 
-function mastodonRow(host: SettingsDialogSectionsHost): HTMLElement {
+function mastodonRow(host: SettingsGeneralSectionsHost): HTMLElement {
     const row = el('div', 'share-row');
     const input = el('input');
     input.id = 'mastodon-host';
@@ -225,7 +226,7 @@ function mastodonRow(host: SettingsDialogSectionsHost): HTMLElement {
     return row;
 }
 
-export function buildSharingSection(host: SettingsDialogSectionsHost): HTMLElement {
+export function buildSharingSection(host: SettingsGeneralSectionsHost): HTMLElement {
     const root = section('Sharing');
     const label = el('label', 'field-label', 'Mastodon instance');
     label.htmlFor = 'mastodon-host';
@@ -257,7 +258,7 @@ function actionButton(
     return node;
 }
 
-function addRow(host: SettingsDialogSectionsHost): HTMLElement | null {
+function addRow(host: SettingsGeneralSectionsHost): HTMLElement | null {
     if (!host.adding) return null;
     const row = el('div', 'add-row');
     const input = el('input');
@@ -278,7 +279,7 @@ function addRow(host: SettingsDialogSectionsHost): HTMLElement | null {
     return row;
 }
 
-function feedActions(host: SettingsDialogSectionsHost): HTMLElement {
+function feedActions(host: SettingsGeneralSectionsHost): HTMLElement {
     const actions = el('div', 'actions');
     actions.append(actionButton('Add feed', 'Subscribe by RSS/Atom URL', '+', host.busy, host.openAdd));
     const row = addRow(host);
@@ -304,7 +305,7 @@ function feedActions(host: SettingsDialogSectionsHost): HTMLElement {
     return actions;
 }
 
-function opmlFileInput(host: SettingsDialogSectionsHost): HTMLInputElement {
+function opmlFileInput(host: SettingsGeneralSectionsHost): HTMLInputElement {
     const input = el('input');
     input.type = 'file';
     input.accept = '.opml,.xml,text/xml,application/xml';
@@ -314,7 +315,7 @@ function opmlFileInput(host: SettingsDialogSectionsHost): HTMLInputElement {
     return input;
 }
 
-export function buildFeedsSection(host: SettingsDialogSectionsHost): HTMLElement {
+export function buildFeedsSection(host: SettingsGeneralSectionsHost): HTMLElement {
     const root = section('Feeds');
     root.append(feedActions(host), opmlFileInput(host));
     if (host.status) root.append(statusLine(host.status, host.statusError));
@@ -334,12 +335,14 @@ function historyList(): HTMLElement {
     return list;
 }
 
-export function buildAboutSection(host: SettingsDialogSectionsHost): HTMLElement {
+export function buildAboutSection(host: SettingsGeneralSectionsHost): HTMLElement {
     const root = section('About');
     const built = BUILD_TIME ? new Date(BUILD_TIME).toLocaleDateString() : '';
     root.append(hint(`Version ${APP_VERSION} · ${APP_COMMIT}${built ? ` · ${built}` : ''}`, 'about-meta'));
     const actions = el('div', 'view-actions');
-    actions.append(button('btn', host.showHistory ? 'Hide version history' : "What's new", () => host.toggleHistory()));
+    const history = button('btn', host.showHistory ? 'Hide version history' : "What's new", () => host.toggleHistory());
+    history.setAttribute('data-setting', 'version-history');
+    actions.append(history);
     root.append(actions);
     if (host.showHistory) root.append(historyList());
     return root;
