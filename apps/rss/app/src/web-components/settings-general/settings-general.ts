@@ -15,20 +15,10 @@ import { invalidateArticles, invalidateLibrary } from '../../query';
 import { navigate } from '../../router';
 import { onAddFeedRequested, takeAddFeedRequest } from '../../services/add-feed-intent';
 import {
-    applyDefaultToAllViews,
-    DEFAULT_VIEW_SETTINGS,
-    normalizeViewSettings,
-    readDefaultViewSettings,
-    readViewSettingsFor,
-    saveDefaultViewSettings,
-    type ViewSettings,
-} from '../article-list/article-list-helpers';
-import type { View } from '../../types';
-import {
     buildAboutSection,
     buildAppearanceSection,
     buildFeedsSection,
-    buildReadingSection,
+    buildReaderSection,
     buildSharingSection,
 } from './settings-general-sections';
 import { el } from './settings-general-dom';
@@ -54,13 +44,12 @@ function defineReactive<T>(host: SettingsGeneral, name: string, initial: T): voi
 }
 
 /**
- * The General tab of the settings area: appearance, reading defaults, sharing,
+ * The General tab of the settings area: appearance, reader typography, sharing,
  * feed import/export, and about. Built once, its five sections are rebuilt from
  * plain DOM in `paint()`. It used to be a modal dialog; it is a page panel now,
  * so there is no open state, backdrop, or focus trap.
  */
 export class SettingsGeneral extends HTMLElement {
-    declare view: View;
     declare theme: Theme;
     declare readerMode: ReaderMode;
     declare adding: boolean;
@@ -72,8 +61,6 @@ export class SettingsGeneral extends HTMLElement {
     declare shareStatus: string;
     declare shareStatusError: boolean;
     declare shareTargets: ShareTarget[];
-    declare viewSettings: ViewSettings;
-    declare viewStatus: string;
     declare showHistory: boolean;
 
     private bodyEl: HTMLDivElement | null = null;
@@ -86,7 +73,6 @@ export class SettingsGeneral extends HTMLElement {
 
     constructor() {
         super();
-        defineReactive(this, 'view', { kind: 'all' } satisfies View);
         defineReactive(this, 'theme', 'light' as Theme);
         defineReactive(this, 'readerMode', loadReaderMode());
         defineReactive(this, 'adding', false);
@@ -98,8 +84,6 @@ export class SettingsGeneral extends HTMLElement {
         defineReactive(this, 'shareStatus', '');
         defineReactive(this, 'shareStatusError', false);
         defineReactive(this, 'shareTargets', [] as ShareTarget[]);
-        defineReactive(this, 'viewSettings', { ...DEFAULT_VIEW_SETTINGS });
-        defineReactive(this, 'viewStatus', '');
         defineReactive(this, 'showHistory', false);
         this.resetState();
     }
@@ -167,7 +151,7 @@ export class SettingsGeneral extends HTMLElement {
         this.captureDrafts();
         this.bodyEl.replaceChildren(
             buildAppearanceSection(this),
-            buildReadingSection(this),
+            buildReaderSection(this),
             buildSharingSection(this),
             buildFeedsSection(this),
             buildAboutSection(this),
@@ -217,84 +201,15 @@ export class SettingsGeneral extends HTMLElement {
         this.shareTargets = loadShareTargets();
         this.shareStatus = '';
         this.shareStatusError = false;
-        this.viewSettings = readDefaultViewSettings();
-        this.viewStatus = '';
         this.showHistory = false;
         this.mastodonDraft = null;
         this.addUrlDraft = null;
     }
 
-    private saveViewDefaults = (): void => {
-        saveDefaultViewSettings(this.viewSettings);
-        // Let an open view that has no own override adopt the new default now.
-        this.announceViewSettings();
-        this.viewStatus = 'Defaults saved. Apply to all views to replace per-view settings.';
-    };
-
-    /** Tell the open list and the badge refresh that the defaults changed. */
-    private announceViewSettings(): void {
-        window.dispatchEvent(new CustomEvent('view-settings-changed'));
-    }
-
-    setListView = (value: string): void => {
-        if (value !== 'detailed' && value !== 'headline' && value !== 'cards' && value !== 'slideshow') return;
-        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, listView: value });
-        this.saveViewDefaults();
-    };
-
     setReaderMode = (mode: ReaderMode): void => {
         this.readerMode = mode;
         saveReaderMode(mode);
         applyReaderMode(mode);
-    };
-
-    setSort = (value: string): void => {
-        if (value !== 'hot' && value !== 'newest' && value !== 'oldest') return;
-        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, sort: value });
-        this.saveViewDefaults();
-    };
-
-    setPageSize = (value: number): void => {
-        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, pageSize: value });
-        this.saveViewDefaults();
-    };
-
-    setMaxCardCols = (value: number): void => {
-        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, maxCardCols: value });
-        this.saveViewDefaults();
-    };
-
-    setUnreadOnly = (value: boolean): void => {
-        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, unreadOnly: value });
-        this.saveViewDefaults();
-    };
-
-    setMarkOnScroll = (value: boolean): void => {
-        this.viewSettings = normalizeViewSettings({ ...this.viewSettings, markOnScroll: value });
-        this.saveViewDefaults();
-    };
-
-    /** Only the article-list routes have per-view settings worth copying. */
-    get canUseCurrentView(): boolean {
-        return (
-            this.view.kind === 'all' ||
-            this.view.kind === 'folder' ||
-            this.view.kind === 'feed' ||
-            this.view.kind === 'interesting'
-        );
-    }
-
-    useCurrentView = (): void => {
-        this.viewSettings = readViewSettingsFor(this.view);
-        saveDefaultViewSettings(this.viewSettings);
-        this.announceViewSettings();
-        this.viewStatus = "Loaded the current view's settings.";
-    };
-
-    applyAllViews = (): void => {
-        applyDefaultToAllViews(this.viewSettings);
-        this.announceViewSettings();
-        this.viewStatus = 'Applied to all views.';
     };
 
     toggleShareTarget = (target: ShareTarget, checked: boolean): void => {

@@ -11,10 +11,12 @@ import { libraryArrived, viewChanged } from './article-list-load-state';
 import { markBeforeAction } from './article-list-actions';
 import { markAboveViewport } from './article-list-selection';
 import {
+    applyDefaultToAllViews,
     describeFreshness,
     folderFeedsOf,
     freshestFetchAt,
     loadViewSettingsFor,
+    normalizeViewSettings,
     saveViewSettingsFor,
     scopeLabelOf,
 } from './article-list-helpers';
@@ -100,6 +102,21 @@ export function loadViewSettings(host: any): void {
 
 export function saveViewSettings(host: any): void {
     saveViewSettingsFor(host);
+}
+
+/** The Advanced menu's contextual "make this the default everywhere" action. */
+export function applyAllViewsAction(host: any): void {
+    const settings = normalizeViewSettings({
+        listView: host.listView,
+        sort: host.sort,
+        pageSize: host.pageSize,
+        maxCardCols: host.maxCardCols,
+        unreadOnly: host.unreadOnly,
+        markOnScroll: host.markOnScroll,
+    });
+    applyDefaultToAllViews(settings);
+    window.dispatchEvent(new CustomEvent('view-settings-changed'));
+    toastInfo('Applied this view to all views');
 }
 
 /** Toolbar and shortcut mutators: each writes its setting, then persists the per-view prefs. */

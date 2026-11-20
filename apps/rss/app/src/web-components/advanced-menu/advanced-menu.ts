@@ -146,7 +146,7 @@ export class AdvancedMenu extends HTMLElement {
 
     private render(): void {
         if (!this.menuEl) return;
-        this.menuEl.replaceChildren(this.renderFilter(), this.renderMark());
+        this.menuEl.replaceChildren(this.renderFilter(), this.renderMark(), this.renderDefaults());
     }
 
     private renderFilter(): HTMLElement {
@@ -192,6 +192,22 @@ export class AdvancedMenu extends HTMLElement {
         span.textContent = 'Mark as read on scroll';
         markScroll.append(markScrollInput, span);
         section.appendChild(markScroll);
+        return section;
+    }
+
+    private renderDefaults(): HTMLElement {
+        const section = document.createElement('div');
+        section.className = 'section';
+        const h = document.createElement('h3');
+        h.textContent = 'Defaults';
+        const button = document.createElement('button');
+        button.className = 'mark-opt';
+        button.textContent = 'Apply this view to all views';
+        button.title = 'Make this layout and sort the default for every view';
+        button.addEventListener('click', () => {
+            this.dispatchEvent(new CustomEvent('apply-all', { bubbles: true, composed: true }));
+        });
+        section.append(h, button);
         return section;
     }
 

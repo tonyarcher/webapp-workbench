@@ -43,14 +43,14 @@ describe('settings search', () => {
     it('filters the index and jumps to the control on the same tab', async () => {
         el = document.createElement('settings-view') as SettingsView;
         document.body.append(el);
-        type(el, 'page size');
+        type(el, 'reader font');
         const links = results(el);
         expect(links.length).to.be.greaterThan(0);
-        expect(links[0]!.textContent).to.equal('Page size');
+        expect(links[0]!.textContent).to.equal('Reader font');
         expect(links[0]!.getAttribute('href')).to.equal('#/settings');
         links[0]!.click();
         await nextFrame();
-        expect(deepActiveElement()?.getAttribute('data-focus-key')).to.equal('select:Page size');
+        expect(deepActiveElement()?.getAttribute('data-focus-key')).to.equal('select:Font');
         // The jump clears the query, so the list is closed again.
         expect(el.shadowRoot!.querySelector('#settings-results')!.hasAttribute('hidden')).to.equal(true);
     });

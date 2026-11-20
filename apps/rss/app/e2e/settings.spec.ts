@@ -84,11 +84,11 @@ test('the settings area opens from the sidebar and its tabs are routes', async (
     await expect(page.getByRole('heading', { name: 'General' })).toBeVisible();
 
     // The filter updates the page live, not a dropdown.
-    await page.getByLabel('Filter settings').fill('page size');
+    await page.getByLabel('Filter settings').fill('reader font');
     await expect(page.getByRole('heading', { name: 'Filtered settings' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Page size' })).toBeVisible();
-    await page.getByRole('link', { name: 'Page size' }).click();
-    await expect(page.getByRole('combobox', { name: 'Page size' })).toBeFocused();
+    await expect(page.getByRole('link', { name: 'Reader font' })).toBeVisible();
+    await page.getByRole('link', { name: 'Reader font' }).click();
+    await expect(page.getByRole('combobox', { name: 'Font' })).toBeFocused();
     await expect(page.getByLabel('Filter settings')).toHaveValue('');
     await expect(page.getByRole('heading', { name: 'General' })).toBeVisible();
 

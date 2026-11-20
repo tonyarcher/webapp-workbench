@@ -180,6 +180,7 @@ export function renderAdvancedMenu(host: ArticleListRenderHost): HTMLElement {
     menu.addEventListener('unread-change', host.onAdvancedUnread.bind(host));
     menu.addEventListener('mark-scroll-change', host.onAdvancedMarkScroll.bind(host));
     menu.addEventListener('mark-before', host.onMarkBefore.bind(host));
+    menu.addEventListener('apply-all', () => host.onApplyAllViews());
     menu.addEventListener('close', () => {
         host.advancedOpen = false;
     });

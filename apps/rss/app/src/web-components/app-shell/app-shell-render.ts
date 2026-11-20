@@ -49,7 +49,6 @@ interface SearchViewElement extends HTMLElement {
 }
 interface SettingsViewElement extends HTMLElement {
     section: SettingsSection;
-    view: View;
 }
 interface BoardViewElement extends HTMLElement {
     boardId: string;
@@ -273,8 +272,6 @@ export class ShellDom {
     private handle: HTMLElement | null = null;
     private articleView: ArticleViewElement | null = null;
     private toastKey = '';
-    /** The last article route, so Settings > Reading can copy that view's settings. */
-    private lastContentView: View = { kind: 'all' };
 
     constructor(shadow: ShadowRoot, host: AppShellRenderHost) {
         this.host = host;
@@ -345,7 +342,6 @@ export class ShellDom {
 
     private renderMain(): void {
         const route = this.host.route;
-        if (route.kind !== 'settings') this.lastContentView = route;
         if (this.sourceList.view !== route) this.sourceList.view = route;
         this.mountView(route);
     }
@@ -392,7 +388,6 @@ export class ShellDom {
         if (route.kind !== 'settings') return;
         const settings = view as SettingsViewElement;
         if (settings.section !== route.section) settings.section = route.section;
-        if (settings.view !== this.lastContentView) settings.view = this.lastContentView;
     }
 
     private renderOverlay(): void {

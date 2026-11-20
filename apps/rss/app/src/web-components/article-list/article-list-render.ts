@@ -56,6 +56,7 @@ export interface ArticleListRenderHost extends HighlightHost {
     onRefresh(): Promise<void>;
     onAdvancedUnread(e: Event): void;
     onAdvancedMarkScroll(e: Event): void;
+    onApplyAllViews(): void;
     onMarkBefore(e: Event): Promise<void>;
     onRetryLibrary(): void;
     onScroll(): void;

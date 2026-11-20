@@ -114,13 +114,6 @@
     width: 100%;
 }
 
-.view-toggles {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 16px;
-    margin: 0 0 10px;
-}
-
 .view-actions {
     display: flex;
     gap: 8px;

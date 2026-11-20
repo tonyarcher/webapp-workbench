@@ -1,9 +1,7 @@
 import { ALL_SHARE_TARGETS } from '../../services/share-settings';
-import { PAGE_SIZES } from '../article-list/article-list-helpers';
 import type { ReaderFont, ReaderLine, ReaderMode, ReaderSize, ReaderWidth } from '../../services/reader-mode';
 import type { ShareTarget } from '../../services/share';
 import type { Theme } from '../../theme';
-import type { ViewSettings } from '../article-list/article-list-helpers';
 import { APP_COMMIT, APP_VERSION, BUILD_TIME, VERSION_HISTORY } from '../../generated/version-history';
 import {
     button,
@@ -29,21 +27,10 @@ export interface SettingsGeneralSectionsHost {
     shareStatus: string;
     shareStatusError: boolean;
     shareTargets: ShareTarget[];
-    viewSettings: ViewSettings;
-    viewStatus: string;
     readerMode: ReaderMode;
     showHistory: boolean;
-    canUseCurrentView: boolean;
     onThemeClick: (event: Event) => void;
-    setListView: (value: string) => void;
-    setSort: (value: string) => void;
-    setPageSize: (value: number) => void;
-    setMaxCardCols: (value: number) => void;
-    setUnreadOnly: (value: boolean) => void;
-    setMarkOnScroll: (value: boolean) => void;
     setReaderMode: (mode: ReaderMode) => void;
-    useCurrentView: () => void;
-    applyAllViews: () => void;
     toggleShareTarget: (target: ShareTarget, checked: boolean) => void;
     submitMastodonHost: () => void;
     openAdd: () => void;
@@ -62,22 +49,6 @@ const THEMES: Array<{ value: Theme; label: string }> = [
     { value: 'dark', label: 'Dark grey' },
     { value: 'oled', label: 'Lights out' },
 ];
-
-const LIST_VIEW_OPTIONS: SelectOption[] = [
-    { value: 'detailed', label: 'Detailed List' },
-    { value: 'headline', label: 'Headline View' },
-    { value: 'cards', label: 'Cards' },
-    { value: 'slideshow', label: 'Slideshow' },
-];
-
-const SORT_OPTIONS: SelectOption[] = [
-    { value: 'hot', label: 'Hot' },
-    { value: 'newest', label: 'Newest' },
-    { value: 'oldest', label: 'Oldest' },
-];
-
-const PAGE_SIZE_OPTIONS: SelectOption[] = PAGE_SIZES.map((size) => ({ value: String(size), label: String(size) }));
-const COLUMN_OPTIONS: SelectOption[] = [2, 3, 4, 5, 6].map((cols) => ({ value: String(cols), label: String(cols) }));
 
 const FONT_OPTIONS: SelectOption[] = [
     { value: 'sans', label: 'Sans' },
@@ -128,31 +99,6 @@ export function buildAppearanceSection(host: SettingsGeneralSectionsHost): HTMLE
     return root;
 }
 
-function viewDefaultFields(host: SettingsGeneralSectionsHost): HTMLElement {
-    const grid = el('div', 'view-defaults');
-    const settings = host.viewSettings;
-    grid.append(
-        selectField('Default list view', LIST_VIEW_OPTIONS, settings.listView, host.setListView),
-        selectField('Sort', SORT_OPTIONS, settings.sort, host.setSort),
-        selectField('Page size', PAGE_SIZE_OPTIONS, String(settings.pageSize), (value) =>
-            host.setPageSize(Number(value)),
-        ),
-        selectField('Card columns', COLUMN_OPTIONS, String(settings.maxCardCols), (value) =>
-            host.setMaxCardCols(Number(value)),
-        ),
-    );
-    return grid;
-}
-
-function viewToggles(host: SettingsGeneralSectionsHost): HTMLElement {
-    const row = el('div', 'view-toggles');
-    row.append(
-        checkboxField('Unread only', host.viewSettings.unreadOnly, host.setUnreadOnly),
-        checkboxField('Mark on scroll', host.viewSettings.markOnScroll, host.setMarkOnScroll),
-    );
-    return row;
-}
-
 function readerModeFields(host: SettingsGeneralSectionsHost): HTMLElement {
     const mode = host.readerMode;
     const grid = el('div', 'view-defaults');
@@ -173,20 +119,10 @@ function readerModeFields(host: SettingsGeneralSectionsHost): HTMLElement {
     return grid;
 }
 
-function viewActions(host: SettingsGeneralSectionsHost): HTMLElement {
-    const actions = el('div', 'view-actions');
-    if (host.canUseCurrentView) actions.append(button('btn', 'Use current view', () => host.useCurrentView()));
-    actions.append(button('btn primary', 'Apply to all views', () => host.applyAllViews()));
-    return actions;
-}
-
-export function buildReadingSection(host: SettingsGeneralSectionsHost): HTMLElement {
-    const root = section('Reading');
-    root.append(viewDefaultFields(host), viewToggles(host), readerModeFields(host), viewActions(host));
-    root.append(
-        hint("New and untouched views use these defaults. Apply to all views replaces every view's own settings."),
-    );
-    if (host.viewStatus) root.append(statusLine(host.viewStatus, false));
+export function buildReaderSection(host: SettingsGeneralSectionsHost): HTMLElement {
+    const root = section('Reader');
+    root.append(readerModeFields(host));
+    root.append(hint('Text size, font and width for the article reader. List layout lives in the list toolbar.'));
     return root;
 }
 

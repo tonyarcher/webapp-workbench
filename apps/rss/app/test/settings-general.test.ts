@@ -1,23 +1,23 @@
-// The Settings > Reading defaults, in a real DOM. The smoke suite pins the
-// storage fallback/override logic; this pins the shadow-root wiring the review
-// called out: the page-size select must show the saved value, not the first
-// option, and "Apply to all views" must clear the per-view map.
+// Reading controls that belong to a single list (layout, sort, page size,
+// unread-only, mark-on-scroll) moved back to the list toolbar. General now
+// keeps only article-reader typography. This pins that boundary.
 import './test-setup';
 import { expect } from '@esm-bundle/chai';
 import '../src/web-components/settings-general/settings-general';
 import type { SettingsGeneral } from '../src/web-components/settings-general/settings-general';
 
-function readingSection(el: SettingsGeneral): HTMLElement {
+function sectionTitles(el: SettingsGeneral): string[] {
     const panel = el.shadowRoot!.querySelector('.panel')!;
-    const section = Array.from(panel.querySelectorAll<HTMLElement>('.section')).find(
-        (s) => s.querySelector('h3')?.textContent === 'Reading',
-    );
-    if (!section) throw new Error('Reading section missing');
-    return section;
+    return Array.from(panel.querySelectorAll<HTMLElement>('.section h3')).map((h) => h.textContent ?? '');
 }
 
-function selects(el: SettingsGeneral): HTMLSelectElement[] {
-    return Array.from(readingSection(el).querySelectorAll<HTMLSelectElement>('.view-field select'));
+function readerSection(el: SettingsGeneral): HTMLElement {
+    const panel = el.shadowRoot!.querySelector('.panel')!;
+    const section = Array.from(panel.querySelectorAll<HTMLElement>('.section')).find(
+        (s) => s.querySelector('h3')?.textContent === 'Reader',
+    );
+    if (!section) throw new Error('Reader section missing');
+    return section;
 }
 
 async function mount(): Promise<SettingsGeneral> {
@@ -27,7 +27,7 @@ async function mount(): Promise<SettingsGeneral> {
     return el;
 }
 
-describe('settings-general reading defaults', () => {
+describe('settings-general reader section', () => {
     let el: SettingsGeneral | undefined;
 
     beforeEach(() => {
@@ -42,44 +42,25 @@ describe('settings-general reading defaults', () => {
         }
     });
 
-    it('shows the built-in defaults, including the page size', async () => {
+    it('keeps typography but not per-view list controls', async () => {
         el = await mount();
-        const [listView, sort, pageSize, columns] = selects(el);
-        expect(listView!.value).to.equal('detailed');
-        expect(sort!.value).to.equal('hot');
-        expect(pageSize!.value).to.equal('50');
-        expect(pageSize!.selectedOptions[0]?.textContent).to.equal('50');
-        expect(columns!.value).to.equal('4');
+        expect(sectionTitles(el)).to.include('Reader');
+        expect(sectionTitles(el)).not.to.include('Reading');
+        const selects = Array.from(readerSection(el).querySelectorAll<HTMLSelectElement>('.view-field select'));
+        expect(selects.map((s) => s.value)).to.deep.equal(['sans', 'medium', 'normal', 'medium']);
+        const labels = readerSection(el).textContent ?? '';
+        for (const gone of ['Page size', 'Sort', 'Unread only', 'Mark on scroll', 'Apply to all views']) {
+            expect(labels).not.to.include(gone);
+        }
     });
 
-    it('saves a changed default and applies it to every view', async () => {
-        const perView = {
-            all: {
-                listView: 'detailed',
-                sort: 'hot',
-                pageSize: 20,
-                maxCardCols: 4,
-                unreadOnly: true,
-                markOnScroll: false,
-            },
-        };
-        localStorage.setItem('rss-reader:view-settings', JSON.stringify(perView));
-
+    it('persists a changed reader font', async () => {
         el = await mount();
-        const listView = selects(el)[0]!;
-        listView.value = 'cards';
-        listView.dispatchEvent(new Event('change', { bubbles: true }));
+        const font = readerSection(el).querySelector<HTMLSelectElement>('.view-field select')!;
+        font.value = 'serif';
+        font.dispatchEvent(new Event('change', { bubbles: true }));
         await el.updateComplete;
-
-        const saved = JSON.parse(localStorage.getItem('rss-reader:default-view-settings')!) as { listView: string };
-        expect(saved.listView).to.equal('cards');
-
-        const apply = Array.from(readingSection(el).querySelectorAll('button')).find(
-            (b) => b.textContent?.trim() === 'Apply to all views',
-        );
-        apply!.click();
-        await el.updateComplete;
-
-        expect(localStorage.getItem('rss-reader:view-settings')).to.equal(null);
+        const saved = JSON.parse(localStorage.getItem('rss-reader:reader-mode')!) as { font: string };
+        expect(saved.font).to.equal('serif');
     });
 });

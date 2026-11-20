@@ -27,8 +27,9 @@ import { assert } from './smoke-assert';
     assert(searchSettings('   ').length === 0, 'a blank query matches nothing');
     assert(searchSettings('zzzz').length === 0, 'an unknown word matches nothing');
 
-    const page = searchSettings('page size');
-    assert(page.length > 0 && page[0]!.id === 'page-size', '"page size" finds Page size first');
+    const font = searchSettings('reader font');
+    assert(font.length > 0 && font[0]!.id === 'reader-font', '"reader font" finds the reader font control');
+    assert(searchSettings('page size').length === 0, 'per-view list controls are not in the settings index');
 
     const dark = searchSettings('dark');
     assert(

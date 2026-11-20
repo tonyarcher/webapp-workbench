@@ -47,6 +47,7 @@ import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../
 import { areHighlightsEnabled } from '../../services/highlights';
 import { syncHighlightsEnabled, toggleRowHighlight, type RowHighlightsHost } from './article-list-row-highlights';
 import {
+    applyAllViewsAction,
     canUndoMute as canUndoMuteHost,
     currentViewKey as currentViewKeyHost,
     freshnessLabel as freshnessLabelHost,
@@ -510,6 +511,10 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
 
     onAdvancedMarkScroll(e: Event): void {
         advancedMarkScrollAction(this as never, e);
+    }
+
+    onApplyAllViews(): void {
+        applyAllViewsAction(this);
     }
 
     scopeLabel(): string {

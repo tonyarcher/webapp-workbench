@@ -1,5 +1,5 @@
 import { navigate, viewToPath } from '../../router';
-import type { SettingsSection, View } from '../../types';
+import type { SettingsSection } from '../../types';
 import { searchSettings, type SettingEntry } from './settings-index';
 import '../settings-general/settings-general';
 import '../organize-view/organize-view';
@@ -42,7 +42,6 @@ function specOf(section: SettingsSection): SectionSpec {
  */
 export class SettingsView extends HTMLElement {
     private _section: SettingsSection = 'general';
-    private _view: View = { kind: 'all' };
     private root: HTMLElement | null = null;
     private panelHost: HTMLElement | null = null;
     private panel: HTMLElement | null = null;
@@ -65,17 +64,6 @@ export class SettingsView extends HTMLElement {
         if (value === this._section) return;
         this._section = value;
         this.paint();
-    }
-
-    get view(): View {
-        return this._view;
-    }
-
-    set view(value: View) {
-        this._view = value;
-        if (this.panel !== null && this.activeTag === 'settings-general') {
-            (this.panel as HTMLElement & { view: View }).view = value;
-        }
     }
 
     connectedCallback(): void {
@@ -265,9 +253,6 @@ export class SettingsView extends HTMLElement {
             this.panel = next;
             this.activeTag = spec.tag;
             this.panelHost.append(next);
-        }
-        if (this.panel !== null && spec.tag === 'settings-general') {
-            (this.panel as HTMLElement & { view: View }).view = this._view;
         }
     }
 
