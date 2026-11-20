@@ -812,3 +812,27 @@ button.title-open:hover {
     color: var(--muted);
     padding: 24px;
 }
+
+@media (max-width: 700px) {
+    .toolbar {
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px 10px;
+    }
+
+    .toolbar h2 {
+        flex: 1 1 100%;
+    }
+
+    .toolbar .actions {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 700px) {
+    .row.cards {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 0 10px 16px;
+    }
+}

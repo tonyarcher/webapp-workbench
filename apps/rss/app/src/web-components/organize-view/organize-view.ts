@@ -244,30 +244,32 @@ export class OrganizeView extends HTMLElement {
         if (!this.popoverEl) return;
         const feed = this.feeds.find((f) => f.id === this.popoverFeedId);
         const open = this.popoverOpen && feed !== undefined;
+        this.popoverEl.replaceChildren();
+        if (open && feed) {
+            const heading = document.createElement('h3');
+            heading.textContent = feed.title;
+            this.popoverEl.appendChild(heading);
+            for (const folder of this.folders) {
+                const label = document.createElement('label');
+                label.className = 'folder-choice';
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.checked = feed.folderIds.includes(folder.id);
+                input.addEventListener('change', () => void this.onToggleMembership(feed, folder.id, input.checked));
+                label.append(input, document.createTextNode(folder.title));
+                this.popoverEl.appendChild(label);
+            }
+            const hint = document.createElement('p');
+            hint.className = 'folders-hint';
+            hint.textContent = 'None selected means Uncategorized.';
+            this.popoverEl.appendChild(hint);
+        }
+        // Measure after the rows exist, so a tall list is clamped correctly.
         syncMenuPopover(this.popoverEl, open, this.popoverAnchor, () => {
             this.popoverOpen = false;
             this.popoverFeedId = null;
             this.paintPopover();
         });
-        this.popoverEl.replaceChildren();
-        if (!open || !feed) return;
-        const heading = document.createElement('h3');
-        heading.textContent = feed.title;
-        this.popoverEl.appendChild(heading);
-        for (const folder of this.folders) {
-            const label = document.createElement('label');
-            label.className = 'folder-choice';
-            const input = document.createElement('input');
-            input.type = 'checkbox';
-            input.checked = feed.folderIds.includes(folder.id);
-            input.addEventListener('change', () => void this.onToggleMembership(feed, folder.id, input.checked));
-            label.append(input, document.createTextNode(folder.title));
-            this.popoverEl.appendChild(label);
-        }
-        const hint = document.createElement('p');
-        hint.className = 'folders-hint';
-        hint.textContent = 'None selected means Uncategorized.';
-        this.popoverEl.appendChild(hint);
     }
 }
 

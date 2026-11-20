@@ -350,3 +350,42 @@ main {
         animation: none;
     }
 }
+
+@media (max-width: 700px) {
+    header {
+        gap: 6px;
+        padding: 0 8px;
+    }
+
+    header h1 {
+        font-size: 13px;
+    }
+
+    header .sub,
+    .who {
+        display: none;
+    }
+
+    .signout {
+        padding: 4px 6px;
+    }
+
+    .palette-search-trigger {
+        width: 34px;
+        min-width: 34px;
+        max-width: 34px;
+        justify-content: center;
+        padding: 0;
+    }
+
+    .palette-search-trigger::before {
+        content: '🔍';
+        font-size: 14px;
+        line-height: 1;
+    }
+
+    .palette-search-text,
+    .palette-search-hint {
+        display: none;
+    }
+}

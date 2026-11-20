@@ -411,3 +411,46 @@ nav.drag-over {
     color: var(--accent);
     background: var(--active-bg);
 }
+
+@media (max-width: 700px) {
+    :host {
+        --sidebar-width: min(280px, 78vw);
+        width: 16px;
+    }
+
+    :host(:hover),
+    :host(:focus-within),
+    :host([hover]) {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 5;
+        width: var(--sidebar-width);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    :host(:not(:hover):not(:focus-within):not([hover])) .sidebar-head,
+    :host(:not(:hover):not(:focus-within):not([hover])) .nav,
+    :host(:not(:hover):not(:focus-within):not([hover])) .resize-handle {
+        display: none;
+    }
+
+    :host::before {
+        content: '≡';
+        font-family: system-ui, sans-serif;
+        font-size: 16px;
+        position: absolute;
+        top: 10px;
+        left: 0;
+        width: 16px;
+        text-align: center;
+        color: var(--text-muted);
+    }
+
+    :host(:hover)::before,
+    :host(:focus-within)::before,
+    :host([hover])::before {
+        content: none;
+    }
+}

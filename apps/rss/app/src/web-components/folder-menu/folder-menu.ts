@@ -59,9 +59,6 @@ export class FolderMenu extends HTMLElement {
     private paint() {
         if (!this.root) return;
         const open = this._open && this._folder !== null;
-        syncMenuPopover(this.root, open, this._anchor, () =>
-            this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true })),
-        );
         this.root.replaceChildren();
         if (!open) return;
         const actions = document.createElement('div');
@@ -111,6 +108,9 @@ export class FolderMenu extends HTMLElement {
         );
         actions.appendChild(del);
         this.root.appendChild(actions);
+        syncMenuPopover(this.root, open, this._anchor, () =>
+            this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true })),
+        );
     }
 }
 
