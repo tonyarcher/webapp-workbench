@@ -189,6 +189,24 @@ class ScrapeSourceControllerTest {
     }
 
     @Test
+    fun explicitTitleAndBlankSelector() {
+        stubAuth()
+        val url = "https://example.com/blog"
+        whenever(pages.fetchHtml(url)).thenReturn(PAGE_HTML)
+        whenever(feeds.findByXmlUrl(url)).thenReturn(null)
+        whenever(feeds.save(any<FeedEntity>())).thenAnswer {
+            val entity: FeedEntity = it.getArgument(0)
+            entity.id = UUID.randomUUID()
+            entity
+        }
+
+        create("""{"url":"$url","title":"My blog","selector":"   "}""").andExpect {
+            status { isOk() }
+            jsonPath("$.title") { value("My blog") }
+        }
+    }
+
+    @Test
     fun missingVersionIsNotRouted() {
         stubAuth()
         mvc.post("/sources") {

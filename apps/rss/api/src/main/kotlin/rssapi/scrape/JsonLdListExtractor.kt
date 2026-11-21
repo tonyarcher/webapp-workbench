@@ -34,7 +34,12 @@ class JsonLdListExtractor : PageExtractor {
         for (script in doc.select("script[type=application/ld+json]")) {
             runCatching { mapper.readTree(script.data()) }.getOrNull()?.let { collect(it, found, baseUrl, 0) }
         }
-        return found.distinctBy { it.url }
+        return found.distinctBy { it.url }.map { candidate ->
+            val element = doc.select("a[href]").firstOrNull { link ->
+                link.absUrl("href").ifBlank { link.attr("href") } == candidate.url
+            }
+            if (element == null) candidate else candidate.copy(elementSelector = cssPath(element.parent() ?: element))
+        }
     }
 
     private fun collect(node: JsonNode, found: MutableList<ScrapeCandidate>, baseUrl: String, depth: Int) {

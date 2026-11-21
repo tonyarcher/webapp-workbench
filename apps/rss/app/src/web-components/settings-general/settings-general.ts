@@ -9,7 +9,14 @@ import {
     saveMastodonHost,
     saveShareTargets,
 } from '../../services/share-settings';
-import { addScrapeSource, migrateLibrary, previewScrape, type ScrapeCandidate } from '../../services/api';
+import {
+    addScrapeSource,
+    migrateLibrary,
+    previewScrape,
+    type ScrapeCandidate,
+    type ScrapePreview,
+    type ScrapeStrategy,
+} from '../../services/api';
 import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
 import { invalidateArticles, invalidateLibrary } from '../../query';
 import { navigate } from '../../router';
@@ -68,6 +75,8 @@ export class SettingsGeneral extends HTMLElement {
     declare scrapeStatusError: boolean;
     declare scrapeCandidates: ScrapeCandidate[];
     declare scrapeSelected: string[];
+    declare scrapePreview: ScrapePreview | null;
+    declare scrapeStrategyId: string;
 
     private bodyEl: HTMLDivElement | null = null;
     private updateScheduled = false;
@@ -99,6 +108,8 @@ export class SettingsGeneral extends HTMLElement {
         defineReactive(this, 'scrapeStatusError', false);
         defineReactive(this, 'scrapeCandidates', [] as ScrapeCandidate[]);
         defineReactive(this, 'scrapeSelected', [] as string[]);
+        defineReactive(this, 'scrapePreview', null as ScrapePreview | null);
+        defineReactive(this, 'scrapeStrategyId', '');
         this.resetState();
     }
 
@@ -282,6 +293,8 @@ export class SettingsGeneral extends HTMLElement {
         this.scrapeStatus = '';
         this.scrapeCandidates = [];
         this.scrapeSelected = [];
+        this.scrapePreview = null;
+        this.scrapeStrategyId = '';
         this.scrapeUrlDraft = null;
         this.scrapeSelectorDraft = null;
     };
@@ -306,15 +319,29 @@ export class SettingsGeneral extends HTMLElement {
         this.scrapeBusy = true;
         try {
             const result = await previewScrape(url, selector);
-            this.scrapeCandidates = result.candidates;
-            this.scrapeSelected = result.candidates.map((candidate) => candidate.url);
-            this.scrapeStatus = `${result.candidates.length} stories found with ${result.label}.`;
+            this.scrapePreview = result;
+            const first = result.strategies[0];
+            this.scrapeStrategyId = first?.id ?? '';
+            this.applyStrategy(first);
+            this.scrapeStatus = first
+                ? `${first.candidates.length} stories found with ${first.label}. Try another list below.`
+                : 'No article list found.';
             this.scrapeStatusError = false;
         } catch (err) {
             this.scrapeError(err instanceof Error ? err.message : 'Could not preview the page');
         } finally {
             this.scrapeBusy = false;
         }
+    };
+
+    private applyStrategy(strategy: ScrapeStrategy | undefined): void {
+        this.scrapeCandidates = strategy?.candidates ?? [];
+        this.scrapeSelected = this.scrapeCandidates.map((candidate) => candidate.url);
+    }
+
+    selectScrapeStrategy = (id: string): void => {
+        this.scrapeStrategyId = id;
+        this.applyStrategy(this.scrapePreview?.strategies.find((strategy) => strategy.id === id));
     };
 
     toggleScrapeCandidate = (candidateUrl: string, checked: boolean): void => {
@@ -336,7 +363,8 @@ export class SettingsGeneral extends HTMLElement {
         }
         this.scrapeBusy = true;
         try {
-            await addScrapeSource(url, selector, this.scrapeSelected);
+            const strategy = this.scrapePreview?.strategies.find((entry) => entry.id === this.scrapeStrategyId);
+            await addScrapeSource(url, strategy?.selector ?? selector, this.scrapeSelected);
             await invalidateLibrary();
             this.cancelScrape();
             this.status = `Following ${url}.`;

@@ -78,19 +78,25 @@ class ScrapeControllerTest {
     fun returnsCandidates() {
         stubAuth()
         whenever(service.preview(anyOrNull(), anyOrNull())).thenReturn(
-            ScrapeResult(
-                strategy = "semantic-list",
-                label = "Article list",
-                confidence = 0.7f,
+            ScrapePreviewResult(
+                html = "<article>One</article>",
+                baseUrl = "https://example.com/blog",
                 title = "Blog",
-                candidates = listOf(ScrapeCandidate("One", "https://example.com/one")),
+                strategies = listOf(
+                    ScrapeStrategy(
+                        "semantic-list",
+                        "Article list",
+                        0.7f,
+                        "strategy:semantic-list",
+                        listOf(ScrapeCandidate("One", "https://example.com/one")),
+                    ),
+                ),
             ),
         )
         preview("""{"url":"https://example.com/blog"}""").andExpect {
             status { isOk() }
-            jsonPath("$.strategy") { value("semantic-list") }
-            jsonPath("$.candidates.length()") { value(1) }
-            jsonPath("$.candidates[0].title") { value("One") }
+            jsonPath("$.strategies.length()") { value(1) }
+            jsonPath("$.strategies[0].candidates[0].title") { value("One") }
         }
     }
 
@@ -98,7 +104,7 @@ class ScrapeControllerTest {
     fun passesTheSelectorThrough() {
         stubAuth()
         whenever(service.preview(anyOrNull(), anyOrNull())).thenReturn(
-            ScrapeResult("selector", "Selected list", 1f, null, emptyList()),
+            ScrapePreviewResult("<p>x</p>", "https://example.com/blog", null, emptyList()),
         )
         preview("""{"url":"https://example.com/blog","selector":".stories"}""").andExpect {
             status { isOk() }

@@ -63,5 +63,6 @@ export type {
     OpmlImportResult,
     ScrapeCandidate,
     ScrapePreview,
+    ScrapeStrategy,
     ServerAiStatus,
 } from './api-domains';

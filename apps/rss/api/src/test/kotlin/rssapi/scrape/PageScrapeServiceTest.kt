@@ -26,23 +26,53 @@ class PageScrapeServiceTest {
     fun picksTheBestExtractor() {
         whenever(pages.fetchHtml(PAGE_URL)).thenReturn(ARTICLES)
         val result = service.preview(PAGE_URL, null)
-        assertEquals("semantic-list", result.strategy)
+        assertEquals("semantic-list", result.strategies.first().id)
         assertEquals("Blog", result.title)
-        assertEquals(2, result.candidates.size)
+        assertEquals(2, result.strategies.first().candidates.size)
+        assertEquals(PAGE_URL, result.baseUrl)
+        assertEquals(true, result.html.contains("One"))
+        assertEquals(false, result.html.contains("<script"))
     }
 
     @Test
     fun selectorOverridesAutomaticChoice() {
         whenever(pages.fetchHtml(PAGE_URL)).thenReturn(ARTICLES)
         val result = service.preview(PAGE_URL, "article")
-        assertEquals("selector", result.strategy)
-        assertEquals(2, result.candidates.size)
+        val custom = result.strategies.first { it.id == "selector" }
+        assertEquals(2, custom.candidates.size)
+        assertEquals("article", custom.selector)
     }
 
     @Test
     fun blankSelectorUsesAutomaticChoice() {
         whenever(pages.fetchHtml(PAGE_URL)).thenReturn(ARTICLES)
-        assertEquals("semantic-list", service.preview(PAGE_URL, "  ").strategy)
+        assertEquals("semantic-list", service.preview(PAGE_URL, "  ").strategies.first().id)
+    }
+
+    @Test
+    fun jsonLdBoxesPointAtRealElements() {
+        val html = """
+            <html><body>
+              <script type="application/ld+json">{"@type":"ItemList","itemListElement":[
+                {"headline":"One","url":"/one"}]}</script>
+              <article id="one"><a href="/one">One</a></article>
+            </body></html>
+        """.trimIndent()
+        whenever(pages.fetchHtml(PAGE_URL)).thenReturn(html)
+        val strategy = service.preview(PAGE_URL, null).strategies.first { it.id == "json-ld-list" }
+        assertEquals("https://example.com/one", strategy.candidates.first().url)
+        assertEquals("#one", strategy.candidates.first().elementSelector)
+    }
+
+    @Test
+    fun excerptIsSafeForPreview() {
+        whenever(pages.fetchHtml(PAGE_URL)).thenReturn(
+            "<script>alert(1)</script><article><a href='/a'>A</a></article><article><a href='/b'>B</a></article>",
+        )
+        val html = service.preview(PAGE_URL, null).html
+        assertEquals(false, html.contains("alert"))
+        assertEquals(false, html.contains("<script"))
+        assertEquals(true, html.contains("A"))
     }
 
     @Test
@@ -76,7 +106,8 @@ class PageScrapeServiceTest {
     @Test
     fun reportsEmptySelectorMatch() {
         whenever(pages.fetchHtml(PAGE_URL)).thenReturn(ARTICLES)
-        assertEquals(422, statusOf { service.preview(PAGE_URL, ".missing") })
+        val result = service.preview(PAGE_URL, ".missing")
+        assertEquals(0, result.strategies.first { it.id == "selector" }.candidates.size)
     }
 
     @Test

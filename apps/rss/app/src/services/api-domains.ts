@@ -123,14 +123,22 @@ export interface ScrapeCandidate {
     url: string;
     published?: number | null;
     summary?: string | null;
+    elementSelector?: string | null;
+}
+
+export interface ScrapeStrategy {
+    id: string;
+    label: string;
+    confidence: number;
+    selector?: string | null;
+    candidates: ScrapeCandidate[];
 }
 
 export interface ScrapePreview {
-    strategy: string;
-    label: string;
-    confidence: number;
+    html: string;
+    baseUrl: string;
     title?: string | null;
-    candidates: ScrapeCandidate[];
+    strategies: ScrapeStrategy[];
 }
 
 export async function previewScrape(url: string, selector?: string): Promise<ScrapePreview> {

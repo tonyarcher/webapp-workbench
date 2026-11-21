@@ -10,5 +10,5 @@ data class ScrapePreviewBody(val url: String? = null, val selector: String? = nu
 @RestController
 class ScrapeController(private val service: PageScrapeService) {
     @PostMapping("/sources/preview", headers = ["X-Api-Version=1"])
-    fun preview(@RequestBody body: ScrapePreviewBody): ScrapeResult = service.preview(body.url, body.selector)
+    fun preview(@RequestBody body: ScrapePreviewBody): ScrapePreviewResult = service.preview(body.url, body.selector)
 }

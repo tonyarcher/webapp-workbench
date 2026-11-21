@@ -1,5 +1,6 @@
 import { ALL_SHARE_TARGETS } from '../../services/share-settings';
-import type { ScrapeCandidate } from '../../services/api';
+import type { ScrapeCandidate, ScrapePreview } from '../../services/api';
+import '../scrape-preview/scrape-preview';
 import type { ReaderFont, ReaderLine, ReaderMode, ReaderSize, ReaderWidth } from '../../services/reader-mode';
 import type { ShareTarget } from '../../services/share';
 import type { Theme } from '../../theme';
@@ -36,6 +37,8 @@ export interface SettingsGeneralSectionsHost {
     scrapeStatusError: boolean;
     scrapeCandidates: ScrapeCandidate[];
     scrapeSelected: string[];
+    scrapePreview: ScrapePreview | null;
+    scrapeStrategyId: string;
     onThemeClick: (event: Event) => void;
     setReaderMode: (mode: ReaderMode) => void;
     toggleShareTarget: (target: ShareTarget, checked: boolean) => void;
@@ -54,6 +57,7 @@ export interface SettingsGeneralSectionsHost {
     previewScrapePage: () => void;
     followScrapePage: () => void;
     toggleScrapeCandidate: (url: string, checked: boolean) => void;
+    selectScrapeStrategy: (id: string) => void;
 }
 
 const THEMES: Array<{ value: Theme; label: string }> = [
@@ -227,6 +231,35 @@ function addRow(host: SettingsGeneralSectionsHost): HTMLElement | null {
     return row;
 }
 
+function strategyPicker(host: SettingsGeneralSectionsHost): HTMLElement {
+    const row = el('div', 'scrape-strategies');
+    const label = el('span', 'scrape-strategies-label', 'Article list');
+    row.appendChild(label);
+    for (const strategy of host.scrapePreview?.strategies ?? []) {
+        const button = el('button', 'scrape-strategy');
+        button.type = 'button';
+        button.textContent = `${strategy.label} (${strategy.candidates.length})`;
+        button.setAttribute('aria-pressed', String(strategy.id === host.scrapeStrategyId));
+        button.addEventListener('click', () => host.selectScrapeStrategy(strategy.id));
+        row.appendChild(button);
+    }
+    return row;
+}
+
+function pagePreview(host: SettingsGeneralSectionsHost): HTMLElement {
+    const holder = el('div', 'scrape-preview-wrap');
+    const preview = document.createElement('scrape-preview');
+    preview.config = {
+        html: host.scrapePreview?.html ?? '',
+        baseUrl: host.scrapePreview?.baseUrl ?? '',
+        candidates: host.scrapeCandidates,
+        selected: host.scrapeSelected,
+        onToggle: (url: string, checked: boolean) => host.toggleScrapeCandidate(url, checked),
+    };
+    holder.appendChild(preview);
+    return holder;
+}
+
 function scrapeForm(host: SettingsGeneralSectionsHost): HTMLElement {
     const form = el('div', 'scrape-form');
     const url = el('input');
@@ -246,6 +279,11 @@ function scrapeForm(host: SettingsGeneralSectionsHost): HTMLElement {
     follow.disabled = host.scrapeBusy;
     form.append(url, selector, preview, follow, cancel);
     if (host.scrapeStatus) form.append(statusLine(host.scrapeStatus, host.scrapeStatusError));
+    if (host.scrapePreview) {
+        form.append(strategyPicker(host), pagePreview(host));
+        const note = hint('Click a highlighted box or use the checkboxes to choose which stories to import.');
+        form.appendChild(note);
+    }
     if (host.scrapeCandidates.length) {
         const list = el('ul', 'scrape-list');
         for (const candidate of host.scrapeCandidates) {

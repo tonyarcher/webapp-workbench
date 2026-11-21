@@ -21,13 +21,35 @@ test('the settings page previews and follows a watched page', async ({ page }) =
         return route.fulfill({
             status: 200,
             body: JSON.stringify({
-                strategy: 'semantic-list',
-                label: 'Article list',
-                confidence: 0.7,
+                html: '<article>First story</article><article>Second story</article>',
+                baseUrl: 'https://example.com/blog',
                 title: 'Blog',
-                candidates: [
-                    { title: 'First story', url: 'https://example.com/one' },
-                    { title: 'Second story', url: 'https://example.com/two' },
+                strategies: [
+                    {
+                        id: 'semantic-list',
+                        label: 'Article list',
+                        confidence: 0.7,
+                        selector: 'strategy:semantic-list',
+                        candidates: [
+                            {
+                                title: 'First story',
+                                url: 'https://example.com/one',
+                                elementSelector: 'article:nth-child(1)',
+                            },
+                            {
+                                title: 'Second story',
+                                url: 'https://example.com/two',
+                                elementSelector: 'article:nth-child(2)',
+                            },
+                        ],
+                    },
+                    {
+                        id: 'json-ld-list',
+                        label: 'Structured list',
+                        confidence: 0.8,
+                        selector: 'strategy:json-ld-list',
+                        candidates: [{ title: 'Second story', url: 'https://example.com/two' }],
+                    },
                 ],
             }),
         });
@@ -57,6 +79,23 @@ test('the settings page previews and follows a watched page', async ({ page }) =
     await page.getByRole('button', { name: 'Preview' }).click();
     await expect(page.getByText('First story')).toBeVisible();
     expect(previewBody).toContain('.post');
+
+    const frame = page.frameLocator('scrape-preview iframe');
+    await expect(frame.locator('.rss-scrape-box')).toHaveCount(2);
+    await expect(frame.getByRole('button', { name: /Selected: Second story/ })).toBeVisible();
+
+    // Clicking a highlight box toggles the matching checkbox.
+    await frame.getByRole('button', { name: /Selected: Second story/ }).click();
+    await expect(page.getByRole('checkbox', { name: 'Second story' })).not.toBeChecked();
+    await page.getByRole('checkbox', { name: 'Second story' }).check();
+
+    // Switching list type redraws the boxes and the story list.
+    await page.getByRole('button', { name: /Structured list/ }).click();
+    await expect(frame.locator('.rss-scrape-box')).toHaveCount(0);
+    await expect(page.getByRole('checkbox', { name: 'Second story' })).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'First story' })).toHaveCount(0);
+    await page.getByRole('button', { name: /Article list/ }).click();
+    await expect(frame.locator('.rss-scrape-box')).toHaveCount(2);
 
     await page.getByRole('checkbox', { name: 'Second story' }).uncheck();
     await page.getByRole('button', { name: 'Follow page' }).click();

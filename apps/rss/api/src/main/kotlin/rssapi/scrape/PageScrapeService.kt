@@ -12,15 +12,27 @@ import rssapi.web.ApiException
 private const val MAX_CANDIDATES = 50
 private val NO_LIST_STATUS: HttpStatusCode = HttpStatusCode.valueOf(422)
 
-/** Fetches a page once and lets the extractors compete for its article list. */
+/** Everything the browser needs to draw a page preview and its highlight boxes. */
+data class ScrapePreviewResult(
+    val html: String,
+    val baseUrl: String,
+    val title: String?,
+    val strategies: List<ScrapeStrategy>,
+)
+
+/** Fetches a page once and shows every way its article list can be read. */
 @Service
 class PageScrapeService(private val pages: PageFetcher, private val extractors: List<PageExtractor>) {
-    fun preview(url: String?, selector: String?): ScrapeResult {
+    fun preview(url: String?, selector: String?): ScrapePreviewResult {
         val target = target(url)
         val doc = Jsoup.parse(fetch(target), target)
-        val chosen = choose(doc, selector)
-        val candidates = candidates(chosen, doc, target)
-        return ScrapeResult(chosen.id, chosen.label, chosen.confidence(doc), doc.title().ifBlank { null }, candidates)
+        val strategies = strategies(doc, target, selector)
+        return ScrapePreviewResult(
+            html = previewHtml(doc),
+            baseUrl = target,
+            title = doc.title().ifBlank { null },
+            strategies = strategies,
+        )
     }
 
     private fun target(url: String?): String = safeHttpUrl(url)
@@ -32,20 +44,34 @@ class PageScrapeService(private val pages: PageFetcher, private val extractors: 
         throw ApiException(HttpStatus.BAD_REQUEST, "Could not fetch page: ${err.message ?: "error"}", err)
     }
 
-    private fun choose(doc: Document, selector: String?): PageExtractor {
-        if (!selector.isNullOrBlank()) return SelectorListExtractor(selector)
-        return extractors.maxByOrNull { it.confidence(doc) }?.takeIf { it.confidence(doc) > 0f }
-            ?: throw ApiException(NO_LIST_STATUS, "No article list found on this page")
+    private fun strategies(doc: Document, url: String, selector: String?): List<ScrapeStrategy> {
+        val found = extractors.mapNotNull { strategy(it, doc, url, "strategy:${it.id}") }.toMutableList()
+        if (!selector.isNullOrBlank()) {
+            strategy(SelectorListExtractor(selector), doc, url, selector)?.let(found::add)
+        }
+        if (found.isEmpty()) throw ApiException(NO_LIST_STATUS, "No article list found on this page")
+        return found.sortedByDescending { it.confidence }
     }
 
-    private fun candidates(extractor: PageExtractor, doc: Document, url: String): List<ScrapeCandidate> {
+    private fun strategy(extractor: PageExtractor, doc: Document, url: String, stored: String): ScrapeStrategy? {
+        val confidence = extractor.confidence(doc)
+        if (confidence <= 0f) return null
         val found = runCatching { extractor.extract(doc, url) }
             .getOrElse { throw ApiException(HttpStatus.BAD_REQUEST, "Could not read this page's list", it) }
             .distinctBy { it.url }
             .take(MAX_CANDIDATES)
-        if (found.isEmpty()) {
-            throw ApiException(NO_LIST_STATUS, "${extractor.label} found no articles")
+        if (found.isEmpty() && !stored.startsWith("strategy:")) {
+            return ScrapeStrategy(extractor.id, extractor.label, confidence, stored, found)
         }
-        return found
+        if (found.isEmpty()) return null
+        return ScrapeStrategy(extractor.id, extractor.label, confidence, stored, found)
+    }
+
+    /** Scripts and frames cannot run in the preview; keep layout styles intact. */
+    private fun previewHtml(doc: Document): String {
+        val copy = doc.clone()
+        copy.select("script, iframe, object, embed, form, noscript").remove()
+        copy.select("*").removeAttr("onclick onload onerror onmouseover")
+        return copy.outerHtml()
     }
 }

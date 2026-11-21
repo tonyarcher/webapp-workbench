@@ -8,13 +8,16 @@ data class ScrapeCandidate(
     val url: String,
     val published: Long? = null,
     val summary: String? = null,
+    /** CSS selector that locates this article's element in the preview. */
+    val elementSelector: String? = null,
 )
 
-data class ScrapeResult(
-    val strategy: String,
+data class ScrapeStrategy(
+    val id: String,
     val label: String,
     val confidence: Float,
-    val title: String?,
+    /** Stored on the feed so future polls use the same list shape. */
+    val selector: String? = null,
     val candidates: List<ScrapeCandidate>,
 )
 
