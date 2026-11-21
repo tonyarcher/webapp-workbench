@@ -1,11 +1,9 @@
 package rssapi.scrape
 
-import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
-import rssapi.domain.safeHttpUrl
 import rssapi.fetch.PageFetcher
 import rssapi.web.ApiException
 
@@ -24,8 +22,8 @@ data class ScrapePreviewResult(
 @Service
 class PageScrapeService(private val pages: PageFetcher, private val extractors: List<PageExtractor>) {
     fun preview(url: String?, selector: String?): ScrapePreviewResult {
-        val target = target(url)
-        val doc = Jsoup.parse(fetch(target), target)
+        val target = ScrapeFetch.target(url)
+        val doc = ScrapeFetch.doc(pages, target)
         val strategies = strategies(doc, target, selector)
         return ScrapePreviewResult(
             html = previewHtml(doc),
@@ -33,15 +31,6 @@ class PageScrapeService(private val pages: PageFetcher, private val extractors: 
             title = doc.title().ifBlank { null },
             strategies = strategies,
         )
-    }
-
-    private fun target(url: String?): String = safeHttpUrl(url)
-        ?: throw ApiException(HttpStatus.BAD_REQUEST, "Invalid page URL (must be http/https)")
-
-    private fun fetch(url: String): String = try {
-        pages.fetchHtml(url)
-    } catch (err: IllegalStateException) {
-        throw ApiException(HttpStatus.BAD_REQUEST, "Could not fetch page: ${err.message ?: "error"}", err)
     }
 
     private fun strategies(doc: Document, url: String, selector: String?): List<ScrapeStrategy> {

@@ -1,0 +1,170 @@
+import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
+import { migrateLibrary } from '../../services/api';
+import { normalizeMastodonHost, type ShareTarget } from '../../services/share';
+import { invalidateArticles, invalidateLibrary } from '../../query';
+import { navigate } from '../../router';
+import { ALL_SHARE_TARGETS, loadShareTargets, saveMastodonHost, saveShareTargets } from '../../services/share-settings';
+import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
+
+const MIGRATE_SIZE_LIMIT = 1_800_000;
+
+/** State the feed and sharing handlers need from the settings panel. */
+export interface FeedsHost {
+    adding: boolean;
+    busy: boolean;
+    migrating: boolean;
+    status: string;
+    statusError: boolean;
+    shareStatus: string;
+    shareStatusError: boolean;
+    shareTargets: ShareTarget[];
+    mastodonHost: string;
+    shadowRoot: ShadowRoot | null;
+    updateComplete: Promise<boolean>;
+    clearMastodonDraft: () => void;
+}
+
+export function toggleShare(host: FeedsHost, target: ShareTarget, checked: boolean): void {
+    const current = new Set(loadShareTargets());
+    if (checked) current.add(target);
+    else current.delete(target);
+    const next = ALL_SHARE_TARGETS.filter((item) => current.has(item));
+    saveShareTargets(next);
+    host.shareTargets = next;
+    window.dispatchEvent(new CustomEvent('share-settings-changed'));
+}
+
+export async function submitMastodon(host: FeedsHost): Promise<void> {
+    const input = host.shadowRoot?.querySelector<HTMLInputElement>('#mastodon-host');
+    const clean = normalizeMastodonHost(input?.value.trim() ?? '');
+    if (!clean) {
+        host.shareStatus = 'Enter an instance domain, e.g. mastodon.social.';
+        host.shareStatusError = true;
+        return;
+    }
+    saveMastodonHost(clean);
+    if (input) input.value = clean;
+    host.mastodonHost = clean;
+    host.clearMastodonDraft();
+    host.shareStatus = `Sharing through ${clean}.`;
+    host.shareStatusError = false;
+    window.dispatchEvent(new CustomEvent('share-settings-changed'));
+}
+
+export function cancelAdd(host: FeedsHost): void {
+    host.adding = false;
+}
+
+export function openAdd(host: FeedsHost): void {
+    host.adding = true;
+    host.status = '';
+    host.statusError = false;
+    void host.updateComplete.then(() => {
+        host.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]')?.focus();
+    });
+}
+
+export function openImport(host: FeedsHost): void {
+    host.shadowRoot?.querySelector<HTMLInputElement>('input[data-import]')?.click();
+}
+
+export function openMuteFilters(): void {
+    navigate({ kind: 'settings', section: 'mute-filters' });
+}
+
+export async function submitAdd(host: FeedsHost): Promise<void> {
+    const input = host.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]');
+    const url = input?.value.trim() ?? '';
+    if (!url) return;
+    host.busy = true;
+    try {
+        const feed = await addFeed(url);
+        if (input) input.value = '';
+        host.adding = false;
+        navigate({ kind: 'feed', id: feed.id });
+    } catch (err) {
+        host.status = err instanceof Error ? err.message : 'Could not add feed';
+        host.statusError = true;
+    } finally {
+        host.busy = false;
+    }
+}
+
+export async function importFile(host: FeedsHost, event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    host.busy = true;
+    host.status = '';
+    host.statusError = false;
+    try {
+        const xml = await file.text();
+        const result = await importOpmlFile(xml);
+        const skipped = result.skippedFeeds > 0 ? ` (${result.skippedFeeds} skipped)` : '';
+        host.status = `Imported ${result.subscribedFeeds} new subscriptions${skipped}. Syncing articles.`;
+        await syncAllFeeds((done: number, total: number) => {
+            host.status = `Syncing ${done + 1}/${total}.`;
+        });
+        host.status = 'Import complete';
+    } catch (err) {
+        host.status = err instanceof Error ? `Import failed: ${err.message}` : 'Import failed';
+        host.statusError = true;
+    } finally {
+        host.busy = false;
+        input.value = '';
+    }
+}
+
+export async function exportFile(host: FeedsHost): Promise<void> {
+    host.busy = true;
+    try {
+        const xml = await exportOpmlFile();
+        const blob = new Blob([xml], { type: 'text/xml' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'subscriptions.opml';
+        anchor.click();
+        URL.revokeObjectURL(url);
+        host.status = 'Exported subscriptions.opml';
+        host.statusError = false;
+    } catch (err) {
+        host.status = err instanceof Error ? `Export failed: ${err.message}` : 'Export failed';
+        host.statusError = true;
+    } finally {
+        host.busy = false;
+    }
+}
+
+async function migrate(host: FeedsHost): Promise<void> {
+    const { folders, feeds, articles, metaEntries } = await readIdbForMigration();
+    if (!feeds.length && !folders.length) {
+        host.status = 'No local data to migrate.';
+        return;
+    }
+    const payload = buildMigratePayload(folders, feeds, articles, metaEntries);
+    const json = JSON.stringify(payload);
+    if (json.length > MIGRATE_SIZE_LIMIT)
+        throw new Error(`Payload too large (${Math.round(json.length / 1024)} KB). Use OPML import instead.`);
+    const result = await migrateLibrary(payload);
+    host.status = `Migrated ${result.feedsAdded} feeds, ${result.foldersAdded} folders, ${result.statesQueued} states. Syncing.`;
+    host.statusError = false;
+    await invalidateLibrary();
+    await invalidateArticles();
+    await syncAllFeeds();
+    host.status = 'Migration complete';
+}
+
+export async function migrateLibraryData(host: FeedsHost): Promise<void> {
+    host.migrating = true;
+    host.status = '';
+    host.statusError = false;
+    try {
+        await migrate(host);
+    } catch (err) {
+        host.status = err instanceof Error ? `Migration failed: ${err.message}` : 'Migration failed';
+        host.statusError = true;
+    } finally {
+        host.migrating = false;
+    }
+}

@@ -1,25 +1,7 @@
 import { applyTheme, getTheme, type Theme } from '../../theme';
 import { applyReaderMode, loadReaderMode, saveReaderMode, type ReaderMode } from '../../services/reader-mode';
-import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
-import { normalizeMastodonHost, type ShareTarget } from '../../services/share';
-import {
-    ALL_SHARE_TARGETS,
-    loadMastodonHost,
-    loadShareTargets,
-    saveMastodonHost,
-    saveShareTargets,
-} from '../../services/share-settings';
-import {
-    addScrapeSource,
-    migrateLibrary,
-    previewScrape,
-    type ScrapeCandidate,
-    type ScrapePreview,
-    type ScrapeStrategy,
-} from '../../services/api';
-import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
-import { invalidateArticles, invalidateLibrary } from '../../query';
-import { navigate } from '../../router';
+import { discoverSite as discoverSiteHost, subscribeToFeed as subscribeToFeedHost } from './settings-general-discovery';
+import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
 import { onAddFeedRequested, takeAddFeedRequest } from '../../services/add-feed-intent';
 import {
     buildAboutSection,
@@ -28,10 +10,23 @@ import {
     buildReaderSection,
     buildSharingSection,
 } from './settings-general-sections';
+import type { DiscoveredFeed, ScrapeCandidate, ScrapePreview } from '../../services/api';
+import type { ShareTarget } from '../../services/share';
+import { chooseStrategy, followPage, previewPage, toggleCandidate } from './settings-general-scrape';
+import {
+    cancelAdd,
+    exportFile,
+    importFile,
+    migrateLibraryData,
+    openAdd,
+    openImport,
+    openMuteFilters,
+    submitAdd,
+    submitMastodon,
+    toggleShare,
+} from './settings-general-feeds';
 import { el } from './settings-general-dom';
 import styles from './settings-general.css?inline';
-
-const MIGRATE_SIZE_LIMIT = 1_800_000;
 
 /** Install a reactive accessor. Assignments request the same batched paint Lit used to. */
 function defineReactive<T>(host: SettingsGeneral, name: string, initial: T): void {
@@ -77,6 +72,11 @@ export class SettingsGeneral extends HTMLElement {
     declare scrapeSelected: string[];
     declare scrapePreview: ScrapePreview | null;
     declare scrapeStrategyId: string;
+    declare discoverOpen: boolean;
+    declare discoverBusy: boolean;
+    declare discoverStatus: string;
+    declare discoverStatusError: boolean;
+    declare discovered: DiscoveredFeed[];
 
     private bodyEl: HTMLDivElement | null = null;
     private updateScheduled = false;
@@ -110,6 +110,11 @@ export class SettingsGeneral extends HTMLElement {
         defineReactive(this, 'scrapeSelected', [] as string[]);
         defineReactive(this, 'scrapePreview', null as ScrapePreview | null);
         defineReactive(this, 'scrapeStrategyId', '');
+        defineReactive(this, 'discoverOpen', false);
+        defineReactive(this, 'discoverBusy', false);
+        defineReactive(this, 'discoverStatus', '');
+        defineReactive(this, 'discoverStatusError', false);
+        defineReactive(this, 'discovered', [] as DiscoveredFeed[]);
         this.resetState();
     }
 
@@ -243,6 +248,9 @@ export class SettingsGeneral extends HTMLElement {
         this.scrapeSelected = [];
         this.scrapeUrlDraft = null;
         this.scrapeSelectorDraft = null;
+        this.discoverOpen = false;
+        this.discoverStatus = '';
+        this.discovered = [];
     }
 
     setReaderMode = (mode: ReaderMode): void => {
@@ -251,31 +259,14 @@ export class SettingsGeneral extends HTMLElement {
         applyReaderMode(mode);
     };
 
-    toggleShareTarget = (target: ShareTarget, checked: boolean): void => {
-        const current = new Set(loadShareTargets());
-        if (checked) current.add(target);
-        else current.delete(target);
-        const next = ALL_SHARE_TARGETS.filter((item) => current.has(item));
-        saveShareTargets(next);
-        this.shareTargets = next;
-        window.dispatchEvent(new CustomEvent('share-settings-changed'));
+    toggleShareTarget = (target: ShareTarget, checked: boolean): void => toggleShare(this, target, checked);
+
+    submitMastodonHost = (): void => {
+        void submitMastodon(this);
     };
 
-    submitMastodonHost = async (): Promise<void> => {
-        const input = this.shadowRoot?.querySelector<HTMLInputElement>('#mastodon-host');
-        const clean = normalizeMastodonHost(input?.value.trim() ?? '');
-        if (!clean) {
-            this.shareStatus = 'Enter an instance domain, e.g. mastodon.social.';
-            this.shareStatusError = true;
-            return;
-        }
-        saveMastodonHost(clean);
-        if (input) input.value = clean;
-        this.mastodonHost = clean;
+    clearMastodonDraft = (): void => {
         this.mastodonDraft = null;
-        this.shareStatus = `Sharing through ${clean}.`;
-        this.shareStatusError = false;
-        window.dispatchEvent(new CustomEvent('share-settings-changed'));
     };
 
     toggleHistory = (): void => {
@@ -299,81 +290,36 @@ export class SettingsGeneral extends HTMLElement {
         this.scrapeSelectorDraft = null;
     };
 
-    private scrapeFields(): { url: string; selector: string } {
-        const url = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-scrape-url]');
-        const selector = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-scrape-selector]');
-        return { url: url?.value.trim() ?? '', selector: selector?.value.trim() ?? '' };
-    }
-
-    private scrapeError(message: string): void {
-        this.scrapeStatus = message;
-        this.scrapeStatusError = true;
-    }
-
-    previewScrapePage = async (): Promise<void> => {
-        const { url, selector } = this.scrapeFields();
-        if (!url) {
-            this.scrapeError('Enter the page URL.');
-            return;
-        }
-        this.scrapeBusy = true;
-        try {
-            const result = await previewScrape(url, selector);
-            this.scrapePreview = result;
-            const first = result.strategies[0];
-            this.scrapeStrategyId = first?.id ?? '';
-            this.applyStrategy(first);
-            this.scrapeStatus = first
-                ? `${first.candidates.length} stories found with ${first.label}. Try another list below.`
-                : 'No article list found.';
-            this.scrapeStatusError = false;
-        } catch (err) {
-            this.scrapeError(err instanceof Error ? err.message : 'Could not preview the page');
-        } finally {
-            this.scrapeBusy = false;
-        }
+    openDiscover = (): void => {
+        this.discoverOpen = true;
+        this.discoverStatus = '';
+        this.discovered = [];
     };
 
-    private applyStrategy(strategy: ScrapeStrategy | undefined): void {
-        this.scrapeCandidates = strategy?.candidates ?? [];
-        this.scrapeSelected = this.scrapeCandidates.map((candidate) => candidate.url);
-    }
-
-    selectScrapeStrategy = (id: string): void => {
-        this.scrapeStrategyId = id;
-        this.applyStrategy(this.scrapePreview?.strategies.find((strategy) => strategy.id === id));
+    cancelDiscover = (): void => {
+        this.discoverOpen = false;
+        this.discoverStatus = '';
+        this.discovered = [];
     };
 
-    toggleScrapeCandidate = (candidateUrl: string, checked: boolean): void => {
-        const next = new Set(this.scrapeSelected);
-        if (checked) next.add(candidateUrl);
-        else next.delete(candidateUrl);
-        this.scrapeSelected = [...next];
+    discoverSite = (): void => {
+        void discoverSiteHost(this);
     };
 
-    followScrapePage = async (): Promise<void> => {
-        const { url, selector } = this.scrapeFields();
-        if (!url) {
-            this.scrapeError('Enter the page URL.');
-            return;
-        }
-        if (this.scrapeSelected.length === 0) {
-            this.scrapeError('Select at least one story.');
-            return;
-        }
-        this.scrapeBusy = true;
-        try {
-            const strategy = this.scrapePreview?.strategies.find((entry) => entry.id === this.scrapeStrategyId);
-            await addScrapeSource(url, strategy?.selector ?? selector, this.scrapeSelected);
-            await invalidateLibrary();
-            this.cancelScrape();
-            this.status = `Following ${url}.`;
-            this.statusError = false;
-        } catch (err) {
-            this.scrapeError(err instanceof Error ? err.message : 'Could not follow the page');
-        } finally {
-            this.scrapeBusy = false;
-        }
+    subscribeToFeed = (feed: DiscoveredFeed): void => {
+        void subscribeToFeedHost(this, feed);
+    };
+
+    previewScrapePage = (): void => {
+        void previewPage(this);
+    };
+
+    selectScrapeStrategy = (id: string): void => chooseStrategy(this, id);
+
+    toggleScrapeCandidate = (url: string, checked: boolean): void => toggleCandidate(this, url, checked);
+
+    followScrapePage = (): void => {
+        void followPage(this);
     };
 
     onThemeClick = (event: Event): void => {
@@ -386,128 +332,28 @@ export class SettingsGeneral extends HTMLElement {
         applyTheme(theme);
     }
 
-    cancelAdd = (): void => {
-        this.adding = false;
+    cancelAdd = (): void => cancelAdd(this);
+
+    onImportClick = (): void => openImport(this);
+
+    openAdd = (): void => openAdd(this);
+
+    openMuteFilters = (): void => openMuteFilters();
+
+    submitAdd = (): void => {
+        void submitAdd(this);
     };
 
-    onImportClick = (): void => {
-        this.shadowRoot?.querySelector<HTMLInputElement>('input[data-import]')?.click();
+    onImportFile = (event: Event): void => {
+        void importFile(this, event);
     };
 
-    openAdd = (): void => {
-        this.adding = true;
-        this.status = '';
-        this.statusError = false;
-        void this.updateComplete.then(() => {
-            this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]')?.focus();
-        });
+    onExport = (): void => {
+        void exportFile(this);
     };
 
-    openMuteFilters = (): void => {
-        navigate({ kind: 'settings', section: 'mute-filters' });
-    };
-
-    submitAdd = async (): Promise<void> => {
-        const input = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]');
-        const url = input?.value.trim() ?? '';
-        if (!url) return;
-        this.busy = true;
-        try {
-            const feed = await addFeed(url);
-            if (input) input.value = '';
-            this.adding = false;
-            navigate({ kind: 'feed', id: feed.id });
-        } catch (err) {
-            this.status = err instanceof Error ? err.message : 'Could not add feed';
-            this.statusError = true;
-        } finally {
-            this.busy = false;
-        }
-    };
-
-    onImportFile = async (event: Event): Promise<void> => {
-        const input = event.target as HTMLInputElement;
-        const file = input.files?.[0];
-        if (!file) return;
-        this.busy = true;
-        this.status = '';
-        this.statusError = false;
-        try {
-            const xml = await file.text();
-            const result = await importOpmlFile(xml);
-            const skipped = result.skippedFeeds > 0 ? ` (${result.skippedFeeds} skipped)` : '';
-            this.status = `Imported ${result.subscribedFeeds} new subscriptions${skipped}. Syncing articles.`;
-            await syncAllFeeds((done, total) => {
-                this.status = `Syncing ${done + 1}/${total}.`;
-            });
-            this.status = 'Import complete';
-        } catch (err) {
-            this.status = err instanceof Error ? `Import failed: ${err.message}` : 'Import failed';
-            this.statusError = true;
-        } finally {
-            this.busy = false;
-            input.value = '';
-        }
-    };
-
-    onExport = async (): Promise<void> => {
-        this.busy = true;
-        try {
-            const xml = await exportOpmlFile();
-            const blob = new Blob([xml], { type: 'text/xml' });
-            const url = URL.createObjectURL(blob);
-            const anchor = document.createElement('a');
-            anchor.href = url;
-            anchor.download = 'subscriptions.opml';
-            anchor.click();
-            URL.revokeObjectURL(url);
-            this.status = 'Exported subscriptions.opml';
-            this.statusError = false;
-        } catch (err) {
-            this.status = err instanceof Error ? `Export failed: ${err.message}` : 'Export failed';
-            this.statusError = true;
-        } finally {
-            this.busy = false;
-        }
-    };
-
-    private async prepareMigratePayload() {
-        const { folders, feeds, articles, metaEntries } = await readIdbForMigration();
-        if (!feeds.length && !folders.length) return null;
-        const payload = buildMigratePayload(folders, feeds, articles, metaEntries);
-        const json = JSON.stringify(payload);
-        if (json.length > MIGRATE_SIZE_LIMIT)
-            throw new Error(`Payload too large (${Math.round(json.length / 1024)} KB). Use OPML import instead.`);
-        return payload;
-    }
-
-    private async runMigrateWithPayload(payload: ReturnType<typeof buildMigratePayload>) {
-        const result = await migrateLibrary(payload);
-        this.status = `Migrated ${result.feedsAdded} feeds, ${result.foldersAdded} folders, ${result.statesQueued} states. Syncing.`;
-        this.statusError = false;
-        await invalidateLibrary();
-        await invalidateArticles();
-        await syncAllFeeds();
-        this.status = 'Migration complete';
-    }
-
-    onMigrate = async (): Promise<void> => {
-        this.migrating = true;
-        this.status = '';
-        this.statusError = false;
-        try {
-            const payload = await this.prepareMigratePayload();
-            if (!payload) {
-                this.status = 'No local data to migrate.';
-                return;
-            }
-            await this.runMigrateWithPayload(payload);
-        } catch (err) {
-            this.status = err instanceof Error ? `Migration failed: ${err.message}` : 'Migration failed';
-            this.statusError = true;
-        } finally {
-            this.migrating = false;
-        }
+    onMigrate = (): void => {
+        void migrateLibraryData(this);
     };
 }
 

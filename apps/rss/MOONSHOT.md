@@ -753,6 +753,10 @@ ingestion.
   items and cadence, subscribe to the right one in one tap.
 - **Half.** `both` (detection assist server-side).
 - **Effort.** `M`.
+- **Status.** Site detection is shipped: advertised and linked RSS, Atom and
+  JSON Feed candidates are found on a pasted site, the top three are peeked for
+  recent titles, and the settings picker subscribes in one tap. Detection and
+  feed peeking go through the existing safe fetchers.
 - **First test.** Detection goldens; preview smoke.
 
 ### E2. More like this feed

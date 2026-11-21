@@ -141,6 +141,29 @@ export interface ScrapePreview {
     strategies: ScrapeStrategy[];
 }
 
+export interface DiscoveredFeed {
+    url: string;
+    title: string;
+    type: string;
+    source: string;
+    confidence: number;
+    recentTitles: string[];
+    lastPublished?: number | null;
+}
+
+export interface DiscoveryResult {
+    baseUrl: string;
+    siteTitle?: string | null;
+    feeds: DiscoveredFeed[];
+}
+
+export async function discoverFeeds(url: string): Promise<DiscoveryResult> {
+    return apiFetch('/sources/discover', {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+    }) as Promise<DiscoveryResult>;
+}
+
 export async function previewScrape(url: string, selector?: string): Promise<ScrapePreview> {
     return apiFetch('/sources/preview', {
         method: 'POST',

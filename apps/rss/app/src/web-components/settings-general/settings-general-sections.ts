@@ -1,5 +1,5 @@
 import { ALL_SHARE_TARGETS } from '../../services/share-settings';
-import type { ScrapeCandidate, ScrapePreview } from '../../services/api';
+import type { DiscoveredFeed, ScrapeCandidate, ScrapePreview } from '../../services/api';
 import '../scrape-preview/scrape-preview';
 import type { ReaderFont, ReaderLine, ReaderMode, ReaderSize, ReaderWidth } from '../../services/reader-mode';
 import type { ShareTarget } from '../../services/share';
@@ -39,6 +39,11 @@ export interface SettingsGeneralSectionsHost {
     scrapeSelected: string[];
     scrapePreview: ScrapePreview | null;
     scrapeStrategyId: string;
+    discoverOpen: boolean;
+    discoverBusy: boolean;
+    discoverStatus: string;
+    discoverStatusError: boolean;
+    discovered: DiscoveredFeed[];
     onThemeClick: (event: Event) => void;
     setReaderMode: (mode: ReaderMode) => void;
     toggleShareTarget: (target: ShareTarget, checked: boolean) => void;
@@ -58,6 +63,10 @@ export interface SettingsGeneralSectionsHost {
     followScrapePage: () => void;
     toggleScrapeCandidate: (url: string, checked: boolean) => void;
     selectScrapeStrategy: (id: string) => void;
+    openDiscover: () => void;
+    cancelDiscover: () => void;
+    discoverSite: () => void;
+    subscribeToFeed: (feed: DiscoveredFeed) => void;
 }
 
 const THEMES: Array<{ value: Theme; label: string }> = [
@@ -260,6 +269,38 @@ function pagePreview(host: SettingsGeneralSectionsHost): HTMLElement {
     return holder;
 }
 
+function discoveredList(host: SettingsGeneralSectionsHost): HTMLElement {
+    const list = el('ul', 'discovered-list');
+    for (const feed of host.discovered) {
+        const item = el('li', 'discovered-item');
+        const info = el('div', 'discovered-info');
+        info.append(el('div', 'discovered-title', feed.title));
+        info.append(el('div', 'discovered-meta', `${feed.type} | ${feed.source}`));
+        for (const title of feed.recentTitles) info.append(el('div', 'discovered-story', title));
+        const follow = button('btn primary', 'Subscribe', () => void host.subscribeToFeed(feed));
+        follow.disabled = host.discoverBusy;
+        item.append(info, follow);
+        list.appendChild(item);
+    }
+    return list;
+}
+
+function discoverForm(host: SettingsGeneralSectionsHost): HTMLElement {
+    const form = el('div', 'discover-form');
+    const url = el('input');
+    url.type = 'url';
+    url.placeholder = 'https://example.com';
+    url.setAttribute('data-discover-url', '');
+    url.setAttribute('aria-label', 'Site address');
+    const find = button('btn', 'Find feeds', () => void host.discoverSite());
+    const cancel = button('btn', 'Cancel', host.cancelDiscover);
+    find.disabled = host.discoverBusy;
+    form.append(url, find, cancel);
+    if (host.discoverStatus) form.append(statusLine(host.discoverStatus, host.discoverStatusError));
+    if (host.discovered.length) form.appendChild(discoveredList(host));
+    return form;
+}
+
 function scrapeForm(host: SettingsGeneralSectionsHost): HTMLElement {
     const form = el('div', 'scrape-form');
     const url = el('input');
@@ -308,6 +349,9 @@ function feedActions(host: SettingsGeneralSectionsHost): HTMLElement {
     const actions = el('div', 'actions');
     actions.append(actionButton('Add feed', 'Subscribe by RSS, Atom or JSON Feed URL', '+', host.busy, host.openAdd));
     actions.append(actionButton('Add from a page', 'Follow a site with no feed', '?', host.busy, host.openScrape));
+    actions.append(
+        actionButton('Find feeds on a site', 'Detect feeds from a site address', '?', host.busy, host.openDiscover),
+    );
     const row = addRow(host);
     if (row) actions.append(row);
     actions.append(
@@ -345,6 +389,7 @@ export function buildFeedsSection(host: SettingsGeneralSectionsHost): HTMLElemen
     const root = section('Feeds');
     root.append(feedActions(host), opmlFileInput(host));
     if (host.scrapeOpen) root.appendChild(scrapeForm(host));
+    if (host.discoverOpen) root.appendChild(discoverForm(host));
     if (host.status) root.append(statusLine(host.status, host.statusError));
     return root;
 }

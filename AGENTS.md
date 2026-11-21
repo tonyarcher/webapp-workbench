@@ -171,6 +171,11 @@ Stock-game documents its own exceptions (decorator-free Lit,
 “no comments unless asked”). Pure `*-core` packages follow TypeScript, formatting,
 comments, and workflow only — not Lit/CSS/PWA.
 
+Aim for custom-element classes under 300 lines. `tools/verify.py` enforces 500
+as a hard ceiling, not a target. When an element grows, move handlers and DOM
+builders into sibling modules that take the element as a narrow host interface;
+do not split one cohesive template into unrelated files.
+
 ### TypeScript
 
 - Strict plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`,
