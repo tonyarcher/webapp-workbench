@@ -1,18 +1,3 @@
-buildscript {
-    configurations.classpath {
-        resolutionStrategy.eachDependency {
-            if (requested.group == "tools.jackson.core" &&
-                requested.name in setOf("jackson-core", "jackson-databind")
-            ) {
-                useVersion("3.3.0")
-            }
-            if (requested.group == "org.apache.commons" && requested.name == "commons-lang3") {
-                useVersion("3.21.0")
-            }
-        }
-    }
-}
-
 plugins {
     kotlin("jvm") version "2.4.21"
     kotlin("plugin.spring") version "2.4.21"
@@ -61,52 +46,14 @@ configurations.matching {
     resolutionStrategy.activateDependencyLocking()
 }
 
-// The security floors below pin the Tomcat and Jackson line artifacts
-// artifacts that carried the advisories osv-scanner reported:
-// GHSA-9xv2-5v5q-p794, GHSA-gcx9-497g-6cp6 and GHSA-h3x4-894j-xpx5 (critical)
-// on tomcat-embed-core, and GHSA-wv8q-qhhj-9h54, GHSA-cxp5-3px4-pw24,
-// GHSA-p6pp-m3f8-5c89 and GHSA-7hhh-6rmp-j9qf on the Jackson 2 and Jackson 3
-// core and databind. Boot 4.2.0's BOM still names older Jackson lines; the
-// rule keeps a BOM move or a transitive request from walking them back.
-//
-// Jackson ships its core line in lockstep: databind 2.23 references
-// annotations classes that older patches lack, so each floor covers its whole
-// group with the modules on the same line. Annotations versions without the
-// trailing zero (2.23, not 2.23.0), and Jackson 3 folds annotations into core,
-// so each line names its own shape.
-//
-// This has to be eachDependency, registered after the plugin's own rule.
-// resolutionStrategy.force, a lockfile edit, and the plugin's overrides map
-// are each substituted back to the managed BOM version. eachDependency is the
-// same kind of rule the plugin installs, and being registered later it wins.
+// kotlinx-serialization ships its BOM, core and json artifacts in lockstep;
+// the direct 1.12.0 line would otherwise mix with the BOM-managed 1.11.0 core.
 configurations.all {
     resolutionStrategy.eachDependency {
-        when {
-            requested.group == "org.apache.tomcat.embed" &&
-                requested.name in setOf("tomcat-embed-core", "tomcat-embed-websocket") -> useVersion("11.0.27")
-
-            requested.group == "org.apache.commons" &&
-                requested.name == "commons-lang3" -> useVersion("3.21.0")
-
-            requested.group == "com.fasterxml.jackson.core" &&
-                requested.name != "jackson-annotations" -> useVersion("2.23.0")
-
-            requested.group == "com.fasterxml.jackson.core" &&
-                requested.name == "jackson-annotations" -> useVersion("2.23")
-
-            requested.group == "com.fasterxml.jackson.module" &&
-                requested.name == "jackson-module-kotlin" -> useVersion("2.23.0")
-
-            requested.group == "tools.jackson.core" -> useVersion("3.3.0")
-
-            requested.group == "tools.jackson.module" &&
-                requested.name == "jackson-module-kotlin" -> useVersion("3.3.0")
-
-            // kotlinx-serialization ships its BOM, core and json artifacts in
-            // lockstep: the direct 1.12.0 line would otherwise mix with the
-            // BOM-managed 1.11.0 core at runtime.
-            requested.group == "org.jetbrains.kotlinx" &&
-                requested.name.startsWith("kotlinx-serialization") -> useVersion("1.12.0")
+        if (requested.group == "org.jetbrains.kotlinx" &&
+            requested.name.startsWith("kotlinx-serialization")
+        ) {
+            useVersion("1.12.0")
         }
     }
 }
@@ -117,7 +64,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-hateoas")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     // Boot 4 serializes HTTP with Jackson 3. Call sites still construct the
-    // Jackson 2 ObjectMapper, so keep that line on the patched 2.23 BOM.
+    // Jackson 2 ObjectMapper, so keep this module on the managed BOM line.
     implementation("org.springframework.boot:spring-boot-jackson2")
     implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0")
