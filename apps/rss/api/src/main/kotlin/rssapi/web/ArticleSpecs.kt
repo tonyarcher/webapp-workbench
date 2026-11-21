@@ -104,14 +104,10 @@ private fun searchPredicate(
     val tokens = search?.tokens ?: return null
     if (tokens.isEmpty()) return null
     val tokenPredicates = tokens.map { token ->
-        val pattern = likeContains(token)
+        // search_text is generated and GIN-indexed with pg_trgm (V15). The
+        // old six-column OR scanned TOAST content on every token.
         cb.or(
-            cb.like(cb.lower(cb.coalesce(root.get("title"), "")), pattern, '\\'),
-            cb.like(cb.lower(cb.coalesce(root.get("summary"), "")), pattern, '\\'),
-            cb.like(cb.lower(cb.coalesce(root.get("contentHtml"), "")), pattern, '\\'),
-            cb.like(cb.lower(cb.coalesce(root.get("author"), "")), pattern, '\\'),
-            cb.like(cb.lower(cb.coalesce(root.get("domain"), "")), pattern, '\\'),
-            cb.like(cb.lower(cb.coalesce(root.get("link"), "")), pattern, '\\'),
+            cb.like(root.get("searchText"), likeContains(token), '\\'),
             feedTitleMatches(token, root, query, cb),
         )
     }
