@@ -18,7 +18,7 @@ plugins {
     kotlin("plugin.spring") version "2.4.21"
     kotlin("plugin.serialization") version "2.4.21"
     kotlin("plugin.jpa") version "2.4.21"
-    id("org.springframework.boot") version "4.1.2"
+    id("org.springframework.boot") version "4.2.0"
     id("io.spring.dependency-management") version "1.1.7"
     id("dev.detekt") version "2.0.0-alpha.6"
     jacoco
@@ -68,7 +68,7 @@ configurations.matching {
 // GHSA-9xv2-5v5q-p794, GHSA-gcx9-497g-6cp6 and GHSA-h3x4-894j-xpx5 (critical)
 // on tomcat-embed-core, and GHSA-wv8q-qhhj-9h54, GHSA-cxp5-3px4-pw24,
 // GHSA-p6pp-m3f8-5c89 and GHSA-7hhh-6rmp-j9qf on the Jackson 2 and Jackson 3
-// core and databind. Boot 4.1.2's BOM names these patched versions today; the
+// core and databind. Boot 4.2.0's BOM still names older Jackson lines; the
 // rule keeps a BOM move or a transitive request from walking them back.
 //
 // Jackson ships its core line in lockstep: databind 2.23 references
@@ -190,7 +190,7 @@ tasks.named("check") {
  * test needs a real server and a mock cannot stand in. But the test should not
  * know about Docker: it connects to a port, and this task owns the server's
  * lifecycle. That split is also why there is no Testcontainers dependency --
- * Boot 4.1.2 manages Testcontainers 2.0.5, which deprecates the whole container
+ * Boot 4.2.0 manages Testcontainers 2.0.5, which deprecates the whole container
  * API, and this module treats a warning as a build failure.
  *
  * Credentials are throwaway and local-only; nothing here is a secret.
