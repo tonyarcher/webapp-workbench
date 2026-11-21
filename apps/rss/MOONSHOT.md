@@ -1026,9 +1026,10 @@ can tell where an item came from.
 - **Status.** Watched pages are real subscribed feeds with provenance. The
   settings picker renders the page in a script-free frame with clickable boxes
   around every detected article and a switcher for JSON-LD, semantic and custom
-  selector lists; the reader picks which stories to import. Remaining: refetch
-  with URL/content-hash diffing, h-feed support, pagination caps, polite fetch
-  checks, full-text import and feed-health errors.
+  selector lists; the reader picks which stories to import. Refetch skips
+  articles whose title, link, summary, content and date are unchanged, so a poll
+  does not rewrite rows. Remaining: h-feed support, pagination caps, polite
+  fetch checks, full-text import and feed-health errors.
 
 - **Why.** Many valuable sites publish updates with no RSS/Atom/JSON Feed or
   h-feed at all. A reader that requires a feed cannot follow them.

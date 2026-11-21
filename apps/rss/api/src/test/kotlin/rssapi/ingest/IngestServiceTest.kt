@@ -2,10 +2,12 @@ package rssapi.ingest
 
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import rssapi.domain.makeArticleId
 import rssapi.fetch.FeedFetcher
 import rssapi.fetch.PageFetcher
 import rssapi.persist.ArticleEntity
@@ -25,6 +27,16 @@ private const val PAGE_HTML = """
     <article><h2><a href="/two">Two</a></h2><p>second</p></article>
 """
 
+private fun rssItem(guid: String) = """
+    <item><title>x</title><link>https://example.com/x</link>
+      <guid>""" + guid + """</guid>
+      <pubDate>Thu, 19 Nov 2026 00:00:00 GMT</pubDate><description>hi</description>
+    </item>
+""".trimIndent()
+
+private fun rssWith(item: String) = """<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>""" +
+    item + """</channel></rss>"""
+
 class IngestServiceTest {
     private val feeds: FeedRepo = mock()
     private val articles: ArticleRepo = mock()
@@ -39,6 +51,43 @@ class IngestServiceTest {
         <item><title>x</title><link>https://example.com/x</link></item>
         </channel></rss>
     """.trimIndent()
+
+    @Test
+    fun unchangedArticleIsNotRewritten() {
+        val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
+        val guid = "g1"
+        val item = rssItem(guid)
+        val xml = rssWith(item)
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
+        ingest.ingestXml(feed, xml)
+        val stored = argumentCaptor<ArticleEntity>()
+        verify(articles).save(stored.capture())
+        org.mockito.kotlin.clearInvocations(articles, maintenance)
+        whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(stored.firstValue)
+
+        ingest.ingestXml(feed, xml)
+
+        verify(articles, org.mockito.kotlin.never()).save(any())
+        verify(maintenance, org.mockito.kotlin.never()).updatePopularity(any(), any())
+    }
+
+    @Test
+    fun changedArticleIsSavedAgain() {
+        val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
+        val guid = "g1"
+        val existing = ArticleEntity(
+            id = makeArticleId(feed.id!!.toString(), guid),
+            feedId = feed.id!!,
+            guid = guid,
+            title = "old",
+        )
+        whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(existing)
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
+
+        ingest.ingestXml(feed, rssWith(rssItem(guid)))
+
+        verify(articles).save(any())
+    }
 
     @Test
     fun ingestsJsonFeedText() {

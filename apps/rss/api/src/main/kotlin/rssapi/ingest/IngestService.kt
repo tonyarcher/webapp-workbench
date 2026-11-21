@@ -27,6 +27,12 @@ import java.time.Instant
 import java.util.UUID
 
 /** 304 Not Modified: the feed is unchanged since the stored validators. */
+private fun ArticleEntity.sameContent(other: ArticleEntity): Boolean = title == other.title &&
+    link == other.link &&
+    summary == other.summary &&
+    contentHtml == other.contentHtml &&
+    publishedAt == other.publishedAt
+
 private const val NOT_MODIFIED = 304
 private const val SCRAPE_KIND = "scrape"
 private const val MAX_SCRAPE_ITEMS = 50
@@ -133,7 +139,12 @@ class IngestService(
         val html = truncatedHtml(item)
         val link = item.link
         val norm = link?.let { normalizeLink(it) }
-        articles.save(toEntity(feed, item, html, link, norm))
+        val entity = toEntity(feed, item, html, link, norm)
+        val existing = articles.findByFeedIdAndGuid(feed.id!!, item.guid)
+        // A poll that finds the same story with the same text must not rewrite
+        // the row: that churns writes and can reset extracted article metadata.
+        if (existing != null && existing.sameContent(entity)) return null
+        articles.save(entity)
         return norm
     }
 
