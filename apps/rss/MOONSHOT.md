@@ -1028,8 +1028,10 @@ can tell where an item came from.
   around every detected article and a switcher for JSON-LD, semantic and custom
   selector lists; the reader picks which stories to import. Refetch skips
   articles whose title, link, summary, content and date are unchanged, so a poll
-  does not rewrite rows. Remaining: h-feed support, pagination caps, polite
-  fetch checks, full-text import and feed-health errors.
+  does not rewrite rows. New articles now fetch their link once through the
+  existing article extractor and store the body; failures keep the list summary.
+  Remaining: h-feed support, pagination caps, polite fetch checks and
+  feed-health errors.
 
 - **Why.** Many valuable sites publish updates with no RSS/Atom/JSON Feed or
   h-feed at all. A reader that requires a feed cannot follow them.

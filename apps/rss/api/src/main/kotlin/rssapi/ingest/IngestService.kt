@@ -144,6 +144,9 @@ class IngestService(
         // A poll that finds the same story with the same text must not rewrite
         // the row: that churns writes and can reset extracted article metadata.
         if (existing != null && existing.sameContent(entity)) return null
+        // Full text is a one-time enrichment for new stories. A later poll
+        // keeps the stored body and only refreshes list-level fields.
+        if (existing == null) entity.contentHtml = ArticleFullText.of(pages, item, html)
         articles.save(entity)
         return norm
     }

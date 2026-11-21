@@ -44,13 +44,31 @@ class IngestServiceTest {
     private val sync: IngestSync = mock()
     private val pending: PendingApply = mock()
     private val fetcher: FeedFetcher = mock()
-    private val ingest = IngestService(feeds, articles, maintenance, sync, pending, fetcher, mock())
+    private val pages: PageFetcher = mock()
+    private val ingest = IngestService(feeds, articles, maintenance, sync, pending, fetcher, pages)
 
     private val rss = """
         <?xml version="1.0"?><rss version="2.0"><channel><title>t</title>
         <item><title>x</title><link>https://example.com/x</link></item>
         </channel></rss>
     """.trimIndent()
+
+    @Test
+    fun newArticleGetsFullTextOnce() {
+        val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
+        val body = "This is the article body with enough text to be considered a real paragraph by the extractor. " +
+            "It keeps going so the text density score is comfortably above the minimum " +
+            "for the main-article heuristic. " +
+            "A final sentence closes the piece and makes the whole fragment unmistakably article-like."
+        whenever(pages.fetchHtml("https://example.com/x")).thenReturn("<article><p>$body</p></article>")
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
+
+        ingest.ingestXml(feed, rssWith(rssItem("g1")))
+
+        val captor = argumentCaptor<ArticleEntity>()
+        verify(articles).save(captor.capture())
+        assertEquals("<p>$body</p>", captor.firstValue.contentHtml)
+    }
 
     @Test
     fun unchangedArticleIsNotRewritten() {
