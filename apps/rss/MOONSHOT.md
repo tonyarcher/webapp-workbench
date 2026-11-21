@@ -1019,8 +1019,13 @@ can tell where an item came from.
 
 ### P5. Follow any page (scrape fallback when no feed exists)
 
-- **Plan.** `SCRAPE_PLAN.md` in this folder. Phase 0 (extractor classes plus a
-  preview endpoint) is shipped; persistence and the picker UI follow.
+- **Status.** The preview engine is shipped: extractor classes for JSON-LD
+  lists, semantic article lists and a user CSS selector, behind one interface,
+  plus a preview endpoint that returns candidate articles and the chosen
+  strategy. Remaining: Flyway columns for watched pages (source kind, page URL,
+  item selector, last scrape), a create-source endpoint and settings picker UI,
+  refetch with URL/content-hash diffing, then h-feed support, pagination caps,
+  polite fetch checks, full-text import and feed-health errors.
 
 - **Why.** Many valuable sites publish updates with no RSS/Atom/JSON Feed or
   h-feed at all. A reader that requires a feed cannot follow them.
