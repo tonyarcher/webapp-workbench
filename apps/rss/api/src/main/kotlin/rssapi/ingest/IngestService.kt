@@ -1,4 +1,5 @@
 package rssapi.ingest
+import org.jsoup.Jsoup
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.xml.sax.SAXException
@@ -14,16 +15,21 @@ import rssapi.domain.normalizeLink
 import rssapi.domain.parseFeedXml
 import rssapi.domain.sanitizeHtml
 import rssapi.fetch.FeedFetcher
+import rssapi.fetch.PageFetcher
 import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleMaintenanceRepo
 import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
+import rssapi.scrape.ScrapeCandidate
+import rssapi.scrape.ScrapeExtraction
 import java.time.Instant
 import java.util.UUID
 
 /** 304 Not Modified: the feed is unchanged since the stored validators. */
 private const val NOT_MODIFIED = 304
+private const val SCRAPE_KIND = "scrape"
+private const val MAX_SCRAPE_ITEMS = 50
 
 @Service
 class IngestService(
@@ -33,10 +39,15 @@ class IngestService(
     private val sync: IngestSync,
     private val pending: PendingApply,
     private val fetcher: FeedFetcher,
+    private val pages: PageFetcher,
 ) {
     @Transactional
     fun fetchAndIngest(feedId: UUID) {
         val feed = feeds.findById(feedId).orElse(null) ?: return
+        if (feed.sourceKind == SCRAPE_KIND) {
+            scrapeAndIngest(feed)
+            return
+        }
         val meta = sync.meta(feedId)
         try {
             val result = fetcher.fetch(feed.xmlUrl, meta.first, meta.second)
@@ -56,6 +67,44 @@ class IngestService(
     @Transactional
     fun pollFeed(feedId: UUID) {
         fetchAndIngest(feedId)
+    }
+
+    /** A watched page: fetch HTML, then extract and store its item list. */
+    @Transactional
+    fun scrapeAndIngest(feed: FeedEntity) {
+        val url = feed.pageUrl ?: feed.xmlUrl
+        try {
+            ingestScrapedHtml(feed, pages.fetchHtml(url))
+        } catch (err: IllegalStateException) {
+            sync.saveError(feed.id!!, err.message ?: "error")
+        } catch (err: IllegalArgumentException) {
+            sync.saveError(feed.id!!, err.message ?: "error")
+        }
+    }
+
+    @Transactional
+    fun ingestScrapedHtml(feed: FeedEntity, html: String) {
+        val url = feed.pageUrl ?: feed.xmlUrl
+        val doc = Jsoup.parse(html, url)
+        val candidates = ScrapeExtraction.best(doc, feed.itemSelector).extract(doc, url).take(MAX_SCRAPE_ITEMS)
+        if (candidates.isEmpty()) {
+            sync.saveError(feed.id!!, "No articles found on page")
+            return
+        }
+        saveScrapedItems(feed, candidates)
+        sync.saveOk(feed.id!!, null, null)
+        feed.lastScrapeAt = Instant.now()
+        feeds.save(feed)
+    }
+
+    private fun saveScrapedItems(feed: FeedEntity, candidates: List<ScrapeCandidate>) {
+        val now = System.currentTimeMillis()
+        val items = ScrapeExtraction.items(candidates, now)
+        val links = items.mapNotNull { saveItem(feed, it) }
+        if (links.isNotEmpty()) maintenance.updatePopularity(feed.id!!, links.toTypedArray())
+        maintenance.updateLonelyHot(feed.id!!)
+        maintenance.pruneFeed(feed.id!!, MAX_ARTICLES_PER_FEED)
+        pending.applyForFeed(feed.id!!)
     }
 
     @Transactional

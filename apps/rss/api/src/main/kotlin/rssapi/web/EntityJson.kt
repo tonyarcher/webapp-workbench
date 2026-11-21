@@ -21,6 +21,8 @@ fun FeedEntity.toJson(
     lastError: String?,
     consecutiveFailures: Int = 0,
     status: String = "ok",
+    sourceKind: String = "rss",
+    itemSelector: String? = null,
 ): FeedJson = FeedJson(
     id = id.toString(),
     title = title,
@@ -34,6 +36,8 @@ fun FeedEntity.toJson(
     lastError = lastError,
     consecutiveFailures = consecutiveFailures,
     status = status,
+    sourceKind = sourceKind,
+    itemSelector = itemSelector,
 )
 
 fun SavedSearchEntity.toJson(unread: Int = 0): SavedSearchJson = SavedSearchJson(

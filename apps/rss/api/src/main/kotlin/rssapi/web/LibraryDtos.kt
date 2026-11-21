@@ -15,6 +15,8 @@ data class FeedJson(
     val lastError: String? = null,
     val consecutiveFailures: Int = 0,
     val status: String = "ok",
+    val sourceKind: String = "rss",
+    val itemSelector: String? = null,
 )
 
 data class SavedSearchJson(

@@ -1,4 +1,5 @@
 import { ALL_SHARE_TARGETS } from '../../services/share-settings';
+import type { ScrapeCandidate } from '../../services/api';
 import type { ReaderFont, ReaderLine, ReaderMode, ReaderSize, ReaderWidth } from '../../services/reader-mode';
 import type { ShareTarget } from '../../services/share';
 import type { Theme } from '../../theme';
@@ -29,6 +30,11 @@ export interface SettingsGeneralSectionsHost {
     shareTargets: ShareTarget[];
     readerMode: ReaderMode;
     showHistory: boolean;
+    scrapeOpen: boolean;
+    scrapeBusy: boolean;
+    scrapeStatus: string;
+    scrapeStatusError: boolean;
+    scrapeCandidates: ScrapeCandidate[];
     onThemeClick: (event: Event) => void;
     setReaderMode: (mode: ReaderMode) => void;
     toggleShareTarget: (target: ShareTarget, checked: boolean) => void;
@@ -42,6 +48,10 @@ export interface SettingsGeneralSectionsHost {
     onExport: () => void;
     onMigrate: () => void;
     toggleHistory: () => void;
+    openScrape: () => void;
+    cancelScrape: () => void;
+    previewScrapePage: () => void;
+    followScrapePage: () => void;
 }
 
 const THEMES: Array<{ value: Theme; label: string }> = [
@@ -215,9 +225,41 @@ function addRow(host: SettingsGeneralSectionsHost): HTMLElement | null {
     return row;
 }
 
+function scrapeForm(host: SettingsGeneralSectionsHost): HTMLElement {
+    const form = el('div', 'scrape-form');
+    const url = el('input');
+    url.type = 'url';
+    url.placeholder = 'https://example.com/blog';
+    url.setAttribute('data-scrape-url', '');
+    url.setAttribute('aria-label', 'Page URL');
+    const selector = el('input');
+    selector.type = 'text';
+    selector.placeholder = 'Article list CSS selector (optional)';
+    selector.setAttribute('data-scrape-selector', '');
+    selector.setAttribute('aria-label', 'Article list selector');
+    const preview = button('btn', 'Preview', () => void host.previewScrapePage());
+    const follow = button('btn primary', 'Follow page', () => void host.followScrapePage());
+    const cancel = button('btn', 'Cancel', host.cancelScrape);
+    preview.disabled = host.scrapeBusy;
+    follow.disabled = host.scrapeBusy;
+    form.append(url, selector, preview, follow, cancel);
+    if (host.scrapeStatus) form.append(statusLine(host.scrapeStatus, host.scrapeStatusError));
+    if (host.scrapeCandidates.length) {
+        const list = el('ul', 'scrape-list');
+        for (const candidate of host.scrapeCandidates) {
+            const item = el('li', undefined, candidate.title);
+            item.title = candidate.url;
+            list.appendChild(item);
+        }
+        form.appendChild(list);
+    }
+    return form;
+}
+
 function feedActions(host: SettingsGeneralSectionsHost): HTMLElement {
     const actions = el('div', 'actions');
     actions.append(actionButton('Add feed', 'Subscribe by RSS, Atom or JSON Feed URL', '+', host.busy, host.openAdd));
+    actions.append(actionButton('Add from a page', 'Follow a site with no feed', '?', host.busy, host.openScrape));
     const row = addRow(host);
     if (row) actions.append(row);
     actions.append(
@@ -254,6 +296,7 @@ function opmlFileInput(host: SettingsGeneralSectionsHost): HTMLInputElement {
 export function buildFeedsSection(host: SettingsGeneralSectionsHost): HTMLElement {
     const root = section('Feeds');
     root.append(feedActions(host), opmlFileInput(host));
+    if (host.scrapeOpen) root.appendChild(scrapeForm(host));
     if (host.status) root.append(statusLine(host.status, host.statusError));
     return root;
 }

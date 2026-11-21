@@ -251,6 +251,36 @@ textarea {
     border-color: var(--accent);
 }
 
+.scrape-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.scrape-form input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.scrape-list {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.scrape-list li {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
 .status {
     font-size: 12px;
     color: var(--text-muted);

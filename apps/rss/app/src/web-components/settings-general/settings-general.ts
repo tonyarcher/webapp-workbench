@@ -9,7 +9,7 @@ import {
     saveMastodonHost,
     saveShareTargets,
 } from '../../services/share-settings';
-import { migrateLibrary } from '../../services/api';
+import { addScrapeSource, migrateLibrary, previewScrape, type ScrapeCandidate } from '../../services/api';
 import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
 import { invalidateArticles, invalidateLibrary } from '../../query';
 import { navigate } from '../../router';
@@ -62,6 +62,11 @@ export class SettingsGeneral extends HTMLElement {
     declare shareStatusError: boolean;
     declare shareTargets: ShareTarget[];
     declare showHistory: boolean;
+    declare scrapeOpen: boolean;
+    declare scrapeBusy: boolean;
+    declare scrapeStatus: string;
+    declare scrapeStatusError: boolean;
+    declare scrapeCandidates: ScrapeCandidate[];
 
     private bodyEl: HTMLDivElement | null = null;
     private updateScheduled = false;
@@ -69,6 +74,8 @@ export class SettingsGeneral extends HTMLElement {
     /** Text typed into a field before a paint; restored only while focused. */
     private mastodonDraft: string | null = null;
     private addUrlDraft: string | null = null;
+    private scrapeUrlDraft: string | null = null;
+    private scrapeSelectorDraft: string | null = null;
     private unsubscribeAddFeed: (() => void) | null = null;
 
     constructor() {
@@ -85,6 +92,11 @@ export class SettingsGeneral extends HTMLElement {
         defineReactive(this, 'shareStatusError', false);
         defineReactive(this, 'shareTargets', [] as ShareTarget[]);
         defineReactive(this, 'showHistory', false);
+        defineReactive(this, 'scrapeOpen', false);
+        defineReactive(this, 'scrapeBusy', false);
+        defineReactive(this, 'scrapeStatus', '');
+        defineReactive(this, 'scrapeStatusError', false);
+        defineReactive(this, 'scrapeCandidates', [] as ScrapeCandidate[]);
         this.resetState();
     }
 
@@ -181,6 +193,10 @@ export class SettingsGeneral extends HTMLElement {
     private captureDrafts(): void {
         this.mastodonDraft = null;
         this.addUrlDraft = null;
+        const scrapeUrlField = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-scrape-url]');
+        if (scrapeUrlField) this.scrapeUrlDraft = scrapeUrlField.value;
+        const scrapeSelectorField = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-scrape-selector]');
+        if (scrapeSelectorField) this.scrapeSelectorDraft = scrapeSelectorField.value;
         const active = this.shadowRoot?.activeElement;
         if (!(active instanceof HTMLInputElement)) return;
         if (active.id === 'mastodon-host') this.mastodonDraft = active.value;
@@ -192,6 +208,10 @@ export class SettingsGeneral extends HTMLElement {
         if (mastodon && this.mastodonDraft !== null) mastodon.value = this.mastodonDraft;
         const addUrl = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-add-url]');
         if (addUrl && this.addUrlDraft !== null) addUrl.value = this.addUrlDraft;
+        const scrapeUrl = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-scrape-url]');
+        if (scrapeUrl && this.scrapeUrlDraft !== null) scrapeUrl.value = this.scrapeUrlDraft;
+        const scrapeSelector = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-scrape-selector]');
+        if (scrapeSelector && this.scrapeSelectorDraft !== null) scrapeSelector.value = this.scrapeSelectorDraft;
     }
 
     /** Load the persisted values. The panel is a page, so this runs once per mount. */
@@ -204,6 +224,11 @@ export class SettingsGeneral extends HTMLElement {
         this.showHistory = false;
         this.mastodonDraft = null;
         this.addUrlDraft = null;
+        this.scrapeOpen = false;
+        this.scrapeStatus = '';
+        this.scrapeCandidates = [];
+        this.scrapeUrlDraft = null;
+        this.scrapeSelectorDraft = null;
     }
 
     setReaderMode = (mode: ReaderMode): void => {
@@ -241,6 +266,70 @@ export class SettingsGeneral extends HTMLElement {
 
     toggleHistory = (): void => {
         this.showHistory = !this.showHistory;
+    };
+
+    openScrape = (): void => {
+        this.scrapeOpen = true;
+        this.scrapeStatus = '';
+        this.scrapeCandidates = [];
+    };
+
+    cancelScrape = (): void => {
+        this.scrapeOpen = false;
+        this.scrapeStatus = '';
+        this.scrapeCandidates = [];
+        this.scrapeUrlDraft = null;
+        this.scrapeSelectorDraft = null;
+    };
+
+    private scrapeFields(): { url: string; selector: string } {
+        const url = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-scrape-url]');
+        const selector = this.shadowRoot?.querySelector<HTMLInputElement>('input[data-scrape-selector]');
+        return { url: url?.value.trim() ?? '', selector: selector?.value.trim() ?? '' };
+    }
+
+    private scrapeError(message: string): void {
+        this.scrapeStatus = message;
+        this.scrapeStatusError = true;
+    }
+
+    previewScrapePage = async (): Promise<void> => {
+        const { url, selector } = this.scrapeFields();
+        if (!url) {
+            this.scrapeError('Enter the page URL.');
+            return;
+        }
+        this.scrapeBusy = true;
+        try {
+            const result = await previewScrape(url, selector);
+            this.scrapeCandidates = result.candidates;
+            this.scrapeStatus = `${result.candidates.length} stories found with ${result.label}.`;
+            this.scrapeStatusError = false;
+        } catch (err) {
+            this.scrapeError(err instanceof Error ? err.message : 'Could not preview the page');
+        } finally {
+            this.scrapeBusy = false;
+        }
+    };
+
+    followScrapePage = async (): Promise<void> => {
+        const { url, selector } = this.scrapeFields();
+        if (!url) {
+            this.scrapeError('Enter the page URL.');
+            return;
+        }
+        this.scrapeBusy = true;
+        try {
+            await addScrapeSource(url, selector);
+            await invalidateLibrary();
+            this.cancelScrape();
+            this.status = `Following ${url}.`;
+            this.statusError = false;
+        } catch (err) {
+            this.scrapeError(err instanceof Error ? err.message : 'Could not follow the page');
+        } finally {
+            this.scrapeBusy = false;
+        }
     };
 
     onThemeClick = (event: Event): void => {

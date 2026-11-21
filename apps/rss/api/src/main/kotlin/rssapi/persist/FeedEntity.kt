@@ -24,4 +24,12 @@ class FeedEntity(
     var icon: String? = null,
     @Column(name = "added_at")
     var addedAt: Instant = Instant.now(),
+    @Column(name = "source_kind")
+    var sourceKind: String = "rss",
+    @Column(name = "page_url")
+    var pageUrl: String? = null,
+    @Column(name = "item_selector")
+    var itemSelector: String? = null,
+    @Column(name = "last_scrape_at")
+    var lastScrapeAt: Instant? = null,
 )

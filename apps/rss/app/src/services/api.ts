@@ -45,6 +45,7 @@ export {
     reorderFolders,
     reorderSavedSearches,
     requestServerSummary,
+    addScrapeSource,
     previewScrape,
     requestSync,
     saveArticleForLater,
