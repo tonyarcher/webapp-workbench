@@ -25,7 +25,10 @@ test('the settings page previews and follows a watched page', async ({ page }) =
                 label: 'Article list',
                 confidence: 0.7,
                 title: 'Blog',
-                candidates: [{ title: 'First story', url: 'https://example.com/one' }],
+                candidates: [
+                    { title: 'First story', url: 'https://example.com/one' },
+                    { title: 'Second story', url: 'https://example.com/two' },
+                ],
             }),
         });
     });
@@ -55,8 +58,10 @@ test('the settings page previews and follows a watched page', async ({ page }) =
     await expect(page.getByText('First story')).toBeVisible();
     expect(previewBody).toContain('.post');
 
+    await page.getByRole('checkbox', { name: 'Second story' }).uncheck();
     await page.getByRole('button', { name: 'Follow page' }).click();
     await expect(page.getByRole('button', { name: 'Add from a page' })).toBeVisible();
     await expect(page.getByLabel('Page URL')).toHaveCount(0);
     expect(sourceBody).toContain('https://example.com/blog');
+    expect(sourceBody).toContain('"urls":["https://example.com/one"]');
 });

@@ -136,7 +136,7 @@ class IngestServiceBranchTest {
     @Test
     fun pollDelegates() {
         whenever(feeds.findById(feedId)).thenReturn(Optional.empty())
-        ingest.pollFeed(feedId)
+        ingest.fetchAndIngest(feedId)
         verify(fetcher, never()).fetch(any(), anyOrNull(), anyOrNull())
     }
 

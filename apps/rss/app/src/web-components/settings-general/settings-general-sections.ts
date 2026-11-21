@@ -35,6 +35,7 @@ export interface SettingsGeneralSectionsHost {
     scrapeStatus: string;
     scrapeStatusError: boolean;
     scrapeCandidates: ScrapeCandidate[];
+    scrapeSelected: string[];
     onThemeClick: (event: Event) => void;
     setReaderMode: (mode: ReaderMode) => void;
     toggleShareTarget: (target: ShareTarget, checked: boolean) => void;
@@ -52,6 +53,7 @@ export interface SettingsGeneralSectionsHost {
     cancelScrape: () => void;
     previewScrapePage: () => void;
     followScrapePage: () => void;
+    toggleScrapeCandidate: (url: string, checked: boolean) => void;
 }
 
 const THEMES: Array<{ value: Theme; label: string }> = [
@@ -247,8 +249,16 @@ function scrapeForm(host: SettingsGeneralSectionsHost): HTMLElement {
     if (host.scrapeCandidates.length) {
         const list = el('ul', 'scrape-list');
         for (const candidate of host.scrapeCandidates) {
-            const item = el('li', undefined, candidate.title);
+            const label = el('label', 'scrape-choice');
+            const input = el('input');
+            input.type = 'checkbox';
+            input.checked = host.scrapeSelected.includes(candidate.url);
+            input.setAttribute('data-candidate-url', candidate.url);
+            input.addEventListener('change', () => host.toggleScrapeCandidate(candidate.url, input.checked));
+            label.append(input, document.createTextNode(candidate.title));
+            const item = el('li');
             item.title = candidate.url;
+            item.appendChild(label);
             list.appendChild(item);
         }
         form.appendChild(list);

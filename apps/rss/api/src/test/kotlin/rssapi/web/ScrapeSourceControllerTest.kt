@@ -22,7 +22,13 @@ import rssapi.persist.FeedRepo
 import rssapi.persist.SubscriptionRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
+import rssapi.scrape.ScrapeCandidate
 import java.util.UUID
+
+private const val PAGE_HTML = """
+    <article class="post"><h2><a href="/one">One</a></h2></article>
+    <article class="post"><h2><a href="/two">Two</a></h2></article>
+"""
 
 @WebMvcTest(ScrapeSourceController::class)
 @Import(SecurityConfig::class, RequestIdFilter::class, IdentityUser::class)
@@ -99,19 +105,19 @@ class ScrapeSourceControllerTest {
             sourceKind = "scrape",
             pageUrl = "https://example.com/blog",
         )
-        whenever(pages.fetchHtml(existing.xmlUrl)).thenReturn("<title>old</title>")
+        whenever(pages.fetchHtml(existing.xmlUrl)).thenReturn(PAGE_HTML)
         whenever(feeds.findByXmlUrl(existing.xmlUrl)).thenReturn(existing)
         whenever(subs.existsByUserIdAndFeedId(any(), any())).thenReturn(true)
         create("""{"url":"${existing.xmlUrl}"}""").andExpect { status { isOk() } }
         verify(feeds, org.mockito.kotlin.never()).save(any())
-        verify(ingest).scrapeAndIngest(existing)
+        verify(ingest).ingestScrapedCandidates(any(), any())
     }
 
     @Test
     fun doesNotReuseARssFeedAtTheSameUrl() {
         stubAuth()
         val rss = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/blog", sourceKind = "rss")
-        whenever(pages.fetchHtml(rss.xmlUrl)).thenReturn("<title>Blog</title>")
+        whenever(pages.fetchHtml(rss.xmlUrl)).thenReturn(PAGE_HTML)
         whenever(feeds.findByXmlUrl(rss.xmlUrl)).thenReturn(rss)
         whenever(feeds.save(any<FeedEntity>())).thenAnswer {
             val entity: FeedEntity = it.getArgument(0)
@@ -122,6 +128,64 @@ class ScrapeSourceControllerTest {
             status { isOk() }
             jsonPath("$.sourceKind") { value("scrape") }
         }
+    }
+
+    @Test
+    fun followsOnlySelectedArticles() {
+        stubAuth()
+        val url = "https://example.com/blog"
+        whenever(pages.fetchHtml(url)).thenReturn(PAGE_HTML)
+        whenever(feeds.findByXmlUrl(url)).thenReturn(null)
+        whenever(feeds.save(any<FeedEntity>())).thenAnswer {
+            val entity: FeedEntity = it.getArgument(0)
+            entity.id = UUID.randomUUID()
+            entity
+        }
+
+        create("""{"url":"$url","urls":["https://example.com/one"]}""").andExpect { status { isOk() } }
+        verify(ingest).ingestScrapedCandidates(
+            any(),
+            org.mockito.kotlin.argThat<List<ScrapeCandidate>> { candidates ->
+                candidates.size == 1 && candidates[0].url == "https://example.com/one"
+            },
+        )
+    }
+
+    @Test
+    fun rejectsUnknownSelection() {
+        stubAuth()
+        val url = "https://example.com/blog"
+        whenever(pages.fetchHtml(url)).thenReturn(PAGE_HTML)
+        whenever(feeds.findByXmlUrl(url)).thenReturn(null)
+        whenever(feeds.save(any<FeedEntity>())).thenAnswer {
+            val entity: FeedEntity = it.getArgument(0)
+            entity.id = UUID.randomUUID()
+            entity
+        }
+
+        create("""{"url":"$url","urls":["https://example.com/missing"]}""").andExpect {
+            status { isBadRequest() }
+            jsonPath("$.error") { value("None of the selected articles were found on the page") }
+        }
+    }
+
+    @Test
+    fun emptySelectionFollowsAll() {
+        stubAuth()
+        val url = "https://example.com/blog"
+        whenever(pages.fetchHtml(url)).thenReturn(PAGE_HTML)
+        whenever(feeds.findByXmlUrl(url)).thenReturn(null)
+        whenever(feeds.save(any<FeedEntity>())).thenAnswer {
+            val entity: FeedEntity = it.getArgument(0)
+            entity.id = UUID.randomUUID()
+            entity
+        }
+
+        create("""{"url":"$url","urls":[]}""").andExpect { status { isOk() } }
+        verify(ingest).ingestScrapedCandidates(
+            any(),
+            org.mockito.kotlin.argThat<List<ScrapeCandidate>> { candidates -> candidates.size == 2 },
+        )
     }
 
     @Test
@@ -144,7 +208,7 @@ class ScrapeSourceControllerTest {
     fun createsWatchedPage() {
         stubAuth()
         val url = "https://example.com/blog"
-        whenever(pages.fetchHtml(url)).thenReturn("<html><head><title>Blog</title></head><body></body></html>")
+        whenever(pages.fetchHtml(url)).thenReturn(PAGE_HTML)
         whenever(feeds.findByXmlUrl(url)).thenReturn(null)
         val saved = FeedEntity(
             id = UUID.randomUUID(),
@@ -162,6 +226,6 @@ class ScrapeSourceControllerTest {
             jsonPath("$.itemSelector") { value(".post") }
             jsonPath("$.title") { value("Blog") }
         }
-        verify(ingest).scrapeAndIngest(saved)
+        verify(ingest).ingestScrapedCandidates(any(), any())
     }
 }

@@ -67,6 +67,7 @@ export class SettingsGeneral extends HTMLElement {
     declare scrapeStatus: string;
     declare scrapeStatusError: boolean;
     declare scrapeCandidates: ScrapeCandidate[];
+    declare scrapeSelected: string[];
 
     private bodyEl: HTMLDivElement | null = null;
     private updateScheduled = false;
@@ -97,6 +98,7 @@ export class SettingsGeneral extends HTMLElement {
         defineReactive(this, 'scrapeStatus', '');
         defineReactive(this, 'scrapeStatusError', false);
         defineReactive(this, 'scrapeCandidates', [] as ScrapeCandidate[]);
+        defineReactive(this, 'scrapeSelected', [] as string[]);
         this.resetState();
     }
 
@@ -227,6 +229,7 @@ export class SettingsGeneral extends HTMLElement {
         this.scrapeOpen = false;
         this.scrapeStatus = '';
         this.scrapeCandidates = [];
+        this.scrapeSelected = [];
         this.scrapeUrlDraft = null;
         this.scrapeSelectorDraft = null;
     }
@@ -278,6 +281,7 @@ export class SettingsGeneral extends HTMLElement {
         this.scrapeOpen = false;
         this.scrapeStatus = '';
         this.scrapeCandidates = [];
+        this.scrapeSelected = [];
         this.scrapeUrlDraft = null;
         this.scrapeSelectorDraft = null;
     };
@@ -303,6 +307,7 @@ export class SettingsGeneral extends HTMLElement {
         try {
             const result = await previewScrape(url, selector);
             this.scrapeCandidates = result.candidates;
+            this.scrapeSelected = result.candidates.map((candidate) => candidate.url);
             this.scrapeStatus = `${result.candidates.length} stories found with ${result.label}.`;
             this.scrapeStatusError = false;
         } catch (err) {
@@ -312,15 +317,26 @@ export class SettingsGeneral extends HTMLElement {
         }
     };
 
+    toggleScrapeCandidate = (candidateUrl: string, checked: boolean): void => {
+        const next = new Set(this.scrapeSelected);
+        if (checked) next.add(candidateUrl);
+        else next.delete(candidateUrl);
+        this.scrapeSelected = [...next];
+    };
+
     followScrapePage = async (): Promise<void> => {
         const { url, selector } = this.scrapeFields();
         if (!url) {
             this.scrapeError('Enter the page URL.');
             return;
         }
+        if (this.scrapeSelected.length === 0) {
+            this.scrapeError('Select at least one story.');
+            return;
+        }
         this.scrapeBusy = true;
         try {
-            await addScrapeSource(url, selector);
+            await addScrapeSource(url, selector, this.scrapeSelected);
             await invalidateLibrary();
             this.cancelScrape();
             this.status = `Following ${url}.`;

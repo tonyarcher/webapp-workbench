@@ -140,10 +140,10 @@ export async function previewScrape(url: string, selector?: string): Promise<Scr
     }) as Promise<ScrapePreview>;
 }
 
-export async function addScrapeSource(url: string, selector?: string): Promise<Feed> {
+export async function addScrapeSource(url: string, selector?: string, urls?: string[]): Promise<Feed> {
     return apiFetch('/sources', {
         method: 'POST',
-        body: JSON.stringify({ url, ...(selector ? { selector } : {}) }),
+        body: JSON.stringify({ url, ...(selector ? { selector } : {}), ...(urls ? { urls } : {}) }),
     }) as Promise<Feed>;
 }
 

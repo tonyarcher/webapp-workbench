@@ -53,8 +53,8 @@ class FeedPollerTest {
         val captor = argumentCaptor<UUID>()
         verify(sync).ensureRow(captor.capture())
         assertEquals(listOf(activeFeed), captor.allValues)
-        verify(ingest).pollFeed(activeFeed)
-        verify(ingest, never()).pollFeed(staleFeed)
+        verify(ingest).fetchAndIngest(activeFeed)
+        verify(ingest, never()).fetchAndIngest(staleFeed)
     }
 
     @Test
@@ -68,7 +68,7 @@ class FeedPollerTest {
         tickOnce()
 
         verify(sync, never()).ensureRow(any())
-        verify(ingest, never()).pollFeed(any())
+        verify(ingest, never()).fetchAndIngest(any())
     }
 
     @Test
@@ -80,7 +80,7 @@ class FeedPollerTest {
 
         tickOnce()
 
-        verify(ingest).pollFeed(feedId)
+        verify(ingest).fetchAndIngest(feedId)
     }
 
     @Test
@@ -92,7 +92,7 @@ class FeedPollerTest {
 
         tickOnce()
 
-        verify(ingest).pollFeed(feedId)
+        verify(ingest).fetchAndIngest(feedId)
     }
 
     @Test
@@ -105,7 +105,7 @@ class FeedPollerTest {
 
         tickOnce()
 
-        verify(ingest).pollFeed(feedId)
+        verify(ingest).fetchAndIngest(feedId)
     }
 
     @Test
@@ -118,14 +118,14 @@ class FeedPollerTest {
         )
         whenever(subs.findMaxLastSeenByFeedId(badFeed)).thenReturn(now.minus(Duration.ofDays(1)))
         whenever(subs.findMaxLastSeenByFeedId(goodFeed)).thenReturn(now.minus(Duration.ofDays(1)))
-        whenever(ingest.pollFeed(badFeed)).thenThrow(
+        whenever(ingest.fetchAndIngest(badFeed)).thenThrow(
             org.springframework.dao.DataRetrievalFailureException("poison"),
         )
 
         tickOnce()
 
-        verify(ingest).pollFeed(badFeed)
-        verify(ingest).pollFeed(goodFeed)
+        verify(ingest).fetchAndIngest(badFeed)
+        verify(ingest).fetchAndIngest(goodFeed)
     }
 
     @Test
@@ -140,6 +140,6 @@ class FeedPollerTest {
         poller.destroy()
         poller.scheduledTick()
 
-        verify(ingest, never()).pollFeed(any())
+        verify(ingest, never()).fetchAndIngest(any())
     }
 }

@@ -113,7 +113,7 @@ class FeedPoller(
     private fun pollOne(id: UUID) {
         try {
             sync.ensureRow(id)
-            ingest.pollFeed(id)
+            ingest.fetchAndIngest(id)
         } catch (err: IllegalStateException) {
             logPoll(id, err)
         } catch (err: IllegalArgumentException) {

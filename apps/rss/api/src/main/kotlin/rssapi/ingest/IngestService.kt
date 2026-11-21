@@ -64,11 +64,6 @@ class IngestService(
         }
     }
 
-    @Transactional
-    fun pollFeed(feedId: UUID) {
-        fetchAndIngest(feedId)
-    }
-
     /** A watched page: fetch HTML, then extract and store its item list. */
     @Transactional
     fun scrapeAndIngest(feed: FeedEntity) {
@@ -87,6 +82,11 @@ class IngestService(
         val url = feed.pageUrl ?: feed.xmlUrl
         val doc = Jsoup.parse(html, url)
         val candidates = ScrapeExtraction.best(doc, feed.itemSelector).extract(doc, url).take(MAX_SCRAPE_ITEMS)
+        ingestScrapedCandidates(feed, candidates)
+    }
+
+    @Transactional
+    fun ingestScrapedCandidates(feed: FeedEntity, candidates: List<ScrapeCandidate>) {
         if (candidates.isEmpty()) {
             sync.saveError(feed.id!!, "No articles found on page")
             return

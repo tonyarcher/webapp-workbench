@@ -34,13 +34,13 @@ class FeedPollerBranchTest {
             ),
         )
         whenever(subs.findMaxLastSeenByFeedId(any())).thenReturn(null)
-        whenever(ingest.pollFeed(badState)).thenThrow(IllegalStateException("boom"))
-        whenever(ingest.pollFeed(badArg)).thenThrow(IllegalArgumentException("bad"))
+        whenever(ingest.fetchAndIngest(badState)).thenThrow(IllegalStateException("boom"))
+        whenever(ingest.fetchAndIngest(badArg)).thenThrow(IllegalArgumentException("bad"))
         val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.scheduledTick()
         poller.destroy()
-        verify(ingest).pollFeed(badState)
-        verify(ingest).pollFeed(badArg)
+        verify(ingest).fetchAndIngest(badState)
+        verify(ingest).fetchAndIngest(badArg)
     }
 
     @Test
@@ -48,7 +48,7 @@ class FeedPollerBranchTest {
         val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.destroy()
         poller.scheduledTick()
-        verify(ingest, never()).pollFeed(any())
+        verify(ingest, never()).fetchAndIngest(any())
     }
 
     @Test
@@ -58,11 +58,11 @@ class FeedPollerBranchTest {
             listOf(FeedSyncEntity(feedId = feedId, lastFetchedAt = null)),
         )
         whenever(subs.findMaxLastSeenByFeedId(any())).thenReturn(null)
-        whenever(ingest.pollFeed(feedId)).thenThrow(object : IllegalStateException() {})
+        whenever(ingest.fetchAndIngest(feedId)).thenThrow(object : IllegalStateException() {})
         val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.scheduledTick()
         poller.destroy()
-        verify(ingest).pollFeed(feedId)
+        verify(ingest).fetchAndIngest(feedId)
     }
 
     @Test
@@ -72,7 +72,7 @@ class FeedPollerBranchTest {
         whenever(subs.findMaxLastSeenByFeedId(any())).thenReturn(null)
         val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.queue(listOf(id, id))
-        verify(ingest, timeout(5_000L)).pollFeed(id)
+        verify(ingest, timeout(5_000L)).fetchAndIngest(id)
         poller.destroy()
     }
 
@@ -81,7 +81,7 @@ class FeedPollerBranchTest {
         val ids = (0 until 7).map { UUID.randomUUID() }
         val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
         poller.queue(ids)
-        ids.take(5).forEach { verify(ingest, timeout(5_000L)).pollFeed(it) }
+        ids.take(5).forEach { verify(ingest, timeout(5_000L)).fetchAndIngest(it) }
         verify(syncRows, never()).findDue(any(), any(), any<Pageable>())
         poller.destroy()
     }

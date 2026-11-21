@@ -15,10 +15,16 @@ import rssapi.persist.FeedEntity
 import rssapi.persist.FeedRepo
 import rssapi.persist.SubscriptionEntity
 import rssapi.persist.SubscriptionRepo
+import rssapi.scrape.ScrapeExtraction
 import java.net.URI
 import java.util.UUID
 
-data class CreateScrapeSourceBody(val url: String? = null, val selector: String? = null, val title: String? = null)
+data class CreateScrapeSourceBody(
+    val url: String? = null,
+    val selector: String? = null,
+    val title: String? = null,
+    val urls: List<String>? = null,
+)
 
 /** Turns a watched page into a normal subscribed feed, with scrape provenance. */
 @RestController
@@ -37,10 +43,11 @@ class ScrapeSourceController(
             ?: throw ApiException(HttpStatus.BAD_REQUEST, "Invalid page URL (must be http/https)")
         val doc = fetchDoc(url)
         val title = body.title?.trim()?.takeIf { it.isNotEmpty() } ?: doc.title().ifBlank { URI(url).host }
-        val feed = findOrCreate(url, title, body.selector?.trim()?.ifEmpty { null })
+        val selector = body.selector?.trim()?.ifEmpty { null }
+        val feed = findOrCreate(url, title, selector)
         subscribe(feed.id!!)
         sync.ensureRow(feed.id!!)
-        ingest.scrapeAndIngest(feed)
+        ingestSelected(doc, feed, selector, body.urls)
         return feed.toJson(
             emptyList(),
             0,
@@ -49,6 +56,15 @@ class ScrapeSourceController(
             sourceKind = feed.sourceKind,
             itemSelector = feed.itemSelector,
         )
+    }
+
+    private fun ingestSelected(doc: Document, feed: FeedEntity, selector: String?, urls: List<String>?) {
+        val found = ScrapeExtraction.best(doc, selector).extract(doc, feed.pageUrl ?: feed.xmlUrl)
+        val chosen = if (urls.isNullOrEmpty()) found else found.filter { it.url in urls }
+        if (chosen.isEmpty()) {
+            throw ApiException(HttpStatus.BAD_REQUEST, "None of the selected articles were found on the page")
+        }
+        ingest.ingestScrapedCandidates(feed, chosen)
     }
 
     private fun fetchDoc(url: String): Document = try {
