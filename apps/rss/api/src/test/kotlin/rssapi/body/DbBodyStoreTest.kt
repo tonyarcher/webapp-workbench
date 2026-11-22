@@ -73,4 +73,20 @@ class DbBodyStoreTest {
         verify(bodies, never()).save(any())
         verify(articles, never()).save(any())
     }
+
+    @Test
+    fun blankBodyRowFallsBackToArticleColumn() {
+        whenever(bodies.findById("a")).thenReturn(Optional.of(ArticleBodyEntity("a", "")))
+        whenever(articles.findById("a")).thenReturn(Optional.of(ArticleEntity(id = "a", contentHtml = "old")))
+
+        assertEquals("old", store.get("a"))
+    }
+
+    @Test
+    fun blankBodyIsNotStored() {
+        store.put("a", "   ")
+
+        verify(bodies, never()).save(any())
+        verify(articles, never()).findById(any())
+    }
 }

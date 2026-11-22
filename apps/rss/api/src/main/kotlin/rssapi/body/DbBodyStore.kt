@@ -10,10 +10,14 @@ import rssapi.persist.ArticleRepo
  * writes keep both copies in sync for rollback.
  */
 class DbBodyStore(private val articles: ArticleRepo, private val bodies: ArticleBodyRepo) : BodyStore {
-    override fun get(articleId: String): String? = bodies.findById(articleId).orElse(null)?.contentHtml
-        ?: articles.findById(articleId).orElse(null)?.contentHtml
+    override fun get(articleId: String): String? =
+        bodies.findById(articleId).orElse(null)?.contentHtml?.takeIf { it.isNotBlank() }
+            ?: articles.findById(articleId).orElse(null)?.contentHtml
 
     override fun put(articleId: String, html: String) {
+        // A blank body is indistinguishable from no body, and storing one adds
+        // a row plus its foreign-key index entry for every link-only item.
+        if (html.isBlank()) return
         val article = articles.findById(articleId).orElse(null) ?: return
         bodies.save(ArticleBodyEntity(articleId, html))
         if (article.contentHtml == html) return

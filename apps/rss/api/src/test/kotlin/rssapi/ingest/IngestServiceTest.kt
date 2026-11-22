@@ -169,6 +169,33 @@ class IngestServiceTest {
     }
 
     @Test
+    fun newArticleWritesBodyToStore() {
+        val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
+
+        ingest.ingestXml(feed, rssWith(rssItem("g1")))
+
+        verify(bodyStore).put(makeArticleId(feed.id!!.toString(), "g1"), "hi")
+    }
+
+    @Test
+    fun unchangedArticleDoesNotRewriteBody() {
+        val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
+        val guid = "g1"
+        val xml = rssWith(rssItem(guid))
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
+        ingest.ingestXml(feed, xml)
+        val stored = argumentCaptor<ArticleEntity>()
+        verify(articles).save(stored.capture())
+        clearInvocations(articles, maintenance, bodyStore)
+        whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(stored.firstValue)
+
+        ingest.ingestXml(feed, xml)
+
+        verify(bodyStore, org.mockito.kotlin.never()).put(any(), any())
+    }
+
+    @Test
     fun ingestsJsonFeedText() {
         val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/feed.json", title = "t")
         val json = """

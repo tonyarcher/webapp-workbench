@@ -22,6 +22,8 @@ class ArticleBodyBackfill(private val articles: ArticleRepo, private val bodies:
 
     @Volatile private var done = false
 
+    private var copied = 0L
+
     @PreDestroy
     fun stop() {
         stopped = true
@@ -33,9 +35,10 @@ class ArticleBodyBackfill(private val articles: ArticleRepo, private val bodies:
         val rows = articles.bodiesToBackfill(PageRequest.of(0, BATCH_SIZE))
         if (rows.isEmpty()) {
             done = true
-            log("rss-api", "info", "body backfill complete", emptyMap())
+            log("rss-api", "info", "body backfill complete", mapOf("copied" to copied))
             return
         }
         bodies.saveAll(rows.map { ArticleBodyEntity(it.id, it.contentHtml.orEmpty()) })
+        copied += rows.size
     }
 }

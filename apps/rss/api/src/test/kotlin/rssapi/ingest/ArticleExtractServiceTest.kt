@@ -89,6 +89,7 @@ class ArticleExtractServiceTest {
         assertTrue(res.extracted)
         assertTrue(res.article.contentHtml!!.contains("Grid operators"))
         verify(articles).save(any<ArticleEntity>())
+        verify(bodyStore).put("a1", res.article.contentHtml!!)
     }
 
     @Test

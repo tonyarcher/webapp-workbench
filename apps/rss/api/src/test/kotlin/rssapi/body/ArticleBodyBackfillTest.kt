@@ -11,8 +11,9 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import rssapi.persist.ArticleBodyEntity
 import rssapi.persist.ArticleBodyRepo
-import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleRepo
+
+private class Source(override val id: String, override val contentHtml: String?) : ArticleRepo.BodySource
 
 class ArticleBodyBackfillTest {
     private val articles: ArticleRepo = mock()
@@ -22,10 +23,7 @@ class ArticleBodyBackfillTest {
     @Test
     fun copiesBatchThenStopsWhenEmpty() {
         whenever(articles.bodiesToBackfill(any())).thenReturn(
-            listOf(
-                ArticleEntity(id = "a", contentHtml = "one"),
-                ArticleEntity(id = "b", contentHtml = "two"),
-            ),
+            listOf(Source("a", "one"), Source("b", "two")),
             emptyList(),
         )
 

@@ -15,17 +15,27 @@ interface ArticleRepo :
     fun findByFeedIdAndNormLink(feedId: UUID, normLink: String): ArticleEntity?
     fun findByFeedIdIn(feedIds: Collection<UUID>): List<ArticleEntity>
 
-    /** Bounded source for the Q1 body-table backfill. */
+    /** The two columns the body backfill copies; nothing else. */
+    interface BodySource {
+        val id: String
+        val contentHtml: String?
+    }
+
+    /**
+     * Bounded source for the Q1 body-table backfill. Projected on purpose: an
+     * entity query would also load `search_text` (generated, 4 KB) and every
+     * other column into memory for each batch.
+     */
     @Query(
         """
-        select a from ArticleEntity a
+        select a.id as id, a.contentHtml as contentHtml from ArticleEntity a
         where a.contentHtml is not null and a.contentHtml <> ''
           and not exists (
             select 1 from ArticleBodyEntity b where b.articleId = a.id
           )
         """,
     )
-    fun bodiesToBackfill(page: Pageable): List<ArticleEntity>
+    fun bodiesToBackfill(page: Pageable): List<BodySource>
 
     @Query(
         """
