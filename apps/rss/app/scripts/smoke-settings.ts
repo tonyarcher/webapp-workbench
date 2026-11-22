@@ -125,6 +125,7 @@ assert(
         pageSize: 20,
         maxCardCols: 2,
         unreadOnly: true,
+        hideRead: true,
         markOnScroll: true,
         updateCols: () => {},
     } as const;
@@ -136,6 +137,7 @@ assert(
         pageSize: number;
         maxCardCols: number;
         unreadOnly: boolean;
+        hideRead: boolean;
         markOnScroll: boolean;
         updateCols: () => void;
     } = {
@@ -145,13 +147,52 @@ assert(
         pageSize: 50,
         maxCardCols: 4,
         unreadOnly: false,
+        hideRead: false,
         markOnScroll: false,
         updateCols: () => {},
     };
     loadViewSettingsFor(restored as never);
     assert(restored.markOnScroll === true, 'view settings round-trip the mark-on-scroll toggle');
     assert(restored.unreadOnly === true, 'view settings round-trip the unread filter');
+    assert(restored.hideRead === false, 'normal views keep hide-read transient, not persisted');
     assert(restored.listView === 'headline', 'view settings round-trip the list view');
+
+    const interesting = {
+        view: { kind: 'interesting', id: 'f9' },
+        listView: 'headline',
+        sort: 'hot',
+        pageSize: 50,
+        maxCardCols: 4,
+        unreadOnly: true,
+        hideRead: true,
+        markOnScroll: false,
+        updateCols: () => {},
+    } as const;
+    saveViewSettingsFor(interesting as never);
+    const restoredInteresting: {
+        view: { kind: string; id: string };
+        listView: string;
+        sort: string;
+        pageSize: number;
+        maxCardCols: number;
+        unreadOnly: boolean;
+        hideRead: boolean;
+        markOnScroll: boolean;
+        updateCols: () => void;
+    } = {
+        view: { kind: 'interesting', id: 'f9' },
+        listView: 'detailed',
+        sort: 'hot',
+        pageSize: 50,
+        maxCardCols: 4,
+        unreadOnly: false,
+        hideRead: false,
+        markOnScroll: false,
+        updateCols: () => {},
+    };
+    loadViewSettingsFor(restoredInteresting as never);
+    assert(restoredInteresting.hideRead === true, 'Interesting views persist the hide-read filter');
+    assert(restoredInteresting.unreadOnly === false, 'Interesting views never persist the unread filter');
     const other: {
         view: { kind: string; id: string };
         listView: string;
@@ -159,6 +200,7 @@ assert(
         pageSize: number;
         maxCardCols: number;
         unreadOnly: boolean;
+        hideRead: boolean;
         markOnScroll: boolean;
         updateCols: () => void;
     } = {
@@ -168,11 +210,13 @@ assert(
         pageSize: 50,
         maxCardCols: 4,
         unreadOnly: false,
+        hideRead: false,
         markOnScroll: false,
         updateCols: () => {},
     };
     loadViewSettingsFor(other as never);
     assert(other.markOnScroll === false, 'mark-on-scroll defaults off for untouched views');
+    assert(other.hideRead === false, 'hide-read defaults off for untouched views');
     assert(viewKeyOf({ kind: 'all' }) === 'all', 'the all view keeps its settings bucket');
 }
 
@@ -204,9 +248,11 @@ assert(
         pageSize: 20,
         maxCardCols: 2,
         unreadOnly: true,
+        hideRead: true,
     });
     assert(readDefaultViewSettings().listView === 'cards', 'reading defaults round-trip the list view');
     assert(readDefaultViewSettings().maxCardCols === 2, 'reading defaults round-trip the card columns');
+    assert(readDefaultViewSettings().hideRead === true, 'reading defaults round-trip the hide-read filter');
 
     const freshHost = () => ({
         view: { kind: 'folder' as 'folder' | 'feed' | 'interesting', id: 'fresh' },
@@ -215,6 +261,7 @@ assert(
         pageSize: 50,
         maxCardCols: 4,
         unreadOnly: false,
+        hideRead: false,
         markOnScroll: false,
         updateCols: () => {},
     });
@@ -222,6 +269,7 @@ assert(
     loadViewSettingsFor(fresh as never);
     assert(fresh.listView === 'cards', 'an untouched view picks up the reading defaults');
     assert(fresh.unreadOnly === true, 'an untouched view picks up the default unread filter');
+    assert(fresh.hideRead === false, 'normal views ignore the default hide-read filter');
 
     const own = freshHost();
     saveViewSettingsFor({ ...own, view: { kind: 'feed', id: 'own' }, listView: 'headline', pageSize: 100 } as never);
@@ -241,6 +289,7 @@ assert(
         pageSize: 50,
         maxCardCols: 3,
         unreadOnly: false,
+        hideRead: false,
     });
     const afterApply = freshHost();
     afterApply.view = { kind: 'feed', id: 'own' };
@@ -251,6 +300,7 @@ assert(
     const interestingSettings = readViewSettingsFor({ kind: 'interesting', id: 'fresh' });
     assert(interestingSettings.listView === 'headline', 'Interesting views use the reading defaults');
     assert(interestingSettings.unreadOnly === false, 'Interesting views use the default unread filter');
+    assert(interestingSettings.hideRead === false, 'Interesting views use the default hide-read filter');
 
     const clamped = normalizeViewSettings({
         listView: 'bogus' as never,

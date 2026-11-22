@@ -74,7 +74,6 @@ export function currentViewKey(host: any): string {
 
 export function handleUpdate(host: any, viewKey: string): void {
     if (viewKey !== host.lastViewKey) {
-        host.hideRead = false;
         loadViewSettingsFor(host);
         host.lastViewKey = currentViewKey(host);
         void applyStep(host, viewChanged(host.loadState, needsLibrary(host), host.library.data !== undefined));
@@ -112,6 +111,7 @@ export function applyAllViewsAction(host: any): void {
         pageSize: host.pageSize,
         maxCardCols: host.maxCardCols,
         unreadOnly: host.unreadOnly,
+        hideRead: host.view?.kind === 'interesting' ? host.hideRead : false,
         markOnScroll: host.markOnScroll,
     });
     applyDefaultToAllViews(settings);
@@ -125,6 +125,7 @@ export function toggleUnread(host: any): void {
         // Interesting ranks a bounded recent batch; server-side unreadOnly starves it.
         // Hide-read is the client-side equivalent.
         host.hideRead = !host.hideRead;
+        saveViewSettings(host);
         void host.reset();
         return;
     }

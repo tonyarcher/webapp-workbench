@@ -24,6 +24,7 @@ export function advancedUnreadAction(
     if (host.view?.kind === 'interesting') {
         // Interesting ranks a bounded recent batch; server-side unreadOnly starves it.
         host.hideRead = next;
+        host.saveViewSettings();
         void host.reset?.();
         return;
     }

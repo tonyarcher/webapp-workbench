@@ -16,6 +16,7 @@ export interface ViewSettings {
     pageSize: number;
     maxCardCols: number;
     unreadOnly: boolean;
+    hideRead: boolean;
     markOnScroll: boolean;
 }
 
@@ -26,6 +27,7 @@ export const DEFAULT_VIEW_SETTINGS: ViewSettings = {
     pageSize: DEFAULT_PAGE_SIZE,
     maxCardCols: 4,
     unreadOnly: false,
+    hideRead: false,
     markOnScroll: false,
 };
 
@@ -50,6 +52,7 @@ export function normalizeViewSettings(input: Partial<ViewSettings> | null | unde
         pageSize: clampPageSize(input?.pageSize),
         maxCardCols,
         unreadOnly: input?.unreadOnly === true,
+        hideRead: input?.hideRead === true,
         markOnScroll: input?.markOnScroll === true,
     };
 }
@@ -194,6 +197,7 @@ interface SettingsHost {
     pageSize: number;
     maxCardCols: number;
     unreadOnly: boolean;
+    hideRead: boolean;
     markOnScroll: boolean;
     updateCols(): void;
 }
@@ -207,6 +211,9 @@ function applyViewSettings(host: SettingsHost, saved: ViewSettings): void {
     // Interesting ranks a bounded recent batch; unreadOnly starves it once
     // items are read, so never apply it to Interesting views.
     host.unreadOnly = host.view.kind === 'interesting' ? false : settings.unreadOnly;
+    // hideRead doubles as the transient "just marked these read" flag in normal
+    // views. Only persist it for Interesting, where it is the unread filter.
+    host.hideRead = host.view.kind === 'interesting' ? settings.hideRead : false;
     host.markOnScroll = settings.markOnScroll;
     host.updateCols();
 }
@@ -229,6 +236,7 @@ export function saveViewSettingsFor(host: SettingsHost): void {
         pageSize: host.pageSize,
         maxCardCols: host.maxCardCols,
         unreadOnly: host.unreadOnly,
+        hideRead: host.view.kind === 'interesting' ? host.hideRead : false,
         markOnScroll: host.markOnScroll,
     };
     try {
