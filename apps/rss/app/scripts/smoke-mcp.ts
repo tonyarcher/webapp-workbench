@@ -39,7 +39,7 @@ try {
         calls[1]?.url.startsWith('https://id.test/user-api/oauth/mcp/clients'),
         'issue calls identity, not the reader API',
     );
-    assert(calls[1]?.csrf === 'csrf-token', 'issue echoes the CSRF token');
+    assert(calls[1]!.csrf === 'csrf-token', 'issue echoes the CSRF token');
     const clients = await listMcpClients();
     assert(clients.length === 1 && clients[0]!.id === 'c1', 'list returns client metadata only');
     await setMcpConsent('c1', true);
