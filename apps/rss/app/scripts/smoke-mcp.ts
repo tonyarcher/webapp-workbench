@@ -36,7 +36,7 @@ try {
     const issued = await issueMcpClient('desk');
     assert(issued.token === 'raw-token-once', 'identity issues the one-time token');
     assert(
-        calls[1]?.url.startsWith('https://id.test/user-api/oauth/mcp/clients'),
+        calls[1]!.url.startsWith('https://id.test/user-api/oauth/mcp/clients'),
         'issue calls identity, not the reader API',
     );
     assert(calls[1]!.csrf === 'csrf-token', 'issue echoes the CSRF token');
