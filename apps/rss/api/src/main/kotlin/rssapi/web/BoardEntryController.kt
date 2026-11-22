@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import rssapi.body.BodyStore
 import rssapi.domain.parseSearchQueryText
 import rssapi.persist.ArticleRepo
 import rssapi.persist.BoardEntity
@@ -30,6 +31,7 @@ class BoardEntryController(
     private val articles: ArticleRepo,
     private val feeds: FeedRepo,
     private val subs: SubscriptionRepo,
+    private val bodyStore: BodyStore,
 ) {
     @GetMapping("/boards/{id}/entries", headers = ["X-Api-Version=1"])
     fun list(@PathVariable id: String): BoardEntryListJson {
@@ -48,7 +50,15 @@ class BoardEntryController(
         val article = resolveSubscribedArticle(articles, subs, user.id, articleId)
         val feed = feeds.findById(article.feedId).orElse(null)
         val row = try {
-            entries.save(snapshotOf(article, feed, board.id!!, nextEntrySortOrder(entries, board.id!!)))
+            entries.save(
+                snapshotOf(
+                    article,
+                    feed,
+                    board.id!!,
+                    nextEntrySortOrder(entries, board.id!!),
+                    bodyStore.get(article.id),
+                ),
+            )
         } catch (_: DataIntegrityViolationException) {
             entries.findByBoardIdAndArticleId(board.id!!, articleId)
                 ?: throw ApiException(HttpStatus.CONFLICT, "Unable to add article to board")

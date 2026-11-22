@@ -78,13 +78,15 @@ rollback path; none of them changes the global feed pool or per-user state.
    table, a bounded `@Scheduled` job backfills it, and the store reads the table
    with an `articles.content_html` fallback while dual-writing both copies.
    Ingest and on-demand extraction now write bodies through the store, so the
-   table stays current. **Slice 2b implemented:** V18 adds `excerpt` and `image`
-   to `articles`; ingest and extraction fill them, a bounded backfill covers
-   existing rows with targeted updates, `ArticleListQuery` projects them so the
-   list read never selects `content_html`, and `GET /articles/{id}/body` serves
-   the stored body to the reader on open. Still open: `search_text` is still
-   generated from `content_html`, and the front-page and edition builders still
-   load bodies — the column stays until those move.
+   table stays current. **Slice 2b implemented:** V18 adds excerpt and image
+   to rticles; ingest and extraction fill them, a bounded backfill covers
+   existing rows with targeted updates, ArticleListQuery projects them so the
+   list read never selects content_html, and GET /articles/{id}/body serves
+   the stored body to the reader on open. **V19** moves search_text off
+   content_html (SQL excerpt backfill + regenerated GIN column). **V20** drops
+   rticles.content_html; bodies live in rticle_bodies, readers/writers use
+   BodyStore, and the Kotlin body backfills were removed. Front-page and
+   edition builders read the list projection.
 3. **Object-store tier.** Add an S3 client for `seaweedfs` and a body store that
    writes content-addressed objects, with Postgres keeping a key and byte size.
    Offload is opt-in behind DB size / backup-duration triggers, never a row

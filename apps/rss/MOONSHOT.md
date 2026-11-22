@@ -1245,15 +1245,7 @@ the shape of the system must not assume that.
 
 ### Q1. Dynamic body fetching and out-of-database offload
 
-- **Status.** Slice 1 committed. Slice 2a adds the `article_bodies` table, a
-  bounded backfill job and a body store that reads it with a fallback to
-  `articles.content_html` while keeping both copies in sync. Slice 2b narrows
-  list reads: the article-list query projects `excerpt` and `image` (V18)
-  instead of `content_html`, and the reader fetches the stored body from
-  `GET /articles/{id}/body` when a list row has none. The old column stays
-  mapped and dual-written for rollback, and `search_text` is still generated
-  from it, so the final "drop the column" step is open. The remaining slices and
-  their acceptance criteria live in `DB_SCALE_PLAN.md` under "Q1 slices".
+- **Status.** Slices 1-2b done through V20: `article_bodies` + bounded backfills (V17), `excerpt`/`image` list projection and body endpoint (V18), `search_text` moved off `content_html` (V19), and `articles.content_html` dropped with readers/writers on `BodyStore` (V20). Remaining: slice 3 object-store cold tier and slice 4 dynamic depth/purge UI; acceptance criteria live in `DB_SCALE_PLAN.md` under "Q1 slices".
 - **Why.** Storing every full body, image, AI response and rendered edition in
   Postgres makes backups, vacuum and indexes the limit long before query
   latency. A reader opens a tiny slice of what we ingest. Store the slice,

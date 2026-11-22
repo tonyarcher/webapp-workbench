@@ -30,13 +30,12 @@ class ArticleExtractServiceMoreTest {
             "Developers are reworking plans that were shelved before the recent cost decline. "
         ).repeat(8)
 
-    private fun article(id: String = "a1", content: String = "<p>short</p>") = ArticleEntity(
+    private fun article(id: String = "a1") = ArticleEntity(
         id = id,
         feedId = feedId,
         guid = "g",
         title = "T",
         link = "https://example.com/story",
-        contentHtml = content,
     )
 
     private fun stub(a: ArticleEntity) {
@@ -88,8 +87,9 @@ class ArticleExtractServiceMoreTest {
     @Test
     fun equalLengthNotMeaningfulGain() {
         val rich = sanitizeHtml("<p>$longBody</p>")
-        val a = article(id = "a2", content = rich)
+        val a = article(id = "a2")
         stub(a)
+        whenever(bodyStore.get("a2")).thenReturn(rich)
         whenever(
             pages.fetchHtml("https://example.com/story"),
         ).thenReturn("""<html><body><article><p>$longBody</p></article></body></html>""")

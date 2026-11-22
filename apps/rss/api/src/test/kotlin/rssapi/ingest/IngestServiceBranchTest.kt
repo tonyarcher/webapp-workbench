@@ -115,9 +115,9 @@ class IngestServiceBranchTest {
             """<content:encoded>real content here</content:encoded></item>""" +
             """</channel></rss>"""
         ingest.ingestXml(feed, xml)
-        val captor = argumentCaptor<rssapi.persist.ArticleEntity>()
-        verify(articles).save(captor.capture())
-        assertTrue(captor.firstValue.contentHtml?.contains("real content here") == true)
+        val body = argumentCaptor<String>()
+        verify(bodyStore).put(any(), body.capture())
+        assertTrue(body.firstValue.contains("real content here"))
     }
 
     @Test
@@ -129,9 +129,9 @@ class IngestServiceBranchTest {
             """<enclosure url="https://example.com/i.png" type="image/png"/></item>""" +
             """</channel></rss>"""
         ingest.ingestXml(feed, xml)
-        val captor = argumentCaptor<rssapi.persist.ArticleEntity>()
-        verify(articles).save(captor.capture())
-        val html = captor.firstValue.contentHtml ?: ""
+        val body = argumentCaptor<String>()
+        verify(bodyStore).put(any(), body.capture())
+        val html = body.firstValue
         assertEquals(1, html.split("https://example.com/i.png").size - 1)
     }
 
@@ -173,9 +173,9 @@ class IngestServiceBranchTest {
             """<item><title>t</title><link>https://example.com/z</link><description>$big</description></item>""" +
             """</channel></rss>"""
         ingest.ingestXml(feed, xml)
-        val captor = argumentCaptor<rssapi.persist.ArticleEntity>()
-        verify(articles, org.mockito.kotlin.atLeastOnce()).save(captor.capture())
-        assertTrue(captor.allValues.any { (it.contentHtml?.length ?: 0) <= rssapi.MAX_CONTENT_BYTES })
+        val body = argumentCaptor<String>()
+        verify(bodyStore, org.mockito.kotlin.atLeastOnce()).put(any(), body.capture())
+        assertTrue(body.allValues.any { it.length <= rssapi.MAX_CONTENT_BYTES })
     }
 
     @Test
@@ -189,9 +189,9 @@ class IngestServiceBranchTest {
             </channel></rss>
         """.trimIndent()
         ingest.ingestXml(feed, xml)
-        val captor = argumentCaptor<rssapi.persist.ArticleEntity>()
-        verify(articles).save(captor.capture())
-        assertTrue(captor.firstValue.contentHtml?.contains("https://example.com/i.png") == true)
+        val body = argumentCaptor<String>()
+        verify(bodyStore).put(any(), body.capture())
+        assertTrue(body.firstValue.contains("https://example.com/i.png"))
     }
 
     @Test

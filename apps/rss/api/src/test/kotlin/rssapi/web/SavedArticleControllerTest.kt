@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
+import rssapi.body.BodyStore
 import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedEntity
@@ -60,6 +61,9 @@ class SavedArticleControllerTest {
 
     @MockitoBean
     lateinit var subs: SubscriptionRepo
+
+    @MockitoBean
+    lateinit var bodyStore: BodyStore
 
     private val uid = UUID.randomUUID()
     private val feedId = UUID.randomUUID()

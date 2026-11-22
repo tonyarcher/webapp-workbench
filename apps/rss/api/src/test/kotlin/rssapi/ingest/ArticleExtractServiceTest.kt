@@ -36,7 +36,6 @@ class ArticleExtractServiceTest {
         guid = "g",
         title = "T",
         link = "https://example.com/story",
-        contentHtml = "<p>short</p>",
     )
 
     private val longBody = (
@@ -87,9 +86,9 @@ class ArticleExtractServiceTest {
         whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
         val res = service.extractForUser(uid, "a1")
         assertTrue(res.extracted)
-        assertTrue(res.article.contentHtml!!.contains("Grid operators"))
-        verify(articles).save(any<ArticleEntity>())
-        verify(bodyStore).put("a1", res.article.contentHtml!!)
+        val body = org.mockito.kotlin.argumentCaptor<String>()
+        verify(bodyStore).put(org.mockito.kotlin.eq("a1"), body.capture())
+        assertTrue(body.firstValue.contains("Grid operators"))
     }
 
     @Test
@@ -118,9 +117,9 @@ class ArticleExtractServiceTest {
             guid = "g3",
             title = "T",
             link = "https://example.com/story",
-            contentHtml = sanitizeHtml("<p>$longBody$longBody</p>"),
         )
         whenever(articles.findById("a3")).thenReturn(Optional.of(rich))
+        whenever(bodyStore.get("a3")).thenReturn(sanitizeHtml("<p>$longBody$longBody</p>"))
         whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedId))
         val page = """<html><body><article><p>$longBody</p></article></body></html>"""
         whenever(pages.fetchHtml("https://example.com/story")).thenReturn(page)

@@ -42,7 +42,6 @@ class ArticleExtractService(
             ?: return ExtractResult(article, false, null)
         val sanitized = sanitizeHtml(html).take(MAX_CONTENT_BYTES)
         if (!isMeaningfulGain(article, sanitized)) return ExtractResult(article, false, source)
-        article.contentHtml = sanitized
         article.excerpt = excerptOf(sanitized)
         article.image = firstImageUrl(sanitized, article.link)
         val saved = articles.save(article)
@@ -76,7 +75,7 @@ class ArticleExtractService(
     }
 
     private fun isMeaningfulGain(article: ArticleEntity, candidateHtml: String): Boolean {
-        val current = stripHtml(article.contentHtml ?: article.summary).length
+        val current = stripHtml(bodyStore.get(article.id) ?: article.summary).length
         val next = stripHtml(candidateHtml).length
         return next >= current + MIN_GAIN_CHARS
     }

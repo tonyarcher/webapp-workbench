@@ -23,6 +23,7 @@ import rssapi.ai.AiStatus
 import rssapi.ai.HighlightExcerpt
 import rssapi.ai.HighlightResult
 import rssapi.ai.SummaryLength
+import rssapi.body.BodyStore
 import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleRepo
 import rssapi.persist.SubscriptionRepo
@@ -61,6 +62,9 @@ class AiControllerTest {
 
     @MockitoBean
     lateinit var highlights: AiHighlightService
+
+    @MockitoBean
+    lateinit var bodyStore: BodyStore
 
     private fun stubAuth() {
         whenever(decoder.decode(any())).thenReturn(aiJwt("u1"))

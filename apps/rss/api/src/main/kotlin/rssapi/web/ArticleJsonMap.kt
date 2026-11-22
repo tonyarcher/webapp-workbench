@@ -2,7 +2,6 @@ package rssapi.web
 
 import rssapi.domain.ArticleSort
 import rssapi.domain.encodeCursor
-import rssapi.domain.firstImageUrl
 import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleListRow
 import rssapi.persist.ArticleScoreEntity
@@ -22,8 +21,8 @@ fun ArticleEntity.toJson(state: ArticleStateEntity?, scores: ArticleScoreEntity?
     link = link,
     author = author,
     summary = summary,
-    content = contentHtml,
-    image = image ?: firstImageUrl(contentHtml, link),
+    content = null,
+    image = image,
     normLink = normLink,
     comments = comments,
     engagement = engagement.toDouble().takeIf { it != 0.0 },

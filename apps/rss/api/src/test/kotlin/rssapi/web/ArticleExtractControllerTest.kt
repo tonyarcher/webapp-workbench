@@ -57,7 +57,6 @@ class ArticleExtractControllerTest {
             guid = "g",
             title = "Batteries",
             link = "https://example.com/a",
-            contentHtml = "<p>rich</p>",
             publishedAt = Instant.parse("2026-01-01T00:00:00Z"),
             fetchedAt = Instant.parse("2026-01-01T00:00:00Z"),
         )

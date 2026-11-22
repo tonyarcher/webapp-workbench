@@ -14,7 +14,6 @@ import rssapi.domain.affinityKeys
 import rssapi.log.log
 import rssapi.persist.AffinityId
 import rssapi.persist.AffinityRepo
-import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleListQuery
 import rssapi.persist.ArticleListRow
 import rssapi.persist.ArticleScoreEntity
@@ -247,9 +246,7 @@ private fun ArticleScoreEntity.isStale(now: Instant): Boolean {
 /** Counts whitespace-separated words after stripping tags; null bodies count as zero. */
 internal fun wordCountOf(article: ArticleListRow): Int = wordCountOf(article.summary, article.excerpt)
 
-internal fun wordCountOf(article: ArticleEntity): Int = wordCountOf(article.summary, article.contentHtml)
-
-private fun wordCountOf(summary: String?, body: String?): Int {
+internal fun wordCountOf(summary: String?, body: String?): Int {
     val text = listOfNotNull(summary, body).joinToString(" ")
     return TAG_STRIP.replace(text, " ").split(WS_SPLIT).count { it.isNotBlank() }
 }

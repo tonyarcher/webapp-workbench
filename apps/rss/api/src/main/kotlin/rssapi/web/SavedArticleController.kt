@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
+import rssapi.body.BodyStore
 import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleRepo
 import rssapi.persist.FeedEntity
@@ -25,6 +26,7 @@ class SavedArticleController(
     private val articles: ArticleRepo,
     private val feeds: FeedRepo,
     private val subs: SubscriptionRepo,
+    private val bodyStore: BodyStore,
 ) {
     @GetMapping("/saved-articles", headers = ["X-Api-Version=1"])
     fun list(): SavedArticleListJson =
@@ -70,7 +72,7 @@ class SavedArticleController(
         link = article.link,
         author = article.author,
         summary = article.summary,
-        contentHtml = article.contentHtml,
+        contentHtml = bodyStore.get(article.id),
         publishedAt = article.publishedAt,
         savedAt = Instant.now(),
     )

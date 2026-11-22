@@ -10,6 +10,7 @@ import rssapi.ai.AiHighlightService
 import rssapi.ai.AiService
 import rssapi.ai.HighlightResult
 import rssapi.ai.SummaryLength
+import rssapi.body.BodyStore
 import rssapi.frontpage.wordCountOf
 import rssapi.persist.ArticleRepo
 import rssapi.persist.SubscriptionRepo
@@ -36,6 +37,7 @@ class AiController(
     private val articles: ArticleRepo,
     private val subs: SubscriptionRepo,
     private val highlights: AiHighlightService,
+    private val bodyStore: BodyStore,
 ) {
     @GetMapping("/ai/status", headers = ["X-Api-Version=1"])
     fun status(): AiStatusJson {
@@ -63,8 +65,9 @@ class AiController(
         if (article.feedId !in subs.findFeedIdsByUserId(uid).toSet()) {
             throw ApiException(HttpStatus.NOT_FOUND, "Article not found")
         }
-        val readMinutes = ((wordCountOf(article) + 249) / 250).coerceAtLeast(1)
-        val result: HighlightResult = highlights.highlights(uid, article.title, article.contentHtml, readMinutes)
+        val body = bodyStore.get(articleId)
+        val readMinutes = ((wordCountOf(article.summary, body) + 249) / 250).coerceAtLeast(1)
+        val result: HighlightResult = highlights.highlights(uid, article.title, body, readMinutes)
         return AiHighlightsJson(
             available = result.available,
             excerpts = result.excerpts.map { HighlightExcerptJson(it.index, it.text, it.score) },

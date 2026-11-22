@@ -37,7 +37,6 @@ class ArticleExtractServiceBranchesTest {
             guid = "g",
             title = "T",
             link = "https://example.com/story",
-            contentHtml = "<p>short</p>",
         )
         whenever(articles.findById("a1")).thenReturn(Optional.of(article))
         whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedId))
@@ -59,7 +58,6 @@ class ArticleExtractServiceBranchesTest {
             guid = "g",
             title = "T",
             link = "https://example.com/story",
-            contentHtml = "<p>short</p>",
         )
         whenever(articles.findById("a2")).thenReturn(Optional.of(article))
         whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedId))
@@ -76,7 +74,6 @@ class ArticleExtractServiceBranchesTest {
             guid = "g",
             title = "T",
             link = "https://example.com/story",
-            contentHtml = "<p>short</p>",
         )
         whenever(articles.findById("a3")).thenReturn(Optional.of(article))
         whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedId))

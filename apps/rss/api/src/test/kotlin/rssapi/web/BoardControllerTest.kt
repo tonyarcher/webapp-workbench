@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.put
+import rssapi.body.BodyStore
 import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleRepo
 import rssapi.persist.BoardEntity
@@ -58,6 +59,8 @@ class BoardControllerTest {
     @MockitoBean lateinit var feeds: FeedRepo
 
     @MockitoBean lateinit var subs: SubscriptionRepo
+
+    @MockitoBean lateinit var bodyStore: BodyStore
 
     private val uid = UUID.randomUUID()
     private val boardId = UUID.randomUUID()

@@ -67,9 +67,9 @@ class IngestServiceTest {
 
         ingest.ingestXml(feed, rssWith(rssItem("g1")))
 
-        val captor = argumentCaptor<ArticleEntity>()
-        verify(articles).save(captor.capture())
-        assertEquals("<p>$FULL_BODY</p>", captor.firstValue.contentHtml)
+        val body = argumentCaptor<String>()
+        verify(bodyStore).put(any(), body.capture())
+        assertEquals("<p>$FULL_BODY</p>", body.firstValue)
     }
 
     @Test
@@ -81,9 +81,9 @@ class IngestServiceTest {
         ingest.ingestXml(feed, rssWith(rssItem(guid)))
         val stored = argumentCaptor<ArticleEntity>()
         verify(articles).save(stored.capture())
-        assertEquals("<p>$FULL_BODY</p>", stored.firstValue.contentHtml)
-        org.mockito.kotlin.clearInvocations(articles, maintenance)
+        org.mockito.kotlin.clearInvocations(articles, maintenance, bodyStore)
         whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(stored.firstValue)
+        whenever(bodyStore.get(stored.firstValue.id)).thenReturn("<p>$FULL_BODY</p>")
 
         ingest.ingestXml(feed, rssWith(rssItem(guid)))
 
@@ -99,15 +99,18 @@ class IngestServiceTest {
         ingest.ingestXml(feed, rssWith(rssItem(guid)))
         val stored = argumentCaptor<ArticleEntity>()
         verify(articles).save(stored.capture())
-        org.mockito.kotlin.clearInvocations(articles, maintenance)
+        org.mockito.kotlin.clearInvocations(articles, maintenance, bodyStore)
         whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(stored.firstValue)
+        whenever(bodyStore.get(stored.firstValue.id)).thenReturn("<p>$FULL_BODY</p>")
 
         ingest.ingestXml(feed, rssWith(rssItem(guid, title = "rewritten")))
 
         val saved = argumentCaptor<ArticleEntity>()
         verify(articles).save(saved.capture())
         assertEquals("rewritten", saved.firstValue.title)
-        assertEquals("<p>$FULL_BODY</p>", saved.firstValue.contentHtml)
+        val body = argumentCaptor<String>()
+        verify(bodyStore).put(any(), body.capture())
+        assertEquals("<p>$FULL_BODY</p>", body.firstValue)
     }
 
     @Test
@@ -119,16 +122,16 @@ class IngestServiceTest {
             feedId = feed.id!!,
             guid = guid,
             title = "old",
-            contentHtml = "   ",
         )
         whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(existing)
+        whenever(bodyStore.get(existing.id)).thenReturn("   ")
         whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
 
         ingest.ingestXml(feed, rssWith(rssItem(guid)))
 
-        val saved = argumentCaptor<ArticleEntity>()
-        verify(articles).save(saved.capture())
-        assertEquals("hi", saved.firstValue.contentHtml)
+        val body = argumentCaptor<String>()
+        verify(bodyStore).put(any(), body.capture())
+        assertEquals("hi", body.firstValue)
     }
 
     @Test

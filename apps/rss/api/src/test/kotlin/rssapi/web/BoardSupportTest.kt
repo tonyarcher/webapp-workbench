@@ -57,12 +57,11 @@ class BoardSupportTest {
                 title = "T",
                 author = "A",
                 summary = "S",
-                contentHtml = "<p>x</p>",
                 publishedAt = Instant.ofEpochMilli(5),
             )
         val feed = FeedEntity(id = article.feedId, title = "Feed")
         val boardId = UUID.randomUUID()
-        val entry = snapshotOf(article, feed, boardId, 3)
+        val entry = snapshotOf(article, feed, boardId, 3, "<p>x</p>")
         assertEquals(boardId, entry.boardId)
         assertEquals("a1", entry.articleId)
         assertEquals("T", entry.title)

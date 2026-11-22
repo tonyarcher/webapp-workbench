@@ -11,7 +11,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import rssapi.persist.ArticleBodyEntity
 import rssapi.persist.ArticleBodyRepo
-import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleRepo
 import java.util.Optional
 
@@ -21,7 +20,7 @@ class DbBodyStoreTest {
     private val store = DbBodyStore(articles, bodies)
 
     @Test
-    fun readsFromBodyTableFirst() {
+    fun readsFromBodyTable() {
         whenever(bodies.findById("a")).thenReturn(Optional.of(ArticleBodyEntity("a", "body")))
 
         assertEquals("body", store.get("a"))
@@ -29,21 +28,22 @@ class DbBodyStoreTest {
     }
 
     @Test
-    fun fallsBackToArticleColumn() {
-        whenever(articles.findById("a")).thenReturn(Optional.of(ArticleEntity(id = "a", contentHtml = "old")))
+    fun missingBodyReturnsNull() {
+        whenever(bodies.findById("a")).thenReturn(Optional.empty())
 
-        assertEquals("old", store.get("a"))
-    }
-
-    @Test
-    fun missingArticleHasNoBody() {
         assertNull(store.get("a"))
     }
 
     @Test
-    fun writesBothCopies() {
-        val article = ArticleEntity(id = "a", contentHtml = "old")
-        whenever(articles.findById("a")).thenReturn(Optional.of(article))
+    fun blankBodyRowReturnsNull() {
+        whenever(bodies.findById("a")).thenReturn(Optional.of(ArticleBodyEntity("a", "")))
+
+        assertNull(store.get("a"))
+    }
+
+    @Test
+    fun writesBodyOnly() {
+        whenever(articles.existsById("a")).thenReturn(true)
 
         store.put("a", "new")
 
@@ -51,35 +51,16 @@ class DbBodyStoreTest {
         verify(bodies).save(saved.capture())
         assertEquals("a", saved.firstValue.articleId)
         assertEquals("new", saved.firstValue.contentHtml)
-        assertEquals("new", article.contentHtml)
-        verify(articles).save(article)
-    }
-
-    @Test
-    fun unchangedArticleColumnIsNotSaved() {
-        val article = ArticleEntity(id = "a", contentHtml = "new")
-        whenever(articles.findById("a")).thenReturn(Optional.of(article))
-
-        store.put("a", "new")
-
-        verify(bodies, org.mockito.kotlin.times(1)).save(any())
         verify(articles, never()).save(any())
     }
 
     @Test
     fun missingArticleIsNotSaved() {
+        whenever(articles.existsById("a")).thenReturn(false)
+
         store.put("a", "new")
 
         verify(bodies, never()).save(any())
-        verify(articles, never()).save(any())
-    }
-
-    @Test
-    fun blankBodyRowFallsBackToArticleColumn() {
-        whenever(bodies.findById("a")).thenReturn(Optional.of(ArticleBodyEntity("a", "")))
-        whenever(articles.findById("a")).thenReturn(Optional.of(ArticleEntity(id = "a", contentHtml = "old")))
-
-        assertEquals("old", store.get("a"))
     }
 
     @Test
@@ -87,6 +68,6 @@ class DbBodyStoreTest {
         store.put("a", "   ")
 
         verify(bodies, never()).save(any())
-        verify(articles, never()).findById(any())
+        verify(articles, never()).existsById(any())
     }
 }

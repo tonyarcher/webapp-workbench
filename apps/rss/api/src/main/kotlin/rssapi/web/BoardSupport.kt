@@ -44,20 +44,25 @@ internal fun resolveSubscribedArticle(
     return article
 }
 
-internal fun snapshotOf(article: ArticleEntity, feed: FeedEntity?, boardId: UUID, sortOrder: Int): BoardEntryEntity =
-    BoardEntryEntity(
-        boardId = boardId,
-        articleId = article.id,
-        feedId = article.feedId,
-        feedTitle = feed?.title,
-        title = article.title,
-        link = article.link,
-        author = article.author,
-        summary = article.summary,
-        contentHtml = article.contentHtml,
-        publishedAt = article.publishedAt,
-        sortOrder = sortOrder,
-    )
+internal fun snapshotOf(
+    article: ArticleEntity,
+    feed: FeedEntity?,
+    boardId: UUID,
+    sortOrder: Int,
+    contentHtml: String?,
+): BoardEntryEntity = BoardEntryEntity(
+    boardId = boardId,
+    articleId = article.id,
+    feedId = article.feedId,
+    feedTitle = feed?.title,
+    title = article.title,
+    link = article.link,
+    author = article.author,
+    summary = article.summary,
+    contentHtml = contentHtml,
+    publishedAt = article.publishedAt,
+    sortOrder = sortOrder,
+)
 
 internal fun nextEntrySortOrder(entries: BoardEntryRepo, boardId: UUID): Int =
     (entries.findFirstByBoardIdOrderBySortOrderDesc(boardId)?.sortOrder ?: -1) + 1

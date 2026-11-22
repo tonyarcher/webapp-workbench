@@ -22,7 +22,7 @@ class ArticleJsonMapTest {
         popularity = 1.5f,
         engagement = 2f,
         hot = hot,
-        contentHtml = "<p>hi</p><img src=\"https://example.com/a.png\">",
+        image = "https://example.com/a.png",
     )
 
     @Test

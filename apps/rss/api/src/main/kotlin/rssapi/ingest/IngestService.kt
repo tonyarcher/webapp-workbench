@@ -32,7 +32,6 @@ import java.util.UUID
 private fun ArticleEntity.sameContent(other: ArticleEntity): Boolean = title == other.title &&
     link == other.link &&
     summary == other.summary &&
-    contentHtml == other.contentHtml &&
     excerpt == other.excerpt &&
     image == other.image &&
     publishedAt == other.publishedAt
@@ -148,22 +147,24 @@ class IngestService(
         val existing = articles.findByFeedIdAndGuid(feed.id!!, item.guid)
         if (existing == null) {
             // Full text is a one-time enrichment for new stories.
-            entity.contentHtml = ArticleFullText.of(pages, item, html)
-            entity.excerpt = excerptOf(entity.contentHtml)
+            val fullHtml = ArticleFullText.of(pages, item, html)
+            entity.excerpt = excerptOf(fullHtml)
+            entity.image = firstImageUrl(fullHtml, entity.link)
             articles.save(entity)
-            bodyStore.put(entity.id, entity.contentHtml.orEmpty())
+            bodyStore.put(entity.id, fullHtml)
             return norm
         }
         // The stored body may be the one-time full-text extraction, which the
         // feed excerpt cannot reproduce. Keep it and refresh list-level fields.
-        entity.contentHtml = existing.contentHtml?.takeIf { it.isNotBlank() } ?: entity.contentHtml
-        entity.excerpt = excerptOf(entity.contentHtml)
-        entity.image = firstImageUrl(entity.contentHtml, entity.link)
+        val stored = bodyStore.get(existing.id)?.takeIf { it.isNotBlank() }
+        val body = stored ?: html
+        entity.excerpt = excerptOf(body)
+        entity.image = firstImageUrl(body, entity.link)
         // A poll that finds the same story with the same fields must not rewrite
         // the row: that churns writes and can reset extracted article metadata.
         if (existing.sameContent(entity)) return null
         articles.save(entity)
-        bodyStore.put(entity.id, entity.contentHtml.orEmpty())
+        bodyStore.put(entity.id, body)
         return norm
     }
 
@@ -197,7 +198,6 @@ class IngestService(
             domain = link?.let { domainOf(it) }?.ifEmpty { null },
             author = item.author,
             summary = item.summary,
-            contentHtml = html,
             excerpt = excerptOf(html),
             image = firstImageUrl(html, link),
             comments = item.comments,
