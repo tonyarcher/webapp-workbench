@@ -44,6 +44,7 @@ export function anchor(root: ShadowRoot): Comment {
 /** Swap the single node mounted at an anchor, removing the previous one. */
 export function mountRegion(host: PaintHost, anchorNode: Comment, node: Node | null): void {
     const previous = host.regionNodes.get(anchorNode);
+    if (node === previous) return;
     if (previous?.parentNode) previous.parentNode.removeChild(previous);
     if (node) {
         host.regionNodes.set(anchorNode, node);
@@ -59,7 +60,8 @@ export function paint(host: PaintHost): void {
     const { toolbar, selection, hint, advanced, slideshow, loadError } = host.anchors;
     mountRegion(host, toolbar, renderToolbar(renderHost));
     mountRegion(host, hint, renderInterestingHint(renderHost));
-    mountRegion(host, advanced, renderAdvancedMenu(renderHost));
+    const prevAdvanced = host.regionNodes.get(advanced);
+    mountRegion(host, advanced, renderAdvancedMenu(renderHost, prevAdvanced));
     if (host.listView === 'slideshow') {
         mountRegion(host, selection, null);
         mountRegion(host, slideshow, renderSlideshowSection(renderHost));

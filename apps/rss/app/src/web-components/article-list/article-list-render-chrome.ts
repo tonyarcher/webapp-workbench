@@ -168,8 +168,11 @@ export function renderInterestingHint(host: ArticleListRenderHost): HTMLElement 
     return bar;
 }
 
-export function renderAdvancedMenu(host: ArticleListRenderHost): HTMLElement {
-    const menu = document.createElement('advanced-menu');
+export function renderAdvancedMenu(host: ArticleListRenderHost, existing?: Node): HTMLElement {
+    const menu =
+        existing instanceof HTMLElement && existing.localName === 'advanced-menu'
+            ? existing
+            : document.createElement('advanced-menu');
     (menu as unknown as { open: boolean }).open = host.advancedOpen;
     (menu as unknown as { anchor: MenuAnchor | null }).anchor = host.advancedAnchor;
     // Interesting uses client-side hideRead; server-side unreadOnly starves the batch.
@@ -179,13 +182,15 @@ export function renderAdvancedMenu(host: ArticleListRenderHost): HTMLElement {
     (menu as unknown as { markOnScroll: boolean }).markOnScroll = host.markOnScroll;
     (menu as unknown as { marking: boolean }).marking = host.marking;
     (menu as unknown as { scopeLabel: string }).scopeLabel = host.scopeLabel();
-    menu.addEventListener('unread-change', host.onAdvancedUnread.bind(host));
-    menu.addEventListener('mark-scroll-change', host.onAdvancedMarkScroll.bind(host));
-    menu.addEventListener('mark-before', host.onMarkBefore.bind(host));
-    menu.addEventListener('apply-all', () => host.onApplyAllViews());
-    menu.addEventListener('close', () => {
-        host.advancedOpen = false;
-    });
+    if (menu !== existing) {
+        menu.addEventListener('unread-change', host.onAdvancedUnread.bind(host));
+        menu.addEventListener('mark-scroll-change', host.onAdvancedMarkScroll.bind(host));
+        menu.addEventListener('mark-before', host.onMarkBefore.bind(host));
+        menu.addEventListener('apply-all', () => host.onApplyAllViews());
+        menu.addEventListener('close', () => {
+            host.advancedOpen = false;
+        });
+    }
     return menu;
 }
 
