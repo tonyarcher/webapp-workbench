@@ -13,7 +13,6 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.jpa.domain.Specification
@@ -25,8 +24,8 @@ import rssapi.persist.AffinityId
 import rssapi.persist.AffinityRepo
 import rssapi.persist.AiQuotaEntity
 import rssapi.persist.AiQuotaRepo
-import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleRepo
+import rssapi.persist.ArticleListQuery
+import rssapi.persist.ArticleListRow
 import rssapi.persist.EDITION_FAILED
 import rssapi.persist.EDITION_READY
 import rssapi.persist.EditionEntity
@@ -50,7 +49,7 @@ private val RESILIENCE_UID: UUID = UUID.fromString("33333333-3333-3333-3333-3333
 @ExtendWith(MockitoExtension::class)
 class EditionServiceResilienceTest {
     @Mock
-    lateinit var articles: ArticleRepo
+    lateinit var articles: ArticleListQuery
 
     @Mock
     lateinit var affinity: AffinityRepo
@@ -87,15 +86,24 @@ class EditionServiceResilienceTest {
         return out
     }
 
-    private fun article(id: String): ArticleEntity = ArticleEntity(
+    private fun article(id: String): ArticleListRow = ArticleListRow(
         id = id,
         feedId = UUID.randomUUID(),
         guid = "g-$id",
         title = "t-$id",
+        link = null,
         normLink = "story-$id",
+        domain = null,
+        author = null,
         summary = "summary $id",
+        excerpt = null,
+        image = null,
+        comments = null,
         publishedAt = RESILIENCE_NOW.minusSeconds(3_600),
         fetchedAt = RESILIENCE_NOW.minusSeconds(3_600),
+        popularity = 0f,
+        engagement = 0f,
+        hot = 0f,
     )
 
     private fun stubQuota() {
@@ -124,7 +132,7 @@ class EditionServiceResilienceTest {
     @Test
     fun unexpectedFailureMarksFailedAs500() {
         stubQuota()
-        whenever(articles.findAll(any<Specification<ArticleEntity>>(), any<Pageable>()))
+        whenever(articles.findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>()))
             .thenThrow(RuntimeException("db down"))
         whenever(editions.save(any<EditionEntity>())).thenAnswer { it.getArgument<EditionEntity>(0) }
 
@@ -139,8 +147,8 @@ class EditionServiceResilienceTest {
     @Test
     fun pruneKeepsSevenNewest() {
         stubQuota()
-        whenever(articles.findAll(any<Specification<ArticleEntity>>(), any<Pageable>()))
-            .thenReturn(PageImpl(listOf(article("a1"))))
+        whenever(articles.findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>()))
+            .thenReturn(listOf(article("a1")))
         whenever(affinity.findAllById(any<Iterable<AffinityId>>())).thenReturn(emptyList())
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(emptyList())
         whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenReturn("s")
@@ -162,8 +170,8 @@ class EditionServiceResilienceTest {
     @Test
     fun emptyWindowStillBuildsReady() {
         stubQuota()
-        whenever(articles.findAll(any<Specification<ArticleEntity>>(), any<Pageable>()))
-            .thenReturn(PageImpl(emptyList()))
+        whenever(articles.findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>()))
+            .thenReturn(emptyList())
         whenever(affinity.findAllById(any<Iterable<AffinityId>>())).thenReturn(emptyList())
         whenever(editions.save(any<EditionEntity>())).thenAnswer { it.getArgument<EditionEntity>(0) }
         whenever(editions.findByUserId(any(), any<Sort>())).thenReturn(emptyList())
@@ -181,8 +189,8 @@ class EditionServiceResilienceTest {
     @Test
     fun articlesWithoutFoldersGetNullTopic() {
         stubQuota()
-        whenever(articles.findAll(any<Specification<ArticleEntity>>(), any<Pageable>()))
-            .thenReturn(PageImpl(listOf(article("a1"))))
+        whenever(articles.findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>()))
+            .thenReturn(listOf(article("a1")))
         whenever(affinity.findAllById(any<Iterable<AffinityId>>())).thenReturn(emptyList())
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(emptyList())
         whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenReturn("s")
@@ -198,8 +206,8 @@ class EditionServiceResilienceTest {
     @Test
     fun opinionFailureLeavesNullOpinion() {
         stubQuota()
-        whenever(articles.findAll(any<Specification<ArticleEntity>>(), any<Pageable>()))
-            .thenReturn(PageImpl(listOf(article("a1"))))
+        whenever(articles.findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>()))
+            .thenReturn(listOf(article("a1")))
         whenever(affinity.findAllById(any<Iterable<AffinityId>>())).thenReturn(emptyList())
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(emptyList())
         whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenAnswer { inv ->
@@ -223,16 +231,9 @@ class EditionServiceResilienceTest {
     @Test
     fun blankArticleSkipsAiEntirely() {
         stubQuota()
-        val blank = ArticleEntity(
-            id = "blank",
-            feedId = UUID.randomUUID(),
-            guid = "g-blank",
-            title = "",
-            publishedAt = RESILIENCE_NOW.minusSeconds(3_600),
-            fetchedAt = RESILIENCE_NOW.minusSeconds(3_600),
-        )
-        whenever(articles.findAll(any<Specification<ArticleEntity>>(), any<Pageable>()))
-            .thenReturn(PageImpl(listOf(blank)))
+        val blank = article("blank").copy(title = "", normLink = null, summary = null)
+        whenever(articles.findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>()))
+            .thenReturn(listOf(blank))
         whenever(affinity.findAllById(any<Iterable<AffinityId>>())).thenReturn(emptyList())
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(emptyList())
         whenever(editions.save(any<EditionEntity>())).thenAnswer { it.getArgument<EditionEntity>(0) }

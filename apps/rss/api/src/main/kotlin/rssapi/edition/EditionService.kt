@@ -26,7 +26,7 @@ import rssapi.domain.voteTopic
 import rssapi.log.log
 import rssapi.persist.AffinityId
 import rssapi.persist.AffinityRepo
-import rssapi.persist.ArticleRepo
+import rssapi.persist.ArticleListQuery
 import rssapi.persist.EDITION_BUILDING
 import rssapi.persist.EDITION_FAILED
 import rssapi.persist.EDITION_READY
@@ -76,7 +76,7 @@ private data class SectionDraft(val item: Ranked, val summary: String?)
  */
 @Service
 class EditionService(
-    private val articles: ArticleRepo,
+    private val articles: ArticleListQuery,
     private val affinity: AffinityRepo,
     private val folders: FolderRepo,
     private val folderFeeds: FolderFeedRepo,
@@ -136,9 +136,9 @@ class EditionService(
     private fun loadRanked(userId: UUID, start: Instant, now: Instant, windowHours: Long): List<Ranked> {
         val spec = articleSpec(userId, ArticleScope.All, false, ArticleSort.NEWEST, null, start.toEpochMilli())
         val sort = Sort.by("publishedAt").descending().and(Sort.by("id").descending())
-        val found = articles.findAll(spec, PageRequest.of(0, EDITION_MAX_ARTICLES, sort)).content
+        val found = articles.findAll(spec, PageRequest.of(0, EDITION_MAX_ARTICLES, sort))
         val inputs = found.map { article ->
-            val excerpt = plainExcerpt(article.summary ?: article.contentHtml, EDITION_EXCERPT_CHARS)
+            val excerpt = plainExcerpt(article.summary ?: article.excerpt, EDITION_EXCERPT_CHARS)
             EditionArticle(
                 article.id, article.feedId, article.title, excerpt, article.publishedAt,
                 article.hot.toDouble(), article.popularity.toDouble(), article.engagement.toDouble(),

@@ -12,7 +12,6 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.jpa.domain.Specification
@@ -23,8 +22,8 @@ import rssapi.ai.AiService
 import rssapi.persist.AffinityRepo
 import rssapi.persist.AiQuotaEntity
 import rssapi.persist.AiQuotaRepo
-import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleRepo
+import rssapi.persist.ArticleListQuery
+import rssapi.persist.ArticleListRow
 import rssapi.persist.EDITION_READY
 import rssapi.persist.EditionEntity
 import rssapi.persist.EditionRepo
@@ -51,15 +50,21 @@ private fun serviceArticle(
     feed: UUID,
     hoursAgo: Long = 1,
     title: String = "t-$id",
-): ArticleEntity {
+): ArticleListRow {
     val at = SERVICE_NOW.minus(Duration.ofHours(hoursAgo))
-    return ArticleEntity(
+    return ArticleListRow(
         id = id,
         feedId = feed,
         guid = "g-$id",
         title = title,
+        link = null,
         normLink = norm,
+        domain = null,
+        author = null,
         summary = "summary $id",
+        excerpt = null,
+        image = null,
+        comments = null,
         publishedAt = at,
         fetchedAt = at,
         popularity = 5f,
@@ -71,7 +76,7 @@ private fun serviceArticle(
 @ExtendWith(MockitoExtension::class)
 class EditionServiceTest {
     @Mock
-    lateinit var articles: ArticleRepo
+    lateinit var articles: ArticleListQuery
 
     @Mock
     lateinit var affinity: AffinityRepo
@@ -113,12 +118,12 @@ class EditionServiceTest {
     }
 
     private fun stubWindow(
-        rows: List<ArticleEntity>,
+        rows: List<ArticleListRow>,
         links: List<FolderFeedEntity> = emptyList(),
         folderRows: List<FolderEntity> = emptyList(),
     ) {
-        whenever(articles.findAll(any<Specification<ArticleEntity>>(), any<Pageable>()))
-            .thenReturn(PageImpl(rows))
+        whenever(articles.findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>()))
+            .thenReturn(rows)
         whenever(affinity.findAllById(any<Iterable<rssapi.persist.AffinityId>>())).thenReturn(emptyList())
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(links)
         whenever(editions.save(any<EditionEntity>())).thenAnswer { it.getArgument<EditionEntity>(0) }
