@@ -74,6 +74,8 @@ export class ArticleView extends HTMLElement {
     boardMembership = new Set<string>();
     newBoardTitle = '';
     keywords: ArticleKeyword[] = [];
+    /** Stored body fetched for a list row; survives parent object churn. */
+    fetchedBody: { id: string; html: string } | null = null;
     /** Prevent async saved-state refresh from clobbering newer intent/results. */
     savedStateGen = 0;
     /** Decision-model-selected key lines for the open article. */
@@ -165,6 +167,13 @@ export class ArticleView extends HTMLElement {
 
     /** Bookkeeping formerly in updated(), run when the article identity changes. */
     private onArticleChanged(): void {
+        // A star/read toggle hands the element a new object built from the list
+        // row, which has no body. Reapply the body already fetched for it.
+        const incoming = this.article;
+        if (incoming && !incoming.content && this.fetchedBody?.id === incoming.id) {
+            this._article = { ...incoming, content: this.fetchedBody.html };
+        }
+        if (this.fetchedBody && this.fetchedBody.id !== this.article?.id) this.fetchedBody = null;
         this.sanitizedBody = null;
         this.deranked = this.article ? isDeranked(this.article.id) : false;
         this.keywords = this.article ? articleKeywords(this.article) : [];
@@ -181,7 +190,12 @@ export class ArticleView extends HTMLElement {
             if (saved !== null && this.article) {
                 void restoreArticleReadingProgress(this, this.article.id, saved);
             }
-            if (this.highlightsOn) void this.refreshKeyLines();
+            const current = this.article;
+            if (this.highlightsOn) {
+                void this.refreshKeyLines();
+            } else if (current && !current.content) {
+                void this.ensureRichContent(current);
+            }
             void this.refreshSavedState();
         }
     }

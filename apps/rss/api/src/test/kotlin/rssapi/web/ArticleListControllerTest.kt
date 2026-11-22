@@ -6,7 +6,6 @@ import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
-import org.springframework.data.domain.PageImpl
 import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
@@ -14,7 +13,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleRepo
+import rssapi.persist.ArticleListQuery
+import rssapi.persist.ArticleListRow
 import rssapi.persist.ArticleStateRepo
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
@@ -41,7 +41,7 @@ class ArticleListControllerTest {
     lateinit var users: UserRepo
 
     @MockitoBean
-    lateinit var articles: ArticleRepo
+    lateinit var listQuery: ArticleListQuery
 
     @MockitoBean
     lateinit var states: ArticleStateRepo
@@ -53,11 +53,11 @@ class ArticleListControllerTest {
 
     private fun stubEmpty() {
         whenever(
-            articles.findAll(
+            listQuery.findAll(
                 any<org.springframework.data.jpa.domain.Specification<ArticleEntity>>(),
                 any<org.springframework.data.domain.Pageable>(),
             ),
-        ).thenReturn(PageImpl(emptyList()))
+        ).thenReturn(emptyList())
         whenever(
             states.findByUserIdAndArticleIdIn(
                 any<UUID>(),
@@ -176,23 +176,34 @@ class ArticleListControllerTest {
 
     private fun stubSearchHit() {
         auth(UUID.randomUUID())
-        val entity = ArticleEntity(
-            id = "a1",
-            feedId = UUID.randomUUID(),
-            guid = "g1",
-            title = "Battery storage grid",
-            summary = "grid batteries",
-            publishedAt = java.time.Instant.ofEpochMilli(1000),
-            fetchedAt = java.time.Instant.ofEpochMilli(1000),
-        )
         whenever(
-            articles.findAll(
+            listQuery.findAll(
                 any<org.springframework.data.jpa.domain.Specification<ArticleEntity>>(),
                 any<org.springframework.data.domain.Pageable>(),
             ),
-        ).thenReturn(PageImpl(listOf(entity)))
+        ).thenReturn(listOf(searchRow()))
         whenever(states.findByUserIdAndArticleIdIn(any<UUID>(), any<List<String>>())).thenReturn(emptyList())
     }
+
+    private fun searchRow() = ArticleListRow(
+        id = "a1",
+        feedId = UUID.randomUUID(),
+        guid = "g1",
+        title = "Battery storage grid",
+        link = null,
+        normLink = null,
+        domain = null,
+        author = null,
+        summary = "grid batteries",
+        excerpt = "grid batteries",
+        image = null,
+        comments = null,
+        publishedAt = java.time.Instant.ofEpochMilli(1000),
+        fetchedAt = java.time.Instant.ofEpochMilli(1000),
+        popularity = 0f,
+        engagement = 0f,
+        hot = 0f,
+    )
 
     private fun getArticles(query: String) = mvc.get("/articles?$query") {
         header("X-Api-Version", "1")

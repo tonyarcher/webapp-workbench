@@ -43,6 +43,8 @@ export interface ArticleViewActionsHost {
     highlightsOn: boolean;
     sanitizedBody: { id: string; source: string | undefined; html: string } | null;
     keywords: ArticleKeyword[];
+    /** Stored body fetched for a list row; survives parent object churn. */
+    fetchedBody: { id: string; html: string } | null;
     dispatchEvent(e: Event): boolean;
     paint(): void;
     refreshSavedState(): Promise<void>;
@@ -266,26 +268,48 @@ export async function refreshKeyLines(host: ArticleViewActionsHost): Promise<voi
     host.paint();
 }
 
-/** Dynamically fetch fuller article text for thin content so analysis improves. */
+/** Load the stored body for list rows that omitted content, then extract if thin. */
 export async function ensureRichContent(host: ArticleViewActionsHost, a: Article): Promise<void> {
-    const text = stripTags(a.content ?? a.summary ?? '');
-    if (text.length >= 1200 || !a.link) return;
+    const open = (): Article | null => (host.article?.id === a.id ? host.article : null);
     try {
-        const { extractArticle } = await import('../../services/api');
-        const res = await extractArticle(a.id);
-        if (host.article?.id !== a.id || !res.extracted) return;
+        const { extractArticle, fetchArticleBody } = await import('../../services/api');
+        if (!a.content) {
+            const body = await fetchArticleBody(a.id);
+            if (!body) {
+                // No stored body: fall through to on-demand extraction below.
+            } else {
+                const still = open();
+                if (!still) return;
+                const next = { ...still, content: body };
+                recordUsage('body_loaded');
+                host.fetchedBody = { id: next.id, html: body };
+                host.article = next;
+                host.sanitizedBody = null;
+                host.keywords = articleKeywords(next);
+                host.paint();
+                return;
+            }
+        }
+        const current = open();
+        if (!current) return;
+        const text = stripTags(current.content ?? current.summary ?? '');
+        if (text.length >= 1200 || !current.link) return;
+        const res = await extractArticle(current.id);
+        const still = res.extracted ? open() : null;
+        if (!still) return;
+        const next = {
+            ...still,
+            content: res.article.content ?? still.content,
+            summary: res.article.summary ?? still.summary,
+        };
         recordUsage('body_loaded');
         // Keep local read/starred and other user state; extraction only enriches content.
-        host.article = {
-            ...host.article,
-            content: res.article.content ?? host.article.content,
-            summary: res.article.summary ?? host.article.summary,
-        };
+        host.article = next;
         host.sanitizedBody = null;
-        host.keywords = articleKeywords(host.article);
+        host.keywords = articleKeywords(next);
         host.paint();
     } catch {
-        // extraction is best-effort; keep showing stored content
+        // body/extraction is best-effort; keep showing stored content
     }
 }
 

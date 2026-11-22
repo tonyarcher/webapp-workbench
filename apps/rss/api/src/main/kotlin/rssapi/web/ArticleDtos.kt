@@ -51,3 +51,5 @@ data class ReadBeforeBody(val feedIds: List<String>? = null, val cutoff: Long?)
 data class ReadAllBody(val feedId: String? = null)
 
 data class AffinityBody(val articleId: String?, val amount: Double?)
+
+data class ArticleBodyJson(val content: String?)

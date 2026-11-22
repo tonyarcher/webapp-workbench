@@ -24,6 +24,7 @@ export {
     deleteSavedSearch,
     exportOpml,
     extractArticle,
+    fetchArticleBody,
     fetchArticlesPage,
     fetchEdition,
     fetchEditions,

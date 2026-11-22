@@ -3,6 +3,7 @@ package rssapi.persist
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.util.UUID
@@ -36,6 +37,42 @@ interface ArticleRepo :
         """,
     )
     fun bodiesToBackfill(page: Pageable): List<BodySource>
+
+    /** The columns the excerpt backfill needs; never the whole entity. */
+    interface ExcerptSource {
+        val id: String
+        val contentHtml: String?
+        val link: String?
+    }
+
+    /** Rows that still need a plain-text excerpt on the article row. */
+    @Query(
+        """
+        select a.id as id, a.contentHtml as contentHtml, a.link as link
+          from ArticleEntity a
+        where a.contentHtml is not null and a.contentHtml <> ''
+          and (a.excerpt is null or a.excerpt = '')
+        """,
+    )
+    fun excerptsToBackfill(page: Pageable): List<ExcerptSource>
+
+    /**
+     * Targeted updates keep the backfill off the body column and out of every
+     * other column, so a concurrent ingest cannot be overwritten with a stale
+     * row snapshot.
+     */
+    @Modifying
+    @Query("update ArticleEntity a set a.excerpt = :excerpt where a.id = :id")
+    fun setExcerpt(id: String, excerpt: String): Int
+
+    @Modifying
+    @Query(
+        """
+        update ArticleEntity a set a.image = :image
+        where a.id = :id and (a.image is null or a.image = '')
+        """,
+    )
+    fun setImageIfBlank(id: String, image: String): Int
 
     @Query(
         """

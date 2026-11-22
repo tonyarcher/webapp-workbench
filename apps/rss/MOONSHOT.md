@@ -1247,8 +1247,12 @@ the shape of the system must not assume that.
 
 - **Status.** Slice 1 committed. Slice 2a adds the `article_bodies` table, a
   bounded backfill job and a body store that reads it with a fallback to
-  `articles.content_html` while keeping both copies in sync. The old column is
-  still authoritative, so no reader has moved yet. The remaining slices and
+  `articles.content_html` while keeping both copies in sync. Slice 2b narrows
+  list reads: the article-list query projects `excerpt` and `image` (V18)
+  instead of `content_html`, and the reader fetches the stored body from
+  `GET /articles/{id}/body` when a list row has none. The old column stays
+  mapped and dual-written for rollback, and `search_text` is still generated
+  from it, so the final "drop the column" step is open. The remaining slices and
   their acceptance criteria live in `DB_SCALE_PLAN.md` under "Q1 slices".
 - **Why.** Storing every full body, image, AI response and rendered edition in
   Postgres makes backups, vacuum and indexes the limit long before query

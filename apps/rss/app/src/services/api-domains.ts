@@ -350,6 +350,12 @@ export async function extractArticle(articleId: string): Promise<{ article: Arti
     return { article: res.article, extracted: res.extracted === true };
 }
 
+/** Fetch the stored body for a list row that omitted content. */
+export async function fetchArticleBody(articleId: string): Promise<string | null> {
+    const res = (await apiFetch(`/articles/${encodeURIComponent(articleId)}/body`)) as { content?: string | null };
+    return typeof res.content === 'string' ? res.content : null;
+}
+
 export interface ServerAiStatus {
     available: boolean;
     provider: string;

@@ -18,10 +18,12 @@ import java.time.Duration
  * all fine while the service can no longer validate a new token. This closes
  * that gap by probing the JWKS endpoint directly.
  */
-class JwksHealthIndicator(private val jwksUri: String) : HealthIndicator {
-    private val client = HttpClient.newBuilder()
+class JwksHealthIndicator(
+    private val jwksUri: String,
+    private val client: HttpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(2))
-        .build()
+        .build(),
+) : HealthIndicator {
 
     override fun health(): Health = try {
         val request = HttpRequest.newBuilder()

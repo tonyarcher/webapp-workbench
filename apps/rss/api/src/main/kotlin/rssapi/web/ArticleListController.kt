@@ -16,7 +16,8 @@ import rssapi.domain.parseArticleScope
 import rssapi.domain.parseArticleSort
 import rssapi.domain.parseSearchQueryText
 import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleRepo
+import rssapi.persist.ArticleListQuery
+import rssapi.persist.ArticleListRow
 import rssapi.persist.ArticleStateEntity
 import rssapi.persist.ArticleStateRepo
 
@@ -30,7 +31,7 @@ private const val SCORE_OTHER = 1
 @RestController
 class ArticleListController(
     private val user: IdentityUser,
-    private val articles: ArticleRepo,
+    private val listQuery: ArticleListQuery,
     private val states: ArticleStateRepo,
 ) {
     @GetMapping("/articles", headers = ["X-Api-Version=1"])
@@ -76,21 +77,21 @@ class ArticleListController(
         pageLimit: Int,
     ): ArticlePageJson {
         val windowSize = minOf(pageLimit * SEARCH_WINDOW_FACTOR, SEARCH_WINDOW_MAX)
-        val window = articles.findAll(spec, PageRequest.of(0, windowSize, sortFor(ArticleSort.NEWEST))).content
+        val window = listQuery.findAll(spec, PageRequest.of(0, windowSize, sortFor(ArticleSort.NEWEST)))
         val ranked = rankSearchResults(window, search).take(pageLimit)
         val stateMap = stateMapFor(ranked)
         return ArticlePageJson(ranked.map { it.toJson(stateMap[it.id]) }, null)
     }
 
     private fun cursorPage(spec: Specification<ArticleEntity>, sort: ArticleSort, pageLimit: Int): ArticlePageJson {
-        val rows = articles.findAll(spec, PageRequest.of(0, pageLimit + 1, sortFor(sort))).content
+        val rows = listQuery.findAll(spec, PageRequest.of(0, pageLimit + 1, sortFor(sort)))
         val hasMore = rows.size > pageLimit
         val page = rows.take(pageLimit)
         val stateMap = stateMapFor(page)
         return ArticlePageJson(page.map { it.toJson(stateMap[it.id]) }, nextCursor(page, hasMore, sort))
     }
 
-    private fun stateMapFor(rows: List<ArticleEntity>): Map<String, ArticleStateEntity> =
+    private fun stateMapFor(rows: List<ArticleListRow>): Map<String, ArticleStateEntity> =
         states.findByUserIdAndArticleIdIn(user.id, rows.map { it.id }).associateBy { it.articleId }
 }
 
@@ -111,32 +112,32 @@ private fun sortFor(sort: ArticleSort): Sort = when (sort) {
     ArticleSort.NEWEST -> Sort.by("publishedAt").descending().and(Sort.by("id").descending())
 }
 
-private val NEWEST_FIRST: Comparator<ArticleEntity> =
-    compareByDescending<ArticleEntity> { it.publishedAt }.thenByDescending { it.id }
+private val NEWEST_FIRST: Comparator<ArticleListRow> =
+    compareByDescending<ArticleListRow> { it.publishedAt }.thenByDescending { it.id }
 
 private fun fieldHits(field: String?, token: String): Boolean {
     val f = field?.lowercase() ?: return false
     return f.contains(token)
 }
 
-private fun rankSearchResults(rows: List<ArticleEntity>, search: ParsedSearchQuery): List<ArticleEntity> {
+private fun rankSearchResults(rows: List<ArticleListRow>, search: ParsedSearchQuery): List<ArticleListRow> {
     if (search.tokens.isEmpty()) return rows.sortedWith(NEWEST_FIRST)
     return rows.map { it to scoreArticle(it, search.tokens) }
         .sortedWith(
-            compareByDescending<Pair<ArticleEntity, Int>> { it.second }
+            compareByDescending<Pair<ArticleListRow, Int>> { it.second }
                 .thenByDescending { it.first.publishedAt }
                 .thenByDescending { it.first.id },
         )
         .map { it.first }
 }
 
-private fun scoreArticle(article: ArticleEntity, tokens: List<String>): Int {
+private fun scoreArticle(article: ArticleListRow, tokens: List<String>): Int {
     var score = 0
     for (token in tokens) {
         if (fieldHits(article.title, token)) score += SCORE_TITLE
         if (fieldHits(article.author, token)) score += SCORE_AUTHOR
         if (fieldHits(article.summary, token)) score += SCORE_SUMMARY
-        if (fieldHits(article.contentHtml, token)) score += SCORE_OTHER
+        if (fieldHits(article.excerpt, token)) score += SCORE_OTHER
         if (fieldHits(article.domain, token)) score += SCORE_OTHER
         if (fieldHits(article.link, token)) score += SCORE_OTHER
     }

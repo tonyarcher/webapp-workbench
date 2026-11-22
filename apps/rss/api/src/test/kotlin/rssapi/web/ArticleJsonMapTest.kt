@@ -2,6 +2,7 @@ package rssapi.web
 
 import rssapi.domain.ArticleSort
 import rssapi.persist.ArticleEntity
+import rssapi.persist.ArticleListRow
 import rssapi.persist.ArticleStateEntity
 import java.time.Instant
 import java.util.UUID
@@ -58,7 +59,7 @@ class ArticleJsonMapTest {
 
     @Test
     fun nextCursorNullWhenEmpty() {
-        assertNull(nextCursor(emptyList(), hasMore = true, ArticleSort.NEWEST))
+        assertNull(nextCursor(emptyList<ArticleEntity>(), hasMore = true, ArticleSort.NEWEST))
         assertNull(nextCursor(listOf(article("a", 1f, 10)), hasMore = false, ArticleSort.NEWEST))
     }
 
@@ -69,5 +70,57 @@ class ArticleJsonMapTest {
         assertTrue(!hot.isNullOrEmpty())
         val newest = nextCursor(items, hasMore = true, ArticleSort.NEWEST)
         assertTrue(!newest.isNullOrEmpty())
+    }
+
+    @Test
+    fun listRowToJsonOmitsContentButKeepsImage() {
+        val json = listRow("https://img/x.png", 0f).toJson(ArticleStateEntity(read = true, starred = false))
+        assertNull(json.content)
+        assertEquals("https://img/x.png", json.image)
+        assertEquals(1, json.read)
+        assertNull(json.engagement)
+    }
+
+    private fun listRow(image: String?, engagement: Float) = ArticleListRow(
+        id = "a1",
+        feedId = UUID.randomUUID(),
+        guid = "g1",
+        title = "t",
+        link = "https://example.com",
+        normLink = "n",
+        domain = "example.com",
+        author = "a",
+        summary = "s",
+        excerpt = "e",
+        image = image,
+        comments = 1,
+        publishedAt = Instant.ofEpochMilli(10),
+        fetchedAt = Instant.ofEpochMilli(11),
+        popularity = 1f,
+        engagement = engagement,
+        hot = 2f,
+    )
+
+    @Test
+    fun nextCursorRowsHotAndNewest() {
+        val rows = listOf(
+            ArticleListRow(
+                "a", UUID.randomUUID(), "g", "t", null, null, null, null, null, null, null, null,
+                Instant.ofEpochMilli(
+                    10,
+                ),
+                Instant.ofEpochMilli(10), 0f, 0f, 1f,
+            ),
+            ArticleListRow(
+                "b", UUID.randomUUID(), "g2", "t2", null, null, null, null, null, null, null, null,
+                Instant.ofEpochMilli(
+                    20,
+                ),
+                Instant.ofEpochMilli(20), 0f, 0f, 2f,
+            ),
+        )
+        assertNull(nextCursor(rows, hasMore = false, ArticleSort.HOT))
+        assertTrue(!nextCursor(rows, hasMore = true, ArticleSort.HOT).isNullOrEmpty())
+        assertTrue(!nextCursor(rows, hasMore = true, ArticleSort.NEWEST).isNullOrEmpty())
     }
 }

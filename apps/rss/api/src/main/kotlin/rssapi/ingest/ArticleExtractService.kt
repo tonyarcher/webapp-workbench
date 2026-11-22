@@ -5,7 +5,9 @@ import org.springframework.stereotype.Service
 import rssapi.MAX_CONTENT_BYTES
 import rssapi.body.BodyStore
 import rssapi.domain.ampUrlOf
+import rssapi.domain.excerptOf
 import rssapi.domain.extractArticleHtml
+import rssapi.domain.firstImageUrl
 import rssapi.domain.safeHttpUrl
 import rssapi.domain.sanitizeHtml
 import rssapi.domain.stripHtml
@@ -41,6 +43,8 @@ class ArticleExtractService(
         val sanitized = sanitizeHtml(html).take(MAX_CONTENT_BYTES)
         if (!isMeaningfulGain(article, sanitized)) return ExtractResult(article, false, source)
         article.contentHtml = sanitized
+        article.excerpt = excerptOf(sanitized)
+        article.image = firstImageUrl(sanitized, article.link)
         val saved = articles.save(article)
         bodyStore.put(article.id, sanitized)
         return ExtractResult(saved, true, source)
