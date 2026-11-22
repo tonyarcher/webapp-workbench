@@ -11,7 +11,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.http.HttpStatus
@@ -25,8 +24,8 @@ import rssapi.persist.AffinityEntity
 import rssapi.persist.AffinityRepo
 import rssapi.persist.AiQuotaEntity
 import rssapi.persist.AiQuotaRepo
-import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleRepo
+import rssapi.persist.ArticleListQuery
+import rssapi.persist.ArticleListRow
 import rssapi.persist.ArticleScoreEntity
 import rssapi.persist.ArticleScoreRepo
 import rssapi.persist.ArticleStateRepo
@@ -44,7 +43,7 @@ import kotlin.test.assertTrue
 @ExtendWith(MockitoExtension::class)
 class FrontPageServiceTest {
     @Mock
-    lateinit var articles: ArticleRepo
+    lateinit var articles: ArticleListQuery
 
     @Mock
     lateinit var states: ArticleStateRepo
@@ -69,13 +68,23 @@ class FrontPageServiceTest {
         hot: Float = 6_300f,
         popularity: Float = 2f,
         engagement: Float = 1f,
-    ): ArticleEntity = ArticleEntity(
+    ): ArticleListRow = ArticleListRow(
         id = id,
         feedId = feedId,
         guid = "g-$id",
         title = "t-$id",
-        hot = hot,
+        link = null,
+        normLink = null,
+        domain = null,
+        author = null,
+        summary = null,
+        excerpt = null,
+        image = null,
+        comments = null,
+        publishedAt = Instant.ofEpochMilli(1_700_000_000_000L),
+        fetchedAt = Instant.ofEpochMilli(1_700_000_000_000L),
         popularity = popularity,
+        hot = hot,
         engagement = engagement,
     )
 
@@ -97,16 +106,16 @@ class FrontPageServiceTest {
         model = SCORE_MODEL,
     )
 
-    private fun stubCandidates(vararg rows: ArticleEntity) {
-        whenever(articles.findAll(any<Specification<ArticleEntity>>(), any<Pageable>()))
-            .thenReturn(PageImpl(rows.toList()))
+    private fun stubCandidates(vararg rows: ArticleListRow) {
+        whenever(articles.findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>()))
+            .thenReturn(rows.toList())
         whenever(states.findByUserIdAndArticleIdIn(eq(uid), anyOrNull())).thenReturn(emptyList())
     }
 
     @Test
     fun emptyWindowReturnsEmpty() {
-        whenever(articles.findAll(any<Specification<ArticleEntity>>(), any<Pageable>()))
-            .thenReturn(PageImpl(emptyList()))
+        whenever(articles.findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>()))
+            .thenReturn(emptyList())
         val out = service.frontPage(uid, 1_700_000_000_000L, false, 10)
         assertTrue(out.isEmpty())
         verify(states, never()).findByUserIdAndArticleIdIn(any(), any())
@@ -219,11 +228,11 @@ class FrontPageServiceTest {
 
     @Test
     fun wordCounts() {
-        assertEquals(0, wordCountOf(ArticleEntity(id = "x")))
-        assertEquals(0, wordCountOf(ArticleEntity(id = "x", summary = "   ")))
-        assertEquals(0, wordCountOf(ArticleEntity(id = "x", contentHtml = "<br/>")))
-        assertEquals(2, wordCountOf(ArticleEntity(id = "x", contentHtml = "<p>hello <b>world</b></p>")))
-        assertEquals(3, wordCountOf(ArticleEntity(id = "x", summary = "one two", contentHtml = "<p>three</p>")))
+        assertEquals(0, wordCountOf(article("x").copy(summary = null, excerpt = null)))
+        assertEquals(0, wordCountOf(article("x").copy(summary = "   ", excerpt = null)))
+        assertEquals(0, wordCountOf(article("x").copy(excerpt = " ")))
+        assertEquals(2, wordCountOf(article("x").copy(excerpt = "hello world")))
+        assertEquals(3, wordCountOf(article("x").copy(summary = "one two", excerpt = "three")))
     }
 
     private fun openQuota(): Pair<AiQuotaService, AiQuotaRepo> {
@@ -476,7 +485,7 @@ class FrontPageServiceTest {
         assertEquals(setOf("jev-latest", "signals-v1"), evidence.map { it.model }.toSet())
         verify(scoreRows).findAllByScoredAtAfter(eq(now.minus(Duration.ofDays(DEFAULT_WINDOW_DAYS))))
         verify(scoreRows, never()).saveAll(any<Iterable<ArticleScoreEntity>>())
-        verify(articles, never()).findAll(any<Specification<ArticleEntity>>(), any<Pageable>())
+        verify(articles, never()).findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>())
     }
 
     @Test

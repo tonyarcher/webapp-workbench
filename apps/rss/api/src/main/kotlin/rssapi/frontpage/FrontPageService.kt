@@ -15,7 +15,8 @@ import rssapi.log.log
 import rssapi.persist.AffinityId
 import rssapi.persist.AffinityRepo
 import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleRepo
+import rssapi.persist.ArticleListQuery
+import rssapi.persist.ArticleListRow
 import rssapi.persist.ArticleScoreEntity
 import rssapi.persist.ArticleScoreRepo
 import rssapi.persist.ArticleStateEntity
@@ -35,7 +36,7 @@ private val WS_SPLIT = Regex("\\s+")
 
 /** One candidate article with its read state and resolved scores. */
 data class ScoredArticle(
-    val article: ArticleEntity,
+    val article: ArticleListRow,
     val state: ArticleStateEntity?,
     val scores: SignalScores,
     val scoreRow: ArticleScoreEntity,
@@ -53,7 +54,7 @@ data class ScoredArticle(
  */
 @Service
 class FrontPageService(
-    private val articles: ArticleRepo,
+    private val articles: ArticleListQuery,
     private val states: ArticleStateRepo,
     private val affinity: AffinityRepo,
     private val scoreRows: ArticleScoreRepo,
@@ -72,7 +73,7 @@ class FrontPageService(
         val windowStart = sinceMs ?: Instant.now().minus(Duration.ofDays(DEFAULT_WINDOW_DAYS)).toEpochMilli()
         val spec = articleSpec(userId, ArticleScope.All, unreadOnly, ArticleSort.NEWEST, null, windowStart)
         val sort = Sort.by("publishedAt").descending().and(Sort.by("id").descending())
-        val candidates = articles.findAll(spec, PageRequest.of(0, FRONT_PAGE_MAX_ROWS, sort)).content
+        val candidates = articles.findAll(spec, PageRequest.of(0, FRONT_PAGE_MAX_ROWS, sort))
         if (candidates.isEmpty()) return emptyList()
         val ids = candidates.map { it.id }
         val stateMap = states.findByUserIdAndArticleIdIn(userId, ids).associateBy { it.articleId }
@@ -110,7 +111,7 @@ class FrontPageService(
 
     private fun scoreAll(
         userId: UUID,
-        candidates: List<ArticleEntity>,
+        candidates: List<ArticleListRow>,
         stateMap: Map<String, ArticleStateEntity>,
         affinityMap: Map<String, Float>,
         stored: Map<String, ArticleScoreEntity>,
@@ -138,7 +139,7 @@ class FrontPageService(
 
     private fun scoreWithDecision(
         provider: DecisionScoreProvider,
-        candidates: List<ArticleEntity>,
+        candidates: List<ArticleListRow>,
         stateMap: Map<String, ArticleStateEntity>,
         stored: Map<String, ArticleScoreEntity>,
         affinityMap: Map<String, Float>,
@@ -160,7 +161,7 @@ class FrontPageService(
     }
 
     private fun writeDecisionRow(
-        article: ArticleEntity,
+        article: ArticleListRow,
         state: ArticleStateEntity?,
         existing: ArticleScoreEntity?,
         input: SignalInput,
@@ -174,7 +175,7 @@ class FrontPageService(
         return toScored(article, state, refresh(article, input, existing, now, decisionScores, model))
     }
 
-    private fun toScored(article: ArticleEntity, state: ArticleStateEntity?, row: ArticleScoreEntity): ScoredArticle =
+    private fun toScored(article: ArticleListRow, state: ArticleStateEntity?, row: ArticleScoreEntity): ScoredArticle =
         ScoredArticle(
             article,
             state,
@@ -189,7 +190,7 @@ class FrontPageService(
         )
 
     private fun scoreOne(
-        article: ArticleEntity,
+        article: ArticleListRow,
         state: ArticleStateEntity?,
         existing: ArticleScoreEntity?,
         affinityMap: Map<String, Float>,
@@ -201,7 +202,7 @@ class FrontPageService(
     }
 
     private fun refresh(
-        article: ArticleEntity,
+        article: ArticleListRow,
         input: SignalInput,
         existing: ArticleScoreEntity?,
         now: Instant,
@@ -220,7 +221,7 @@ class FrontPageService(
         return row
     }
 
-    private fun loadAffinity(userId: UUID, candidates: List<ArticleEntity>): Map<String, Float> {
+    private fun loadAffinity(userId: UUID, candidates: List<ArticleListRow>): Map<String, Float> {
         val keys = candidates.flatMapTo(mutableSetOf()) { article ->
             affinityKeys(article.feedId, article.domain, article.author)
         }
@@ -244,7 +245,11 @@ private fun ArticleScoreEntity.isStale(now: Instant): Boolean {
 }
 
 /** Counts whitespace-separated words after stripping tags; null bodies count as zero. */
-internal fun wordCountOf(article: ArticleEntity): Int {
-    val text = listOfNotNull(article.summary, article.contentHtml).joinToString(" ")
+internal fun wordCountOf(article: ArticleListRow): Int = wordCountOf(article.summary, article.excerpt)
+
+internal fun wordCountOf(article: ArticleEntity): Int = wordCountOf(article.summary, article.contentHtml)
+
+private fun wordCountOf(summary: String?, body: String?): Int {
+    val text = listOfNotNull(summary, body).joinToString(" ")
     return TAG_STRIP.replace(text, " ").split(WS_SPLIT).count { it.isNotBlank() }
 }

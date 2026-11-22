@@ -20,7 +20,7 @@ import rssapi.frontpage.FrontPageService
 import rssapi.frontpage.ModelEvidence
 import rssapi.frontpage.ScoredArticle
 import rssapi.frontpage.SignalScores
-import rssapi.persist.ArticleEntity
+import rssapi.persist.ArticleListRow
 import rssapi.persist.ArticleScoreEntity
 import rssapi.persist.UserEntity
 import rssapi.persist.UserRepo
@@ -55,28 +55,35 @@ class FrontPageControllerTest {
         whenever(users.findBySubject("u1")).thenReturn(UserEntity(id = uid, subject = "u1"))
     }
 
-    private fun scored(id: String, worthy: Double, full: Boolean): ScoredArticle {
-        val article = ArticleEntity(id = id, feedId = UUID.randomUUID(), guid = "g-$id", title = "t-$id")
-        val row = if (full) {
-            ArticleScoreEntity(
-                articleId = id,
-                worthy = worthy,
-                interest = 0.6,
-                topic = null,
-                popularityOutlook = 0.5,
-                readability = 0.7,
-                scoredAt = Instant.ofEpochMilli(1_700_000_000_000L),
-                model = "signals-v1",
-            )
-        } else {
-            ArticleScoreEntity(articleId = id, worthy = worthy)
-        }
-        return ScoredArticle(
-            article = article,
-            state = null,
-            scores = SignalScores(worthy, 0.6, 0.5, 0.7),
-            scoreRow = row,
+    private fun scored(id: String, worthy: Double, full: Boolean): ScoredArticle = ScoredArticle(
+        article = listRow(id),
+        state = null,
+        scores = SignalScores(worthy, 0.6, 0.5, 0.7),
+        scoreRow = scoreRow(id, worthy, full),
+    )
+
+    private fun listRow(id: String) = ArticleListRow(
+        id = id, feedId = UUID.randomUUID(), guid = "g-$id", title = "t-$id",
+        link = null, normLink = null, domain = null, author = null, summary = null,
+        excerpt = null, image = null, comments = null,
+        publishedAt = Instant.ofEpochMilli(1_700_000_000_000L),
+        fetchedAt = Instant.ofEpochMilli(1_700_000_000_000L),
+        popularity = 0f, engagement = 0f, hot = 0f,
+    )
+
+    private fun scoreRow(id: String, worthy: Double, full: Boolean): ArticleScoreEntity = if (full) {
+        ArticleScoreEntity(
+            articleId = id,
+            worthy = worthy,
+            interest = 0.6,
+            topic = null,
+            popularityOutlook = 0.5,
+            readability = 0.7,
+            scoredAt = Instant.ofEpochMilli(1_700_000_000_000L),
+            model = "signals-v1",
         )
+    } else {
+        ArticleScoreEntity(articleId = id, worthy = worthy)
     }
 
     private fun stubRows(vararg rows: ScoredArticle) {

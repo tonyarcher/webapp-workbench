@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import rssapi.ai.DecisionBackend
 import rssapi.ai.jsonBody
 import rssapi.domain.affinitySum
-import rssapi.persist.ArticleEntity
+import rssapi.persist.ArticleListRow
 
 const val DECISION_BATCH_MAX: Int = 16
 const val DECISION_TOP_WORDS: Int = 10
@@ -110,11 +110,11 @@ class DecisionScoreProvider(
 }
 
 /** Reader-affinity total for one article: feed plus domain plus author components, floored at zero. */
-internal fun affinityOf(article: ArticleEntity, affinityMap: Map<String, Float>): Double =
+internal fun affinityOf(article: ArticleListRow, affinityMap: Map<String, Float>): Double =
     affinitySum(article.feedId, article.domain, article.author, affinityMap)
 
 /** Raw signal inputs for one article, shared by the signal path and decision fallback. */
-internal fun signalInputOf(article: ArticleEntity, affinityMap: Map<String, Float>): SignalInput = SignalInput(
+internal fun signalInputOf(article: ArticleListRow, affinityMap: Map<String, Float>): SignalInput = SignalInput(
     hot = article.hot.toDouble(),
     popularity = article.popularity.toDouble(),
     engagement = article.engagement.toDouble(),
@@ -123,7 +123,7 @@ internal fun signalInputOf(article: ArticleEntity, affinityMap: Map<String, Floa
 )
 
 /** Batch candidate for one article, carrying its signal input for per-article fallback. */
-internal fun decisionCandidateOf(article: ArticleEntity, input: SignalInput): DecisionCandidate = DecisionCandidate(
+internal fun decisionCandidateOf(article: ArticleListRow, input: SignalInput): DecisionCandidate = DecisionCandidate(
     id = article.id,
     title = article.title,
     feed = article.feedId.toString(),
