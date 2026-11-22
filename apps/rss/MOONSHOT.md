@@ -1245,7 +1245,7 @@ the shape of the system must not assume that.
 
 ### Q1. Dynamic body fetching and out-of-database offload
 
-- **Status.** Slices 1-2b done through V20: `article_bodies` + bounded backfills (V17), `excerpt`/`image` list projection and body endpoint (V18), `search_text` moved off `content_html` (V19), and `articles.content_html` dropped with readers/writers on `BodyStore` (V20). Remaining: slice 3 object-store cold tier and slice 4 dynamic depth/purge UI; acceptance criteria live in `DB_SCALE_PLAN.md` under "Q1 slices".
+- **Status.** Slices 1-2b done through V20: `article_bodies` + bounded backfills (V17), `excerpt`/`image` list projection and body endpoint (V18), `search_text` moved off `content_html` (V19), and `articles.content_html` dropped with readers/writers on `BodyStore` (V20). Slice 3 implemented (env-gated): V21 adds `storage_key`/`byte_size`, `DbBodyStore` writes content-addressed S3 objects when `RSS_BODY_S3_BUCKET` is set with read-through fallback to `content_html`, and `BodyOffloadService` moves old hot bodies when `RSS_BODY_OFFLOAD_ENABLED=true`. Remaining: DB-size/backup-duration offload trigger, purge semantics/UI, cold-body restore drill, and slice 4 dynamic depth/purge UI/counters. Acceptance criteria live in `DB_SCALE_PLAN.md` under "Q1 slices".
 - **Why.** Storing every full body, image, AI response and rendered edition in
   Postgres makes backups, vacuum and indexes the limit long before query
   latency. A reader opens a tiny slice of what we ingest. Store the slice,

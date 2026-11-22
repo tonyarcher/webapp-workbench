@@ -129,6 +129,17 @@ services:
             # (AI_PROVIDER=decision). Empty by default; the real value stays
             # in the untracked deploy/.env.
             TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+            # Optional cold body tier (Q1 slice 3). Empty bucket keeps bodies in
+            # Postgres article_bodies only. Offload is env-gated; no payloads logged.
+            RSS_BODY_S3_ENDPOINT: ${RSS_BODY_S3_ENDPOINT:-}
+            RSS_BODY_S3_REGION: ${RSS_BODY_S3_REGION:-us-east-1}
+            RSS_BODY_S3_BUCKET: ${RSS_BODY_S3_BUCKET:-}
+            RSS_BODY_S3_PREFIX: ${RSS_BODY_S3_PREFIX:-rss/bodies}
+            RSS_BODY_S3_ACCESS_KEY: ${RSS_BODY_S3_ACCESS_KEY:-}
+            RSS_BODY_S3_SECRET_KEY: ${RSS_BODY_S3_SECRET_KEY:-}
+            RSS_BODY_OFFLOAD_ENABLED: ${RSS_BODY_OFFLOAD_ENABLED:-false}
+            RSS_BODY_OFFLOAD_AFTER_DAYS: ${RSS_BODY_OFFLOAD_AFTER_DAYS:-30}
+            BODY_OFFLOAD_MS: ${BODY_OFFLOAD_MS:-60000}
             # Cross-origin client (assets on their own S3-backed origin) calling
             # the API. Empty = same-origin only, the current gateway deployment.
             CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}

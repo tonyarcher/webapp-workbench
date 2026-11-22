@@ -11,6 +11,10 @@ class ArticleBodyEntity(
     @Id
     @Column(name = "article_id")
     var articleId: String = "",
-    @Column(name = "content_html", nullable = false)
-    var contentHtml: String = "",
+    @Column(name = "content_html")
+    var contentHtml: String? = null,
+    @Column(name = "storage_key")
+    var storageKey: String? = null,
+    @Column(name = "byte_size")
+    var byteSize: Long? = null,
 )

@@ -42,14 +42,10 @@ Read from the code, not from memory:
       unchanged. Acceptance: search tests pass; a 10m-row fixture explains a
       bitmap index scan, not a sequential scan. tsvector + FTS remains a Stage
       1 option if relevance ranking needs it.
-- [ ] **Keep list reads narrow.** Folded into Q1 slice 2 below, not a separate
-      Stage 0 change. Move `content_html` into `article_bodies` keyed by article
-      id, loaded only for the opened article. `search_text` must first switch
-      from the body to a stored excerpt so search survives the column drop.
-      This is the largest storage win (100-200 GB of TOAST at 10m articles) but
-      touches ingest, the article extractor, the JSON mapper and every read
-      path, so it needs its own change with a rollback plan. Acceptance: the
-      article-list query never selects the body column.
+- [x] **Keep list reads narrow.** Moved to Q1 slices 2a/2b/V19/V20: bodies live in
+      `article_bodies`, `search_text` no longer reads `content_html`, V20 dropped
+      `articles.content_html`, and list/detail readers use `BodyStore`. Acceptance:
+      the article-list query never selects a body column.
 - [x] **Bound popularity work.** The existing `updatePopularity` query already
       limits the `norm_link` rollup to the links in this ingest (`ANY(:links)`)
       and to this feed's rows, with `idx_articles_norm_link` covering the
@@ -87,11 +83,15 @@ rollback path; none of them changes the global feed pool or per-user state.
    rticles.content_html; bodies live in rticle_bodies, readers/writers use
    BodyStore, and the Kotlin body backfills were removed. Front-page and
    edition builders read the list projection.
-3. **Object-store tier.** Add an S3 client for `seaweedfs` and a body store that
-   writes content-addressed objects, with Postgres keeping a key and byte size.
-   Offload is opt-in behind DB size / backup-duration triggers, never a row
-   count. Acceptance: a cold body opens after a simulated Postgres-only
-   restore; purge removes objects but never article rows; no payload in logs.
+3. **Object-store tier (implemented, env-gated).** V21 adds `storage_key` and
+   `byte_size` to `article_bodies` and makes `content_html` nullable. When
+   `RSS_BODY_S3_BUCKET` is set, `DbBodyStore` writes content-addressed objects
+   (`sha256.html`) through an S3-compatible client and stores the key in Postgres;
+   reads fall back to `content_html` when an object is missing. `BodyOffloadService`
+   moves old hot bodies when `RSS_BODY_OFFLOAD_ENABLED=true` (age-based cutoff via
+   `RSS_BODY_OFFLOAD_AFTER_DAYS`, bounded batches). Acceptance still pending:
+   automated DB-size/backup-duration trigger, purge endpoint/UI (objects never
+   delete article rows), and a cold-body restore drill. No payloads in logs.
 4. **Dynamic depth and purge UI.** Lazy body load in the reader, per-source
    refetch capability, and a visible confirmable purge action. Acceptance: the
    client smoke suite covers the load states and the confirm path.
