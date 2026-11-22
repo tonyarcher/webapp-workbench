@@ -141,12 +141,18 @@ class IngestService(
         val norm = link?.let { normalizeLink(it) }
         val entity = toEntity(feed, item, html, link, norm)
         val existing = articles.findByFeedIdAndGuid(feed.id!!, item.guid)
-        // A poll that finds the same story with the same text must not rewrite
+        if (existing == null) {
+            // Full text is a one-time enrichment for new stories.
+            entity.contentHtml = ArticleFullText.of(pages, item, html)
+            articles.save(entity)
+            return norm
+        }
+        // The stored body may be the one-time full-text extraction, which the
+        // feed excerpt cannot reproduce. Keep it and refresh list-level fields.
+        entity.contentHtml = existing.contentHtml?.takeIf { it.isNotBlank() } ?: entity.contentHtml
+        // A poll that finds the same story with the same fields must not rewrite
         // the row: that churns writes and can reset extracted article metadata.
-        if (existing != null && existing.sameContent(entity)) return null
-        // Full text is a one-time enrichment for new stories. A later poll
-        // keeps the stored body and only refreshes list-level fields.
-        if (existing == null) entity.contentHtml = ArticleFullText.of(pages, item, html)
+        if (existing.sameContent(entity)) return null
         articles.save(entity)
         return norm
     }

@@ -27,8 +27,12 @@ private const val PAGE_HTML = """
     <article><h2><a href="/two">Two</a></h2><p>second</p></article>
 """
 
-private fun rssItem(guid: String) = """
-    <item><title>x</title><link>https://example.com/x</link>
+private const val FULL_BODY = "This is the article body with enough text to be considered a real paragraph by the " +
+    "extractor. It keeps going so the text density score is comfortably above the minimum for the main-article " +
+    "heuristic. A final sentence closes the piece and makes the whole fragment unmistakably article-like."
+
+private fun rssItem(guid: String, title: String = "x") = """
+    <item><title>$title</title><link>https://example.com/x</link>
       <guid>""" + guid + """</guid>
       <pubDate>Thu, 19 Nov 2026 00:00:00 GMT</pubDate><description>hi</description>
     </item>
@@ -56,18 +60,73 @@ class IngestServiceTest {
     @Test
     fun newArticleGetsFullTextOnce() {
         val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
-        val body = "This is the article body with enough text to be considered a real paragraph by the extractor. " +
-            "It keeps going so the text density score is comfortably above the minimum " +
-            "for the main-article heuristic. " +
-            "A final sentence closes the piece and makes the whole fragment unmistakably article-like."
-        whenever(pages.fetchHtml("https://example.com/x")).thenReturn("<article><p>$body</p></article>")
+        whenever(pages.fetchHtml("https://example.com/x")).thenReturn("<article><p>$FULL_BODY</p></article>")
         whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
 
         ingest.ingestXml(feed, rssWith(rssItem("g1")))
 
         val captor = argumentCaptor<ArticleEntity>()
         verify(articles).save(captor.capture())
-        assertEquals("<p>$body</p>", captor.firstValue.contentHtml)
+        assertEquals("<p>$FULL_BODY</p>", captor.firstValue.contentHtml)
+    }
+
+    @Test
+    fun pollKeepsExtractedBody() {
+        val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
+        val guid = "g1"
+        whenever(pages.fetchHtml("https://example.com/x")).thenReturn("<article><p>$FULL_BODY</p></article>")
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
+        ingest.ingestXml(feed, rssWith(rssItem(guid)))
+        val stored = argumentCaptor<ArticleEntity>()
+        verify(articles).save(stored.capture())
+        assertEquals("<p>$FULL_BODY</p>", stored.firstValue.contentHtml)
+        org.mockito.kotlin.clearInvocations(articles, maintenance)
+        whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(stored.firstValue)
+
+        ingest.ingestXml(feed, rssWith(rssItem(guid)))
+
+        verify(articles, org.mockito.kotlin.never()).save(any())
+    }
+
+    @Test
+    fun changedItemKeepsExtractedBody() {
+        val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
+        val guid = "g1"
+        whenever(pages.fetchHtml("https://example.com/x")).thenReturn("<article><p>$FULL_BODY</p></article>")
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
+        ingest.ingestXml(feed, rssWith(rssItem(guid)))
+        val stored = argumentCaptor<ArticleEntity>()
+        verify(articles).save(stored.capture())
+        org.mockito.kotlin.clearInvocations(articles, maintenance)
+        whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(stored.firstValue)
+
+        ingest.ingestXml(feed, rssWith(rssItem(guid, title = "rewritten")))
+
+        val saved = argumentCaptor<ArticleEntity>()
+        verify(articles).save(saved.capture())
+        assertEquals("rewritten", saved.firstValue.title)
+        assertEquals("<p>$FULL_BODY</p>", saved.firstValue.contentHtml)
+    }
+
+    @Test
+    fun changedItemFillsBlankBodyFromFeed() {
+        val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
+        val guid = "g1"
+        val existing = ArticleEntity(
+            id = makeArticleId(feed.id!!.toString(), guid),
+            feedId = feed.id!!,
+            guid = guid,
+            title = "old",
+            contentHtml = "   ",
+        )
+        whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(existing)
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
+
+        ingest.ingestXml(feed, rssWith(rssItem(guid)))
+
+        val saved = argumentCaptor<ArticleEntity>()
+        verify(articles).save(saved.capture())
+        assertEquals("hi", saved.firstValue.contentHtml)
     }
 
     @Test
