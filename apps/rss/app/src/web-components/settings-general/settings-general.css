@@ -468,6 +468,27 @@ textarea {
     line-height: 1.4;
 }
 
+.usage-counts {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.usage-count-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.usage-count {
+    font-family: monospace;
+    color: var(--text);
+}
+
 @media (max-width: 500px) {
     .view-defaults {
         grid-template-columns: 1fr;

@@ -14,6 +14,7 @@ import { areHighlightsEnabled } from '../../services/highlights';
 import type { Article, Board, RowHighlight } from '../../types';
 import { stripTags } from '../../util';
 import { articleKeywords } from './article-view-helpers';
+import { recordUsage } from '../../services/usage';
 import { VideoHeader } from '../video-header/video-header';
 import { renderBoardPicker, renderSpeedReadOverlay } from './article-view-overlays';
 import '../speed-read-view/speed-read-view';
@@ -53,6 +54,10 @@ export class ArticleView extends HTMLElement {
     set article(value: Article | null) {
         if (this._article === value) return;
         this._article = value;
+        if (value?.published) {
+            const ageMs = Date.now() - new Date(value.published).getTime();
+            if (ageMs > 365 * 24 * 60 * 60 * 1000) recordUsage('older_article_opened');
+        }
         this.onArticleChanged();
         this.paint();
     }

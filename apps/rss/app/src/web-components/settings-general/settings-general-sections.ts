@@ -5,6 +5,7 @@ import type { ReaderFont, ReaderLine, ReaderMode, ReaderSize, ReaderWidth } from
 import type { ShareTarget } from '../../services/share';
 import type { Theme } from '../../theme';
 import { APP_COMMIT, APP_VERSION, BUILD_TIME, VERSION_HISTORY } from '../../generated/version-history';
+import { loadUsageCounts, usageFeatureLabel, USAGE_FEATURES, type UsageFeature } from '../../services/usage';
 import {
     button,
     checkboxField,
@@ -31,6 +32,7 @@ export interface SettingsGeneralSectionsHost {
     shareTargets: ShareTarget[];
     readerMode: ReaderMode;
     showHistory: boolean;
+    usageEnabled: boolean;
     scrapeOpen: boolean;
     scrapeBusy: boolean;
     scrapeStatus: string;
@@ -57,6 +59,7 @@ export interface SettingsGeneralSectionsHost {
     onExport: () => void;
     onMigrate: () => void;
     toggleHistory: () => void;
+    setUsageEnabled: (enabled: boolean) => void;
     openScrape: () => void;
     cancelScrape: () => void;
     previewScrapePage: () => void;
@@ -405,6 +408,28 @@ function historyList(): HTMLElement {
         list.append(item);
     }
     return list;
+}
+
+export function buildUsageSection(host: SettingsGeneralSectionsHost): HTMLElement {
+    const root = section('Privacy & usage');
+    root.append(
+        checkboxField('Share anonymous feature-use counts', host.usageEnabled, (checked) =>
+            host.setUsageEnabled(checked),
+        ),
+        hint(
+            'When on, the app sends daily counts for which screens were opened. No article titles, URLs, accounts, or reading history are sent.',
+        ),
+    );
+    const counts = loadUsageCounts();
+    const list = el('ul', 'usage-counts');
+    for (const feature of USAGE_FEATURES as readonly UsageFeature[]) {
+        const count = counts.counts[feature] ?? 0;
+        const item = el('li', 'usage-count-row');
+        item.append(el('span', undefined, usageFeatureLabel(feature)), el('span', 'usage-count', String(count)));
+        list.append(item);
+    }
+    root.append(el('div', 'field-label', "Today's local counts"), list);
+    return root;
 }
 
 export function buildAboutSection(host: SettingsGeneralSectionsHost): HTMLElement {

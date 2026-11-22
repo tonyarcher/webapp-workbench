@@ -2,6 +2,7 @@ import { applyTheme, getTheme, type Theme } from '../../theme';
 import { applyReaderMode, loadReaderMode, saveReaderMode, type ReaderMode } from '../../services/reader-mode';
 import { discoverSite as discoverSiteHost, subscribeToFeed as subscribeToFeedHost } from './settings-general-discovery';
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
+import { flushUsageNow, loadUsageEnabled, recordUsage, saveUsageEnabled } from '../../services/usage';
 import { onAddFeedRequested, takeAddFeedRequest } from '../../services/add-feed-intent';
 import {
     buildAboutSection,
@@ -9,6 +10,7 @@ import {
     buildFeedsSection,
     buildReaderSection,
     buildSharingSection,
+    buildUsageSection,
 } from './settings-general-sections';
 import type { DiscoveredFeed, ScrapeCandidate, ScrapePreview } from '../../services/api';
 import type { ShareTarget } from '../../services/share';
@@ -64,6 +66,7 @@ export class SettingsGeneral extends HTMLElement {
     declare shareStatusError: boolean;
     declare shareTargets: ShareTarget[];
     declare showHistory: boolean;
+    declare usageEnabled: boolean;
     declare scrapeOpen: boolean;
     declare scrapeBusy: boolean;
     declare scrapeStatus: string;
@@ -102,6 +105,7 @@ export class SettingsGeneral extends HTMLElement {
         defineReactive(this, 'shareStatusError', false);
         defineReactive(this, 'shareTargets', [] as ShareTarget[]);
         defineReactive(this, 'showHistory', false);
+        defineReactive(this, 'usageEnabled', false);
         defineReactive(this, 'scrapeOpen', false);
         defineReactive(this, 'scrapeBusy', false);
         defineReactive(this, 'scrapeStatus', '');
@@ -150,6 +154,7 @@ export class SettingsGeneral extends HTMLElement {
     connectedCallback(): void {
         if (!this.bodyEl) this.build();
         this.paint();
+        recordUsage('settings_panel_viewed');
         this.unsubscribeAddFeed = onAddFeedRequested(() => {
             takeAddFeedRequest();
             this.openAdd();
@@ -184,6 +189,7 @@ export class SettingsGeneral extends HTMLElement {
             buildReaderSection(this),
             buildSharingSection(this),
             buildFeedsSection(this),
+            buildUsageSection(this),
             buildAboutSection(this),
         );
         this.restoreDrafts();
@@ -240,6 +246,7 @@ export class SettingsGeneral extends HTMLElement {
         this.shareStatus = '';
         this.shareStatusError = false;
         this.showHistory = false;
+        this.usageEnabled = loadUsageEnabled();
         this.mastodonDraft = null;
         this.addUrlDraft = null;
         this.scrapeOpen = false;
@@ -271,6 +278,12 @@ export class SettingsGeneral extends HTMLElement {
 
     toggleHistory = (): void => {
         this.showHistory = !this.showHistory;
+    };
+
+    setUsageEnabled = (enabled: boolean): void => {
+        this.usageEnabled = enabled;
+        saveUsageEnabled(enabled);
+        if (enabled) void flushUsageNow();
     };
 
     openScrape = (): void => {

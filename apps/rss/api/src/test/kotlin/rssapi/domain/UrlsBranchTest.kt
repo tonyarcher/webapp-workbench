@@ -26,6 +26,7 @@ class UrlsBranchTest {
         assertEquals("", domainOf("mailto:foo@bar"))
         assertEquals("example.com", hostTitleFor("https://example.com/rss"))
         assertEquals("http://exa mple.com", hostTitleFor("http://exa mple.com"))
+        assertEquals("/local/path", hostTitleFor("/local/path"))
     }
 
     @Test

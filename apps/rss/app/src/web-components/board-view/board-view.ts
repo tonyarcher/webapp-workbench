@@ -5,6 +5,7 @@ import {
     removeFromBoard,
     exportBoardOpml,
 } from '../../services/api';
+import { recordUsage } from '../../services/usage';
 import { saveBoardNote } from '../../mutations';
 import { domainOf, formatDate } from '../../util';
 import type { Article, BoardEntry } from '../../types';
@@ -37,6 +38,7 @@ export class BoardView extends HTMLElement {
     private root: HTMLDivElement | null = null;
 
     connectedCallback() {
+        recordUsage('board_opened');
         const shadow = this.attachShadow({ mode: 'open' });
         const style = document.createElement('style');
         style.textContent = styles;

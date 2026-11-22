@@ -67,4 +67,13 @@ class CorsConfigTest {
         val config = corsSourceFor(listOf("https://a.example")).getCorsConfiguration(request)!!
         assertEquals(listOf("https://a.example"), config.allowedOrigins)
     }
+
+    @Test
+    fun sameHostHandlesIpv6() {
+        val request = MockHttpServletRequest("GET", "/library")
+        request.addHeader("Origin", "http://[::1]:8080")
+        request.addHeader("Host", "[::1]:3000")
+        val config = corsSourceFor(listOf("https://cdn.example.com")).getCorsConfiguration(request)!!
+        assertEquals(listOf("http://[::1]:8080"), config.allowedOrigins)
+    }
 }

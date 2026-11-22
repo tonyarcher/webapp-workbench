@@ -48,6 +48,7 @@ class SecurityConfig(private val env: Environment) {
                 authorize(HttpMethod.GET, "/healthz", permitAll)
                 authorize(HttpMethod.GET, "/readyz", permitAll)
                 authorize(HttpMethod.GET, "/", permitAll)
+                authorize(HttpMethod.POST, "/usage", permitAll)
                 if (swaggerEnabledFromEnv(env)) {
                     swaggerDocPaths().forEach { authorize(HttpMethod.GET, it, permitAll) }
                 }

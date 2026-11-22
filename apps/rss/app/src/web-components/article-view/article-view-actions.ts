@@ -15,6 +15,7 @@ import { fetchBoards, fetchBoardEntries } from '../../services/api';
 import type { ArticleKeyword } from '../../services/keywords';
 import type { Article, Board, RowHighlight } from '../../types';
 import { stripTags } from '../../util';
+import { recordUsage } from '../../services/usage';
 import { enqueue } from '../../services/listen-queue';
 import { toastError, toastInfo } from '../../services/toast';
 import { navigate } from '../../router';
@@ -273,6 +274,7 @@ export async function ensureRichContent(host: ArticleViewActionsHost, a: Article
         const { extractArticle } = await import('../../services/api');
         const res = await extractArticle(a.id);
         if (host.article?.id !== a.id || !res.extracted) return;
+        recordUsage('body_loaded');
         // Keep local read/starred and other user state; extraction only enriches content.
         host.article = {
             ...host.article,
