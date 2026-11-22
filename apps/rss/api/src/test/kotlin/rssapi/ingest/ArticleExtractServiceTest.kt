@@ -6,6 +6,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus
+import rssapi.body.BodyStore
 import rssapi.domain.sanitizeHtml
 import rssapi.fetch.PageFetcher
 import rssapi.persist.ArticleEntity
@@ -24,7 +25,8 @@ class ArticleExtractServiceTest {
     private val articles: ArticleRepo = mock()
     private val subs: SubscriptionRepo = mock()
     private val pages: PageFetcher = mock()
-    private val service = ArticleExtractService(articles, subs, pages)
+    private val bodyStore: BodyStore = mock()
+    private val service = ArticleExtractService(articles, subs, pages, bodyStore)
 
     private val uid = UUID.randomUUID()
     private val feedId = UUID.randomUUID()

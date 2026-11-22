@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional
 import org.xml.sax.SAXException
 import rssapi.MAX_ARTICLES_PER_FEED
 import rssapi.MAX_CONTENT_BYTES
+import rssapi.body.BodyStore
 import rssapi.domain.EngagementInput
 import rssapi.domain.ParsedItem
 import rssapi.domain.contentEngagement
@@ -46,6 +47,7 @@ class IngestService(
     private val pending: PendingApply,
     private val fetcher: FeedFetcher,
     private val pages: PageFetcher,
+    private val bodyStore: BodyStore,
 ) {
     @Transactional
     fun fetchAndIngest(feedId: UUID) {
@@ -145,6 +147,7 @@ class IngestService(
             // Full text is a one-time enrichment for new stories.
             entity.contentHtml = ArticleFullText.of(pages, item, html)
             articles.save(entity)
+            bodyStore.put(entity.id, entity.contentHtml.orEmpty())
             return norm
         }
         // The stored body may be the one-time full-text extraction, which the
@@ -154,6 +157,7 @@ class IngestService(
         // the row: that churns writes and can reset extracted article metadata.
         if (existing.sameContent(entity)) return null
         articles.save(entity)
+        bodyStore.put(entity.id, entity.contentHtml.orEmpty())
         return norm
     }
 

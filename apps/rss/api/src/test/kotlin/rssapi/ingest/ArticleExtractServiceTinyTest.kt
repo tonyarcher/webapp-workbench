@@ -5,6 +5,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import rssapi.body.BodyStore
 import rssapi.fetch.PageFetcher
 import rssapi.persist.ArticleEntity
 import rssapi.persist.ArticleRepo
@@ -18,7 +19,8 @@ class ArticleExtractServiceTinyTest {
     private val articles: ArticleRepo = mock()
     private val subs: SubscriptionRepo = mock()
     private val pages: PageFetcher = mock()
-    private val service = ArticleExtractService(articles, subs, pages)
+    private val bodyStore: BodyStore = mock()
+    private val service = ArticleExtractService(articles, subs, pages, bodyStore)
 
     private val uid = UUID.randomUUID()
     private val feedId = UUID.randomUUID()

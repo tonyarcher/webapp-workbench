@@ -1245,9 +1245,10 @@ the shape of the system must not assume that.
 
 ### Q1. Dynamic body fetching and out-of-database offload
 
-- **Status.** Slice 1 implemented, verified and committed: the `BodyStore` seam,
-  a DB-backed implementation and a fault-injected read-through helper. It is not
-  deployed yet. No schema or live behavior change. The remaining slices and
+- **Status.** Slice 1 committed. Slice 2a adds the `article_bodies` table, a
+  bounded backfill job and a body store that reads it with a fallback to
+  `articles.content_html` while keeping both copies in sync. The old column is
+  still authoritative, so no reader has moved yet. The remaining slices and
   their acceptance criteria live in `DB_SCALE_PLAN.md` under "Q1 slices".
 - **Why.** Storing every full body, image, AI response and rendered edition in
   Postgres makes backups, vacuum and indexes the limit long before query

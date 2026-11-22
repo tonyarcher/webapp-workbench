@@ -74,7 +74,13 @@ rollback path; none of them changes the global feed pool or per-user state.
    make the store read from it. Keep `articles.content_html` until every reader
    has moved; switch `search_text` to a stored excerpt first. Acceptance: the
    article-list query never selects a body column; a rollback restores the old
-   reads without a data migration.
+   reads without a data migration. **Slice 2a implemented:** V17 creates the
+   table, a bounded `@Scheduled` job backfills it, and the store reads the table
+   with an `articles.content_html` fallback while dual-writing both copies.
+   Ingest and on-demand extraction now write bodies through the store, so the
+   table stays current. Still open: switching the remaining readers off the old
+   column and dropping it — the acceptance criterion is not met until that
+   happens.
 3. **Object-store tier.** Add an S3 client for `seaweedfs` and a body store that
    writes content-addressed objects, with Postgres keeping a key and byte size.
    Offload is opt-in behind DB size / backup-duration triggers, never a row

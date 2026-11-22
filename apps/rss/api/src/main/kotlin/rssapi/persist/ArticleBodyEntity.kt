@@ -1,0 +1,16 @@
+package rssapi.persist
+
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Table
+
+@Entity
+@Table(name = "article_bodies")
+class ArticleBodyEntity(
+    @Id
+    @Column(name = "article_id")
+    var articleId: String = "",
+    @Column(name = "content_html", nullable = false)
+    var contentHtml: String = "",
+)

@@ -8,6 +8,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import rssapi.body.BodyStore
 import rssapi.fetch.FeedFetcher
 import rssapi.fetch.FetchResult
 import rssapi.fetch.PageFetcher
@@ -30,7 +31,8 @@ class IngestServiceBranchTest {
     private val pending: PendingApply = mock()
     private val fetcher: FeedFetcher = mock()
     private val pages: PageFetcher = mock()
-    private val ingest = IngestService(feeds, articles, maintenance, sync, pending, fetcher, pages)
+    private val bodyStore: BodyStore = mock()
+    private val ingest = IngestService(feeds, articles, maintenance, sync, pending, fetcher, pages, bodyStore)
     private val feedId = UUID.randomUUID()
     private val feed = FeedEntity(id = feedId, xmlUrl = "https://example.com/rss", title = "t")
 

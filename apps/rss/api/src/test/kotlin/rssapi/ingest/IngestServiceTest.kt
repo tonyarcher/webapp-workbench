@@ -7,6 +7,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import rssapi.body.BodyStore
 import rssapi.domain.makeArticleId
 import rssapi.fetch.FeedFetcher
 import rssapi.fetch.PageFetcher
@@ -49,7 +50,8 @@ class IngestServiceTest {
     private val pending: PendingApply = mock()
     private val fetcher: FeedFetcher = mock()
     private val pages: PageFetcher = mock()
-    private val ingest = IngestService(feeds, articles, maintenance, sync, pending, fetcher, pages)
+    private val bodyStore: BodyStore = mock()
+    private val ingest = IngestService(feeds, articles, maintenance, sync, pending, fetcher, pages, bodyStore)
 
     private val rss = """
         <?xml version="1.0"?><rss version="2.0"><channel><title>t</title>
@@ -246,6 +248,7 @@ class IngestServiceTest {
         pending,
         fetcher,
         pages,
+        bodyStore,
     )
 
     private fun watchedFeed() = FeedEntity(

@@ -3,6 +3,7 @@ package rssapi.ingest
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import rssapi.body.BodyStore
 import rssapi.domain.sanitizeHtml
 import rssapi.fetch.PageFetcher
 import rssapi.persist.ArticleEntity
@@ -19,7 +20,8 @@ class ArticleExtractServiceMoreTest {
     private val articles: ArticleRepo = mock()
     private val subs: SubscriptionRepo = mock()
     private val pages: PageFetcher = mock()
-    private val service = ArticleExtractService(articles, subs, pages)
+    private val bodyStore: BodyStore = mock()
+    private val service = ArticleExtractService(articles, subs, pages, bodyStore)
 
     private val uid = UUID.randomUUID()
     private val feedId = UUID.randomUUID()

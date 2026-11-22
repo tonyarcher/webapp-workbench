@@ -3,6 +3,7 @@ package rssapi.ingest
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import rssapi.MAX_CONTENT_BYTES
+import rssapi.body.BodyStore
 import rssapi.domain.ampUrlOf
 import rssapi.domain.extractArticleHtml
 import rssapi.domain.safeHttpUrl
@@ -24,6 +25,7 @@ class ArticleExtractService(
     private val articles: ArticleRepo,
     private val subs: SubscriptionRepo,
     private val pages: PageFetcher,
+    private val bodyStore: BodyStore,
 ) {
     fun extractForUser(userId: UUID, articleId: String): ExtractResult {
         val article = articles.findById(articleId).orElseThrow {
@@ -40,6 +42,7 @@ class ArticleExtractService(
         if (!isMeaningfulGain(article, sanitized)) return ExtractResult(article, false, source)
         article.contentHtml = sanitized
         val saved = articles.save(article)
+        bodyStore.put(article.id, sanitized)
         return ExtractResult(saved, true, source)
     }
 
