@@ -1,3 +1,16 @@
+// Spring Boot's Gradle plugin pulls commons-lang3 3.16.0 into the buildscript
+// classpath through commons-compress; that line is affected by
+// GHSA-j288-q9x7-2f5v. Keep the build-time copy on the patched 3.21.0 line.
+buildscript {
+    configurations.classpath {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "org.apache.commons" && requested.name == "commons-lang3") {
+                useVersion("3.21.0")
+            }
+        }
+    }
+}
+
 plugins {
     kotlin("jvm") version "2.4.21"
     kotlin("plugin.spring") version "2.4.21"
