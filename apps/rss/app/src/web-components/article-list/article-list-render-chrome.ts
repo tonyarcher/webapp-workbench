@@ -172,8 +172,10 @@ export function renderAdvancedMenu(host: ArticleListRenderHost): HTMLElement {
     const menu = document.createElement('advanced-menu');
     (menu as unknown as { open: boolean }).open = host.advancedOpen;
     (menu as unknown as { anchor: MenuAnchor | null }).anchor = host.advancedAnchor;
-    // Interesting ranks from the full recent batch; unreadOnly starves it.
-    (menu as unknown as { unreadOnly: boolean }).unreadOnly = host.interestingActive() ? false : host.unreadOnly;
+    // Interesting uses client-side hideRead; server-side unreadOnly starves the batch.
+    (menu as unknown as { unreadOnly: boolean }).unreadOnly = host.interestingActive()
+        ? host.hideRead
+        : host.unreadOnly;
     (menu as unknown as { markOnScroll: boolean }).markOnScroll = host.markOnScroll;
     (menu as unknown as { marking: boolean }).marking = host.marking;
     (menu as unknown as { scopeLabel: string }).scopeLabel = host.scopeLabel();

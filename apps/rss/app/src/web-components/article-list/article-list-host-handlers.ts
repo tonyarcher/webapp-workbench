@@ -122,8 +122,10 @@ export function applyAllViewsAction(host: any): void {
 /** Toolbar and shortcut mutators: each writes its setting, then persists the per-view prefs. */
 export function toggleUnread(host: any): void {
     if (host.view?.kind === 'interesting') {
-        host.unreadOnly = false;
-        saveViewSettings(host);
+        // Interesting ranks a bounded recent batch; server-side unreadOnly starves it.
+        // Hide-read is the client-side equivalent.
+        host.hideRead = !host.hideRead;
+        void host.reset();
         return;
     }
     host.unreadOnly = !host.unreadOnly;

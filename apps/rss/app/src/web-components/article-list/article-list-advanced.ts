@@ -16,8 +16,18 @@ export function toggleAdvancedAction(host: AdvancedHost, e: Event): void {
     host.advancedOpen = !host.advancedOpen;
 }
 
-export function advancedUnreadAction(host: AdvancedHost, e: Event): void {
-    host.unreadOnly = (e as CustomEvent<boolean>).detail;
+export function advancedUnreadAction(
+    host: AdvancedHost & { view?: { kind: string }; hideRead?: boolean; reset?: () => Promise<void> },
+    e: Event,
+): void {
+    const next = (e as CustomEvent<boolean>).detail;
+    if (host.view?.kind === 'interesting') {
+        // Interesting ranks a bounded recent batch; server-side unreadOnly starves it.
+        host.hideRead = next;
+        void host.reset?.();
+        return;
+    }
+    host.unreadOnly = next;
     host.saveViewSettings();
 }
 
