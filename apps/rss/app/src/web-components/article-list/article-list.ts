@@ -500,12 +500,6 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     }
 
     onAdvancedUnread(e: Event): void {
-        if (this.view.kind === 'interesting') {
-            // Interesting ranks from the full recent batch; unreadOnly starves it.
-            this.unreadOnly = false;
-            this.saveViewSettings();
-            return;
-        }
         advancedUnreadAction(this as never, e);
     }
 
