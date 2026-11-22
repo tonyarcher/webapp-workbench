@@ -1233,6 +1233,97 @@ range from `M` to `XL`; sequence them by which unlocked the most delight in
 months one through three, and cut any two without grief if the foundations
 need the time instead.
 
+## Q. Tiered storage and dynamic fetching
+
+The feed store should keep only what a reader needs right now. Everything else
+is fetched on demand or moved out of Postgres. Measured baseline on the live
+library (Nov 2026): 215,584 articles, 968 MB database, `articles` 825 MB
+(234 MB rows, 346 MB TOAST, 189 MB trigram index), `article_state` 131 MB.
+Only 20,305 articles are older than a year, holding 21 MB of body text.
+Average `content_html` is ~1 KB, not 10-20 KB. Cold data is small today, but
+the shape of the system must not assume that.
+
+### Q1. Dynamic body fetching and out-of-database offload
+
+- **Why.** Storing every full body, image, AI response and rendered edition in
+  Postgres makes backups, vacuum and indexes the limit long before query
+  latency. A reader opens a tiny slice of what we ingest. Store the slice,
+  fetch the rest when it is asked for.
+- **What.** Three tiers with one article id across all of them:
+    1. **Hot in Postgres.** Article metadata, guid/link, scores, per-user state,
+       and a short summary. No full body, no images, no cached AI payloads.
+    2. **Warm on demand.** On open, fetch the article body from its source through
+       the existing `extractArticleHtml` path (already shipped for scraped
+       sources), sanitize it, and cache it in the object store with a TTL. A
+       read-through helper serves it to every reader of the same article; a
+       miss never breaks the view, it just shows the summary.
+    3. **Cold in the object store.** Bodies older than a configurable window,
+       images, saved AI responses, briefings and full-text index payloads move
+       to S3-compatible storage under a content-addressed key. Postgres keeps a
+       pointer and a byte size. Nothing is silently deleted: an article row and
+       its state always remain.
+- **Network and privacy.** All offload goes through the existing object store
+  used by publish (`seaweedfs`), never a new registry or vendor. Keys are
+  article ids or content hashes, never user ids. Bodies may contain personal
+  text from newsletters, so cold objects get the same lifecycle rule as their
+  source: deleting a subscription purges its bodies on a schedule with a
+  visible, confirmable "purge old data" action. No offload path logs payloads.
+- **Dynamic depth.** Fetching more is a product behavior, not only storage:
+  opening an article sees the summary first, then the full body loads; a
+  scrolled-into-view row can load its excerpt; a briefing pulls only the
+  sections it cites. A per-source capability flag says whether a full body
+  can be refetched at all, so an archived source does not pretend to.
+- **Triggers and budgets.** Start when the database passes 2 GB or backup
+  duration passes 15 minutes, not on a row count. Keep `article_state` and
+  metadata in Postgres always. Target: at 10m articles, Postgres stays under
+  50 GB with bodies out of TOAST and the trigram index rebuilt from summaries
+  plus warm excerpts only.
+- **Half.** `both` (tiering, read-through and purge jobs in `api`; lazy body
+  loading, status and purge UI in `app`).
+- **Effort.** `XL`.
+- **First test.** A fake object store with fault injection: read-through on a
+  miss, no body in the article-list query, a cold body still opening after a
+  simulated Postgres-only restore, purge removing objects but never article
+  rows, and a size report comparing DB before and after offload.
+- **Relationship to the scale plan.** `DB_SCALE_PLAN.md` Stage 0 item "keep
+  list reads narrow" becomes Q1. The trigram index shipped in V15 stays; Q1
+  changes what it indexes, not how it is queried.
+
+### Q2. Privacy-preserving feature usage signals
+
+- **Why.** We are about to move data out of Postgres based on guesses about
+  what readers use. A feature nobody opens should not keep storing bodies,
+  indexes, or derived tables. We need counts, not profiles.
+- **What.** A first-party counter channel in the RSS API: `POST /usage` accepts
+  a small batch of `{feature, count}` pairs with an API version header, no auth
+  identity attached, no payload, no URL, no timing beyond the day bucket.
+  Counters live in a `feature_usage(feature text, day date, count bigint)` table
+  owned by `rss-api`, aggregated by day. The client batches opaque feature
+  names from a fixed local enum (tab opened, body loaded, board opened, older
+  article opened, digest read, settings panel viewed) and flushes on a timer
+  with `void`/catch. No pixel, no third-party script, no cross-site id, no
+  per-user history, no event-level log line. The report is a single grouped
+  query: feature by 30-day count. Nothing is shown to advertisers; nothing
+  leaves the service.
+- **Consent and limits.** Off by default behind `USAGE_ENABLED`; when off, the
+  endpoint 404s and the client drops events. A settings toggle states plainly
+  what is counted ("which screens are opened, once a day, no article titles").
+  Counters older than 90 days are pruned by a scheduled job. `gitleaks` and
+  the log rules still apply: a usage line never includes a token, title, or
+  article id.
+- **How it drives storage.** Q1 offload windows and which derived tables
+  survive come from the 30-day report. A feature under a documented threshold
+  for two months is a candidate to stop persisting; a feature with no reads is
+  deleted with its data, not left as dead schema. The report itself is the
+  only new UI: a small `usage` section in Settings showing the local day's
+  counts, so a reader can see exactly what was sent.
+- **Half.** `both` (counter endpoint, pruning and report query in `api`; fixed
+  event enum, batching and settings view in `app`).
+- **Effort.** `M`.
+- **First test.** A fake clock test for day buckets and pruning, an auth-free
+  payload rejection test, a smoke asserting no user id or title reaches the
+  table, and a settings view smoke with `USAGE_ENABLED` off and on.
+
 ## J. Non-goals (what we will not copy)
 
 - Advertising, tracking pixels, affiliate injection, or engagement farming.

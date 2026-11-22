@@ -25,8 +25,11 @@ Read from the code, not from memory:
 
 1. Search: a leading-wildcard LIKE over TOAST text is a sequential scan.
 2. Popularity: a full-table `GROUP BY norm_link` on every feed refresh.
-3. Storage: 10m x 10-20 KB of `content_html` is 100-200 GB of TOAST, which
-   makes backups and vacuum the operational limit, not query latency.
+3. Storage: 10m x ~1 KB of `content_html` is ~10 GB of TOAST (measured
+   average 1 KB on the live library, 21 MB for the 20k articles older than a
+   year). The trigram index is the bigger multiplier: 189 MB for 215k articles.
+   Backups, vacuum and indexes become the limit before query latency does. Q1
+   in `MOONSHOT.md` covers dynamic body fetching and out-of-database offload.
 4. `article_state`: it grows with users x articles read and is the real
    long-term multiplier.
 5. Hot-sort scoped by a subscription subquery: sorts broadly before filtering.
