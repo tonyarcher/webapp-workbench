@@ -1,6 +1,5 @@
 package rssapi.frontpage
-
-import rssapi.persist.ArticleScoreEntity
+import rssapi.articles.ArticleScoreEntity
 import java.time.Instant
 
 /** One model's share of stored front-page judgments. */

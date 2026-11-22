@@ -1,5 +1,4 @@
 package rssapi.frontpage
-
 import rssapi.ai.AiConfig
 import rssapi.ai.AiException
 import rssapi.ai.DecisionBackend

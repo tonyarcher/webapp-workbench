@@ -1,11 +1,9 @@
 package rssapi.frontpage
-
 import com.fasterxml.jackson.databind.JsonNode
 import rssapi.ai.DecisionBackend
 import rssapi.ai.jsonBody
-import rssapi.domain.affinitySum
-import rssapi.persist.ArticleListRow
-
+import rssapi.articles.ArticleListRow
+import rssapi.editions.affinitySum
 const val DECISION_BATCH_MAX: Int = 16
 const val DECISION_TOP_WORDS: Int = 10
 const val DECISION_MAX_QUESTIONS: Int = 64

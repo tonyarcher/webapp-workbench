@@ -1,18 +1,17 @@
 package rssapi.ingest
-
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus
-import rssapi.body.BodyStore
-import rssapi.domain.sanitizeHtml
+import rssapi.articles.ArticleEntity
+import rssapi.articles.ArticleRepo
+import rssapi.feeds.SubscriptionRepo
 import rssapi.fetch.PageFetcher
-import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleRepo
-import rssapi.persist.SubscriptionRepo
-import rssapi.web.ApiException
+import rssapi.platform.ApiException
+import rssapi.platform.sanitizeHtml
+import rssapi.storage.BodyStore
 import java.util.Optional
 import java.util.UUID
 import kotlin.test.Test

@@ -1,5 +1,4 @@
 package rssapi.scrape
-
 import org.jsoup.Jsoup
 import kotlin.test.Test
 import kotlin.test.assertEquals

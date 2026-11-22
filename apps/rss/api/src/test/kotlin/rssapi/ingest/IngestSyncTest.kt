@@ -1,14 +1,13 @@
 package rssapi.ingest
-
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import rssapi.persist.FeedEntity
-import rssapi.persist.FeedRepo
-import rssapi.persist.FeedSyncEntity
-import rssapi.persist.FeedSyncRepo
+import rssapi.feeds.FeedEntity
+import rssapi.feeds.FeedRepo
+import rssapi.feeds.FeedSyncEntity
+import rssapi.feeds.FeedSyncRepo
 import java.util.Optional
 import java.util.UUID
 import kotlin.test.Test

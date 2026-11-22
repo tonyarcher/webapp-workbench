@@ -1,8 +1,7 @@
 package rssapi.ingest
-
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import rssapi.domain.ParsedItem
+import rssapi.feeds.ParsedItem
 import rssapi.fetch.PageFetcher
 import kotlin.test.Test
 import kotlin.test.assertEquals

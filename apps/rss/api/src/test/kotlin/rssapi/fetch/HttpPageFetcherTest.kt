@@ -1,5 +1,4 @@
 package rssapi.fetch
-
 import com.sun.net.httpserver.HttpServer
 import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets

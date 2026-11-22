@@ -1,10 +1,9 @@
 package rssapi.ingest
-
 import org.springframework.stereotype.Component
-import rssapi.persist.FeedEntity
-import rssapi.persist.FeedRepo
-import rssapi.persist.FeedSyncEntity
-import rssapi.persist.FeedSyncRepo
+import rssapi.feeds.FeedEntity
+import rssapi.feeds.FeedRepo
+import rssapi.feeds.FeedSyncEntity
+import rssapi.feeds.FeedSyncRepo
 import rssapi.poller.PollingBackoff
 import java.time.Instant
 import java.util.UUID

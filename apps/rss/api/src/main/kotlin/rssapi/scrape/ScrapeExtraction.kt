@@ -1,8 +1,6 @@
 package rssapi.scrape
-
 import org.jsoup.nodes.Document
-import rssapi.domain.ParsedItem
-
+import rssapi.feeds.ParsedItem
 /** Shared extraction rules for the preview endpoint and the ingest path. */
 object ScrapeExtraction {
     fun all(doc: Document): List<PageExtractor> = listOf(

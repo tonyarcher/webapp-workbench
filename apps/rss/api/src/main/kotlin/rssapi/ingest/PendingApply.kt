@@ -1,11 +1,13 @@
 package rssapi.ingest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
-import rssapi.persist.ArticleRepo
-import rssapi.persist.ArticleStateEntity
-import rssapi.persist.ArticleStateRepo
-import rssapi.persist.PendingStateEntity
-import rssapi.persist.PendingStateRepo
+import rssapi.articles.ArticleEntity
+import rssapi.articles.ArticleRepo
+import rssapi.articles.ArticleStateEntity
+import rssapi.articles.ArticleStateId
+import rssapi.articles.ArticleStateRepo
+import rssapi.feeds.PendingStateEntity
+import rssapi.feeds.PendingStateRepo
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -27,7 +29,7 @@ class PendingApply(
 
     private fun applyOne(row: PendingStateEntity) {
         val match = matchArticle(row) ?: return
-        val id = rssapi.persist.ArticleStateId(row.userId, match.id)
+        val id = ArticleStateId(row.userId, match.id)
         val existing = states.findById(id).orElse(null)
         if (existing == null) {
             states.save(
@@ -48,7 +50,7 @@ class PendingApply(
         pending.delete(row)
     }
 
-    private fun matchArticle(row: PendingStateEntity): rssapi.persist.ArticleEntity? {
+    private fun matchArticle(row: PendingStateEntity): ArticleEntity? {
         if (row.guid != null) {
             articles.findByFeedIdAndGuid(row.feedId, row.guid!!)?.let { return it }
         }

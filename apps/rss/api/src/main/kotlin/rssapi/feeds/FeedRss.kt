@@ -1,0 +1,68 @@
+package rssapi.feeds
+import org.w3c.dom.Document
+import org.w3c.dom.Element
+import rssapi.articles.parseCommentCount
+import rssapi.platform.safeHttpUrl
+import rssapi.platform.stripHtml
+
+/** Stored summaries are truncated to one short paragraph. */
+private const val SUMMARY_CHARS = 500
+
+internal fun parseRss(doc: Document, fallbackPublished: Long): ParsedFeed {
+    val channel = doc.documentElement.descendants("channel").firstOrNull() ?: doc.documentElement
+    val title = channel.childText("title").ifEmpty { "Untitled feed" }
+    val siteUrl = channel.childText("link").ifEmpty { null }
+    val items = doc.documentElement.descendants("item").map { rssItem(it, fallbackPublished, title) }
+    return ParsedFeed(title, siteUrl, items, channelIcon(channel))
+}
+
+private fun channelIcon(channel: Element): String? {
+    val imgUrl = channel.descendants("image").firstOrNull()?.let { img ->
+        val url = img.childText("url").ifEmpty { img.getAttribute("href") }
+        if (url.isNotEmpty()) safeHttpUrl(url) else null
+    }
+    if (imgUrl != null) return imgUrl
+    val itunes = channel.descendants("image").firstOrNull { it.getAttribute("href").isNotEmpty() }?.getAttribute("href")
+    if (!itunes.isNullOrBlank()) return safeHttpUrl(itunes)
+    return null
+}
+
+private fun rssItem(item: Element, fallbackPublished: Long, feedTitle: String): ParsedItem {
+    val dcDate = item.firstDesc("date")?.textContent?.trim()
+    val published = tryParsePub(item.childText("pubDate").ifEmpty { dcDate }, fallbackPublished)
+    val description = item.childText("description")
+    val encoded = item.firstDesc("encoded")?.textContent?.trim().orEmpty()
+    val content = encoded.ifEmpty { description }.ifEmpty { null }
+    val link = safeHttpUrl(item.childText("link").ifEmpty { null })
+    val guid = item.childText("guid").ifEmpty { item.childText("link") }.ifEmpty { "$published-$feedTitle" }
+    return ParsedItem(
+        guid = guid,
+        title = item.childText("title").ifEmpty { "(untitled)" },
+        published = published,
+        link = link,
+        author = rssAuthor(item),
+        summary = stripHtml(description).take(SUMMARY_CHARS).ifEmpty { null },
+        content = content,
+        media = parseMedia(item, link) ?: firstImageUrl(content, link),
+        comments = parseCommentCount(item),
+    )
+}
+
+private fun rssAuthor(item: Element): String? {
+    val dc = item.firstDesc("creator")?.textContent?.trim()
+    return item.childText("author").ifEmpty { dc.orEmpty() }.ifEmpty { null }
+}
+
+internal fun tryParsePub(value: String?, fallback: Long): Long {
+    if (value.isNullOrBlank()) return fallback
+    return try {
+        java.time.Instant.parse(value).toEpochMilli()
+    } catch (_: Exception) {
+        try {
+            java.time.ZonedDateTime.parse(value, java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME)
+                .toInstant().toEpochMilli()
+        } catch (_: Exception) {
+            fallback
+        }
+    }
+}

@@ -1,5 +1,4 @@
 package rssapi.ai
-
 /** A healthy Ollama root answers 200. */
 private const val HTTP_OK = 200
 

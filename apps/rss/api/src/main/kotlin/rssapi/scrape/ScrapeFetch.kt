@@ -1,12 +1,10 @@
 package rssapi.scrape
-
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.springframework.http.HttpStatus
-import rssapi.domain.safeHttpUrl
 import rssapi.fetch.PageFetcher
-import rssapi.web.ApiException
-
+import rssapi.platform.ApiException
+import rssapi.platform.safeHttpUrl
 /** Shared page fetch for every source preview, so URL and transport rules stay in one place. */
 object ScrapeFetch {
     fun target(url: String?): String = safeHttpUrl(url)

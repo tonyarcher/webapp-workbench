@@ -1,0 +1,61 @@
+package rssapi.articles
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
+import rssapi.poller.FeedRecency
+import java.util.UUID
+
+interface ArticleMaintenanceRepo : JpaRepository<ArticleEntity, String> {
+    /**
+     * Refresh popularity/hot for this feed's rows only. The syndication count
+     * still sees every feed, but sibling feeds' rows wait for their own poll:
+     * at this scale they are stale already, and nobody reads a feed whose
+     * owner went quiet (see FeedRecency). One feed's writes per ingest.
+     */
+    @Modifying
+    @Query(
+        value = """
+        UPDATE articles a SET
+          popularity = 1+3*GREATEST(sub.cnt-1,0)+LEAST(GREATEST(COALESCE(a.comments,0),0),50),
+          hot = log(GREATEST(1+3*GREATEST(sub.cnt-1,0)+LEAST(GREATEST(COALESCE(a.comments,0),0),50)
+                +GREATEST(a.engagement,0),1)::numeric)
+                +(EXTRACT(EPOCH FROM a.published_at)-1134028003)/90000
+        FROM (
+          SELECT norm_link, COUNT(DISTINCT feed_id) AS cnt FROM articles
+          WHERE norm_link = ANY(:links)
+          GROUP BY norm_link
+        ) sub
+        WHERE a.norm_link = sub.norm_link AND a.feed_id = :feedId
+        """,
+        nativeQuery = true,
+    )
+    fun updatePopularity(@Param("feedId") feedId: UUID, @Param("links") links: Array<String>)
+
+    @Modifying
+    @Query(
+        value = """
+        UPDATE articles SET
+          popularity = 1+LEAST(GREATEST(COALESCE(comments,0),0),50),
+          hot = log(GREATEST(1+LEAST(GREATEST(COALESCE(comments,0),0),50)+GREATEST(engagement,0),1)::numeric)
+                +(EXTRACT(EPOCH FROM published_at)-1134028003)/90000
+        WHERE feed_id = :feedId AND norm_link IS NULL
+        """,
+        nativeQuery = true,
+    )
+    fun updateLonelyHot(@Param("feedId") feedId: UUID)
+
+    @Modifying
+    @Query(
+        value = """
+        DELETE FROM articles a
+        WHERE a.feed_id = :feedId
+          AND NOT EXISTS (SELECT 1 FROM article_state s WHERE s.article_id = a.id AND s.starred)
+          AND a.id NOT IN (
+            SELECT id FROM articles WHERE feed_id = :feedId ORDER BY published_at DESC LIMIT :keep
+          )
+        """,
+        nativeQuery = true,
+    )
+    fun pruneFeed(@Param("feedId") feedId: UUID, @Param("keep") keep: Int)
+}

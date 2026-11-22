@@ -1,5 +1,4 @@
 package rssapi.scrape
-
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
@@ -13,11 +12,11 @@ import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
-import rssapi.persist.UserEntity
-import rssapi.persist.UserRepo
-import rssapi.web.IdentityUser
-import rssapi.web.RequestIdFilter
-import rssapi.web.SecurityConfig
+import rssapi.feeds.UserEntity
+import rssapi.feeds.UserRepo
+import rssapi.platform.IdentityUser
+import rssapi.platform.RequestIdFilter
+import rssapi.platform.SecurityConfig
 import java.util.UUID
 
 @WebMvcTest(FeedDiscoveryController::class)

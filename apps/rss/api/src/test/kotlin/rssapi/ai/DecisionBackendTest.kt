@@ -1,5 +1,4 @@
 package rssapi.ai
-
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

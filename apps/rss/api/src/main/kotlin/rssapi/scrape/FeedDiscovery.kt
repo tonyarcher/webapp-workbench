@@ -1,7 +1,6 @@
 package rssapi.scrape
-
 import org.jsoup.nodes.Document
-import rssapi.domain.safeHttpUrl
+import rssapi.platform.safeHttpUrl
 import java.net.URI
 
 data class FeedCandidate(

@@ -1,5 +1,4 @@
 package rssapi.poller
-
 import java.time.Duration
 import java.time.Instant
 

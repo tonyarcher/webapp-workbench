@@ -1,12 +1,10 @@
 package rssapi.scrape
-
 import org.jsoup.nodes.Document
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
 import rssapi.fetch.PageFetcher
-import rssapi.web.ApiException
-
+import rssapi.platform.ApiException
 private const val MAX_CANDIDATES = 50
 private val NO_LIST_STATUS: HttpStatusCode = HttpStatusCode.valueOf(422)
 

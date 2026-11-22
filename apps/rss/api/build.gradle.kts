@@ -123,9 +123,11 @@ tasks.named("check") { dependsOn("detekt", "jacocoTestCoverageVerification", "ja
 tasks.withType<Test> { useJUnitPlatform() }
 
 val jacocoExcludes = listOf(
-    "rssapi/persist/**",
-    "rssapi/db/**",
-    "rssapi/config/DataSourceConfig*",
+    // Vertical slices own their entities and repos; they live beside each
+    // feature now rather than under one persist/ layer.
+    "rssapi/**/*Entity*",
+    "rssapi/**/*Repo*",
+    "rssapi/platform/db/**",
     "rssapi/RssApiApplicationKt*",
 )
 

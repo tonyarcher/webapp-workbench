@@ -1,9 +1,8 @@
 package rssapi.scrape
-
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import rssapi.fetch.PageFetcher
-import rssapi.web.ApiException
+import rssapi.platform.ApiException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

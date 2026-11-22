@@ -1,5 +1,4 @@
 package rssapi.fetch
-
 data class FetchResult(
     val status: Int,
     val text: String? = null,

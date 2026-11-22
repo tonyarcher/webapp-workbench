@@ -1,7 +1,6 @@
 package rssapi.frontpage
-
 import org.junit.jupiter.api.Test
-import rssapi.persist.ArticleScoreEntity
+import rssapi.articles.ArticleScoreEntity
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

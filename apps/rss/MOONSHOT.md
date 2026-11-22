@@ -895,6 +895,32 @@ reader into infrastructure.
 - **Effort.** `M`.
 - **First test.** Manifest assertions; receive-flow smoke.
 
+### G6. MCP server for my AI
+
+- **Why.** The reader already holds the curated corpus: feeds, folders, boards,
+  highlights, and reading state. An AI assistant should query that through an
+  explicit, narrow surface instead of screen-scraping the app or copying text
+  around. The connection has to stay private, inspectable, and revocable.
+- **What.** A first-party Model Context Protocol surface owned by `rss-api`,
+  using the same identity and database boundary as every other reader route: no
+  new store, no new vendor, no token in logs. Start read-first: list feeds and
+  folders, search with the existing operators, open a summary, fetch the stored
+  body on demand through the Q1 tiering seam, and quote a highlight with its
+  provenance. Write tools (star, save for later, add to board) stay behind an
+  explicit per-client consent flag and remain individually confirmable. No
+  arbitrary SQL, no arbitrary URL fetch, no payload-bearing log line. The
+  protocol surface gets its auth and versioning contract in
+  `apps/rss/api/AGENTS.md`; a small settings panel issues and revokes a client
+  credential and shows what was connected. Pick one MCP transport at
+  implementation time rather than shipping both.
+- **Half.** `api` (tool registry, auth, transport) plus minimal `app` consent
+  and revocation UI.
+- **Effort.** `M`.
+- **First test.** Tool-contract tests for the advertised list and schemas; a
+  fake-client session smoke (list feeds, search, open summary, fetch body, and
+  a write rejected before consent); auth and version rejection tests; and an
+  assertion that no article title, summary, body, or token reaches logs.
+
 ## H. Speed, offline, and trust (the platform bets)
 
 ### H1. Full offline reader
@@ -1216,8 +1242,9 @@ push and email surfaces stay opt-in from day one with revoke paths tested.
 Month three is understanding: duplicate clustering (B2) with the
 perspective spectrum (M1) as coverage compare, row-level why-this-row (N1)
 on top of the provenance layer (N6), highlights with margin notes, webhooks,
-personal reading page, full portable export, and the connector framework,
-provenance, and source safety baseline (P12). The quarter closes by deleting
+personal reading page, full portable export, an MCP server for reader data
+(G6), and the connector framework, provenance, and source safety baseline
+(P12). The quarter closes by deleting
 shipped lines from this file and writing the next quarter from what readers
 actually used, informed by the private stats screen (O4) and any opt-in
 aggregate signals (E3), not by opinion.

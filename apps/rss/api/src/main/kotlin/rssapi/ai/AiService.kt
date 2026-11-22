@@ -1,9 +1,8 @@
 package rssapi.ai
-
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import rssapi.log.log
-import rssapi.web.ApiException
+import rssapi.platform.ApiException
+import rssapi.platform.log.log
 import java.util.UUID
 
 data class AiStatus(val provider: String, val model: String, val available: Boolean)

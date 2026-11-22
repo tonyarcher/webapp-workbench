@@ -1,5 +1,4 @@
 package rssapi.ai
-
 /** Defaults for every AI knob; each is overridable by its AI_* env var. */
 private const val DEFAULT_TIMEOUT_MS = 90_000L
 private const val DEFAULT_PROBE_TIMEOUT_MS = 5_000L

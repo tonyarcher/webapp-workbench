@@ -8,12 +8,15 @@ Do not put RSS tables in `user-api`. Do not add Node `pg` here.
 
 ## Rules
 
+- The API is organised in **vertical feature slices**, not technical layers.
+  Each slice under `rssapi/` owns its controller, service, entities, repos, and
+  DTOs; cross-cutting infrastructure lives in `rssapi/platform/`. Keep files
+  small and focused — one class per file, short functions. Do not reintroduce
+  shared technical layers named for web, persist, or domain.
 - `@Entity` plus `JpaRepository` for tables. Do not write JDBC DAOs.
 - **Feeds are one global pool: one row per URL, fetched once.** Per-user reading
   state lives in subscriptions, folders, states, and affinity — do not
   re-fetch per reader.
-- `domain/` holds ranking, parsing, sanitising, SSRF checks, and cursors. It
-  holds no entities.
 - **The poller must stop on application dispose.** It is a Spring `@Scheduled` or
   `SmartLifecycle` bean, and a leaked poller fetches against a closed context.
 - Auth is an OAuth2 resource server over JWKS; users provision from the JWT

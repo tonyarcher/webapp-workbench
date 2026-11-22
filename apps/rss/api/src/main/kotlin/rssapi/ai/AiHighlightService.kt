@@ -1,10 +1,9 @@
 package rssapi.ai
-
 import com.fasterxml.jackson.databind.JsonNode
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import rssapi.log.log
-import rssapi.web.ApiException
+import rssapi.platform.ApiException
+import rssapi.platform.log.log
 import java.util.UUID
 
 data class HighlightExcerpt(val index: Int, val text: String, val score: Double)

@@ -1,9 +1,7 @@
 package rssapi.ai
-
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import rssapi.persist.AiQuotaRepo
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID

@@ -1,13 +1,10 @@
 package rssapi.ai
-
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.orm.ObjectOptimisticLockingFailureException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import rssapi.persist.AiQuotaEntity
-import rssapi.persist.AiQuotaRepo
-import rssapi.web.ApiException
+import rssapi.platform.ApiException
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate

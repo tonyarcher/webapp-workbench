@@ -1,5 +1,4 @@
 package rssapi.scrape
-
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doReturn
@@ -9,7 +8,7 @@ import org.mockito.kotlin.whenever
 import rssapi.fetch.FeedFetcher
 import rssapi.fetch.FetchResult
 import rssapi.fetch.PageFetcher
-import rssapi.web.ApiException
+import rssapi.platform.ApiException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

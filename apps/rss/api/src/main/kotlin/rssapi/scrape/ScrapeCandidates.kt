@@ -1,8 +1,7 @@
 package rssapi.scrape
-
 import org.jsoup.nodes.Element
-import rssapi.domain.safeHttpUrl
-import rssapi.domain.tryParsePub
+import rssapi.feeds.tryParsePub
+import rssapi.platform.safeHttpUrl
 
 private const val MAX_TITLE = 200
 private const val MAX_SUMMARY = 300

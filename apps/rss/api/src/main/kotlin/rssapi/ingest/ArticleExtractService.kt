@@ -1,21 +1,20 @@
 package rssapi.ingest
-
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import rssapi.MAX_CONTENT_BYTES
-import rssapi.body.BodyStore
-import rssapi.domain.ampUrlOf
-import rssapi.domain.excerptOf
-import rssapi.domain.extractArticleHtml
-import rssapi.domain.firstImageUrl
-import rssapi.domain.safeHttpUrl
-import rssapi.domain.sanitizeHtml
-import rssapi.domain.stripHtml
+import rssapi.articles.ArticleEntity
+import rssapi.articles.ArticleRepo
+import rssapi.articles.excerptOf
+import rssapi.feeds.SubscriptionRepo
+import rssapi.feeds.firstImageUrl
 import rssapi.fetch.PageFetcher
-import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleRepo
-import rssapi.persist.SubscriptionRepo
-import rssapi.web.ApiException
+import rssapi.ingest.ampUrlOf
+import rssapi.ingest.extractArticleHtml
+import rssapi.platform.ApiException
+import rssapi.platform.MAX_CONTENT_BYTES
+import rssapi.platform.safeHttpUrl
+import rssapi.platform.sanitizeHtml
+import rssapi.platform.stripHtml
+import rssapi.storage.BodyStore
 import java.util.UUID
 
 private const val MIN_GAIN_CHARS = 300

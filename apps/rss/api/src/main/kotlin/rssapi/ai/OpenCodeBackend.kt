@@ -1,5 +1,4 @@
 package rssapi.ai
-
 /**
  * opencode serve (see opencode.ai/docs/server). Sessions are created per
  * summary and deleted after: nothing accumulates on the model host. The

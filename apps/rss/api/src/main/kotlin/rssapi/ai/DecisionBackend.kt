@@ -1,5 +1,4 @@
 package rssapi.ai
-
 import com.fasterxml.jackson.databind.JsonNode
 
 const val DECISION_DEFAULT_BASE: String = "https://api.typesafe.ai"

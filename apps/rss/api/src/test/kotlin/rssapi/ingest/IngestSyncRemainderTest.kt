@@ -1,13 +1,12 @@
 package rssapi.ingest
-
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import rssapi.persist.FeedRepo
-import rssapi.persist.FeedSyncEntity
-import rssapi.persist.FeedSyncRepo
+import rssapi.feeds.FeedRepo
+import rssapi.feeds.FeedSyncEntity
+import rssapi.feeds.FeedSyncRepo
 import java.util.Optional
 import java.util.UUID
 import kotlin.test.Test
@@ -73,7 +72,7 @@ class IngestSyncRemainderTest {
 
     @Test
     fun renameKeepsGoodTitle() {
-        val feed = rssapi.persist.FeedEntity(xmlUrl = "https://example.com/rss", title = "Keep Me")
+        val feed = rssapi.feeds.FeedEntity(xmlUrl = "https://example.com/rss", title = "Keep Me")
         ingest.maybeRename(feed, "New Name")
         assertEquals("Keep Me", feed.title)
         verify(feeds, never()).save(any())

@@ -1,5 +1,4 @@
 package rssapi.ingest
-
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.clearInvocations
@@ -7,16 +6,16 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import rssapi.body.BodyStore
-import rssapi.domain.makeArticleId
+import rssapi.articles.ArticleEntity
+import rssapi.articles.ArticleMaintenanceRepo
+import rssapi.articles.ArticleRepo
+import rssapi.articles.makeArticleId
+import rssapi.feeds.FeedEntity
+import rssapi.feeds.FeedRepo
 import rssapi.fetch.FeedFetcher
 import rssapi.fetch.PageFetcher
-import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleMaintenanceRepo
-import rssapi.persist.ArticleRepo
-import rssapi.persist.FeedEntity
-import rssapi.persist.FeedRepo
 import rssapi.scrape.SemanticListExtractor
+import rssapi.storage.BodyStore
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals

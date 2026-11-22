@@ -1,5 +1,4 @@
 package rssapi.frontpage
-
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
@@ -16,20 +15,20 @@ import org.springframework.data.jpa.domain.Specification
 import org.springframework.http.HttpStatus
 import rssapi.ai.AiConfig
 import rssapi.ai.AiException
+import rssapi.ai.AiQuotaEntity
+import rssapi.ai.AiQuotaRepo
 import rssapi.ai.AiQuotaService
 import rssapi.ai.DecisionBackend
 import rssapi.ai.HttpPoster
 import rssapi.ai.HttpResult
-import rssapi.persist.AffinityEntity
-import rssapi.persist.AffinityRepo
-import rssapi.persist.AiQuotaEntity
-import rssapi.persist.AiQuotaRepo
-import rssapi.persist.ArticleListQuery
-import rssapi.persist.ArticleListRow
-import rssapi.persist.ArticleScoreEntity
-import rssapi.persist.ArticleScoreRepo
-import rssapi.persist.ArticleStateRepo
-import rssapi.web.ApiException
+import rssapi.articles.ArticleListQuery
+import rssapi.articles.ArticleListRow
+import rssapi.articles.ArticleScoreEntity
+import rssapi.articles.ArticleScoreRepo
+import rssapi.articles.ArticleStateRepo
+import rssapi.feeds.AffinityEntity
+import rssapi.feeds.AffinityRepo
+import rssapi.platform.ApiException
 import java.time.Duration
 import java.time.Instant
 import java.util.Optional
@@ -107,14 +106,14 @@ class FrontPageServiceTest {
     )
 
     private fun stubCandidates(vararg rows: ArticleListRow) {
-        whenever(articles.findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>()))
+        whenever(articles.findAll(any<Specification<rssapi.articles.ArticleEntity>>(), any<Pageable>()))
             .thenReturn(rows.toList())
         whenever(states.findByUserIdAndArticleIdIn(eq(uid), anyOrNull())).thenReturn(emptyList())
     }
 
     @Test
     fun emptyWindowReturnsEmpty() {
-        whenever(articles.findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>()))
+        whenever(articles.findAll(any<Specification<rssapi.articles.ArticleEntity>>(), any<Pageable>()))
             .thenReturn(emptyList())
         val out = service.frontPage(uid, 1_700_000_000_000L, false, 10)
         assertTrue(out.isEmpty())
@@ -198,7 +197,7 @@ class FrontPageServiceTest {
         val liked = article("liked", feedId = feedA)
         stubCandidates(bare, liked)
         whenever(scoreRows.findAllById(anyOrNull())).thenReturn(emptyList())
-        whenever(affinity.findAllById(any<Iterable<rssapi.persist.AffinityId>>())).thenReturn(
+        whenever(affinity.findAllById(any<Iterable<rssapi.feeds.AffinityId>>())).thenReturn(
             mutableListOf(AffinityEntity(userId = uid, key = "aff:feed:$feedA", value = 20f)),
         )
         whenever(scoreRows.saveAll(any<Iterable<ArticleScoreEntity>>()))
@@ -485,7 +484,7 @@ class FrontPageServiceTest {
         assertEquals(setOf("jev-latest", "signals-v1"), evidence.map { it.model }.toSet())
         verify(scoreRows).findAllByScoredAtAfter(eq(now.minus(Duration.ofDays(DEFAULT_WINDOW_DAYS))))
         verify(scoreRows, never()).saveAll(any<Iterable<ArticleScoreEntity>>())
-        verify(articles, never()).findAll(any<Specification<rssapi.persist.ArticleEntity>>(), any<Pageable>())
+        verify(articles, never()).findAll(any<Specification<rssapi.articles.ArticleEntity>>(), any<Pageable>())
     }
 
     @Test

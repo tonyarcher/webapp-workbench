@@ -1,5 +1,4 @@
 package rssapi.scrape
-
 import org.jsoup.nodes.Document
 
 /** One candidate article seen on a page. Preview only, not persisted yet. */

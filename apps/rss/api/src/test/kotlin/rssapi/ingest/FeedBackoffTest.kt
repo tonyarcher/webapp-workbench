@@ -1,10 +1,9 @@
 package rssapi.ingest
-
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import rssapi.persist.FeedSyncEntity
-import rssapi.persist.FeedSyncRepo
+import rssapi.feeds.FeedSyncEntity
+import rssapi.feeds.FeedSyncRepo
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID

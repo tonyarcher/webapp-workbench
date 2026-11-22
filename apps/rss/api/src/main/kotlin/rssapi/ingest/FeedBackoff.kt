@@ -1,7 +1,6 @@
 package rssapi.ingest
-
 import org.springframework.stereotype.Component
-import rssapi.persist.FeedSyncRepo
+import rssapi.feeds.FeedSyncRepo
 import java.util.UUID
 
 /** Small helper for reader-forced refreshes that must ignore the retry delay. */

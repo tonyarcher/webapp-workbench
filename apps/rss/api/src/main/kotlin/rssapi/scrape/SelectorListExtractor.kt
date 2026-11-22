@@ -1,5 +1,4 @@
 package rssapi.scrape
-
 import org.jsoup.nodes.Document
 
 /** Feedly-style escape hatch: the reader points at the list container. */

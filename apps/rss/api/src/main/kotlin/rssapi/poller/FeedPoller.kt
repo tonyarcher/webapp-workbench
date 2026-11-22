@@ -1,17 +1,16 @@
 package rssapi.poller
-
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.dao.DataAccessException
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import rssapi.POLL_BATCH
+import rssapi.feeds.FeedSyncEntity
+import rssapi.feeds.FeedSyncRepo
+import rssapi.feeds.SubscriptionRepo
 import rssapi.ingest.FeedBackoff
 import rssapi.ingest.IngestService
 import rssapi.ingest.IngestSync
-import rssapi.log.log
-import rssapi.persist.FeedSyncEntity
-import rssapi.persist.FeedSyncRepo
-import rssapi.persist.SubscriptionRepo
+import rssapi.platform.POLL_BATCH
+import rssapi.platform.log.log
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue

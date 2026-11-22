@@ -1,5 +1,4 @@
 package rssapi.fetch
-
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

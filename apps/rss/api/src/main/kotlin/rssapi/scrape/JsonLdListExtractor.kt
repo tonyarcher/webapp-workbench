@@ -1,11 +1,10 @@
 package rssapi.scrape
-
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.jsoup.nodes.Document
 import org.springframework.stereotype.Component
-import rssapi.domain.safeHttpUrl
-import rssapi.domain.tryParsePub
+import rssapi.feeds.tryParsePub
+import rssapi.platform.safeHttpUrl
 import java.net.URI
 
 private const val MAX_DEPTH = 6

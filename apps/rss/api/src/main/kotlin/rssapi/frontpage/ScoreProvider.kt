@@ -1,10 +1,5 @@
 package rssapi.frontpage
-
 import org.springframework.stereotype.Component
-import rssapi.domain.signalInterest
-import rssapi.domain.signalPopularityOutlook
-import rssapi.domain.signalReadability
-import rssapi.domain.signalWorthy
 
 /** Raw per-article inputs for scoring. All doubles are 0+ magnitudes; NaN maps to 0 downstream. */
 data class SignalInput(

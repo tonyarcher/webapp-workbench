@@ -1,15 +1,14 @@
 package rssapi.ingest
-
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleRepo
-import rssapi.persist.ArticleStateEntity
-import rssapi.persist.ArticleStateRepo
-import rssapi.persist.PendingStateEntity
-import rssapi.persist.PendingStateRepo
+import rssapi.articles.ArticleEntity
+import rssapi.articles.ArticleRepo
+import rssapi.articles.ArticleStateEntity
+import rssapi.articles.ArticleStateRepo
+import rssapi.feeds.PendingStateEntity
+import rssapi.feeds.PendingStateRepo
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID

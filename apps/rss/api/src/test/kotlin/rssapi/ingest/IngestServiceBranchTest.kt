@@ -1,5 +1,4 @@
 package rssapi.ingest
-
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
@@ -8,15 +7,17 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import rssapi.body.BodyStore
+import rssapi.articles.ArticleEntity
+import rssapi.articles.ArticleMaintenanceRepo
+import rssapi.articles.ArticleRepo
+import rssapi.feeds.FeedEntity
+import rssapi.feeds.FeedRepo
 import rssapi.fetch.FeedFetcher
 import rssapi.fetch.FetchResult
 import rssapi.fetch.PageFetcher
-import rssapi.persist.ArticleEntity
-import rssapi.persist.ArticleMaintenanceRepo
-import rssapi.persist.ArticleRepo
-import rssapi.persist.FeedEntity
-import rssapi.persist.FeedRepo
+import rssapi.platform.MAX_ARTICLES_PER_FEED
+import rssapi.platform.MAX_CONTENT_BYTES
+import rssapi.storage.BodyStore
 import java.util.Optional
 import java.util.UUID
 import kotlin.test.Test
@@ -162,20 +163,20 @@ class IngestServiceBranchTest {
         ingest.ingestXml(feed, xml)
         verify(maintenance, never()).updatePopularity(any(), any())
         verify(maintenance).updateLonelyHot(feedId)
-        verify(maintenance).pruneFeed(feedId, rssapi.MAX_ARTICLES_PER_FEED)
+        verify(maintenance).pruneFeed(feedId, rssapi.platform.MAX_ARTICLES_PER_FEED)
     }
 
     @Test
     fun largeContentTruncated() {
         whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
-        val big = "x".repeat(rssapi.MAX_CONTENT_BYTES + 10)
+        val big = "x".repeat(rssapi.platform.MAX_CONTENT_BYTES + 10)
         val xml = """<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>""" +
             """<item><title>t</title><link>https://example.com/z</link><description>$big</description></item>""" +
             """</channel></rss>"""
         ingest.ingestXml(feed, xml)
         val body = argumentCaptor<String>()
         verify(bodyStore, org.mockito.kotlin.atLeastOnce()).put(any(), body.capture())
-        assertTrue(body.allValues.any { it.length <= rssapi.MAX_CONTENT_BYTES })
+        assertTrue(body.allValues.any { it.length <= rssapi.platform.MAX_CONTENT_BYTES })
     }
 
     @Test
@@ -203,7 +204,7 @@ class IngestServiceBranchTest {
             </channel></rss>
         """.trimIndent()
         ingest.ingestXml(feed, xml)
-        val captor = argumentCaptor<rssapi.persist.ArticleEntity>()
+        val captor = argumentCaptor<rssapi.articles.ArticleEntity>()
         verify(articles).save(captor.capture())
         assertEquals(null, captor.firstValue.link)
         assertEquals(null, captor.firstValue.normLink)

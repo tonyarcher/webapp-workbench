@@ -1,0 +1,9 @@
+package rssapi.fetch
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import rssapi.fetch.FeedFetcher
+@Configuration
+class FetchConfig {
+    @Bean
+    fun feedFetcher(): FeedFetcher = HttpFeedFetcher(System.getenv("RSS_ALLOW_LOCAL_FETCH") == "1")
+}

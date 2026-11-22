@@ -1,6 +1,5 @@
 package rssapi.fetch
-
-import rssapi.domain.isPrivateIp
+import rssapi.platform.isPrivateIp
 import java.net.InetAddress
 import java.net.URI
 

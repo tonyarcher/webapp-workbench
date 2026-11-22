@@ -1,9 +1,7 @@
 package rssapi.fetch
-
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import rssapi.settingsFromEnv
-
+import rssapi.platform.settingsFromEnv
 @Configuration
 class FetchBeans {
     @Bean

@@ -1,7 +1,6 @@
 package rssapi.fetch
-
-import rssapi.FETCH_TIMEOUT_MS
-import rssapi.MAX_FEED_BYTES
+import rssapi.platform.FETCH_TIMEOUT_MS
+import rssapi.platform.MAX_FEED_BYTES
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest

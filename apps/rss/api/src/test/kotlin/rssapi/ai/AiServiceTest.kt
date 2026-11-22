@@ -1,14 +1,11 @@
 package rssapi.ai
-
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus
-import rssapi.persist.AiQuotaEntity
-import rssapi.persist.AiQuotaRepo
-import rssapi.web.ApiException
+import rssapi.platform.ApiException
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID

@@ -1,5 +1,4 @@
 package rssapi.scrape
-
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
@@ -13,11 +12,11 @@ import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
-import rssapi.persist.UserEntity
-import rssapi.persist.UserRepo
-import rssapi.web.IdentityUser
-import rssapi.web.RequestIdFilter
-import rssapi.web.SecurityConfig
+import rssapi.feeds.UserEntity
+import rssapi.feeds.UserRepo
+import rssapi.platform.IdentityUser
+import rssapi.platform.RequestIdFilter
+import rssapi.platform.SecurityConfig
 import java.util.UUID
 
 @WebMvcTest(ScrapeController::class)
@@ -115,7 +114,7 @@ class ScrapeControllerTest {
     fun validationErrorUsesErrorEnvelope() {
         stubAuth()
         whenever(service.preview(anyOrNull(), anyOrNull())).thenThrow(
-            rssapi.web.ApiException(org.springframework.http.HttpStatus.BAD_REQUEST, "Invalid page URL"),
+            rssapi.platform.ApiException(org.springframework.http.HttpStatus.BAD_REQUEST, "Invalid page URL"),
         )
         preview("""{"url":"javascript:alert(1)"}""").andExpect {
             status { isBadRequest() }

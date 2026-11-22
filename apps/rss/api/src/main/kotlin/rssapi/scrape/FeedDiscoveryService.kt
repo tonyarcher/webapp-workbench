@@ -1,12 +1,11 @@
 package rssapi.scrape
-
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import rssapi.domain.parseFeedXml
+import rssapi.feeds.parseFeedXml
 import rssapi.fetch.FeedFetcher
 import rssapi.fetch.PageFetcher
-import rssapi.web.ApiException
-
+import rssapi.platform.ApiException
+import rssapi.scrape.ScrapeFetch
 private const val MAX_PREVIEWS = 3
 private const val MAX_TITLES = 3
 private const val NO_FEEDS_STATUS = 422
