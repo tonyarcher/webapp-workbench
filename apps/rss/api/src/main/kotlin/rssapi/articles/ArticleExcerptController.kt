@@ -11,14 +11,12 @@ import rssapi.platform.IdentityUser
 @RestController
 class ArticleExcerptController(
     private val user: IdentityUser,
-    private val articles: ArticleRepo,
+    private val excerpts: ArticleExcerptService,
     private val subs: SubscriptionRepo,
 ) {
     @GetMapping("/articles/{articleId}/excerpt", headers = ["X-Api-Version=1"])
     fun excerpt(@PathVariable articleId: String): ArticleExcerptJson {
-        val article = articles.findById(articleId).orElseThrow {
-            ApiException(HttpStatus.NOT_FOUND, "Article not found")
-        }
+        val article = excerpts.load(articleId) ?: throw ApiException(HttpStatus.NOT_FOUND, "Article not found")
         if (!subs.existsByUserIdAndFeedId(user.id, article.feedId)) {
             throw ApiException(HttpStatus.NOT_FOUND, "Article not found")
         }

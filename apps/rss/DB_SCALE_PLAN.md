@@ -110,7 +110,9 @@ rollback path; none of them changes the global feed pool or per-user state.
    is in: rows carry a visibility marker, a scoped `IntersectionObserver` fetches
    `GET /articles/{id}/excerpt` once per visible row, and the cached excerpt
    renders without reading the body; `smoke-excerpts.ts` and the row test cover
-   the narrow route, the cache, and the render. Section-only briefing fetches
+   the narrow route, the cache, and the render. The API caches the same read in
+   a bounded Caffeine cache manager (2,000 entries, 10 minutes) keyed by article
+   id, and evicts on ingest and extraction writes. Section-only briefing fetches
    are in: `EditionService` loads excerpt text only for the article ids in the
    sections it publishes. The privacy-preserving counters themselves live in Q2.
 

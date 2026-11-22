@@ -1,6 +1,8 @@
 package rssapi.ingest
+import org.springframework.cache.annotation.CacheEvict
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import rssapi.articles.ARTICLE_EXCERPT_CACHE
 import rssapi.articles.ArticleEntity
 import rssapi.articles.ArticleRepo
 import rssapi.articles.excerptOf
@@ -28,6 +30,7 @@ class ArticleExtractService(
     private val pages: PageFetcher,
     private val bodyStore: BodyStore,
 ) {
+    @CacheEvict(cacheNames = [ARTICLE_EXCERPT_CACHE], key = "#articleId")
     fun extractForUser(userId: UUID, articleId: String): ExtractResult {
         val article = articles.findById(articleId).orElseThrow {
             ApiException(HttpStatus.NOT_FOUND, "Article not found")

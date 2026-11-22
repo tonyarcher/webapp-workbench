@@ -1,8 +1,10 @@
 package rssapi.ingest
 import org.jsoup.Jsoup
+import org.springframework.cache.annotation.CacheEvict
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.xml.sax.SAXException
+import rssapi.articles.ARTICLE_EXCERPT_CACHE
 import rssapi.articles.ArticleEntity
 import rssapi.articles.ArticleMaintenanceRepo
 import rssapi.articles.ArticleRepo
@@ -52,6 +54,7 @@ class IngestService(
     private val pages: PageFetcher,
     private val bodyStore: BodyStore,
 ) {
+    @CacheEvict(cacheNames = [ARTICLE_EXCERPT_CACHE], allEntries = true)
     @Transactional
     fun fetchAndIngest(feedId: UUID) {
         val feed = feeds.findById(feedId).orElse(null) ?: return
@@ -76,6 +79,7 @@ class IngestService(
     }
 
     /** A watched page: fetch HTML, then extract and store its item list. */
+    @CacheEvict(cacheNames = [ARTICLE_EXCERPT_CACHE], allEntries = true)
     @Transactional
     fun scrapeAndIngest(feed: FeedEntity) {
         val url = feed.pageUrl ?: feed.xmlUrl
@@ -88,6 +92,7 @@ class IngestService(
         }
     }
 
+    @CacheEvict(cacheNames = [ARTICLE_EXCERPT_CACHE], allEntries = true)
     @Transactional
     fun ingestScrapedHtml(feed: FeedEntity, html: String) {
         val url = feed.pageUrl ?: feed.xmlUrl
@@ -96,6 +101,7 @@ class IngestService(
         ingestScrapedCandidates(feed, candidates)
     }
 
+    @CacheEvict(cacheNames = [ARTICLE_EXCERPT_CACHE], allEntries = true)
     @Transactional
     fun ingestScrapedCandidates(feed: FeedEntity, candidates: List<ScrapeCandidate>) {
         if (candidates.isEmpty()) {
@@ -118,6 +124,7 @@ class IngestService(
         pending.applyForFeed(feed.id!!)
     }
 
+    @CacheEvict(cacheNames = [ARTICLE_EXCERPT_CACHE], allEntries = true)
     @Transactional
     fun ingestXml(feed: FeedEntity, xml: String) {
         val parsed = parseFeedXml(xml, System.currentTimeMillis())

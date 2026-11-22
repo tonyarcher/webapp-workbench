@@ -8,14 +8,13 @@ import org.springframework.http.HttpStatus
 import rssapi.feeds.SubscriptionRepo
 import rssapi.platform.ApiException
 import rssapi.platform.IdentityUser
-import java.util.Optional
 import java.util.UUID
 
 class ArticleExcerptControllerTest {
     private val user: IdentityUser = mock()
-    private val articles: ArticleRepo = mock()
+    private val excerpts: ArticleExcerptService = mock()
     private val subs: SubscriptionRepo = mock()
-    private val controller = ArticleExcerptController(user, articles, subs)
+    private val controller = ArticleExcerptController(user, excerpts, subs)
 
     private val userId = UUID.randomUUID()
     private val feedId = UUID.randomUUID()
@@ -23,9 +22,7 @@ class ArticleExcerptControllerTest {
     @Test
     fun returnsExcerptForOwnedArticle() {
         whenever(user.id).thenReturn(userId)
-        whenever(articles.findById("a1")).thenReturn(
-            Optional.of(ArticleEntity(id = "a1", feedId = feedId, excerpt = "a short excerpt")),
-        )
+        whenever(excerpts.load("a1")).thenReturn(CachedArticleExcerpt(feedId, "a short excerpt"))
         whenever(subs.existsByUserIdAndFeedId(userId, feedId)).thenReturn(true)
 
         assertEquals("a short excerpt", controller.excerpt("a1").excerpt)
@@ -34,7 +31,7 @@ class ArticleExcerptControllerTest {
     @Test
     fun missingArticleIs404() {
         whenever(user.id).thenReturn(userId)
-        whenever(articles.findById("missing")).thenReturn(Optional.empty())
+        whenever(excerpts.load("missing")).thenReturn(null)
 
         val err = assertThrows<ApiException> { controller.excerpt("missing") }
 
@@ -44,7 +41,7 @@ class ArticleExcerptControllerTest {
     @Test
     fun unownedArticleIs404() {
         whenever(user.id).thenReturn(userId)
-        whenever(articles.findById("a1")).thenReturn(Optional.of(ArticleEntity(id = "a1", feedId = feedId)))
+        whenever(excerpts.load("a1")).thenReturn(CachedArticleExcerpt(feedId, "a short excerpt"))
         whenever(subs.existsByUserIdAndFeedId(userId, feedId)).thenReturn(false)
 
         val err = assertThrows<ApiException> { controller.excerpt("a1") }
