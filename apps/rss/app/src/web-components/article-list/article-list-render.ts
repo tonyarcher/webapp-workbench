@@ -8,6 +8,7 @@ import type { HighlightHost } from './article-list-render-highlights';
  * (`this as never`, matching article-list-actions.ts).
  */
 export interface ArticleListRenderHost extends HighlightHost {
+    rowExcerpt(articleId: string): string | null | undefined;
     view: View;
     items: Article[];
     cursor: number;

@@ -1,5 +1,6 @@
 package rssapi.articles
 import jakarta.persistence.EntityManager
+import jakarta.persistence.Tuple
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Order
@@ -22,6 +23,22 @@ class ArticleListQuery(private val em: EntityManager) {
         query.firstResult = pageable.offset.toInt()
         query.maxResults = pageable.pageSize
         return query.resultList
+    }
+
+    /** Excerpt, or stored summary as fallback, for cited article ids only. */
+    fun findExcerpts(ids: Collection<String>): Map<String, String> {
+        if (ids.isEmpty()) return emptyMap()
+        val cb = em.criteriaBuilder
+        val cq = cb.createQuery(Tuple::class.java)
+        val root = cq.from(ArticleEntity::class.java)
+        val text = cb.coalesce(root.get<String>("excerpt"), root.get<String>("summary"))
+        cq.select(cb.tuple(root.get<String>("id"), text))
+        cq.where(root.get<String>("id").`in`(ids))
+        return em.createQuery(cq).resultList.mapNotNull { row ->
+            val id = row.get(0, String::class.java) ?: return@mapNotNull null
+            val text = row.get(1, String::class.java) ?: return@mapNotNull null
+            id to text
+        }.toMap()
     }
 
     private fun select(

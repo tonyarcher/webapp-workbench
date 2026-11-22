@@ -106,9 +106,13 @@ rollback path; none of them changes the global feed pool or per-user state.
    promise a refetch for sources without a canonical link. The privacy settings
    screen exposes the purge action with an inline confirmation and a result
    line that states article rows survive. `smoke-body-load.ts` covers the load
-   states, the source capability, and the confirm projection. Still open within
-   Q1: excerpt-on-scroll for list rows and section-only briefing fetches; the
-   privacy-preserving counters themselves live in Q2.
+   states, the source capability, and the confirm projection. Excerpt-on-scroll
+   is in: rows carry a visibility marker, a scoped `IntersectionObserver` fetches
+   `GET /articles/{id}/excerpt` once per visible row, and the cached excerpt
+   renders without reading the body; `smoke-excerpts.ts` and the row test cover
+   the narrow route, the cache, and the render. Section-only briefing fetches
+   are in: `EditionService` loads excerpt text only for the article ids in the
+   sections it publishes. The privacy-preserving counters themselves live in Q2.
 
 ## Stage 1 — dedicated search service (trigger: FTS misses relevance or p95)
 

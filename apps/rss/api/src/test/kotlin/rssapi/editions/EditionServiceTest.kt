@@ -6,6 +6,7 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doCallRealMethod
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.times
@@ -118,9 +119,11 @@ class EditionServiceTest {
         rows: List<ArticleListRow>,
         links: List<FolderFeedEntity> = emptyList(),
         folderRows: List<FolderEntity> = emptyList(),
+        excerpts: Map<String, String> = emptyMap(),
     ) {
         whenever(articles.findAll(any<Specification<rssapi.articles.ArticleEntity>>(), any<Pageable>()))
             .thenReturn(rows)
+        whenever(articles.findExcerpts(any())).thenReturn(excerpts)
         whenever(affinity.findAllById(any<Iterable<rssapi.feeds.AffinityId>>())).thenReturn(emptyList())
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(links)
         whenever(editions.save(any<EditionEntity>())).thenAnswer { it.getArgument<EditionEntity>(0) }
@@ -193,6 +196,22 @@ class EditionServiceTest {
         val row = service().buildEdition(SERVICE_UID, 24, 1)
 
         assertEquals(1, bodyOf(row).path("sections").size())
+    }
+
+    @Test
+    fun excerptsAreLoadedOnlyForCitedSections() {
+        val feed = UUID.randomUUID()
+        val rows = (1..20).map { serviceArticle("a$it", "story-$it", feed) }
+        stubQuota()
+        stubWindow(rows, excerpts = mapOf("a1" to "cited excerpt"))
+        stubAi()
+
+        service().buildEdition(SERVICE_UID, 24, 3)
+
+        val cited = argumentCaptor<Collection<String>>()
+        verify(articles).findExcerpts(cited.capture())
+        assertEquals(3, cited.firstValue.size)
+        assertTrue("a1" in cited.firstValue)
     }
 
     @Test

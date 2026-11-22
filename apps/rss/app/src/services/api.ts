@@ -1,4 +1,5 @@
 export { API_VERSION, API_VERSION_HEADER, AuthError, apiFetch, apiUrl } from './api-client';
+export { fetchArticleExcerpt } from './api-excerpts';
 export {
     ApiError,
     QuotaError,

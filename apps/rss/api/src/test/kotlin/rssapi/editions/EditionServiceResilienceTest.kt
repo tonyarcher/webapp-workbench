@@ -146,6 +146,7 @@ class EditionServiceResilienceTest {
         stubQuota()
         whenever(articles.findAll(any<Specification<rssapi.articles.ArticleEntity>>(), any<Pageable>()))
             .thenReturn(listOf(article("a1")))
+        whenever(articles.findExcerpts(any())).thenReturn(emptyMap())
         whenever(affinity.findAllById(any<Iterable<AffinityId>>())).thenReturn(emptyList())
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(emptyList())
         whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenReturn("s")
@@ -169,6 +170,7 @@ class EditionServiceResilienceTest {
         stubQuota()
         whenever(articles.findAll(any<Specification<rssapi.articles.ArticleEntity>>(), any<Pageable>()))
             .thenReturn(emptyList())
+        whenever(articles.findExcerpts(any())).thenReturn(emptyMap())
         whenever(affinity.findAllById(any<Iterable<AffinityId>>())).thenReturn(emptyList())
         whenever(editions.save(any<EditionEntity>())).thenAnswer { it.getArgument<EditionEntity>(0) }
         whenever(editions.findByUserId(any(), any<Sort>())).thenReturn(emptyList())
@@ -188,6 +190,7 @@ class EditionServiceResilienceTest {
         stubQuota()
         whenever(articles.findAll(any<Specification<rssapi.articles.ArticleEntity>>(), any<Pageable>()))
             .thenReturn(listOf(article("a1")))
+        whenever(articles.findExcerpts(any())).thenReturn(emptyMap())
         whenever(affinity.findAllById(any<Iterable<AffinityId>>())).thenReturn(emptyList())
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(emptyList())
         whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenReturn("s")
@@ -205,6 +208,7 @@ class EditionServiceResilienceTest {
         stubQuota()
         whenever(articles.findAll(any<Specification<rssapi.articles.ArticleEntity>>(), any<Pageable>()))
             .thenReturn(listOf(article("a1")))
+        whenever(articles.findExcerpts(any())).thenReturn(emptyMap())
         whenever(affinity.findAllById(any<Iterable<AffinityId>>())).thenReturn(emptyList())
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(emptyList())
         whenever(ai.summarize(any(), anyOrNull(), any(), any())).thenAnswer { inv ->
@@ -231,6 +235,7 @@ class EditionServiceResilienceTest {
         val blank = article("blank").copy(title = "", normLink = null, summary = null)
         whenever(articles.findAll(any<Specification<rssapi.articles.ArticleEntity>>(), any<Pageable>()))
             .thenReturn(listOf(blank))
+        whenever(articles.findExcerpts(any())).thenReturn(emptyMap())
         whenever(affinity.findAllById(any<Iterable<AffinityId>>())).thenReturn(emptyList())
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(emptyList())
         whenever(editions.save(any<EditionEntity>())).thenAnswer { it.getArgument<EditionEntity>(0) }

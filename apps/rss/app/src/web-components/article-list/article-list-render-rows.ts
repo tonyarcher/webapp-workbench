@@ -12,6 +12,7 @@ import {
     rowFragment,
     type RowHighlightRenderState,
 } from './article-list-render-highlights';
+import { renderRowExcerpt } from './article-list-render-excerpts';
 import type { ArticleListRenderHost } from './article-list-render';
 
 const DERANK_ACTIVE = 'M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z';
@@ -213,18 +214,21 @@ export function detailRowTemplate(
     onStar: (e: Event, article: Article) => void,
     onOpen: (e: MouseEvent, article: Article) => void,
     highlight?: RowHighlightRenderState,
+    excerpt?: string | null,
 ): HTMLElement {
     const popular = article.popularity >= 4;
     const link = safeHttpUrl(article.link);
     const video = articleVideo(article);
     const image = articleImage(article, feedIcon);
     const body = el('div', 'detail-body');
+    body.dataset['articleId'] = article.id;
     const media = detailMedia(video, image, article, link);
     if (media) body.appendChild(media);
     const text = el('div', 'detail-text');
     append(text, detailTitleRow(article, popular, onStar, onOpen));
     append(text, detailMeta(article, showFeed, feedTitle, link, highlight));
     if (article.summary) text.appendChild(el('div', 'summary', article.summary));
+    append(text, renderRowExcerpt(excerpt));
     if (highlight?.open) text.appendChild(renderRowHighlights(highlight));
     body.appendChild(text);
     return body;
@@ -241,6 +245,7 @@ export function headlineRowTemplate(
     const popular = article.popularity >= 4;
     const minutes = readMinutes(article.content, article.summary);
     const row = el('div', 'row-top');
+    row.dataset['articleId'] = article.id;
     append(
         row,
         article.read === 0 ? dot() : null,
@@ -264,6 +269,7 @@ export function cardRowTemplate(
     picked: boolean,
     onStar: (e: Event, article: Article) => void,
     onOpen: (e: MouseEvent, article: Article) => void,
+    excerpt?: string | null,
 ): HTMLElement {
     const link = safeHttpUrl(article.link);
     const video = articleVideo(article);
@@ -272,6 +278,7 @@ export function cardRowTemplate(
         'article',
         `grid-card ${article.read ? 'read' : ''} ${selected ? 'selected' : ''} ${picked ? 'picked' : ''}`,
     );
+    card.dataset['articleId'] = article.id;
     card.addEventListener('click', (e: MouseEvent) => {
         if ((e.target as HTMLElement).closest('button')) return;
         onOpen(e, article);
@@ -303,6 +310,7 @@ export function cardRowTemplate(
     titleRow.appendChild(starButton(article, onStar));
     body.appendChild(titleRow);
     if (article.summary) body.appendChild(el('div', 'grid-card-summary', article.summary));
+    append(body, renderRowExcerpt(excerpt));
     const minutes = readMinutes(article.content, article.summary);
     const meta = el('div', 'meta');
     append(
@@ -326,6 +334,7 @@ export function renderRow(host: ArticleListRenderHost, article: Article, showFee
         (e, a) => void host.onStar(e, a),
         (e) => host.onRowClick(e, index),
         highlightArgs(host, article.id),
+        host.rowExcerpt(article.id),
     );
 }
 
@@ -352,5 +361,6 @@ export function renderCardRow(host: ArticleListRenderHost, article: Article, sho
             void host.onStar(e, a);
         },
         (e, _a) => host.onRowClick(e, index),
+        host.rowExcerpt(article.id),
     );
 }

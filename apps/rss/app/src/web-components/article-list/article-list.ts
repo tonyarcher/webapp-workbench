@@ -46,6 +46,7 @@ import { handleSlideshowUpdated, handleSlideshowWillUpdate } from './article-lis
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 import { areHighlightsEnabled } from '../../services/highlights';
 import { syncHighlightsEnabled, toggleRowHighlight, type RowHighlightsHost } from './article-list-row-highlights';
+import { createRowExcerptObserver, observeVisibleRows } from './article-list-row-excerpts';
 import {
     applyAllViewsAction,
     canUndoMute as canUndoMuteHost,
@@ -133,6 +134,10 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     declare loadError: string | null;
     /** Articles hidden by mute filters in the current loaded batch/page. */
     declare mutedHidden: number;
+    /** Excerpts fetched only for rows that scroll into view. */
+    declare rowExcerpts: Record<string, string | null>;
+    rowExcerptPending = new Set<string>();
+    excerptObserver: IntersectionObserver | null = null;
     /** Row-level key lines expansion (N1). */
     declare highlightsOn: boolean;
     declare rowHighlights: {
@@ -234,6 +239,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         defineReactive(this, 'interestingStrictness', DEFAULT_INTERESTING_STRICTNESS);
         defineReactive(this, 'loadError', null as string | null);
         defineReactive(this, 'mutedHidden', 0);
+        defineReactive(this, 'rowExcerpts', {} as Record<string, string | null>);
         defineReactive(this, 'highlightsOn', areHighlightsEnabled());
         defineReactive(this, 'rowHighlights', { open: {}, loading: {}, data: {} });
         defineReactive(this, 'slideshowIndex', 0);
@@ -286,16 +292,24 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     connectedCallback(): void {
         for (const controller of this.controllers) controller.hostConnected?.();
         attachHostListeners(this as never);
+        if (!this.excerptObserver) this.excerptObserver = createRowExcerptObserver(this, this.scrollEl);
         this.requestUpdate();
     }
 
     disconnectedCallback(): void {
         for (const controller of this.controllers) controller.hostDisconnected?.();
+        this.excerptObserver?.disconnect();
+        this.excerptObserver = null;
         teardownHost(this as never);
     }
 
     private paint(): void {
         paintRegions(this as never);
+        observeVisibleRows(this.excerptObserver, this.scrollEl);
+    }
+
+    rowExcerpt(articleId: string): string | null | undefined {
+        return this.rowExcerpts[articleId];
     }
 
     /** True while this view's own refresh job runs. Other folders track their own keys. */

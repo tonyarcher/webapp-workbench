@@ -120,9 +120,8 @@ class EditionService(
         val sort = Sort.by("publishedAt").descending().and(Sort.by("id").descending())
         val found = articles.findAll(spec, PageRequest.of(0, EDITION_MAX_ARTICLES, sort))
         val inputs = found.map { article ->
-            val excerpt = plainExcerpt(article.summary ?: article.excerpt, EDITION_EXCERPT_CHARS)
             EditionArticle(
-                article.id, article.feedId, article.title, excerpt, article.publishedAt,
+                article.id, article.feedId, article.title, "", article.publishedAt,
                 article.hot.toDouble(), article.popularity.toDouble(), article.engagement.toDouble(),
                 article.domain, article.author, article.normLink,
             )
@@ -169,19 +168,31 @@ class EditionService(
         )
     }
 
-    private fun summarizeAll(userId: UUID, ranked: List<Ranked>): List<SectionDraft> = ranked.map { item ->
-        val joined = item.cluster.articles.joinToString("\n\n") { "${it.title}\n${it.excerpt}" }
-            .take(aiConfig.maxInputChars).trim()
-        val summary = try {
-            if (joined.isEmpty()) {
-                null
-            } else {
-                ai.summarize(userId, item.cluster.articles.first().title, joined, SummaryLength.STANDARD)
+    /**
+     * Ranking needs titles and signals, not body text. Load excerpts only for
+     * the sections the edition actually cites, then fill them before the AI
+     * call so a large candidate window never drags excerpt text along.
+     */
+    private fun summarizeAll(userId: UUID, ranked: List<Ranked>): List<SectionDraft> {
+        val ids = ranked.flatMap { it.cluster.articles.map { article -> article.id } }
+        val excerpts = articles.findExcerpts(ids)
+        return ranked.map { item ->
+            val cited = item.cluster.articles.map { article ->
+                article.copy(excerpt = plainExcerpt(excerpts[article.id], EDITION_EXCERPT_CHARS))
             }
-        } catch (_: Exception) {
-            null
+            val joined = cited.joinToString("\n\n") { "${it.title}\n${it.excerpt}" }
+                .take(aiConfig.maxInputChars).trim()
+            val summary = try {
+                if (joined.isEmpty()) {
+                    null
+                } else {
+                    ai.summarize(userId, cited.first().title, joined, SummaryLength.STANDARD)
+                }
+            } catch (_: Exception) {
+                null
+            }
+            SectionDraft(item.copy(cluster = item.cluster.copy(articles = cited)), summary)
         }
-        SectionDraft(item, summary)
     }
 
     private fun opinionFor(userId: UUID, sections: List<SectionDraft>): String? {
