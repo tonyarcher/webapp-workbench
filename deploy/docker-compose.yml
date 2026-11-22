@@ -140,6 +140,14 @@ services:
             RSS_BODY_OFFLOAD_ENABLED: ${RSS_BODY_OFFLOAD_ENABLED:-false}
             RSS_BODY_OFFLOAD_AFTER_DAYS: ${RSS_BODY_OFFLOAD_AFTER_DAYS:-30}
             BODY_OFFLOAD_MS: ${BODY_OFFLOAD_MS:-60000}
+            # Automatic offload trigger and confirmable cold-object purge (Q1).
+            RSS_BODY_OFFLOAD_REQUIRE_PRESSURE: ${RSS_BODY_OFFLOAD_REQUIRE_PRESSURE:-false}
+            RSS_BODY_DB_SIZE_TRIGGER_GB: ${RSS_BODY_DB_SIZE_TRIGGER_GB:-2}
+            RSS_BODY_BACKUP_MINUTES_TRIGGER: ${RSS_BODY_BACKUP_MINUTES_TRIGGER:-15}
+            RSS_BACKUP_DURATION_MINUTES: ${RSS_BACKUP_DURATION_MINUTES:-0}
+            RSS_BODY_PURGE_ENABLED: ${RSS_BODY_PURGE_ENABLED:-false}
+            RSS_BODY_PURGE_AFTER_DAYS: ${RSS_BODY_PURGE_AFTER_DAYS:-365}
+            BODY_PURGE_MS: ${BODY_PURGE_MS:-3600000}
             # Cross-origin client (assets on their own S3-backed origin) calling
             # the API. Empty = same-origin only, the current gateway deployment.
             CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}

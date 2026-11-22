@@ -32,6 +32,8 @@ export {
     fetchLatestEdition,
     fetchRowHighlights,
     fetchSavedArticles,
+    fetchStorageStatus,
+    purgeStoredBodies,
     getLibraryCounts,
     getLibraryFeeds,
     getLibraryFolders,
@@ -69,4 +71,5 @@ export type {
     ScrapePreview,
     ScrapeStrategy,
     ServerAiStatus,
+    StorageStatus,
 } from './api-domains';

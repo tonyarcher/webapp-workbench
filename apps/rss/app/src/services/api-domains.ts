@@ -356,6 +356,30 @@ export async function fetchArticleBody(articleId: string): Promise<string | null
     return typeof res.content === 'string' ? res.content : null;
 }
 
+/** Storage tier status. Sizes are bytes; no article ids or payloads cross this boundary. */
+export interface StorageStatus {
+    objectStoreEnabled: boolean;
+    offloadEnabled: boolean;
+    requirePressure: boolean;
+    databaseBytes: number;
+    dbTriggerBytes: number;
+    backupMinutes: number;
+    backupTriggerMinutes: number;
+    pressureTriggered: boolean;
+    purgeEnabled: boolean;
+    purgeAfterDays: number;
+}
+
+export async function fetchStorageStatus(): Promise<StorageStatus> {
+    return apiFetch('/storage/status') as Promise<StorageStatus>;
+}
+
+/** Purge old cold objects. Article rows and reading state are never deleted. */
+export async function purgeStoredBodies(): Promise<number> {
+    const res = (await apiFetch('/storage/purge', { method: 'POST' })) as { purged?: number };
+    return typeof res.purged === 'number' ? res.purged : 0;
+}
+
 export interface ServerAiStatus {
     available: boolean;
     provider: string;

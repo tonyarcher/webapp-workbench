@@ -83,18 +83,32 @@ rollback path; none of them changes the global feed pool or per-user state.
    rticles.content_html; bodies live in rticle_bodies, readers/writers use
    BodyStore, and the Kotlin body backfills were removed. Front-page and
    edition builders read the list projection.
-3. **Object-store tier (implemented, env-gated).** V21 adds `storage_key` and
+3. **Object-store tier (done, env-gated).** V21 adds `storage_key` and
    `byte_size` to `article_bodies` and makes `content_html` nullable. When
    `RSS_BODY_S3_BUCKET` is set, `DbBodyStore` writes content-addressed objects
    (`sha256.html`) through an S3-compatible client and stores the key in Postgres;
    reads fall back to `content_html` when an object is missing. `BodyOffloadService`
    moves old hot bodies when `RSS_BODY_OFFLOAD_ENABLED=true` (age-based cutoff via
-   `RSS_BODY_OFFLOAD_AFTER_DAYS`, bounded batches). Acceptance still pending:
-   automated DB-size/backup-duration trigger, purge endpoint/UI (objects never
-   delete article rows), and a cold-body restore drill. No payloads in logs.
-4. **Dynamic depth and purge UI.** Lazy body load in the reader, per-source
-   refetch capability, and a visible confirmable purge action. Acceptance: the
-   client smoke suite covers the load states and the confirm path.
+   `RSS_BODY_OFFLOAD_AFTER_DAYS`, bounded batches). The automated trigger is
+   `StoragePressureService`: it reads `pg_database_size(current_database())` and
+   the last backup duration supplied by `RSS_BACKUP_DURATION_MINUTES`, and gates
+   offload when `RSS_BODY_OFFLOAD_REQUIRE_PRESSURE=true` (defaults 2 GB or 15 min,
+   both configurable). `BodyPurgeService` deletes old cold objects in bounded
+   batches under `RSS_BODY_PURGE_ENABLED`, clearing only the pointer; article
+   rows and user state are never deleted. `GET /storage/status` reports the
+   thresholds and `POST /storage/purge` is the confirmable action behind the
+   same gate. `ColdBodyRestoreDrillTest` opens a cold body after a simulated
+   Postgres-only restore, and verifies a missing object degrades to no body
+   without breaking the open. No payloads in logs.
+4. **Dynamic depth and purge UI (core done).** The reader already shows the
+   summary first and fetches the stored body on open; `bodyLoadStatus` now makes
+   that state visible with a busy/status line, and `canRefetchBody` refuses to
+   promise a refetch for sources without a canonical link. The privacy settings
+   screen exposes the purge action with an inline confirmation and a result
+   line that states article rows survive. `smoke-body-load.ts` covers the load
+   states, the source capability, and the confirm projection. Still open within
+   Q1: excerpt-on-scroll for list rows and section-only briefing fetches; the
+   privacy-preserving counters themselves live in Q2.
 
 ## Stage 1 — dedicated search service (trigger: FTS misses relevance or p95)
 

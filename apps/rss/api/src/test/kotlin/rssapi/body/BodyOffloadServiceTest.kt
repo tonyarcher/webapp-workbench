@@ -14,11 +14,16 @@ class BodyOffloadServiceTest {
     private val bodies: ArticleBodyRepo = mock()
     private val client: BodyObjectClient = mock()
     private val config = BodyObjectStoreConfig(bucket = "b", offloadEnabled = true, offloadAfterDays = 1)
-    private val service = BodyOffloadService(bodies, client, config)
+    private val pressure: StoragePressureService = mock()
+    private val service = BodyOffloadService(bodies, client, config, pressure)
+
+    init {
+        whenever(pressure.offloadAllowed()).thenReturn(true)
+    }
 
     @Test
     fun disabledDoesNothing() {
-        val disabled = BodyOffloadService(bodies, client, BodyObjectStoreConfig())
+        val disabled = BodyOffloadService(bodies, client, BodyObjectStoreConfig(), pressure)
         disabled.runBatch()
         verify(bodies, never()).offloadCandidates(any(), any())
     }
@@ -46,7 +51,8 @@ class BodyOffloadServiceTest {
 
     @Test
     fun offloadDisabledByFlagDoesNothing() {
-        val disabled = BodyOffloadService(bodies, client, BodyObjectStoreConfig(bucket = "b", offloadEnabled = false))
+        val disabled =
+            BodyOffloadService(bodies, client, BodyObjectStoreConfig(bucket = "b", offloadEnabled = false), pressure)
         disabled.runBatch()
         verify(bodies, never()).offloadCandidates(any(), any())
     }
@@ -99,9 +105,16 @@ class BodyOffloadServiceTest {
 
     @Test
     fun objectKeyBlankPrefix() {
-        val svc = BodyOffloadService(bodies, client, BodyObjectStoreConfig(bucket = "b", prefix = ""))
+        val svc = BodyOffloadService(bodies, client, BodyObjectStoreConfig(bucket = "b", prefix = ""), pressure)
         val key = svc.objectKey("x".toByteArray())
         assertTrue(key.endsWith(".html"))
         assertTrue(!key.contains("/"))
+    }
+
+    @Test
+    fun pressureTriggerGatesOffload() {
+        whenever(pressure.offloadAllowed()).thenReturn(false)
+        service.runBatch()
+        verify(bodies, never()).offloadCandidates(any(), any())
     }
 }

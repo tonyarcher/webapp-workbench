@@ -40,6 +40,8 @@ export interface ArticleViewActionsHost {
     newBoardTitle: string;
     keyLines: RowHighlight | null;
     keyLinesLoading: boolean;
+    /** True while a stored body or extraction is in flight for the open article. */
+    bodyLoading: boolean;
     highlightsOn: boolean;
     sanitizedBody: { id: string; source: string | undefined; html: string } | null;
     keywords: ArticleKeyword[];
@@ -271,6 +273,8 @@ export async function refreshKeyLines(host: ArticleViewActionsHost): Promise<voi
 /** Load the stored body for list rows that omitted content, then extract if thin. */
 export async function ensureRichContent(host: ArticleViewActionsHost, a: Article): Promise<void> {
     const open = (): Article | null => (host.article?.id === a.id ? host.article : null);
+    host.bodyLoading = true;
+    host.paint();
     try {
         const { extractArticle, fetchArticleBody } = await import('../../services/api');
         if (!a.content) {
@@ -310,6 +314,13 @@ export async function ensureRichContent(host: ArticleViewActionsHost, a: Article
         host.paint();
     } catch {
         // body/extraction is best-effort; keep showing stored content
+    } finally {
+        // After every await, recheck the owner: a switched article must not
+        // inherit this load's state or paint over the newer selection.
+        if (host.article?.id === a.id) {
+            host.bodyLoading = false;
+            host.paint();
+        }
     }
 }
 

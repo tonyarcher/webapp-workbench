@@ -1,3 +1,5 @@
+import { fetchStorageStatus, purgeStoredBodies, type StorageStatus } from '../../services/api';
+import { purgeAvailable, purgeResultLine, storageSizeLine } from '../../services/storage-status';
 import { forgetLearning } from '../../services/interesting-settings';
 import { invalidateStarredTitles } from '../../services/interesting-starred';
 import {
@@ -15,9 +17,9 @@ import styles from './privacy-view.css?inline';
 /** Deranked ids are shown as a sample; the count above is the real number. */
 const DERANK_SAMPLE = 20;
 
-type FocusTarget = 'cancel' | 'forget' | 'status';
+type FocusTarget = 'cancel' | 'forget' | 'status' | 'cancel-purge' | 'purge';
 
-type Action = 'export' | 'forget' | 'confirm-forget' | 'cancel-forget';
+type Action = 'export' | 'forget' | 'confirm-forget' | 'cancel-forget' | 'purge' | 'confirm-purge' | 'cancel-purge';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): HTMLElementTagNameMap[K] {
     const node = document.createElement(tag);
@@ -47,6 +49,10 @@ export class PrivacyView extends HTMLElement {
     private confirming = false;
     private status = '';
     private focusAfter: FocusTarget | null = null;
+    private storage: StorageStatus | null = null;
+    private storageEl: HTMLElement | null = null;
+    private purgeConfirming = false;
+    private purging = false;
 
     connectedCallback(): void {
         if (!this.root) {
@@ -57,6 +63,22 @@ export class PrivacyView extends HTMLElement {
             shadow.append(style, this.root);
         }
         this.render();
+        void this.loadStorage();
+    }
+
+    private async loadStorage(): Promise<void> {
+        try {
+            this.storage = await fetchStorageStatus();
+        } catch {
+            this.storage = null;
+        }
+        // Replace only this section. A full render after the async status
+        // arrives would rebuild the Forget buttons and steal focus that the
+        // settings search just placed on them.
+        const previous = this.storageEl;
+        const next = this.storageSection();
+        if (previous?.isConnected) previous.replaceWith(next);
+        this.storageEl = next;
     }
 
     private render(): void {
@@ -79,6 +101,7 @@ export class PrivacyView extends HTMLElement {
             this.engagements(profile),
             this.deranks(profile),
             this.decay(profile),
+            this.storageSection(),
             this.actions(),
             statusEl,
         );
@@ -213,6 +236,73 @@ export class PrivacyView extends HTMLElement {
         return section;
     }
 
+    /** Cold-data purge is confirmable and never removes article rows or state. */
+    private storageSection(): HTMLElement {
+        const section = document.createElement('section');
+        this.storageEl = section;
+        section.setAttribute('data-setting', 'purge');
+        section.tabIndex = -1;
+        section.append(text('h3', '', 'Stored article data'));
+        const storage = this.storage;
+        if (!storage || !purgeAvailable(storage)) {
+            section.append(
+                text(
+                    'p',
+                    'empty',
+                    'Old-body purge is off on this server. Articles and reading state are never purged.',
+                ),
+            );
+            return section;
+        }
+        section.append(
+            text(
+                'p',
+                '',
+                `Bodies older than ${storage.purgeAfterDays} days can be removed from the object store. ` +
+                    `Articles, stars, and reading state stay. Database size: ${storageSizeLine(storage.databaseBytes)}.`,
+            ),
+        );
+        const row = el('div', 'actions');
+        const button = this.actionButton('Purge old body data', 'purge', true);
+        button.disabled = this.purging;
+        row.append(button);
+        section.append(row);
+        if (this.purgeConfirming) {
+            const box = el('div', 'confirm');
+            box.setAttribute('role', 'group');
+            box.setAttribute('aria-labelledby', 'purge-heading');
+            const heading = text('h3', '', 'Purge old body data?');
+            heading.id = 'purge-heading';
+            box.append(
+                heading,
+                text('p', '', 'This removes old cold body objects. Articles and reading state are not deleted.'),
+            );
+            const confirmRow = el('div', 'actions');
+            confirmRow.append(
+                this.actionButton('Cancel', 'cancel-purge', false),
+                this.actionButton('Purge old body data', 'confirm-purge', true),
+            );
+            box.append(confirmRow);
+            section.append(box);
+        }
+        return section;
+    }
+
+    private async runPurge(): Promise<void> {
+        this.purging = true;
+        this.purgeConfirming = false;
+        this.render();
+        try {
+            const purged = await purgeStoredBodies();
+            this.setStatus(purgeResultLine(purged));
+        } catch {
+            this.setStatus('Could not purge old body data.');
+        } finally {
+            this.purging = false;
+            await this.loadStorage();
+        }
+    }
+
     private actions(): HTMLElement {
         const section = document.createElement('section');
         const row = el('div', 'actions');
@@ -268,6 +358,22 @@ export class PrivacyView extends HTMLElement {
             this.render();
             return;
         }
+        if (action === 'purge') {
+            this.purgeConfirming = true;
+            this.focusAfter = 'cancel-purge';
+            this.render();
+            return;
+        }
+        if (action === 'cancel-purge') {
+            this.purgeConfirming = false;
+            this.focusAfter = 'purge';
+            this.render();
+            return;
+        }
+        if (action === 'confirm-purge') {
+            void this.runPurge();
+            return;
+        }
         this.forget();
     }
 
@@ -314,8 +420,14 @@ export class PrivacyView extends HTMLElement {
             this.statusEl?.focus();
             return;
         }
-        const selector = target === 'cancel' ? '[data-action="cancel-forget"]' : '[data-action="forget"]';
-        this.root?.querySelector<HTMLElement>(selector)?.focus();
+        const selectors: Record<FocusTarget, string> = {
+            cancel: '[data-action="cancel-forget"]',
+            forget: '[data-action="forget"]',
+            status: '[role="status"]',
+            'cancel-purge': '[data-action="cancel-purge"]',
+            purge: '[data-action="purge"]',
+        };
+        this.root?.querySelector<HTMLElement>(selectors[target])?.focus();
     }
 }
 

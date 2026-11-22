@@ -19,6 +19,7 @@ class BodyOffloadService(
     private val bodies: ArticleBodyRepo,
     private val objectClient: BodyObjectClient,
     private val config: BodyObjectStoreConfig,
+    private val pressure: StoragePressureService,
 ) {
     @Volatile private var stopped = false
 
@@ -38,7 +39,7 @@ class BodyOffloadService(
         if (moved > 0) log("rss-api", "info", "body offload batch", mapOf("moved" to moved))
     }
 
-    private fun canRun(): Boolean = !stopped && config.enabled() && config.offloadEnabled
+    private fun canRun(): Boolean = !stopped && config.enabled() && config.offloadEnabled && pressure.offloadAllowed()
 
     private fun offloadOne(articleId: String, html: String?): Boolean {
         val body = html?.takeIf { it.isNotBlank() } ?: return false

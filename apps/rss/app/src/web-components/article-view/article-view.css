@@ -402,6 +402,12 @@ h1 a:hover {
     margin-bottom: 20px;
 }
 
+.body-status {
+    color: var(--muted, var(--text));
+    font-size: 0.9rem;
+    margin: 0 0 12px;
+}
+
 .content {
     font-size: var(--reading-font-size, 16px);
     line-height: var(--reading-line-height, 1.7);

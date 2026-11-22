@@ -1,4 +1,5 @@
 import { sanitizeHtml, safeHttpUrl } from '../../services/parser';
+import { bodyLoadStatus } from '../../services/body-load';
 import { articleVideo } from '../../services/video';
 import {
     beginArticleProgress,
@@ -81,6 +82,7 @@ export class ArticleView extends HTMLElement {
     /** Decision-model-selected key lines for the open article. */
     keyLines: RowHighlight | null = null;
     keyLinesLoading = false;
+    bodyLoading = false;
     highlightsOn = areHighlightsEnabled();
     /** Article the progress bar belongs to; object identity churns on star. */
     progressArticleId: string | null = null;
@@ -184,6 +186,7 @@ export class ArticleView extends HTMLElement {
             this.savedForLater = false;
             this.keyLines = null;
             this.keyLinesLoading = false;
+            this.bodyLoading = false;
             this.prevDeranked = false;
             this.prevStarred = false;
             const saved = beginArticleProgress(this);
@@ -232,6 +235,13 @@ export class ArticleView extends HTMLElement {
         appendAll(bodyDiv, this.buildTitle(a, link));
         appendAll(bodyDiv, this.buildMeta(a));
         appendAll(bodyDiv, this.buildKeyLines());
+        const loadStatus = bodyLoadStatus(a, this.bodyLoading);
+        if (loadStatus.text) {
+            const status = el('p', 'body-status', loadStatus.text);
+            status.setAttribute('role', 'status');
+            if (loadStatus.busy) status.setAttribute('aria-busy', 'true');
+            bodyDiv.appendChild(status);
+        }
         if (video) {
             const header = document.createElement('video-header') as VideoHeader;
             header.className = 'expanded-video';

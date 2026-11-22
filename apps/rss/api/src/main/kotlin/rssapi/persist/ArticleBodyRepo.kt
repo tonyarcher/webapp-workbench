@@ -39,4 +39,40 @@ interface ArticleBodyRepo : JpaRepository<ArticleBodyEntity, String> {
         @Param("storageKey") storageKey: String,
         @Param("byteSize") byteSize: Long,
     ): Int
+
+    /** Live database size, for the offload trigger. Never logs a payload. */
+    @Query(value = "select pg_database_size(current_database())", nativeQuery = true)
+    fun databaseSizeBytes(): Long
+
+    /** Content-addressed keys are shared; never delete an object still in use. */
+    @Query("select count(b) from ArticleBodyEntity b where b.storageKey = :storageKey")
+    fun countByStorageKey(@Param("storageKey") storageKey: String): Long
+
+    interface ColdRow {
+        val articleId: String
+        val storageKey: String
+    }
+
+    @Query(
+        """
+        select b.articleId as articleId, b.storageKey as storageKey
+          from ArticleBodyEntity b, ArticleEntity a
+         where b.articleId = a.id
+           and b.storageKey is not null
+           and a.fetchedAt < :cutoff
+         order by a.fetchedAt asc
+        """,
+    )
+    fun purgeCandidates(@Param("cutoff") cutoff: Instant, page: Pageable): List<ColdRow>
+
+    /** Drop only the cold pointer. The article row and user state are untouched. */
+    @Modifying
+    @Query(
+        """
+        update ArticleBodyEntity b
+           set b.storageKey = null, b.byteSize = null
+         where b.articleId = :articleId and b.storageKey = :storageKey
+        """,
+    )
+    fun clearOffloaded(@Param("articleId") articleId: String, @Param("storageKey") storageKey: String): Int
 }

@@ -237,6 +237,13 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
         keywords: 'privacy forget clear reset learned data',
         target: '[data-action="forget"]',
     },
+    {
+        id: 'purge-bodies',
+        section: 'privacy',
+        label: 'Purge old body data',
+        keywords: 'privacy storage purge old cold bodies object store articles',
+        target: '[data-setting="purge"]',
+    },
     // Stats
     {
         id: 'mastery-stats',

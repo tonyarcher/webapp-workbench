@@ -80,4 +80,24 @@ class BodyObjectStoreConfigTest {
         val cfg = bodyObjectStoreConfigFromEnv(mapOf("RSS_BODY_OFFLOAD_AFTER_DAYS" to "bad"))
         assertEquals(30, cfg.offloadAfterDays)
     }
+
+    @Test
+    fun triggerAndPurgeEnvKnobs() {
+        val cfg = bodyObjectStoreConfigFromEnv(
+            mapOf(
+                "RSS_BODY_OFFLOAD_REQUIRE_PRESSURE" to "true",
+                "RSS_BODY_DB_SIZE_TRIGGER_GB" to "4",
+                "RSS_BODY_BACKUP_MINUTES_TRIGGER" to "20",
+                "RSS_BACKUP_DURATION_MINUTES" to "25",
+                "RSS_BODY_PURGE_ENABLED" to "1",
+                "RSS_BODY_PURGE_AFTER_DAYS" to "180",
+            ),
+        )
+        assertTrue(cfg.requirePressure)
+        assertEquals(4L, cfg.dbSizeTriggerGb)
+        assertEquals(20L, cfg.backupMinutesTrigger)
+        assertEquals(25L, cfg.backupMinutes)
+        assertTrue(cfg.purgeEnabled)
+        assertEquals(180, cfg.purgeAfterDays)
+    }
 }
