@@ -1,6 +1,14 @@
 export { API_VERSION, API_VERSION_HEADER, AuthError, apiFetch, apiUrl } from './api-client';
 export { fetchArticleExcerpt } from './api-excerpts';
 export {
+    issueMcpClient,
+    listMcpClients,
+    revokeMcpClient,
+    setMcpConsent,
+    type McpClientInfo,
+    type McpIssuedClient,
+} from './api-mcp';
+export {
     ApiError,
     QuotaError,
     addFeed,

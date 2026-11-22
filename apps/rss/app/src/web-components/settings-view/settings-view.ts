@@ -5,6 +5,7 @@ import '../settings-general/settings-general';
 import '../organize-view/organize-view';
 import '../mute-filters-view/mute-filters-view';
 import '../privacy-view/privacy-view';
+import '../ai-connections-view/ai-connections-view';
 import '../stats-view/stats-view';
 import '../glossary-view/glossary-view';
 import styles from './settings-view.css?inline';
@@ -26,6 +27,7 @@ const SECTIONS: readonly SectionSpec[] = [
     { id: 'organize', label: 'Organize', tag: 'organize-view' },
     { id: 'mute-filters', label: 'Mute filters', tag: 'mute-filters-view' },
     { id: 'privacy', label: 'Privacy', tag: 'privacy-view' },
+    { id: 'ai-connections', label: 'AI connections', tag: 'ai-connections-view' },
     { id: 'stats', label: 'Stats', tag: 'stats-view' },
     { id: 'glossary', label: 'Glossary', tag: 'glossary-view' },
 ];

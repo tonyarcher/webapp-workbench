@@ -42,6 +42,41 @@ class SettingsBranchTest {
     }
 
     @Test
+    fun mcpAudienceDefaultsAndOverrides() {
+        assertEquals("rss-reader", settingsFromEnv(requiredEnv()).mcpAudience)
+        assertEquals(
+            "other-reader",
+            settingsFromEnv(requiredEnv() + mapOf("MCP_AUDIENCE" to "other-reader")).mcpAudience,
+        )
+        assertEquals(
+            "rss-reader",
+            settingsFromEnv(requiredEnv() + mapOf("MCP_AUDIENCE" to "  ")).mcpAudience,
+        )
+    }
+
+    @Test
+    fun deploymentOverridesAndClientSecrets() {
+        val secret = "a".repeat(64)
+        val s = settingsFromEnv(
+            requiredEnv() +
+                mapOf(
+                    "LOG_LEVEL" to "debug",
+                    "DATABASE_URL" to "postgres://localhost/rss",
+                    "OAUTH_INTERNAL_BASE" to "http://user-api:3000/",
+                    "LOGIN_PATH" to "/login/",
+                    "SWAGGER_ENABLED" to "on",
+                    "OAUTH_CLIENT_SECRETS" to "confidential=$secret",
+                ),
+        )
+        assertEquals("http://user-api:3000", s.internalBase)
+        assertEquals("debug", s.logLevel)
+        assertEquals("postgres://localhost/rss", s.databaseUrl)
+        assertEquals("/login/", s.loginPath)
+        assertTrue(s.swaggerEnabled)
+        assertTrue(s.clientSecretDigests.containsKey("confidential"))
+    }
+
+    @Test
     fun badValuesFallback() {
         val s = settingsFromEnv(
             requiredEnv() +

@@ -897,6 +897,14 @@ reader into infrastructure.
 
 ### G6. MCP server for my AI
 
+- **Status.** Implemented. `user-api` owns client registration, consent and
+  revocation at `/oauth/mcp/clients` and issues a short-lived signed JWT with
+  MCP claims. `rss-api` serves one transport: JSON-RPC 2.0 over Spring MVC at
+  `POST /mcp`, validated by its existing JWKS filter chain. Read tools cover feeds,
+  folders, search with existing operators, summaries, stored bodies through the
+  Q1 tiering seam, and provenance-bearing highlights. Write tools are hidden
+  until the client gets explicit consent and require a `confirm` argument per
+  call. The contract lives in `apps/rss/api/AGENTS.md`.
 - **Why.** The reader already holds the curated corpus: feeds, folders, boards,
   highlights, and reading state. An AI assistant should query that through an
   explicit, narrow surface instead of screen-scraping the app or copying text

@@ -12,6 +12,10 @@ Kotlin.
 ## Rules
 
 - **Do not invent OAuth.** Use what the framework gives you.
+- MCP client registration is auth data and belongs here: `/oauth/mcp/clients`
+  issues a short-lived signed JWT with `mcp_client_id` and `mcp_writes` claims.
+  Resource servers validate it with JWKS; they do not store credentials or call
+  back to identity on every request.
 - **Do not invent a hasher.** Passwords are Argon2id via password4j.
 - `domain/` is pure Kotlin — usernames, password rules, lockout, tokens, return
   paths. No Spring types and no `@Entity` there.

@@ -1,0 +1,90 @@
+.view {
+    padding: 20px;
+    max-width: 720px;
+    color: var(--text);
+}
+
+.view h2 {
+    margin-top: 0;
+}
+
+.intro {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.error {
+    color: var(--danger);
+}
+
+.token-panel {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 16px 0;
+}
+
+.token {
+    display: block;
+    overflow-wrap: anywhere;
+    background: var(--panel-bg);
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.issue {
+    display: flex;
+    gap: 8px;
+    align-items: end;
+    margin-bottom: 20px;
+}
+
+.issue label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+}
+
+.issue input {
+    padding: 6px 8px;
+    background: var(--panel-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.clients {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.clients li {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 4px 12px;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+}
+
+button {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    background: var(--panel-bg);
+    color: var(--text);
+}
+
+button:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+button.revoke {
+    color: var(--danger);
+}

@@ -8,6 +8,7 @@ const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     'organize',
     'mute-filters',
     'privacy',
+    'ai-connections',
     'stats',
     'glossary',
 ];

@@ -119,7 +119,8 @@ export interface SavedArticleSnapshot {
 }
 
 /** The tabs of the one settings area. Each is a real route, so every tab deep-links. */
-export type SettingsSection = 'general' | 'organize' | 'mute-filters' | 'privacy' | 'stats' | 'glossary';
+export type SettingsSection =
+    'general' | 'organize' | 'mute-filters' | 'privacy' | 'ai-connections' | 'stats' | 'glossary';
 
 export type View =
     | { kind: 'all' }

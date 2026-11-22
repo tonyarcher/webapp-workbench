@@ -45,9 +45,7 @@ class SecurityConfig(private val env: Environment) {
             cors { }
             sessionManagement { sessionCreationPolicy = SessionCreationPolicy.STATELESS }
             authorizeHttpRequests {
-                authorize(HttpMethod.GET, "/healthz", permitAll)
-                authorize(HttpMethod.GET, "/readyz", permitAll)
-                authorize(HttpMethod.GET, "/", permitAll)
+                listOf("/healthz", "/readyz", "/").forEach { authorize(HttpMethod.GET, it, permitAll) }
                 authorize(HttpMethod.POST, "/usage", permitAll)
                 if (swaggerEnabledFromEnv(env)) {
                     swaggerDocPaths().forEach { authorize(HttpMethod.GET, it, permitAll) }

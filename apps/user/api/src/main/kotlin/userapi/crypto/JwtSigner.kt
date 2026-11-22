@@ -40,6 +40,28 @@ class JwtSigner(store: OAuthStore, private val issuer: String) {
         identityToken(userId, username, clientId, now)
 
     /**
+     * MCP client token: a normal signed JWT the resource server already trusts,
+     * plus the client id and write consent as claims. Revocation is bounded by
+     * the 15-minute access-token lifetime; registration stays in user-api.
+     */
+    fun mcpToken(
+        userId: UUID,
+        username: String,
+        audience: String,
+        clientId: String,
+        writes: Boolean,
+        now: Instant,
+    ): String {
+        val claims = baseClaims(userId, username, audience, now)
+            .claim("mcp_client_id", clientId)
+            .claim("mcp_writes", writes)
+            .build()
+        val jwt = SignedJWT(JWSHeader.Builder(JWSAlgorithm.RS256).keyID(key.keyID).build(), claims)
+        jwt.sign(signer)
+        return jwt.serialize()
+    }
+
+    /**
      * The OIDC identity token.
      *
      * Same claims and same audience as the access token, and a separate
@@ -57,21 +79,24 @@ class JwtSigner(store: OAuthStore, private val issuer: String) {
      */
     @Suppress("LongParameterList")
     fun identityToken(userId: UUID, username: String, clientId: String, now: Instant, nonce: String = ""): String {
-        val claims = JWTClaimsSet.Builder()
-            .issuer(issuer)
-            .subject(userId.toString())
-            .audience(clientId)
-            .issueTime(Date.from(now))
-            .expirationTime(Date.from(now.plusSeconds(ACCESS_TTL_SEC.toLong())))
-            .jwtID(UUID.randomUUID().toString())
-            .claim("preferred_username", username)
-            .claim("name", username)
+        val claims = baseClaims(userId, username, clientId, now)
             .apply { if (nonce.isNotEmpty()) claim("nonce", nonce) }
             .build()
         val jwt = SignedJWT(JWSHeader.Builder(JWSAlgorithm.RS256).keyID(key.keyID).build(), claims)
         jwt.sign(signer)
         return jwt.serialize()
     }
+
+    private fun baseClaims(userId: UUID, username: String, audience: String, now: Instant): JWTClaimsSet.Builder =
+        JWTClaimsSet.Builder()
+            .issuer(issuer)
+            .subject(userId.toString())
+            .audience(audience)
+            .issueTime(Date.from(now))
+            .expirationTime(Date.from(now.plusSeconds(ACCESS_TTL_SEC.toLong())))
+            .jwtID(UUID.randomUUID().toString())
+            .claim("preferred_username", username)
+            .claim("name", username)
 
     /**
      * Verify one of our own access tokens, or null if it is not ours or is stale.

@@ -61,6 +61,8 @@ data class Settings(
      * Defaults to false: the schema is not public.
      */
     val swaggerEnabled: Boolean = false,
+    /** Audience of the MCP tokens issued for the reader. */
+    val mcpAudience: String = "rss-reader",
 )
 
 fun settingsFromEnv(env: Map<String, String>): Settings {
@@ -82,6 +84,7 @@ fun settingsFromEnv(env: Map<String, String>): Settings {
         clientSecretDigests(env),
         env["LOGIN_PATH"] ?: "/auth/",
         env["SWAGGER_ENABLED"]?.trim()?.lowercase() in setOf("1", "true", "yes", "on"),
+        mcpAudience = env["MCP_AUDIENCE"]?.takeIf { it.isNotBlank() } ?: "rss-reader",
     )
 }
 

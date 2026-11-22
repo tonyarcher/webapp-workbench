@@ -36,6 +36,23 @@ Do not put RSS tables in `user-api`. Do not add Node `pg` here.
 - CORS is off unless `CORS_ALLOWED_ORIGINS` names origins; the Bearer-JWT API
   never sets `allowCredentials` (see `CorsConfig.kt`).
 
+## MCP (G6)
+
+- `POST /mcp` is the one transport: JSON-RPC 2.0 over Spring MVC, JSON
+  responses, no SSE. It requires `X-Api-Version: 1` and the normal
+  `Authorization: Bearer` JWT, validated by the existing JWKS filter chain.
+  `McpPrincipalService` accepts only tokens carrying an `mcp_client_id` claim;
+  a browser access token cannot call MCP.
+- Client registration, consent and revocation live in `user-api` at
+  `/oauth/mcp/clients`. It issues a short-lived signed JWT with `sub` = user id,
+  `aud` = `rss-reader`, plus `mcp_client_id` and `mcp_writes` claims. rss-api
+  makes no runtime call to identity; revocation is bounded by the token TTL.
+- Read tools are always available: list feeds/folders, search, open summary,
+  fetch body, quote highlights. Write tools are advertised only when the token
+  carries `mcp_writes=true`, and each call needs a `confirm` argument equal to
+  the tool name. No arbitrary SQL, URL fetch, or payload-bearing log line.
+- rss-api stores no MCP credential and needs no extra deploy secret.
+
 ## Verification
 
 - Domain logic (ranking, cursors, SSRF, sanitising, feed parsing) needs unit tests.
