@@ -3,8 +3,6 @@ import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Table
-import org.hibernate.annotations.JdbcTypeCode
-import org.hibernate.type.SqlTypes
 import java.time.Instant
 import java.util.UUID
 
@@ -51,10 +49,6 @@ class ArticleEntity(
     var popularity: Float = 0f,
     var engagement: Float = 0f,
     var hot: Float = 0f,
-    // Generated in V15; the application never writes this column.
-    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
-    @Column(name = "search_text", insertable = false, updatable = false)
-    var searchText: String? = null,
 ) {
     /**
      * A newer local excerpt invalidates the store pointer, so the offload pass

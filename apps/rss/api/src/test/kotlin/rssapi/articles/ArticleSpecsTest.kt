@@ -1,9 +1,13 @@
 package rssapi.articles
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
+import jakarta.persistence.criteria.Expression
 import jakarta.persistence.criteria.Root
 import org.mockito.Answers
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -78,6 +82,32 @@ class ArticleSpecsTest {
             parseSearchQueryText("battery grid"),
         )
         assertNotNull(spec.toPredicate(root, query, cb))
+    }
+
+    @Test
+    fun searchUsesTheIndexedFunction() {
+        val spec = articleSpec(
+            userId,
+            ArticleScope.All,
+            false,
+            ArticleSort.NEWEST,
+            null,
+            null,
+            parseSearchQueryText("battery"),
+        )
+
+        spec.toPredicate(root, query, cb)
+
+        verify(cb).function(
+            eq("rss_search_text"),
+            eq(String::class.java),
+            any<Expression<*>>(),
+            any<Expression<*>>(),
+            any<Expression<*>>(),
+            any<Expression<*>>(),
+            any<Expression<*>>(),
+            any<Expression<*>>(),
+        )
     }
 
     @Test

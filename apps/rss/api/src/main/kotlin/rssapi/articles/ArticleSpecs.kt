@@ -11,6 +11,8 @@ import rssapi.feeds.SubscriptionEntity
 import java.time.Instant
 import java.util.UUID
 
+private const val SEARCH_FUNCTION = "rss_search_text"
+
 fun articleSpec(
     userId: UUID,
     scope: ArticleScope,
@@ -97,10 +99,24 @@ private fun searchPredicate(
     val tokens = search?.tokens ?: return null
     if (tokens.isEmpty()) return null
     val tokenPredicates = tokens.map { token ->
-        // search_text is generated and GIN-indexed with pg_trgm (V15). The
-        // old six-column OR scanned TOAST content on every token.
+        // rss_search_text is an immutable SQL function with a pg_trgm GIN index
+        // (V24). Postgres inlines it, so the LIKE uses the index. The old
+        // six-column OR scanned TOAST content on every token.
         cb.or(
-            cb.like(root.get("searchText"), likeContains(token), '\\'),
+            cb.like(
+                cb.function(
+                    SEARCH_FUNCTION,
+                    String::class.java,
+                    root.get<String>("title"),
+                    root.get<String>("summary"),
+                    root.get<String>("author"),
+                    root.get<String>("domain"),
+                    root.get<String>("link"),
+                    root.get<String>("excerpt"),
+                ),
+                likeContains(token),
+                '\\',
+            ),
             feedTitleMatches(token, root, query, cb),
         )
     }

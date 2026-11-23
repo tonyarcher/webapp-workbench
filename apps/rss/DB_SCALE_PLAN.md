@@ -36,12 +36,14 @@ Read from the code, not from memory:
 
 ## Stage 0 — Postgres, no new service (now)
 
-- [x] **Index article search.** Generated `search_text` column plus a
-      `pg_trgm` GIN index (V15); `ArticleSpecs` uses one indexed LIKE over that
-      column instead of six LIKEs across TOAST columns. Substring semantics are
-      unchanged. Acceptance: search tests pass; a 10m-row fixture explains a
-      bitmap index scan, not a sequential scan. tsvector + FTS remains a Stage
-      1 option if relevance ranking needs it.
+- [x] **Index article search.** V15 added a generated `search_text` column and a
+      `pg_trgm` GIN index; V24 removed the stored copy and indexes the immutable
+      `rss_search_text(title, summary, author, domain, link, excerpt)` function
+      instead. `ArticleSpecs` calls that function in one LIKE per token, so the
+      planner inlines it and uses the index. Substring semantics are unchanged.
+      Acceptance: search tests pass; a 10m-row fixture explains a bitmap index
+      scan, not a sequential scan. tsvector + FTS remains a Stage 1 option if
+      relevance ranking needs it.
 - [x] **Keep list reads narrow.** Moved to Q1 slices 2a/2b/V19/V20: bodies live in
       `article_bodies`, `search_text` no longer reads `content_html`, V20 dropped
       `articles.content_html`, and list/detail readers use `BodyStore`. Acceptance:
@@ -118,8 +120,8 @@ rollback path; none of them changes the global feed pool or per-user state.
    sections it publishes. The privacy-preserving counters themselves live in Q2.
 5. **All article text in the store, gzip (V23).** `articles.excerpt_key` and
    `excerpt_bytes` point at the full excerpt, stored gzip under a separate
-   prefix; `excerpt` keeps a bounded head (`RSS_EXCERPT_HEAD_CHARS`, default 800) because the generated `search_text` column, list previews and cited-id
-   lookups read it. `ExcerptOffloadService` moves the tail in bounded batches
+   prefix; `excerpt` keeps a bounded head (`RSS_EXCERPT_HEAD_CHARS`, default 800)
+   because `rss_search_text`, list previews and cited-id lookups read it. `ExcerptOffloadService` moves the tail in bounded batches
    and trims the row in the same write, so no migration rewrites the table.
    Both offload queries have a partial index over pending rows only, so the
    steady state after the drain is cheap. `GET /articles/{id}/body.raw` returns
