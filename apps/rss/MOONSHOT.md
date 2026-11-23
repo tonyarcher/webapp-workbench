@@ -68,12 +68,15 @@ estimates; video handling; and a PWA shell with virtualized lists.
 Honest gaps against Feedly, which the middle of this file attacks: no boards
 or collections beyond stars, no keyword alerts, no audio way to read, no
 offline pack for planes, no user highlights or margin notes, no feed
-discovery, no feed health story, no ingestion beyond RSS/Atom feeds (no JSON
-Feed, no feed autodiscovery beyond pasting a feed URL, no social/API sources,
-no scrape fallback for sites without feeds), no stats, no webhooks or
-automation surface, and no public sharing. The super-app themes at the top
-assume those foundations land first: the briefing desk needs clustering and
-digests; the workbench needs provenance.
+discovery, no feed health story in the UI, no ingestion beyond RSS/Atom feeds
+and watched pages (no JSON Feed, no feed autodiscovery beyond pasting a feed
+URL, no social or API sources), no stats, no webhooks or automation surface,
+and no public sharing. Both of those gaps are narrower than they were: a page
+can be scraped as a source, every article records the connector that produced
+it, and the API can report a feed's connector, capabilities, and last run or
+error. The super-app themes at the top still assume the rest lands first: the
+briefing desk needs clustering and digests; the workbench needs the richer
+provenance layer.
 
 ## K. The briefing desk (mornings like the president)
 
