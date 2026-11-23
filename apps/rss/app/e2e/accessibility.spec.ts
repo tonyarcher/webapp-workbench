@@ -163,7 +163,7 @@ test('the search screen has no automatic accessibility violations', async ({ pag
     await seedAuth(page);
     await stubLibrary(page, ARTICLES);
     await page.goto('/#/search');
-    await expect(page.locator('search-view').getByRole('heading', { name: 'Search', exact: true })).toBeVisible();
+    await expect(page.locator('article-list').getByRole('heading', { name: 'Search', exact: true })).toBeVisible();
     await expect(page.getByLabel('Search articles')).toBeVisible();
     expect(await audit(page)).toEqual([]);
 });

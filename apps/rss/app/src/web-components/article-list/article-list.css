@@ -19,8 +19,8 @@
     font-size: 16px;
     font-weight: 600;
     margin: 0;
-    flex: 1;
-    overflow: hidden;
+    flex: 0 0 auto;
+    min-width: 88px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
