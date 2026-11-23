@@ -83,7 +83,7 @@ export class DwellTracker {
 }
 
 /** Articles under the event: one list row, or a card row's visible slice. */
-function rowArticlesFromEvent(
+export function rowArticlesFromEvent(
     e: Event,
     items: Article[],
     cols: number,
@@ -92,16 +92,19 @@ function rowArticlesFromEvent(
     const target = e.target as HTMLElement | null;
     const row = target?.closest?.('.row') ?? null;
     if (!row || !root?.contains(row)) return [];
-    const indexAttr = row.getAttribute('data-index');
-    if (indexAttr !== null) {
-        const article = items[Number(indexAttr)];
-        return article ? [{ id: article.id, title: article.title }] : [];
-    }
+    // Card rows carry both data-row (article start, for dwell) and data-index
+    // (virtualizer row index). Prefer data-row so a card row credits every
+    // article it contains, not just the one at the virtualizer index.
     const rowAttr = row.getAttribute('data-row');
     if (rowAttr !== null) {
         const perRow = Math.max(1, cols);
         const start = Number(rowAttr) * perRow;
         return items.slice(start, start + perRow).map((a) => ({ id: a.id, title: a.title }));
+    }
+    const indexAttr = row.getAttribute('data-index');
+    if (indexAttr !== null) {
+        const article = items[Number(indexAttr)];
+        return article ? [{ id: article.id, title: article.title }] : [];
     }
     return [];
 }

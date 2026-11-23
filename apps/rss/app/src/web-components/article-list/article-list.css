@@ -281,7 +281,7 @@
 
 .row.cards {
     display: grid;
-    grid-template-columns: repeat(var(--cols, 3), minmax(0, 300px));
+    grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
     justify-content: center;
     /* roomier rows than columns so headlines and summaries breathe */
     gap: 32px 22px;
@@ -335,9 +335,7 @@
 }
 
 .grid-card {
-    /* min-height, not height: short summaries shrink their card instead of
-       leaving a dead zone above the pinned meta line. */
-    min-height: 470px;
+    height: var(--card-height, 470px);
     border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;

@@ -17,6 +17,7 @@ export class AdvancedMenu extends HTMLElement {
     private _open = false;
     private _anchor: MenuAnchor | null = null;
     private _unreadOnly = false;
+    private _hideUnread = false;
     private _markOnScroll = false;
     private _scopeLabel = '';
     private _marking = false;
@@ -45,6 +46,15 @@ export class AdvancedMenu extends HTMLElement {
     set unreadOnly(value: boolean) {
         if (this._unreadOnly === value) return;
         this._unreadOnly = value;
+        if (this.isConnected) this.render();
+    }
+
+    get hideUnread(): boolean {
+        return this._hideUnread;
+    }
+    set hideUnread(value: boolean) {
+        if (this._hideUnread === value) return;
+        this._hideUnread = value;
         if (this.isConnected) this.render();
     }
 
@@ -156,22 +166,24 @@ export class AdvancedMenu extends HTMLElement {
         h.textContent = 'Filter';
         section.appendChild(h);
 
-        const unread = document.createElement('label');
-        unread.className = 'filter';
-        const unreadInput = document.createElement('input');
-        unreadInput.type = 'checkbox';
-        unreadInput.checked = this._unreadOnly;
-        unreadInput.addEventListener('change', (e) => {
-            this.dispatchEvent(
-                new CustomEvent('unread-change', {
-                    detail: (e.target as HTMLInputElement).checked,
-                    bubbles: true,
-                    composed: true,
-                }),
-            );
-        });
-        unread.append(unreadInput, document.createTextNode(' Unread only'));
-        section.appendChild(unread);
+        if (!this._hideUnread) {
+            const unread = document.createElement('label');
+            unread.className = 'filter';
+            const unreadInput = document.createElement('input');
+            unreadInput.type = 'checkbox';
+            unreadInput.checked = this._unreadOnly;
+            unreadInput.addEventListener('change', (e) => {
+                this.dispatchEvent(
+                    new CustomEvent('unread-change', {
+                        detail: (e.target as HTMLInputElement).checked,
+                        bubbles: true,
+                        composed: true,
+                    }),
+                );
+            });
+            unread.append(unreadInput, document.createTextNode(' Unread only'));
+            section.appendChild(unread);
+        }
 
         const markScroll = document.createElement('label');
         markScroll.className = 'filter';

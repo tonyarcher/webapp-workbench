@@ -6,7 +6,7 @@ export const PAGE_SIZES = [5, 10, 20, 50, 100, 500] as const;
 export const VIEW_SETTINGS_KEY = 'rss-reader:view-settings';
 export const DEFAULT_VIEW_SETTINGS_KEY = 'rss-reader:default-view-settings';
 export const CARD_MIN_WIDTH = 240;
-export const CARD_HEIGHT = 420;
+export const CARD_HEIGHT = 470;
 export const CARD_ROW_GAP = 32;
 export const CARD_ROW_HEIGHT = CARD_HEIGHT + CARD_ROW_GAP;
 

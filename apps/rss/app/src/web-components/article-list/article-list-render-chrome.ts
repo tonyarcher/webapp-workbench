@@ -179,6 +179,7 @@ export function renderAdvancedMenu(host: ArticleListRenderHost, existing?: Node)
     (menu as unknown as { unreadOnly: boolean }).unreadOnly = host.interestingActive()
         ? host.hideRead
         : host.unreadOnly;
+    (menu as unknown as { hideUnread: boolean }).hideUnread = host.interestingActive();
     (menu as unknown as { markOnScroll: boolean }).markOnScroll = host.markOnScroll;
     (menu as unknown as { marking: boolean }).marking = host.marking;
     (menu as unknown as { scopeLabel: string }).scopeLabel = host.scopeLabel();
@@ -238,6 +239,9 @@ function renderCardVirtualRow(
     if (!rowItems.length) return null;
     const row = el('div', 'row cards');
     row.setAttribute('data-row', String(vi.index));
+    // The virtualizer measures rows by data-index; without it every card row
+    // falls back to the estimate and taller cards overlap the next row.
+    row.setAttribute('data-index', String(vi.index));
     row.style.transform = `translateY(${vi.start}px)`;
     for (let c = 0; c < rowItems.length; c += 1) {
         const article = rowItems[c];
