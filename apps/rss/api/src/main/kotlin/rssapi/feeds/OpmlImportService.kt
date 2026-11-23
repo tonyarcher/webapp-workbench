@@ -96,7 +96,13 @@ class OpmlImportService(
         if (cleaned.isEmpty()) return FeedsResult(emptyMap(), 0)
         val existing = feeds.findByXmlUrlIn(cleaned.keys).associateBy { it.xmlUrl }
         val missing = cleaned.values.filter { it.url !in existing }.map {
-            FeedEntity(xmlUrl = it.url, title = it.title, siteUrl = it.siteUrl)
+            FeedEntity(
+                xmlUrl = it.url,
+                title = it.title,
+                siteUrl = it.siteUrl,
+                connectorId = "rss",
+                connectorVersion = "1",
+            )
         }
         val saved = if (missing.isEmpty()) emptyList() else feeds.saveAll(missing)
         return FeedsResult((existing.values + saved).associateBy { it.xmlUrl }, saved.size)

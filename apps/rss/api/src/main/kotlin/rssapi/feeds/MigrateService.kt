@@ -42,7 +42,15 @@ class MigrateService(
         rows?.forEach { f ->
             val title = f.title ?: hostTitleFor(f.url)
             val row = feeds.findByXmlUrl(f.url)
-                ?: feeds.save(FeedEntity(xmlUrl = f.url, title = title, siteUrl = f.siteUrl))
+                ?: feeds.save(
+                    FeedEntity(
+                        xmlUrl = f.url,
+                        title = title,
+                        siteUrl = f.siteUrl,
+                        connectorId = "rss",
+                        connectorVersion = "1",
+                    ),
+                )
             if (!subs.existsByUserIdAndFeedId(userId, row.id!!)) {
                 subs.save(SubscriptionEntity(userId = userId, feedId = row.id!!))
             }

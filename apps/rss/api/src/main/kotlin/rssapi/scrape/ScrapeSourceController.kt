@@ -78,7 +78,15 @@ class ScrapeSourceController(
     private fun findOrCreate(url: String, title: String, selector: String?): FeedEntity =
         feeds.findByXmlUrl(url)?.takeIf { it.sourceKind == "scrape" }
             ?: feeds.save(
-                FeedEntity(xmlUrl = url, title = title, sourceKind = "scrape", pageUrl = url, itemSelector = selector),
+                FeedEntity(
+                    xmlUrl = url,
+                    title = title,
+                    sourceKind = "scrape",
+                    connectorId = "scrape",
+                    connectorVersion = "1",
+                    pageUrl = url,
+                    itemSelector = selector,
+                ),
             )
 
     private fun subscribe(feedId: UUID) {

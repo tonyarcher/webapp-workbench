@@ -26,6 +26,18 @@ class ArticleEntity(
     // Plain-text preview for list/search; body stays in article_bodies.
     var excerpt: String? = null,
     var image: String? = null,
+    @Column(name = "source_kind")
+    var sourceKind: String? = null,
+    @Column(name = "connector_id")
+    var connectorId: String? = null,
+    @Column(name = "connector_version")
+    var connectorVersion: String? = null,
+    @Column(name = "canonical_url")
+    var canonicalUrl: String? = null,
+    @Column(name = "source_url")
+    var sourceUrl: String? = null,
+    @Column(name = "fetch_mode")
+    var fetchMode: String? = null,
     var comments: Int? = null,
     @Column(name = "published_at")
     var publishedAt: Instant = Instant.now(),

@@ -99,7 +99,7 @@ class FeedController(
     private fun upsertFeed(url: String, title: String): FeedEntity {
         val existing = feeds.findByXmlUrl(url)
         if (existing != null) return existing
-        return feeds.save(FeedEntity(xmlUrl = url, title = title))
+        return feeds.save(FeedEntity(xmlUrl = url, title = title, connectorId = "rss", connectorVersion = "1"))
     }
 
     private fun requireOwnedFolders(ids: List<UUID>) {

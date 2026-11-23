@@ -1192,6 +1192,12 @@ can tell where an item came from.
 
 ### P12. Connector framework, provenance, and source safety
 
+- **Status.** First slice done: provenance columns on feeds and articles, a
+  shared connector contract with capability flags and a registry, and a
+  versioned `/feeds/{id}/source` info endpoint (last run and last error read
+  from `feed_sync`) with tests. App source-info UI and the remaining connector
+  implementations are not done yet.
+
 - **Why.** Every new source type is another way to fail, leak, or confuse.
   A shared framework keeps connectors consistent, observable, and safe to add.
 - **What.** A common connector contract (discover, validate, fetch, normalize,
@@ -1327,6 +1333,11 @@ the shape of the system must not assume that.
 
 ### Q2. Privacy-preserving feature usage signals
 
+- **Status.** Done. `POST /usage` is a versioned, auth-free endpoint behind
+  `USAGE_ENABLED`; counters aggregate per day in `feature_usage`, prune after
+  90 days, and the client batches opaque feature names with `void`/catch. The
+  app records the fixed enum, shows today's local counts, and has a settings
+  toggle with plain wording. The report is a single grouped query over the table.
 - **Why.** We are about to move data out of Postgres based on guesses about
   what readers use. A feature nobody opens should not keep storing bodies,
   indexes, or derived tables. We need counts, not profiles.

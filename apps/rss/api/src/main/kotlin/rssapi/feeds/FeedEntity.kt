@@ -25,6 +25,10 @@ class FeedEntity(
     var addedAt: Instant = Instant.now(),
     @Column(name = "source_kind")
     var sourceKind: String = "rss",
+    @Column(name = "connector_id")
+    var connectorId: String? = null,
+    @Column(name = "connector_version")
+    var connectorVersion: String? = null,
     @Column(name = "page_url")
     var pageUrl: String? = null,
     @Column(name = "item_selector")

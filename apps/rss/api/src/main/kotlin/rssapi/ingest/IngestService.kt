@@ -196,7 +196,7 @@ class IngestService(
         val engagement = contentEngagement(
             EngagementInput(item.title, html, item.summary, item.author, item.media),
         )
-        return ArticleEntity(
+        val entity = ArticleEntity(
             id = makeArticleId(feed.id!!.toString(), item.guid),
             feedId = feed.id!!,
             guid = item.guid,
@@ -213,5 +213,16 @@ class IngestService(
             fetchedAt = Instant.now(),
             engagement = engagement.toFloat(),
         )
+        applyProvenance(entity, feed, norm, link)
+        return entity
     }
+}
+
+private fun applyProvenance(entity: ArticleEntity, feed: FeedEntity, norm: String?, link: String?) {
+    entity.sourceKind = if (feed.sourceKind == "scrape") "scrape" else "rss"
+    entity.connectorId = feed.connectorId ?: feed.sourceKind
+    entity.connectorVersion = feed.connectorVersion ?: "1"
+    entity.canonicalUrl = norm
+    entity.sourceUrl = link
+    entity.fetchMode = if (feed.sourceKind == "scrape") "scrape" else "poll"
 }
