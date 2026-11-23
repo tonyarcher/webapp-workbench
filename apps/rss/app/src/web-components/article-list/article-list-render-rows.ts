@@ -73,6 +73,17 @@ function derankButton(article: Article): HTMLButtonElement {
     return button;
 }
 
+/** White overlay controls that appear over the cover on hover or focus. */
+function cardActions(article: Article, onStar: (e: Event, article: Article) => void): HTMLElement {
+    const layer = el('div', 'card-actions');
+    const star = starButton(article, onStar);
+    star.className = 'card-action';
+    const derank = derankButton(article);
+    derank.className = 'card-action';
+    layer.append(star, derank);
+    return layer;
+}
+
 /** Star toggle with its glyph hidden from the name computation. */
 function starButton(article: Article, onStar: (e: Event, article: Article) => void): HTMLButtonElement {
     const button = el('button', 'star');
@@ -301,13 +312,12 @@ export function cardRowTemplate(
         empty.setAttribute('style', cardPlaceholderStyle(article));
         media.appendChild(empty);
     }
+    media.appendChild(cardActions(article, onStar));
     card.appendChild(media);
     const body = el('div', 'grid-card-body');
     const titleRow = el('div', 'grid-card-title-row');
     append(titleRow, article.read === 0 ? dot() : null);
     titleRow.appendChild(openButton(article, 'grid-card-title title-open', onOpen));
-    titleRow.appendChild(derankButton(article));
-    titleRow.appendChild(starButton(article, onStar));
     body.appendChild(titleRow);
     if (article.summary) body.appendChild(el('div', 'grid-card-summary', article.summary));
     append(body, renderRowExcerpt(excerpt));

@@ -92,7 +92,7 @@ export async function loadInterestingBatchAction(host: InterestingHost, gen: num
         loadStarredTitles().catch(() => [] as StarredSeed[]),
     ]);
     if (gen !== host.gen) return;
-    const visible = host.hideRead ? res.items.filter((a) => a.read === 0) : res.items;
+    const visible = res.items.filter((a) => a.read === 0);
     const lookup = lookupFromFeeds(host.library?.data?.feeds);
     const filtered = filterMutedArticles(visible, loadMuteRules(), lookup);
     host.mutedHidden = visible.length - filtered.length;

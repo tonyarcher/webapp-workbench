@@ -68,8 +68,9 @@ function enabledFolderIds(): string[] {
 }
 
 function interestingViewSettings(): InterestingViewSettings {
-    // Interesting ranks from the full recent batch; unreadOnly would starve it.
-    return { unreadOnly: false };
+    // Interesting shows unread articles only; read rows still feed the word
+    // map from likes, but they never appear in the view.
+    return { unreadOnly: true };
 }
 
 async function fetchBatch(folderId: string, unreadOnly: boolean): Promise<Article[]> {
