@@ -15,10 +15,13 @@ private const val NOT_FOUND = 404
 
 class S3BodyObjectClient(private val s3: S3Client, private val bucket: String) : BodyObjectClient {
     override fun put(key: String, bytes: ByteArray) {
-        s3.putObject(
-            PutObjectRequest.builder().bucket(bucket).key(key).contentType("text/html; charset=utf-8").build(),
-            RequestBody.fromBytes(bytes),
-        )
+        val request = PutObjectRequest.builder()
+            .bucket(bucket)
+            .key(key)
+            .contentType("text/html; charset=utf-8")
+            .also { builder -> if (ObjectText.isGzip(bytes)) builder.contentEncoding("gzip") }
+            .build()
+        s3.putObject(request, RequestBody.fromBytes(bytes))
     }
 
     override fun get(key: String): ByteArray? = try {

@@ -55,4 +55,44 @@ class ArticleBodyControllerTest {
 
         assertEquals(HttpStatus.NOT_FOUND, err.status)
     }
+
+    @Test
+    fun rawBodyKeepsGzipAndThePrivateCacheHeader() {
+        whenever(user.id).thenReturn(userId)
+        whenever(articles.findById("a1")).thenReturn(Optional.of(ArticleEntity(id = "a1", feedId = feedId)))
+        whenever(subs.existsByUserIdAndFeedId(userId, feedId)).thenReturn(true)
+        val gz = byteArrayOf(0x1f, 0x8b.toByte(), 0, 0)
+        whenever(bodyStore.getRaw("a1")).thenReturn(StoredText(gz, true))
+
+        val res = controller.rawBody("a1")
+
+        assertEquals(gz.toList(), res.body?.toList())
+        assertEquals("gzip", res.headers.getFirst("Content-Encoding"))
+        assertEquals("private, max-age=300", res.headers.getFirst("Cache-Control"))
+        assertEquals(gz.size.toLong(), res.headers.contentLength)
+    }
+
+    @Test
+    fun rawBodyOmitsEncodingForPlainText() {
+        whenever(user.id).thenReturn(userId)
+        whenever(articles.findById("a1")).thenReturn(Optional.of(ArticleEntity(id = "a1", feedId = feedId)))
+        whenever(subs.existsByUserIdAndFeedId(userId, feedId)).thenReturn(true)
+        whenever(bodyStore.getRaw("a1")).thenReturn(StoredText("plain".toByteArray(), false))
+
+        val res = controller.rawBody("a1")
+
+        assertEquals(null, res.headers.getFirst("Content-Encoding"))
+    }
+
+    @Test
+    fun rawBodyMissingIs404() {
+        whenever(user.id).thenReturn(userId)
+        whenever(articles.findById("a1")).thenReturn(Optional.of(ArticleEntity(id = "a1", feedId = feedId)))
+        whenever(subs.existsByUserIdAndFeedId(userId, feedId)).thenReturn(true)
+        whenever(bodyStore.getRaw("a1")).thenReturn(null)
+
+        val err = assertThrows<ApiException> { controller.rawBody("a1") }
+
+        assertEquals(HttpStatus.NOT_FOUND, err.status)
+    }
 }

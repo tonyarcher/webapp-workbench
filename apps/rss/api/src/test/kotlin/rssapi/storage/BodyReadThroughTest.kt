@@ -22,6 +22,10 @@ class BodyReadThroughTest {
             if (failWrite) throw IllegalStateException("write failed")
             body = html
         }
+
+        override fun getRaw(articleId: String): StoredText? = body?.let {
+            StoredText(it.toByteArray(Charsets.UTF_8), false)
+        }
     }
 
     @Test

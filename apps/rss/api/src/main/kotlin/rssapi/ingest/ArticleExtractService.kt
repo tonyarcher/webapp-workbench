@@ -44,7 +44,7 @@ class ArticleExtractService(
             ?: return ExtractResult(article, false, null)
         val sanitized = sanitizeHtml(html).take(MAX_CONTENT_BYTES)
         if (!isMeaningfulGain(article, sanitized)) return ExtractResult(article, false, source)
-        article.excerpt = excerptOf(sanitized)
+        article.replaceExcerpt(excerptOf(sanitized))
         article.image = firstImageUrl(sanitized, article.link)
         val saved = articles.save(article)
         bodyStore.put(article.id, sanitized)

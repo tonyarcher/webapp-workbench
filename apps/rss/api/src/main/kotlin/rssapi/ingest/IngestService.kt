@@ -28,6 +28,7 @@ import rssapi.platform.sanitizeHtml
 import rssapi.scrape.ScrapeCandidate
 import rssapi.scrape.ScrapeExtraction
 import rssapi.storage.BodyStore
+import rssapi.storage.ObjectText
 import java.time.Instant
 import java.util.UUID
 
@@ -35,9 +36,22 @@ import java.util.UUID
 private fun ArticleEntity.sameContent(other: ArticleEntity): Boolean = title == other.title &&
     link == other.link &&
     summary == other.summary &&
-    excerpt == other.excerpt &&
+    sameExcerpt(other) &&
     image == other.image &&
     publishedAt == other.publishedAt
+
+/**
+ * An offloaded row holds only a head, which may be empty. The object key hashes
+ * the full text, so compare fingerprints instead of the local window.
+ */
+private fun ArticleEntity.sameExcerpt(other: ArticleEntity): Boolean {
+    val key = excerptKey
+    if (key == null) return excerpt == other.excerpt
+    if (key.endsWith(".txt.gz")) {
+        return key.substringAfterLast('/').removeSuffix(".txt.gz") == ObjectText.digestHex(other.excerpt ?: "")
+    }
+    return excerpt == (other.excerpt ?: "").take(excerpt?.length ?: 0)
+}
 
 private const val NOT_MODIFIED = 304
 private const val SCRAPE_KIND = "scrape"

@@ -129,17 +129,26 @@ services:
             # (AI_PROVIDER=decision). Empty by default; the real value stays
             # in the untracked deploy/.env.
             TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
-            # Optional cold body tier (Q1 slice 3). Empty bucket keeps bodies in
-            # Postgres article_bodies only. Offload is env-gated; no payloads logged.
-            RSS_BODY_S3_ENDPOINT: ${RSS_BODY_S3_ENDPOINT:-}
+            # Article text lives in the object store (Q1 slice 3, P12).
+            # Bodies and full excerpts are gzip objects; Postgres keeps the
+            # article row, user state, and a bounded excerpt head for search.
+            # The compose network reaches the store as http://seaweedfs:8333.
+            # Offload defaults to on with 0 days, so every stored body moves.
+            # Leave RSS_BODY_S3_ENDPOINT unset for local SeaweedFS; set it to an
+            # empty value for real AWS so the SDK uses its own endpoint.
+            RSS_BODY_S3_ENDPOINT: ${RSS_BODY_S3_ENDPOINT-http://seaweedfs:8333}
             RSS_BODY_S3_REGION: ${RSS_BODY_S3_REGION:-us-east-1}
-            RSS_BODY_S3_BUCKET: ${RSS_BODY_S3_BUCKET:-}
+            RSS_BODY_S3_BUCKET: ${RSS_BODY_S3_BUCKET:-${S3_BUCKET:-}}
             RSS_BODY_S3_PREFIX: ${RSS_BODY_S3_PREFIX:-rss/bodies}
-            RSS_BODY_S3_ACCESS_KEY: ${RSS_BODY_S3_ACCESS_KEY:-}
-            RSS_BODY_S3_SECRET_KEY: ${RSS_BODY_S3_SECRET_KEY:-}
-            RSS_BODY_OFFLOAD_ENABLED: ${RSS_BODY_OFFLOAD_ENABLED:-false}
-            RSS_BODY_OFFLOAD_AFTER_DAYS: ${RSS_BODY_OFFLOAD_AFTER_DAYS:-30}
-            BODY_OFFLOAD_MS: ${BODY_OFFLOAD_MS:-60000}
+            RSS_BODY_S3_ACCESS_KEY: ${RSS_BODY_S3_ACCESS_KEY:-${S3_ACCESS_KEY:-}}
+            RSS_BODY_S3_SECRET_KEY: ${RSS_BODY_S3_SECRET_KEY:-${S3_SECRET_KEY:-}}
+            RSS_BODY_OFFLOAD_ENABLED: ${RSS_BODY_OFFLOAD_ENABLED:-true}
+            RSS_BODY_OFFLOAD_AFTER_DAYS: ${RSS_BODY_OFFLOAD_AFTER_DAYS:-0}
+            BODY_OFFLOAD_MS: ${BODY_OFFLOAD_MS:-2000}
+            RSS_EXCERPT_S3_PREFIX: ${RSS_EXCERPT_S3_PREFIX:-rss/excerpts}
+            RSS_EXCERPT_OFFLOAD_ENABLED: ${RSS_EXCERPT_OFFLOAD_ENABLED:-true}
+            RSS_EXCERPT_OFFLOAD_MS: ${RSS_EXCERPT_OFFLOAD_MS:-2000}
+            RSS_EXCERPT_HEAD_CHARS: ${RSS_EXCERPT_HEAD_CHARS:-800}
             # Automatic offload trigger and confirmable cold-object purge (Q1).
             RSS_BODY_OFFLOAD_REQUIRE_PRESSURE: ${RSS_BODY_OFFLOAD_REQUIRE_PRESSURE:-false}
             RSS_BODY_DB_SIZE_TRIGGER_GB: ${RSS_BODY_DB_SIZE_TRIGGER_GB:-2}

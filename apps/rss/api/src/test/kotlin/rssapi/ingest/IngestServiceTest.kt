@@ -16,6 +16,7 @@ import rssapi.fetch.FeedFetcher
 import rssapi.fetch.PageFetcher
 import rssapi.scrape.SemanticListExtractor
 import rssapi.storage.BodyStore
+import rssapi.storage.ObjectText
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -87,6 +88,51 @@ class IngestServiceTest {
         ingest.ingestXml(feed, rssWith(rssItem(guid)))
 
         verify(articles, org.mockito.kotlin.never()).save(any())
+    }
+
+    @Test
+    fun offloadedRowIsNotRewrittenOnEveryPoll() {
+        val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
+        val guid = "g1"
+        whenever(pages.fetchHtml("https://example.com/x")).thenReturn("<article><p>$FULL_BODY</p></article>")
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
+        ingest.ingestXml(feed, rssWith(rssItem(guid)))
+        val stored = argumentCaptor<ArticleEntity>()
+        verify(articles).save(stored.capture())
+        clearInvocations(articles, maintenance, bodyStore)
+        val offloaded = stored.firstValue
+        val fullExcerpt = offloaded.excerpt ?: ""
+        offloaded.excerpt = ""
+        offloaded.excerptKey = "rss/excerpts/${ObjectText.digestHex(fullExcerpt)}.txt.gz"
+        whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(offloaded)
+        whenever(bodyStore.get(offloaded.id)).thenReturn("<p>$FULL_BODY</p>")
+
+        ingest.ingestXml(feed, rssWith(rssItem(guid)))
+
+        verify(articles, org.mockito.kotlin.never()).save(any())
+    }
+
+    @Test
+    fun offloadedRowWithChangedExcerptIsRewritten() {
+        val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
+        val guid = "g1"
+        whenever(pages.fetchHtml("https://example.com/x")).thenReturn("<article><p>$FULL_BODY</p></article>")
+        whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
+        ingest.ingestXml(feed, rssWith(rssItem(guid)))
+        val stored = argumentCaptor<ArticleEntity>()
+        verify(articles).save(stored.capture())
+        clearInvocations(articles, maintenance, bodyStore)
+        val offloaded = stored.firstValue
+        offloaded.excerpt = ""
+        offloaded.excerptKey = "rss/excerpts/${ObjectText.digestHex("older text")}.txt.gz"
+        whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(offloaded)
+        whenever(bodyStore.get(offloaded.id)).thenReturn("<p>$FULL_BODY</p>")
+
+        ingest.ingestXml(feed, rssWith(rssItem(guid)))
+
+        val saved = argumentCaptor<ArticleEntity>()
+        verify(articles).save(saved.capture())
+        assertTrue(saved.firstValue.excerptKey == null)
     }
 
     @Test

@@ -106,7 +106,7 @@ class BodyOffloadServiceTest {
     fun objectKeyBlankPrefix() {
         val svc = BodyOffloadService(bodies, client, BodyObjectStoreConfig(bucket = "b", prefix = ""), pressure)
         val key = svc.objectKey("x".toByteArray())
-        assertTrue(key.endsWith(".html"))
+        assertTrue(key.endsWith(".html.gz"))
         assertTrue(!key.contains("/"))
     }
 

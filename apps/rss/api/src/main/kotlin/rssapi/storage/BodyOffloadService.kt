@@ -12,7 +12,13 @@ import java.time.Instant
 
 private const val BATCH_SIZE = 200
 
-/** Moves old hot bodies to the object store when offload is enabled. */
+/**
+ * Moves bodies to the object store when offload is enabled.
+ *
+ * `offloadAfterDays = 0` means every stored body is a candidate: the reader
+ * keeps only the article row plus user state in Postgres, and bodies are read
+ * back from the store on demand.
+ */
 @Component
 class BodyOffloadService(
     private val bodies: ArticleBodyRepo,
@@ -31,19 +37,25 @@ class BodyOffloadService(
     @Transactional
     fun runBatch() {
         if (!canRun()) return
-        val cutoff = Instant.now().minus(Duration.ofDays(config.offloadAfterDays.toLong().coerceAtLeast(1)))
-        val rows = bodies.offloadCandidates(cutoff, PageRequest.of(0, BATCH_SIZE))
+        val rows = bodies.offloadCandidates(cutoff(), PageRequest.of(0, BATCH_SIZE))
         if (rows.isEmpty()) return
         val moved = rows.count { offloadOne(it.articleId, it.contentHtml) }
         if (moved > 0) log("rss-api", "info", "body offload batch", mapOf("moved" to moved))
+    }
+
+    /** Zero days means everything already fetched, not a one-day floor. */
+    internal fun cutoff(): Instant {
+        val days = config.offloadAfterDays.coerceAtLeast(0)
+        val now = Instant.now()
+        return if (days == 0) now else now.minus(Duration.ofDays(days.toLong()))
     }
 
     private fun canRun(): Boolean = !stopped && config.enabled() && config.offloadEnabled && pressure.offloadAllowed()
 
     private fun offloadOne(articleId: String, html: String?): Boolean {
         val body = html?.takeIf { it.isNotBlank() } ?: return false
-        val bytes = body.toByteArray(Charsets.UTF_8)
-        val key = objectKey(bytes)
+        val bytes = ObjectText.encode(body)
+        val key = objectKey(body.toByteArray(Charsets.UTF_8))
         if (!runCatching { objectClient.put(key, bytes) }.isSuccess) return false
         return bodies.markOffloaded(articleId, key, bytes.size.toLong()) > 0
     }
@@ -52,6 +64,6 @@ class BodyOffloadService(
         val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
         val hex = digest.joinToString("") { "%02x".format(it) }
         val prefix = config.prefix.trim('/')
-        return if (prefix.isBlank()) "$hex.html" else "$prefix/$hex.html"
+        return if (prefix.isBlank()) "$hex.html.gz" else "$prefix/$hex.html.gz"
     }
 }

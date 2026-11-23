@@ -103,6 +103,10 @@ export async function authedFetch(path: string, init?: RequestInit, retried = fa
     }
     const res = await fetch(apiUrl(path), withAuthHeaders(init, token));
     if (res.status === 401 && !retried) return retryFetchRaw(path, init);
+    if (res.status === 401) {
+        emitAuthRequired();
+        throw new AuthError();
+    }
     return res;
 }
 

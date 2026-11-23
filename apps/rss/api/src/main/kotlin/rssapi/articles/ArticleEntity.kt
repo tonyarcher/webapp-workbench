@@ -25,6 +25,11 @@ class ArticleEntity(
     var summary: String? = null,
     // Plain-text preview for list/search; body stays in article_bodies.
     var excerpt: String? = null,
+    // Full excerpt in the object store, gzip. `excerpt` keeps a bounded head.
+    @Column(name = "excerpt_key")
+    var excerptKey: String? = null,
+    @Column(name = "excerpt_bytes")
+    var excerptBytes: Long? = null,
     var image: String? = null,
     @Column(name = "source_kind")
     var sourceKind: String? = null,
@@ -50,4 +55,14 @@ class ArticleEntity(
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     @Column(name = "search_text", insertable = false, updatable = false)
     var searchText: String? = null,
-)
+) {
+    /**
+     * A newer local excerpt invalidates the store pointer, so the offload pass
+     * re-uploads the full text instead of serving the older object.
+     */
+    fun replaceExcerpt(text: String?) {
+        excerpt = text
+        excerptKey = null
+        excerptBytes = null
+    }
+}

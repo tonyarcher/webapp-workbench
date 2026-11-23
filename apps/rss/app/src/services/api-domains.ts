@@ -350,10 +350,11 @@ export async function extractArticle(articleId: string): Promise<{ article: Arti
     return { article: res.article, extracted: res.extracted === true };
 }
 
-/** Fetch the stored body for a list row that omitted content. */
 export async function fetchArticleBody(articleId: string): Promise<string | null> {
-    const res = (await apiFetch(`/articles/${encodeURIComponent(articleId)}/body`)) as { content?: string | null };
-    return typeof res.content === 'string' ? res.content : null;
+    const res = await authedFetch(`/articles/${encodeURIComponent(articleId)}/body.raw`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(await errorMessage(res));
+    return res.text();
 }
 
 /** Storage tier status. Sizes are bytes; no article ids or payloads cross this boundary. */

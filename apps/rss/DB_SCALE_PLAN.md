@@ -83,17 +83,18 @@ rollback path; none of them changes the global feed pool or per-user state.
    rticles.content_html; bodies live in rticle_bodies, readers/writers use
    BodyStore, and the Kotlin body backfills were removed. Front-page and
    edition builders read the list projection.
-3. **Object-store tier (done, env-gated).** V21 adds `storage_key` and
-   `byte_size` to `article_bodies` and makes `content_html` nullable. When
-   `RSS_BODY_S3_BUCKET` is set, `DbBodyStore` writes content-addressed objects
-   (`sha256.html`) through an S3-compatible client and stores the key in Postgres;
-   reads fall back to `content_html` when an object is missing. `BodyOffloadService`
-   moves old hot bodies when `RSS_BODY_OFFLOAD_ENABLED=true` (age-based cutoff via
-   `RSS_BODY_OFFLOAD_AFTER_DAYS`, bounded batches). The automated trigger is
-   `StoragePressureService`: it reads `pg_database_size(current_database())` and
-   the last backup duration supplied by `RSS_BACKUP_DURATION_MINUTES`, and gates
-   offload when `RSS_BODY_OFFLOAD_REQUIRE_PRESSURE=true` (defaults 2 GB or 15 min,
-   both configurable). `BodyPurgeService` deletes old cold objects in bounded
+3. **Object-store tier (done, default on).** V21 adds `storage_key` and
+   `byte_size` to `article_bodies` and makes `content_html` nullable. When a
+   bucket is set, `DbBodyStore` writes content-addressed gzip objects
+   (`sha256.html.gz`) through an S3-compatible client and stores the key in
+   Postgres; reads fall back to `content_html` when an object is missing.
+   `BodyOffloadService` moves bodies when `RSS_BODY_OFFLOAD_ENABLED=true`
+   (`RSS_BODY_OFFLOAD_AFTER_DAYS`, bounded batches; **0 means every stored
+   body**). The automated trigger is `StoragePressureService`: it reads
+   `pg_database_size(current_database())` and the last backup duration supplied
+   by `RSS_BACKUP_DURATION_MINUTES`, and gates offload when
+   `RSS_BODY_OFFLOAD_REQUIRE_PRESSURE=true` (defaults 2 GB or 15 min, both
+   configurable). `BodyPurgeService` deletes old cold objects in bounded
    batches under `RSS_BODY_PURGE_ENABLED`, clearing only the pointer; article
    rows and user state are never deleted. `GET /storage/status` reports the
    thresholds and `POST /storage/purge` is the confirmable action behind the
@@ -115,6 +116,23 @@ rollback path; none of them changes the global feed pool or per-user state.
    id, and evicts on ingest and extraction writes. Section-only briefing fetches
    are in: `EditionService` loads excerpt text only for the article ids in the
    sections it publishes. The privacy-preserving counters themselves live in Q2.
+5. **All article text in the store, gzip (V23).** `articles.excerpt_key` and
+   `excerpt_bytes` point at the full excerpt, stored gzip under a separate
+   prefix; `excerpt` keeps a bounded head (`RSS_EXCERPT_HEAD_CHARS`, default 800) because the generated `search_text` column, list previews and cited-id
+   lookups read it. `ExcerptOffloadService` moves the tail in bounded batches
+   and trims the row in the same write, so no migration rewrites the table.
+   Both offload queries have a partial index over pending rows only, so the
+   steady state after the drain is cheap. `GET /articles/{id}/body.raw` returns
+   the stored body still gzip with `Content-Encoding: gzip`, and the reader
+   uses it, so the browser inflates a body instead of the API decoding it into
+   JSON. `excerpt` text beyond the head is no longer searchable; that is the
+   trade for keeping search local.
+   **Reclaiming the files is a separate, manual step.** Nulling `content_html`
+   and trimming `excerpt` leaves dead TOAST and index entries; Postgres reuses
+   that space but does not shrink the files. After the drain, run
+   `REINDEX INDEX CONCURRENTLY idx_articles_search_trgm` and
+   `VACUUM (FULL) article_bodies`, then `VACUUM (FULL) articles` during a
+   window that can take the API down. Do not schedule `VACUUM FULL` on its own.
 
 ## Stage 1 — dedicated search service (trigger: FTS misses relevance or p95)
 

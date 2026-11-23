@@ -1,174 +1,236 @@
 package rssapi.storage
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import rssapi.articles.ArticleRepo
-import rssapi.storage.ArticleBodyEntity
-import rssapi.storage.ArticleBodyRepo
 import java.util.Optional
 
 class DbBodyStoreTest {
     private val articles: ArticleRepo = mock()
     private val bodies: ArticleBodyRepo = mock()
-    private val store = DbBodyStore(articles, bodies)
+    private val client = InMemoryClient()
+    private val store = DbBodyStore(articles, bodies, client, BodyObjectStoreConfig(bucket = "b"))
 
-    @Test
-    fun readsFromBodyTable() {
-        whenever(bodies.findById("a")).thenReturn(Optional.of(ArticleBodyEntity("a", "body")))
+    private class InMemoryClient : BodyObjectClient {
+        val objects = mutableMapOf<String, ByteArray>()
 
-        assertEquals("body", store.get("a"))
-        verify(articles, never()).findById(any())
+        override fun put(key: String, bytes: ByteArray) {
+            objects[key] = bytes
+        }
+
+        override fun get(key: String): ByteArray? = objects[key]
+
+        override fun delete(key: String) {
+            objects.remove(key)
+        }
     }
 
     @Test
-    fun missingBodyReturnsNull() {
-        whenever(bodies.findById("a")).thenReturn(Optional.empty())
+    fun putStoresGzipAndKeepsTheRowSmall() {
+        whenever(articles.existsById("a1")).thenReturn(true)
 
-        assertNull(store.get("a"))
+        store.put("a1", "<p>hello</p>")
+
+        val key = client.objects.keys.single()
+        assertTrue(key.endsWith(".html.gz"))
+        val stored = client.objects.getValue(key)
+        assertTrue(ObjectText.isGzip(stored))
+        assertEquals("<p>hello</p>", ObjectText.decode(stored))
+        verify(bodies).save(any())
     }
 
     @Test
-    fun blankBodyRowReturnsNull() {
-        whenever(bodies.findById("a")).thenReturn(Optional.of(ArticleBodyEntity("a", "")))
+    fun getInflatesAnOffloadedBody() {
+        val key = "rss/bodies/x.html.gz"
+        client.objects[key] = ObjectText.encode("<p>hi</p>")
+        whenever(bodies.findById("a1")).thenReturn(
+            Optional.of(ArticleBodyEntity(articleId = "a1", contentHtml = null, storageKey = key)),
+        )
 
-        assertNull(store.get("a"))
+        assertEquals("<p>hi</p>", store.get("a1"))
     }
 
     @Test
-    fun writesBodyOnly() {
-        whenever(articles.existsById("a")).thenReturn(true)
+    fun getStillReadsAnUncompressedLegacyObject() {
+        val key = "rss/bodies/legacy.html"
+        client.objects[key] = "<p>old</p>".toByteArray(Charsets.UTF_8)
+        whenever(bodies.findById("a1")).thenReturn(
+            Optional.of(ArticleBodyEntity(articleId = "a1", storageKey = key)),
+        )
 
-        store.put("a", "new")
-
-        val saved = argumentCaptor<ArticleBodyEntity>()
-        verify(bodies).save(saved.capture())
-        assertEquals("a", saved.firstValue.articleId)
-        assertEquals("new", saved.firstValue.contentHtml)
-        verify(articles, never()).save(any())
+        assertEquals("<p>old</p>", store.get("a1"))
     }
 
     @Test
-    fun missingArticleIsNotSaved() {
-        whenever(articles.existsById("a")).thenReturn(false)
+    fun getFallsBackToTheColumnWhenTheStoreMisses() {
+        whenever(bodies.findById("a1")).thenReturn(
+            Optional.of(ArticleBodyEntity(articleId = "a1", contentHtml = "<p>row</p>", storageKey = "missing")),
+        )
 
-        store.put("a", "new")
+        assertEquals("<p>row</p>", store.get("a1"))
+    }
 
-        verify(bodies, never()).save(any())
+    @Test
+    fun getRawPassesCompressedBytesThrough() {
+        val key = "rss/bodies/x.html.gz"
+        val gz = ObjectText.encode("<p>hi</p>")
+        client.objects[key] = gz
+        whenever(bodies.findById("a1")).thenReturn(Optional.of(ArticleBodyEntity(articleId = "a1", storageKey = key)))
+
+        val raw = store.getRaw("a1")
+
+        assertTrue(raw?.gzip == true)
+        assertEquals(gz.toList(), raw?.bytes?.toList())
+    }
+
+    @Test
+    fun getRawCompressesAColumnBodyForStreaming() {
+        whenever(
+            bodies.findById("a1"),
+        ).thenReturn(Optional.of(ArticleBodyEntity(articleId = "a1", contentHtml = "<p>hi</p>")))
+
+        val raw = store.getRaw("a1")
+
+        assertTrue(raw?.gzip == true)
+        assertEquals("<p>hi</p>", ObjectText.decode(raw!!.bytes))
+    }
+
+    @Test
+    fun missingRowHasNoBody() {
+        whenever(bodies.findById("a1")).thenReturn(Optional.empty())
+        assertNull(store.get("a1"))
+        assertNull(store.getRaw("a1"))
     }
 
     @Test
     fun blankBodyIsNotStored() {
-        store.put("a", "   ")
-
-        verify(bodies, never()).save(any())
-        verify(articles, never()).existsById(any())
+        store.put("a1", "   ")
+        verify(bodies, org.mockito.kotlin.never()).save(any())
+        assertFalse(client.objects.isNotEmpty())
     }
 
     @Test
-    fun readsFromObjectStoreWhenKeyPresent() {
-        val client: BodyObjectClient = mock()
-        val s3Store = DbBodyStore(
-            articles,
-            bodies,
-            client,
-            BodyObjectStoreConfig(bucket = "b", prefix = "rss/bodies"),
+    fun unknownArticleIsNotStored() {
+        whenever(articles.existsById("gone")).thenReturn(false)
+
+        store.put("gone", "<p>body</p>")
+
+        verify(bodies, org.mockito.kotlin.never()).save(any())
+        assertTrue(client.objects.isEmpty())
+    }
+
+    @Test
+    fun emptyPrefixStillProducesAFlatKey() {
+        val flat = DbBodyStore(articles, bodies, client, BodyObjectStoreConfig(bucket = "b", prefix = ""))
+
+        val key = flat.objectKey("x".toByteArray())
+
+        assertFalse(key.startsWith("/"))
+        assertTrue(key.endsWith(".html.gz"))
+    }
+
+    @Test
+    fun getRawFallsBackWhenTheObjectIsEmpty() {
+        val key = "rss/bodies/empty.html.gz"
+        client.objects[key] = ByteArray(0)
+        whenever(bodies.findById("a1")).thenReturn(
+            Optional.of(ArticleBodyEntity(articleId = "a1", contentHtml = "<p>row</p>", storageKey = key)),
         )
-        whenever(bodies.findById("a")).thenReturn(Optional.of(ArticleBodyEntity("a", null, "k", 3)))
-        whenever(client.get("k")).thenReturn("html".toByteArray(Charsets.UTF_8))
 
-        assertEquals("html", s3Store.get("a"))
+        val raw = store.getRaw("a1")
+
+        assertEquals("<p>row</p>", ObjectText.decode(raw!!.bytes))
     }
 
     @Test
-    fun fallsBackToContentHtmlWhenObjectMissing() {
-        val client: BodyObjectClient = mock()
-        val s3Store = DbBodyStore(
-            articles,
-            bodies,
-            client,
-            BodyObjectStoreConfig(bucket = "b"),
+    fun putKeepsTheColumnWhenTheStoreIsOff() {
+        val local = DbBodyStore(articles, bodies, client, BodyObjectStoreConfig())
+        whenever(articles.existsById("a1")).thenReturn(true)
+        val captor = argumentCaptor<ArticleBodyEntity>()
+
+        local.put("a1", "<p>kept</p>")
+
+        verify(bodies).save(captor.capture())
+        assertEquals("<p>kept</p>", captor.firstValue.contentHtml)
+        assertNull(captor.firstValue.storageKey)
+    }
+
+    @Test
+    fun putFallsBackToTheColumnWhenTheUploadFails() {
+        val failing = object : BodyObjectClient {
+            override fun put(key: String, bytes: ByteArray) = throw IllegalStateException("down")
+            override fun get(key: String): ByteArray? = null
+            override fun delete(key: String) = Unit
+        }
+        val local = DbBodyStore(articles, bodies, failing, BodyObjectStoreConfig(bucket = "b"))
+        whenever(articles.existsById("a1")).thenReturn(true)
+        val captor = argumentCaptor<ArticleBodyEntity>()
+
+        local.put("a1", "<p>kept</p>")
+
+        verify(bodies).save(captor.capture())
+        assertEquals("<p>kept</p>", captor.firstValue.contentHtml)
+    }
+
+    @Test
+    fun getWithoutAKeyReadsTheColumn() {
+        whenever(
+            bodies.findById("a1"),
+        ).thenReturn(Optional.of(ArticleBodyEntity(articleId = "a1", contentHtml = "<p>row</p>")))
+
+        assertEquals("<p>row</p>", store.get("a1"))
+    }
+
+    @Test
+    fun blankKeyIsTreatedAsNoPointer() {
+        whenever(bodies.findById("a1")).thenReturn(
+            Optional.of(ArticleBodyEntity(articleId = "a1", contentHtml = "<p>row</p>", storageKey = "  ")),
         )
-        whenever(bodies.findById("a")).thenReturn(Optional.of(ArticleBodyEntity("a", "local", "k", 3)))
-        whenever(client.get("k")).thenReturn(null)
 
-        assertEquals("local", s3Store.get("a"))
+        assertEquals("<p>row</p>", store.get("a1"))
+        assertEquals("<p>row</p>", ObjectText.decode(store.getRaw("a1")!!.bytes))
     }
 
     @Test
-    fun putWritesToObjectStoreWhenEnabled() {
-        val client: BodyObjectClient = mock()
-        val config = BodyObjectStoreConfig(bucket = "b", prefix = "rss/bodies")
-        val s3Store = DbBodyStore(articles, bodies, client, config)
-        whenever(articles.existsById("a")).thenReturn(true)
+    fun storeOffIgnoresThePointer() {
+        val local = DbBodyStore(articles, bodies, client, BodyObjectStoreConfig())
+        whenever(bodies.findById("a1")).thenReturn(
+            Optional.of(ArticleBodyEntity(articleId = "a1", contentHtml = "<p>row</p>", storageKey = "rss/bodies/x")),
+        )
 
-        s3Store.put("a", "<p>hi</p>")
-
-        val key = argumentCaptor<String>()
-        val bytes = argumentCaptor<ByteArray>()
-        verify(client).put(key.capture(), bytes.capture())
-        assertTrue(key.firstValue.startsWith("rss/bodies/"))
-        assertTrue(key.firstValue.endsWith(".html"))
-        val saved = argumentCaptor<ArticleBodyEntity>()
-        verify(bodies).save(saved.capture())
-        assertNull(saved.firstValue.contentHtml)
-        assertEquals(key.firstValue, saved.firstValue.storageKey)
-        assertEquals(bytes.firstValue.size.toLong(), saved.firstValue.byteSize)
+        assertEquals("<p>row</p>", local.get("a1"))
+        assertEquals("<p>row</p>", ObjectText.decode(local.getRaw("a1")!!.bytes))
     }
 
     @Test
-    fun putWithoutObjectStoreKeepsContentHtml() {
-        whenever(articles.existsById("a")).thenReturn(true)
+    fun storeExceptionFallsBackToTheColumn() {
+        val failing = object : BodyObjectClient {
+            override fun put(key: String, bytes: ByteArray) = Unit
+            override fun get(key: String): ByteArray? = throw IllegalStateException("boom")
+            override fun delete(key: String) = Unit
+        }
+        val local = DbBodyStore(articles, bodies, failing, BodyObjectStoreConfig(bucket = "b"))
+        whenever(bodies.findById("a1")).thenReturn(
+            Optional.of(ArticleBodyEntity(articleId = "a1", contentHtml = "<p>row</p>", storageKey = "rss/bodies/x")),
+        )
 
-        store.put("a", "<p>hi</p>")
-
-        val saved = argumentCaptor<ArticleBodyEntity>()
-        verify(bodies).save(saved.capture())
-        assertEquals("<p>hi</p>", saved.firstValue.contentHtml)
-        assertNull(saved.firstValue.storageKey)
+        assertEquals("<p>row</p>", local.get("a1"))
+        assertEquals("<p>row</p>", ObjectText.decode(local.getRaw("a1")!!.bytes))
     }
 
     @Test
-    fun enabledStoreFallsBackWhenKeyBlank() {
-        val client: BodyObjectClient = mock()
-        val s3Store = DbBodyStore(articles, bodies, client, BodyObjectStoreConfig(bucket = "b"))
-        whenever(bodies.findById("a")).thenReturn(Optional.of(ArticleBodyEntity("a", "local", " ", 1)))
+    fun getRawWithoutAColumnOrObjectIsNull() {
+        whenever(bodies.findById("a1")).thenReturn(
+            Optional.of(ArticleBodyEntity(articleId = "a1", contentHtml = "  ", storageKey = "rss/bodies/missing")),
+        )
 
-        assertEquals("local", s3Store.get("a"))
-        verify(client, never()).get(any())
-    }
-
-    @Test
-    fun enabledStoreFallsBackWhenObjectBlank() {
-        val client: BodyObjectClient = mock()
-        val s3Store = DbBodyStore(articles, bodies, client, BodyObjectStoreConfig(bucket = "b"))
-        whenever(bodies.findById("a")).thenReturn(Optional.of(ArticleBodyEntity("a", "local", "k", 1)))
-        whenever(client.get("k")).thenReturn("   ".toByteArray(Charsets.UTF_8))
-
-        assertEquals("local", s3Store.get("a"))
-    }
-
-    @Test
-    fun enabledStoreFallsBackWhenObjectThrows() {
-        val client: BodyObjectClient = mock()
-        val s3Store = DbBodyStore(articles, bodies, client, BodyObjectStoreConfig(bucket = "b"))
-        whenever(bodies.findById("a")).thenReturn(Optional.of(ArticleBodyEntity("a", "local", "k", 1)))
-        whenever(client.get("k")).thenThrow(RuntimeException("boom"))
-
-        assertEquals("local", s3Store.get("a"))
-    }
-
-    @Test
-    fun objectKeyUsesBlankPrefix() {
-        val s3Store = DbBodyStore(articles, bodies, mock(), BodyObjectStoreConfig(bucket = "b", prefix = ""))
-        val key = s3Store.objectKey("hi".toByteArray())
-        assertTrue(key.endsWith(".html"))
-        assertTrue(!key.contains("/"))
+        assertNull(store.getRaw("a1"))
     }
 }

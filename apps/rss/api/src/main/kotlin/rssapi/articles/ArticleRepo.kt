@@ -2,6 +2,7 @@ package rssapi.articles
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.util.UUID
@@ -13,6 +14,40 @@ interface ArticleRepo :
     fun findByFeedIdOrderByPublishedAtDesc(feedId: UUID, page: Pageable): List<ArticleEntity>
     fun findByFeedIdAndNormLink(feedId: UUID, normLink: String): ArticleEntity?
     fun findByFeedIdIn(feedIds: Collection<UUID>): List<ArticleEntity>
+
+    interface ExcerptRow {
+        val id: String
+        val excerpt: String
+    }
+
+    /** Full excerpts not yet in the object store, oldest first. */
+    @Query(
+        """
+        select a.id as id, a.excerpt as excerpt from ArticleEntity a
+        where a.excerptKey is null
+          and a.excerpt is not null
+          and length(a.excerpt) > 0
+        order by a.fetchedAt asc
+        """,
+    )
+    fun excerptOffloadCandidates(page: Pageable): List<ExcerptRow>
+
+    /** Store the pointer and trim the local copy in one write, if the text did not change meanwhile. */
+    @Modifying
+    @Query(
+        """
+        update ArticleEntity a
+           set a.excerptKey = :key, a.excerptBytes = :bytes, a.excerpt = :head
+         where a.id = :id and a.excerptKey is null and a.excerpt = :source
+        """,
+    )
+    fun markExcerptOffloaded(
+        @Param("id") id: String,
+        @Param("key") key: String,
+        @Param("bytes") bytes: Long,
+        @Param("head") head: String,
+        @Param("source") source: String,
+    ): Int
 
     @Query(
         """
