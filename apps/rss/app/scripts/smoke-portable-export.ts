@@ -49,7 +49,7 @@ const json = JSON.stringify(archive);
 assert(JSON.parse(json).feeds[1].siteUrl === 'https://example.com', 'JSON round trip keeps siteUrl');
 
 const text = archiveToText(archive);
-assert(text.split('\n').filter(Boolean)[0]?.startsWith('version\t'), 'text format is line separated');
+assert(text.split('\n').filter(Boolean)[0]?.startsWith('version\t') === true, 'text format is line separated');
 assert(text.includes('folder\tTech\\, News'), 'text escapes commas in a title');
 assert(text.includes('feed\tVerge'), 'text holds one feed per line');
 const parsed = textToArchive(text);
