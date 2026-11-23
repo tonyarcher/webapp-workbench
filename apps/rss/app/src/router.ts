@@ -53,6 +53,9 @@ export function parsePath(pathname: string, search = ''): View {
     if (parts[0] === 'today') {
         return { kind: 'today' };
     }
+    if (parts[0] === 'alerts') {
+        return { kind: 'alerts' };
+    }
     if (parts[0] === 'frontpage') {
         return { kind: 'frontpage' };
     }
@@ -102,6 +105,8 @@ export function viewToPath(view: View): string {
             return '/brief';
         case 'today':
             return '/today';
+        case 'alerts':
+            return '/alerts';
         case 'frontpage':
             return '/frontpage';
         case 'focus':

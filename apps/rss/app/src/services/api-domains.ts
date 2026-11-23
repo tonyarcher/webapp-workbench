@@ -77,7 +77,7 @@ export async function addSavedSearch(body: {
 
 export async function updateSavedSearch(
     id: string,
-    body: { title?: string; query?: string; scopeKind?: string; scopeId?: string | null },
+    body: { title?: string; query?: string; scopeKind?: string; scopeId?: string | null; alert?: boolean },
 ): Promise<SavedSearch> {
     return apiFetch(`/saved-searches/${id}`, {
         method: 'PUT',

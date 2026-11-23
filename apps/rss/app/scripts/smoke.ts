@@ -97,6 +97,7 @@ await import('./smoke-body-load.js');
 await import('./smoke-excerpts.js');
 await import('./smoke-provenance.js');
 await import('./smoke-clusters.js');
+await import('./smoke-alerts.js');
 await import('./smoke-mcp.js');
 await import('./smoke-share.js');
 await import('./smoke-usage.js');

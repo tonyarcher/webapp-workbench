@@ -53,6 +53,7 @@ fun SavedSearchEntity.toJson(unread: Int = 0): SavedSearchJson = SavedSearchJson
     sortOrder = sortOrder,
     createdAt = createdAt.toEpochMilli(),
     unread = unread,
+    alert = alert,
 )
 
 fun SavedArticleEntity.toSavedArticleJson(): SavedArticleJson = SavedArticleJson(

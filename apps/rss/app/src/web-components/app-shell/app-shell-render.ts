@@ -67,6 +67,7 @@ const VIEW_TAGS: Record<View['kind'], string> = {
     feed: 'article-list',
     brief: 'brief-view',
     today: 'today-view',
+    alerts: 'alerts-view',
     frontpage: 'front-page',
     focus: 'focus-view',
     settings: 'settings-view',

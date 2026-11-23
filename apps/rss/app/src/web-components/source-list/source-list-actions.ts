@@ -7,6 +7,7 @@ import {
     renameSavedSearch,
     reorderFolders,
     setFeedFolderMembership,
+    setSavedSearchAlert,
     syncAllFeeds,
 } from '../../mutations';
 import { pruneTodaySettings, saveTodaySettings, type TodaySettings } from '../../services/today-settings';
@@ -201,6 +202,13 @@ export async function savedSearchMenuRenameAction(host: ActionHost): Promise<voi
     const title = window.prompt('Rename saved search', search.title)?.trim();
     if (!title || title === search.title) return;
     await renameSavedSearch(search.id, title);
+}
+
+export async function savedSearchMenuToggleAlertAction(host: ActionHost): Promise<void> {
+    const search = host.savedSearchMenuSearch();
+    closeSavedSearchMenuAction(host);
+    if (!search) return;
+    await setSavedSearchAlert(search.id, !search.alert);
 }
 
 export async function savedSearchMenuDeleteAction(host: ActionHost): Promise<void> {

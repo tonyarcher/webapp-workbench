@@ -14,6 +14,7 @@ export interface SavedSearch {
     sortOrder?: number | undefined;
     createdAt: number;
     unread: number;
+    alert?: boolean | undefined;
 }
 
 export interface Feed {
@@ -129,6 +130,7 @@ export type View =
     | { kind: 'feed'; id: string }
     | { kind: 'brief' }
     | { kind: 'today' }
+    | { kind: 'alerts' }
     | { kind: 'frontpage' }
     | { kind: 'focus' }
     | { kind: 'settings'; section: SettingsSection }

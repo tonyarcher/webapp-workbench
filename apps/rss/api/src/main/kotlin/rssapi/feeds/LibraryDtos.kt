@@ -27,6 +27,7 @@ data class SavedSearchJson(
     val sortOrder: Int,
     val createdAt: Long,
     val unread: Int = 0,
+    val alert: Boolean = false,
 )
 
 data class LibraryJson(
@@ -50,4 +51,5 @@ data class SavedSearchBody(
     val query: String? = null,
     val scopeKind: String? = null,
     val scopeId: String? = null,
+    val alert: Boolean? = null,
 )

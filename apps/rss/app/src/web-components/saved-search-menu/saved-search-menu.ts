@@ -4,7 +4,17 @@ import styles from './saved-search-menu.css?inline';
 export class SavedSearchMenu extends HTMLElement {
     private open = false;
     private _anchor: MenuAnchor | null = null;
+    private _alert = false;
     private root: HTMLDivElement | null = null;
+
+    get alert(): boolean {
+        return this._alert;
+    }
+    set alert(v: boolean) {
+        if (this._alert === v) return;
+        this._alert = v;
+        this.paint();
+    }
 
     get anchor() {
         return this._anchor;
@@ -39,6 +49,15 @@ export class SavedSearchMenu extends HTMLElement {
             this.dispatchEvent(new CustomEvent('rename', { bubbles: true, composed: true })),
         );
         actions.appendChild(rename);
+        const alert = document.createElement('button');
+        alert.className = 'action';
+        alert.textContent = this._alert ? 'Remove alert' : 'Make alert';
+        alert.addEventListener('click', () =>
+            this.dispatchEvent(
+                new CustomEvent('toggle-alert', { detail: !this._alert, bubbles: true, composed: true }),
+            ),
+        );
+        actions.appendChild(alert);
         const del = document.createElement('button');
         del.className = 'action danger';
         del.textContent = 'Delete';

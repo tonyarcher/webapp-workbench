@@ -195,6 +195,21 @@ export async function renameSavedSearch(id: string, title: string) {
     }
 }
 
+export async function setSavedSearchAlert(id: string, alert: boolean) {
+    const prev = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
+    if (prev) {
+        queryClient.setQueryData(libraryKey, {
+            ...prev,
+            savedSearches: prev.savedSearches.map((s) => (s.id === id ? { ...s, alert } : s)),
+        });
+    }
+    try {
+        await apiUpdateSavedSearch(id, { alert });
+    } finally {
+        await invalidateLibrary();
+    }
+}
+
 export async function removeSavedSearch(id: string) {
     const prev = queryClient.getQueryData(libraryKey) as LibraryData | undefined;
     if (prev) {

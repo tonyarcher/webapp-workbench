@@ -26,4 +26,5 @@ class SavedSearchEntity(
     var sortOrder: Int = 0,
     @Column(name = "created_at")
     var createdAt: Instant = Instant.now(),
+    var alert: Boolean = false,
 )

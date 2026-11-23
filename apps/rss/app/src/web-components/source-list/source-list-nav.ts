@@ -57,6 +57,7 @@ export function renderStaticNav(host: SourceListRenderHost): DocumentFragment {
         fragment,
         allRow(host),
         todayRow(host),
+        navRow(host, { kind: 'alerts' }, '🔔', 'Alerts', true),
         navRow(host, { kind: 'frontpage' }, '📰', 'Front Page', false),
         navRow(host, { kind: 'brief' }, '✨', 'Daily Brief', false),
         navRow(host, { kind: 'focus' }, '⏱', 'Focus session', true),

@@ -839,6 +839,12 @@ ingestion.
 - **Half.** `both` (matching server-side; delivery via push and in-app).
 - **Effort.** `L`.
 - **First test.** Matching tests; quiet-hours time travel.
+- **Shipped (first slice).** A saved search can be flagged as an alert from
+  its sidebar menu. `GET /alerts` reuses the existing search parser and
+  `articleSpec` over metadata only — no article body read — and returns up to
+  eight alerts with five unread hits each. An Alerts sidebar row and view list
+  the hits and deep-link to the rows. Still wanted: push delivery, per-alert
+  channels, quiet hours (shared with F3/K4), and cluster-break alerts from B7.
 
 ### F2. Email digest option
 

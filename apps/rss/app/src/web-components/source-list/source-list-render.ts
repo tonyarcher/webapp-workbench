@@ -14,6 +14,7 @@ import {
     refreshAllAction,
     savedSearchMenuDeleteAction,
     savedSearchMenuRenameAction,
+    savedSearchMenuToggleAlertAction,
     sortFoldersAction,
     todaySettingsChangeAction,
     toggleAutoHideAction,
@@ -436,6 +437,9 @@ function savedSearchMenu(host: SourceListRenderHost): HTMLElement {
     const menu = document.createElement('saved-search-menu');
     menu.addEventListener('close', () => closeSavedSearchMenuAction(host));
     menu.addEventListener('rename', () => void savedSearchMenuRenameAction(host));
+    menu.addEventListener('toggle-alert', () => {
+        void savedSearchMenuToggleAlertAction(host);
+    });
     menu.addEventListener('delete', () => void savedSearchMenuDeleteAction(host));
     return menu;
 }
@@ -497,6 +501,7 @@ function updateFolderMenu(menu: HTMLElement, host: SourceListRenderHost, folder:
 function updateSavedSearchMenu(menu: HTMLElement, host: SourceListRenderHost, search: SavedSearch | undefined): void {
     Object.assign(menu, {
         search: search ?? null,
+        alert: search?.alert === true,
         open: host.savedSearchMenuOpen && search !== undefined,
         anchor: host.savedSearchMenuAnchor,
     });

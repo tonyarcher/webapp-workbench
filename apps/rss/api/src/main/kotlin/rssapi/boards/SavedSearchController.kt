@@ -31,6 +31,7 @@ class SavedSearchController(private val user: IdentityUser, private val savedSea
                 query = body.query?.trim() ?: "",
                 scopeKind = scopeKind,
                 scopeId = if (scopeKind == "all") null else parseOptionalUuid(body.scopeId),
+                alert = body.alert == true,
             ),
         )
         return row.toJson()
@@ -41,6 +42,7 @@ class SavedSearchController(private val user: IdentityUser, private val savedSea
         val row = find(id)
         body.title?.trim()?.takeIf { it.isNotEmpty() }?.let { row.title = it }
         body.query?.let { row.query = it.trim() }
+        body.alert?.let { row.alert = it }
         applyScope(row, body)
         return savedSearches.save(row).toJson()
     }
