@@ -5,6 +5,17 @@
 Keep the RSS API simple on Postgres until the workload actually needs another
 store, and make each transition a contained change with a clear trigger.
 
+## Metadata is the asset; article text is input
+
+Links stick around on the internet. Article text is disposable once its
+metadata is learned. Every feature reads learned metadata — topic keys,
+evidence ids and text, scores, source links, reading state — and never re-reads
+a body or full excerpt at request time. One-time extractors are the only code
+allowed to read article text, and they write rows that outlive it. Bodies and
+full excerpts stay available to the reader on demand, but no feature depends on
+them being retained. Target: 90% of today's functionality with a fraction of the
+stored text.
+
 ## Use cases this must serve
 
 Read from the code, not from memory:

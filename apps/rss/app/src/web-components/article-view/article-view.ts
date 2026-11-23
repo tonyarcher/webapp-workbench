@@ -13,6 +13,7 @@ import { isDeranked } from '../../services/interesting-settings';
 import type { ArticleKeyword } from '../../services/keywords';
 import { areHighlightsEnabled } from '../../services/highlights';
 import { fetchArticleProvenance, type ArticleProvenance } from '../../services/api-provenance';
+import { fetchArticleCluster, type ArticleCluster } from '../../services/api-clusters';
 import { provenanceToMarkdown } from '../../services/provenance-export';
 import { toastError, toastInfo } from '../../services/toast';
 import type { Article, Board, RowHighlight } from '../../types';
@@ -32,6 +33,7 @@ import {
     buildKeyLines as buildKeyLinesNodes,
 } from './article-view-content';
 import { buildProvenance as buildProvenanceNodes } from './article-view-provenance';
+import { buildClusterLine } from './article-view-cluster';
 import {
     onStar as onStarAction,
     onDerank as onDerankAction,
@@ -89,6 +91,8 @@ export class ArticleView extends HTMLElement {
     /** Extractive evidence for the open article; loaded on article change. */
     provenance: ArticleProvenance | null = null;
     provenanceLoading = false;
+    /** Learned topic group; never read from article text at request time. */
+    articleCluster: ArticleCluster | null = null;
     bodyLoading = false;
     highlightsOn = areHighlightsEnabled();
     /** Article the progress bar belongs to; object identity churns on star. */
@@ -195,6 +199,7 @@ export class ArticleView extends HTMLElement {
             this.keyLinesLoading = false;
             this.provenance = null;
             this.provenanceLoading = false;
+            this.articleCluster = null;
             this.bodyLoading = false;
             this.prevDeranked = false;
             this.prevStarred = false;
@@ -209,6 +214,7 @@ export class ArticleView extends HTMLElement {
                 void this.ensureRichContent(current);
             }
             void this.refreshProvenance();
+            void this.refreshCluster();
             void this.refreshSavedState();
         }
     }
@@ -230,6 +236,19 @@ export class ArticleView extends HTMLElement {
                 this.provenanceLoading = false;
                 this.paint();
             }
+        }
+    }
+
+    private async refreshCluster(): Promise<void> {
+        const id = this.article?.id;
+        if (!id) return;
+        try {
+            const result = await fetchArticleCluster(id);
+            if (!this.isConnected || this.article?.id !== id) return;
+            this.articleCluster = result;
+            this.paint();
+        } catch {
+            // A missing cluster is normal; leave the line off.
         }
     }
 
@@ -273,6 +292,7 @@ export class ArticleView extends HTMLElement {
         const bodyDiv = el('div', 'body');
         appendAll(bodyDiv, this.buildTitle(a, link));
         appendAll(bodyDiv, this.buildMeta(a));
+        appendAll(bodyDiv, buildClusterLine(this.articleCluster));
         appendAll(bodyDiv, this.buildKeyLines());
         appendAll(bodyDiv, buildProvenanceNodes(this));
         const loadStatus = bodyLoadStatus(a, this.bodyLoading);

@@ -46,6 +46,10 @@ class ArticleEntity(
     var publishedAt: Instant = Instant.now(),
     @Column(name = "fetched_at")
     var fetchedAt: Instant = Instant.now(),
+    @Column(name = "topics_extracted_at")
+    var topicsExtractedAt: Instant? = null,
+    @Column(name = "evidence_extracted_at")
+    var evidenceExtractedAt: Instant? = null,
     var popularity: Float = 0f,
     var engagement: Float = 0f,
     var hot: Float = 0f,

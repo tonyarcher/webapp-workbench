@@ -299,11 +299,16 @@ export async function ensureRichContent(host: ArticleViewActionsHost, a: Article
         const text = stripTags(current.content ?? current.summary ?? '');
         if (text.length >= 1200 || !current.link) return;
         const res = await extractArticle(current.id);
-        const still = res.extracted ? open() : null;
-        if (!still) return;
+        if (!res.extracted || !open()) return;
+        // The extract response intentionally omits the body. Read the stored
+        // text through the narrow gzip route so the full article replaces the
+        // short RSS description.
+        const body = await fetchArticleBody(current.id);
+        const still = open();
+        if (!still || !body) return;
         const next = {
             ...still,
-            content: res.article.content ?? still.content,
+            content: body,
             summary: res.article.summary ?? still.summary,
         };
         recordUsage('body_loaded');

@@ -208,6 +208,10 @@ assert(
 );
 assert(firstImageUrl('<p>no image</p>') === undefined, 'firstImageUrl returns undefined without img');
 assert(firstImageUrl('<img src="data:image/gif;base64,xxx">') === undefined, 'firstImageUrl rejects data: urls');
+assert(
+    firstImageUrl('<img src="https://img.example/photo-150x150.jpg">') === 'https://img.example/photo-150x150.jpg',
+    'firstImageUrl keeps the feed-provided URL so lazy-img can try a fallback',
+);
 
 // ---- video headers (click-to-play facade over sharp posters) ----
 const {

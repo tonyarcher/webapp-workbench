@@ -337,7 +337,7 @@
 .grid-card {
     /* min-height, not height: short summaries shrink their card instead of
        leaving a dead zone above the pinned meta line. */
-    min-height: 420px;
+    min-height: 470px;
     border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;
@@ -371,7 +371,7 @@
 .grid-card-img {
     display: block;
     width: 100%;
-    height: 168px;
+    height: 208px;
     object-fit: cover;
     flex: none;
     overflow: hidden;
@@ -400,7 +400,7 @@
 .grid-card-title {
     flex: 1;
     min-width: 0;
-    font-size: 17px;
+    font-size: 19px;
     line-height: 1.3;
     font-weight: 600;
     color: inherit;
@@ -565,11 +565,12 @@ button.title-open:hover {
 }
 
 .row-excerpt {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 4px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.45;
+    margin-top: 6px;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

@@ -52,6 +52,32 @@ Depth here means mastery, not addiction. Nothing in this file optimizes
 time-on-site, streaks-as-guilt, or infinite scroll. Sessions end with done
 screens, queues have bottoms, and every digest says what it left out.
 
+## Reading psychology: outside-in attention design
+
+The list is an advertisement for the need-to-know information, not a feed of
+links. Design from the reader's behavior inward:
+
+- **Information scent** (Pirolli & Card): a reader decides whether to click
+  from cues available before the click — headline, snippet, image, source,
+  why-it-matters. The cue has to carry value in the first glance.
+- **"Heads up" / advance organizer** (Ausubel; the reading-strategy _Heads Up_
+  step): a one-line frame before reading raises comprehension and lowers
+  effort. A card should tell you what you are about to read.
+- **Progressive disclosure**: show only what the current moment needs. Skim
+  gets a scent line; open gets evidence; the panel gets full text.
+- **F-pattern**: attention lands top-left, scans right, then down the left
+  edge. Put the strongest cue where the eye lands first.
+- **Inverted pyramid**: lead with the conclusion, not the context.
+- **Time budget**: five minutes wants a few strong scents; five hours wants
+  structure and depth from the same corpus.
+
+Current gaps: sort is only newest/oldest/hot (popularity and time gravity),
+not need-to-know; `worthy`/`interest`/`popularity-outlook` scores and B7
+cluster growth are computed but unused in list order; cards have no "why this
+matters" line; why-this-row appears only in the panel, after the click; read
+state and coverage balance do not affect ordering. Everything needed is
+already learned metadata — no body reads required.
+
 ## Where we stand
 
 What already beats the default reader: a per-folder Interesting view that
@@ -361,10 +387,12 @@ server.
 - **What.** A per-row provenance record: extracted quotes, cited figures,
   linked entities, and source rows, with stable ids the workbench themes
   consume; provenance renders in the panel and exports with case files.
-  Shipped: extractive quotes and figures with stable ids, a source row carrying
-  the P12 connector fields, a narrow `/articles/{id}/provenance` route, and an
-  Evidence section in the article panel with markdown copy. Still wanted:
-  linked entities, cross-article source rows, and case-file export.
+  Shipped: extractive quotes and figures with stable ids stored as
+  `article_evidence` at extraction time (the endpoint never reads a body), a
+  source row carrying the P12 connector fields, a narrow
+  `/articles/{id}/provenance` route, and an Evidence section in the article
+  panel with markdown copy. Still wanted: linked entities, cross-article
+  source rows, and case-file export.
 - **Half.** `both` (extraction server-side; render and export client-side).
 - **Effort.** `L`.
 - **First test.** Extraction goldens; provenance-link integrity tests.
@@ -554,7 +582,12 @@ triage as premium features. Ours are core.
   growth rate, and member set; clusters persist across refreshes and merge
   when two clusters converge. Entity linking arrives with N6; B7 ships
   phrase and link clustering first and folds entity links in when N6 lands.
-  Exposes the cluster id the workbench themes consume.
+  Exposes the cluster id the workbench themes consume. Shipped: a one-time
+  topic-key extractor that reads article text once and persists phrase and
+  source-link keys, pure key-based clustering with stable ids, growth and
+  member sets, and `/clusters` plus `/articles/{id}/cluster` reads. Clusters
+  never read article text. Still wanted: entity links, the cluster row in the
+  client, and merge-history aliases.
 - **Half.** `both` (cluster identity and growth server-side; merge rules
   and the cluster row client-side first).
 - **Effort.** `XL`.

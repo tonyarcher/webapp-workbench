@@ -3,13 +3,16 @@ package rssapi.provenance
 import org.springframework.stereotype.Service
 import rssapi.articles.ArticleEntity
 import rssapi.feeds.FeedRepo
-import rssapi.storage.BodyStore
 
-/** Builds the provenance record for one already-authorized article row. */
+/**
+ * Reads learned provenance metadata for one already-authorized article row.
+ * No body or full excerpt is read here: article text was consumed once by
+ * [ArticleEvidenceExtractor] and is disposable afterwards.
+ */
 @Service
-class ProvenanceService(private val feeds: FeedRepo, private val bodyStore: BodyStore) {
+class ProvenanceService(private val feeds: FeedRepo, private val evidence: ArticleEvidenceRepo) {
     fun load(article: ArticleEntity): ArticleProvenanceJson {
-        val extracted = ProvenanceExtractor.extract(article.id, bodyStore.get(article.id), article.excerpt)
+        val rows = evidence.findByArticleIdOrderByKindAscIdAsc(article.id)
         val feed = feeds.findById(article.feedId).orElse(null)
         return ArticleProvenanceJson(
             articleId = article.id,
@@ -25,10 +28,10 @@ class ProvenanceService(private val feeds: FeedRepo, private val bodyStore: Body
                 sourceUrl = article.sourceUrl,
                 fetchedAt = article.fetchedAt.toEpochMilli(),
             ),
-            quotes = extracted.quotes.map(::toJson),
-            figures = extracted.figures.map(::toJson),
+            quotes = rows.filter { it.kind == "quote" }.map(::toJson),
+            figures = rows.filter { it.kind == "figure" }.map(::toJson),
         )
     }
 
-    private fun toJson(e: Evidence) = EvidenceJson(e.id, e.articleId, e.kind, e.text)
+    private fun toJson(e: ArticleEvidenceEntity) = EvidenceJson(e.id, e.articleId, e.kind, e.evidenceText)
 }

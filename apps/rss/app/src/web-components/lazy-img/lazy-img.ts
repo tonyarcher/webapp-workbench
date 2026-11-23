@@ -1,4 +1,5 @@
 import { safeHttpUrl } from '../../services/parser';
+import { upgradeImageUrl } from '../../services/image';
 import styles from './lazy-img.css?inline';
 
 type LoadState = 'waiting' | 'loading' | 'loaded' | 'error';
@@ -7,6 +8,9 @@ const loadedSrcs = new Set<string>();
 
 export class LazyImg extends HTMLElement {
     private _src = '';
+    private _primary = '';
+    private _fallback: string | undefined;
+    private triedFallback = false;
     private state: LoadState = 'waiting';
     private img: HTMLImageElement | null = null;
     private observer: IntersectionObserver | null = null;
@@ -32,20 +36,27 @@ export class LazyImg extends HTMLElement {
         const next = value ?? '';
         if (this._src === next) return;
         this._src = next;
+        // Try the crisp sibling first; the URL the feed actually served stays
+        // as fallback for CMSs where only the sized filename exists.
+        this._primary = upgradeImageUrl(next) ?? next;
+        this._fallback = this._primary === next ? undefined : next;
+        this.triedFallback = false;
         this.reset();
     }
 
     connectedCallback() {
         const attr = this.getAttribute('src');
-        if (attr != null && !this._src) this._src = attr;
+        if (attr != null && !this._src) this.src = attr;
         if (this.state === 'loaded' && !this.img && this.resolvedSrc()) {
             this.restoreLoaded();
             return;
         }
         if (this.state === 'loading') {
-            // A prior load was interrupted by disconnect (virtual scroll); restart.
+            // A prior load was interrupted by disconnect (virtual scroll);
+            // restart, giving the fallback another chance if one is pending.
             this.state = 'waiting';
             this.img = null;
+            this.triedFallback = false;
         }
         this.render();
         this.ensureObserved();
@@ -79,7 +90,7 @@ export class LazyImg extends HTMLElement {
     }
 
     private resolvedSrc(): string | undefined {
-        const raw = this._src.trim();
+        const raw = (this.triedFallback && this._fallback ? this._fallback : this._primary).trim();
         return safeHttpUrl(raw) ?? (raw.startsWith('data:image/') ? raw : undefined);
     }
 
@@ -129,20 +140,26 @@ export class LazyImg extends HTMLElement {
         img.addEventListener(
             'load',
             () => {
-                loadedSrcs.add(src);
+                loadedSrcs.add(img.src);
                 this.state = 'loaded';
+                this.img = img;
                 this.render();
             },
-            { once: true },
+            { once: false },
         );
         img.addEventListener(
             'error',
             () => {
+                if (!this.triedFallback && this._fallback) {
+                    this.triedFallback = true;
+                    img.src = this._fallback;
+                    return;
+                }
                 this.state = 'error';
                 this.img = null;
                 this.render();
             },
-            { once: true },
+            { once: false },
         );
         img.src = src;
         this.img = img;

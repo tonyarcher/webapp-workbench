@@ -55,6 +55,14 @@ class ProvenanceExtractorTest {
     }
 
     @Test
+    fun blankTextHasNoEvidence() {
+        val result = ProvenanceExtractor.extract(articleId, "<p>   </p>", "")
+
+        assertTrue(result.quotes.isEmpty())
+        assertTrue(result.figures.isEmpty())
+    }
+
+    @Test
     fun evidenceIsBounded() {
         val sentence = "Officials said the number would reach 4 million users within the decade. "
         val many = "<p>${sentence.repeat(10)}</p>"

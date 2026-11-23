@@ -44,6 +44,25 @@ export function firstImageUrl(html: string | undefined, base?: string): string |
     return undefined;
 }
 
+/**
+ * Suggest a higher-resolution sibling for a thumbnail URL. Always keep the
+ * original as a fallback: a sized filename may be the only one the server has,
+ * and a signed query must be left byte-for-byte intact or its signature breaks.
+ * Only WordPress-style -WIDTHxHEIGHT path markers are changed; query and
+ * fragment are never touched.
+ */
+export function upgradeImageUrl(url: string): string | undefined {
+    try {
+        const u = new URL(url);
+        const match = /^(.*)-\d{2,4}x\d{2,4}(\.[a-z0-9]+)$/i.exec(u.pathname);
+        if (!match) return undefined;
+        u.pathname = `${match[1]}${match[2]}`;
+        return u.toString();
+    } catch {
+        return undefined;
+    }
+}
+
 function resolveUrl(url: string, base?: string): string | undefined {
     const trimmed = url.trim();
     if (!trimmed) return undefined;

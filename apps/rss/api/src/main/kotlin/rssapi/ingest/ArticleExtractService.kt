@@ -45,6 +45,8 @@ class ArticleExtractService(
         val sanitized = sanitizeHtml(html).take(MAX_CONTENT_BYTES)
         if (!isMeaningfulGain(article, sanitized)) return ExtractResult(article, false, source)
         article.replaceExcerpt(excerptOf(sanitized))
+        // A fuller body means evidence should be learned again from it.
+        article.evidenceExtractedAt = null
         article.image = firstImageUrl(sanitized, article.link)
         val saved = articles.save(article)
         bodyStore.put(article.id, sanitized)
