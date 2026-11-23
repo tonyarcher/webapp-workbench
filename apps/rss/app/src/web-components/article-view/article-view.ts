@@ -22,6 +22,8 @@ import { articleKeywords, copyText } from './article-view-helpers';
 import { recordUsage } from '../../services/usage';
 import { VideoHeader } from '../video-header/video-header';
 import { renderBoardPicker, renderSpeedReadOverlay } from './article-view-overlays';
+import { FeedFoldersMenu } from '../feed-folders-menu/feed-folders-menu';
+import type { MenuAnchor } from '../menu-popover';
 import '../speed-read-view/speed-read-view';
 import styles from './article-view.css?inline';
 
@@ -116,6 +118,7 @@ export class ArticleView extends HTMLElement {
     sanitizedBody: { id: string; source: string | undefined; html: string } | null = null;
     private root: ShadowRoot | null = null;
     private styleEl: HTMLStyleElement | null = null;
+    private feedFoldersMenu: FeedFoldersMenu | null = null;
 
     /** paint() is synchronous, so consumers can await a resolved promise. */
     get updateComplete(): Promise<void> {
@@ -138,6 +141,12 @@ export class ArticleView extends HTMLElement {
         this.setAttribute('role', 'dialog');
         this.setAttribute('aria-modal', 'true');
         this.setAttribute('tabindex', '-1');
+        if (!this.feedFoldersMenu) {
+            this.feedFoldersMenu = new FeedFoldersMenu();
+            this.feedFoldersMenu.addEventListener('close', () => {
+                if (this.feedFoldersMenu) this.feedFoldersMenu.open = false;
+            });
+        }
         window.addEventListener('share-settings-changed', this.onShareSettingsChanged);
         window.addEventListener('saved-articles-changed', this.onSavedArticlesChanged);
         this.addEventListener('scroll', this.onScroll);
@@ -252,6 +261,14 @@ export class ArticleView extends HTMLElement {
         }
     }
 
+    onManageFolders(anchor: MenuAnchor): void {
+        const id = this.article?.feedId;
+        if (!id || !this.feedFoldersMenu) return;
+        this.feedFoldersMenu.feedId = id;
+        this.feedFoldersMenu.anchor = anchor;
+        this.feedFoldersMenu.open = true;
+    }
+
     onCopyProvenance = (): void => {
         const data = this.provenance;
         if (!data) return;
@@ -267,7 +284,10 @@ export class ArticleView extends HTMLElement {
         if (!root) return;
         const a = this.article;
         if (!a) {
-            root.replaceChildren(...(this.styleEl ? [this.styleEl] : []));
+            root.replaceChildren(
+                ...(this.styleEl ? [this.styleEl] : []),
+                ...(this.feedFoldersMenu ? [this.feedFoldersMenu] : []),
+            );
             return;
         }
         let body = '';
@@ -347,7 +367,11 @@ export class ArticleView extends HTMLElement {
             }),
         );
 
-        root.replaceChildren(...(this.styleEl ? [this.styleEl] : []), ...nodes);
+        root.replaceChildren(
+            ...(this.styleEl ? [this.styleEl] : []),
+            ...nodes,
+            ...(this.feedFoldersMenu ? [this.feedFoldersMenu] : []),
+        );
 
         this.setAttribute('aria-label', a.title);
         if (this.focused) return;

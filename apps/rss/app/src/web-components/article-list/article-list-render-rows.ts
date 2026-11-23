@@ -1,3 +1,4 @@
+import { anchorFromEvent } from '../menu-popover';
 import { safeHttpUrl } from '../../services/parser';
 import { articleImage, cardPlaceholderStyle } from '../../services/image';
 import { articleVideo, watchUrlFor } from '../../services/video';
@@ -80,7 +81,20 @@ function cardActions(article: Article, onStar: (e: Event, article: Article) => v
     star.className = 'card-action';
     const derank = derankButton(article);
     derank.className = 'card-action';
-    layer.append(star, derank);
+    const more = el('button', 'card-action', '⋯');
+    more.setAttribute('aria-label', 'Manage feed folders');
+    more.title = 'Manage feed folders';
+    more.addEventListener('click', (e) => {
+        e.stopPropagation();
+        more.dispatchEvent(
+            new CustomEvent('open-feed-folders', {
+                bubbles: true,
+                composed: true,
+                detail: { feedId: article.feedId, anchor: anchorFromEvent(e) },
+            }),
+        );
+    });
+    layer.append(more, derank, star);
     return layer;
 }
 

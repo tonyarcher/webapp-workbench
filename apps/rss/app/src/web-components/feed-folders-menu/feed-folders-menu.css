@@ -1,0 +1,63 @@
+:host {
+    display: contents;
+}
+
+.menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 200px;
+    max-width: 280px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel-bg);
+    color: var(--text);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+    font: inherit;
+    font-size: 13px;
+}
+
+.menu:popover-open {
+    margin: 0;
+}
+
+.menu-title {
+    font-weight: 600;
+    padding: 4px 8px 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+}
+
+.menu-empty {
+    padding: 8px;
+    color: var(--text-muted);
+}
+
+.folder-list {
+    display: flex;
+    flex-direction: column;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.folder-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.folder-option:hover,
+.folder-option:focus-within {
+    background: var(--hover);
+}
+
+.folder-option input {
+    accent-color: var(--accent);
+    margin: 0;
+}

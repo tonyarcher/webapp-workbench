@@ -72,6 +72,7 @@ import {
 import type { MenuAnchor } from '../feed-menu/feed-menu';
 import type { RowHighlight } from '../../types';
 import '../advanced-menu/advanced-menu';
+import { mountFeedFoldersMenu } from './article-list-feed-folders';
 import '../lazy-img/lazy-img';
 import '../video-header/video-header';
 import styles from './article-list.css?inline';
@@ -217,6 +218,8 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         this.scrollEl.addEventListener('scroll', this.onScroll);
         shadow.appendChild(this.scrollEl);
         this.scrollElRef.value = this.scrollEl;
+
+        mountFeedFoldersMenu(this, shadow);
 
         defineReactive(this, 'view', { kind: 'all' } satisfies View);
         defineReactive(this, 'resumeArticleId', null);

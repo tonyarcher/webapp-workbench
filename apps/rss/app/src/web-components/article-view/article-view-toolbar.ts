@@ -1,6 +1,7 @@
 import { noteOriginal, noteShare } from '../../mutations';
 import { canNativeShare, mailtoShareUrl, shareUrl, type ShareTarget } from '../../services/share';
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
+import { anchorFromEvent, type MenuAnchor } from '../menu-popover';
 import type { Article } from '../../types';
 import {
     actionIcon,
@@ -29,6 +30,7 @@ export interface ArticleViewToolbarHost {
     openBoardPicker(): Promise<void>;
     enqueueListen(): void;
     nativeShare(a: Article, link: string): Promise<void>;
+    onManageFolders(anchor: MenuAnchor): void;
     paint(): void;
 }
 
@@ -94,6 +96,11 @@ export function buildStateButtons(host: ArticleViewToolbarHost, a: Article): Nod
             onClick: () => void host.onToggleSaved(),
         }),
     );
+    const folders = el('button', 'btn toolbar-folders', 'Folders');
+    folders.title = 'Manage feed folders';
+    folders.setAttribute('aria-label', 'Manage feed folders');
+    folders.addEventListener('click', (e) => host.onManageFolders(anchorFromEvent(e as MouseEvent)));
+    group.appendChild(folders);
     group.appendChild(
         iconButton(actionIcon('more'), {
             label: 'More actions',
