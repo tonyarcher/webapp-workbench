@@ -1,5 +1,6 @@
 import { ALL_SHARE_TARGETS } from '../../services/share-settings';
 import type { DiscoveredFeed, ScrapeCandidate, ScrapePreview } from '../../services/api';
+import type { ExportFormat } from './settings-general-feeds';
 import '../scrape-preview/scrape-preview';
 import type { ReaderFont, ReaderLine, ReaderMode, ReaderSize, ReaderWidth } from '../../services/reader-mode';
 import type { ShareTarget } from '../../services/share';
@@ -57,6 +58,8 @@ export interface SettingsGeneralSectionsHost {
     onImportClick: () => void;
     onImportFile: (event: Event) => void;
     onExport: () => void;
+    exportFormat: ExportFormat;
+    onExportFormat: (format: ExportFormat) => void;
     onMigrate: () => void;
     toggleHistory: () => void;
     setUsageEnabled: (enabled: boolean) => void;
@@ -202,6 +205,26 @@ export function buildSharingSection(host: SettingsGeneralSectionsHost): HTMLElem
     );
     if (host.shareStatus) root.append(statusLine(host.shareStatus, host.shareStatusError));
     return root;
+}
+
+function formatSelect(host: SettingsGeneralSectionsHost): HTMLElement {
+    const label = el('label', 'action export-format');
+    label.append(document.createTextNode('Export format'));
+    const select = el('select');
+    select.setAttribute('aria-label', 'Export format');
+    for (const [value, text] of [
+        ['json', 'JSON archive'],
+        ['text', 'Text (one item per line)'],
+        ['opml', 'OPML (standard feeds)'],
+    ] as Array<[ExportFormat, string]>) {
+        const option = el('option', undefined, text);
+        option.value = value;
+        select.appendChild(option);
+    }
+    select.value = host.exportFormat;
+    select.addEventListener('change', () => host.onExportFormat(select.value as ExportFormat));
+    label.appendChild(select);
+    return label;
 }
 
 function actionButton(
@@ -366,7 +389,8 @@ function feedActions(host: SettingsGeneralSectionsHost): HTMLElement {
             host.openMuteFilters,
         ),
         actionButton('Import OPML', 'Restore feeds and folders', '↑', host.busy, host.onImportClick),
-        actionButton('Export OPML', 'Back up your subscriptions', '↓', host.busy, host.onExport),
+        formatSelect(host),
+        actionButton('Export archive', 'Back up your library in the chosen format', '↓', host.busy, host.onExport),
         actionButton(
             'Upload local library',
             'Migrate IndexedDB data to the server',

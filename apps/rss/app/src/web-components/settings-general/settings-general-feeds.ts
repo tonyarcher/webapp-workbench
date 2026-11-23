@@ -1,10 +1,13 @@
 import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
 import { migrateLibrary } from '../../services/api';
 import { normalizeMastodonHost, type ShareTarget } from '../../services/share';
-import { invalidateArticles, invalidateLibrary } from '../../query';
+import { fetchLibrary, invalidateArticles, invalidateLibrary } from '../../query';
 import { navigate } from '../../router';
 import { ALL_SHARE_TARGETS, loadShareTargets, saveMastodonHost, saveShareTargets } from '../../services/share-settings';
 import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
+import { archiveToText, buildArchive } from '../../services/portable-export';
+
+export type ExportFormat = 'json' | 'text' | 'opml';
 
 const MIGRATE_SIZE_LIMIT = 1_800_000;
 
@@ -115,18 +118,31 @@ export async function importFile(host: FeedsHost, event: Event): Promise<void> {
     }
 }
 
-export async function exportFile(host: FeedsHost): Promise<void> {
+export async function exportFile(host: FeedsHost, format: ExportFormat = 'opml'): Promise<void> {
     host.busy = true;
     try {
-        const xml = await exportOpmlFile();
-        const blob = new Blob([xml], { type: 'text/xml' });
+        let body: string;
+        let mime: string;
+        let name: string;
+        if (format === 'opml') {
+            body = await exportOpmlFile();
+            mime = 'text/xml';
+            name = 'subscriptions.opml';
+        } else {
+            const lib = await fetchLibrary();
+            const archive = buildArchive(lib.folders, lib.feeds, lib.savedSearches);
+            body = format === 'json' ? JSON.stringify(archive, null, 2) : archiveToText(archive);
+            mime = format === 'json' ? 'application/json' : 'text/plain';
+            name = format === 'json' ? 'rss-reader-archive.json' : 'rss-reader-archive.txt';
+        }
+        const blob = new Blob([body], { type: mime });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement('a');
         anchor.href = url;
-        anchor.download = 'subscriptions.opml';
+        anchor.download = name;
         anchor.click();
         URL.revokeObjectURL(url);
-        host.status = 'Exported subscriptions.opml';
+        host.status = `Exported ${name}`;
         host.statusError = false;
     } catch (err) {
         host.status = err instanceof Error ? `Export failed: ${err.message}` : 'Export failed';

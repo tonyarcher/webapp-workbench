@@ -498,3 +498,20 @@ textarea {
         padding: 1rem 0.75rem 0;
     }
 }
+
+.export-format {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.export-format select {
+    font: inherit;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--input-bg);
+    color: var(--text);
+}

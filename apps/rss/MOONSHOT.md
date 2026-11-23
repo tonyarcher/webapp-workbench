@@ -754,6 +754,12 @@ needs piles. Ours add portability: everything exports, everything migrates.
 - **Half.** `both`.
 - **Effort.** `M`.
 - **First test.** Round-trip fixtures; version-tolerance tests.
+- **Shipped (first slice).** Three export formats in Organize: OPML for
+  standardized feed interchange, a versioned JSON archive of folders, feeds,
+  saved searches and mute rules, and a line-separated text mirror of the same
+  archive for diffing and hand editing. Round-trip and version-rejection smoke
+  tests cover JSON and text. Still wanted: one import path that rebuilds the
+  full archive (stars, boards, notes, settings), and a documented schema file.
 
 ### D4. Feed health dashboard
 

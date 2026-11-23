@@ -18,6 +18,7 @@ import { chooseStrategy, followPage, previewPage, toggleCandidate } from './sett
 import {
     cancelAdd,
     exportFile,
+    type ExportFormat,
     importFile,
     migrateLibraryData,
     openAdd,
@@ -58,6 +59,7 @@ export class SettingsGeneral extends HTMLElement {
     declare readerMode: ReaderMode;
     declare adding: boolean;
     declare busy: boolean;
+    declare exportFormat: ExportFormat;
     declare migrating: boolean;
     declare status: string;
     declare statusError: boolean;
@@ -97,6 +99,7 @@ export class SettingsGeneral extends HTMLElement {
         defineReactive(this, 'readerMode', loadReaderMode());
         defineReactive(this, 'adding', false);
         defineReactive(this, 'busy', false);
+        defineReactive(this, 'exportFormat', 'opml' as ExportFormat);
         defineReactive(this, 'migrating', false);
         defineReactive(this, 'status', '');
         defineReactive(this, 'statusError', false);
@@ -362,7 +365,11 @@ export class SettingsGeneral extends HTMLElement {
     };
 
     onExport = (): void => {
-        void exportFile(this);
+        void exportFile(this, this.exportFormat);
+    };
+
+    onExportFormat = (format: ExportFormat): void => {
+        this.exportFormat = format;
     };
 
     onMigrate = (): void => {
