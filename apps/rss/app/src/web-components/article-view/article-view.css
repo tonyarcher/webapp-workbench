@@ -485,3 +485,63 @@ h1 a:hover {
     inset: 0;
     z-index: 49;
 }
+
+.provenance {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel-bg);
+    padding: 12px 14px;
+    margin: 0 0 16px;
+}
+.provenance-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.provenance-head h2 {
+    font-size: 13px;
+    margin: 0;
+}
+.provenance-copy {
+    font: inherit;
+    font-size: 12px;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+.provenance-copy:hover,
+.provenance-copy:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.provenance-source,
+.provenance-empty {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin: 6px 0 0;
+}
+.provenance-label {
+    font-size: 12px;
+    margin: 12px 0 0;
+    color: var(--text-muted);
+}
+.provenance-list {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.provenance-item blockquote {
+    margin: 0;
+    padding-left: 10px;
+    border-left: 2px solid var(--accent);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+}

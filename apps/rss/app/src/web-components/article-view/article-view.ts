@@ -12,9 +12,12 @@ import { noteOriginal } from '../../mutations';
 import { isDeranked } from '../../services/interesting-settings';
 import type { ArticleKeyword } from '../../services/keywords';
 import { areHighlightsEnabled } from '../../services/highlights';
+import { fetchArticleProvenance, type ArticleProvenance } from '../../services/api-provenance';
+import { provenanceToMarkdown } from '../../services/provenance-export';
+import { toastError, toastInfo } from '../../services/toast';
 import type { Article, Board, RowHighlight } from '../../types';
 import { stripTags } from '../../util';
-import { articleKeywords } from './article-view-helpers';
+import { articleKeywords, copyText } from './article-view-helpers';
 import { recordUsage } from '../../services/usage';
 import { VideoHeader } from '../video-header/video-header';
 import { renderBoardPicker, renderSpeedReadOverlay } from './article-view-overlays';
@@ -28,6 +31,7 @@ import {
     buildMeta as buildMetaNodes,
     buildKeyLines as buildKeyLinesNodes,
 } from './article-view-content';
+import { buildProvenance as buildProvenanceNodes } from './article-view-provenance';
 import {
     onStar as onStarAction,
     onDerank as onDerankAction,
@@ -82,6 +86,9 @@ export class ArticleView extends HTMLElement {
     /** Decision-model-selected key lines for the open article. */
     keyLines: RowHighlight | null = null;
     keyLinesLoading = false;
+    /** Extractive evidence for the open article; loaded on article change. */
+    provenance: ArticleProvenance | null = null;
+    provenanceLoading = false;
     bodyLoading = false;
     highlightsOn = areHighlightsEnabled();
     /** Article the progress bar belongs to; object identity churns on star. */
@@ -186,6 +193,8 @@ export class ArticleView extends HTMLElement {
             this.savedForLater = false;
             this.keyLines = null;
             this.keyLinesLoading = false;
+            this.provenance = null;
+            this.provenanceLoading = false;
             this.bodyLoading = false;
             this.prevDeranked = false;
             this.prevStarred = false;
@@ -199,9 +208,39 @@ export class ArticleView extends HTMLElement {
             } else if (current && !current.content) {
                 void this.ensureRichContent(current);
             }
+            void this.refreshProvenance();
             void this.refreshSavedState();
         }
     }
+
+    private async refreshProvenance(): Promise<void> {
+        const id = this.article?.id;
+        if (!id) return;
+        this.provenanceLoading = true;
+        this.paint();
+        try {
+            const result = await fetchArticleProvenance(id);
+            if (!this.isConnected || this.article?.id !== id) return;
+            this.provenance = result;
+        } catch {
+            if (!this.isConnected || this.article?.id !== id) return;
+            this.provenance = null;
+        } finally {
+            if (this.isConnected && this.article?.id === id) {
+                this.provenanceLoading = false;
+                this.paint();
+            }
+        }
+    }
+
+    onCopyProvenance = (): void => {
+        const data = this.provenance;
+        if (!data) return;
+        void copyText(provenanceToMarkdown(data)).then((copied) => {
+            if (copied) toastInfo('Evidence copied as markdown');
+            else toastError('Could not copy evidence');
+        });
+    };
 
     /** Rebuild the whole view from current state. */
     private paint(): void {
@@ -235,6 +274,7 @@ export class ArticleView extends HTMLElement {
         appendAll(bodyDiv, this.buildTitle(a, link));
         appendAll(bodyDiv, this.buildMeta(a));
         appendAll(bodyDiv, this.buildKeyLines());
+        appendAll(bodyDiv, buildProvenanceNodes(this));
         const loadStatus = bodyLoadStatus(a, this.bodyLoading);
         if (loadStatus.text) {
             const status = el('p', 'body-status', loadStatus.text);

@@ -361,6 +361,10 @@ server.
 - **What.** A per-row provenance record: extracted quotes, cited figures,
   linked entities, and source rows, with stable ids the workbench themes
   consume; provenance renders in the panel and exports with case files.
+  Shipped: extractive quotes and figures with stable ids, a source row carrying
+  the P12 connector fields, a narrow `/articles/{id}/provenance` route, and an
+  Evidence section in the article panel with markdown copy. Still wanted:
+  linked entities, cross-article source rows, and case-file export.
 - **Half.** `both` (extraction server-side; render and export client-side).
 - **Effort.** `L`.
 - **First test.** Extraction goldens; provenance-link integrity tests.
