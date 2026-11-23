@@ -9,10 +9,41 @@ import { renderCardRow, renderHeadlineRow, renderRow } from './article-list-rend
 
 type VirtualItems = ReturnType<Virtualizer<HTMLDivElement, HTMLDivElement>['getVirtualItems']>;
 
+/** Search box and field scope. Body text is no longer stored locally, so the
+ *  server searches title, summary, author, domain, link and the excerpt head;
+ *  "Headlines" narrows that to title only. */
+function renderSearchBox(host: ArticleListRenderHost): HTMLElement {
+    const box = el('div', 'search-box');
+    const input = el('input', 'search-input');
+    input.type = 'search';
+    input.placeholder = 'Search articles';
+    input.setAttribute('aria-label', 'Search articles');
+    input.value = host.view.kind === 'search' ? (host.view.q ?? '') : '';
+    const commit = (): void => host.onSearchQuery(input.value);
+    input.addEventListener('keydown', (e) => {
+        if ((e as KeyboardEvent).key === 'Enter') commit();
+    });
+    input.addEventListener('change', commit);
+    box.appendChild(input);
+    const scope = labeledSelect(
+        'search-scope',
+        'Search fields',
+        host.searchScope,
+        [
+            ['all', 'Headlines + text'],
+            ['title', 'Headlines only'],
+        ] as Array<[string, string]>,
+        (e) => host.onSearchScope((e.target as HTMLSelectElement).value),
+    );
+    box.appendChild(scope);
+    return box;
+}
+
 export function renderToolbar(host: ArticleListRenderHost): HTMLElement {
     const toolbar = el('div', 'toolbar');
     toolbar.appendChild(el('h2', undefined, host.viewTitle()));
     const actions = el('div', 'actions');
+    if (host.view.kind === 'search') actions.appendChild(renderSearchBox(host));
     const freshness = renderFreshness(host);
     if (freshness) actions.appendChild(freshness);
     actions.appendChild(

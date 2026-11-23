@@ -182,6 +182,11 @@ header .sub {
     line-height: 1;
 }
 
+.search-nav {
+    font-size: 15px;
+    line-height: 1;
+}
+
 .palette-search-trigger {
     display: inline-flex;
     align-items: center;

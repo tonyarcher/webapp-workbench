@@ -99,28 +99,37 @@ private fun searchPredicate(
     val tokens = search?.tokens ?: return null
     if (tokens.isEmpty()) return null
     val tokenPredicates = tokens.map { token ->
-        // rss_search_text is an immutable SQL function with a pg_trgm GIN index
-        // (V24). Postgres inlines it, so the LIKE uses the index. The old
-        // six-column OR scanned TOAST content on every token.
-        cb.or(
-            cb.like(
-                cb.function(
-                    SEARCH_FUNCTION,
-                    String::class.java,
-                    root.get<String>("title"),
-                    root.get<String>("summary"),
-                    root.get<String>("author"),
-                    root.get<String>("domain"),
-                    root.get<String>("link"),
-                    root.get<String>("excerpt"),
-                ),
-                likeContains(token),
-                '\\',
-            ),
-            feedTitleMatches(token, root, query, cb),
-        )
+        cb.or(textMatchFor(search, token, root, cb), feedTitleMatches(token, root, query, cb))
     }
     return cb.and(*tokenPredicates.toTypedArray())
+}
+
+private fun textMatchFor(
+    search: ParsedSearchQuery,
+    token: String,
+    root: Root<ArticleEntity>,
+    cb: CriteriaBuilder,
+): jakarta.persistence.criteria.Predicate {
+    if (search.operators.headlineOnly) {
+        return cb.like(cb.lower(root.get("title")), likeContains(token), '\\')
+    }
+    // rss_search_text is an immutable SQL function with a pg_trgm GIN index
+    // (V24). Postgres inlines it, so the LIKE uses the index. The old
+    // six-column OR scanned TOAST content on every token.
+    return cb.like(
+        cb.function(
+            SEARCH_FUNCTION,
+            String::class.java,
+            root.get<String>("title"),
+            root.get<String>("summary"),
+            root.get<String>("author"),
+            root.get<String>("domain"),
+            root.get<String>("link"),
+            root.get<String>("excerpt"),
+        ),
+        likeContains(token),
+        '\\',
+    )
 }
 
 private fun feedTitleMatches(

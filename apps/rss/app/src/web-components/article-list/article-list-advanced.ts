@@ -1,4 +1,13 @@
 import type { MenuAnchor } from '../feed-menu/feed-menu';
+import { setSearchQuery, setSearchScope, type SearchHost } from './article-list-search';
+
+export function onSearchQueryAction(host: SearchHost, q: string): void {
+    setSearchQuery(host, q);
+}
+
+export function onSearchScopeAction(host: SearchHost, scope: string): void {
+    setSearchScope(host, scope);
+}
 
 /** Advanced-menu surface: anchor placement and the two persisted toggles. */
 export interface AdvancedHost {

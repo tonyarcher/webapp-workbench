@@ -44,9 +44,6 @@ interface ArticleListElement extends HTMLElement {
     active: boolean;
     resumeArticleId: string | null;
 }
-interface SearchViewElement extends HTMLElement {
-    view: View;
-}
 interface SettingsViewElement extends HTMLElement {
     section: SettingsSection;
 }
@@ -77,7 +74,7 @@ const VIEW_TAGS: Record<View['kind'], string> = {
     coverage: 'coverage-view',
     boards: 'boards-view',
     board: 'board-view',
-    search: 'search-view',
+    search: 'article-list',
 };
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string): HTMLElementTagNameMap[K] {
@@ -180,11 +177,22 @@ function buildHeader(host: AppShellRenderHost): HeaderNodes {
         el('div', 'spacer'),
         who,
         signOut,
+        buildSearchButton(),
         buildAddFeedButton(),
         buildHelpButton(host),
         buildPaletteTrigger(host),
     );
     return { root: header, who, signOut };
+}
+
+function buildSearchButton(): HTMLButtonElement {
+    const button = el('button', 'gear search-nav');
+    button.type = 'button';
+    button.title = 'Search';
+    button.setAttribute('aria-label', 'Search');
+    button.textContent = '🔎';
+    button.addEventListener('click', () => navigate({ kind: 'search' }));
+    return button;
 }
 
 function buildAddFeedButton(): HTMLButtonElement {
@@ -353,7 +361,6 @@ export class ShellDom {
         const view = this.view;
         if (!view) return;
         if (tag === 'article-list') this.updateArticleList(view, route);
-        else if (tag === 'search-view') this.updateSearchView(view, route);
         else if (tag === 'settings-view') this.updateSettingsView(view, route);
     }
 
@@ -378,11 +385,6 @@ export class ShellDom {
         const resume = this.host.resume;
         const resumeArticleId = resume && JSON.stringify(route) === resume.view ? resume.id : null;
         if (list.resumeArticleId !== resumeArticleId) list.resumeArticleId = resumeArticleId;
-    }
-
-    private updateSearchView(view: HTMLElement, route: View): void {
-        const search = view as SearchViewElement;
-        if (search.view !== route) search.view = route;
     }
 
     private updateSettingsView(view: HTMLElement, route: View): void {

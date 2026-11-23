@@ -69,7 +69,8 @@ export function syncInterestingCount(host: any, changed: Map<string, unknown>): 
 
 export function currentViewKey(host: any): string {
     const strict = host.view.kind === 'interesting' ? `|strict:${host.interestingStrictness}` : '';
-    return `${JSON.stringify(host.view)}|${host.unreadOnly}|${host.sort}|${host.listView}|${host.pageSize}${strict}`;
+    const search = host.view.kind === 'search' ? `|search:${host.searchScope}` : '';
+    return `${JSON.stringify(host.view)}|${host.unreadOnly}|${host.sort}|${host.listView}|${host.pageSize}${strict}${search}`;
 }
 
 export function handleUpdate(host: any, viewKey: string): void {

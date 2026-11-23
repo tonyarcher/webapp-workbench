@@ -1,7 +1,7 @@
 import { Virtualizer } from '@tanstack/virtual-core';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 import { beginReset, loadSettled, pageRequested, type LoadState, type LoadStep } from './article-list-load-state';
-import { loadFolderPageAction, loadSinglePageAction } from './article-list-paging';
+import { loadFolderPageAction, loadSearchPageAction, loadSinglePageAction } from './article-list-paging';
 import { interestingActiveFor, loadInterestingBatchAction } from './article-list-interesting';
 import { applyResumeAction } from './article-list-actions';
 import { folderFeedsOf, virtualizerOptionsFor } from './article-list-helpers';
@@ -107,6 +107,9 @@ async function loadPageSource(host: LoadingHost, gen: number): Promise<void> {
     if (interestingActiveFor(host.view)) {
         return loadInterestingBatchAction(host as never, gen);
     }
+    if (host.view.kind === 'search') {
+        return loadSearchPageAction(host as never, gen);
+    }
     if (host.view.kind === 'folder' || host.view.kind === 'interesting') {
         return loadFolderPageAction(host as never, gen);
     }
@@ -154,6 +157,7 @@ export function refreshFeedSetKey(host: LoadingHost): void {
 }
 
 export function canLoadMore(host: LoadingHost): boolean {
+    if (host.view.kind === 'search') return false;
     if (host.items.length >= host.pageSize) return false;
     if (
         host.view.kind === 'feed' ||

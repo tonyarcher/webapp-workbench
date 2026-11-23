@@ -30,7 +30,13 @@ import {
 } from './article-list-layout';
 import { attachHostListeners, teardownHost } from './article-list-lifecycle';
 import { catchMeUpAction } from './article-list-catch-up';
-import { advancedMarkScrollAction, advancedUnreadAction, toggleAdvancedAction } from './article-list-advanced';
+import {
+    advancedMarkScrollAction,
+    advancedUnreadAction,
+    onSearchQueryAction,
+    onSearchScopeAction,
+    toggleAdvancedAction,
+} from './article-list-advanced';
 import { onStarAction, onToggleDerankAction } from './article-list-star-derank';
 import {
     DEFAULT_PAGE_SIZE,
@@ -160,6 +166,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     virtualizer!: Virtualizer<HTMLDivElement, HTMLDivElement>;
     virtualizerCleanup?: () => void;
     cursors = new Map<string, string | undefined>();
+    searchScope = 'all';
     feedHasMore = new Map<string, boolean>();
     hasMoreSingle = true;
     lastViewKey = '';
@@ -483,9 +490,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         setListViewPrefHost(this, listView);
     }
 
-    setSort(sort: ArticleSort): void {
-        setSortPrefHost(this, sort);
-    }
+    setSort = (sort: ArticleSort): void => setSortPrefHost(this, sort);
 
     onRowClick(e: MouseEvent, index: number): void {
         onRowClickAction(this as never, e, index);
@@ -512,21 +517,16 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         this.requestUpdate();
     }
 
-    onToggleAdvanced(e: Event): void {
-        toggleAdvancedAction(this as never, e);
-    }
-
-    onAdvancedUnread(e: Event): void {
-        advancedUnreadAction(this as never, e);
-    }
-
-    onAdvancedMarkScroll(e: Event): void {
-        advancedMarkScrollAction(this as never, e);
-    }
+    onToggleAdvanced = (e: Event): void => toggleAdvancedAction(this as never, e);
+    onAdvancedUnread = (e: Event): void => advancedUnreadAction(this as never, e);
+    onAdvancedMarkScroll = (e: Event): void => advancedMarkScrollAction(this as never, e);
 
     onApplyAllViews(): void {
         applyAllViewsAction(this);
     }
+
+    onSearchQuery = (q: string): void => onSearchQueryAction(this, q);
+    onSearchScope = (scope: string): void => onSearchScopeAction(this, scope);
 
     scopeLabel(): string {
         return scopeLabelHost(this);

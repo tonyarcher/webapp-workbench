@@ -2,6 +2,7 @@ import { fetchArticlesPage } from '../../services/api';
 import { capItems, feedWindow, perFeedLimit } from '../../services/pagination';
 import { filterMutedArticles, loadMuteRules, type FeedFolderLookup } from '../../services/mute-rules';
 import { interleaveArticles } from '../../util';
+import { searchQuery } from './article-list-search';
 import type { Article, ArticleSort, Feed, View } from '../../types';
 
 function mergeSorted(current: Article[], incoming: Article[], sort: ArticleSort): Article[] {
@@ -262,12 +263,48 @@ export interface PageHost {
     pageSize: number;
     items: Article[];
     gen: number;
+    searchScope: string;
     hasMoreSingle: boolean;
     cursors: Map<string, string | undefined>;
     feedHasMore: Map<string, boolean>;
     feedWindowOffset: number;
     mutedHidden: number;
     library: { data?: { feeds: Feed[] } };
+}
+
+export async function loadSearchPageAction(host: PageHost, gen: number): Promise<void> {
+    if (host.view.kind !== 'search') return;
+    const q = searchQuery({
+        view: host.view,
+        searchScope: host.searchScope,
+        cursors: host.cursors,
+        dispatchEvent: () => false,
+        requestUpdate: () => undefined,
+    });
+    if (!q) {
+        if (gen !== host.gen) return;
+        host.items = [];
+        host.hasMoreSingle = false;
+        host.cursors.clear();
+        return;
+    }
+    const scope =
+        host.view.scope === 'folder' && host.view.id
+            ? `folder:${host.view.id}`
+            : host.view.scope === 'feed' && host.view.id
+              ? `feed:${host.view.id}`
+              : 'all';
+    const res = await fetchArticlesPage({
+        scope,
+        q,
+        sort: host.sort,
+        limit: host.pageSize,
+        cursor: host.cursors.get('search'),
+    });
+    if (gen !== host.gen) return;
+    host.items = res.items;
+    host.hasMoreSingle = false;
+    host.mutedHidden = 0;
 }
 
 export async function loadSinglePageAction(host: PageHost, gen: number): Promise<void> {

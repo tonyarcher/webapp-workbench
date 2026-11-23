@@ -1,4 +1,4 @@
-import { history, parsePath } from '../../router';
+import { history, navigate, parsePath } from '../../router';
 import type { Command, CommandContext } from '../../services/commands';
 import { dismissToast, onToast, type ToastNotice } from '../../services/toast';
 import { startInterestingCountsRefresh, stopInterestingCountsRefresh } from '../../services/interesting-counts-refresh';
@@ -147,6 +147,7 @@ export class AppShell extends HTMLElement {
         window.addEventListener('rss-auth-error', this.onAuthErrorEv);
         window.addEventListener('show-shortcuts', this.onShowShortcuts);
         window.addEventListener('article-read', this.onArticleReadSync);
+        window.addEventListener('search-query', this.onSearchQuery);
         this.unsubscribeToasts = onToast((notices) => {
             this.toasts = notices;
             syncToastTimersAuth(this as never, dismissToast);
@@ -172,6 +173,7 @@ export class AppShell extends HTMLElement {
         window.removeEventListener('rss-auth-error', this.onAuthErrorEv);
         window.removeEventListener('show-shortcuts', this.onShowShortcuts);
         window.removeEventListener('article-read', this.onArticleReadSync);
+        window.removeEventListener('search-query', this.onSearchQuery);
         this.unsubscribe?.();
     }
 
@@ -217,6 +219,12 @@ export class AppShell extends HTMLElement {
         this.resume = { view: JSON.stringify(this.route), id: article.id };
         void markOpenedRead(article, (id) => this.syncReadState(id, 1));
     }
+
+    private onSearchQuery = (e: Event): void => {
+        const q = (e as CustomEvent<{ q: string }>).detail.q;
+        if (this.route.kind !== 'search') return;
+        navigate({ ...this.route, q }, true);
+    };
 
     onOpenArticle = (e: Event) => {
         const detail = (e as CustomEvent<{ article: Article; index: number; items: Article[] }>).detail;

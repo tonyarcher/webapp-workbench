@@ -468,6 +468,12 @@ Search shipped local-first: a client index over cached pages, a server `q=`
 endpoint with ranking, operators, and saved searches as sidebar rows.
 Feedly's power search is a paid moat; ours is local-first and free.
 Everything in the workbench themes depends on retrieval landing first.
+Search now renders through the full article list: star, not-interesting, read,
+save-for-later, boards, the feed-folder menu, bulk actions, and the article
+panel all work on results. A toolbar search box and a Headlines-only vs
+Headlines + text scope (the `in:headline` operator) choose the search field.
+Full body text is no longer retained locally, so "text" means the stored
+metadata: title, summary, author, domain, link and excerpt head.
 
 ### A4. Stories like this one
 

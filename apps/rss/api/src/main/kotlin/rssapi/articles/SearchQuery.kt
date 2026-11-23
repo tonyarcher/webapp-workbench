@@ -13,6 +13,7 @@ data class SearchOperators(
     val isRead: Boolean? = null,
     val hasVideo: Boolean? = null,
     val minReadMinutes: Int? = null,
+    val headlineOnly: Boolean = false,
 )
 
 data class ParsedSearchQuery(val text: String, val tokens: List<String>, val operators: SearchOperators) {
@@ -39,7 +40,7 @@ data class ParsedSearchQuery(val text: String, val tokens: List<String>, val ope
 }
 
 private val OPERATOR_RE =
-    Regex("""(^|\s)(author|feed|folder|after|before|has|is|min):(?:"([^"]+)"|(\S+))""", RegexOption.IGNORE_CASE)
+    Regex("""(^|\s)(author|feed|folder|after|before|has|is|min|in):(?:"([^"]+)"|(\S+))""", RegexOption.IGNORE_CASE)
 
 private fun parseDateStartMs(raw: String): Long? = try {
     LocalDate.parse(raw.trim()).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
@@ -71,6 +72,7 @@ private class OperatorState {
     var isRead: Boolean? = null
     var hasVideo: Boolean? = null
     var minReadMinutes: Int? = null
+    var headlineOnly = false
 
     fun toOperators(): SearchOperators = SearchOperators(
         authors = authors,
@@ -83,6 +85,7 @@ private class OperatorState {
         isRead = isRead,
         hasVideo = hasVideo,
         minReadMinutes = minReadMinutes,
+        headlineOnly = headlineOnly,
     )
 }
 
@@ -105,6 +108,13 @@ fun parseSearchQueryText(query: String): ParsedSearchQuery {
 }
 
 private fun applyOperator(key: String, value: String, state: OperatorState) {
+    when (key) {
+        "in" -> if (value.equals("headline", ignoreCase = true)) state.headlineOnly = true
+        else -> applyOtherOperator(key, value, state)
+    }
+}
+
+private fun applyOtherOperator(key: String, value: String, state: OperatorState) {
     when (key) {
         "author" -> state.authors.add(value)
         "feed" -> state.feeds.add(value)

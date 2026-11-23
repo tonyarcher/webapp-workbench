@@ -54,6 +54,9 @@ export interface ArticleListRenderHost extends HighlightHost {
     onMarkShownRead(): Promise<void>;
     onCatchMeUp(): Promise<void>;
     onToggleAdvanced(e: Event): void;
+    onSearchQuery(q: string): void;
+    onSearchScope(scope: string): void;
+    searchScope: string;
     onRefresh(): Promise<void>;
     onAdvancedUnread(e: Event): void;
     onAdvancedMarkScroll(e: Event): void;

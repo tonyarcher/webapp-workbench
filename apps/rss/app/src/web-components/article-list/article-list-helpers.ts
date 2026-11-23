@@ -121,6 +121,7 @@ export function viewTitleOf(view: View, library: { feeds: Feed[]; folders: Folde
         const title = library.folders.find((f) => f.id === view.id)?.title ?? 'Folder';
         return `Interesting in ${title}`;
     }
+    if (view.kind === 'search') return view.q?.trim() ? `Search: ${view.q.trim()}` : 'Search';
     return 'All';
 }
 
