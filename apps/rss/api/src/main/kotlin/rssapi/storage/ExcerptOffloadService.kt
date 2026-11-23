@@ -14,7 +14,7 @@ private const val BATCH_SIZE = 200
  * Moves full excerpts to the object store, gzip, leaving a bounded head in
  * Postgres.
  *
- * The head is what `search_text`, list previews, and cited-id lookups read, so
+ * The head is what `rss_search_text`, list previews, and cited-id lookups read, so
  * they never touch the store. Set `RSS_EXCERPT_HEAD_CHARS` to 0 to keep the
  * text only in the store, at the cost of search over excerpt text.
  */
