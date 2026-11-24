@@ -33,6 +33,13 @@ private fun editionJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .claim("aud", listOf("times-up"))
     .build()
 
+private const val RICH_BODY = """{"generatedAt":1700000000000,"opinion":{"text":"op!"},"sections":[
+    {"id":"s1","topic":"tech","title":"T1","summary":"S1","articleIds":["a1"],
+     "excerpts":[{"articleId":"a1","title":"Source","text":"Cited text"}],
+     "scores":{"worthy":0.8,"interest":0.6,"newness":0.9,"popularity":0.7}},
+    {"id":"s2","title":"T2","articleIds":[]}
+]}"""
+
 @WebMvcTest(EditionController::class)
 @Import(SecurityConfig::class, RequestIdFilter::class, IdentityUser::class)
 class EditionControllerTest {
@@ -198,11 +205,7 @@ class EditionControllerTest {
     @Test
     fun latestParsesRichBody() {
         auth(UUID.randomUUID())
-        val body = """{"generatedAt":1700000000000,"opinion":{"text":"op!"},"sections":[
-            {"id":"s1","topic":"tech","title":"T1","summary":"S1","articleIds":["a1"],
-             "scores":{"worthy":0.8,"interest":0.6,"newness":0.9,"popularity":0.7}},
-            {"id":"s2","title":"T2","articleIds":[]}
-        ]}"""
+        val body = RICH_BODY
         val ready = row(EDITION_READY, body)
         whenever(editions.findTopByUserIdAndStatusOrderByCreatedAtDesc(any(), eq(EDITION_READY))).thenReturn(ready)
 
@@ -216,6 +219,8 @@ class EditionControllerTest {
             jsonPath("$.sections.length()") { value(2) }
             jsonPath("$.sections[0].topic") { value("tech") }
             jsonPath("$.sections[0].scores.worthy") { value(0.8) }
+            jsonPath("$.sections[0].excerpts[0].articleId") { value("a1") }
+            jsonPath("$.sections[0].excerpts[0].text") { value("Cited text") }
             jsonPath("$.sections[0].scores.newness") { value(0.9) }
             jsonPath("$.sections[0].scores.popularity") { value(0.7) }
             jsonPath("$.sections[1].topic") { doesNotExist() }

@@ -38,10 +38,7 @@ export {
     extractArticle,
     fetchArticleBody,
     fetchArticlesPage,
-    fetchEdition,
-    fetchEditions,
     fetchFrontPage,
-    fetchLatestEdition,
     fetchRowHighlights,
     fetchSavedArticles,
     fetchStorageStatus,
@@ -51,8 +48,6 @@ export {
     getLibraryFolders,
     importOpmlXml,
     migrateLibrary,
-    normalizeEditionJson,
-    normalizeEditionMeta,
     readAll,
     readBefore,
     recordAffinity,
@@ -70,6 +65,13 @@ export {
     updateArticleState,
     updateSavedSearch,
 } from './api-domains';
+export {
+    fetchEdition,
+    fetchEditions,
+    fetchLatestEdition,
+    normalizeEditionJson,
+    normalizeEditionMeta,
+} from './api-editions';
 export type {
     ArticlePageParams,
     ArticleStateUpdate,

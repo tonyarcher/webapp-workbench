@@ -216,6 +216,82 @@
     flex: none;
 }
 
+.btn.tier[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: var(--hover);
+    color: var(--text);
+}
+
+.section-summary {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin: 0 0 12px;
+}
+
+.excerpts {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.excerpt {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.excerpt:hover {
+    background: var(--hover);
+}
+
+.excerpt .cite {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.excerpt .excerpt-text {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.sources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.source {
+    font: inherit;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.source:hover {
+    background: var(--hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn.tier {
+        transition: none;
+    }
+}
+
 .article .date {
     font-size: 12px;
     color: var(--text-muted);

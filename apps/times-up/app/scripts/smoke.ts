@@ -92,6 +92,7 @@ await import('./smoke-foreground.js');
 await import('./smoke-search.js');
 await import('./smoke-similar.js');
 await import('./smoke-edition.js');
+await import('./smoke-brief-tiers.js');
 await import('./smoke-router-guard.js');
 await import('./smoke-sidebar.js');
 await import('./smoke-article-panel.js');

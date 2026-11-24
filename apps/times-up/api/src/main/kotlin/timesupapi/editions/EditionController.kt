@@ -28,12 +28,15 @@ data class EditionSectionScoresJson(
     val popularity: Double? = null,
 )
 
+data class EditionExcerptJson(val articleId: String, val title: String, val text: String)
+
 data class EditionSectionJson(
     val id: String,
     val topic: String? = null,
     val title: String,
     val summary: String? = null,
     val articleIds: List<String>,
+    val excerpts: List<EditionExcerptJson> = emptyList(),
     val scores: EditionSectionScoresJson? = null,
 )
 
@@ -145,7 +148,14 @@ private fun detailSection(node: com.fasterxml.jackson.databind.JsonNode): Editio
     title = node.path("title").asText("(untitled)"),
     summary = node.path("summary").takeIf { it.isTextual }?.asText(),
     articleIds = node.path("articleIds").takeIf { it.isArray }?.map { it.asText() } ?: emptyList(),
+    excerpts = node.path("excerpts").takeIf { it.isArray }?.map(::detailExcerpt) ?: emptyList(),
     scores = detailScores(node.path("scores")),
+)
+
+private fun detailExcerpt(node: com.fasterxml.jackson.databind.JsonNode): EditionExcerptJson = EditionExcerptJson(
+    articleId = node.path("articleId").asText(""),
+    title = node.path("title").asText("(untitled)"),
+    text = node.path("text").asText(""),
 )
 
 private fun detailScores(node: com.fasterxml.jackson.databind.JsonNode): EditionSectionScoresJson? {

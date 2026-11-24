@@ -189,6 +189,12 @@ export interface OpmlFolder {
     children: OpmlNode[];
 }
 
+export interface EditionExcerpt {
+    articleId: string;
+    title: string;
+    text: string;
+}
+
 export interface EditionSection {
     id: string;
     topic?: string | undefined;
@@ -196,6 +202,7 @@ export interface EditionSection {
     summary?: string | undefined;
     opinion?: string | undefined;
     articleIds: string[];
+    excerpts?: EditionExcerpt[] | undefined;
     scores?:
         { worthy: number; interest: number; newness?: number | undefined; popularity?: number | undefined } | undefined;
     verified?: boolean | undefined;

@@ -29,6 +29,7 @@ const val EDITION_MAX_ARTICLES: Int = 300
 const val EDITION_KEEP: Int = 7
 const val EDITION_DEFAULT_WINDOW_HOURS: Long = 24
 const val EDITION_EXCERPT_CHARS: Int = 500
+const val EDITION_SECTION_EXCERPTS: Int = 6
 const val EDITION_OPINION_TITLE: String = "Editorial opinion"
 const val EDITION_OPINION_PROMPT: String =
     "Write a brief editorial opinion based ONLY on the section summaries below. " +
@@ -228,6 +229,11 @@ class EditionService(
         "title" to section.item.cluster.articles.first().title,
         "summary" to section.summary,
         "articleIds" to section.item.cluster.articles.map { it.id },
+        "excerpts" to section.item.cluster.articles.mapNotNull { article ->
+            article.excerpt.takeIf { it.isNotBlank() }?.let { text ->
+                mapOf("articleId" to article.id, "title" to article.title, "text" to text)
+            }
+        }.take(EDITION_SECTION_EXCERPTS),
         "scores" to mapOf(
             "worthy" to section.item.worthy,
             "interest" to section.item.interest,

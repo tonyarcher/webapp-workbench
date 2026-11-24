@@ -144,6 +144,11 @@ class EditionServiceTest {
 
     private fun bodyOf(row: EditionEntity) = ObjectMapper().readTree(row.body!!)
 
+    private fun citedIds(body: com.fasterxml.jackson.databind.JsonNode): Set<String> =
+        body.path("sections").flatMap { section ->
+            section.path("excerpts").map { it.path("articleId").asText() }
+        }.toSet()
+
     @Test
     fun buildsReadyEditionWithSectionsAndOpinion() {
         val feed = UUID.randomUUID()
@@ -154,6 +159,7 @@ class EditionServiceTest {
                 serviceArticle("a2", "story-1", feed, hoursAgo = 1),
                 serviceArticle("b1", null, feed, hoursAgo = 3),
             ),
+            excerpts = mapOf("a1" to "excerpt one", "a2" to "excerpt two", "b1" to "excerpt three"),
         )
         stubAi(mapOf("Editorial opinion" to "Opinion: a quiet day."))
 
@@ -168,6 +174,8 @@ class EditionServiceTest {
         assertEquals("test-model", body.path("model").asText())
         val titles = body.path("sections").map { it.path("title").asText() }.toSet()
         assertEquals(setOf("t-a2", "t-b1"), titles)
+        assertEquals(setOf("a1", "a2", "b1"), citedIds(body))
+        assertTrue(body.path("sections").first().path("excerpts").first().path("text").asText().startsWith("excerpt"))
     }
 
     @Test
