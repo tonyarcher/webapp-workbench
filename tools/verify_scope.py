@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -10,7 +11,27 @@ Check = tuple[str, str, list[str]]
 
 
 def changed_files(root: Path, skip_dirs: frozenset[str]) -> list[Path]:
-    """Tracked modifications plus untracked files, excluding generated trees."""
+    """Tracked modifications plus untracked files, excluding generated trees.
+
+    A caller (the pre-push hook) can pass an explicit JSON array of repo-relative
+    paths in VERIFY_CHANGED_FILES so the same scoped check covers a pushed range,
+    not just the working tree.
+    """
+    explicit = os.environ.get("VERIFY_CHANGED_FILES")
+    if explicit:
+        try:
+            names = json.loads(explicit)
+        except (TypeError, ValueError):
+            names = []
+        if isinstance(names, list):
+            return [
+                path
+                for name in names
+                if isinstance(name, str)
+                and (path := (root / name).resolve()).is_file()
+                and path.is_relative_to(root)
+                and not (set(path.relative_to(root).parts) & skip_dirs)
+            ]
     tracked = subprocess.run(
         ["git", "diff", "--name-only", "-z", "HEAD", "--"],
         cwd=root,

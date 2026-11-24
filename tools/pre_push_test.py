@@ -8,7 +8,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from tools.pre_push import ref_range, workspace_of
+from tools.pre_push import (
+    affected_workspaces,
+    api_services_for_files,
+    build_inputs_changed,
+    ordered_workspaces,
+    ref_range,
+    workspace_of,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -28,6 +35,36 @@ class WorkspaceOfTest(unittest.TestCase):
 
     def test_root_manifest_maps_to_no_workspace(self) -> None:
         self.assertIsNone(workspace_of("package.json"))
+
+
+class ApiServicesTest(unittest.TestCase):
+    def test_api_file_maps_to_service(self) -> None:
+        self.assertEqual(
+            api_services_for_files(
+                ["apps/times-up/api/src/main/kotlin/timesupapi/poller/FeedPoller.kt"]
+            ),
+            ["times-up-api"],
+        )
+
+    def test_client_file_maps_to_no_service(self) -> None:
+        self.assertEqual(api_services_for_files(["apps/times-up/app/src/main.ts"]), [])
+
+
+class AffectedWorkspacesTest(unittest.TestCase):
+    def test_shared_client_change_affects_consumers(self) -> None:
+        result = affected_workspaces(["apps/user/client/src/index.ts"])
+        self.assertIn("user-client", result)
+        self.assertIn("times-up", result)
+        self.assertIn("@stock-game/app", result)
+
+    def test_consumers_run_after_their_library(self) -> None:
+        order = ordered_workspaces({"user-client", "times-up"})
+        self.assertLess(order.index("user-client"), order.index("times-up"))
+
+    def test_build_inputs_trigger_full_gradle_catalog_checks(self) -> None:
+        self.assertTrue(build_inputs_changed(["apps.json"]))
+        self.assertTrue(build_inputs_changed(["buildSrc/src/main/kotlin/Foo.kt"]))
+        self.assertFalse(build_inputs_changed(["apps/times-up/app/src/main.ts"]))
 
 
 class RefRangeTest(unittest.TestCase):
