@@ -14,6 +14,19 @@ those rather than trusting a table that can only go stale.
 Each app directory carries its own `AGENTS.md` with the conventions and gotchas
 that apply to it.
 
+## What the reader does
+
+The RSS reader keeps one copy of each feed and stores per-user reading state
+separately. Article text is treated as input: a one-time extractor learns topic
+keys and evidence, then the body and full excerpt can live in the object store.
+Features read learned metadata, so search, clusters, alerts, and provenance do
+not depend on retaining article text. The reader still opens full bodies on
+demand. `apps/rss/MOONSHOT.md` records what is shipped and what is deferred.
+
+Views, sorting rules, export formats, and the storage tiers are described in
+each app's own documentation; read `apps/rss/README.md` and the `AGENTS.md`
+files in that tree rather than a table that would go stale.
+
 ## Getting started
 
 ```sh

@@ -1,15 +1,28 @@
-dialog {
+:host {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgb(0 0 0 / 0.5);
+}
+
+:host([open]) {
+    display: flex;
+}
+
+.dialog {
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--panel-bg);
     color: var(--text);
     padding: 20px 24px;
-    max-width: 440px;
+    max-width: 560px;
     width: calc(100vw - 48px);
-}
-
-dialog::backdrop {
-    background: rgb(0 0 0 / 0.5);
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
 h2 {

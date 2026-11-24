@@ -1439,6 +1439,20 @@ the shape of the system must not assume that.
   payload rejection test, a smoke asserting no user id or title reaches the
   table, and a settings view smoke with `USAGE_ENABLED` off and on.
 
+## Z. Documentation and in-app help
+
+- **Why.** A reader with this many views needs a map, and documentation that
+  inventories the code goes stale. Help should point at the sources that
+  derive the truth.
+- **What.** Root `README.md` and `apps/rss/README.md` explain what the product
+  does and where to read each contract, without app counts or endpoint lists.
+  The in-app `?` dialog shows a short views guide and the shortcut tables
+  shared with the handlers. New selects carry title tooltips.
+- **Status.** Shipped. The final moonshot slice. The help dialog previously
+  rendered no shortcuts even though the shared tables existed; it now uses
+  them and adds the views guide. Keep facts in derived sources, not prose.
+- **First test.** Browser tests for help rendering and tooltip presence.
+
 ## J. Non-goals (what we will not copy)
 
 - Advertising, tracking pixels, affiliate injection, or engagement farming.

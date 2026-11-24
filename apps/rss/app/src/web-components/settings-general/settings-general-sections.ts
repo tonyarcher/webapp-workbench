@@ -212,6 +212,7 @@ function formatSelect(host: SettingsGeneralSectionsHost): HTMLElement {
     label.append(document.createTextNode('Export format'));
     const select = el('select');
     select.setAttribute('aria-label', 'Export format');
+    select.title = 'Choose JSON archive, line-separated text, or OPML';
     for (const [value, text] of [
         ['json', 'JSON archive'],
         ['text', 'Text (one item per line)'],

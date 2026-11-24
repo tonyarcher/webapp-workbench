@@ -5,6 +5,7 @@ import {
     deriveHealth,
     pruneSelection,
     removalMessage,
+    toggleSelection,
     viewHealth,
     type FeedHealthRow,
     type HealthKind,
@@ -23,6 +24,8 @@ export class HealthView extends HTMLElement {
     private maxRecent: number | null = null;
     private sort: HealthSort = 'status';
     private selected = new Set<string>();
+    private selectAnchor = -1;
+    private shiftSelect = false;
     private root: HTMLDivElement | null = null;
     private generation = 0;
 
@@ -49,6 +52,7 @@ export class HealthView extends HTMLElement {
             if (gen !== this.generation || !this.isConnected) return;
             this.rows = deriveHealth(lib.feeds, recent.feeds);
             this.selected = pruneSelection(this.selected, lib.feeds);
+            this.selectAnchor = -1;
         } catch {
             if (gen !== this.generation || !this.isConnected) return;
             this.rows = [];
@@ -75,6 +79,7 @@ export class HealthView extends HTMLElement {
         const select = el('select');
         select.dataset['focusKey'] = label;
         select.setAttribute('aria-label', label);
+        select.title = label;
         for (const [v, text] of options) {
             const option = el('option', undefined, text);
             option.value = v;
@@ -149,6 +154,7 @@ export class HealthView extends HTMLElement {
                 String(this.days),
                 (v) => {
                     this.days = Number(v);
+                    this.selectAnchor = -1;
                     void this.load();
                 },
             ),
@@ -175,6 +181,7 @@ export class HealthView extends HTMLElement {
                     this.kind,
                     (v) => {
                         this.kind = v as HealthKind | 'all';
+                        this.selectAnchor = -1;
                         this.paint();
                     },
                 ),
@@ -192,6 +199,7 @@ export class HealthView extends HTMLElement {
                     this.maxRecent === null ? 'all' : String(this.maxRecent),
                     (v) => {
                         this.maxRecent = v === 'all' ? null : Number(v);
+                        this.selectAnchor = -1;
                         this.paint();
                     },
                 ),
@@ -208,6 +216,7 @@ export class HealthView extends HTMLElement {
                     this.sort,
                     (v) => {
                         this.sort = v as HealthSort;
+                        this.selectAnchor = -1;
                         this.paint();
                     },
                 ),
@@ -247,16 +256,22 @@ export class HealthView extends HTMLElement {
                 body.appendChild(el('div', 'empty', 'No feeds match these filters.'));
             }
             const list = el('ul', 'list');
-            for (const row of shown) {
+            for (const [index, row] of shown.entries()) {
                 const li = el('li', `row ${row.kind}`);
                 const box = el('input', 'row-select');
                 box.type = 'checkbox';
                 box.checked = this.selected.has(row.feed.id);
                 box.dataset['focusKey'] = `select:${row.feed.id}`;
                 box.setAttribute('aria-label', `Select ${row.feed.title}`);
+                box.title = 'Shift-click to select a range';
+                box.addEventListener('click', (e) => {
+                    this.shiftSelect = (e as MouseEvent).shiftKey;
+                });
                 box.addEventListener('change', () => {
-                    if (box.checked) this.selected.add(row.feed.id);
-                    else this.selected.delete(row.feed.id);
+                    const next = toggleSelection(this.selected, shown, this.selectAnchor, index, this.shiftSelect);
+                    this.selected = next.selected;
+                    this.selectAnchor = next.anchor;
+                    this.shiftSelect = false;
                     this.paint();
                 });
                 li.appendChild(box);

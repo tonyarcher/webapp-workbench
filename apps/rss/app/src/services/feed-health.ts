@@ -66,6 +66,29 @@ export function viewHealth(
     return sorted;
 }
 
+/** Toggle one id, or with shift, select the visible range from the anchor. */
+export function toggleSelection(
+    selected: Set<string>,
+    rows: FeedHealthRow[],
+    anchor: number,
+    index: number,
+    shift: boolean,
+): { selected: Set<string>; anchor: number } {
+    const row = rows[index];
+    if (!row) return { selected, anchor };
+    const next = new Set(selected);
+    if (!shift || anchor < 0 || anchor >= rows.length) {
+        if (next.has(row.feed.id)) next.delete(row.feed.id);
+        else next.add(row.feed.id);
+        return { selected: next, anchor: index };
+    }
+    for (let i = Math.min(anchor, index); i <= Math.max(anchor, index); i += 1) {
+        const id = rows[i]?.feed.id;
+        if (id) next.add(id);
+    }
+    return { selected: next, anchor: index };
+}
+
 /** Keep only selected ids that still have a feed in the library. */
 export function pruneSelection(ids: Iterable<string>, feeds: Feed[]): Set<string> {
     const valid = new Set(feeds.map((f) => f.id));

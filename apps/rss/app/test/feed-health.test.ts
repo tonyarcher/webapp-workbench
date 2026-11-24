@@ -1,6 +1,6 @@
 import './test-setup';
 import { expect } from '@esm-bundle/chai';
-import { deriveHealth, pruneSelection, removalMessage, viewHealth } from '../src/services/feed-health';
+import { deriveHealth, pruneSelection, removalMessage, toggleSelection, viewHealth } from '../src/services/feed-health';
 import type { Feed } from '../src/types';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -62,6 +62,20 @@ describe('feed health derivation', () => {
 
         expect(low.map((r) => r.feed.id)).to.deep.equal(['a']);
     });
+    it('shift-click selects the visible range from the anchor', () => {
+        const rows = deriveHealth(
+            [feed({ id: 'a', title: 'Alpha' }), feed({ id: 'b', title: 'Beta' }), feed({ id: 'c', title: 'Gamma' })],
+            {},
+            now,
+        );
+        const ordered = viewHealth(rows, { kind: 'all', maxRecent: null, sort: 'name' });
+
+        const first = toggleSelection(new Set(), ordered, -1, 0, false);
+        const ranged = toggleSelection(first.selected, ordered, first.anchor, 2, true);
+
+        expect([...ranged.selected]).to.deep.equal(['a', 'b', 'c']);
+    });
+
     it('prunes stale selection ids', () => {
         const kept = feed({ id: 'keep' });
         const pruned = pruneSelection(['keep', 'gone'], [kept]);

@@ -36,6 +36,7 @@ function renderSearchBox(host: ArticleListRenderHost): HTMLElement {
         (e) => host.onSearchScope((e.target as HTMLSelectElement).value),
     );
     box.appendChild(scope);
+    scope.title = 'Search headlines only, or headlines with summary and excerpt text';
     return box;
 }
 
