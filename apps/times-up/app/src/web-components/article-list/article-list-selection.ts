@@ -1,4 +1,4 @@
-import { bulkStar, markShownRead, noteDerank, saveForLater } from '../../mutations';
+import { bulkStar, markShownRead, noteDerank, saveForLater, unsaveForLater } from '../../mutations';
 import { toastInfo } from '../../services/toast';
 import type { Article } from '../../types';
 
@@ -137,23 +137,21 @@ export function bulkDerankAction(host: SelectionHost & { clearSelection(): void 
     host.clearSelection();
 }
 
-interface SaveForLaterHost extends SelectionHost {
-    listView?: string;
-    slideshowIndex?: number;
-    clearSelection(): void;
+export async function saveArticleForLaterAction(article: Article, saved: boolean): Promise<boolean> {
+    const ok = saved ? await unsaveForLater(article.id) : await saveForLater(article.id);
+    if (ok) toastInfo(saved ? 'Article removed from saved' : '1 article saved for later');
+    return ok;
 }
 
-export async function saveForLaterAction(host: SaveForLaterHost): Promise<void> {
-    const selected = selectedItems(host);
-    const currentIndex = host.listView === 'slideshow' ? (host.slideshowIndex ?? host.cursor) : host.cursor;
-    const current = host.items[currentIndex];
-    const targets = selected.length ? selected : current ? [current] : [];
-    if (!targets.length) return;
-    let saved = 0;
-    for (const article of targets) {
-        if (await saveForLater(article.id)) saved++;
-    }
-    if (!saved) return;
-    if (saved === targets.length && selected.length) host.clearSelection();
-    toastInfo(`${saved} article${saved === 1 ? '' : 's'} saved for later`);
+interface SavedArticleHost {
+    savedArticleIds: Set<string>;
+}
+
+export async function toggleArticleSavedAction(host: SavedArticleHost, article: Article): Promise<void> {
+    const wasSaved = host.savedArticleIds.has(article.id);
+    if (!(await saveArticleForLaterAction(article, wasSaved))) return;
+    const saved = new Set(host.savedArticleIds);
+    if (wasSaved) saved.delete(article.id);
+    else saved.add(article.id);
+    host.savedArticleIds = saved;
 }

@@ -19,7 +19,7 @@ export interface SlideshowHost {
     listView: string;
     slideshowIndex: number;
     slideshowAutoAdvance: boolean;
-    slideshowSavedIds: Set<string>;
+    savedArticleIds: Set<string>;
     slideshowAutoTimer: ReturnType<typeof setTimeout> | null;
     slideshowMarked: Set<string>;
     slideshowSuppressRead: Set<string>;
@@ -137,10 +137,10 @@ export async function toggleSlideshowRead(host: SlideshowHost): Promise<void> {
     }
 }
 
-export async function refreshSlideshowSaved(host: SlideshowHost): Promise<void> {
+export async function refreshSavedArticles(host: SlideshowHost): Promise<void> {
     try {
         const items = await fetchSavedArticlesList();
-        host.slideshowSavedIds = new Set(items.map((s) => s.articleId).filter((id): id is string => !!id));
+        host.savedArticleIds = new Set(items.map((s) => s.articleId).filter((id): id is string => !!id));
         host.requestUpdate();
     } catch {
         // ignore
@@ -150,18 +150,18 @@ export async function refreshSlideshowSaved(host: SlideshowHost): Promise<void> 
 export async function toggleSlideshowSave(host: SlideshowHost): Promise<void> {
     const article = currentSlideshowArticle(host);
     if (!article) return;
-    const saved = host.slideshowSavedIds.has(article.id);
+    const saved = host.savedArticleIds.has(article.id);
     const next = !saved;
-    const ids = new Set(host.slideshowSavedIds);
+    const ids = new Set(host.savedArticleIds);
     if (next) ids.add(article.id);
     else ids.delete(article.id);
-    host.slideshowSavedIds = ids;
+    host.savedArticleIds = ids;
     const ok = next ? await saveForLater(article.id) : await unsaveForLater(article.id);
     if (!ok) {
-        const revert = new Set(host.slideshowSavedIds);
+        const revert = new Set(host.savedArticleIds);
         if (next) revert.delete(article.id);
         else revert.add(article.id);
-        host.slideshowSavedIds = revert;
+        host.savedArticleIds = revert;
     }
     host.requestUpdate();
 }
@@ -198,7 +198,7 @@ export function handleSlideshowWillUpdate(
 ): void {
     if (changed.has('listView') && host.listView === 'slideshow') {
         enterSlideshow(host);
-        void refreshSlideshowSaved(host);
+        void refreshSavedArticles(host);
     }
     if (changed.has('listView') && host.listView !== 'slideshow') {
         clearSlideshowAuto(host);

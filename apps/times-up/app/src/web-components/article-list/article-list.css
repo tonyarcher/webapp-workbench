@@ -359,6 +359,7 @@
     position: absolute;
     top: 8px;
     right: 8px;
+    z-index: 2;
     display: flex;
     gap: 6px;
     opacity: 0;
@@ -399,6 +400,17 @@
     outline: 2px solid #0a66c2;
     outline-offset: 1px;
 }
+.card-action.star {
+    background: #fff;
+    color: #1f2937;
+}
+
+.card-action.star:hover,
+.card-action.star:focus-visible {
+    background: #fff;
+    color: #0a66c2;
+}
+
 .card-action svg {
     width: 16px;
     height: 16px;
@@ -639,8 +651,12 @@ button.title-open:hover {
     padding: 0 2px;
 }
 
-.star[aria-pressed='true'],
+.star[aria-pressed='true'] {
+    color: var(--star-color);
+}
+
 .card-action.star[aria-pressed='true'] {
+    background: #fff;
     color: var(--star-color);
 }
 

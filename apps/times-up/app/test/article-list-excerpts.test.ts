@@ -65,6 +65,56 @@ describe('article-list excerpts', () => {
         expect(host.querySelector('.row-excerpt')?.textContent).to.equal('more text');
     });
 
+    it('puts Save for later on the card image and targets that article', () => {
+        let savedId: string | undefined;
+        host = mount(
+            cardRowTemplate(
+                article,
+                false,
+                undefined,
+                undefined,
+                false,
+                false,
+                () => {},
+                () => {},
+                null,
+                false,
+                (_e, saved) => {
+                    savedId = saved.id;
+                },
+            ),
+        );
+        const save = host.querySelector<HTMLButtonElement>('.card-actions [aria-label="Save for later"]');
+        expect(save).not.to.equal(null);
+        save!.click();
+        expect(savedId).to.equal('a1');
+    });
+
+    it('fills the saved bookmark and keeps it beside the far-right menu', () => {
+        host = mount(
+            cardRowTemplate(
+                article,
+                false,
+                undefined,
+                undefined,
+                false,
+                false,
+                () => {},
+                () => {},
+                null,
+                true,
+                () => {},
+            ),
+        );
+        const actions = host.querySelector<HTMLElement>('.card-actions')!;
+        expect(
+            [...actions.querySelectorAll('button')].map((button) => button.getAttribute('aria-label')),
+        ).to.deep.equal(['Not interesting', 'Star', 'Save for later', 'Manage feed folders']);
+        const save = actions.querySelector<HTMLButtonElement>('[aria-label="Save for later"]')!;
+        expect(save.getAttribute('aria-pressed')).to.equal('true');
+        expect(save.querySelector('path')?.getAttribute('fill')).to.equal('currentColor');
+    });
+
     it('marks and fills card rows the same way', () => {
         host = mount(
             cardRowTemplate(

@@ -13,7 +13,7 @@ import {
     bulkMarkReadAction,
     bulkStarAction,
     clearSelectionAction,
-    saveForLaterAction,
+    toggleArticleSavedAction,
 } from './article-list-selection';
 import { onRowClickAction, toggleSelectCursorAction, toggleStarCursorAction } from './article-list-cursor';
 import {
@@ -55,7 +55,7 @@ import {
     virtualizerOptionsFor,
 } from './article-list-helpers';
 import { anchor, paint as paintRegions, type Regions } from './article-list-paint';
-import { handleSlideshowUpdated, handleSlideshowWillUpdate } from './article-list-slideshow';
+import { handleSlideshowUpdated, handleSlideshowWillUpdate, refreshSavedArticles } from './article-list-slideshow';
 import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../../types';
 import { areHighlightsEnabled } from '../../services/highlights';
 import { syncHighlightsEnabled, toggleRowHighlight, type RowHighlightsHost } from './article-list-row-highlights';
@@ -152,7 +152,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     };
     declare slideshowIndex: number;
     declare slideshowAutoAdvance: boolean;
-    declare slideshowSavedIds: Set<string>;
+    declare savedArticleIds: Set<string>;
     declare activeRefreshKeys: string[];
 
     slideshowAutoTimer: ReturnType<typeof setTimeout> | null = null;
@@ -249,7 +249,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         defineReactive(this, 'rowHighlights', { open: {}, loading: {}, data: {} });
         defineReactive(this, 'slideshowIndex', 0);
         defineReactive(this, 'slideshowAutoAdvance', false);
-        defineReactive(this, 'slideshowSavedIds', new Set<string>());
+        defineReactive(this, 'savedArticleIds', new Set<string>());
         defineReactive(this, 'activeRefreshKeys', [] as string[]);
     }
 
@@ -297,6 +297,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     connectedCallback(): void {
         for (const controller of this.controllers) controller.hostConnected?.();
         attachHostListeners(this as never);
+        void refreshSavedArticles(this as never);
         if (!this.excerptObserver) this.excerptObserver = createRowExcerptObserver(this, this.scrollEl);
         this.requestUpdate();
     }
@@ -510,9 +511,8 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         await bulkStarAction(this as never);
     }
 
-    async onSaveForLater(): Promise<void> {
-        await saveForLaterAction(this as never);
-    }
+    onSaveArticle = (article: Article): Promise<void> => toggleArticleSavedAction(this as never, article);
+    onSavedArticlesChanged = (): void => void refreshSavedArticles(this as never);
 
     async onBulkDerank(): Promise<void> {
         bulkDerankAction(this as never);

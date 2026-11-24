@@ -12,6 +12,7 @@ export interface ListenerHost extends LayoutHost {
     onFeedsRefreshed: () => void;
     onArticleRead: (e: Event) => void;
     onArticleStarred: (e: Event) => void;
+    onSavedArticlesChanged: () => void;
     onMuteRulesChanged: () => void;
     onViewSettingsChanged: () => void;
     onStorage: (e: StorageEvent) => void;
@@ -27,6 +28,7 @@ const WINDOW_LISTENERS = [
     ['feeds-refreshed', 'onFeedsRefreshed'],
     ['article-read', 'onArticleRead'],
     ['article-starred', 'onArticleStarred'],
+    ['saved-articles-changed', 'onSavedArticlesChanged'],
     ['mute-rules-changed', 'onMuteRulesChanged'],
     ['view-settings-changed', 'onViewSettingsChanged'],
     ['storage', 'onStorage'],

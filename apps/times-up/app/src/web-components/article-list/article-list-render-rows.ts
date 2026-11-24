@@ -18,6 +18,7 @@ import type { ArticleListRenderHost } from './article-list-render';
 
 const DERANK_ACTIVE = 'M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z';
 const DERANK_SLASH = 'M4 4l16 16';
+const BOOKMARK = 'M6 4h12v17l-6-4-6 4z';
 
 function derankButton(article: Article): HTMLButtonElement {
     const active = isDeranked(article.id);
@@ -74,27 +75,95 @@ function derankButton(article: Article): HTMLButtonElement {
     return button;
 }
 
+function saveButton(article: Article, saved: boolean, onSave: (e: Event, article: Article) => void): HTMLButtonElement {
+    const button = el('button', 'card-action');
+    button.type = 'button';
+    button.setAttribute('aria-label', 'Save for later');
+    button.setAttribute('aria-pressed', String(saved));
+    button.title = saved ? 'Saved for later' : 'Save for later';
+    button.appendChild(
+        svgIcon({ viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' }, [
+            [
+                'path',
+                {
+                    fill: saved ? 'currentColor' : 'none',
+                    stroke: 'currentColor',
+                    'stroke-width': '1.8',
+                    'stroke-linejoin': 'round',
+                    d: BOOKMARK,
+                },
+            ],
+        ]),
+    );
+    button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onSave(e, article);
+    });
+    return button;
+}
+
 /** White overlay controls that appear over the cover on hover or focus. */
-function cardActions(article: Article, onStar: (e: Event, article: Article) => void): HTMLElement {
+function cardActions(
+    article: Article,
+    saved: boolean,
+    onStar: (e: Event, article: Article) => void,
+    onSave?: (e: Event, article: Article) => void,
+): HTMLElement {
     const layer = el('div', 'card-actions');
     const star = starButton(article, onStar);
     star.className = 'card-action star';
     const derank = derankButton(article);
     derank.className = 'card-action';
     const more = el('button', 'card-action', '⋯');
+    let cancelTimer: ReturnType<typeof setTimeout> | null = null;
+    const cancelPress = () => {
+        if (cancelTimer !== null) clearTimeout(cancelTimer);
+        cancelTimer = null;
+        more.dispatchEvent(
+            new CustomEvent('card-menu-pointercancel', {
+                detail: { articleId: article.id },
+                bubbles: true,
+                composed: true,
+            }),
+        );
+    };
+    more.addEventListener('pointerdown', () => {
+        if (cancelTimer !== null) clearTimeout(cancelTimer);
+        cancelTimer = null;
+        more.dispatchEvent(
+            new CustomEvent('card-menu-pointerdown', {
+                detail: { articleId: article.id },
+                bubbles: true,
+                composed: true,
+            }),
+        );
+    });
+    more.addEventListener('pointercancel', cancelPress);
+    more.addEventListener('contextmenu', cancelPress);
+    more.addEventListener('pointerleave', (e) => {
+        if (e.buttons !== 0) cancelPress();
+    });
+    more.addEventListener('pointerup', () => {
+        cancelTimer = setTimeout(cancelPress, 0);
+    });
     more.setAttribute('aria-label', 'Manage feed folders');
     more.title = 'Manage feed folders';
     more.addEventListener('click', (e) => {
+        if (cancelTimer !== null) clearTimeout(cancelTimer);
+        cancelTimer = null;
         e.stopPropagation();
         more.dispatchEvent(
             new CustomEvent('open-feed-folders', {
                 bubbles: true,
                 composed: true,
-                detail: { feedId: article.feedId, anchor: anchorFromEvent(e) },
+                detail: { feedId: article.feedId, anchor: anchorFromEvent(e), articleId: article.id },
             }),
         );
     });
-    layer.append(more, derank, star);
+    layer.appendChild(derank);
+    layer.appendChild(star);
+    if (onSave) layer.appendChild(saveButton(article, saved, onSave));
+    layer.appendChild(more);
     return layer;
 }
 
@@ -296,6 +365,8 @@ export function cardRowTemplate(
     onStar: (e: Event, article: Article) => void,
     onOpen: (e: MouseEvent, article: Article) => void,
     excerpt?: string | null,
+    saved = false,
+    onSave?: (e: Event, article: Article) => void,
 ): HTMLElement {
     const link = safeHttpUrl(article.link);
     const video = articleVideo(article);
@@ -327,7 +398,7 @@ export function cardRowTemplate(
         empty.setAttribute('style', cardPlaceholderStyle(article));
         media.appendChild(empty);
     }
-    media.appendChild(cardActions(article, onStar));
+    media.appendChild(cardActions(article, saved, onStar, onSave));
     card.appendChild(media);
     const body = el('div', 'grid-card-body');
     const titleRow = el('div', 'grid-card-title-row');
@@ -387,5 +458,9 @@ export function renderCardRow(host: ArticleListRenderHost, article: Article, sho
         },
         (e, _a) => host.onRowClick(e, index),
         host.rowExcerpt(article.id),
+        host.savedArticleIds.has(article.id),
+        (_e, a) => {
+            void host.onSaveArticle(a);
+        },
     );
 }

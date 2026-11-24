@@ -27,6 +27,7 @@ export interface ArticleListRenderHost extends HighlightHost {
     interestingActive(): boolean;
     loadError: string | null;
     selectedIds: string[];
+    savedArticleIds: Set<string>;
     mutedHidden: number;
     canUndoMute(): boolean;
     onUndoMute(): void;
@@ -34,7 +35,7 @@ export interface ArticleListRenderHost extends HighlightHost {
     clearSelection(): void;
     onBulkMarkRead(): void;
     onBulkStar(): void;
-    onSaveForLater(): Promise<void>;
+    onSaveArticle(article: Article): Promise<void>;
     onBulkDerank(): void;
     showShortcuts(): void;
     onRetryArticles(): void;

@@ -24,7 +24,7 @@ export interface SlideshowRenderHost {
     items: Article[];
     slideshowIndex: number;
     slideshowAutoAdvance: boolean;
-    slideshowSavedIds: Set<string>;
+    savedArticleIds: Set<string>;
     loading: boolean;
 }
 
@@ -250,7 +250,7 @@ export function renderSlideshow(host: SlideshowRenderHost, actions: SlideshowRen
     const link = safeHttpUrl(article.link);
     const video = articleVideo(article);
     const minutes = readMinutes(article.content, article.summary);
-    const saved = host.slideshowSavedIds.has(article.id);
+    const saved = host.savedArticleIds.has(article.id);
 
     const root = el('div', 'slideshow');
     root.setAttribute('aria-label', 'Slideshow view');
