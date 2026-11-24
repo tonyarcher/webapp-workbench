@@ -46,7 +46,7 @@ Options:
   --dry-run      Print the Gradle command instead of running it
 
 Apps:
-  Deploy ids or aliases (rss, stock, lemmy, ...), or folders (apps/rss).
+  Deploy ids or aliases (times-up, stock, lemmy, ...), or folders (apps/times-up).
   No app names rebuilds every service.
 
 Environment: DOCKER_HOST, DOCKER_TUNNEL (default tcp://127.0.0.1:2375),

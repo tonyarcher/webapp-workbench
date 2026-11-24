@@ -102,10 +102,10 @@ the monorepo as the build context, and tunnel vs local Docker lives in
 one place.
 
 ```sh
-python deploy.py rss                # rebuild + roll out rss-reader
+python deploy.py apps/times-up    # rebuild + publish the UI and roll out the API
 python deploy.py baseball           # also accepted: baseball-tracker
 python deploy.py lemmy stock
-python deploy.py --remote rss
+python deploy.py --remote times-up
 python deploy.py --build-only lemmy
 ```
 
@@ -114,7 +114,7 @@ unknown name fails with the list of valid ones.
 
 `python deploy.py` compiles TypeScript on the host (Vite / tsc, with
 `APP_BASE_PATH` for subpath SPAs) then copies `dist/` into nginx images.
-`python build.py rss` is the same host compile without Docker — useful as a
+`python build.py times-up` is the same host compile without Docker — useful as a
 typecheck before a tunnel upload. Images do not run `tsc` or Vite.
 
 The gateway listens on port `80` (plus `443` when `TLS_HOSTS` is set — see
@@ -153,7 +153,7 @@ Pick a hosts-file name, e.g. `workbench.lan`:
 5. Register the origin with identity (DB rows, not code):
     ```sql
     INSERT INTO oauth_redirect_uris (client_id, redirect_uri)
-      VALUES ('rss-reader', 'https://workbench.lan/rss-reader/') ON CONFLICT DO NOTHING;
+      VALUES ('times-up', 'https://workbench.lan/times-up/') ON CONFLICT DO NOTHING;
     ```
     (Repeat per app origin; run with `docker compose exec postgres psql -U rss -d users`.)
 6. Browse `https://workbench.lan/`. Set `TLS_REDIRECT=1` to send port-80 stragglers to https.
@@ -206,8 +206,35 @@ nginx.conf. Source, `node_modules/`, and `deploy/.env` stay off the tunnel.
 
 ## Data
 
-Stock Game state lives in the `stock` Postgres database owned by
-`stock-game-api`. The nginx-served apps are stateless.
+Times Up state lives in the `times_up` Postgres database owned by
+`times-up-api`. The nginx-served apps are stateless.
+
+### Rename an existing Times Up database
+
+Fresh volumes create `times_up` from the compose default. An existing volume
+still names the reader database `rss`. Set `POSTGRES_DB=times_up` in
+`deploy/.env`, stop the old API container, and rename the database before
+deploying the renamed API:
+
+```sh
+docker ps --filter label=com.docker.compose.service=rss-api --format '{{.ID}}' |
+  xargs -r docker stop
+docker compose -f deploy/docker-compose.yml exec postgres \
+  psql -U ${POSTGRES_USER:-rss} -d postgres \
+  -c "ALTER DATABASE rss RENAME TO times_up;"
+docker compose -f deploy/docker-compose.yml up -d postgres
+```
+
+Deploy `user-api` first so its Flyway migration renames the OAuth client,
+redirect paths, and refresh-token client ids. Then recreate the gateway and
+deploy both Times Up halves with `python deploy.py gateway apps/times-up`.
+Rename `PUBLIC_API_BASE` to
+`TIMES_UP_API_BASE` in `deploy/.env`; the legacy key remains accepted during the
+transition and its `/rss-reader/api` path is rewritten. The API accepts legacy
+`RSS_*` environment names and the legacy JWT audience during the transition.
+Existing body and excerpt objects stay under their stored `rss/` keys; new
+objects use `times-up/`. Browser settings, auth state, and IndexedDB rows migrate
+on first launch.
 
 ## Postgres major-version upgrades
 

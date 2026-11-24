@@ -167,8 +167,8 @@ class BuildNodeTaskGraphTest(unittest.TestCase):
     def test_api_only_selection_skips_npm_install(self) -> None:
         # The positive assertion first: it fails if the task-list format ever
         # changes, which would make the negative assertion below vacuous.
-        plan = dry_run("buildAll", "-Papps=rss-api")
-        self.assertIn(":rss-api:bootJar", plan)
+        plan = dry_run("buildAll", "-Papps=times-up-api")
+        self.assertIn(":times-up-api:bootJar", plan)
         self.assertNotIn(":npmInstall", plan)
 
     def test_javascript_selection_still_installs(self) -> None:

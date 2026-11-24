@@ -2,7 +2,7 @@
 
 Smart uses for decision models in this monorepo. One rule first.
 
-## Ground rules (copy from `rss-api`)
+## Ground rules (copy from `times-up-api`)
 
 - Key arrives only via `TYPESAFE_API_KEY` in untracked `deploy/.env`.
 - Key never leaves the Kotlin API. No browser calls. Lit stays on `console`.
@@ -13,7 +13,7 @@ Smart uses for decision models in this monorepo. One rule first.
 
 ## Phase 1 — done now
 
-### RSS spam screen (`apps/rss/api`)
+### RSS spam screen (`apps/times-up/api`)
 
 `DecisionScoreProvider` asks a fourth question per candidate: `_spam` noul.
 `worthy` is scaled by `(1 - spam)`. Spam missing or malformed defaults to `0`
@@ -22,7 +22,7 @@ so old batches still score. Batch cap drops from `20` to `16` because
 
 ### Radio safety (`apps/radio-station/api`)
 
-New `radioapi.ai` package mirrors `rssapi.ai` without any database:
+New `radioapi.ai` package mirrors `timesupapi.ai` without any database:
 `AiConfig`, `AiBackend`, `DecisionBackend`. The backend sends the Bearer key
 only to `https://` hosts (or local loopback proxies) and refuses anything
 else. New `radioapi.safety`

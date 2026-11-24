@@ -66,8 +66,8 @@ jobs:
                       dirs: apps/baseball apps/basketball apps/football
                     - name: calendar-clipstack-lemmy
                       dirs: apps/calendar-sync apps/clipstack apps/lemmy-vertical-scroll
-                    - name: radio-coldwater-rss
-                      dirs: apps/radio-station apps/coldwater apps/rss/app
+                    - name: radio-coldwater-times-up
+                      dirs: apps/radio-station apps/coldwater apps/times-up/app
                     - name: stock-fitness-user
                       dirs: apps/stock-game/app apps/fitness/app apps/user/app
         steps:
@@ -309,7 +309,7 @@ jobs:
                   TOOL_DIR: ${{ runner.temp }}/ci-tools
               run: echo "$TOOL_DIR" >> "$GITHUB_PATH"
 
-            # The two .ps1 files under apps/rss/app/scripts make verify.py generate this
+            # The two .ps1 files under apps/times-up/app/scripts make verify.py generate this
             # check, so the module has to be present or --strict turns into a failure.
             - name: Cache PSScriptAnalyzer
               uses: actions/cache@v4

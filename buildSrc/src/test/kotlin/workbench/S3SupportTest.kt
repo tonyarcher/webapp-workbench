@@ -9,9 +9,9 @@ import kotlin.test.assertTrue
 class S3SupportTest {
     /** A reader-shaped descriptor for the block-rendering tests. */
     private fun readerApp(apiBase: String): S3App = S3App(
-        id = "rss-reader",
-        basePath = "/rss-reader/",
-        distDir = "apps/rss/app/dist",
+        id = "times-up",
+        basePath = "/times-up/",
+        distDir = "apps/times-up/app/dist",
         apiBase = apiBase,
         manifest = "manifest.webmanifest",
         swJs = true,
@@ -20,8 +20,8 @@ class S3SupportTest {
 
     @Test
     fun s3KeyPrefixJoinsPrefixAndBasePath() {
-        assertEquals("apps/rss-reader", s3KeyPrefix("apps", "/rss-reader/"))
-        assertEquals("rss-reader", s3KeyPrefix("", "/rss-reader/"))
+        assertEquals("apps/times-up", s3KeyPrefix("apps", "/times-up/"))
+        assertEquals("times-up", s3KeyPrefix("", "/times-up/"))
         assertEquals("apps", s3KeyPrefix("apps", ""))
         assertEquals("", s3KeyPrefix("", ""))
     }
@@ -59,12 +59,12 @@ class S3SupportTest {
     @Test
     fun s3SyncCommandOmitsEndpointWhenBlank() {
         assertEquals(
-            listOf("aws", "s3", "sync", "dist", "s3://bucket/apps/rss-reader", "--delete"),
-            s3SyncCommand("bucket", "apps/rss-reader", "dist"),
+            listOf("aws", "s3", "sync", "dist", "s3://bucket/apps/times-up", "--delete"),
+            s3SyncCommand("bucket", "apps/times-up", "dist"),
         )
         assertEquals(
-            listOf("aws", "s3", "sync", "dist", "s3://bucket/apps/rss-reader", "--delete"),
-            s3SyncCommand("bucket", "apps/rss-reader", "dist", ""),
+            listOf("aws", "s3", "sync", "dist", "s3://bucket/apps/times-up", "--delete"),
+            s3SyncCommand("bucket", "apps/times-up", "dist", ""),
         )
     }
 
@@ -76,19 +76,19 @@ class S3SupportTest {
                 "s3",
                 "sync",
                 "dist",
-                "s3://bucket/apps/rss-reader",
+                "s3://bucket/apps/times-up",
                 "--delete",
                 "--endpoint-url",
                 "http://seaweedfs:8333",
             ),
-            s3SyncCommand("bucket", "apps/rss-reader", "dist", "http://seaweedfs:8333"),
+            s3SyncCommand("bucket", "apps/times-up", "dist", "http://seaweedfs:8333"),
         )
     }
 
     @Test
     fun s3StorePathJoinsBucketAndKey() {
-        assertEquals("bucket/apps/rss-reader", s3StorePath("bucket", "apps", "/rss-reader/"))
-        assertEquals("rss-reader", s3StorePath("", "", "/rss-reader/"))
+        assertEquals("bucket/apps/times-up", s3StorePath("bucket", "apps", "/times-up/"))
+        assertEquals("times-up", s3StorePath("", "", "/times-up/"))
     }
 
     @Test
@@ -100,26 +100,26 @@ class S3SupportTest {
     fun assetServerBlockServesTheStoreUnderTheAppBasePath() {
         val env = mapOf(
             "ASSETS_HOST" to "assets.example.com",
-            "PUBLIC_API_BASE" to "https://api.example.com",
+            "TIMES_UP_API_BASE" to "https://api.example.com",
             "S3_BUCKET" to "workbench-assets",
             "S3_PREFIX" to "apps",
         )
         val block = assetServerBlock(listOf(readerApp("https://api.example.com")), env, false, false)
         assertTrue(block.contains("server_name assets.example.com;"), block)
         // Static files, including the PWA files, come from the store.
-        assertTrue(block.contains("location ^~ /rss-reader/assets/"), block)
-        assertTrue(block.contains("location = /rss-reader/sw.js"), block)
-        assertTrue(block.contains("location = /rss-reader/manifest.webmanifest"), block)
-        assertTrue(block.contains("rewrite ^/rss-reader/(.*)\$ /workbench-assets/apps/rss-reader/\$1 break;"), block)
+        assertTrue(block.contains("location ^~ /times-up/assets/"), block)
+        assertTrue(block.contains("location = /times-up/sw.js"), block)
+        assertTrue(block.contains("location = /times-up/manifest.webmanifest"), block)
+        assertTrue(block.contains("rewrite ^/times-up/(.*)\$ /workbench-assets/apps/times-up/\$1 break;"), block)
         assertTrue(block.contains("set \$upstream_store http://seaweedfs:8333;"), block)
         assertTrue(block.contains("proxy_pass \$upstream_store;"), block)
         // The document is Vite's static index.html from the store.
-        assertTrue(block.contains("location = /rss-reader/"), block)
-        assertTrue(block.contains("rewrite ^ /workbench-assets/apps/rss-reader/index.html break;"), block)
+        assertTrue(block.contains("location = /times-up/"), block)
+        assertTrue(block.contains("rewrite ^ /workbench-assets/apps/times-up/index.html break;"), block)
         assertTrue(block.contains("Cache-Control \"public, max-age=31536000, immutable\";"), block)
         assertTrue(block.contains("Cache-Control \"no-cache\";"), block)
         assertTrue(block.contains("script-src 'self';"), block)
-        // rss-reader binds Lit style attributes in its virtualized list, so
+        // times-up binds Lit style attributes in its virtualized list, so
         // the style-src default carries 'unsafe-inline' (see CspPolicy.Emit).
         assertTrue(block.contains("style-src 'self' 'unsafe-inline';"), block)
         assertTrue(block.contains("connect-src https://api.example.com"), block)
@@ -210,7 +210,7 @@ class S3SupportTest {
     fun assetServerBlockConnectsReaderToApiSelfAndProxies() {
         val env = mapOf(
             "ASSETS_HOST" to "assets.example.com",
-            "PUBLIC_API_BASE" to "https://api.example.com",
+            "TIMES_UP_API_BASE" to "https://api.example.com",
             "S3_BUCKET" to "workbench-assets",
         )
         val block = assetServerBlock(listOf(readerApp("https://api.example.com")), env, false, false)
@@ -275,12 +275,47 @@ class S3SupportTest {
 
     @Test
     fun apiBaseEnvKeyMapsEachApiBackedApp() {
-        assertEquals("PUBLIC_API_BASE", apiBaseEnvKey("rss-reader"))
+        assertEquals("TIMES_UP_API_BASE", apiBaseEnvKey("times-up"))
         assertEquals("STOCK_GAME_API_BASE", apiBaseEnvKey("stock-game"))
         assertEquals("FITNESS_API_BASE", apiBaseEnvKey("fitness"))
         assertEquals("RADIO_API_BASE", apiBaseEnvKey("radio-station"))
         assertNull(apiBaseEnvKey("baseball"))
         assertNull(apiBaseEnvKey("lemmy-vertical-scroll"))
+    }
+
+    @Test
+    fun timesUpApiBaseFallsBackToLegacyPublicBaseAndRewritesPath() {
+        assertEquals(
+            "https://api.example.com/times-up/api",
+            apiBaseFromEnv(
+                "times-up",
+                mapOf("PUBLIC_API_BASE" to "https://api.example.com/rss-reader/api"),
+            ),
+        )
+    }
+
+    @Test
+    fun timesUpApiBasePrefersTheNewKeyEvenWhenEmpty() {
+        assertEquals(
+            "https://api.example.com/times-up/api",
+            apiBaseFromEnv(
+                "times-up",
+                mapOf(
+                    "TIMES_UP_API_BASE" to "https://api.example.com/times-up/api",
+                    "PUBLIC_API_BASE" to "https://old.example/rss-reader/api",
+                ),
+            ),
+        )
+        assertEquals(
+            "",
+            apiBaseFromEnv(
+                "times-up",
+                mapOf(
+                    "TIMES_UP_API_BASE" to "",
+                    "PUBLIC_API_BASE" to "https://old.example/rss-reader/api",
+                ),
+            ),
+        )
     }
 
     @Test
@@ -335,8 +370,8 @@ class S3SupportTest {
     @Test
     fun s3CopyCommandUploadsTheDocumentOverIndexHtml() {
         assertEquals(
-            listOf("aws", "s3", "cp", "rendered.html", "s3://bucket/apps/rss-reader/index.html"),
-            s3CopyCommand("bucket", "apps/rss-reader", "rendered.html"),
+            listOf("aws", "s3", "cp", "rendered.html", "s3://bucket/apps/times-up/index.html"),
+            s3CopyCommand("bucket", "apps/times-up", "rendered.html"),
         )
         assertEquals(
             listOf(
@@ -344,19 +379,19 @@ class S3SupportTest {
                 "s3",
                 "cp",
                 "rendered.html",
-                "s3://bucket/apps/rss-reader/index.html",
+                "s3://bucket/apps/times-up/index.html",
                 "--endpoint-url",
                 "http://seaweedfs:8333",
             ),
-            s3CopyCommand("bucket", "apps/rss-reader", "rendered.html", "http://seaweedfs:8333"),
+            s3CopyCommand("bucket", "apps/times-up", "rendered.html", "http://seaweedfs:8333"),
         )
     }
 
     @Test
     fun mcCopyCommandUploadsTheDocumentOverIndexHtml() {
         assertEquals(
-            listOf("mc", "cp", "rendered.html", "workbench/bucket/apps/rss-reader/index.html"),
-            mcCopyCommand("workbench", "bucket", "apps/rss-reader", "rendered.html"),
+            listOf("mc", "cp", "rendered.html", "workbench/bucket/apps/times-up/index.html"),
+            mcCopyCommand("workbench", "bucket", "apps/times-up", "rendered.html"),
         )
     }
 
@@ -396,8 +431,8 @@ class S3SupportTest {
     @Test
     fun mcMirrorCommandMirrorsWithDelete() {
         assertEquals(
-            listOf("mc", "mirror", "--overwrite", "--remove", "dist", "workbench/bucket/apps/rss-reader"),
-            mcMirrorCommand("workbench", "bucket", "apps/rss-reader", "dist"),
+            listOf("mc", "mirror", "--overwrite", "--remove", "dist", "workbench/bucket/apps/times-up"),
+            mcMirrorCommand("workbench", "bucket", "apps/times-up", "dist"),
         )
     }
 

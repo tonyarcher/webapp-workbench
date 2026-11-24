@@ -9,7 +9,7 @@ import org.gradle.api.Project
  * for the script's implicit receiver so call sites stay identical.
  */
 
-/** npm workspace -> repo-relative directory, for `-Papps=apps/rss` folder forms. */
+/** npm workspace -> repo-relative directory, for `-Papps=apps/times-up` folder forms. */
 @Suppress("UNCHECKED_CAST")
 fun packageJson(path: java.io.File): Map<String, Any?>? = groovy.json.JsonSlurper().parse(path) as? Map<String, Any?>
 
@@ -76,7 +76,7 @@ fun Project.resolveAppName(name: String): List<String> {
     // Like the old normalize_app_name: lowercase, forward slashes, no trailing /.
     val key = name.trim().lowercase().replace('\\', '/').trimEnd('/')
     // Folder forms expand like expand_folders: every alias or workspace dir
-    // under the prefix counts, so apps/rss selects both halves.
+    // under the prefix counts, so apps/times-up selects both halves.
     val byFolder = if ('/' in key) folderMatches(key) else emptyList()
     val exact = exactAppMatch(key)
     val candidates = if (byFolder.size > 1) byFolder else listOfNotNull(exact ?: byFolder.singleOrNull())

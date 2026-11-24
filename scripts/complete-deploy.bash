@@ -31,7 +31,7 @@ EOF
 _webapp_workbench_apps() {
     # App names and aliases from apps.json (the Gradle app catalog).
     _webapp_workbench_catalog
-    # Folder shortcuts: the first two path segments of every alias (apps/rss, ...).
+    # Folder shortcuts: the first two path segments of every alias (apps/times-up, ...).
     _webapp_workbench_catalog | awk -F/ 'NF>1 {print $1"/"$2}'
 }
 

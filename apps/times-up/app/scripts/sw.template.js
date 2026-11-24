@@ -1,0 +1,89 @@
+// Service worker template — do not edit dist/sw.js (it's generated).
+// `npm run build` rewrites dist/sw.js via scripts/write-sw.mjs, embedding the
+// hashed bundle list (__ASSETS__) and a content-derived cache name
+// (__CACHE_HASH__) so updated builds always get fresh caches without manual
+// version bumps.
+//
+// Strategy: precache every hashed build asset and the PWA files on install
+// (fresh installs work fully offline on the first relaunch), cache-first for
+// same-origin static assets, network-first for navigations with an offline
+// fallback to the cached index.html. The document itself is NOT precached:
+// it carries the runtime config block (the API origin) the publish renders
+// per environment, so it must never be served from a stale precached copy.
+// A successful navigation caches the document only as the offline fallback.
+const ASSETS = __ASSETS__;
+const CACHE = 'times-up-' + __CACHE_HASH__;
+const CACHE_PREFIX = 'times-up-';
+const LEGACY_CACHE_PREFIX = 'rss-reader-';
+// Scope-relative shell URL so the offline fallback matches the navigation URL
+// both at the app root and under a subpath like /times-up/.
+const INDEX = new URL('./index.html', self.registration.scope).href;
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open(CACHE).then(async (cache) => {
+            await Promise.all(ASSETS.map((url) => cache.add(url).catch(() => {})));
+        }),
+    );
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches
+            .keys()
+            .then((keys) =>
+                Promise.all(
+                    keys
+                        .filter(
+                            (key) =>
+                                (key.startsWith(CACHE_PREFIX) || key.startsWith(LEGACY_CACHE_PREFIX)) && key !== CACHE,
+                        )
+                        .map((key) => caches.delete(key)),
+                ),
+            )
+            .then(() => self.clients.claim()),
+    );
+});
+
+self.addEventListener('fetch', (event) => {
+    const { request } = event;
+    if (request.method !== 'GET') return;
+    if (new URL(request.url).origin !== self.location.origin) return;
+
+    const pathname = new URL(request.url).pathname;
+    if (pathname.startsWith('/api') || pathname.startsWith('/times-up/api')) {
+        event.respondWith(fetch(request));
+        return;
+    }
+
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            fetch(request)
+                .then((response) => {
+                    // Only cache successful navigations so a server error can't
+                    // overwrite the offline fallback.
+                    if (response.ok) {
+                        const copy = response.clone();
+                        void caches.open(CACHE).then((cache) => cache.put(INDEX, copy));
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(INDEX)),
+        );
+        return;
+    }
+
+    event.respondWith(
+        caches.match(request).then((hit) => {
+            if (hit) return hit;
+            return fetch(request).then((response) => {
+                if (response.ok && response.type === 'basic') {
+                    const copy = response.clone();
+                    void caches.open(CACHE).then((cache) => cache.put(request, copy));
+                }
+                return response;
+            });
+        }),
+    );
+});

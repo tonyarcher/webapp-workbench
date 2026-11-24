@@ -1,0 +1,134 @@
+package timesupapi.frontpage
+import com.fasterxml.jackson.databind.JsonNode
+import timesupapi.ai.DecisionBackend
+import timesupapi.ai.jsonBody
+import timesupapi.articles.ArticleListRow
+import timesupapi.editions.affinitySum
+const val DECISION_BATCH_MAX: Int = 16
+const val DECISION_TOP_WORDS: Int = 10
+const val DECISION_MAX_QUESTIONS: Int = 64
+
+/** One front-page candidate packaged for a decision-model batch call, with its signal input for fallback. */
+data class DecisionCandidate(
+    val id: String,
+    val title: String,
+    val feed: String,
+    val hot: Double,
+    val input: SignalInput,
+)
+
+private val INTEREST_LEVELS = listOf("Not interesting to this reader", "Worth a skim", "Must read")
+
+private val TOPIC_CHOICES = listOf("news", "tech", "sports", "culture", "science", "business", "other")
+
+/**
+ * Decision-model-backed scorer. Single-shot [score] stays on signals (a
+ * decision model cannot rank one article in isolation); per-serve ranking
+ * goes through [scoreBatch], which asks one narrow judgment per question over
+ * shared state and maps answers back to 0..1 scores. Each candidate asks
+ * worthy, interest, spam, and topic. Spam scales worthy down and defaults to
+ * zero when missing. Thresholds and caps live here in code. A worthy or
+ * interest answer that comes back missing or malformed falls back
+ * per-article to signals; a list-level failure throws and the caller falls
+ * back for the whole batch. Never logs titles or affinity contents.
+ */
+class DecisionScoreProvider(
+    private val backend: DecisionBackend,
+    private val signals: SignalScoreProvider = SignalScoreProvider(),
+) : ScoreProvider {
+    override fun score(input: SignalInput): SignalScores = signals.score(input)
+
+    fun scoreBatch(
+        topWords: List<String>,
+        affinity: Map<String, Float>,
+        candidates: List<DecisionCandidate>,
+    ): Map<String, SignalScores> {
+        val batch = candidates.take(minOf(DECISION_BATCH_MAX, DECISION_MAX_QUESTIONS / 4))
+        if (batch.isEmpty()) return emptyMap()
+        val answers = backend.score(stateJson(topWords, affinity, batch), questionsFor(batch))
+        return batch.mapNotNull { candidate ->
+            scoresFor(candidate, answers)?.let { candidate.id to it }
+        }.toMap()
+    }
+
+    private fun scoresFor(candidate: DecisionCandidate, answers: JsonNode): SignalScores? {
+        val fallback = signals.score(candidate.input)
+        val worthy = answers.path(candidate.id + "_worthy").path("noul").asDouble(Double.NaN)
+        val interest = answers.path(candidate.id + "_interest").path("score").asDouble(Double.NaN)
+        if (!worthy.isFinite() || !interest.isFinite()) return null
+        val spam = answers.path(candidate.id + "_spam").path("noul").asDouble(0.0)
+        val spamSafe = if (spam.isFinite()) spam.coerceIn(0.0, 1.0) else 0.0
+        val topic = answers.path(candidate.id + "_topic").path("choice").asText().takeIf { it in TOPIC_CHOICES }
+        return SignalScores(
+            worthy = (worthy * (1.0 - spamSafe)).coerceIn(0.0, 1.0),
+            interest = (interest / 2.0).coerceIn(0.0, 1.0),
+            popularityOutlook = fallback.popularityOutlook,
+            readability = fallback.readability,
+            topic = topic,
+        )
+    }
+
+    private fun stateJson(
+        topWords: List<String>,
+        affinity: Map<String, Float>,
+        candidates: List<DecisionCandidate>,
+    ): String = jsonBody(
+        mapOf(
+            "reader" to mapOf("topWords" to topWords, "affinity" to affinity),
+            "candidates" to candidates.map {
+                mapOf("id" to it.id, "title" to it.title, "feed" to it.feed, "hot" to it.hot)
+            },
+        ),
+    )
+
+    private fun questionsFor(candidates: List<DecisionCandidate>): Map<String, Any> {
+        val out = LinkedHashMap<String, Any>(candidates.size * 4)
+        candidates.forEachIndexed { index, candidate ->
+            out[candidate.id + "_worthy"] = mapOf(
+                "type" to "noul",
+                "instructions" to "Is `candidates[$index].title` front-page worthy for this reader?",
+            )
+            out[candidate.id + "_interest"] = mapOf(
+                "type" to "score",
+                "instructions" to "How interesting is `candidates[$index].title` to this reader?",
+                "criteria" to INTEREST_LEVELS,
+            )
+            out[candidate.id + "_spam"] = mapOf(
+                "type" to "noul",
+                "instructions" to "Is `candidates[$index].title` spam, an ad, or boilerplate?",
+            )
+            out[candidate.id + "_topic"] = mapOf(
+                "type" to "choice",
+                "instructions" to "Which topic best fits `candidates[$index].title`?",
+                "criteria" to TOPIC_CHOICES,
+            )
+        }
+        return out
+    }
+}
+
+/** Reader-affinity total for one article: feed plus domain plus author components, floored at zero. */
+internal fun affinityOf(article: ArticleListRow, affinityMap: Map<String, Float>): Double =
+    affinitySum(article.feedId, article.domain, article.author, affinityMap)
+
+/** Raw signal inputs for one article, shared by the signal path and decision fallback. */
+internal fun signalInputOf(article: ArticleListRow, affinityMap: Map<String, Float>): SignalInput = SignalInput(
+    hot = article.hot.toDouble(),
+    popularity = article.popularity.toDouble(),
+    engagement = article.engagement.toDouble(),
+    affinity = affinityOf(article, affinityMap),
+    wordCount = wordCountOf(article),
+)
+
+/** Batch candidate for one article, carrying its signal input for per-article fallback. */
+internal fun decisionCandidateOf(article: ArticleListRow, input: SignalInput): DecisionCandidate = DecisionCandidate(
+    id = article.id,
+    title = article.title,
+    feed = article.feedId.toString(),
+    hot = article.hot.toDouble(),
+    input = input,
+)
+
+/** Top affinity keys by value, giving the decision model a compact picture of reader taste. */
+internal fun topWordsOf(affinityMap: Map<String, Float>): List<String> =
+    affinityMap.entries.sortedByDescending { it.value }.take(DECISION_TOP_WORDS).map { it.key }

@@ -174,18 +174,18 @@ val testPostgresName = "user-api-test-postgres"
 val testPostgresHost = providers.gradleProperty("testPostgresHost").getOrElse("127.0.0.1")
 
 /**
- * `-Pintegration` runs the Postgres slice test; without it the test is excluded
- * and `check` needs no Docker daemon.
+ * `-Pintegration` runs the Postgres slice and migration tests; without it they
+ * are excluded and `check` needs no Docker daemon.
  *
- * The exclusion is deliberate rather than a conditional skip inside the test. A
+ * The exclusion is deliberate rather than a conditional skip inside the tests. A
  * test that quietly skips when its database is missing reads as coverage and
- * protects nothing, which is the reason the slice insists on a real server. So
- * the default run omits the whole class, and running it without the flag still
+ * protects nothing, which is the reason these tests insist on a real server. So
+ * the default run omits the classes, and running them without the flag still
  * fails loudly rather than passing.
  *
- * CI passes the flag. It is the only place the upsert is exercised against
- * Postgres, and a default that quietly dropped it would be a reduction in
- * verification dressed as a speed-up.
+ * CI passes the flag. It is the only place the upsert and OAuth client migration
+ * are exercised against Postgres, and a default that quietly dropped them would
+ * be a reduction in verification dressed as a speed-up.
  *
  * A bare `-Pintegration` supplies an empty string, and `"".toBoolean()` is
  * false, so presence is read as true. Mapping the value alone made the flag a
@@ -268,6 +268,7 @@ tasks.withType<Test> {
         systemProperty("userapi.test.db.password", "verify")
     } else {
         exclude("**/RateLimitStoreTest.class")
+        exclude("**/TimesUpClientMigrationPostgresTest.class")
     }
 }
 

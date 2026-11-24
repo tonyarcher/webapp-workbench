@@ -50,7 +50,7 @@ DATABASES_SQL = (
 ROUTES = [
     "/user-api/healthz",
     "/auth/",
-    "/rss-reader/",
+    "/times-up/",
     "/fitness/",
     "/stock-game/",
     "/radio-station/",
@@ -66,7 +66,7 @@ ROUTES = [
 
 APIS = [
     "user-api",
-    "rss-api",
+    "times-up-api",
     "fitness-api",
     "stock-game-api",
     "radio-api",

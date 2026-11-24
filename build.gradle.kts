@@ -12,9 +12,9 @@
  * Limit either half to named apps with -Papps (ids, aliases, or folders).
  * An app name selects that app's own service; folder forms select both halves:
  *
- *   gradle buildNode -Papps=rss            # the reader UI
- *   gradle buildJvm -Papps=apps/rss        # the reader's API half
- *   gradle buildJvm -Papps=rss-api         # the API alone
+ *   gradle buildNode -Papps=times-up     # the reader UI
+ *   gradle buildJvm -Papps=apps/times-up # the reader's API half
+ *   gradle buildJvm -Papps=times-up-api  # the API alone
  *
  * The Gradle wrapper is committed so a fresh clone and CI use the same Gradle
  * version. `gradle` from PATH also works and is what the Python entry points
@@ -150,7 +150,7 @@ tasks.register("buildNode") {
     group = "build"
     description = "Build the selected JS workspaces (per-app APP_BASE_PATH)"
     // Every workspace task declares npmInstall, so an empty nodeChains (an
-    // API-only selection like -Papps=rss-api) reaches no npm at all rather than
+    // API-only selection like -Papps=times-up-api) reaches no npm at all rather than
     // running the six package `prepare` builds for artifacts no service ships.
     dependsOn(nodeChains)
 }
@@ -193,8 +193,8 @@ tasks.register("usage") {
               gradle deploy      build, render gateway, mint certs, compose up
 
             Limit either half to one app with -Papps (ids, aliases, or folders):
-              gradle buildAll -Papps=rss
-              gradle buildJvm -Papps=apps/rss
+              gradle buildAll -Papps=times-up
+              gradle buildJvm -Papps=apps/times-up
 
             ${deployHelp()}
             """.trimIndent(),
@@ -207,7 +207,7 @@ tasks.register("usage") {
 // Python is not involved: the gateway config renders here and certs are minted
 // here, so build.py / deploy.py are thin `./gradlew` calls.
 //
-//   gradle deploy -Pargs="rss"        rebuild one service
+//   gradle deploy -Pargs="times-up"        rebuild one service
 //   gradle deploy -Pargs="remote"     force the tunneled remote engine
 //   gradle deploy -Pargs="down"       stop the stack
 //   gradle deploy -Pargs="status"     compose ps
@@ -226,7 +226,7 @@ tasks.register("deploy") {
     }
     deployValidate()
     if (!skipBuild) {
-        // Same app selection as -Papps (gradle deploy -Pargs=rss -Papps=rss).
+        // Same app selection as -Papps (gradle deploy -Pargs=times-up -Papps=times-up).
         dependsOn("buildAll")
     }
     doLast {

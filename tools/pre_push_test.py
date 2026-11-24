@@ -14,12 +14,14 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class WorkspaceOfTest(unittest.TestCase):
-    def test_rss_app_file_maps_to_workspace_name(self) -> None:
-        found = workspace_of("apps/rss/app/src/web-components/app-shell/app-shell.ts")
+    def test_times_up_app_file_maps_to_workspace_name(self) -> None:
+        found = workspace_of(
+            "apps/times-up/app/src/web-components/app-shell/app-shell.ts"
+        )
         assert found is not None
         name, directory = found
-        self.assertEqual(name, "rss-reader")
-        self.assertEqual(directory, ROOT / "apps" / "rss" / "app")
+        self.assertEqual(name, "times-up")
+        self.assertEqual(directory, ROOT / "apps" / "times-up" / "app")
 
     def test_tool_file_maps_to_no_workspace(self) -> None:
         self.assertIsNone(workspace_of("tools/pre_push.py"))

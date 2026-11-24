@@ -1,0 +1,48 @@
+import './services/storage-migration';
+import './web-components/shared-view/shared-view';
+import './web-components/app-shell/app-shell';
+import './web-components/source-list/source-list';
+import './web-components/article-list/article-list';
+import './web-components/article-view/article-view';
+import './web-components/brief-view/brief-view';
+import './web-components/front-page/front-page';
+import './web-components/today-view/today-view';
+import './web-components/alerts-view/alerts-view';
+import './web-components/health-view/health-view';
+import './web-components/search-view/search-view';
+import './web-components/today-menu/today-menu';
+import './web-components/settings-view/settings-view';
+import './web-components/feed-menu/feed-menu';
+import './web-components/folder-menu/folder-menu';
+import './styles/global.css';
+import { initTheme } from './theme';
+import { applyReaderMode, loadReaderMode } from './services/reader-mode';
+import { finishLoginFromCallback } from './services/auth';
+import { parseAppConfig, setAppConfig } from './services/config';
+import { recomputeHotIfNeeded } from './db/db-query';
+
+// The runtime config must be in place before anything resolves an API or
+// identity URL — including the OAuth callback below. The entry point owns this
+// DOM read so `src/services/` stays free of DOM.
+setAppConfig(parseAppConfig(document.getElementById('app-config')?.textContent ?? ''));
+
+// An OAuth callback (?code&state) must become tokens before anything reads
+// auth state, so the exchange runs before the shell boots. The shell already
+// upgraded during imports, so both outcomes are delivered as events it
+// listens for: success re-reads the session, failure shows the reason.
+const loggedIn = await finishLoginFromCallback().catch((err: unknown) => {
+    const message = err instanceof Error && err.message ? err.message : 'Sign-in failed';
+    window.dispatchEvent(new CustomEvent('times-up-auth-error', { detail: message }));
+    return false;
+});
+if (loggedIn) window.dispatchEvent(new CustomEvent('times-up-auth-changed'));
+
+initTheme();
+applyReaderMode(loadReaderMode());
+void recomputeHotIfNeeded();
+
+// PWA install + offline support; registration in dev would fight HMR, so only
+// the production bundle gets the service worker.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+}

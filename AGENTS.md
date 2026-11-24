@@ -61,19 +61,19 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 
 ## Commands (run from the repo root)
 
-| Task                          | Command                                                                                                                                                                                                                            |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Install all workspaces        | `npm install`                                                                                                                                                                                                                      |
-| Build all (JS)                | `npm run build` (delegates `--workspaces --if-present`; the Kotlin APIs build via Gradle, not npm)                                                                                                                                 |
-| Test all                      | `npm test`                                                                                                                                                                                                                         |
-| Typecheck all                 | `npm run typecheck`                                                                                                                                                                                                                |
-| Lint all                      | `npm run lint`                                                                                                                                                                                                                     |
-| Dev server (one app)          | `npm run dev:<app>` for any app with a UI or an API (for example `dev:baseball`, `dev:rss-reader`, `dev:rss-api`). The full set is the `dev:*` scripts in the root `package.json`.                                                 |
-| Build (entry point)           | `python build.py [app...]` (or `python3`); calls `./gradlew buildAll`                                                                                                                                                              |
-| Build everything, one command | `./gradlew buildAll` (root; JS workspaces + all Kotlin APIs). `./gradlew buildJvm` = APIs only, `./gradlew buildNode` = JS only, `./gradlew checkAll` = API tests/detekt/Jacoco. Add `-Papps=rss` (or `apps/rss`) to build one app |
-| Deploy compose stack          | `python deploy.py [options] [app...]` (or `python3`); calls `./gradlew deploy`, which builds, renders the gateway, mints certs, then runs compose. Tab completion: `source scripts/complete-deploy.bash`.                          |
-| Format everything             | `npm run format` (prettier --write). Check only: `npm run format:check`.                                                                                                                                                           |
-| Verify format + lint          | `python tools/verify.py` (check mode) or `python tools/verify.py --fix` (apply the formatters). It owns the tool list.                                                                                                             |
+| Task                          | Command                                                                                                                                                                                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install all workspaces        | `npm install`                                                                                                                                                                                                                                |
+| Build all (JS)                | `npm run build` (delegates `--workspaces --if-present`; the Kotlin APIs build via Gradle, not npm)                                                                                                                                           |
+| Test all                      | `npm test`                                                                                                                                                                                                                                   |
+| Typecheck all                 | `npm run typecheck`                                                                                                                                                                                                                          |
+| Lint all                      | `npm run lint`                                                                                                                                                                                                                               |
+| Dev server (one app)          | `npm run dev:<app>` for any app with a UI or an API (for example `dev:baseball`, `dev:times-up`, `dev:times-up-api`). The full set is the `dev:*` scripts in the root `package.json`.                                                        |
+| Build (entry point)           | `python build.py [app...]` (or `python3`); calls `./gradlew buildAll`                                                                                                                                                                        |
+| Build everything, one command | `./gradlew buildAll` (root; JS workspaces + all Kotlin APIs). `./gradlew buildJvm` = APIs only, `./gradlew buildNode` = JS only, `./gradlew checkAll` = API tests/detekt/Jacoco. Add `-Papps=times-up` (or `apps/times-up`) to build one app |
+| Deploy compose stack          | `python deploy.py [options] [app...]` (or `python3`); calls `./gradlew deploy`, which builds, renders the gateway, mints certs, then runs compose. Tab completion: `source scripts/complete-deploy.bash`.                                    |
+| Format everything             | `npm run format` (prettier --write). Check only: `npm run format:check`.                                                                                                                                                                     |
+| Verify format + lint          | `python tools/verify.py` (check mode) or `python tools/verify.py --fix` (apply the formatters). It owns the tool list.                                                                                                                       |
 
 Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm test`).
 
@@ -82,7 +82,7 @@ Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm tes
 CI use the same Gradle version; `gradlew` carries mode 100755 in git so it is executable
 on checkout. The entry points still fall back to `gradle` on PATH when it is absent.
 
-An API-only `-Papps` (`rss-api`) runs no `npm install` and no JS build. `buildNode` reaches
+An API-only `-Papps` (`times-up-api`) runs no `npm install` and no JS build. `buildNode` reaches
 `npmInstall` only through a real per-workspace task, so a selection with no JS workspace
 never pays for the package `prepare` builds. `tools/gradle_test.py` asserts both directions and
 skips when Gradle is absent.
@@ -308,7 +308,7 @@ or a shared logging workspace until a second language needs the same code.
 ### PWA
 
 - Manifest + icons in `public/`. Paths are base-relative (`%BASE_URL%` / `import.meta.env.BASE_URL`) so subpath deploys work.
-- Never edit `dist/sw.js`. rss-reader generates it from `scripts/sw.template.js` via `write-sw.mjs`; most others stamp a cache version with `stamp-sw.mjs`.
+- Never edit `dist/sw.js`. times-up generates it from `scripts/sw.template.js` via `write-sw.mjs`; most others stamp a cache version with `stamp-sw.mjs`.
 
 ## Kotlin
 

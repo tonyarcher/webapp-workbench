@@ -1,0 +1,10 @@
+{
+    "name": "times-up-api",
+    "private": true,
+    "version": "0.1.0",
+    "description": "Times Up reader microservice (Kotlin / Spring Data JPA).",
+    "scripts": {
+        "dev": "gradle bootRun",
+        "test:coverage": "gradle test jacocoTestReport"
+    }
+}

@@ -1,0 +1,224 @@
+package timesupapi.articles
+import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.whenever
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
+import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
+import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.security.oauth2.jwt.JwtDecoder
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.get
+import timesupapi.feeds.UserEntity
+import timesupapi.feeds.UserRepo
+import timesupapi.platform.IdentityUser
+import timesupapi.platform.RequestIdFilter
+import timesupapi.platform.SecurityConfig
+import java.util.UUID
+import kotlin.test.assertEquals
+
+private fun listJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
+    .header("alg", "RS256")
+    .claim("sub", sub)
+    .claim("preferred_username", sub)
+    .claim("aud", listOf("times-up"))
+    .build()
+
+@WebMvcTest(ArticleListController::class)
+@Import(SecurityConfig::class, RequestIdFilter::class, IdentityUser::class)
+class ArticleListControllerTest {
+    @Autowired
+    lateinit var mvc: MockMvc
+
+    @MockitoBean
+    lateinit var decoder: JwtDecoder
+
+    @MockitoBean
+    lateinit var users: UserRepo
+
+    @MockitoBean
+    lateinit var listQuery: ArticleListQuery
+
+    @MockitoBean
+    lateinit var states: ArticleStateRepo
+
+    private fun auth(uid: UUID) {
+        whenever(decoder.decode(any())).thenReturn(listJwt("u1"))
+        whenever(users.findBySubject("u1")).thenReturn(UserEntity(id = uid, subject = "u1"))
+    }
+
+    private fun stubEmpty() {
+        whenever(
+            listQuery.findAll(
+                any<org.springframework.data.jpa.domain.Specification<ArticleEntity>>(),
+                any<org.springframework.data.domain.Pageable>(),
+            ),
+        ).thenReturn(emptyList())
+        whenever(
+            states.findByUserIdAndArticleIdIn(
+                any<UUID>(),
+                any<List<String>>(),
+            ),
+        ).thenReturn(emptyList())
+    }
+
+    @Test
+    fun listOkDefaults() {
+        val uid = UUID.randomUUID()
+        auth(uid)
+        stubEmpty()
+        val res = mvc.get("/articles") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andReturn()
+        assertEquals(200, res.response.status)
+    }
+
+    @Test
+    fun invalidScopeIs400() {
+        auth(UUID.randomUUID())
+        val res = mvc.get("/articles?scope=nope") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andReturn()
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
+    }
+
+    @Test
+    fun invalidSinceIs400() {
+        auth(UUID.randomUUID())
+        val res = mvc.get("/articles?since=abc") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andReturn()
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
+    }
+
+    @Test
+    fun sortsAndUnread() {
+        val uid = UUID.randomUUID()
+        auth(uid)
+        stubEmpty()
+        for (sort in listOf("oldest", "hot", "newest")) {
+            val res = mvc.get("/articles?sort=$sort&unreadOnly=1&limit=5&since=1000") {
+                header("X-Api-Version", "1")
+                header("Authorization", "Bearer t")
+            }.andReturn()
+            assertEquals(200, res.response.status)
+        }
+    }
+
+    @Test
+    fun searchQueryFiltersAndReturnsPage() {
+        stubSearchHit()
+        val res = getArticles("q=battery+grid&scope=all")
+        assertEquals(200, res.status)
+        val body = res.contentAsString
+        kotlin.test.assertTrue(body.contains("\"items\""))
+        kotlin.test.assertTrue(body.contains("Battery storage grid"))
+    }
+
+    @Test
+    fun searchQueryWithNoUsableTokensReturnsEmpty() {
+        auth(UUID.randomUUID())
+        val res = getArticles("q=a")
+        assertEquals(200, res.status)
+        kotlin.test.assertTrue(res.contentAsString.contains("\"items\":[]"))
+    }
+
+    @Test
+    fun invalidSinceIsRejected() {
+        auth(UUID.randomUUID())
+        stubEmpty()
+        mvc.get("/articles?since=nope") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun invalidScopeIsRejected() {
+        auth(UUID.randomUUID())
+        stubEmpty()
+        mvc.get("/articles?scope=nope") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun blankQueryIsTreatedAsMissing() {
+        auth(UUID.randomUUID())
+        stubEmpty()
+        mvc.get("/articles?q=%20") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andExpect { status { isOk() } }
+    }
+
+    @Test
+    fun searchOperatorsAreAccepted() {
+        stubSearchHit()
+        for (q in SEARCH_OPERATOR_QUERIES) {
+            val res = mvc.get("/articles") {
+                param("q", q)
+                header("X-Api-Version", "1")
+                header("Authorization", "Bearer t")
+            }.andReturn().response
+            assertEquals(200, res.status, "failed for q=$q")
+            kotlin.test.assertTrue(res.contentAsString.contains("\"items\""), "missing items for q=$q")
+        }
+    }
+
+    private fun stubSearchHit() {
+        auth(UUID.randomUUID())
+        whenever(
+            listQuery.findAll(
+                any<org.springframework.data.jpa.domain.Specification<ArticleEntity>>(),
+                any<org.springframework.data.domain.Pageable>(),
+            ),
+        ).thenReturn(listOf(searchRow()))
+        whenever(states.findByUserIdAndArticleIdIn(any<UUID>(), any<List<String>>())).thenReturn(emptyList())
+    }
+
+    private fun searchRow() = ArticleListRow(
+        id = "a1",
+        feedId = UUID.randomUUID(),
+        guid = "g1",
+        title = "Battery storage grid",
+        link = null,
+        normLink = null,
+        domain = null,
+        author = null,
+        summary = "grid batteries",
+        excerpt = "grid batteries",
+        image = null,
+        comments = null,
+        publishedAt = java.time.Instant.ofEpochMilli(1000),
+        fetchedAt = java.time.Instant.ofEpochMilli(1000),
+        popularity = 0f,
+        engagement = 0f,
+        hot = 0f,
+    )
+
+    private fun getArticles(query: String) = mvc.get("/articles?$query") {
+        header("X-Api-Version", "1")
+        header("Authorization", "Bearer t")
+    }.andReturn().response
+}
+
+private val SEARCH_OPERATOR_QUERIES = listOf(
+    "author:ada",
+    "is:starred",
+    "is:unread",
+    "is:read",
+    "after:2025-01-01",
+    "before:2025-12-31",
+    "has:video",
+    "min:readtime:5",
+    "feed:grid",
+    "folder:tech",
+    "author:ada is:unread after:2025-01-01",
+)

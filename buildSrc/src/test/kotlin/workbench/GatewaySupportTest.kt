@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 class GatewaySupportTest {
     /** The catalog shape apps.json carries for the six deployed APIs. */
     private fun catalogSpecs(): Map<String, ApiRouteSpec> = linkedMapOf(
-        "rss-api" to ApiRouteSpec("/rss-reader/api/", readTimeout = "120s"),
+        "times-up-api" to ApiRouteSpec("/times-up/api/", readTimeout = "120s"),
         "stock-game-api" to ApiRouteSpec("/stock-game/api/"),
         "calendar-sync-api" to ApiRouteSpec("/calendar-sync/api/"),
         "radio-api" to ApiRouteSpec("/radio-station/api/"),
@@ -19,9 +19,9 @@ class GatewaySupportTest {
     @Test
     fun apiRoutesOfDerivesUpstreamNamesAndAddressesFromTheServiceKey() {
         val routes = apiRoutesOf(catalogSpecs()).associateBy { it.publicPath }
-        val rss = requireNotNull(routes["/rss-reader/api/"])
-        assertEquals("upstream_rss_api", rss.upstreamVar)
-        assertEquals("http://rss-api:3000", rss.upstream)
+        val rss = requireNotNull(routes["/times-up/api/"])
+        assertEquals("upstream_times_up_api", rss.upstreamVar)
+        assertEquals("http://times-up-api:3000", rss.upstream)
         assertEquals("120s", rss.readTimeout)
         val user = requireNotNull(routes["/user-api/"])
         assertEquals("upstream_user_api", user.upstreamVar)
@@ -47,7 +47,7 @@ class GatewaySupportTest {
     @Test
     fun apiRoutesTokenEmitsReadTimeoutOnlyWhereDeclared() {
         val blocks = apiRoutesToken(catalogSpecs()).split("\n\n")
-        val rss = blocks.first { "rss-reader" in it }
+        val rss = blocks.first { "times-up" in it }
         val stock = blocks.first { "stock-game" in it }
         assertTrue("proxy_read_timeout 120s;" in rss, rss)
         assertTrue("proxy_read_timeout" !in stock, stock)
@@ -65,14 +65,14 @@ class AppCatalogApiRoutesTest {
             {
                 "composeFile": "deploy/docker-compose.yml",
                 "dockerOnly": {},
-                "apiJars": { "rss-api": "apps/rss/api/build/libs/rss-api-0.1.0.jar" },
+                "apiJars": { "times-up-api": "apps/times-up/api/build/libs/times-up-api-0.1.0.jar" },
                 "apiRoutes": $apiRoutes,
                 "apps": [
                     {
-                        "id": "rss-reader",
-                        "workspaces": ["rss-reader"],
-                        "services": ["rss-reader"],
-                        "basePath": "/rss-reader/"
+                        "id": "times-up",
+                        "workspaces": ["times-up"],
+                        "services": ["times-up"],
+                        "basePath": "/times-up/"
                     }
                 ]
             }
@@ -92,7 +92,7 @@ class AppCatalogApiRoutesTest {
     @Test
     fun aRoutePathMustWrapTheSubpathInSlashes() {
         val error = assertFailsWith<IllegalStateException> {
-            loadAppCatalog(catalogFile("""{ "rss-api": { "path": "/rss-reader/api" } }"""))
+            loadAppCatalog(catalogFile("""{ "times-up-api": { "path": "/times-up/api" } }"""))
         }
         assertTrue("must start and end" in (error.message ?: ""), error.message)
     }
@@ -100,9 +100,9 @@ class AppCatalogApiRoutesTest {
     @Test
     fun aValidRouteSurvivesParsingWithItsTimeout() {
         val catalog =
-            loadAppCatalog(catalogFile("""{ "rss-api": { "path": "/rss-reader/api/", "readTimeout": "120s" } }"""))
-        val spec = requireNotNull(catalog.apiRoutes["rss-api"])
-        assertEquals("/rss-reader/api/", spec.path)
+            loadAppCatalog(catalogFile("""{ "times-up-api": { "path": "/times-up/api/", "readTimeout": "120s" } }"""))
+        val spec = requireNotNull(catalog.apiRoutes["times-up-api"])
+        assertEquals("/times-up/api/", spec.path)
         assertEquals("120s", spec.readTimeout)
     }
 }

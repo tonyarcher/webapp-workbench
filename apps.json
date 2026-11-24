@@ -10,13 +10,13 @@
     "apiJars": {
         "user-api": "apps/user/api/build/libs/user-api-0.1.0.jar",
         "fitness-api": "apps/fitness/api/build/libs/fitness-api-0.1.0.jar",
-        "rss-api": "apps/rss/api/build/libs/rss-api-0.1.0.jar",
+        "times-up-api": "apps/times-up/api/build/libs/times-up-api-0.1.0.jar",
         "stock-game-api": "apps/stock-game/api/build/libs/stock-game-api-0.1.0.jar",
         "radio-api": "apps/radio-station/api/build/libs/radio-api-0.1.0.jar",
         "calendar-sync-api": "apps/calendar-sync/api/build/libs/calendar-sync-api-0.1.0.jar"
     },
     "apiRoutes": {
-        "rss-api": { "path": "/rss-reader/api/", "readTimeout": "120s" },
+        "times-up-api": { "path": "/times-up/api/", "readTimeout": "120s" },
         "stock-game-api": { "path": "/stock-game/api/" },
         "calendar-sync-api": { "path": "/calendar-sync/api/" },
         "radio-api": { "path": "/radio-station/api/" },
@@ -33,18 +33,18 @@
             "aliases": ["baseball-tracker", "tracker", "apps/baseball"]
         },
         {
-            "id": "rss-reader",
-            "workspaces": ["user-client", "rss-reader"],
-            "services": ["rss-reader"],
+            "id": "times-up",
+            "workspaces": ["user-client", "times-up"],
+            "services": ["times-up"],
             "containerless": true,
-            "basePath": "/rss-reader/",
-            "aliases": ["rss", "apps/rss/app"]
+            "basePath": "/times-up/",
+            "aliases": ["apps/times-up/app"]
         },
         {
-            "id": "rss-api",
-            "workspaces": ["rss-api"],
-            "services": ["rss-api"],
-            "aliases": ["apps/rss/api"]
+            "id": "times-up-api",
+            "workspaces": ["times-up-api"],
+            "services": ["times-up-api"],
+            "aliases": ["apps/times-up/api"]
         },
         {
             "id": "stock-game",

@@ -360,7 +360,7 @@ class PointerHandlerReachabilityTest(unittest.TestCase):
         # attempts to close: a regex cannot tell a tag's own ">" from one inside
         # "${...}", because the only difference is the brace depth around it.
         # The comparison form is the one that survives naive fixes, and it is
-        # live in the rss source list at source-list-render.ts:92.
+        # live in the Times Up source list at source-list-render.ts:92.
         compare_before = (
             "<div class=${feed.unread > 0 ? 'has-unread' : ''} data-id=${feed.id}"
             " @click=${() => onSelect(feed)}>"

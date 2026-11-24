@@ -97,7 +97,7 @@ KNOWN_BASELINE: dict[str, str] = {
     "apps/fitness/api/src/main/resources/db/migration/V2__energy_total.sql": (
         "564796d9db276e1b4ed68b1ed51122e003c28bcc"
     ),
-    "apps/rss/api/src/main/resources/db/migration/V3__identity_and_pool.sql": (
+    "apps/times-up/api/src/main/resources/db/migration/V3__identity_and_pool.sql": (
         "c773eadf39abb50a31b3d9b338eadc95c39a91d4"
     ),
     "apps/stock-game/api/src/main/resources/db/migration/V1__schema.sql": (
@@ -333,19 +333,24 @@ class FlywayMigrationImmutabilityTest(unittest.TestCase):
         )
 
     def test_baseline_entries_are_all_live(self) -> None:
-        """Every baseline path must exist, be committed, and still match its pin.
+        """Every baseline path must exist in the tree and still match its pin.
 
-        A stale entry is dead weight that would quietly exempt a future file
-        reusing the name. The pins are asserted to match, because that is what
-        makes the baseline a pin rather than a hole: a live production migration
-        edited today must fail. A file legitimately restored to its introducing
-        bytes is handled by the edit check instead, which accepts either blob.
+        A pre-commit rename has no HEAD blob at its new path yet, so the index
+        counts as proof that the file is staged. A stale entry is dead weight
+        that would quietly exempt a future file reusing the name. The pins are
+        asserted to match, because that is what makes the baseline a pin rather
+        than a hole: a live production migration edited today must fail. A file
+        legitimately restored to its introducing bytes is handled by the edit
+        check instead, which accepts either blob.
         """
         files = {p.relative_to(ROOT).as_posix() for p in migration_files(ROOT)}
         for rel, pin in KNOWN_BASELINE.items():
             with self.subTest(rel=rel):
                 self.assertIn(rel, files, f"{rel} is not a migration in the tree")
-                self.assertTrue(blob_at(ROOT, "HEAD", rel), f"{rel} is not committed")
+                self.assertTrue(
+                    blob_at(ROOT, "HEAD", rel) or blob_at(ROOT, "", rel),
+                    f"{rel} is not committed or staged",
+                )
                 self.assertEqual(
                     pin,
                     git("hash-object", "--", rel, cwd=ROOT).strip(),

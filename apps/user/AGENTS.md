@@ -9,11 +9,11 @@ monorepo rules.
 - `api/` — see `apps/user/api/AGENTS.md` for the OAuth, session, and WebAuthn
   rules. It owns the `users` database.
 - `client/` — see `apps/user/client/AGENTS.md`. Headless PKCE and JWT payload
-  parsing, no DOM. `rss` and `stock-game` import it, so a change here reaches
+  parsing, no DOM. `times-up` and `stock-game` import it, so a change here reaches
   every signed-in surface; it is the browser half of the protocol `api/` defines.
   Source-only: it exports `src/index.ts` and has no build step, so there is
   nothing to rebuild after an edit.
-- `api` is the shared identity service, not one product's backend: `rss` and
+- `api` is the shared identity service, not one product's backend: `times-up` and
   `stock-game` sign in through it today and `fitness-api` already accepts its
   JWT, so a change here reaches every signed-in surface. Two consequences: keep
   it cloneable to its own repo (accounts and auth only, never product tables),

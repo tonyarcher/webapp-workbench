@@ -16,15 +16,15 @@ that apply to it.
 
 ## What Times Up does
 
-The RSS reader keeps one copy of each feed and stores per-user reading state
+Times Up keeps one copy of each feed and stores per-user reading state
 separately. Article text is treated as input: a one-time extractor learns topic
 keys and evidence, then the body and full excerpt can live in the object store.
 Features read learned metadata, so search, clusters, alerts, and provenance do
 not depend on retaining article text. The reader still opens full bodies on
-demand. `apps/rss/MOONSHOT.md` records what is shipped and what is deferred.
+demand. `apps/times-up/MOONSHOT.md` records what is shipped and what is deferred.
 
 Views, sorting rules, export formats, and the storage tiers are described in
-each app's own documentation; read `apps/rss/README.md` and the `AGENTS.md`
+each app's own documentation; read `apps/times-up/README.md` and the `AGENTS.md`
 files in that tree rather than a table that would go stale.
 
 ## Getting started
@@ -44,7 +44,7 @@ one command from the repo root:
 ./gradlew buildJvm              # Kotlin APIs only (bootJar)
 ./gradlew buildNode             # JS workspaces only
 ./gradlew checkAll              # API tests, detekt, Jacoco gates
-./gradlew buildAll -Papps=rss   # one app, by id, alias, or folder path
+./gradlew buildAll -Papps=times-up   # one app, by id, alias, or folder path
 ```
 
 The Gradle wrapper is local-only (`gradle wrapper` generates it; nothing is
@@ -62,7 +62,7 @@ renders to `default.conf` on every run.
 
 ```sh
 python deploy.py             # build, render the gateway, mint certs, compose up
-python deploy.py rss         # one service
+python deploy.py apps/times-up # reader UI + API
 python deploy.py --status
 ```
 

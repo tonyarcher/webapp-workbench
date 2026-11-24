@@ -49,8 +49,8 @@ apps/user/api/build/
 apps/user/api/.kotlin/
 apps/fitness/api/build/
 apps/fitness/api/.kotlin/
-apps/rss/api/build/
-apps/rss/api/.kotlin/
+apps/times-up/api/build/
+apps/times-up/api/.kotlin/
 apps/stock-game/api/build/
 apps/stock-game/api/.kotlin/
 apps/radio-station/api/build/

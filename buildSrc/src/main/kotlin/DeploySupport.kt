@@ -15,7 +15,7 @@ fun Project.deployHelp(): String = """
 Deploy the compose stack with docker compose.
 
   gradle deploy                     build host artifacts, render the gateway, compose up
-  gradle deploy -Pargs="rss"        rebuild and roll out one service
+  gradle deploy -Pargs="times-up"  rebuild and roll out one service
   gradle deploy -Pargs="remote"     force the tunneled remote engine
   gradle deploy -Pargs="down"       stop the stack
   gradle deploy -Pargs="status"     compose ps

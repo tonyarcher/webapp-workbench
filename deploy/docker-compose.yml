@@ -1,9 +1,9 @@
 # Reverse-proxy gateway stack for the Baseball deployment.
 #   gateway  - nginx Alpine, port 80; serves `/` (hello) and routes subpaths.
 #   baseball - nginx static, serves the Baseball Vite app under /baseball/.
-#   rss-reader - nginx static, serves the RSS reader under /rss-reader/.
-#   rss-api    - Kotlin JSON API + feed poller for the RSS reader under
-#                /rss-reader/api/ (prefix stripped by the gateway).
+#   times-up - nginx static, serves Times Up under /times-up/.
+#   times-up-api    - Kotlin JSON API + feed poller for Times Up under
+#                /times-up/api/ (prefix stripped by the gateway).
 #   postgres   - shared Postgres instance; each app gets its own database.
 #                Data persists in the `pgdata` named volume across rebuilds.
 #   stock-game - nginx static, serves the Stock Game Vite SPA under /stock-game/
@@ -56,7 +56,7 @@ services:
             - '80:80'
             - '443:443'
         depends_on:
-            - rss-api
+            - times-up-api
             - stock-game-api
             - calendar-sync-api
             - radio-api
@@ -79,13 +79,13 @@ services:
         environment:
             POSTGRES_USER: ${POSTGRES_USER:-rss}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rss}
-            POSTGRES_DB: ${POSTGRES_DB:-rss}
+            POSTGRES_DB: ${POSTGRES_DB:-times_up}
             # Subpath under the data dir so the mount root stays owned by root.
             PGDATA: /var/lib/postgresql/data/pgdata
         volumes:
             - pgdata:/var/lib/postgresql/data
         healthcheck:
-            test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-rss} -d ${POSTGRES_DB:-rss}']
+            test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-rss} -d ${POSTGRES_DB:-times_up}']
             interval: 10s
             timeout: 5s
             retries: 5
@@ -93,11 +93,11 @@ services:
         networks:
             - baseball
 
-    rss-api:
+    times-up-api:
         logging: *bounded-logs
         build:
             context: ..
-            dockerfile: deploy/rss-api/Dockerfile
+            dockerfile: deploy/times-up-api/Dockerfile
         # Must exceed the 20s graceful shutdown phase in
         # application-prod.yml, or compose SIGKILLs mid-request.
         stop_grace_period: 30s
@@ -108,7 +108,7 @@ services:
             # framework levels the prod profile sets.
             LOG_LEVEL: ${LOG_LEVEL:-info}
             PORT: 3000
-            DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/${POSTGRES_DB:-rss}
+            DATABASE_URL: postgres://${POSTGRES_USER:-rss}:${POSTGRES_PASSWORD:-rss}@postgres:5432/${POSTGRES_DB:-times_up}
             OAUTH_JWKS_URI: http://user-api:3000/oauth/jwks
             # Defaults derive from PUBLIC_ORIGIN so a deployment sets one public
             # origin and cannot leave a service advertising a stale host. The
@@ -134,28 +134,28 @@ services:
             # article row, user state, and a bounded excerpt head for search.
             # The compose network reaches the store as http://seaweedfs:8333.
             # Offload defaults to on with 0 days, so every stored body moves.
-            # Leave RSS_BODY_S3_ENDPOINT unset for local SeaweedFS; set it to an
+            # Leave TIMES_UP_BODY_S3_ENDPOINT unset for local SeaweedFS; set it to an
             # empty value for real AWS so the SDK uses its own endpoint.
-            RSS_BODY_S3_ENDPOINT: ${RSS_BODY_S3_ENDPOINT-http://seaweedfs:8333}
-            RSS_BODY_S3_REGION: ${RSS_BODY_S3_REGION:-us-east-1}
-            RSS_BODY_S3_BUCKET: ${RSS_BODY_S3_BUCKET:-${S3_BUCKET:-}}
-            RSS_BODY_S3_PREFIX: ${RSS_BODY_S3_PREFIX:-rss/bodies}
-            RSS_BODY_S3_ACCESS_KEY: ${RSS_BODY_S3_ACCESS_KEY:-${S3_ACCESS_KEY:-}}
-            RSS_BODY_S3_SECRET_KEY: ${RSS_BODY_S3_SECRET_KEY:-${S3_SECRET_KEY:-}}
-            RSS_BODY_OFFLOAD_ENABLED: ${RSS_BODY_OFFLOAD_ENABLED:-true}
-            RSS_BODY_OFFLOAD_AFTER_DAYS: ${RSS_BODY_OFFLOAD_AFTER_DAYS:-0}
+            TIMES_UP_BODY_S3_ENDPOINT: ${TIMES_UP_BODY_S3_ENDPOINT-${RSS_BODY_S3_ENDPOINT-http://seaweedfs:8333}}
+            TIMES_UP_BODY_S3_REGION: ${TIMES_UP_BODY_S3_REGION-${RSS_BODY_S3_REGION:-us-east-1}}
+            TIMES_UP_BODY_S3_BUCKET: ${TIMES_UP_BODY_S3_BUCKET-${RSS_BODY_S3_BUCKET:-${S3_BUCKET:-}}}
+            TIMES_UP_BODY_S3_PREFIX: ${TIMES_UP_BODY_S3_PREFIX-${RSS_BODY_S3_PREFIX:-times-up/bodies}}
+            TIMES_UP_BODY_S3_ACCESS_KEY: ${TIMES_UP_BODY_S3_ACCESS_KEY-${RSS_BODY_S3_ACCESS_KEY:-${S3_ACCESS_KEY:-}}}
+            TIMES_UP_BODY_S3_SECRET_KEY: ${TIMES_UP_BODY_S3_SECRET_KEY-${RSS_BODY_S3_SECRET_KEY:-${S3_SECRET_KEY:-}}}
+            TIMES_UP_BODY_OFFLOAD_ENABLED: ${TIMES_UP_BODY_OFFLOAD_ENABLED-${RSS_BODY_OFFLOAD_ENABLED:-true}}
+            TIMES_UP_BODY_OFFLOAD_AFTER_DAYS: ${TIMES_UP_BODY_OFFLOAD_AFTER_DAYS-${RSS_BODY_OFFLOAD_AFTER_DAYS:-0}}
             BODY_OFFLOAD_MS: ${BODY_OFFLOAD_MS:-2000}
-            RSS_EXCERPT_S3_PREFIX: ${RSS_EXCERPT_S3_PREFIX:-rss/excerpts}
-            RSS_EXCERPT_OFFLOAD_ENABLED: ${RSS_EXCERPT_OFFLOAD_ENABLED:-true}
-            RSS_EXCERPT_OFFLOAD_MS: ${RSS_EXCERPT_OFFLOAD_MS:-2000}
-            RSS_EXCERPT_HEAD_CHARS: ${RSS_EXCERPT_HEAD_CHARS:-800}
+            TIMES_UP_EXCERPT_S3_PREFIX: ${TIMES_UP_EXCERPT_S3_PREFIX-${RSS_EXCERPT_S3_PREFIX:-times-up/excerpts}}
+            TIMES_UP_EXCERPT_OFFLOAD_ENABLED: ${TIMES_UP_EXCERPT_OFFLOAD_ENABLED-${RSS_EXCERPT_OFFLOAD_ENABLED:-true}}
+            TIMES_UP_EXCERPT_OFFLOAD_MS: ${TIMES_UP_EXCERPT_OFFLOAD_MS-${RSS_EXCERPT_OFFLOAD_MS:-2000}}
+            TIMES_UP_EXCERPT_HEAD_CHARS: ${TIMES_UP_EXCERPT_HEAD_CHARS-${RSS_EXCERPT_HEAD_CHARS:-800}}
             # Automatic offload trigger and confirmable cold-object purge (Q1).
-            RSS_BODY_OFFLOAD_REQUIRE_PRESSURE: ${RSS_BODY_OFFLOAD_REQUIRE_PRESSURE:-false}
-            RSS_BODY_DB_SIZE_TRIGGER_GB: ${RSS_BODY_DB_SIZE_TRIGGER_GB:-2}
-            RSS_BODY_BACKUP_MINUTES_TRIGGER: ${RSS_BODY_BACKUP_MINUTES_TRIGGER:-15}
-            RSS_BACKUP_DURATION_MINUTES: ${RSS_BACKUP_DURATION_MINUTES:-0}
-            RSS_BODY_PURGE_ENABLED: ${RSS_BODY_PURGE_ENABLED:-false}
-            RSS_BODY_PURGE_AFTER_DAYS: ${RSS_BODY_PURGE_AFTER_DAYS:-365}
+            TIMES_UP_BODY_OFFLOAD_REQUIRE_PRESSURE: ${TIMES_UP_BODY_OFFLOAD_REQUIRE_PRESSURE-${RSS_BODY_OFFLOAD_REQUIRE_PRESSURE:-false}}
+            TIMES_UP_BODY_DB_SIZE_TRIGGER_GB: ${TIMES_UP_BODY_DB_SIZE_TRIGGER_GB-${RSS_BODY_DB_SIZE_TRIGGER_GB:-2}}
+            TIMES_UP_BODY_BACKUP_MINUTES_TRIGGER: ${TIMES_UP_BODY_BACKUP_MINUTES_TRIGGER-${RSS_BODY_BACKUP_MINUTES_TRIGGER:-15}}
+            TIMES_UP_BACKUP_DURATION_MINUTES: ${TIMES_UP_BACKUP_DURATION_MINUTES-${RSS_BACKUP_DURATION_MINUTES:-0}}
+            TIMES_UP_BODY_PURGE_ENABLED: ${TIMES_UP_BODY_PURGE_ENABLED-${RSS_BODY_PURGE_ENABLED:-false}}
+            TIMES_UP_BODY_PURGE_AFTER_DAYS: ${TIMES_UP_BODY_PURGE_AFTER_DAYS-${RSS_BODY_PURGE_AFTER_DAYS:-365}}
             BODY_PURGE_MS: ${BODY_PURGE_MS:-3600000}
             # Cross-origin client (assets on their own S3-backed origin) calling
             # the API. Empty = same-origin only, the current gateway deployment.

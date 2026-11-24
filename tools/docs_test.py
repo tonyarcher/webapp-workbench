@@ -409,14 +409,16 @@ class CiAuditMatrixTest(unittest.TestCase):
 
                 dir:
                     - apps/baseball
-                    - "apps/rss/app"
+                    - "apps/times-up/app"
         steps:
             - run: npm run test:e2e
     jvm:
         steps:
             - run: ./gradlew checkAll
 """
-        self.assertEqual({"apps/baseball", "apps/rss/app"}, ci_matrix_dirs(synthetic))
+        self.assertEqual(
+            {"apps/baseball", "apps/times-up/app"}, ci_matrix_dirs(synthetic)
+        )
         self.assertEqual(set(), ci_matrix_dirs("jobs:\n    web:\n      steps: []\n"))
         grouped = """jobs:
     a11y:
@@ -424,7 +426,7 @@ class CiAuditMatrixTest(unittest.TestCase):
             matrix:
                 include:
                     - name: baseball-rss
-                      dirs: apps/baseball apps/rss/app
+                      dirs: apps/baseball apps/times-up/app
                     - name: radio
                       dirs: "apps/radio-station"
         steps:
@@ -434,7 +436,7 @@ class CiAuditMatrixTest(unittest.TestCase):
             - run: ./gradlew checkAll
 """
         self.assertEqual(
-            {"apps/baseball", "apps/rss/app", "apps/radio-station"},
+            {"apps/baseball", "apps/times-up/app", "apps/radio-station"},
             ci_matrix_dirs(grouped),
         )
 

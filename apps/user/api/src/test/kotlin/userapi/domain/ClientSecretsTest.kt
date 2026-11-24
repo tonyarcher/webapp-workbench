@@ -27,7 +27,7 @@ class ClientSecretsTest {
 
     @Test
     fun `a client with no digest is public`() {
-        assertFalse(secrets.isConfidential("rss-reader"))
+        assertFalse(secrets.isConfidential("times-up"))
         assertFalse(ClientSecrets(emptyMap()).isConfidential("anything"))
     }
 
@@ -54,7 +54,7 @@ class ClientSecretsTest {
 
     @Test
     fun `an unknown client never verifies, even with a plausible secret`() {
-        assertFalse(secrets.verify("rss-reader", "s3cret"))
+        assertFalse(secrets.verify("times-up", "s3cret"))
         assertFalse(ClientSecrets(emptyMap()).verify("gitea", "s3cret"))
     }
 

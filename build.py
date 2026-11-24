@@ -20,9 +20,9 @@ Usage:
   python build.py [app...] [--dry-run]
 
 Apps:
-  Deploy ids or aliases (rss, stock, lemmy, ...), or folders (apps/rss).
+  Deploy ids or aliases (times-up, stock, lemmy, ...), or folders (apps/times-up).
   No app names builds everything: `./gradlew buildAll`.
-  A folder selects both halves, e.g. apps/rss = rss-reader + rss-api.
+  A folder selects both halves, e.g. apps/times-up = times-up + times-up-api.
 
 Also:
   ./gradlew buildJvm   Kotlin APIs only

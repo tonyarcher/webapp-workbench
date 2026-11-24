@@ -59,7 +59,7 @@ val S3_SEED_KEYS: List<String> = listOf(
     "S3_PREFIX",
     "S3_REGION",
     "ASSETS_HOST",
-    "PUBLIC_API_BASE",
+    "TIMES_UP_API_BASE",
     "STOCK_GAME_API_BASE",
     "FITNESS_API_BASE",
     "RADIO_API_BASE",
@@ -225,17 +225,24 @@ fun Project.publishAppAssets(env: Map<String, String>, app: S3App) {
 private val S3_EXCLUDED_APPS: Set<String> = setOf("football", "user-web")
 
 /**
- * The env key holding an app's cross-origin API origin, or null when it has
- * none (a client-only app). Each API-backed app names its own origin so the
+ * The env key holding an app's cross-origin API base, or null when it has
+ * none (a client-only app). Each API-backed app names its own base so the
  * rendered config block and the emitted `connect-src` are both accurate.
  */
 internal fun apiBaseEnvKey(appId: String): String? = when (appId) {
-    "rss-reader" -> "PUBLIC_API_BASE"
+    "times-up" -> "TIMES_UP_API_BASE"
     "stock-game" -> "STOCK_GAME_API_BASE"
     "fitness" -> "FITNESS_API_BASE"
     "radio-station" -> "RADIO_API_BASE"
     "calendar-sync" -> "CALENDAR_SYNC_API_BASE"
     else -> null
+}
+
+internal fun apiBaseFromEnv(appId: String, env: Map<String, String>): String {
+    val key = apiBaseEnvKey(appId) ?: return ""
+    val legacy = if (appId == "times-up") env["PUBLIC_API_BASE"] else null
+    val value = expandEnv(env[key] ?: legacy.orEmpty(), env).trim()
+    return if (appId == "times-up") value.replace("/rss-reader/api", "/times-up/api") else value
 }
 
 /**
@@ -249,7 +256,7 @@ internal fun apiBaseEnvKey(appId: String): String? = when (appId) {
  * `connect-src` for an app that never calls the identity service.
  */
 internal fun identityBaseEnvKey(appId: String): String? = when (appId) {
-    "rss-reader", "stock-game", "calendar-sync" -> "OAUTH_PUBLIC_BASE"
+    "times-up", "stock-game", "calendar-sync" -> "OAUTH_PUBLIC_BASE"
     else -> null
 }
 
@@ -285,7 +292,7 @@ fun Project.s3Apps(env: Map<String, String>, only: Set<String>? = null): List<S3
         if (app.basePath.isEmpty() || id in S3_EXCLUDED_APPS) continue
         val distDir = staticDistDir(id) ?: continue
         val pwa = S3_PWA_FILES[id] ?: PwaFiles(null, false, emptyList())
-        val apiBase = apiBaseEnvKey(id)?.let { expandEnv(env[it].orEmpty(), env).trim() }.orEmpty()
+        val apiBase = apiBaseFromEnv(id, env)
         val identityBase = identityBaseEnvKey(id)?.let { expandEnv(env[it].orEmpty(), env).trim() }.orEmpty()
         add(S3App(id, app.basePath, distDir, apiBase, identityBase, pwa.manifest, pwa.swJs, pwa.icons))
     }

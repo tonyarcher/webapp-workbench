@@ -2,7 +2,7 @@
 # This template renders to default.conf on every deploy run;
 # edit this file, never the rendered output.
 # - `/` serves a hello-world page from the hello volume.
-# - `/baseball/`, `/rss-reader/`, `/lemmy-vertical-scroll/`,
+# - `/baseball/`, `/times-up/`, `/lemmy-vertical-scroll/`,
 #   `/clipstack/`, `/calendar-sync/`, `/radio-station/`, `/football/`, `/basketball/`, `/fitness/`,
 #   and `/auth/` proxy to the matching app services with the prefix stripped
 #   (static nginx apps). `/user-api/` is the identity API (prefix stripped).

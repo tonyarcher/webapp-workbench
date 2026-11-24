@@ -62,7 +62,7 @@ class S3CspTest {
         val emitApps = listOf(
             "baseball",
             "basketball",
-            "rss-reader",
+            "times-up",
             "stock-game",
             "calendar-sync",
             "fitness",
@@ -79,12 +79,12 @@ class S3CspTest {
     }
 
     @Test
-    fun rssReaderVideoHeadersAllowPlayerOrigins() {
+    fun timesUpVideoHeadersAllowPlayerOrigins() {
         val app = S3App(
-            id = "rss-reader",
-            basePath = "/rss-reader/",
-            distDir = "apps/rss-reader/dist",
-            apiBase = "https://gateway/rss-reader/api",
+            id = "times-up",
+            basePath = "/times-up/",
+            distDir = "apps/times-up/app/dist",
+            apiBase = "https://gateway/times-up/api",
         )
         val header = requireNotNull(cspHeader(app))
         assertTrue("frame-src https://www.youtube-nocookie.com" in header, "youtube facade: $header")

@@ -66,7 +66,7 @@ unset `S3_BUCKET` fails the deploy rather than falling back.
   is host-independent. Every app's entry point reads the block at boot and hands
   it to `src/services/config.ts`, so the services stay free of DOM.
 - One S3 seed drives the whole store: `S3_ENDPOINT`, `S3_BUCKET`, `S3_PREFIX`,
-  `S3_REGION`, and one API-origin key per API-backed app (`PUBLIC_API_BASE`,
+  `S3_REGION`, and one API-base key per API-backed app (`TIMES_UP_API_BASE`,
   `STOCK_GAME_API_BASE`, `FITNESS_API_BASE`, `RADIO_API_BASE`; see
   `.env.example`). `S3_BUCKET` is required: the gateway serves every static app
   from the store, so an unset bucket fails the deploy rather than falling back

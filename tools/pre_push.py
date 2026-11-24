@@ -9,7 +9,7 @@ What it runs, fail-fast in this order:
   3. npm run typecheck (every workspace; mirrors the CI Web job)
   4. for each changed workspace: its `test` script, then `test:e2e` when present
 
-Changed means pushed by this push (from the hook's ref range), so an RSS-only
+Changed means pushed by this push (from the hook's ref range), so an Times Up-only
 push never pays for baseball's browser suite. When the range cannot be
 determined (deleted refs, no upstream), it falls back to working-tree files.
 Full `npm run build` and Gradle stay CI-side: they are minutes long and a

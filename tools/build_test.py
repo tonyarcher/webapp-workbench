@@ -19,14 +19,16 @@ class GradleArgvTest(unittest.TestCase):
         self.assertEqual(gradle_argv([]), ["buildAll"])
 
     def test_app_names_join_into_the_filter(self) -> None:
-        self.assertEqual(gradle_argv(["rss"]), ["buildAll", "-Papps=rss"])
+        self.assertEqual(gradle_argv(["times-up"]), ["buildAll", "-Papps=times-up"])
         self.assertEqual(
-            gradle_argv(["apps/rss", "lemmy"]),
-            ["buildAll", "-Papps=apps/rss,lemmy"],
+            gradle_argv(["apps/times-up", "lemmy"]),
+            ["buildAll", "-Papps=apps/times-up,lemmy"],
         )
 
     def test_flags_are_ignored_by_the_mapping(self) -> None:
-        self.assertEqual(gradle_argv(["--dry-run", "rss"]), ["buildAll", "-Papps=rss"])
+        self.assertEqual(
+            gradle_argv(["--dry-run", "times-up"]), ["buildAll", "-Papps=times-up"]
+        )
 
 
 class GradleCommandTest(unittest.TestCase):

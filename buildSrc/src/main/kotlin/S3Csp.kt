@@ -28,7 +28,7 @@ data class S3App(
 internal data class PwaFiles(val manifest: String?, val swJs: Boolean, val icons: List<String>)
 
 internal val S3_PWA_FILES: Map<String, PwaFiles> = mapOf(
-    "rss-reader" to PwaFiles("manifest.webmanifest", true, listOf("favicon.svg", "icon-192.png", "icon-512.png")),
+    "times-up" to PwaFiles("manifest.webmanifest", true, listOf("favicon.svg", "icon-192.png", "icon-512.png")),
     "baseball" to PwaFiles("manifest.json", true, listOf("favicon.svg", "icons.svg")),
     "basketball" to PwaFiles("manifest.json", true, listOf("favicon.svg")),
     "stock-game" to PwaFiles(null, false, emptyList()),
@@ -59,7 +59,7 @@ private sealed interface CspPolicy {
         // 'unsafe-inline' is the honest default, not a shortcut: every shipped
         // client renders inline styles one way or another. lit-html commits
         // `style="..."` attributes through setAttribute, which style-src
-        // governs — virtualized list positioning (rss-reader, radio-station,
+        // governs — virtualized list positioning (times-up, radio-station,
         // baseball), meter and progress widths (radio-station,
         // calendar-sync), a trade-form hint (stock-game) — and four documents
         // carry an inline <style> background guard in index.html. A style-src
@@ -86,12 +86,12 @@ private val S3_CSP: Map<String, CspPolicy> = mapOf(
         styleSrc = listOf("'self'", "'unsafe-inline'", "https://fonts.googleapis.com"),
         fontSrc = listOf("https://fonts.gstatic.com"),
     ),
-    // The reader reaches its API origin (PUBLIC_API_BASE, joined at render
+    // The reader reaches its API origin (TIMES_UP_API_BASE, joined at render
     // time), the identity token endpoint on the document origin ('self'), and
     // the two CORS proxies it uses to fetch feed text. Card video headers
     // play YouTube/Vimeo behind a click-to-play facade, so the player origins
     // join frame-src; direct mp4 enclosures join media-src.
-    "rss-reader" to CspPolicy.Emit(
+    "times-up" to CspPolicy.Emit(
         connectSrc = listOf("'self'", "https://api.allorigins.win", "https://corsproxy.io"),
         frameSrc = listOf(
             "https://www.youtube-nocookie.com",

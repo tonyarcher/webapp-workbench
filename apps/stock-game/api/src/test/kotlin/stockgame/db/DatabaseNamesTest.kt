@@ -16,7 +16,7 @@ class DatabaseNamesTest {
             createDatabaseSql("fitness\"; DROP TABLE users; --")
         }
         assertFailsWith<IllegalArgumentException> { requireDatabaseName("Stock") }
-        assertFailsWith<IllegalArgumentException> { requireDatabaseName("rss-reader") }
+        assertFailsWith<IllegalArgumentException> { requireDatabaseName("times-up") }
         assertFailsWith<IllegalArgumentException> { requireDatabaseName("") }
     }
 }

@@ -43,13 +43,13 @@ class SettingsBranchTest {
 
     @Test
     fun mcpAudienceDefaultsAndOverrides() {
-        assertEquals("rss-reader", settingsFromEnv(requiredEnv()).mcpAudience)
+        assertEquals("times-up", settingsFromEnv(requiredEnv()).mcpAudience)
         assertEquals(
             "other-reader",
             settingsFromEnv(requiredEnv() + mapOf("MCP_AUDIENCE" to "other-reader")).mcpAudience,
         )
         assertEquals(
-            "rss-reader",
+            "times-up",
             settingsFromEnv(requiredEnv() + mapOf("MCP_AUDIENCE" to "  ")).mcpAudience,
         )
     }
@@ -61,7 +61,7 @@ class SettingsBranchTest {
             requiredEnv() +
                 mapOf(
                     "LOG_LEVEL" to "debug",
-                    "DATABASE_URL" to "postgres://localhost/rss",
+                    "DATABASE_URL" to "postgres://localhost/times_up",
                     "OAUTH_INTERNAL_BASE" to "http://user-api:3000/",
                     "LOGIN_PATH" to "/login/",
                     "SWAGGER_ENABLED" to "on",
@@ -70,7 +70,7 @@ class SettingsBranchTest {
         )
         assertEquals("http://user-api:3000", s.internalBase)
         assertEquals("debug", s.logLevel)
-        assertEquals("postgres://localhost/rss", s.databaseUrl)
+        assertEquals("postgres://localhost/times_up", s.databaseUrl)
         assertEquals("/login/", s.loginPath)
         assertTrue(s.swaggerEnabled)
         assertTrue(s.clientSecretDigests.containsKey("confidential"))

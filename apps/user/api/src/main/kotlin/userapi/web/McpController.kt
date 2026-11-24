@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController
 import userapi.accounts.McpClientService
 import java.util.UUID
 
-/** Identity owns MCP clients. rss-api trusts the signed tokens issued here. */
+/** Identity owns MCP clients. times-up-api trusts the signed tokens issued here. */
 @RestController
 class McpController(private val clients: McpClientService) {
     @GetMapping("/oauth/mcp/clients", headers = ["X-Api-Version=1"])

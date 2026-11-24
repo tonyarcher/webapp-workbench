@@ -31,7 +31,7 @@ class McpClientServiceTest {
         origins = setOf("https://example.com"),
         issuer = "https://example.com/user-api",
         publicBase = "https://example.com/user-api",
-        mcpAudience = "rss-reader",
+        mcpAudience = "times-up",
     )
     private val service = McpClientService(repo, signer, settings)
     private val uid = UUID.randomUUID()

@@ -53,7 +53,7 @@ assert(
 assert(safeReturnPath('/fitness/') === '/fitness/', 'return path ok');
 assert(safeReturnPath('//evil.example') === null, 'return path protocol-relative');
 assert(safeReturnPath('https://evil.example/') === null, 'return path absolute');
-assert(returnPathFromSearch('?return=/rss-reader/') === '/rss-reader/', 'search return');
+assert(returnPathFromSearch('?return=/times-up/') === '/times-up/', 'search return');
 assert(returnPathFromSearch('?return=https://evil.example') === null, 'search rejects host');
 
 // A real OAuth authorize return path, captured from the log viewer's sign-in.

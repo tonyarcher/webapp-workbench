@@ -8,7 +8,7 @@ class ReturnPathsTest {
     @Test
     fun allowsSameOriginPaths() {
         assertEquals("/fitness/", safeReturnPath("/fitness/"))
-        assertEquals("/rss-reader/foo", safeReturnPath("/rss-reader/foo"))
+        assertEquals("/times-up/foo", safeReturnPath("/times-up/foo"))
     }
 
     @Test
