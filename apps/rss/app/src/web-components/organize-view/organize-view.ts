@@ -1,5 +1,7 @@
 import { fetchLibrary } from '../../query';
 import { requestAddFeed } from '../../services/add-feed-intent';
+import { importOpmlFile, syncAllFeeds } from '../../mutations';
+import { navigate } from '../../router';
 import { deleteFolder, renameFolder, reorderFolders, setFeedFolderMembership } from '../../mutations';
 import { addFolder } from '../../services/api';
 import type { Feed, Folder } from '../../types';
@@ -161,8 +163,53 @@ export class OrganizeView extends HTMLElement {
         this.folders.forEach((folder, index) => {
             body.appendChild(this.renderFolderSection(folder.title, this.feedsFor(folder.id), folder, index));
         });
+        body.appendChild(this.renderFeedManagement());
         this.root.appendChild(body);
         this.paintPopover();
+    }
+
+    private renderFeedManagement(): HTMLElement {
+        const section = document.createElement('section');
+        section.className = 'feed-management';
+        const head = document.createElement('h3');
+        head.textContent = 'Feed management';
+        section.appendChild(head);
+        const intro = document.createElement('p');
+        intro.className = 'intro';
+        intro.textContent = 'Import and export your subscriptions, then check which feeds are healthy.';
+        section.appendChild(intro);
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        const importBtn = document.createElement('button');
+        importBtn.className = 'btn';
+        importBtn.textContent = 'Import OPML';
+        const file = document.createElement('input');
+        file.type = 'file';
+        file.accept = '.opml,.xml,text/xml';
+        file.hidden = true;
+        file.addEventListener('change', () => void this.importOpml(file));
+        importBtn.addEventListener('click', () => file.click());
+        const healthBtn = document.createElement('button');
+        healthBtn.className = 'btn';
+        healthBtn.textContent = 'Feed health';
+        healthBtn.addEventListener('click', () => navigate({ kind: 'settings', section: 'feed-health' }));
+        actions.append(importBtn, healthBtn, file);
+        section.appendChild(actions);
+        return section;
+    }
+
+    private async importOpml(input: HTMLInputElement): Promise<void> {
+        const file = input.files?.[0];
+        if (!file) return;
+        try {
+            await importOpmlFile(await file.text());
+            this.status = 'Imported subscriptions. Syncing.';
+            await syncAllFeeds();
+            await this.load();
+        } catch (err) {
+            this.fail(err instanceof Error ? err.message : 'Import failed');
+        }
+        input.value = '';
     }
 
     private renderFolderSection(title: string, feeds: Feed[], folder?: Folder, index?: number): HTMLElement {

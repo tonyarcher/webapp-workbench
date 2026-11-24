@@ -778,7 +778,10 @@ needs piles. Ours add portability: everything exports, everything migrates.
   filters by status, caps volume (at most 1/3/5/10 articles in a 7/30/60/90-day
   window), sorts by status/count/age/name, supports multi-select with a
   confirmed bulk Remove, and removes a single feed only after an explicit
-  confirm. Four derivation tests and four recent-count API tests.
+  confirm. Four derivation tests and four recent-count API tests. Feed health
+  is a tab in the Organize settings area, not a top-level sidebar view; the
+  old route redirects there. Feed management controls moved out of General
+  into Organize. Bulk delete uses one batch endpoint with visible progress.
   Still wanted: moved-URL detection, dupe rate, bulk retire with undo, and
   pre-subscribe preview.
 
@@ -1451,6 +1454,8 @@ the shape of the system must not assume that.
 - **Status.** Shipped. The final moonshot slice. The help dialog previously
   rendered no shortcuts even though the shared tables existed; it now uses
   them and adds the views guide. Keep facts in derived sources, not prose.
+  A Google-style account chip in the top right holds the reader's name,
+  Settings, Commands, Keyboard shortcuts and Sign out.
 - **First test.** Browser tests for help rendering and tooltip presence.
 
 ## J. Non-goals (what we will not copy)

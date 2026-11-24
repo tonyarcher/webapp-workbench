@@ -66,7 +66,6 @@ export function renderStaticNav(host: SourceListRenderHost): DocumentFragment {
         navRow(host, { kind: 'backgrounder' }, '📰', 'Catch me up', true),
         navRow(host, { kind: 'boards' }, '📋', 'Boards', true),
         navRow(host, { kind: 'coverage' }, '⚖', 'Coverage', true),
-        navRow(host, { kind: 'health' }, '💚', 'Feed health', true),
     );
     return fragment;
 }

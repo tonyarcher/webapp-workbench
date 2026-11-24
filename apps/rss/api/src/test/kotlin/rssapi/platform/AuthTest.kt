@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.put
 import rssapi.articles.ArticleRepo
 import rssapi.boards.SavedSearchRepo
 import rssapi.feeds.FeedController
+import rssapi.feeds.FeedDeleteController
 import rssapi.feeds.FeedEntity
 import rssapi.feeds.FeedRepo
 import rssapi.feeds.FeedSyncRepo
@@ -168,7 +169,7 @@ class AuthTest {
     }
 }
 
-@WebMvcTest(FeedController::class)
+@WebMvcTest(FeedController::class, FeedDeleteController::class)
 @Import(SecurityConfig::class, RequestIdFilter::class, IdentityUser::class)
 class SharedPoolTest {
     @Autowired

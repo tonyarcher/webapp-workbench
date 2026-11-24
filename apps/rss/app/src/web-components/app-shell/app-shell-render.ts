@@ -1,4 +1,6 @@
 import { navigate } from '../../router';
+import type { AccountMenuHost } from '../account-menu/account-menu';
+import type { MenuAnchor } from '../menu-popover';
 import { requestAddFeed } from '../../services/add-feed-intent';
 import { dismissToast, type ToastNotice } from '../../services/toast';
 import { MAX_ARTICLE_PANEL_WIDTH, MIN_ARTICLE_PANEL_WIDTH } from './article-panel-settings';
@@ -163,27 +165,25 @@ function buildSignIn(host: AppShellRenderHost): SignInNodes {
 
 interface HeaderNodes {
     root: HTMLElement;
-    who: HTMLElement;
-    signOut: HTMLButtonElement;
+    account: HTMLElement & {
+        host: AccountMenuHost;
+        open: boolean;
+        anchor: MenuAnchor | null;
+    };
 }
 
-function buildHeader(host: AppShellRenderHost): HeaderNodes {
+function buildHeader(_host: AppShellRenderHost): HeaderNodes {
     const header = el('header');
-    const who = el('span', 'who');
-    const signOut = el('button', 'signout');
-    signOut.textContent = 'Sign out';
-    signOut.addEventListener('click', () => host.onSignOut());
-    header.append(
-        brandButton(),
-        el('div', 'spacer'),
-        who,
-        signOut,
-        buildSearchButton(),
-        buildAddFeedButton(),
-        buildHelpButton(host),
-        buildPaletteTrigger(host),
-    );
-    return { root: header, who, signOut };
+    const account = document.createElement('account-menu') as HeaderNodes['account'];
+    account.addEventListener('open-account', ((e: CustomEvent<MenuAnchor>) => {
+        account.anchor = e.detail;
+        account.open = !account.open;
+    }) as EventListener);
+    account.addEventListener('close', () => {
+        account.open = false;
+    });
+    header.append(brandButton(), el('div', 'spacer'), buildSearchButton(), buildAddFeedButton(), account);
+    return { root: header, account };
 }
 
 function buildSearchButton(): HTMLButtonElement {
@@ -208,28 +208,6 @@ function buildAddFeedButton(): HTMLButtonElement {
     button.append(plus, text);
     button.addEventListener('click', requestAddFeed);
     return button;
-}
-
-function buildHelpButton(host: AppShellRenderHost): HTMLButtonElement {
-    const help = el('button', 'gear help');
-    help.title = 'Keyboard shortcuts (?)';
-    help.setAttribute('aria-label', 'Keyboard shortcuts (?)');
-    help.textContent = '?';
-    help.addEventListener('click', () => host.onShowShortcuts());
-    return help;
-}
-
-function buildPaletteTrigger(host: AppShellRenderHost): HTMLButtonElement {
-    const trigger = el('button', 'palette-search-trigger');
-    trigger.type = 'button';
-    trigger.title = 'Command palette (Ctrl+K)';
-    const text = el('span', 'palette-search-text');
-    text.textContent = 'Search commands';
-    const hint = el('kbd', 'palette-search-hint');
-    hint.textContent = 'Ctrl+K';
-    trigger.append(text, hint);
-    trigger.addEventListener('click', () => host.openPalette());
-    return trigger;
 }
 
 interface DialogNodes {
@@ -343,11 +321,12 @@ export class ShellDom {
     }
 
     private renderHeader(): void {
-        const username = this.host.username;
-        const signedIn = username !== null && username !== '';
-        this.header.who.textContent = username ?? '';
-        display(this.header.who, signedIn);
-        display(this.header.signOut, signedIn);
+        this.header.account.host = {
+            username: this.host.username,
+            openPalette: () => this.host.openPalette(),
+            onShowShortcuts: () => this.host.onShowShortcuts(),
+            onSignOut: () => this.host.onSignOut(),
+        };
     }
 
     private renderMain(): void {

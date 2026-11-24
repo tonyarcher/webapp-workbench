@@ -2,6 +2,7 @@ import {
     addFeed as apiAddFeed,
     addSavedSearch as apiAddSavedSearch,
     deleteFeed as apiDeleteFeed,
+    deleteFeeds as apiDeleteFeeds,
     deleteFolder as apiDeleteFolder,
     deleteSavedSearch as apiDeleteSavedSearch,
     exportOpml as apiExportOpml,
@@ -113,6 +114,12 @@ export async function importOpmlFile(xml: string) {
 
 export async function exportOpmlFile(): Promise<string> {
     return apiExportOpml();
+}
+
+export async function deleteFeeds(ids: string[]) {
+    await apiDeleteFeeds(ids);
+    await invalidateLibrary();
+    await invalidateArticles();
 }
 
 export async function deleteFeed(feedId: string) {

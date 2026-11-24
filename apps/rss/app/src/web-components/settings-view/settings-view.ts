@@ -25,6 +25,7 @@ interface SectionSpec {
 const SECTIONS: readonly SectionSpec[] = [
     { id: 'general', label: 'General', tag: 'settings-general' },
     { id: 'organize', label: 'Organize', tag: 'organize-view' },
+    { id: 'feed-health', label: 'Feed health', tag: 'health-view' },
     { id: 'mute-filters', label: 'Mute filters', tag: 'mute-filters-view' },
     { id: 'privacy', label: 'Privacy', tag: 'privacy-view' },
     { id: 'ai-connections', label: 'AI connections', tag: 'ai-connections-view' },

@@ -62,26 +62,6 @@ header .sub {
     flex: 1;
 }
 
-.who {
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-.signout {
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-}
-
-.signout:hover {
-    color: var(--text);
-    background: var(--hover);
-}
-
 .signin {
     flex: 1;
     display: flex;
@@ -172,59 +152,13 @@ header .sub {
     height: 18px;
 }
 
-.help {
-    align-items: center;
-    justify-content: center;
-    min-width: 30px;
-    min-height: 30px;
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1;
-}
-
 .search-nav {
     font-size: 15px;
     line-height: 1;
 }
 
-.palette-search-trigger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    width: 220px;
-    max-width: 32vw;
-    height: 30px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--input-bg);
-    color: var(--text-muted);
-    font: inherit;
-    font-size: 12px;
-    cursor: pointer;
-    box-sizing: border-box;
-}
-
-.palette-search-trigger:hover {
-    background: var(--hover);
-}
-
-.palette-search-trigger:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-}
-
-.palette-search-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.palette-search-hint {
-    font: inherit;
-    font-size: 11px;
-    color: var(--text-muted);
+account-menu {
+    flex: none;
 }
 
 .layout {
@@ -391,31 +325,11 @@ main {
         font-size: 13px;
     }
 
-    header .sub,
-    .who {
+    header .sub {
         display: none;
     }
 
-    .signout {
-        padding: 4px 6px;
-    }
-
-    .palette-search-trigger {
-        width: 34px;
-        min-width: 34px;
-        max-width: 34px;
-        justify-content: center;
-        padding: 0;
-    }
-
-    .palette-search-trigger::before {
-        content: '🔍';
-        font-size: 14px;
-        line-height: 1;
-    }
-
-    .palette-search-text,
-    .palette-search-hint {
+    account-menu .name {
         display: none;
     }
 

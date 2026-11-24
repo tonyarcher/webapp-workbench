@@ -50,9 +50,8 @@ export async function renameFolder(id: string, title: string): Promise<Folder> {
     }) as Promise<Folder>;
 }
 
-export async function deleteFolder(id: string): Promise<{ ok: true }> {
-    return apiFetch(`/folders/${id}`, { method: 'DELETE' }) as Promise<{ ok: true }>;
-}
+export const deleteFolder = (id: string): Promise<{ ok: true }> =>
+    apiFetch(`/folders/${id}`, { method: 'DELETE' }) as Promise<{ ok: true }>;
 
 export async function reorderFolders(ids: string[]): Promise<{ ok: true }> {
     return apiFetch('/folders/reorder', {
@@ -105,9 +104,10 @@ export async function addFeed(url: string, folderIds?: string[]): Promise<Feed> 
     }) as Promise<Feed>;
 }
 
-export async function deleteFeed(id: string): Promise<{ ok: true }> {
-    return apiFetch(`/feeds/${id}`, { method: 'DELETE' }) as Promise<{ ok: true }>;
-}
+export const deleteFeeds = (ids: string[]): Promise<{ ok: true }> =>
+    apiFetch('/feeds', { method: 'DELETE', body: JSON.stringify({ ids }) }) as Promise<{ ok: true }>;
+export const deleteFeed = (id: string): Promise<{ ok: true }> =>
+    apiFetch(`/feeds/${id}`, { method: 'DELETE' }) as Promise<{ ok: true }>;
 
 export async function setFeedFolders(id: string, folderIds: string[]): Promise<{ ok: true }> {
     return apiFetch(`/feeds/${id}/folders`, {

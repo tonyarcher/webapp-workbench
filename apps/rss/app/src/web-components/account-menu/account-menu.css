@@ -1,0 +1,95 @@
+.account {
+    position: relative;
+    display: inline-flex;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel-bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    padding: 3px 12px 3px 4px;
+    cursor: pointer;
+}
+
+.chip:hover,
+.chip:focus-visible {
+    border-color: var(--accent);
+}
+
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    flex: none;
+}
+
+[popover] {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.menu {
+    min-width: 210px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel-bg);
+    color: var(--text);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+    font: inherit;
+    font-size: 13px;
+}
+
+.menu-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.action {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.action:hover,
+.action:focus-visible {
+    background: var(--hover);
+}
+
+.action.danger {
+    color: var(--danger, #dc2626);
+}

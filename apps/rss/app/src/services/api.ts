@@ -29,6 +29,7 @@ export {
     aiStatus,
     buildEdition,
     deleteFeed,
+    deleteFeeds,
     deleteFolder,
     deleteSavedSearch,
     exportOpml,

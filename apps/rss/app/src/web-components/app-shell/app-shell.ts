@@ -27,6 +27,8 @@ import '../saved-view/saved-view';
 import '../backgrounder-view/backgrounder-view';
 import '../listen-view/listen-view';
 import '../coverage-view/coverage-view';
+import '../health-view/health-view';
+import '../account-menu/account-menu';
 import '../boards-view/boards-view';
 import '../board-view/board-view';
 import '../focus-view/focus-view';

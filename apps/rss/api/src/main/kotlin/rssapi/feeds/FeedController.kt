@@ -46,20 +46,6 @@ class FeedController(
         return loadedFeed(feed.id!!)
     }
 
-    @DeleteMapping("/feeds/{id}", headers = ["X-Api-Version=1"])
-    @Transactional
-    fun delete(@PathVariable id: String): OkBody {
-        if (!isUuid(id)) throw ApiException(HttpStatus.BAD_REQUEST, "invalid feed id")
-        val feedId = UUID.fromString(id)
-        requireSubscribed(feedId)
-        subs.deleteByUserIdAndFeedId(user.id, feedId)
-        membershipService.removeOwnMemberships(user.id, feedId)
-        if (subs.countByFeedId(feedId) == 0L) {
-            feeds.findById(feedId).ifPresent { feeds.delete(it) }
-        }
-        return OkBody()
-    }
-
     @PutMapping("/feeds/{id}/folders", headers = ["X-Api-Version=1"])
     @Transactional
     fun setFolders(@PathVariable id: String, @RequestBody body: FolderIdsBody): OkBody {

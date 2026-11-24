@@ -7,7 +7,6 @@ import { onAddFeedRequested, takeAddFeedRequest } from '../../services/add-feed-
 import {
     buildAboutSection,
     buildAppearanceSection,
-    buildFeedsSection,
     buildReaderSection,
     buildSharingSection,
     buildUsageSection,
@@ -191,7 +190,6 @@ export class SettingsGeneral extends HTMLElement {
             buildAppearanceSection(this),
             buildReaderSection(this),
             buildSharingSection(this),
-            buildFeedsSection(this),
             buildUsageSection(this),
             buildAboutSection(this),
         );

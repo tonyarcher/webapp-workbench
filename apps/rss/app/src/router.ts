@@ -6,6 +6,7 @@ export const history = createHashHistory();
 const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     'general',
     'organize',
+    'feed-health',
     'mute-filters',
     'privacy',
     'ai-connections',
@@ -19,6 +20,7 @@ const SETTINGS_SECTIONS: readonly SettingsSection[] = [
  */
 const LEGACY_SETTINGS_PATHS: Record<string, SettingsSection> = {
     organize: 'organize',
+    health: 'feed-health',
     'mute-filters': 'mute-filters',
     privacy: 'privacy',
     stats: 'stats',
@@ -125,7 +127,7 @@ export function viewToPath(view: View): string {
         case 'coverage':
             return '/coverage';
         case 'health':
-            return '/health';
+            return '/settings/feed-health';
         case 'boards':
             return '/boards';
         case 'board':

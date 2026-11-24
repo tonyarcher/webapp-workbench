@@ -1,6 +1,6 @@
 import { fetchLibrary } from '../../query';
 import { fetchRecentCounts } from '../../services/api-alerts';
-import { deleteFeed, refreshFeed } from '../../mutations';
+import { deleteFeed, deleteFeeds, refreshFeed } from '../../mutations';
 import {
     deriveHealth,
     pruneSelection,
@@ -92,9 +92,12 @@ export class HealthView extends HTMLElement {
     }
 
     private async refresh(feedId: string): Promise<void> {
+        const title = this.rows.find((r) => r.feed.id === feedId)?.feed.title ?? feedId;
+        this.status = `Refreshing ${title}…`;
+        this.paint();
         try {
             await refreshFeed(feedId);
-            this.status = 'Refresh queued.';
+            this.status = `Refreshed ${title}.`;
             await this.load();
         } catch {
             this.status = 'Could not queue a refresh.';
@@ -119,17 +122,15 @@ export class HealthView extends HTMLElement {
         if (!ids.length) return;
         const titles = ids.map((id) => this.rows.find((r) => r.feed.id === id)?.feed.title ?? id);
         if (!window.confirm(removalMessage(titles))) return;
-        let removed = 0;
-        for (const id of ids) {
-            try {
-                await deleteFeed(id);
-                removed += 1;
-            } catch {
-                // Report partial success; the remaining rows stay selectable.
-            }
+        this.status = `Removing ${ids.length} feeds…`;
+        this.paint();
+        try {
+            await deleteFeeds(ids);
+            this.status = `Removed ${ids.length} feeds.`;
+        } catch {
+            this.status = `Could not remove ${ids.length} feeds.`;
         }
         this.selected = new Set();
-        this.status = `Removed ${removed} of ${ids.length} feeds.`;
         this.root?.querySelector<HTMLElement>(':focus')?.blur();
         this.focusKey = 'health-body';
         await this.load();
