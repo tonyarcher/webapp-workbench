@@ -22,19 +22,19 @@ test('every Add feed entry point opens the one form', async ({ page }) => {
     const formInput = page.locator('input[data-add-url]');
     await page.goto('/');
     await page.getByRole('button', { name: 'Add feed' }).click();
-    await expect(page).toHaveURL(/#\/settings$/);
+    await expect(page).toHaveURL(/#\/settings\/organize$/);
     await expect(formInput).toBeVisible();
     await expect(formInput).toBeFocused();
 
     await page.getByRole('link', { name: 'Organize' }).click();
-    await page.locator('organize-view').getByRole('button', { name: 'Add feed' }).click();
-    await expect(page).toHaveURL(/#\/settings$/);
+    await page.locator('organize-view').getByRole('button', { name: 'Add feed', exact: true }).click();
+    await expect(page).toHaveURL(/#\/settings\/organize$/);
     await expect(formInput).toBeVisible();
 
     await page.goto('/');
     await page.getByRole('button', { name: 'Feed list options' }).click();
     await page.locator('feed-list-menu').getByRole('button', { name: 'Add feed' }).click();
-    await expect(page).toHaveURL(/#\/settings$/);
+    await expect(page).toHaveURL(/#\/settings\/organize$/);
     await expect(formInput).toBeVisible();
 });
 

@@ -51,8 +51,7 @@ test('settings finds feeds on a site and subscribes to one', async ({ page }) =>
         });
     });
 
-    await page.goto('/#/settings');
-    await page.getByRole('button', { name: 'Find feeds on a site' }).click();
+    await page.goto('/#/settings/organize');
     await page.getByLabel('Site address').fill('https://example.com/');
     await page.getByRole('button', { name: 'Find feeds', exact: true }).click();
 
@@ -62,5 +61,5 @@ test('settings finds feeds on a site and subscribes to one', async ({ page }) =>
 
     await page.getByRole('button', { name: 'Subscribe', exact: true }).click();
     expect(subscribed).toContain('https://example.com/feed.xml');
-    await expect(page.getByLabel('Site address')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Subscribe', exact: true })).toHaveCount(0);
 });

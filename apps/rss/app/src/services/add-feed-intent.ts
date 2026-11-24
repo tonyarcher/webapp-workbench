@@ -9,7 +9,7 @@ const ADD_FEED_EVENT = 'rss-add-feed-requested';
 let pending = false;
 
 export function requestAddFeed(): void {
-    navigate({ kind: 'settings', section: 'general' });
+    navigate({ kind: 'settings', section: 'organize' });
     pending = true;
     window.dispatchEvent(new Event(ADD_FEED_EVENT));
 }

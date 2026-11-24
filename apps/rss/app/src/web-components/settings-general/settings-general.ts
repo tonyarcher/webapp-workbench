@@ -3,7 +3,6 @@ import { applyReaderMode, loadReaderMode, saveReaderMode, type ReaderMode } from
 import { discoverSite as discoverSiteHost, subscribeToFeed as subscribeToFeedHost } from './settings-general-discovery';
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
 import { flushUsageNow, loadUsageEnabled, recordUsage, saveUsageEnabled } from '../../services/usage';
-import { onAddFeedRequested, takeAddFeedRequest } from '../../services/add-feed-intent';
 import {
     buildAboutSection,
     buildAppearanceSection,
@@ -90,7 +89,6 @@ export class SettingsGeneral extends HTMLElement {
     private addUrlDraft: string | null = null;
     private scrapeUrlDraft: string | null = null;
     private scrapeSelectorDraft: string | null = null;
-    private unsubscribeAddFeed: (() => void) | null = null;
 
     constructor() {
         super();
@@ -157,16 +155,6 @@ export class SettingsGeneral extends HTMLElement {
         if (!this.bodyEl) this.build();
         this.paint();
         recordUsage('settings_panel_viewed');
-        this.unsubscribeAddFeed = onAddFeedRequested(() => {
-            takeAddFeedRequest();
-            this.openAdd();
-        });
-        if (takeAddFeedRequest()) this.openAdd();
-    }
-
-    disconnectedCallback(): void {
-        this.unsubscribeAddFeed?.();
-        this.unsubscribeAddFeed = null;
     }
 
     private build(): void {
