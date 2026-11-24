@@ -6,6 +6,7 @@ import {
     pruneTodaySettings,
     saveTodaySettings,
 } from '../src/services/today-settings';
+import { cleanSummary } from '../src/web-components/today-view/today-view-dom';
 import { buildTodaySections } from '../src/services/today';
 import { viewKeyOf } from '../src/web-components/article-list/article-list-helpers';
 import type { Article } from '../src/types';
@@ -74,6 +75,10 @@ const pruned = pruneTodaySettings(
     ['a', 'c'],
 );
 assert(pruned.excludedFolderIds.join(',') === 'a', 'today settings prune deleted folder ids');
+
+// ---- today text cleaning ----
+assert(cleanSummary('A short summary Read More') === 'A short summary', 'today summaries drop trailing Read More');
+assert(cleanSummary('Read more about it') === 'Read more about it', 'today summaries keep inline read-more text');
 
 // ---- today sections ----
 const mkArticle = (id: string, feedId: string, hot: number): Article => ({

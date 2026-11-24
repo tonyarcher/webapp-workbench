@@ -519,7 +519,12 @@ button.title-open:hover {
     cursor: pointer;
 }
 
-.expand-handle:hover,
+.expand-handle:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.expand-handle:hover:not(:disabled),
 .medium-row.expanded .expand-handle {
     color: var(--accent);
     border-color: var(--accent);

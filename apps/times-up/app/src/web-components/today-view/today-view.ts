@@ -17,31 +17,13 @@ import { buildTodaySections, type TodaySection } from '../../services/today';
 import '../lazy-img/lazy-img';
 import '../video-header/video-header';
 import type { Article, Feed, Folder } from '../../types';
-import { el } from './today-view-dom';
+import { chevronIcon, cleanSummary, el, updateExpandHandle } from './today-view-dom';
 import styles from './today-view.css?inline';
 
 function startOfToday(): Date {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
-}
-
-function chevronIcon(direction: 'down' | 'up'): SVGSVGElement {
-    const ns = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(ns, 'svg');
-    svg.setAttribute('viewBox', '0 0 16 16');
-    svg.setAttribute('width', '18');
-    svg.setAttribute('height', '18');
-    svg.setAttribute('aria-hidden', 'true');
-    const path = document.createElementNS(ns, 'path');
-    path.setAttribute('d', direction === 'down' ? 'M4 6.5 8 10.5 12 6.5' : 'M4 9.5 8 5.5 12 9.5');
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', 'currentColor');
-    path.setAttribute('stroke-width', '2');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
-    svg.appendChild(path);
-    return svg;
 }
 
 /** Today's Feedly-shaped view: one capped section per folder, newest first. */
@@ -348,7 +330,8 @@ export class TodayView extends HTMLElement {
         top.appendChild(this.titleButton(article, 'medium-title'));
         copy.appendChild(eyebrow);
         copy.appendChild(top);
-        if (article.summary) copy.appendChild(el('p', 'medium-summary', article.summary));
+        const summary = cleanSummary(article.summary);
+        if (summary) copy.appendChild(el('p', 'medium-summary', summary));
         const footer = el('div', 'medium-footer');
         const minutes = readMinutes(article.content, article.summary);
         if (minutes > 0) footer.appendChild(el('span', 'read-time', `${minutes} min read`));
@@ -377,9 +360,12 @@ export class TodayView extends HTMLElement {
             media.appendChild(empty);
         }
         row.appendChild(media);
-        if (article.summary || article.content) {
+        let expandHandle: HTMLButtonElement | undefined;
+        if (summary || article.content) {
             const expand = el('button', 'expand-handle');
+            expandHandle = expand;
             expand.type = 'button';
+            expand.disabled = true;
             expand.dataset['direction'] = 'down';
             expand.appendChild(chevronIcon('down'));
             expand.setAttribute('aria-label', 'Show more');
@@ -394,8 +380,9 @@ export class TodayView extends HTMLElement {
                 expand.setAttribute('aria-expanded', String(expanded));
             });
             row.appendChild(expand);
+            updateExpandHandle(row, expand);
         }
-        if (!article.summary) void this.excerptInto(copy, article, 'row-excerpt medium-excerpt');
+        if (!summary) void this.excerptInto(copy, article, 'row-excerpt medium-excerpt', expandHandle);
         return row;
     }
 
@@ -420,7 +407,8 @@ export class TodayView extends HTMLElement {
         top.appendChild(this.starButton(article));
         text.appendChild(top);
         text.appendChild(this.meta(article));
-        if (article.summary) text.appendChild(el('div', 'summary', article.summary));
+        const detailSummary = cleanSummary(article.summary);
+        if (detailSummary) text.appendChild(el('div', 'summary', detailSummary));
         body.appendChild(text);
         row.appendChild(body);
         void this.excerptInto(row, article);
@@ -483,19 +471,27 @@ export class TodayView extends HTMLElement {
         titleRow.appendChild(this.titleButton(article, 'grid-card-title'));
         titleRow.appendChild(this.starButton(article));
         body.appendChild(titleRow);
-        if (article.summary) body.appendChild(el('div', 'grid-card-summary', article.summary));
+        const cardSummary = cleanSummary(article.summary);
+        if (cardSummary) body.appendChild(el('div', 'grid-card-summary', cardSummary));
         body.appendChild(this.meta(article));
         card.appendChild(body);
         void this.excerptInto(card, article);
         return card;
     }
 
-    private async excerptInto(host: HTMLElement, article: Article, className = 'row-excerpt'): Promise<void> {
+    private async excerptInto(
+        host: HTMLElement,
+        article: Article,
+        className = 'row-excerpt',
+        handle?: HTMLButtonElement,
+    ): Promise<void> {
         const gen = this.generation;
         try {
             const text = await fetchArticleExcerpt(article.id);
             if (gen !== this.generation || !this.isConnected || !text) return;
-            host.appendChild(el('div', className, text));
+            const node = el('div', className, text);
+            host.appendChild(node);
+            if (handle) updateExpandHandle(handle.parentElement ?? node, handle);
         } catch {
             // Excerpt is optional; the row keeps its compact shape.
         }

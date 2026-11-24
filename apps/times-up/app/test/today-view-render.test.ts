@@ -18,7 +18,8 @@ const article: Article = {
     guid: 'g1',
     title: 'A considered story',
     link: 'https://example.com/story',
-    summary: 'A calm, readable summary that gives the story room to breathe.',
+    summary:
+        'A calm, readable summary that gives the story room to breathe. It keeps going for several sentences so the collapsed state has something meaningful to hide behind the chevron handle, and the reader can switch between the compact and full versions without losing their place.',
     content: '<p><img src="https://example.com/story.jpg" alt=""></p><p>Some article text.</p>',
     published: Date.now(),
     fetchedAt: Date.now(),
@@ -62,7 +63,14 @@ describe('today reading view', () => {
             if (url.includes('/library/feeds')) return json({ feeds: [feed] });
             if (url.includes('/library/counts')) return json({ counts: {} });
             const read = { ...article, id: 'read-1', guid: 'read-1', title: 'Already read', read: 1 as const };
-            if (url.includes('/articles?')) return json({ items: [article, read], nextCursor: null });
+            const short = {
+                ...article,
+                id: 'short-1',
+                guid: 'short-1',
+                title: 'A very short story',
+                summary: 'Short. Read More',
+            };
+            if (url.includes('/articles?')) return json({ items: [article, read, short], nextCursor: null });
             if (url.includes('/excerpt')) return json({ excerpt: '' });
             return json({});
         };
@@ -90,10 +98,15 @@ describe('today reading view', () => {
             expect(root.querySelector('.star')?.getAttribute('aria-label')).to.equal('Star');
             expect(root.querySelector<HTMLSelectElement>('.view-mode select')?.value).to.equal('medium');
             expect(root.querySelector('.unread-toggle')).to.equal(null);
-            expect(root.querySelectorAll('.medium-row').length).to.equal(1);
+            expect(root.querySelectorAll('.medium-row').length).to.equal(2);
             expect(root.textContent).to.not.contain('Already read');
+            expect(root.textContent).to.not.contain('Read More');
+            await waitFor(() => !(root.querySelector<HTMLButtonElement>('.expand-handle')?.disabled ?? true));
             const row = root.querySelector('.medium-row')!;
-            const handle = root.querySelector<HTMLButtonElement>('.expand-handle')!;
+            const handles = [...root.querySelectorAll<HTMLButtonElement>('.expand-handle')];
+            expect(handles.length).to.equal(2);
+            expect(handles[1]?.disabled).to.equal(true);
+            const handle = handles[0]!;
             expect(handle.getAttribute('aria-label')).to.equal('Show more');
             expect(handle.getAttribute('aria-expanded')).to.equal('false');
             expect(handle.dataset['direction']).to.equal('down');
