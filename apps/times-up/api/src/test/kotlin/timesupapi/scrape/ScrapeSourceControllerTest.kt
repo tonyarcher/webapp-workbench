@@ -1,4 +1,5 @@
 package timesupapi.scrape
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
@@ -13,6 +14,9 @@ import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.SimpleTransactionStatus
+import org.springframework.transaction.support.TransactionTemplate
 import timesupapi.feeds.FeedEntity
 import timesupapi.feeds.FeedRepo
 import timesupapi.feeds.SubscriptionRepo
@@ -24,6 +28,7 @@ import timesupapi.ingest.IngestSync
 import timesupapi.platform.IdentityUser
 import timesupapi.platform.RequestIdFilter
 import timesupapi.platform.SecurityConfig
+import timesupapi.platform.TransactionConfig
 import java.util.UUID
 
 private const val PAGE_HTML = """
@@ -32,7 +37,7 @@ private const val PAGE_HTML = """
 """
 
 @WebMvcTest(ScrapeSourceController::class)
-@Import(SecurityConfig::class, RequestIdFilter::class, IdentityUser::class)
+@Import(SecurityConfig::class, RequestIdFilter::class, IdentityUser::class, TransactionConfig::class)
 class ScrapeSourceControllerTest {
     @Autowired
     lateinit var mvc: MockMvc
@@ -57,6 +62,14 @@ class ScrapeSourceControllerTest {
 
     @MockitoBean
     lateinit var pages: PageFetcher
+
+    @MockitoBean
+    lateinit var transactionManager: PlatformTransactionManager
+
+    @BeforeEach
+    fun stubTransactions() {
+        whenever(transactionManager.getTransaction(any())).thenReturn(SimpleTransactionStatus())
+    }
 
     private fun stubAuth() {
         whenever(decoder.decode(any())).thenReturn(
@@ -168,6 +181,9 @@ class ScrapeSourceControllerTest {
             status { isBadRequest() }
             jsonPath("$.error") { value("None of the selected articles were found on the page") }
         }
+        verify(feeds, org.mockito.kotlin.never()).save(any())
+        verify(subs, org.mockito.kotlin.never()).save(any())
+        verify(sync, org.mockito.kotlin.never()).ensureRow(any())
     }
 
     @Test

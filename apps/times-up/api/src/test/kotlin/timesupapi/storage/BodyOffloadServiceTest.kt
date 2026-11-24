@@ -6,23 +6,34 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import timesupapi.ingest.testTransactionTemplate
 import timesupapi.storage.ArticleBodyRepo
 import java.time.Instant
+import java.util.Optional
 
 class BodyOffloadServiceTest {
     private val bodies: ArticleBodyRepo = mock()
     private val client: BodyObjectClient = mock()
     private val config = BodyObjectStoreConfig(bucket = "b", offloadEnabled = true, offloadAfterDays = 1)
     private val pressure: StoragePressureService = mock()
-    private val service = BodyOffloadService(bodies, client, config, pressure)
+    private val service = BodyOffloadService(bodies, client, config, pressure, testTransactionTemplate())
 
     init {
         whenever(pressure.offloadAllowed()).thenReturn(true)
+        whenever(bodies.findById(any())).thenAnswer {
+            Optional.of(ArticleBodyEntity(articleId = it.getArgument(0), contentHtml = "<p>hi</p>"))
+        }
     }
 
     @Test
     fun disabledDoesNothing() {
-        val disabled = BodyOffloadService(bodies, client, BodyObjectStoreConfig(), pressure)
+        val disabled = BodyOffloadService(
+            bodies,
+            client,
+            BodyObjectStoreConfig(),
+            pressure,
+            testTransactionTemplate(),
+        )
         disabled.runBatch()
         verify(bodies, never()).offloadCandidates(any(), any())
     }
@@ -33,12 +44,12 @@ class BodyOffloadServiceTest {
         whenever(row.articleId).thenReturn("a1")
         whenever(row.contentHtml).thenReturn("<p>hi</p>")
         whenever(bodies.offloadCandidates(any<Instant>(), any())).thenReturn(listOf(row))
-        whenever(bodies.markOffloaded(any(), any(), any())).thenReturn(1)
+        whenever(bodies.markOffloaded(any(), any(), any(), any())).thenReturn(1)
 
         service.runBatch()
 
         verify(client).put(any(), any())
-        verify(bodies).markOffloaded(any(), any(), any())
+        verify(bodies).markOffloaded(any(), any(), any(), any())
     }
 
     @Test
@@ -50,8 +61,13 @@ class BodyOffloadServiceTest {
 
     @Test
     fun offloadDisabledByFlagDoesNothing() {
-        val disabled =
-            BodyOffloadService(bodies, client, BodyObjectStoreConfig(bucket = "b", offloadEnabled = false), pressure)
+        val disabled = BodyOffloadService(
+            bodies,
+            client,
+            BodyObjectStoreConfig(bucket = "b", offloadEnabled = false),
+            pressure,
+            testTransactionTemplate(),
+        )
         disabled.runBatch()
         verify(bodies, never()).offloadCandidates(any(), any())
     }
@@ -73,7 +89,7 @@ class BodyOffloadServiceTest {
         service.runBatch()
 
         verify(client, never()).put(any(), any())
-        verify(bodies, never()).markOffloaded(any(), any(), any())
+        verify(bodies, never()).markOffloaded(any(), any(), any(), any())
     }
 
     @Test
@@ -86,7 +102,7 @@ class BodyOffloadServiceTest {
 
         service.runBatch()
 
-        verify(bodies, never()).markOffloaded(any(), any(), any())
+        verify(bodies, never()).markOffloaded(any(), any(), any(), any())
     }
 
     @Test
@@ -95,7 +111,7 @@ class BodyOffloadServiceTest {
         whenever(row.articleId).thenReturn("a1")
         whenever(row.contentHtml).thenReturn("<p>hi</p>")
         whenever(bodies.offloadCandidates(any<Instant>(), any())).thenReturn(listOf(row))
-        whenever(bodies.markOffloaded(any(), any(), any())).thenReturn(0)
+        whenever(bodies.markOffloaded(any(), any(), any(), any())).thenReturn(0)
 
         service.runBatch()
 
@@ -103,8 +119,30 @@ class BodyOffloadServiceTest {
     }
 
     @Test
+    fun changedBodyIsNotReplacedByStaleOffload() {
+        val row = mock<ArticleBodyRepo.OffloadRow>()
+        whenever(row.articleId).thenReturn("a1")
+        whenever(row.contentHtml).thenReturn("<p>old</p>")
+        whenever(bodies.offloadCandidates(any<Instant>(), any())).thenReturn(listOf(row))
+        whenever(bodies.findById("a1")).thenReturn(
+            Optional.of(ArticleBodyEntity(articleId = "a1", contentHtml = "<p>new</p>")),
+        )
+
+        service.runBatch()
+
+        verify(client, never()).put(any(), any())
+        verify(bodies, never()).markOffloaded(any(), any(), any(), any())
+    }
+
+    @Test
     fun objectKeyBlankPrefix() {
-        val svc = BodyOffloadService(bodies, client, BodyObjectStoreConfig(bucket = "b", prefix = ""), pressure)
+        val svc = BodyOffloadService(
+            bodies,
+            client,
+            BodyObjectStoreConfig(bucket = "b", prefix = ""),
+            pressure,
+            testTransactionTemplate(),
+        )
         val key = svc.objectKey("x".toByteArray())
         assertTrue(key.endsWith(".html.gz"))
         assertTrue(!key.contains("/"))

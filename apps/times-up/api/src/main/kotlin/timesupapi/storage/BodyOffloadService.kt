@@ -3,7 +3,7 @@ import jakarta.annotation.PreDestroy
 import org.springframework.data.domain.PageRequest
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 import timesupapi.platform.log.log
 import timesupapi.storage.ArticleBodyRepo
 import java.security.MessageDigest
@@ -25,6 +25,7 @@ class BodyOffloadService(
     private val objectClient: BodyObjectClient,
     private val config: BodyObjectStoreConfig,
     private val pressure: StoragePressureService,
+    private val transactions: TransactionTemplate,
 ) {
     @Volatile private var stopped = false
 
@@ -34,7 +35,6 @@ class BodyOffloadService(
     }
 
     @Scheduled(fixedDelayString = "\${BODY_OFFLOAD_MS:60000}")
-    @Transactional
     fun runBatch() {
         if (!canRun()) return
         val rows = bodies.offloadCandidates(cutoff(), PageRequest.of(0, BATCH_SIZE))
@@ -56,8 +56,15 @@ class BodyOffloadService(
         val body = html?.takeIf { it.isNotBlank() } ?: return false
         val bytes = ObjectText.encode(body)
         val key = objectKey(body.toByteArray(Charsets.UTF_8))
-        if (!runCatching { objectClient.put(key, bytes) }.isSuccess) return false
-        return bodies.markOffloaded(articleId, key, bytes.size.toLong()) > 0
+        var moved = false
+        transactions.executeWithoutResult {
+            bodies.lockStorageKey(key)
+            val current = bodies.findById(articleId).orElse(null) ?: return@executeWithoutResult
+            if (current.storageKey != null || current.contentHtml != body) return@executeWithoutResult
+            if (!runCatching { objectClient.put(key, bytes) }.isSuccess) return@executeWithoutResult
+            moved = bodies.markOffloaded(articleId, key, bytes.size.toLong(), body) > 0
+        }
+        return moved
     }
 
     internal fun objectKey(bytes: ByteArray): String {

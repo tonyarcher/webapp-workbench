@@ -30,14 +30,19 @@ interface ArticleBodyRepo : JpaRepository<ArticleBodyEntity, String> {
         """
         update ArticleBodyEntity b
            set b.contentHtml = null, b.storageKey = :storageKey, b.byteSize = :byteSize
-         where b.articleId = :articleId and b.storageKey is null
+         where b.articleId = :articleId and b.storageKey is null and b.contentHtml = :source
         """,
     )
     fun markOffloaded(
         @Param("articleId") articleId: String,
         @Param("storageKey") storageKey: String,
         @Param("byteSize") byteSize: Long,
+        @Param("source") source: String,
     ): Int
+
+    /** Serializes pointer changes and deletion for one content-addressed key. */
+    @Query(value = "select pg_advisory_xact_lock(hashtextextended(:storageKey, 0))", nativeQuery = true)
+    fun lockStorageKey(@Param("storageKey") storageKey: String)
 
     /** Live database size, for the offload trigger. Never logs a payload. */
     @Query(value = "select pg_database_size(current_database())", nativeQuery = true)

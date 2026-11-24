@@ -33,7 +33,9 @@ class IngestServiceBranchTest {
     private val fetcher: FeedFetcher = mock()
     private val pages: PageFetcher = mock()
     private val bodyStore: BodyStore = mock()
-    private val ingest = IngestService(feeds, articles, maintenance, sync, pending, fetcher, pages, bodyStore)
+    private val ingest = IngestService(
+        feeds, articles, maintenance, sync, pending, fetcher, pages, bodyStore, testTransactionTemplate(),
+    )
     private val feedId = UUID.randomUUID()
     private val feed = FeedEntity(id = feedId, xmlUrl = "https://example.com/rss", title = "t")
 

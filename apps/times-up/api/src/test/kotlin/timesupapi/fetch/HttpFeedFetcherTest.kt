@@ -1,5 +1,6 @@
 package timesupapi.fetch
 import com.sun.net.httpserver.HttpServer
+import timesupapi.platform.MAX_FEED_BYTES
 import java.net.InetSocketAddress
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -140,6 +141,32 @@ class HttpFeedFetcherTest {
         try {
             val res = HttpFeedFetcher(allowLocal = true).fetch(base, etag = "e1", lastModified = "m1")
             assertEquals(304, res.status)
+        } finally {
+            srv.stop(0)
+        }
+    }
+
+    @Test
+    fun oversizedStreamingBodyIsRejected() {
+        val (srv, base) = server { ex ->
+            ex.sendResponseHeaders(200, 0)
+            val chunk = ByteArray(64 * 1024) { 'x'.code.toByte() }
+            try {
+                repeat(MAX_FEED_BYTES / chunk.size + 1) {
+                    ex.responseBody.write(chunk)
+                    ex.responseBody.flush()
+                }
+            } catch (_: java.io.IOException) {
+                // The client cancels once its bounded subscriber exceeds the limit.
+            } finally {
+                ex.close()
+            }
+        }
+        try {
+            val err = assertFailsWith<IllegalStateException> {
+                HttpFeedFetcher(allowLocal = true).fetch(base)
+            }
+            assertEquals("feed too large", err.message)
         } finally {
             srv.stop(0)
         }

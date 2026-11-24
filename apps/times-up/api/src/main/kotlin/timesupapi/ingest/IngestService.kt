@@ -3,6 +3,7 @@ import org.jsoup.Jsoup
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 import org.xml.sax.SAXException
 import timesupapi.articles.ARTICLE_EXCERPT_CACHE
 import timesupapi.articles.ArticleEntity
@@ -20,7 +21,6 @@ import timesupapi.feeds.firstImageUrl
 import timesupapi.feeds.parseFeedXml
 import timesupapi.fetch.FeedFetcher
 import timesupapi.fetch.PageFetcher
-import timesupapi.ingest.ArticleFullText
 import timesupapi.platform.MAX_ARTICLES_PER_FEED
 import timesupapi.platform.MAX_CONTENT_BYTES
 import timesupapi.platform.domainOf
@@ -67,23 +67,32 @@ class IngestService(
     private val fetcher: FeedFetcher,
     private val pages: PageFetcher,
     private val bodyStore: BodyStore,
+    private val transactions: TransactionTemplate,
 ) {
     @CacheEvict(cacheNames = [ARTICLE_EXCERPT_CACHE], allEntries = true)
-    @Transactional
     fun fetchAndIngest(feedId: UUID) {
         val feed = feeds.findById(feedId).orElse(null) ?: return
         if (feed.sourceKind == SCRAPE_KIND) {
             scrapeAndIngest(feed)
             return
         }
+        fetchFeed(feed)
+    }
+
+    private fun fetchFeed(feed: FeedEntity) {
+        val feedId = feed.id!!
         val meta = sync.meta(feedId)
         try {
             val result = fetcher.fetch(feed.xmlUrl, meta.first, meta.second)
-            applyResult(feed, result.status, result.text, result.etag, result.lastModified)
+            transactions.executeWithoutResult {
+                applyResult(feed, result.status, result.text, result.etag, result.lastModified)
+            }
         } catch (err: IllegalStateException) {
             sync.saveError(feedId, err.message ?: "error")
         } catch (err: IllegalArgumentException) {
             sync.saveError(feedId, err.message ?: "error")
+        } catch (err: java.lang.reflect.UndeclaredThrowableException) {
+            sync.saveError(feedId, err.cause?.message ?: err.message ?: "error")
         } catch (err: SAXException) {
             // Malformed feeds (SAXParseException and kin) must also land on
             // the sync row: an unrecorded failure leaves the feed perpetually
@@ -94,11 +103,11 @@ class IngestService(
 
     /** A watched page: fetch HTML, then extract and store its item list. */
     @CacheEvict(cacheNames = [ARTICLE_EXCERPT_CACHE], allEntries = true)
-    @Transactional
     fun scrapeAndIngest(feed: FeedEntity) {
         val url = feed.pageUrl ?: feed.xmlUrl
         try {
-            ingestScrapedHtml(feed, pages.fetchHtml(url))
+            val html = pages.fetchHtml(url)
+            transactions.executeWithoutResult { ingestScrapedHtml(feed, html) }
         } catch (err: IllegalStateException) {
             sync.saveError(feed.id!!, err.message ?: "error")
         } catch (err: IllegalArgumentException) {
@@ -144,7 +153,8 @@ class IngestService(
         val parsed = parseFeedXml(xml, System.currentTimeMillis())
         sync.maybeRename(feed, parsed.title)
         sync.maybeUpdateMeta(feed, parsed.siteUrl, parsed.icon)
-        val links = parsed.items.mapNotNull { saveItem(feed, it) }
+        val items = parsed.items.sortedByDescending { it.published }.take(MAX_ARTICLES_PER_FEED)
+        val links = items.mapNotNull { saveItem(feed, it) }
         if (links.isNotEmpty()) maintenance.updatePopularity(feed.id!!, links.toTypedArray())
         maintenance.updateLonelyHot(feed.id!!)
         maintenance.pruneFeed(feed.id!!, MAX_ARTICLES_PER_FEED)
@@ -168,12 +178,12 @@ class IngestService(
         val entity = toEntity(feed, item, html, link, norm)
         val existing = articles.findByFeedIdAndGuid(feed.id!!, item.guid)
         if (existing == null) {
-            // Full text is a one-time enrichment for new stories.
-            val fullHtml = ArticleFullText.of(pages, item, html)
-            entity.excerpt = excerptOf(fullHtml)
-            entity.image = firstImageUrl(fullHtml, entity.link)
+            // Full-text extraction is on-demand. Poller ingest stores the feed
+            // body only, so one feed cannot trigger hundreds of page fetches.
+            entity.excerpt = excerptOf(html)
+            entity.image = firstImageUrl(html, entity.link)
             articles.save(entity)
-            bodyStore.put(entity.id, fullHtml)
+            bodyStore.put(entity.id, html)
             return norm
         }
         // The stored body may be the one-time full-text extraction, which the
@@ -188,16 +198,6 @@ class IngestService(
         articles.save(entity)
         bodyStore.put(entity.id, body)
         return norm
-    }
-
-    private fun truncatedHtml(item: ParsedItem): String {
-        val raw = item.content ?: item.summary.orEmpty()
-        var html = sanitizeHtml(raw)
-        if (html.length > MAX_CONTENT_BYTES) html = html.take(MAX_CONTENT_BYTES)
-        if (item.media != null && firstImageUrl(html, item.link) != item.media) {
-            html = sanitizeHtml("""<img src="${item.media}" alt="">""") + html
-        }
-        return html
     }
 
     private fun toEntity(
@@ -230,6 +230,16 @@ class IngestService(
         applyProvenance(entity, feed, norm, link)
         return entity
     }
+}
+
+private fun truncatedHtml(item: ParsedItem): String {
+    val raw = item.content ?: item.summary.orEmpty()
+    var html = sanitizeHtml(raw)
+    if (html.length > MAX_CONTENT_BYTES) html = html.take(MAX_CONTENT_BYTES)
+    if (item.media != null && firstImageUrl(html, item.link) != item.media) {
+        html = sanitizeHtml("""<img src="${item.media}" alt="">""") + html
+    }
+    return html
 }
 
 private fun applyProvenance(entity: ArticleEntity, feed: FeedEntity, norm: String?, link: String?) {

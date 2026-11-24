@@ -11,11 +11,14 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 import timesupapi.platform.ApiException
+import timesupapi.platform.IdentityUser
 import java.util.UUID
 
 class McpPrincipalServiceTest {
-    private val service = McpPrincipalService()
+    private val users = mock<IdentityUser>()
+    private val service = McpPrincipalService(users)
     private val uid = UUID.randomUUID()
+    private val internalId = UUID.randomUUID()
 
     @AfterEach
     fun clear() = SecurityContextHolder.clearContext()
@@ -37,9 +40,10 @@ class McpPrincipalServiceTest {
 
     @Test
     fun readsMcpClaimsFromJwt() {
+        whenever(users.id).thenReturn(internalId)
         authenticate(jwt(mapOf("mcp_client_id" to "desk", "mcp_writes" to true)))
         val principal = service.current()
-        assertEquals(uid, principal.userId)
+        assertEquals(internalId, principal.userId)
         assertEquals("desk", principal.clientId)
         assertEquals(true, principal.writesEnabled)
     }

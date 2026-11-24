@@ -3,6 +3,7 @@ import jakarta.annotation.PreDestroy
 import org.springframework.data.domain.PageRequest
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import org.springframework.transaction.support.TransactionTemplate
 import timesupapi.platform.log.log
 import timesupapi.storage.ArticleBodyRepo
 import java.time.Duration
@@ -21,6 +22,7 @@ class BodyPurgeService(
     private val bodies: ArticleBodyRepo,
     private val objectClient: BodyObjectClient,
     private val config: BodyObjectStoreConfig,
+    private val transactions: TransactionTemplate,
 ) {
     @Volatile private var stopped = false
 
@@ -44,13 +46,18 @@ class BodyPurgeService(
     }
 
     private fun purgeOne(row: ArticleBodyRepo.ColdRow): Int {
-        // A hash key can be shared by identical bodies. Drop only this pointer
-        // when another article still reads the object; delete it only when this
-        // is the last reference. Either way, no article row is touched.
-        if (bodies.countByStorageKey(row.storageKey) > 1) {
-            return if (bodies.clearOffloaded(row.articleId, row.storageKey) > 0) 1 else 0
+        var purged = false
+        transactions.executeWithoutResult {
+            bodies.lockStorageKey(row.storageKey)
+            if (bodies.clearOffloaded(row.articleId, row.storageKey) == 0) return@executeWithoutResult
+            purged = true
+            // Pointer changes and offloads take the same advisory lock. Once
+            // this pointer is gone, zero references means no concurrent writer
+            // can add one before the object is deleted.
+            if (bodies.countByStorageKey(row.storageKey) == 0L) {
+                runCatching { objectClient.delete(row.storageKey) }
+            }
         }
-        if (!runCatching { objectClient.delete(row.storageKey) }.isSuccess) return 0
-        return if (bodies.clearOffloaded(row.articleId, row.storageKey) > 0) 1 else 0
+        return if (purged) 1 else 0
     }
 }

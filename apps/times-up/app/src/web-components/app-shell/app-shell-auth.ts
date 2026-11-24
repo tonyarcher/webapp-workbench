@@ -11,9 +11,29 @@ export interface AppShellAuthHost {
     authed: boolean;
     username: string | null;
     authError: string;
+    localDataClearFailed: boolean;
     toasts: ToastNotice[];
     toastTimers: Map<number, ReturnType<typeof setTimeout>>;
     autoSyncFeedIds: () => string[] | undefined;
+}
+
+const LOCAL_CLEAR_FAILED_KEY = 'times-up.local-data-clear-failed';
+
+export function hasPersistentLocalClearFailure(): boolean {
+    try {
+        return localStorage.getItem(LOCAL_CLEAR_FAILED_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
+
+function writeLocalClearFailure(failed: boolean): void {
+    try {
+        if (failed) localStorage.setItem(LOCAL_CLEAR_FAILED_KEY, '1');
+        else localStorage.removeItem(LOCAL_CLEAR_FAILED_KEY);
+    } catch {
+        // The in-memory flag still blocks sign-in for this page.
+    }
 }
 
 export function onAuthError(host: AppShellAuthHost, e: Event): void {
@@ -35,6 +55,10 @@ export function onAuthChanged(host: AppShellAuthHost): void {
 }
 
 export function signIn(host: AppShellAuthHost): void {
+    if (host.localDataClearFailed) {
+        host.authError = 'Close other Times Up tabs and reload before signing in again.';
+        return;
+    }
     host.authError = '';
     startLogin().catch((err: unknown) => {
         host.authError = err instanceof Error ? err.message : 'Sign-in failed';
@@ -46,9 +70,24 @@ export function signOut(host: AppShellAuthHost): void {
     stopForegroundSync();
     void resetAccount(host).catch(() => {
         host.authError = 'Signed out on this device, but some local data could not be cleared.';
+        writeLocalClearFailure(true);
+        host.localDataClearFailed = true;
         host.authed = false;
         host.username = null;
     });
+}
+
+export async function recoverLocalDataClear(host: AppShellAuthHost): Promise<void> {
+    if (!hasPersistentLocalClearFailure()) return;
+    try {
+        await clearClientDb();
+        writeLocalClearFailure(false);
+        host.localDataClearFailed = false;
+        host.authError = '';
+    } catch {
+        host.localDataClearFailed = true;
+        host.authError = 'Close other Times Up tabs and reload before signing in again.';
+    }
 }
 
 async function resetAccount(host: AppShellAuthHost): Promise<void> {
@@ -62,8 +101,10 @@ async function resetAccount(host: AppShellAuthHost): Promise<void> {
     // and the decay clock. The stars themselves live on the server.
     forgetLearning();
     await clearClientDb();
+    writeLocalClearFailure(false);
     host.authed = false;
     host.username = null;
+    host.localDataClearFailed = false;
     document.title = 'Times Up';
     clearToasts();
     host.authError = ended

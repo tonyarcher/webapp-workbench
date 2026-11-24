@@ -7,6 +7,7 @@ import {
     unsaveForLater,
 } from '../../mutations';
 import { fetchSavedArticlesList } from '../../query';
+import { authEpoch } from '../../services/auth';
 import { toastApiError } from '../../services/toast';
 import { safeHttpUrl } from '../../services/parser';
 import { isModalOpen } from '../../services/modal-guard';
@@ -137,9 +138,15 @@ export async function toggleSlideshowRead(host: SlideshowHost): Promise<void> {
     }
 }
 
+const savedRefreshSeq = new WeakMap<SlideshowHost, number>();
+
 export async function refreshSavedArticles(host: SlideshowHost): Promise<void> {
+    const seq = (savedRefreshSeq.get(host) ?? 0) + 1;
+    savedRefreshSeq.set(host, seq);
+    const epoch = authEpoch();
     try {
-        const items = await fetchSavedArticlesList();
+        const items = await fetchSavedArticlesList(epoch);
+        if (!host.isConnected || epoch !== authEpoch() || savedRefreshSeq.get(host) !== seq) return;
         host.savedArticleIds = new Set(items.map((s) => s.articleId).filter((id): id is string => !!id));
         host.requestUpdate();
     } catch {

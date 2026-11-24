@@ -80,13 +80,36 @@ export function ensureSchema(db: IDBPDatabase<ReaderDB>, tx: UpgradeTx) {
 const LEGACY_DB = 'rss-reader';
 const CURRENT_DB = 'times-up';
 const LEGACY_MIGRATED_KEY = 'legacy-db-migrated';
+const CLEAR_CHANNEL = 'times-up-db-clear';
+const CLEAR_GRACE_MS = 300;
 
-function deleteLegacyDatabase(): Promise<void> {
+type ClearMessage = { type: 'close'; sender: string };
+
+let clearChannel: BroadcastChannel | null = null;
+
+function ensureClearChannel(): void {
+    if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return;
+    if (clearChannel) return;
+    clearChannel = new BroadcastChannel(CLEAR_CHANNEL);
+    clearChannel.onmessage = (event: MessageEvent<ClearMessage>) => {
+        if (event.data.type === 'close') void closeDb().catch(() => {});
+    };
+}
+
+async function askOtherTabsToClose(): Promise<void> {
+    ensureClearChannel();
+    if (!clearChannel) return;
+    clearChannel.postMessage({ type: 'close', sender: uid() } satisfies ClearMessage);
+    await new Promise<void>((resolve) => setTimeout(resolve, CLEAR_GRACE_MS));
+}
+
+function deleteDatabase(name: string): Promise<void> {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(LEGACY_DB);
+        const request = indexedDB.deleteDatabase(name);
         request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error ?? new Error('legacy database delete failed'));
-        request.onblocked = () => resolve();
+        request.onerror = () => reject(request.error ?? new Error('database delete failed'));
+        request.onblocked = () =>
+            reject(new Error(`Could not clear ${name}. Close other Times Up tabs and reload before signing in again.`));
     });
 }
 
@@ -152,8 +175,11 @@ export async function migrateLegacyDatabase(): Promise<boolean> {
 }
 
 let dbPromise: Promise<IDBPDatabase<ReaderDB>> | undefined;
+let clearPromise: Promise<void> | null = null;
 
-export function getDb() {
+export function getDb(): Promise<IDBPDatabase<ReaderDB>> {
+    ensureClearChannel();
+    if (clearPromise) return clearPromise.then(() => getDb());
     if (!dbPromise) {
         dbPromise = migrateLegacyDatabase().then(() =>
             openDB<ReaderDB>(CURRENT_DB, 5, {
@@ -173,14 +199,21 @@ export async function closeDb(): Promise<void> {
 }
 
 export async function clearClientDb(): Promise<void> {
+    if (clearPromise) return clearPromise;
+    const clearing = performClear();
+    clearPromise = clearing;
+    try {
+        await clearing;
+    } finally {
+        if (clearPromise === clearing) clearPromise = null;
+    }
+}
+
+async function performClear(): Promise<void> {
     await closeDb();
-    await deleteLegacyDatabase();
-    await new Promise<void>((resolve, reject) => {
-        const req = indexedDB.deleteDatabase(CURRENT_DB);
-        req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error ?? new Error('clear failed'));
-        req.onblocked = () => resolve();
-    });
+    await askOtherTabsToClose();
+    await deleteDatabase(LEGACY_DB);
+    await deleteDatabase(CURRENT_DB);
 }
 
 export const uid = () =>

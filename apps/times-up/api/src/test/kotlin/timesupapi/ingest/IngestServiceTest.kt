@@ -3,6 +3,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -14,6 +15,7 @@ import timesupapi.feeds.FeedEntity
 import timesupapi.feeds.FeedRepo
 import timesupapi.fetch.FeedFetcher
 import timesupapi.fetch.PageFetcher
+import timesupapi.platform.MAX_ARTICLES_PER_FEED
 import timesupapi.scrape.SemanticListExtractor
 import timesupapi.storage.BodyStore
 import timesupapi.storage.ObjectText
@@ -51,7 +53,9 @@ class IngestServiceTest {
     private val fetcher: FeedFetcher = mock()
     private val pages: PageFetcher = mock()
     private val bodyStore: BodyStore = mock()
-    private val ingest = IngestService(feeds, articles, maintenance, sync, pending, fetcher, pages, bodyStore)
+    private val ingest = IngestService(
+        feeds, articles, maintenance, sync, pending, fetcher, pages, bodyStore, testTransactionTemplate(),
+    )
 
     private val rss = """
         <?xml version="1.0"?><rss version="2.0"><channel><title>t</title>
@@ -60,16 +64,27 @@ class IngestServiceTest {
     """.trimIndent()
 
     @Test
-    fun newArticleGetsFullTextOnce() {
+    fun newArticleStoresFeedBodyWithoutPageFetch() {
         val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
-        whenever(pages.fetchHtml("https://example.com/x")).thenReturn("<article><p>$FULL_BODY</p></article>")
         whenever(articles.save(any<ArticleEntity>())).thenAnswer { it.getArgument(0) }
 
         ingest.ingestXml(feed, rssWith(rssItem("g1")))
 
         val body = argumentCaptor<String>()
         verify(bodyStore).put(any(), body.capture())
-        assertEquals("<p>$FULL_BODY</p>", body.firstValue)
+        assertEquals("hi", body.firstValue)
+        verify(pages, never()).fetchHtml(any())
+    }
+
+    @Test
+    fun ingestCapsItemsBeforePerItemWork() {
+        val feed = FeedEntity(id = UUID.randomUUID(), xmlUrl = "https://example.com/rss", title = "t")
+        val items = (1..MAX_ARTICLES_PER_FEED + 1).joinToString("") { rssItem("g$it") }
+
+        ingest.ingestXml(feed, rssWith(items))
+
+        verify(articles, times(MAX_ARTICLES_PER_FEED)).save(any())
+        verify(pages, never()).fetchHtml(any())
     }
 
     @Test
@@ -83,7 +98,7 @@ class IngestServiceTest {
         verify(articles).save(stored.capture())
         org.mockito.kotlin.clearInvocations(articles, maintenance, bodyStore)
         whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(stored.firstValue)
-        whenever(bodyStore.get(stored.firstValue.id)).thenReturn("<p>$FULL_BODY</p>")
+        whenever(bodyStore.get(stored.firstValue.id)).thenReturn("hi")
 
         ingest.ingestXml(feed, rssWith(rssItem(guid)))
 
@@ -105,7 +120,7 @@ class IngestServiceTest {
         offloaded.excerpt = ""
         offloaded.excerptKey = "rss/excerpts/${ObjectText.digestHex(fullExcerpt)}.txt.gz"
         whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(offloaded)
-        whenever(bodyStore.get(offloaded.id)).thenReturn("<p>$FULL_BODY</p>")
+        whenever(bodyStore.get(offloaded.id)).thenReturn("hi")
 
         ingest.ingestXml(feed, rssWith(rssItem(guid)))
 
@@ -126,7 +141,7 @@ class IngestServiceTest {
         offloaded.excerpt = ""
         offloaded.excerptKey = "rss/excerpts/${ObjectText.digestHex("older text")}.txt.gz"
         whenever(articles.findByFeedIdAndGuid(feed.id!!, guid)).thenReturn(offloaded)
-        whenever(bodyStore.get(offloaded.id)).thenReturn("<p>$FULL_BODY</p>")
+        whenever(bodyStore.get(offloaded.id)).thenReturn("hi")
 
         ingest.ingestXml(feed, rssWith(rssItem(guid)))
 
@@ -324,6 +339,7 @@ class IngestServiceTest {
         fetcher,
         pages,
         bodyStore,
+        testTransactionTemplate(),
     )
 
     private fun watchedFeed() = FeedEntity(

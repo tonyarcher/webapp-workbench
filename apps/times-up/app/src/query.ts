@@ -1,6 +1,7 @@
 import { QueryClient, QueryObserver, type QueryObserverResult } from '@tanstack/query-core';
 import { fetchSavedArticles, getLibraryCounts, getLibraryFeeds, getLibraryFolders } from './services/api';
-import { clearSavedArticles, getSavedArticles, putSavedArticle } from './db/db';
+import { getDb, getSavedArticles } from './db/db';
+import { authEpoch } from './services/auth';
 import type { Article, Feed, Folder, SavedArticleSnapshot, SavedSearch } from './types';
 
 export interface ReactiveController {
@@ -55,15 +56,20 @@ export function mergeSavedArticles(
     return [...server, ...localOnly].sort((a, b) => b.savedAt - a.savedAt);
 }
 
-export async function fetchSavedArticlesList(): Promise<SavedArticleSnapshot[]> {
+export async function fetchSavedArticlesList(epoch: number = authEpoch()): Promise<SavedArticleSnapshot[]> {
     try {
         const items = await fetchSavedArticles();
-        const local = await getSavedArticles();
+        if (epoch !== authEpoch()) return [];
+        const db = await getDb();
+        const tx = db.transaction('saved', 'readwrite');
+        const local = await tx.store.getAll();
         const merged = mergeSavedArticles(items, local);
-        await clearSavedArticles();
-        for (const item of merged) await putSavedArticle(item);
+        await tx.store.clear();
+        for (const item of merged) await tx.store.put(item);
+        await tx.done;
         return merged;
     } catch {
+        if (epoch !== authEpoch()) return [];
         return getSavedArticles();
     }
 }

@@ -6,6 +6,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import timesupapi.ingest.testTransactionTemplate
 import timesupapi.storage.ArticleBodyRepo
 import java.time.Instant
 
@@ -13,7 +14,7 @@ class BodyPurgeServiceTest {
     private val bodies: ArticleBodyRepo = mock()
     private val client: BodyObjectClient = mock()
     private val config = BodyObjectStoreConfig(bucket = "b", purgeEnabled = true, purgeAfterDays = 30)
-    private val service = BodyPurgeService(bodies, client, config)
+    private val service = BodyPurgeService(bodies, client, config, testTransactionTemplate())
 
     private fun row(articleId: String = "a1", key: String = "k1"): ArticleBodyRepo.ColdRow =
         mock<ArticleBodyRepo.ColdRow>().apply {
@@ -23,7 +24,7 @@ class BodyPurgeServiceTest {
 
     @Test
     fun disabledDoesNothing() {
-        val disabled = BodyPurgeService(bodies, client, BodyObjectStoreConfig())
+        val disabled = BodyPurgeService(bodies, client, BodyObjectStoreConfig(), testTransactionTemplate())
         assertEquals(0, disabled.purgeOld())
         verify(bodies, never()).purgeCandidates(any(), any())
     }
@@ -55,23 +56,24 @@ class BodyPurgeServiceTest {
     }
 
     @Test
-    fun failedDeleteKeepsPointer() {
+    fun failedDeleteStillClearsTheDanglingPointer() {
         val cold = row()
         whenever(bodies.purgeCandidates(any<Instant>(), any())).thenReturn(listOf(cold))
+        whenever(bodies.clearOffloaded("a1", "k1")).thenReturn(1)
         whenever(client.delete(any())).thenThrow(RuntimeException("boom"))
 
-        assertEquals(0, service.purgeOld())
-        verify(bodies, never()).clearOffloaded(any(), any())
+        assertEquals(1, service.purgeOld())
+        verify(bodies).clearOffloaded("a1", "k1")
     }
 
     @Test
-    fun failedClearDoesNotCountAsPurged() {
+    fun failedClearDoesNotDeleteTheObject() {
         val cold = row()
         whenever(bodies.purgeCandidates(any<Instant>(), any())).thenReturn(listOf(cold))
         whenever(bodies.clearOffloaded(any(), any())).thenReturn(0)
 
         assertEquals(0, service.purgeOld())
-        verify(client).delete("k1")
+        verify(client, never()).delete(any())
     }
 
     @Test

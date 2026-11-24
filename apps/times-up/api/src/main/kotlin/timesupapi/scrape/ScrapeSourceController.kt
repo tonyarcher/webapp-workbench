@@ -2,7 +2,7 @@ package timesupapi.scrape
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.springframework.http.HttpStatus
-import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
@@ -37,19 +37,23 @@ class ScrapeSourceController(
     private val sync: IngestSync,
     private val ingest: IngestService,
     private val pages: PageFetcher,
+    private val transactions: TransactionTemplate,
 ) {
     @PostMapping("/sources", headers = ["X-Api-Version=1"])
-    @Transactional
     fun create(@RequestBody body: CreateScrapeSourceBody): FeedJson {
         val url = safeHttpUrl(body.url)
             ?: throw ApiException(HttpStatus.BAD_REQUEST, "Invalid page URL (must be http/https)")
         val doc = fetchDoc(url)
         val title = body.title?.trim()?.takeIf { it.isNotEmpty() } ?: doc.title().ifBlank { URI(url).host }
         val selector = body.selector?.trim()?.ifEmpty { null }
-        val feed = findOrCreate(url, title, selector)
-        subscribe(feed.id!!)
-        sync.ensureRow(feed.id!!)
-        ingestSelected(doc, feed, selector, body.urls)
+        val chosen = selectedCandidates(doc, url, selector, body.urls)
+        lateinit var feed: FeedEntity
+        transactions.executeWithoutResult {
+            feed = findOrCreate(url, title, selector)
+            subscribe(feed.id!!)
+            sync.ensureRow(feed.id!!)
+            ingest.ingestScrapedCandidates(feed, chosen)
+        }
         return feed.toJson(
             emptyList(),
             0,
@@ -60,13 +64,18 @@ class ScrapeSourceController(
         )
     }
 
-    private fun ingestSelected(doc: Document, feed: FeedEntity, selector: String?, urls: List<String>?) {
-        val found = ScrapeExtraction.best(doc, selector).extract(doc, feed.pageUrl ?: feed.xmlUrl)
+    private fun selectedCandidates(
+        doc: Document,
+        url: String,
+        selector: String?,
+        urls: List<String>?,
+    ): List<ScrapeCandidate> {
+        val found = ScrapeExtraction.best(doc, selector).extract(doc, url)
         val chosen = if (urls.isNullOrEmpty()) found else found.filter { it.url in urls }
         if (chosen.isEmpty()) {
             throw ApiException(HttpStatus.BAD_REQUEST, "None of the selected articles were found on the page")
         }
-        ingest.ingestScrapedCandidates(feed, chosen)
+        return chosen
     }
 
     private fun fetchDoc(url: String): Document = try {

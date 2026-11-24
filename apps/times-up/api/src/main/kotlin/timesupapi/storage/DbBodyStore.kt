@@ -41,26 +41,10 @@ class DbBodyStore(
         // a row plus its foreign-key index entry for every link-only item.
         if (html.isBlank()) return
         if (!articles.existsById(articleId)) return
-        // A store outage must not break ingest: fall back to the column, and the
-        // offload pass moves the body later when the store recovers.
-        val stored = if (objectConfig.enabled()) {
-            upload(articleId, html)
-        } else {
-            null
-        }
-        bodies.save(stored ?: ArticleBodyEntity(articleId = articleId, contentHtml = html))
-    }
-
-    private fun upload(articleId: String, html: String): ArticleBodyEntity? {
-        val bytes = ObjectText.encode(html)
-        val key = objectKey(html.toByteArray(Charsets.UTF_8))
-        if (!runCatching { objectClient.put(key, bytes) }.isSuccess) return null
-        return ArticleBodyEntity(
-            articleId = articleId,
-            contentHtml = null,
-            storageKey = key,
-            byteSize = bytes.size.toLong(),
-        )
+        // Writes stay local and transactional. The scheduled offload job moves
+        // cold bodies to the object store without holding ingest transactions
+        // open across network calls.
+        bodies.save(ArticleBodyEntity(articleId = articleId, contentHtml = html))
     }
 
     /**

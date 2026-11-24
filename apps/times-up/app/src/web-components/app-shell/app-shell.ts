@@ -16,7 +16,15 @@ import {
     panelResizeStart,
 } from './article-panel-resize';
 import { loadArticlePanelWidth } from './article-panel-settings';
-import { onAuthChanged, onAuthError, signIn, signOut, syncToastTimers as syncToastTimersAuth } from './app-shell-auth';
+import {
+    hasPersistentLocalClearFailure,
+    onAuthChanged,
+    onAuthError,
+    recoverLocalDataClear,
+    signIn,
+    signOut,
+    syncToastTimers as syncToastTimersAuth,
+} from './app-shell-auth';
 import {
     autoSyncFeedIds as autoSyncFeedIdsFor,
     deepActiveElement,
@@ -73,6 +81,7 @@ export class AppShell extends HTMLElement {
     declare authed: boolean;
     declare username: string | null;
     declare authError: string;
+    declare localDataClearFailed: boolean;
     declare toasts: ToastNotice[];
     declare articleWidth: number;
 
@@ -110,6 +119,7 @@ export class AppShell extends HTMLElement {
         defineReactive(this, 'authed', hasSession());
         defineReactive(this, 'username', currentUsername());
         defineReactive(this, 'authError', '');
+        defineReactive(this, 'localDataClearFailed', hasPersistentLocalClearFailure());
         defineReactive(this, 'toasts', [] as ToastNotice[]);
         defineReactive(this, 'articleWidth', loadArticlePanelWidth());
     }
@@ -142,6 +152,7 @@ export class AppShell extends HTMLElement {
     }
 
     connectedCallback() {
+        if (!this.authed) void recoverLocalDataClear(this as never);
         this.adoptSharedLink();
         this.route = parsePath(history.location.pathname, history.location.search);
         this.deepLinkArticleId = parseArticleId(history.location.search);

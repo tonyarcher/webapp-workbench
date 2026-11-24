@@ -54,6 +54,16 @@ class HttpPageFetcherTest {
     }
 
     @Test
+    fun malformedRedirectBecomesFetchFailure() {
+        server.createContext("/redirect") { ex ->
+            ex.responseHeaders.add("Location", "ftp://example.com/feed")
+            ex.sendResponseHeaders(302, -1)
+            ex.close()
+        }
+        assertFailsWith<IllegalStateException> { fetcher.fetchHtml("$base/redirect") }
+    }
+
+    @Test
     fun failsOnHttpError() {
         server.createContext("/bad") { ex ->
             ex.sendResponseHeaders(404, -1)

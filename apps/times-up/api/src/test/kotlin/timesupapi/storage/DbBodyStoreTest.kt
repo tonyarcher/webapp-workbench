@@ -33,17 +33,16 @@ class DbBodyStoreTest {
     }
 
     @Test
-    fun putStoresGzipAndKeepsTheRowSmall() {
+    fun putStoresLocallyWithoutNetworkIO() {
         whenever(articles.existsById("a1")).thenReturn(true)
+        val captor = argumentCaptor<ArticleBodyEntity>()
 
         store.put("a1", "<p>hello</p>")
 
-        val key = client.objects.keys.single()
-        assertTrue(key.endsWith(".html.gz"))
-        val stored = client.objects.getValue(key)
-        assertTrue(ObjectText.isGzip(stored))
-        assertEquals("<p>hello</p>", ObjectText.decode(stored))
-        verify(bodies).save(any())
+        verify(bodies).save(captor.capture())
+        assertEquals("<p>hello</p>", captor.firstValue.contentHtml)
+        assertNull(captor.firstValue.storageKey)
+        assertTrue(client.objects.isEmpty())
     }
 
     @Test
