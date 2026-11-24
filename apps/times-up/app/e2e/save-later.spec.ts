@@ -174,11 +174,14 @@ test('the slideshow saves the visible article', async ({ page }) => {
     await page.route('**/api/articles?**', (route) => route.fulfill({ status: 200, body: JSON.stringify({ items }) }));
     await page.route('**/api/articles/a*/**', (route) => route.fulfill({ status: 404, body: '{}' }));
     let savedBody: unknown = null;
+    let saved = false;
     await page.route('**/api/saved-articles', async (route) => {
         if (route.request().method() === 'GET') {
-            await route.fulfill({ status: 200, body: '{"items":[]}' });
+            const savedItems = saved ? [{ id: 'saved', articleId: 'a2', title: 'Slide 2', savedAt: now }] : [];
+            await route.fulfill({ status: 200, body: JSON.stringify({ items: savedItems }) });
             return;
         }
+        saved = true;
         savedBody = route.request().postDataJSON() as unknown;
         await route.fulfill({
             status: 200,

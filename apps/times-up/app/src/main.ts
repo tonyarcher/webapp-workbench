@@ -39,7 +39,8 @@ if (loggedIn) window.dispatchEvent(new CustomEvent('times-up-auth-changed'));
 
 initTheme();
 applyReaderMode(loadReaderMode());
-void recomputeHotIfNeeded();
+// A sign-out in another tab can close IndexedDB during this best-effort maintenance.
+void recomputeHotIfNeeded().catch(() => {});
 
 // PWA install + offline support; registration in dev would fight HMR, so only
 // the production bundle gets the service worker.
