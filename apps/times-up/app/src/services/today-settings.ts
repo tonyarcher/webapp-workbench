@@ -17,12 +17,13 @@ export const PER_FOLDER_OPTIONS = [3, 5, 10] as const;
 export const TODAY_LIST_VIEWS = ['medium', 'detailed', 'headline', 'cards'] as const;
 
 const STORAGE_KEY = 'times-up:today-settings';
+const MEDIUM_MIGRATION_KEY = 'times-up:today-medium-migrated';
 
 export function defaultTodaySettings(): TodaySettings {
     return {
         excludedFolderIds: [],
         perFolder: DEFAULT_PER_FOLDER,
-        unreadOnly: false,
+        unreadOnly: true,
         listView: 'medium',
     };
 }
@@ -30,8 +31,19 @@ export function defaultTodaySettings(): TodaySettings {
 export function loadTodaySettings(): TodaySettings {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
+        const migrated = localStorage.getItem(MEDIUM_MIGRATION_KEY) === '1';
+        localStorage.setItem(MEDIUM_MIGRATION_KEY, '1');
         if (!raw) return defaultTodaySettings();
         const parsed = JSON.parse(raw) as Partial<TodaySettings>;
+        const storedView =
+            typeof parsed.listView === 'string' && (TODAY_LIST_VIEWS as readonly string[]).includes(parsed.listView)
+                ? (parsed.listView as TodayListView)
+                : 'medium';
+        const needsMigration = !migrated && storedView === 'detailed';
+        const listView: TodayListView = needsMigration ? 'medium' : storedView;
+        if (needsMigration) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...parsed, listView }));
+        }
         return {
             excludedFolderIds: Array.isArray(parsed.excludedFolderIds)
                 ? parsed.excludedFolderIds.filter((id): id is string => typeof id === 'string')
@@ -41,11 +53,9 @@ export function loadTodaySettings(): TodaySettings {
                 (PER_FOLDER_OPTIONS as readonly number[]).includes(parsed.perFolder)
                     ? parsed.perFolder
                     : DEFAULT_PER_FOLDER,
-            unreadOnly: parsed.unreadOnly === true,
-            listView:
-                typeof parsed.listView === 'string' && (TODAY_LIST_VIEWS as readonly string[]).includes(parsed.listView)
-                    ? parsed.listView
-                    : 'medium',
+            unreadOnly: true,
+            // Readers who never chose another view get the new medium default.
+            listView,
         };
     } catch {
         return defaultTodaySettings();

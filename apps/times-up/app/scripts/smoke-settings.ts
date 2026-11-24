@@ -28,6 +28,7 @@ const defaults = loadTodaySettings();
 assert(defaults.excludedFolderIds.length === 0, 'today settings default to all folders included');
 assert(defaults.perFolder === DEFAULT_PER_FOLDER, 'today settings default per-folder amount');
 assert(defaults.listView === 'medium', 'today settings default to the medium reading view');
+assert(defaults.unreadOnly === true, 'today settings are unread-only by default');
 
 const mem = new Map<string, string>();
 const gStorage = globalThis as Record<string, unknown>;
@@ -36,12 +37,32 @@ gStorage['localStorage'] = {
     setItem: (k: string, v: string) => void mem.set(k, String(v)),
     removeItem: (k: string) => void mem.delete(k),
 };
+const fresh = loadTodaySettings();
+assert(fresh.listView === 'medium', 'fresh settings start in medium');
+assert(mem.get('times-up:today-medium-migrated') === '1', 'fresh install completes the migration');
 saveTodaySettings({ excludedFolderIds: ['a', 'b'], perFolder: 3, unreadOnly: true, listView: 'cards' });
 const roundTrip = loadTodaySettings();
 assert(roundTrip.excludedFolderIds.join(',') === 'a,b', 'today settings save/load round trip');
 assert(roundTrip.perFolder === 3, 'today settings round trip keeps the amount');
-assert(roundTrip.unreadOnly === true, 'today settings round trip keeps unread-only');
+assert(roundTrip.unreadOnly === true, 'today settings stay unread-only');
 assert(roundTrip.listView === 'cards', 'today settings round trip keeps list view');
+
+mem.set('times-up:today-medium-migrated', '1');
+mem.set('times-up:today-settings', JSON.stringify({ listView: 'detailed', unreadOnly: false }));
+assert(loadTodaySettings().listView === 'detailed', 'an explicit detailed choice survives after migration');
+assert(loadTodaySettings().unreadOnly === true, 'stored false cannot disable unread-only');
+mem.delete('times-up:today-medium-migrated');
+mem.set('times-up:today-settings', JSON.stringify({ listView: 'detailed' }));
+const migrated = loadTodaySettings();
+assert(migrated.listView === 'medium', 'legacy detailed stored view migrates to medium once');
+assert(mem.get('times-up:today-medium-migrated') === '1', 'migration flag is persisted');
+assert(
+    JSON.parse(mem.get('times-up:today-settings') ?? '{}').listView === 'medium',
+    'migration rewrites the stored view so later loads stay medium',
+);
+assert(migrated.unreadOnly === true, 'legacy settings are unread-only');
+mem.set('times-up:today-settings', JSON.stringify({ listView: 'detailed' }));
+assert(loadTodaySettings().listView === 'detailed', 'migration does not override a later explicit choice');
 
 mem.set('times-up:today-settings', JSON.stringify({ excludedFolderIds: ['a'], perFolder: 7 }));
 assert(loadTodaySettings().perFolder === DEFAULT_PER_FOLDER, 'today settings clamp an unknown amount');

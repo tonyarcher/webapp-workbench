@@ -61,7 +61,8 @@ describe('today reading view', () => {
             if (url.includes('/library/folders')) return json({ folders: [folder], savedSearches: [] });
             if (url.includes('/library/feeds')) return json({ feeds: [feed] });
             if (url.includes('/library/counts')) return json({ counts: {} });
-            if (url.includes('/articles?')) return json({ items: [article], nextCursor: null });
+            const read = { ...article, id: 'read-1', guid: 'read-1', title: 'Already read', read: 1 as const };
+            if (url.includes('/articles?')) return json({ items: [article, read], nextCursor: null });
             if (url.includes('/excerpt')) return json({ excerpt: '' });
             return json({});
         };
@@ -71,6 +72,7 @@ describe('today reading view', () => {
         globalThis.fetch = originalFetch;
         localStorage.removeItem('times-up.auth.tokens');
         localStorage.removeItem('times-up:today-settings');
+        localStorage.removeItem('times-up:today-medium-migrated');
     });
 
     it('renders sectioned medium rows with image, summary, and source controls', async () => {
@@ -87,6 +89,9 @@ describe('today reading view', () => {
             expect(root.querySelector('.feed-label')?.textContent).to.equal(feed.title);
             expect(root.querySelector('.star')?.getAttribute('aria-label')).to.equal('Star');
             expect(root.querySelector<HTMLSelectElement>('.view-mode select')?.value).to.equal('medium');
+            expect(root.querySelector('.unread-toggle')).to.equal(null);
+            expect(root.querySelectorAll('.medium-row').length).to.equal(1);
+            expect(root.textContent).to.not.contain('Already read');
             const row = root.querySelector('.medium-row')!;
             const handle = root.querySelector<HTMLButtonElement>('.expand-handle')!;
             expect(handle.getAttribute('aria-label')).to.equal('Show more');

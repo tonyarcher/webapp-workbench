@@ -217,14 +217,6 @@ export class TodayView extends HTMLElement {
         toolbar.appendChild(
             el('span', 'date', this.today.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })),
         );
-        const unreadLabel = el('label', 'unread-toggle');
-        const unreadBox = el('input');
-        unreadBox.type = 'checkbox';
-        unreadBox.checked = this.settings.unreadOnly;
-        unreadBox.addEventListener('change', () => this.persist({ ...this.settings, unreadOnly: unreadBox.checked }));
-        unreadLabel.appendChild(unreadBox);
-        unreadLabel.appendChild(document.createTextNode(' Unread only'));
-        toolbar.appendChild(unreadLabel);
         const viewLabel = el('label', 'view-mode');
         const select = el('select');
         for (const entry of [
