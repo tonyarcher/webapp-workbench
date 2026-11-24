@@ -405,10 +405,11 @@ button.title-open:hover {
 }
 
 .medium-row {
+    position: relative;
     display: flex;
     align-items: stretch;
     gap: 20px;
-    padding: 18px;
+    padding: 18px 18px 26px;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--panel-bg);
@@ -480,15 +481,64 @@ button.title-open:hover {
     white-space: normal;
 }
 
+.medium-row:not(.expanded) .medium-summary,
+.medium-row:not(.expanded) .medium-excerpt {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.medium-row.expanded .medium-summary,
+.medium-row.expanded .medium-excerpt {
+    display: block;
+    overflow: visible;
+}
+
 .medium-summary {
     margin: 0;
     font-size: 14px;
     line-height: 1.6;
     color: var(--text-muted);
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+}
+
+.medium-excerpt {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-muted);
+    border-left: 2px solid var(--accent);
+    padding-left: 10px;
+}
+
+.expand-handle {
+    position: absolute;
+    left: 50%;
+    bottom: 5px;
+    transform: translateX(-50%);
+    width: 42px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel-bg);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.expand-handle:hover {
+    color: var(--text);
+    border-color: var(--accent);
+}
+
+.medium-row.expanded .expand-handle {
+    background: var(--hover);
+    color: var(--text);
 }
 
 .medium-footer {

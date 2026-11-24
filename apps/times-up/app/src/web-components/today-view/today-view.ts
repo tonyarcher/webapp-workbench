@@ -367,6 +367,20 @@ export class TodayView extends HTMLElement {
             media.appendChild(empty);
         }
         row.appendChild(media);
+        if (article.summary || article.content) {
+            const expand = el('button', 'expand-handle', '⌄');
+            expand.type = 'button';
+            expand.setAttribute('aria-label', 'Show more');
+            expand.setAttribute('aria-expanded', 'false');
+            expand.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const expanded = row.classList.toggle('expanded');
+                expand.textContent = expanded ? '⌃' : '⌄';
+                expand.setAttribute('aria-label', expanded ? 'Show less' : 'Show more');
+                expand.setAttribute('aria-expanded', String(expanded));
+            });
+            row.appendChild(expand);
+        }
         if (!article.summary) void this.excerptInto(copy, article, 'row-excerpt medium-excerpt');
         return row;
     }

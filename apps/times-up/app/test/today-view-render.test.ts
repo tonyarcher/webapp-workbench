@@ -87,6 +87,16 @@ describe('today reading view', () => {
             expect(root.querySelector('.feed-label')?.textContent).to.equal(feed.title);
             expect(root.querySelector('.star')?.getAttribute('aria-label')).to.equal('Star');
             expect(root.querySelector<HTMLSelectElement>('.view-mode select')?.value).to.equal('medium');
+            const row = root.querySelector('.medium-row')!;
+            const handle = root.querySelector<HTMLButtonElement>('.expand-handle')!;
+            expect(handle.getAttribute('aria-label')).to.equal('Show more');
+            expect(handle.getAttribute('aria-expanded')).to.equal('false');
+            expect(handle.textContent).to.equal('⌄');
+            handle.click();
+            expect(row.classList.contains('expanded')).to.equal(true);
+            expect(handle.getAttribute('aria-label')).to.equal('Show less');
+            expect(handle.getAttribute('aria-expanded')).to.equal('true');
+            expect(handle.textContent).to.equal('⌃');
         } finally {
             view.remove();
         }
