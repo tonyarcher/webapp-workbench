@@ -257,11 +257,9 @@ main {
 
 @keyframes article-panel-in {
     from {
-        transform: translateX(32px);
         opacity: 0;
     }
     to {
-        transform: none;
         opacity: 1;
     }
 }

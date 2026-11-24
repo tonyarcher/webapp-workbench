@@ -323,6 +323,6 @@ import { assert } from './smoke-assert';
 // ---- the tab title carries the unread count ----
 {
     const { unreadTitle } = await import('../src/query');
-    assert(unreadTitle(0) === 'RSS Reader', 'an empty inbox leaves the title alone');
-    assert(unreadTitle(176) === '(176) RSS Reader', 'unread articles count in the tab title');
+    assert(unreadTitle(0) === 'Times Up', 'an empty inbox leaves the title alone');
+    assert(unreadTitle(176) === '(176) Times Up', 'unread articles count in the tab title');
 }

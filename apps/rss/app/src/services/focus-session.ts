@@ -4,6 +4,17 @@ import { selectInteresting } from './interesting-words';
 
 const STATE_KEY = 'rss-reader:focus-session';
 const STREAK_KEY = 'rss-reader:focus-streak';
+let stagedSeed: Article[] | null = null;
+
+export function stageFocusSeed(articles: Article[]): void {
+    stagedSeed = articles.length ? articles : null;
+}
+
+export function takeFocusSeed(): Article[] | null {
+    const seed = stagedSeed;
+    stagedSeed = null;
+    return seed;
+}
 
 export interface FocusStreak {
     kept: number;
@@ -103,8 +114,22 @@ export function startFocusSession(
     durationMs: number,
     now = Date.now(),
     limit = 10,
+    priorityIds: string[] = [],
 ): FocusSessionState {
-    const queue = rankFocusQueue(articles, limit).map((a) => a.id);
+    const priority: Article[] = [];
+    const seen = new Set<string>();
+    for (const id of priorityIds) {
+        const article = articles.find((item) => item.id === id && item.read === 0);
+        if (article && !seen.has(id)) {
+            priority.push(article);
+            seen.add(id);
+        }
+    }
+    const rest = rankFocusQueue(
+        articles.filter((article) => !seen.has(article.id)),
+        limit,
+    );
+    const queue = [...priority, ...rest].slice(0, limit).map((a) => a.id);
     const state: FocusSessionState = {
         status: 'running',
         queueIds: queue,

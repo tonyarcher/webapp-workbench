@@ -34,8 +34,10 @@ assert(
 );
 
 const manifest = JSON.parse(readFileSync(new URL('../public/manifest.webmanifest', import.meta.url), 'utf8')) as {
+    name?: string;
     share_target?: { action?: string; method?: string; params?: Record<string, string> };
 };
+assert(manifest.name === 'Times Up', 'the installed app uses the Times Up name');
 assert(manifest.share_target?.action === './', 'share target launches the app base URL');
 assert(manifest.share_target?.method === 'GET', 'share target works before the service worker is installed');
 assert(manifest.share_target?.params?.['url'] === 'url', 'share target receives the shared URL');

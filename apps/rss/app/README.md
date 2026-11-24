@@ -1,8 +1,9 @@
-# rss-reader
+# Times Up
 
-A client-side RSS reader. Subscriptions, folders, articles, and read state live
-in IndexedDB; feeds are fetched through a public CORS proxy and parsed in the
-browser. `AGENTS.md` has the engineering rules.
+The `rss-reader` workspace powers Times Up.
+
+Times Up is a private feed reader. The UI stores reading state in IndexedDB;
+feeds are fetched through the Kotlin API. `AGENTS.md` has the engineering rules.
 
 ## Getting started
 
@@ -29,11 +30,11 @@ If 4173 is already taken by another app, `vite preview` picks the next free port
 `powershell -File scripts/install-firefox.ps1 -Url http://localhost:4174`.
 
 - **Chrome / Edge**: open http://localhost:4173, then use the install icon in the address
-  bar if offered (or `⋮` → _Install RSS Reader_). It launches from the Start menu /
+  bar if offered (or `⋮` → _Install Times Up_). It launches from the Start menu /
   taskbar, runs in its own window, and works offline once loaded.
 - **Firefox**: desktop Firefox doesn't support installing manifest PWAs (no native
   install UI), so run `powershell -File scripts/install-firefox.ps1` to create a
-  "RSS Reader (Firefox)" desktop shortcut that opens the app in a dedicated Firefox
+  "Times Up (Firefox)" desktop shortcut that opens the app in a dedicated Firefox
   window — a browser window, not a stripped-down app window.
 
 Notes:

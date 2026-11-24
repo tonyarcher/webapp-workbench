@@ -1,0 +1,87 @@
+:host {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: color-mix(in srgb, var(--bg, #000) 55%, transparent);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.similar-panel {
+    width: min(520px, 100%);
+    height: 100%;
+    overflow-y: auto;
+    background: var(--panel-bg, #fff);
+    border-left: 1px solid var(--border, #ddd);
+    box-sizing: border-box;
+    padding: 20px;
+}
+
+.similar-panel:focus {
+    outline: none;
+}
+
+.head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.head h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.btn {
+    font: inherit;
+    padding: 6px 12px;
+    border: 1px solid var(--border, #ddd);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text, #111);
+    cursor: pointer;
+}
+
+.btn:focus-visible,
+.result:focus-visible {
+    outline: 2px solid var(--accent, #2563eb);
+    outline-offset: 2px;
+}
+
+.results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.result {
+    width: 100%;
+    display: grid;
+    gap: 4px;
+    text-align: left;
+    font: inherit;
+    padding: 12px;
+    border: 1px solid var(--border, #ddd);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text, #111);
+    cursor: pointer;
+}
+
+.result:hover {
+    background: var(--hover, #f5f5f5);
+}
+
+.result-title {
+    font-weight: 600;
+}
+
+.result-reason,
+.empty {
+    color: var(--text-muted, #666);
+    font-size: 13px;
+}

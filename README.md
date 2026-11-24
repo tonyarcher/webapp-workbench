@@ -14,7 +14,7 @@ those rather than trusting a table that can only go stale.
 Each app directory carries its own `AGENTS.md` with the conventions and gotchas
 that apply to it.
 
-## What the reader does
+## What Times Up does
 
 The RSS reader keeps one copy of each feed and stores per-user reading state
 separately. Article text is treated as input: a one-time extractor learns topic

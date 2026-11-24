@@ -121,6 +121,12 @@ export function renderToolbar(host: ArticleListRenderHost): HTMLElement {
     pageSize.title = 'Articles shown at a time';
     actions.appendChild(pageSize);
     actions.appendChild(actionButton('btn', 'Mark shown as read', host.onMarkShownRead.bind(host)));
+    const save = actionButton('btn save-for-later', '🔖 Save for later', () => void host.onSaveForLater());
+    const currentIndex = host.listView === 'slideshow' ? host.slideshowIndex : host.cursor;
+    save.disabled = !host.selectedIds.length && !host.items[currentIndex];
+    save.setAttribute('aria-label', 'Save for later');
+    save.title = 'Save selected articles, or the current row, for reading later';
+    actions.appendChild(save);
     actions.appendChild(actionButton('btn', 'Catch me up (5 min)', host.onCatchMeUp.bind(host)));
     actions.appendChild(actionButton('btn', 'Advanced', host.onToggleAdvanced.bind(host)));
     const refresh = el('button', 'btn refresh');

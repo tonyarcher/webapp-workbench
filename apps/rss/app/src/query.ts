@@ -72,9 +72,9 @@ export function invalidateSavedArticles() {
     return queryClient.invalidateQueries({ queryKey: savedArticlesKey });
 }
 
-/** Tab title with the unread count: "(176) RSS Reader". Zero means just the name. */
+/** Tab title with the unread count: "(176) Times Up". Zero means just the name. */
 export function unreadTitle(totalUnread: number): string {
-    return totalUnread > 0 ? `(${totalUnread}) RSS Reader` : 'RSS Reader';
+    return totalUnread > 0 ? `(${totalUnread}) Times Up` : 'Times Up';
 }
 
 /**

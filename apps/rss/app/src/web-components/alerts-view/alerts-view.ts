@@ -1,4 +1,6 @@
 import { fetchAlerts, type AlertGroup } from '../../services/api-alerts';
+import { clearFocusSession, loadFocusSession, stageFocusSeed } from '../../services/focus-session';
+import { navigate } from '../../router';
 import type { Article } from '../../types';
 import { formatDate } from '../../util';
 import { el } from './alerts-view-dom';
@@ -56,6 +58,21 @@ export class AlertsView extends HTMLElement {
         if (!this.root) return;
         const toolbar = el('div', 'toolbar');
         toolbar.appendChild(el('h2', undefined, 'Alerts'));
+        const hits = this.groups.flatMap((group) => group.hits);
+        const focus = el('button', 'btn', 'Focus these');
+        focus.disabled = this.loading || hits.length === 0;
+        focus.addEventListener('click', () => {
+            if (
+                loadFocusSession() &&
+                !window.confirm('Start a new focus session from these alerts? The current session will be replaced.')
+            ) {
+                return;
+            }
+            clearFocusSession();
+            stageFocusSeed(hits);
+            navigate({ kind: 'focus' });
+        });
+        toolbar.appendChild(focus);
         const body = el('div', 'body');
         body.tabIndex = 0;
         if (this.loading) {

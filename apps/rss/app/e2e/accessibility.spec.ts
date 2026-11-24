@@ -177,6 +177,32 @@ test('the shared-link screen has no automatic accessibility violations', async (
     expect(await audit(page)).toEqual([]);
 });
 
+test('the focus session has no automatic accessibility violations', async ({ page }) => {
+    await seedAuth(page);
+    await stubLibrary(page, ARTICLES);
+    await page.route('**/api/saved-articles', (route) => route.fulfill({ status: 200, body: '{"items":[]}' }));
+    await page.goto('/#/focus');
+    await page.getByRole('button', { name: 'Start', exact: true }).click();
+    await expect(page.getByRole('progressbar', { name: 'Focus session progress' })).toBeVisible();
+    expect(await audit(page)).toEqual([]);
+});
+
+test('the related-stories panel has no automatic accessibility violations', async ({ page }) => {
+    await seedAuth(page);
+    const related = [
+        article('a1', 'Battery grid storage', { link: 'https://example.com/battery' }),
+        article('a2', 'Battery grid policy', { link: 'https://example.com/policy' }),
+    ];
+    await stubLibrary(page, related);
+    await page.route('**/api/saved-articles', (route) => route.fulfill({ status: 200, body: '{"items":[]}' }));
+    await page.goto('/#/all');
+    await page.getByRole('button', { name: 'Battery grid storage', exact: true }).click();
+    await page.getByRole('button', { name: 'More actions' }).click();
+    await page.getByRole('button', { name: 'More like this' }).click();
+    await expect(page.getByRole('dialog', { name: 'More like this' })).toBeVisible();
+    expect(await audit(page)).toEqual([]);
+});
+
 test('the command palette has no automatic accessibility violations', async ({ page }) => {
     await seedAuth(page);
     await stubLibrary(page, [ARTICLES[0]]);

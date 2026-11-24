@@ -633,9 +633,14 @@ button.title-open:hover {
     border: none;
     background: none;
     cursor: pointer;
-    color: var(--star-color);
+    color: var(--text-muted);
     font-size: 15px;
     padding: 0 2px;
+}
+
+.star[aria-pressed='true'],
+.card-action.star[aria-pressed='true'] {
+    color: var(--star-color);
 }
 
 .derank {
@@ -829,6 +834,10 @@ button.title-open:hover {
 .slideshow-share {
     margin-top: 8px;
 }
+.slideshow-actions .starred {
+    color: var(--star-color);
+}
+
 .slideshow-body {
     flex: 1;
     min-height: 0;

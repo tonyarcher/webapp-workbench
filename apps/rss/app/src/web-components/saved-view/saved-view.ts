@@ -1,27 +1,9 @@
 import { fetchSavedArticlesList } from '../../query';
 import { removeSavedSnapshot, unsaveForLater } from '../../mutations-saved';
 import { domainOf, formatDate } from '../../util';
-import type { Article, SavedArticleSnapshot } from '../../types';
+import { savedSnapshotToArticle } from '../../services/saved-queue';
+import type { SavedArticleSnapshot } from '../../types';
 import styles from './saved-view.css?inline';
-
-function toArticle(s: SavedArticleSnapshot): Article {
-    return {
-        id: s.articleId ?? s.id,
-        feedId: s.feedId ?? 'saved',
-        guid: s.articleId ?? s.id,
-        title: s.title,
-        link: s.link,
-        author: s.author,
-        summary: s.summary,
-        content: s.content,
-        published: s.published ?? s.savedAt,
-        fetchedAt: s.savedAt,
-        read: 0,
-        starred: false,
-        popularity: 0,
-        hot: 0,
-    };
-}
 
 export class SavedView extends HTMLElement {
     private items: SavedArticleSnapshot[] = [];
@@ -92,7 +74,7 @@ export class SavedView extends HTMLElement {
             const ul = document.createElement('ul');
             ul.className = 'list';
             for (const s of this.items) {
-                const article = toArticle(s);
+                const article = savedSnapshotToArticle(s);
                 const li = document.createElement('li');
                 li.className = 'row';
                 const open = document.createElement('button');
@@ -142,7 +124,7 @@ export class SavedView extends HTMLElement {
     }
 
     private open(s: SavedArticleSnapshot) {
-        const article = toArticle(s);
+        const article = savedSnapshotToArticle(s);
         this.dispatchEvent(
             new CustomEvent('open-article', {
                 detail: { article, index: 0, items: [article] },
@@ -161,7 +143,7 @@ export class SavedView extends HTMLElement {
 
     private exportNotes() {
         const items = this.items;
-        const articles = items.map(toArticle);
+        const articles = items.map(savedSnapshotToArticle);
         // dynamic import to avoid circular dep
         import('../../services/notes-export').then((m) => m.downloadNotesExport(articles, 'obsidian'));
     }

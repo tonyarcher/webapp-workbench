@@ -1,4 +1,5 @@
-import { bulkStar, markShownRead, noteDerank } from '../../mutations';
+import { bulkStar, markShownRead, noteDerank, saveForLater } from '../../mutations';
+import { toastInfo } from '../../services/toast';
 import type { Article } from '../../types';
 
 /** Selection, bulk actions, and mark-on-scroll. The element keeps the
@@ -134,4 +135,25 @@ export async function bulkStarAction(
 export function bulkDerankAction(host: SelectionHost & { clearSelection(): void }): void {
     for (const item of selectedItems(host)) noteDerank(item.id, item.title, true);
     host.clearSelection();
+}
+
+interface SaveForLaterHost extends SelectionHost {
+    listView?: string;
+    slideshowIndex?: number;
+    clearSelection(): void;
+}
+
+export async function saveForLaterAction(host: SaveForLaterHost): Promise<void> {
+    const selected = selectedItems(host);
+    const currentIndex = host.listView === 'slideshow' ? (host.slideshowIndex ?? host.cursor) : host.cursor;
+    const current = host.items[currentIndex];
+    const targets = selected.length ? selected : current ? [current] : [];
+    if (!targets.length) return;
+    let saved = 0;
+    for (const article of targets) {
+        if (await saveForLater(article.id)) saved++;
+    }
+    if (!saved) return;
+    if (saved === targets.length && selected.length) host.clearSelection();
+    toastInfo(`${saved} article${saved === 1 ? '' : 's'} saved for later`);
 }

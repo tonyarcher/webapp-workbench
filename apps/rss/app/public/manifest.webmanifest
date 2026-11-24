@@ -1,7 +1,7 @@
 {
-    "name": "RSS Reader",
-    "short_name": "RSS Reader",
-    "description": "A client-side RSS reader. Subscriptions, folders, articles, and read state live in IndexedDB.",
+    "name": "Times Up",
+    "short_name": "Times Up",
+    "description": "A private reading desk for your feeds, saved stories, and focus sessions.",
     "start_url": "./",
     "scope": "./",
     "display": "standalone",

@@ -13,7 +13,7 @@ export function buildNotesExport(articles: Article[], options: NotesExportOption
     const lines: string[] = [];
     lines.push(`# ${title}`);
     lines.push('');
-    lines.push(`Exported ${articles.length} article${articles.length === 1 ? '' : 's'} from RSS Reader.`);
+    lines.push(`Exported ${articles.length} article${articles.length === 1 ? '' : 's'} from Times Up.`);
     lines.push('');
     for (const a of articles) {
         const link = a.link ? `[${a.title}](${a.link})` : a.title;
@@ -44,7 +44,7 @@ export function buildNotesExport(articles: Article[], options: NotesExportOption
 }
 
 export function downloadNotesExport(articles: Article[], format: NotesFormat, filename = 'rss-reader-export.md'): void {
-    const content = buildNotesExport(articles, { format, title: 'RSS Reader Export' });
+    const content = buildNotesExport(articles, { format, title: 'Times Up Export' });
     const blob = new Blob([content], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

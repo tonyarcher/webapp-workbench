@@ -20,6 +20,7 @@ export interface ArticleListRenderHost extends HighlightHost {
     markOnScroll: boolean;
     sort: ArticleSort;
     listView: ListViewType;
+    slideshowIndex: number;
     maxCardCols: number;
     pageSize: number;
     interestingStrictness: number;
@@ -33,6 +34,7 @@ export interface ArticleListRenderHost extends HighlightHost {
     clearSelection(): void;
     onBulkMarkRead(): void;
     onBulkStar(): void;
+    onSaveForLater(): Promise<void>;
     onBulkDerank(): void;
     showShortcuts(): void;
     onRetryArticles(): void;

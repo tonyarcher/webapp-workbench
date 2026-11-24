@@ -1,5 +1,6 @@
 import { assert } from './smoke-assert.js';
 import type { Article } from '../src/types.js';
+import { savedSnapshotToArticle } from '../src/services/saved-queue.js';
 import {
     clearFocusSession,
     finishFocusSession,
@@ -10,7 +11,9 @@ import {
     rankFocusQueue,
     recordKeptSession,
     remainingFocusIds,
+    stageFocusSeed,
     startFocusSession,
+    takeFocusSeed,
 } from '../src/services/focus-session.js';
 
 function makeStore(): Storage {
@@ -67,6 +70,9 @@ assert(loadFocusSession() === null, 'no focus session initially');
 assert(loadFocusStreak().kept === 0, 'streak starts at zero');
 
 const articles = [art('a', 0, 5, 3), art('b', 1, 9, 9), art('c', 0, 1, 1), art('d', 0, 7, 2)];
+stageFocusSeed([art('alert', 0, 0, 0)]);
+assert(takeFocusSeed()?.[0]?.id === 'alert', 'alert rows stage a focus seed');
+assert(takeFocusSeed() === null, 'a focus seed is consumed once');
 const queue = rankFocusQueue(articles, 2);
 assert(queue.length === 2, 'focus queue respects limit');
 assert(
@@ -78,6 +84,18 @@ const started = startFocusSession(articles, 10 * 60_000, 1_000_000, 3);
 assert(started.status === 'running', 'started focus session is running');
 assert(started.queueIds.length === 3, 'started focus session queues unread articles');
 assert(started.endsAt === 1_000_000 + 10 * 60_000, 'focus session endsAt set from duration');
+const prioritized = startFocusSession(articles, 60_000, 0, 3, ['d', 'a', 'b']);
+assert(prioritized.queueIds.join(',') === 'd,a,c', 'saved or alert priority rows lead the focus queue');
+const saved = savedSnapshotToArticle({
+    id: 'shared:example.com/story',
+    title: 'Shared story',
+    link: 'https://example.com/story',
+    savedAt: 1,
+});
+assert(
+    saved.id === 'shared:example.com/story' && saved.feedId === 'saved',
+    'saved links adapt into focus queue articles',
+);
 
 const doneOne = markFocusDone(started, started.queueIds[0]!);
 assert(doneOne.doneIds.length === 1, 'markFocusDone records article once');

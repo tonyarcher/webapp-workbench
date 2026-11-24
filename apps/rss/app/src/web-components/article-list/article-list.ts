@@ -8,7 +8,13 @@ import {
 } from '../../query';
 import { markShownReadAction, openArticleAction } from './article-list-actions';
 import { applyResumeAction, prepareArticleTarget, revealArticleAction } from './article-list-targets';
-import { bulkDerankAction, bulkMarkReadAction, bulkStarAction, clearSelectionAction } from './article-list-selection';
+import {
+    bulkDerankAction,
+    bulkMarkReadAction,
+    bulkStarAction,
+    clearSelectionAction,
+    saveForLaterAction,
+} from './article-list-selection';
 import { onRowClickAction, toggleSelectCursorAction, toggleStarCursorAction } from './article-list-cursor';
 import {
     applyPendingFeedsRefresh,
@@ -132,22 +138,18 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     declare marking: boolean;
     declare advancedAnchor: MenuAnchor | null;
     declare interestingStrictness: number;
-    /** Last page-load failure, cleared on the next attempt. Rendered as a banner, never silent. */
     declare loadError: string | null;
     /** Articles hidden by mute filters in the current loaded batch/page. */
     declare mutedHidden: number;
-    /** Excerpts fetched only for rows that scroll into view. */
     declare rowExcerpts: Record<string, string | null>;
     rowExcerptPending = new Set<string>();
     excerptObserver: IntersectionObserver | null = null;
-    /** Row-level key lines expansion (N1). */
     declare highlightsOn: boolean;
     declare rowHighlights: {
         open: Record<string, boolean>;
         loading: Record<string, boolean>;
         data: Record<string, RowHighlight | null>;
     };
-    /** Slideshow view mode: current article index and playback options. */
     declare slideshowIndex: number;
     declare slideshowAutoAdvance: boolean;
     declare slideshowSavedIds: Set<string>;
@@ -166,20 +168,15 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     hasMoreSingle = true;
     lastViewKey = '';
     resumeApplied = false;
-    /** Article fetched by id when a deep link points outside the current list window. */
     deepLinkArticle: Article | null = null;
-    /** Feed membership last loaded: folder feeds, or every feed for All/Hot. */
     lastFeedSetKey = '';
-    /** Headline dwell with an active mouse, owned by this element's lifetime. */
     dwell = new DwellTracker();
     selectAnchor = -1;
     lastAutoMark = 0;
     resizeObserver: ResizeObserver | undefined;
     boundScrollEl: HTMLDivElement | null = null;
     feedWindowOffset = 0;
-    /** In-flight refresh jobs by view key. Each folder is its own elevator button. */
     refreshJobs = new Map<string, Promise<void>>();
-    /** A background refresh arrived while the article overlay had focus; apply it once active again. */
     pendingFeedsRefresh = false;
     /** Folder whose transient hide-read state is mirrored for count refresh. */
     interestingHideReadFolderId: string | null = null;
@@ -511,6 +508,10 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
 
     async onBulkStar(): Promise<void> {
         await bulkStarAction(this as never);
+    }
+
+    async onSaveForLater(): Promise<void> {
+        await saveForLaterAction(this as never);
     }
 
     async onBulkDerank(): Promise<void> {

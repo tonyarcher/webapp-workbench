@@ -25,6 +25,7 @@ import { renderBoardPicker, renderSpeedReadOverlay } from './article-view-overla
 import { FeedFoldersMenu } from '../feed-folders-menu/feed-folders-menu';
 import type { MenuAnchor } from '../menu-popover';
 import '../speed-read-view/speed-read-view';
+import { SimilarView } from '../similar-view/similar-view';
 import styles from './article-view.css?inline';
 
 import { el, appendAll } from './article-view-dom';
@@ -79,6 +80,8 @@ export class ArticleView extends HTMLElement {
     savedForLater = false;
     overflowOpen = false;
     speedReadOpen = false;
+    similarOpen = false;
+    relatedCorpus: Article[] = [];
     boardPickerOpen = false;
     boards: Board[] = [];
     boardMembership = new Set<string>();
@@ -120,6 +123,7 @@ export class ArticleView extends HTMLElement {
     private root: ShadowRoot | null = null;
     private styleEl: HTMLStyleElement | null = null;
     private feedFoldersMenu: FeedFoldersMenu | null = null;
+    private similarView: SimilarView | null = null;
     private readonly find = new ArticleFind(this, () => this.paint());
 
     /** paint() is synchronous, so consumers can await a resolved promise. */
@@ -212,6 +216,7 @@ export class ArticleView extends HTMLElement {
         this.keywords = this.article ? articleKeywords(this.article) : [];
         if (this.article?.id !== this.progressArticleId) {
             this.find.close(false);
+            this.similarOpen = false;
             flushProgressOnSwitch(this);
             this.progressArticleId = this.article?.id ?? null;
             this.savedStateGen++;
@@ -376,6 +381,11 @@ export class ArticleView extends HTMLElement {
                 a,
             ),
         );
+        if (this.similarOpen) {
+            const similar = this.relatedView();
+            similar.setSeed(a, this.relatedCorpus);
+            nodes.push(similar);
+        }
         nodes.push(
             ...renderSpeedReadOverlay(this.speedReadOpen, stripTags(a.content ?? a.summary ?? ''), () => {
                 this.speedReadOpen = false;
@@ -442,6 +452,24 @@ export class ArticleView extends HTMLElement {
 
     enqueueListen(): void {
         enqueueListenAction(this as never);
+    }
+
+    private relatedView(): SimilarView {
+        if (!this.similarView) {
+            this.similarView = new SimilarView();
+            this.similarView.addEventListener('close', () => {
+                this.similarOpen = false;
+                this.paint();
+                this.focus();
+            });
+        }
+        return this.similarView;
+    }
+
+    openSimilar(): void {
+        this.similarOpen = true;
+        this.overflowOpen = false;
+        this.paint();
     }
 
     openBoardPicker(): Promise<void> {

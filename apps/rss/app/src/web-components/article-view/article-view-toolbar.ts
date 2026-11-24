@@ -22,6 +22,8 @@ export interface ArticleViewToolbarHost {
     savedForLater: boolean;
     overflowOpen: boolean;
     speedReadOpen: boolean;
+    similarOpen: boolean;
+    openSimilar(): void;
     emitClose: () => void;
     onStar(): Promise<void>;
     onDerank(): void;
@@ -71,7 +73,7 @@ export function buildStateButtons(host: ArticleViewToolbarHost, a: Article): Nod
 
     group.appendChild(
         iconButton(actionIcon(a.starred ? 'starred' : 'star'), {
-            ...(a.starred ? { className: 'active' } : {}),
+            ...(a.starred ? { className: 'active star-action' } : { className: 'star-action' }),
             label: a.starred ? 'Unstar' : 'Star',
             title: a.starred ? 'Unstar' : 'Star',
             pressed: a.starred,
@@ -136,6 +138,9 @@ export function buildStateButtons(host: ArticleViewToolbarHost, a: Article): Nod
             host.paint();
         });
         menu.appendChild(speed);
+        const similar = el('button', 'btn', '🔗 More like this');
+        similar.addEventListener('click', () => host.openSimilar());
+        menu.appendChild(similar);
         const board = el('button', 'btn', '📋 Add to board');
         board.addEventListener('click', () => {
             void host.openBoardPicker();

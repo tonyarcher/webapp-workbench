@@ -1,4 +1,4 @@
-# RSS
+# Times Up
 
 Feed reader: a Vite + Lit UI (`app/`) backed by a Kotlin JSON API and feed
 poller (`api/`). `AGENTS.md` has the product rules; `app/AGENTS.md` and

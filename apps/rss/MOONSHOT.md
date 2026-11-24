@@ -488,6 +488,10 @@ metadata: title, summary, author, domain, link and excerpt head.
   shared feeds, and syndication clusters, served as a transient view.
 - **Half.** `app` first (local scoring), `api` later for depth.
 - **Effort.** `M`.
+- **Status.** Shipped. The article menu opens a transient related-stories
+  panel scored from the current list and local corpus by word overlap,
+  shared feed, and normalized-link syndication. Results explain each match
+  and open in the existing article panel.
 - **First test.** Smoke for the similarity ranking with crafted titles.
 
 ### A5. Search inside one article and jump-to-article
@@ -915,6 +919,10 @@ ingestion.
   done screen offers the next session as a single tap.
 - **Half.** `app`.
 - **Effort.** `M`.
+- **Status.** Shipped. Alerts can start a ready focus session seeded with
+  their hits. Sessions put saved-for-later rows first, restore after reload,
+  show queue progress, and end with explicit keep-unread, mark-rest-read, or
+  next-session actions. Kept-session streaks still never create guilt.
 - **First test.** Alert-to-session seeding smoke; queue-first ordering tests.
 
 ## G. Share and integrate (the reader as a citizen)

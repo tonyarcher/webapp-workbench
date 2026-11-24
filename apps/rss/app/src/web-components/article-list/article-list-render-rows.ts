@@ -78,7 +78,7 @@ function derankButton(article: Article): HTMLButtonElement {
 function cardActions(article: Article, onStar: (e: Event, article: Article) => void): HTMLElement {
     const layer = el('div', 'card-actions');
     const star = starButton(article, onStar);
-    star.className = 'card-action';
+    star.className = 'card-action star';
     const derank = derankButton(article);
     derank.className = 'card-action';
     const more = el('button', 'card-action', '⋯');
@@ -102,6 +102,7 @@ function cardActions(article: Article, onStar: (e: Event, article: Article) => v
 function starButton(article: Article, onStar: (e: Event, article: Article) => void): HTMLButtonElement {
     const button = el('button', 'star');
     button.setAttribute('aria-label', article.starred ? 'Unstar' : 'Star');
+    button.setAttribute('aria-pressed', String(article.starred));
     const glyph = el('span', undefined, article.starred ? '★' : '☆');
     glyph.setAttribute('aria-hidden', 'true');
     button.appendChild(glyph);

@@ -284,7 +284,13 @@ export function renderSlideshow(host: SlideshowRenderHost, actions: SlideshowRen
     next.disabled = host.slideshowIndex >= total - 1 && !host.loading;
     actionsBar.appendChild(prev);
     actionsBar.appendChild(next);
-    actionsBar.appendChild(actionButton('btn', article.starred ? '★ Unstar' : '☆ Star', actions.toggleStar));
+    actionsBar.appendChild(
+        actionButton(
+            article.starred ? 'btn starred' : 'btn',
+            article.starred ? '★ Unstar' : '☆ Star',
+            actions.toggleStar,
+        ),
+    );
     actionsBar.appendChild(actionButton('btn', article.read ? 'Keep unread' : 'Mark read', actions.toggleRead));
     const save = actionButton('btn', saved ? '🔖 Saved' : '🔖 Save for later', actions.toggleSave);
     save.setAttribute('aria-pressed', String(saved));

@@ -15,6 +15,7 @@ export interface AppShellRenderHost {
     authed: boolean;
     route: View;
     article: Article | null;
+    readContext: { items: Article[]; index: number } | null;
     deepLinkArticleId: string | null;
     shortcutsOpen: boolean;
     paletteOpen: boolean;
@@ -60,6 +61,7 @@ interface BoardViewElement extends HTMLElement {
 }
 interface ArticleViewElement extends HTMLElement {
     article: Article | null;
+    relatedCorpus: Article[];
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -138,7 +140,7 @@ function logoIcon(): SVGElement {
 function brandButton(): HTMLButtonElement {
     const brand = el('button', 'brand-link');
     const heading = el('h1');
-    heading.textContent = 'RSS Reader';
+    heading.textContent = 'Times Up';
     const sub = el('span', 'sub');
     sub.textContent = 'your feeds, in one place';
     brand.append(logoIcon(), heading, sub);
@@ -413,6 +415,7 @@ export class ShellDom {
         if (handle.getAttribute('aria-valuenow') !== String(Math.round(this.host.articleWidth))) {
             handle.setAttribute('aria-valuenow', String(Math.round(this.host.articleWidth)));
         }
+        articleView.relatedCorpus = this.host.readContext?.items ?? [];
         if (articleView.article !== article) articleView.article = article;
     }
 
@@ -444,6 +447,7 @@ export class ShellDom {
         const handle = this.createResizeHandle();
         const articleView = document.createElement('article-view') as ArticleViewElement;
         articleView.addEventListener('close', () => host.closeArticle());
+        articleView.addEventListener('open-article', host.onOpenArticle);
         articleView.article = host.article;
         panel.append(handle, articleView);
         this.panel = panel;

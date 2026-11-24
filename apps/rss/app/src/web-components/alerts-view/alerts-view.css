@@ -26,6 +26,22 @@
     margin: 0;
 }
 
+.toolbar .btn {
+    margin-left: auto;
+    font: inherit;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.toolbar .btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 .body {
     padding: 16px;
     max-width: 820px;

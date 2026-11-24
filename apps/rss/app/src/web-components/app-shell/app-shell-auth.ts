@@ -64,7 +64,7 @@ async function resetAccount(host: AppShellAuthHost): Promise<void> {
     await clearClientDb();
     host.authed = false;
     host.username = null;
-    document.title = 'RSS Reader';
+    document.title = 'Times Up';
     clearToasts();
     host.authError = ended
         ? ''

@@ -7,7 +7,7 @@
 #        powershell -File scripts/install-firefox.ps1 -Url http://localhost:4173
 param(
     [string]$Url = 'http://localhost:4173',
-    [string]$Name = 'RSS Reader (Firefox)'
+    [string]$Name = 'Times Up (Firefox)'
 )
 
 # Only allow absolute http(s) targets so a bad URL can't inject extra
@@ -50,7 +50,7 @@ $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = $firefox
 $shortcut.Arguments = "-new-window `"$($uri.AbsoluteUri)`""
 $shortcut.IconLocation = "$firefox,0"
-$shortcut.Description = 'Open RSS Reader in a dedicated Firefox window'
+$shortcut.Description = 'Open Times Up in a dedicated Firefox window'
 $shortcut.Save()
 
 Write-Output "Created $shortcutPath"
