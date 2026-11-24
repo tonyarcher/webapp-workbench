@@ -584,6 +584,7 @@ button.title-open:hover {
 }
 
 .medium-media {
+    order: -1;
     width: 184px;
     flex: none;
     display: flex;
