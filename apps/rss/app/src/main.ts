@@ -6,6 +6,7 @@ import './web-components/brief-view/brief-view';
 import './web-components/front-page/front-page';
 import './web-components/today-view/today-view';
 import './web-components/alerts-view/alerts-view';
+import './web-components/health-view/health-view';
 import './web-components/search-view/search-view';
 import './web-components/today-menu/today-menu';
 import './web-components/settings-view/settings-view';

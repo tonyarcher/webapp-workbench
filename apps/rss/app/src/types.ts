@@ -138,6 +138,7 @@ export type View =
     | { kind: 'backgrounder' }
     | { kind: 'listen' }
     | { kind: 'coverage' }
+    | { kind: 'health' }
     | { kind: 'boards' }
     | { kind: 'board'; id: string }
     | {

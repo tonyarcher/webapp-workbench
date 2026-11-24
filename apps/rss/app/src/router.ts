@@ -74,6 +74,9 @@ export function parsePath(pathname: string, search = ''): View {
     if (parts[0] === 'coverage') {
         return { kind: 'coverage' };
     }
+    if (parts[0] === 'health') {
+        return { kind: 'health' };
+    }
     if (parts[0] === 'boards') {
         return { kind: 'boards' };
     }
@@ -121,6 +124,8 @@ export function viewToPath(view: View): string {
             return '/listen';
         case 'coverage':
             return '/coverage';
+        case 'health':
+            return '/health';
         case 'boards':
             return '/boards';
         case 'board':

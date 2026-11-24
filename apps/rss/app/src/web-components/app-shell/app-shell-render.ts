@@ -72,6 +72,7 @@ const VIEW_TAGS: Record<View['kind'], string> = {
     backgrounder: 'backgrounder-view',
     listen: 'listen-view',
     coverage: 'coverage-view',
+    health: 'health-view',
     boards: 'boards-view',
     board: 'board-view',
     search: 'article-list',

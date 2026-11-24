@@ -771,6 +771,12 @@ needs piles. Ours add portability: everything exports, everything migrates.
 - **Half.** `both` (fetch history exists server-side; the dashboard is new).
 - **Effort.** `L`.
 - **First test.** Health-derivation tests; dashboard audit.
+- **Shipped (first slice).** A Feed health view in the sidebar, derived from
+  the library's existing `status`, `lastFetchedAt`, `lastError` and
+  `consecutiveFailures` — no new endpoint. It groups feeds by healthy/stale/
+  unreachable, shows age and a fix suggestion, and offers a manual Refresh.
+  No automatic removal. Four derivation tests. Still wanted: moved-URL
+  detection, dupe rate, bulk retire with undo, and pre-subscribe preview.
 
 ### D5. Curated bundles and starter packs
 
