@@ -113,25 +113,35 @@ function svg(attrs: Record<string, string>, shapes: Array<[string, Record<string
 
 function logoIcon(): SVGElement {
     return svg({ class: 'logo', viewBox: '0 0 24 24', 'aria-hidden': 'true' }, [
-        ['circle', { cx: '6', cy: '18', r: '2', fill: 'currentColor' }],
+        ['rect', { x: '1.5', y: '1.5', width: '21', height: '21', rx: '5.5', fill: 'currentColor', opacity: '0.15' }],
         [
             'path',
-            {
-                d: 'M4 4a16 16 0 0 1 16 16',
-                stroke: 'currentColor',
-                'stroke-width': '2',
-                fill: 'none',
-                'stroke-linecap': 'round',
-            },
+            { d: 'M8.4 6.5h7.2', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', fill: 'none' },
+        ],
+        [
+            'path',
+            { d: 'M12 4.7v1.8', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', fill: 'none' },
         ],
         [
             'path',
             {
-                d: 'M4 11a9 9 0 0 1 9 9',
+                d: 'M16.1 7.6l1.3-1.3',
                 stroke: 'currentColor',
                 'stroke-width': '2',
-                fill: 'none',
                 'stroke-linecap': 'round',
+                fill: 'none',
+            },
+        ],
+        ['circle', { cx: '12', cy: '13.5', r: '5.5', stroke: 'currentColor', 'stroke-width': '2', fill: 'none' }],
+        [
+            'path',
+            {
+                d: 'M12 10.6v2.9l2.1 1.4',
+                stroke: 'currentColor',
+                'stroke-width': '2',
+                'stroke-linecap': 'round',
+                'stroke-linejoin': 'round',
+                fill: 'none',
             },
         ],
     ]);
