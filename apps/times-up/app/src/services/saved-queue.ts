@@ -3,10 +3,11 @@ import type { Article, SavedArticleSnapshot } from '../types';
 
 /** Adapt a saved row, including a local-only shared link, for reading views. */
 export function savedSnapshotToArticle(snapshot: SavedArticleSnapshot): Article {
+    const articleId = snapshot.articleId ?? snapshot.id;
     return {
-        id: snapshot.articleId ?? snapshot.id,
+        id: articleId,
         feedId: snapshot.feedId ?? 'saved',
-        guid: snapshot.articleId ?? snapshot.id,
+        guid: articleId,
         title: snapshot.title,
         link: snapshot.link,
         author: snapshot.author,
@@ -18,7 +19,16 @@ export function savedSnapshotToArticle(snapshot: SavedArticleSnapshot): Article 
         starred: false,
         popularity: 0,
         hot: 0,
+        snapshotSource:
+            snapshot.contentPending && snapshot.articleId
+                ? { kind: 'saved', articleId: snapshot.articleId }
+                : undefined,
     };
+}
+
+/** Snapshots are read-only views; never write article state back from them. */
+export function isSnapshotArticle(article: { snapshotSource?: unknown; feedId: string }): boolean {
+    return article.snapshotSource !== undefined || article.feedId === 'saved';
 }
 
 export async function fetchSavedQueue(): Promise<Article[]> {

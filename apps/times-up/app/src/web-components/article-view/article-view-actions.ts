@@ -10,6 +10,7 @@ import {
     toggleStar,
     unsaveForLater,
 } from '../../mutations';
+import { isSnapshotArticle } from '../../services/saved-queue';
 import { fetchSavedArticlesList } from '../../query';
 import { fetchBoards, fetchBoardEntries } from '../../services/api';
 import type { ArticleKeyword } from '../../services/keywords';
@@ -56,7 +57,7 @@ export interface ArticleViewActionsHost {
 
 export async function onStar(host: ArticleViewActionsHost): Promise<void> {
     const started = host.article;
-    if (!started || started.feedId === 'saved') return;
+    if (!started || isSnapshotArticle(started)) return;
     const next = !started.starred;
     if (next) {
         host.prevDeranked = host.deranked;
@@ -80,7 +81,7 @@ export async function onStar(host: ArticleViewActionsHost): Promise<void> {
 
 export async function onToggleRead(host: ArticleViewActionsHost): Promise<void> {
     const started = host.article;
-    if (!started || started.feedId === 'saved') return;
+    if (!started || isSnapshotArticle(started)) return;
     const nextRead: 0 | 1 = started.read ? 0 : 1;
     host.article = { ...started, read: nextRead };
     const ok = nextRead === 1 ? await markArticleRead(started.id) : await markArticleUnread(started.id);
@@ -126,7 +127,7 @@ export function enqueueListen(host: ArticleViewActionsHost): void {
 
 export async function openBoardPicker(host: ArticleViewActionsHost): Promise<void> {
     const a = host.article;
-    if (!a || a.feedId === 'saved') return;
+    if (!a || isSnapshotArticle(a)) return;
     host.boardPickerOpen = true;
     host.newBoardTitle = '';
     host.paint();
@@ -190,7 +191,7 @@ export async function createBoardFromPicker(host: ArticleViewActionsHost): Promi
 
 export async function onToggleSaved(host: ArticleViewActionsHost): Promise<void> {
     const a = host.article;
-    if (!a || a.feedId === 'saved') return;
+    if (!a || isSnapshotArticle(a)) return;
     const next = !host.savedForLater;
     // Invalidate any in-flight refresh so it cannot overwrite optimistic intent.
     host.savedStateGen++;
@@ -210,7 +211,7 @@ export async function onToggleSaved(host: ArticleViewActionsHost): Promise<void>
 
 export function onDerank(host: ArticleViewActionsHost): void {
     const a = host.article;
-    if (!a || a.feedId === 'saved') return;
+    if (!a || isSnapshotArticle(a)) return;
     const next = !host.deranked;
     if (next) {
         host.prevStarred = a.starred;
@@ -276,6 +277,24 @@ export async function ensureRichContent(host: ArticleViewActionsHost, a: Article
     host.bodyLoading = true;
     host.paint();
     try {
+        const snapshot = a.snapshotSource;
+        if (snapshot) {
+            const { fetchBoardEntryContent, fetchSavedArticleContent } = await import('../../services/api');
+            const html =
+                snapshot.kind === 'saved'
+                    ? await fetchSavedArticleContent(snapshot.articleId)
+                    : await fetchBoardEntryContent(snapshot.boardId, snapshot.articleId);
+            const still = open();
+            if (!still || !html) return;
+            const next = { ...still, content: html };
+            recordUsage('body_loaded');
+            host.fetchedBody = { id: next.id, html };
+            host.article = next;
+            host.sanitizedBody = null;
+            host.keywords = articleKeywords(next);
+            host.paint();
+            return;
+        }
         const { extractArticle, fetchArticleBody } = await import('../../services/api');
         if (!a.content) {
             const body = await fetchArticleBody(a.id);

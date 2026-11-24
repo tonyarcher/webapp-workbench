@@ -46,6 +46,7 @@ internal fun snapshotOf(
     boardId: UUID,
     sortOrder: Int,
     contentHtml: String?,
+    storageKey: String?,
 ): BoardEntryEntity = BoardEntryEntity(
     boardId = boardId,
     articleId = article.id,
@@ -56,6 +57,7 @@ internal fun snapshotOf(
     author = article.author,
     summary = article.summary,
     contentHtml = contentHtml,
+    contentStorageKey = storageKey,
     publishedAt = article.publishedAt,
     sortOrder = sortOrder,
 )
@@ -68,21 +70,20 @@ internal fun nextEntrySortOrder(entries: BoardEntryRepo, boardId: UUID): Int =
  * state, so an operators-only query has nothing to filter on and returns the
  * board unchanged rather than pretending to apply `is:starred`.
  */
-internal fun rankBoardEntries(rows: List<BoardEntryEntity>, tokens: List<String>): List<BoardEntryEntity> =
+internal fun rankBoardEntries(rows: List<BoardEntryRepo.Summary>, tokens: List<String>): List<BoardEntryRepo.Summary> =
     rows.map { it to scoreEntry(it, tokens) }
         .sortedWith(
-            compareByDescending<Pair<BoardEntryEntity, Int>> { it.second }
+            compareByDescending<Pair<BoardEntryRepo.Summary, Int>> { it.second }
                 .thenBy { it.first.sortOrder },
         )
         .map { it.first }
 
-private fun scoreEntry(entry: BoardEntryEntity, tokens: List<String>): Int {
+private fun scoreEntry(entry: BoardEntryRepo.Summary, tokens: List<String>): Int {
     var score = 0
     for (token in tokens) {
         if (fieldHits(entry.title, token)) score += BOARD_SCORE_TITLE
         if (fieldHits(entry.author, token)) score += BOARD_SCORE_AUTHOR
         if (fieldHits(entry.summary, token) || fieldHits(entry.note, token)) score += BOARD_SCORE_NOTE
-        if (fieldHits(entry.contentHtml, token)) score += 1
         if (fieldHits(entry.link, token)) score += 1
     }
     return score

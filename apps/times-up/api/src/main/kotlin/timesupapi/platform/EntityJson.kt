@@ -2,9 +2,11 @@ package timesupapi.platform
 import timesupapi.boards.BoardEntity
 import timesupapi.boards.BoardEntryEntity
 import timesupapi.boards.BoardEntryJson
+import timesupapi.boards.BoardEntryRepo
 import timesupapi.boards.BoardJson
 import timesupapi.boards.SavedArticleEntity
 import timesupapi.boards.SavedArticleJson
+import timesupapi.boards.SavedArticleRepo
 import timesupapi.boards.SavedSearchEntity
 import timesupapi.feeds.FeedEntity
 import timesupapi.feeds.FeedJson
@@ -65,7 +67,23 @@ fun SavedArticleEntity.toSavedArticleJson(): SavedArticleJson = SavedArticleJson
     link = link,
     author = author,
     summary = summary,
-    content = contentHtml,
+    content = null,
+    contentPending = contentStorageKey != null || contentHtml != null,
+    published = publishedAt?.toEpochMilli(),
+    savedAt = savedAt.toEpochMilli(),
+)
+
+fun SavedArticleRepo.Summary.toSavedArticleJson(): SavedArticleJson = SavedArticleJson(
+    id = id.toString(),
+    articleId = articleId,
+    feedId = feedId?.toString(),
+    feedTitle = feedTitle,
+    title = title,
+    link = link,
+    author = author,
+    summary = summary,
+    content = null,
+    contentPending = contentPending,
     published = publishedAt?.toEpochMilli(),
     savedAt = savedAt.toEpochMilli(),
 )
@@ -86,7 +104,25 @@ fun BoardEntryEntity.toJson(): BoardEntryJson = BoardEntryJson(
     link = link,
     author = author,
     summary = summary,
-    content = contentHtml,
+    content = null,
+    contentPending = contentStorageKey != null || contentHtml != null,
+    published = publishedAt?.toEpochMilli(),
+    note = note,
+    addedAt = addedAt.toEpochMilli(),
+    sortOrder = sortOrder,
+)
+
+fun BoardEntryRepo.Summary.toJson(): BoardEntryJson = BoardEntryJson(
+    id = id.toString(),
+    articleId = articleId,
+    feedId = feedId?.toString(),
+    feedTitle = feedTitle,
+    title = title,
+    link = link,
+    author = author,
+    summary = summary,
+    content = null,
+    contentPending = contentPending,
     published = publishedAt?.toEpochMilli(),
     note = note,
     addedAt = addedAt.toEpochMilli(),

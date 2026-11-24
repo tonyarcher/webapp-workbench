@@ -30,6 +30,13 @@ export async function addToBoard(boardId: string, articleId: string): Promise<Bo
         body: JSON.stringify({ articleId }),
     }) as Promise<BoardEntry>;
 }
+export async function fetchBoardEntryContent(boardId: string, articleId: string): Promise<string | null> {
+    const data = (await apiFetch(
+        `/boards/${encodeURIComponent(boardId)}/entries/${encodeURIComponent(articleId)}/content`,
+    )) as { content?: string | null };
+    return data.content ?? null;
+}
+
 export async function removeFromBoard(boardId: string, articleId: string): Promise<{ ok: true }> {
     return apiFetch(`/boards/${encodeURIComponent(boardId)}/entries/${encodeURIComponent(articleId)}`, {
         method: 'DELETE',

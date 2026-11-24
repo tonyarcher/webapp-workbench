@@ -13,6 +13,7 @@ data class BoardEntryJson(
     val author: String? = null,
     val summary: String? = null,
     val content: String? = null,
+    val contentPending: Boolean = false,
     val published: Long? = null,
     val note: String = "",
     val addedAt: Long,
@@ -26,3 +27,5 @@ data class BoardEntryBody(val articleId: String?)
 data class BoardNoteBody(val note: String?)
 
 data class BoardArticleIdsBody(val articleIds: List<String>?)
+
+data class SnapshotContentJson(val content: String?)

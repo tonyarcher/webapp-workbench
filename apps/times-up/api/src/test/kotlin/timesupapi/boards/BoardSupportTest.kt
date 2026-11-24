@@ -57,7 +57,7 @@ class BoardSupportTest {
             )
         val feed = FeedEntity(id = article.feedId, title = "Feed")
         val boardId = UUID.randomUUID()
-        val entry = snapshotOf(article, feed, boardId, 3, "<p>x</p>")
+        val entry = snapshotOf(article, feed, boardId, 3, "<p>x</p>", null)
         assertEquals(boardId, entry.boardId)
         assertEquals("a1", entry.articleId)
         assertEquals("T", entry.title)
@@ -85,43 +85,41 @@ class BoardSupportTest {
         assertEquals(5, nextEntrySortOrder(repo, boardId))
     }
 
+    private fun summary(
+        idValue: String,
+        titleValue: String,
+        orderValue: Int,
+        authorValue: String? = null,
+        summaryValue: String? = null,
+        noteValue: String = "",
+        linkValue: String? = null,
+    ): BoardEntryRepo.Summary = object : BoardEntryRepo.Summary {
+        override val id = UUID.randomUUID()
+        override val articleId = idValue
+        override val feedId = UUID.randomUUID()
+        override val feedTitle = null
+        override val title = titleValue
+        override val link = linkValue
+        override val author = authorValue
+        override val summary = summaryValue
+        override val publishedAt = Instant.now()
+        override val note = noteValue
+        override val addedAt = Instant.now()
+        override val sortOrder = orderValue
+        override val contentPending = false
+    }
+
     @Test
     fun rankBoardEntriesAllFields() {
-        val boardId = UUID.randomUUID()
-        val e = BoardEntryEntity(
-            boardId = boardId,
-            articleId = "a1",
-            title = "batteries",
-            author = "alice",
-            summary = "lithium",
-            note = "important",
-            contentHtml = "<p>x</p>",
-            link = "https://example.com/batteries",
-            addedAt = Instant.now(),
-            sortOrder = 0,
-        )
+        val e = summary("a1", "batteries", 0, "alice", "lithium", "important", "https://example.com/batteries")
         val ranked = rankBoardEntries(listOf(e), listOf("batteries", "alice", "lithium", "important", "example"))
         assertEquals("a1", ranked.first().articleId)
     }
 
     @Test
     fun rankBoardEntriesRanksByTitle() {
-        val e1 =
-            BoardEntryEntity(
-                boardId = UUID.randomUUID(),
-                articleId = "a1",
-                title = "batteries",
-                addedAt = Instant.now(),
-                sortOrder = 0,
-            )
-        val e2 =
-            BoardEntryEntity(
-                boardId = e1.boardId,
-                articleId = "a2",
-                title = "solar",
-                addedAt = Instant.now(),
-                sortOrder = 1,
-            )
+        val e1 = summary("a1", "batteries", 0)
+        val e2 = summary("a2", "solar", 1)
         val ranked = rankBoardEntries(listOf(e1, e2), listOf("batteries"))
         assertEquals("a1", ranked.first().articleId)
     }

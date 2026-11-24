@@ -16,6 +16,14 @@ interface ArticleRepo :
     fun findByFeedIdAndNormLink(feedId: UUID, normLink: String): ArticleEntity?
     fun findByFeedIdIn(feedIds: Collection<UUID>): List<ArticleEntity>
 
+    interface ArticleFeedRow {
+        val id: String
+        val feedId: UUID
+    }
+
+    @Query("select a.id as id, a.feedId as feedId from ArticleEntity a where a.id in :ids")
+    fun findFeedIdsByIdIn(@Param("ids") ids: Collection<String>): List<ArticleFeedRow>
+
     interface ExcerptRow {
         val id: String
         val excerpt: String

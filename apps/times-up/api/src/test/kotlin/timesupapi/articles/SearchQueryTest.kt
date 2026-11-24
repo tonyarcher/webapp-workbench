@@ -70,6 +70,19 @@ class SearchQueryTest {
     }
 
     @Test
+    fun boundsQueryGrowthBeforeBuildingPredicates() {
+        val long = parseSearchQueryText("x".repeat(SEARCH_MAX_CHARS + 100))
+        assertEquals(SEARCH_MAX_CHARS, long.text.length)
+        val many = parseSearchQueryText((1..100).joinToString(" ") { "token$it" })
+        assertEquals(SEARCH_MAX_TOKENS, many.tokens.size)
+        assertEquals(SEARCH_MAX_TOKENS, many.tokens.distinct().size)
+        val hugeToken = parseSearchQueryText("y".repeat(SEARCH_MAX_TOKEN_CHARS + 10))
+        assertTrue(hugeToken.tokens.isEmpty())
+        val operators = (1..100).joinToString(" ") { "author:name$it" }
+        assertEquals(SEARCH_MAX_OPERATOR_TERMS, parseSearchQueryText(operators).operators.authors.size)
+    }
+
+    @Test
     fun anyOperatorCoversEveryField() {
         val empty = ParsedSearchQuery("", emptyList(), SearchOperators())
         assertEquals(false, empty.hasAnyOperator())

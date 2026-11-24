@@ -1,4 +1,5 @@
 package timesupapi.boards
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.never
@@ -27,9 +28,12 @@ import timesupapi.platform.IdentityUser
 import timesupapi.platform.RequestIdFilter
 import timesupapi.platform.SecurityConfig
 import timesupapi.storage.BodyStore
+import timesupapi.storage.SnapshotStore
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 private fun savedJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .header("alg", "RS256")
@@ -64,6 +68,14 @@ class SavedArticleControllerTest {
 
     @MockitoBean
     lateinit var bodyStore: BodyStore
+
+    @MockitoBean
+    lateinit var snapshots: SnapshotStore
+
+    @BeforeEach
+    fun emptySummaries() {
+        whenever(saved.findSummariesByUserIdOrderBySavedAtDesc(any())).thenReturn(emptyList())
+    }
 
     private val uid = UUID.randomUUID()
     private val feedId = UUID.randomUUID()
@@ -103,7 +115,7 @@ class SavedArticleControllerTest {
     @Test
     fun listReturnsSnapshots() {
         auth()
-        whenever(saved.findByUserIdOrderBySavedAtDesc(uid)).thenReturn(listOf(row()))
+        whenever(saved.findSummariesByUserIdOrderBySavedAtDesc(uid)).thenReturn(listOf(savedSummary()))
         mvc.get("/saved-articles") {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
@@ -250,6 +262,106 @@ class SavedArticleControllerTest {
         }.andExpect {
             status { isConflict() }
         }
+    }
+
+    private fun stubSaveWithBody() {
+        auth()
+        whenever(saved.findByUserIdAndArticleId(uid, "a1")).thenReturn(null)
+        whenever(articles.findById("a1")).thenReturn(Optional.of(article()))
+        subscribed()
+        whenever(bodyStore.get("a1")).thenReturn("<p>body</p>")
+        whenever(snapshots.put(any(), any(), any(), any())).thenReturn("snapshot-key")
+        whenever(saved.save(any<SavedArticleEntity>())).thenAnswer { inv ->
+            (inv.arguments[0] as SavedArticleEntity).apply { id = UUID.randomUUID() }
+        }
+    }
+
+    @Test
+    fun saveOffloadsBodyToObjectStore() {
+        stubSaveWithBody()
+        mvc.post("/saved-articles") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"articleId":"a1"}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.contentPending") { value(true) }
+        }
+        verify(
+            snapshots,
+        ).put(
+            org.mockito.kotlin.eq("saved"),
+            org.mockito.kotlin.eq(uid),
+            org.mockito.kotlin.eq("a1"),
+            org.mockito.kotlin.eq("<p>body</p>"),
+        )
+    }
+
+    @Test
+    fun offloadedSnapshotKeepsNoDuplicateHtml() {
+        stubSaveWithBody()
+        mvc.post("/saved-articles") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"articleId":"a1"}"""
+        }.andExpect { status { isOk() } }
+        verify(saved).save(
+            org.mockito.kotlin.check {
+                assertEquals("snapshot-key", it.contentStorageKey)
+                assertNull(it.contentHtml)
+            },
+        )
+    }
+
+    @Test
+    fun saveKeepsHtmlWhenObjectStoreUnavailable() {
+        auth()
+        whenever(saved.findByUserIdAndArticleId(uid, "a1")).thenReturn(null)
+        whenever(articles.findById("a1")).thenReturn(Optional.of(article()))
+        subscribed()
+        whenever(bodyStore.get("a1")).thenReturn("<p>body</p>")
+        whenever(saved.save(any<SavedArticleEntity>())).thenAnswer { inv ->
+            (inv.arguments[0] as SavedArticleEntity).apply { id = UUID.randomUUID() }
+        }
+        mvc.post("/saved-articles") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"articleId":"a1"}"""
+        }.andExpect { status { isOk() } }
+        verify(saved).save(
+            org.mockito.kotlin.check {
+                assertEquals("<p>body</p>", it.contentHtml)
+                assertNull(it.contentStorageKey)
+            },
+        )
+    }
+
+    @Test
+    fun contentLoadsFromSnapshotStore() {
+        auth()
+        val row = row().apply { contentStorageKey = "snapshot-key" }
+        whenever(saved.findByUserIdAndArticleId(uid, "a1")).thenReturn(row)
+        whenever(snapshots.load("snapshot-key", null)).thenReturn("<p>stored</p>")
+        mvc.get("/saved-articles/a1/content") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.content") { value("<p>stored</p>") }
+        }
+    }
+
+    @Test
+    fun contentRequiresSavedRow() {
+        auth()
+        whenever(saved.findByUserIdAndArticleId(uid, "missing")).thenReturn(null)
+        mvc.get("/saved-articles/missing/content") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }.andExpect { status { isNotFound() } }
     }
 
     @Test

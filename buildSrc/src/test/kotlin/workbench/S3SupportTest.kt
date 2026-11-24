@@ -207,7 +207,7 @@ class S3SupportTest {
     }
 
     @Test
-    fun assetServerBlockConnectsReaderToApiSelfAndProxies() {
+    fun assetServerBlockConnectsReaderToApiAndSelf() {
         val env = mapOf(
             "ASSETS_HOST" to "assets.example.com",
             "TIMES_UP_API_BASE" to "https://api.example.com",
@@ -216,7 +216,7 @@ class S3SupportTest {
         val block = assetServerBlock(listOf(readerApp("https://api.example.com")), env, false, false)
         assertTrue(
             block.contains(
-                "connect-src https://api.example.com 'self' https://api.allorigins.win https://corsproxy.io;",
+                "connect-src https://api.example.com 'self';",
             ),
             block,
         )

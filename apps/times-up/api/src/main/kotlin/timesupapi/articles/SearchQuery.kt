@@ -39,6 +39,11 @@ data class ParsedSearchQuery(val text: String, val tokens: List<String>, val ope
         operators.isRead != null
 }
 
+internal const val SEARCH_MAX_CHARS: Int = 2_048
+internal const val SEARCH_MAX_TOKENS: Int = 32
+internal const val SEARCH_MAX_TOKEN_CHARS: Int = 128
+internal const val SEARCH_MAX_OPERATOR_TERMS: Int = 16
+
 private val OPERATOR_RE =
     Regex("""(^|\s)(author|feed|folder|after|before|has|is|min|in):(?:"([^"]+)"|(\S+))""", RegexOption.IGNORE_CASE)
 
@@ -75,9 +80,9 @@ private class OperatorState {
     var headlineOnly = false
 
     fun toOperators(): SearchOperators = SearchOperators(
-        authors = authors,
-        feeds = feeds,
-        folders = folders,
+        authors = authors.distinct().take(SEARCH_MAX_OPERATOR_TERMS),
+        feeds = feeds.distinct().take(SEARCH_MAX_OPERATOR_TERMS),
+        folders = folders.distinct().take(SEARCH_MAX_OPERATOR_TERMS),
         afterMs = afterMs,
         beforeMs = beforeMs,
         isStarred = isStarred,
@@ -90,20 +95,25 @@ private class OperatorState {
 }
 
 fun parseSearchQueryText(query: String): ParsedSearchQuery {
+    val bounded = query.take(SEARCH_MAX_CHARS)
     val state = OperatorState()
     val text = StringBuffer()
     var last = 0
-    for (m in OPERATOR_RE.findAll(query)) {
-        text.append(query.substring(last, m.range.first))
+    for (m in OPERATOR_RE.findAll(bounded)) {
+        text.append(bounded.substring(last, m.range.first))
         val lead = m.groupValues[1]
-        val value = (m.groupValues[3].ifEmpty { m.groupValues[4] }).trim()
+        val value = (m.groupValues[3].ifEmpty { m.groupValues[4] }).trim().take(SEARCH_MAX_TOKEN_CHARS)
         if (value.isNotEmpty()) applyOperator(m.groupValues[2].lowercase(), value, state)
         text.append(lead)
         last = m.range.last + 1
     }
-    text.append(query.substring(last))
+    text.append(bounded.substring(last))
     val cleaned = text.toString().replace(Regex("""\s+"""), " ").trim()
-    val tokens = cleaned.lowercase().split(Regex("[^a-z0-9]+")).filter { it.length >= 2 }
+    val tokens = cleaned.lowercase()
+        .split(Regex("[^a-z0-9]+"))
+        .filter { it.length in 2..SEARCH_MAX_TOKEN_CHARS }
+        .distinct()
+        .take(SEARCH_MAX_TOKENS)
     return ParsedSearchQuery(text = cleaned, tokens = tokens, operators = state.toOperators())
 }
 

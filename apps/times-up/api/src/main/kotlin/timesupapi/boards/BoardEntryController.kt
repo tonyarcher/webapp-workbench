@@ -1,8 +1,6 @@
 package timesupapi.boards
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType
-import org.springframework.http.ResponseEntity
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -21,6 +19,7 @@ import timesupapi.platform.ApiException
 import timesupapi.platform.IdentityUser
 import timesupapi.platform.toJson
 import timesupapi.storage.BodyStore
+import timesupapi.storage.SnapshotStore
 import java.util.UUID
 
 @RestController
@@ -32,11 +31,12 @@ class BoardEntryController(
     private val feeds: FeedRepo,
     private val subs: SubscriptionRepo,
     private val bodyStore: BodyStore,
+    private val snapshots: SnapshotStore,
 ) {
     @GetMapping("/boards/{id}/entries", headers = ["X-Api-Version=1"])
     fun list(@PathVariable id: String): BoardEntryListJson {
         val board = ownedBoard(boards, user.id, boardId(id))
-        return BoardEntryListJson(boardEntries(board).map { it.toJson() })
+        return BoardEntryListJson(entrySummaries(board).map { it.toJson() })
     }
 
     /** Adding the same article twice is a no-op that returns the pinned row,
@@ -48,22 +48,27 @@ class BoardEntryController(
             ?: throw ApiException(HttpStatus.BAD_REQUEST, "articleId is required")
         entries.findByBoardIdAndArticleId(board.id!!, articleId)?.let { return it.toJson() }
         val article = resolveSubscribedArticle(articles, subs, user.id, articleId)
-        val feed = feeds.findById(article.feedId).orElse(null)
         val row = try {
-            entries.save(
-                snapshotOf(
-                    article,
-                    feed,
-                    board.id!!,
-                    nextEntrySortOrder(entries, board.id!!),
-                    bodyStore.get(article.id),
-                ),
-            )
+            entries.save(newEntry(board.id!!, article))
         } catch (_: DataIntegrityViolationException) {
             entries.findByBoardIdAndArticleId(board.id!!, articleId)
                 ?: throw ApiException(HttpStatus.CONFLICT, "Unable to add article to board")
         }
         return row.toJson()
+    }
+
+    private fun newEntry(boardId: UUID, article: timesupapi.articles.ArticleEntity): BoardEntryEntity {
+        val feed = feeds.findById(article.feedId).orElse(null)
+        val html = bodyStore.get(article.id)
+        val storageKey = snapshots.put("board", boardId, article.id, html)
+        return snapshotOf(
+            article,
+            feed,
+            boardId,
+            nextEntrySortOrder(entries, boardId),
+            if (storageKey == null) html else null,
+            storageKey,
+        )
     }
 
     @DeleteMapping("/boards/{id}/entries/{articleId}", headers = ["X-Api-Version=1"])
@@ -100,21 +105,13 @@ class BoardEntryController(
     fun search(@PathVariable id: String, @RequestParam q: String?): BoardEntryListJson {
         val board = ownedBoard(boards, user.id, boardId(id))
         val tokens = q?.trim()?.takeIf { it.isNotEmpty() }?.let { parseSearchQueryText(it).tokens } ?: emptyList()
-        val rows = boardEntries(board)
+        val rows = entrySummaries(board)
         val ranked = if (tokens.isEmpty()) rows else rankBoardEntries(rows, tokens)
         return BoardEntryListJson(ranked.map { it.toJson() })
     }
 
-    @GetMapping("/boards/{id}/opml", produces = [MediaType.TEXT_XML_VALUE], headers = ["X-Api-Version=1"])
-    fun opml(@PathVariable id: String): ResponseEntity<String> {
-        val board = ownedBoard(boards, user.id, boardId(id))
-        val rows = boardEntries(board)
-        val feedMap = feeds.findAllById(rows.mapNotNull { it.feedId }.distinct()).associateBy { it.id!! }
-        val xml = buildBoardOpml(board.title, rows, feedMap)
-        return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/xml; charset=utf-8")).body(xml)
-    }
-
-    private fun boardEntries(board: BoardEntity) = entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(board.id!!)
+    private fun entrySummaries(board: BoardEntity) =
+        entries.findSummariesByBoardIdOrderBySortOrderAscAddedAtAsc(board.id!!)
 
     private fun applyEntryOrder(boardId: UUID, articleIds: List<String>) {
         if (articleIds.isEmpty()) return

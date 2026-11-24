@@ -80,6 +80,8 @@ assert(
     'aiStatusMessage gives actionable guidance for unsupported',
 );
 assert(aiStatusMessage('after-download').includes('downloading'), 'aiStatusMessage covers after-download');
+assert(aiStatusMessage('unsupported').includes('Chrome’s'), 'aiStatusMessage uses readable punctuation');
+assert(!aiStatusMessage('unsupported').includes('â'), 'aiStatusMessage has no mojibake');
 assert(aiStatusMessage('readily') === '', 'aiStatusMessage empty when readily');
 
 // diagnostics surface what Chrome exposes

@@ -1,3 +1,4 @@
+export { fetchSavedArticleContent } from './api-saved';
 export { API_VERSION, API_VERSION_HEADER, AuthError, apiFetch, apiUrl } from './api-client';
 export { fetchArticleExcerpt } from './api-excerpts';
 export {
@@ -17,6 +18,7 @@ export {
     deleteBoard,
     exportBoardOpml,
     fetchBoardEntries,
+    fetchBoardEntryContent,
     fetchBoards,
     renameBoard,
     reorderBoardEntries,

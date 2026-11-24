@@ -46,9 +46,8 @@ const uncancelled = new Map<unknown, number>();
         fn(...args);
     };
     const handle = realSetTimeout(wrapped, delay, ...rest);
-    // A timer that fires is no longer holding the loop open, so drop it from the
-    // map as well as on clearTimeout. Otherwise a long timer that simply elapses
-    // (proxy.ts arms a 20s abort timer per fetch) would fail the guard spuriously.
+    // A timer that fires is no longer holding the event loop open, so drop it
+    // from the map as well as on clearTimeout.
     if (tracked) uncancelled.set(handle, delay);
     return handle;
 };
@@ -62,7 +61,8 @@ assert(API_VERSION_HEADER === 'X-Api-Version' && API_VERSION === '1', 'api versi
 
 await import('./smoke-feed.js');
 await import('./smoke-ai.js');
-await import('./smoke-proxy.js');
+await import('./smoke-sw.js');
+await import('./smoke-snapshot.js');
 await import('./smoke-pagination.js');
 await import('./smoke-coalesce.js');
 await import('./smoke-settings.js');

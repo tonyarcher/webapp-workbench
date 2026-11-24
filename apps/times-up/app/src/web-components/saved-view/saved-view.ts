@@ -1,8 +1,9 @@
+import { fetchSavedArticleContent } from '../../services/api';
 import { fetchSavedArticlesList } from '../../query';
 import { removeSavedSnapshot, unsaveForLater } from '../../mutations-saved';
 import { domainOf, formatDate } from '../../util';
 import { savedSnapshotToArticle } from '../../services/saved-queue';
-import type { SavedArticleSnapshot } from '../../types';
+import type { Article, SavedArticleSnapshot } from '../../types';
 import styles from './saved-view.css?inline';
 
 export class SavedView extends HTMLElement {
@@ -59,7 +60,7 @@ export class SavedView extends HTMLElement {
         const exportBtn = document.createElement('button');
         exportBtn.className = 'btn';
         exportBtn.textContent = 'Export to markdown';
-        exportBtn.addEventListener('click', () => this.exportNotes());
+        exportBtn.addEventListener('click', () => void this.exportNotes().catch(() => undefined));
         toolbar.appendChild(exportBtn);
         this.root.appendChild(toolbar);
         const body = document.createElement('div');
@@ -141,11 +142,29 @@ export class SavedView extends HTMLElement {
         });
     }
 
-    private exportNotes() {
+    private async exportNotes() {
         const items = this.items;
-        const articles = items.map(savedSnapshotToArticle);
+        const articles: Article[] = [];
+        for (let i = 0; i < items.length; i += 6) {
+            const batch = await Promise.all(
+                items.slice(i, i + 6).map(async (s) => {
+                    const article = savedSnapshotToArticle(s);
+                    if (!article.content && article.snapshotSource?.kind === 'saved') {
+                        try {
+                            const content = await fetchSavedArticleContent(article.snapshotSource.articleId);
+                            if (content) return { ...article, content };
+                        } catch {
+                            // Offline or removed rows still export their metadata.
+                        }
+                    }
+                    return article;
+                }),
+            );
+            articles.push(...batch);
+        }
         // dynamic import to avoid circular dep
-        import('../../services/notes-export').then((m) => m.downloadNotesExport(articles, 'obsidian'));
+        const m = await import('../../services/notes-export');
+        m.downloadNotesExport(articles, 'obsidian');
     }
 }
 

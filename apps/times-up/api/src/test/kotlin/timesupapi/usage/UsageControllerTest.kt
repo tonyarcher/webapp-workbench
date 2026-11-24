@@ -12,7 +12,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
@@ -20,6 +22,7 @@ import timesupapi.platform.RequestIdFilter
 import timesupapi.platform.SecurityConfig
 
 @WebMvcTest(UsageController::class)
+@TestPropertySource(properties = ["USAGE_ENABLED=1"])
 @Import(SecurityConfig::class, RequestIdFilter::class, UsageControllerTest.EnabledConfig::class)
 class UsageControllerTest {
     @TestConfiguration
@@ -42,13 +45,31 @@ class UsageControllerTest {
 
     @BeforeEach
     fun allowRate() {
+        whenever(decoder.decode(any())).thenReturn(
+            Jwt.withTokenValue("tok")
+                .header("alg", "RS256")
+                .claim("sub", "u1")
+                .claim("aud", listOf("times-up"))
+                .build(),
+        )
         whenever(rateLimiter.allow(any(), any())).thenReturn(true)
+    }
+
+    @Test
+    fun requiresAuthenticationWhenEnabled() {
+        mvc.post("/usage") {
+            header("X-Api-Version", "1")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"events":[]}"""
+        }.andExpect { status { isUnauthorized() } }
+        verify(repo, never()).increment(any(), any(), any())
     }
 
     @Test
     fun recordsValidBatch() {
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"events":[{"feature":"tab_opened","count":2},{"feature":"body_loaded","count":1}]}"""
         }.andExpect {
@@ -63,6 +84,7 @@ class UsageControllerTest {
     fun rejectsUnknownFeature() {
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"events":[{"feature":"steal_passwords","count":1}]}"""
         }.andExpect {
@@ -75,6 +97,7 @@ class UsageControllerTest {
     fun rejectsMissingFeature() {
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"events":[{"count":1}]}"""
         }.andExpect { status { isBadRequest() } }
@@ -84,6 +107,7 @@ class UsageControllerTest {
     fun rejectsBlankFeature() {
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"events":[{"feature":"  ","count":1}]}"""
         }.andExpect { status { isBadRequest() } }
@@ -93,6 +117,7 @@ class UsageControllerTest {
     fun rejectsInvalidCount() {
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"events":[{"feature":"tab_opened","count":0}]}"""
         }.andExpect {
@@ -105,6 +130,7 @@ class UsageControllerTest {
         val events = (1..51).joinToString(",") { """{"feature":"tab_opened","count":1}""" }
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"events":[$events]}"""
         }.andExpect {
@@ -116,6 +142,7 @@ class UsageControllerTest {
     fun emptyBatchIsOk() {
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"events":[]}"""
         }.andExpect { status { isOk() } }
@@ -126,6 +153,7 @@ class UsageControllerTest {
     fun rejectsCountAboveMax() {
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"events":[{"feature":"tab_opened","count":1001}]}"""
         }.andExpect { status { isBadRequest() } }
@@ -136,6 +164,7 @@ class UsageControllerTest {
     fun rejectsMissingCount() {
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"events":[{"feature":"tab_opened"}]}"""
         }.andExpect { status { isBadRequest() } }
@@ -145,6 +174,7 @@ class UsageControllerTest {
     fun sumsSameFeature() {
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"events":[{"feature":"tab_opened","count":2},{"feature":"tab_opened","count":3}]}"""
         }.andExpect { status { isOk() } }
@@ -155,6 +185,7 @@ class UsageControllerTest {
     fun rejectsMissingEvents() {
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{}"""
         }.andExpect { status { isBadRequest() } }
@@ -165,6 +196,7 @@ class UsageControllerTest {
         whenever(rateLimiter.allow(any(), any())).thenReturn(false)
         mvc.post("/usage") {
             header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
             contentType = MediaType.APPLICATION_JSON
             content = """{"events":[{"feature":"tab_opened","count":1}]}"""
         }.andExpect { status { isTooManyRequests() } }

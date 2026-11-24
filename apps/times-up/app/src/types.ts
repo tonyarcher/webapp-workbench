@@ -32,6 +32,9 @@ export interface Feed {
     status?: 'ok' | 'stale' | 'unreachable' | undefined;
 }
 
+export type SnapshotSource =
+    { kind: 'saved'; articleId: string } | { kind: 'board'; boardId: string; articleId: string };
+
 export interface Article {
     id: string;
     feedId: string;
@@ -61,6 +64,8 @@ export interface Article {
               model?: string | undefined;
           }
         | undefined;
+    /** Server-backed saved/board body to load on open, never on list paint. */
+    snapshotSource?: SnapshotSource | undefined;
 }
 
 export type ArticleSort = 'hot' | 'newest' | 'oldest';
@@ -100,6 +105,7 @@ export interface BoardEntry {
     author?: string | undefined;
     summary?: string | undefined;
     content?: string | undefined;
+    contentPending?: boolean | undefined;
     published?: number | undefined;
     note: string;
     addedAt: number;
@@ -115,6 +121,7 @@ export interface SavedArticleSnapshot {
     author?: string | undefined;
     summary?: string | undefined;
     content?: string | undefined;
+    contentPending?: boolean | undefined;
     published?: number | undefined;
     savedAt: number;
 }

@@ -1,4 +1,4 @@
-import { apiUrl, API_VERSION, API_VERSION_HEADER } from './api-client';
+import { authedFetch } from './api-client';
 
 export const USAGE_FEATURES = [
     'tab_opened',
@@ -110,12 +110,8 @@ async function flushUsage(): Promise<void> {
     if (events.length === 0) return;
     flushing = true;
     try {
-        const res = await fetch(apiUrl('/usage'), {
+        const res = await authedFetch('/usage', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                [API_VERSION_HEADER]: API_VERSION,
-            },
             body: JSON.stringify({ events }),
         });
         if (res.ok) {

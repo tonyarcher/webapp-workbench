@@ -1,6 +1,7 @@
 package timesupapi.feeds
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
@@ -54,12 +55,9 @@ class OpmlExportTest {
     @MockitoBean
     lateinit var subs: SubscriptionRepo
 
-    @MockitoBean
-    lateinit var membershipService: MembershipService
-
     @Test
     fun exportGroupsByFolder() {
-        stubExportRows()
+        val (_, _, folderId) = stubExportRows()
         val res = mvc.get("/opml") {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer t")
@@ -68,6 +66,46 @@ class OpmlExportTest {
         assertTrue(res.response.contentAsString.contains("<opml"))
         assertTrue(res.response.contentAsString.contains("<title>Times Up Export</title>"))
         assertTrue(res.response.contentAsString.contains("Tech"))
+        verify(memberships).findByFolderIdIn(listOf(folderId))
+        verify(feeds, org.mockito.kotlin.never()).findById(any<UUID>())
+    }
+
+    @Test
+    fun exportIncludesFolderFeedOutsideSubscriptions() {
+        val (_, feedId, folderId) = stubExportRows()
+        val extraId = UUID.randomUUID()
+        val rows = listOf(
+            timesupapi.feeds.FolderFeedEntity(folderId = folderId, feedId = feedId),
+            timesupapi.feeds.FolderFeedEntity(folderId = folderId, feedId = extraId),
+        )
+        whenever(memberships.findByFolderIdIn(listOf(folderId))).thenReturn(rows)
+        val extra =
+            FeedEntity(
+                id = extraId,
+                xmlUrl = "https://extra.example/rss",
+                title = "Extra",
+                siteUrl = "https://extra.example",
+            )
+        whenever(feeds.findAllById(listOf(extraId))).thenReturn(listOf(extra))
+        val res = mvc.get("/opml") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andReturn()
+        assertEquals(200, res.response.status)
+        assertTrue(res.response.contentAsString.contains("Extra"))
+    }
+
+    @Test
+    fun exportSkipsMissingFolderFeed() {
+        val (_, _, folderId) = stubExportRows()
+        whenever(memberships.findByFolderIdIn(listOf(folderId))).thenReturn(
+            listOf(timesupapi.feeds.FolderFeedEntity(folderId = folderId, feedId = UUID.randomUUID())),
+        )
+        whenever(feeds.findAllById(any())).thenReturn(emptyList())
+        mvc.get("/opml") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+        }.andExpect { status { isOk() } }
     }
 
     private fun stubExportRows(): Triple<UUID, UUID, UUID> {
@@ -83,12 +121,8 @@ class OpmlExportTest {
         whenever(folders.findByUserIdOrderBySortOrderAscCreatedAtAsc(uid)).thenReturn(
             listOf(FolderEntity(id = folderId, userId = uid, title = "Tech")),
         )
-        whenever(membershipService.ownedFolderIds(uid, feedId)).thenReturn(listOf(folderId.toString()))
-        whenever(memberships.findByFolderId(folderId)).thenReturn(
+        whenever(memberships.findByFolderIdIn(listOf(folderId))).thenReturn(
             listOf(timesupapi.feeds.FolderFeedEntity(folderId = folderId, feedId = feedId)),
-        )
-        whenever(feeds.findById(feedId)).thenReturn(
-            java.util.Optional.of(FeedEntity(id = feedId, xmlUrl = "https://a.example/rss", title = "A")),
         )
         return Triple(uid, feedId, folderId)
     }

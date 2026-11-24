@@ -1,144 +1,115 @@
 package timesupapi.poller
-import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.never
+import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.data.domain.Pageable
+import org.springframework.dao.DataRetrievalFailureException
 import timesupapi.feeds.FeedSyncEntity
 import timesupapi.feeds.FeedSyncRepo
-import timesupapi.feeds.SubscriptionRepo
 import timesupapi.ingest.FeedBackoff
 import timesupapi.ingest.IngestService
 import timesupapi.ingest.IngestSync
-import java.time.Duration
-import java.time.Instant
 import java.util.UUID
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class FeedPollerTest {
     private val ingest = mock(IngestService::class.java)
     private val syncRows = mock(FeedSyncRepo::class.java)
     private val sync = mock(IngestSync::class.java)
-    private val subs = mock(SubscriptionRepo::class.java)
-    private val now = Instant.now()
-    private val baseMs = 15 * 60_000L
 
-    private fun row(feedId: UUID, fetched: Instant?): FeedSyncEntity =
-        FeedSyncEntity(feedId = feedId, lastFetchedAt = fetched)
+    private fun poller(): FeedPoller = FeedPoller(ingest, syncRows, sync, FeedBackoff(syncRows))
 
-    private fun tickOnce(): FeedPoller {
-        val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
-        poller.scheduledTick()
-        poller.destroy()
-        return poller
+    @Test
+    fun dueRowsFillTheBatch() {
+        val ids = (1..3).map { UUID.randomUUID() }
+        whenever(syncRows.findDue(any(), any(), any())).thenReturn(ids.map { FeedSyncEntity(feedId = it) })
+        val p = poller()
+        p.scheduledTick()
+        p.destroy()
+        ids.forEach { verify(ingest).fetchAndIngest(it) }
     }
 
     @Test
-    fun skipsFeedsOnlySeenByStaleUsers() {
-        val activeFeed = UUID.randomUUID()
-        val staleFeed = UUID.randomUUID()
-        val fetched = now.minus(Duration.ofHours(2))
-        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(
-            listOf(row(activeFeed, fetched), row(staleFeed, fetched)),
-        )
-        whenever(subs.findMaxLastSeenByFeedId(activeFeed)).thenReturn(now.minus(Duration.ofDays(1)))
-        whenever(subs.findMaxLastSeenByFeedId(staleFeed)).thenReturn(now.minus(Duration.ofDays(31)))
-
-        tickOnce()
-
-        val captor = argumentCaptor<UUID>()
-        verify(sync).ensureRow(captor.capture())
-        assertEquals(listOf(activeFeed), captor.allValues)
-        verify(ingest).fetchAndIngest(activeFeed)
-        verify(ingest, never()).fetchAndIngest(staleFeed)
+    fun forcedAndDueWorkShareOneBatch() {
+        val forced = UUID.randomUUID()
+        val due = (1..4).map { UUID.randomUUID() }
+        whenever(syncRows.findDue(any(), any(), any())).thenReturn(due.map { FeedSyncEntity(feedId = it) })
+        val p = poller()
+        p.queue(listOf(forced))
+        verify(ingest, timeout(5_000L)).fetchAndIngest(forced)
+        due.forEach { verify(ingest, timeout(5_000L)).fetchAndIngest(it) }
+        p.destroy()
     }
 
     @Test
-    fun throttlesRecentlyFetchedInactiveOnlyFeeds() {
-        val feedId = UUID.randomUUID()
-        val fetched = now.minus(Duration.ofHours(2))
-        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(listOf(row(feedId, fetched)))
-        // 10 days quiet needs a full day of staleness; 2 hours is not due.
-        whenever(subs.findMaxLastSeenByFeedId(feedId)).thenReturn(now.minus(Duration.ofDays(10)))
-
-        tickOnce()
-
-        verify(sync, never()).ensureRow(any())
-        verify(ingest, never()).fetchAndIngest(any())
+    fun duplicatesInOneQueueCallPollOnce() {
+        val id = UUID.randomUUID()
+        val p = poller()
+        p.queue(List(100) { id })
+        verify(ingest, timeout(5_000L)).fetchAndIngest(id)
+        p.destroy()
+        verify(ingest, org.mockito.kotlin.times(1)).fetchAndIngest(id)
     }
 
     @Test
-    fun pollsStaleEnoughInactiveOnlyFeeds() {
-        val feedId = UUID.randomUUID()
-        val fetched = now.minus(Duration.ofDays(3))
-        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(listOf(row(feedId, fetched)))
-        whenever(subs.findMaxLastSeenByFeedId(feedId)).thenReturn(now.minus(Duration.ofDays(10)))
-
-        tickOnce()
-
-        verify(ingest).fetchAndIngest(feedId)
+    fun fullForcedBatchSkipsDueQuery() {
+        val ids = (1..5).map { UUID.randomUUID() }
+        val p = poller()
+        p.queue(ids)
+        ids.forEach { verify(ingest, timeout(5_000L)).fetchAndIngest(it) }
+        verify(syncRows, never()).findDue(any(), any(), any())
+        p.destroy()
     }
 
     @Test
-    fun unknownRecencyStaysEligible() {
-        val feedId = UUID.randomUUID()
-        val fetched = now.minus(Duration.ofHours(1))
-        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(listOf(row(feedId, fetched)))
-        whenever(subs.findMaxLastSeenByFeedId(feedId)).thenReturn(null)
-
-        tickOnce()
-
-        verify(ingest).fetchAndIngest(feedId)
-    }
-
-    @Test
-    fun lookupFailureFallsBackToEligible() {
-        val feedId = UUID.randomUUID()
-        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(
-            listOf(row(feedId, now.minus(Duration.ofHours(1)))),
-        )
-        whenever(subs.findMaxLastSeenByFeedId(feedId)).thenThrow(RuntimeException("db down"))
-
-        tickOnce()
-
-        verify(ingest).fetchAndIngest(feedId)
+    fun forcedOverflowIsProcessedAcrossBatches() {
+        val ids = (1..7).map { UUID.randomUUID() }
+        val p = poller()
+        p.queue(ids)
+        ids.forEach { verify(ingest, timeout(5_000L)).fetchAndIngest(it) }
+        p.destroy()
     }
 
     @Test
     fun poisonFeedDoesNotAbortDrain() {
-        val badFeed = UUID.randomUUID()
-        val goodFeed = UUID.randomUUID()
-        val fetched = now.minus(Duration.ofHours(2))
-        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(
-            listOf(row(badFeed, fetched), row(goodFeed, fetched)),
+        val bad = UUID.randomUUID()
+        val good = UUID.randomUUID()
+        whenever(syncRows.findDue(any(), any(), any())).thenReturn(
+            listOf(FeedSyncEntity(feedId = bad), FeedSyncEntity(feedId = good)),
         )
-        whenever(subs.findMaxLastSeenByFeedId(badFeed)).thenReturn(now.minus(Duration.ofDays(1)))
-        whenever(subs.findMaxLastSeenByFeedId(goodFeed)).thenReturn(now.minus(Duration.ofDays(1)))
-        whenever(ingest.fetchAndIngest(badFeed)).thenThrow(
-            org.springframework.dao.DataRetrievalFailureException("poison"),
-        )
-
-        tickOnce()
-
-        verify(ingest).fetchAndIngest(badFeed)
-        verify(ingest).fetchAndIngest(goodFeed)
+        whenever(ingest.fetchAndIngest(bad)).thenThrow(DataRetrievalFailureException("poison"))
+        val p = poller()
+        p.scheduledTick()
+        p.destroy()
+        verify(ingest).fetchAndIngest(bad)
+        verify(ingest).fetchAndIngest(good)
     }
 
     @Test
-    fun destroyedPollerSkipsTick() {
-        val feedId = UUID.randomUUID()
-        whenever(syncRows.findDue(any(), any(), any<Pageable>())).thenReturn(
-            listOf(row(feedId, now.minus(Duration.ofHours(2)))),
-        )
-        whenever(subs.findMaxLastSeenByFeedId(feedId)).thenReturn(null)
-
-        val poller = FeedPoller(ingest, syncRows, sync, subs, FeedBackoff(syncRows))
-        poller.destroy()
-        poller.scheduledTick()
-
+    fun destroyedPollerSkipsTickAndQueue() {
+        val id = UUID.randomUUID()
+        val p = poller()
+        p.destroy()
+        p.scheduledTick()
+        p.queue(listOf(id))
         verify(ingest, never()).fetchAndIngest(any())
+    }
+
+    @Test
+    fun dueQueryReceivesTheRemainingBatchSize() {
+        val forced = UUID.randomUUID()
+        val p = poller()
+        p.queue(listOf(forced))
+        verify(syncRows, timeout(5_000L)).findDue(
+            any(),
+            any(),
+            org.mockito.kotlin.check { page ->
+                assertEquals(4, page.pageSize)
+            },
+        )
+        p.destroy()
     }
 }

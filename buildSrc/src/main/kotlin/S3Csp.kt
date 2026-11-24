@@ -87,12 +87,11 @@ private val S3_CSP: Map<String, CspPolicy> = mapOf(
         fontSrc = listOf("https://fonts.gstatic.com"),
     ),
     // The reader reaches its API origin (TIMES_UP_API_BASE, joined at render
-    // time), the identity token endpoint on the document origin ('self'), and
-    // the two CORS proxies it uses to fetch feed text. Card video headers
-    // play YouTube/Vimeo behind a click-to-play facade, so the player origins
-    // join frame-src; direct mp4 enclosures join media-src.
+    // time) and the identity token endpoint on the document origin ('self').
+    // Card video headers play YouTube/Vimeo behind a click-to-play facade, so
+    // the player origins join frame-src; direct mp4 enclosures join media-src.
     "times-up" to CspPolicy.Emit(
-        connectSrc = listOf("'self'", "https://api.allorigins.win", "https://corsproxy.io"),
+        connectSrc = listOf("'self'"),
         frameSrc = listOf(
             "https://www.youtube-nocookie.com",
             "https://www.youtube.com",

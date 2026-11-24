@@ -49,12 +49,12 @@ export function aiStatusMessage(status: AiAvailability): string {
         case 'readily':
             return '';
         case 'after-download':
-            return 'The on-device model is still downloading in Chrome â€” it will be ready in a moment. Try again shortly.';
+            return 'The on-device model is still downloading in Chrome — it will be ready in a moment. Try again shortly.';
         case 'no':
             return 'On-device AI is not available on this device or Chrome profile. Check chrome://on-device-internals and chrome://components (Gemma / Gemini Nano).';
         case 'unsupported':
         default:
-            return 'AI is not available on this page. Chromeâ€™s on-device Prompt API (`LanguageModel`) is separate from the cloud â€œAsk Geminiâ€ button and from models listed in chrome://components. The API is only exposed in a secure context (https:// or http://localhost) in Chrome 138+, with chrome://flags/#optimization-guide-on-device-model and chrome://flags/#prompt-api-for-gemini-nano enabled. Open this app on localhost or HTTPS, then run `await LanguageModel.availability()` in DevTools.';
+            return 'AI is not available on this page. Chrome’s on-device Prompt API (`LanguageModel`) is separate from the cloud “Ask Gemini” button and from models listed in chrome://components. The API is only exposed in a secure context (https:// or http://localhost) in Chrome 138+, with chrome://flags/#optimization-guide-on-device-model and chrome://flags/#prompt-api-for-gemini-nano enabled. Open this app on localhost or HTTPS, then run `await LanguageModel.availability()` in DevTools.';
     }
 }
 
@@ -140,7 +140,7 @@ function normalizeAvailability(value: string | undefined): AiAvailability {
 let cachedAvailability: AiAvailability | undefined;
 
 function setAvailability(value: AiAvailability): AiAvailability {
-    // 'after-download' is transient â€” re-probe on the next call instead of
+    // 'after-download' is transient — re-probe on the next call instead of
     // caching it forever, so the UI can retry once the model finishes.
     if (value !== 'after-download') cachedAvailability = value;
     return value;

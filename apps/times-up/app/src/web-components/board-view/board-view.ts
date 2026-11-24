@@ -11,7 +11,7 @@ import { domainOf, formatDate } from '../../util';
 import type { Article, BoardEntry } from '../../types';
 import styles from './board-view.css?inline';
 
-function toArticle(e: BoardEntry): Article {
+function toArticle(e: BoardEntry, boardId: string): Article {
     return {
         id: e.articleId,
         feedId: e.feedId ?? 'board',
@@ -27,6 +27,7 @@ function toArticle(e: BoardEntry): Article {
         starred: false,
         popularity: 0,
         hot: 0,
+        snapshotSource: e.contentPending ? { kind: 'board', boardId, articleId: e.articleId } : undefined,
     };
 }
 
@@ -242,7 +243,7 @@ export class BoardView extends HTMLElement {
     }
 
     private open(e: BoardEntry) {
-        const article = toArticle(e);
+        const article = toArticle(e, this.boardId);
         this.dispatchEvent(
             new CustomEvent('open-article', {
                 detail: { article, index: 0, items: [article] },

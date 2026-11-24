@@ -28,6 +28,8 @@ class SavedArticleEntity(
     var summary: String? = null,
     @Column(name = "content_html")
     var contentHtml: String? = null,
+    @Column(name = "content_storage_key")
+    var contentStorageKey: String? = null,
     @Column(name = "published_at")
     var publishedAt: Instant? = null,
     @Column(name = "saved_at", nullable = false)

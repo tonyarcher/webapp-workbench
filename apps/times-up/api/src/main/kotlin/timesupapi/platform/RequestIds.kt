@@ -1,5 +1,10 @@
 package timesupapi.platform
+import jakarta.servlet.http.HttpServletRequest
 import java.util.UUID
+
+const val REQUEST_ID_ATTRIBUTE = "timesup.requestId"
+const val TRACE_ID_ATTRIBUTE = "timesup.traceId"
+const val SPAN_ID_ATTRIBUTE = "timesup.spanId"
 
 data class RequestIds(val requestId: String, val traceId: String? = null, val spanId: String? = null)
 
@@ -25,4 +30,22 @@ fun parseTraceparent(header: String?): RequestIds? {
         traceId = match.groupValues[1].lowercase(),
         spanId = match.groupValues[2].lowercase(),
     )
+}
+
+fun storeRequestIds(request: HttpServletRequest, ids: RequestIds) {
+    request.setAttribute(REQUEST_ID_ATTRIBUTE, ids.requestId)
+    ids.traceId?.let { request.setAttribute(TRACE_ID_ATTRIBUTE, it) }
+    ids.spanId?.let { request.setAttribute(SPAN_ID_ATTRIBUTE, it) }
+}
+
+fun currentRequestIds(request: HttpServletRequest): RequestIds {
+    val stored = request.getAttribute(REQUEST_ID_ATTRIBUTE) as? String
+    if (stored != null) {
+        return RequestIds(
+            requestId = stored,
+            traceId = request.getAttribute(TRACE_ID_ATTRIBUTE) as? String,
+            spanId = request.getAttribute(SPAN_ID_ATTRIBUTE) as? String,
+        )
+    }
+    return requestIdsFrom(request.getHeader("X-Request-ID"), request.getHeader("traceparent"))
 }

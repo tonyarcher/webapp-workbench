@@ -1,4 +1,5 @@
 package timesupapi.usage
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -21,6 +22,25 @@ class UsageRateLimiterTest {
         assertTrue(limiter.allow("1.2.3.4", now))
         assertFalse(limiter.allow("1.2.3.4", now.plusSeconds(30)))
         assertTrue(limiter.allow("1.2.3.4", now.plusSeconds(61)))
+    }
+
+    @Test
+    fun capsTrackedKeys() {
+        val limiter = UsageRateLimiter(maxRequests = 1, windowSeconds = 60, maxKeys = 2)
+        val now = Instant.parse("2026-01-01T00:00:00Z")
+        assertTrue(limiter.allow("a", now))
+        assertTrue(limiter.allow("b", now))
+        assertTrue(limiter.allow("c", now))
+        assertEquals(2, limiter.trackedKeys())
+    }
+
+    @Test
+    fun prunesExpiredKeysBeforeGrowing() {
+        val limiter = UsageRateLimiter(maxRequests = 1, windowSeconds = 60, maxKeys = 2)
+        val now = Instant.parse("2026-01-01T00:00:00Z")
+        assertTrue(limiter.allow("a", now))
+        assertTrue(limiter.allow("b", now.plusSeconds(61)))
+        assertEquals(1, limiter.trackedKeys())
     }
 
     @Test

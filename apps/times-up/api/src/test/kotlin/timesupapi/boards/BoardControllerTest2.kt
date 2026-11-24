@@ -1,4 +1,5 @@
 package timesupapi.boards
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.never
@@ -27,6 +28,7 @@ import timesupapi.platform.IdentityUser
 import timesupapi.platform.RequestIdFilter
 import timesupapi.platform.SecurityConfig
 import timesupapi.storage.BodyStore
+import timesupapi.storage.SnapshotStore
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
@@ -38,7 +40,7 @@ private fun boardJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .claim("aud", listOf("times-up"))
     .build()
 
-@WebMvcTest(BoardController::class, BoardEntryController::class)
+@WebMvcTest(BoardController::class, BoardEntryController::class, BoardEntryExportController::class)
 @Import(SecurityConfig::class, RequestIdFilter::class, IdentityUser::class)
 class BoardControllerTest2 {
     @Autowired lateinit var mvc: MockMvc
@@ -58,6 +60,13 @@ class BoardControllerTest2 {
     @MockitoBean lateinit var subs: SubscriptionRepo
 
     @MockitoBean lateinit var bodyStore: BodyStore
+
+    @MockitoBean lateinit var snapshots: SnapshotStore
+
+    @BeforeEach
+    fun emptySummaries() {
+        whenever(entries.findSummariesByBoardIdOrderBySortOrderAscAddedAtAsc(any())).thenReturn(emptyList())
+    }
 
     private val uid = UUID.randomUUID()
     private val boardId = UUID.randomUUID()

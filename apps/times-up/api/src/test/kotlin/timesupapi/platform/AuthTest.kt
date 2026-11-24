@@ -191,10 +191,10 @@ class SharedPoolTest {
     lateinit var memberships: FolderFeedRepo
 
     @MockitoBean
-    lateinit var ingest: timesupapi.ingest.IngestService
+    lateinit var sync: timesupapi.ingest.IngestSync
 
     @MockitoBean
-    lateinit var sync: timesupapi.ingest.IngestSync
+    lateinit var poller: timesupapi.poller.FeedPoller
 
     @MockitoBean
     lateinit var articleRepo: ArticleRepo
@@ -348,6 +348,7 @@ class SharedPoolTest {
         }.andReturn()
         assertEquals(200, result.response.status)
         verify(feeds).save(any())
+        verify(poller).queue(org.mockito.kotlin.eq(listOf(feedId)), any())
     }
 
     private fun stubNewFeed(feedId: UUID) {

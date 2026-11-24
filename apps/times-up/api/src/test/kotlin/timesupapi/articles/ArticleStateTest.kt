@@ -55,6 +55,25 @@ class ArticleStateTest {
         whenever(users.findBySubject("u1")).thenReturn(UserEntity(id = uid, subject = "u1"))
     }
 
+    private fun feedRow(articleId: String, feedId: UUID): ArticleRepo.ArticleFeedRow =
+        object : ArticleRepo.ArticleFeedRow {
+            override val id = articleId
+            override val feedId = feedId
+        }
+
+    @Test
+    fun rejectsTooManyUpdates() {
+        auth(UUID.randomUUID())
+        val updates = (1..MAX_STATE_UPDATES + 1).joinToString(",") { """{"id":"a$it","read":true}""" }
+        val res = mvc.post("/articles/state") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer t")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"updates":[$updates]}"""
+        }.andReturn()
+        assertEquals(HttpStatus.BAD_REQUEST.value(), res.response.status)
+    }
+
     @Test
     fun missingUpdatesIs400() {
         auth(UUID.randomUUID())
@@ -88,8 +107,8 @@ class ArticleStateTest {
         val feedId = UUID.randomUUID()
         auth(uid)
         whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedId))
-        whenever(articles.findAllById(listOf("a1"))).thenReturn(
-            listOf(ArticleEntity(id = "a1", feedId = feedId)),
+        whenever(articles.findFeedIdsByIdIn(any())).thenReturn(
+            listOf(feedRow("a1", feedId)),
         )
         whenever(states.findById(any())).thenReturn(Optional.empty())
         val res = mvc.post("/articles/state") {
@@ -132,8 +151,8 @@ class ArticleStateTest {
         val feedId = UUID.randomUUID()
         auth(uid)
         whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedId))
-        whenever(articles.findAllById(listOf("a1", "a2"))).thenReturn(
-            listOf(ArticleEntity(id = "a1", feedId = feedId), ArticleEntity(id = "a2", feedId = UUID.randomUUID())),
+        whenever(articles.findFeedIdsByIdIn(any())).thenReturn(
+            listOf(feedRow("a1", feedId), feedRow("a2", UUID.randomUUID())),
         )
         whenever(states.findById(any())).thenReturn(Optional.empty())
         val res = mvc.post("/articles/state") {
@@ -152,8 +171,8 @@ class ArticleStateTest {
         val feedId = UUID.randomUUID()
         auth(uid)
         whenever(subs.findFeedIdsByUserId(uid)).thenReturn(listOf(feedId))
-        whenever(articles.findAllById(listOf("a1"))).thenReturn(
-            listOf(ArticleEntity(id = "a1", feedId = feedId)),
+        whenever(articles.findFeedIdsByIdIn(any())).thenReturn(
+            listOf(feedRow("a1", feedId)),
         )
         whenever(states.findById(any())).thenReturn(Optional.empty())
         val res = mvc.post("/articles/state") {

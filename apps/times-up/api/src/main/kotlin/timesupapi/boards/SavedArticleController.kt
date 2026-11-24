@@ -18,6 +18,7 @@ import timesupapi.platform.ApiException
 import timesupapi.platform.IdentityUser
 import timesupapi.platform.toSavedArticleJson
 import timesupapi.storage.BodyStore
+import timesupapi.storage.SnapshotStore
 import java.time.Instant
 
 @RestController
@@ -28,10 +29,11 @@ class SavedArticleController(
     private val feeds: FeedRepo,
     private val subs: SubscriptionRepo,
     private val bodyStore: BodyStore,
+    private val snapshots: SnapshotStore,
 ) {
     @GetMapping("/saved-articles", headers = ["X-Api-Version=1"])
     fun list(): SavedArticleListJson =
-        SavedArticleListJson(saved.findByUserIdOrderBySavedAtDesc(user.id).map { it.toJson() })
+        SavedArticleListJson(saved.findSummariesByUserIdOrderBySavedAtDesc(user.id).map { it.toSavedArticleJson() })
 
     @PostMapping("/saved-articles", headers = ["X-Api-Version=1"])
     fun save(@RequestBody body: SaveArticleBody): SavedArticleJson {
@@ -43,7 +45,9 @@ class SavedArticleController(
         // surfaces a duplicate-key race here, where the winner's row can be read
         // back instead of answering 500.
         val row = try {
-            saved.save(snapshotOf(article, feed))
+            val html = bodyStore.get(article.id)
+            val storageKey = snapshots.put("saved", user.id, article.id, html)
+            saved.save(snapshotOf(article, feed, html, storageKey))
         } catch (_: DataIntegrityViolationException) {
             saved.findByUserIdAndArticleId(user.id, articleId)
                 ?: throw ApiException(HttpStatus.CONFLICT, "Unable to save article")
@@ -64,7 +68,12 @@ class SavedArticleController(
         return article
     }
 
-    private fun snapshotOf(article: ArticleEntity, feed: FeedEntity?): SavedArticleEntity = SavedArticleEntity(
+    private fun snapshotOf(
+        article: ArticleEntity,
+        feed: FeedEntity?,
+        contentHtml: String?,
+        storageKey: String?,
+    ): SavedArticleEntity = SavedArticleEntity(
         userId = user.id,
         articleId = article.id,
         feedId = article.feedId,
@@ -73,10 +82,18 @@ class SavedArticleController(
         link = article.link,
         author = article.author,
         summary = article.summary,
-        contentHtml = bodyStore.get(article.id),
+        contentHtml = if (storageKey == null) contentHtml else null,
+        contentStorageKey = storageKey,
         publishedAt = article.publishedAt,
         savedAt = Instant.now(),
     )
+
+    @GetMapping("/saved-articles/{articleId}/content", headers = ["X-Api-Version=1"])
+    fun content(@PathVariable articleId: String): SnapshotContentJson {
+        val row = saved.findByUserIdAndArticleId(user.id, articleId)
+            ?: throw ApiException(HttpStatus.NOT_FOUND, "Saved article not found")
+        return SnapshotContentJson(snapshots.load(row.contentStorageKey, row.contentHtml))
+    }
 
     @DeleteMapping("/saved-articles/{articleId}", headers = ["X-Api-Version=1"])
     @Transactional

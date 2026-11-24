@@ -1,4 +1,6 @@
 package timesupapi.platform
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -25,6 +27,37 @@ class RequestIdsBranchTest {
         val upper = requestIdsFrom("r1", tp.uppercase(), newId = { "gen" })
         assertEquals("r1", upper.requestId)
         assertTrue(upper.traceId != null)
+    }
+
+    @Test
+    fun storedIdsAreAvailableToQueuedWorkAndErrorLogs() {
+        val request = MockHttpServletRequest()
+        val ids = RequestIds("req", "trace", "span")
+        storeRequestIds(request, ids)
+        assertEquals(ids, currentRequestIds(request))
+        assertEquals("req", request.getAttribute(REQUEST_ID_ATTRIBUTE))
+        assertEquals("trace", request.getAttribute(TRACE_ID_ATTRIBUTE))
+        assertEquals("span", request.getAttribute(SPAN_ID_ATTRIBUTE))
+    }
+
+    @Test
+    fun currentIdsFallBackToHeaders() {
+        val request = MockHttpServletRequest()
+        request.addHeader("X-Request-ID", "header-id")
+        assertEquals("header-id", currentRequestIds(request).requestId)
+    }
+
+    @Test
+    fun requestLogFieldsCarryTraceIdsOnlyWhenPresent() {
+        val request = MockHttpServletRequest("POST", "/sync")
+        val response = MockHttpServletResponse()
+        val traced = requestLogFields(request, response, RequestIds("req", "trace", "span"), System.nanoTime())
+        assertEquals("req", traced["request_id"])
+        assertEquals("trace", traced["trace_id"])
+        assertEquals("span", traced["span_id"])
+        val plain = requestLogFields(request, response, RequestIds("req"), System.nanoTime())
+        assertNull(plain["trace_id"])
+        assertNull(plain["span_id"])
     }
 
     @Test

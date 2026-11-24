@@ -41,6 +41,19 @@ class BodyObjectStoreConfigTest {
     }
 
     @Test
+    fun snapshotPrefixReadsNewAndLegacyKeys() {
+        val new = bodyObjectStoreConfigFromEnv(
+            mapOf(
+                "TIMES_UP_SNAPSHOT_S3_PREFIX" to "new/snapshots",
+                "RSS_SNAPSHOT_S3_PREFIX" to "legacy/snapshots",
+            ),
+        )
+        assertEquals("new/snapshots", new.snapshotPrefix)
+        val legacy = bodyObjectStoreConfigFromEnv(mapOf("RSS_SNAPSHOT_S3_PREFIX" to "legacy/snapshots"))
+        assertEquals("legacy/snapshots", legacy.snapshotPrefix)
+    }
+
+    @Test
     fun fromEnvFallsBackToS3Defaults() {
         val cfg = bodyObjectStoreConfigFromEnv(
             mapOf(

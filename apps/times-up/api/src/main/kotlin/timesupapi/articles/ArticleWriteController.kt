@@ -12,6 +12,8 @@ import timesupapi.platform.isUuid
 import java.time.Instant
 import java.util.UUID
 
+internal const val MAX_STATE_UPDATES: Int = 500
+
 @RestController
 class ArticleWriteController(
     private val user: IdentityUser,
@@ -20,20 +22,19 @@ class ArticleWriteController(
     private val subs: SubscriptionRepo,
 ) {
     @PostMapping("/articles/state", headers = ["X-Api-Version=1"])
+    @Transactional
     fun updateState(@RequestBody body: StateListBody): StateResult {
         val updates = body.updates ?: throw ApiException(HttpStatus.BAD_REQUEST, "updates array is required")
-        val owned = ownedArticleIds(updates.mapNotNull { it.id })
-        var n = 0
-        updates.mapNotNull { u ->
-            val id = u.id ?: return@mapNotNull null
-            if (id !in owned || (u.read == null && u.starred == null)) {
-                null
-            } else {
-                upsertState(id, u.read, u.starred)
-                1
-            }
-        }.forEach { n += it }
-        return StateResult(updated = n)
+        if (updates.size > MAX_STATE_UPDATES) throw ApiException(HttpStatus.BAD_REQUEST, "too many updates")
+        val latest = updates.filter { it.id != null && (it.read != null || it.starred != null) }
+            .associate { it.id!! to it }
+        val owned = ownedArticleIds(latest.keys)
+        val candidates = latest.values.filter { it.id in owned }
+        val keys = candidates.map { ArticleStateId(user.id, it.id!!) }
+        val existing = states.findAllById(keys).associateBy { it.articleId }
+        val rows = candidates.map { stateRow(it.id!!, it.read, it.starred, existing[it.id]) }
+        states.saveAll(rows)
+        return StateResult(updated = rows.size)
     }
 
     @PostMapping("/articles/read-before", headers = ["X-Api-Version=1"])
@@ -57,21 +58,25 @@ class ArticleWriteController(
         return OkBody()
     }
 
-    private fun ownedArticleIds(ids: List<String>): Set<String> {
+    private fun ownedArticleIds(ids: Collection<String>): Set<String> {
         if (ids.isEmpty()) return emptySet()
         val userFeeds = subs.findFeedIdsByUserId(user.id).toSet()
-        return articles.findAllById(ids).filter { it.feedId in userFeeds }.map { it.id }.toSet()
+        return articles.findFeedIdsByIdIn(ids).filter { it.feedId in userFeeds }.map { it.id }.toSet()
     }
 
-    private fun upsertState(articleId: String, read: Boolean?, starred: Boolean?) {
-        val key = ArticleStateId(user.id, articleId)
-        val row = states.findById(key).orElse(ArticleStateEntity(userId = user.id, articleId = articleId))
+    private fun stateRow(
+        articleId: String,
+        read: Boolean?,
+        starred: Boolean?,
+        existing: ArticleStateEntity?,
+    ): ArticleStateEntity {
+        val row = existing ?: ArticleStateEntity(userId = user.id, articleId = articleId)
         if (read != null) {
             row.read = read
             row.readAt = if (read) Instant.now() else null
         }
         if (starred != null) row.starred = starred
-        states.save(row)
+        return row
     }
 
     private fun markRead(feedIds: List<UUID>?, cutoff: Instant?) {

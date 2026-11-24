@@ -28,7 +28,6 @@ class OpmlController(
     private val memberships: FolderFeedRepo,
     private val subs: SubscriptionRepo,
     private val importer: OpmlImportService,
-    private val membershipService: MembershipService,
 ) {
     @GetMapping("/opml", produces = [MediaType.TEXT_XML_VALUE], headers = ["X-Api-Version=1"])
     fun export(): ResponseEntity<String> {
@@ -42,36 +41,5 @@ class OpmlController(
         return importer.run(user.id, xml)
     }
 
-    private fun buildOpml(): String {
-        val folderRows = folders.findByUserIdOrderBySortOrderAscCreatedAtAsc(user.id)
-        val feedRows = feeds.findAllById(subs.findFeedIdsByUserId(user.id)).sortedBy { it.addedAt }
-        val lines = mutableListOf(
-            """<?xml version="1.0" encoding="UTF-8"?>""",
-            """<opml version="2.0">""",
-            "<head><title>Times Up Export</title></head>",
-            "<body>",
-        )
-        for (f in feedRows) {
-            if (membershipService.ownedFolderIds(user.id, f.id!!).isNotEmpty()) continue
-            lines.add(outline(f, "  "))
-        }
-        for (folder in folderRows) {
-            lines.add("""  <outline text="${escXml(folder.title)}" title="${escXml(folder.title)}">""")
-            memberships.findByFolderId(folder.id!!).forEach { rel ->
-                feeds.findById(rel.feedId).ifPresent { lines.add(outline(it, "    ")) }
-            }
-            lines.add("  </outline>")
-        }
-        lines.add("</body>")
-        lines.add("</opml>")
-        return lines.joinToString("\n")
-    }
-
-    private fun outline(f: FeedEntity, indent: String): String {
-        val html = f.siteUrl.orEmpty()
-        val text = escXml(f.title)
-        val xmlUrl = escXml(f.xmlUrl)
-        return indent +
-            """<outline type="rss" text="$text" title="$text" xmlUrl="$xmlUrl" htmlUrl="${escXml(html)}"/>"""
-    }
+    private fun buildOpml(): String = buildOpml(user.id, folders, feeds, memberships, subs)
 }

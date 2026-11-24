@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 import timesupapi.platform.log.log
-import java.util.UUID
 
 /** Nanosecond to millisecond conversion, and the status that means 'error'. */
 private const val NS_PER_MS = 1_000_000
@@ -15,34 +14,24 @@ private const val HTTP_INTERNAL_ERROR = 500
 class RequestIdFilter : OncePerRequestFilter() {
     override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
         val ids = requestIdsFrom(request.getHeader("X-Request-ID"), request.getHeader("traceparent"))
+        storeRequestIds(request, ids)
         response.setHeader("X-Request-ID", ids.requestId)
         val started = System.nanoTime()
         chain.doFilter(request, response)
-        logRequest(request, response, ids.requestId, started)
+        logRequest(request, response, ids, started)
     }
 
     private fun logRequest(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        requestId: String,
+        ids: RequestIds,
         started: Long,
     ) {
         val path = request.requestURI
         val status = response.status
         val health = path == "/healthz" || path == "/readyz"
         val level = levelFor(status, health)
-        log(
-            "times-up-api",
-            level,
-            "request",
-            mapOf(
-                "method" to request.method,
-                "path" to path,
-                "status" to status,
-                "duration_ms" to (System.nanoTime() - started) / NS_PER_MS,
-                "request_id" to requestId,
-            ),
-        )
+        log("times-up-api", level, "request", requestLogFields(request, response, ids, started))
     }
 
     private fun levelFor(status: Int, health: Boolean): String = when {
@@ -50,4 +39,19 @@ class RequestIdFilter : OncePerRequestFilter() {
         health -> "debug"
         else -> "info"
     }
+}
+
+internal fun requestLogFields(
+    request: HttpServletRequest,
+    response: HttpServletResponse,
+    ids: RequestIds,
+    started: Long,
+): Map<String, Any?> = buildMap {
+    put("method", request.method)
+    put("path", request.requestURI)
+    put("status", response.status)
+    put("duration_ms", (System.nanoTime() - started) / NS_PER_MS)
+    put("request_id", ids.requestId)
+    ids.traceId?.let { put("trace_id", it) }
+    ids.spanId?.let { put("span_id", it) }
 }

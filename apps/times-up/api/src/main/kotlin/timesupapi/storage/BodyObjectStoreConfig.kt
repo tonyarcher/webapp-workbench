@@ -11,6 +11,8 @@ data class BodyObjectStoreConfig(
     val region: String = "us-east-1",
     val bucket: String = "",
     val prefix: String = "times-up/bodies",
+    /** Private saved/board snapshots use a separate prefix in the same bucket. */
+    val snapshotPrefix: String = "times-up/snapshots",
     val accessKey: String = "",
     val secretKey: String = "",
     val offloadEnabled: Boolean = false,
@@ -43,6 +45,7 @@ fun bodyObjectStoreConfigFromEnv(env: Map<String, String> = System.getenv()): Bo
         region = envText(env, "TIMES_UP_BODY_S3_REGION", envText(env, "S3_REGION", "us-east-1")),
         bucket = envText(env, "TIMES_UP_BODY_S3_BUCKET", ""),
         prefix = envText(env, "TIMES_UP_BODY_S3_PREFIX", "times-up/bodies").trim('/'),
+        snapshotPrefix = envText(env, "TIMES_UP_SNAPSHOT_S3_PREFIX", "times-up/snapshots").trim('/'),
         accessKey = envText(env, "TIMES_UP_BODY_S3_ACCESS_KEY", envText(env, "S3_ACCESS_KEY", "")),
         secretKey = envText(env, "TIMES_UP_BODY_S3_SECRET_KEY", envText(env, "S3_SECRET_KEY", "")),
         offloadEnabled = envBool(env, "TIMES_UP_BODY_OFFLOAD_ENABLED", false),

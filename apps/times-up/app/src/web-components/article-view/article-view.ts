@@ -10,6 +10,7 @@ import {
 } from './article-view-progress';
 import { noteOriginal } from '../../mutations';
 import { isDeranked } from '../../services/interesting-settings';
+import { isSnapshotArticle } from '../../services/saved-queue';
 import type { ArticleKeyword } from '../../services/keywords';
 import { areHighlightsEnabled } from '../../services/highlights';
 import { fetchArticleProvenance, type ArticleProvenance } from '../../services/api-provenance';
@@ -234,10 +235,11 @@ export class ArticleView extends HTMLElement {
                 void restoreArticleReadingProgress(this, this.article.id, saved);
             }
             const current = this.article;
-            const serverBacked = current?.feedId !== 'saved';
-            if (serverBacked && this.highlightsOn) {
+            const snapshot = current !== null && isSnapshotArticle(current);
+            const serverBacked = current !== null && !snapshot;
+            if ((serverBacked || snapshot) && current && this.highlightsOn) {
                 void this.refreshKeyLines();
-            } else if (serverBacked && current && !current.content) {
+            } else if (current && !current.content) {
                 void this.ensureRichContent(current);
             }
             if (serverBacked) {
@@ -282,8 +284,9 @@ export class ArticleView extends HTMLElement {
     }
 
     onManageFolders(anchor: MenuAnchor): void {
-        const id = this.article?.feedId;
-        if (!id || id === 'saved' || !this.feedFoldersMenu) return;
+        const a = this.article;
+        const id = a?.feedId;
+        if (!a || !id || isSnapshotArticle(a) || !this.feedFoldersMenu) return;
         this.feedFoldersMenu.feedId = id;
         this.feedFoldersMenu.anchor = anchor;
         this.feedFoldersMenu.open = true;

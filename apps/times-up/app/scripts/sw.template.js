@@ -52,7 +52,9 @@ self.addEventListener('fetch', (event) => {
     if (new URL(request.url).origin !== self.location.origin) return;
 
     const pathname = new URL(request.url).pathname;
-    if (pathname.startsWith('/api') || pathname.startsWith('/times-up/api')) {
+    // Authenticated requests and every API prefix bypass the cache. The API
+    // base can be same-origin under any configured prefix, not only /api.
+    if (request.headers.has('Authorization') || /(?:^|\/)(?:api|[\w-]*-api)(?:\/|$)/.test(pathname)) {
         event.respondWith(fetch(request));
         return;
     }

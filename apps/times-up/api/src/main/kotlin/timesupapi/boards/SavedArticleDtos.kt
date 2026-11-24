@@ -9,6 +9,7 @@ data class SavedArticleJson(
     val author: String? = null,
     val summary: String? = null,
     val content: String? = null,
+    val contentPending: Boolean = false,
     val published: Long? = null,
     val savedAt: Long,
 )

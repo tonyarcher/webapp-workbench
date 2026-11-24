@@ -1,16 +1,6 @@
-import {
-    type BumpSpec,
-    getFeed,
-    getMetaMany,
-    ingestArticlesTx,
-    queryArticlesByLink,
-    uid,
-    updateFeedErrorIfExists,
-} from '../db/db';
+import { type BumpSpec, getMetaMany, ingestArticlesTx, queryArticlesByLink } from '../db/db';
 import { authEpoch, hasSession } from './auth';
-import { parseFeedXml } from './parser';
 import { firstImageUrl } from './image';
-import { fetchFeedText } from './proxy';
 import {
     affinityBoostScore,
     contentEngagement,
@@ -248,6 +238,13 @@ function buildItemsAndBumps(
     return { items, bumpsByLink };
 }
 
+/** True when a browser session ended after the given epoch started. */
+function sessionEnded(startEpoch: number): boolean {
+    // No browser storage (node smoke tests): there are no sessions to guard.
+    if (typeof localStorage === 'undefined') return false;
+    return startEpoch !== authEpoch() || !hasSession();
+}
+
 export async function ingestFeed(
     feed: Feed,
     parsed: ParsedFeed,
@@ -265,70 +262,4 @@ export async function ingestFeed(
     // session's rows into the fresh database.
     if (sessionEnded(epoch)) return { inserted: 0, unread: 0 };
     return ingestArticlesTx(items, bumpsByLink, feedPatch, createIfMissing);
-}
-
-/** True when a browser session ended after the given epoch started. */
-function sessionEnded(startEpoch: number): boolean {
-    // No browser storage (node smoke tests): there are no sessions to guard.
-    if (typeof localStorage === 'undefined') return false;
-    return startEpoch !== authEpoch() || !hasSession();
-}
-
-export interface SyncResult {
-    inserted: number;
-    total: number;
-    title: string;
-}
-
-export async function syncFeed(feedId: string): Promise<SyncResult> {
-    const epoch = authEpoch();
-    const feed = await getFeed(feedId);
-    if (!feed) throw new Error('Feed not found');
-
-    try {
-        const xml = await fetchFeedText(feed.url);
-        const parsed = parseFeedXml(xml, Date.now());
-
-        const patch: Feed = {
-            ...feed,
-            title: feed.title === feed.url ? parsed.title : feed.title,
-            siteUrl: parsed.siteUrl || feed.siteUrl,
-            icon: parsed.icon ?? feed.icon,
-            lastFetchedAt: Date.now(),
-            lastError: undefined,
-        };
-        // The patch is persisted inside the ingest transaction with the
-        // freshly computed unread counter (read in-transaction, not from
-        // the caller's snapshot).
-        const { inserted } = await ingestFeed(feed, parsed, patch, false, epoch);
-
-        return { inserted, total: parsed.items.length, title: parsed.title };
-    } catch (err) {
-        // If the feed was deleted mid-sync, don't recreate it with an error.
-        await updateFeedErrorIfExists(feed.id, err instanceof Error ? err.message : String(err));
-        throw err;
-    }
-}
-
-export async function addFeedFromUrl(url: string): Promise<Feed> {
-    const epoch = authEpoch();
-    const xml = await fetchFeedText(url);
-    const parsed = parseFeedXml(xml, Date.now());
-
-    const feed: Feed = {
-        id: uid(),
-        title: parsed.title || url,
-        url,
-        siteUrl: parsed.siteUrl,
-        folderIds: [],
-        unread: 0,
-        addedAt: Date.now(),
-        icon: parsed.icon,
-        lastFetchedAt: Date.now(),
-    };
-
-    const { unread } = await ingestFeed(feed, parsed, feed, true, epoch);
-    feed.unread = unread;
-
-    return feed;
 }

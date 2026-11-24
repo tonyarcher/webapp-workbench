@@ -1,6 +1,8 @@
 package timesupapi.feeds
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
@@ -62,11 +64,14 @@ class SyncControllerTest {
         val res = mvc.post("/sync") {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer t")
+            header("X-Request-ID", "trace-request")
+            header("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
             contentType = MediaType.APPLICATION_JSON
             content = """{"scope":"all"}"""
         }.andReturn()
         assertEquals(200, res.response.status)
         assertTrue(res.response.contentAsString.contains("\"queued\":1"))
+        verify(poller).queue(eq(listOf(f1)), org.mockito.kotlin.check { assertEquals("trace-request", it.requestId) })
     }
 
     @Test

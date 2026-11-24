@@ -1,4 +1,5 @@
 package timesupapi.boards
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.never
@@ -28,6 +29,7 @@ import timesupapi.platform.IdentityUser
 import timesupapi.platform.RequestIdFilter
 import timesupapi.platform.SecurityConfig
 import timesupapi.storage.BodyStore
+import timesupapi.storage.SnapshotStore
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
@@ -39,7 +41,7 @@ private fun boardJwt(sub: String): Jwt = Jwt.withTokenValue("tok")
     .claim("aud", listOf("times-up"))
     .build()
 
-@WebMvcTest(BoardController::class, BoardEntryController::class)
+@WebMvcTest(BoardController::class, BoardEntryController::class, BoardEntryExportController::class)
 @Import(SecurityConfig::class, RequestIdFilter::class, IdentityUser::class)
 class BoardControllerTest {
     @Autowired lateinit var mvc: MockMvc
@@ -59,6 +61,13 @@ class BoardControllerTest {
     @MockitoBean lateinit var subs: SubscriptionRepo
 
     @MockitoBean lateinit var bodyStore: BodyStore
+
+    @MockitoBean lateinit var snapshots: SnapshotStore
+
+    @BeforeEach
+    fun emptySummaries() {
+        whenever(entries.findSummariesByBoardIdOrderBySortOrderAscAddedAtAsc(any())).thenReturn(emptyList())
+    }
 
     private val uid = UUID.randomUUID()
     private val boardId = UUID.randomUUID()
@@ -197,18 +206,9 @@ class BoardControllerTest {
     fun listEntries() {
         auth()
         ownedBoard()
-        whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
-            listOf(
-                BoardEntryEntity(
-                    id = UUID.randomUUID(),
-                    boardId = boardId,
-                    articleId = "a1",
-                    title = "T",
-                    addedAt = Instant.ofEpochMilli(1000),
-                    sortOrder = 0,
-                ),
-            ),
-        )
+        whenever(
+            entries.findSummariesByBoardIdOrderBySortOrderAscAddedAtAsc(boardId),
+        ).thenReturn(listOf(boardSummary()))
         mvc.get("/boards/$boardId/entries") {
             header("X-Api-Version", "1")
             header("Authorization", "Bearer good")
@@ -287,17 +287,8 @@ class BoardControllerTest {
     fun searchEntries() {
         auth()
         ownedBoard()
-        whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
-            listOf(
-                BoardEntryEntity(
-                    id = UUID.randomUUID(),
-                    boardId = boardId,
-                    articleId = "a1",
-                    title = "Batteries",
-                    addedAt = Instant.ofEpochMilli(1000),
-                    sortOrder = 0,
-                ),
-            ),
+        whenever(entries.findSummariesByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
+            listOf(boardSummary(titleValue = "Batteries")),
         )
         mvc.get("/boards/$boardId/search") {
             header("X-Api-Version", "1")
@@ -334,6 +325,32 @@ class BoardControllerTest {
             header("Authorization", "Bearer good")
         }
             .andExpect { status { isOk() } }
+    }
+
+    @Test
+    fun entryContentLoadsFromSnapshotStore() {
+        auth()
+        ownedBoard()
+        val row = entry("a1").apply { contentStorageKey = "snapshot-key" }
+        whenever(entries.findByBoardIdAndArticleId(boardId, "a1")).thenReturn(row)
+        whenever(snapshots.load("snapshot-key", null)).thenReturn("<p>stored</p>")
+        mvc.get("/boards/$boardId/entries/a1/content") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.content") { value("<p>stored</p>") }
+        }
+    }
+
+    @Test
+    fun entryContentRequiresAnOwnedRow() {
+        auth()
+        ownedBoard()
+        mvc.get("/boards/$boardId/entries/missing/content") {
+            header("X-Api-Version", "1")
+            header("Authorization", "Bearer good")
+        }.andExpect { status { isNotFound() } }
     }
 
     @Test
@@ -432,10 +449,10 @@ class BoardControllerTest {
     fun searchEntriesWithTokens() {
         auth()
         ownedBoard()
-        whenever(entries.findByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
+        whenever(entries.findSummariesByBoardIdOrderBySortOrderAscAddedAtAsc(boardId)).thenReturn(
             listOf(
-                entry("a1", "Batteries review", 1000, 0, "Alice", "lithium", "important"),
-                entry("a2", "Solar power", 2000, 1),
+                boardSummary(idValue = "a1", titleValue = "Batteries"),
+                boardSummary(idValue = "a2", titleValue = "Solar", order = 1),
             ),
         )
         mvc.get("/boards/$boardId/search") {

@@ -60,9 +60,6 @@ class OpmlControllerTest {
     @MockitoBean
     lateinit var subs: SubscriptionRepo
 
-    @MockitoBean
-    lateinit var membershipService: MembershipService
-
     private fun stubAuth(uid: UUID) {
         whenever(decoder.decode(any())).thenReturn(opmlJwt("u1"))
         whenever(users.findBySubject("u1")).thenReturn(

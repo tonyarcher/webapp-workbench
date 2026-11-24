@@ -69,5 +69,5 @@ by itself.
 This needs a recent Chrome on `https://` or `http://localhost`, with the
 on-device-model and prompt-api flags enabled. Confirm with
 `await LanguageModel.availability()` in DevTools; if it is unavailable the UI
-shows diagnostics. Because the app is purely client-side, feed fetching relies on
-a CORS proxy (see `src/services/proxy.ts`).
+shows diagnostics. Feed fetching goes through the Times Up API; the on-device
+model still runs in the browser.

@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.Environment
 import org.springframework.http.HttpMethod
+import org.springframework.security.authorization.AuthorizationManager
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.invoke
@@ -22,6 +23,7 @@ import org.springframework.security.oauth2.jwt.JwtTimestampValidator
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext
 import org.springframework.web.cors.CorsConfigurationSource
 
 /** Unauthenticated request handling for the resource server. */
@@ -46,7 +48,10 @@ class SecurityConfig(private val env: Environment) {
             sessionManagement { sessionCreationPolicy = SessionCreationPolicy.STATELESS }
             authorizeHttpRequests {
                 listOf("/healthz", "/readyz", "/").forEach { authorize(HttpMethod.GET, it, permitAll) }
-                authorize(HttpMethod.POST, "/usage", permitAll)
+                // Disabled usage stays indistinguishable from an unknown route.
+                val usageAuth: AuthorizationManager<in RequestAuthorizationContext> =
+                    if (usageRequiresAuth()) authenticated else permitAll
+                authorize(HttpMethod.POST, "/usage", usageAuth)
                 if (swaggerEnabledFromEnv(env)) {
                     swaggerDocPaths().forEach { authorize(HttpMethod.GET, it, permitAll) }
                 }
@@ -64,6 +69,8 @@ class SecurityConfig(private val env: Environment) {
         }
         return http.build()
     }
+
+    private fun usageRequiresAuth(): Boolean = env.getProperty("USAGE_ENABLED") == "1"
 
     /** Doc paths, permitted only when springdoc is switched on. */
     private fun swaggerDocPaths(): List<String> =

@@ -1,4 +1,5 @@
 package timesupapi.feeds
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -8,13 +9,14 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import timesupapi.articles.ArticleRepo
-import timesupapi.ingest.IngestService
 import timesupapi.ingest.IngestSync
 import timesupapi.platform.ApiException
 import timesupapi.platform.IdentityUser
+import timesupapi.platform.currentRequestIds
 import timesupapi.platform.isUuid
 import timesupapi.platform.safeHttpUrl
 import timesupapi.platform.toJson
+import timesupapi.poller.FeedPoller
 import java.net.URI
 import java.util.UUID
 
@@ -23,15 +25,15 @@ class FeedController(
     private val user: IdentityUser,
     private val feeds: FeedRepo,
     private val folders: FolderRepo,
-    private val ingest: IngestService,
     private val sync: IngestSync,
+    private val poller: FeedPoller,
     private val articleRepo: ArticleRepo,
     private val syncRows: FeedSyncRepo,
     private val subs: SubscriptionRepo,
     private val membershipService: MembershipService,
 ) {
     @PostMapping("/feeds", headers = ["X-Api-Version=1"])
-    fun create(@RequestBody body: CreateFeedBody): FeedJson {
+    fun create(@RequestBody body: CreateFeedBody, request: HttpServletRequest): FeedJson {
         val url = body.url ?: throw ApiException(HttpStatus.BAD_REQUEST, "url is required")
         val validated =
             safeHttpUrl(url) ?: throw ApiException(HttpStatus.BAD_REQUEST, "Invalid feed URL (must be http/https)")
@@ -42,7 +44,7 @@ class FeedController(
         ensureSubscribed(feed.id!!)
         folderIds.forEach { membershipService.addMembership(it, feed.id!!) }
         sync.ensureRow(feed.id!!)
-        ingest.fetchAndIngest(feed.id!!)
+        poller.queue(listOf(feed.id!!), currentRequestIds(request))
         return loadedFeed(feed.id!!)
     }
 
