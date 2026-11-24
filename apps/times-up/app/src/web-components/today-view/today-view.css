@@ -409,22 +409,12 @@ button.title-open:hover {
     display: flex;
     align-items: stretch;
     gap: 20px;
-    padding: 18px 18px 26px;
+    padding: 18px 18px 38px;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--panel-bg);
     cursor: pointer;
     box-sizing: border-box;
-    transition:
-        border-color 120ms ease,
-        background 120ms ease,
-        transform 120ms ease;
-}
-
-.medium-row:hover {
-    border-color: var(--accent);
-    background: var(--hover);
-    transform: translateY(-1px);
 }
 
 .medium-row:focus-visible {
@@ -514,31 +504,26 @@ button.title-open:hover {
 .expand-handle {
     position: absolute;
     left: 50%;
-    bottom: 5px;
+    bottom: 7px;
     transform: translateX(-50%);
-    width: 42px;
-    height: 18px;
+    width: 58px;
+    height: 26px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font: inherit;
-    font-size: 13px;
-    line-height: 1;
     border: 1px solid var(--border);
     border-radius: 999px;
     background: var(--panel-bg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
     color: var(--text-muted);
     cursor: pointer;
 }
 
-.expand-handle:hover {
-    color: var(--text);
-    border-color: var(--accent);
-}
-
+.expand-handle:hover,
 .medium-row.expanded .expand-handle {
+    color: var(--accent);
+    border-color: var(--accent);
     background: var(--hover);
-    color: var(--text);
 }
 
 .medium-footer {
@@ -590,12 +575,6 @@ button.title-open:hover {
 
     .medium-title {
         font-size: 17px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .medium-row {
-        transition: none;
     }
 }
 

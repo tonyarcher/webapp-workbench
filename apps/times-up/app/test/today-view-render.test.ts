@@ -91,12 +91,14 @@ describe('today reading view', () => {
             const handle = root.querySelector<HTMLButtonElement>('.expand-handle')!;
             expect(handle.getAttribute('aria-label')).to.equal('Show more');
             expect(handle.getAttribute('aria-expanded')).to.equal('false');
-            expect(handle.textContent).to.equal('⌄');
+            expect(handle.dataset['direction']).to.equal('down');
+            expect(handle.querySelector('path')?.getAttribute('d')).to.equal('M4 6.5 8 10.5 12 6.5');
             handle.click();
             expect(row.classList.contains('expanded')).to.equal(true);
             expect(handle.getAttribute('aria-label')).to.equal('Show less');
             expect(handle.getAttribute('aria-expanded')).to.equal('true');
-            expect(handle.textContent).to.equal('⌃');
+            expect(handle.dataset['direction']).to.equal('up');
+            expect(handle.querySelector('path')?.getAttribute('d')).to.equal('M4 9.5 8 5.5 12 9.5');
         } finally {
             view.remove();
         }

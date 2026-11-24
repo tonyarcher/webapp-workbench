@@ -26,6 +26,24 @@ function startOfToday(): Date {
     return d;
 }
 
+function chevronIcon(direction: 'down' | 'up'): SVGSVGElement {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 16 16');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', direction === 'down' ? 'M4 6.5 8 10.5 12 6.5' : 'M4 9.5 8 5.5 12 9.5');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(path);
+    return svg;
+}
+
 /** Today's Feedly-shaped view: one capped section per folder, newest first. */
 export class TodayView extends HTMLElement {
     private articles: Article[] = [];
@@ -368,14 +386,18 @@ export class TodayView extends HTMLElement {
         }
         row.appendChild(media);
         if (article.summary || article.content) {
-            const expand = el('button', 'expand-handle', '⌄');
+            const expand = el('button', 'expand-handle');
             expand.type = 'button';
+            expand.dataset['direction'] = 'down';
+            expand.appendChild(chevronIcon('down'));
             expand.setAttribute('aria-label', 'Show more');
             expand.setAttribute('aria-expanded', 'false');
             expand.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const expanded = row.classList.toggle('expanded');
-                expand.textContent = expanded ? '⌃' : '⌄';
+                const direction = expanded ? 'up' : 'down';
+                expand.dataset['direction'] = direction;
+                expand.replaceChildren(chevronIcon(direction));
                 expand.setAttribute('aria-label', expanded ? 'Show less' : 'Show more');
                 expand.setAttribute('aria-expanded', String(expanded));
             });
