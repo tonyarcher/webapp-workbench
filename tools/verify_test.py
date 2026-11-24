@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import subprocess
 import tempfile
 import unittest
 
@@ -189,6 +190,108 @@ class LintConfigErrorsTest(unittest.TestCase):
         root = pathlib.Path(verify.__file__).resolve().parent.parent
         errors = verify.lint_config_errors(root, verify.collect(root))
         self.assertEqual(errors, [], f"repo configs must parse: {errors}")
+
+
+class ChangedFilesTest(unittest.TestCase):
+    """Changed scope includes tracked edits and untracked source, not deleted files."""
+
+    def test_collects_working_tree_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "test@example.com"],
+                cwd=root,
+                check=True,
+            )
+            subprocess.run(["git", "config", "user.name", "Test"], cwd=root, check=True)
+            tracked = root / "apps/demo/src/a.ts"
+            deleted = root / "tools/old.py"
+            tracked.parent.mkdir(parents=True)
+            tracked.write_text("old", encoding="utf-8")
+            deleted.parent.mkdir(parents=True)
+            deleted.write_text("old", encoding="utf-8")
+            (root / ".gitignore").write_text("ignored.py\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "seed"], cwd=root, check=True)
+            tracked.write_text("new", encoding="utf-8")
+            deleted.unlink()
+            untracked = root / "apps/demo/src/new.ts"
+            untracked.write_text("new", encoding="utf-8")
+            (root / "ignored.py").write_text("ignored", encoding="utf-8")
+
+            changed = {
+                path.relative_to(root).as_posix() for path in verify.changed_files(root)
+            }
+
+            self.assertEqual(changed, {"apps/demo/src/a.ts", "apps/demo/src/new.ts"})
+
+
+class ScopedSpecsTest(unittest.TestCase):
+    """Scoped verification selects paths/workspaces and omits global scans."""
+
+    def test_scopes_file_tools_and_typechecks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            demo = root / "apps/demo"
+            (demo / "src").mkdir(parents=True)
+            (demo / "package.json").write_text('{"name":"demo"}', encoding="utf-8")
+            source = demo / "src/a.ts"
+            tool = root / "tools/check.py"
+            config = root / "ruff.toml"
+            tool.parent.mkdir()
+            source.write_text("", encoding="utf-8")
+            tool.write_text("", encoding="utf-8")
+            config.write_text("", encoding="utf-8")
+
+            entries = verify.specs(root, [source, tool, config], fix=False, scoped=True)
+            labels = {label for label, _tool, _argv in entries}
+            commands = {label: argv for label, _tool, argv in entries}
+
+            self.assertIn("tsc[demo]", labels)
+            self.assertIn("prettier", labels)
+            self.assertIn("taplo", labels)
+            self.assertIn("ruff-check", labels)
+            self.assertNotIn("gitleaks", labels)
+            self.assertIn(str(source), commands["prettier"])
+            self.assertNotIn(str(config), commands["prettier"])
+            self.assertIn(str(config), commands["taplo"])
+            self.assertIn(str(tool), commands["ruff-check"])
+            self.assertNotIn(".", commands["prettier"])
+
+    def test_shared_tsconfig_change_checks_its_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            stock = root / "apps/stock-game"
+            stock.mkdir(parents=True)
+            (stock / "package.json").write_text(
+                '{"name":"stock-game"}', encoding="utf-8"
+            )
+            entries = verify.workspace_typechecks(root, [stock / "tsconfig.base.json"])
+            self.assertEqual(
+                entries,
+                [
+                    (
+                        "tsc[stock-game]",
+                        "npm",
+                        [
+                            "npm",
+                            "run",
+                            "typecheck",
+                            "--workspace",
+                            "stock-game",
+                            "--if-present",
+                        ],
+                    )
+                ],
+            )
+
+    def test_root_type_change_checks_every_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "package.json").write_text('{"name":"root"}', encoding="utf-8")
+            entries = verify.workspace_typechecks(root, [root / "tsconfig.json"])
+            self.assertEqual(entries, [("tsc", "npm", ["npm", "run", "typecheck"])])
 
 
 if __name__ == "__main__":

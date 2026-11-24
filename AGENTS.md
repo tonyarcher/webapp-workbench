@@ -73,7 +73,7 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 | Build everything, one command | `./gradlew buildAll` (root; JS workspaces + all Kotlin APIs). `./gradlew buildJvm` = APIs only, `./gradlew buildNode` = JS only, `./gradlew checkAll` = API tests/detekt/Jacoco. Add `-Papps=times-up` (or `apps/times-up`) to build one app |
 | Deploy compose stack          | `python deploy.py [options] [app...]` (or `python3`); calls `./gradlew deploy`, which builds, renders the gateway, mints certs, then runs compose. Tab completion: `source scripts/complete-deploy.bash`.                                    |
 | Format everything             | `npm run format` (prettier --write). Check only: `npm run format:check`.                                                                                                                                                                     |
-| Verify format + lint          | `python tools/verify.py` (check mode) or `python tools/verify.py --fix` (apply the formatters). It owns the tool list.                                                                                                                       |
+| Verify format + lint          | `python tools/verify.py` (full check) or `python tools/verify.py --fix` (apply formatters). Scope fast checks with `--changed` or `--module apps/<app>`; scoped runs omit repo-wide secret/dependency scans.                                 |
 
 Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm test`).
 
@@ -97,7 +97,9 @@ A stale Vite process on 5199 hangs baseball e2e — kill it first.
 2. Bug fixes: add a failing regression test with the fix. Core / data / API / service
    changes need new or extended tests in that workspace.
 3. Verify in the workspace you touched: `npm test`, then `npm run build` (or `npm run verify`
-   when the app has it). Then `git diff --check`.
+   when the app has it). During editing, run `python tools/verify.py --changed` or
+   `python tools/verify.py --module apps/<app>` instead of the full repository scan.
+   Then `git diff --check`.
 4. Dispatch the `review` subagent on the **full uncommitted diff** (including untracked files).
    Fix blocking findings and re-dispatch until `APPROVE`. The reviewer does not edit or commit.
    The reviewer has a small step budget, so a large diff exhausts it before it reaches a verdict.
@@ -105,12 +107,12 @@ A stale Vite process on 5199 hangs baseball e2e — kill it first.
    (build tooling, deploy config, each service, the client), each given the files it owns. A
    review that returns no verdict is not an `APPROVE` — re-scope and re-dispatch, and never read
    a step-limited report as consent.
-5. After verification, jev-gate (when required), and `review` returns `APPROVE`,
-   create a conventional commit (`feat:`, `fix:`, `chore:`, `test:`, `docs:`,
-   `refactor:`). Stage files explicitly. Do not push, deploy, or ship unless the
-   user explicitly asks. Keep fixing and re-reviewing until `APPROVE` before
-   committing. If the user explicitly overrides (for example, says to deploy or
-   commit without `APPROVE`), follow the explicit request and state the override
+5. Run full `python tools/verify.py` once before finishing. After that final verification,
+   jev-gate (when required), and `review` returns `APPROVE`, create a conventional commit
+   (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`). Stage files explicitly.
+   Do not push, deploy, or ship unless the user explicitly asks. Keep fixing and re-reviewing
+   until `APPROVE` before committing. If the user explicitly overrides (for example, says to
+   deploy or commit without `APPROVE`), follow the explicit request and state the override
    in the summary.
 6. `AGENTS.md` files may be
    updated to stay in sync with the code — but never to dodge the work. Do not
@@ -343,8 +345,12 @@ fetchers cannot send custom headers.
 ## Verification
 
 - Workspace `npm test` then `npm run build` must pass before finishing.
-- `python tools/verify.py` passes. It owns the full tool list; `--fix` applies the formatters.
-  Tools come from the `ops-scripts` installers.
+- `python tools/verify.py` passes before finishing. It owns the full tool list; `--fix` applies the formatters.
+  During implementation, use `python tools/verify.py --changed` for modified files or
+  `python tools/verify.py --module apps/<app>` for one module. Repeat `--module` for several
+  modules, and combine it with `--changed` to narrow further. Scoped runs check only the
+  selected files and affected npm workspaces; they omit repo-wide secret and dependency
+  scans, so run the full command before finishing. Tools come from the `ops-scripts` installers.
 - A doc-rot guard runs with the script tests. It checks the claim shapes that rot most
   often here — a backticked path, an `npm run` script, a Gradle task, and an app or
   package count — against whatever derives each one, so a stale claim fails instead of

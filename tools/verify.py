@@ -1,33 +1,51 @@
 #!/usr/bin/env python3
 """Verify entry point: run every formatter and linter in check mode.
 
-Run: `python3 tools/verify.py [--fix] [--strict]` (usually
+Run: `python3 tools/verify.py [--fix] [--strict] [--changed]` (usually
 `python tools/verify.py` on Windows). Covers every format this repo owns: web
 (prettier), Python (ruff,
 mypy), Kotlin (ktlint), shell (shfmt, shellcheck), SQL (sqlfluff), Dockerfile
 (hadolint), TOML (taplo) and PowerShell (PSScriptAnalyzer). `--fix` applies
 the formatters instead of checking. `--strict` treats a missing tool as a
-failure rather than a skip.
+failure rather than a skip. `--changed` limits file checks and typechecks to
+changed workspaces and omits repo-wide secret/dependency scans.
 
 Only stdlib is used (subprocess, sys, pathlib, shutil).
 """
 
 from __future__ import annotations
 
+import argparse
+import importlib
 import json
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
+
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+_scope = importlib.import_module("tools.verify_scope")
+discover_changed_files: Callable[[Path, frozenset[str]], list[Path]] = (
+    _scope.changed_files
+)
+discover_workspace_typechecks: Callable[
+    [Path, list[Path], tuple[str, ...]], list[Check]
+] = _scope.workspace_typechecks
 
 HELP = """Run every formatter and linter in check mode.
 
 Usage:
-  python tools/verify.py [--fix] [--strict]
+  python tools/verify.py [--fix] [--strict] [--changed] [--module PATH]
 
 Also:
-  python tools/verify.py --fix     apply the formatters instead of checking
-  python tools/verify.py --strict  a missing tool is a failure, not a skip
+  python tools/verify.py --fix       apply the formatters instead of checking
+  python tools/verify.py --strict    a missing tool is a failure, not a skip
+  python tools/verify.py --changed   check only changed files/workspaces;
+                                     repo-wide scans are omitted
+  python tools/verify.py --module    check one module (repeatable); combine
+                                     with --changed to narrow it further
 
 Tools: prettier, tsc (via npm), ruff, mypy, ktlint, shfmt, shellcheck,
 hadolint, yamllint, taplo, sqlfluff, psscriptanalyzer, gitleaks, osv-scanner,
@@ -59,6 +77,24 @@ BUDGET = 5000
 
 TOML = (".toml",)
 PYTHON = (".py", ".pyi")
+TYPESCRIPT = (".ts", ".tsx", ".js", ".mjs", ".cjs")
+PRETTIER = (
+    ".ts",
+    ".tsx",
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".json",
+    ".jsonc",
+    ".css",
+    ".scss",
+    ".less",
+    ".html",
+    ".md",
+    ".mdx",
+    ".yaml",
+    ".yml",
+)
 KOTLIN = (".kt", ".kts")
 SHELL = (".sh", ".bash")
 SQL = (".sql",)
@@ -81,6 +117,11 @@ Check = tuple[str, str, list[str]]
 # This happened for real: a trailing comma left in apps/baseball/.oxlintrc.json
 # survived `verify.py --strict` reporting 0 failed.
 LINT_CONFIGS = (".oxlintrc.json",)
+GLOBAL_SCANS = (
+    ("gitleaks", "gitleaks", ["gitleaks", "detect", "--no-banner", "--redact"]),
+    ("osv-scanner", "osv-scanner", ["osv-scanner", "-r", "."]),
+    ("npm-audit", "npm", ["npm", "audit", "--omit=dev", "--audit-level=high"]),
+)
 
 # Shared file-length budget. Only oxlint (`max-lines`) and detekt
 # (`LargeClass`) can express it natively; ruff and ktlint cannot, so this
@@ -98,6 +139,14 @@ def collect(root: Path) -> list[Path]:
             continue
         kept.append(path)
     return kept
+
+
+def changed_files(root: Path) -> list[Path]:
+    return discover_changed_files(root, SKIP_DIRS)
+
+
+def workspace_typechecks(root: Path, files: list[Path]) -> list[Check]:
+    return discover_workspace_typechecks(root, files, TYPESCRIPT)
 
 
 def by_suffix(files: list[Path], suffixes: tuple[str, ...]) -> list[str]:
@@ -299,20 +348,56 @@ def lint_config_errors(root: Path, files: list[Path]) -> list[tuple[str, str]]:
     return errors
 
 
-def specs(root: Path, files: list[Path], fix: bool) -> list[Check]:
+def specs(
+    root: Path, files: list[Path], fix: bool, scoped: bool = False
+) -> list[Check]:
     """Label, executable and argv for each check, in run order."""
     config = str(root / ".sqlfluff")
     flag = ["-F"] if fix else []
     edit = ["-w"] if fix else ["-d"]
-    entries: list[Check] = [
-        ("prettier", "prettier", ["prettier", "--write" if fix else "--check", "."]),
-        # tsc, because the bundler strips types instead of checking them, so a
-        # type error in TypeScript can pass prettier, the unit tests and the
-        # build. It has no fix mode, so it reports in both.
-        ("tsc", "npm", ["npm", "run", "typecheck"]),
-        ("ruff-check", "ruff", ["ruff", "check", *(["--fix"] if fix else []), "."]),
-        ("ruff-format", "ruff", ["ruff", "format", *([] if fix else ["--check"]), "."]),
-    ]
+    prettier_paths = by_suffix(files, PRETTIER)
+    prettier = (
+        multi(
+            "prettier",
+            "prettier",
+            ["prettier", "--write" if fix else "--check"],
+            prettier_paths,
+        )
+        if scoped
+        else [
+            ("prettier", "prettier", ["prettier", "--write" if fix else "--check", "."])
+        ]
+    )
+    typechecks = (
+        workspace_typechecks(root, files)
+        if scoped
+        else [("tsc", "npm", ["npm", "run", "typecheck"])]
+    )
+    entries: list[Check] = [*prettier, *typechecks]
+    ruff_paths = by_suffix(files, PYTHON)
+    if not scoped or ruff_paths:
+        entries += [
+            (
+                "ruff-check",
+                "ruff",
+                [
+                    "ruff",
+                    "check",
+                    *(["--fix"] if fix else []),
+                    *(ruff_paths if scoped else ["."]),
+                ],
+            ),
+            (
+                "ruff-format",
+                "ruff",
+                [
+                    "ruff",
+                    "format",
+                    *([] if fix else ["--check"]),
+                    *(ruff_paths if scoped else ["."]),
+                ],
+            ),
+        ]
     entries += multi("mypy", "mypy", ["mypy", "--strict"], by_suffix(files, PYTHON))
     entries += multi("ktlint", "ktlint", ["ktlint", *flag], by_suffix(files, KOTLIN))
     entries += multi("shfmt", "shfmt", ["shfmt", *edit], by_suffix(files, SHELL))
@@ -348,11 +433,8 @@ def specs(root: Path, files: list[Path], fix: bool) -> list[Check]:
     # known CVEs in every dependency tree. Check-only, in both modes. They run
     # last because they are the slowest and the least likely to need a rerun
     # after a formatting fix.
-    entries += [
-        ("gitleaks", "gitleaks", ["gitleaks", "detect", "--no-banner", "--redact"]),
-        ("osv-scanner", "osv-scanner", ["osv-scanner", "-r", "."]),
-        ("npm-audit", "npm", ["npm", "audit", "--omit=dev", "--audit-level=high"]),
-    ]
+    if not scoped:
+        entries += list(GLOBAL_SCANS)
     return entries
 
 
@@ -373,17 +455,58 @@ def execute(argv: list[str], root: Path) -> tuple[int, str]:
     return result.returncode, (result.stdout + result.stderr).strip()
 
 
-def main(argv: list[str]) -> int:
-    """Run every check and summarise pass, fail and skip."""
-    if any(arg in ("-h", "--help") for arg in argv):
-        print(HELP)
-        return 0
-    fix = "--fix" in argv
-    strict = "--strict" in argv
-    root = Path(__file__).resolve().parent.parent
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--fix", action="store_true", help="apply formatters instead of checking"
+    )
+    parser.add_argument(
+        "--strict", action="store_true", help="fail when a required tool is missing"
+    )
+    parser.add_argument(
+        "--changed", action="store_true", help="check only changed files and workspaces"
+    )
+    parser.add_argument(
+        "--module",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="limit checks to a module (repeatable)",
+    )
+    return parser.parse_args(argv)
+
+
+def module_paths(
+    parser: argparse.ArgumentParser, values: list[str], root: Path
+) -> list[Path]:
+    modules: list[Path] = []
+    for raw in values:
+        path = (root / raw).resolve()
+        if not path.is_relative_to(root) or not path.is_dir():
+            parser.error(f"module must be a directory inside the repository: {raw}")
+        modules.append(path)
+    return modules
+
+
+def selected_sources(root: Path, changed: bool, modules: list[Path]) -> list[Path]:
+    sources = (
+        sorted({path for module in modules for path in collect(module)})
+        if modules
+        else collect(root)
+    )
+    if changed:
+        modified = set(changed_files(root))
+        sources = [path for path in sources if path in modified]
+    return sources
+
+
+def run_checks(
+    root: Path, sources: list[Path], fix: bool, strict: bool, scoped: bool
+) -> int:
     missing: list[str] = []
     failed: list[str] = []
-    sources = collect(root)
     long = overlong(sources)
     if long:
         print(f"FAIL max-lines (over {MAX_FILE_LINES} lines)")
@@ -400,7 +523,7 @@ def main(argv: list[str]) -> int:
             print(f"  {path}: {message}")
     else:
         print("PASS oxlint-config")
-    for label, tool, command in specs(root, sources, fix):
+    for label, tool, command in specs(root, sources, fix, scoped):
         if shutil.which(tool) is None:
             print(f"SKIP {label} ({tool} not on PATH)")
             missing.append(label)
@@ -413,12 +536,33 @@ def main(argv: list[str]) -> int:
         failed.append(label)
         if output:
             print(output)
-    print(f"\n{len(failed)} failed, {len(missing)} skipped")
+    omitted = len(GLOBAL_SCANS) if scoped else 0
+    if scoped:
+        for label, _tool, _command in GLOBAL_SCANS:
+            print(f"OMIT {label} (repo-wide scan; run without --changed/--module)")
+    summary = (
+        f"{len(failed)} failed, {len(missing)} skipped, "
+        f"{omitted} repo-wide scans omitted"
+    )
+    print(f"\n{summary}")
     if missing:
         print("skipped (install via ops-scripts): " + ", ".join(missing))
     if failed:
         return 1
     return 1 if (strict and missing) else 0
+
+
+def main(argv: list[str]) -> int:
+    """Run the selected checks and summarise pass, fail, skip, and omissions."""
+    args = parse_args(argv)
+    root = Path(__file__).resolve().parent.parent
+    parser = argparse.ArgumentParser()
+    modules = module_paths(parser, args.module, root)
+    scoped = args.changed or bool(modules)
+    sources = selected_sources(root, args.changed, modules)
+    scope = "scoped" if scoped else "repository"
+    print(f"Scope: {len(sources)} files ({scope})")
+    return run_checks(root, sources, args.fix, args.strict, scoped)
 
 
 if __name__ == "__main__":
