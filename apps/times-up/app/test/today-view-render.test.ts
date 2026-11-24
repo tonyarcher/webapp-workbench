@@ -1,7 +1,7 @@
 import './test-setup';
 import { expect } from '@esm-bundle/chai';
 import '../src/web-components/today-view/today-view';
-import type { Article, Feed, Folder } from '../src/types';
+import type { Article, Feed, Folder, SavedArticleSnapshot } from '../src/types';
 
 const folder: Folder = { id: 'f1', title: 'Tech', createdAt: 1 };
 const feed: Feed = {
@@ -47,8 +47,12 @@ async function waitFor(done: () => boolean): Promise<void> {
 
 describe('today reading view', () => {
     const originalFetch = globalThis.fetch;
+    let articlePageFetches = 0;
+    let savedItems: SavedArticleSnapshot[] = [];
 
     beforeEach(() => {
+        articlePageFetches = 0;
+        savedItems = [];
         localStorage.setItem(
             'times-up.auth.tokens',
             JSON.stringify({ access: 't', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 3600 }),
@@ -70,7 +74,12 @@ describe('today reading view', () => {
                 title: 'A very short story',
                 summary: 'Short. Read More',
             };
-            if (url.includes('/articles?')) return json({ items: [article, read, short], nextCursor: null });
+            if (url.includes('/saved-articles')) return json({ items: savedItems });
+            if (url.includes('/articles/state')) return json({ ok: true, updated: 1 });
+            if (url.includes('/articles?')) {
+                articlePageFetches++;
+                return json({ items: [article, read, short], nextCursor: null });
+            }
             if (url.includes('/excerpt')) return json({ excerpt: '' });
             return json({});
         };
@@ -95,14 +104,26 @@ describe('today reading view', () => {
             expect(root.querySelector('.medium-summary')?.textContent).to.equal(article.summary);
             expect(root.querySelector('.medium-img')).to.not.equal(null);
             expect(root.querySelector('.feed-label')?.textContent).to.equal(feed.title);
-            expect(root.querySelector('.star')?.getAttribute('aria-label')).to.equal('Star');
+            const row = root.querySelector('.medium-row')!;
+            const star = root.querySelector<HTMLButtonElement>('.star-overlay')!;
+            expect(star.getAttribute('aria-label')).to.equal('Star');
+            expect(star.parentElement?.classList.contains('medium-actions')).to.equal(true);
+            expect(row.querySelector('.medium-footer .star')).to.equal(null);
+            const bookmark = root.querySelector<HTMLButtonElement>('.bookmark-overlay')!;
+            expect(bookmark.getAttribute('aria-label')).to.equal('Save for later');
+            expect(bookmark.getAttribute('aria-pressed')).to.equal('false');
+            const fetchesBeforeActions = articlePageFetches;
+            star.click();
+            bookmark.click();
+            expect(star.getAttribute('aria-label')).to.equal('Unstar');
+            expect(bookmark.getAttribute('aria-pressed')).to.equal('true');
+            expect(articlePageFetches).to.equal(fetchesBeforeActions);
             expect(root.querySelector<HTMLSelectElement>('.view-mode select')?.value).to.equal('medium');
             expect(root.querySelector('.unread-toggle')).to.equal(null);
             expect(root.querySelectorAll('.medium-row').length).to.equal(2);
             expect(root.textContent).to.not.contain('Already read');
             expect(root.textContent).to.not.contain('Read More');
             await waitFor(() => !(root.querySelector<HTMLButtonElement>('.expand-handle')?.disabled ?? true));
-            const row = root.querySelector('.medium-row')!;
             const handles = [...root.querySelectorAll<HTMLButtonElement>('.expand-handle')];
             expect(handles.length).to.equal(2);
             expect(handles[1]?.disabled).to.equal(true);
@@ -117,6 +138,23 @@ describe('today reading view', () => {
             expect(handle.getAttribute('aria-expanded')).to.equal('true');
             expect(handle.dataset['direction']).to.equal('up');
             expect(handle.querySelector('path')?.getAttribute('d')).to.equal('M4 9.5 8 5.5 12 9.5');
+        } finally {
+            view.remove();
+        }
+    });
+
+    it('syncs bookmarks saved from the reader without refetching', async () => {
+        const view = document.createElement('today-view');
+        document.body.appendChild(view);
+        try {
+            await waitFor(() => Boolean(view.shadowRoot?.querySelector('.bookmark-overlay')));
+            const bookmark = view.shadowRoot!.querySelector<HTMLButtonElement>('.bookmark-overlay')!;
+            expect(bookmark.getAttribute('aria-pressed')).to.equal('false');
+            savedItems = [{ id: 'saved-1', articleId: article.id, title: article.title, savedAt: 1 }];
+            const fetchesBefore = articlePageFetches;
+            window.dispatchEvent(new Event('saved-articles-changed'));
+            await waitFor(() => bookmark.getAttribute('aria-pressed') === 'true');
+            expect(articlePageFetches).to.equal(fetchesBefore);
         } finally {
             view.remove();
         }

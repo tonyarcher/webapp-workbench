@@ -1,10 +1,10 @@
 import { fetchArticlesPage } from '../../services/api';
-import { fetchLibrary } from '../../query';
+import { fetchLibrary, fetchSavedArticlesList } from '../../query';
 import { fetchArticleExcerpt } from '../../services/api-excerpts';
 import { safeHttpUrl } from '../../services/parser';
 import { articleImage, cardPlaceholderStyle } from '../../services/image';
 import { articleVideo, watchUrlFor } from '../../services/video';
-import { markShownRead, toggleStar } from '../../mutations';
+import { markShownRead } from '../../mutations';
 import { domainOf, formatDate, readMinutes } from '../../util';
 import {
     loadTodaySettings,
@@ -17,6 +17,12 @@ import { buildTodaySections, type TodaySection } from '../../services/today';
 import '../lazy-img/lazy-img';
 import '../video-header/video-header';
 import type { Article, Feed, Folder } from '../../types';
+import {
+    bookmarkButton as buildBookmarkButton,
+    onArticleStarred as applyArticleStarred,
+    refreshBookmarks as applySavedArticles,
+    starButton as buildStarButton,
+} from './today-view-actions';
 import { chevronIcon, cleanSummary, el, updateExpandHandle } from './today-view-dom';
 import styles from './today-view.css?inline';
 
@@ -28,14 +34,15 @@ function startOfToday(): Date {
 
 /** Today's Feedly-shaped view: one capped section per folder, newest first. */
 export class TodayView extends HTMLElement {
-    private articles: Article[] = [];
+    articles: Article[] = [];
     private folders: Folder[] = [];
     private feeds: Feed[] = [];
+    savedIds = new Set<string>();
     private settings: TodaySettings = loadTodaySettings();
     private today = startOfToday();
     private loading = true;
     private failed = false;
-    private root: HTMLDivElement | null = null;
+    root: HTMLDivElement | null = null;
     private midnightTimer: number | null = null;
     private generation = 0;
 
@@ -49,7 +56,8 @@ export class TodayView extends HTMLElement {
         window.addEventListener('today-settings-changed', this.onSettingsChanged);
         window.addEventListener('feeds-refreshed', this.onFeedsRefreshed);
         window.addEventListener('article-read', this.onDataChanged);
-        window.addEventListener('article-starred', this.onDataChanged);
+        window.addEventListener('article-starred', this.onArticleStarred);
+        window.addEventListener('saved-articles-changed', this.onSavedArticlesChanged);
         this.scheduleMidnightRollover();
         void this.load();
     }
@@ -61,7 +69,8 @@ export class TodayView extends HTMLElement {
         window.removeEventListener('today-settings-changed', this.onSettingsChanged);
         window.removeEventListener('feeds-refreshed', this.onFeedsRefreshed);
         window.removeEventListener('article-read', this.onDataChanged);
-        window.removeEventListener('article-starred', this.onDataChanged);
+        window.removeEventListener('article-starred', this.onArticleStarred);
+        window.removeEventListener('saved-articles-changed', this.onSavedArticlesChanged);
     }
 
     private onSettingsChanged = (): void => {
@@ -107,14 +116,16 @@ export class TodayView extends HTMLElement {
         this.failed = false;
         this.paint();
         try {
-            const [library, page] = await Promise.all([
+            const [library, page, saved] = await Promise.all([
                 fetchLibrary(),
                 fetchArticlesPage({ since: this.today.getTime(), sort: 'newest', limit: 10_000 }),
+                fetchSavedArticlesList().catch(() => []),
             ]);
             if (gen !== this.generation || !this.isConnected) return;
             this.folders = library.folders;
             this.feeds = library.feeds;
             this.articles = page.items;
+            this.savedIds = new Set(saved.map((item) => item.articleId).filter((id): id is string => Boolean(id)));
             this.settings = pruneTodaySettings(
                 loadTodaySettings(),
                 this.folders.map((f) => f.id),
@@ -174,12 +185,18 @@ export class TodayView extends HTMLElement {
         );
     }
 
-    private onStar(e: Event, article: Article): void {
-        e.stopPropagation();
-        const starred = !article.starred;
-        void toggleStar(article.id, starred).then(() => this.load());
-        window.dispatchEvent(new CustomEvent('article-starred', { detail: { id: article.id, starred } }));
-    }
+    private onArticleStarred = (e: Event): void => applyArticleStarred(this, e);
+
+    private onSavedArticlesChanged = async (): Promise<void> => {
+        const gen = this.generation;
+        try {
+            const items = await fetchSavedArticlesList();
+            if (gen !== this.generation || !this.isConnected) return;
+            applySavedArticles(this, items);
+        } catch {
+            // Keep the last known bookmark state on a transient failure.
+        }
+    };
 
     private async onMarkShownRead(): Promise<void> {
         const ids = this.visibleArticles()
@@ -289,11 +306,12 @@ export class TodayView extends HTMLElement {
         return button;
     }
 
-    private starButton(article: Article): HTMLElement {
-        const button = el('button', 'star', article.starred ? '★' : '☆');
-        button.setAttribute('aria-label', article.starred ? 'Unstar' : 'Star');
-        button.addEventListener('click', (e) => this.onStar(e, article));
-        return button;
+    private starButton(article: Article, className = 'star'): HTMLElement {
+        return buildStarButton(this, article, className);
+    }
+
+    private bookmarkButton(article: Article): HTMLElement {
+        return buildBookmarkButton(this, article);
     }
 
     private meta(article: Article): HTMLElement {
@@ -344,7 +362,6 @@ export class TodayView extends HTMLElement {
             a.addEventListener('click', (e) => e.stopPropagation());
             footer.appendChild(a);
         }
-        footer.appendChild(this.starButton(article));
         copy.appendChild(footer);
         row.appendChild(copy);
         const media = el('div', 'medium-media');
@@ -360,6 +377,10 @@ export class TodayView extends HTMLElement {
             media.appendChild(empty);
         }
         row.appendChild(media);
+        const actions = el('div', 'medium-actions');
+        actions.appendChild(this.starButton(article, 'star star-overlay'));
+        actions.appendChild(this.bookmarkButton(article));
+        row.appendChild(actions);
         let expandHandle: HTMLButtonElement | undefined;
         if (summary || article.content) {
             const expand = el('button', 'expand-handle');
