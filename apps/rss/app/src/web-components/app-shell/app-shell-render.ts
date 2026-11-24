@@ -2,6 +2,7 @@ import { navigate } from '../../router';
 import type { AccountMenuHost } from '../account-menu/account-menu';
 import type { MenuAnchor } from '../menu-popover';
 import { requestAddFeed } from '../../services/add-feed-intent';
+import type { SharedLink } from '../../services/shared-links';
 import { dismissToast, type ToastNotice } from '../../services/toast';
 import { MAX_ARTICLE_PANEL_WIDTH, MIN_ARTICLE_PANEL_WIDTH } from './article-panel-settings';
 import type { Article, SettingsSection, View } from '../../types';
@@ -14,6 +15,7 @@ export interface AppShellRenderHost {
     authed: boolean;
     route: View;
     article: Article | null;
+    deepLinkArticleId: string | null;
     shortcutsOpen: boolean;
     paletteOpen: boolean;
     paletteCommands: unknown[];
@@ -45,9 +47,13 @@ interface ArticleListElement extends HTMLElement {
     view: View;
     active: boolean;
     resumeArticleId: string | null;
+    deepLinkArticleId: string | null;
 }
 interface SettingsViewElement extends HTMLElement {
     section: SettingsSection;
+}
+interface SharedViewElement extends HTMLElement {
+    link: SharedLink | null;
 }
 interface BoardViewElement extends HTMLElement {
     boardId: string;
@@ -71,6 +77,7 @@ const VIEW_TAGS: Record<View['kind'], string> = {
     focus: 'focus-view',
     settings: 'settings-view',
     saved: 'saved-view',
+    shared: 'shared-view',
     backgrounder: 'backgrounder-view',
     listen: 'listen-view',
     coverage: 'coverage-view',
@@ -206,7 +213,7 @@ function buildAddFeedButton(): HTMLButtonElement {
     const text = el('span', 'add-feed-text');
     text.textContent = 'Add feed';
     button.append(plus, text);
-    button.addEventListener('click', requestAddFeed);
+    button.addEventListener('click', () => requestAddFeed());
     return button;
 }
 
@@ -342,6 +349,7 @@ export class ShellDom {
         if (!view) return;
         if (tag === 'article-list') this.updateArticleList(view, route);
         else if (tag === 'settings-view') this.updateSettingsView(view, route);
+        else if (tag === 'shared-view') this.updateSharedView(view, route);
     }
 
     /** Reuse the mounted view unless the route needs a different element. */
@@ -365,12 +373,27 @@ export class ShellDom {
         const resume = this.host.resume;
         const resumeArticleId = resume && JSON.stringify(route) === resume.view ? resume.id : null;
         if (list.resumeArticleId !== resumeArticleId) list.resumeArticleId = resumeArticleId;
+        const deepLinkArticleId = this.host.article ? null : this.host.deepLinkArticleId;
+        if (list.deepLinkArticleId !== deepLinkArticleId) list.deepLinkArticleId = deepLinkArticleId;
     }
 
     private updateSettingsView(view: HTMLElement, route: View): void {
         if (route.kind !== 'settings') return;
         const settings = view as SettingsViewElement;
         if (settings.section !== route.section) settings.section = route.section;
+    }
+
+    private updateSharedView(view: HTMLElement, route: View): void {
+        if (route.kind !== 'shared') return;
+        const shared = view as SharedViewElement;
+        const next: SharedLink | null = route.url
+            ? {
+                  url: route.url,
+                  ...(route.title ? { title: route.title } : {}),
+                  ...(route.text ? { text: route.text } : {}),
+              }
+            : null;
+        if (JSON.stringify(shared.link) !== JSON.stringify(next)) shared.link = next;
     }
 
     private renderOverlay(): void {

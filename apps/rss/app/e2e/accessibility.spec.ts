@@ -168,6 +168,15 @@ test('the search screen has no automatic accessibility violations', async ({ pag
     expect(await audit(page)).toEqual([]);
 });
 
+test('the shared-link screen has no automatic accessibility violations', async ({ page }) => {
+    await seedAuth(page);
+    await stubLibrary(page, ARTICLES);
+    await page.goto('/?url=https%3A%2F%2Fexample.com%2Fstory&title=Shared%20story');
+    await expect(page.getByRole('heading', { name: 'Shared link' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Subscribe to feed', exact: true })).toBeVisible();
+    expect(await audit(page)).toEqual([]);
+});
+
 test('the command palette has no automatic accessibility violations', async ({ page }) => {
     await seedAuth(page);
     await stubLibrary(page, [ARTICLES[0]]);

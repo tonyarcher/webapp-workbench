@@ -56,7 +56,7 @@ export function endOpen(timing: OpenTiming, article: { id: string; title: string
 
 /** Mark a newly opened article read (Feedly-like) while keeping it accessible for re-read. */
 export async function markOpenedRead(article: Article, onMarked: (id: string) => void): Promise<void> {
-    if (article.read !== 0) return;
+    if (article.read !== 0 || article.feedId === 'saved') return;
     if (!(await markArticleReadOnOpen(article.id))) return;
     onMarked(article.id);
 }

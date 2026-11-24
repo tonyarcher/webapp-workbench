@@ -312,6 +312,7 @@ function renderListVirtualRow(
         } ${picked ? 'picked' : ''}`,
     );
     row.setAttribute('data-index', String(vi.index));
+    row.dataset['articleId'] = article.id;
     row.style.transform = `translateY(${vi.start}px)`;
     row.addEventListener('click', (e: MouseEvent) => host.onRowClick(e, vi.index));
     const content =

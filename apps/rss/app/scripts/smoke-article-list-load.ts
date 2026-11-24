@@ -117,6 +117,81 @@ assert(
     'scroll paging never replaces the reset already owed',
 );
 
+// ---- resume and deep-link targeting ----
+{
+    const { applyResumeAction, insertArticleForReveal, prepareArticleTarget, revealArticleAction } =
+        await import('../src/web-components/article-list/article-list-targets');
+    const article = (id: string) =>
+        ({ id, published: 2, hot: 2 }) as Parameters<typeof applyResumeAction>[0]['items'][number];
+    const items = [article('a1'), article('a2'), article('a3'), article('a4')];
+    const opened: string[] = [];
+    const scrolled: number[] = [];
+    const host = {
+        items,
+        cursor: -1,
+        listView: 'detailed' as const,
+        cols: 2,
+        resumeApplied: false,
+        resumeArticleId: null,
+        deepLinkArticleId: 'a2',
+        openArticle: async (a: (typeof items)[number]) => {
+            opened.push(a.id);
+        },
+        virtualizer: {
+            scrollToIndex: (index: number) => scrolled.push(index),
+        },
+    };
+    applyResumeAction(host);
+    assert(host.cursor === 1 && scrolled[0] === 1, 'a deep link scrolls to its row');
+    assert(opened[0] === 'a2' && host.resumeApplied, 'a deep link opens its article once');
+
+    const resumed = { ...host, resumeApplied: false, deepLinkArticleId: null, resumeArticleId: 'a3' };
+    applyResumeAction(resumed);
+    assert(resumed.cursor === 2 && opened.length === 1, 'resume only scrolls and does not reopen an article');
+
+    const missing = { ...host, resumeApplied: false, deepLinkArticleId: 'missing' };
+    applyResumeAction(missing);
+    assert(!missing.resumeApplied, 'a target outside the loaded page stays pending');
+
+    const cards = { ...host, resumeApplied: false, listView: 'cards' as const, deepLinkArticleId: 'a4' };
+    applyResumeAction(cards);
+    assert(scrolled.at(-1) === 1, 'card deep links scroll to the card row');
+
+    const older = { ...article('a0'), published: 0, hot: 0 };
+    const revealed = insertArticleForReveal([items[1]!, older], items[0]!, 'newest');
+    assert(
+        revealed.map((item) => item.id).join(',') === 'a1,a2,a0',
+        'a fetched deep-link row is inserted in sort order',
+    );
+    assert(
+        insertArticleForReveal(items, items[0]!, 'newest') === items,
+        'revealing an existing row does not duplicate it',
+    );
+
+    const target = {
+        resumeApplied: false,
+        resumeArticleId: null as string | null,
+        deepLinkArticleId: 'a2' as string | null,
+        deepLinkArticle: items[1]!,
+        items,
+        sort: 'newest' as const,
+        requestUpdate: () => {},
+    };
+    revealArticleAction(target, items[1]!);
+    assert(target.deepLinkArticle?.id === 'a2', 'reveal keeps the fetched target for later page loads');
+    target.deepLinkArticleId = 'a3';
+    prepareArticleTarget(target, new Map([['deepLinkArticleId', 'a2']]));
+    assert(
+        target.deepLinkArticle === null && !target.resumeApplied,
+        'a new deep-link target clears the old fetched row',
+    );
+    target.deepLinkArticle = items[1]!;
+    target.deepLinkArticleId = null;
+    target.resumeArticleId = 'a2';
+    prepareArticleTarget(target, new Map([['deepLinkArticleId', 'a2']]));
+    assert(target.deepLinkArticle?.id === 'a2', 'the open article keeps its revealed row across background reloads');
+}
+
 // ---- empty-state copy names the active filter ----
 {
     const { emptyTextFor } = await import('../src/web-components/article-list/article-list-render');

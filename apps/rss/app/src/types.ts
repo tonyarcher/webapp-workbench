@@ -135,6 +135,7 @@ export type View =
     | { kind: 'focus' }
     | { kind: 'settings'; section: SettingsSection }
     | { kind: 'saved' }
+    | { kind: 'shared'; url?: string | undefined; title?: string | undefined; text?: string | undefined }
     | { kind: 'backgrounder' }
     | { kind: 'listen' }
     | { kind: 'coverage' }

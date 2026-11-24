@@ -229,14 +229,17 @@ export class ArticleView extends HTMLElement {
                 void restoreArticleReadingProgress(this, this.article.id, saved);
             }
             const current = this.article;
-            if (this.highlightsOn) {
+            const serverBacked = current?.feedId !== 'saved';
+            if (serverBacked && this.highlightsOn) {
                 void this.refreshKeyLines();
-            } else if (current && !current.content) {
+            } else if (serverBacked && current && !current.content) {
                 void this.ensureRichContent(current);
             }
-            void this.refreshProvenance();
-            void this.refreshCluster();
-            void this.refreshSavedState();
+            if (serverBacked) {
+                void this.refreshProvenance();
+                void this.refreshCluster();
+                void this.refreshSavedState();
+            }
         }
     }
 
@@ -275,7 +278,7 @@ export class ArticleView extends HTMLElement {
 
     onManageFolders(anchor: MenuAnchor): void {
         const id = this.article?.feedId;
-        if (!id || !this.feedFoldersMenu) return;
+        if (!id || id === 'saved' || !this.feedFoldersMenu) return;
         this.feedFoldersMenu.feedId = id;
         this.feedFoldersMenu.anchor = anchor;
         this.feedFoldersMenu.open = true;

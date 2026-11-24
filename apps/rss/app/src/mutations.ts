@@ -49,6 +49,7 @@ import {
 } from './services/engagement';
 import { STAR_WORD_WEIGHT } from './services/interesting-words';
 import { toastApiError } from './services/toast';
+import { isSharedSnapshotId } from './services/shared-links';
 
 // Elevator-button coalescing for refreshes: mashing Refresh joins the
 // in-flight job rather than spawning a second sync.
@@ -374,7 +375,7 @@ export async function bulkStar(items: Array<{ id: string; title: string }>): Pro
  */
 export function noteShare(articleId: string, title: string): void {
     accrueEngagement(title, SHARE_WORD_WEIGHT, articleId, SHARE_WORD_CAP, 'share');
-    void recordAffinity(articleId, SHARE_AFFINITY).catch(() => {});
+    if (!isSharedSnapshotId(articleId)) void recordAffinity(articleId, SHARE_AFFINITY).catch(() => {});
 }
 
 /**
@@ -384,7 +385,7 @@ export function noteShare(articleId: string, title: string): void {
  */
 export function noteSummary(articleId: string, title: string): void {
     accrueEngagement(title, SUMMARY_WORD_WEIGHT, articleId, SUMMARY_WORD_CAP, 'summary');
-    void recordAffinity(articleId, SUMMARY_AFFINITY).catch(() => {});
+    if (!isSharedSnapshotId(articleId)) void recordAffinity(articleId, SUMMARY_AFFINITY).catch(() => {});
 }
 
 /** Leaving the reader to read the original is real interest, local only. */

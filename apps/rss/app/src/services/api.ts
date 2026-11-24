@@ -83,3 +83,4 @@ export type {
     ServerAiStatus,
     StorageStatus,
 } from './api-domains';
+export { fetchArticleById } from './api-article-detail';

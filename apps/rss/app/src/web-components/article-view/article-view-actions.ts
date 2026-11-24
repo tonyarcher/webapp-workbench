@@ -56,7 +56,7 @@ export interface ArticleViewActionsHost {
 
 export async function onStar(host: ArticleViewActionsHost): Promise<void> {
     const started = host.article;
-    if (!started) return;
+    if (!started || started.feedId === 'saved') return;
     const next = !started.starred;
     if (next) {
         host.prevDeranked = host.deranked;
@@ -80,7 +80,7 @@ export async function onStar(host: ArticleViewActionsHost): Promise<void> {
 
 export async function onToggleRead(host: ArticleViewActionsHost): Promise<void> {
     const started = host.article;
-    if (!started) return;
+    if (!started || started.feedId === 'saved') return;
     const nextRead: 0 | 1 = started.read ? 0 : 1;
     host.article = { ...started, read: nextRead };
     const ok = nextRead === 1 ? await markArticleRead(started.id) : await markArticleUnread(started.id);
@@ -126,7 +126,7 @@ export function enqueueListen(host: ArticleViewActionsHost): void {
 
 export async function openBoardPicker(host: ArticleViewActionsHost): Promise<void> {
     const a = host.article;
-    if (!a) return;
+    if (!a || a.feedId === 'saved') return;
     host.boardPickerOpen = true;
     host.newBoardTitle = '';
     host.paint();
@@ -190,7 +190,7 @@ export async function createBoardFromPicker(host: ArticleViewActionsHost): Promi
 
 export async function onToggleSaved(host: ArticleViewActionsHost): Promise<void> {
     const a = host.article;
-    if (!a) return;
+    if (!a || a.feedId === 'saved') return;
     const next = !host.savedForLater;
     // Invalidate any in-flight refresh so it cannot overwrite optimistic intent.
     host.savedStateGen++;
@@ -210,7 +210,7 @@ export async function onToggleSaved(host: ArticleViewActionsHost): Promise<void>
 
 export function onDerank(host: ArticleViewActionsHost): void {
     const a = host.article;
-    if (!a) return;
+    if (!a || a.feedId === 'saved') return;
     const next = !host.deranked;
     if (next) {
         host.prevStarred = a.starred;

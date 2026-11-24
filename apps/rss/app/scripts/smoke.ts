@@ -101,6 +101,7 @@ await import('./smoke-alerts.js');
 await import('./smoke-portable-export.js');
 await import('./smoke-mcp.js');
 await import('./smoke-share.js');
+await import('./smoke-share-target.js');
 await import('./smoke-usage.js');
 
 // Without the gcTime override above, smoke-fetch-races leaves a 300s gc timer

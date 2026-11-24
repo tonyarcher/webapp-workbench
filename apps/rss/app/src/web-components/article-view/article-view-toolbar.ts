@@ -44,7 +44,7 @@ export function buildToolbar(host: ArticleViewToolbarHost, a: Article, link: str
     backGroup.appendChild(iconButton(actionIcon('back'), { label: 'Back', title: 'Back', onClick: host.emitClose }));
     toolbar.appendChild(backGroup);
 
-    appendAll(toolbar, buildStateButtons(host, a));
+    if (a.feedId !== 'saved') appendAll(toolbar, buildStateButtons(host, a));
 
     if (link) {
         const divider = el('span', 'toolbar-divider');

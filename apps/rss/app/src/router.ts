@@ -67,6 +67,17 @@ export function parsePath(pathname: string, search = ''): View {
     if (parts[0] === 'saved') {
         return { kind: 'saved' };
     }
+    if (parts[0] === 'shared') {
+        const url = params.get('url') ?? undefined;
+        const title = params.get('title') ?? undefined;
+        const text = params.get('text') ?? undefined;
+        return {
+            kind: 'shared',
+            ...(url ? { url } : {}),
+            ...(title ? { title } : {}),
+            ...(text ? { text } : {}),
+        };
+    }
     if (parts[0] === 'backgrounder') {
         return { kind: 'backgrounder' };
     }
@@ -102,6 +113,17 @@ export function parsePath(pathname: string, search = ''): View {
     return { kind: 'all' };
 }
 
+export function parseArticleId(search = ''): string | null {
+    const id = new URLSearchParams(search).get('article')?.trim();
+    return id || null;
+}
+
+export function articleLink(view: View, articleId: string): string {
+    const path = viewToPath(view);
+    const separator = path.includes('?') ? '&' : '?';
+    return `${path}${separator}article=${encodeURIComponent(articleId)}`;
+}
+
 export function viewToPath(view: View): string {
     switch (view.kind) {
         case 'all':
@@ -120,6 +142,14 @@ export function viewToPath(view: View): string {
             return view.section === 'general' ? '/settings' : `/settings/${view.section}`;
         case 'saved':
             return '/saved';
+        case 'shared': {
+            const params = new URLSearchParams();
+            if (view.url) params.set('url', view.url);
+            if (view.title) params.set('title', view.title);
+            if (view.text) params.set('text', view.text);
+            const qs = params.toString();
+            return qs ? `/shared?${qs}` : '/shared';
+        }
         case 'backgrounder':
             return '/backgrounder';
         case 'listen':

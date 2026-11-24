@@ -7,6 +7,7 @@ import {
     type ReactiveControllerHost,
 } from '../../query';
 import { markShownReadAction, openArticleAction } from './article-list-actions';
+import { applyResumeAction, prepareArticleTarget, revealArticleAction } from './article-list-targets';
 import { bulkDerankAction, bulkMarkReadAction, bulkStarAction, clearSelectionAction } from './article-list-selection';
 import { onRowClickAction, toggleSelectCursorAction, toggleStarCursorAction } from './article-list-cursor';
 import {
@@ -18,7 +19,7 @@ import {
     setRefreshingKey as setRefreshingKeyAction,
 } from './article-list-refresh';
 import { reinitVirtualizer, resetList } from './article-list-loading';
-import { initialLoadState, isLoading, type LoadState } from './article-list-load-state';
+import { initialLoadState, isIdle, isLoading, type LoadState } from './article-list-load-state';
 import { interestingActiveFor } from './article-list-interesting';
 import { DEFAULT_INTERESTING_STRICTNESS } from '../../services/interesting-settings';
 import { DwellTracker } from './article-list-dwell';
@@ -82,7 +83,6 @@ import { mountFeedFoldersMenu } from './article-list-feed-folders';
 import '../lazy-img/lazy-img';
 import '../video-header/video-header';
 import styles from './article-list.css?inline';
-// removed
 
 interface Library {
     folders: Folder[];
@@ -91,7 +91,6 @@ interface Library {
 
 export { INTERESTING_BATCH } from './article-list-interesting';
 
-/** Install a reactive accessor. Assignments request the same batched paint Lit used to. */
 function defineReactive<T>(host: ArticleList, name: string, initial: T): void {
     let current = initial;
     Object.defineProperty(host, name, {
@@ -109,17 +108,13 @@ function defineReactive<T>(host: ArticleList, name: string, initial: T): void {
     });
 }
 
-/**
- * Vanilla custom element: reactive fields plus thin delegators. Behavior lives
- * in the sibling `article-list-*` modules, each receiving the element as an
- * explicitly typed host (`this as never`), so every group stays unit-testable.
- * DOM is built imperatively; no template literal or html tag is involved.
- */
+/** Vanilla custom element; behavior lives in typed `article-list-*` host modules. */
 export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     static styles = { cssText: styles };
 
     declare view: View;
     declare resumeArticleId: string | null;
+    declare deepLinkArticleId: string | null;
     declare active: boolean;
     declare items: Article[];
     declare loadState: LoadState;
@@ -171,6 +166,8 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     hasMoreSingle = true;
     lastViewKey = '';
     resumeApplied = false;
+    /** Article fetched by id when a deep link points outside the current list window. */
+    deepLinkArticle: Article | null = null;
     /** Feed membership last loaded: folder feeds, or every feed for All/Hot. */
     lastFeedSetKey = '';
     /** Headline dwell with an active mouse, owned by this element's lifetime. */
@@ -230,6 +227,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
 
         defineReactive(this, 'view', { kind: 'all' } satisfies View);
         defineReactive(this, 'resumeArticleId', null);
+        defineReactive(this, 'deepLinkArticleId', null);
         defineReactive(this, 'active', true);
         defineReactive(this, 'items', [] as Article[]);
         defineReactive(this, 'loadState', initialLoadState());
@@ -332,7 +330,6 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         return isLoading(this.loadState);
     }
 
-    /** Staleness key the paging actions compare a result against. */
     get gen(): number {
         return this.loadState.gen;
     }
@@ -357,8 +354,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         updateColsLayout(this as never);
     }
 
-    // Handler fields stay public with stable arrow identities: the lifecycle
-    // module adds and removes these exact references on window.
+    // Stable arrow identities: the lifecycle module adds and removes these on window.
     onStorage = (e: StorageEvent) => {
         syncHighlightsEnabled(this as unknown as RowHighlightsHost, e.key);
     };
@@ -383,6 +379,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
             this.markOnScroll = readViewSettings()[viewKeyOf(this.view)]?.markOnScroll ?? false;
             this.loadViewSettings();
         }
+        prepareArticleTarget(this, changed);
         handleSlideshowWillUpdate(this as never, changed);
         if (this.virtualizer) {
             this.virtualizer.setOptions(virtualizerOptionsFor(this as never));
@@ -401,6 +398,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         applyPendingFeedsRefresh(this as never, changed);
         handleSlideshowUpdated(this as never, changed);
         syncScrollBindingsLayout(this as never);
+        if (isIdle(this.loadState)) applyResumeAction(this as never);
     }
 
     interestingActive(): boolean {
@@ -427,7 +425,6 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         saveViewSettingsHost(this);
     }
 
-    /** Thin delegator so actions and menus keep one reset entry point. */
     async reset(): Promise<void> {
         await resetList(this as never);
     }
@@ -468,6 +465,10 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
 
     feedIcon(feedId: string): string | undefined {
         return this.library.data?.feeds.find((f) => f.id === feedId)?.icon;
+    }
+
+    revealArticle(article: Article): void {
+        revealArticleAction(this as never, article);
     }
 
     async openArticle(article: Article): Promise<void> {

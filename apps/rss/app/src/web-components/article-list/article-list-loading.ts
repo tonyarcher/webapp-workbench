@@ -3,7 +3,7 @@ import type { Article, ArticleSort, Feed, Folder, ListViewType, View } from '../
 import { beginReset, loadSettled, pageRequested, type LoadState, type LoadStep } from './article-list-load-state';
 import { loadFolderPageAction, loadSearchPageAction, loadSinglePageAction } from './article-list-paging';
 import { interestingActiveFor, loadInterestingBatchAction } from './article-list-interesting';
-import { applyResumeAction } from './article-list-actions';
+import { applyResumeAction, insertArticleForReveal } from './article-list-targets';
 import { folderFeedsOf, virtualizerOptionsFor } from './article-list-helpers';
 import { fetchLibrary, libraryKey, queryClient } from '../../query';
 import { clearSelectionAction } from './article-list-selection';
@@ -35,6 +35,8 @@ export interface LoadingHost {
     library: { data?: { feeds: Feed[]; folders: Folder[] } };
     resumeApplied: boolean;
     resumeArticleId: string | null;
+    deepLinkArticleId: string | null;
+    deepLinkArticle: Article | null;
 }
 
 /** Replace the list for the current view. The load machine decides whether
@@ -66,6 +68,7 @@ export function clearList(host: LoadingHost): void {
     host.feedHasMore.clear();
     host.hasMoreSingle = true;
     host.cursor = -1;
+    host.resumeApplied = false;
     host.feedWindowOffset = 0;
     host.lastFeedSetKey = feedSetKey(host);
     const el = host.scrollElRef.value;
@@ -90,6 +93,7 @@ export function reinitVirtualizer(host: LoadingHost): void {
 export async function runLoad(host: LoadingHost, gen: number): Promise<void> {
     try {
         await loadPageSource(host, gen);
+        if (host.deepLinkArticle) host.items = insertArticleForReveal(host.items, host.deepLinkArticle, host.sort);
         applyResumeAction(host as never);
     } catch (err) {
         console.error('article page load failed', err);

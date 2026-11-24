@@ -1,5 +1,5 @@
 import { fetchLibrary } from '../../query';
-import { requestAddFeed, onAddFeedRequested, takeAddFeedRequest } from '../../services/add-feed-intent';
+import { requestAddFeed, onAddFeedRequested, takeAddFeedRequest, takeAddFeedUrl } from '../../services/add-feed-intent';
 
 import { deleteFolder, renameFolder, reorderFolders, setFeedFolderMembership } from '../../mutations';
 import { addFolder } from '../../services/api';
@@ -37,17 +37,20 @@ export class OrganizeView extends HTMLElement {
         this.popoverEl = document.createElement('div');
         this.popoverEl.className = 'folders-popover';
         shadow.append(this.root, this.popoverEl);
-        const focusAdd = (): void => {
-            this.root?.querySelector<HTMLInputElement>('input[data-add-url]')?.focus();
+        const focusAdd = (url: string | null = null): void => {
+            const input = this.root?.querySelector<HTMLInputElement>('input[data-add-url]');
+            if (input && url) input.value = url;
+            input?.focus();
         };
         this.stopAddFeed = onAddFeedRequested(() => {
             if (!this.isConnected) return;
             takeAddFeedRequest();
-            focusAdd();
-            queueMicrotask(focusAdd);
+            const url = takeAddFeedUrl();
+            focusAdd(url);
+            queueMicrotask(() => focusAdd(url));
         });
         void this.load().then(() => {
-            if (takeAddFeedRequest()) focusAdd();
+            if (takeAddFeedRequest()) focusAdd(takeAddFeedUrl());
         });
     }
 
@@ -163,7 +166,7 @@ export class OrganizeView extends HTMLElement {
         feedBtn.className = 'btn primary';
         feedBtn.textContent = 'Add feed';
         feedBtn.setAttribute('aria-label', 'Add feed');
-        feedBtn.addEventListener('click', requestAddFeed);
+        feedBtn.addEventListener('click', () => requestAddFeed());
         toolbar.append(h, addBtn, feedBtn);
         this.root.appendChild(toolbar);
         if (this.status) {

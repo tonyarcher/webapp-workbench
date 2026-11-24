@@ -7,10 +7,12 @@ import { navigate } from '../router';
 
 const ADD_FEED_EVENT = 'rss-add-feed-requested';
 let pending = false;
+let pendingUrl: string | null = null;
 
-export function requestAddFeed(): void {
+export function requestAddFeed(url?: string): void {
     navigate({ kind: 'settings', section: 'organize' });
     pending = true;
+    pendingUrl = url ?? null;
     window.dispatchEvent(new Event(ADD_FEED_EVENT));
 }
 
@@ -18,6 +20,12 @@ export function takeAddFeedRequest(): boolean {
     const wasPending = pending;
     pending = false;
     return wasPending;
+}
+
+export function takeAddFeedUrl(): string | null {
+    const url = pendingUrl;
+    pendingUrl = null;
+    return url;
 }
 
 export function onAddFeedRequested(handler: () => void): () => void {

@@ -162,24 +162,3 @@ export function handleListKey(host: ListKeyHost, e: KeyboardEvent): void {
             break;
     }
 }
-
-interface ResumeHost {
-    items: Article[];
-    cursor: number;
-    listView: ListViewType;
-    cols: number;
-    resumeApplied: boolean;
-    resumeArticleId: string | null;
-    virtualizer: { scrollToIndex(index: number, options: { align: 'center' }): void } | null | undefined;
-}
-
-export function applyResumeAction(host: ResumeHost): void {
-    if (host.resumeApplied || host.resumeArticleId == null) return;
-    host.resumeApplied = true;
-    const index = host.items.findIndex((a) => a.id === host.resumeArticleId);
-    if (index >= 0) {
-        host.cursor = index;
-        const target = host.listView === 'cards' ? Math.floor(index / Math.max(1, host.cols)) : index;
-        host.virtualizer?.scrollToIndex(target, { align: 'center' });
-    }
-}

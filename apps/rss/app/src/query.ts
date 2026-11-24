@@ -47,12 +47,22 @@ export function invalidateBoard(boardId: string) {
 }
 export type LibraryData = { folders: Folder[]; feeds: Feed[]; savedSearches: SavedSearch[] };
 
+export function mergeSavedArticles(
+    server: SavedArticleSnapshot[],
+    local: SavedArticleSnapshot[],
+): SavedArticleSnapshot[] {
+    const localOnly = local.filter((item) => !item.articleId);
+    return [...server, ...localOnly].sort((a, b) => b.savedAt - a.savedAt);
+}
+
 export async function fetchSavedArticlesList(): Promise<SavedArticleSnapshot[]> {
     try {
         const items = await fetchSavedArticles();
+        const local = await getSavedArticles();
+        const merged = mergeSavedArticles(items, local);
         await clearSavedArticles();
-        for (const item of items) await putSavedArticle(item);
-        return items;
+        for (const item of merged) await putSavedArticle(item);
+        return merged;
     } catch {
         return getSavedArticles();
     }

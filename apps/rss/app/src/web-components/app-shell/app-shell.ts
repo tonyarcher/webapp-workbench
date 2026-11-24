@@ -1,9 +1,12 @@
-import { history, navigate, parsePath } from '../../router';
+import { articleLink, history, navigate, parseArticleId, parsePath, viewToPath } from '../../router';
 import type { Command, CommandContext } from '../../services/commands';
 import { dismissToast, onToast, type ToastNotice } from '../../services/toast';
 import { startInterestingCountsRefresh, stopInterestingCountsRefresh } from '../../services/interesting-counts-refresh';
 import { startForegroundSync, stopForegroundSync } from '../../services/foreground-sync';
 import { currentUsername, hasSession } from '../../services/auth';
+import { fetchArticleById } from '../../services/api';
+import { sharedLinkFromParams } from '../../services/shared-links';
+import type { ArticleList } from '../article-list/article-list';
 import { endOpen, initialOpenTiming, markOpenedRead, trackOpen, type OpenTiming } from './article-open-tracking';
 import {
     endArticleResize,
@@ -62,6 +65,7 @@ function defineReactive<T>(host: AppShell, name: string, initial: T): void {
 export class AppShell extends HTMLElement {
     declare route: View;
     declare article: Article | null;
+    declare deepLinkArticleId: string | null;
     declare shortcutsOpen: boolean;
     declare paletteOpen: boolean;
     declare paletteCommands: Command[];
@@ -98,6 +102,7 @@ export class AppShell extends HTMLElement {
         shadow.adoptedStyleSheets = [sheet];
         defineReactive(this, 'route', { kind: 'all' } satisfies View);
         defineReactive(this, 'article', null as Article | null);
+        defineReactive(this, 'deepLinkArticleId', parseArticleId(history.location.search));
         defineReactive(this, 'shortcutsOpen', false);
         defineReactive(this, 'paletteOpen', false);
         defineReactive(this, 'paletteCommands', [] as Command[]);
@@ -137,11 +142,19 @@ export class AppShell extends HTMLElement {
     }
 
     connectedCallback() {
+        this.adoptSharedLink();
         this.route = parsePath(history.location.pathname, history.location.search);
+        this.deepLinkArticleId = parseArticleId(history.location.search);
         this.unsubscribe = history.subscribe(({ location }) => {
-            this.route = parsePath(location.pathname, location.search);
-            this.closeArticle(false);
-            this.resume = null;
+            const nextRoute = parsePath(location.pathname, location.search);
+            const nextArticleId = parseArticleId(location.search);
+            const routeChanged = JSON.stringify(nextRoute) !== JSON.stringify(this.route);
+            const articleTargetChanged = nextArticleId !== this.deepLinkArticleId && nextArticleId !== this.article?.id;
+            this.route = nextRoute;
+            this.deepLinkArticleId = nextArticleId;
+            if (routeChanged || articleTargetChanged) this.closeArticle(false, false);
+            if (routeChanged) this.resume = null;
+            void this.resolveDeepLink();
         });
         window.addEventListener('keydown', this.onKeyDown);
         window.addEventListener('rss-auth-required', this.onAuthRequired);
@@ -157,8 +170,16 @@ export class AppShell extends HTMLElement {
         if (this.authed) {
             startInterestingCountsRefresh();
             startForegroundSync(this.autoSyncFeedIds);
+            void this.resolveDeepLink();
         }
         this.requestUpdate();
+    }
+
+    private adoptSharedLink(): void {
+        const shared = sharedLinkFromParams(new URLSearchParams(window.location.search));
+        if (!shared) return;
+        window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.hash}`);
+        history.replace(viewToPath({ kind: 'shared', ...shared }));
     }
 
     disconnectedCallback() {
@@ -196,6 +217,7 @@ export class AppShell extends HTMLElement {
     };
     onAuthChanged = () => {
         onAuthChanged(this as never);
+        void this.resolveDeepLink();
     };
     private onAuthRequired = () => {
         signOut(this as never);
@@ -215,11 +237,38 @@ export class AppShell extends HTMLElement {
         if (!this.readContext) return;
         const article = this.readContext.items[index];
         if (!article) return;
-        this.readContext = { ...this.readContext, index };
+        this.showArticle(article, this.readContext.items, index);
+    }
+
+    private showArticle(article: Article, items: Article[], index: number): void {
+        this.readContext = { items, index };
+        this.articleReturnFocus = deepActiveElement();
         trackOpen(this.openTiming, this.article, article);
         this.article = article;
         this.resume = { view: JSON.stringify(this.route), id: article.id };
+        this.syncArticleUrl(article.id);
         void markOpenedRead(article, (id) => this.syncReadState(id, 1));
+    }
+
+    private async resolveDeepLink(): Promise<void> {
+        const id = this.deepLinkArticleId;
+        if (!id || !this.authed || this.article) return;
+        try {
+            const article = await fetchArticleById(id);
+            if (!this.isConnected || !this.authed || this.deepLinkArticleId !== id || this.article) return;
+            await this.updateComplete;
+            if (!this.isConnected || !this.authed || this.deepLinkArticleId !== id || this.article) return;
+            const list = this.renderRoot.querySelector<ArticleList>('article-list');
+            if (list) list.revealArticle(article);
+            else this.showArticle(article, [article], 0);
+        } catch {
+            // The list may still contain the row. If not, the link is unavailable.
+        }
+    }
+
+    private syncArticleUrl(articleId: string | null): void {
+        const path = articleId ? articleLink(this.route, articleId) : viewToPath(this.route);
+        if (`${history.location.pathname}${history.location.search}` !== path) history.replace(path);
     }
 
     private onSearchQuery = (e: Event): void => {
@@ -230,12 +279,7 @@ export class AppShell extends HTMLElement {
 
     onOpenArticle = (e: Event) => {
         const detail = (e as CustomEvent<{ article: Article; index: number; items: Article[] }>).detail;
-        this.readContext = { items: detail.items, index: detail.index };
-        this.articleReturnFocus = deepActiveElement();
-        trackOpen(this.openTiming, this.article, detail.article);
-        this.article = detail.article;
-        this.resume = { view: JSON.stringify(this.route), id: detail.article.id };
-        void markOpenedRead(detail.article, (id) => this.syncReadState(id, 1));
+        this.showArticle(detail.article, detail.items, detail.index);
     };
 
     private onArticleReadSync = (e: Event): void => {
@@ -252,15 +296,17 @@ export class AppShell extends HTMLElement {
         };
     }
 
-    closeArticle = (dismissed = true) => {
-        if (!this.article) return;
-        endOpen(this.openTiming, this.article, dismissed);
-        this.article = null;
-        this.readContext = null;
-        this.endArticleResize();
-        const target = this.articleReturnFocus;
-        this.articleReturnFocus = null;
-        target?.focus();
+    closeArticle = (dismissed = true, updateUrl = true) => {
+        if (this.article) {
+            endOpen(this.openTiming, this.article, dismissed);
+            this.article = null;
+            this.readContext = null;
+            this.endArticleResize();
+            const target = this.articleReturnFocus;
+            this.articleReturnFocus = null;
+            target?.focus();
+        }
+        if (updateUrl && parseArticleId(history.location.search)) this.syncArticleUrl(null);
     };
 
     private endArticleResize() {

@@ -25,7 +25,7 @@ import { assert } from './smoke-assert';
     };
     shims['document'] = {};
     try {
-        const { parsePath, viewToPath } = await import('../src/router');
+        const { articleLink, parseArticleId, parsePath, viewToPath } = await import('../src/router');
         assert(viewToPath({ kind: 'frontpage' }) === '/frontpage', 'frontpage serializes to #/frontpage');
         assert(parsePath('/frontpage').kind === 'frontpage', 'frontpage parses back to a View');
         assert(
@@ -76,6 +76,18 @@ import { assert } from './smoke-assert';
             JSON.stringify(parsePath(viewToPath({ kind: 'search', scope: 'all', q: 'kube' }))) ===
                 JSON.stringify({ kind: 'search', scope: 'all', q: 'kube' }),
             'search router round-trips',
+        );
+        assert(articleLink({ kind: 'all' }, 'a/1') === '/all?article=a%2F1', 'article links encode the id');
+        assert(parseArticleId('?article=a%2F1') === 'a/1', 'article links parse the id');
+        assert(parseArticleId('?article=%20') === null, 'blank article ids are ignored');
+        assert(
+            articleLink({ kind: 'search', q: 'grid storage' }, 'a1') === '/search?q=grid+storage&article=a1',
+            'article links preserve search parameters',
+        );
+        const shared = { kind: 'shared', url: 'https://example.com/story', title: 'Story' } as const;
+        assert(
+            JSON.stringify(parsePath(viewToPath(shared))) === JSON.stringify(shared),
+            'shared-link routes round-trip their URL and title',
         );
     } finally {
         shims['window'] = realWindow;

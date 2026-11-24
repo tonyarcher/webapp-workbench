@@ -1,5 +1,5 @@
 import { fetchSavedArticlesList } from '../../query';
-import { unsaveForLater } from '../../mutations';
+import { removeSavedSnapshot, unsaveForLater } from '../../mutations-saved';
 import { domainOf, formatDate } from '../../util';
 import type { Article, SavedArticleSnapshot } from '../../types';
 import styles from './saved-view.css?inline';
@@ -153,8 +153,10 @@ export class SavedView extends HTMLElement {
     }
 
     private removeSaved(s: SavedArticleSnapshot) {
-        if (!s.articleId) return;
-        void unsaveForLater(s.articleId);
+        const done = s.articleId ? unsaveForLater(s.articleId) : removeSavedSnapshot(s.id);
+        void done.then((ok) => {
+            if (ok) void this.load();
+        });
     }
 
     private exportNotes() {

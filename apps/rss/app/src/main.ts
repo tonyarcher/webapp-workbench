@@ -1,3 +1,4 @@
+import './web-components/shared-view/shared-view';
 import './web-components/app-shell/app-shell';
 import './web-components/source-list/source-list';
 import './web-components/article-list/article-list';

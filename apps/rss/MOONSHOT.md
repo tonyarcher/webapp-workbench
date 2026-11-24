@@ -447,6 +447,11 @@ command, and stats that respect attention.
   first; export your own data anytime.
 - **Half.** `app` first.
 - **Effort.** `M`.
+- **Status.** Core screen shipped: minutes read, finish rate, read/total,
+  topic mix, and the O3 focus streak compute locally from cached reading
+  state. Still wanted: monthly recap cards and a stats-specific export. The
+  client stores no read timestamp yet, so a read-time recap needs that data
+  before it can be accurate.
 - **First test.** Aggregation smoke; empty-state copy tests.
 
 ### O5. Case files that leave the app
@@ -491,8 +496,12 @@ metadata: title, summary, author, domain, link and excerpt head.
   and deep links worth sending.
 - **What.** In-article find with match counts and keyboard stepping; every
   article gets a stable link that opens scrolled to the right row.
-- **Half.** `app`.
+- **Half.** `app`. Shipped.
 - **Effort.** `S`.
+- **Status.** In-article find has live match counts, keyboard stepping,
+  accessible controls, and highlights that survive repaints. Article URLs
+  carry a stable `article` id; the shell opens and scrolls to the row, with an
+  authenticated get-by-id fallback when the row is outside the loaded window.
 - **First test.** Browser smoke for the find flow; unit tests for link
   building.
 
@@ -964,6 +973,11 @@ reader into infrastructure.
   subscribe-or-save flows.
 - **Half.** `app` plus manifest work.
 - **Effort.** `M`.
+- **Status.** Shipped. The manifest uses a GET share target at the app base,
+  so receiving works before the service worker is installed. Shared links
+  open a subscribe-or-save screen; subscribe prefills the Organize form, and
+  save keeps a local-only snapshot that survives server sync and can be
+  removed. Unsafe URLs are rejected.
 - **First test.** Manifest assertions; receive-flow smoke.
 
 ### G6. MCP server for my AI
