@@ -33,18 +33,19 @@ files in that tree rather than a table that would go stale.
 npm install        # installs all workspaces and builds the library dists
 npm run build      # builds every workspace
 npm test           # runs every workspace's tests
-python tools/verify.py   # formatters and linters, in check mode
+python tools/verify.py --changed   # formatters and linters for changed files
 ```
 
-For faster checks while editing, scope the verifier to changed files or one
-module. Scoped runs omit repo-wide secret and dependency scans; run the full
-command before finishing.
+For one module, or a narrower intersection, scope further. Scoped runs omit repo-wide
+secret and dependency scans.
 
 ```sh
 python tools/verify.py --changed
 python tools/verify.py --module apps/times-up
 python tools/verify.py --module apps/times-up --changed
 ```
+
+Run bare `python tools/verify.py` only when a repository-wide scan is explicitly requested.
 
 Everything that can build on a host, JS workspaces and Kotlin APIs together, in
 one command from the repo root:

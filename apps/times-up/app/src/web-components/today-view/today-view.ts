@@ -5,7 +5,7 @@ import { safeHttpUrl } from '../../services/parser';
 import { articleImage, cardPlaceholderStyle } from '../../services/image';
 import { articleVideo, watchUrlFor } from '../../services/video';
 import { markShownRead, toggleStar } from '../../mutations';
-import { domainOf, formatDate } from '../../util';
+import { domainOf, formatDate, readMinutes } from '../../util';
 import {
     loadTodaySettings,
     pruneTodaySettings,
@@ -14,6 +14,8 @@ import {
     type TodaySettings,
 } from '../../services/today-settings';
 import { buildTodaySections, type TodaySection } from '../../services/today';
+import '../lazy-img/lazy-img';
+import '../video-header/video-header';
 import type { Article, Feed, Folder } from '../../types';
 import { el } from './today-view-dom';
 import styles from './today-view.css?inline';
@@ -208,6 +210,7 @@ export class TodayView extends HTMLElement {
         const viewLabel = el('label', 'view-mode');
         const select = el('select');
         for (const entry of [
+            { value: 'medium', label: 'Medium' },
             { value: 'detailed', label: 'Detailed List' },
             { value: 'headline', label: 'Headline View' },
             { value: 'cards', label: 'Cards' },
@@ -275,6 +278,7 @@ export class TodayView extends HTMLElement {
     }
 
     private item(article: Article, view: TodayListView): HTMLElement {
+        if (view === 'medium') return this.medium(article);
         if (view === 'cards') return this.card(article);
         if (view === 'headline') return this.headline(article);
         return this.detailed(article);
@@ -315,6 +319,55 @@ export class TodayView extends HTMLElement {
             a.rel = 'noopener noreferrer';
             row.appendChild(a);
         }
+        return row;
+    }
+
+    /** pointer-only: the row body opens on pointer; the title button is the keyboard path. */
+    private medium(article: Article): HTMLElement {
+        const row = el('article', `medium-row ${article.read ? 'read' : ''}`);
+        row.addEventListener('click', () => this.openArticle(article));
+        const copy = el('div', 'medium-copy');
+        const eyebrow = el('div', 'medium-eyebrow');
+        const dot = this.unreadDot(article);
+        if (dot) eyebrow.appendChild(dot);
+        const feed = this.feeds.find((f) => f.id === article.feedId);
+        if (feed) eyebrow.appendChild(el('span', 'feed-label', feed.title));
+        eyebrow.appendChild(el('span', undefined, domainOf(article.link)));
+        eyebrow.appendChild(el('span', undefined, formatDate(article.published)));
+        const top = el('div', 'medium-top');
+        top.appendChild(this.titleButton(article, 'medium-title'));
+        copy.appendChild(eyebrow);
+        copy.appendChild(top);
+        if (article.summary) copy.appendChild(el('p', 'medium-summary', article.summary));
+        const footer = el('div', 'medium-footer');
+        const minutes = readMinutes(article.content, article.summary);
+        if (minutes > 0) footer.appendChild(el('span', 'read-time', `${minutes} min read`));
+        const link = safeHttpUrl(article.link);
+        if (link) {
+            const a = el('a', 'orig-link', 'original ↗');
+            a.href = link;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.addEventListener('click', (e) => e.stopPropagation());
+            footer.appendChild(a);
+        }
+        footer.appendChild(this.starButton(article));
+        copy.appendChild(footer);
+        row.appendChild(copy);
+        const media = el('div', 'medium-media');
+        const image = articleImage(article, feed?.icon);
+        if (image) {
+            const lazy = document.createElement('lazy-img') as HTMLElement & { src: string };
+            lazy.className = 'medium-img';
+            lazy.src = image;
+            media.appendChild(lazy);
+        } else {
+            const empty = el('div', 'medium-img medium-img-empty');
+            empty.setAttribute('style', cardPlaceholderStyle(article));
+            media.appendChild(empty);
+        }
+        row.appendChild(media);
+        if (!article.summary) void this.excerptInto(copy, article, 'row-excerpt medium-excerpt');
         return row;
     }
 
@@ -409,12 +462,12 @@ export class TodayView extends HTMLElement {
         return card;
     }
 
-    private async excerptInto(host: HTMLElement, article: Article): Promise<void> {
+    private async excerptInto(host: HTMLElement, article: Article, className = 'row-excerpt'): Promise<void> {
         const gen = this.generation;
         try {
             const text = await fetchArticleExcerpt(article.id);
             if (gen !== this.generation || !this.isConnected || !text) return;
-            host.appendChild(el('div', 'row-excerpt', text));
+            host.appendChild(el('div', className, text));
         } catch {
             // Excerpt is optional; the row keeps its compact shape.
         }

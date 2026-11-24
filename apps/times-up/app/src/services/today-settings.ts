@@ -3,7 +3,7 @@
  * starts with every folder included; unchecking a folder adds its id here.
  * New folders are automatically included, deleted ones are pruned on load.
  */
-export type TodayListView = 'detailed' | 'headline' | 'cards';
+export type TodayListView = 'medium' | 'detailed' | 'headline' | 'cards';
 
 export interface TodaySettings {
     excludedFolderIds: string[];
@@ -14,7 +14,7 @@ export interface TodaySettings {
 
 export const DEFAULT_PER_FOLDER = 5;
 export const PER_FOLDER_OPTIONS = [3, 5, 10] as const;
-export const TODAY_LIST_VIEWS = ['detailed', 'headline', 'cards'] as const;
+export const TODAY_LIST_VIEWS = ['medium', 'detailed', 'headline', 'cards'] as const;
 
 const STORAGE_KEY = 'times-up:today-settings';
 
@@ -23,7 +23,7 @@ export function defaultTodaySettings(): TodaySettings {
         excludedFolderIds: [],
         perFolder: DEFAULT_PER_FOLDER,
         unreadOnly: false,
-        listView: 'detailed',
+        listView: 'medium',
     };
 }
 
@@ -45,7 +45,7 @@ export function loadTodaySettings(): TodaySettings {
             listView:
                 typeof parsed.listView === 'string' && (TODAY_LIST_VIEWS as readonly string[]).includes(parsed.listView)
                     ? parsed.listView
-                    : 'detailed',
+                    : 'medium',
         };
     } catch {
         return defaultTodaySettings();

@@ -19,7 +19,7 @@
         "lint": "oxlint apps --disable-nested-config && npm run lint --workspaces --if-present",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "verify": "python tools/verify.py",
+        "verify": "python tools/verify.py --changed",
         "dev:baseball": "npm run dev -w baseball-tracker",
         "dev:times-up": "npm run dev -w times-up",
         "dev:times-up-api": "npm run dev -w times-up-api",

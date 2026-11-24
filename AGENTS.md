@@ -61,19 +61,19 @@ Library `prepare` scripts build `dist/` on install. After changing a package, re
 
 ## Commands (run from the repo root)
 
-| Task                          | Command                                                                                                                                                                                                                                      |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Install all workspaces        | `npm install`                                                                                                                                                                                                                                |
-| Build all (JS)                | `npm run build` (delegates `--workspaces --if-present`; the Kotlin APIs build via Gradle, not npm)                                                                                                                                           |
-| Test all                      | `npm test`                                                                                                                                                                                                                                   |
-| Typecheck all                 | `npm run typecheck`                                                                                                                                                                                                                          |
-| Lint all                      | `npm run lint`                                                                                                                                                                                                                               |
-| Dev server (one app)          | `npm run dev:<app>` for any app with a UI or an API (for example `dev:baseball`, `dev:times-up`, `dev:times-up-api`). The full set is the `dev:*` scripts in the root `package.json`.                                                        |
-| Build (entry point)           | `python build.py [app...]` (or `python3`); calls `./gradlew buildAll`                                                                                                                                                                        |
-| Build everything, one command | `./gradlew buildAll` (root; JS workspaces + all Kotlin APIs). `./gradlew buildJvm` = APIs only, `./gradlew buildNode` = JS only, `./gradlew checkAll` = API tests/detekt/Jacoco. Add `-Papps=times-up` (or `apps/times-up`) to build one app |
-| Deploy compose stack          | `python deploy.py [options] [app...]` (or `python3`); calls `./gradlew deploy`, which builds, renders the gateway, mints certs, then runs compose. Tab completion: `source scripts/complete-deploy.bash`.                                    |
-| Format everything             | `npm run format` (prettier --write). Check only: `npm run format:check`.                                                                                                                                                                     |
-| Verify format + lint          | `python tools/verify.py` (full check) or `python tools/verify.py --fix` (apply formatters). Scope fast checks with `--changed` or `--module apps/<app>`; scoped runs omit repo-wide secret/dependency scans.                                 |
+| Task                          | Command                                                                                                                                                                                                                                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install all workspaces        | `npm install`                                                                                                                                                                                                                                         |
+| Build all (JS)                | `npm run build` (delegates `--workspaces --if-present`; the Kotlin APIs build via Gradle, not npm)                                                                                                                                                    |
+| Test all                      | `npm test`                                                                                                                                                                                                                                            |
+| Typecheck all                 | `npm run typecheck`                                                                                                                                                                                                                                   |
+| Lint all                      | `npm run lint`                                                                                                                                                                                                                                        |
+| Dev server (one app)          | `npm run dev:<app>` for any app with a UI or an API (for example `dev:baseball`, `dev:times-up`, `dev:times-up-api`). The full set is the `dev:*` scripts in the root `package.json`.                                                                 |
+| Build (entry point)           | `python build.py [app...]` (or `python3`); calls `./gradlew buildAll`                                                                                                                                                                                 |
+| Build everything, one command | `./gradlew buildAll` (root; JS workspaces + all Kotlin APIs). `./gradlew buildJvm` = APIs only, `./gradlew buildNode` = JS only, `./gradlew checkAll` = API tests/detekt/Jacoco. Add `-Papps=times-up` (or `apps/times-up`) to build one app          |
+| Deploy compose stack          | `python deploy.py [options] [app...]` (or `python3`); calls `./gradlew deploy`, which builds, renders the gateway, mints certs, then runs compose. Tab completion: `source scripts/complete-deploy.bash`.                                             |
+| Format everything             | `npm run format` (prettier --write). Check only: `npm run format:check`.                                                                                                                                                                              |
+| Verify changed code           | `python tools/verify.py --changed` or `python tools/verify.py --module apps/<app>`. This is the default and the final gate. Scoped runs omit repo-wide secret/dependency scans. Run bare `python tools/verify.py` only when the user explicitly asks. |
 
 Per-app commands run inside the app directory (e.g. `cd apps/baseball && npm test`).
 
@@ -96,9 +96,10 @@ A stale Vite process on 5199 hangs baseball e2e — kill it first.
 1. Read this file and the workspace `AGENTS.md`. Make a focused change.
 2. Bug fixes: add a failing regression test with the fix. Core / data / API / service
    changes need new or extended tests in that workspace.
-3. Verify in the workspace you touched: `npm test`, then `npm run build` (or `npm run verify`
-   when the app has it). During editing, run `python tools/verify.py --changed` or
-   `python tools/verify.py --module apps/<app>` instead of the full repository scan.
+3. Verify only the workspace you touched: `npm test`, then `npm run build` (or `npm run verify`
+   when the app has it). Run `python tools/verify.py --changed`, or repeat
+   `python tools/verify.py --module apps/<app>` for each touched module. Do not run bare
+   `python tools/verify.py`; scoped verification is both the fast check and the final gate.
    Then `git diff --check`.
 4. Dispatch the `review` subagent on the **full uncommitted diff** (including untracked files).
    Fix blocking findings and re-dispatch until `APPROVE`. The reviewer does not edit or commit.
@@ -107,7 +108,9 @@ A stale Vite process on 5199 hangs baseball e2e — kill it first.
    (build tooling, deploy config, each service, the client), each given the files it owns. A
    review that returns no verdict is not an `APPROVE` — re-scope and re-dispatch, and never read
    a step-limited report as consent.
-5. Run full `python tools/verify.py` once before finishing. After that final verification,
+5. Run scoped `python tools/verify.py --changed` (or the relevant `--module` flags) once more
+   before finishing. Never run bare `python tools/verify.py` unless the user asks for a
+   repository-wide scan. After that final scoped verification,
    jev-gate (when required), and `review` returns `APPROVE`, create a conventional commit
    (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`). Stage files explicitly.
    Do not push, deploy, or ship unless the user explicitly asks. Keep fixing and re-reviewing
@@ -345,12 +348,12 @@ fetchers cannot send custom headers.
 ## Verification
 
 - Workspace `npm test` then `npm run build` must pass before finishing.
-- `python tools/verify.py` passes before finishing. It owns the full tool list; `--fix` applies the formatters.
-  During implementation, use `python tools/verify.py --changed` for modified files or
-  `python tools/verify.py --module apps/<app>` for one module. Repeat `--module` for several
-  modules, and combine it with `--changed` to narrow further. Scoped runs check only the
-  selected files and affected npm workspaces; they omit repo-wide secret and dependency
-  scans, so run the full command before finishing. Tools come from the `ops-scripts` installers.
+- `python tools/verify.py --changed` passes before finishing. It owns the full tool list; `--fix` applies the formatters.
+  Use `python tools/verify.py --module apps/<app>` for one module, repeat `--module` for
+  several modules, and combine it with `--changed` to narrow further. Scoped runs check only
+  the selected files and affected npm workspaces; they omit repo-wide secret and dependency
+  scans. Do not run bare `python tools/verify.py` unless the user asks for a repository-wide
+  scan. Tools come from the `ops-scripts` installers.
 - A doc-rot guard runs with the script tests. It checks the claim shapes that rot most
   often here — a backticked path, an `npm run` script, a Gradle task, and an app or
   package count — against whatever derives each one, so a stale claim fails instead of

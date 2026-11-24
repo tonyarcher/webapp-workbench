@@ -27,6 +27,7 @@ assert(isSetSyncKey(allSyncKey(['a'])!) === true, 'a set key is a feed-set key')
 const defaults = loadTodaySettings();
 assert(defaults.excludedFolderIds.length === 0, 'today settings default to all folders included');
 assert(defaults.perFolder === DEFAULT_PER_FOLDER, 'today settings default per-folder amount');
+assert(defaults.listView === 'medium', 'today settings default to the medium reading view');
 
 const mem = new Map<string, string>();
 const gStorage = globalThis as Record<string, unknown>;
@@ -44,6 +45,8 @@ assert(roundTrip.listView === 'cards', 'today settings round trip keeps list vie
 
 mem.set('times-up:today-settings', JSON.stringify({ excludedFolderIds: ['a'], perFolder: 7 }));
 assert(loadTodaySettings().perFolder === DEFAULT_PER_FOLDER, 'today settings clamp an unknown amount');
+mem.set('times-up:today-settings', JSON.stringify({ listView: 'nope' }));
+assert(loadTodaySettings().listView === 'medium', 'today settings fall back to medium for an unknown view');
 
 const pruned = pruneTodaySettings(
     { excludedFolderIds: ['a', 'b'], perFolder: 5, unreadOnly: false, listView: 'detailed' },
