@@ -66,6 +66,19 @@ export function viewHealth(
     return sorted;
 }
 
+/** Keep only selected ids that still have a feed in the library. */
+export function pruneSelection(ids: Iterable<string>, feeds: Feed[]): Set<string> {
+    const valid = new Set(feeds.map((f) => f.id));
+    return new Set([...ids].filter((id) => valid.has(id)));
+}
+
+/** Explicit confirm copy for a bulk removal. Never promises the articles survive. */
+export function removalMessage(titles: string[]): string {
+    const names = titles.slice(0, 3).join(', ');
+    const rest = titles.length > 3 ? ` and ${titles.length - 3} more` : '';
+    return `Remove ${titles.length} feed${titles.length === 1 ? '' : 's'} (${names}${rest}) and their saved articles? This cannot be undone.`;
+}
+
 function rank(kind: HealthKind): number {
     return kind === 'unreachable' ? 2 : kind === 'stale' ? 1 : 0;
 }

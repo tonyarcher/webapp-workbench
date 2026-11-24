@@ -776,8 +776,9 @@ needs piles. Ours add portability: everything exports, everything migrates.
   `consecutiveFailures` — no new endpoint. It groups feeds by healthy/stale/
   unreachable, shows age, a recent-article count, and a fix suggestion. It
   filters by status, caps volume (at most 1/3/5/10 articles in a 7/30/60/90-day
-  window), sorts by status/count/age/name, and removes a feed only after an
-  explicit confirm. Four derivation tests and four recent-count API tests.
+  window), sorts by status/count/age/name, supports multi-select with a
+  confirmed bulk Remove, and removes a single feed only after an explicit
+  confirm. Four derivation tests and four recent-count API tests.
   Still wanted: moved-URL detection, dupe rate, bulk retire with undo, and
   pre-subscribe preview.
 

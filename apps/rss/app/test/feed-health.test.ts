@@ -1,6 +1,6 @@
 import './test-setup';
 import { expect } from '@esm-bundle/chai';
-import { deriveHealth, viewHealth } from '../src/services/feed-health';
+import { deriveHealth, pruneSelection, removalMessage, viewHealth } from '../src/services/feed-health';
 import type { Feed } from '../src/types';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -62,6 +62,21 @@ describe('feed health derivation', () => {
 
         expect(low.map((r) => r.feed.id)).to.deep.equal(['a']);
     });
+    it('prunes stale selection ids', () => {
+        const kept = feed({ id: 'keep' });
+        const pruned = pruneSelection(['keep', 'gone'], [kept]);
+
+        expect([...pruned]).to.deep.equal(['keep']);
+    });
+
+    it('names the feeds in a bulk removal confirm', () => {
+        const message = removalMessage(['Alpha', 'Beta', 'Gamma', 'Delta']);
+
+        expect(message).to.contain('Remove 4 feeds');
+        expect(message).to.contain('Alpha, Beta, Gamma and 1 more');
+        expect(message).to.contain('cannot be undone');
+    });
+
     it('never proposes removal', () => {
         const rows = deriveHealth([feed({ consecutiveFailures: 9 })], {}, now);
 

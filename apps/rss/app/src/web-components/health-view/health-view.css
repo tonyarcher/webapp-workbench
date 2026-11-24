@@ -85,9 +85,49 @@
     padding: 0;
 }
 
+.bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.bulk-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
 .row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
     padding: 10px 8px;
     border-bottom: 1px solid var(--row-border);
+}
+
+.row-select {
+    margin-top: 4px;
+    accent-color: var(--accent);
+}
+
+.row-content {
+    min-width: 0;
+}
+
+.row .row-top,
+.row .suggestion,
+.row .meta {
+    min-width: 0;
+}
+
+.btn:disabled {
+    opacity: 0.45;
+    cursor: default;
 }
 
 .row-top {
