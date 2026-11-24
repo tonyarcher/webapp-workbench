@@ -62,6 +62,44 @@
     flex: none;
 }
 
+.find-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-bg);
+    flex: none;
+}
+
+.find-input {
+    min-width: 0;
+    flex: 1;
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+
+.find-count {
+    min-width: 48px;
+    text-align: center;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+::highlight(rss-article-find) {
+    background: color-mix(in srgb, var(--accent, #3b82f6) 25%, transparent);
+    color: inherit;
+}
+
+::highlight(rss-article-find-current) {
+    background: var(--accent, #3b82f6);
+    color: white;
+}
+
 .btn {
     font: inherit;
     font-size: 13px;

@@ -29,6 +29,7 @@ import styles from './article-view.css?inline';
 
 import { el, appendAll } from './article-view-dom';
 import { buildToolbar as buildToolbarNodes } from './article-view-toolbar';
+import { ArticleFind } from './article-view-find';
 import {
     buildTitle as buildTitleNodes,
     buildMeta as buildMetaNodes,
@@ -119,6 +120,7 @@ export class ArticleView extends HTMLElement {
     private root: ShadowRoot | null = null;
     private styleEl: HTMLStyleElement | null = null;
     private feedFoldersMenu: FeedFoldersMenu | null = null;
+    private readonly find = new ArticleFind(this, () => this.paint());
 
     /** paint() is synchronous, so consumers can await a resolved promise. */
     get updateComplete(): Promise<void> {
@@ -150,6 +152,7 @@ export class ArticleView extends HTMLElement {
         window.addEventListener('share-settings-changed', this.onShareSettingsChanged);
         window.addEventListener('saved-articles-changed', this.onSavedArticlesChanged);
         this.addEventListener('scroll', this.onScroll);
+        this.addEventListener('keydown', this.onFindKey);
         this.paint();
     }
 
@@ -158,6 +161,8 @@ export class ArticleView extends HTMLElement {
         window.removeEventListener('share-settings-changed', this.onShareSettingsChanged);
         window.removeEventListener('saved-articles-changed', this.onSavedArticlesChanged);
         this.removeEventListener('scroll', this.onScroll);
+        this.removeEventListener('keydown', this.onFindKey);
+        this.find.close(false);
         if (this.progressSaveTimer !== null) window.clearTimeout(this.progressSaveTimer);
     }
 
@@ -168,6 +173,12 @@ export class ArticleView extends HTMLElement {
     private onScroll = () => {
         handleProgressScroll(this);
     };
+    private onFindKey = (event: KeyboardEvent) => {
+        this.find.handleKeyDown(event);
+    };
+    toggleFind(): void {
+        this.find.toggle();
+    }
     /** Keyboard entry points, called by the shell which owns global keys. */
     keyboardStar(): void {
         void this.onStar();
@@ -200,6 +211,7 @@ export class ArticleView extends HTMLElement {
         this.deranked = this.article ? isDeranked(this.article.id) : false;
         this.keywords = this.article ? articleKeywords(this.article) : [];
         if (this.article?.id !== this.progressArticleId) {
+            this.find.close(false);
             flushProgressOnSwitch(this);
             this.progressArticleId = this.article?.id ?? null;
             this.savedStateGen++;
@@ -308,6 +320,7 @@ export class ArticleView extends HTMLElement {
         progress.appendChild(progressSpan);
         nodes.push(progress);
         nodes.push(...this.buildToolbar(a, link));
+        if (this.find.open) nodes.push(this.find.bar);
 
         const bodyDiv = el('div', 'body');
         appendAll(bodyDiv, this.buildTitle(a, link));
@@ -367,11 +380,14 @@ export class ArticleView extends HTMLElement {
             }),
         );
 
+        const findFocused = this.find.focused;
         root.replaceChildren(
             ...(this.styleEl ? [this.styleEl] : []),
             ...nodes,
             ...(this.feedFoldersMenu ? [this.feedFoldersMenu] : []),
         );
+        this.find.refresh(root.querySelector('.content'));
+        if (findFocused) this.find.focusInput(false);
 
         this.setAttribute('aria-label', a.title);
         if (this.focused) return;

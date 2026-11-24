@@ -122,7 +122,8 @@ export function actionIcon(
         | 'mail'
         | 'external'
         | 'more'
-        | 'share',
+        | 'share'
+        | 'search',
 ): SVGElement {
     switch (name) {
         case 'back':
@@ -213,6 +214,11 @@ export function actionIcon(
                 svgNode('path', { d: 'M12 3v12' }),
                 svgNode('path', { d: 'M8 7l4-4 4 4' }),
                 svgNode('rect', { x: '5', y: '11', width: '14', height: '10', rx: '2' }),
+            ]);
+        case 'search':
+            return svgNode('svg', STROKED, [
+                svgNode('circle', { cx: '10.5', cy: '10.5', r: '6.5' }),
+                svgNode('path', { d: 'M15.5 15.5L21 21' }),
             ]);
     }
 }

@@ -31,6 +31,7 @@ export interface ArticleViewToolbarHost {
     enqueueListen(): void;
     nativeShare(a: Article, link: string): Promise<void>;
     onManageFolders(anchor: MenuAnchor): void;
+    toggleFind(): void;
     paint(): void;
 }
 
@@ -53,6 +54,13 @@ export function buildToolbar(host: ArticleViewToolbarHost, a: Article, link: str
     }
 
     toolbar.appendChild(el('div', 'spacer'));
+    toolbar.appendChild(
+        iconButton(actionIcon('search'), {
+            label: 'Find in article',
+            title: 'Find in article (Ctrl/Cmd+F)',
+            onClick: () => host.toggleFind(),
+        }),
+    );
     if (link) toolbar.appendChild(buildOpenOriginal(a, link));
     return [toolbar];
 }
