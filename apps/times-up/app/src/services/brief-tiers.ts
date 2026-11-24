@@ -15,6 +15,7 @@ export interface BriefTierSection {
     title: string;
     topic?: string | undefined;
     summary?: string | undefined;
+    delta?: 'new' | 'steady' | undefined;
     items: EditionExcerpt[];
 }
 
@@ -65,6 +66,7 @@ function tierSection(section: EditionSection, take: number): BriefTierSection {
         title: section.title,
         ...(section.topic ? { topic: section.topic } : {}),
         ...(section.summary ? { summary: section.summary } : {}),
+        ...(section.delta ? { delta: section.delta } : {}),
         items: (section.excerpts ?? []).slice(0, take),
     };
 }

@@ -99,10 +99,12 @@ class EditionService(
     ): EditionEntity {
         val started = System.currentTimeMillis()
         quotas.consume(userId, aiConfig.hourlyLimit, aiConfig.dailyLimit)
+        val previous = editions.findTopByUserIdAndStatusOrderByCreatedAtDesc(userId, EDITION_READY)
+        val previousKeys = parseSectionKeys(previous?.body, mapper)
         val ranked = loadRanked(userId, start, now, windowHours).take(sectionCount)
         val sections = summarizeAll(userId, ranked)
         val opinion = opinionFor(userId, sections)
-        finishReady(row, sections, opinion, now)
+        finishReady(row, sections, opinion, now, previousKeys)
         log(
             "times-up-api",
             "info",
@@ -208,13 +210,20 @@ class EditionService(
         }
     }
 
-    private fun finishReady(row: EditionEntity, sections: List<SectionDraft>, opinion: String?, now: Instant) {
+    private fun finishReady(
+        row: EditionEntity,
+        sections: List<SectionDraft>,
+        opinion: String?,
+        now: Instant,
+        previousKeys: Set<String>,
+    ) {
         row.body = mapper.writeValueAsString(
             mapOf(
-                "sections" to sections.map(::sectionJson),
+                "sections" to sections.map { sectionJson(it, previousKeys) },
                 "opinion" to opinion?.let { mapOf("text" to it) },
                 "generatedAt" to now.toEpochMilli(),
                 "model" to aiConfig.model,
+                "deltaSince" to previousKeys.isNotEmpty(),
             ),
         )
         row.model = aiConfig.model
@@ -223,7 +232,7 @@ class EditionService(
         editions.deleteOld(row.requireOwner(), EDITION_KEEP)
     }
 
-    private fun sectionJson(section: SectionDraft): Map<String, Any?> = mapOf(
+    private fun sectionJson(section: SectionDraft, previousKeys: Set<String>): Map<String, Any?> = mapOf(
         "id" to section.item.cluster.key,
         "topic" to section.item.topic,
         "title" to section.item.cluster.articles.first().title,
@@ -240,6 +249,7 @@ class EditionService(
             "newness" to section.item.newness,
             "popularity" to section.item.popularity,
         ),
+        "delta" to if (section.item.cluster.key in previousKeys) "steady" else "new",
     )
 
     private fun failRow(row: EditionEntity) {
@@ -253,3 +263,11 @@ class EditionService(
 /** Owner is always set by [EditionService.buildEdition]; fail loud otherwise. */
 private fun EditionEntity.requireOwner(): UUID =
     userId ?: throw ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "edition has no owner")
+
+private fun parseSectionKeys(body: String?, mapper: com.fasterxml.jackson.databind.ObjectMapper): Set<String> {
+    if (body.isNullOrBlank()) return emptySet()
+    val node = mapper.readTree(body)
+    val sections = node.path("sections")
+    if (!sections.isArray) return emptySet()
+    return sections.mapNotNull { it.path("id").takeIf { id -> id.isTextual }?.asText() }.toSet()
+}

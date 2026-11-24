@@ -80,6 +80,7 @@ function normalizeSectionJson(json: unknown): EditionSection {
         excerpts: excerptArrayOf(o['excerpts']),
         ...(scores ? { scores } : {}),
         ...(typeof o['verified'] === 'boolean' ? { verified: o['verified'] } : {}),
+        ...(o['delta'] === 'new' || o['delta'] === 'steady' ? { delta: o['delta'] as 'new' | 'steady' } : {}),
     };
 }
 

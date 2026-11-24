@@ -206,6 +206,7 @@ export interface EditionSection {
     scores?:
         { worthy: number; interest: number; newness?: number | undefined; popularity?: number | undefined } | undefined;
     verified?: boolean | undefined;
+    delta?: 'new' | 'steady' | undefined;
 }
 
 export type EditionStatus = 'ready' | 'building' | 'failed';

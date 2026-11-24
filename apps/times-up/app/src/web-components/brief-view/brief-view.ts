@@ -142,6 +142,12 @@ export class BriefView extends HTMLElement {
         const title = document.createElement('h3');
         title.textContent = section.topic ?? section.title;
         node.appendChild(title);
+        if (section.delta === 'new') {
+            const badge = document.createElement('span');
+            badge.className = 'delta-badge';
+            badge.textContent = 'New';
+            node.appendChild(badge);
+        }
         if (section.summary) {
             const summary = document.createElement('p');
             summary.className = 'section-summary';

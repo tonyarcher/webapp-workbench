@@ -128,6 +128,7 @@ class EditionServiceTest {
         whenever(folderFeeds.findByFeedIdIn(any<Collection<UUID>>())).thenReturn(links)
         whenever(editions.save(any<EditionEntity>())).thenAnswer { it.getArgument<EditionEntity>(0) }
         whenever(editions.findByUserId(any(), any<Sort>())).thenReturn(emptyList())
+        whenever(editions.findTopByUserIdAndStatusOrderByCreatedAtDesc(any(), any())).thenReturn(null)
         doCallRealMethod().whenever(editions).deleteOld(any(), any())
         if (links.isNotEmpty()) {
             whenever(folders.findByUserIdAndIdIn(any(), any<Collection<UUID>>())).thenReturn(folderRows)
@@ -305,5 +306,24 @@ class EditionServiceTest {
 
         val opinion = bodyOf(row).path("opinion").path("text").asText()
         assertTrue(opinion.startsWith("Opinion:"), "opinion carries its label")
+    }
+
+    @Test
+    @org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
+    fun buildMarksDeltaWhenPreviousEditionExists() {
+        stubQuota()
+        stubWindow(listOf(serviceArticle("a1", "story-1", UUID.randomUUID())))
+        whenever(editions.findTopByUserIdAndStatusOrderByCreatedAtDesc(any(), any())).thenReturn(
+            EditionEntity(
+                windowStart = SERVICE_NOW,
+                windowEnd = SERVICE_NOW,
+                status = EDITION_READY,
+                userId = SERVICE_UID,
+                body = """{"sections":[{"id":"story-1","title":"old"}]}""",
+            ),
+        )
+        stubAi()
+        val row = service().buildEdition(SERVICE_UID, 24, 12)
+        assertEquals(EDITION_READY, row.status)
     }
 }
