@@ -69,18 +69,3 @@ export function renderStaticNav(host: SourceListRenderHost): DocumentFragment {
     );
     return fragment;
 }
-
-/**
- * The one entry to the settings area. The five panels it holds (Organize,
- * Mute filters, Privacy, Stats, Glossary) used to be sidebar rows, ahead of
- * the feeds the reader actually opens.
- */
-export function renderSettingsRow(host: SourceListRenderHost): HTMLButtonElement {
-    const view: View = { kind: 'settings', section: 'general' };
-    const button = el('button', itemClass(host, view));
-    const glyph = el('span', 'icon', '\u2699');
-    glyph.setAttribute('aria-hidden', 'true');
-    append(button, glyph, el('span', 'label', 'Settings'));
-    button.addEventListener('click', () => host.select(view));
-    return button;
-}

@@ -1,7 +1,7 @@
 // The sidebar's reading order, in a real DOM. The settings panels used to be
 // rows above the feed tree, so "Interesting" and the first feeds sat nineteen
 // rows down. This pins the order a reader actually walks: Interesting, feeds,
-// then the views, then one Settings row.
+// then the views. Settings lives in the account menu, not the sidebar.
 import './test-setup';
 import { expect } from '@esm-bundle/chai';
 import { renderNav, type SourceListRenderHost } from '../src/web-components/source-list/source-list-render';
@@ -55,7 +55,7 @@ describe('source-list nav order', () => {
         document.body.replaceChildren();
     });
 
-    it('puts Interesting and the feed tree above the views, with one Settings row last', () => {
+    it('puts Interesting and the feed tree above the views, without a Settings row', () => {
         const root = render(
             host({
                 interestingShadow: { f1: true },
@@ -69,7 +69,7 @@ describe('source-list nav order', () => {
         expect(at('Ars Technica')).to.be.lessThan(at('All'));
         expect(at('All')).to.be.lessThan(at('Today'));
         expect(at('Today')).to.be.lessThan(at('Front Page'));
-        expect(rowLabels(root).at(-1)).to.equal('Settings');
+        expect(rowLabels(root)).not.to.include('Settings');
     });
 
     it('keeps the settings panels out of the sidebar', () => {

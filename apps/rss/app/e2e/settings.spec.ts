@@ -79,7 +79,8 @@ test('the settings area opens from the sidebar and its tabs are routes', async (
     );
 
     await page.goto('/');
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('button', { name: /Account/ }).click();
+    await page.getByRole('button', { name: 'Settings' }).click();
     await expect(page).toHaveURL(/#\/settings$/);
     await expect(page.getByRole('heading', { name: 'General' })).toBeVisible();
 

@@ -32,7 +32,7 @@ import {
 } from './source-list-menus';
 import { append, el } from './source-list-dom';
 import { icon, menuIcon, type IconKind } from './source-list-icons';
-import { renderSettingsRow, renderStaticNav } from './source-list-nav';
+import { renderStaticNav } from './source-list-nav';
 
 /**
  * State and handlers the sidebar renderers read. The component passes itself
@@ -109,9 +109,8 @@ export function renderHead(host: SourceListRenderHost): DocumentFragment {
 }
 
 export function renderNav(host: SourceListRenderHost, folders: Folder[], uncategorized: Feed[]): DocumentFragment {
-    // Reading order: Interesting, then the feed tree, then the views. The
-    // settings panels are one row at the bottom: they used to sit above the
-    // feeds, which pushed a reader's actual sources below the fold.
+    // Reading order: Interesting, then the feed tree, then the views. Settings
+    // lives in the account menu so it does not push reading destinations down.
     const fragment = document.createDocumentFragment();
     append(
         fragment,
@@ -122,7 +121,6 @@ export function renderNav(host: SourceListRenderHost, folders: Folder[], uncateg
         dropZone(),
         renderSavedSearches(host, host.libraryData.savedSearches),
         renderStaticNav(host),
-        renderSettingsRow(host),
     );
     return fragment;
 }
