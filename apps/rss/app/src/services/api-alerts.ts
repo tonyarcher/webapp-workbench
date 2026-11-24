@@ -9,6 +9,23 @@ export interface AlertGroup {
     hits: Article[];
 }
 
+/** Recent article counts for one window, keyed by feed id. */
+export interface RecentCounts {
+    days: number;
+    feeds: Record<string, number>;
+}
+
+export async function fetchRecentCounts(days: number): Promise<RecentCounts> {
+    const res = (await apiFetch(`/library/recent?days=${days}`)) as {
+        days: number;
+        feeds: Array<{ feedId: string; count: number }>;
+    };
+    return {
+        days: res.days,
+        feeds: Object.fromEntries((res.feeds ?? []).map((f) => [f.feedId, f.count])),
+    };
+}
+
 /** Keyword alerts: flagged saved searches with matching unread articles. */
 export async function fetchAlerts(): Promise<AlertGroup[]> {
     const res = (await apiFetch('/alerts')) as { alerts?: AlertGroup[] };

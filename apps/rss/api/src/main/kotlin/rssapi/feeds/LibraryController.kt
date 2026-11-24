@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import rssapi.platform.ApiException
 import rssapi.platform.IdentityUser
@@ -14,12 +15,22 @@ import rssapi.platform.isUuid
 import rssapi.platform.toJson
 import java.util.UUID
 
+/** Recent article counts per subscribed feed, for the health dashboard. */
+data class FeedRecentJson(val feedId: String, val count: Int)
+data class FeedRecentListJson(val days: Int, val feeds: List<FeedRecentJson>)
+
+private const val MAX_RECENT_DAYS = 365
+
 @RestController
 class LibraryController(
     private val user: IdentityUser,
     private val folders: FolderRepo,
     private val library: LibraryService,
 ) {
+    @GetMapping("/library/recent", headers = ["X-Api-Version=1"])
+    fun recent(@RequestParam(defaultValue = "30") days: Int): FeedRecentListJson =
+        library.recentCounts(user.id, days.coerceIn(1, MAX_RECENT_DAYS))
+
     @GetMapping("/library", headers = ["X-Api-Version=1"])
     fun library(): LibraryJson = library.library(user.id)
 

@@ -774,9 +774,12 @@ needs piles. Ours add portability: everything exports, everything migrates.
 - **Shipped (first slice).** A Feed health view in the sidebar, derived from
   the library's existing `status`, `lastFetchedAt`, `lastError` and
   `consecutiveFailures` — no new endpoint. It groups feeds by healthy/stale/
-  unreachable, shows age and a fix suggestion, and offers a manual Refresh.
-  No automatic removal. Four derivation tests. Still wanted: moved-URL
-  detection, dupe rate, bulk retire with undo, and pre-subscribe preview.
+  unreachable, shows age, a recent-article count, and a fix suggestion. It
+  filters by status, caps volume (at most 1/3/5/10 articles in a 7/30/60/90-day
+  window), sorts by status/count/age/name, and removes a feed only after an
+  explicit confirm. Four derivation tests and four recent-count API tests.
+  Still wanted: moved-URL detection, dupe rate, bulk retire with undo, and
+  pre-subscribe preview.
 
 ### D5. Curated bundles and starter packs
 

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.Instant
 import java.util.UUID
 
 interface ArticleRepo :
@@ -48,6 +49,24 @@ interface ArticleRepo :
         @Param("head") head: String,
         @Param("source") source: String,
     ): Int
+
+    interface RecentCount {
+        val feedId: UUID
+        val cnt: Long
+    }
+
+    /** Articles published since the cutoff, grouped for feed health. */
+    @Query(
+        """
+        select a.feedId as feedId, count(a) as cnt from ArticleEntity a
+        where a.feedId in :feedIds and a.publishedAt >= :since
+        group by a.feedId
+        """,
+    )
+    fun countRecentByFeed(
+        @Param("feedIds") feedIds: Collection<UUID>,
+        @Param("since") since: Instant,
+    ): List<RecentCount>
 
     @Query(
         """

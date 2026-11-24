@@ -1,24 +1,30 @@
 import type { Feed } from '../types';
 
 /**
- * D4 feed health, derived from the library the server already returns.
- * No new endpoint: `status`, `lastFetchedAt`, `lastError` and
- * `consecutiveFailures` come from `feed_sync` through `/library/feeds`.
+ * D4 feed health, derived from the library plus a bounded recent-count read.
+ * Status fields come from `feed_sync`; recent counts come from `/library/recent`.
  */
 export type HealthKind = 'ok' | 'stale' | 'unreachable';
+export type HealthSort = 'status' | 'recent' | 'name' | 'age';
 
 export interface FeedHealthRow {
     feed: Feed;
     kind: HealthKind;
     /** Days since the last successful fetch, or null when never fetched. */
     ageDays: number | null;
+    /** Articles published in the selected window. */
+    recent: number;
     /** Suggested next step, never an automatic action. */
     suggestion: string;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function deriveHealth(feeds: Feed[], now: number = Date.now()): FeedHealthRow[] {
+export function deriveHealth(
+    feeds: Feed[],
+    recent: Record<string, number> = {},
+    now: number = Date.now(),
+): FeedHealthRow[] {
     return feeds
         .map((feed) => {
             const kind: HealthKind =
@@ -31,9 +37,33 @@ export function deriveHealth(feeds: Feed[], now: number = Date.now()): FeedHealt
                 feed.lastFetchedAt === undefined || feed.lastFetchedAt === null
                     ? null
                     : Math.max(0, Math.floor((now - feed.lastFetchedAt) / DAY_MS));
-            return { feed, kind, ageDays, suggestion: suggestionFor(feed, kind) };
+            return {
+                feed,
+                kind,
+                ageDays,
+                recent: recent[feed.id] ?? 0,
+                suggestion: suggestionFor(feed, kind),
+            };
         })
         .sort((a, b) => rank(b.kind) - rank(a.kind) || (b.ageDays ?? 0) - (a.ageDays ?? 0));
+}
+
+/** Filters and ordering applied locally to the derived rows. */
+export function viewHealth(
+    rows: FeedHealthRow[],
+    options: { kind: HealthKind | 'all'; maxRecent: number | null; sort: HealthSort },
+): FeedHealthRow[] {
+    const filtered = rows.filter((r) => {
+        if (options.kind !== 'all' && r.kind !== options.kind) return false;
+        if (options.maxRecent !== null && r.recent > options.maxRecent) return false;
+        return true;
+    });
+    const sorted = [...filtered];
+    if (options.sort === 'recent')
+        sorted.sort((a, b) => a.recent - b.recent || a.feed.title.localeCompare(b.feed.title));
+    else if (options.sort === 'name') sorted.sort((a, b) => a.feed.title.localeCompare(b.feed.title));
+    else if (options.sort === 'age') sorted.sort((a, b) => (b.ageDays ?? 0) - (a.ageDays ?? 0));
+    return sorted;
 }
 
 function rank(kind: HealthKind): number {
@@ -41,8 +71,10 @@ function rank(kind: HealthKind): number {
 }
 
 function suggestionFor(feed: Feed, kind: HealthKind): string {
-    if (kind === 'unreachable') return 'Check the site URL, then refresh or unfollow it in Organize.';
+    if (kind === 'unreachable') return 'Check the site URL, then refresh or remove it below.';
     if (kind === 'stale')
-        return feed.lastError ? 'Fetch failed recently. Refresh to retry.' : 'No recent fetch. Refresh to check it.';
+        return feed.lastError
+            ? 'Fetch failed recently. Refresh to retry, or remove the feed below.'
+            : 'No recent fetch. Refresh to check it.';
     return 'Healthy.';
 }

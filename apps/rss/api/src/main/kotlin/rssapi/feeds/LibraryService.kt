@@ -4,6 +4,8 @@ import rssapi.articles.ArticleRepo
 import rssapi.boards.SavedSearchRepo
 import rssapi.boards.SavedSearchService
 import rssapi.platform.toJson
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 /** Bulk library reads. Each call runs a fixed handful of queries, sized by table, not by feed. */
@@ -29,6 +31,18 @@ class LibraryService(
         val feedIds = subs.findFeedIdsByUserId(uid)
         if (feedIds.isEmpty()) return emptyList()
         return feedJsons(folderRows, feedIds, emptyMap())
+    }
+
+    fun recentCounts(uid: UUID, days: Int): FeedRecentListJson {
+        val feedIds = subs.findFeedIdsByUserId(uid)
+        if (feedIds.isEmpty()) return FeedRecentListJson(days, emptyList())
+        val since = Instant.now().minus(Duration.ofDays(days.toLong()))
+        return FeedRecentListJson(
+            days,
+            articles.countRecentByFeed(feedIds, since).associateBy { it.feedId }.let { counts ->
+                feedIds.map { FeedRecentJson(it.toString(), (counts[it]?.cnt ?: 0).toInt().coerceAtLeast(0)) }
+            },
+        )
     }
 
     fun counts(uid: UUID): LibraryCountsJson {
