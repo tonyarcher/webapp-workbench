@@ -17,7 +17,8 @@ class McpToolsTest {
     private val library: McpLibraryTools = mock()
     private val article: McpArticleTools = mock()
     private val write: McpWriteTools = mock()
-    private val dispatcher = McpToolDispatcher(library, article, write)
+    private val interests: McpInterestTools = mock()
+    private val dispatcher = McpToolDispatcher(library, article, write, interests)
 
     private fun client(writes: Boolean = false): McpPrincipal = McpPrincipal(
         userId = TOOLS_UID,

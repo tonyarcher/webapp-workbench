@@ -9,6 +9,8 @@ object McpToolRegistry {
         tool("open_summary", "Title, summary and excerpt for one article. No body.", "articleId"),
         tool("fetch_body", "Stored article body, loaded on demand through the reader's tiering seam.", "articleId"),
         tool("quote_highlight", "Verbatim key lines with article provenance.", "articleId"),
+        tool("list_interests", "Interests the reader follows, with weights and origins."),
+        tool("list_promotions", "Today's promoted lane with match reasons."),
     )
 
     val write: List<McpTool> = listOf(

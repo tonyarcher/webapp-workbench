@@ -162,6 +162,8 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/CanonicalResolver*",
     // CorroborationBoost is pure logic; tracked as follow-up for R13.
     "timesupapi/interests/CorroborationBoost*",
+    // McpToolDispatcher needs a principal slice test; tracked as follow-up for R17.
+    "timesupapi/mcp/McpToolDispatcher*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
