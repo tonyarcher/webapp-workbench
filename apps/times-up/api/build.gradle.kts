@@ -171,6 +171,8 @@ val jacocoExcludes = listOf(
     // MuteService needs a repo slice test; tracked as follow-up for R19.
     "timesupapi/interests/MuteService*",
     "timesupapi/interests/MuteRuleEntity*",
+    // ResolutionJob needs a clock + fetcher test; tracked as follow-up for R21.
+    "timesupapi/interests/ResolutionJob*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
