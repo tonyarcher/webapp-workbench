@@ -19,8 +19,15 @@ data class InterestJson(
 data class ImportRequest(val topics: String? = null, val sources: String? = null)
 data class ImportResponse(val fingerprint: String, val topics: ImportReport, val sources: ImportReport)
 
+data class CandidateRequest(val labels: List<String> = emptyList())
+data class CandidateResponse(val candidates: List<CandidateResult>)
+
 @RestController
-class InterestController(private val user: IdentityUser, private val service: InterestService) {
+class InterestController(
+    private val user: IdentityUser,
+    private val service: InterestService,
+    private val candidates: CandidateService,
+) {
     @GetMapping("/interests", headers = ["X-Api-Version=1"])
     fun list(): List<InterestJson> = service.list(user.id).map {
         InterestJson(it.id.toString(), it.kind, it.label, it.key, it.weight, it.origin, it.enabled)
@@ -29,4 +36,8 @@ class InterestController(private val user: IdentityUser, private val service: In
     @PostMapping("/interests/import", headers = ["X-Api-Version=1"])
     fun import(@RequestBody body: ImportRequest): ImportResponse =
         service.import(user.id, body.topics ?: "", body.sources ?: "")
+
+    @PostMapping("/interests/candidates", headers = ["X-Api-Version=1"])
+    fun candidates(@RequestBody body: CandidateRequest): CandidateResponse =
+        CandidateResponse(candidates.candidates(body.labels))
 }
