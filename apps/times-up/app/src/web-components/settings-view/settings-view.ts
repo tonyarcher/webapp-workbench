@@ -8,6 +8,7 @@ import '../privacy-view/privacy-view';
 import '../ai-connections-view/ai-connections-view';
 import '../stats-view/stats-view';
 import '../glossary-view/glossary-view';
+import '../interests-settings/interests-settings';
 import styles from './settings-view.css?inline';
 
 interface SectionSpec {
@@ -31,6 +32,7 @@ const SECTIONS: readonly SectionSpec[] = [
     { id: 'ai-connections', label: 'AI connections', tag: 'ai-connections-view' },
     { id: 'stats', label: 'Stats', tag: 'stats-view' },
     { id: 'glossary', label: 'Glossary', tag: 'glossary-view' },
+    { id: 'interests', label: 'Interests', tag: 'interests-settings' },
 ];
 
 function specOf(section: SettingsSection): SectionSpec {
