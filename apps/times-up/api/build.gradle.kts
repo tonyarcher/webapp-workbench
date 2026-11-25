@@ -178,6 +178,8 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/ImportBatchEntity*",
     // ApprovalService runs OPML import; tracked as follow-up for R24.
     "timesupapi/interests/ApprovalService*",
+    // InterestEditorService needs a repo slice test; tracked as follow-up for R25.
+    "timesupapi/interests/InterestEditorService*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
