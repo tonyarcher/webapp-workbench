@@ -10,9 +10,7 @@
         "test": "node scripts/write-version-history.mjs && tsx scripts/smoke.ts && tsx scripts/db-smoke.ts && npm run test:browser",
         "test:browser": "wtr",
         "typecheck": "node scripts/write-version-history.mjs && tsc --noEmit -p tsconfig.test.json",
-        "test:e2e": "playwright test",
-        "tauri:dev": "tauri dev",
-        "tauri:build": "tauri build"
+        "test:e2e": "playwright test"
     },
     "dependencies": {
         "@tanstack/history": "1.162.5",
@@ -35,7 +33,6 @@
         "typescript": "7.0.2",
         "vite": "^8.3.5",
         "@axe-core/playwright": "^4.14.0",
-        "@playwright/test": "^1.64.1",
-        "@tauri-apps/cli": "^2.12.6"
+        "@playwright/test": "^1.64.1"
     }
 }
