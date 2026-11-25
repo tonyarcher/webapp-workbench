@@ -6,6 +6,7 @@ data class SearchOperators(
     val authors: List<String> = emptyList(),
     val feeds: List<String> = emptyList(),
     val folders: List<String> = emptyList(),
+    val interests: List<String> = emptyList(),
     val afterMs: Long? = null,
     val beforeMs: Long? = null,
     val isStarred: Boolean? = null,
@@ -17,24 +18,32 @@ data class SearchOperators(
 )
 
 data class ParsedSearchQuery(val text: String, val tokens: List<String>, val operators: SearchOperators) {
-    fun hasAnyOperator(): Boolean = operators.authors.isNotEmpty() ||
+    fun hasAnyOperator(): Boolean = hasCoreOperator() || hasFlagOperator()
+
+    private fun hasCoreOperator(): Boolean = operators.authors.isNotEmpty() ||
         operators.feeds.isNotEmpty() ||
         operators.folders.isNotEmpty() ||
+        operators.interests.isNotEmpty() ||
         operators.afterMs != null ||
-        operators.beforeMs != null ||
-        operators.isStarred != null ||
+        operators.beforeMs != null
+
+    private fun hasFlagOperator(): Boolean = operators.isStarred != null ||
         operators.isUnread != null ||
         operators.isRead != null ||
         operators.hasVideo != null ||
         operators.minReadMinutes != null
 
     /** Operators the server can enforce in the DB query. */
-    fun hasEnforceableOperator(): Boolean = operators.authors.isNotEmpty() ||
+    fun hasEnforceableOperator(): Boolean = hasEnforceableCore() || hasEnforceableFlag()
+
+    private fun hasEnforceableCore(): Boolean = operators.authors.isNotEmpty() ||
         operators.feeds.isNotEmpty() ||
         operators.folders.isNotEmpty() ||
+        operators.interests.isNotEmpty() ||
         operators.afterMs != null ||
-        operators.beforeMs != null ||
-        operators.isStarred != null ||
+        operators.beforeMs != null
+
+    private fun hasEnforceableFlag(): Boolean = operators.isStarred != null ||
         operators.isUnread != null ||
         operators.isRead != null
 }
@@ -45,7 +54,10 @@ internal const val SEARCH_MAX_TOKEN_CHARS: Int = 128
 internal const val SEARCH_MAX_OPERATOR_TERMS: Int = 16
 
 private val OPERATOR_RE =
-    Regex("""(^|\s)(author|feed|folder|after|before|has|is|min|in):(?:"([^"]+)"|(\S+))""", RegexOption.IGNORE_CASE)
+    Regex(
+        """(^|\s)(author|feed|folder|interest|after|before|has|is|min|in):(?:"([^"]+)"|(\S+))""",
+        RegexOption.IGNORE_CASE,
+    )
 
 private fun parseDateStartMs(raw: String): Long? = try {
     LocalDate.parse(raw.trim()).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
@@ -70,6 +82,7 @@ private class OperatorState {
     val authors = mutableListOf<String>()
     val feeds = mutableListOf<String>()
     val folders = mutableListOf<String>()
+    val interests = mutableListOf<String>()
     var afterMs: Long? = null
     var beforeMs: Long? = null
     var isStarred: Boolean? = null
@@ -83,6 +96,7 @@ private class OperatorState {
         authors = authors.distinct().take(SEARCH_MAX_OPERATOR_TERMS),
         feeds = feeds.distinct().take(SEARCH_MAX_OPERATOR_TERMS),
         folders = folders.distinct().take(SEARCH_MAX_OPERATOR_TERMS),
+        interests = interests.distinct().take(SEARCH_MAX_OPERATOR_TERMS),
         afterMs = afterMs,
         beforeMs = beforeMs,
         isStarred = isStarred,
@@ -129,6 +143,7 @@ private fun applyOtherOperator(key: String, value: String, state: OperatorState)
         "author" -> state.authors.add(value)
         "feed" -> state.feeds.add(value)
         "folder" -> state.folders.add(value)
+        "interest" -> state.interests.add(value)
         "after" -> state.afterMs = parseDateStartMs(value) ?: state.afterMs
         "before" -> state.beforeMs = parseDateEndMs(value) ?: state.beforeMs
         else -> applyFlagOperator(key, value, state)
