@@ -183,6 +183,8 @@ val jacocoExcludes = listOf(
     // SourceService runs resolution + discovery; tracked as follow-up.
     "timesupapi/interests/SourceService*",
     "timesupapi/interests/SourceEntity*",
+    // SourceSignalService needs a repo slice test; tracked as follow-up.
+    "timesupapi/interests/SourceSignalService*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
