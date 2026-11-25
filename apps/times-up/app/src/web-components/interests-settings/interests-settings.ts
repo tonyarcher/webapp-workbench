@@ -6,6 +6,7 @@ import {
     fetchLane,
     type InterestJson,
     type LaneResult,
+    type ImportResult,
 } from '../../services/api-interests';
 
 @customElement('interests-settings')
@@ -15,6 +16,7 @@ export class InterestsSettings extends LitElement {
     @state() private sources = '';
     @state() private busy = false;
     @state() private status = '';
+    @state() private report: ImportResult | null = null;
     @state() private lane: LaneResult | null = null;
 
     static override styles = css`
@@ -46,6 +48,7 @@ export class InterestsSettings extends LitElement {
         this.status = '';
         try {
             const r = await importInterests(this.topics, this.sources);
+            this.report = r;
             this.status = `Imported: ${r.topics.unique} topics, ${r.sources.unique} sources`;
             this.interests = await fetchInterests();
         } catch {
@@ -72,6 +75,17 @@ export class InterestsSettings extends LitElement {
             <button ?disabled=${this.busy} @click=${() => void this.doImport()}>Import</button>
             <button @click=${() => void this.loadLane()}>Load promoted lane</button>
             ${this.status ? html`<p>${this.status}</p>` : ''}
+            ${
+                this.report
+                    ? html`
+                          <div class="report">
+                              <p>Topics: ${this.report.topics.count} lines, ${this.report.topics.unique} unique, ${this.report.topics.duplicates} duplicates, ${this.report.topics.quarantined} quarantined</p>
+                              <p>Sources: ${this.report.sources.count} lines, ${this.report.sources.unique} unique, ${this.report.sources.duplicates} duplicates, ${this.report.sources.quarantined} quarantined</p>
+                              ${this.report.topics.quarantinedLabels.length ? html`<p>Quarantined: ${this.report.topics.quarantinedLabels.join(', ')}</p>` : ''}
+                          </div>
+                      `
+                    : ''
+            }
             <h4>Your interests (${this.interests.length})</h4>
             ${this.interests.map((i) => html`<div class="interest">${i.label} <span class="weight">${i.weight.toFixed(2)}</span></div>`)}
             ${
