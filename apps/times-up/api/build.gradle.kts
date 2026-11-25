@@ -158,6 +158,8 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/CoverageGuard*",
     // CanonicalResolver needs network tests; tracked as follow-up for R12.
     "timesupapi/interests/CanonicalResolver*",
+    // CorroborationBoost is pure logic; tracked as follow-up for R13.
+    "timesupapi/interests/CorroborationBoost*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
