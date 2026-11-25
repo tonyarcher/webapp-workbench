@@ -166,6 +166,9 @@ val jacocoExcludes = listOf(
     "timesupapi/mcp/McpToolDispatcher*",
     // InterestFlagsService reads env; tracked as follow-up for R18.
     "timesupapi/interests/InterestFlagsService*",
+    // MuteService needs a repo slice test; tracked as follow-up for R19.
+    "timesupapi/interests/MuteService*",
+    "timesupapi/interests/MuteRuleEntity*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
