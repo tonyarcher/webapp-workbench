@@ -10,7 +10,9 @@
         "test": "node scripts/write-version-history.mjs && tsx scripts/smoke.ts && tsx scripts/db-smoke.ts && npm run test:browser",
         "test:browser": "wtr",
         "typecheck": "node scripts/write-version-history.mjs && tsc --noEmit -p tsconfig.test.json",
-        "test:e2e": "playwright test"
+        "test:e2e": "playwright test",
+        "tauri:dev": "tauri dev",
+        "tauri:build": "tauri build"
     },
     "dependencies": {
         "@tanstack/history": "1.162.5",
