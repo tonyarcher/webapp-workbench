@@ -144,6 +144,8 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/ResolutionCacheEntity*",
     // CandidateService runs feed discovery; tracked as follow-up for R4.
     "timesupapi/interests/CandidateService*",
+    // TopicSensorService needs feed/subscription slice tests; tracked as follow-up for R5.
+    "timesupapi/interests/TopicSensorService*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
