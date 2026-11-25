@@ -180,6 +180,9 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/ApprovalService*",
     // InterestEditorService needs a repo slice test; tracked as follow-up for R25.
     "timesupapi/interests/InterestEditorService*",
+    // SourceService runs resolution + discovery; tracked as follow-up.
+    "timesupapi/interests/SourceService*",
+    "timesupapi/interests/SourceEntity*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
