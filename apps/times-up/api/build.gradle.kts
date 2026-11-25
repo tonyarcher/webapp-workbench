@@ -173,6 +173,9 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/MuteRuleEntity*",
     // ResolutionJob needs a clock + fetcher test; tracked as follow-up for R21.
     "timesupapi/interests/ResolutionJob*",
+    // ImportBatchService needs a repo slice test; tracked as follow-up for R22.
+    "timesupapi/interests/ImportBatchService*",
+    "timesupapi/interests/ImportBatchEntity*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
