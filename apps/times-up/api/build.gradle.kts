@@ -148,6 +148,8 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/TopicSensorService*",
     // InterestMatcher needs a topic-repo slice test; tracked as follow-up for R6.
     "timesupapi/interests/InterestMatcher*",
+    // ImportanceService wraps AiService; tracked as follow-up for R7.
+    "timesupapi/interests/ImportanceService*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
