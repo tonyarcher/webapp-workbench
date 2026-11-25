@@ -30,6 +30,7 @@ export class InterestsSettings extends LitElement {
     override connectedCallback(): void {
         super.connectedCallback();
         void this.load();
+        void this.loadLane();
     }
 
     private async load(): Promise<void> {
