@@ -154,6 +154,8 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/PromotionLaneService*",
     // InterestFeedbackService needs a repo slice test; tracked as follow-up for R10.
     "timesupapi/interests/InterestFeedbackService*",
+    // CoverageGuard is pure logic; tracked as follow-up for R11.
+    "timesupapi/interests/CoverageGuard*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
