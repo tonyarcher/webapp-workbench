@@ -5,9 +5,21 @@ import timesupapi.feeds.OpmlImportResult
 import timesupapi.feeds.OpmlImportService
 import java.util.UUID
 
+data class DryRunReport(val wouldCreate: Int, val feeds: List<String>, val folder: String, val requiresConfirm: String)
+
 @Service
 class ApprovalService(private val opmlImport: OpmlImportService) {
-    fun approve(userId: UUID, candidates: List<CandidateFeed>, folder: String): OpmlImportResult {
+    private val confirmToken = "approve"
+
+    fun dryRun(candidates: List<CandidateFeed>, folder: String): DryRunReport = DryRunReport(
+        wouldCreate = candidates.size,
+        feeds = candidates.map { it.url },
+        folder = folder,
+        requiresConfirm = confirmToken,
+    )
+
+    fun approve(userId: UUID, candidates: List<CandidateFeed>, folder: String, confirm: String): OpmlImportResult {
+        if (confirm != confirmToken) throw IllegalArgumentException("confirm must equal $confirmToken")
         val xml = buildOpml(candidates, folder)
         return opmlImport.run(userId, xml)
     }
