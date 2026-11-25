@@ -71,6 +71,16 @@ class AskServiceTest {
         assertEquals(0.0, out.first().score)
     }
 
+    @Test
+    fun askUsesSummaryWhenNoExcerpt() {
+        val uid = UUID.randomUUID()
+        val row = article("a7", "Grid storage advances")
+        whenever(listQuery.findAll(any(), any())).thenReturn(listOf(row))
+        whenever(listQuery.findExcerpts(any())).thenReturn(emptyMap())
+        val out = service.ask(uid, "grid storage", 5)
+        assertEquals(1, out.size)
+    }
+
     private fun article(id: String, title: String): ArticleListRow = ArticleListRow(
         id,
         UUID.randomUUID(),
