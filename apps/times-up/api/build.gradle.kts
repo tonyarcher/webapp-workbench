@@ -139,6 +139,8 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/InterestController*",
     // InterestExportController needs a MockMvc slice test; tracked as follow-up for R16.
     "timesupapi/interests/InterestExportController*",
+    // InterestPreviewController needs a MockMvc slice test; tracked as follow-up for R20.
+    "timesupapi/interests/InterestPreviewController*",
     // InterestService needs a repo slice test; tracked as follow-up for R2.
     "timesupapi/interests/InterestService*",
     // ResolutionService needs network + cache tests; tracked as follow-up for R3.
