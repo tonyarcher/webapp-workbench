@@ -20,6 +20,7 @@ import { applyReaderMode, loadReaderMode } from './services/reader-mode';
 import { finishLoginFromCallback } from './services/auth';
 import { parseAppConfig, setAppConfig } from './services/config';
 import { recomputeHotIfNeeded } from './db/db-query';
+import { captureInstallPrompt } from './services/pwa-install';
 
 // The runtime config must be in place before anything resolves an API or
 // identity URL — including the OAuth callback below. The entry point owns this
@@ -41,6 +42,7 @@ initTheme();
 applyReaderMode(loadReaderMode());
 // A sign-out in another tab can close IndexedDB during this best-effort maintenance.
 void recomputeHotIfNeeded().catch(() => {});
+captureInstallPrompt();
 
 // PWA install + offline support; registration in dev would fight HMR, so only
 // the production bundle gets the service worker.
