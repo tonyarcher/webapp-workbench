@@ -88,3 +88,4 @@ export type {
     StorageStatus,
 } from './api-domains';
 export { fetchArticleById } from './api-article-detail';
+export * from './api-interests';
