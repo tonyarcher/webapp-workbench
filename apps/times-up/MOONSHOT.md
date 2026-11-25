@@ -52,6 +52,13 @@ Depth here means mastery, not addiction. Nothing in this file optimizes
 time-on-site, streaks-as-guilt, or infinite scroll. Sessions end with done
 screens, queues have bottoms, and every digest says what it left out.
 
+The interest graph is the quiet layer under all of it. A follow is a weak
+signal: it names what you care about, not what you must read today. Import
+loose follows as weighted interests, resolve the few worth following as real
+sources, and let every view spend those interests on the day's stories. The
+reader gets Google News breadth without its front page, and Feedly control
+without the river.
+
 ## Reading psychology: outside-in attention design
 
 The list is an advertisement for the need-to-know information, not a feed of
@@ -103,6 +110,12 @@ it, and the API can report a feed's connector, capabilities, and last run or
 error. The super-app themes at the top still assume the rest lands first: the
 briefing desk needs clustering and digests; the workbench needs the richer
 provenance layer.
+
+The exported Google News topic and source lists are not in the reader at all
+today. They are loose signals with no weight, no publisher resolution, and no
+effect on ranking. Theme R turns them into a private interest graph that feeds
+Today, Brief, Interesting, alerts, and the desk without converting each follow
+into a subscription.
 
 ## K. The briefing desk (mornings like the president)
 
@@ -1325,6 +1338,468 @@ can tell where an item came from.
 - **First test.** Robots/permission enforcement tests, consent-gating smoke,
   and audit-log integrity tests.
 
+## R. The interest graph (loose follows become daily signal)
+
+Google News follows are the rawest useful preference data a reader can bring:
+long lists of topics, places, people, and outlets you tapped "follow" on
+without promising to read every story. The two exported lists are that data.
+A follow is not a feed. Treating each one as a subscription would turn the
+reader into the firehose it was built to replace.
+
+The shape is three artifacts, not one:
+
+1. **Interests.** Per-user weighted records. No polling and no article rows.
+   They change ranking, highlights, and briefing selection everywhere.
+2. **Sources.** A reviewed, bounded subset of followed outlets resolved to
+   real feeds and added to the global pool by explicit approval. One row per
+   URL, fetched once, with connector provenance.
+3. **Sensors.** A small, rotating set of Google News search feeds for topics
+   no publisher feed covers well. They discover candidates for the same
+   normalization and dedupe pipeline, not a separate reading stream.
+
+Everything else follows: match articles to interests through the keys the
+scheduled extractor writes (B7), judge importance in batches with Jev, promote a capped daily lane with typed
+reasons, and let feedback move the weights. No generated prose, no
+auto-subscribe, and no cross-user tracking.
+
+**Data shape.** New tables live in `apps/times-up/api` behind versioned Flyway
+migrations, beside the existing feature slices. Interests, import batches,
+candidates, promotions, and feedback are per user; source resolution is
+global and cached. Every imported row carries provenance: origin
+`GOOGLE_NEWS_IMPORT`, the imported label, and the batch it came from. A
+promotion row stores the article id, the explaining interest id, a typed
+reason, the score, the day, and a bounded excerpt head; it never stores a
+body. Interest matching reuses the per-article topic keys the scheduled
+extractor writes (B7), so no per-user match matrix is stored over the archive.
+Articles without keys yet match on feed, host, and title. Indexes follow
+the read shapes: `(user_id, day, rank)` for the promotion lane,
+`(kind, normalized_key)` for import dedupe, `(interest_key)` for the key
+join, and `(host)` for source resolution. Nothing in this theme reads a body
+on a list path.
+
+**Flow.** Parse the two lists, normalize and quarantine, propose interests
+and source candidates, resolve candidate publishers once, let the reader
+approve feeds and sensors, join interests to the existing article keys inside
+a bounded window, score the day's candidates in one batched Jev pass, build a
+capped promotion lane, apply feedback to weights, and let decay sunset what
+went unused. Each step is idempotent and resumable. A failed resolution never
+loses an approved interest.
+
+### R1. Two-file follow import
+
+- **Why.** The exported lists are the only record of what the reader loosely
+  follows. Without an import they are dead text.
+- **What.** An Organize panel uploads or pastes the topic and source lists.
+  Parse one label per line as UTF-8, apply NFKC normalization, collapse
+  whitespace, keep the display label, derive a casefolded key, drop blank and
+  junk lines, and dedupe by key with repeat count as a weight bump. Cap line
+  length and batch size. Record an idempotent batch fingerprint so a re-import
+  refreshes weights instead of duplicating rows. Show counts, top labels,
+  duplicates, and a quarantined list with reasons before anything applies.
+- **Half.** `both` (parser and batch rows in `api`, picker and report in `app`).
+- **Effort.** `M`.
+- **First test.** Parser goldens over the exported lists including the odd
+  labels; idempotency test for repeated imports; smoke for the review report
+  and quarantine display.
+
+### R2. Interest records and weights
+
+- **Why.** A follow needs a strength, a kind, and a lifetime before it can
+  rank anything.
+- **What.** Per-user interest rows with kind TOPIC, ENTITY, PLACE, or SOURCE;
+  label and normalized key; weight; origin; created and last-hit times; a
+  decay half-life; and an enabled flag. A source interest links to a feed when
+  promoted. File position, repeat count, and kind set the initial weight. Jev
+  classifies ambiguous labels in one batch, not one call per row. Manual
+  interests and learned word-map signals share the table with their own
+  origin. A low score never deletes a row; decay handles that.
+- **Half.** `both`.
+- **Effort.** `L`.
+- **First test.** Weight and decay unit tests with a frozen clock;
+  classification batch test; migration test for the table and indexes.
+
+### R3. Source label to publisher resolution
+
+- **Why.** The source file holds display names, not URLs. No feed can be found
+  until a name becomes a host.
+- **What.** The bounded resolver in R21 reads the public Google News RSS
+  search feed for a label and takes the publisher host from the item's source
+  attribute. It records the host in a global resolution cache with method,
+  confidence, and last-checked time. Never guess a domain silently; ambiguous
+  or unseen labels go to quarantine. A later export that carries publisher
+  URLs fills the same cache directly and skips resolution.
+- **Half.** `api` (resolver and cache) plus minimal `app` status.
+- **Effort.** `L`.
+- **First test.** Fixture feeds with and without source attributes; resolver
+  concurrency and backoff tests; cache-idempotency test; assertion that no
+  label or URL reaches a log line.
+
+### R4. Source candidate review and feed promotion
+
+- **Why.** P says sources are explicit and user-added. A bulk import must not
+  silently subscribe to a thousand feeds.
+- **What.** For each resolved host, run the existing feed discovery path, peek
+  recent titles and cadence, and present a review table with one accepted
+  feed per host, the confidence reason, and the alternatives. The reader
+  approves all, a subset, or none. R23 applies approvals through the existing
+  subscribe path with import provenance and a chosen folder. Rejected hosts
+  stay as SOURCE interests with no feed so they still influence ranking.
+- **Half.** `both`.
+- **Effort.** `L`.
+- **First test.** Discovery-to-candidate tests over fixture pages; approval
+  endpoint tests; smoke for bulk select and folder choice; assertion that no
+  feed is created without approval.
+
+### R5. Bounded topic sensors
+
+- **Why.** Some followed topics have no publisher feed worth polling, yet
+  their stories still matter.
+- **What.** Promote a small, configurable number of high-weight topics into
+  Google News RSS search feeds with a one-day window, quoted phrases for
+  multiword labels, and the reader's edition parameters. Register them as
+  ordinary feed rows with a search-connector id and provenance, so the global
+  poller, conditional GET, health, and dedupe apply unchanged. Rotate weekly:
+  retire low-yield sensors and promote topics with rising B7 cluster growth.
+  Flag the connector because the endpoint is undocumented; when it changes,
+  sensors degrade to empty feeds and the rest of the graph keeps working.
+- **Half.** `both`.
+- **Effort.** `L`.
+- **First test.** Query-building goldens for quoting, edition, and window;
+  rotation tests with synthetic yield; flag-off test; poller
+  stop-on-dispose test for the new connector.
+
+### R6. Interest matching on existing article keys
+
+- **Why.** Ranking at read time over every interest and every article is too
+  slow, and reading a body to rank is worse.
+- **What.** Reuse the topic and link keys the scheduled extractor writes for
+  each article (B7). Normalize imported interests into the same key space,
+  then join a reader's enabled interest keys to those article keys inside a
+  bounded recent window. Articles without keys yet match on feed, host, and
+  title until the extractor runs. Source interests match by feed id or
+  resolved host. Persist
+  only the hits that enter the promotion lane, not a per-user matrix over the
+  archive. A new interest needs no backfill beyond that window.
+- **Half.** `api`.
+- **Effort.** `M`.
+- **First test.** Join goldens for exact, phrase, and host matches; a
+  no-body-read assertion; window-boundary test; row-count assertion on a
+  seeded corpus.
+
+### R7. Batched Jev importance judgments
+
+- **Why.** Metadata overlap alone promotes noise. A typed judgment over the
+  day's candidates is better and stays cheap when batched.
+- **What.** For each day's candidate set, ask Jev one batched triage or score
+  question over bounded chunks: does this article matter to the reader's
+  stated interests, and which interest explains it. The answer is a calibrated
+  number and a choice among existing interests, never prose; it selects
+  existing rows and excerpts only. Cache by article and interest fingerprint,
+  respect the shared quota, and fall back to deterministic scores when the
+  model is unavailable, as `frontpage` already does. No prompt, title, or score
+  reaches a log.
+- **Half.** `api`.
+- **Effort.** `L`.
+- **First test.** Batch-chunking and cache tests; quota-exhaustion fallback
+  test; log-redaction test; calibration fixture with known important and
+  trivial rows.
+
+### R8. Promoted-today lane
+
+- **Why.** A rank signal nobody sees changes nothing. The reader needs one
+  place where the interests cash out.
+- **What.** A promotion lane built once per day and cached, holding a hard cap
+  of rows selected from interest-key hits, Jev scores, cluster growth,
+  cross-post count, and the existing hot and affinity signals. Refresh only on
+  a significant new cluster or a manual refresh. Every row carries a typed
+  reason chip: matched topic, followed source, multi-feed corroboration, or
+  developing story. Reasons name fields, never generated sentences. Dismiss
+  removes the row for the day and feeds R10.
+- **Half.** `both`.
+- **Effort.** `L`.
+- **First test.** Lane-cap and reason-chip goldens; frozen-clock rebuild test;
+  refresh-trigger test; dismiss persistence smoke.
+
+### R9. Highlights tied to the matched interest
+
+- **Why.** A promoted row without a why-this-matters line is still a link in a
+  river.
+- **What.** For promoted rows only, reuse the existing highlight service to
+  select verbatim key lines and pair them with the interest that matched.
+  Render one extractive highlight and a why line in the row and panel, using
+  N1's shape. Cache alongside row highlights and honor the global off switch.
+  No abstract, no paraphrase, and no uncited line.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Highlight-selection goldens; cache-key tests; off-switch
+  smoke; citation-link integrity test.
+
+### R10. Feedback and weight decay
+
+- **Why.** Tastes change. A static import becomes noise within a month.
+- **What.** Star, open, save, dismiss, not-interested, and mute on a promoted
+  row produce bounded weight deltas on the explaining interest, with an
+  explicit undo and a visible note on what changed. A scheduled decay job
+  halves unused weights over a configurable half-life, never deletes a row,
+  and surfaces a "still interested?" review in the weekend edition (K5). Mute
+  rules (B1), synced server-side by R19, veto promotion before scoring.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Delta and decay tests with a fake clock; veto test against
+  the synced mute model; undo smoke; review-surface smoke.
+
+### R11. Coverage guard on promotion
+
+- **Why.** Following ten outlets on one side of a question produces a
+  confident-looking blind spot.
+- **What.** Cap promoted rows per source, per host family, and per perspective
+  using the N4 breadth meter and M1 perspective spectrum signals. When a cap
+  binds, fill from a different source and explain the gap in one line. The
+  guard applies to promotion only, never to the full corpus, so the reader can
+  still dig into one outlet deliberately.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Cap and fill-order tests; gap-copy goldens; guard-off
+  comparison test.
+
+### R12. Canonical links for discovery items
+
+- **Why.** Google News RSS items carry a redirect link and no summary. Without
+  resolution they cannot dedupe against articles already in the reader.
+- **What.** Resolve sensor item redirects server-side through the existing
+  pinned HTTP and SSRF guard to a canonical publisher URL, normalize it, and
+  dedupe against ingested articles before creating a row. Fetch and extract a
+  body only for candidates that survive promotion; everything else stays a
+  metadata row. A failed resolution keeps the item as a low-confidence
+  metadata row with visible provenance, never a silent drop.
+- **Half.** `api`.
+- **Effort.** `L`.
+- **First test.** Redirect-chain and SSRF fixture tests; dedupe tests against
+  seeded articles; body-fetch-count assertion for a batch of sensor items.
+
+### R13. Corroboration boost
+
+- **Why.** A story in three of your sources beats the same claim in one, even
+  when every headline is unremarkable.
+- **What.** Feed B2 cross-post and B7 cluster growth into the promotion score
+  as explicit, typed signals with weights visible in the reason chip. Fold
+  wire copies before counting so one syndicated story is not three votes. The
+  boost is deterministic and capped so it cannot dominate the interest match.
+- **Half.** `both` (score in `api`, reason render in `app`).
+- **Effort.** `M`.
+- **First test.** Score goldens with synthetic clusters and wire copies; cap
+  test; reason-chip test.
+
+### R14. Interest operators in search, alerts, and views
+
+- **Why.** Interests should be usable as a filter, not only as invisible
+  ranking weight.
+- **What.** Add an interest operator to the existing search parser, scoped to
+  a named interest or kind, and let saved searches, alerts (F1), smart
+  folders, and the Interesting view accept it. Results keep the normal row
+  actions and show which interest matched. The operator composes with the
+  existing feed, state, and date operators instead of adding a second query
+  language.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Parser goldens for the new operator; composed-query tests;
+  alert matching test; view smoke.
+
+### R15. Interests in the daily views
+
+- **Why.** The graph only earns its keep if the reader meets it during the
+  day, not in a settings screen.
+- **What.** Today opens on the promotion lane (R8) above the capped folder
+  sections. Brief seeds its minute tier from promoted rows (K1) and its delta
+  from new interest-key hits (K2). Interesting adds interest weight to the
+  learned word map. Focus can draw a promoted queue (O3 and F4). The weekend
+  review shows interest drift (K5) and Stats shows interest mix against read
+  mix (O4). Every surface links back to the interest that caused the row and
+  honors mute and the highlight off switch.
+- **Half.** `both`.
+- **Effort.** `L`.
+- **First test.** View-level smoke for each surface; reason-link integrity
+  tests; muted-row exclusion test.
+
+### R16. Portable interests
+
+- **Why.** An import the reader cannot export is lock-in by another name.
+- **What.** Add interests, candidate dispositions, and feedback to the
+  versioned JSON archive and line-separated mirror (D3), with a documented
+  schema, and accept the same file on import. Keep the plain two-list text
+  format valid so the original Google News export remains usable input.
+  Re-import is idempotent by fingerprint and never overwrites manual edits
+  without a visible conflict note.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Round-trip fixtures for both formats; version-rejection
+  test; conflict-note smoke.
+
+### R17. MCP surface for the graph
+
+- **Why.** The assistant should answer "what do I follow and why did this
+  surface" from the same private corpus.
+- **What.** Extend G6 with read tools for interests, match reasons,
+  promotions, and import status. Write tools for accepting or skipping
+  candidates stay behind `mcp_writes` and require the per-call confirm
+  argument. No arbitrary URL fetch, no Google News query from an MCP tool,
+  and no payload-bearing log line; the resolver stays server-owned.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Tool-contract tests for the advertised schemas; write
+  rejected before consent; log-redaction assertion.
+
+### R18. Safety, flags, and budgets
+
+- **Why.** This theme touches an undocumented endpoint, third-party
+  publishers, and a large one-time import. It must fail small.
+- **What.** Flag import, resolution, sensors, and promotion separately so each
+  can ship alone. Run import and resolution as bounded background jobs with
+  progress and cancellation; no request waits on a thousand resolutions.
+  Respect robots, terms, rate limits, and the existing SSRF and sanitizing
+  paths. Never bypass a paywall or access control. Keep a local, user-visible
+  action log of resolution and promotion runs without labels, URLs, or
+  titles. Budgets: import parse under a second, resolution bounded per hour,
+  promotion build under a second for a day's candidates, no body read on a
+  list path, and no Jev call per article per reader. Add these to H2's CI
+  budgets.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Flag-off tests at every seam; job cancellation and resume
+  tests; rate-limit and robots tests; budget assertions in the browser suite;
+  log-redaction test.
+
+### R19. Server-side mute sync for promotion
+
+- **Why.** B1's mute rules live only in browser storage, so a server-built
+  promotion lane cannot honor them before scoring. A muted story would take a
+  slot and then disappear, pushing out a row the reader would have accepted.
+- **What.** Extend B1 with a versioned per-user mute model and sync, keeping
+  the client rules as the source during the transition and showing conflicts
+  plainly. Expose the rules to the promotion builder only; reading views keep
+  their existing client evaluation. Sync the shipped B1 fields: terms, a
+  title/body/either match target, enabled, and a folder scope. Author, domain,
+  and pattern matching stay in B1's still-wanted slice, not here. No new rule
+  language and no cross-user data.
+- **Half.** `both` (storage and endpoint in `api`, sync and conflict note in
+  `app`).
+- **Effort.** `M`.
+- **First test.** Migration and endpoint tests for the rules; sync
+  round-trip and conflict smoke; veto test in the promotion builder; assertion
+  that no rule text reaches a log line.
+
+### R20. Import workbench in the app
+
+- **Why.** A two-list import with thousands of labels needs a review surface,
+  not a text box and a spinner.
+- **What.** A sub-panel inside Organize, built like the existing feed tools:
+  upload the two lists or paste them, parse into a preview with counts,
+  duplicates, and quarantined rows, then review each row with accept, skip,
+  or quarantine-override controls. Add bulk accept by kind, filtering within
+  the review list, keyboard navigation, and a status line with cancel. Keep
+  parsing in a pure service module and all state in the host, never in a
+  detached component field. Nothing is written before an explicit approve.
+- **Half.** `app`.
+- **Effort.** `L`.
+- **First test.** Smoke tests for the parser over crafted lists and file text;
+  review-list render and selection tests; seeded accessibility audit for the
+  panel; cache-key assertions for the batch-scoped reads.
+
+### R21. Sane rate-limited resolver
+
+- **Why.** Resolving a thousand labels against an undocumented Google News
+  endpoint with a tight loop is how you get the reader blocked and the server
+  hammered.
+- **What.** A scheduled `DisposableBean` job shaped like the feed poller:
+  single-thread worker, single-flight guard, a bounded batch per tick, a
+  configurable minimum delay between requests, and a per-host fixed-window
+  cap like the usage limiter. On 429, 5xx, timeout, or malformed XML, set a
+  backoff timestamp and skip the row until it is due; never retry hot.
+  Fetch only through the existing `FeedFetcher` and `PageFetcher` seams so the
+  pinned-DNS SSRF guard, redirect caps, timeouts, and byte limits all apply.
+  Resolve a publisher host from the feed's source attribute, then run the
+  existing feed-discovery service on that host. Cache hosts and feed URLs
+  permanently and skip rows already resolved. Log counts, never labels or
+  URLs. Check the stop flag in every loop and shut the worker down on dispose.
+- **Half.** `api`.
+- **Effort.** `L`.
+- **First test.** Fake fetcher and fake clock tests for request delay, batch
+  cap, per-host cap, 429 backoff, single-flight, cache hit, and worker stop on
+  dispose; SSRF-refusal test; log-redaction assertion.
+
+### R22. Import status, progress, and resume
+
+- **Why.** A job that can run for minutes must say what it is doing and
+  survive a reload.
+- **What.** A versioned status read per batch with parsed, resolved,
+  discovered, failed, and pending counts plus the current state. The panel
+  polls with backoff and stops when the tab goes away or the user cancels.
+  Persist each candidate's due time so a restart resumes instead of starting
+  over, and expose partial results before the whole batch finishes. Cancel
+  marks the batch stopped without deleting already-discovered candidates.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Status projection tests with a frozen clock; cancel and
+  resume tests; progress and cancel smoke in the panel.
+
+### R23. Approval through the existing subscribe path
+
+- **Why.** A second subscription implementation would drift from the global
+  feed pool, membership rules, sync rows, and health tracking.
+- **What.** Turn accepted candidates into a generated OPML payload and run it
+  through the existing bulk import service, which already creates folders,
+  pool feeds, subscriptions, memberships, and sync rows in one transaction.
+  Mark the candidates approved only after that succeeds, and offer a target
+  folder name from the panel. Do not write feeds or subscriptions from the
+  import slice, and do not add a second URL dedupe. Queue the new feeds
+  through the poller's existing queue method so they are fetched promptly.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Approval tests asserting pool rows, subscriptions,
+  memberships, and sync rows; idempotent re-approval test; no-duplicate
+  assertion; folder-choice smoke.
+
+### R24. Dry run and reversible decisions
+
+- **Why.** One wrong bulk click can create dozens of feeds the reader never
+  wanted.
+- **What.** A dry-run read that reports what approval would create, with a
+  reason per row and no writes, plus an explicit confirm token the approve
+  call must carry. A one-tap undo removes only feeds this batch created, only
+  inside a visible window, and only when no reading state exists on them;
+  pre-existing feeds are never touched. Quarantined rows can be restored with
+  a stated reason.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Dry-run no-write assertion; confirm-token rejection test;
+  undo tests preserving pre-existing feeds; confirm-dialog smoke.
+
+### R25. Interest editor and manual overrides
+
+- **Why.** An import is a starting point. Readers need to correct what the
+  import guessed.
+- **What.** A compact editor per interest: rename the display label, adjust
+  weight, disable, change kind, merge duplicates, add a manual interest, and
+  forget with a reason. Source interests show their resolved feed and health.
+  Changes take effect at the next match build, with no archive rewrite.
+  Every edit is a versioned, per-user write.
+- **Half.** `both`.
+- **Effort.** `M`.
+- **First test.** Endpoint tests for each edit; merge-preservation test;
+  editor and validation smoke.
+
+### R26. Import report and portability
+
+- **Why.** The reader should be able to see and keep exactly what the importer
+  decided.
+- **What.** A downloadable report in text and JSON with each label, normalized
+  key, decision, reason, resolved host, and feed URL. Include it in the
+  portable archive (D3) and accept the same report as valid import input.
+  Render values as text, never as markup, and keep bodies out of the report.
+- **Half.** `both`.
+- **Effort.** `S`.
+- **First test.** Report goldens; archive round-trip; text-rendering smoke.
+
 ## I. Sequencing (six months to daylight)
 
 Foundations first, because the desk depends on them. The months below name
@@ -1338,7 +1813,9 @@ audits green on every new screen.
 
 Month two is briefing and ears: topic clustering (B7) and the row-level
 provenance layer (N6) first, because the deltas, cluster alerts, and
-storylines below consume them, then three-tier briefing with overnight
+storylines below consume them, then the interest import, weight model, and
+key-based matching (R1, R2, R6) so the graph has something to rank with,
+then three-tier briefing with overnight
 deltas, scheduled briefings that arrive, audio briefs with offline cache,
 ask-your-feeds scoped Q&A, keyword and cluster alerts with quiet hours,
 push plumbing (F3) so the alert and briefing deliveries have a channel,
@@ -1351,7 +1828,12 @@ perspective spectrum (M1) as coverage compare, row-level why-this-row (N1)
 on top of the provenance layer (N6), highlights with margin notes, webhooks,
 personal reading page, full portable export, an MCP server for reader data
 (G6), and the connector framework, provenance, and source safety baseline
-(P12). The quarter closes by deleting
+(P12). On that foundation land the import workbench and rate-limited resolver
+(R20, R21), status and resume (R22), approval through the existing subscribe
+path (R23), source resolution and candidate approval (R3, R4), bounded topic
+sensors (R5), server-side mute sync (R19), batched Jev judgments (R7), the
+promoted lane (R8), canonical links for discovery items (R12), and interest
+operators (R14). The quarter closes by deleting
 shipped lines from this file and writing the next quarter from what readers
 actually used, informed by the private stats screen (O4) and any opt-in
 aggregate signals (E3), not by opinion.
@@ -1362,7 +1844,11 @@ backgrounders on demand, the in-panel reading companion, the coverage-
 balance meter (N4) as the second half of the perspective-spectrum pair
 with M1, the contradiction radar, numbers with receipts, beat workspaces,
 the weekend review edition, the full offline reader, and the broader source
-expansion (P3, P5–P11, P13) as the connector foundation proves out. These
+expansion (P3, P5–P11, P13) as the connector foundation proves out. The
+interest graph matures here: dry run and undo, the interest editor, the import
+report, interest-tied highlights, feedback and decay, the coverage guard,
+corroboration, daily-view wiring, portable interests, and the MCP graph tools
+(R9–R11, R13, R15–R17, R24–R26). These
 range from `M` to `XL`; sequence them by which unlocked the most delight in
 months one through three, and cut any two without grief if the foundations
 need the time instead.
