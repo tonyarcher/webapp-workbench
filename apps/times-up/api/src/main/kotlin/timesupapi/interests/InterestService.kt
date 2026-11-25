@@ -13,31 +13,41 @@ private const val MAX_INITIAL_WEIGHT = 5.0
 private const val MIN_WEIGHT = 0.01
 
 @Service
-class InterestService(private val repo: InterestRepo) {
+class InterestService(private val repo: InterestRepo, private val sourceService: SourceService) {
     internal var clock: Clock = Clock.systemUTC()
 
     fun import(userId: UUID, topics: String, sources: String): ImportResponse {
         val (topicReport, topicLabels) = FollowImportParser.parse(topics)
-        val (sourceReport, sourceLabels) = FollowImportParser.parse(sources)
+        val sourceEntities = sourceService.importSources(
+            userId,
+            sources.lines().map {
+                it.trim()
+            }.filter { it.isNotEmpty() },
+        )
         val now = clock.instant()
         for ((i, pl) in topicLabels.withIndex()) {
-            upsert(userId, InterestKind.TOPIC, pl, i, now)
-        }
-        for ((i, pl) in sourceLabels.withIndex()) {
-            upsert(userId, InterestKind.SOURCE, pl, i, now)
+            upsertTopic(userId, pl, i, now)
         }
         val fingerprint = sha256(topics + "\n---\n" + sources)
+        val sourceReport = ImportReport(
+            count = sources.lines().count { it.trim().isNotEmpty() },
+            unique = sourceEntities.size,
+            duplicates = 0,
+            quarantined = sourceEntities.count { !it.validated },
+            top = sourceEntities.take(10).map { it.label },
+            quarantinedLabels = sourceEntities.filter { !it.validated }.take(20).map { it.label },
+        )
         return ImportResponse(fingerprint, topicReport, sourceReport)
     }
 
-    private fun upsert(userId: UUID, kind: InterestKind, pl: ParsedLabel, position: Int, now: Instant) {
-        val existing = repo.findByUserIdAndKindAndKey(userId, kind.name, pl.key)
+    private fun upsertTopic(userId: UUID, pl: ParsedLabel, position: Int, now: Instant) {
+        val existing = repo.findByUserIdAndKindAndKey(userId, "TOPIC", pl.key)
         val weight = initialWeight(position, pl.count)
         if (existing == null) {
             repo.save(
                 InterestEntity(
                     userId = userId,
-                    kind = kind.name,
+                    kind = "TOPIC",
                     label = pl.display,
                     key = pl.key,
                     weight = weight,
