@@ -22,11 +22,15 @@ data class ImportResponse(val fingerprint: String, val topics: ImportReport, val
 data class CandidateRequest(val labels: List<String> = emptyList())
 data class CandidateResponse(val candidates: List<CandidateResult>)
 
+data class LaneJson(val articleId: String, val title: String, val score: Double, val reason: String)
+data class LaneResponse(val builtAt: Long, val rows: List<LaneJson>)
+
 @RestController
 class InterestController(
     private val user: IdentityUser,
     private val service: InterestService,
     private val candidates: CandidateService,
+    private val lane: PromotionLaneService,
 ) {
     @GetMapping("/interests", headers = ["X-Api-Version=1"])
     fun list(): List<InterestJson> = service.list(user.id).map {
@@ -40,4 +44,10 @@ class InterestController(
     @PostMapping("/interests/candidates", headers = ["X-Api-Version=1"])
     fun candidates(@RequestBody body: CandidateRequest): CandidateResponse =
         CandidateResponse(candidates.candidates(body.labels))
+
+    @GetMapping("/interests/lane", headers = ["X-Api-Version=1"])
+    fun lane(): LaneResponse {
+        val r = lane.build(user.id)
+        return LaneResponse(r.builtAt, r.rows.map { LaneJson(it.articleId, it.title, it.score, it.reason) })
+    }
 }
