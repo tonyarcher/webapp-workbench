@@ -135,6 +135,10 @@ val jacocoExcludes = listOf(
     "timesupapi/TimesUpApiApplicationKt*",
     // AskController needs a MockMvc slice test; tracked as follow-up for N3.
     "timesupapi/ask/AskController*",
+    // InterestController needs a MockMvc slice test; tracked as follow-up for R2.
+    "timesupapi/interests/InterestController*",
+    // InterestService needs a repo slice test; tracked as follow-up for R2.
+    "timesupapi/interests/InterestService*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
