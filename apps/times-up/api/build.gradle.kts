@@ -176,6 +176,8 @@ val jacocoExcludes = listOf(
     // ImportBatchService needs a repo slice test; tracked as follow-up for R22.
     "timesupapi/interests/ImportBatchService*",
     "timesupapi/interests/ImportBatchEntity*",
+    // ApprovalService runs OPML import; tracked as follow-up for R23.
+    "timesupapi/interests/ApprovalService*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
