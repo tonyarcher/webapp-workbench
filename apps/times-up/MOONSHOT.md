@@ -117,6 +117,11 @@ effect on ranking. Theme R turns them into a private interest graph that feeds
 Today, Brief, Interesting, alerts, and the desk without converting each follow
 into a subscription.
 
+The PWA installs and has a service worker, but the browser shell itself is
+unused: no install prompt, no notification permission or delivery, and no
+unread count on the app icon. Theme S adds those surfaces without a native
+wrapper.
+
 ## K. The briefing desk (mornings like the president)
 
 One screen, three depths, zero decisions before coffee. The editions
@@ -1800,6 +1805,124 @@ loses an approved interest.
 - **Effort.** `S`.
 - **First test.** Report goldens; archive round-trip; text-rendering smoke.
 
+## S. Browser-native surface (install, notifications, unread badge)
+
+A browser tab cannot stay resident or sit in a system tray. It can do the next
+best things: install as a standalone window, notify the reader away from the
+tab, and show the unread count on the app icon. All three live inside the PWA.
+No native shell, no extension, and no third-party push vendor.
+
+### S1. In-app install affordance
+
+- **Why.** Installability is offered by a quiet address-bar icon most readers
+  never see.
+- **What.** Capture `beforeinstallprompt` and keep it until used. Render a
+  plain "Install Times Up" action in the account chip and settings with a short
+  offline-first explanation. When installed, hide the action and show installed
+  state. On browsers without the event, link to the install section of the app
+  README. No nags, no demanding badges, and no stored prompt across reloads.
+- **Half.** `app`.
+- **Effort.** `S`.
+- **First test.** Prompt-capture smoke with a fake event; installed-state smoke;
+  audit for the new control.
+
+### S2. Notification permission onboarding
+
+- **Why.** A permission request without context gets denied forever.
+- **What.** Show a short in-app explanation before the browser prompt, and ask
+  only from a real user gesture. Track granted, denied, and default states.
+  Re-ask only after a visible re-explanation, and offer a test notification.
+  Never request on first load and never use a third-party push service.
+- **Half.** `app`.
+- **Effort.** `S`.
+- **First test.** Permission-state smoke for all three states; automatic-prompt
+  suppression test.
+
+### S3. Alert and briefing notifications
+
+- **Why.** F1 alerts and K4 briefings need a channel that reaches the reader
+  away from the tab.
+- **What.** Use the browser Notification API from the service worker for the
+  alert hits and scheduled briefings those slices already select. Keep payloads
+  to a short label, a count, and a deep link to existing rows: no article
+  bodies, titles, tokens, or user ids in the payload or a log line. Honor the
+  shared quiet-hours preference from F3 and each alert's opt-in. Collapse
+  repeated hits into one notification with a count. A click opens the app at
+  the rows and marks the notification handled. Server-side selection stays in
+  the slices that own it.
+- **Half.** `both` (selection server-side, render and routing client-side).
+- **Effort.** `M`.
+- **First test.** Payload-redaction assertions; quiet-hours time travel;
+  deep-link routing smoke; collapse-count test.
+
+### S4. Unread count on the app icon
+
+- **Why.** The reader should see what is waiting without opening the app.
+- **What.** Derive one total from the existing library badges, then call
+  `navigator.setAppBadge` where supported and fall back to drawing a small
+  count over the favicon on a canvas. Cap the display at 99+, and clear on
+  sign-out, session death, and all-read. Update from the same throttled badge
+  refresh that feeds the sidebar so the two never disagree. Count only, never
+  titles.
+- **Half.** `app`.
+- **Effort.** `M`.
+- **First test.** Badge goldens for 0, 1, 99, and 100+; clear-on-sign-out smoke;
+  favicon-restore test.
+
+### S5. Service worker notification actions and routing
+
+- **Why.** A notification that opens a blank tab is worse than none.
+- **What.** Add show and dismiss actions where the platform supports them.
+  Validate every route carried in notification data against the app's own path
+  parser before use; untrusted URLs never become a destination. A click focuses
+  an existing app window instead of opening a duplicate, and actions work
+  offline for cached rows.
+- **Half.** `app`.
+- **Effort.** `M`.
+- **First test.** Route allow-list tests; duplicate-window smoke;
+  offline-action smoke.
+
+### S6. Background refresh without a resident process
+
+- **Why.** The web equivalent of keeping the app running is bounded background
+  refresh, not a tray process.
+- **What.** Use Periodic Background Sync and the Sync API where available to
+  request a server sync and refresh cached rows. Fall back to the existing
+  foreground sync loop everywhere else. Respect battery saver, offline state,
+  and the auth epoch, and unregister on sign-out. Never promise live delivery
+  where the browser lacks the API.
+- **Half.** `app`, no new server surface.
+- **Effort.** `L`.
+- **First test.** Registration tests with fake sync APIs; auth-epoch and
+  sign-out teardown tests; unsupported-browser smoke.
+
+### S7. Browser surface settings
+
+- **Why.** Install state, notification permission, and the icon badge each
+  need a place the reader can see and revoke.
+- **What.** One compact settings section showing install state, notification
+  permission, quiet hours owned by F3, badge on or off, and a test
+  notification. Every toggle says what it does and how to undo it. Cross-device
+  sync is not required for the first slice.
+- **Half.** `app`.
+- **Effort.** `S`.
+- **First test.** Settings render smoke; revoke and re-request flow; audit for
+  the section.
+
+### S8. Privacy and platform limits
+
+- **Why.** Browser surfaces leak easily when payloads and routes are handled
+  carelessly.
+- **What.** No analytics or third-party push service in this theme. No titles,
+  bodies, URLs, or user ids in notification payloads or logs. Validate every
+  route. Degrade quietly when a browser lacks an API, and document in the
+  in-app help which surfaces depend on the browser. VAPID keys, if F3 ever
+  needs them, stay per deployment.
+- **Half.** `app`.
+- **Effort.** `S`.
+- **First test.** Log-redaction assertions; unsupported-API smoke; help-text
+  test.
+
 ## I. Sequencing (six months to daylight)
 
 Foundations first, because the desk depends on them. The months below name
@@ -1821,7 +1944,9 @@ ask-your-feeds scoped Q&A, keyword and cluster alerts with quiet hours,
 push plumbing (F3) so the alert and briefing deliveries have a channel,
 feed health dashboard, site-to-feed finder, feed-format parity and
 autodiscovery with polite polling foundations (P1, P2, P4), and stats. The
-push and email surfaces stay opt-in from day one with revoke paths tested.
+browser shell arrives here too: install affordance, notification onboarding,
+and the unread icon badge (S1, S2, S4). The push and email surfaces stay opt-in
+from day one with revoke paths tested.
 
 Month three is understanding: duplicate clustering (B2) with the
 perspective spectrum (M1) as coverage compare, row-level why-this-row (N1)
@@ -1833,7 +1958,9 @@ personal reading page, full portable export, an MCP server for reader data
 path (R23), source resolution and candidate approval (R3, R4), bounded topic
 sensors (R5), server-side mute sync (R19), batched Jev judgments (R7), the
 promoted lane (R8), canonical links for discovery items (R12), and interest
-operators (R14). The quarter closes by deleting
+operators (R14). Alert and briefing notifications, service worker routing, and
+browser surface settings (S3, S5, S7) reuse the delivery channel from month
+two. The quarter closes by deleting
 shipped lines from this file and writing the next quarter from what readers
 actually used, informed by the private stats screen (O4) and any opt-in
 aggregate signals (E3), not by opinion.
@@ -1848,7 +1975,8 @@ expansion (P3, P5–P11, P13) as the connector foundation proves out. The
 interest graph matures here: dry run and undo, the interest editor, the import
 report, interest-tied highlights, feedback and decay, the coverage guard,
 corroboration, daily-view wiring, portable interests, and the MCP graph tools
-(R9–R11, R13, R15–R17, R24–R26). These
+(R9–R11, R13, R15–R17, R24–R26). Background refresh and the privacy limits
+(S6, S8) land when the browser APIs and the help surface are ready. These
 range from `M` to `XL`; sequence them by which unlocked the most delight in
 months one through three, and cut any two without grief if the foundations
 need the time instead.
