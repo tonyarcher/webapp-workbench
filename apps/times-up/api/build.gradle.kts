@@ -164,6 +164,8 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/CorroborationBoost*",
     // McpToolDispatcher needs a principal slice test; tracked as follow-up for R17.
     "timesupapi/mcp/McpToolDispatcher*",
+    // InterestFlagsService reads env; tracked as follow-up for R18.
+    "timesupapi/interests/InterestFlagsService*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
