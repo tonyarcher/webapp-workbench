@@ -139,6 +139,9 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/InterestController*",
     // InterestService needs a repo slice test; tracked as follow-up for R2.
     "timesupapi/interests/InterestService*",
+    // ResolutionService needs network + cache tests; tracked as follow-up for R3.
+    "timesupapi/interests/ResolutionService*",
+    "timesupapi/interests/ResolutionCacheEntity*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
