@@ -21,7 +21,7 @@ export class InterestsSettings extends LitElement {
 
     static override styles = css`
         :host { display: block; padding: 1rem; }
-        textarea { width: 100%; min-height: 80px; margin-bottom: 0.5rem; }
+        textarea { width: 100%; min-height: 200px; margin-bottom: 0.5rem; font-family: monospace; font-size: 0.85rem; }
         button { margin-right: 0.5rem; }
         .interest { padding: 0.25rem 0; border-bottom: 1px solid var(--border, #eee); }
         .weight { color: var(--text-muted, #888); font-size: 0.85rem; }
@@ -58,6 +58,16 @@ export class InterestsSettings extends LitElement {
         }
     }
 
+    private async onFile(event: Event, target: 'topics' | 'sources'): Promise<void> {
+        const input = event.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        const text = await file.text();
+        if (target === 'topics') this.topics = text;
+        else this.sources = text;
+        input.value = '';
+    }
+
     private async loadLane(): Promise<void> {
         try {
             this.lane = await fetchLane();
@@ -71,7 +81,9 @@ export class InterestsSettings extends LitElement {
             <h3>Interests</h3>
             <p>Import followed topics and sources from exported lists.</p>
             <textarea .value=${this.topics} @input=${(e: Event) => (this.topics = (e.target as HTMLTextAreaElement).value)} placeholder="Topics (one per line)"></textarea>
+            <input type="file" accept=".txt" @change=${(e: Event) => void this.onFile(e, 'topics')} />
             <textarea .value=${this.sources} @input=${(e: Event) => (this.sources = (e.target as HTMLTextAreaElement).value)} placeholder="Sources (one per line)"></textarea>
+            <input type="file" accept=".txt" @change=${(e: Event) => void this.onFile(e, 'sources')} />
             <button ?disabled=${this.busy} @click=${() => void this.doImport()}>Import</button>
             <button @click=${() => void this.loadLane()}>Load promoted lane</button>
             ${this.status ? html`<p>${this.status}</p>` : ''}
