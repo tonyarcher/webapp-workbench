@@ -25,12 +25,16 @@ data class CandidateResponse(val candidates: List<CandidateResult>)
 data class LaneJson(val articleId: String, val title: String, val score: Double, val reason: String)
 data class LaneResponse(val builtAt: Long, val rows: List<LaneJson>)
 
+data class FeedbackRequest(val interestKey: String, val action: String)
+data class FeedbackResponse(val interestKey: String, val newWeight: Double)
+
 @RestController
 class InterestController(
     private val user: IdentityUser,
     private val service: InterestService,
     private val candidates: CandidateService,
     private val lane: PromotionLaneService,
+    private val feedback: InterestFeedbackService,
 ) {
     @GetMapping("/interests", headers = ["X-Api-Version=1"])
     fun list(): List<InterestJson> = service.list(user.id).map {
@@ -50,4 +54,8 @@ class InterestController(
         val r = lane.build(user.id)
         return LaneResponse(r.builtAt, r.rows.map { LaneJson(it.articleId, it.title, it.score, it.reason) })
     }
+
+    @PostMapping("/interests/feedback", headers = ["X-Api-Version=1"])
+    fun feedback(@RequestBody body: FeedbackRequest): FeedbackResponse =
+        FeedbackResponse(body.interestKey, feedback.feedback(user.id, body.interestKey, body.action))
 }

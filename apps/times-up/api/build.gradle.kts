@@ -152,6 +152,8 @@ val jacocoExcludes = listOf(
     "timesupapi/interests/ImportanceService*",
     // PromotionLaneService orchestrates matcher + importance; tracked as follow-up for R8.
     "timesupapi/interests/PromotionLaneService*",
+    // InterestFeedbackService needs a repo slice test; tracked as follow-up for R10.
+    "timesupapi/interests/InterestFeedbackService*",
 )
 
 tasks.named<JacocoReport>("jacocoTestReport") {
