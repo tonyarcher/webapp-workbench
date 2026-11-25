@@ -12,6 +12,7 @@ const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     'ai-connections',
     'stats',
     'glossary',
+    'interests',
 ];
 
 /**
