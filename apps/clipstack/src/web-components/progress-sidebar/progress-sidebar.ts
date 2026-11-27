@@ -31,6 +31,10 @@ export class ProgressSidebar extends LitElement {
         this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     }
 
+    private emitReverse(): void {
+        this.dispatchEvent(new CustomEvent('reverse', { bubbles: true, composed: true }));
+    }
+
     private onJump(event: Event): void {
         const button = event.currentTarget as HTMLButtonElement;
         const index = Number(button.dataset['index']);
@@ -87,7 +91,7 @@ export class ProgressSidebar extends LitElement {
         const total = this.items.length;
         const progress = total > 0 ? ((this.activeIndex + 1) / total) * 100 : 0;
         const skipped = this.skippedCount;
-        return html`<div class="sidebar">${this.renderBrand()}<div class="count">${this.activeIndex + 1} / ${total}${skipped > 0 ? ` · ${skipped} skipped` : ''}</div><div class="progress-track"><div class="progress-fill" style="width: ${progress}%"></div></div><label class="auto-advance auto-advance-top"><input type="checkbox" .checked=${this.autoAdvance} @change=${this.onAutoAdvanceChange}>Auto-advance</label><div class="scroller" ${ref(this.onListRef)}>${this.renderList()}<div class="toolbar"><button class="new-list" @click=${this.emitNewList}>New list</button></div></div></div>`;
+        return html`<div class="sidebar">${this.renderBrand()}<div class="count">${this.activeIndex + 1} / ${total}${skipped > 0 ? ` · ${skipped} skipped` : ''}</div><div class="progress-track"><div class="progress-fill" style="width: ${progress}%"></div></div><div class="controls"><label class="auto-advance"><input type="checkbox" .checked=${this.autoAdvance} @change=${this.onAutoAdvanceChange}>Auto-advance</label><button class="reverse" @click=${this.emitReverse}>Reverse</button></div><div class="scroller" ${ref(this.onListRef)}>${this.renderList()}<div class="toolbar"><button class="new-list" @click=${this.emitNewList}>New list</button></div></div></div>`;
     }
 }
 

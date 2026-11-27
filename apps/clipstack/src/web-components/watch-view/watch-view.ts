@@ -29,7 +29,6 @@ export class WatchView extends LitElement {
     @state() private resetKey = '';
     @state() private sidebarOpen = false;
     @state() private autoAdvance = false;
-    @state() private reverse = false;
 
     private viewport: ScrollViewport | null = null;
     private prevItems: ClipLink[] = [];
@@ -45,8 +44,7 @@ export class WatchView extends LitElement {
             const items = this.items;
             if (items !== this.prevItems) {
                 this.prevItems = items;
-                const ordered = this.reverse ? [...items].reverse() : items.map((link) => ({ ...link }));
-                this.links = ordered.map((link) => ({ ...link }));
+                this.links = items.map((link) => ({ ...link }));
                 this.scrollItems = this.links.map((link, index) => toScrollItem(link, index, this.links.length));
                 this.listGen += 1;
                 this.resetKey = `${items[0]?.id ?? ''}:${items.length}:${this.listGen}`;
@@ -183,14 +181,6 @@ export class WatchView extends LitElement {
         this.sidebarOpen = !this.sidebarOpen;
     }
 
-    private onToggleReverse(): void {
-        this.reverse = !this.reverse;
-        this.links = [...this.links].reverse();
-        this.scrollItems = this.links.map((link, index) => toScrollItem(link, index, this.links.length));
-        this.listGen += 1;
-        this.resetKey = `${this.links[0]?.id ?? ''}:${this.links.length}:${this.listGen}`;
-    }
-
     private emitNewList(): void {
         this.dispatchEvent(new CustomEvent('new-list', { bubbles: true, composed: true }));
     }
@@ -279,15 +269,6 @@ export class WatchView extends LitElement {
                 @new-list=${this.emitNewList}
                 @close=${this.onBackdrop}
             ></cs-progress-sidebar>
-            ${
-                this.sidebarOpen
-                    ? html`<button
-                          class="reverse-toggle"
-                          aria-label=${this.reverse ? 'Reverse order off' : 'Reverse order on'}
-                          @click=${this.onToggleReverse}
-                      >${this.reverse ? '↓ Reverse' : '↑ Reverse'}</button>`
-                    : html``
-            }
         `;
     }
 

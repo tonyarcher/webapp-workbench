@@ -88,10 +88,19 @@
     user-select: none;
 }
 
-.auto-advance-top {
+.controls {
     flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     padding: 0 16px 10px;
     border-bottom: 1px solid var(--border);
+}
+
+/* The collapsed slideout sits off-screen; keep its controls out of the tab order too. */
+:host(:not(.open)) .reverse {
+    visibility: hidden;
 }
 
 .auto-advance input {
@@ -99,7 +108,8 @@
 }
 
 .new-list,
-.close {
+.close,
+.reverse {
     padding: 6px 12px;
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -111,12 +121,17 @@
 }
 
 .new-list:hover,
-.close:hover {
+.close:hover,
+.reverse:hover {
     background: var(--surface-hover);
 }
 
 .new-list {
     flex: 1;
+}
+
+.reverse {
+    flex: none;
 }
 
 .close {

@@ -57,6 +57,16 @@ export class AppShell extends LitElement {
         saveProgress(event.detail.index, event.detail.maxSeen);
     }
 
+    /** Reverse the stack and start from the other end. Reversing is its own inverse. */
+    private onReverse(): void {
+        const result = this.result;
+        if (!result || result.items.length < 2) return;
+        this.result = { items: [...result.items].reverse(), skipped: result.skipped };
+        this.startIndex = 0;
+        this.startMaxSeen = 0;
+        this.persistList(0, 0);
+    }
+
     /** Persist oEmbed author/title without replacing the items reference
      *  (that would remount the watch view and abort in-flight probes). */
     private onLinksEnriched(event: CustomEvent<{ items: ClipLink[] }>): void {
@@ -74,6 +84,7 @@ export class AppShell extends LitElement {
                 .startMaxSeen=${this.startMaxSeen}
                 @new-list=${this.onNewList}
                 @progress=${this.onProgress}
+                @reverse=${this.onReverse}
                 @links-enriched=${this.onLinksEnriched}
             ></cs-watch-view></main>`;
         }
