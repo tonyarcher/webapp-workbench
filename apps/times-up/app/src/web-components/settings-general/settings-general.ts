@@ -4,12 +4,19 @@ import { discoverSite as discoverSiteHost, subscribeToFeed as subscribeToFeedHos
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
 import { flushUsageNow, loadUsageEnabled, recordUsage, saveUsageEnabled } from '../../services/usage';
 import {
+    notificationState as readNotificationState,
+    requestNotificationPermission,
+    showTestNotification,
+    type NotificationState,
+} from '../../services/notifications';
+import {
     buildAboutSection,
     buildAppearanceSection,
     buildReaderSection,
     buildSharingSection,
     buildUsageSection,
 } from './settings-general-sections';
+import { buildNotificationsSection } from './settings-general-notifications';
 import type { DiscoveredFeed, ScrapeCandidate, ScrapePreview } from '../../services/api';
 import type { ShareTarget } from '../../services/share';
 import { chooseStrategy, followPage, previewPage, toggleCandidate } from './settings-general-scrape';
@@ -80,6 +87,9 @@ export class SettingsGeneral extends HTMLElement {
     declare discoverStatus: string;
     declare discoverStatusError: boolean;
     declare discovered: DiscoveredFeed[];
+    declare notificationState: NotificationState;
+    declare notificationStatus: string;
+    declare notificationStatusError: boolean;
 
     private bodyEl: HTMLDivElement | null = null;
     private updateScheduled = false;
@@ -119,6 +129,9 @@ export class SettingsGeneral extends HTMLElement {
         defineReactive(this, 'discoverStatus', '');
         defineReactive(this, 'discoverStatusError', false);
         defineReactive(this, 'discovered', [] as DiscoveredFeed[]);
+        defineReactive(this, 'notificationState', 'unsupported' as NotificationState);
+        defineReactive(this, 'notificationStatus', '');
+        defineReactive(this, 'notificationStatusError', false);
         this.resetState();
     }
 
@@ -153,6 +166,9 @@ export class SettingsGeneral extends HTMLElement {
 
     connectedCallback(): void {
         if (!this.bodyEl) this.build();
+        // The reader may have changed the site permission in browser settings
+        // while another panel was open, so read it again on every mount.
+        this.notificationState = readNotificationState();
         this.paint();
         recordUsage('settings_panel_viewed');
     }
@@ -179,6 +195,7 @@ export class SettingsGeneral extends HTMLElement {
             buildReaderSection(this),
             buildSharingSection(this),
             buildUsageSection(this),
+            buildNotificationsSection(this),
             buildAboutSection(this),
         );
         this.restoreDrafts();
@@ -247,6 +264,9 @@ export class SettingsGeneral extends HTMLElement {
         this.discoverOpen = false;
         this.discoverStatus = '';
         this.discovered = [];
+        this.notificationState = readNotificationState();
+        this.notificationStatus = '';
+        this.notificationStatusError = false;
     }
 
     setReaderMode = (mode: ReaderMode): void => {
@@ -273,6 +293,44 @@ export class SettingsGeneral extends HTMLElement {
         this.usageEnabled = enabled;
         saveUsageEnabled(enabled);
         if (enabled) void flushUsageNow();
+    };
+
+    requestNotifications = (): void => {
+        void this.askForNotifications();
+    };
+
+    /**
+     * The permission prompt needs the click that led here; this only runs from
+     * the panel's button. State is re-read after the await, and the element may
+     * have left the page while the browser prompt was open.
+     */
+    private async askForNotifications(): Promise<void> {
+        const next = await requestNotificationPermission();
+        if (!this.isConnected) return;
+        this.notificationState = next;
+        this.notificationStatus = notificationResultText(next);
+        this.notificationStatusError = next === 'denied';
+    }
+
+    sendTest = (): void => {
+        void this.sendTestNotification();
+    };
+
+    private async sendTestNotification(): Promise<void> {
+        const sent = await showTestNotification();
+        if (!this.isConnected) return;
+        this.notificationStatus = sent ? 'Test notification sent.' : 'The browser did not show the test notification.';
+        this.notificationStatusError = !sent;
+    }
+
+    /** Browsers cannot re-prompt after a denial; re-read the state instead. */
+    refreshNotificationState = (): void => {
+        this.notificationState = readNotificationState();
+        this.notificationStatus =
+            this.notificationState === 'denied'
+                ? "Still blocked. Allow notifications in this browser's site settings."
+                : '';
+        this.notificationStatusError = this.notificationState === 'denied';
     };
 
     openScrape = (): void => {
@@ -361,6 +419,19 @@ export class SettingsGeneral extends HTMLElement {
     onMigrate = (): void => {
         void migrateLibraryData(this);
     };
+}
+
+function notificationResultText(state: NotificationState): string {
+    switch (state) {
+        case 'granted':
+            return 'Notifications are on.';
+        case 'denied':
+            return "Permission was blocked. Allow notifications in your browser's site settings.";
+        case 'unsupported':
+            return 'This browser does not support notifications.';
+        default:
+            return 'Permission was not granted. You can try again.';
+    }
 }
 
 customElements.define('settings-general', SettingsGeneral);

@@ -116,6 +116,13 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
         target: '[data-focus-key="action:Upload local library"]',
     },
     {
+        id: 'notification-permission',
+        section: 'general',
+        label: 'Notifications',
+        keywords: 'notifications alerts briefings permission allow browser test',
+        target: '[data-setting="notifications"]',
+    },
+    {
         id: 'version-history',
         section: 'general',
         label: 'Version history',

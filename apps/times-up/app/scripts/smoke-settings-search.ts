@@ -45,6 +45,11 @@ import { assert } from './smoke-assert';
     assert(mastodon[0]!.id === 'mastodon-host', 'a word at the start of a label outranks one buried in keywords');
 
     assert(
+        searchSettings('notifications').some((entry) => entry.id === 'notification-permission'),
+        '"notifications" finds the permission control',
+    );
+
+    assert(
         searchSettings('forget').some((entry) => entry.id === 'forget-profile'),
         '"forget" finds the forget control',
     );
