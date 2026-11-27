@@ -262,11 +262,6 @@ export class WatchView extends LitElement {
                 aria-expanded=${this.sidebarOpen}
                 @click=${this.onToggleSidebar}
             >☰</button>
-            <button
-                class="rail-toggle reverse-toggle"
-                aria-label=${this.reverse ? 'Reverse order off' : 'Reverse order on'}
-                @click=${this.onToggleReverse}
-            >${this.reverse ? '↓' : '↑'}</button>
         `;
     }
 
@@ -284,6 +279,15 @@ export class WatchView extends LitElement {
                 @new-list=${this.emitNewList}
                 @close=${this.onBackdrop}
             ></cs-progress-sidebar>
+            ${
+                this.sidebarOpen
+                    ? html`<button
+                          class="reverse-toggle"
+                          aria-label=${this.reverse ? 'Reverse order off' : 'Reverse order on'}
+                          @click=${this.onToggleReverse}
+                      >${this.reverse ? '↓ Reverse' : '↑ Reverse'}</button>`
+                    : html``
+            }
         `;
     }
 
