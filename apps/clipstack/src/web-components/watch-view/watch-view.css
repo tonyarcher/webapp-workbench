@@ -47,8 +47,8 @@ vsc-scroll-viewport {
     cursor: pointer;
 }
 
-.rail-toggle:hover {
-    background: var(--scrim-strong);
+.rail-toggle.reverse-toggle {
+    top: 60px;
 }
 
 .sidebar {

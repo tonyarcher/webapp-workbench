@@ -263,7 +263,7 @@ export class WatchView extends LitElement {
                 @click=${this.onToggleSidebar}
             >☰</button>
             <button
-                class="rail-toggle"
+                class="rail-toggle reverse-toggle"
                 aria-label=${this.reverse ? 'Reverse order off' : 'Reverse order on'}
                 @click=${this.onToggleReverse}
             >${this.reverse ? '↓' : '↑'}</button>
