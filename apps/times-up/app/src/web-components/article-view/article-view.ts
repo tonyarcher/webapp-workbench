@@ -13,16 +13,9 @@ import { isDeranked } from '../../services/interesting-settings';
 import { isSnapshotArticle } from '../../services/saved-queue';
 import type { ArticleKeyword } from '../../services/keywords';
 import { areHighlightsEnabled } from '../../services/highlights';
-import {
-    applyReaderMode,
-    clearFeedReaderMode,
-    loadFeedReaderMode,
-    loadReaderMode,
-    readerModeForFeed,
-    saveFeedReaderMode,
-} from '../../services/reader-mode';
+import { applyArticleReaderMode, toggleArticleReaderMode } from './article-view-reader-mode';
 import { fetchArticleProvenance, type ArticleProvenance } from '../../services/api-provenance';
-import { fetchArticleCluster, type ArticleCluster } from '../../services/api-clusters';
+import { fetchArticleCluster } from '../../services/api-clusters';
 import { provenanceToMarkdown } from '../../services/provenance-export';
 import { toastError, toastInfo } from '../../services/toast';
 import type { Article, Board, RowHighlight } from '../../types';
@@ -46,7 +39,7 @@ import {
     buildKeyLines as buildKeyLinesNodes,
 } from './article-view-content';
 import { buildProvenance as buildProvenanceNodes } from './article-view-provenance';
-import { buildClusterLine } from './article-view-cluster';
+import { ArticleClusterState, buildClusterLine } from './article-view-cluster';
 import {
     onStar as onStarAction,
     onDerank as onDerankAction,
@@ -107,7 +100,11 @@ export class ArticleView extends HTMLElement {
     provenance: ArticleProvenance | null = null;
     provenanceLoading = false;
     /** Learned topic group; never read from article text at request time. */
-    articleCluster: ArticleCluster | null = null;
+    private readonly clusterState = new ArticleClusterState({
+        articleId: () => this.article?.id ?? null,
+        paint: () => this.paint(),
+        openMember: (id) => this.openClusterMember(id),
+    });
     bodyLoading = false;
     highlightsOn = areHighlightsEnabled();
     /** Article the progress bar belongs to; object identity churns on star. */
@@ -211,22 +208,12 @@ export class ArticleView extends HTMLElement {
         this.paint();
     };
 
-    private applyFeedReaderMode(): void {
-        const feedId = this.article?.feedId;
-        applyReaderMode(feedId ? readerModeForFeed(feedId) : loadReaderMode());
+    private openClusterMember(id: string): void {
+        this.dispatchEvent(new CustomEvent('open-cluster-member', { detail: { id }, bubbles: true, composed: true }));
     }
 
     onReaderModeForFeed = (): void => {
-        const article = this.article;
-        if (!article || isSnapshotArticle(article)) return;
-        if (loadFeedReaderMode(article.feedId)) {
-            clearFeedReaderMode(article.feedId);
-            applyReaderMode(loadReaderMode());
-            toastInfo('Feed reader mode cleared');
-        } else {
-            saveFeedReaderMode(article.feedId, loadReaderMode());
-            toastInfo('Reader mode saved for this feed');
-        }
+        toggleArticleReaderMode(this.article);
         this.paint();
     };
 
@@ -253,7 +240,7 @@ export class ArticleView extends HTMLElement {
             this.keyLinesLoading = false;
             this.provenance = null;
             this.provenanceLoading = false;
-            this.articleCluster = null;
+            this.clusterState.reset(null, null);
             this.bodyLoading = false;
             this.prevDeranked = false;
             this.prevStarred = false;
@@ -275,7 +262,7 @@ export class ArticleView extends HTMLElement {
                 void this.refreshSavedState();
             }
         }
-        this.applyFeedReaderMode();
+        applyArticleReaderMode(this.article);
     }
 
     private async refreshProvenance(): Promise<void> {
@@ -304,7 +291,7 @@ export class ArticleView extends HTMLElement {
         try {
             const result = await fetchArticleCluster(id);
             if (!this.isConnected || this.article?.id !== id) return;
-            this.articleCluster = result;
+            this.clusterState.reset(result, id);
             this.paint();
         } catch {
             // A missing cluster is normal; leave the line off.
@@ -364,7 +351,7 @@ export class ArticleView extends HTMLElement {
         const bodyDiv = el('div', 'body');
         appendAll(bodyDiv, this.buildTitle(a, link));
         appendAll(bodyDiv, this.buildMeta(a));
-        appendAll(bodyDiv, buildClusterLine(this.articleCluster));
+        appendAll(bodyDiv, buildClusterLine(this.clusterState));
         appendAll(bodyDiv, this.buildKeyLines());
         appendAll(bodyDiv, buildProvenanceNodes(this));
         const loadStatus = bodyLoadStatus(a, this.bodyLoading);

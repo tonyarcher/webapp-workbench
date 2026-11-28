@@ -26,6 +26,7 @@ export interface AppShellRenderHost {
     toasts: ToastNotice[];
     articleWidth: number;
     onOpenArticle: (e: Event) => void;
+    onOpenClusterMember: (e: Event) => void;
     closeArticle: (dismissed?: boolean) => void;
     onArticleResizeStart: (e: PointerEvent) => void;
     onArticleResizeMove: (e: PointerEvent) => void;
@@ -458,6 +459,7 @@ export class ShellDom {
         const articleView = document.createElement('article-view') as ArticleViewElement;
         articleView.addEventListener('close', () => host.closeArticle());
         articleView.addEventListener('open-article', host.onOpenArticle);
+        articleView.addEventListener('open-cluster-member', host.onOpenClusterMember);
         articleView.article = host.article;
         panel.append(handle, articleView);
         this.panel = panel;

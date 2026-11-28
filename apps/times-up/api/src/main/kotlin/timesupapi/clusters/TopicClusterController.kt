@@ -23,6 +23,9 @@ data class ArticleClusterJson(val id: String, val label: String, val memberCount
 
 data class TopicClusterListJson(val clusters: List<TopicClusterJson>)
 
+data class ClusterMemberJson(val id: String, val title: String, val feedId: String, val publishedAt: Long)
+data class ClusterMembersJson(val items: List<ClusterMemberJson>)
+
 /** Persistent topic groups and the group of one subscriber-owned article. */
 @RestController
 class TopicClusterController(
@@ -30,10 +33,21 @@ class TopicClusterController(
     private val articles: ArticleRepo,
     private val subs: SubscriptionRepo,
     private val service: TopicClusterService,
+    private val memberService: TopicClusterMemberService,
 ) {
     @GetMapping("/clusters", headers = ["X-Api-Version=1"])
     fun clusters(@RequestParam(defaultValue = "20") limit: Int): TopicClusterListJson = TopicClusterListJson(
         service.top(limit.coerceIn(1, MAX_LIMIT)).map { it.toJson() },
+    )
+
+    @GetMapping("/clusters/{clusterId}/members", headers = ["X-Api-Version=1"])
+    fun clusterMembers(
+        @PathVariable clusterId: String,
+        @RequestParam(defaultValue = "20") limit: Int,
+    ): ClusterMembersJson = ClusterMembersJson(
+        memberService.members(clusterId, user.id, limit).map {
+            ClusterMemberJson(it.id, it.title, it.feedId.toString(), it.publishedAt.toEpochMilli())
+        },
     )
 
     @GetMapping("/articles/{articleId}/cluster", headers = ["X-Api-Version=1"])

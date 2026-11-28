@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import timesupapi.articles.ArticleEntity
 import java.time.Instant
+import java.util.UUID
 
 interface TopicArticleRepo : JpaRepository<ArticleEntity, String> {
     interface Candidate {
@@ -58,6 +59,27 @@ interface TopicClusterMemberRepo : JpaRepository<TopicClusterMemberEntity, Clust
     fun deleteByClusterId(clusterId: String)
     fun findByArticleId(articleId: String): List<TopicClusterMemberEntity>
     fun findByClusterId(clusterId: String): List<TopicClusterMemberEntity>
+
+    interface MemberRow {
+        val id: String
+        val title: String
+        val feedId: UUID
+        val publishedAt: Instant
+    }
+
+    @Query(
+        """
+        select a.id as id, a.title as title, a.feedId as feedId, a.publishedAt as publishedAt
+          from TopicClusterMemberEntity m join ArticleEntity a on a.id = m.articleId
+         where m.clusterId = :clusterId and a.feedId in :feedIds
+         order by a.publishedAt desc
+        """,
+    )
+    fun findMemberRows(
+        @Param("clusterId") clusterId: String,
+        @Param("feedIds") feedIds: Collection<UUID>,
+        page: Pageable,
+    ): List<MemberRow>
 
     @Query(
         """

@@ -302,6 +302,18 @@ export class AppShell extends HTMLElement {
         this.showArticle(detail.article, detail.items, detail.index);
     };
 
+    onOpenClusterMember = async (e: Event): Promise<void> => {
+        const id = (e as CustomEvent<{ id: string }>).detail.id;
+        if (!id) return;
+        try {
+            const article = await fetchArticleById(id);
+            if (!this.isConnected || !this.authed) return;
+            this.showArticle(article, [article], 0);
+        } catch {
+            // A removed or unavailable member leaves the current article open.
+        }
+    };
+
     private onArticleReadSync = (e: Event): void => {
         const d = (e as CustomEvent<string | { id: string; read: 0 | 1 }>).detail;
         this.syncReadState(typeof d === 'string' ? d : d.id, typeof d === 'string' ? 1 : d.read);

@@ -22,7 +22,8 @@ class TopicClusterControllerTest {
     private val articles: ArticleRepo = mock()
     private val subs: SubscriptionRepo = mock()
     private val service: TopicClusterService = mock()
-    private val controller = TopicClusterController(user, articles, subs, service)
+    private val memberService: TopicClusterMemberService = mock()
+    private val controller = TopicClusterController(user, articles, subs, service, memberService)
     private val userId = UUID.randomUUID()
     private val feedId = UUID.randomUUID()
     private val article = ArticleEntity(id = "a1", feedId = feedId)
@@ -62,6 +63,22 @@ class TopicClusterControllerTest {
         whenever(service.forArticle("a1")).thenReturn(cluster)
 
         assertEquals("battery grid", controller.cluster("a1")?.label)
+    }
+
+    @Test
+    fun clusterMembersAreMappedForTheCurrentUser() {
+        val row: TopicClusterMemberRepo.MemberRow = mock()
+        whenever(user.id).thenReturn(userId)
+        whenever(row.id).thenReturn("a2")
+        whenever(row.title).thenReturn("Another source")
+        whenever(row.feedId).thenReturn(feedId)
+        whenever(row.publishedAt).thenReturn(Instant.parse("2026-11-24T00:00:00Z"))
+        whenever(memberService.members("topic:1", userId, 20)).thenReturn(listOf(row))
+
+        val result = controller.clusterMembers("topic:1", 20)
+
+        assertEquals("a2", result.items.single().id)
+        assertEquals(feedId.toString(), result.items.single().feedId)
     }
 
     @Test
